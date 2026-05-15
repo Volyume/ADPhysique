@@ -1,0 +1,182 @@
+import React, { useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Animated,
+  Dimensions,
+  TouchableOpacity,
+} from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const NUM_PARTICLES = 40;
+
+function createParticle(index) {
+  return {
+    x: new Animated.Value(SCREEN_WIDTH / 2),
+    y: new Animated.Value(SCREEN_HEIGHT / 2),
+    opacity: new Animated.Value(1),
+    scale: new Animated.Value(0),
+    angle: (index / NUM_PARTICLES) * Math.PI * 2,
+    distance: 80 + Math.random() * 180,
+    color: [
+      colors.primary, colors.gold, colors.success, '#FF6B35', '#9C27B0',
+    ][index % 5],
+    size: 6 + Math.random() * 8,
+  };
+}
+
+export default function PRCelebration({ pr, onDismiss }) {
+  const particles = useRef(Array.from({ length: NUM_PARTICLES }, (_, i) => createParticle(i))).current;
+  const overlayOpacity = useRef(new Animated.Value(0)).current;
+  const cardScale = useRef(new Animated.Value(0.5)).current;
+  const cardOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 150);
+    setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 300);
+
+    Animated.parallel([
+      Animated.timing(overlayOpacity, { toValue: 0.85, duration: 200, useNativeDriver: true }),
+      Animated.spring(cardScale, { toValue: 1, tension: 100, friction: 8, useNativeDriver: true }),
+      Animated.timing(cardOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+    ]).start();
+
+    const particleAnims = particles.map((p, i) => {
+      const targetX = SCREEN_WIDTH / 2 + Math.cos(p.angle) * p.distance;
+      const targetY = SCREEN_HEIGHT / 2 + Math.sin(p.angle) * p.distance;
+
+      return Animated.sequence([
+        Animated.delay(i * 20),
+        Animated.parallel([
+          Animated.spring(p.x, { toValue: targetX, tension: 80, friction: 6, useNativeDriver: true }),
+          Animated.spring(p.y, { toValue: targetY, tension: 80, friction: 6, useNativeDriver: true }),
+          Animated.spring(p.scale, { toValue: 1, tension: 100, friction: 7, useNativeDriver: true }),
+          Animated.sequence([
+            Animated.delay(500),
+            Animated.timing(p.opacity, { toValue: 0, duration: 600, useNativeDriver: true }),
+          ]),
+        ]),
+      ]);
+    });
+
+    Animated.stagger(8, particleAnims).start();
+
+    const timer = setTimeout(onDismiss, 3000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const prIcon = pr.type === '1rm_estimate' ? 'trophy' :
+    pr.type === 'heaviest_weight' ? 'barbell' : 'flash';
+
+  const prLabel = pr.type === '1rm_estimate' ? 'New Estimated 1RM' :
+    pr.type === 'heaviest_weight' ? 'New Heaviest Weight' : 'Most Reps at Weight';
+
+  return (
+    <TouchableOpacity
+      style={StyleSheet.absoluteFillObject}
+      activeOpacity={1}
+      onPress={onDismiss}
+    >
+      <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]} />
+
+      {particles.map((p, i) => (
+        <Animated.View
+          key={i}
+          style={[
+            styles.particle,
+            {
+              backgroundColor: p.color,
+              width: p.size,
+              height: p.size,
+              borderRadius: p.size / 2,
+              transform: [
+                { translateX: Animated.add(p.x, new Animated.Value(-p.size / 2)) },
+                { translateY: Animated.add(p.y, new Animated.Value(-p.size / 2)) },
+                { scale: p.scale },
+              ],
+              opacity: p.opacity,
+            },
+          ]}
+        />
+      ))}
+
+      <Animated.View
+        style={[
+          styles.card,
+          { transform: [{ scale: cardScale }], opacity: cardOpacity },
+        ]}
+      >
+        <View style={styles.iconContainer}>
+          <Ionicons name={prIcon} size={48} color={colors.gold} />
+        </View>
+        <Text style={styles.prBadge}>PERSONAL RECORD</Text>
+        <Text style={styles.prType}>{prLabel}</Text>
+        <Text style={styles.prValue}>{pr.label}</Text>
+        <Text style={styles.dismiss}>Tap to continue</Text>
+      </Animated.View>
+    </TouchableOpacity>
+  );
+}
+
+const styles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#000',
+  },
+  particle: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
+  card: {
+    position: 'absolute',
+    top: SCREEN_HEIGHT / 2 - 160,
+    left: spacing.xl,
+    right: spacing.xl,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    padding: spacing.xxl,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.gold + '60',
+  },
+  iconContainer: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: colors.gold + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
+  },
+  prBadge: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.black,
+    color: colors.gold,
+    letterSpacing: 2,
+    marginBottom: spacing.sm,
+  },
+  prType: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+  },
+  prValue: {
+    fontSize: fontSize.md,
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
+  },
+  dismiss: {
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+  },
+});
