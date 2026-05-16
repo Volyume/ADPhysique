@@ -61,6 +61,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
   function renderItem({ item }) {
     const { workout, setCount, exerciseCount, tonnage, exerciseNames } = item;
     const date = new Date(workout.startedAt);
+    const isRecent = Date.now() - workout.startedAt < 7 * 24 * 60 * 60 * 1000;
 
     return (
       <View style={styles.card}>
@@ -120,7 +121,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
             <View style={styles.empty}>
               <Ionicons name="barbell-outline" size={48} color={colors.surface3} />
               <Text style={styles.emptyTitle}>No sessions yet</Text>
-              <Text style={styles.emptyText}>Completed workouts will appear here.{' '}Start a session from the Train tab.</Text>
+              <Text style={styles.emptyText}>Completed workouts will appear here. Start a session from the Train tab.</Text>
             </View>
           ) : null
         }
