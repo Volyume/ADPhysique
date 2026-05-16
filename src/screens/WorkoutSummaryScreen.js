@@ -5,7 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { database } from '../lib/database';
+import { getAllWorkoutSets, getAllExercises, updateWorkout } from '../lib/database';
 import { calculateWeeklyVolume, getVolumeStatus, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 
@@ -69,9 +69,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   async function loadVolumeAndSuggestions() {
     if (!user?.id) return;
     const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    const allSets = await database.get('workout_sets').query().fetch();
-    const recentSets = allSets.filter(s => s.userId === user.id && s.createdAt >= weekAgo);
-    const allExercises = await database.get('exercises').query().fetch();
+    const allSets = await getAllWorkoutSets(user.id);
+    const recentSets = allSets.filter(s => s.createdAt >= weekAgo);
+    const allExercises = await getAllExercises();
     const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
     const volume = calculateWeeklyVolume(recentSets, exerciseMap);
     setWeeklyVolume(volume);
@@ -81,18 +81,13 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     if (!workoutId) { navigation.popToTop(); return; }
     setSaving(true);
     try {
-      await database.write(async () => {
-        const workout = await database.get('workouts').find(workoutId);
-        await workout.update(w => {
-          w.sessionDifficulty = feedback.sessionDifficulty;
-          w.overallPump = feedback.overallPump;
-          w.soreness24hBefore = feedback.soreness24hBefore;
-          w.fatigueLevel = feedback.fatigueLevel;
-          w.notes = notes || null;
-          w.updatedAt = Date.now();
-        });
+      await updateWorkout(workoutId, {
+        sessionDifficulty: feedback.sessionDifficulty,
+        overallPump: feedback.overallPump,
+        soreness24hBefore: feedback.soreness24hBefore,
+        fatigueLevel: feedback.fatigueLevel,
+        notes: notes || null,
       });
-
     } finally {
       setSaving(false);
       navigation.popToTop();

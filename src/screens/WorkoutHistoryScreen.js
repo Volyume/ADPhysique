@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { format, formatDistanceToNow } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { database } from '../lib/database';
+import { getAllWorkouts, getAllWorkoutSets, getAllExercises, createWorkout } from '../lib/database';
 import useAppStore from '../store/useAppStore';
 
 export default function WorkoutHistoryScreen({ navigation }) {
@@ -22,28 +22,23 @@ export default function WorkoutHistoryScreen({ navigation }) {
     if (!user?.id) return;
     setLoading(true);
     try {
-      const all = await database.get('workouts').query().fetch();
-      const mine = all
-        .filter(w => w.userId === user.id && w.isCompleted)
+      const allWorkouts = await getAllWorkouts(user.id);
+      const mine = allWorkouts
+        .filter(w => w.isCompleted)
         .sort((a, b) => b.startedAt - a.startedAt);
 
-      const withSets = await Promise.all(
-        mine.slice(0, 50).map(async w => {
-          const sets = await database.get('workout_sets').query().fetch();
-          const mySets = sets.filter(s => s.workoutId === w.id);
-          const exerciseIds = [...new Set(mySets.map(s => s.exerciseId))];
-          const exercises = await Promise.all(
-            exerciseIds.slice(0, 4).map(id =>
-              database.get('exercises').find(id).catch(() => null),
-            ),
-          );
-          return {
-            workout: w,
-            setCount: mySets.length,
-            exerciseNames: exercises.filter(Boolean).map(e => e.name),
-          };
-        }),
-      );
+      const allSets = await getAllWorkoutSets(user.id);
+      const allExercises = await getAllExercises();
+      const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
+
+      const withSets = mine.slice(0, 50).map(w => {
+        const mySets = allSets.filter(s => s.workoutId === w.id);
+        const exerciseIds = [...new Set(mySets.map(s => s.exerciseId))];
+        const exerciseNames = exerciseIds.slice(0, 4)
+          .map(id => exerciseMap[id]?.name)
+          .filter(Boolean);
+        return { workout: w, setCount: mySets.length, exerciseNames };
+      });
       setWorkouts(withSets);
     } finally {
       setLoading(false);
@@ -51,16 +46,8 @@ export default function WorkoutHistoryScreen({ navigation }) {
   }
 
   async function handleRepeatWorkout(workout) {
-    await database.write(async () => {
-      const newWorkout = await database.get('workouts').create(record => {
-        record.userId = user.id;
-        record.routineId = workout.routineId || null;
-        record.startedAt = Date.now();
-        record.isCompleted = false;
-        record.updatedAt = Date.now();
-      });
-      startWorkout(newWorkout);
-    });
+    const newWorkout = await createWorkout(user.id, workout.routineId || null);
+    startWorkout(newWorkout);
     navigation.navigate('ActiveWorkout');
   }
 
@@ -124,15 +111,8 @@ export default function WorkoutHistoryScreen({ navigation }) {
           <TouchableOpacity
             style={styles.startBtn}
             onPress={async () => {
-              await database.write(async () => {
-                const workout = await database.get('workouts').create(record => {
-                  record.userId = user.id;
-                  record.startedAt = Date.now();
-                  record.isCompleted = false;
-                  record.updatedAt = Date.now();
-                });
-                startWorkout(workout);
-              });
+              const workout = await createWorkout(user.id);
+              startWorkout(workout);
               navigation.navigate('ActiveWorkout');
             }}
           >

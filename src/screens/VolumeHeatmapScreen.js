@@ -5,7 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { database } from '../lib/database';
+import { getAllWorkoutSets, getAllExercises } from '../lib/database';
 import {
   calculateWeeklyVolume, VOLUME_LANDMARKS, MUSCLE_DISPLAY_NAMES, getVolumeStatus,
 } from '../lib/algorithms';
@@ -26,9 +26,9 @@ export default function VolumeHeatmapScreen() {
     if (!user?.id) return;
 
     const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    const allSets = await database.get('workout_sets').query().fetch();
-    const recentSets = allSets.filter(s => s.userId === user.id && s.createdAt >= weekAgo);
-    const allExercises = await database.get('exercises').query().fetch();
+    const allSets = await getAllWorkoutSets(user.id);
+    const recentSets = allSets.filter(s => s.createdAt >= weekAgo);
+    const allExercises = await getAllExercises();
     const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
     const volume = calculateWeeklyVolume(recentSets, exerciseMap);
     setWeeklyVolume(volume);

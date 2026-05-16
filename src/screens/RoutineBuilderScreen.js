@@ -5,7 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { database } from '../lib/database';
+import { getAllRoutines, createRoutine, softDeleteRoutine } from '../lib/database';
 import useAppStore from '../store/useAppStore';
 
 export default function RoutineBuilderScreen({ navigation }) {
@@ -21,25 +21,14 @@ export default function RoutineBuilderScreen({ navigation }) {
 
   async function loadRoutines() {
     if (!user?.id) return;
-    const all = await database.get('routines').query().fetch();
-    const mine = all.filter(r => r.userId === user.id && r.isActive)
-      .sort((a, b) => b.updatedAt - a.updatedAt);
-    setRoutines(mine);
+    const all = await getAllRoutines(user.id);
+    setRoutines(all.filter(r => r.isActive));
   }
 
-  async function createRoutine() {
+  async function handleCreateRoutine() {
     if (!newName.trim()) { Alert.alert('Name required', 'Enter a name for the routine.'); return; }
     setCreating(true);
-    await database.write(async () => {
-      await database.get('routines').create(r => {
-        r.userId = user.id;
-        r.name = newName.trim();
-        r.description = newDesc.trim() || null;
-        r.splitType = splitType || null;
-        r.isActive = true;
-        r.updatedAt = Date.now();
-      });
-    });
+    await createRoutine(user.id, newName.trim(), newDesc.trim() || null, splitType || null);
     setNewName(''); setNewDesc(''); setSplitType('');
     setShowCreate(false);
     setCreating(false);
@@ -53,9 +42,7 @@ export default function RoutineBuilderScreen({ navigation }) {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
-          await database.write(async () => {
-            await routine.update(r => { r.isActive = false; });
-          });
+          await softDeleteRoutine(routine.id);
           await loadRoutines();
         },
       },
@@ -146,7 +133,7 @@ export default function RoutineBuilderScreen({ navigation }) {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalCreate, creating && styles.btnDisabled]}
-                onPress={createRoutine}
+                onPress={handleCreateRoutine}
                 disabled={creating}
               >
                 <Text style={styles.modalCreateText}>Create</Text>

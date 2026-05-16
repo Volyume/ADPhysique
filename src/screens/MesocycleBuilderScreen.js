@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { format, differenceInWeeks } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { database } from '../lib/database';
+import { getAllMesocycles, createMesocycle } from '../lib/database';
 import useAppStore from '../store/useAppStore';
 
 export default function MesocycleBuilderScreen({ navigation }) {
@@ -27,33 +27,27 @@ export default function MesocycleBuilderScreen({ navigation }) {
 
   async function loadMesocycles() {
     if (!user?.id) return;
-    const all = await database.get('mesocycles').query().fetch();
-    const mine = all
-      .filter(m => m.userId === user.id)
-      .sort((a, b) => b.createdAt - a.createdAt);
+    const mine = await getAllMesocycles(user.id);
     setMesocycles(mine);
   }
 
-  async function createMesocycle() {
+  async function handleCreateMesocycle() {
     if (!form.name.trim()) { Alert.alert('Name required'); return; }
     setSaving(true);
     try {
       const startDate = new Date(form.start_date);
       const endDate = new Date(form.end_date);
       const durationWeeks = Math.max(1, differenceInWeeks(endDate, startDate));
-      await database.write(async () => {
-        await database.get('mesocycles').create(m => {
-          m.userId = user.id;
-          m.name = form.name.trim();
-          m.startDate = form.start_date;
-          m.endDate = form.end_date;
-          m.durationWeeks = durationWeeks;
-          m.focus = form.focus || null;
-          m.isActive = true;
-          m.deloadWeek = parseInt(form.deload_week, 10) || 4;
-          m.autoRegulationEnabled = form.auto_regulation;
-          m.updatedAt = Date.now();
-        });
+      await createMesocycle({
+        userId: user.id,
+        name: form.name.trim(),
+        startDate: form.start_date,
+        endDate: form.end_date,
+        durationWeeks,
+        focus: form.focus || null,
+        isActive: true,
+        deloadWeek: parseInt(form.deload_week, 10) || 4,
+        autoRegulationEnabled: form.auto_regulation,
       });
       setShowCreate(false);
       await loadMesocycles();
@@ -198,7 +192,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.createBtn2, saving && { opacity: 0.6 }]}
-                onPress={createMesocycle}
+                onPress={handleCreateMesocycle}
                 disabled={saving}
               >
                 <Text style={styles.createText}>Create</Text>

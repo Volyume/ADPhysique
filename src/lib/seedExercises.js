@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { database } from './database';
+import { getAllExercises, insertExercise } from './database';
 
-const SEEDED_KEY = '@volyume_exercises_seeded_v1';
+const SEEDED_KEY = '@volyume_exercises_seeded_v2';
 
 // [name, primaryMuscle, secondaryMuscles, equipment, movementPattern, isCompound, minReps, maxReps, fatigueCost, sfr]
 const RAW = [
@@ -157,7 +157,7 @@ const RAW = [
   ['Barbell Shrug', 'traps', [], 'barbell', 'isolation', false, 12, 20, 2, 4],
   ['Dumbbell Shrug', 'traps', [], 'dumbbell', 'isolation', false, 12, 20, 2, 4],
   ['Cable Shrug', 'traps', [], 'cable', 'isolation', false, 12, 20, 2, 4],
-  ['Farmer\'s Walk', 'traps', ['forearms', 'core'], 'dumbbell', 'carry', true, 20, 40, 3, 4],
+  ["Farmer's Walk", 'traps', ['forearms', 'core'], 'dumbbell', 'carry', true, 20, 40, 3, 4],
   ['Hex Bar Shrug', 'traps', [], 'barbell', 'isolation', false, 12, 20, 3, 4],
 
   // FOREARMS
@@ -172,32 +172,28 @@ export async function seedExercisesIfNeeded() {
     const seeded = await AsyncStorage.getItem(SEEDED_KEY);
     if (seeded === 'true') return;
 
-    const existing = await database.get('exercises').query().fetch();
+    const existing = await getAllExercises();
     if (existing.length > 0) {
       await AsyncStorage.setItem(SEEDED_KEY, 'true');
       return;
     }
 
-    const now = Date.now();
-    await database.write(async () => {
-      for (const row of RAW) {
-        const [name, primaryMuscle, secondaryMuscles, equipment, movementPattern, isCompound, min, max, fatigue, sfr] = row;
-        await database.get('exercises').create(e => {
-          e.name = name;
-          e.primaryMuscle = primaryMuscle;
-          e._secondaryMuscles = JSON.stringify(secondaryMuscles);
-          e.equipment = equipment;
-          e.movementPattern = movementPattern;
-          e.compoundIsolation = isCompound ? 'compound' : 'isolation';
-          e.defaultRepMin = min;
-          e.defaultRepMax = max;
-          e.fatigueCost = fatigue;
-          e.stimulusToFatigueRatio = sfr;
-          e.isCustom = false;
-          e.updatedAt = now;
-        });
-      }
-    });
+    for (const row of RAW) {
+      const [name, primaryMuscle, secondaryMuscles, equipment, movementPattern, isCompound, min, max, fatigue, sfr] = row;
+      await insertExercise({
+        name,
+        primaryMuscle,
+        secondaryMuscles,
+        equipment,
+        movementPattern,
+        compoundIsolation: isCompound ? 'compound' : 'isolation',
+        defaultRepMin: min,
+        defaultRepMax: max,
+        fatigueCost: fatigue,
+        stimulusToFatigueRatio: sfr,
+        isCustom: false,
+      });
+    }
 
     await AsyncStorage.setItem(SEEDED_KEY, 'true');
     console.log(`[Seed] Inserted ${RAW.length} exercises`);

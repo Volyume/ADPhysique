@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import VolumeBars from '../components/VolumeBars';
-import { database } from '../lib/database';
+import { getAllWorkoutSets, getAllWorkouts, getAllExercises } from '../lib/database';
 import {
   calculateWeeklyVolume, calculateTonnage, shouldDeload, MUSCLE_DISPLAY_NAMES,
 } from '../lib/algorithms';
@@ -29,13 +29,13 @@ export default function AnalyticsScreen({ navigation }) {
   async function loadWeeklyData() {
     try {
       const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-      const allSets = await database.get('workout_sets').query().fetch();
-      const recentSets = allSets.filter(s => s.userId === user.id && s.createdAt >= weekAgo);
-      const allWorkouts = await database.get('workouts').query().fetch();
+      const allSets = await getAllWorkoutSets(user.id);
+      const recentSets = allSets.filter(s => s.createdAt >= weekAgo);
+      const allWorkouts = await getAllWorkouts(user.id);
       const recentWorkouts = allWorkouts.filter(
-        w => w.userId === user.id && w.startedAt >= weekAgo && w.isCompleted,
+        w => w.startedAt >= weekAgo && w.isCompleted,
       );
-      const allExercises = await database.get('exercises').query().fetch();
+      const allExercises = await getAllExercises();
       const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
       const volume = calculateWeeklyVolume(recentSets, exerciseMap);
       setWeeklyVolume(volume);
@@ -62,17 +62,17 @@ export default function AnalyticsScreen({ navigation }) {
 
   async function checkDeload() {
     try {
-      const allWorkouts = await database.get('workouts').query().fetch();
-      const allSets = await database.get('workout_sets').query().fetch();
+      const allWorkouts = await getAllWorkouts(user.id);
+      const allSets = await getAllWorkoutSets(user.id);
 
       const last4Weeks = Array.from({ length: 4 }, (_, i) => {
         const weekStart = Date.now() - (i + 1) * 7 * 24 * 60 * 60 * 1000;
         const weekEnd = weekStart + 7 * 24 * 60 * 60 * 1000;
         const weekWorkouts = allWorkouts.filter(
-          w => w.userId === user.id && w.startedAt >= weekStart && w.startedAt < weekEnd,
+          w => w.startedAt >= weekStart && w.startedAt < weekEnd,
         );
         const weekSets = allSets.filter(
-          s => s.userId === user.id && s.createdAt >= weekStart && s.createdAt < weekEnd,
+          s => s.createdAt >= weekStart && s.createdAt < weekEnd,
         );
         const avgReps = weekSets.length > 0
           ? weekSets.reduce((sum, s) => sum + (s.actualReps || 0), 0) / weekSets.length

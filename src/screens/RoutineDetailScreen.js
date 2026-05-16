@@ -5,7 +5,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { database } from '../lib/database';
+import {
+  getRoutineById, getRoutineExercisesWithDetails, getAllExercises,
+  addExerciseToRoutine, removeExerciseFromRoutine, createWorkout,
+} from '../lib/database';
 import useAppStore from '../store/useAppStore';
 
 export default function RoutineDetailScreen({ navigation, route }) {
@@ -22,61 +25,37 @@ export default function RoutineDetailScreen({ navigation, route }) {
   }, [routineId]);
 
   async function loadRoutine() {
-    const r = await database.get('routines').find(routineId);
+    const r = await getRoutineById(routineId);
     setRoutine(r);
     navigation.setOptions({ title: r.name });
 
-    const routineExs = await database.get('routine_exercises').query().fetch();
-    const mine = routineExs
-      .filter(re => re.routineId === routineId)
-      .sort((a, b) => (a.orderInRoutine || 0) - (b.orderInRoutine || 0));
+    const withExercises = await getRoutineExercisesWithDetails(routineId);
+    setExercises(withExercises);
 
-    const withExercises = await Promise.all(
-      mine.map(async re => {
-        const ex = await database.get('exercises').find(re.exerciseId).catch(() => null);
-        return { routineExercise: re, exercise: ex };
-      }),
-    );
-    setExercises(withExercises.filter(e => e.exercise));
-
-    const all = await database.get('exercises').query().fetch();
+    const all = await getAllExercises();
     setAllExercises(all);
   }
 
   async function removeExercise(routineExercise) {
-    await database.write(async () => {
-      await routineExercise.destroyPermanently();
-    });
+    await removeExerciseFromRoutine(routineExercise.id);
     await loadRoutine();
   }
 
   async function addExercise(exercise) {
-    await database.write(async () => {
-      await database.get('routine_exercises').create(re => {
-        re.routineId = routineId;
-        re.exerciseId = exercise.id;
-        re.orderInRoutine = exercises.length;
-        re.recommendedSets = 3;
-        re.recommendedRepsMin = exercise.defaultRepMin || 6;
-        re.recommendedRepsMax = exercise.defaultRepMax || 12;
-        re.createdAt = Date.now();
-      });
-    });
+    await addExerciseToRoutine(
+      routineId,
+      exercise.id,
+      exercises.length,
+      exercise.defaultRepMin || 6,
+      exercise.defaultRepMax || 12,
+    );
     setShowAddExercise(false);
     await loadRoutine();
   }
 
   async function handleStartWorkout() {
-    await database.write(async () => {
-      const workout = await database.get('workouts').create(record => {
-        record.userId = user.id;
-        record.routineId = routineId;
-        record.startedAt = Date.now();
-        record.isCompleted = false;
-        record.updatedAt = Date.now();
-      });
-      startWorkout(workout);
-    });
+    const workout = await createWorkout(user.id, routineId);
+    startWorkout(workout);
     navigation.navigate('WorkoutTab', { screen: 'ActiveWorkout' });
   }
 

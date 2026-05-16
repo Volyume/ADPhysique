@@ -9,6 +9,7 @@ import { colors } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { supabase } from '../lib/supabase';
 import { initDatabase } from '../lib/database';
+import { seedExercisesIfNeeded } from '../lib/seedExercises';
 
 // Auth screens
 import LoginScreen from '../screens/LoginScreen';
@@ -132,8 +133,10 @@ export default function RootNavigator() {
 
   useEffect(() => {
     async function bootstrap() {
-      // Always seed exercises on launch (no-op after first run)
-      initDatabase().catch(console.error);
+      // Init DB tables, then seed exercises (no-op after first run)
+      initDatabase()
+        .then(() => seedExercisesIfNeeded().catch(console.error))
+        .catch(console.error);
 
       // 1. Try Supabase auth (works when credentials are configured)
       try {

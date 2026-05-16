@@ -13,7 +13,9 @@ import { startOfWeek, endOfWeek, subDays } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import VolumeBars from '../components/VolumeBars';
-import { database } from '../lib/database';
+import {
+  getAllWorkoutSets, getAllExercises, getAllWorkouts, getAllRoutines, createWorkout,
+} from '../lib/database';
 import { calculateWeeklyVolume } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 
@@ -34,9 +36,9 @@ export default function HomeScreen({ navigation }) {
   async function loadWeeklyVolume() {
     try {
       const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-      const allSets = await database.get('workout_sets').query().fetch();
-      const recentSets = allSets.filter(s => s.userId === user.id && s.createdAt >= weekAgo);
-      const allExercises = await database.get('exercises').query().fetch();
+      const allSets = await getAllWorkoutSets(user.id);
+      const recentSets = allSets.filter(s => s.createdAt >= weekAgo);
+      const allExercises = await getAllExercises();
       const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
       setWeeklyVolume(calculateWeeklyVolume(recentSets, exerciseMap));
     } catch (e) {
@@ -47,8 +49,7 @@ export default function HomeScreen({ navigation }) {
   async function loadWeekStats() {
     try {
       const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-      const allWorkouts = await database.get('workouts').query().fetch();
-      const mine = allWorkouts.filter(w => w.userId === user.id);
+      const mine = await getAllWorkouts(user.id);
       const thisWeek = mine.filter(w => w.startedAt >= weekAgo && w.isCompleted);
 
       let streak = 0;
@@ -68,8 +69,8 @@ export default function HomeScreen({ navigation }) {
 
   async function loadNextRoutine() {
     try {
-      const routines = await database.get('routines').query().fetch();
-      const active = routines.find(r => r.userId === user.id && r.isActive);
+      const routines = await getAllRoutines(user.id);
+      const active = routines.find(r => r.isActive);
       setNextRoutine(active || null);
     } catch (_e) {}
   }
@@ -81,29 +82,14 @@ export default function HomeScreen({ navigation }) {
   }
 
   async function handleStartBlankWorkout() {
-    await database.write(async () => {
-      const workout = await database.get('workouts').create(record => {
-        record.userId = user.id;
-        record.startedAt = Date.now();
-        record.isCompleted = false;
-        record.updatedAt = Date.now();
-      });
-      startWorkout(workout);
-    });
+    const workout = await createWorkout(user.id);
+    startWorkout(workout);
     navigation.navigate('WorkoutTab', { screen: 'ActiveWorkout' });
   }
 
   async function handleStartRoutine(routine) {
-    await database.write(async () => {
-      const workout = await database.get('workouts').create(record => {
-        record.userId = user.id;
-        record.routineId = routine.id;
-        record.startedAt = Date.now();
-        record.isCompleted = false;
-        record.updatedAt = Date.now();
-      });
-      startWorkout(workout);
-    });
+    const workout = await createWorkout(user.id, routine.id);
+    startWorkout(workout);
     navigation.navigate('WorkoutTab', { screen: 'ActiveWorkout' });
   }
 

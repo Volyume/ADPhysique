@@ -1,332 +1,458 @@
-import { Database } from '@nozbe/watermelondb';
-import SQLiteAdapter from '@nozbe/watermelondb/adapters/sqlite';
-import { synchronize } from '@nozbe/watermelondb/sync';
+import * as SQLite from 'expo-sqlite';
 
-import schema from '../models/schema';
-import Exercise from '../models/Exercise';
-import Workout from '../models/Workout';
-import WorkoutSet from '../models/WorkoutSet';
-import Routine from '../models/Routine';
-import RoutineExercise from '../models/RoutineExercise';
-import Mesocycle from '../models/Mesocycle';
-import { supabase } from './supabase';
-import { seedExercisesIfNeeded } from './seedExercises';
+let _db = null;
 
-const adapter = new SQLiteAdapter({
-  schema,
-  dbName: 'volyume',
-  jsi: true,
-  onSetUpError: error => {
-    console.error('WatermelonDB setup error:', error);
-  },
-});
-
-export const database = new Database({
-  adapter,
-  modelClasses: [Exercise, Workout, WorkoutSet, Routine, RoutineExercise, Mesocycle],
-});
-
-// Sync tables that live locally
-const SYNC_TABLES = ['workouts', 'workout_sets', 'routines', 'routine_exercises', 'mesocycles'];
-
-export async function syncDatabase(userId) {
-  if (!userId) return;
-
-  try {
-    await synchronize({
-      database,
-      pullChanges: async ({ lastPulledAt, schemaVersion }) => {
-        const timestamp = lastPulledAt || 0;
-        const changes = {};
-
-        for (const table of SYNC_TABLES) {
-          const serverTime = new Date(timestamp).toISOString();
-          const { data, error } = await supabase
-            .from(table)
-            .select('*')
-            .eq('user_id', userId)
-            .gt('updated_at', serverTime);
-
-          if (error) throw error;
-
-          const deleted = [];
-          const created = [];
-          const updated = [];
-
-          for (const row of data || []) {
-            const record = serverRowToLocal(table, row);
-            if (record._deleted) {
-              deleted.push(row.id);
-            } else if (row.created_at === row.updated_at) {
-              created.push(record);
-            } else {
-              updated.push(record);
-            }
-          }
-
-          changes[table] = { created, updated, deleted };
-        }
-
-        // Also sync exercises (canonical ones without user_id)
-        const { data: exercises } = await supabase
-          .from('exercises')
-          .select('*')
-          .or(`user_id.eq.${userId},user_id.is.null`)
-          .gt('updated_at', new Date(timestamp).toISOString());
-
-        changes.exercises = {
-          created: (exercises || []).map(r => serverRowToLocal('exercises', r)),
-          updated: [],
-          deleted: [],
-        };
-
-        return { changes, timestamp: Date.now() };
-      },
-
-      pushChanges: async ({ changes, lastPulledAt }) => {
-        for (const table of SYNC_TABLES) {
-          const tableChanges = changes[table];
-          if (!tableChanges) continue;
-
-          const toUpsert = [
-            ...tableChanges.created.map(r => localRowToServer(table, r, userId)),
-            ...tableChanges.updated.map(r => localRowToServer(table, r, userId)),
-          ];
-
-          if (toUpsert.length > 0) {
-            const { error } = await supabase.from(table).upsert(toUpsert);
-            if (error) console.error(`Sync push error (${table}):`, error);
-          }
-
-          if (tableChanges.deleted.length > 0) {
-            const { error } = await supabase
-              .from(table)
-              .delete()
-              .in('id', tableChanges.deleted);
-            if (error) console.error(`Sync delete error (${table}):`, error);
-          }
-        }
-      },
-    });
-  } catch (error) {
-    console.error('Sync error:', error);
-  }
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
 }
 
-function serverRowToLocal(table, row) {
-  const base = {
-    id: row.id,
-    server_id: row.id,
-    created_at: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
-    updated_at: row.updated_at ? new Date(row.updated_at).getTime() : Date.now(),
-  };
-
-  switch (table) {
-    case 'exercises':
-      return {
-        ...base,
-        user_id: row.user_id || null,
-        name: row.name,
-        primary_muscle: row.primary_muscle,
-        secondary_muscles: row.secondary_muscles ? JSON.stringify(row.secondary_muscles) : null,
-        equipment: row.equipment,
-        movement_pattern: row.movement_pattern,
-        compound_isolation: row.compound_isolation,
-        default_rep_min: row.default_rep_min,
-        default_rep_max: row.default_rep_max,
-        fatigue_cost: row.fatigue_cost,
-        stimulus_to_fatigue_ratio: row.stimulus_to_fatigue_ratio,
-        is_custom: row.is_custom || false,
-        notes: row.notes,
-      };
-    case 'workouts':
-      return {
-        ...base,
-        user_id: row.user_id,
-        routine_id: row.routine_id,
-        mesocycle_id: row.mesocycle_id,
-        started_at: row.started_at ? new Date(row.started_at).getTime() : Date.now(),
-        ended_at: row.ended_at ? new Date(row.ended_at).getTime() : null,
-        duration_minutes: row.duration_minutes,
-        notes: row.notes,
-        session_difficulty: row.session_difficulty,
-        overall_pump: row.overall_pump,
-        soreness_24h_before: row.soreness_24h_before,
-        fatigue_level: row.fatigue_level,
-        is_completed: row.is_completed || false,
-      };
-    case 'workout_sets':
-      return {
-        ...base,
-        user_id: row.user_id,
-        workout_id: row.workout_id,
-        exercise_id: row.exercise_id,
-        set_number: row.set_number,
-        set_type: row.set_type || 'straight',
-        target_reps_min: row.target_reps_min,
-        target_reps_max: row.target_reps_max,
-        actual_reps: row.actual_reps,
-        weight: row.weight,
-        rir: row.rir,
-        rpe: row.rpe,
-        failed: row.failed || false,
-        notes: row.notes,
-        post_set_pump: row.post_set_pump,
-        post_set_muscle_connection: row.post_set_muscle_connection,
-        joint_discomfort: row.joint_discomfort,
-        is_amrap: row.is_amrap || false,
-        amrap_reps: row.amrap_reps,
-      };
-    case 'routines':
-      return {
-        ...base,
-        user_id: row.user_id,
-        name: row.name,
-        description: row.description,
-        split_type: row.split_type,
-        is_active: row.is_active !== false,
-      };
-    case 'routine_exercises':
-      return {
-        ...base,
-        routine_id: row.routine_id,
-        exercise_id: row.exercise_id,
-        order_in_routine: row.order_in_routine,
-        recommended_sets: row.recommended_sets,
-        recommended_reps_min: row.recommended_reps_min,
-        recommended_reps_max: row.recommended_reps_max,
-        notes: row.notes,
-      };
-    case 'mesocycles':
-      return {
-        ...base,
-        user_id: row.user_id,
-        name: row.name,
-        start_date: row.start_date,
-        end_date: row.end_date,
-        duration_weeks: row.duration_weeks,
-        focus: row.focus,
-        goals: row.goals,
-        is_active: row.is_active !== false,
-        deload_week: row.deload_week,
-        auto_regulation_enabled: row.auto_regulation_enabled !== false,
-      };
-    default:
-      return base;
+function rowToCamel(row) {
+  if (!row) return null;
+  const result = {};
+  for (const [key, value] of Object.entries(row)) {
+    const camelKey = key.replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase());
+    if (key === 'secondary_muscles' && typeof value === 'string') {
+      try { result[camelKey] = JSON.parse(value); } catch { result[camelKey] = []; }
+    } else {
+      result[camelKey] = value;
+    }
   }
-}
-
-function localRowToServer(table, row, userId) {
-  const base = {
-    id: row.server_id || row.id,
-    user_id: userId,
-    updated_at: new Date(row.updated_at || Date.now()).toISOString(),
-  };
-
-  switch (table) {
-    case 'workouts':
-      return {
-        ...base,
-        routine_id: row.routine_id || null,
-        mesocycle_id: row.mesocycle_id || null,
-        started_at: new Date(row.started_at).toISOString(),
-        ended_at: row.ended_at ? new Date(row.ended_at).toISOString() : null,
-        duration_minutes: row.duration_minutes || null,
-        notes: row.notes || null,
-        session_difficulty: row.session_difficulty || null,
-        overall_pump: row.overall_pump || null,
-        soreness_24h_before: row.soreness_24h_before || null,
-        fatigue_level: row.fatigue_level || null,
-        is_completed: row.is_completed || false,
-      };
-    case 'workout_sets':
-      return {
-        ...base,
-        workout_id: row.workout_id,
-        exercise_id: row.exercise_id,
-        set_number: row.set_number,
-        set_type: row.set_type || 'straight',
-        target_reps_min: row.target_reps_min || null,
-        target_reps_max: row.target_reps_max || null,
-        actual_reps: row.actual_reps,
-        weight: row.weight || null,
-        rir: row.rir !== undefined ? row.rir : null,
-        rpe: row.rpe !== undefined ? row.rpe : null,
-        failed: row.failed || false,
-        notes: row.notes || null,
-        post_set_pump: row.post_set_pump || null,
-        post_set_muscle_connection: row.post_set_muscle_connection || null,
-        joint_discomfort: row.joint_discomfort || null,
-        is_amrap: row.is_amrap || false,
-        amrap_reps: row.amrap_reps || null,
-      };
-    case 'routines':
-      return {
-        ...base,
-        name: row.name,
-        description: row.description || null,
-        split_type: row.split_type || null,
-        is_active: row.is_active !== false,
-      };
-    case 'routine_exercises':
-      return {
-        ...base,
-        routine_id: row.routine_id,
-        exercise_id: row.exercise_id,
-        order_in_routine: row.order_in_routine || 0,
-        recommended_sets: row.recommended_sets || 3,
-        recommended_reps_min: row.recommended_reps_min || 6,
-        recommended_reps_max: row.recommended_reps_max || 12,
-        notes: row.notes || null,
-      };
-    case 'mesocycles':
-      return {
-        ...base,
-        name: row.name,
-        start_date: row.start_date,
-        end_date: row.end_date,
-        duration_weeks: row.duration_weeks || null,
-        focus: row.focus || null,
-        goals: row.goals || null,
-        is_active: row.is_active !== false,
-        deload_week: row.deload_week || null,
-        auto_regulation_enabled: row.auto_regulation_enabled !== false,
-      };
-    default:
-      return base;
-  }
+  return result;
 }
 
 export async function initDatabase() {
-  await seedExercisesIfNeeded();
+  if (_db) return _db;
+  _db = await SQLite.openDatabaseAsync('volyume.db');
+  await _db.execAsync('PRAGMA journal_mode = WAL;');
+  await _db.execAsync(`
+    CREATE TABLE IF NOT EXISTS exercises (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      primary_muscle TEXT,
+      secondary_muscles TEXT,
+      equipment TEXT,
+      movement_pattern TEXT,
+      compound_isolation TEXT,
+      default_rep_min INTEGER,
+      default_rep_max INTEGER,
+      fatigue_cost INTEGER,
+      stimulus_to_fatigue_ratio INTEGER,
+      is_custom INTEGER DEFAULT 0,
+      notes TEXT,
+      created_at INTEGER,
+      updated_at INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS workouts (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      routine_id TEXT,
+      mesocycle_id TEXT,
+      started_at INTEGER,
+      ended_at INTEGER,
+      duration_minutes INTEGER,
+      notes TEXT,
+      session_difficulty INTEGER,
+      overall_pump INTEGER,
+      soreness_24h_before INTEGER,
+      fatigue_level INTEGER,
+      is_completed INTEGER DEFAULT 0,
+      created_at INTEGER,
+      updated_at INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS workout_sets (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      workout_id TEXT NOT NULL,
+      exercise_id TEXT NOT NULL,
+      set_number INTEGER,
+      set_type TEXT DEFAULT 'straight',
+      target_reps_min INTEGER,
+      target_reps_max INTEGER,
+      actual_reps INTEGER,
+      weight REAL,
+      rir INTEGER,
+      rpe REAL,
+      failed INTEGER DEFAULT 0,
+      notes TEXT,
+      post_set_pump INTEGER,
+      post_set_muscle_connection INTEGER,
+      joint_discomfort INTEGER,
+      is_amrap INTEGER DEFAULT 0,
+      amrap_reps INTEGER,
+      created_at INTEGER,
+      updated_at INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS routines (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      split_type TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at INTEGER,
+      updated_at INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS routine_exercises (
+      id TEXT PRIMARY KEY,
+      routine_id TEXT NOT NULL,
+      exercise_id TEXT NOT NULL,
+      order_in_routine INTEGER DEFAULT 0,
+      recommended_sets INTEGER DEFAULT 3,
+      recommended_reps_min INTEGER DEFAULT 6,
+      recommended_reps_max INTEGER DEFAULT 12,
+      notes TEXT,
+      created_at INTEGER,
+      updated_at INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS mesocycles (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      start_date TEXT,
+      end_date TEXT,
+      duration_weeks INTEGER,
+      focus TEXT,
+      goals TEXT,
+      is_active INTEGER DEFAULT 1,
+      deload_week INTEGER,
+      auto_regulation_enabled INTEGER DEFAULT 1,
+      created_at INTEGER,
+      updated_at INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_workouts_user ON workouts(user_id);
+    CREATE INDEX IF NOT EXISTS idx_workout_sets_workout ON workout_sets(workout_id);
+    CREATE INDEX IF NOT EXISTS idx_workout_sets_exercise ON workout_sets(exercise_id, user_id);
+    CREATE INDEX IF NOT EXISTS idx_routines_user ON routines(user_id);
+    CREATE INDEX IF NOT EXISTS idx_routine_exercises_routine ON routine_exercises(routine_id);
+    CREATE INDEX IF NOT EXISTS idx_mesocycles_user ON mesocycles(user_id);
+  `);
+  return _db;
 }
 
-// Query helpers
+async function db() {
+  return _db || initDatabase();
+}
+
+// ─── Exercises ───────────────────────────────────────────────────────────────
+
+export async function getAllExercises() {
+  const d = await db();
+  const rows = await d.getAllAsync('SELECT * FROM exercises ORDER BY name ASC');
+  return rows.map(rowToCamel);
+}
+
+export async function getExerciseById(id) {
+  const d = await db();
+  const row = await d.getFirstAsync('SELECT * FROM exercises WHERE id = ?', [id]);
+  return rowToCamel(row);
+}
+
 export async function getExercisesByMuscle(muscle) {
-  return database
-    .get('exercises')
-    .query()
-    .fetch()
-    .then(all => all.filter(e => e.primaryMuscle?.toLowerCase() === muscle?.toLowerCase()));
+  const d = await db();
+  const rows = await d.getAllAsync(
+    'SELECT * FROM exercises WHERE lower(primary_muscle) = lower(?)',
+    [muscle],
+  );
+  return rows.map(rowToCamel);
+}
+
+export async function insertExercise(data) {
+  const d = await db();
+  const id = uid();
+  const now = Date.now();
+  await d.runAsync(
+    `INSERT OR IGNORE INTO exercises
+      (id, name, primary_muscle, secondary_muscles, equipment, movement_pattern,
+       compound_isolation, default_rep_min, default_rep_max, fatigue_cost,
+       stimulus_to_fatigue_ratio, is_custom, notes, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      data.name,
+      data.primaryMuscle || null,
+      data.secondaryMuscles ? JSON.stringify(data.secondaryMuscles) : null,
+      data.equipment || null,
+      data.movementPattern || null,
+      data.compoundIsolation || null,
+      data.defaultRepMin ?? null,
+      data.defaultRepMax ?? null,
+      data.fatigueCost ?? null,
+      data.stimulusToFatigueRatio ?? null,
+      data.isCustom ? 1 : 0,
+      data.notes || null,
+      now,
+      now,
+    ],
+  );
+  return { id, ...data, createdAt: now, updatedAt: now };
+}
+
+// ─── Workouts ─────────────────────────────────────────────────────────────────
+
+export async function getAllWorkouts(userId) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    'SELECT * FROM workouts WHERE user_id = ? ORDER BY started_at DESC',
+    [userId],
+  );
+  return rows.map(rowToCamel);
+}
+
+export async function getWorkoutById(id) {
+  const d = await db();
+  const row = await d.getFirstAsync('SELECT * FROM workouts WHERE id = ?', [id]);
+  return rowToCamel(row);
+}
+
+export async function createWorkout(userId, routineId = null) {
+  const d = await db();
+  const id = uid();
+  const now = Date.now();
+  await d.runAsync(
+    `INSERT INTO workouts (id, user_id, routine_id, started_at, is_completed, created_at, updated_at)
+     VALUES (?, ?, ?, ?, 0, ?, ?)`,
+    [id, userId, routineId, now, now, now],
+  );
+  return { id, userId, routineId, startedAt: now, isCompleted: 0, createdAt: now, updatedAt: now };
+}
+
+export async function updateWorkout(id, data) {
+  const d = await db();
+  const now = Date.now();
+  const fieldMap = {
+    endedAt: 'ended_at',
+    durationMinutes: 'duration_minutes',
+    isCompleted: 'is_completed',
+    notes: 'notes',
+    sessionDifficulty: 'session_difficulty',
+    overallPump: 'overall_pump',
+    soreness24hBefore: 'soreness_24h_before',
+    fatigueLevel: 'fatigue_level',
+  };
+  const fields = [];
+  const values = [];
+  for (const [key, col] of Object.entries(fieldMap)) {
+    if (key in data) {
+      fields.push(`${col} = ?`);
+      values.push(typeof data[key] === 'boolean' ? (data[key] ? 1 : 0) : data[key]);
+    }
+  }
+  if (fields.length === 0) return;
+  fields.push('updated_at = ?');
+  values.push(now, id);
+  await d.runAsync(`UPDATE workouts SET ${fields.join(', ')} WHERE id = ?`, values);
+}
+
+// ─── Workout Sets ─────────────────────────────────────────────────────────────
+
+export async function getAllWorkoutSets(userId) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    'SELECT * FROM workout_sets WHERE user_id = ? ORDER BY created_at DESC',
+    [userId],
+  );
+  return rows.map(rowToCamel);
+}
+
+export async function getWorkoutSetsForWorkout(workoutId) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    'SELECT * FROM workout_sets WHERE workout_id = ? ORDER BY set_number ASC',
+    [workoutId],
+  );
+  return rows.map(rowToCamel);
 }
 
 export async function getWorkoutSetsForExercise(exerciseId, userId, limit = 100) {
-  const allSets = await database.get('workout_sets').query().fetch();
-  return allSets
-    .filter(s => s.exerciseId === exerciseId && s.userId === userId)
-    .sort((a, b) => b.createdAt - a.createdAt)
-    .slice(0, limit);
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT * FROM workout_sets
+     WHERE exercise_id = ? AND user_id = ?
+     ORDER BY created_at DESC LIMIT ?`,
+    [exerciseId, userId, limit],
+  );
+  return rows.map(rowToCamel);
 }
 
 export async function getPreviousWorkoutSets(exerciseId, currentWorkoutId) {
-  const allSets = await database.get('workout_sets').query().fetch();
-  const otherSets = allSets.filter(
-    s => s.exerciseId === exerciseId && s.workoutId !== currentWorkoutId,
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT * FROM workout_sets
+     WHERE exercise_id = ? AND workout_id != ?
+     ORDER BY created_at DESC`,
+    [exerciseId, currentWorkoutId],
   );
-  otherSets.sort((a, b) => b.createdAt - a.createdAt);
+  if (rows.length === 0) return [];
+  const mapped = rows.map(rowToCamel);
+  const mostRecentWorkoutId = mapped[0].workoutId;
+  return mapped.filter(s => s.workoutId === mostRecentWorkoutId);
+}
 
-  if (otherSets.length === 0) return [];
+export async function createWorkoutSet(data) {
+  const d = await db();
+  const id = uid();
+  const now = Date.now();
+  await d.runAsync(
+    `INSERT INTO workout_sets
+      (id, user_id, workout_id, exercise_id, set_number, set_type,
+       target_reps_min, target_reps_max, actual_reps, weight, rir, rpe,
+       failed, notes, is_amrap, amrap_reps, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      data.userId,
+      data.workoutId,
+      data.exerciseId,
+      data.setNumber || 1,
+      data.setType || 'straight',
+      data.targetRepsMin ?? null,
+      data.targetRepsMax ?? null,
+      data.actualReps || 0,
+      data.weight || 0,
+      data.rir ?? null,
+      data.rpe ?? null,
+      data.failed ? 1 : 0,
+      data.notes || null,
+      data.isAmrap ? 1 : 0,
+      data.amrapReps ?? null,
+      now,
+      now,
+    ],
+  );
+  return { id, ...data, createdAt: now, updatedAt: now };
+}
 
-  const mostRecentWorkoutId = otherSets[0].workoutId;
-  return otherSets.filter(s => s.workoutId === mostRecentWorkoutId);
+// ─── Routines ─────────────────────────────────────────────────────────────────
+
+export async function getAllRoutines(userId) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    'SELECT * FROM routines WHERE user_id = ? ORDER BY updated_at DESC',
+    [userId],
+  );
+  return rows.map(rowToCamel);
+}
+
+export async function getRoutineById(id) {
+  const d = await db();
+  const row = await d.getFirstAsync('SELECT * FROM routines WHERE id = ?', [id]);
+  return rowToCamel(row);
+}
+
+export async function createRoutine(userId, name, description = null, splitType = null) {
+  const d = await db();
+  const id = uid();
+  const now = Date.now();
+  await d.runAsync(
+    `INSERT INTO routines (id, user_id, name, description, split_type, is_active, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
+    [id, userId, name, description, splitType, now, now],
+  );
+  return { id, userId, name, description, splitType, isActive: 1, createdAt: now, updatedAt: now };
+}
+
+export async function softDeleteRoutine(id) {
+  const d = await db();
+  await d.runAsync(
+    'UPDATE routines SET is_active = 0, updated_at = ? WHERE id = ?',
+    [Date.now(), id],
+  );
+}
+
+// ─── Routine Exercises ────────────────────────────────────────────────────────
+
+export async function getRoutineExercisesWithDetails(routineId) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT re.*,
+            e.name AS exercise_name,
+            e.primary_muscle,
+            e.secondary_muscles,
+            e.equipment,
+            e.movement_pattern,
+            e.compound_isolation,
+            e.default_rep_min,
+            e.default_rep_max,
+            e.fatigue_cost,
+            e.stimulus_to_fatigue_ratio
+     FROM routine_exercises re
+     JOIN exercises e ON e.id = re.exercise_id
+     WHERE re.routine_id = ?
+     ORDER BY re.order_in_routine ASC`,
+    [routineId],
+  );
+  return rows.map(row => {
+    const re = rowToCamel(row);
+    const exercise = {
+      id: row.exercise_id,
+      name: row.exercise_name,
+      primaryMuscle: row.primary_muscle,
+      secondaryMuscles: (() => { try { return JSON.parse(row.secondary_muscles || '[]'); } catch { return []; } })(),
+      equipment: row.equipment,
+      movementPattern: row.movement_pattern,
+      compoundIsolation: row.compound_isolation,
+      defaultRepMin: row.default_rep_min,
+      defaultRepMax: row.default_rep_max,
+      fatigueCost: row.fatigue_cost,
+      stimulusToFatigueRatio: row.stimulus_to_fatigue_ratio,
+    };
+    return { routineExercise: re, exercise };
+  });
+}
+
+export async function addExerciseToRoutine(routineId, exerciseId, order, repsMin = 6, repsMax = 12) {
+  const d = await db();
+  const id = uid();
+  const now = Date.now();
+  await d.runAsync(
+    `INSERT INTO routine_exercises
+      (id, routine_id, exercise_id, order_in_routine, recommended_sets,
+       recommended_reps_min, recommended_reps_max, created_at, updated_at)
+     VALUES (?, ?, ?, ?, 3, ?, ?, ?, ?)`,
+    [id, routineId, exerciseId, order, repsMin, repsMax, now, now],
+  );
+  return { id, routineId, exerciseId, orderInRoutine: order };
+}
+
+export async function removeExerciseFromRoutine(id) {
+  const d = await db();
+  await d.runAsync('DELETE FROM routine_exercises WHERE id = ?', [id]);
+}
+
+// ─── Mesocycles ───────────────────────────────────────────────────────────────
+
+export async function getAllMesocycles(userId) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    'SELECT * FROM mesocycles WHERE user_id = ? ORDER BY created_at DESC',
+    [userId],
+  );
+  return rows.map(rowToCamel);
+}
+
+export async function createMesocycle(data) {
+  const d = await db();
+  const id = uid();
+  const now = Date.now();
+  await d.runAsync(
+    `INSERT INTO mesocycles
+      (id, user_id, name, start_date, end_date, duration_weeks, focus,
+       is_active, deload_week, auto_regulation_enabled, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      data.userId,
+      data.name,
+      data.startDate || null,
+      data.endDate || null,
+      data.durationWeeks || null,
+      data.focus || null,
+      data.isActive ? 1 : 0,
+      data.deloadWeek || null,
+      data.autoRegulationEnabled ? 1 : 0,
+      now,
+      now,
+    ],
+  );
+  return { id, ...data, createdAt: now, updatedAt: now };
 }

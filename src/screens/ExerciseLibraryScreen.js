@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import ExerciseCard from '../components/ExerciseCard';
-import { database } from '../lib/database';
+import { getAllExercises, getAllWorkoutSets } from '../lib/database';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 
@@ -29,11 +29,11 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
   }, []);
 
   async function loadExercises() {
-    const all = await database.get('exercises').query().fetch();
+    const all = await getAllExercises();
     setExercises(all);
     if (user?.id) {
-      const sets = await database.get('workout_sets').query().fetch();
-      setRecentSets(sets.filter(s => s.userId === user.id));
+      const sets = await getAllWorkoutSets(user.id);
+      setRecentSets(sets);
     }
   }
 

@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { database } from '../lib/database';
+import { getExerciseById, getWorkoutSetsForExercise, getAllExercises } from '../lib/database';
 import { calculate1RM, getExerciseSubstitutes, MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 
@@ -22,15 +22,12 @@ export default function ExerciseDetailScreen({ navigation, route }) {
 
   async function loadData() {
     try {
-      const ex = await database.get('exercises').find(exerciseId);
+      const ex = await getExerciseById(exerciseId);
       setExercise(ex);
       navigation.setOptions({ title: ex.name });
 
       // History — group by workout, last 8 sessions
-      const allSets = await database.get('workout_sets').query().fetch();
-      const mySets = allSets
-        .filter(s => s.exerciseId === exerciseId && s.userId === user.id)
-        .sort((a, b) => b.createdAt - a.createdAt);
+      const mySets = await getWorkoutSetsForExercise(exerciseId, user.id, 200);
 
       const byWorkout = {};
       for (const s of mySets) {
@@ -44,7 +41,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
       setPRs([]);
 
       // Substitutes
-      const allExercises = await database.get('exercises').query().fetch();
+      const allExercises = await getAllExercises();
       const subs = getExerciseSubstitutes(ex, allExercises, []);
       setSubstitutes(subs);
     } catch (e) {

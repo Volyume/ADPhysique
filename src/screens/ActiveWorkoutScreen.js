@@ -21,7 +21,7 @@ import SetEntry from '../components/SetEntry';
 import RestTimer from '../components/RestTimer';
 import PlateCalculator from '../components/PlateCalculator';
 import useAppStore from '../store/useAppStore';
-import { database, getPreviousWorkoutSets } from '../lib/database';
+import { getPreviousWorkoutSets, createWorkoutSet, updateWorkout, getAllExercises } from '../lib/database';
 import {
   detectPR,
   getProgressionSuggestion,
@@ -117,26 +117,22 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
     try {
       const setNumber = loggedSets.length + 1;
-      let savedSet;
 
-      await database.write(async () => {
-        savedSet = await database.get('workout_sets').create(record => {
-          record.userId = user.id;
-          record.workoutId = activeWorkout.id;
-          record.exerciseId = exercise.id;
-          record.setNumber = setNumber;
-          record.setType = currentSet.setType || 'straight';
-          record.targetRepsMin = routineExercise?.recommendedRepsMin || null;
-          record.targetRepsMax = routineExercise?.recommendedRepsMax || null;
-          record.actualReps = parseInt(currentSet.reps, 10);
-          record.weight = parseFloat(currentSet.weight) || 0;
-          record.rir = currentSet.rir ?? null;
-          record.rpe = currentSet.rpe ?? null;
-          record.failed = false;
-          record.notes = noteText || null;
-          record.isAmrap = currentSet.setType === 'amrap';
-          record.updatedAt = Date.now();
-        });
+      const savedSet = await createWorkoutSet({
+        userId: user.id,
+        workoutId: activeWorkout.id,
+        exerciseId: exercise.id,
+        setNumber,
+        setType: currentSet.setType || 'straight',
+        targetRepsMin: routineExercise?.recommendedRepsMin ?? null,
+        targetRepsMax: routineExercise?.recommendedRepsMax ?? null,
+        actualReps: parseInt(currentSet.reps, 10),
+        weight: parseFloat(currentSet.weight) || 0,
+        rir: currentSet.rir ?? null,
+        rpe: currentSet.rpe ?? null,
+        failed: false,
+        notes: noteText || null,
+        isAmrap: currentSet.setType === 'amrap',
       });
 
       const setData = {
@@ -192,13 +188,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         {
           text: 'Finish',
           onPress: async () => {
-            await database.write(async () => {
-              await activeWorkout.update(w => {
-                w.endedAt = Date.now();
-                w.durationMinutes = Math.round(elapsedSeconds / 60);
-                w.isCompleted = true;
-                w.updatedAt = Date.now();
-              });
+            await updateWorkout(activeWorkout.id, {
+              endedAt: Date.now(),
+              durationMinutes: Math.round(elapsedSeconds / 60),
+              isCompleted: true,
             });
             const allSets = workoutExercises.flatMap(e => e.sets);
             endWorkout();
@@ -517,7 +510,7 @@ function ExercisePickerModal({ visible, onClose, onSelect }) {
   }, [visible]);
 
   async function loadExercises() {
-    const all = await database.get('exercises').query().fetch();
+    const all = await getAllExercises();
     setExercises(all);
   }
 
