@@ -1,6 +1,9 @@
 name: EAS Build
 
 on:
+  push:
+    branches:
+      - claude/build-volyume-app-srY9C
   workflow_dispatch:
     inputs:
       platform:
@@ -39,9 +42,9 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Build iOS (Simulator)
-        if: ${{ github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all' }}
+        if: ${{ github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all' || github.event_name == 'push' }}
         run: eas build --platform ios --profile development --non-interactive
 
       - name: Build Android
-        if: ${{ github.event.inputs.platform == 'android' || github.event.inputs.platform == 'all' }}
+        if: ${{ github.event.inputs.platform == 'android' || github.event.inputs.platform == 'all' || github.event_name == 'push' }}
         run: eas build --platform android --profile development --non-interactive
