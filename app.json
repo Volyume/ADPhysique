@@ -8,6 +8,7 @@
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0D0D0D",
     "splash": {
+      "image": "./assets/splash.png",
       "backgroundColor": "#0D0D0D",
       "resizeMode": "contain"
     },
@@ -21,6 +22,7 @@
     },
     "android": {
       "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0D0D0D"
       },
       "package": "app.volyume"
@@ -32,7 +34,6 @@
     "plugins": [
       "expo-dev-client",
       "expo-secure-store"
-    ],
-    "newArchEnabled": false
+    ]
   }
 }
