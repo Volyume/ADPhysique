@@ -55,6 +55,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const currentEntry = workoutExercises[currentExerciseIndex];
   const exercise = currentEntry?.exercise;
   const routineExercise = currentEntry?.routineExercise;
+  const isLastExercise = currentExerciseIndex === workoutExercises.length - 1;
+
+  function handleNextExercise() {
+    setCurrentExerciseIndex(currentExerciseIndex + 1);
+    setTimeout(() => scrollRef.current?.scrollTo({ y: 0, animated: true }), 50);
+  }
 
   // Workout timer
   useEffect(() => {
@@ -394,15 +400,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
               <Text style={styles.actionBtnText}>Note</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.actionBtn}
-              onPress={() => setCurrentExerciseIndex(
-                (currentExerciseIndex + 1) % workoutExercises.length,
-              )}
-            >
-              <Ionicons name="swap-horizontal-outline" size={18} color={colors.textSecondary} />
-              <Text style={styles.actionBtnText}>Switch</Text>
-            </TouchableOpacity>
           </View>
 
           {/* Rest Timer */}
@@ -429,6 +426,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 );
               })}
             </View>
+          )}
+
+          {/* Exercise Navigation — Next Exercise or Finish Workout */}
+          {isLastExercise ? (
+            <TouchableOpacity style={styles.finishWorkoutLargeBtn} onPress={handleFinishWorkout}>
+              <Ionicons name="checkmark-done" size={20} color={colors.background} />
+              <Text style={styles.finishWorkoutLargeBtnText}>Finish Workout</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={styles.nextExerciseBtn} onPress={handleNextExercise}>
+              <Text style={styles.nextExerciseBtnText}>Next Exercise</Text>
+              <Ionicons name="arrow-forward" size={18} color={colors.primary} />
+            </TouchableOpacity>
           )}
 
           <View style={{ height: 40 }} />
@@ -777,6 +787,35 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textSecondary,
     fontWeight: fontWeight.medium,
+  },
+  nextExerciseBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.lg,
+  },
+  nextExerciseBtnText: {
+    fontSize: fontSize.md,
+    color: colors.primary,
+    fontWeight: fontWeight.bold,
+  },
+  finishWorkoutLargeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.success,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.lg,
+  },
+  finishWorkoutLargeBtnText: {
+    fontSize: fontSize.md,
+    color: colors.background,
+    fontWeight: fontWeight.bold,
   },
   loggedSection: {
     gap: spacing.sm,
