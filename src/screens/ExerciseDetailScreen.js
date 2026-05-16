@@ -130,7 +130,8 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                     {sessionSets.map((s, j) => (
                       <Text key={j} style={styles.historySetText}>
                         {s.weight}{units} × {s.actualReps}
-                        {s.rir !== null && s.rir !== undefined ? ` (RIR ${s.rir})` : ''}
+                        {s.set_type === 'warmup' || s.setType === 'warmup' ? ' · Warm-up' : ''}
+                        {s.set_type === 'dropset' || s.setType === 'dropset' ? ' · Drop Set' : ''}
                       </Text>
                     ))}
                   </View>
