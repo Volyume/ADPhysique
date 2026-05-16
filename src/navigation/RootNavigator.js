@@ -134,39 +134,41 @@ export default function RootNavigator() {
 
   useEffect(() => {
     async function bootstrap() {
-      // Init DB tables, then seed exercises (no-op after first run)
-      initDatabase()
-        .then(() => seedExercisesIfNeeded().catch(console.error))
-        .catch(console.error);
-
-      // 1. Try Supabase auth (works when credentials are configured)
       try {
-        const client = getSupabaseClient();
-        if (client) {
-          const { data: { session } } = await client.auth.getSession();
-          if (session?.user) {
-            setSession(session);
-            setUser(session.user);
-            setAuthLoading(false);
-            return;
+        // Init DB + seed in background — errors are non-fatal
+        initDatabase()
+          .then(() => seedExercisesIfNeeded().catch(console.warn))
+          .catch(console.warn);
+
+        // 1. Try Supabase auth (works when credentials are configured)
+        try {
+          const client = getSupabaseClient();
+          if (client) {
+            const { data: { session } } = await client.auth.getSession();
+            if (session?.user) {
+              setSession(session);
+              setUser(session.user);
+              setAuthLoading(false);
+              return;
+            }
           }
-        }
-      } catch (_e) {
-        // Supabase not configured yet — that's fine for Stage 1
+        } catch (_e) {}
+
+        // 2. Check for an existing local user (persisted across restarts)
+        try {
+          const localId = await AsyncStorage.getItem(LOCAL_USER_KEY);
+          if (localId) {
+            setUser({ id: localId, email: 'local@device', isLocal: true });
+          }
+        } catch (_e) {}
+      } catch (err) {
+        console.error('bootstrap failed:', err);
+      } finally {
+        setAuthLoading(false);
       }
-
-      // 2. Check for an existing local user (persisted across restarts)
-      try {
-        const localId = await AsyncStorage.getItem(LOCAL_USER_KEY);
-        if (localId) {
-          setUser({ id: localId, email: 'local@device', isLocal: true });
-        }
-      } catch (_e) {}
-
-      setAuthLoading(false);
     }
 
-    bootstrap();
+    bootstrap().catch(console.error);
 
     // Still subscribe to Supabase auth changes (works when credentials are present)
     let subscription;

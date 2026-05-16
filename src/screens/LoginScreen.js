@@ -15,7 +15,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { signInWithEmail, signUpWithEmail, resetPassword } from '../lib/supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../store/useAppStore';
+
+const CRASH_LOG_KEY = '@volyume_crash_log';
 
 export default function LoginScreen({ navigation }) {
   const { initLocalUser } = useAppStore();
@@ -25,6 +28,19 @@ export default function LoginScreen({ navigation }) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [localLoading, setLocalLoading] = useState(false);
+  const [crashLog, setCrashLog] = useState(null);
+
+  // On mount, check for a stored crash log from a previous fatal error
+  React.useEffect(() => {
+    AsyncStorage.getItem(CRASH_LOG_KEY).then(raw => {
+      if (raw) {
+        try {
+          const data = JSON.parse(raw);
+          setCrashLog(data);
+        } catch (_) {}
+      }
+    }).catch(() => {});
+  }, []);
 
   async function handleEmailAuth() {
     if (!email.trim() || !password.trim()) {
@@ -76,6 +92,17 @@ export default function LoginScreen({ navigation }) {
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          {/* Crash log — only shown when a previous fatal error was stored */}
+          {crashLog && (
+            <View style={{ backgroundColor: '#1a0000', borderWidth: 1, borderColor: '#FF3B30', borderRadius: 8, padding: 12, margin: 8 }}>
+              <Text style={{ color: '#FF3B30', fontWeight: 'bold', marginBottom: 4 }}>Previous crash detected — screenshot this:</Text>
+              <Text style={{ color: '#FF8080', fontSize: 12 }}>{crashLog.message}</Text>
+              <Text style={{ color: '#999', fontSize: 10, marginTop: 4 }}>{crashLog.stack?.slice(0, 400)}</Text>
+              <TouchableOpacity onPress={() => { AsyncStorage.removeItem(CRASH_LOG_KEY); setCrashLog(null); }} style={{ marginTop: 8 }}>
+                <Text style={{ color: '#FF3B30', fontSize: 12 }}>Dismiss</Text>
+              </TouchableOpacity>
+            </View>
+          )}
           {/* Logo */}
           <View style={styles.logoContainer}>
             <View style={styles.logoMark}>
