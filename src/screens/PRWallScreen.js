@@ -6,7 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { database } from '../lib/database';
+import { getAllWorkoutSets, getAllExercises } from '../lib/database';
+import { calculate1RM } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 
 const STRENGTH_EXERCISES = ['Barbell Bench Press', 'Barbell Squat', 'Deadlift'];
@@ -23,9 +24,44 @@ export default function PRWallScreen({ navigation }) {
   useEffect(() => { loadData(); }, [user?.id]);
 
   async function loadData() {
-    // Stage 1: PRs not yet tracked locally — will be populated in Stage 4
-    setPRs([]);
-    setGrouped({});
+    if (!user?.id) return;
+    try {
+      const [allSets, allExercises] = await Promise.all([
+        getAllWorkoutSets(user.id),
+        getAllExercises(),
+      ]);
+      const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
+      const byExercise = {};
+      for (const s of allSets) {
+        const ex = exerciseMap[s.exerciseId];
+        if (!ex) continue;
+        const name = ex.name;
+        if (!byExercise[name]) byExercise[name] = [];
+        byExercise[name].push(s);
+      }
+      const newGrouped = {};
+      for (const [name, sets] of Object.entries(byExercise)) {
+        const best1RM = sets.reduce((best, s) => {
+          const est = calculate1RM(s.weight || 0, s.actualReps || 0);
+          return est > (best?.value || 0)
+            ? { value: est, reps: s.actualReps, weight: s.weight, achieved_date: new Date(s.createdAt).toISOString() }
+            : best;
+        }, null);
+        const heaviest = sets.reduce((best, s) => {
+          return (s.weight || 0) > (best?.value || 0)
+            ? { value: s.weight, reps: s.actualReps, achieved_date: new Date(s.createdAt).toISOString() }
+            : best;
+        }, null);
+        if (best1RM || heaviest) {
+          newGrouped[name] = {};
+          if (best1RM) newGrouped[name]['1rm_estimate'] = best1RM;
+          if (heaviest) newGrouped[name]['heaviest_weight'] = heaviest;
+        }
+      }
+      setGrouped(newGrouped);
+    } catch (e) {
+      console.error('PRWallScreen loadData:', e);
+    }
   }
 
   async function handleRefresh() {
