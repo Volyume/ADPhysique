@@ -54,13 +54,8 @@ export function calculateTonnage(sets) {
 }
 
 function isHardSet(set) {
-  const rir = set.rir ?? set.RIR;
-  const rpe = set.rpe ?? set.RPE;
   const setType = set.setType || set.set_type || 'straight';
-  if (setType === 'warmup') return false;
-  if (rir !== null && rir !== undefined) return rir <= 2;
-  if (rpe !== null && rpe !== undefined) return rpe >= 7;
-  return true;
+  return setType !== 'warmup';
 }
 
 // Algorithm 1: Weekly Volume Tracking Per Muscle
@@ -80,9 +75,9 @@ export function calculateWeeklyVolume(sets, exerciseMap = {}) {
 
     if (primaryMuscle) {
       if (!volumeByMuscle[primaryMuscle]) {
-        volumeByMuscle[primaryMuscle] = { hardSets: 0, reps: 0, tonnage: 0 };
+        volumeByMuscle[primaryMuscle] = { workingSets: 0, reps: 0, tonnage: 0 };
       }
-      volumeByMuscle[primaryMuscle].hardSets += 1;
+      volumeByMuscle[primaryMuscle].workingSets += 1;
       volumeByMuscle[primaryMuscle].reps += set.actualReps || set.actual_reps || 0;
       volumeByMuscle[primaryMuscle].tonnage +=
         (set.weight || 0) * (set.actualReps || set.actual_reps || 0);
@@ -92,9 +87,9 @@ export function calculateWeeklyVolume(sets, exerciseMap = {}) {
       const muscle = (sec.muscle || sec).toLowerCase();
       const contribution = sec.contribution || 0.5;
       if (!volumeByMuscle[muscle]) {
-        volumeByMuscle[muscle] = { hardSets: 0, reps: 0, tonnage: 0 };
+        volumeByMuscle[muscle] = { workingSets: 0, reps: 0, tonnage: 0 };
       }
-      volumeByMuscle[muscle].hardSets += contribution;
+      volumeByMuscle[muscle].workingSets += contribution;
     }
   }
 
@@ -102,22 +97,22 @@ export function calculateWeeklyVolume(sets, exerciseMap = {}) {
 }
 
 // Algorithm 5: Volume Status
-export function getVolumeStatus(hardSets, muscle, customLandmarks = null) {
+export function getVolumeStatus(workingSets, muscle, customLandmarks = null) {
   const landmarks = customLandmarks?.[muscle] || VOLUME_LANDMARKS[muscle];
   if (!landmarks) return { status: 'unknown', color: '#9E9E9E', label: 'No data', landmarks: null };
 
   const { mev, mav, mrv } = landmarks;
 
-  if (hardSets < mev) {
+  if (workingSets < mev) {
     return { status: 'below', color: '#616161', label: 'Below target', landmarks };
   }
-  if (mev > 0 && hardSets <= mev + 2) {
+  if (mev > 0 && workingSets <= mev + 2) {
     return { status: 'minimum', color: '#FFB300', label: 'Minimum stimulus', landmarks };
   }
-  if (hardSets <= mav) {
+  if (workingSets <= mav) {
     return { status: 'optimal', color: '#00C853', label: 'Growth range', landmarks };
   }
-  if (hardSets <= mrv) {
+  if (workingSets <= mrv) {
     return { status: 'near_mrv', color: '#FFB300', label: 'Near recovery ceiling', landmarks };
   }
   return { status: 'over_mrv', color: '#FF3D00', label: 'Recovery debt', landmarks };
@@ -259,11 +254,11 @@ export function getAutoRegSuggestion(workoutFeedback, weeklyVolumeByMuscle, cust
   for (const [muscle, data] of Object.entries(weeklyVolumeByMuscle || {})) {
     const landmarks = customLandmarks?.[muscle] || VOLUME_LANDMARKS[muscle];
     if (!landmarks) continue;
-    if (data.hardSets > landmarks.mrv) {
+    if (data.workingSets > landmarks.mrv) {
       suggestions.push({
         type: 'deload_muscle',
         muscle,
-        message: `${MUSCLE_DISPLAY_NAMES[muscle] || muscle}: near recovery ceiling (${Math.round(data.hardSets)} hard sets). Avoid adding more direct volume unless recovery is excellent.`,
+        message: `${MUSCLE_DISPLAY_NAMES[muscle] || muscle}: near recovery ceiling (${Math.round(data.workingSets)} working sets). Consider reducing volume next session.`,
       });
     }
   }

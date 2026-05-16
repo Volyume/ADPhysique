@@ -43,7 +43,7 @@ function RatingRow({ label, field, value, max, onChange }) {
 }
 
 export default function WorkoutSummaryScreen({ navigation, route }) {
-  const { workoutId, durationMinutes, exerciseCount, setCount, hardSetCount, tonnage, exerciseNames = [] } =
+  const { workoutId, durationMinutes, exerciseCount, setCount, workingSetCount, tonnage, exerciseNames = [] } =
     route.params || {};
   const { user, units } = useAppStore();
 
@@ -102,11 +102,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   }
 
   const musclesWorked = Object.keys(weeklyVolume)
-    .filter(m => weeklyVolume[m]?.hardSets > 0)
-    .sort((a, b) => (weeklyVolume[b]?.hardSets || 0) - (weeklyVolume[a]?.hardSets || 0))
+    .filter(m => weeklyVolume[m]?.workingSets > 0)
+    .sort((a, b) => (weeklyVolume[b]?.workingSets || 0) - (weeklyVolume[a]?.workingSets || 0))
     .slice(0, 6);
 
-  const displayHardSets = hardSetCount ?? setCount ?? 0;
+  const displayWorkingSets = workingSetCount ?? setCount ?? 0;
   const dataLimited = completedWorkoutCount !== null && completedWorkoutCount < 4;
 
   return (
@@ -129,7 +129,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         {/* Stats */}
         <View style={styles.statsGrid}>
           <StatBox icon="barbell-outline" value={String(exerciseCount || 0)} label="Exercises" />
-          <StatBox icon="layers-outline" value={String(displayHardSets)} label="Hard Sets" />
+          <StatBox icon="layers-outline" value={String(displayWorkingSets)} label="Working Sets" />
           <StatBox icon="time-outline" value={`${durationMinutes || 0}m`} label="Duration" />
           <StatBox icon="trending-up-outline" value={`${((tonnage || 0) / 1000).toFixed(1)}t`} label="Total Volume" />
         </View>
@@ -140,11 +140,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             <Text style={styles.sectionTitle}>THIS WEEK AFTER SESSION</Text>
             {musclesWorked.map(muscle => {
               const data = weeklyVolume[muscle];
-              const { color, label } = getVolumeStatus(data.hardSets, muscle);
+              const { color, label } = getVolumeStatus(data.workingSets, muscle);
               return (
                 <View key={muscle} style={styles.volumeRow}>
                   <Text style={styles.muscleName}>{MUSCLE_DISPLAY_NAMES[muscle] || muscle}</Text>
-                  <Text style={styles.muscleSetCount}>{Math.round(data.hardSets)} hard sets</Text>
+                  <Text style={styles.muscleSetCount}>{Math.round(data.workingSets)} working sets</Text>
                   <View style={[styles.statusBadge, { backgroundColor: color + '22' }]}>
                     <Text style={[styles.statusText, { color }]}>{label}</Text>
                   </View>

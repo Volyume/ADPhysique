@@ -9,8 +9,8 @@ export default function VolumeBars({ weeklyVolume = {}, customLandmarks = null }
   return (
     <View style={styles.container}>
       {muscles.map(muscle => {
-        const data = weeklyVolume[muscle] || { hardSets: 0 };
-        const sets = data.hardSets || 0;
+        const data = weeklyVolume[muscle] || { workingSets: 0 };
+        const sets = data.workingSets || 0;
         const { status, color, label, landmarks } = getVolumeStatus(sets, muscle, customLandmarks);
         const mrv = landmarks?.mrv || VOLUME_LANDMARKS[muscle]?.mrv || 20;
         const fillPct = Math.min(sets / mrv, 1);

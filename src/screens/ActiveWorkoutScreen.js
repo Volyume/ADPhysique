@@ -29,25 +29,21 @@ import {
   calculateTonnage,
 } from '../lib/algorithms';
 
-const DEFAULT_SET = { weight: 0, reps: 8, rir: 2, setType: 'straight', notes: '' };
+const DEFAULT_SET = { weight: 0, reps: 8, setType: 'straight', notes: '' };
 
 const SET_TYPE_DISPLAY = {
-  straight: 'Working set',
+  straight: 'Working',
   warmup: 'Warm-up',
-  dropset: 'Drop set',
-  amrap: 'AMRAP',
+  dropset: 'Working',
+  amrap: 'Working',
+  myo_reps: 'Working',
+  rest_pause: 'Working',
+  superset: 'Working',
 };
 
 const SET_TYPE_OPTIONS = [
-  {
-    section: 'PHASE 1.5',
-    items: [
-      { value: 'straight', label: 'Working set', description: 'Normal hard set. Counts towards weekly volume.' },
-      { value: 'warmup', label: 'Warm-up', description: 'Preparation set. Does not count towards hard-set volume.' },
-      { value: 'amrap', label: 'AMRAP', description: 'As many reps as possible. Log the reps you achieved.' },
-      { value: 'dropset', label: 'Drop set', description: 'Reduce load immediately after the main set and continue.' },
-    ],
-  },
+  { value: 'straight', label: 'Working', description: 'Counts toward your weekly volume. Use this for all main sets.' },
+  { value: 'warmup', label: 'Warm-up', description: 'Preparation set. Does not count toward weekly volume.' },
 ];
 
 export default function ActiveWorkoutScreen({ navigation, route }) {
@@ -104,8 +100,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           ...c,
           weight: lastSet.weight || c.weight,
           reps: lastSet.actualReps || c.reps,
-          rir: lastSet.rir ?? c.rir,
-          rpe: lastSet.rpe ?? c.rpe,
         }));
       } else if (routineExercise) {
         setCurrentSet(c => ({
@@ -147,9 +141,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     try {
       const setNumber = loggedSets.length + 1;
 
-      const rir = currentSet.rir ?? null;
-      const derivedRpe = rir !== null ? 10 - rir : null;
-
       const savedSet = await createWorkoutSet({
         userId: user.id,
         workoutId: activeWorkout.id,
@@ -160,8 +151,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         targetRepsMax: routineExercise?.recommendedRepsMax ?? null,
         actualReps: parseInt(currentSet.reps, 10),
         weight: parseFloat(currentSet.weight) || 0,
-        rir,
-        rpe: derivedRpe,
+        rir: null,
+        rpe: null,
         failed: false,
         notes: noteText || null,
         isAmrap: currentSet.setType === 'amrap',
@@ -175,8 +166,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         setType: currentSet.setType,
         actualReps: parseInt(currentSet.reps, 10),
         weight: parseFloat(currentSet.weight) || 0,
-        rir: currentSet.rir ?? null,
-        rpe: derivedRpe,
+        rir: null,
+        rpe: null,
       };
 
       const newLoggedSets = [...loggedSets, setData];
@@ -227,16 +218,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               isCompleted: true,
             });
             const allSets = workoutExercises.flatMap(e => e.sets);
-            const hardSetCount = allSets.filter(
-              s => s.setType !== 'warmup' && (s.rir === null || s.rir <= 2),
-            ).length;
+            const workingSetCount = allSets.filter(s => s.setType !== 'warmup').length;
             endWorkout();
             navigation.replace('WorkoutSummary', {
               workoutId: activeWorkout.id,
               durationMinutes: Math.round(elapsedSeconds / 60),
               exerciseCount: workoutExercises.length,
               setCount: allSets.length,
-              hardSetCount,
+              workingSetCount,
               tonnage: calculateTonnage(allSets),
               exerciseNames: workoutExercises.map(e => e.exercise?.name).filter(Boolean),
             });
@@ -350,9 +339,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             {prevSets.length > 0 ? (
               <>
                 <Text style={styles.prevSetsSummary}>
-                  {prevSets.map((s, i) =>
-                    `${s.weight}${units} × ${s.actualReps}${s.rir !== null && s.rir !== undefined ? ` · RIR ${s.rir}` : ''}`
-                  ).join('   ')}
+                  {prevSets.map(s => `${s.weight}${units} × ${s.actualReps}`).join('   ')}
                 </Text>
                 {progression && progression.action !== 'baseline' && (
                   <View style={styles.progressionBadge}>
@@ -375,8 +362,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             <View style={styles.targetRow}>
               <Ionicons name="flag-outline" size={14} color={colors.textMuted} />
               <Text style={styles.targetText}>
-                Target: {routineExercise.recommendedSets || 3} sets,{' '}
-                {routineExercise.recommendedRepsMin}–{routineExercise.recommendedRepsMax} reps @ RIR 2
+                Target: {routineExercise.recommendedSets || 3} sets · {routineExercise.recommendedRepsMin}–{routineExercise.recommendedRepsMax} reps
               </Text>
             </View>
           )}
@@ -385,8 +371,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           <View style={styles.setEntryCard}>
             <Text style={styles.setEntryTitle}>
               {routineExercise?.recommendedSets
-                ? `SET ${loggedSets.length + 1} / ${routineExercise.recommendedSets} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working set'}`
-                : `SET ${loggedSets.length + 1} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working set'}`}
+                ? `SET ${loggedSets.length + 1} / ${routineExercise.recommendedSets} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working'}`
+                : `SET ${loggedSets.length + 1} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working'}`}
             </Text>
             <SetEntry
               value={currentSet}
@@ -449,7 +435,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     </View>
                     <Text style={styles.loggedSetText}>
                       {s.weight}{units} × {s.actualReps}
-                      {s.rir !== null && s.rir !== undefined ? ` · RIR ${s.rir}` : ''}
+                      {s.setType === 'warmup' ? ' · Warm-up' : ''}
                     </Text>
                     <Text style={styles.loggedEst1RM}>≈{est1RM.toFixed(0)}{units} 1RM</Text>
                     <Ionicons name="checkmark-circle" size={16} color={colors.success} />
@@ -518,7 +504,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           <View style={[styles.sheet, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}>
             <View style={styles.sheetHandle} />
             <Text style={styles.sheetTitle}>Set type</Text>
-            {SET_TYPE_OPTIONS[0].items.map(opt => (
+            <Text style={styles.sheetExplainer}>
+              Working sets count toward your weekly volume. Warm-up sets do not.{'\n'}Use Working for the sets you want to track for progression. Use Warm-up for preparation sets before your main work.
+            </Text>
+            {SET_TYPE_OPTIONS.map(opt => (
               <TouchableOpacity
                 key={opt.value}
                 style={styles.sheetOption}
@@ -559,7 +548,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             <Text style={styles.sheetTitle}>{exercise?.name}</Text>
             {routineExercise?.recommendedSets ? (
               <Text style={styles.infoTarget}>
-                Target: {routineExercise.recommendedSets} sets · {routineExercise.recommendedRepsMin}–{routineExercise.recommendedRepsMax} reps · RIR 2
+                Target: {routineExercise.recommendedSets} sets · {routineExercise.recommendedRepsMin}–{routineExercise.recommendedRepsMax} reps
               </Text>
             ) : null}
             {exercise?.primaryMuscle ? (
@@ -1072,6 +1061,12 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
     color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  sheetExplainer: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 20,
     marginBottom: spacing.lg,
   },
   sheetSection: {

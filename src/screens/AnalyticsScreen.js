@@ -121,7 +121,7 @@ export default function AnalyticsScreen({ navigation }) {
             <Text style={styles.sectionTitle}>THIS WEEK</Text>
             <View style={styles.statsGrid}>
               <StatCard value={String(weekStats.workoutCount)} label="Workouts" icon="barbell" />
-              <StatCard value={String(weekStats.totalSets)} label="Hard Sets" icon="layers" />
+              <StatCard value={String(weekStats.totalSets)} label="Working Sets" icon="layers" />
               <StatCard value={`${weekStats.tonnage}t`} label="Tonnage" icon="trending-up" />
               <StatCard value={`${weekStats.avgDuration}m`} label="Avg Session" icon="time" />
             </View>

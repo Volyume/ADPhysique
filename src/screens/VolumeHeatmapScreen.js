@@ -101,8 +101,8 @@ export default function VolumeHeatmapScreen() {
         {/* Muscle Rows */}
         <View style={styles.heatmapCard}>
           {muscles.map(muscle => {
-            const data = weeklyVolume[muscle] || { hardSets: 0 };
-            const sets = Math.round(data.hardSets || 0);
+            const data = weeklyVolume[muscle] || { workingSets: 0 };
+            const sets = Math.round(data.workingSets || 0);
             const landmarks = effectiveLandmarks?.[muscle] || VOLUME_LANDMARKS[muscle];
             const { color, label } = getVolumeStatus(sets, muscle, effectiveLandmarks);
             const mrv = landmarks.mrv || 20;

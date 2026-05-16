@@ -3,25 +3,23 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-nativ
 import * as Haptics from 'expo-haptics';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 
-const RIR_OPTIONS = [0, 1, 2, 3, 4, 5];
-
 const SET_TYPE_LABELS = {
-  straight: 'Working set',
+  straight: 'Working',
   warmup: 'Warm-up',
-  dropset: 'Drop set',
-  superset: 'Superset',
-  myo_reps: 'Myo-reps',
-  rest_pause: 'Rest-pause',
-  amrap: 'AMRAP',
+  dropset: 'Working',
+  superset: 'Working',
+  myo_reps: 'Working',
+  rest_pause: 'Working',
+  amrap: 'Working',
 };
 
 export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypePicker }) {
-  const { weight, reps, rir, setType } = value;
+  const { weight, reps, setType } = value;
 
   function adjust(field, delta) {
     Haptics.selectionAsync();
-    const steps = { weight: 2.5, reps: 1, rir: 1 };
-    const limits = { weight: [0, 500], reps: [1, 100], rir: [0, 5] };
+    const steps = { weight: 2.5, reps: 1 };
+    const limits = { weight: [0, 500], reps: [1, 100] };
     const current = value[field] || 0;
     const next = Math.min(Math.max(current + delta * (steps[field] || 1), limits[field][0]), limits[field][1]);
     onChange({ ...value, [field]: field === 'weight' ? Math.round(next * 100) / 100 : Math.round(next) });
@@ -31,7 +29,7 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
     onChange({ ...value, [field]: val });
   }
 
-  const setTypeLabel = SET_TYPE_LABELS[setType] || 'Working set';
+  const setTypeLabel = SET_TYPE_LABELS[setType] || 'Working';
 
   return (
     <View style={styles.container}>
@@ -80,22 +78,6 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
           <TouchableOpacity style={styles.stepBtn} onPress={() => adjust('reps', 1)}>
             <Text style={styles.stepBtnText}>+</Text>
           </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* RIR Row */}
-      <View style={styles.rirRow}>
-        <Text style={styles.fieldLabel}>RIR</Text>
-        <View style={styles.chipRow}>
-          {RIR_OPTIONS.map(v => (
-            <TouchableOpacity
-              key={v}
-              style={[styles.chip, rir === v && styles.chipActive]}
-              onPress={() => { Haptics.selectionAsync(); setField('rir', v); }}
-            >
-              <Text style={[styles.chipText, rir === v && styles.chipTextActive]}>{v}</Text>
-            </TouchableOpacity>
-          ))}
         </View>
       </View>
 
@@ -157,38 +139,6 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     paddingVertical: spacing.sm,
     fontVariant: ['tabular-nums'],
-  },
-  rirRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  chipRow: {
-    flex: 1,
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  chip: {
-    flex: 1,
-    height: 40,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  chipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  chipText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-    color: colors.textSecondary,
-  },
-  chipTextActive: {
-    color: colors.background,
   },
   setTypeRow: {
     flexDirection: 'row',

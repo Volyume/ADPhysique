@@ -190,10 +190,10 @@ export default function HomeScreen({ navigation }) {
           )}
         </View>
 
-        {/* Weekly Hard Sets */}
+        {/* Weekly Working Sets */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>WEEKLY HARD SETS</Text>
+            <Text style={styles.sectionTitle}>WEEKLY WORKING SETS</Text>
             <TouchableOpacity
               onPress={() => navigation.navigate('AnalyticsTab', { screen: 'VolumeHeatmap' })}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}

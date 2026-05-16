@@ -94,16 +94,16 @@ Verify [SAMPLE] routines seed once and load correctly.
 | # | Step | Expected | Severity |
 |---|---|---|---|
 | D1 | Start workout, navigate to an exercise logged before | "PREVIOUS SESSION" card shows weight × reps in readable size | High |
-| D2 | Verify previous performance format | e.g. "80kg × 10 · RIR 2   80kg × 9 · RIR 2" on one line | High |
+| D2 | Verify previous performance format | e.g. "80kg × 10   80kg × 9" on one line (no RIR shown) | High |
 | D3 | Start workout, first-ever exercise | Previous card shows "No previous logs." | High |
-| D4 | Verify RIR is the only effort input visible | No RPE chip row visible | Critical |
-| D5 | Select RIR 0 | Chip highlights, value stored | High |
-| D6 | Check there is no RPE selector | RPE is not displayed or interactive | Critical |
-| D7 | Verify set counter label | "SET 1 / 4 · Working set" (if routine sets defined) or "SET 1 · Working set" | High |
-| D8 | Tap "Change" on set type | Bottom sheet opens with Working set, Warm-up, AMRAP, Drop set options | High |
+| D4 | Verify no RIR chips visible | No RIR chip row on screen | Critical |
+| D5 | Verify no RPE chips visible | No RPE chip row on screen | Critical |
+| D6 | Verify set counter label | "SET 1 / 4 · Working" (if routine sets defined) or "SET 1 · Working" | High |
+| D7 | Tap "Change" on set type | Bottom sheet opens with Working and Warm-up options only | High |
+| D8 | Verify explainer text in bottom sheet | "Working sets count toward your weekly volume. Warm-up sets do not." visible | High |
 | D9 | Select Warm-up | Label updates to "Warm-up" | High |
-| D10 | Complete a warm-up set | Set logged, but should not count as hard set in volume | High |
-| D11 | Select AMRAP | Label updates to "AMRAP" | Medium |
+| D10 | Complete a warm-up set | Set logged, does not count toward weekly volume | High |
+| D11 | Confirm no AMRAP/Drop set options in picker | Not visible in Phase 1.5 set type sheet | Medium |
 | D12 | Tap "Info" button | Bottom sheet opens with exercise name, target, notes | High |
 | D13 | Info sheet for [SAMPLE] routine exercise | Shows execution notes from routine | High |
 | D14 | Info sheet for non-sample exercise | Shows "No execution notes for this exercise." | Medium |
@@ -125,8 +125,8 @@ Verify [SAMPLE] routines seed once and load correctly.
 |---|---|---|---|
 | E1 | Finish any workout | Screen title: "Session Logged" | High |
 | E2 | No large green circle in header | Compact checkmark icon only | Medium |
-| E3 | Stats grid shows "Hard Sets" label | Not "Sets" | High |
-| E4 | Hard Sets count excludes warm-ups | Warm-up sets not counted | High |
+| E3 | Stats grid shows "Working Sets" label | Not "Sets" or "Hard Sets" | High |
+| E4 | Working Sets count excludes warm-ups | Warm-up sets not counted | High |
 | E5 | Stats shows "Total Volume" (not just "Tonnage") | Label is "Total Volume" | Medium |
 | E6 | "THIS WEEK AFTER SESSION" section visible | Muscle rows show correct hard set counts | High |
 | E7 | Volume status labels correct | "Below target", "Growth range", "Near recovery ceiling", "Recovery debt" (not "Below MEV", "Optimal", etc.) | High |
@@ -145,13 +145,13 @@ Verify [SAMPLE] routines seed once and load correctly.
 |---|---|---|---|
 | F1 | Complete workout, check Train tab Sessions count | Count increments by 1 | High |
 | F2 | Train tab "WEEKLY HARD SETS" matches Progress tab | Same muscles, same counts | High |
-| F3 | Complete workout with no warm-up sets | Hard set count matches logged working sets | High |
-| F4 | Complete workout with mixed warm-up and working sets | Warm-ups excluded from hard set count | High |
+| F3 | Complete workout with no warm-up sets | Working set count matches all logged sets | High |
+| F4 | Complete workout with mixed warm-up and working sets | Warm-ups excluded from working set count | High |
 | F5 | Volume Heatmap matches weekly volume source | Bars represent same data | High |
 | F6 | Kill and reopen, navigate to Log → History | Workout still present | Critical |
 | F7 | Routine workout in History | Correct routine name shown | Medium |
 | F8 | Start same routine twice in same week | Both sessions appear in history | High |
-| F9 | RIR logged → RPE stored correctly | Stored RPE = 10 − RIR (verify via debug if needed) | Low |
+| F9 | New sets logged — RIR and RPE are null | Stored RIR = null, RPE = null (legacy data unaffected) | Low |
 
 ---
 
@@ -168,7 +168,7 @@ Verify [SAMPLE] routines seed once and load correctly.
 | G7 | No crash across any screen | App stable throughout test session | Critical |
 | G8 | Tab labels correct | Train / Log / Progress / You | High |
 | G9 | [SAMPLE] prefix on seeded routines | Both routines clearly labelled | High |
-| G10 | Hard Sets terminology consistent | Used in Train, Progress, Session Logged | Medium |
+| G10 | Working Sets terminology consistent | Used in Train, Progress, Session Logged — no "Hard Sets" anywhere | Medium |
 
 ---
 
@@ -187,12 +187,15 @@ Run after every change touching routines or active workout:
 Run after every change to SetEntry or set type picker:
 
 - [ ] Start workout, add exercise
-- [ ] Confirm RPE chip row is not visible
-- [ ] Confirm default set type label reads "Working set"
-- [ ] Tap "Change" → bottom sheet opens with Working set, Warm-up, AMRAP, Drop set
+- [ ] Confirm no RIR chip row is visible
+- [ ] Confirm no RPE chip row is visible
+- [ ] Confirm default set type label reads "Working"
+- [ ] Tap "Change" → bottom sheet opens with Working and Warm-up options only
+- [ ] Explainer text visible: "Working sets count toward your weekly volume. Warm-up sets do not."
 - [ ] Each option has a one-line description
 - [ ] Select "Warm-up" → label updates → set logged as warm-up
-- [ ] Warm-up does not count in hard set total on Session Logged screen
+- [ ] Warm-up does not count in working set total on Session Logged screen
+- [ ] Session Logged screen shows "Working Sets" label
 
 ---
 
