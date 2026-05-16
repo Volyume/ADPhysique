@@ -52,6 +52,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     user, units, activeWorkout, workoutExercises, currentExerciseIndex,
     setCurrentExerciseIndex, addExerciseToWorkout, addSetToCurrentExercise,
     startRestTimer, showPRCelebration, endWorkout, workoutStartTime,
+    lastActivityAt, updateLastActivity,
   } = useAppStore();
 
   const [currentSet, setCurrentSet] = useState({ ...DEFAULT_SET });
@@ -66,6 +67,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [progression, setProgression] = useState(null);
   const [showSetTypePicker, setShowSetTypePicker] = useState(false);
   const [showExecution, setShowExecution] = useState(false);
+  const [showStaleModal, setShowStaleModal] = useState(false);
+  const [addedMsg, setAddedMsg] = useState('');
 
   const scrollRef = useRef(null);
   const insets = useSafeAreaInsets();
@@ -81,8 +84,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setTimeout(() => scrollRef.current?.scrollTo({ y: 0, animated: true }), 50);
   }
 
-  // Workout timer
+  // Stale workout check (>4h since last activity)
   useEffect(() => {
+    if (lastActivityAt && Date.now() - lastActivityAt > 4 * 60 * 60 * 1000) {
+      setShowStaleModal(true);
+    }
+  }, []);
+
+  // Workout timer — initialize from workoutStartTime so it survives tab switches
+  useEffect(() => {
+    if (workoutStartTime) {
+      setElapsedSeconds(Math.floor((Date.now() - workoutStartTime) / 1000));
+    }
     timerRef.current = setInterval(() => setElapsedSeconds(s => s + 1), 1000);
     return () => clearInterval(timerRef.current);
   }, []);
@@ -105,6 +118,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       } else if (routineExercise) {
         setCurrentSet(c => ({
           ...c,
+          weight: routineExercise.startingWeight || c.weight,
           reps: routineExercise.recommendedRepsMax || c.reps,
         }));
       }
@@ -191,8 +205,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       );
       setProgression(suggestion);
 
-      // Start rest timer
-      startRestTimer(90);
+      // Update last activity timestamp
+      updateLastActivity();
+
+      // Start rest timer with per-exercise duration
+      startRestTimer(routineExercise?.restSeconds || 90);
 
       // Prepare next set
       setNoteText('');
@@ -242,6 +259,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   };
   const elapsedStr = `${elapsed.mins}:${elapsed.secs.toString().padStart(2, '0')}`;
 
+  const targetSets = routineExercise?.recommendedSets;
+  const workingLogged = loggedSets.filter(s => s.setType !== 'warmup').length;
+  const targetComplete = targetSets && workingLogged >= targetSets;
+
   if (!exercise) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -258,6 +279,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           onClose={() => setShowExercisePicker(false)}
           onSelect={ex => {
             addExerciseToWorkout(ex);
+            // Jump to the first exercise when starting from empty
             setCurrentExerciseIndex(workoutExercises.length);
             setShowExercisePicker(false);
           }}
@@ -368,6 +390,24 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </View>
           )}
 
+          {/* Target complete banner */}
+          {targetComplete && (
+            <View style={styles.targetBanner}>
+              <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+              <Text style={styles.targetBannerText}>
+                Target reached — {targetSets} working set{targetSets !== 1 ? 's' : ''} done
+              </Text>
+            </View>
+          )}
+
+          {/* Exercise added confirmation */}
+          {addedMsg ? (
+            <View style={styles.addedBanner}>
+              <Ionicons name="add-circle" size={14} color={colors.primary} />
+              <Text style={styles.addedBannerText}>{addedMsg} added</Text>
+            </View>
+          ) : null}
+
           {/* Set Entry */}
           <View style={styles.setEntryCard}>
             <Text style={styles.setEntryTitle}>
@@ -402,7 +442,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             disabled={saving}
           >
             <Ionicons name="checkmark-circle" size={24} color={colors.background} />
-            <Text style={styles.completeBtnText}>COMPLETE SET</Text>
+            <Text style={styles.completeBtnText}>{targetComplete ? 'COMPLETE EXTRA SET' : 'COMPLETE SET'}</Text>
           </TouchableOpacity>
 
           <View style={styles.secondaryActions}>
@@ -479,16 +519,51 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           </View>
         </Modal>
 
-        {/* Exercise Picker Modal */}
+        {/* Exercise Picker Modal — does NOT jump to new exercise; shows confirmation */}
         <ExercisePickerModal
           visible={showExercisePicker}
           onClose={() => setShowExercisePicker(false)}
           onSelect={ex => {
             addExerciseToWorkout(ex);
-            setCurrentExerciseIndex(workoutExercises.length);
             setShowExercisePicker(false);
+            setAddedMsg(ex.name);
+            setTimeout(() => setAddedMsg(''), 2500);
           }}
         />
+
+        {/* Stale workout recovery modal */}
+        <Modal visible={showStaleModal} transparent animationType="fade" onRequestClose={() => setShowStaleModal(false)}>
+          <View style={styles.staleOverlay}>
+            <View style={styles.staleSheet}>
+              <Ionicons name="time-outline" size={32} color={colors.warning} style={{ marginBottom: spacing.md }} />
+              <Text style={styles.staleTitle}>Resume workout?</Text>
+              <Text style={styles.staleBody}>
+                This workout has been inactive for a while. What would you like to do?
+              </Text>
+              <TouchableOpacity style={styles.staleResume} onPress={() => { updateLastActivity(); setShowStaleModal(false); }}>
+                <Text style={styles.staleResumeText}>Resume</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.staleFinish} onPress={() => { setShowStaleModal(false); handleFinishWorkout(); }}>
+                <Text style={styles.staleFinishText}>Finish Workout</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.staleDiscard} onPress={() => {
+                Alert.alert('Discard workout?', 'All logged sets will be lost.', [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Discard',
+                    style: 'destructive',
+                    onPress: () => {
+                      endWorkout();
+                      navigation.goBack();
+                    },
+                  },
+                ]);
+              }}>
+                <Text style={styles.staleDiscardText}>Discard</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
 
         {/* Set Type Picker Bottom Sheet */}
         <Modal
@@ -1126,5 +1201,100 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
     color: colors.background,
+  },
+  targetBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.successBg,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.success,
+  },
+  targetBannerText: {
+    fontSize: fontSize.sm,
+    color: colors.success,
+    fontWeight: fontWeight.semibold,
+    flex: 1,
+  },
+  addedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primaryBg,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  addedBannerText: {
+    fontSize: fontSize.sm,
+    color: colors.primary,
+    fontWeight: fontWeight.medium,
+  },
+  staleOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  staleSheet: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    padding: spacing.xl,
+    width: '100%',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  staleTitle: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+    textAlign: 'center',
+  },
+  staleBody: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: spacing.md,
+  },
+  staleResume: {
+    width: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+  },
+  staleResumeText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+    color: colors.background,
+  },
+  staleFinish: {
+    width: '100%',
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+  },
+  staleFinishText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.medium,
+    color: colors.textPrimary,
+  },
+  staleDiscard: {
+    width: '100%',
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+  },
+  staleDiscardText: {
+    fontSize: fontSize.sm,
+    color: colors.error,
+    fontWeight: fontWeight.medium,
   },
 });
