@@ -35,8 +35,5 @@ jobs:
       - name: Create or link EAS project
         run: eas init --non-interactive --force || true
 
-      - name: Build iOS Simulator
-        run: eas build --platform ios --profile development --non-interactive --no-wait
-
       - name: Build Android
-        run: eas build --platform android --profile development --non-interactive --no-wait
+        run: eas build --platform android --profile preview --non-interactive --no-wait
