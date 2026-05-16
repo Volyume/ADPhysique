@@ -6,9 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { supabase } from '../lib/supabase';
 import { database } from '../lib/database';
-import { getStrengthStandard, STRENGTH_STANDARDS } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 
 const STRENGTH_EXERCISES = ['Barbell Bench Press', 'Barbell Squat', 'Deadlift'];
@@ -25,46 +23,9 @@ export default function PRWallScreen({ navigation }) {
   useEffect(() => { loadData(); }, [user?.id]);
 
   async function loadData() {
-    if (!user?.id) return;
-    const { data: prData } = await supabase
-      .from('personal_records')
-      .select('*, exercises(name, primary_muscle)')
-      .eq('user_id', user.id)
-      .order('achieved_date', { ascending: false });
-
-    setPRs(prData || []);
-
-    const byExercise = {};
-    for (const pr of (prData || [])) {
-      const name = pr.exercises?.name;
-      if (!byExercise[name]) byExercise[name] = {};
-      if (!byExercise[name][pr.record_type] || pr.value > byExercise[name][pr.record_type].value) {
-        byExercise[name][pr.record_type] = pr;
-      }
-    }
-    setGrouped(byExercise);
-
-    const { data: bwData } = await supabase
-      .from('body_metrics')
-      .select('body_weight')
-      .eq('user_id', user.id)
-      .order('metric_date', { ascending: false })
-      .limit(1);
-    const bw = bwData?.[0]?.body_weight;
-    setBodyWeight(bw);
-
-    if (bw) {
-      const standards = {};
-      for (const [exerciseName, types] of Object.entries(byExercise)) {
-        const liftKey = exerciseName.toLowerCase().includes('bench') ? 'bench' :
-          exerciseName.toLowerCase().includes('squat') ? 'squat' :
-          exerciseName.toLowerCase().includes('deadlift') ? 'deadlift' : null;
-        if (liftKey && types['1rm_estimate']) {
-          standards[exerciseName] = getStrengthStandard(liftKey, types['1rm_estimate'].value, bw);
-        }
-      }
-      setStrengthStandards(standards);
-    }
+    // Stage 1: PRs not yet tracked locally — will be populated in Stage 4
+    setPRs([]);
+    setGrouped({});
   }
 
   async function handleRefresh() {

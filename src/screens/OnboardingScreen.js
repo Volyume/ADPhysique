@@ -113,14 +113,10 @@ export default function OnboardingScreen({ navigation }) {
     }
     setLoading(true);
     try {
-      const { error } = await upsertUserProfile(user.id, selections);
-      if (error) {
-        Alert.alert('Error', error.message);
-      } else {
-        setUnits(selections.units);
+      if (!user?.isLocal) {
+        await upsertUserProfile(user.id, selections).catch(() => {});
       }
-    } catch (e) {
-      Alert.alert('Error', 'Could not save profile. You can update it in Settings.');
+      setUnits(selections.units);
     } finally {
       setLoading(false);
     }

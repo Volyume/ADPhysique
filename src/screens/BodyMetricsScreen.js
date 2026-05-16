@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { supabase } from '../lib/supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../store/useAppStore';
 
 const MEASUREMENTS = [
@@ -34,15 +34,15 @@ export default function BodyMetricsScreen() {
 
   useEffect(() => { loadHistory(); }, [user?.id]);
 
+  const STORAGE_KEY = `@volyume_body_metrics_${user?.id}`;
+
   async function loadHistory() {
     if (!user?.id) return;
-    const { data } = await supabase
-      .from('body_metrics')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('metric_date', { ascending: false })
-      .limit(20);
-    setHistory(data || []);
+    try {
+      const raw = await AsyncStorage.getItem(STORAGE_KEY);
+      const all = raw ? JSON.parse(raw) : [];
+      setHistory(all.sort((a, b) => b.metric_date.localeCompare(a.metric_date)).slice(0, 20));
+    } catch (_e) { setHistory([]); }
   }
 
   async function saveMetrics() {
@@ -51,21 +51,26 @@ export default function BodyMetricsScreen() {
       return;
     }
     setSaving(true);
-    const payload = { user_id: user.id };
-    for (const [k, v] of Object.entries(form)) {
-      if (k === 'notes' || k === 'metric_date') payload[k] = v;
-      else if (v !== '') payload[k] = parseFloat(v);
+    try {
+      const entry = { id: Date.now().toString() };
+      for (const [k, v] of Object.entries(form)) {
+        if (k === 'notes' || k === 'metric_date') entry[k] = v;
+        else if (v !== '') entry[k] = parseFloat(v);
+      }
+      const raw = await AsyncStorage.getItem(STORAGE_KEY);
+      const all = raw ? JSON.parse(raw) : [];
+      all.unshift(entry);
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+      setShowForm(false);
+      setForm({
+        body_weight: '', chest: '', shoulders: '', arms: '', forearms: '',
+        waist: '', hips: '', quads: '', hamstrings: '', calves: '',
+        metric_date: format(new Date(), 'yyyy-MM-dd'), notes: '',
+      });
+      await loadHistory();
+    } finally {
+      setSaving(false);
     }
-    const { error } = await supabase.from('body_metrics').insert(payload);
-    setSaving(false);
-    if (error) { Alert.alert('Error', error.message); return; }
-    setShowForm(false);
-    setForm({
-      body_weight: '', chest: '', shoulders: '', arms: '', forearms: '',
-      waist: '', hips: '', quads: '', hamstrings: '', calves: '',
-      metric_date: format(new Date(), 'yyyy-MM-dd'), notes: '',
-    });
-    await loadHistory();
   }
 
   const latest = history[0];

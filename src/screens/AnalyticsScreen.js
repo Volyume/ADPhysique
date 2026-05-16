@@ -6,8 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import VolumeBars from '../components/VolumeBars';
-import { database, syncDatabase } from '../lib/database';
-import { supabase } from '../lib/supabase';
+import { database } from '../lib/database';
 import {
   calculateWeeklyVolume, calculateTonnage, shouldDeload, MUSCLE_DISPLAY_NAMES,
 } from '../lib/algorithms';
@@ -91,7 +90,6 @@ export default function AnalyticsScreen({ navigation }) {
 
   async function handleRefresh() {
     setRefreshing(true);
-    await syncDatabase(user?.id);
     await loadData();
     setRefreshing(false);
   }

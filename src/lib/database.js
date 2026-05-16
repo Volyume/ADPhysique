@@ -10,6 +10,7 @@ import Routine from '../models/Routine';
 import RoutineExercise from '../models/RoutineExercise';
 import Mesocycle from '../models/Mesocycle';
 import { supabase } from './supabase';
+import { seedExercisesIfNeeded } from './seedExercises';
 
 const adapter = new SQLiteAdapter({
   schema,
@@ -294,6 +295,10 @@ function localRowToServer(table, row, userId) {
     default:
       return base;
   }
+}
+
+export async function initDatabase() {
+  await seedExercisesIfNeeded();
 }
 
 // Query helpers

@@ -15,13 +15,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { signInWithEmail, signUpWithEmail, supabase } from '../lib/supabase';
+import useAppStore from '../store/useAppStore';
 
 export default function LoginScreen({ navigation }) {
+  const { initLocalUser } = useAppStore();
   const [mode, setMode] = useState('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [localLoading, setLocalLoading] = useState(false);
 
   async function handleEmailAuth() {
     if (!email.trim() || !password.trim()) {
@@ -58,6 +61,12 @@ export default function LoginScreen({ navigation }) {
     } else {
       Alert.alert('Email sent', 'Check your inbox for a password reset link.');
     }
+  }
+
+  async function handleContinueLocally() {
+    setLocalLoading(true);
+    await initLocalUser();
+    setLocalLoading(false);
   }
 
   return (
@@ -147,7 +156,7 @@ export default function LoginScreen({ navigation }) {
             </TouchableOpacity>
           )}
 
-          {/* Primary CTA */}
+          {/* Email Auth CTA */}
           <TouchableOpacity
             style={[styles.primaryBtn, loading && styles.primaryBtnDisabled]}
             onPress={handleEmailAuth}
@@ -168,26 +177,27 @@ export default function LoginScreen({ navigation }) {
             <View style={styles.dividerLine} />
           </View>
 
-          {/* OAuth Buttons */}
+          {/* Continue Locally — primary Stage 1 path */}
           <TouchableOpacity
-            style={styles.oauthBtn}
-            onPress={() => Alert.alert('Apple Sign In', 'Configure Apple OAuth in your Supabase project dashboard to enable this.')}
+            style={[styles.localBtn, localLoading && styles.primaryBtnDisabled]}
+            onPress={handleContinueLocally}
+            disabled={localLoading}
           >
-            <Ionicons name="logo-apple" size={20} color={colors.textPrimary} />
-            <Text style={styles.oauthBtnText}>Continue with Apple</Text>
+            {localLoading ? (
+              <ActivityIndicator color={colors.textPrimary} />
+            ) : (
+              <>
+                <Ionicons name="phone-portrait-outline" size={18} color={colors.textPrimary} />
+                <Text style={styles.localBtnText}>Continue without an account</Text>
+              </>
+            )}
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.oauthBtn}
-            onPress={() => Alert.alert('Google Sign In', 'Configure Google OAuth in your Supabase project dashboard to enable this.')}
-          >
-            <Ionicons name="logo-google" size={20} color="#4285F4" />
-            <Text style={styles.oauthBtnText}>Continue with Google</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.betaNote}>
-            Free during beta — no subscription required
+          <Text style={styles.localNote}>
+            Your data stays on this device. You can add an account later to sync across devices.
           </Text>
+
+          <Text style={styles.betaNote}>Free during beta — no subscription required</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -195,20 +205,14 @@ export default function LoginScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
+  safe: { flex: 1, backgroundColor: colors.background },
   scroll: {
     flexGrow: 1,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.xxl,
     justifyContent: 'center',
   },
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: spacing.xxxl,
-  },
+  logoContainer: { alignItems: 'center', marginBottom: spacing.xxxl },
   logoMark: {
     width: 72,
     height: 72,
@@ -218,24 +222,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.lg,
   },
-  logoV: {
-    fontSize: 40,
-    fontWeight: fontWeight.black,
-    color: colors.background,
-    lineHeight: 44,
-  },
+  logoV: { fontSize: 40, fontWeight: fontWeight.black, color: colors.background, lineHeight: 44 },
   appName: {
     fontSize: fontSize.xxxl,
     fontWeight: fontWeight.black,
     color: colors.textPrimary,
     letterSpacing: 4,
   },
-  tagline: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-    letterSpacing: 0.5,
-  },
+  tagline: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: spacing.xs, letterSpacing: 0.5 },
   modeToggle: {
     flexDirection: 'row',
     backgroundColor: colors.surface,
@@ -243,26 +237,11 @@ const styles = StyleSheet.create({
     padding: 4,
     marginBottom: spacing.xl,
   },
-  modeBtn: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-    alignItems: 'center',
-  },
-  modeBtnActive: {
-    backgroundColor: colors.primary,
-  },
-  modeBtnText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.textSecondary,
-  },
-  modeBtnTextActive: {
-    color: colors.background,
-  },
-  inputGroup: {
-    marginBottom: spacing.lg,
-  },
+  modeBtn: { flex: 1, paddingVertical: spacing.md, borderRadius: radius.md, alignItems: 'center' },
+  modeBtnActive: { backgroundColor: colors.primary },
+  modeBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textSecondary },
+  modeBtnTextActive: { color: colors.background },
+  inputGroup: { marginBottom: spacing.lg },
   inputLabel: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.medium,
@@ -279,12 +258,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  passwordRow: {
-    position: 'relative',
-  },
-  passwordInput: {
-    paddingRight: 52,
-  },
+  passwordRow: { position: 'relative' },
+  passwordInput: { paddingRight: 52 },
   eyeBtn: {
     position: 'absolute',
     right: spacing.lg,
@@ -292,16 +267,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: 'center',
   },
-  forgotBtn: {
-    alignSelf: 'flex-end',
-    marginBottom: spacing.xl,
-    marginTop: -spacing.sm,
-  },
-  forgotText: {
-    fontSize: fontSize.sm,
-    color: colors.primary,
-    fontWeight: fontWeight.medium,
-  },
+  forgotBtn: { alignSelf: 'flex-end', marginBottom: spacing.xl, marginTop: -spacing.sm },
+  forgotText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.medium },
   primaryBtn: {
     backgroundColor: colors.primary,
     borderRadius: radius.lg,
@@ -309,45 +276,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.xl,
   },
-  primaryBtnDisabled: {
-    opacity: 0.6,
-  },
-  primaryBtnText: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
-    color: colors.background,
-  },
+  primaryBtnDisabled: { opacity: 0.6 },
+  primaryBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.background },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     marginBottom: spacing.xl,
   },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  dividerText: {
-    fontSize: fontSize.sm,
-    color: colors.textMuted,
-  },
-  oauthBtn: {
+  dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
+  dividerText: { fontSize: fontSize.sm, color: colors.textMuted },
+  localBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.md,
+    gap: spacing.sm,
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     paddingVertical: spacing.lg,
-    marginBottom: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  oauthBtnText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.textPrimary,
+  localBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  localNote: {
+    textAlign: 'center',
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    marginTop: spacing.md,
+    lineHeight: 18,
+    paddingHorizontal: spacing.sm,
   },
   betaNote: {
     textAlign: 'center',

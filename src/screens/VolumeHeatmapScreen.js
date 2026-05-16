@@ -4,8 +4,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { database } from '../lib/database';
-import { supabase } from '../lib/supabase';
 import {
   calculateWeeklyVolume, VOLUME_LANDMARKS, MUSCLE_DISPLAY_NAMES, getVolumeStatus,
 } from '../lib/algorithms';
@@ -33,14 +33,10 @@ export default function VolumeHeatmapScreen() {
     const volume = calculateWeeklyVolume(recentSets, exerciseMap);
     setWeeklyVolume(volume);
 
-    const { data: landmarks } = await supabase
-      .from('volume_landmarks')
-      .select('*')
-      .eq('user_id', user.id);
-
-    if (landmarks && landmarks.length > 0) {
-      const map = {};
-      for (const l of landmarks) map[l.muscle_group] = { mev: l.mev, mav: l.mav, mrv: l.mrv };
+    // Load locally stored custom landmarks (Stage 1 — no Supabase yet)
+    const stored = await AsyncStorage.getItem(`@volyume_landmarks_${user.id}`).catch(() => null);
+    if (stored) {
+      const map = JSON.parse(stored);
       setCustomLandmarks(map);
       setEditValues(map);
     } else {
@@ -54,23 +50,18 @@ export default function VolumeHeatmapScreen() {
 
   async function saveLandmarks() {
     if (!user?.id) return;
-    const rows = Object.entries(editValues).map(([muscle, vals]) => ({
-      user_id: user.id,
-      muscle_group: muscle,
-      mev: parseInt(vals.mev) || 0,
-      mav: parseInt(vals.mav) || 0,
-      mrv: parseInt(vals.mrv) || 0,
-    }));
-    const { error } = await supabase.from('volume_landmarks').upsert(rows);
-    if (error) {
-      Alert.alert('Error', error.message);
-    } else {
-      const map = {};
-      for (const r of rows) map[r.muscle_group] = { mev: r.mev, mav: r.mav, mrv: r.mrv };
-      setCustomLandmarks(map);
-      setEditing(false);
-      Alert.alert('Saved', 'Volume landmarks updated.');
+    const map = {};
+    for (const [muscle, vals] of Object.entries(editValues)) {
+      map[muscle] = {
+        mev: parseInt(vals.mev) || 0,
+        mav: parseInt(vals.mav) || 0,
+        mrv: parseInt(vals.mrv) || 0,
+      };
     }
+    await AsyncStorage.setItem(`@volyume_landmarks_${user.id}`, JSON.stringify(map));
+    setCustomLandmarks(map);
+    setEditing(false);
+    Alert.alert('Saved', 'Volume landmarks updated.');
   }
 
   async function resetToDefaults() {
@@ -79,12 +70,10 @@ export default function VolumeHeatmapScreen() {
       {
         text: 'Reset',
         onPress: async () => {
-          await supabase.from('volume_landmarks').delete().eq('user_id', user.id);
+          await AsyncStorage.removeItem(`@volyume_landmarks_${user.id}`);
           setCustomLandmarks(null);
           const defaults = {};
-          for (const [m, v] of Object.entries(VOLUME_LANDMARKS)) {
-            defaults[m] = { ...v };
-          }
+          for (const [m, v] of Object.entries(VOLUME_LANDMARKS)) defaults[m] = { ...v };
           setEditValues(defaults);
           setEditing(false);
         },

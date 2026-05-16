@@ -1,6 +1,14 @@
 import { create } from 'zustand';
-import { database } from '../lib/database';
-import { supabase } from '../lib/supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const LOCAL_USER_KEY = '@volyume_local_user_id';
+
+function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
 
 const useAppStore = create((set, get) => ({
   // Auth
@@ -14,9 +22,31 @@ const useAppStore = create((set, get) => ({
   setUserProfile: (userProfile) => set({ userProfile }),
   setAuthLoading: (isAuthLoading) => set({ isAuthLoading }),
 
+  // Creates or restores a local (offline) user from AsyncStorage
+  initLocalUser: async () => {
+    try {
+      let userId = await AsyncStorage.getItem(LOCAL_USER_KEY);
+      if (!userId) {
+        userId = generateUUID();
+        await AsyncStorage.setItem(LOCAL_USER_KEY, userId);
+      }
+      const localUser = { id: userId, email: 'local@device', isLocal: true };
+      set({ user: localUser, isAuthLoading: false });
+      return localUser;
+    } catch (e) {
+      console.error('initLocalUser failed:', e);
+    }
+  },
+
+  // Clears local user from AsyncStorage and store
+  clearLocalUser: async () => {
+    await AsyncStorage.removeItem(LOCAL_USER_KEY);
+    set({ user: null, session: null });
+  },
+
   // Active workout
   activeWorkout: null,
-  workoutExercises: [],       // [{ exercise, routineExercise?, sets: [] }]
+  workoutExercises: [],
   currentExerciseIndex: 0,
   workoutStartTime: null,
 
@@ -79,7 +109,7 @@ const useAppStore = create((set, get) => ({
     }
   },
 
-  // PR Celebration
+  // PR Celebration (kept for future; Stage 1 shows simple alert)
   prCelebration: null,
   showPRCelebration: (pr) => set({ prCelebration: pr }),
   hidePRCelebration: () => set({ prCelebration: null }),
@@ -88,7 +118,7 @@ const useAppStore = create((set, get) => ({
   units: 'kg',
   setUnits: (units) => set({ units }),
 
-  // Plate calculator bar weight
+  // Bar weight for plate calculator
   barWeight: 20,
   setBarWeight: (w) => set({ barWeight: w }),
 }));

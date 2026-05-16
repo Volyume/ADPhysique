@@ -5,7 +5,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { supabase } from '../lib/supabase';
 import { database } from '../lib/database';
 import { calculateWeeklyVolume, getVolumeStatus, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
@@ -94,15 +93,6 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         });
       });
 
-      for (const suggestion of autoRegSuggestions) {
-        await supabase.from('autoregulation_suggestions').insert({
-          user_id: user.id,
-          workout_id: workoutId,
-          suggestion_type: suggestion.type,
-          muscle_group: suggestion.muscle || null,
-          suggestion_text: suggestion.message,
-        });
-      }
     } finally {
       setSaving(false);
       navigation.popToTop();

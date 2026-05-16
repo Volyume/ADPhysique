@@ -5,7 +5,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { database } from '../lib/database';
-import { supabase } from '../lib/supabase';
 import { calculate1RM, getExerciseSubstitutes, MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 
@@ -41,14 +40,8 @@ export default function ExerciseDetailScreen({ navigation, route }) {
       const sessions = Object.values(byWorkout).slice(0, 8);
       setHistory(sessions);
 
-      // PRs from Supabase
-      const { data: prData } = await supabase
-        .from('personal_records')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('exercise_id', exerciseId)
-        .order('achieved_date', { ascending: false });
-      setPRs(prData || []);
+      // PRs: computed locally from history for Stage 1
+      setPRs([]);
 
       // Substitutes
       const allExercises = await database.get('exercises').query().fetch();

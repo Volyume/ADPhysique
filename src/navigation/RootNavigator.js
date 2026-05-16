@@ -3,11 +3,12 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { colors } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { supabase } from '../lib/supabase';
-import { syncDatabase } from '../lib/database';
+import { initDatabase } from '../lib/database';
 
 // Auth screens
 import LoginScreen from '../screens/LoginScreen';
@@ -96,7 +97,7 @@ function MainTabs() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
-        tabBarIcon: ({ focused, color, size }) => {
+        tabBarIcon: ({ focused, color }) => {
           const icons = {
             HomeTab: focused ? 'home' : 'home-outline',
             WorkoutTab: focused ? 'barbell' : 'barbell-outline',
@@ -124,29 +125,53 @@ function AuthStack() {
   );
 }
 
+const LOCAL_USER_KEY = '@volyume_local_user_id';
+
 export default function RootNavigator() {
-  const { user, isAuthLoading, setUser, setSession, setAuthLoading, setUserProfile } = useAppStore();
+  const { user, isAuthLoading, setUser, setSession, setAuthLoading } = useAppStore();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    async function bootstrap() {
+      // Always seed exercises on launch (no-op after first run)
+      initDatabase().catch(console.error);
+
+      // 1. Try Supabase auth (works when credentials are configured)
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          setSession(session);
+          setUser(session.user);
+          setAuthLoading(false);
+          return;
+        }
+      } catch (_e) {
+        // Supabase not configured yet — that's fine for Stage 1
+      }
+
+      // 2. Check for an existing local user (persisted across restarts)
+      try {
+        const localId = await AsyncStorage.getItem(LOCAL_USER_KEY);
+        if (localId) {
+          setUser({ id: localId, email: 'local@device', isLocal: true });
+        }
+      } catch (_e) {}
+
       setAuthLoading(false);
+    }
 
-      if (session?.user) {
-        syncDatabase(session.user.id).catch(console.error);
-      }
-    });
+    bootstrap();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        syncDatabase(session.user.id).catch(console.error);
-      }
-    });
+    // Still subscribe to Supabase auth changes (works when credentials are present)
+    let subscription;
+    try {
+      const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+      });
+      subscription = data.subscription;
+    } catch (_e) {}
 
-    return () => subscription.unsubscribe();
+    return () => subscription?.unsubscribe();
   }, []);
 
   if (isAuthLoading) return null;
