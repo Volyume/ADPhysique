@@ -121,7 +121,7 @@ export function getVolumeStatus(hardSets, muscle, customLandmarks = null) {
 }
 
 // Algorithm 2: Double Progression Suggestion
-export function getProgressionSuggestion(currentSets, prevWorkoutSets, targetRepsMin, targetRepsMax) {
+export function getProgressionSuggestion(currentSets, prevWorkoutSets, targetRepsMin, targetRepsMax, units = 'kg') {
   if (!prevWorkoutSets || prevWorkoutSets.length === 0) {
     return { action: 'baseline', message: 'First time logging — establish a baseline.' };
   }
@@ -142,7 +142,7 @@ export function getProgressionSuggestion(currentSets, prevWorkoutSets, targetRep
     const increment = prevAvgWeight >= 60 ? 2.5 : 1.25;
     return {
       action: 'increase_weight',
-      message: `Great work! Try ${(prevAvgWeight + increment).toFixed(1)}kg next session.`,
+      message: `Great work! Try ${(prevAvgWeight + increment).toFixed(1)}${units} next session.`,
       suggestedWeight: prevAvgWeight + increment,
     };
   }
@@ -151,20 +151,20 @@ export function getProgressionSuggestion(currentSets, prevWorkoutSets, targetRep
     const decrement = prevAvgWeight >= 60 ? 2.5 : 1.25;
     return {
       action: 'decrease_weight',
-      message: `Reduce to ${(prevAvgWeight - decrement).toFixed(1)}kg and focus on rep quality.`,
+      message: `Reduce to ${(prevAvgWeight - decrement).toFixed(1)}${units} and focus on rep quality.`,
       suggestedWeight: Math.max(0, prevAvgWeight - decrement),
     };
   }
 
   return {
     action: 'maintain',
-    message: `Keep ${prevAvgWeight.toFixed(1)}kg — aim for ${Math.ceil(targetMax)} reps next set.`,
+    message: `Keep ${prevAvgWeight.toFixed(1)}${units} — aim for ${Math.ceil(targetMax)} reps next set.`,
     suggestedWeight: prevAvgWeight,
   };
 }
 
 // Algorithm 3: PR Detection
-export function detectPR(newSet, historicalSets, exercise) {
+export function detectPR(newSet, historicalSets, exercise, units = 'kg') {
   const prs = [];
   const weight = newSet.weight || 0;
   const reps = newSet.actualReps || newSet.actual_reps || 0;
@@ -184,7 +184,7 @@ export function detectPR(newSet, historicalSets, exercise) {
       value: new1RM,
       reps,
       weight,
-      label: `New estimated 1RM: ${new1RM.toFixed(1)}kg`,
+      label: `New estimated 1RM: ${new1RM.toFixed(1)}${units}`,
     });
   }
 
@@ -197,7 +197,7 @@ export function detectPR(newSet, historicalSets, exercise) {
       type: 'heaviest_weight',
       value: weight,
       reps,
-      label: `New heaviest weight: ${weight}kg × ${reps} reps`,
+      label: `New heaviest weight: ${weight}${units} × ${reps} reps`,
     });
   }
 
@@ -209,7 +209,7 @@ export function detectPR(newSet, historicalSets, exercise) {
       type: 'most_reps_at_weight',
       reps,
       value: weight,
-      label: `Most reps at ${weight}kg: ${reps} reps`,
+      label: `Most reps at ${weight}${units}: ${reps} reps`,
     });
   }
 
@@ -358,7 +358,7 @@ function buildSubstituteReason(sub, target) {
 }
 
 // Algorithm 10: Progression Path
-export function getProgressionPath(thisWeekSets, lastWeekSets) {
+export function getProgressionPath(thisWeekSets, lastWeekSets, units = 'kg') {
   if (!lastWeekSets || lastWeekSets.length === 0) {
     return { action: 'establish_baseline', message: 'Keep tracking — building your baseline.' };
   }
@@ -377,7 +377,7 @@ export function getProgressionPath(thisWeekSets, lastWeekSets) {
     const increment = lastWeight >= 60 ? 2.5 : 1.25;
     return {
       action: 'increase_weight',
-      message: `Rep count up — increase weight by ${increment}kg next session.`,
+      message: `Rep count up — increase weight by ${increment}${units} next session.`,
       delta: increment,
     };
   }

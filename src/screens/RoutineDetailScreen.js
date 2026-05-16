@@ -26,6 +26,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
 
   async function loadRoutine() {
     const r = await getRoutineById(routineId);
+    if (!r) return;
     setRoutine(r);
     navigation.setOptions({ title: r.name });
 

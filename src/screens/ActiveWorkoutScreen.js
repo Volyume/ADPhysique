@@ -100,6 +100,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         prevSets,
         routineExercise?.recommendedRepsMin,
         routineExercise?.recommendedRepsMax,
+        units,
       );
       setProgression(suggestion);
     }
@@ -152,7 +153,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       addSetToCurrentExercise(setData);
 
       // PR Detection
-      const prs = detectPR(setData, prevSets, exercise);
+      const prs = detectPR(setData, prevSets, exercise, units);
       if (prs.length > 0) {
         showPRCelebration({ ...prs[0], exerciseName: exercise.name });
       }
@@ -163,6 +164,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         prevSets,
         routineExercise?.recommendedRepsMin,
         routineExercise?.recommendedRepsMax,
+        units,
       );
       setProgression(suggestion);
 

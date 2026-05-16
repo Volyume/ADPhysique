@@ -35,10 +35,13 @@ export default function VolumeHeatmapScreen() {
 
     // Load locally stored custom landmarks (Stage 1 — no Supabase yet)
     const stored = await AsyncStorage.getItem(`@volyume_landmarks_${user.id}`).catch(() => null);
+    let parsed = null;
     if (stored) {
-      const map = JSON.parse(stored);
-      setCustomLandmarks(map);
-      setEditValues(map);
+      try { parsed = JSON.parse(stored); } catch (_) {}
+    }
+    if (parsed) {
+      setCustomLandmarks(parsed);
+      setEditValues(parsed);
     } else {
       const defaults = {};
       for (const [m, v] of Object.entries(VOLUME_LANDMARKS)) {

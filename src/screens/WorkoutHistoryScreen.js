@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { format, formatDistanceToNow } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { getAllWorkouts, getAllWorkoutSets, getAllExercises, createWorkout } from '../lib/database';
+import { calculateTonnage } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 
 export default function WorkoutHistoryScreen({ navigation }) {
@@ -37,7 +38,13 @@ export default function WorkoutHistoryScreen({ navigation }) {
         const exerciseNames = exerciseIds.slice(0, 4)
           .map(id => exerciseMap[id]?.name)
           .filter(Boolean);
-        return { workout: w, setCount: mySets.length, exerciseNames };
+        return {
+          workout: w,
+          setCount: mySets.length,
+          exerciseCount: exerciseIds.length,
+          tonnage: calculateTonnage(mySets),
+          exerciseNames,
+        };
       });
       setWorkouts(withSets);
     } finally {
@@ -52,7 +59,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
   }
 
   function renderItem({ item }) {
-    const { workout, setCount, exerciseNames } = item;
+    const { workout, setCount, exerciseCount, tonnage, exerciseNames } = item;
     const date = new Date(workout.startedAt);
     const isRecent = Date.now() - workout.startedAt < 7 * 24 * 60 * 60 * 1000;
 
@@ -81,7 +88,9 @@ export default function WorkoutHistoryScreen({ navigation }) {
               navigation.navigate('WorkoutSummary', {
                 workoutId: workout.id,
                 durationMinutes: workout.durationMinutes,
+                exerciseCount,
                 setCount,
+                tonnage,
                 exerciseNames,
               })
             }

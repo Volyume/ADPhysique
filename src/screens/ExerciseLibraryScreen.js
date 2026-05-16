@@ -14,7 +14,7 @@ const MUSCLES = Object.keys(MUSCLE_DISPLAY_NAMES);
 const EQUIPMENT = ['Barbell', 'Dumbbell', 'Cable', 'Machine', 'Bodyweight', 'Smith Machine', 'Bands'];
 
 export default function ExerciseLibraryScreen({ navigation, route }) {
-  const { user } = useAppStore();
+  const { user, units } = useAppStore();
   const [query, setQuery] = useState('');
   const [exercises, setExercises] = useState([]);
   const [filterMuscle, setFilterMuscle] = useState(null);
@@ -124,6 +124,7 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
           <ExerciseCard
             exercise={item}
             lastLogged={getLastLogged(item.id)}
+            units={units}
             onPress={() => navigation.navigate('ExerciseDetail', { exerciseId: item.id })}
             onAdd={addToWorkout ? () => addToWorkout(item) : undefined}
             showAddButton={!!addToWorkout}
