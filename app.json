@@ -30,6 +30,7 @@
       "bundler": "metro"
     },
     "plugins": [
+      "expo-dev-client",
       "expo-secure-store",
       [
         "expo-sqlite",
