@@ -2,7 +2,7 @@
   "expo": {
     "name": "Volyume",
     "slug": "volyume",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -25,7 +25,8 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0D0D0D"
       },
-      "package": "app.volyume"
+      "package": "app.volyume",
+      "versionCode": 2
     },
     "web": {
       "favicon": "./assets/favicon.png",
