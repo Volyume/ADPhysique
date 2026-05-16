@@ -74,9 +74,9 @@ const useAppStore = create((set, get) => ({
     set({ workoutExercises: updated });
   },
 
-  startWorkout: (workout) => set({
+  startWorkout: (workout, initialExercises = []) => set({
     activeWorkout: workout,
-    workoutExercises: [],
+    workoutExercises: initialExercises,
     currentExerciseIndex: 0,
     workoutStartTime: Date.now(),
   }),

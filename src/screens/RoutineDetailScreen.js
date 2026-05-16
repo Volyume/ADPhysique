@@ -55,8 +55,31 @@ export default function RoutineDetailScreen({ navigation, route }) {
   }
 
   async function handleStartWorkout() {
+    if (exercises.length === 0) {
+      Alert.alert(
+        'No exercises',
+        'This routine has no exercises yet.',
+        [
+          { text: 'Add Exercise', onPress: () => setShowAddExercise(true) },
+          {
+            text: 'Start Blank Workout',
+            onPress: async () => {
+              const workout = await createWorkout(user.id);
+              startWorkout(workout, []);
+              navigation.navigate('WorkoutTab', { screen: 'ActiveWorkout' });
+            },
+          },
+        ],
+      );
+      return;
+    }
     const workout = await createWorkout(user.id, routineId);
-    startWorkout(workout);
+    const initialExercises = exercises.map(({ exercise, routineExercise }) => ({
+      exercise,
+      routineExercise,
+      sets: [],
+    }));
+    startWorkout(workout, initialExercises);
     navigation.navigate('WorkoutTab', { screen: 'ActiveWorkout' });
   }
 

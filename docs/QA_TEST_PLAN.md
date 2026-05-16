@@ -2,7 +2,7 @@
 
 ## Stage 1 — Core Logging Flow
 
-**Verdict: PASS** (tested on Android, 2026-05-16)
+**Verdict: PARTIAL PASS** (tested on Android, 2026-05-16) — launch and blank workout logging pass; routine-start and active workout UX fixes pending.
 
 ### Pass Criteria
 
@@ -101,6 +101,49 @@ Run this checklist on every new APK before declaring a stage complete.
 - [ ] kg/lb toggle applies across all displays
 - [ ] Deload suggestion appears after sustained fatigue signals
 - [ ] Exercise substitution returns same primary muscle, lower/equal fatigue cost
+
+---
+
+---
+
+## Routine Start Regression Test
+
+Run after every change to routine or active workout flows:
+
+- [ ] Create a routine with 3 exercises (e.g. Bench Press, Squat, Row)
+- [ ] Save the routine
+- [ ] Press "Start This Workout"
+- [ ] Confirm active workout opens with those 3 exercises (not blank)
+- [ ] Confirm exercise order is preserved (Bench Press first, etc.)
+- [ ] Log sets across all 3 exercises
+- [ ] Finish workout
+- [ ] Confirm summary shows all 3 exercises
+- [ ] Kill and reopen app
+- [ ] Confirm workout persists in history with all 3 exercises and correct set data
+
+Empty routine edge case:
+- [ ] Create a routine with no exercises
+- [ ] Press "Start This Workout"
+- [ ] Confirm alert appears: "No exercises" with "Add Exercise" and "Start Blank Workout" options
+- [ ] "Add Exercise" opens the add-exercise picker
+- [ ] "Start Blank Workout" opens an empty active workout
+
+---
+
+## Set Type UX Test
+
+Run after every change to SetEntry or set type picker:
+
+- [ ] Start a blank workout, add an exercise
+- [ ] Confirm advanced set type chips are not all visible by default
+- [ ] Confirm the default set type label reads "Straight set"
+- [ ] Tap "Change" next to Set type
+- [ ] Confirm bottom sheet opens with Common and Advanced sections
+- [ ] Confirm each set type has a short description line
+- [ ] Select a non-straight set type (e.g. Drop set)
+- [ ] Confirm the set type label updates to reflect the selection
+- [ ] Log a set — confirm logging flow remains fast and uncluttered
+- [ ] Complete set — confirm logged set row reflects the selected type
 
 ---
 
