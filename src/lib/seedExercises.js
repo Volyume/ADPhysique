@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAllExercises, insertExercise } from './database';
 
-const SEEDED_KEY = '@volyume_exercises_seeded_v2';
+const SEEDED_KEY = '@volyume_exercises_seeded_v3';
 
 // [name, primaryMuscle, secondaryMuscles, equipment, movementPattern, isCompound, minReps, maxReps, fatigueCost, sfr]
 const RAW = [
@@ -140,31 +140,83 @@ const RAW = [
   ['Single-Leg Calf Raise (Bodyweight)', 'calves', [], 'bodyweight', 'isolation', false, 15, 25, 2, 4],
   ['Donkey Calf Raise', 'calves', [], 'bodyweight', 'isolation', false, 15, 25, 2, 4],
 
-  // CORE
-  ['Cable Crunch', 'core', [], 'cable', 'isolation', false, 15, 25, 2, 5],
-  ['Hanging Leg Raise', 'core', [], 'bodyweight', 'isolation', false, 10, 20, 2, 5],
-  ['Plank', 'core', [], 'bodyweight', 'isolation', false, 20, 60, 2, 4],
-  ['Ab Rollout', 'core', [], 'bodyweight', 'isolation', false, 8, 15, 2, 5],
-  ['Decline Crunch', 'core', [], 'bodyweight', 'isolation', false, 15, 25, 2, 4],
-  ['Russian Twist', 'core', [], 'bodyweight', 'isolation', false, 20, 30, 2, 4],
-  ['Pallof Press', 'core', [], 'cable', 'isolation', false, 10, 15, 2, 5],
-  ['Landmine Twist', 'core', [], 'barbell', 'isolation', false, 10, 15, 2, 4],
-  ['Side Plank', 'core', [], 'bodyweight', 'isolation', false, 20, 60, 1, 4],
-  ['Bicycle Crunch', 'core', [], 'bodyweight', 'isolation', false, 20, 30, 1, 4],
-  ['V-Up', 'core', [], 'bodyweight', 'isolation', false, 10, 20, 2, 4],
+  // ABS
+  ['Cable Crunch', 'abs', [], 'cable', 'isolation', false, 15, 25, 2, 5],
+  ['Hanging Leg Raise', 'abs', [], 'bodyweight', 'isolation', false, 10, 20, 2, 5],
+  ['Plank', 'abs', [], 'bodyweight', 'isolation', false, 20, 60, 2, 4],
+  ['Ab Rollout', 'abs', [], 'bodyweight', 'isolation', false, 8, 15, 2, 5],
+  ['Decline Crunch', 'abs', [], 'bodyweight', 'isolation', false, 15, 25, 2, 4],
+  ['Russian Twist', 'abs', [], 'bodyweight', 'isolation', false, 20, 30, 2, 4],
+  ['Pallof Press', 'abs', [], 'cable', 'isolation', false, 10, 15, 2, 5],
+  ['Landmine Twist', 'abs', [], 'barbell', 'isolation', false, 10, 15, 2, 4],
+  ['Side Plank', 'abs', [], 'bodyweight', 'isolation', false, 20, 60, 1, 4],
+  ['Bicycle Crunch', 'abs', [], 'bodyweight', 'isolation', false, 20, 30, 1, 4],
+  ['V-Up', 'abs', [], 'bodyweight', 'isolation', false, 10, 20, 2, 4],
+  ['Sit-Up', 'abs', [], 'bodyweight', 'isolation', false, 15, 30, 1, 3],
+  ['Leg Raise (Flat Bench)', 'abs', [], 'bodyweight', 'isolation', false, 15, 25, 1, 4],
+  ['Dragon Flag', 'abs', [], 'bodyweight', 'isolation', false, 5, 10, 3, 5],
+  ['Cable Woodchop', 'abs', [], 'cable', 'isolation', false, 10, 15, 2, 4],
 
   // TRAPS
   ['Barbell Shrug', 'traps', [], 'barbell', 'isolation', false, 12, 20, 2, 4],
   ['Dumbbell Shrug', 'traps', [], 'dumbbell', 'isolation', false, 12, 20, 2, 4],
   ['Cable Shrug', 'traps', [], 'cable', 'isolation', false, 12, 20, 2, 4],
-  ["Farmer's Walk", 'traps', ['forearms', 'core'], 'dumbbell', 'carry', true, 20, 40, 3, 4],
+  ["Farmer's Walk", 'traps', ['forearms', 'abs'], 'dumbbell', 'carry', true, 20, 40, 3, 4],
   ['Hex Bar Shrug', 'traps', [], 'barbell', 'isolation', false, 12, 20, 3, 4],
+  ['Smith Machine Shrug', 'traps', [], 'machine', 'isolation', false, 12, 20, 2, 4],
+  ['Behind-the-Back Barbell Shrug', 'traps', [], 'barbell', 'isolation', false, 12, 20, 2, 4],
 
   // FOREARMS
   ['Barbell Wrist Curl', 'forearms', [], 'barbell', 'isolation', false, 15, 25, 2, 3],
   ['Reverse Wrist Curl', 'forearms', [], 'barbell', 'isolation', false, 15, 25, 2, 3],
   ['Reverse Curl', 'forearms', ['biceps'], 'barbell', 'isolation', false, 10, 15, 2, 3],
   ['Dead Hang', 'forearms', ['back'], 'bodyweight', 'isolation', false, 20, 60, 2, 4],
+  ['Dumbbell Wrist Curl', 'forearms', [], 'dumbbell', 'isolation', false, 15, 25, 1, 3],
+  ['Plate Pinch', 'forearms', [], 'barbell', 'isolation', false, 30, 60, 2, 3],
+  ['Cable Reverse Curl', 'forearms', ['biceps'], 'cable', 'isolation', false, 12, 20, 2, 3],
+
+  // CALVES (additional)
+  ['Dumbbell Calf Raise (Standing)', 'calves', [], 'dumbbell', 'isolation', false, 12, 20, 2, 4],
+  ['Box Jump', 'calves', ['quads', 'glutes'], 'bodyweight', 'plyometric', true, 5, 10, 3, 4],
+
+  // GLUTES (additional)
+  ['45-Degree Hip Extension', 'glutes', ['hamstrings', 'back'], 'machine', 'hinge', true, 12, 20, 2, 4],
+  ['Sumo Deadlift (High Bar)', 'glutes', ['hamstrings', 'quads'], 'barbell', 'hinge', true, 5, 10, 5, 3],
+  ['Smith Machine Hip Thrust', 'glutes', ['hamstrings'], 'machine', 'hinge', true, 10, 20, 3, 5],
+
+  // BACK (additional compound)
+  ['Seal Row', 'back', ['biceps'], 'barbell', 'pull', true, 6, 12, 3, 5],
+  ['Chest-Supported Row (Dumbbell)', 'back', ['biceps'], 'dumbbell', 'pull', true, 8, 15, 3, 5],
+  ['Landmine Row', 'back', ['biceps'], 'barbell', 'pull', true, 8, 15, 3, 4],
+  ['Seated Machine Row (Wide)', 'back', ['biceps'], 'machine', 'pull', true, 10, 15, 3, 4],
+  ['Face Pull (Rope)', 'back', ['shoulders', 'traps'], 'cable', 'pull', false, 15, 25, 2, 5],
+
+  // CHEST (additional)
+  ['Svend Press', 'chest', [], 'barbell', 'isolation', false, 15, 25, 2, 4],
+  ['Cable Fly (Chest Height)', 'chest', [], 'cable', 'isolation', false, 12, 20, 2, 5],
+  ['Dumbbell Pullover', 'chest', ['back'], 'dumbbell', 'isolation', false, 10, 15, 2, 4],
+
+  // SHOULDERS (additional)
+  ['Seated Dumbbell Press', 'shoulders', ['triceps'], 'dumbbell', 'push', true, 8, 15, 3, 4],
+  ['Leaning Lateral Raise', 'shoulders', [], 'dumbbell', 'isolation', false, 15, 25, 2, 5],
+  ['Lying Rear Delt Row', 'shoulders', ['back'], 'dumbbell', 'pull', false, 15, 25, 2, 5],
+
+  // BICEPS (additional)
+  ['Cable Hammer Curl (Rope)', 'biceps', ['forearms'], 'cable', 'isolation', false, 10, 15, 2, 4],
+  ['Prone Incline Curl', 'biceps', [], 'dumbbell', 'isolation', false, 10, 15, 2, 5],
+
+  // TRICEPS (additional)
+  ['Decline Skull Crusher', 'triceps', [], 'barbell', 'isolation', false, 8, 15, 2, 4],
+  ['Bench Dip', 'triceps', ['chest', 'shoulders'], 'bodyweight', 'push', true, 10, 20, 2, 3],
+
+  // QUADS (additional)
+  ['Sissy Squat', 'quads', [], 'bodyweight', 'isolation', false, 10, 20, 3, 4],
+  ['Wall Sit', 'quads', [], 'bodyweight', 'isolation', false, 30, 90, 2, 3],
+  ['Pendulum Squat', 'quads', ['glutes'], 'machine', 'squat', true, 8, 15, 4, 4],
+
+  // HAMSTRINGS (additional)
+  ['Single-Leg Romanian Deadlift', 'hamstrings', ['glutes'], 'dumbbell', 'hinge', true, 8, 12, 3, 4],
+  ['Swiss Ball Leg Curl', 'hamstrings', ['glutes'], 'bodyweight', 'isolation', false, 10, 20, 2, 5],
 ];
 
 export async function seedExercisesIfNeeded() {
