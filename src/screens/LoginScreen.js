@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { signInWithEmail, signUpWithEmail, supabase } from '../lib/supabase';
+import { signInWithEmail, signUpWithEmail, resetPassword } from '../lib/supabase';
 import useAppStore from '../store/useAppStore';
 
 export default function LoginScreen({ navigation }) {
@@ -54,7 +54,7 @@ export default function LoginScreen({ navigation }) {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
+    const { error } = await resetPassword(email.trim());
     setLoading(false);
     if (error) {
       Alert.alert('Error', error.message);

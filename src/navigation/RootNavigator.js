@@ -2,12 +2,13 @@ import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
+import { View, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { colors } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
-import { supabase } from '../lib/supabase';
+import { getSupabaseClient } from '../lib/supabase';
 import { initDatabase } from '../lib/database';
 import { seedExercisesIfNeeded } from '../lib/seedExercises';
 
@@ -140,12 +141,15 @@ export default function RootNavigator() {
 
       // 1. Try Supabase auth (works when credentials are configured)
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          setSession(session);
-          setUser(session.user);
-          setAuthLoading(false);
-          return;
+        const client = getSupabaseClient();
+        if (client) {
+          const { data: { session } } = await client.auth.getSession();
+          if (session?.user) {
+            setSession(session);
+            setUser(session.user);
+            setAuthLoading(false);
+            return;
+          }
         }
       } catch (_e) {
         // Supabase not configured yet — that's fine for Stage 1
@@ -167,17 +171,26 @@ export default function RootNavigator() {
     // Still subscribe to Supabase auth changes (works when credentials are present)
     let subscription;
     try {
-      const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-      });
-      subscription = data.subscription;
+      const client = getSupabaseClient();
+      if (client) {
+        const { data } = client.auth.onAuthStateChange((_event, session) => {
+          setSession(session);
+          setUser(session?.user ?? null);
+        });
+        subscription = data.subscription;
+      }
     } catch (_e) {}
 
     return () => subscription?.unsubscribe();
   }, []);
 
-  if (isAuthLoading) return null;
+  if (isAuthLoading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <NavigationContainer

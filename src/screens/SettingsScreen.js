@@ -5,7 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { supabase, signOut, getUserProfile } from '../lib/supabase';
+import { getSupabaseClient, signOut, getUserProfile } from '../lib/supabase';
 import useAppStore from '../store/useAppStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -74,7 +74,7 @@ export default function SettingsScreen({ navigation }) {
           style: 'destructive',
           onPress: async () => {
             if (!user?.isLocal) {
-              await supabase.rpc('delete_user_data').catch(() => {});
+              await getSupabaseClient()?.rpc('delete_user_data').catch(() => {});
               await signOut().catch(() => {});
             }
             await AsyncStorage.removeItem('@volyume_local_user_id');
