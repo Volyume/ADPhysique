@@ -31,14 +31,7 @@
     },
     "plugins": [
       "expo-dev-client",
-      "expo-secure-store",
-      [
-        "expo-sqlite",
-        {
-          "enableFTS": true,
-          "useSQLCipher": false
-        }
-      ]
+      "expo-secure-store"
     ],
     "newArchEnabled": false
   }
