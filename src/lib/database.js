@@ -1,6 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 
 let _db = null;
+let _initPromise = null;
 
 function uid() {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
@@ -20,8 +21,14 @@ function rowToCamel(row) {
   return result;
 }
 
-export async function initDatabase() {
-  if (_db) return _db;
+export function initDatabase() {
+  if (_db) return Promise.resolve(_db);
+  if (_initPromise) return _initPromise;
+  _initPromise = _doInit();
+  return _initPromise;
+}
+
+async function _doInit() {
   _db = await SQLite.openDatabaseAsync('volyume.db');
   await _db.execAsync('PRAGMA journal_mode = WAL;');
   await _db.execAsync(`

@@ -85,7 +85,7 @@ function OptionButton({ option, selected, onPress }) {
   );
 }
 
-export default function OnboardingScreen({ navigation }) {
+export default function OnboardingScreen({ navigation, route }) {
   const { user, setUnits } = useAppStore();
   const [step, setStep] = useState(0);
   const [selections, setSelections] = useState({
@@ -117,6 +117,10 @@ export default function OnboardingScreen({ navigation }) {
         await upsertUserProfile(user.id, selections).catch(() => {});
       }
       setUnits(selections.units);
+      // If the user arrived here from within the auth stack (Supabase signup),
+      // navigating back to Login re-triggers the auth listener which switches to MainTabs.
+      // For any other entry point, reset to Login so the stack is clean.
+      navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
     } finally {
       setLoading(false);
     }
