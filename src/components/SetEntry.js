@@ -5,17 +5,18 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 
 const RIR_OPTIONS = [0, 1, 2, 3, 4, 5];
 const RPE_OPTIONS = [6, 7, 8, 9, 10];
-const SET_TYPES = [
-  { value: 'straight', label: 'Straight' },
-  { value: 'warmup', label: 'Warmup' },
-  { value: 'dropset', label: 'Dropset' },
-  { value: 'superset', label: 'Superset' },
-  { value: 'myo_reps', label: 'Myo-Reps' },
-  { value: 'amrap', label: 'AMRAP' },
-  { value: 'rest_pause', label: 'Rest-Pause' },
-];
 
-export default function SetEntry({ value, onChange, units = 'kg' }) {
+const SET_TYPE_LABELS = {
+  straight: 'Straight set',
+  warmup: 'Warm-up',
+  dropset: 'Drop set',
+  superset: 'Superset',
+  myo_reps: 'Myo-reps',
+  rest_pause: 'Rest-pause',
+  amrap: 'AMRAP',
+};
+
+export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypePicker }) {
   const { weight, reps, rir, rpe, setType } = value;
 
   function adjust(field, delta) {
@@ -36,23 +37,10 @@ export default function SetEntry({ value, onChange, units = 'kg' }) {
     onChange({ ...value, [field]: val });
   }
 
+  const setTypeLabel = SET_TYPE_LABELS[setType] || 'Straight set';
+
   return (
     <View style={styles.container}>
-      {/* Set Type Row */}
-      <View style={styles.setTypeRow}>
-        {SET_TYPES.map(t => (
-          <TouchableOpacity
-            key={t.value}
-            style={[styles.setTypeBtn, setType === t.value && styles.setTypeBtnActive]}
-            onPress={() => { Haptics.selectionAsync(); setField('setType', t.value); }}
-          >
-            <Text style={[styles.setTypeText, setType === t.value && styles.setTypeTextActive]}>
-              {t.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
       {/* Weight Row */}
       <View style={styles.inputRow}>
         <Text style={styles.fieldLabel}>Weight ({units})</Text>
@@ -132,6 +120,15 @@ export default function SetEntry({ value, onChange, units = 'kg' }) {
           </View>
         </View>
       </View>
+
+      {/* Set Type — compact inline row */}
+      <TouchableOpacity style={styles.setTypeRow} onPress={onOpenSetTypePicker} activeOpacity={0.7}>
+        <Text style={styles.setTypeLabel}>Set type</Text>
+        <View style={styles.setTypeRight}>
+          <Text style={styles.setTypeValue}>{setTypeLabel}</Text>
+          <Text style={styles.setTypeChange}> · Change</Text>
+        </View>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -139,31 +136,6 @@ export default function SetEntry({ value, onChange, units = 'kg' }) {
 const styles = StyleSheet.create({
   container: {
     gap: spacing.md,
-  },
-  setTypeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-  },
-  setTypeBtn: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs + 2,
-    borderRadius: radius.full,
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  setTypeBtnActive: {
-    backgroundColor: colors.primaryBg,
-    borderColor: colors.primary,
-  },
-  setTypeText: {
-    fontSize: fontSize.xs,
-    color: colors.textSecondary,
-    fontWeight: fontWeight.medium,
-  },
-  setTypeTextActive: {
-    color: colors.primary,
   },
   inputRow: {
     flexDirection: 'row',
@@ -242,5 +214,32 @@ const styles = StyleSheet.create({
   },
   chipTextActive: {
     color: colors.background,
+  },
+  setTypeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  setTypeLabel: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    fontWeight: fontWeight.medium,
+  },
+  setTypeRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  setTypeValue: {
+    fontSize: fontSize.sm,
+    color: colors.textPrimary,
+    fontWeight: fontWeight.semibold,
+  },
+  setTypeChange: {
+    fontSize: fontSize.sm,
+    color: colors.primary,
+    fontWeight: fontWeight.medium,
   },
 });

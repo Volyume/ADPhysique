@@ -12,7 +12,7 @@ import {
   Platform,
   FlatList,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
@@ -31,6 +31,26 @@ import {
 
 const DEFAULT_SET = { weight: 0, reps: 8, rir: 2, rpe: 8, setType: 'straight', notes: '' };
 
+const SET_TYPE_OPTIONS = [
+  {
+    section: 'COMMON',
+    items: [
+      { value: 'straight', label: 'Straight set', description: 'Normal working set. Counts towards hard-set volume.' },
+      { value: 'warmup', label: 'Warm-up', description: 'Preparation set. Does not count towards hard-set volume.' },
+    ],
+  },
+  {
+    section: 'ADVANCED',
+    items: [
+      { value: 'dropset', label: 'Drop set', description: 'Reduce weight immediately and continue the set.' },
+      { value: 'superset', label: 'Superset', description: 'Pair this exercise with another exercise.' },
+      { value: 'myo_reps', label: 'Myo-reps', description: 'Activation set followed by short-rest mini-sets.' },
+      { value: 'rest_pause', label: 'Rest-pause', description: 'Short pauses used to extend the set.' },
+      { value: 'amrap', label: 'AMRAP', description: 'As many reps as possible.' },
+    ],
+  },
+];
+
 export default function ActiveWorkoutScreen({ navigation, route }) {
   const {
     user, units, activeWorkout, workoutExercises, currentExerciseIndex,
@@ -48,8 +68,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [saving, setSaving] = useState(false);
   const [progression, setProgression] = useState(null);
+  const [showSetTypePicker, setShowSetTypePicker] = useState(false);
+  const [showExecution, setShowExecution] = useState(false);
 
   const scrollRef = useRef(null);
+  const insets = useSafeAreaInsets();
   const timerRef = useRef(null);
 
   const currentEntry = workoutExercises[currentExerciseIndex];
@@ -360,6 +383,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               value={currentSet}
               onChange={setCurrentSet}
               units={units}
+              onOpenSetTypePicker={() => setShowSetTypePicker(true)}
             />
 
             {showNoteInput ? (
@@ -386,19 +410,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           </TouchableOpacity>
 
           <View style={styles.secondaryActions}>
-            <TouchableOpacity
-              style={styles.actionBtn}
-              onPress={() => setShowPlateCalc(true)}
-            >
+            <TouchableOpacity style={styles.actionBtn} onPress={() => setShowPlateCalc(true)}>
               <Ionicons name="calculator-outline" size={18} color={colors.textSecondary} />
               <Text style={styles.actionBtnText}>Plates</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.actionBtn}
-              onPress={() => setShowNoteInput(v => !v)}
-            >
+            <TouchableOpacity style={styles.actionBtn} onPress={() => setShowNoteInput(v => !v)}>
               <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
               <Text style={styles.actionBtnText}>Note</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionBtn} onPress={() => setShowExecution(true)}>
+              <Ionicons name="information-circle-outline" size={18} color={colors.textSecondary} />
+              <Text style={styles.actionBtnText}>Execution</Text>
             </TouchableOpacity>
           </View>
 
@@ -431,7 +453,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           {/* Exercise Navigation — Next Exercise or Finish Workout */}
           {isLastExercise ? (
             <TouchableOpacity style={styles.finishWorkoutLargeBtn} onPress={handleFinishWorkout}>
-              <Ionicons name="checkmark-done" size={20} color={colors.background} />
+              <Ionicons name="checkmark-done" size={18} color={colors.success} />
               <Text style={styles.finishWorkoutLargeBtnText}>Finish Workout</Text>
             </TouchableOpacity>
           ) : (
@@ -441,7 +463,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </TouchableOpacity>
           )}
 
-          <View style={{ height: 40 }} />
+          <View style={{ height: Math.max(spacing.xxl, insets.bottom + spacing.lg) }} />
         </ScrollView>
 
         {/* Plate Calculator Modal */}
@@ -471,6 +493,69 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             setShowExercisePicker(false);
           }}
         />
+
+        {/* Set Type Picker Bottom Sheet */}
+        <Modal
+          visible={showSetTypePicker}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowSetTypePicker(false)}
+        >
+          <TouchableOpacity
+            style={styles.sheetOverlay}
+            activeOpacity={1}
+            onPress={() => setShowSetTypePicker(false)}
+          />
+          <View style={[styles.sheet, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>Set type</Text>
+            {SET_TYPE_OPTIONS.map(group => (
+              <View key={group.section}>
+                <Text style={styles.sheetSection}>{group.section}</Text>
+                {group.items.map(opt => (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[styles.sheetOption, currentSet.setType === opt.value && styles.sheetOptionActive]}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      setCurrentSet(s => ({ ...s, setType: opt.value }));
+                      setShowSetTypePicker(false);
+                    }}
+                  >
+                    <View style={styles.sheetOptionText}>
+                      <Text style={[styles.sheetOptionLabel, currentSet.setType === opt.value && styles.sheetOptionLabelActive]}>
+                        {opt.label}
+                      </Text>
+                      <Text style={styles.sheetOptionDesc}>{opt.description}</Text>
+                    </View>
+                    {currentSet.setType === opt.value && (
+                      <Ionicons name="checkmark" size={18} color={colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ))}
+          </View>
+        </Modal>
+
+        {/* Execution Placeholder Bottom Sheet */}
+        <Modal
+          visible={showExecution}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowExecution(false)}
+        >
+          <TouchableOpacity
+            style={styles.sheetOverlay}
+            activeOpacity={1}
+            onPress={() => setShowExecution(false)}
+          />
+          <View style={[styles.sheet, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>Execution guide</Text>
+            <Text style={styles.executionPlaceholder}>Execution guide coming soon.</Text>
+          </View>
+        </Modal>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -808,13 +893,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.success,
+    borderWidth: 1.5,
+    borderColor: colors.success,
     borderRadius: radius.lg,
     paddingVertical: spacing.lg,
   },
   finishWorkoutLargeBtnText: {
     fontSize: fontSize.md,
-    color: colors.background,
+    color: colors.success,
     fontWeight: fontWeight.bold,
   },
   loggedSection: {
@@ -944,6 +1030,71 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xxl,
     paddingVertical: spacing.lg,
     marginTop: spacing.lg,
+  },
+  sheetOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  sheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+  },
+  sheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.border,
+    alignSelf: 'center',
+    marginBottom: spacing.lg,
+  },
+  sheetTitle: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.lg,
+  },
+  sheetSection: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.textMuted,
+    letterSpacing: 1.2,
+    marginBottom: spacing.sm,
+    marginTop: spacing.md,
+  },
+  sheetOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  sheetOptionActive: {
+    backgroundColor: 'transparent',
+  },
+  sheetOptionText: {
+    flex: 1,
+    gap: 2,
+  },
+  sheetOptionLabel: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+  },
+  sheetOptionLabelActive: {
+    color: colors.primary,
+  },
+  sheetOptionDesc: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+  },
+  executionPlaceholder: {
+    fontSize: fontSize.md,
+    color: colors.textSecondary,
+    paddingVertical: spacing.lg,
   },
   addFirstBtnText: {
     fontSize: fontSize.lg,
