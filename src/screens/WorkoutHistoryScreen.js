@@ -61,7 +61,6 @@ export default function WorkoutHistoryScreen({ navigation }) {
   function renderItem({ item }) {
     const { workout, setCount, exerciseCount, tonnage, exerciseNames } = item;
     const date = new Date(workout.startedAt);
-    const isRecent = Date.now() - workout.startedAt < 7 * 24 * 60 * 60 * 1000;
 
     return (
       <View style={styles.card}>
@@ -116,25 +115,12 @@ export default function WorkoutHistoryScreen({ navigation }) {
         keyExtractor={item => item.workout.id}
         renderItem={renderItem}
         contentContainerStyle={styles.list}
-        ListHeaderComponent={
-          <TouchableOpacity
-            style={styles.startBtn}
-            onPress={async () => {
-              const workout = await createWorkout(user.id);
-              startWorkout(workout);
-              navigation.navigate('ActiveWorkout');
-            }}
-          >
-            <Ionicons name="add-circle" size={22} color={colors.background} />
-            <Text style={styles.startBtnText}>Start New Workout</Text>
-          </TouchableOpacity>
-        }
         ListEmptyComponent={
           !loading ? (
             <View style={styles.empty}>
               <Ionicons name="barbell-outline" size={48} color={colors.surface3} />
-              <Text style={styles.emptyTitle}>No workouts yet</Text>
-              <Text style={styles.emptyText}>Start your first session above</Text>
+              <Text style={styles.emptyTitle}>No sessions yet</Text>
+              <Text style={styles.emptyText}>Completed workouts will appear here.{' '}Start a session from the Train tab.</Text>
             </View>
           ) : null
         }
@@ -147,21 +133,6 @@ export default function WorkoutHistoryScreen({ navigation }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   list: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
-  startBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    paddingVertical: spacing.lg,
-    marginBottom: spacing.xl,
-  },
-  startBtnText: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
-    color: colors.background,
-  },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
@@ -249,5 +220,8 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: fontSize.md,
     color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 22,
+    paddingHorizontal: spacing.xl,
   },
 });
