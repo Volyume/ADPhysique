@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import {
   getRoutineById, getRoutineExercisesWithDetails, getAllExercises,
-  addExerciseToRoutine, removeExerciseFromRoutine, createWorkout,
+  addExerciseToRoutine, removeExerciseFromRoutine, createWorkout, updateRoutineExercise,
 } from '../lib/database';
 import useAppStore from '../store/useAppStore';
 
@@ -63,11 +63,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
           { text: 'Add Exercise', onPress: () => setShowAddExercise(true) },
           {
             text: 'Start Blank Workout',
-            onPress: async () => {
-              const workout = await createWorkout(user.id);
-              startWorkout(workout, []);
-              navigation.navigate('WorkoutTab', { screen: 'ActiveWorkout' });
-            },
+            onPress: () => navigation.navigate('HomeTab', { screen: 'BuildWorkout' }),
           },
         ],
       );
@@ -80,7 +76,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
       sets: [],
     }));
     startWorkout(workout, initialExercises);
-    navigation.navigate('WorkoutTab', { screen: 'ActiveWorkout' });
+    navigation.navigate('HomeTab', { screen: 'ActiveWorkout' });
   }
 
   const filtered = searchQuery.trim()
@@ -111,7 +107,13 @@ export default function RoutineDetailScreen({ navigation, route }) {
               <Text style={styles.exerciseMeta}>
                 {routineExercise.recommendedSets} sets ·{' '}
                 {routineExercise.recommendedRepsMin}–{routineExercise.recommendedRepsMax} reps
+                {routineExercise.restSeconds ? ` · ${routineExercise.restSeconds}s rest` : ''}
               </Text>
+              {routineExercise.startingWeight > 0 ? (
+                <Text style={styles.exerciseStartWeight}>
+                  Start: {routineExercise.startingWeight} kg
+                </Text>
+              ) : null}
               <Text style={styles.exerciseMuscle}>
                 {(exercise.primaryMuscle || '').charAt(0).toUpperCase() +
                   (exercise.primaryMuscle || '').slice(1)}
@@ -224,6 +226,7 @@ const styles = StyleSheet.create({
   exerciseName: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   exerciseMeta: { fontSize: fontSize.sm, color: colors.primary },
   exerciseMuscle: { fontSize: fontSize.xs, color: colors.textMuted },
+  exerciseStartWeight: { fontSize: fontSize.xs, color: colors.primary },
   addBtn: {
     flexDirection: 'row',
     alignItems: 'center',

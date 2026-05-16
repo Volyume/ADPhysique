@@ -17,8 +17,8 @@ import {
   getAllWorkoutSets, getAllExercises, getAllWorkouts, getAllRoutines,
   createWorkout, getRoutineExercisesWithDetails,
 } from '../lib/database';
-import { calculateWeeklyVolume } from '../lib/algorithms';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
+import { calculateWeeklyVolume } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 
 export default function HomeScreen({ navigation }) {
@@ -90,10 +90,8 @@ export default function HomeScreen({ navigation }) {
     setRefreshing(false);
   }
 
-  async function handleStartBlankWorkout() {
-    const workout = await createWorkout(user.id);
-    startWorkout(workout, []);
-    navigation.navigate('WorkoutTab', { screen: 'ActiveWorkout' });
+  function handleStartBlankWorkout() {
+    navigation.navigate('BuildWorkout');
   }
 
   async function handleStartRoutine(routine) {
@@ -105,11 +103,11 @@ export default function HomeScreen({ navigation }) {
       sets: [],
     }));
     startWorkout(workout, initialExercises);
-    navigation.navigate('WorkoutTab', { screen: 'ActiveWorkout' });
+    navigation.navigate('ActiveWorkout');
   }
 
   function handleContinueWorkout() {
-    navigation.navigate('WorkoutTab', { screen: 'ActiveWorkout' });
+    navigation.navigate('ActiveWorkout');
   }
 
   const hasActiveWorkout = !!activeWorkout;
@@ -148,7 +146,7 @@ export default function HomeScreen({ navigation }) {
           </View>
           <TouchableOpacity
             style={[styles.statCard, styles.statCardAction]}
-            onPress={() => navigation.navigate('AnalyticsTab', { screen: 'BodyMetrics' })}
+            onPress={() => navigation.navigate('ProgressTab', { screen: 'BodyMetrics' })}
           >
             <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
             <Text style={styles.statLabel}>Log weight</Text>
@@ -182,7 +180,7 @@ export default function HomeScreen({ navigation }) {
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.ghostBtn}
-                onPress={() => navigation.navigate('ProfileTab', { screen: 'RoutineBuilder' })}
+                onPress={() => navigation.navigate('RoutinesTab')}
               >
                 <Text style={styles.ghostBtnText}>Create a Routine</Text>
               </TouchableOpacity>
@@ -195,7 +193,7 @@ export default function HomeScreen({ navigation }) {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>WEEKLY WORKING SETS</Text>
             <TouchableOpacity
-              onPress={() => navigation.navigate('AnalyticsTab', { screen: 'VolumeHeatmap' })}
+              onPress={() => navigation.navigate('ProgressTab', { screen: 'VolumeHeatmap' })}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Text style={styles.seeAll}>See all</Text>
@@ -218,21 +216,21 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.quickActions}>
           <TouchableOpacity
             style={styles.quickAction}
-            onPress={() => navigation.navigate('WorkoutTab', { screen: 'WorkoutHistory' })}
+            onPress={() => navigation.navigate('ProgressTab', { screen: 'WorkoutHistory' })}
           >
             <Ionicons name="time-outline" size={22} color={colors.primary} />
             <Text style={styles.quickActionText}>History</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickAction}
-            onPress={() => navigation.navigate('ProfileTab', { screen: 'RoutineBuilder' })}
+            onPress={() => navigation.navigate('RoutinesTab')}
           >
             <Ionicons name="list" size={22} color={colors.primary} />
             <Text style={styles.quickActionText}>Routines</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickAction}
-            onPress={() => navigation.navigate('WorkoutTab', { screen: 'ExerciseLibrary' })}
+            onPress={() => navigation.navigate('RoutinesTab', { screen: 'ExerciseLibrary' })}
           >
             <Ionicons name="barbell-outline" size={22} color={colors.primary} />
             <Text style={styles.quickActionText}>Exercises</Text>

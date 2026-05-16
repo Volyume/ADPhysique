@@ -150,6 +150,11 @@ export default function AnalyticsScreen({ navigation }) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>DEEP DIVE</Text>
           <View style={styles.linkGrid}>
+            <TouchableOpacity style={styles.linkCard} onPress={() => navigation.navigate('WorkoutHistory')}>
+              <Ionicons name="time" size={24} color={colors.primary} />
+              <Text style={styles.linkTitle}>Workout History</Text>
+              <Text style={styles.linkSub}>Past sessions</Text>
+            </TouchableOpacity>
             <TouchableOpacity style={styles.linkCard} onPress={() => navigation.navigate('PRWall')}>
               <Ionicons name="trophy" size={24} color={colors.gold} />
               <Text style={styles.linkTitle}>Personal Records</Text>
