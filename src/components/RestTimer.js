@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,9 +10,11 @@ export default function RestTimer() {
     useAppStore();
   const intervalRef = useRef(null);
   const progressAnim = useRef(new Animated.Value(1)).current;
+  const [showDone, setShowDone] = useState(false);
 
   useEffect(() => {
     if (restTimerActive) {
+      setShowDone(false);
       Animated.timing(progressAnim, {
         toValue: 0,
         duration: restTimerDuration * 1000,
@@ -30,25 +32,43 @@ export default function RestTimer() {
     return () => clearInterval(intervalRef.current);
   }, [restTimerActive]);
 
+  // Haptics at 3, 2, 1 seconds and "done" banner at 0
   useEffect(() => {
-    if (restTimerActive && restTimerRemaining === 0) {
+    if (!restTimerActive) return;
+    if (restTimerRemaining <= 3 && restTimerRemaining > 0) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    }
+    if (restTimerRemaining === 0) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 200);
       setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 400);
+      setShowDone(true);
+      setTimeout(() => setShowDone(false), 3000);
     }
   }, [restTimerRemaining]);
 
-  if (!restTimerActive && restTimerRemaining === 0) return null;
+  const isCountdown = restTimerActive && restTimerRemaining <= 3 && restTimerRemaining > 0;
+  const isAlmostDone = restTimerRemaining <= 10 && restTimerActive;
+
+  if (!restTimerActive && restTimerRemaining === 0 && !showDone) return null;
 
   const mins = Math.floor(restTimerRemaining / 60);
   const secs = restTimerRemaining % 60;
   const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
-  const isAlmostDone = restTimerRemaining <= 10 && restTimerActive;
 
   const barWidth = progressAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ['0%', '100%'],
   });
+
+  if (showDone && !restTimerActive) {
+    return (
+      <View style={styles.doneContainer}>
+        <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+        <Text style={styles.doneText}>Start next set</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -62,8 +82,12 @@ export default function RestTimer() {
       </View>
       <View style={styles.row}>
         <Ionicons name="timer-outline" size={18} color={isAlmostDone ? colors.warning : colors.primary} />
-        <Text style={[styles.timeText, isAlmostDone && styles.almostDone]}>{timeStr}</Text>
-        <Text style={styles.label}>rest</Text>
+        {isCountdown ? (
+          <Text style={styles.countdownNum}>{restTimerRemaining}</Text>
+        ) : (
+          <Text style={[styles.timeText, isAlmostDone && styles.almostDone]}>{timeStr}</Text>
+        )}
+        <Text style={styles.label}>{isCountdown ? 'seconds' : 'rest'}</Text>
         <TouchableOpacity onPress={stopRestTimer} style={styles.skipBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
           <Text style={styles.skipText}>Skip</Text>
         </TouchableOpacity>
@@ -104,6 +128,13 @@ const styles = StyleSheet.create({
   almostDone: {
     color: colors.warning,
   },
+  countdownNum: {
+    fontSize: fontSize.xxl,
+    fontWeight: fontWeight.black,
+    color: colors.warning,
+    minWidth: 52,
+    textAlign: 'center',
+  },
   label: {
     fontSize: fontSize.sm,
     color: colors.textSecondary,
@@ -120,5 +151,20 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textSecondary,
     fontWeight: fontWeight.medium,
+  },
+  doneContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.successBg,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    marginVertical: spacing.sm,
+  },
+  doneText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.success,
   },
 });

@@ -49,10 +49,12 @@ const useAppStore = create((set, get) => ({
   workoutExercises: [],
   currentExerciseIndex: 0,
   workoutStartTime: null,
+  lastActivityAt: null,
 
   setActiveWorkout: (workout) => set({ activeWorkout: workout }),
   setWorkoutExercises: (workoutExercises) => set({ workoutExercises }),
   setCurrentExerciseIndex: (i) => set({ currentExerciseIndex: i }),
+  updateLastActivity: () => set({ lastActivityAt: Date.now() }),
 
   addExerciseToWorkout: (exercise, routineExercise = null) => {
     const { workoutExercises } = get();
@@ -79,6 +81,7 @@ const useAppStore = create((set, get) => ({
     workoutExercises: initialExercises,
     currentExerciseIndex: 0,
     workoutStartTime: Date.now(),
+    lastActivityAt: Date.now(),
   }),
 
   endWorkout: () => set({
@@ -87,6 +90,7 @@ const useAppStore = create((set, get) => ({
     currentExerciseIndex: 0,
     workoutStartTime: null,
     restTimerActive: false,
+    lastActivityAt: null,
   }),
 
   // Rest timer

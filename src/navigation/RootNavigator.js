@@ -19,6 +19,7 @@ import OnboardingScreen from '../screens/OnboardingScreen';
 // Main screens
 import HomeScreen from '../screens/HomeScreen';
 import ActiveWorkoutScreen from '../screens/ActiveWorkoutScreen';
+import BuildWorkoutScreen from '../screens/BuildWorkoutScreen';
 import WorkoutHistoryScreen from '../screens/WorkoutHistoryScreen';
 import WorkoutSummaryScreen from '../screens/WorkoutSummaryScreen';
 import ExerciseLibraryScreen from '../screens/ExerciseLibraryScreen';
@@ -28,7 +29,7 @@ import VolumeHeatmapScreen from '../screens/VolumeHeatmapScreen';
 import PRWallScreen from '../screens/PRWallScreen';
 import BodyMetricsScreen from '../screens/BodyMetricsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
-import RoutineBuilderScreen from '../screens/RoutineBuilderScreen';
+import RoutinesScreen from '../screens/RoutinesScreen';
 import RoutineDetailScreen from '../screens/RoutineDetailScreen';
 import MesocycleBuilderScreen from '../screens/MesocycleBuilderScreen';
 
@@ -42,22 +43,37 @@ const stackOptions = {
   cardStyle: { backgroundColor: colors.background },
 };
 
-function WorkoutStack() {
+// Train tab: Home + workout flow
+function HomeStack() {
   return (
     <Stack.Navigator screenOptions={stackOptions}>
-      <Stack.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} options={{ title: 'Workouts' }} />
-      <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} options={{ title: 'Workout', headerShown: false }} />
+      <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="BuildWorkout" component={BuildWorkoutScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} options={{ headerShown: false }} />
       <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ title: 'Session Complete' }} />
+    </Stack.Navigator>
+  );
+}
+
+// Routines tab: routine management + exercise library
+function RoutinesStack() {
+  return (
+    <Stack.Navigator screenOptions={stackOptions}>
+      <Stack.Screen name="Routines" component={RoutinesScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="RoutineDetail" component={RoutineDetailScreen} options={{ title: 'Edit Routine' }} />
       <Stack.Screen name="ExerciseLibrary" component={ExerciseLibraryScreen} options={{ title: 'Exercise Library' }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise' }} />
     </Stack.Navigator>
   );
 }
 
-function AnalyticsStack() {
+// Progress tab: analytics + history
+function ProgressStack() {
   return (
     <Stack.Navigator screenOptions={stackOptions}>
-      <Stack.Screen name="Analytics" component={AnalyticsScreen} options={{ title: 'Analytics' }} />
+      <Stack.Screen name="Analytics" component={AnalyticsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} options={{ title: 'Workout History' }} />
+      <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ title: 'Session Complete' }} />
       <Stack.Screen name="VolumeHeatmap" component={VolumeHeatmapScreen} options={{ title: 'Volume Heatmap' }} />
       <Stack.Screen name="PRWall" component={PRWallScreen} options={{ title: 'Personal Records' }} />
       <Stack.Screen name="BodyMetrics" component={BodyMetricsScreen} options={{ title: 'Body Metrics' }} />
@@ -65,22 +81,12 @@ function AnalyticsStack() {
   );
 }
 
+// You tab: settings + mesocycles
 function ProfileStack() {
   return (
     <Stack.Navigator screenOptions={stackOptions}>
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Profile & Settings' }} />
-      <Stack.Screen name="RoutineBuilder" component={RoutineBuilderScreen} options={{ title: 'My Routines' }} />
-      <Stack.Screen name="RoutineDetail" component={RoutineDetailScreen} options={{ title: 'Edit Routine' }} />
       <Stack.Screen name="MesocycleBuilder" component={MesocycleBuilderScreen} options={{ title: 'Mesocycles' }} />
-    </Stack.Navigator>
-  );
-}
-
-function HomeStack() {
-  return (
-    <Stack.Navigator screenOptions={stackOptions}>
-      <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise' }} />
     </Stack.Navigator>
   );
 }
@@ -102,8 +108,8 @@ function MainTabs() {
         tabBarIcon: ({ focused, color }) => {
           const icons = {
             HomeTab: focused ? 'home' : 'home-outline',
-            WorkoutTab: focused ? 'barbell' : 'barbell-outline',
-            AnalyticsTab: focused ? 'stats-chart' : 'stats-chart-outline',
+            RoutinesTab: focused ? 'list' : 'list-outline',
+            ProgressTab: focused ? 'stats-chart' : 'stats-chart-outline',
             ProfileTab: focused ? 'person' : 'person-outline',
           };
           return <Ionicons name={icons[route.name] || 'ellipse'} size={22} color={color} />;
@@ -111,8 +117,8 @@ function MainTabs() {
       })}
     >
       <Tab.Screen name="HomeTab" component={HomeStack} options={{ title: 'Train' }} />
-      <Tab.Screen name="WorkoutTab" component={WorkoutStack} options={{ title: 'Log' }} />
-      <Tab.Screen name="AnalyticsTab" component={AnalyticsStack} options={{ title: 'Progress' }} />
+      <Tab.Screen name="RoutinesTab" component={RoutinesStack} options={{ title: 'Routines' }} />
+      <Tab.Screen name="ProgressTab" component={ProgressStack} options={{ title: 'Progress' }} />
       <Tab.Screen name="ProfileTab" component={ProfileStack} options={{ title: 'You' }} />
     </Tab.Navigator>
   );
@@ -135,12 +141,10 @@ export default function RootNavigator() {
   useEffect(() => {
     async function bootstrap() {
       try {
-        // Init DB + seed in background — errors are non-fatal
         initDatabase()
           .then(() => seedExercisesIfNeeded().catch(console.warn))
           .catch(console.warn);
 
-        // 1. Try Supabase auth (works when credentials are configured)
         try {
           const client = getSupabaseClient();
           if (client) {
@@ -154,7 +158,6 @@ export default function RootNavigator() {
           }
         } catch (_e) {}
 
-        // 2. Check for an existing local user (persisted across restarts)
         try {
           const localId = await AsyncStorage.getItem(LOCAL_USER_KEY);
           if (localId) {
@@ -170,7 +173,6 @@ export default function RootNavigator() {
 
     bootstrap().catch(console.error);
 
-    // Still subscribe to Supabase auth changes (works when credentials are present)
     let subscription;
     try {
       const client = getSupabaseClient();
