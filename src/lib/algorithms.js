@@ -104,20 +104,23 @@ export function calculateWeeklyVolume(sets, exerciseMap = {}) {
 // Algorithm 5: Volume Status
 export function getVolumeStatus(hardSets, muscle, customLandmarks = null) {
   const landmarks = customLandmarks?.[muscle] || VOLUME_LANDMARKS[muscle];
-  if (!landmarks) return { status: 'unknown', color: '#9E9E9E', label: 'Unknown' };
+  if (!landmarks) return { status: 'unknown', color: '#9E9E9E', label: 'No data', landmarks: null };
 
   const { mev, mav, mrv } = landmarks;
 
   if (hardSets < mev) {
-    return { status: 'below', color: '#616161', label: 'Below MEV', landmarks };
+    return { status: 'below', color: '#616161', label: 'Below target', landmarks };
+  }
+  if (mev > 0 && hardSets <= mev + 2) {
+    return { status: 'minimum', color: '#FFB300', label: 'Minimum stimulus', landmarks };
   }
   if (hardSets <= mav) {
-    return { status: 'optimal', color: '#4CAF50', label: 'Optimal', landmarks };
+    return { status: 'optimal', color: '#00C853', label: 'Growth range', landmarks };
   }
   if (hardSets <= mrv) {
-    return { status: 'over_mav', color: '#FFC107', label: 'Near MRV', landmarks };
+    return { status: 'near_mrv', color: '#FFB300', label: 'Near recovery ceiling', landmarks };
   }
-  return { status: 'over_mrv', color: '#F44336', label: 'Over MRV', landmarks };
+  return { status: 'over_mrv', color: '#FF3D00', label: 'Recovery debt', landmarks };
 }
 
 // Algorithm 2: Double Progression Suggestion
@@ -230,26 +233,26 @@ export function getAutoRegSuggestion(workoutFeedback, weeklyVolumeByMuscle, cust
   if (sessionDifficulty >= 4 && soreness24hBefore >= 2) {
     suggestions.push({
       type: 'reduce_volume',
-      message: 'Reduce volume by 1-2 sets next week — high fatigue detected.',
+      message: 'Reduce volume by 1-2 sets next week. High fatigue indicated.',
     });
   } else if (sessionDifficulty <= 2 && soreness24hBefore === 0 && fatigueLevel >= 4) {
     suggestions.push({
       type: 'add_volume',
-      message: 'Add 1-2 sets next week — recovery is good.',
+      message: 'Recovery capacity available. Consider adding 1-2 sets next week.',
     });
   }
 
   if (jointDiscomfort >= 2) {
     suggestions.push({
       type: 'reduce_weight',
-      message: 'Maintain volume but reduce weight 5-10% — joint discomfort noted.',
+      message: 'Maintain volume but reduce load 5-10%. Joint discomfort noted.',
     });
   }
 
   if (overallPump === 3 && sessionDifficulty <= 3) {
     suggestions.push({
       type: 'increase_load',
-      message: 'Excellent pump with low difficulty — increase weight or add a set.',
+      message: 'Strong response. Consider increasing load or adding a set next session.',
     });
   }
 
@@ -260,13 +263,13 @@ export function getAutoRegSuggestion(workoutFeedback, weeklyVolumeByMuscle, cust
       suggestions.push({
         type: 'deload_muscle',
         muscle,
-        message: `${MUSCLE_DISPLAY_NAMES[muscle] || muscle}: over MRV (${data.hardSets} sets). Consider deloading.`,
+        message: `${MUSCLE_DISPLAY_NAMES[muscle] || muscle}: near recovery ceiling (${Math.round(data.hardSets)} hard sets). Avoid adding more direct volume unless recovery is excellent.`,
       });
     }
   }
 
   if (suggestions.length === 0) {
-    suggestions.push({ type: 'maintain', message: 'Volume and recovery look balanced. Keep it up.' });
+    suggestions.push({ type: 'maintain', message: 'Volume is within target range. Continue planned progression.' });
   }
 
   return suggestions;

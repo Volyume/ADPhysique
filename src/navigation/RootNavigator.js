@@ -110,10 +110,10 @@ function MainTabs() {
         },
       })}
     >
-      <Tab.Screen name="HomeTab" component={HomeStack} options={{ title: 'Home' }} />
+      <Tab.Screen name="HomeTab" component={HomeStack} options={{ title: 'Train' }} />
       <Tab.Screen name="WorkoutTab" component={WorkoutStack} options={{ title: 'Log' }} />
-      <Tab.Screen name="AnalyticsTab" component={AnalyticsStack} options={{ title: 'Analytics' }} />
-      <Tab.Screen name="ProfileTab" component={ProfileStack} options={{ title: 'Profile' }} />
+      <Tab.Screen name="AnalyticsTab" component={AnalyticsStack} options={{ title: 'Progress' }} />
+      <Tab.Screen name="ProfileTab" component={ProfileStack} options={{ title: 'You' }} />
     </Tab.Navigator>
   );
 }

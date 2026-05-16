@@ -29,24 +29,23 @@ import {
   calculateTonnage,
 } from '../lib/algorithms';
 
-const DEFAULT_SET = { weight: 0, reps: 8, rir: 2, rpe: 8, setType: 'straight', notes: '' };
+const DEFAULT_SET = { weight: 0, reps: 8, rir: 2, setType: 'straight', notes: '' };
+
+const SET_TYPE_DISPLAY = {
+  straight: 'Working set',
+  warmup: 'Warm-up',
+  dropset: 'Drop set',
+  amrap: 'AMRAP',
+};
 
 const SET_TYPE_OPTIONS = [
   {
-    section: 'COMMON',
+    section: 'PHASE 1.5',
     items: [
-      { value: 'straight', label: 'Straight set', description: 'Normal working set. Counts towards hard-set volume.' },
+      { value: 'straight', label: 'Working set', description: 'Normal hard set. Counts towards weekly volume.' },
       { value: 'warmup', label: 'Warm-up', description: 'Preparation set. Does not count towards hard-set volume.' },
-    ],
-  },
-  {
-    section: 'ADVANCED',
-    items: [
-      { value: 'dropset', label: 'Drop set', description: 'Reduce weight immediately and continue the set.' },
-      { value: 'superset', label: 'Superset', description: 'Pair this exercise with another exercise.' },
-      { value: 'myo_reps', label: 'Myo-reps', description: 'Activation set followed by short-rest mini-sets.' },
-      { value: 'rest_pause', label: 'Rest-pause', description: 'Short pauses used to extend the set.' },
-      { value: 'amrap', label: 'AMRAP', description: 'As many reps as possible.' },
+      { value: 'amrap', label: 'AMRAP', description: 'As many reps as possible. Log the reps you achieved.' },
+      { value: 'dropset', label: 'Drop set', description: 'Reduce load immediately after the main set and continue.' },
     ],
   },
 ];
@@ -148,6 +147,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     try {
       const setNumber = loggedSets.length + 1;
 
+      const rir = currentSet.rir ?? null;
+      const derivedRpe = rir !== null ? 10 - rir : null;
+
       const savedSet = await createWorkoutSet({
         userId: user.id,
         workoutId: activeWorkout.id,
@@ -158,8 +160,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         targetRepsMax: routineExercise?.recommendedRepsMax ?? null,
         actualReps: parseInt(currentSet.reps, 10),
         weight: parseFloat(currentSet.weight) || 0,
-        rir: currentSet.rir ?? null,
-        rpe: currentSet.rpe ?? null,
+        rir,
+        rpe: derivedRpe,
         failed: false,
         notes: noteText || null,
         isAmrap: currentSet.setType === 'amrap',
@@ -173,8 +175,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         setType: currentSet.setType,
         actualReps: parseInt(currentSet.reps, 10),
         weight: parseFloat(currentSet.weight) || 0,
-        rir: currentSet.rir,
-        rpe: currentSet.rpe,
+        rir: currentSet.rir ?? null,
+        rpe: derivedRpe,
       };
 
       const newLoggedSets = [...loggedSets, setData];
@@ -225,12 +227,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               isCompleted: true,
             });
             const allSets = workoutExercises.flatMap(e => e.sets);
+            const hardSetCount = allSets.filter(
+              s => s.setType !== 'warmup' && (s.rir === null || s.rir <= 2),
+            ).length;
             endWorkout();
             navigation.replace('WorkoutSummary', {
               workoutId: activeWorkout.id,
               durationMinutes: Math.round(elapsedSeconds / 60),
               exerciseCount: workoutExercises.length,
               setCount: allSets.length,
+              hardSetCount,
               tonnage: calculateTonnage(allSets),
               exerciseNames: workoutExercises.map(e => e.exercise?.name).filter(Boolean),
             });
@@ -339,29 +345,30 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           </View>
 
           {/* Previous Performance */}
-          {prevSets.length > 0 && (
-            <View style={styles.prevCard}>
-              <Text style={styles.prevTitle}>PREVIOUS SESSION</Text>
-              <View style={styles.prevSets}>
-                {prevSets.map((s, i) => (
-                  <Text key={i} style={styles.prevSetText}>
-                    {s.weight}{units} × {s.actualReps} reps
-                    {s.rir !== null && s.rir !== undefined ? ` (RIR ${s.rir})` : ''}
-                  </Text>
-                ))}
-              </View>
-              {progression && progression.action !== 'baseline' && (
-                <View style={styles.progressionBadge}>
-                  <Ionicons
-                    name={progression.action === 'increase_weight' ? 'trending-up' : 'arrow-forward'}
-                    size={13}
-                    color={colors.primary}
-                  />
-                  <Text style={styles.progressionText}>{progression.message}</Text>
-                </View>
-              )}
-            </View>
-          )}
+          <View style={styles.prevCard}>
+            <Text style={styles.prevTitle}>PREVIOUS SESSION</Text>
+            {prevSets.length > 0 ? (
+              <>
+                <Text style={styles.prevSetsSummary}>
+                  {prevSets.map((s, i) =>
+                    `${s.weight}${units} × ${s.actualReps}${s.rir !== null && s.rir !== undefined ? ` · RIR ${s.rir}` : ''}`
+                  ).join('   ')}
+                </Text>
+                {progression && progression.action !== 'baseline' && (
+                  <View style={styles.progressionBadge}>
+                    <Ionicons
+                      name={progression.action === 'increase_weight' ? 'trending-up' : 'arrow-forward'}
+                      size={13}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.progressionText}>{progression.message}</Text>
+                  </View>
+                )}
+              </>
+            ) : (
+              <Text style={styles.prevEmpty}>No previous logs.</Text>
+            )}
+          </View>
 
           {/* Target */}
           {routineExercise && (
@@ -377,7 +384,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           {/* Set Entry */}
           <View style={styles.setEntryCard}>
             <Text style={styles.setEntryTitle}>
-              SET {loggedSets.length + 1}
+              {routineExercise?.recommendedSets
+                ? `SET ${loggedSets.length + 1} / ${routineExercise.recommendedSets} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working set'}`
+                : `SET ${loggedSets.length + 1} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working set'}`}
             </Text>
             <SetEntry
               value={currentSet}
@@ -420,7 +429,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionBtn} onPress={() => setShowExecution(true)}>
               <Ionicons name="information-circle-outline" size={18} color={colors.textSecondary} />
-              <Text style={styles.actionBtnText}>Execution</Text>
+              <Text style={styles.actionBtnText}>Info</Text>
             </TouchableOpacity>
           </View>
 
@@ -509,36 +518,31 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           <View style={[styles.sheet, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}>
             <View style={styles.sheetHandle} />
             <Text style={styles.sheetTitle}>Set type</Text>
-            {SET_TYPE_OPTIONS.map(group => (
-              <View key={group.section}>
-                <Text style={styles.sheetSection}>{group.section}</Text>
-                {group.items.map(opt => (
-                  <TouchableOpacity
-                    key={opt.value}
-                    style={[styles.sheetOption, currentSet.setType === opt.value && styles.sheetOptionActive]}
-                    onPress={() => {
-                      Haptics.selectionAsync();
-                      setCurrentSet(s => ({ ...s, setType: opt.value }));
-                      setShowSetTypePicker(false);
-                    }}
-                  >
-                    <View style={styles.sheetOptionText}>
-                      <Text style={[styles.sheetOptionLabel, currentSet.setType === opt.value && styles.sheetOptionLabelActive]}>
-                        {opt.label}
-                      </Text>
-                      <Text style={styles.sheetOptionDesc}>{opt.description}</Text>
-                    </View>
-                    {currentSet.setType === opt.value && (
-                      <Ionicons name="checkmark" size={18} color={colors.primary} />
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
+            {SET_TYPE_OPTIONS[0].items.map(opt => (
+              <TouchableOpacity
+                key={opt.value}
+                style={styles.sheetOption}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setCurrentSet(s => ({ ...s, setType: opt.value }));
+                  setShowSetTypePicker(false);
+                }}
+              >
+                <View style={styles.sheetOptionText}>
+                  <Text style={[styles.sheetOptionLabel, currentSet.setType === opt.value && styles.sheetOptionLabelActive]}>
+                    {opt.label}
+                  </Text>
+                  <Text style={styles.sheetOptionDesc}>{opt.description}</Text>
+                </View>
+                {currentSet.setType === opt.value && (
+                  <Ionicons name="checkmark" size={18} color={colors.primary} />
+                )}
+              </TouchableOpacity>
             ))}
           </View>
         </Modal>
 
-        {/* Execution Placeholder Bottom Sheet */}
+        {/* Info / Form Bottom Sheet */}
         <Modal
           visible={showExecution}
           transparent
@@ -552,8 +556,20 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           />
           <View style={[styles.sheet, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}>
             <View style={styles.sheetHandle} />
-            <Text style={styles.sheetTitle}>Execution guide</Text>
-            <Text style={styles.executionPlaceholder}>Execution guide coming soon.</Text>
+            <Text style={styles.sheetTitle}>{exercise?.name}</Text>
+            {routineExercise?.recommendedSets ? (
+              <Text style={styles.infoTarget}>
+                Target: {routineExercise.recommendedSets} sets · {routineExercise.recommendedRepsMin}–{routineExercise.recommendedRepsMax} reps · RIR 2
+              </Text>
+            ) : null}
+            {exercise?.primaryMuscle ? (
+              <Text style={styles.infoMuscle}>
+                {(exercise.primaryMuscle || '').charAt(0).toUpperCase() + (exercise.primaryMuscle || '').slice(1)}{exercise.equipment ? ` · ${exercise.equipment}` : ''}
+              </Text>
+            ) : null}
+            <Text style={styles.infoNotes}>
+              {routineExercise?.notes || 'No execution notes for this exercise.'}
+            </Text>
           </View>
         </Modal>
       </KeyboardAvoidingView>
@@ -776,14 +792,16 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     letterSpacing: 1,
   },
-  prevSets: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
+  prevSetsSummary: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+    lineHeight: 22,
   },
-  prevSetText: {
+  prevEmpty: {
     fontSize: fontSize.sm,
-    color: colors.textSecondary,
+    color: colors.textMuted,
+    fontStyle: 'italic',
   },
   progressionBadge: {
     flexDirection: 'row',
@@ -1091,10 +1109,22 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.textMuted,
   },
-  executionPlaceholder: {
-    fontSize: fontSize.md,
+  infoTarget: {
+    fontSize: fontSize.sm,
+    color: colors.primary,
+    fontWeight: fontWeight.medium,
+    marginBottom: spacing.xs,
+  },
+  infoMuscle: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    marginBottom: spacing.lg,
+  },
+  infoNotes: {
+    fontSize: fontSize.sm,
     color: colors.textSecondary,
-    paddingVertical: spacing.lg,
+    lineHeight: 22,
+    paddingVertical: spacing.sm,
   },
   addFirstBtnText: {
     fontSize: fontSize.lg,

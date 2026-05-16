@@ -407,16 +407,16 @@ export async function getRoutineExercisesWithDetails(routineId) {
   });
 }
 
-export async function addExerciseToRoutine(routineId, exerciseId, order, repsMin = 6, repsMax = 12) {
+export async function addExerciseToRoutine(routineId, exerciseId, order, repsMin = 6, repsMax = 12, notes = null, sets = 3) {
   const d = await db();
   const id = uid();
   const now = Date.now();
   await d.runAsync(
     `INSERT INTO routine_exercises
       (id, routine_id, exercise_id, order_in_routine, recommended_sets,
-       recommended_reps_min, recommended_reps_max, created_at, updated_at)
-     VALUES (?, ?, ?, ?, 3, ?, ?, ?, ?)`,
-    [id, routineId, exerciseId, order, repsMin, repsMax, now, now],
+       recommended_reps_min, recommended_reps_max, notes, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, routineId, exerciseId, order, sets, repsMin, repsMax, notes, now, now],
   );
   return { id, routineId, exerciseId, orderInRoutine: order };
 }

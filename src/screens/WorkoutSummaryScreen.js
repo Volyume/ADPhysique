@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { getAllWorkoutSets, getAllExercises, updateWorkout } from '../lib/database';
+import { getAllWorkoutSets, getAllExercises, getAllWorkouts, updateWorkout } from '../lib/database';
 import { calculateWeeklyVolume, getVolumeStatus, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 
@@ -21,7 +21,10 @@ function RatingRow({ label, field, value, max, onChange }) {
   const labels = RATING_LABELS[field];
   return (
     <View style={styles.ratingRow}>
-      <Text style={styles.ratingLabel}>{label}</Text>
+      <View style={styles.ratingLabelRow}>
+        <Text style={styles.ratingLabel}>{label}</Text>
+        {labels?.[value] ? <Text style={styles.ratingValueLabel}>{labels[value]}</Text> : null}
+      </View>
       <View style={styles.ratingBtns}>
         {Array.from({ length: max + 1 }, (_, i) => (
           <TouchableOpacity
@@ -35,13 +38,12 @@ function RatingRow({ label, field, value, max, onChange }) {
           </TouchableOpacity>
         ))}
       </View>
-      {labels?.[value] && <Text style={styles.ratingValueLabel}>{labels[value]}</Text>}
     </View>
   );
 }
 
 export default function WorkoutSummaryScreen({ navigation, route }) {
-  const { workoutId, durationMinutes, exerciseCount, setCount, tonnage, exerciseNames = [] } =
+  const { workoutId, durationMinutes, exerciseCount, setCount, hardSetCount, tonnage, exerciseNames = [] } =
     route.params || {};
   const { user, units } = useAppStore();
 
@@ -56,9 +58,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const [weeklyVolume, setWeeklyVolume] = useState({});
   const [autoRegSuggestions, setAutoRegSuggestions] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [completedWorkoutCount, setCompletedWorkoutCount] = useState(null);
 
   useEffect(() => {
-    loadVolumeAndSuggestions();
+    loadVolumeAndHistory();
   }, []);
 
   useEffect(() => {
@@ -66,15 +69,19 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     setAutoRegSuggestions(suggestions);
   }, [feedback, weeklyVolume]);
 
-  async function loadVolumeAndSuggestions() {
+  async function loadVolumeAndHistory() {
     if (!user?.id) return;
     const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    const allSets = await getAllWorkoutSets(user.id);
+    const [allSets, allExercises, allWorkouts] = await Promise.all([
+      getAllWorkoutSets(user.id),
+      getAllExercises(),
+      getAllWorkouts(user.id),
+    ]);
     const recentSets = allSets.filter(s => s.createdAt >= weekAgo);
-    const allExercises = await getAllExercises();
     const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
     const volume = calculateWeeklyVolume(recentSets, exerciseMap);
     setWeeklyVolume(volume);
+    setCompletedWorkoutCount(allWorkouts.filter(w => w.isCompleted).length);
   }
 
   async function handleSave() {
@@ -99,41 +106,46 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     .sort((a, b) => (weeklyVolume[b]?.hardSets || 0) - (weeklyVolume[a]?.hardSets || 0))
     .slice(0, 6);
 
+  const displayHardSets = hardSetCount ?? setCount ?? 0;
+  const dataLimited = completedWorkoutCount !== null && completedWorkoutCount < 4;
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content}>
         {/* Header */}
         <View style={styles.completionHeader}>
-          <View style={styles.checkCircle}>
-            <Ionicons name="checkmark" size={40} color={colors.background} />
+          <View style={styles.checkRow}>
+            <Ionicons name="checkmark-circle" size={28} color={colors.success} />
+            <Text style={styles.completionTitle}>Session Logged</Text>
           </View>
-          <Text style={styles.completionTitle}>Workout Complete</Text>
-          <Text style={styles.completionSub}>
-            {exerciseNames.slice(0, 3).join(', ')}
-            {exerciseNames.length > 3 ? ` +${exerciseNames.length - 3} more` : ''}
-          </Text>
+          {exerciseNames.length > 0 && (
+            <Text style={styles.completionSub}>
+              {exerciseNames.slice(0, 3).join(' · ')}
+              {exerciseNames.length > 3 ? ` +${exerciseNames.length - 3} more` : ''}
+            </Text>
+          )}
         </View>
 
         {/* Stats */}
         <View style={styles.statsGrid}>
           <StatBox icon="barbell-outline" value={String(exerciseCount || 0)} label="Exercises" />
-          <StatBox icon="layers-outline" value={String(setCount || 0)} label="Sets" />
+          <StatBox icon="layers-outline" value={String(displayHardSets)} label="Hard Sets" />
           <StatBox icon="time-outline" value={`${durationMinutes || 0}m`} label="Duration" />
-          <StatBox icon="trending-up-outline" value={`${((tonnage || 0) / 1000).toFixed(1)}t`} label="Tonnage" />
+          <StatBox icon="trending-up-outline" value={`${((tonnage || 0) / 1000).toFixed(1)}t`} label="Total Volume" />
         </View>
 
         {/* Volume by Muscle */}
         {musclesWorked.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>VOLUME THIS WEEK</Text>
+            <Text style={styles.sectionTitle}>THIS WEEK AFTER SESSION</Text>
             {musclesWorked.map(muscle => {
               const data = weeklyVolume[muscle];
-              const { status, color, label, landmarks } = getVolumeStatus(data.hardSets, muscle);
+              const { color, label } = getVolumeStatus(data.hardSets, muscle);
               return (
                 <View key={muscle} style={styles.volumeRow}>
                   <Text style={styles.muscleName}>{MUSCLE_DISPLAY_NAMES[muscle] || muscle}</Text>
-                  <Text style={styles.muscleSetCount}>{Math.round(data.hardSets)} sets</Text>
-                  <View style={[styles.statusBadge, { backgroundColor: color + '25' }]}>
+                  <Text style={styles.muscleSetCount}>{Math.round(data.hardSets)} hard sets</Text>
+                  <View style={[styles.statusBadge, { backgroundColor: color + '22' }]}>
                     <Text style={[styles.statusText, { color }]}>{label}</Text>
                   </View>
                 </View>
@@ -142,29 +154,38 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* Auto-Reg Suggestions */}
-        {autoRegSuggestions.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>NEXT WEEK SUGGESTIONS</Text>
-            {autoRegSuggestions.map((s, i) => (
+        {/* Recommendations */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>RECOMMENDATIONS</Text>
+          {dataLimited ? (
+            <View style={styles.limitedCard}>
+              <Text style={styles.limitedText}>
+                Learning your landmarks. Complete more sessions before recommendations become reliable.
+              </Text>
+            </View>
+          ) : (
+            autoRegSuggestions.map((s, i) => (
               <View key={i} style={styles.suggestionRow}>
                 <Ionicons
                   name={s.type === 'reduce_volume' ? 'arrow-down' :
                         s.type === 'add_volume' ? 'arrow-up' :
-                        s.type === 'deload_muscle' ? 'warning' : 'checkmark-circle'}
+                        s.type === 'deload_muscle' ? 'warning-outline' : 'checkmark-circle-outline'}
                   size={16}
                   color={s.type === 'deload_muscle' ? colors.error :
                          s.type === 'maintain' ? colors.success : colors.primary}
                 />
                 <Text style={styles.suggestionText}>{s.message}</Text>
               </View>
-            ))}
-          </View>
-        )}
+            ))
+          )}
+        </View>
 
-        {/* Post-workout Feedback */}
+        {/* Session Feedback */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>HOW WAS IT?</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>SESSION FEEDBACK</Text>
+            <Text style={styles.optionalLabel}>optional</Text>
+          </View>
           <View style={styles.feedbackCard}>
             <RatingRow
               label="Difficulty"
@@ -174,14 +195,14 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               onChange={v => setFeedback(f => ({ ...f, sessionDifficulty: v }))}
             />
             <RatingRow
-              label="Pump"
+              label="Pump quality"
               field="overallPump"
               value={feedback.overallPump}
               max={3}
               onChange={v => setFeedback(f => ({ ...f, overallPump: v }))}
             />
             <RatingRow
-              label="Soreness before"
+              label="Soreness coming in"
               field="soreness24hBefore"
               value={feedback.soreness24hBefore}
               max={3}
@@ -211,7 +232,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             style={styles.notesInput}
             value={notes}
             onChangeText={setNotes}
-            placeholder="How did it feel? Anything notable..."
+            placeholder="Anything notable from this session..."
             placeholderTextColor={colors.textMuted}
             multiline
           />
@@ -223,7 +244,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           onPress={handleSave}
           disabled={saving}
         >
-          <Text style={styles.saveBtnText}>Save & Return Home</Text>
+          <Text style={styles.saveBtnText}>Save & Return</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -244,27 +265,22 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxxl },
   completionHeader: {
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.lg,
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
   },
-  checkCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.success,
+  checkRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: spacing.sm,
   },
   completionTitle: {
-    fontSize: fontSize.xxxl,
+    fontSize: fontSize.xxl,
     fontWeight: fontWeight.black,
     color: colors.textPrimary,
   },
   completionSub: {
-    fontSize: fontSize.md,
+    fontSize: fontSize.sm,
     color: colors.textSecondary,
-    textAlign: 'center',
   },
   statsGrid: {
     flexDirection: 'row',
@@ -292,11 +308,20 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   section: { gap: spacing.md },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   sectionTitle: {
     fontSize: fontSize.xs,
     fontWeight: fontWeight.black,
     color: colors.textMuted,
     letterSpacing: 1.5,
+  },
+  optionalLabel: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
   },
   volumeRow: {
     flexDirection: 'row',
@@ -327,6 +352,18 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
   },
+  limitedCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  limitedText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 20,
+  },
   suggestionRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -353,6 +390,11 @@ const styles = StyleSheet.create({
   },
   ratingRow: {
     gap: spacing.sm,
+  },
+  ratingLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   ratingLabel: {
     fontSize: fontSize.sm,

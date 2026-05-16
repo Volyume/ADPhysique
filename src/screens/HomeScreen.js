@@ -14,23 +14,31 @@ import { startOfWeek, endOfWeek, subDays } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import VolumeBars from '../components/VolumeBars';
 import {
-  getAllWorkoutSets, getAllExercises, getAllWorkouts, getAllRoutines, createWorkout,
+  getAllWorkoutSets, getAllExercises, getAllWorkouts, getAllRoutines,
+  createWorkout, getRoutineExercisesWithDetails,
 } from '../lib/database';
 import { calculateWeeklyVolume } from '../lib/algorithms';
+import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import useAppStore from '../store/useAppStore';
 
 export default function HomeScreen({ navigation }) {
-  const { user, startWorkout, units } = useAppStore();
+  const { user, startWorkout, units, activeWorkout } = useAppStore();
   const [weeklyVolume, setWeeklyVolume] = useState({});
-  const [weekStats, setWeekStats] = useState({ workouts: 0, streak: 0 });
+  const [weekStats, setWeekStats] = useState({ sessions: 0, streak: 0 });
   const [refreshing, setRefreshing] = useState(false);
-  const [nextRoutine, setNextRoutine] = useState(null);
+  const [suggestedRoutine, setSuggestedRoutine] = useState(null);
+  const [hasRoutines, setHasRoutines] = useState(false);
 
-  useEffect(() => { loadData(); }, [user?.id]);
+  useEffect(() => {
+    if (user?.id) {
+      seedRoutinesIfNeeded(user.id).catch(console.warn);
+      loadData();
+    }
+  }, [user?.id]);
 
   async function loadData() {
     if (!user?.id) return;
-    await Promise.all([loadWeeklyVolume(), loadWeekStats(), loadNextRoutine()]);
+    await Promise.all([loadWeeklyVolume(), loadWeekStats(), loadRoutines()]);
   }
 
   async function loadWeeklyVolume() {
@@ -56,22 +64,23 @@ export default function HomeScreen({ navigation }) {
       for (let i = 0; i < 52; i++) {
         const weekStart = startOfWeek(subDays(new Date(), i * 7)).getTime();
         const weekEnd = endOfWeek(subDays(new Date(), i * 7)).getTime();
-        const hasWorkout = mine.some(w => w.startedAt >= weekStart && w.startedAt <= weekEnd);
+        const hasWorkout = mine.some(w => w.startedAt >= weekStart && w.startedAt <= weekEnd && w.isCompleted);
         if (hasWorkout) streak++;
         else break;
       }
 
-      setWeekStats({ workouts: thisWeek.length, streak });
+      setWeekStats({ sessions: thisWeek.length, streak });
     } catch (e) {
       console.error('loadWeekStats:', e);
     }
   }
 
-  async function loadNextRoutine() {
+  async function loadRoutines() {
     try {
       const routines = await getAllRoutines(user.id);
-      const active = routines.find(r => r.isActive);
-      setNextRoutine(active || null);
+      const active = routines.filter(r => r.isActive);
+      setHasRoutines(active.length > 0);
+      setSuggestedRoutine(active[0] || null);
     } catch (_e) {}
   }
 
@@ -83,18 +92,28 @@ export default function HomeScreen({ navigation }) {
 
   async function handleStartBlankWorkout() {
     const workout = await createWorkout(user.id);
-    startWorkout(workout);
+    startWorkout(workout, []);
     navigation.navigate('WorkoutTab', { screen: 'ActiveWorkout' });
   }
 
   async function handleStartRoutine(routine) {
     const workout = await createWorkout(user.id, routine.id);
-    startWorkout(workout);
+    const withExercises = await getRoutineExercisesWithDetails(routine.id);
+    const initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
+      exercise,
+      routineExercise,
+      sets: [],
+    }));
+    startWorkout(workout, initialExercises);
     navigation.navigate('WorkoutTab', { screen: 'ActiveWorkout' });
   }
 
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  function handleContinueWorkout() {
+    navigation.navigate('WorkoutTab', { screen: 'ActiveWorkout' });
+  }
+
+  const hasActiveWorkout = !!activeWorkout;
+  const volumeIsEmpty = Object.keys(weeklyVolume).length === 0;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -107,12 +126,9 @@ export default function HomeScreen({ navigation }) {
       >
         {/* Header */}
         <View style={styles.headerRow}>
-          <View>
-            <Text style={styles.greeting}>{greeting}</Text>
-            <Text style={styles.appTitle}>VOLYUME</Text>
-          </View>
+          <Text style={styles.appTitle}>VOLYUME</Text>
           <TouchableOpacity
-            style={styles.syncBtn}
+            style={styles.refreshBtn}
             onPress={handleRefresh}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
@@ -120,11 +136,11 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        {/* Stats Cards */}
+        {/* Stats */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{weekStats.workouts}</Text>
-            <Text style={styles.statLabel}>This Week</Text>
+            <Text style={styles.statValue}>{weekStats.sessions}</Text>
+            <Text style={styles.statLabel}>Sessions</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{weekStats.streak}</Text>
@@ -142,29 +158,42 @@ export default function HomeScreen({ navigation }) {
         {/* Quick Start */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>QUICK START</Text>
-          <TouchableOpacity style={styles.primaryBtn} onPress={handleStartBlankWorkout}>
-            <Ionicons name="add-circle" size={22} color={colors.background} />
-            <Text style={styles.primaryBtnText}>Start Blank Workout</Text>
-          </TouchableOpacity>
 
-          {nextRoutine && (
-            <TouchableOpacity
-              style={styles.routineBtn}
-              onPress={() => handleStartRoutine(nextRoutine)}
-            >
-              <View>
-                <Text style={styles.routineBtnLabel}>{nextRoutine.name}</Text>
-                <Text style={styles.routineBtnSub}>Tap to start this routine</Text>
-              </View>
-              <Ionicons name="play-circle" size={26} color={colors.primary} />
+          {hasActiveWorkout ? (
+            <TouchableOpacity style={styles.continueBtn} onPress={handleContinueWorkout}>
+              <Ionicons name="play-circle" size={22} color={colors.background} />
+              <Text style={styles.continueBtnText}>Continue Workout</Text>
             </TouchableOpacity>
+          ) : suggestedRoutine ? (
+            <>
+              <TouchableOpacity style={styles.primaryBtn} onPress={() => handleStartRoutine(suggestedRoutine)}>
+                <Ionicons name="play-circle" size={22} color={colors.background} />
+                <Text style={styles.primaryBtnText}>Start {suggestedRoutine.name}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.blankBtn} onPress={handleStartBlankWorkout}>
+                <Text style={styles.blankBtnText}>Start Blank Workout</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <TouchableOpacity style={styles.primaryBtn} onPress={handleStartBlankWorkout}>
+                <Ionicons name="add-circle" size={22} color={colors.background} />
+                <Text style={styles.primaryBtnText}>Start Blank Workout</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.ghostBtn}
+                onPress={() => navigation.navigate('ProfileTab', { screen: 'RoutineBuilder' })}
+              >
+                <Text style={styles.ghostBtnText}>Create a Routine</Text>
+              </TouchableOpacity>
+            </>
           )}
         </View>
 
-        {/* Volume This Week */}
+        {/* Weekly Hard Sets */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>THIS WEEK'S VOLUME</Text>
+            <Text style={styles.sectionTitle}>WEEKLY HARD SETS</Text>
             <TouchableOpacity
               onPress={() => navigation.navigate('AnalyticsTab', { screen: 'VolumeHeatmap' })}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -174,13 +203,13 @@ export default function HomeScreen({ navigation }) {
           </View>
           <View style={styles.volumeCard}>
             <VolumeBars weeklyVolume={weeklyVolume} />
-            {Object.keys(weeklyVolume).length === 0 && (
-              <Text style={styles.emptyVolume}>Log your first workout to see volume here</Text>
+            {volumeIsEmpty && (
+              <Text style={styles.emptyVolume}>No sessions logged this week.</Text>
             )}
             <View style={styles.volumeLegend}>
-              <LegendDot color={colors.textMuted} label="Below MEV" />
-              <LegendDot color={colors.success} label="Optimal" />
-              <LegendDot color={colors.error} label="Over MRV" />
+              <LegendDot color={colors.textMuted} label="Below target" />
+              <LegendDot color={colors.success} label="Growth range" />
+              <LegendDot color={colors.error} label="Near ceiling" />
             </View>
           </View>
         </View>
@@ -227,15 +256,14 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  greeting: { fontSize: fontSize.sm, color: colors.textSecondary, marginBottom: 2 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   appTitle: {
     fontSize: fontSize.xxxl,
     fontWeight: fontWeight.black,
     color: colors.textPrimary,
     letterSpacing: 3,
   },
-  syncBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', marginTop: spacing.sm },
+  refreshBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   statsRow: { flexDirection: 'row', gap: spacing.md },
   statCard: {
     flex: 1,
@@ -267,24 +295,35 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     paddingVertical: spacing.lg,
   },
-  primaryBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.background },
-  routineBtn: {
+  primaryBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background, flexShrink: 1 },
+  continueBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.surface,
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.success,
     borderRadius: radius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
+    paddingVertical: spacing.lg,
   },
-  routineBtnLabel: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.textPrimary,
-    marginBottom: 2,
+  continueBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
+  blankBtn: {
+    alignItems: 'center',
+    paddingVertical: spacing.md,
   },
-  routineBtnSub: { fontSize: fontSize.xs, color: colors.textSecondary },
+  blankBtnText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    fontWeight: fontWeight.medium,
+  },
+  ghostBtn: {
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+  },
+  ghostBtnText: {
+    fontSize: fontSize.sm,
+    color: colors.primary,
+    fontWeight: fontWeight.medium,
+  },
   volumeCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,

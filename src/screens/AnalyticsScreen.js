@@ -102,7 +102,7 @@ export default function AnalyticsScreen({ navigation }) {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
         }
       >
-        <Text style={styles.pageTitle}>Analytics</Text>
+        <Text style={styles.pageTitle}>Progress</Text>
 
         {/* Deload Warning */}
         {deloadCheck?.deload && (
@@ -138,6 +138,11 @@ export default function AnalyticsScreen({ navigation }) {
           </View>
           <View style={styles.card}>
             <VolumeBars weeklyVolume={weeklyVolume} />
+            {Object.keys(weeklyVolume).length === 0 && (
+              <Text style={styles.emptyState}>
+                Complete more sessions to build your weekly muscle-volume map.
+              </Text>
+            )}
           </View>
         </View>
 
@@ -233,6 +238,13 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   statLabel: { fontSize: fontSize.xs, color: colors.textSecondary },
+  emptyState: {
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+    textAlign: 'center',
+    paddingVertical: spacing.md,
+    lineHeight: 20,
+  },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
