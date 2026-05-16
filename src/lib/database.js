@@ -133,6 +133,18 @@ async function _doInit() {
     CREATE INDEX IF NOT EXISTS idx_routine_exercises_routine ON routine_exercises(routine_id);
     CREATE INDEX IF NOT EXISTS idx_mesocycles_user ON mesocycles(user_id);
   `);
+
+  // Backward-compatible column migrations
+  const colMigrations = [
+    'ALTER TABLE routine_exercises ADD COLUMN starting_weight REAL',
+    'ALTER TABLE routine_exercises ADD COLUMN rest_seconds INTEGER',
+    'ALTER TABLE workouts ADD COLUMN last_activity_at INTEGER',
+    'ALTER TABLE workouts ADD COLUMN active_elapsed_seconds INTEGER',
+  ];
+  for (const sql of colMigrations) {
+    try { await _db.execAsync(sql); } catch (_) {}
+  }
+
   return _db;
 }
 
@@ -140,7 +152,7 @@ async function db() {
   return _db || initDatabase();
 }
 
-// ─── Exercises ───────────────────────────────────────────────────────────────
+// ─── Exercises ─────────────────────────────────────────────────────────────────────────────
 
 export async function getAllExercises() {
   const d = await db();
@@ -194,7 +206,7 @@ export async function insertExercise(data) {
   return { id, ...data, createdAt: now, updatedAt: now };
 }
 
-// ─── Workouts ─────────────────────────────────────────────────────────────────
+// ─── Workouts ────────────────────────────────────────────────────────────────────────────────
 
 export async function getAllWorkouts(userId) {
   const d = await db();
@@ -235,6 +247,8 @@ export async function updateWorkout(id, data) {
     overallPump: 'overall_pump',
     soreness24hBefore: 'soreness_24h_before',
     fatigueLevel: 'fatigue_level',
+    lastActivityAt: 'last_activity_at',
+    activeElapsedSeconds: 'active_elapsed_seconds',
   };
   const fields = [];
   const values = [];
@@ -250,7 +264,7 @@ export async function updateWorkout(id, data) {
   await d.runAsync(`UPDATE workouts SET ${fields.join(', ')} WHERE id = ?`, values);
 }
 
-// ─── Workout Sets ─────────────────────────────────────────────────────────────
+// ─── Workout Sets ─────────────────────────────────────────────────────────────────────────────
 
 export async function getAllWorkoutSets(userId) {
   const d = await db();
@@ -329,7 +343,7 @@ export async function createWorkoutSet(data) {
   return { id, ...data, createdAt: now, updatedAt: now };
 }
 
-// ─── Routines ─────────────────────────────────────────────────────────────────
+// ─── Routines ─────────────────────────────────────────────────────────────────────────────
 
 export async function getAllRoutines(userId) {
   const d = await db();
@@ -366,7 +380,7 @@ export async function softDeleteRoutine(id) {
   );
 }
 
-// ─── Routine Exercises ────────────────────────────────────────────────────────
+// ─── Routine Exercises ────────────────────────────────────────────────────────────────────────
 
 export async function getRoutineExercisesWithDetails(routineId) {
   const d = await db();
@@ -407,18 +421,77 @@ export async function getRoutineExercisesWithDetails(routineId) {
   });
 }
 
-export async function addExerciseToRoutine(routineId, exerciseId, order, repsMin = 6, repsMax = 12, notes = null, sets = 3) {
+export async function addExerciseToRoutine(routineId, exerciseId, order, repsMin = 6, repsMax = 12, notes = null, sets = 3, startingWeight = null, restSeconds = null) {
   const d = await db();
   const id = uid();
   const now = Date.now();
   await d.runAsync(
     `INSERT INTO routine_exercises
       (id, routine_id, exercise_id, order_in_routine, recommended_sets,
-       recommended_reps_min, recommended_reps_max, notes, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, routineId, exerciseId, order, sets, repsMin, repsMax, notes, now, now],
+       recommended_reps_min, recommended_reps_max, notes, starting_weight, rest_seconds, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, routineId, exerciseId, order, sets, repsMin, repsMax, notes, startingWeight, restSeconds, now, now],
   );
   return { id, routineId, exerciseId, orderInRoutine: order };
+}
+
+export async function updateRoutineExercise(id, data) {
+  const d = await db();
+  const now = Date.now();
+  const fieldMap = {
+    recommendedSets: 'recommended_sets',
+    recommendedRepsMin: 'recommended_reps_min',
+    recommendedRepsMax: 'recommended_reps_max',
+    notes: 'notes',
+    startingWeight: 'starting_weight',
+    restSeconds: 'rest_seconds',
+  };
+  const fields = [];
+  const values = [];
+  for (const [key, col] of Object.entries(fieldMap)) {
+    if (key in data) {
+      fields.push(`${col} = ?`);
+      values.push(data[key]);
+    }
+  }
+  if (fields.length === 0) return;
+  fields.push('updated_at = ?');
+  values.push(now, id);
+  await d.runAsync(`UPDATE routine_exercises SET ${fields.join(', ')} WHERE id = ?`, values);
+}
+
+export async function getAllRoutineExerciseCounts() {
+  const d = await db();
+  const rows = await d.getAllAsync('SELECT routine_id, COUNT(*) as cnt FROM routine_exercises GROUP BY routine_id');
+  return Object.fromEntries(rows.map(r => [r.routine_id, r.cnt]));
+}
+
+export async function updateRoutineName(id, name) {
+  const d = await db();
+  await d.runAsync('UPDATE routines SET name = ?, updated_at = ? WHERE id = ?', [name, Date.now(), id]);
+}
+
+export async function duplicateRoutine(routineId, userId, newName) {
+  const d = await db();
+  const original = await getRoutineById(routineId);
+  if (!original) throw new Error('Routine not found');
+  const newRoutine = await createRoutine(userId, newName, original.description, original.splitType);
+  const exercises = await getRoutineExercisesWithDetails(routineId);
+  for (let i = 0; i < exercises.length; i++) {
+    const { routineExercise: re } = exercises[i];
+    await addExerciseToRoutine(
+      newRoutine.id,
+      re.exerciseId,
+      i,
+      re.recommendedRepsMin,
+      re.recommendedRepsMax,
+      re.notes,
+      re.recommendedSets,
+      re.startingWeight,
+      re.restSeconds,
+    );
+  }
+  return newRoutine;
 }
 
 export async function removeExerciseFromRoutine(id) {
@@ -426,7 +499,7 @@ export async function removeExerciseFromRoutine(id) {
   await d.runAsync('DELETE FROM routine_exercises WHERE id = ?', [id]);
 }
 
-// ─── Mesocycles ───────────────────────────────────────────────────────────────
+// ─── Mesocycles ─────────────────────────────────────────────────────────────────────────────
 
 export async function getAllMesocycles(userId) {
   const d = await db();
