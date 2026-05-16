@@ -34,7 +34,7 @@ const DEFAULT_SET = { weight: 0, reps: 8, setType: 'straight', notes: '' };
 const SET_TYPE_DISPLAY = {
   straight: 'Working',
   warmup: 'Warm-up',
-  dropset: 'Working',
+  dropset: 'Drop Set',
   amrap: 'Working',
   myo_reps: 'Working',
   rest_pause: 'Working',
@@ -42,8 +42,9 @@ const SET_TYPE_DISPLAY = {
 };
 
 const SET_TYPE_OPTIONS = [
-  { value: 'straight', label: 'Working', description: 'Counts toward your weekly volume. Use this for all main sets.' },
+  { value: 'straight', label: 'Working', description: 'Counts toward your weekly volume. Use for all main sets.' },
   { value: 'warmup', label: 'Warm-up', description: 'Preparation set. Does not count toward weekly volume.' },
+  { value: 'dropset', label: 'Drop Set', description: 'Reduced load after a working set. Counts toward weekly volume.' },
 ];
 
 export default function ActiveWorkoutScreen({ navigation, route }) {

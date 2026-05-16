@@ -6,7 +6,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 const SET_TYPE_LABELS = {
   straight: 'Working',
   warmup: 'Warm-up',
-  dropset: 'Working',
+  dropset: 'Drop Set',
   superset: 'Working',
   myo_reps: 'Working',
   rest_pause: 'Working',

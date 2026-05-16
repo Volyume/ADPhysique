@@ -103,7 +103,8 @@ Verify [SAMPLE] routines seed once and load correctly.
 | D8 | Verify explainer text in bottom sheet | "Working sets count toward your weekly volume. Warm-up sets do not." visible | High |
 | D9 | Select Warm-up | Label updates to "Warm-up" | High |
 | D10 | Complete a warm-up set | Set logged, does not count toward weekly volume | High |
-| D11 | Confirm no AMRAP/Drop set options in picker | Not visible in Phase 1.5 set type sheet | Medium |
+| D11 | Confirm AMRAP/rest-pause/myo-reps not in picker | Not visible in Phase 1.5 set type sheet | Medium |
+| D12 | Select Drop Set | Label updates to "Drop Set", set counts toward weekly volume | Medium |
 | D12 | Tap "Info" button | Bottom sheet opens with exercise name, target, notes | High |
 | D13 | Info sheet for [SAMPLE] routine exercise | Shows execution notes from routine | High |
 | D14 | Info sheet for non-sample exercise | Shows "No execution notes for this exercise." | Medium |
@@ -190,12 +191,14 @@ Run after every change to SetEntry or set type picker:
 - [ ] Confirm no RIR chip row is visible
 - [ ] Confirm no RPE chip row is visible
 - [ ] Confirm default set type label reads "Working"
-- [ ] Tap "Change" → bottom sheet opens with Working and Warm-up options only
+- [ ] Tap "Change" → bottom sheet opens with Working, Warm-up, and Drop Set options
 - [ ] Explainer text visible: "Working sets count toward your weekly volume. Warm-up sets do not."
 - [ ] Each option has a one-line description
 - [ ] Select "Warm-up" → label updates → set logged as warm-up
 - [ ] Warm-up does not count in working set total on Session Logged screen
+- [ ] Select "Drop Set" → label updates → set counts toward working set total
 - [ ] Session Logged screen shows "Working Sets" label
+- [ ] No "Superset" option visible (deferred to Phase 2)
 
 ---
 
