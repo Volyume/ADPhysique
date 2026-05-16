@@ -1,4 +1,4 @@
-name: EAS Build
+name: Build Android APK
 
 on:
   push:
@@ -6,34 +6,43 @@ on:
       - claude/build-volyume-app-srY9C
   workflow_dispatch:
 
-env:
-  EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-
 jobs:
   build:
-    name: EAS Build
+    name: Build Android APK
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
 
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Install EAS CLI
-        run: npm install -g eas-cli@latest
+      - name: Prebuild Android
+        run: npx expo prebuild --platform android --non-interactive
 
-      - name: Verify Expo auth
-        run: eas whoami
+      - name: Build APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+        env:
+          GRADLE_OPTS: -Dorg.gradle.daemon=false
 
-      - name: Create or link EAS project
-        run: eas init --non-interactive --force || true
-
-      - name: Build Android
-        run: eas build --platform android --profile preview --clear-cache --non-interactive --no-wait
+      - name: Publish APK to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: "Volyume v1.1.0 — Build ${{ github.run_number }}"
+          files: android/app/build/outputs/apk/release/app-release.apk
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
