@@ -225,6 +225,7 @@ export default function HomeScreen({ navigation }) {
               style={styles.blankLink}
               onPress={() => navigation.navigate('BuildWorkout')}
             >
+              <Ionicons name="add-circle-outline" size={14} color={colors.textMuted} />
               <Text style={styles.blankLinkText}>Start Blank Workout instead</Text>
             </TouchableOpacity>
           </View>
@@ -277,36 +278,37 @@ export default function HomeScreen({ navigation }) {
             onPress={() => navigation.navigate('ProgressTab', { screen: 'WorkoutHistory' })}
             activeOpacity={0.7}
           >
-            <View style={styles.lastSessionHeader}>
-              <Text style={styles.sectionLabel}>LAST SESSION</Text>
-              <Text style={styles.lastSessionDate}>
-                {format(new Date(lastSession.startedAt), 'd MMM')}
-              </Text>
+            <View style={styles.lastSessionTop}>
+              <View style={{ gap: 2 }}>
+                <Text style={styles.lastSessionLabel}>LAST SESSION</Text>
+                <Text style={styles.lastSessionRelDate}>{getRelativeDay(lastSession.startedAt)}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
             </View>
             <Text style={styles.lastSessionName} numberOfLines={1}>
               {lastSession.name || 'Session'}
             </Text>
-            <View style={styles.lastSessionStats}>
+            <View style={styles.lastSessionStatRow}>
               {lastSession.durationMinutes ? (
-                <View style={styles.lastSessionStat}>
-                  <Text style={styles.lastSessionStatVal}>{lastSession.durationMinutes}m</Text>
-                  <Text style={styles.lastSessionStatLbl}>Duration</Text>
+                <View style={styles.lastSessionStatPill}>
+                  <Ionicons name="time-outline" size={12} color={colors.textMuted} />
+                  <Text style={styles.lastSessionStatText}>{lastSession.durationMinutes}m</Text>
                 </View>
               ) : null}
               {lastSession.setCount ? (
-                <View style={styles.lastSessionStat}>
-                  <Text style={styles.lastSessionStatVal}>{lastSession.setCount}</Text>
-                  <Text style={styles.lastSessionStatLbl}>Sets</Text>
+                <View style={styles.lastSessionStatPill}>
+                  <Ionicons name="repeat-outline" size={12} color={colors.textMuted} />
+                  <Text style={styles.lastSessionStatText}>{lastSession.setCount} sets</Text>
                 </View>
               ) : null}
               {lastSession.totalVolume ? (
-                <View style={styles.lastSessionStat}>
-                  <Text style={styles.lastSessionStatVal}>
+                <View style={styles.lastSessionStatPill}>
+                  <Ionicons name="barbell-outline" size={12} color={colors.textMuted} />
+                  <Text style={styles.lastSessionStatText}>
                     {lastSession.totalVolume >= 1000
                       ? `${(lastSession.totalVolume / 1000).toFixed(1)}t`
                       : `${lastSession.totalVolume}kg`}
                   </Text>
-                  <Text style={styles.lastSessionStatLbl}>Volume</Text>
                 </View>
               ) : null}
             </View>
@@ -397,6 +399,16 @@ export default function HomeScreen({ navigation }) {
       </Modal>
     </SafeAreaView>
   );
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function getRelativeDay(ts) {
+  const days = Math.floor((Date.now() - ts) / (24 * 60 * 60 * 1000));
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days} days ago`;
+  return format(new Date(ts), 'd MMM');
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -594,8 +606,12 @@ const styles = StyleSheet.create({
     borderColor: colors.primary + '50',
   },
   changeBtnText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
-  blankLink: { alignItems: 'center', paddingVertical: spacing.xs },
-  blankLinkText: { fontSize: fontSize.sm, color: colors.textMuted },
+  blankLink: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
+  },
+  blankLinkText: { fontSize: fontSize.sm, color: colors.textMuted, fontWeight: fontWeight.medium },
 
   // No plan — plan-first section
   noPlanSection: { gap: spacing.md },
@@ -665,27 +681,29 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    gap: spacing.md,
+    gap: spacing.sm,
   },
-  lastSessionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  lastSessionTop: {
+    flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between',
   },
-  lastSessionDate: { fontSize: fontSize.xs, color: colors.textMuted },
+  lastSessionLabel: {
+    fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
+    color: colors.textMuted, letterSpacing: 1, textTransform: 'uppercase',
+  },
+  lastSessionRelDate: {
+    fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary,
+  },
   lastSessionName: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.textPrimary,
+    fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary,
   },
-  lastSessionStats: { flexDirection: 'row', gap: spacing.xl },
-  lastSessionStat: { gap: 2 },
-  lastSessionStatVal: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
-    color: colors.textPrimary,
+  lastSessionStatRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.xs },
+  lastSessionStatPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: colors.surface2, borderRadius: radius.full,
+    paddingHorizontal: spacing.sm, paddingVertical: 4,
+    borderWidth: 1, borderColor: colors.border,
   },
-  lastSessionStatLbl: { fontSize: fontSize.xs, color: colors.textMuted },
+  lastSessionStatText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
 
   // Quick nav
   quickRow: { flexDirection: 'row', gap: spacing.sm },

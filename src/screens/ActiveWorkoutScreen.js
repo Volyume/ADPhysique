@@ -302,8 +302,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // Prepare next set
       setNoteText('');
       setShowNoteInput(false);
-
-      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
     } finally {
       setSaving(false);
     }
@@ -549,12 +547,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             <>
               {isLastExercise ? (
                 <TouchableOpacity testID="volyume-btn-finish-primary" style={styles.completeBtn} onPress={handleFinishWorkout}>
-                  <Ionicons name="checkmark-done" size={24} color={colors.background} />
+                  <Ionicons name="checkmark-done" size={20} color={colors.success} />
                   <Text style={styles.completeBtnText}>FINISH WORKOUT</Text>
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity testID="volyume-btn-next-exercise" style={styles.completeBtn} onPress={handleNextExercise}>
-                  <Ionicons name="arrow-forward-circle" size={24} color={colors.background} />
+                  <Ionicons name="arrow-forward-circle" size={20} color={colors.primary} />
                   <Text style={styles.completeBtnText}>NEXT EXERCISE</Text>
                 </TouchableOpacity>
               )}
@@ -574,7 +572,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               onPress={handleCompleteSet}
               disabled={saving}
             >
-              <Ionicons name="checkmark-circle" size={24} color={colors.background} />
+              <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
               <Text style={styles.completeBtnText}>COMPLETE SET</Text>
             </TouchableOpacity>
           )}
@@ -972,9 +970,9 @@ const styles = StyleSheet.create({
   setEntryCard: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, gap: spacing.md },
   setEntryTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.black, color: colors.textMuted, letterSpacing: 1.5 },
   noteInput: { backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md, fontSize: fontSize.sm, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, minHeight: 60 },
-  completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: spacing.lg + 2 },
+  completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderWidth: 1.5, borderColor: colors.primary + '80', borderRadius: radius.lg, paddingVertical: spacing.lg, backgroundColor: colors.primaryBg },
   btnDisabled: { opacity: 0.5 },
-  completeBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background, letterSpacing: 0.8 },
+  completeBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary, letterSpacing: 0.6 },
   extraSetBtn: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, paddingVertical: spacing.md },
   extraSetBtnText: { fontSize: fontSize.md, color: colors.textSecondary, fontWeight: fontWeight.medium },
   secondaryActions: { flexDirection: 'row', gap: spacing.sm },

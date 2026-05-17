@@ -273,10 +273,14 @@ function weeklySetTarget(muscle, experience, weakPoints, nutritionPhase, goal, i
   return Math.round(sets);
 }
 
-// Sets per session for a muscle, given how many sessions it appears in
-function setsPerSession(muscle, experience, weakPoints, nutritionPhase, goal, sessions, inputs = {}) {
+// Sets per exercise per session for a muscle.
+// `sessions` = how many sessions/week that muscle is trained.
+// `numEx` = how many exercises in each session target that muscle (defaults to 1).
+// Weekly volume is divided across sessions and then across exercises, capped at 4 per exercise.
+function setsPerSession(muscle, experience, weakPoints, nutritionPhase, goal, sessions, inputs = {}, numEx = 1) {
   const weekly = weeklySetTarget(muscle, experience, weakPoints, nutritionPhase, goal, inputs);
-  return Math.max(2, Math.round(weekly / sessions));
+  const perSession = Math.round(weekly / Math.max(1, sessions));
+  return Math.min(4, Math.max(2, Math.round(perSession / Math.max(1, numEx))));
 }
 
 // Build a single exercise entry for a workout
@@ -370,26 +374,30 @@ function buildUpperLower(inputs) {
     name: label,
     targetMuscles: ['chest', 'back', 'shoulders', 'biceps', 'triceps'],
     exercises: [
+      // chest: 1 exercise per upper session
       makeExercise(pick(getList('chest', 'compound', eq), slot), cKey,
-        setsPerSession('chest', experience, weakPoints, nutritionPhase, goal, 2, inputs),
+        setsPerSession('chest', experience, weakPoints, nutritionPhase, goal, 2, inputs, 1),
         experience, nutritionPhase),
+      // back: compound + isolation = 2 exercises, share the volume
       makeExercise(pick(getList('back', 'compound', eq), slot), cKey,
-        setsPerSession('back', experience, weakPoints, nutritionPhase, goal, 2, inputs),
+        setsPerSession('back', experience, weakPoints, nutritionPhase, goal, 2, inputs, 2),
         experience, nutritionPhase),
+      // shoulders: compound + isolation = 2 exercises
       makeExercise(pick(getList('shoulders', 'compound', eq), slot), 'machine',
-        setsPerSession('shoulders', experience, weakPoints, nutritionPhase, goal, 2, inputs),
+        setsPerSession('shoulders', experience, weakPoints, nutritionPhase, goal, 2, inputs, 2),
         experience, nutritionPhase),
       makeExercise(pick(getList('shoulders', 'isolation', eq), slot), 'isolation',
-        setsPerSession('shoulders', experience, weakPoints, nutritionPhase, goal, 2, inputs),
+        setsPerSession('shoulders', experience, weakPoints, nutritionPhase, goal, 2, inputs, 2),
         experience, nutritionPhase, 'Lead with elbows, keep torso upright'),
       makeExercise(pick(getList('back', 'isolation', eq), slot), 'machine',
-        setsPerSession('back', experience, weakPoints, nutritionPhase, goal, 2, inputs),
+        setsPerSession('back', experience, weakPoints, nutritionPhase, goal, 2, inputs, 2),
         experience, nutritionPhase),
+      // arms: 1 exercise each
       makeExercise(pick(getList('biceps', 'isolation', eq), slot), 'isolation',
-        setsPerSession('biceps', experience, weakPoints, nutritionPhase, goal, 2, inputs),
+        setsPerSession('biceps', experience, weakPoints, nutritionPhase, goal, 2, inputs, 1),
         experience, nutritionPhase),
       makeExercise(pick(getList('triceps', 'isolation', eq), slot), 'isolation',
-        setsPerSession('triceps', experience, weakPoints, nutritionPhase, goal, 2, inputs),
+        setsPerSession('triceps', experience, weakPoints, nutritionPhase, goal, 2, inputs, 1),
         experience, nutritionPhase),
     ],
   });
@@ -399,20 +407,23 @@ function buildUpperLower(inputs) {
     name: label,
     targetMuscles: ['quads', 'hamstrings', 'glutes', 'calves'],
     exercises: [
+      // quads: compound + isolation = 2 exercises
       makeExercise(pick(getList('quads', 'compound', eq), slot), cKey,
-        setsPerSession('quads', experience, weakPoints, nutritionPhase, goal, 2, inputs),
+        setsPerSession('quads', experience, weakPoints, nutritionPhase, goal, 2, inputs, 2),
         experience, nutritionPhase),
+      // hamstrings: compound + isolation = 2 exercises
       makeExercise(pick(getList('hamstrings', 'compound', eq), slot), cKey,
-        setsPerSession('hamstrings', experience, weakPoints, nutritionPhase, goal, 2, inputs),
+        setsPerSession('hamstrings', experience, weakPoints, nutritionPhase, goal, 2, inputs, 2),
         experience, nutritionPhase),
+      // glutes: 1 exercise per lower session
       makeExercise(pick(getList('glutes', 'compound', eq), slot), cKey,
-        setsPerSession('glutes', experience, weakPoints, nutritionPhase, goal, 2, inputs),
+        setsPerSession('glutes', experience, weakPoints, nutritionPhase, goal, 2, inputs, 1),
         experience, nutritionPhase),
       makeExercise(pick(getList('quads', 'isolation', eq), slot), 'isolation',
-        setsPerSession('quads', experience, weakPoints, nutritionPhase, goal, 2, inputs),
+        setsPerSession('quads', experience, weakPoints, nutritionPhase, goal, 2, inputs, 2),
         experience, nutritionPhase),
       makeExercise(pick(getList('hamstrings', 'isolation', eq), slot), 'isolation',
-        setsPerSession('hamstrings', experience, weakPoints, nutritionPhase, goal, 2, inputs),
+        setsPerSession('hamstrings', experience, weakPoints, nutritionPhase, goal, 2, inputs, 2),
         experience, nutritionPhase),
       makeExercise(pick(getList('calves', 'isolation', eq), 0), 'isolation', 3,
         experience, nutritionPhase, null),
@@ -436,22 +447,25 @@ function buildPPL(inputs, effectiveDays) {
     name: label,
     targetMuscles: ['chest', 'shoulders', 'triceps'],
     exercises: [
+      // chest: 2 compound angles, share the per-session volume
       makeExercise(pick(getList('chest', 'compound', eq), slot), cKey,
-        setsPerSession('chest', experience, weakPoints, nutritionPhase, goal, 2, inputs),
+        setsPerSession('chest', experience, weakPoints, nutritionPhase, goal, 2, inputs, 2),
         experience, nutritionPhase),
       makeExercise(pick(getList('chest', 'compound', eq), slot + 1), cKey,
-        setsPerSession('chest', experience, weakPoints, nutritionPhase, goal, 2, inputs),
+        setsPerSession('chest', experience, weakPoints, nutritionPhase, goal, 2, inputs, 2),
         experience, nutritionPhase, 'Incline angle — upper chest emphasis'),
+      // shoulders: compound + isolation = 2 exercises
       makeExercise(pick(getList('shoulders', 'compound', eq), slot), 'machine',
-        setsPerSession('shoulders', experience, weakPoints, nutritionPhase, goal, 2, inputs),
+        setsPerSession('shoulders', experience, weakPoints, nutritionPhase, goal, 2, inputs, 2),
         experience, nutritionPhase),
       makeExercise(pick(getList('shoulders', 'isolation', eq), slot), 'isolation',
-        setsPerSession('shoulders', experience, weakPoints, nutritionPhase, goal, 2, inputs),
+        setsPerSession('shoulders', experience, weakPoints, nutritionPhase, goal, 2, inputs, 2),
         experience, nutritionPhase),
       makeExercise(pick(getList('chest', 'isolation', eq), slot), 'isolation', 3,
         experience, nutritionPhase),
+      // triceps: 2 exercises, share volume
       makeExercise(pick(getList('triceps', 'isolation', eq), slot), 'isolation',
-        setsPerSession('triceps', experience, weakPoints, nutritionPhase, goal, 2, inputs),
+        setsPerSession('triceps', experience, weakPoints, nutritionPhase, goal, 2, inputs, 2),
         experience, nutritionPhase),
       makeExercise(pick(getList('triceps', 'isolation', eq), slot + 1), 'isolation', 3,
         experience, nutritionPhase),
@@ -463,19 +477,22 @@ function buildPPL(inputs, effectiveDays) {
     name: label,
     targetMuscles: ['back', 'biceps', 'traps'],
     exercises: [
+      // back: 2 compound variations, share volume
       makeExercise(pick(getList('back', 'compound', eq), slot), cKey,
-        setsPerSession('back', experience, weakPoints, nutritionPhase, goal, 2, inputs),
+        setsPerSession('back', experience, weakPoints, nutritionPhase, goal, 2, inputs, 2),
         experience, nutritionPhase),
       makeExercise(pick(getList('back', 'compound', eq), slot + 1), cKey,
-        setsPerSession('back', experience, weakPoints, nutritionPhase, goal, 2, inputs),
+        setsPerSession('back', experience, weakPoints, nutritionPhase, goal, 2, inputs, 2),
         experience, nutritionPhase, 'Row variation — retract scapulae at peak contraction'),
       makeExercise(pick(getList('back', 'isolation', eq), slot), 'machine', 3,
         experience, nutritionPhase),
+      // rear delts: 1 exercise on pull day
       makeExercise(pick(getList('shoulders', 'isolation', eq), slot + 1), 'isolation',
-        setsPerSession('shoulders', experience, weakPoints, nutritionPhase, goal, 2, inputs),
+        setsPerSession('shoulders', experience, weakPoints, nutritionPhase, goal, 2, inputs, 1),
         experience, nutritionPhase, 'Rear delts — essential for balanced shoulder development'),
+      // biceps: 2 exercises, share volume
       makeExercise(pick(getList('biceps', 'isolation', eq), slot), 'isolation',
-        setsPerSession('biceps', experience, weakPoints, nutritionPhase, goal, 2, inputs),
+        setsPerSession('biceps', experience, weakPoints, nutritionPhase, goal, 2, inputs, 2),
         experience, nutritionPhase),
       makeExercise(pick(getList('biceps', 'isolation', eq), slot + 1), 'isolation', 3,
         experience, nutritionPhase),
@@ -489,20 +506,23 @@ function buildPPL(inputs, effectiveDays) {
     name: label,
     targetMuscles: ['quads', 'hamstrings', 'glutes', 'calves'],
     exercises: [
+      // quads: compound + isolation = 2 exercises
       makeExercise(pick(getList('quads', 'compound', eq), slot), cKey,
-        setsPerSession('quads', experience, weakPoints, nutritionPhase, goal, 2, inputs),
+        setsPerSession('quads', experience, weakPoints, nutritionPhase, goal, 2, inputs, 2),
         experience, nutritionPhase),
+      // hamstrings: compound + isolation = 2 exercises
       makeExercise(pick(getList('hamstrings', 'compound', eq), slot), cKey,
-        setsPerSession('hamstrings', experience, weakPoints, nutritionPhase, goal, 2, inputs),
+        setsPerSession('hamstrings', experience, weakPoints, nutritionPhase, goal, 2, inputs, 2),
         experience, nutritionPhase),
+      // glutes: 1 exercise
       makeExercise(pick(getList('glutes', 'compound', eq), slot), cKey,
-        setsPerSession('glutes', experience, weakPoints, nutritionPhase, goal, 2, inputs),
+        setsPerSession('glutes', experience, weakPoints, nutritionPhase, goal, 2, inputs, 1),
         experience, nutritionPhase),
       makeExercise(pick(getList('quads', 'isolation', eq), slot), 'isolation',
-        setsPerSession('quads', experience, weakPoints, nutritionPhase, goal, 2, inputs),
+        setsPerSession('quads', experience, weakPoints, nutritionPhase, goal, 2, inputs, 2),
         experience, nutritionPhase),
       makeExercise(pick(getList('hamstrings', 'isolation', eq), slot), 'isolation',
-        setsPerSession('hamstrings', experience, weakPoints, nutritionPhase, goal, 2, inputs),
+        setsPerSession('hamstrings', experience, weakPoints, nutritionPhase, goal, 2, inputs, 2),
         experience, nutritionPhase),
       makeExercise(pick(getList('calves', 'isolation', eq), 0), 'isolation', 4,
         experience, nutritionPhase),

@@ -123,7 +123,7 @@ export default function AthleteHubScreen({ navigation }) {
                 <Text style={styles.cardSubtitle}>
                   {nutritionTargets.phase
                     ? nutritionTargets.phase.charAt(0).toUpperCase() + nutritionTargets.phase.slice(1)
-                    : 'Active'} · {nutritionTargets.calories} kcal
+                    : 'Active'} · {nutritionTargets.targetKcal} kcal
                 </Text>
               ) : (
                 <Text style={[styles.cardSubtitle, styles.cardSubtitleAlert]}>Not set — tap to configure</Text>
@@ -133,9 +133,9 @@ export default function AthleteHubScreen({ navigation }) {
           </View>
           {nutritionTargets && (
             <View style={styles.macroStrip}>
-              <MacroPill label="Protein" value={`${nutritionTargets.protein}g`} color={colors.primary} />
-              <MacroPill label="Carbs" value={`${nutritionTargets.carbs}g`} color={colors.success} />
-              <MacroPill label="Fat" value={`${nutritionTargets.fat}g`} color={colors.warning} />
+              <MacroPill label="Protein" value={`${nutritionTargets.proteinG}g`} color={colors.primary} />
+              <MacroPill label="Carbs" value={`${nutritionTargets.carbsG}g`} color={colors.success} />
+              <MacroPill label="Fat" value={`${nutritionTargets.fatG}g`} color={colors.warning} />
             </View>
           )}
           {!nutritionTargets && (
