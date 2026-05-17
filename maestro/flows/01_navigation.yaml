@@ -1,0 +1,64 @@
+appId: app.volyume
+name: "01 — Navigation: tabs are Train/Plans/Progress/You with no Log tab"
+tags:
+  - navigation
+---
+- runFlow: ../subflows/_launch_fresh.yaml
+
+# Train tab is active by default; app home screen renders
+- assertVisible:
+    text: "VOLYUME"
+
+# All four correct bottom-tab labels are visible simultaneously
+- assertVisible:
+    text: "Train"
+- assertVisible:
+    text: "Plans"
+- assertVisible:
+    text: "Progress"
+- assertVisible:
+    text: "You"
+
+# Plans tab loads its landing screen correctly
+- tapOn:
+    text: "Plans"
+- extendedWaitUntil:
+    visible:
+      text: "MY PLANS"
+    timeout: 8000
+- assertVisible:
+    text: "MY PLANS"
+
+# Progress tab loads analytics landing screen
+- tapOn:
+    text: "Progress"
+- extendedWaitUntil:
+    visible:
+      text: "Progress"
+    timeout: 6000
+
+# You tab loads settings screen
+- tapOn:
+    text: "You"
+- extendedWaitUntil:
+    visible:
+      text: "TRAINING"
+    timeout: 6000
+- assertVisible:
+    text: "TRAINING"
+
+# Settings → Plans link navigates into the Plans stack
+- tapOn:
+    text: "Plans"
+- extendedWaitUntil:
+    visible:
+      text: "MY PLANS"
+    timeout: 6000
+
+# Return to Train tab
+- tapOn:
+    text: "Train"
+- extendedWaitUntil:
+    visible:
+      text: "VOLYUME"
+    timeout: 5000

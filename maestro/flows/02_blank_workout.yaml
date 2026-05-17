@@ -1,0 +1,49 @@
+appId: app.volyume
+name: "02 — Blank Workout: build screen, add exercise, and start training"
+tags:
+  - workout
+---
+- runFlow: ../subflows/_launch_fresh.yaml
+
+# HomeScreen → BuildWorkoutScreen
+- tapOn:
+    text: "Start Blank Workout"
+- extendedWaitUntil:
+    visible:
+      text: "Build Workout"
+    timeout: 6000
+
+# Workout timer is NOT running during setup — no COMPLETE SET CTA visible
+- assertNotVisible:
+    text: "COMPLETE SET"
+
+# Skip Setup button is accessible
+- assertVisible:
+    id: volyume-btn-skip-setup
+
+# Add exercise via picker (autoFocus means inputText types without a tap)
+- tapOn:
+    id: volyume-btn-add-exercise
+- inputText: "Barbell Bench Press"
+- extendedWaitUntil:
+    visible:
+      text: "Barbell Bench Press"
+    timeout: 8000
+- tapOn:
+    text: "Barbell Bench Press"
+
+# Exercise card appears in the build list
+- assertVisible:
+    text: "Barbell Bench Press"
+
+# Start Training launches ActiveWorkoutScreen
+- tapOn:
+    id: volyume-btn-start-training
+- extendedWaitUntil:
+    visible:
+      text: "COMPLETE SET"
+    timeout: 8000
+
+# Active workout is running with the selected exercise
+- assertVisible:
+    text: "Barbell Bench Press"

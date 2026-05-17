@@ -1,0 +1,67 @@
+appId: app.volyume
+name: "04 — Plan Library: My Plans and Library sections, add plan from library"
+tags:
+  - plans
+---
+- runFlow: ../subflows/_launch_fresh.yaml
+
+# seedRoutinesIfNeeded runs on HomeScreen mount; wait briefly for it to register
+- waitForAnimationToEnd
+
+# Navigate to Plans tab
+- tapOn:
+    text: "Plans"
+- extendedWaitUntil:
+    visible:
+      text: "MY PLANS"
+    timeout: 8000
+
+# Both sections are present
+- assertVisible:
+    text: "MY PLANS"
+
+# Library section populates once seedRoutinesIfNeeded completes
+- extendedWaitUntil:
+    visible:
+      text: "PLAN LIBRARY"
+    timeout: 15000
+- assertVisible:
+    text: "PLAN LIBRARY"
+
+# Seeded plan "Men's Physique Upper Rotation" appears in the Library
+- extendedWaitUntil:
+    visible:
+      text: "Men's Physique Upper Rotation"
+    timeout: 10000
+- assertVisible:
+    text: "Men's Physique Upper Rotation"
+
+# Add the library plan to My Plans via the Add to My Plans button
+- tapOn:
+    id: volyume-btn-copy-from-library
+- extendedWaitUntil:
+    visible:
+      text: "Add to My Plans"
+    timeout: 4000
+- tapOn:
+    text: "Add to My Plans"
+
+# After adding, app shows "Added to My Plans" prompt — dismiss without setting active
+- extendedWaitUntil:
+    visible:
+      text: "Added to My Plans"
+    timeout: 8000
+- tapOn:
+    text: "Not Now"
+
+# Back on Plans screen — verify sections
+- extendedWaitUntil:
+    visible:
+      text: "MY PLANS"
+    timeout: 6000
+
+# Original library plan is still in the Library section unchanged
+- assertVisible:
+    text: "PLAN LIBRARY"
+- assertVisible:
+    text: "Men's Physique Upper Rotation"

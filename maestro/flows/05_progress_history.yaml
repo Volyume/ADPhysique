@@ -1,0 +1,132 @@
+appId: app.volyume
+name: "05 — Progress/History: completed sessions appear, read-only summary, Repeat"
+tags:
+  - progress
+---
+- runFlow: ../subflows/_launch_fresh.yaml
+
+# === PART 1: Complete a quick workout so history is non-empty ===
+
+- tapOn:
+    text: "Start Blank Workout"
+- extendedWaitUntil:
+    visible:
+      text: "Build Workout"
+    timeout: 6000
+
+# Skip Setup — starts an empty active workout
+- tapOn:
+    id: volyume-btn-skip-setup
+- extendedWaitUntil:
+    visible:
+      text: "Add your first exercise"
+    timeout: 6000
+
+# Add Barbell Curl to the empty workout
+- tapOn:
+    text: "Add Exercise"
+- inputText: "Barbell Curl"
+- extendedWaitUntil:
+    visible:
+      text: "Barbell Curl"
+    timeout: 8000
+- tapOn:
+    text: "Barbell Curl"
+
+# Log one set
+- extendedWaitUntil:
+    visible:
+      text: "COMPLETE SET"
+    timeout: 5000
+- tapOn:
+    id: volyume-weight-input
+- clearText
+- inputText: "30"
+- tapOn:
+    id: volyume-reps-input
+- clearText
+- inputText: "12"
+- tapOn:
+    id: volyume-btn-complete-set
+- waitForAnimationToEnd
+
+# Finish the workout (ghost button — no target set on blank workouts)
+- tapOn:
+    id: volyume-btn-finish-ghost
+- extendedWaitUntil:
+    visible:
+      text: "Finish"
+    timeout: 4000
+- tapOn:
+    text: "Finish"
+
+# WorkoutSummary shows session feedback form (non-read-only mode after finishing)
+- extendedWaitUntil:
+    visible:
+      text: "Session Logged"
+    timeout: 8000
+- assertVisible:
+    text: "SESSION FEEDBACK"
+
+# Save feedback and return to HomeScreen
+- tapOn:
+    text: "Save & Return"
+- extendedWaitUntil:
+    visible:
+      text: "VOLYUME"
+    timeout: 8000
+
+# === PART 2: Verify session appears in history ===
+
+- tapOn:
+    text: "Progress"
+- extendedWaitUntil:
+    visible:
+      text: "Workout History"
+    timeout: 6000
+- tapOn:
+    text: "Workout History"
+- extendedWaitUntil:
+    visible:
+      text: "View Details"
+    timeout: 8000
+
+# Completed session is listed; no "No sessions yet" empty state visible
+- assertVisible:
+    text: "View Details"
+- assertVisible:
+    text: "Repeat"
+- assertNotVisible:
+    text: "No sessions yet"
+
+# === PART 3: Read-only summary from history ===
+
+- tapOn:
+    text: "View Details"
+- extendedWaitUntil:
+    visible:
+      text: "Session Logged"
+    timeout: 8000
+
+# Read-only mode: Done button present, SESSION FEEDBACK section hidden
+- assertVisible:
+    text: "Done"
+- assertNotVisible:
+    text: "SESSION FEEDBACK"
+
+# Done navigates back to history
+- tapOn:
+    text: "Done"
+- extendedWaitUntil:
+    visible:
+      text: "View Details"
+    timeout: 5000
+
+# === PART 4: Repeat opens a new active session ===
+
+- tapOn:
+    text: "Repeat"
+- extendedWaitUntil:
+    visible:
+      text: "Add your first exercise"
+    timeout: 8000

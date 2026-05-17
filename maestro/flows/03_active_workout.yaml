@@ -1,0 +1,107 @@
+appId: app.volyume
+name: "03 — Active Workout: set type counting, target complete, Next Exercise CTA, mid-workout add"
+tags:
+  - workout
+---
+- runFlow: ../subflows/_launch_fresh.yaml
+
+# Build a 2-exercise workout so the first exercise shows NEXT EXERCISE (not FINISH WORKOUT)
+# when its target is complete
+- tapOn:
+    text: "Start Blank Workout"
+- extendedWaitUntil:
+    visible:
+      text: "Build Workout"
+    timeout: 6000
+
+# Exercise 1: Barbell Bench Press (default 3 target sets)
+- tapOn:
+    id: volyume-btn-add-exercise
+- inputText: "Barbell Bench Press"
+- extendedWaitUntil:
+    visible:
+      text: "Barbell Bench Press"
+    timeout: 8000
+- tapOn:
+    text: "Barbell Bench Press"
+
+# Exercise 2: Lat Pulldown (default 3 target sets)
+- tapOn:
+    id: volyume-btn-add-exercise
+- inputText: "Lat Pulldown"
+- extendedWaitUntil:
+    visible:
+      text: "Lat Pulldown (Wide Grip)"
+    timeout: 8000
+- tapOn:
+    text: "Lat Pulldown (Wide Grip)"
+
+# Start training
+- tapOn:
+    id: volyume-btn-start-training
+- extendedWaitUntil:
+    visible:
+      text: "COMPLETE SET"
+    timeout: 8000
+- assertVisible:
+    text: "Barbell Bench Press"
+
+# --- Barbell Bench Press: target = 3 working sets ---
+
+# Set 1: Warm-up — working count stays at 0, COMPLETE SET remains primary
+- runFlow: ../subflows/_log_warmup_set.yaml
+- extendedWaitUntil:
+    visible:
+      id: volyume-btn-complete-set
+    timeout: 4000
+
+# Set 2: Working — working count = 1, COMPLETE SET remains primary
+- runFlow: ../subflows/_log_working_set.yaml
+- extendedWaitUntil:
+    visible:
+      id: volyume-btn-complete-set
+    timeout: 4000
+
+# Set 3: Working — working count = 2, COMPLETE SET remains primary
+- runFlow: ../subflows/_log_working_set.yaml
+- extendedWaitUntil:
+    visible:
+      id: volyume-btn-complete-set
+    timeout: 4000
+
+# Set 4: Drop Set — working count becomes 3 = target → primary CTA switches to NEXT EXERCISE
+- runFlow: ../subflows/_log_dropset.yaml
+- extendedWaitUntil:
+    visible:
+      id: volyume-btn-next-exercise
+    timeout: 5000
+
+# NEXT EXERCISE is now the primary CTA; COMPLETE SET is no longer rendered
+- assertVisible:
+    id: volyume-btn-next-exercise
+- assertNotVisible:
+    id: volyume-btn-complete-set
+
+# Add exercise mid-workout using the header "+" button
+- tapOn:
+    id: volyume-btn-add-mid-workout
+- inputText: "Dumbbell Curl"
+- extendedWaitUntil:
+    visible:
+      text: "Dumbbell Curl"
+    timeout: 8000
+- tapOn:
+    text: "Dumbbell Curl"
+- waitForAnimationToEnd
+
+# Navigate to the next exercise (Lat Pulldown)
+- tapOn:
+    id: volyume-btn-next-exercise
+- extendedWaitUntil:
+    visible:
+      text: "Lat Pulldown (Wide Grip)"
+    timeout: 6000
+
+# COMPLETE SET is primary again for the new exercise
+- assertVisible:
+    text: "COMPLETE SET"

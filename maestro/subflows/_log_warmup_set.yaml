@@ -1,0 +1,22 @@
+# Switches set type to Warm-up and completes one set.
+# Pre-condition: volyume-btn-complete-set is the current primary CTA.
+# Post-condition: one warm-up set logged; working set count unchanged.
+- tapOn:
+    id: volyume-set-type-btn
+- extendedWaitUntil:
+    visible:
+      text: "Warm-up"
+    timeout: 4000
+- tapOn:
+    text: "Warm-up"
+- tapOn:
+    id: volyume-weight-input
+- clearText
+- inputText: "40"
+- tapOn:
+    id: volyume-reps-input
+- clearText
+- inputText: "12"
+- tapOn:
+    id: volyume-btn-complete-set
+- waitForAnimationToEnd
