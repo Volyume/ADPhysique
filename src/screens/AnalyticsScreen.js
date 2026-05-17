@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { format } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import VolumeBars from '../components/VolumeBars';
 import { getAllWorkoutSets, getAllWorkouts, getAllExercises } from '../lib/database';
@@ -12,18 +15,40 @@ import {
 } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 
+const NUTRITION_KEY = '@volyume_nutrition_targets';
+
 export default function AnalyticsScreen({ navigation }) {
   const { user, units } = useAppStore();
   const [weeklyVolume, setWeeklyVolume] = useState({});
   const [weekStats, setWeekStats] = useState(null);
   const [deloadCheck, setDeloadCheck] = useState(null);
+  const [recentSessions, setRecentSessions] = useState([]);
+  const [nutritionTargets, setNutritionTargets] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => { loadData(); }, [user?.id]);
+  useFocusEffect(useCallback(() => { loadData(); }, [user?.id]));
 
   async function loadData() {
     if (!user?.id) return;
-    await Promise.all([loadWeeklyData(), checkDeload()]);
+    await Promise.all([loadWeeklyData(), checkDeload(), loadRecentSessions(), loadNutrition()]);
+  }
+
+  async function loadRecentSessions() {
+    try {
+      const all = await getAllWorkouts(user.id);
+      const completed = all
+        .filter(w => w.isCompleted)
+        .sort((a, b) => b.startedAt - a.startedAt)
+        .slice(0, 3);
+      setRecentSessions(completed);
+    } catch (_e) {}
+  }
+
+  async function loadNutrition() {
+    try {
+      const raw = await AsyncStorage.getItem(NUTRITION_KEY);
+      if (raw) setNutritionTargets(JSON.parse(raw));
+    } catch (_e) {}
   }
 
   async function loadWeeklyData() {
@@ -95,7 +120,7 @@ export default function AnalyticsScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
@@ -116,17 +141,21 @@ export default function AnalyticsScreen({ navigation }) {
         )}
 
         {/* This Week Stats */}
-        {weekStats && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>THIS WEEK</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>THIS WEEK</Text>
+          {weekStats ? (
             <View style={styles.statsGrid}>
               <StatCard value={String(weekStats.workoutCount)} label="Workouts" icon="barbell" />
               <StatCard value={String(weekStats.totalSets)} label="Working Sets" icon="layers" />
               <StatCard value={`${weekStats.tonnage}t`} label="Tonnage" icon="trending-up" />
-              <StatCard value={`${weekStats.avgDuration}m`} label="Avg Session" icon="time" />
+              <StatCard value={weekStats.avgDuration > 0 ? `${weekStats.avgDuration}m` : '—'} label="Avg Session" icon="time" />
             </View>
-          </View>
-        )}
+          ) : (
+            <View style={styles.card}>
+              <Text style={styles.emptyState}>No sessions this week. Time to train.</Text>
+            </View>
+          )}
+        </View>
 
         {/* Volume Heatmap */}
         <View style={styles.section}>
@@ -140,13 +169,73 @@ export default function AnalyticsScreen({ navigation }) {
             <VolumeBars weeklyVolume={weeklyVolume} />
             {Object.keys(weeklyVolume).length === 0 && (
               <Text style={styles.emptyState}>
-                Complete more sessions to build your weekly muscle-volume map.
+                Complete sessions to see your weekly muscle-volume map.
               </Text>
             )}
           </View>
         </View>
 
-        {/* Quick Links */}
+        {/* Nutrition snapshot */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>NUTRITION</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('ProfileTab', { screen: 'NutritionTargets' })}>
+              <Text style={styles.seeAll}>{nutritionTargets ? 'Edit' : 'Set targets'}</Text>
+            </TouchableOpacity>
+          </View>
+          {nutritionTargets ? (
+            <View style={styles.nutritionCard}>
+              <View style={styles.nutritionPhase}>
+                <Text style={styles.nutritionPhaseLabel}>{nutritionTargets.phase?.toUpperCase() ?? 'TARGETS'}</Text>
+                <Text style={styles.nutritionCals}>{nutritionTargets.calories} kcal</Text>
+              </View>
+              <View style={styles.macroRow}>
+                <MacroChip label="Protein" value={`${nutritionTargets.protein}g`} color={colors.primary} />
+                <MacroChip label="Carbs" value={`${nutritionTargets.carbs}g`} color={colors.success} />
+                <MacroChip label="Fat" value={`${nutritionTargets.fat}g`} color={colors.warning} />
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.emptyCard}
+              onPress={() => navigation.navigate('ProfileTab', { screen: 'NutritionTargets' })}
+            >
+              <Ionicons name="nutrition-outline" size={24} color={colors.textMuted} />
+              <Text style={styles.emptyCardText}>Set nutrition targets to track calories and macros alongside your training.</Text>
+              <Text style={styles.emptyCardCta}>Set targets →</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Recent Sessions */}
+        {recentSessions.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>RECENT SESSIONS</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('WorkoutHistory')}>
+                <Text style={styles.seeAll}>All sessions</Text>
+              </TouchableOpacity>
+            </View>
+            {recentSessions.map(w => (
+              <View key={w.id} style={styles.sessionRow}>
+                <View style={styles.sessionLeft}>
+                  <Text style={styles.sessionName}>{w.name || 'Session'}</Text>
+                  <Text style={styles.sessionMeta}>
+                    {format(new Date(w.startedAt), 'EEE d MMM')}
+                    {w.durationMinutes ? ` · ${w.durationMinutes}m` : ''}
+                  </Text>
+                </View>
+                {w.sessionDifficulty != null && (
+                  <View style={styles.rpeChip}>
+                    <Text style={styles.rpeText}>RPE {w.sessionDifficulty}</Text>
+                  </View>
+                )}
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Deep Dive */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>DEEP DIVE</Text>
           <View style={styles.linkGrid}>
@@ -183,6 +272,15 @@ function StatCard({ value, label, icon }) {
       <Ionicons name={icon} size={18} color={colors.primary} />
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function MacroChip({ label, value, color }) {
+  return (
+    <View style={styles.macroChip}>
+      <Text style={[styles.macroValue, { color }]}>{value}</Text>
+      <Text style={styles.macroLabel}>{label}</Text>
     </View>
   );
 }
@@ -276,6 +374,102 @@ const styles = StyleSheet.create({
   },
   linkSub: {
     fontSize: fontSize.xs,
+    color: colors.textSecondary,
+  },
+  nutritionCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.md,
+  },
+  nutritionPhase: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  nutritionPhaseLabel: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.black,
+    color: colors.primary,
+    letterSpacing: 1.2,
+  },
+  nutritionCals: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.black,
+    color: colors.textPrimary,
+  },
+  macroRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  macroChip: {
+    flex: 1,
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    alignItems: 'center',
+  },
+  macroValue: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+  },
+  macroLabel: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  emptyCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  emptyCardText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  emptyCardCta: {
+    fontSize: fontSize.sm,
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
+  },
+  sessionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.md,
+  },
+  sessionLeft: { flex: 1 },
+  sessionName: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+  },
+  sessionMeta: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  rpeChip: {
+    backgroundColor: colors.surface2,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  rpeText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
     color: colors.textSecondary,
   },
 });

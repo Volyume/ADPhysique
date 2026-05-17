@@ -9,7 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { format } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import BrandMark from '../components/BrandMark';
+import { VolyumeMark } from '../components/BrandMark';
 import {
   getAllWorkouts, getActivePlan, getRoutinesForPlan,
   getAllRoutineExerciseCounts, createWorkout, getRoutineExercisesWithDetails,
@@ -22,7 +22,7 @@ const NUTRITION_KEY = '@volyume_nutrition_targets';
 export default function HomeScreen({ navigation }) {
   const { user, startWorkout, activeWorkout } = useAppStore();
 
-  const [weekStats, setWeekStats] = useState({ sessions: 0, sets: 0, volume: 0, prs: 0 });
+  const [weekStats, setWeekStats] = useState({ sessions: 0, sets: 0, volume: 0 });
   const [activePlan, setActivePlanData] = useState(null);
   const [nextWorkout, setNextWorkout] = useState(null);
   const [exerciseCounts, setExerciseCounts] = useState({});
@@ -33,8 +33,7 @@ export default function HomeScreen({ navigation }) {
   const [showChangeWorkout, setShowChangeWorkout] = useState(false);
   const [isStartingWorkout, setIsStartingWorkout] = useState(false);
   const [lastSession, setLastSession] = useState(null);
-  const [insightText, setInsightText] = useState(null);
-  const [nutritionPhaseLabel, setNutritionPhaseLabel] = useState(null);
+  const [nutritionTargets, setNutritionTargets] = useState(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -53,7 +52,7 @@ export default function HomeScreen({ navigation }) {
       loadWeekStats(),
       loadNextWorkout(),
       loadExerciseCounts(),
-      loadNutritionPhase(),
+      loadNutrition(),
     ]);
   }
 
@@ -64,29 +63,10 @@ export default function HomeScreen({ navigation }) {
       const thisWeek = all.filter(w => w.startedAt >= weekAgo && w.isCompleted);
       const totalSets = thisWeek.reduce((s, w) => s + (w.setCount || 0), 0);
       const totalVol = thisWeek.reduce((s, w) => s + (w.totalVolume || 0), 0);
+      setWeekStats({ sessions: thisWeek.length, sets: totalSets, volume: totalVol });
 
       const completed = all.filter(w => w.isCompleted).sort((a, b) => b.startedAt - a.startedAt);
-      const last = completed[0] || null;
-      if (last) {
-        setLastSession(last);
-      }
-
-      // Build a simple insight
-      const prev2w = all.filter(w => w.startedAt >= Date.now() - 14 * 24 * 60 * 60 * 1000
-        && w.startedAt < weekAgo && w.isCompleted);
-      if (prev2w.length > 0 && thisWeek.length > 0) {
-        const prevVol = prev2w.reduce((s, w) => s + (w.totalVolume || 0), 0);
-        if (prevVol > 0) {
-          const delta = Math.round(((totalVol - prevVol) / prevVol) * 100);
-          if (Math.abs(delta) >= 5) {
-            setInsightText(`Volume ${delta > 0 ? 'up' : 'down'} ${Math.abs(delta)}% vs last week`);
-          } else {
-            setInsightText(null);
-          }
-        }
-      }
-
-      setWeekStats({ sessions: thisWeek.length, sets: totalSets, volume: totalVol });
+      setLastSession(completed[0] || null);
     } catch (_e) {}
   }
 
@@ -120,16 +100,10 @@ export default function HomeScreen({ navigation }) {
     }
   }
 
-  async function loadNutritionPhase() {
+  async function loadNutrition() {
     try {
       const raw = await AsyncStorage.getItem(NUTRITION_KEY);
-      if (!raw) { setNutritionPhaseLabel(null); return; }
-      const t = JSON.parse(raw);
-      const PHASE_LABELS = {
-        lean_gain: 'Lean Gain', build: 'Build', maintain: 'Maintenance',
-        recomp: 'Recomposition', mild_cut: 'Mild Cut', aggressive_cut: 'Aggressive Cut',
-      };
-      setNutritionPhaseLabel(t.phase ? (PHASE_LABELS[t.phase] ?? t.phase) : null);
+      setNutritionTargets(raw ? JSON.parse(raw) : null);
     } catch (_e) {}
   }
 
@@ -157,14 +131,18 @@ export default function HomeScreen({ navigation }) {
     }
   }
 
-  function handleContinueWorkout() {
-    navigation.navigate('ActiveWorkout');
-  }
-
   const hasActiveWorkout = !!activeWorkout && !isStartingWorkout;
   const displayWorkout = selectedWorkoutOverride || nextWorkout;
   const planProgress = displayWorkout
     ? `Day ${(displayWorkout?.idx ?? 0) + 1} of ${nextWorkout?.total ?? 1}`
+    : null;
+
+  const PHASE_LABELS = {
+    lean_gain: 'Lean Gain', build: 'Build', maintain: 'Maintenance',
+    recomp: 'Recomposition', mild_cut: 'Mild Cut', aggressive_cut: 'Aggressive Cut',
+  };
+  const nutritionPhaseLabel = nutritionTargets?.phase
+    ? (PHASE_LABELS[nutritionTargets.phase] ?? nutritionTargets.phase)
     : null;
 
   return (
@@ -177,18 +155,16 @@ export default function HomeScreen({ navigation }) {
         {/* ── Header ── */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <BrandMark size={22} color={colors.primary} />
+            <VolyumeMark size={26} />
             <Text style={styles.appTitle}>VOLYUME</Text>
           </View>
           <View style={styles.headerRight}>
-            {nutritionPhaseLabel && (
-              <TouchableOpacity
-                style={styles.phaseChip}
-                onPress={() => navigation.navigate('ProfileTab', { screen: 'NutritionTargets' })}
-              >
-                <Text style={styles.phaseChipText}>{nutritionPhaseLabel}</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              onPress={() => navigation.navigate('ProfileTab', { screen: 'NutritionTargets' })}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="nutrition-outline" size={22} color={colors.textSecondary} />
+            </TouchableOpacity>
             <TouchableOpacity
               onPress={() => navigation.navigate('ProgressTab', { screen: 'BodyMetrics' })}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -198,13 +174,13 @@ export default function HomeScreen({ navigation }) {
           </View>
         </View>
 
-        {/* ── Weekly strip ── */}
+        {/* ── This Week strip ── */}
         <View style={styles.weekStrip}>
-          <WeekStatCell value={weekStats.sessions} label="Sessions" />
-          <View style={styles.weekStripDivider} />
-          <WeekStatCell value={weekStats.sets} label="Sets" />
-          <View style={styles.weekStripDivider} />
-          <WeekStatCell
+          <WeekStat value={weekStats.sessions} label="Sessions" />
+          <View style={styles.weekDivider} />
+          <WeekStat value={weekStats.sets} label="Sets" />
+          <View style={styles.weekDivider} />
+          <WeekStat
             value={weekStats.volume >= 1000
               ? `${(weekStats.volume / 1000).toFixed(1)}t`
               : `${weekStats.volume}kg`}
@@ -212,202 +188,268 @@ export default function HomeScreen({ navigation }) {
           />
         </View>
 
-        {/* ── Active plan hero or empty state ── */}
+        {/* ── Primary workout area ── */}
         {hasActiveWorkout ? (
-          <TouchableOpacity style={styles.continueCard} onPress={handleContinueWorkout} activeOpacity={0.85}>
+          <TouchableOpacity style={styles.continueCard} onPress={() => navigation.navigate('ActiveWorkout')} activeOpacity={0.85}>
             <View style={styles.continueCardInner}>
-              <Ionicons name="play-circle" size={28} color={colors.background} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.continueCardTitle}>Continue Workout</Text>
-                <Text style={styles.continueCardSub}>Session in progress — tap to return</Text>
+              <View style={styles.continueIconWrap}>
+                <Ionicons name="play" size={20} color={colors.background} />
               </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.background} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.continueTitle}>Session in Progress</Text>
+                <Text style={styles.continueSub}>Tap to return to your workout</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.background + 'CC'} />
             </View>
           </TouchableOpacity>
         ) : activePlan && nextWorkout ? (
           <View style={styles.heroCard}>
-            {/* Plan name + progress */}
             <View style={styles.heroTopRow}>
               <View style={styles.heroPlanBadge}>
-                <Text style={styles.heroPlanBadgeText}>{activePlan.name}</Text>
+                <Text style={styles.heroPlanBadgeText} numberOfLines={1}>{activePlan.name}</Text>
               </View>
-              <Text style={styles.heroPlanProgress}>{planProgress}</Text>
+              <Text style={styles.heroDayProgress}>{planProgress}</Text>
             </View>
-
-            {/* Workout name */}
             <Text style={styles.heroWorkoutName} numberOfLines={2}>
               {displayWorkout?.routine?.name}
             </Text>
-
-            {/* Target muscles */}
-            {displayWorkout?.routine?.targetMuscles?.length > 0 && (
-              <View style={styles.muscleChips}>
-                {(displayWorkout.routine.targetMuscles || []).slice(0, 4).map(m => (
-                  <View key={m} style={styles.muscleChip}>
-                    <Text style={styles.muscleChipText}>{m}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-
             {exerciseCounts[displayWorkout?.routine?.id] ? (
               <Text style={styles.heroMeta}>
                 {exerciseCounts[displayWorkout.routine.id]} exercises
               </Text>
             ) : null}
-
-            {/* Actions */}
-            <TouchableOpacity style={styles.changeWorkoutBtn} onPress={() => setShowChangeWorkout(true)}>
-              <Ionicons name="swap-horizontal-outline" size={15} color={colors.primary} />
-              <Text style={styles.changeWorkoutBtnText}>Change Workout</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.startBtn} onPress={handleStartNextWorkout} activeOpacity={0.85}>
-              <Ionicons name="play-circle" size={20} color={colors.background} />
-              <Text style={styles.startBtnText}>Start Workout</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.blankBtn} onPress={() => navigation.navigate('BuildWorkout')}>
-              <Text style={styles.blankBtnText}>Start Blank Workout</Text>
+            <View style={styles.heroActions}>
+              <TouchableOpacity
+                style={[styles.startBtn, isStartingWorkout && { opacity: 0.6 }]}
+                onPress={handleStartNextWorkout}
+                disabled={isStartingWorkout}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="play" size={16} color={colors.background} />
+                <Text style={styles.startBtnText}>
+                  {isStartingWorkout ? 'Starting…' : 'Start Workout'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.changeBtn}
+                onPress={() => setShowChangeWorkout(true)}
+              >
+                <Ionicons name="swap-horizontal-outline" size={16} color={colors.primary} />
+                <Text style={styles.changeBtnText}>Change</Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity style={styles.blankLink} onPress={() => navigation.navigate('BuildWorkout')}>
+              <Text style={styles.blankLinkText}>Start Blank Workout</Text>
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={styles.emptyHero}>
-            <BrandMark size={40} color={colors.textMuted} />
-            <Text style={styles.emptyHeroTitle}>No active plan</Text>
-            <Text style={styles.emptyHeroSub}>
-              Build a personalised plan or browse ready-made programmes to get started.
+          <View style={styles.noPlanCard}>
+            <Text style={styles.noPlanTitle}>No active plan</Text>
+            <Text style={styles.noPlanSub}>
+              Build a personalised plan, browse the library, or start a blank session.
             </Text>
             <TouchableOpacity style={styles.startBtn} onPress={() => navigation.navigate('BuildWorkout')}>
-              <Ionicons name="add-circle" size={20} color={colors.background} />
+              <Ionicons name="add" size={18} color={colors.background} />
               <Text style={styles.startBtnText}>Start Blank Workout</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.choosePlanBtn} onPress={() => navigation.navigate('PlansTab')}>
-              <Text style={styles.choosePlanBtnText}>Choose a Plan</Text>
+            <TouchableOpacity style={styles.ghostBtn} onPress={() => navigation.navigate('PlansTab')}>
+              <Text style={styles.ghostBtnText}>Choose a Plan</Text>
             </TouchableOpacity>
           </View>
         )}
 
-        {/* ── Last session recap ── */}
-        {lastSession && (
-          <TouchableOpacity
-            style={styles.lastSessionCard}
-            onPress={() => navigation.navigate('ProgressTab', { screen: 'WorkoutHistory' })}
-            activeOpacity={0.7}
-          >
-            <View style={styles.lastSessionTop}>
-              <Text style={styles.lastSessionLabel}>LAST SESSION</Text>
-              <Text style={styles.lastSessionDate}>
-                {format(new Date(lastSession.startedAt), 'd MMM')}
-              </Text>
-            </View>
-            <View style={styles.lastSessionStats}>
-              {lastSession.durationMinutes ? (
-                <Text style={styles.lastSessionStat}>{lastSession.durationMinutes}m</Text>
-              ) : null}
-              {lastSession.setCount ? (
-                <Text style={styles.lastSessionStat}>{lastSession.setCount} sets</Text>
-              ) : null}
-              {lastSession.totalVolume ? (
-                <Text style={styles.lastSessionStat}>
-                  {lastSession.totalVolume >= 1000
-                    ? `${(lastSession.totalVolume / 1000).toFixed(1)}t`
-                    : `${lastSession.totalVolume}kg`}
+        {/* ── Start or Build a Plan (compact cards) ── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>START OR BUILD A PLAN</Text>
+          <ActionCard
+            icon="sparkles"
+            title="Coach Builder"
+            desc="Answer 7 questions — get a plan tailored to your schedule and goal."
+            onPress={() => navigation.navigate('PlansTab', { screen: 'CoachBuilder' })}
+          />
+          <ActionCard
+            icon="library-outline"
+            title="Plan Library"
+            desc="Browse ready-made plans for every split, level and goal."
+            onPress={() => navigation.navigate('PlansTab', { screen: 'PlanLibrary' })}
+          />
+          <ActionCard
+            icon="create-outline"
+            title="Manual Builder"
+            desc="Build a custom plan from scratch with your own exercises."
+            onPress={() => navigation.navigate('PlansTab', { screen: 'ManualBuilder' })}
+          />
+        </View>
+
+        {/* ── Body & Nutrition card ── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>BODY & NUTRITION</Text>
+          {nutritionTargets ? (
+            <TouchableOpacity
+              style={styles.nutritionCard}
+              onPress={() => navigation.navigate('ProfileTab', { screen: 'NutritionTargets' })}
+              activeOpacity={0.7}
+            >
+              <View style={styles.nutritionCardHeader}>
+                <Ionicons name="nutrition-outline" size={18} color={colors.primary} />
+                <Text style={styles.nutritionCardPhase}>
+                  {nutritionPhaseLabel || 'Targets Set'}
                 </Text>
-              ) : null}
-            </View>
+                <Text style={styles.nutritionCardEdit}>Edit</Text>
+              </View>
+              <View style={styles.nutritionMacroRow}>
+                {nutritionTargets.calories ? (
+                  <View style={styles.nutritionMacroCell}>
+                    <Text style={styles.nutritionMacroValue}>{Math.round(nutritionTargets.calories)}</Text>
+                    <Text style={styles.nutritionMacroLabel}>kcal</Text>
+                  </View>
+                ) : null}
+                {nutritionTargets.protein ? (
+                  <View style={styles.nutritionMacroCell}>
+                    <Text style={styles.nutritionMacroValue}>{Math.round(nutritionTargets.protein)}g</Text>
+                    <Text style={styles.nutritionMacroLabel}>Protein</Text>
+                  </View>
+                ) : null}
+                {nutritionTargets.carbs ? (
+                  <View style={styles.nutritionMacroCell}>
+                    <Text style={styles.nutritionMacroValue}>{Math.round(nutritionTargets.carbs)}g</Text>
+                    <Text style={styles.nutritionMacroLabel}>Carbs</Text>
+                  </View>
+                ) : null}
+                {nutritionTargets.fat ? (
+                  <View style={styles.nutritionMacroCell}>
+                    <Text style={styles.nutritionMacroValue}>{Math.round(nutritionTargets.fat)}g</Text>
+                    <Text style={styles.nutritionMacroLabel}>Fat</Text>
+                  </View>
+                ) : null}
+              </View>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.nutritionEmptyCard}
+              onPress={() => navigation.navigate('ProfileTab', { screen: 'NutritionTargets' })}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="nutrition-outline" size={22} color={colors.textMuted} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.nutritionEmptyTitle}>Set Nutrition Targets</Text>
+                <Text style={styles.nutritionEmptySub}>
+                  Calculate daily calories and macros so future plans account for your recovery.
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={styles.bodyMetricsLink}
+            onPress={() => navigation.navigate('ProgressTab', { screen: 'BodyMetrics' })}
+          >
+            <Ionicons name="body-outline" size={16} color={colors.textMuted} />
+            <Text style={styles.bodyMetricsLinkText}>Log Body Weight & Measurements</Text>
+            <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
           </TouchableOpacity>
-        )}
+        </View>
 
-        {/* ── Insight tile ── */}
-        {insightText && (
-          <View style={styles.insightTile}>
-            <Ionicons name="trending-up-outline" size={16} color={colors.primary} />
-            <Text style={styles.insightText}>{insightText}</Text>
-          </View>
-        )}
+        {/* ── Recent Session ── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>RECENT SESSION</Text>
+          {lastSession ? (
+            <TouchableOpacity
+              style={styles.sessionCard}
+              onPress={() => navigation.navigate('ProgressTab', { screen: 'WorkoutHistory' })}
+              activeOpacity={0.7}
+            >
+              <View style={styles.sessionCardRow}>
+                <Text style={styles.sessionDate}>
+                  {format(new Date(lastSession.startedAt), 'd MMM yyyy')}
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              </View>
+              <View style={styles.sessionStats}>
+                {lastSession.durationMinutes ? (
+                  <View style={styles.sessionStat}>
+                    <Text style={styles.sessionStatValue}>{lastSession.durationMinutes}m</Text>
+                    <Text style={styles.sessionStatLabel}>Duration</Text>
+                  </View>
+                ) : null}
+                {lastSession.setCount ? (
+                  <View style={styles.sessionStat}>
+                    <Text style={styles.sessionStatValue}>{lastSession.setCount}</Text>
+                    <Text style={styles.sessionStatLabel}>Sets</Text>
+                  </View>
+                ) : null}
+                {lastSession.totalVolume ? (
+                  <View style={styles.sessionStat}>
+                    <Text style={styles.sessionStatValue}>
+                      {lastSession.totalVolume >= 1000
+                        ? `${(lastSession.totalVolume / 1000).toFixed(1)}t`
+                        : `${lastSession.totalVolume}kg`}
+                    </Text>
+                    <Text style={styles.sessionStatLabel}>Volume</Text>
+                  </View>
+                ) : null}
+              </View>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.emptyCard}>
+              <Ionicons name="time-outline" size={24} color={colors.textMuted} />
+              <Text style={styles.emptyCardText}>Your completed sessions will appear here.</Text>
+            </View>
+          )}
+        </View>
 
-        {/* ── Quick actions ── */}
-        <View style={styles.quickActions}>
-          <QuickAction
-            icon="time-outline"
-            label="History"
-            onPress={() => navigation.navigate('ProgressTab', { screen: 'WorkoutHistory' })}
-          />
-          <QuickAction
-            icon="list"
-            label="Plans"
-            onPress={() => navigation.navigate('PlansTab')}
-          />
-          <QuickAction
-            icon="barbell-outline"
-            label="Exercises"
-            onPress={() => navigation.navigate('PlansTab', { screen: 'ExerciseLibrary' })}
-          />
-          <QuickAction
-            icon="trophy-outline"
-            label="Records"
-            onPress={() => navigation.navigate('ProgressTab', { screen: 'PRWall' })}
-          />
+        {/* ── Quick nav ── */}
+        <View style={styles.quickRow}>
+          <QuickLink icon="time-outline" label="History" onPress={() => navigation.navigate('ProgressTab', { screen: 'WorkoutHistory' })} />
+          <QuickLink icon="trophy-outline" label="Records" onPress={() => navigation.navigate('ProgressTab', { screen: 'PRWall' })} />
+          <QuickLink icon="stats-chart-outline" label="Progress" onPress={() => navigation.navigate('ProgressTab')} />
+          <QuickLink icon="barbell-outline" label="Exercises" onPress={() => navigation.navigate('PlansTab', { screen: 'ExerciseLibrary' })} />
         </View>
       </ScrollView>
 
-      {/* ── Change Workout sheet ── */}
+      {/* Change Workout Sheet */}
       <Modal
         visible={showChangeWorkout}
         transparent
         animationType="slide"
         onRequestClose={() => setShowChangeWorkout(false)}
       >
-        <TouchableOpacity
-          style={styles.sheetBackdrop}
-          activeOpacity={1}
-          onPress={() => setShowChangeWorkout(false)}
-        />
-        <View style={styles.changeWorkoutSheet}>
+        <TouchableOpacity style={styles.sheetBackdrop} activeOpacity={1} onPress={() => setShowChangeWorkout(false)} />
+        <View style={styles.sheet}>
           <View style={styles.sheetHandle} />
           <Text style={styles.sheetTitle}>Choose Workout</Text>
-          <Text style={styles.sheetSubtitle}>{activePlan?.name}</Text>
+          {activePlan && <Text style={styles.sheetSub}>{activePlan.name}</Text>}
           <ScrollView showsVerticalScrollIndicator={false}>
             {planAllWorkouts.map((routine, i) => {
-              const isNextUp = i === nextWorkout?.idx && !selectedWorkoutOverride;
-              const isSelected = selectedWorkoutOverride?.idx === i;
+              const isNext = i === nextWorkout?.idx && !selectedWorkoutOverride;
+              const isSel = selectedWorkoutOverride?.idx === i;
               return (
                 <TouchableOpacity
                   key={routine.id ?? i}
-                  style={[styles.workoutPickerRow, isSelected && styles.workoutPickerRowActive]}
+                  style={[styles.pickerRow, (isNext || isSel) && styles.pickerRowActive]}
                   onPress={() => {
-                    if (i === nextWorkout?.idx) {
-                      setSelectedWorkoutOverride(null);
-                    } else {
-                      setSelectedWorkoutOverride({ routine, total: planAllWorkouts.length, idx: i });
-                    }
+                    setSelectedWorkoutOverride(i === nextWorkout?.idx ? null : { routine, total: planAllWorkouts.length, idx: i });
                     setShowChangeWorkout(false);
                   }}
                 >
-                  <View style={[styles.dayBadge, (isNextUp || isSelected) && styles.dayBadgeActive]}>
-                    <Text style={[styles.dayNum, (isNextUp || isSelected) && styles.dayNumActive]}>
-                      D{i + 1}
-                    </Text>
+                  <View style={[styles.dayBadge, (isNext || isSel) && styles.dayBadgeActive]}>
+                    <Text style={[styles.dayNum, (isNext || isSel) && styles.dayNumActive]}>D{i + 1}</Text>
                   </View>
-                  <View style={styles.workoutPickerInfo}>
-                    <Text style={styles.workoutPickerName} numberOfLines={1}>{routine.name}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.pickerName} numberOfLines={1}>{routine.name}</Text>
                     {exerciseCounts[routine.id] ? (
-                      <Text style={styles.workoutPickerMeta}>{exerciseCounts[routine.id]} exercises</Text>
+                      <Text style={styles.pickerMeta}>{exerciseCounts[routine.id]} exercises</Text>
                     ) : null}
                   </View>
-                  {isNextUp ? (
-                    <View style={styles.nextUpBadge}>
-                      <Text style={styles.nextUpBadgeText}>Next up</Text>
-                    </View>
-                  ) : isSelected ? (
-                    <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-                  ) : null}
+                  {isNext && (
+                    <View style={styles.nextUpBadge}><Text style={styles.nextUpText}>Next up</Text></View>
+                  )}
+                  {isSel && <Ionicons name="checkmark-circle" size={20} color={colors.primary} />}
                 </TouchableOpacity>
               );
             })}
           </ScrollView>
-          <TouchableOpacity style={styles.sheetCancelBtn} onPress={() => setShowChangeWorkout(false)}>
+          <TouchableOpacity style={styles.sheetCancel} onPress={() => setShowChangeWorkout(false)}>
             <Text style={styles.sheetCancelText}>Cancel</Text>
           </TouchableOpacity>
         </View>
@@ -416,7 +458,7 @@ export default function HomeScreen({ navigation }) {
   );
 }
 
-function WeekStatCell({ value, label }) {
+function WeekStat({ value, label }) {
   return (
     <View style={styles.weekStatCell}>
       <Text style={styles.weekStatValue}>{value}</Text>
@@ -425,11 +467,26 @@ function WeekStatCell({ value, label }) {
   );
 }
 
-function QuickAction({ icon, label, onPress }) {
+function ActionCard({ icon, title, desc, onPress }) {
   return (
-    <TouchableOpacity style={styles.quickAction} onPress={onPress}>
-      <Ionicons name={icon} size={22} color={colors.primary} />
-      <Text style={styles.quickActionText}>{label}</Text>
+    <TouchableOpacity style={styles.actionCard} onPress={onPress} activeOpacity={0.75}>
+      <View style={styles.actionIconWrap}>
+        <Ionicons name={icon} size={22} color={colors.primary} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.actionTitle}>{title}</Text>
+        <Text style={styles.actionDesc}>{desc}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+    </TouchableOpacity>
+  );
+}
+
+function QuickLink({ icon, label, onPress }) {
+  return (
+    <TouchableOpacity style={styles.quickLink} onPress={onPress}>
+      <Ionicons name={icon} size={20} color={colors.primary} />
+      <Text style={styles.quickLinkLabel}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -437,22 +494,18 @@ function QuickAction({ icon, label, onPress }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
-  content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
+  content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
 
   // Header
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.xs },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  appTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.textPrimary, letterSpacing: 2.5 },
-  phaseChip: {
-    backgroundColor: colors.primaryBg,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: colors.primary + '50',
+  appTitle: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.black,
+    color: colors.textPrimary,
+    letterSpacing: 2,
   },
-  phaseChipText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
 
   // Week strip
   weekStrip: {
@@ -464,21 +517,26 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   weekStatCell: { flex: 1, alignItems: 'center', gap: 2 },
-  weekStripDivider: { width: 1, backgroundColor: colors.border, marginVertical: spacing.xs },
+  weekDivider: { width: 1, backgroundColor: colors.border, marginVertical: spacing.xs },
   weekStatValue: { fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.textPrimary },
-  weekStatLabel: { fontSize: fontSize.xs, color: colors.textMuted, fontWeight: fontWeight.medium },
+  weekStatLabel: { fontSize: fontSize.xs, color: colors.textMuted },
 
-  // Continue card (active workout)
+  // Continue card
   continueCard: {
     backgroundColor: colors.success,
     borderRadius: radius.lg,
     padding: spacing.lg,
   },
   continueCardInner: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  continueCardTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
-  continueCardSub: { fontSize: fontSize.xs, color: colors.background + 'CC', marginTop: 2 },
+  continueIconWrap: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  continueTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
+  continueSub: { fontSize: fontSize.xs, color: colors.background + 'CC', marginTop: 2 },
 
-  // Hero card (active plan)
+  // Hero plan card
   heroCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
@@ -487,16 +545,15 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     gap: spacing.md,
   },
-  heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   heroPlanBadge: {
+    flex: 1,
     backgroundColor: colors.primaryBg,
     borderRadius: radius.full,
     paddingHorizontal: spacing.md,
     paddingVertical: 3,
     borderWidth: 1,
-    borderColor: colors.primary + '50',
-    flex: 1,
-    marginRight: spacing.md,
+    borderColor: colors.primary + '40',
   },
   heroPlanBadgeText: {
     fontSize: fontSize.xs,
@@ -504,92 +561,187 @@ const styles = StyleSheet.create({
     color: colors.primary,
     letterSpacing: 0.3,
   },
-  heroPlanProgress: { fontSize: fontSize.xs, color: colors.textMuted },
-  heroWorkoutName: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary, lineHeight: 30 },
-  muscleChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  muscleChip: {
-    backgroundColor: colors.surface2,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: colors.border,
+  heroDayProgress: { fontSize: fontSize.xs, color: colors.textMuted, flexShrink: 0 },
+  heroWorkoutName: {
+    fontSize: fontSize.xxl,
+    fontWeight: fontWeight.black,
+    color: colors.textPrimary,
+    lineHeight: 30,
   },
-  muscleChipText: { fontSize: 10, color: colors.textSecondary, fontWeight: fontWeight.medium, textTransform: 'capitalize' },
-  heroMeta: { fontSize: fontSize.sm, color: colors.textSecondary },
-
-  changeWorkoutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.primary + '60',
-    borderRadius: radius.md,
-    paddingVertical: spacing.sm,
-  },
-  changeWorkoutBtnText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
-
+  heroMeta: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: -spacing.xs },
+  heroActions: { flexDirection: 'row', gap: spacing.sm },
   startBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
     backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    paddingVertical: spacing.lg,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
   },
   startBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
+  changeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.primary + '50',
+  },
+  changeBtnText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
+  blankLink: { alignItems: 'center', paddingVertical: spacing.xs },
+  blankLinkText: { fontSize: fontSize.sm, color: colors.textMuted, fontWeight: fontWeight.medium },
 
-  blankBtn: { alignItems: 'center', paddingVertical: spacing.sm },
-  blankBtnText: { fontSize: fontSize.sm, color: colors.textMuted, fontWeight: fontWeight.medium },
-
-  // Empty hero
-  emptyHero: {
+  // No plan card
+  noPlanCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
-    padding: spacing.xxl,
+    padding: spacing.xl,
     borderWidth: 1,
     borderColor: colors.border,
+    gap: spacing.md,
+    alignItems: 'stretch',
+  },
+  noPlanTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  noPlanSub: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20, marginTop: -spacing.xs },
+  ghostBtn: { alignItems: 'center', paddingVertical: spacing.sm },
+  ghostBtnText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.medium },
+
+  // Sections
+  section: { gap: spacing.md },
+  sectionTitle: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.black,
+    color: colors.textMuted,
+    letterSpacing: 1.5,
+  },
+
+  // Action cards (Coach/Library/Manual)
+  actionCard: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-  },
-  emptyHeroTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textSecondary },
-  emptyHeroSub: { fontSize: fontSize.sm, color: colors.textMuted, textAlign: 'center', lineHeight: 20 },
-  choosePlanBtn: { alignItems: 'center', paddingVertical: spacing.sm },
-  choosePlanBtnText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.medium },
-
-  // Last session
-  lastSessionCard: {
     backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.md,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    gap: spacing.xs,
   },
-  lastSessionTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  lastSessionLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.black, color: colors.textMuted, letterSpacing: 1.2 },
-  lastSessionDate: { fontSize: fontSize.xs, color: colors.textMuted },
-  lastSessionStats: { flexDirection: 'row', gap: spacing.lg },
-  lastSessionStat: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  actionIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  actionTitle: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+    marginBottom: 3,
+  },
+  actionDesc: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
 
-  // Insight tile
-  insightTile: {
+  // Nutrition card
+  nutritionCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.md,
+  },
+  nutritionCardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  nutritionCardPhase: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+  },
+  nutritionCardEdit: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
+  nutritionMacroRow: { flexDirection: 'row', gap: spacing.sm },
+  nutritionMacroCell: { flex: 1, alignItems: 'center', gap: 2 },
+  nutritionMacroValue: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+  },
+  nutritionMacroLabel: { fontSize: fontSize.xs, color: colors.textMuted },
+  nutritionEmptyCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  nutritionEmptyTitle: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+    marginBottom: 3,
+  },
+  nutritionEmptySub: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
+  bodyMetricsLink: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.primaryBg,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.primary + '30',
+    paddingVertical: spacing.xs,
   },
-  insightText: { flex: 1, fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.medium },
+  bodyMetricsLinkText: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+    fontWeight: fontWeight.medium,
+  },
 
-  // Quick actions
-  quickActions: { flexDirection: 'row', gap: spacing.sm },
-  quickAction: {
+  // Recent session card
+  sessionCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.md,
+  },
+  sessionCardRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  sessionDate: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  sessionStats: { flexDirection: 'row', gap: spacing.xl },
+  sessionStat: { gap: 2 },
+  sessionStatValue: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+  },
+  sessionStatLabel: { fontSize: fontSize.xs, color: colors.textMuted },
+
+  emptyCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  emptyCardText: { flex: 1, fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 20 },
+
+  // Quick links
+  quickRow: { flexDirection: 'row', gap: spacing.sm },
+  quickLink: {
     flex: 1,
     alignItems: 'center',
     gap: spacing.xs,
@@ -599,11 +751,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  quickActionText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  quickLinkLabel: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
 
   // Change workout sheet
   sheetBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' },
-  changeWorkoutSheet: {
+  sheet: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
@@ -613,20 +765,22 @@ const styles = StyleSheet.create({
     maxHeight: '80%',
   },
   sheetHandle: {
-    width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border,
-    alignSelf: 'center', marginBottom: spacing.lg,
+    width: 36, height: 4, borderRadius: 2,
+    backgroundColor: colors.border, alignSelf: 'center', marginBottom: spacing.lg,
   },
-  sheetTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.xs },
-  sheetSubtitle: { fontSize: fontSize.sm, color: colors.textMuted, marginBottom: spacing.lg },
-  workoutPickerRow: {
+  sheetTitle: {
+    fontSize: fontSize.xl, fontWeight: fontWeight.bold,
+    color: colors.textPrimary, marginBottom: spacing.xs,
+  },
+  sheetSub: { fontSize: fontSize.sm, color: colors.textMuted, marginBottom: spacing.lg },
+  pickerRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  workoutPickerRowActive: {
+  pickerRowActive: {
     backgroundColor: colors.primaryBg,
     marginHorizontal: -spacing.xl,
     paddingHorizontal: spacing.xl,
-    borderRadius: 0,
   },
   dayBadge: {
     width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface2,
@@ -635,15 +789,14 @@ const styles = StyleSheet.create({
   dayBadgeActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary + '60' },
   dayNum: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textSecondary },
   dayNumActive: { color: colors.primary },
-  workoutPickerInfo: { flex: 1, gap: 2 },
-  workoutPickerName: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  workoutPickerMeta: { fontSize: fontSize.xs, color: colors.textMuted },
+  pickerName: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  pickerMeta: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
   nextUpBadge: {
     backgroundColor: colors.primaryBg, borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: 2,
     borderWidth: 1, borderColor: colors.primary + '40',
   },
-  nextUpBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
-  sheetCancelBtn: { marginTop: spacing.lg, alignItems: 'center', paddingVertical: spacing.md },
+  nextUpText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
+  sheetCancel: { marginTop: spacing.lg, alignItems: 'center', paddingVertical: spacing.md },
   sheetCancelText: { fontSize: fontSize.md, color: colors.textSecondary },
 });

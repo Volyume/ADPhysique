@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { getSupabaseClient, signOut, getUserProfile } from '../lib/supabase';
+import { getSupabaseClient, signOut } from '../lib/supabase';
 import useAppStore from '../store/useAppStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -32,18 +32,9 @@ function SectionHeader({ title }) {
 }
 
 export default function SettingsScreen({ navigation }) {
-  const { user, userProfile, setUser, setSession, units, setUnits, barWeight, setBarWeight } =
+  const { user, setUser, setSession, units, setUnits, barWeight, setBarWeight } =
     useAppStore();
   const [notifications, setNotifications] = useState(true);
-  const [profile, setProfile] = useState(null);
-
-  useEffect(() => {
-    if (user?.id) {
-      getUserProfile(user.id).then(({ data }) => {
-        if (data) setProfile(data);
-      });
-    }
-  }, [user?.id]);
 
   async function handleSignOut() {
     Alert.alert('Sign out?', 'You will need to sign in again.', [
@@ -93,49 +84,6 @@ export default function SettingsScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Profile */}
-        <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {(user?.email?.[0] || 'V').toUpperCase()}
-            </Text>
-          </View>
-          <View style={styles.profileInfo}>
-            <Text style={styles.profileEmail}>{user?.email}</Text>
-            <Text style={styles.profileMeta}>
-              {profile?.training_focus
-                ? profile.training_focus.charAt(0).toUpperCase() + profile.training_focus.slice(1).replace('_', ' ')
-                : 'Bodybuilder'}
-              {profile?.training_age ? ` · ${profile.training_age}+ yrs` : ''}
-            </Text>
-          </View>
-        </View>
-
-        {/* Training */}
-        <SectionHeader title="TRAINING" />
-        <View style={styles.section}>
-          <SettingRow
-            icon="barbell-outline"
-            label="Plans"
-            onPress={() => navigation.navigate('PlansTab')}
-          />
-          <SettingRow
-            icon="calendar-outline"
-            label="Mesocycles"
-            onPress={() => navigation.navigate('MesocycleBuilder')}
-          />
-          <SettingRow
-            icon="nutrition-outline"
-            label="Nutrition Targets"
-            onPress={() => navigation.navigate('NutritionTargets')}
-          />
-          <SettingRow
-            icon="fitness-outline"
-            label="Volume Landmarks"
-            onPress={() => navigation.navigate('ProgressTab', { screen: 'VolumeHeatmap' })}
-          />
-        </View>
-
         {/* Preferences */}
         <SectionHeader title="PREFERENCES" />
         <View style={styles.section}>
@@ -224,31 +172,6 @@ export default function SettingsScreen({ navigation }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.sm, paddingBottom: spacing.xxl },
-  profileCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.lg,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: colors.primaryBg,
-    borderWidth: 2,
-    borderColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.primary },
-  profileInfo: { flex: 1 },
-  profileEmail: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  profileMeta: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: 2 },
   sectionHeader: {
     fontSize: fontSize.xs,
     fontWeight: fontWeight.black,

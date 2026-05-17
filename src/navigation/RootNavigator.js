@@ -2,11 +2,12 @@ import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
-import { View, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors } from '../styles/theme';
+import { colors, fontWeight, spacing } from '../styles/theme';
+import { VolyumeMark } from '../components/BrandMark';
 import useAppStore from '../store/useAppStore';
 import { getSupabaseClient } from '../lib/supabase';
 import { initDatabase } from '../lib/database';
@@ -29,6 +30,7 @@ import VolumeHeatmapScreen from '../screens/VolumeHeatmapScreen';
 import PRWallScreen from '../screens/PRWallScreen';
 import BodyMetricsScreen from '../screens/BodyMetricsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import AthleteHubScreen from '../screens/AthleteHubScreen';
 import PlansScreen from '../screens/PlansScreen';
 import PlanDetailScreen from '../screens/PlanDetailScreen';
 import RoutineDetailScreen from '../screens/RoutineDetailScreen';
@@ -92,9 +94,11 @@ function ProgressStack() {
 function ProfileStack() {
   return (
     <Stack.Navigator screenOptions={stackOptions}>
-      <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Profile & Settings' }} />
-      <Stack.Screen name="MesocycleBuilder" component={MesocycleBuilderScreen} options={{ title: 'Training Blocks' }} />
+      <Stack.Screen name="AthleteHub" component={AthleteHubScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
       <Stack.Screen name="NutritionTargets" component={NutritionTargetsScreen} options={{ title: 'Nutrition Targets' }} />
+      <Stack.Screen name="BodyMetrics" component={BodyMetricsScreen} options={{ title: 'Body Metrics' }} />
+      <Stack.Screen name="MesocycleBuilder" component={MesocycleBuilderScreen} options={{ title: 'Training Blocks' }} />
     </Stack.Navigator>
   );
 }
@@ -198,8 +202,10 @@ export default function RootNavigator() {
 
   if (isAuthLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <View style={splashStyles.container}>
+        <VolyumeMark size={52} />
+        <Text style={splashStyles.wordmark}>VOLYUME</Text>
+        <Text style={splashStyles.tagline}>Intelligent Hypertrophy Logbook</Text>
       </View>
     );
   }
@@ -222,3 +228,26 @@ export default function RootNavigator() {
     </NavigationContainer>
   );
 }
+
+const splashStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.lg,
+  },
+  wordmark: {
+    fontSize: 26,
+    fontWeight: fontWeight.black,
+    color: colors.textPrimary,
+    letterSpacing: 3,
+    marginTop: spacing.xs,
+  },
+  tagline: {
+    fontSize: 12,
+    color: colors.textMuted,
+    letterSpacing: 0.5,
+    fontWeight: fontWeight.medium,
+  },
+});

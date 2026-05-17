@@ -247,13 +247,17 @@ export default function ManualBuilderScreen({ navigation }) {
     }
   }
 
+  const [successModal, setSuccessModal] = useState(false);
+  const [savedPlanName, setSavedPlanName] = useState('');
+
   async function handleSaveAndActivate() {
     if (!validate(true)) return;
     setSaving(true);
     try {
       await persistDays();
       await setActivePlan(user.id, programmeId);
-      navigation.navigate('HomeTab');
+      setSavedPlanName(planName.trim() || 'Your plan');
+      setSuccessModal(true);
     } catch (e) {
       Alert.alert('Error', e.message || 'Could not save plan.');
     } finally {
@@ -449,6 +453,35 @@ export default function ManualBuilderScreen({ navigation }) {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Success Modal */}
+      <Modal visible={successModal} transparent animationType="fade" onRequestClose={() => setSuccessModal(false)}>
+        <View style={styles.successOverlay}>
+          <View style={styles.successCard}>
+            <View style={styles.successIconWrap}>
+              <Ionicons name="checkmark-circle" size={48} color={colors.success} />
+            </View>
+            <Text style={styles.successTitle}>Plan Activated</Text>
+            <Text style={styles.successName}>{savedPlanName}</Text>
+            <Text style={styles.successSub}>Your plan is set as active and ready to use.</Text>
+            <View style={styles.successActions}>
+              <TouchableOpacity
+                style={styles.successSecondary}
+                onPress={() => setSuccessModal(false)}
+              >
+                <Text style={styles.successSecondaryText}>Stay Here</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.successPrimary}
+                onPress={() => { setSuccessModal(false); navigation.navigate('HomeTab'); }}
+              >
+                <Ionicons name="home" size={16} color={colors.background} />
+                <Text style={styles.successPrimaryText}>Go to Train</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -762,5 +795,76 @@ const styles = StyleSheet.create({
   separator: {
     height: 1,
     backgroundColor: colors.border,
+  },
+  successOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  successCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    padding: spacing.xxl,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  successIconWrap: {
+    marginBottom: spacing.sm,
+  },
+  successTitle: {
+    fontSize: fontSize.xxl,
+    fontWeight: fontWeight.black,
+    color: colors.textPrimary,
+  },
+  successName: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.semibold,
+    color: colors.primary,
+    textAlign: 'center',
+  },
+  successSub: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: spacing.sm,
+  },
+  successActions: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    width: '100%',
+  },
+  successSecondary: {
+    flex: 1,
+    paddingVertical: spacing.lg,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  successSecondaryText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textSecondary,
+  },
+  successPrimary: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingVertical: spacing.lg,
+    borderRadius: radius.lg,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  successPrimaryText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+    color: colors.background,
   },
 });
