@@ -75,6 +75,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [swapCandidates, setSwapCandidates] = useState([]);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
   const autoAdvanceRef = useRef(null);
+  const sessionSetsRef = useRef([]);   // tracks sets in this session — used for PR detection
 
   const scrollRef = useRef(null);
   const insets = useSafeAreaInsets();
@@ -113,6 +114,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             setLoggedSets([]);
             setPrevSets([]);
             setAllTimeSets([]);
+            sessionSetsRef.current = [];
           },
         },
       ],
@@ -141,6 +143,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setPrevSets([]);
     setAllTimeSets([]);
     setLoggedSets([]);
+    sessionSetsRef.current = [];
     setProgression(null);
   }
 
@@ -183,6 +186,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // Load previous performance and set defaults when exercise changes
   useEffect(() => {
     if (!exercise || !activeWorkout) return;
+    sessionSetsRef.current = [];
 
     async function loadHistory() {
       const [prev, allTime] = await Promise.all([
@@ -273,11 +277,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       setLoggedSets(newLoggedSets);
       addSetToCurrentExercise(setData);
 
-      // PR Detection — compare against all completed workouts + earlier sets in this session
+      // PR Detection — check BEFORE adding current set to the session ref so it
+      // can never match itself.  sessionSetsRef is a plain ref so it's never stale
+      // the way React state can be between renders.
       const prHistory = [
         ...allTimeSets,
-        ...loggedSets.filter(s => s.exerciseId === exercise.id),
+        ...sessionSetsRef.current.filter(s => s.exerciseId === exercise.id),
       ];
+      sessionSetsRef.current = [...sessionSetsRef.current, setData];
       const prs = detectPR(setData, prHistory, exercise, units);
       if (prs.length > 0) {
         showPRCelebration({ ...prs[0], exerciseName: exercise.name });
