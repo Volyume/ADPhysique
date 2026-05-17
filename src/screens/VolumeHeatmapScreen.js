@@ -104,30 +104,20 @@ export default function VolumeHeatmapScreen() {
             const data = weeklyVolume[muscle] || { workingSets: 0 };
             const sets = Math.round(data.workingSets || 0);
             const landmarks = effectiveLandmarks?.[muscle] || VOLUME_LANDMARKS[muscle];
-            const { color, label } = getVolumeStatus(sets, muscle, effectiveLandmarks);
+            const { color } = getVolumeStatus(sets, muscle, effectiveLandmarks);
             const mrv = landmarks.mrv || 20;
-            const fillPct = Math.min(sets / mrv, 1.2);
+            const fillPct = Math.min(sets / mrv, 1);
 
             return (
               <View key={muscle} style={styles.muscleRow}>
                 <Text style={styles.muscleName}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
-                <View style={styles.barContainer}>
-                  <View style={styles.barTrack}>
-                    <View style={[styles.barFill, { width: `${Math.min(fillPct, 1) * 100}%`, backgroundColor: color }]} />
-                    <View style={[styles.landmark, { left: `${(landmarks.mev / mrv) * 100}%` }]}>
-                      <Text style={styles.landmarkLabel}>MEV</Text>
-                    </View>
-                    <View style={[styles.landmark, { left: `${(landmarks.mav / mrv) * 100}%` }]}>
-                      <Text style={styles.landmarkLabel}>MAV</Text>
-                    </View>
-                  </View>
-                  <View style={styles.barStats}>
-                    <Text style={[styles.setsCount, { color }]}>{sets}</Text>
-                    <Text style={styles.landmarkRange}>
-                      {landmarks.mev}–{landmarks.mav}–{landmarks.mrv}
-                    </Text>
-                  </View>
+                <View style={styles.barTrack}>
+                  <View style={[styles.barFill, { width: `${fillPct * 100}%`, backgroundColor: color }]} />
+                  <View style={[styles.landmark, { left: `${(landmarks.mev / mrv) * 100}%` }]} />
+                  <View style={[styles.landmark, { left: `${(landmarks.mav / mrv) * 100}%` }]} />
                 </View>
+                <Text style={[styles.setsCount, { color }]}>{sets}</Text>
+                <Text style={styles.mrvLabel}>/{mrv}</Text>
               </View>
             );
           })}
@@ -210,22 +200,27 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing.lg,
-    gap: spacing.lg,
+    gap: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  muscleRow: { gap: spacing.sm },
+  muscleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   muscleName: {
+    width: 90,
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    fontWeight: fontWeight.medium,
     color: colors.textSecondary,
   },
-  barContainer: { gap: spacing.xs },
   barTrack: {
-    height: 16,
-    backgroundColor: colors.surface2,
+    flex: 1,
+    height: 8,
+    backgroundColor: colors.surface3,
     borderRadius: radius.full,
-    overflow: 'hidden',
+    overflow: 'visible',
     position: 'relative',
   },
   barFill: {
@@ -235,30 +230,22 @@ const styles = StyleSheet.create({
   },
   landmark: {
     position: 'absolute',
-    top: 0,
-    bottom: 0,
-    width: 1,
-    backgroundColor: colors.surface3,
-    alignItems: 'center',
-  },
-  landmarkLabel: {
-    position: 'absolute',
-    top: -16,
-    fontSize: 9,
-    color: colors.textMuted,
-  },
-  barStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    top: -2,
+    width: 2,
+    height: 12,
+    backgroundColor: colors.border,
+    borderRadius: 1,
   },
   setsCount: {
-    fontSize: fontSize.md,
+    width: 22,
+    fontSize: fontSize.sm,
     fontWeight: fontWeight.bold,
+    textAlign: 'right',
   },
-  landmarkRange: {
+  mrvLabel: {
     fontSize: fontSize.xs,
     color: colors.textMuted,
+    width: 24,
   },
   actionRow: {
     flexDirection: 'row',
