@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { BrandTag } from '../components/BrandMark';
 import {
   getActivePlan, getAllPlansForUser,
   getWorkoutTemplates, getPlanWorkoutCounts, getAllRoutineExerciseCounts,
@@ -163,7 +164,10 @@ export default function PlansScreen({ navigation }) {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
       >
-        <Text style={styles.pageTitle}>Training Plans</Text>
+        <View style={styles.screenHeader}>
+          <Text style={styles.pageTitle}>Plans</Text>
+          <BrandTag size={13} color={colors.textMuted} />
+        </View>
 
         {/* Active Plan */}
         {activePlan ? (
@@ -301,7 +305,12 @@ export default function PlansScreen({ navigation }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
-  pageTitle: { fontSize: fontSize.xxxl, fontWeight: fontWeight.black, color: colors.textPrimary },
+  screenHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  pageTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
   section: { gap: spacing.md },
   sectionTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.black, color: colors.textMuted, letterSpacing: 1.5 },
   sectionSubtitle: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: -spacing.sm },

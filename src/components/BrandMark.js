@@ -87,6 +87,34 @@ export function VolyumeWordmark({ size = 28, color, accent, style }) {
   );
 }
 
+/**
+ * BrandTag — the V mark IS the "V" of "Volyume".
+ * Mark and "olyume" sit flush together as one logotype.
+ * Use this wherever Volyume needs to be identified in a header.
+ */
+export function BrandTag({ size = 15, color, accent, style }) {
+  const textColor = color || colors.textPrimary;
+  // Mark sized so its height roughly matches the cap-height of the text
+  const markSize = size * 1.25;
+  return (
+    <View style={[{ flexDirection: 'row', alignItems: 'center' }, style]}>
+      <VolyumeMark size={markSize} color={textColor} accent={accent} />
+      <Text
+        style={{
+          fontSize: size,
+          fontWeight: fontWeight.bold,
+          color: textColor,
+          letterSpacing: 0.2,
+          marginLeft: 2,
+          includeFontPadding: false,
+        }}
+      >
+        olyume
+      </Text>
+    </View>
+  );
+}
+
 // Keep default export as the mark for backwards compat
 export default VolyumeMark;
 

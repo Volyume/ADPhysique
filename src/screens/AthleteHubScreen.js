@@ -8,6 +8,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { BrandTag } from '../components/BrandMark';
 import useAppStore from '../store/useAppStore';
 import { getAllWorkouts } from '../lib/database';
 
@@ -74,13 +75,16 @@ export default function AthleteHubScreen({ navigation }) {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>You</Text>
-        <TouchableOpacity
-          style={styles.settingsCog}
-          onPress={() => navigation.navigate('Settings')}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <Ionicons name="settings-outline" size={22} color={colors.textSecondary} />
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <BrandTag size={13} color={colors.textMuted} />
+          <TouchableOpacity
+            style={styles.settingsCog}
+            onPress={() => navigation.navigate('Settings')}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Ionicons name="settings-outline" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -267,9 +271,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   headerTitle: {
-    fontSize: fontSize.xxxl,
-    fontWeight: fontWeight.black,
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
     color: colors.textPrimary,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
   },
   settingsCog: {
     width: 40,

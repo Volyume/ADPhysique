@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { format } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { BrandTag } from '../components/BrandMark';
 import VolumeBars from '../components/VolumeBars';
 import { getAllWorkoutSets, getAllWorkouts, getAllExercises } from '../lib/database';
 import {
@@ -116,7 +117,10 @@ export default function AnalyticsScreen({ navigation }) {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
         }
       >
-        <Text style={styles.pageTitle}>Progress</Text>
+        <View style={styles.screenHeader}>
+          <Text style={styles.pageTitle}>Progress</Text>
+          <BrandTag size={13} color={colors.textMuted} />
+        </View>
 
         {/* Deload Warning */}
         {deloadCheck?.deload && (
@@ -236,9 +240,14 @@ function StatCard({ value, label, icon }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
+  screenHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   pageTitle: {
-    fontSize: fontSize.xxxl,
-    fontWeight: fontWeight.black,
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
     color: colors.textPrimary,
   },
   deloadAlert: {

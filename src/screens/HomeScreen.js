@@ -8,7 +8,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { format } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { VolyumeMark } from '../components/BrandMark';
+import { BrandTag } from '../components/BrandMark';
 import {
   getAllWorkouts, getActivePlan, getRoutinesForPlan,
   getAllRoutineExerciseCounts, createWorkout, getRoutineExercisesWithDetails,
@@ -134,10 +134,7 @@ export default function HomeScreen({ navigation }) {
       >
         {/* ── Branded header ── */}
         <View style={styles.header}>
-          <View style={styles.headerBrand}>
-            <VolyumeMark size={22} />
-            <Text style={styles.brandName}>Volyume</Text>
-          </View>
+          <BrandTag size={18} />
           <Text style={styles.headerDate}>{today}</Text>
         </View>
 
@@ -453,17 +450,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingBottom: spacing.xs,
-  },
-  headerBrand: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  brandName: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
-    color: colors.textPrimary,
-    letterSpacing: 0.3,
   },
   headerDate: {
     fontSize: fontSize.sm,
