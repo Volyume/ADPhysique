@@ -277,10 +277,10 @@ export default function PlansScreen({ navigation }) {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.noActiveSecondaryBtn}
-                  onPress={() => setShowNewPlan(true)}
+                  onPress={() => navigation.navigate('CoachBuilder')}
                 >
-                  <Ionicons name="add-outline" size={16} color={colors.primary} />
-                  <Text style={styles.noActiveSecondaryBtnText}>Build a Plan</Text>
+                  <Ionicons name="sparkles" size={16} color={colors.primary} />
+                  <Text style={styles.noActiveSecondaryBtnText}>Coach Builder</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.noActiveTertiaryBtn}
@@ -439,9 +439,31 @@ export default function PlansScreen({ navigation }) {
         {/* Build a Plan */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>BUILD</Text>
-          <TouchableOpacity style={styles.buildBtn} onPress={() => setShowNewPlan(true)}>
-            <Ionicons name="add-circle" size={20} color={colors.background} />
-            <Text style={styles.buildBtnText}>Build a Plan</Text>
+          <TouchableOpacity
+            style={styles.buildCard}
+            onPress={() => navigation.navigate('CoachBuilder')}
+          >
+            <View style={styles.buildCardIcon}>
+              <Ionicons name="sparkles" size={22} color={colors.primary} />
+            </View>
+            <View style={styles.buildCardBody}>
+              <Text style={styles.buildCardTitle}>Coach Builder</Text>
+              <Text style={styles.buildCardDesc}>Answer 7 questions — get a personalised plan tailored to your schedule and goals.</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.buildCard, { marginTop: spacing.sm }]}
+            onPress={() => navigation.navigate('ManualBuilder')}
+          >
+            <View style={styles.buildCardIcon}>
+              <Ionicons name="create-outline" size={22} color={colors.primary} />
+            </View>
+            <View style={styles.buildCardBody}>
+              <Text style={styles.buildCardTitle}>Manual Builder</Text>
+              <Text style={styles.buildCardDesc}>Create a custom multi-day plan from scratch — you choose every exercise.</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -621,6 +643,20 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   buildBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
+
+  buildCard: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  buildCardIcon: {
+    width: 44, height: 44, borderRadius: radius.md,
+    backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: colors.border,
+  },
+  buildCardBody: { flex: 1 },
+  buildCardTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary, marginBottom: 2 },
+  buildCardDesc: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
   modalSheet: {
