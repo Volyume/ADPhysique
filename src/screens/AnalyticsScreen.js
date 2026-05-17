@@ -187,14 +187,14 @@ export default function AnalyticsScreen({ navigation }) {
           </View>
         )}
 
-        {/* Deep Dive */}
+        {/* Analyse */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>DEEP DIVE</Text>
+          <Text style={styles.sectionTitle}>ANALYSE</Text>
           <View style={styles.linkGrid}>
             <TouchableOpacity style={styles.linkCard} onPress={() => navigation.navigate('WorkoutHistory')}>
               <Ionicons name="time" size={24} color={colors.primary} />
-              <Text style={styles.linkTitle}>Workout History</Text>
-              <Text style={styles.linkSub}>Past sessions</Text>
+              <Text style={styles.linkTitle}>Session History</Text>
+              <Text style={styles.linkSub}>All past sessions</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.linkCard} onPress={() => navigation.navigate('PRWall')}>
               <Ionicons name="trophy" size={24} color={colors.gold} />
@@ -204,7 +204,17 @@ export default function AnalyticsScreen({ navigation }) {
             <TouchableOpacity style={styles.linkCard} onPress={() => navigation.navigate('VolumeHeatmap')}>
               <Ionicons name="grid" size={24} color={colors.primary} />
               <Text style={styles.linkTitle}>Volume Heatmap</Text>
-              <Text style={styles.linkSub}>MEV/MAV/MRV</Text>
+              <Text style={styles.linkSub}>Weekly sets vs MEV–MRV</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.linkCard} onPress={() => navigation.navigate('BodyMetrics')}>
+              <Ionicons name="body" size={24} color={colors.success} />
+              <Text style={styles.linkTitle}>Body Metrics</Text>
+              <Text style={styles.linkSub}>Weight & measurements</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.linkCard} onPress={() => navigation.navigate('ExerciseLibrary')}>
+              <Ionicons name="barbell" size={24} color={colors.textSecondary} />
+              <Text style={styles.linkTitle}>Lift Progress</Text>
+              <Text style={styles.linkSub}>Per-exercise history</Text>
             </TouchableOpacity>
           </View>
         </View>

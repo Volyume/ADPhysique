@@ -222,6 +222,9 @@ async function _doInit() {
     'ALTER TABLE programmes ADD COLUMN split_type TEXT',
     'ALTER TABLE programmes ADD COLUMN is_archived INTEGER DEFAULT 0',
     'ALTER TABLE routines ADD COLUMN is_template INTEGER DEFAULT 0',
+    'ALTER TABLE workouts ADD COLUMN name TEXT',
+    'ALTER TABLE workouts ADD COLUMN set_count INTEGER',
+    'ALTER TABLE workouts ADD COLUMN total_volume REAL',
   ];
   for (const sql of colMigrations) {
     try { await _db.execAsync(sql); } catch (_) {}
@@ -293,7 +296,11 @@ export async function insertExercise(data) {
 export async function getAllWorkouts(userId) {
   const d = await db();
   const rows = await d.getAllAsync(
-    'SELECT * FROM workouts WHERE user_id = ? ORDER BY started_at DESC',
+    `SELECT w.*, r.name AS routine_name
+     FROM workouts w
+     LEFT JOIN routines r ON r.id = w.routine_id
+     WHERE w.user_id = ?
+     ORDER BY w.started_at DESC`,
     [userId],
   );
   return rows.map(rowToCamel);
@@ -331,6 +338,9 @@ export async function updateWorkout(id, data) {
     fatigueLevel: 'fatigue_level',
     lastActivityAt: 'last_activity_at',
     activeElapsedSeconds: 'active_elapsed_seconds',
+    name: 'name',
+    setCount: 'set_count',
+    totalVolume: 'total_volume',
   };
   const fields = [];
   const values = [];

@@ -214,6 +214,23 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
       const allLoggedForExercise = workoutExercises[currentExerciseIndex]?.sets || [];
       setLoggedSets(allLoggedForExercise);
+
+      // Auto-select warmup type if no sets logged yet for this exercise
+      if (allLoggedForExercise.length === 0) {
+        const prevWorking = prev.filter(s => s.setType !== 'warmup');
+        const baseWeight = prevWorking.length > 0
+          ? prevWorking[prevWorking.length - 1].weight
+          : (routineExercise?.startingWeight ?? 0);
+        const warmupWeight = baseWeight ? Math.round(baseWeight * 0.5 * 2) / 2 : '';
+        setCurrentSet(cs => ({
+          ...cs,
+          setType: 'warmup',
+          weight: warmupWeight || cs.weight,
+          reps: routineExercise?.recommendedRepsMax
+            ? Math.min(routineExercise.recommendedRepsMax + 4, 20)
+            : 15,
+        }));
+      }
     }
 
     loadHistory();
@@ -321,6 +338,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // Prepare next set
       setNoteText('');
       setShowNoteInput(false);
+      // If warmup was just completed, auto-switch to straight (working) set
+      if (currentSet.setType === 'warmup') {
+        setCurrentSet(cs => ({ ...cs, setType: 'straight' }));
+      }
     } finally {
       setSaving(false);
     }
@@ -335,13 +356,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         {
           text: 'Finish',
           onPress: async () => {
+            const allSets = workoutExercises.flatMap(e => e.sets);
+            const workingSetCount = allSets.filter(s => s.setType !== 'warmup').length;
+            const sessionName = workoutExercises.length > 0
+              ? workoutExercises.slice(0, 2).map(e => e.exercise?.name?.split(' ')[0]).filter(Boolean).join(' & ')
+              : null;
             await updateWorkout(activeWorkout.id, {
               endedAt: Date.now(),
               durationMinutes: Math.round(elapsedSeconds / 60),
               isCompleted: true,
+              name: sessionName,
+              setCount: workingSetCount,
+              totalVolume: calculateTonnage(allSets),
             });
-            const allSets = workoutExercises.flatMap(e => e.sets);
-            const workingSetCount = allSets.filter(s => s.setType !== 'warmup').length;
             endWorkout();
             navigation.replace('WorkoutSummary', {
               workoutId: activeWorkout.id,
@@ -535,11 +562,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           ) : null}
 
           {/* Set Entry */}
-          <View style={styles.setEntryCard}>
+          <View style={[styles.setEntryCard, currentSet.setType === 'warmup' && styles.setEntryCardWarmup]}>
+            {currentSet.setType === 'warmup' && (
+              <View style={styles.warmupBanner}>
+                <Ionicons name="flame-outline" size={14} color={colors.warning} />
+                <Text style={styles.warmupBannerText}>WARM UP · not counted in volume</Text>
+              </View>
+            )}
             <Text style={styles.setEntryTitle}>
-              {routineExercise?.recommendedSets
-                ? `SET ${loggedSets.length + 1} / ${routineExercise.recommendedSets} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working'}`
-                : `SET ${loggedSets.length + 1} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working'}`}
+              {currentSet.setType === 'warmup'
+                ? 'WARM UP SET'
+                : routineExercise?.recommendedSets
+                  ? `SET ${workingLogged + 1} / ${routineExercise.recommendedSets} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working'}`
+                  : `SET ${workingLogged + 1} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working'}`}
             </Text>
             <SetEntry
               value={currentSet}
@@ -587,12 +622,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           ) : (
             <TouchableOpacity
               testID="volyume-btn-complete-set"
-              style={[styles.completeBtn, saving && styles.btnDisabled]}
+              style={[styles.completeBtn, saving && styles.btnDisabled, currentSet.setType === 'warmup' && styles.completeBtnWarmup]}
               onPress={handleCompleteSet}
               disabled={saving}
             >
-              <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-              <Text style={styles.completeBtnText}>COMPLETE SET</Text>
+              <Ionicons name="checkmark-circle" size={20} color={currentSet.setType === 'warmup' ? colors.warning : colors.primary} />
+              <Text style={[styles.completeBtnText, currentSet.setType === 'warmup' && styles.completeBtnTextWarmup]}>
+                {currentSet.setType === 'warmup' ? 'LOG WARM UP' : 'COMPLETE SET'}
+              </Text>
             </TouchableOpacity>
           )}
 
@@ -627,18 +664,27 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             <View style={styles.loggedSection}>
               <Text style={styles.loggedTitle}>THIS WORKOUT</Text>
               {loggedSets.map((s, i) => {
-                const est1RM = calculate1RM(s.weight, s.actualReps);
+                const isWarmup = s.setType === 'warmup';
+                const est1RM = isWarmup ? null : calculate1RM(s.weight, s.actualReps);
                 return (
-                  <View key={i} style={styles.loggedSetRow}>
-                    <View style={styles.setNumBadge}>
-                      <Text style={styles.setNumText}>{i + 1}</Text>
-                    </View>
-                    <Text style={styles.loggedSetText}>
+                  <View key={i} style={[styles.loggedSetRow, isWarmup && styles.loggedSetRowWarmup]}>
+                    {isWarmup ? (
+                      <Ionicons name="flame" size={14} color={colors.warning} style={{ width: 22, textAlign: 'center' }} />
+                    ) : (
+                      <View style={styles.setNumBadge}>
+                        <Text style={styles.setNumText}>
+                          {loggedSets.slice(0, i + 1).filter(x => x.setType !== 'warmup').length}
+                        </Text>
+                      </View>
+                    )}
+                    <Text style={[styles.loggedSetText, isWarmup && styles.loggedSetTextWarmup]}>
                       {s.weight}{units} × {s.actualReps}
-                      {s.setType === 'warmup' ? ' · Warm-up' : ''}
+                      {isWarmup ? ' · Warm-up' : ''}
                     </Text>
-                    <Text style={styles.loggedEst1RM}>≈{est1RM.toFixed(0)}{units} 1RM</Text>
-                    <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                    {!isWarmup && est1RM && (
+                      <Text style={styles.loggedEst1RM}>≈{est1RM.toFixed(0)}{units} 1RM</Text>
+                    )}
+                    <Ionicons name="checkmark-circle" size={16} color={isWarmup ? colors.warning : colors.success} />
                   </View>
                 );
               })}
@@ -1104,11 +1150,16 @@ const styles = StyleSheet.create({
   targetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   targetText: { fontSize: fontSize.sm, color: colors.textMuted },
   setEntryCard: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, gap: spacing.md },
+  setEntryCardWarmup: { borderColor: colors.warning, backgroundColor: colors.warningBg || colors.surface },
+  warmupBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  warmupBannerText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.warning, letterSpacing: 0.8 },
   setEntryTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.black, color: colors.textMuted, letterSpacing: 1.5 },
   noteInput: { backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md, fontSize: fontSize.sm, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, minHeight: 60 },
   completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderWidth: 1.5, borderColor: colors.primary + '80', borderRadius: radius.lg, paddingVertical: spacing.lg, backgroundColor: colors.primaryBg },
   btnDisabled: { opacity: 0.5 },
   completeBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary, letterSpacing: 0.6 },
+  completeBtnWarmup: { borderColor: colors.warning, borderWidth: 1, backgroundColor: colors.warningBg || colors.surface },
+  completeBtnTextWarmup: { color: colors.warning },
   extraSetBtn: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, paddingVertical: spacing.md },
   extraSetBtnText: { fontSize: fontSize.md, color: colors.textSecondary, fontWeight: fontWeight.medium },
   secondaryActions: { flexDirection: 'row', gap: spacing.sm },
@@ -1122,6 +1173,8 @@ const styles = StyleSheet.create({
   loggedSection: { gap: spacing.sm },
   loggedTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textMuted, letterSpacing: 1 },
   loggedSetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border },
+  loggedSetRowWarmup: { borderColor: colors.warning + '60', backgroundColor: colors.warningBg || colors.surface },
+  loggedSetTextWarmup: { color: colors.warning },
   setNumBadge: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
   setNumText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textSecondary },
   loggedSetText: { flex: 1, fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },

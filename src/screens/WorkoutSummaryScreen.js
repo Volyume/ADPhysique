@@ -216,9 +216,6 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             <Text style={styles.completionTitle}>Session Complete</Text>
           </View>
           <Text style={styles.completionDate}>{completionDate}</Text>
-          {sessionLabel && (
-            <Text style={styles.completionSub}>{sessionLabel}</Text>
-          )}
         </View>
 
         <View style={styles.statsGrid}>
@@ -227,6 +224,19 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           <StatBox icon="time-outline" value={`${durationMinutes || 0}m`} label="Duration" />
           <StatBox icon="trending-up-outline" value={`${Math.round(tonnage || 0).toLocaleString('en-GB')} kg`} label="Total kg" />
         </View>
+
+        {exerciseData.length > 0 && (
+          <View style={styles.exerciseList}>
+            {exerciseData.map((ex, i) => (
+              <View key={ex.exerciseId || i} style={styles.exerciseListRow}>
+                <Text style={styles.exerciseListName} numberOfLines={1}>{ex.name}</Text>
+                <Text style={styles.exerciseListMeta}>
+                  {ex.recommendedSets} × {ex.repsMin}–{ex.repsMax}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         {detectedPRs.length > 0 && (
           <View style={styles.prRow}>
@@ -335,19 +345,20 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       </ScrollView>
 
       <View style={[styles.stickyFooter, { paddingBottom: Math.max(spacing.lg, insets.bottom) }]}>
-        {!readOnly && (
-          <TouchableOpacity style={styles.shareFooterBtn} onPress={handleShareCard}>
-            <Ionicons name="share-social-outline" size={18} color={colors.primary} />
-            <Text style={styles.shareFooterBtnText}>Share Session Card</Text>
+        <View style={styles.footerRow}>
+          <TouchableOpacity
+            style={[styles.doneBtn, saving && styles.btnDisabled]}
+            onPress={handleDone}
+            disabled={saving}
+          >
+            <Text style={styles.doneBtnText}>{readOnly ? 'Close' : 'Save & Close'}</Text>
           </TouchableOpacity>
-        )}
-        <TouchableOpacity
-          style={[styles.doneBtn, saving && styles.btnDisabled]}
-          onPress={handleDone}
-          disabled={saving}
-        >
-          <Text style={styles.doneBtnText}>{readOnly ? 'Close' : 'Save & Close'}</Text>
-        </TouchableOpacity>
+          {!readOnly && (
+            <TouchableOpacity style={styles.shareFooterBtn} onPress={handleShareCard}>
+              <Ionicons name="share-social-outline" size={20} color={colors.background} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -437,16 +448,67 @@ const styles = StyleSheet.create({
   },
   templateBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textSecondary },
   stickyFooter: {
-    backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.border,
-    padding: spacing.lg, gap: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    backgroundColor: colors.background,
   },
-  doneBtn: { backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: spacing.lg, alignItems: 'center' },
+  footerRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    alignItems: 'center',
+  },
+  doneBtn: {
+    flex: 1,
+    backgroundColor: colors.primary,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   btnDisabled: { opacity: 0.6 },
-  doneBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.background },
-  shareFooterBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    backgroundColor: colors.primaryBg, borderRadius: radius.md, paddingVertical: spacing.md,
-    borderWidth: 1, borderColor: colors.primary + '40',
+  doneBtnText: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.background,
   },
-  shareFooterBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
+  shareFooterBtn: {
+    width: 52,
+    height: 52,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  exerciseList: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  exerciseListRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  exerciseListName: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+    color: colors.textPrimary,
+    marginRight: spacing.md,
+  },
+  exerciseListMeta: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    fontWeight: fontWeight.semibold,
+  },
 });

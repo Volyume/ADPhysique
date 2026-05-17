@@ -10,7 +10,7 @@ import { format } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { BrandTag } from '../components/BrandMark';
 import {
-  getAllWorkouts, getActivePlan, getRoutinesForPlan,
+  getAllWorkouts, getAllWorkoutSets, getActivePlan, getRoutinesForPlan,
   getAllRoutineExerciseCounts, createWorkout, getRoutineExercisesWithDetails,
 } from '../lib/database';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
@@ -53,12 +53,16 @@ export default function HomeScreen({ navigation }) {
   async function loadWeekStats() {
     try {
       const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-      const all = await getAllWorkouts(user.id);
-      const thisWeek = all.filter(w => w.startedAt >= weekAgo && w.isCompleted);
-      const totalSets = thisWeek.reduce((s, w) => s + (w.setCount || 0), 0);
-      const totalVol = thisWeek.reduce((s, w) => s + (w.totalVolume || 0), 0);
-      setWeekStats({ sessions: thisWeek.length, sets: totalSets, volume: totalVol });
-      const completed = all.filter(w => w.isCompleted).sort((a, b) => b.startedAt - a.startedAt);
+      const [allWorkouts, allSets] = await Promise.all([
+        getAllWorkouts(user.id),
+        getAllWorkoutSets(user.id),
+      ]);
+      const thisWeek = allWorkouts.filter(w => w.startedAt >= weekAgo && w.isCompleted);
+      const workoutIds = new Set(thisWeek.map(w => w.id));
+      const weekSets = allSets.filter(s => workoutIds.has(s.workoutId) && s.setType !== 'warmup');
+      const totalVol = weekSets.reduce((t, s) => t + (s.weight || 0) * (s.actualReps || 0), 0);
+      setWeekStats({ sessions: thisWeek.length, sets: weekSets.length, volume: totalVol });
+      const completed = allWorkouts.filter(w => w.isCompleted).sort((a, b) => b.startedAt - a.startedAt);
       setLastSession(completed[0] || null);
     } catch (_e) {}
   }
@@ -284,7 +288,7 @@ export default function HomeScreen({ navigation }) {
               <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
             </View>
             <Text style={styles.lastSessionName} numberOfLines={1}>
-              {lastSession.name || 'Session'}
+              {lastSession.name || lastSession.routineName || 'Session'}
             </Text>
             <View style={styles.lastSessionStatRow}>
               {lastSession.durationMinutes ? (

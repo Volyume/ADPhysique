@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput,
 } from 'react-native';
@@ -10,6 +10,7 @@ import { getAllWorkoutSets, getAllExercises } from '../lib/database';
 import {
   calculateWeeklyVolume, VOLUME_LANDMARKS, MUSCLE_DISPLAY_NAMES, getVolumeStatus,
 } from '../lib/algorithms';
+import { useFocusEffect } from '@react-navigation/native';
 import useAppStore from '../store/useAppStore';
 
 export default function VolumeHeatmapScreen() {
@@ -19,9 +20,7 @@ export default function VolumeHeatmapScreen() {
   const [editing, setEditing] = useState(false);
   const [editValues, setEditValues] = useState({});
 
-  useEffect(() => {
-    loadData();
-  }, [user?.id]);
+  useFocusEffect(useCallback(() => { loadData(); }, [user?.id]));
 
   async function loadData() {
     if (!user?.id) return;

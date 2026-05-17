@@ -360,7 +360,9 @@ function exerciseSetupSeconds(ex) {
 // setup + (work + rest) × sets − trailing rest (absorbed into next exercise setup).
 function exerciseBlockSeconds(ex) {
   const perSet = setWorkSeconds(ex) + ex.restSec;
-  return exerciseSetupSeconds(ex) + ex.sets * perSet - ex.restSec;
+  // +1 warmup set per exercise: same work time, short rest (45s), no extra transition
+  const warmupExtra = setWorkSeconds(ex) + 45;
+  return exerciseSetupSeconds(ex) + warmupExtra + ex.sets * perSet - ex.restSec;
 }
 
 // Estimated total session duration in seconds.
