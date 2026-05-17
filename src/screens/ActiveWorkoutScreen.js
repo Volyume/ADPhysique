@@ -21,7 +21,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import SetEntry from '../components/SetEntry';
 import RestTimer from '../components/RestTimer';
 import useAppStore from '../store/useAppStore';
-import { getPreviousWorkoutSets, createWorkoutSet, updateWorkout, getAllExercises } from '../lib/database';
+import { getPreviousWorkoutSets, getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, getAllExercises } from '../lib/database';
 import {
   detectPR,
   getProgressionSuggestion,
@@ -58,6 +58,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
   const [currentSet, setCurrentSet] = useState({ ...DEFAULT_SET });
   const [prevSets, setPrevSets] = useState([]);
+  const [allTimeSets, setAllTimeSets] = useState([]);
   const [loggedSets, setLoggedSets] = useState([]);
   const [detectedPRs, setDetectedPRs] = useState([]);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -111,6 +112,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             setCurrentExerciseIndex(Math.min(currentExerciseIndex, updated.length - 1));
             setLoggedSets([]);
             setPrevSets([]);
+            setAllTimeSets([]);
           },
         },
       ],
@@ -137,6 +139,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setSwapCandidates([]);
     setShowSwapModal(false);
     setPrevSets([]);
+    setAllTimeSets([]);
     setLoggedSets([]);
     setProgression(null);
   }
@@ -182,8 +185,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (!exercise || !activeWorkout) return;
 
     async function loadHistory() {
-      const prev = await getPreviousWorkoutSets(exercise.id, activeWorkout.id);
+      const [prev, allTime] = await Promise.all([
+        getPreviousWorkoutSets(exercise.id, activeWorkout.id),
+        getAllCompletedSetsForExercise(exercise.id, activeWorkout.id),
+      ]);
       setPrevSets(prev);
+      setAllTimeSets(allTime);
 
       if (prev.length > 0) {
         const lastSet = prev[prev.length - 1];
@@ -266,8 +273,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       setLoggedSets(newLoggedSets);
       addSetToCurrentExercise(setData);
 
-      // PR Detection
-      const prs = detectPR(setData, prevSets, exercise, units);
+      // PR Detection — compare against all completed workouts + earlier sets in this session
+      const prHistory = [
+        ...allTimeSets,
+        ...loggedSets.filter(s => s.exerciseId === exercise.id),
+      ];
+      const prs = detectPR(setData, prHistory, exercise, units);
       if (prs.length > 0) {
         showPRCelebration({ ...prs[0], exerciseName: exercise.name });
         setDetectedPRs(prev => [...prev, ...prs.map(p => ({ ...p, exerciseName: exercise.name, units }))]);

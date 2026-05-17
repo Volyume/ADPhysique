@@ -6,9 +6,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { format } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { calculateNutritionTargets } from '../lib/nutritionEngine';
+import useAppStore from '../store/useAppStore';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -99,7 +101,11 @@ function MacroCard({ label, grams, perKg }) {
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
+const BODY_METRICS_KEY_PREFIX = '@volyume_body_metrics_';
+
 export default function NutritionTargetsScreen() {
+  const { user } = useAppStore();
+
   // ── Form state ────────────────────────────────────────────────────────────────
   const [sex,          setSex]          = useState('male');
   const [age,          setAge]          = useState('');
@@ -162,6 +168,23 @@ export default function NutritionTargetsScreen() {
 
       setResults(targets);
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(targets));
+
+      // Auto-seed Body Metrics with today's weight if no entry exists for today
+      if (user?.id && weightNum) {
+        try {
+          const metricsKey = BODY_METRICS_KEY_PREFIX + user.id;
+          const today = format(new Date(), 'yyyy-MM-dd');
+          const raw = await AsyncStorage.getItem(metricsKey);
+          const entries = raw ? JSON.parse(raw) : [];
+          const hasToday = entries.some(e => e.metric_date === today);
+          if (!hasToday) {
+            const entry = { id: Date.now().toString(), metric_date: today, body_weight: weightNum };
+            if (bfNum) entry.body_fat = bfNum;
+            entries.unshift(entry);
+            await AsyncStorage.setItem(metricsKey, JSON.stringify(entries));
+          }
+        } catch (_e) {}
+      }
     } catch (e) {
       Alert.alert('Calculation error', e.message || 'Something went wrong.');
     } finally {

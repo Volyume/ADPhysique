@@ -193,6 +193,7 @@ export function detectPR(newSet, historicalSets, exercise, units = 'kg') {
   if (weight > heaviestEver) {
     prs.push({
       type: 'heaviest_weight',
+      weight,
       value: weight,
       reps,
       label: `New heaviest weight: ${weight}${units} × ${reps} reps`,
@@ -205,8 +206,9 @@ export function detectPR(newSet, historicalSets, exercise, units = 'kg') {
   if (reps > maxRepsAtWeight && maxRepsAtWeight > 0) {
     prs.push({
       type: 'most_reps_at_weight',
-      reps,
+      weight,
       value: weight,
+      reps,
       label: `Most reps at ${weight}${units}: ${reps} reps`,
     });
   }

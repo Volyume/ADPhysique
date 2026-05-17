@@ -392,6 +392,18 @@ export async function getPreviousWorkoutSets(exerciseId, currentWorkoutId) {
   return mapped.filter(s => s.workoutId === mostRecentWorkoutId);
 }
 
+export async function getAllCompletedSetsForExercise(exerciseId, currentWorkoutId) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT ws.* FROM workout_sets ws
+     JOIN workouts w ON w.id = ws.workout_id
+     WHERE ws.exercise_id = ? AND ws.workout_id != ? AND w.is_completed = 1
+     ORDER BY ws.created_at DESC`,
+    [exerciseId, currentWorkoutId],
+  );
+  return rows.map(rowToCamel);
+}
+
 export async function createWorkoutSet(data) {
   const d = await db();
   const id = uid();

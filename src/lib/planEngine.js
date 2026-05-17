@@ -29,11 +29,14 @@ export const SPLIT_LABELS = {
 // Volume tables — working sets per muscle per week
 // ---------------------------------------------------------------------------
 
+// Weekly working-set targets per muscle group.
+// Values sit at MEV–MAV (not MRV) — programmes are meant to start here and
+// progress upwards across a mesocycle, not begin at maximum recoverable volume.
 const BASE_VOLUME = {
-  beginner:     { min: 8,  max: 12 },
-  intermediate: { min: 12, max: 16 },
-  advanced:     { min: 14, max: 20 },
-  competitive:  { min: 16, max: 22 },
+  beginner:     { min: 4,  max: 8  },  // MEV range — new trainees need less stimulus
+  intermediate: { min: 8,  max: 12 },  // Low–mid MAV
+  advanced:     { min: 10, max: 16 },  // Mid MAV
+  competitive:  { min: 12, max: 18 },  // High MAV — approaching MRV
 };
 
 // Multipliers applied to base volume midpoint
@@ -276,11 +279,15 @@ function weeklySetTarget(muscle, experience, weakPoints, nutritionPhase, goal, i
 // Sets per exercise per session for a muscle.
 // `sessions` = how many sessions/week that muscle is trained.
 // `numEx` = how many exercises in each session target that muscle (defaults to 1).
-// Weekly volume is divided across sessions and then across exercises, capped at 4 per exercise.
+// Per-exercise cap scales with experience so beginners don't accumulate excessive
+// total session volume before they've built the work capacity to handle it.
+const PER_EX_CAP = { beginner: 3, intermediate: 4, advanced: 4, competitive: 5 };
+
 function setsPerSession(muscle, experience, weakPoints, nutritionPhase, goal, sessions, inputs = {}, numEx = 1) {
   const weekly = weeklySetTarget(muscle, experience, weakPoints, nutritionPhase, goal, inputs);
   const perSession = Math.round(weekly / Math.max(1, sessions));
-  return Math.min(4, Math.max(2, Math.round(perSession / Math.max(1, numEx))));
+  const cap = PER_EX_CAP[experience] ?? 4;
+  return Math.min(cap, Math.max(2, Math.round(perSession / Math.max(1, numEx))));
 }
 
 // Build a single exercise entry for a workout

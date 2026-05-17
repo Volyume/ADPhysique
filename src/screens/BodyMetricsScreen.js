@@ -116,27 +116,27 @@ export default function BodyMetricsScreen({ navigation }) {
           </View>
           {nutritionTargets ? (
             <View style={styles.nutritionGrid}>
-              {nutritionTargets.calories ? (
+              {nutritionTargets.targetKcal ? (
                 <View style={styles.nutritionCell}>
-                  <Text style={styles.nutritionValue}>{Math.round(nutritionTargets.calories)}</Text>
+                  <Text style={styles.nutritionValue}>{Math.round(nutritionTargets.targetKcal)}</Text>
                   <Text style={styles.nutritionLabel}>kcal</Text>
                 </View>
               ) : null}
-              {nutritionTargets.protein ? (
+              {nutritionTargets.proteinG ? (
                 <View style={styles.nutritionCell}>
-                  <Text style={styles.nutritionValue}>{Math.round(nutritionTargets.protein)}g</Text>
+                  <Text style={styles.nutritionValue}>{Math.round(nutritionTargets.proteinG)}g</Text>
                   <Text style={styles.nutritionLabel}>Protein</Text>
                 </View>
               ) : null}
-              {nutritionTargets.carbs ? (
+              {nutritionTargets.carbsG ? (
                 <View style={styles.nutritionCell}>
-                  <Text style={styles.nutritionValue}>{Math.round(nutritionTargets.carbs)}g</Text>
+                  <Text style={styles.nutritionValue}>{Math.round(nutritionTargets.carbsG)}g</Text>
                   <Text style={styles.nutritionLabel}>Carbs</Text>
                 </View>
               ) : null}
-              {nutritionTargets.fat ? (
+              {nutritionTargets.fatG ? (
                 <View style={styles.nutritionCell}>
-                  <Text style={styles.nutritionValue}>{Math.round(nutritionTargets.fat)}g</Text>
+                  <Text style={styles.nutritionValue}>{Math.round(nutritionTargets.fatG)}g</Text>
                   <Text style={styles.nutritionLabel}>Fat</Text>
                 </View>
               ) : null}
