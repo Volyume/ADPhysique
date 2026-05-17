@@ -8,16 +8,14 @@ import { useFocusEffect } from '@react-navigation/native';
 import { format } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { BrandTag } from '../components/BrandMark';
-import VolumeBars from '../components/VolumeBars';
-import { getAllWorkoutSets, getAllWorkouts, getAllExercises } from '../lib/database';
+import { getAllWorkoutSets, getAllWorkouts } from '../lib/database';
 import {
-  calculateWeeklyVolume, calculateTonnage, shouldDeload,
+  calculateTonnage, shouldDeload,
 } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 
 export default function AnalyticsScreen({ navigation }) {
   const { user, units } = useAppStore();
-  const [weeklyVolume, setWeeklyVolume] = useState({});
   const [weekStats, setWeekStats] = useState(null);
   const [deloadCheck, setDeloadCheck] = useState(null);
   const [recentSessions, setRecentSessions] = useState([]);
@@ -50,11 +48,6 @@ export default function AnalyticsScreen({ navigation }) {
       const recentWorkouts = allWorkouts.filter(
         w => w.startedAt >= weekAgo && w.isCompleted,
       );
-      const allExercises = await getAllExercises();
-      const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
-      const volume = calculateWeeklyVolume(recentSets, exerciseMap);
-      setWeeklyVolume(volume);
-
       const tonnage = calculateTonnage(recentSets);
       const avgDuration = recentWorkouts.length > 0
         ? Math.round(recentWorkouts.reduce((s, w) => s + (w.durationMinutes || 0), 0) / recentWorkouts.length)
@@ -150,23 +143,21 @@ export default function AnalyticsScreen({ navigation }) {
           )}
         </View>
 
-        {/* Volume Heatmap */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>VOLUME BY MUSCLE</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('VolumeHeatmap')}>
-              <Text style={styles.seeAll}>Full view</Text>
-            </TouchableOpacity>
+        {/* Volume Heatmap link */}
+        <TouchableOpacity
+          style={styles.heatmapNavCard}
+          onPress={() => navigation.navigate('VolumeHeatmap')}
+          activeOpacity={0.75}
+        >
+          <View style={styles.heatmapNavLeft}>
+            <Ionicons name="grid-outline" size={22} color={colors.primary} />
+            <View>
+              <Text style={styles.heatmapNavTitle}>Volume Heatmap</Text>
+              <Text style={styles.heatmapNavSub}>Weekly sets by muscle group with MEV / MRV landmarks</Text>
+            </View>
           </View>
-          <View style={styles.card}>
-            <VolumeBars weeklyVolume={weeklyVolume} />
-            {Object.keys(weeklyVolume).length === 0 && (
-              <Text style={styles.emptyState}>
-                Complete sessions to see your weekly muscle-volume map.
-              </Text>
-            )}
-          </View>
-        </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
 
         {/* Recent Sessions */}
         {recentSessions.length > 0 && (
@@ -280,6 +271,14 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
   seeAll: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.medium },
+  heatmapNavCard: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    padding: spacing.lg, borderWidth: 1, borderColor: colors.border,
+  },
+  heatmapNavLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 },
+  heatmapNavTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  heatmapNavSub: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   statCard: {
     flex: 1,
