@@ -145,12 +145,10 @@ function AuthStack() {
   );
 }
 
-const LOCAL_USER_KEY = '@volyume_local_user_id';
-
 const SPLASH_MIN_MS = 2000;
 
 export default function RootNavigator() {
-  const { user, isAuthLoading, setUser, setSession, setAuthLoading } = useAppStore();
+  const { user, isAuthLoading, setUser, setSession, setAuthLoading, initLocalUser } = useAppStore();
   const [splashReady, setSplashReady] = useState(false);
 
   useEffect(() => {
@@ -178,16 +176,12 @@ export default function RootNavigator() {
           }
         } catch (_e) {}
 
-        try {
-          const localId = await AsyncStorage.getItem(LOCAL_USER_KEY);
-          if (localId) {
-            setUser({ id: localId, email: 'local@device', isLocal: true });
-          }
-        } catch (_e) {}
+        // No cloud session — auto-restore or create a local user (no login screen)
+        await initLocalUser();
       } catch (err) {
         console.error('bootstrap failed:', err);
-      } finally {
-        setAuthLoading(false);
+        // Failsafe: ensure auth loading clears even if initLocalUser throws
+        await initLocalUser().catch(() => setAuthLoading(false));
       }
     }
 
@@ -226,7 +220,8 @@ export default function RootNavigator() {
         },
       }}
     >
-      {user ? <MainTabs /> : <AuthStack />}
+      {/* Auth gate removed for local-first phase — re-enable when cloud sync is added */}
+      <MainTabs />
     </NavigationContainer>
   );
 }
