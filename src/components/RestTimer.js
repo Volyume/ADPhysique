@@ -5,6 +5,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 
+const TIME_ADJUSTMENTS = [
+  { delta: -30, label: '−30s' },
+  { delta: -15, label: '−15s' },
+  { delta: 15,  label: '+15s' },
+  { delta: 30,  label: '+30s' },
+];
+
 export default function RestTimer() {
   const { restTimerActive, restTimerRemaining, restTimerDuration, stopRestTimer, tickRestTimer, addRestTime } =
     useAppStore();
@@ -20,10 +27,7 @@ export default function RestTimer() {
         duration: restTimerDuration * 1000,
         useNativeDriver: false,
       }).start();
-
-      intervalRef.current = setInterval(() => {
-        tickRestTimer();
-      }, 1000);
+      intervalRef.current = setInterval(() => { tickRestTimer(); }, 1000);
     } else {
       clearInterval(intervalRef.current);
       progressAnim.stopAnimation();
@@ -32,7 +36,6 @@ export default function RestTimer() {
     return () => clearInterval(intervalRef.current);
   }, [restTimerActive]);
 
-  // Haptics at 3, 2, 1 seconds and "done" banner at 0
   useEffect(() => {
     if (!restTimerActive) return;
     if (restTimerRemaining <= 3 && restTimerRemaining > 0) {
@@ -46,6 +49,13 @@ export default function RestTimer() {
       setTimeout(() => setShowDone(false), 3000);
     }
   }, [restTimerRemaining]);
+
+  function handleAdjust(delta) {
+    Haptics.selectionAsync();
+    // Clamp so we never drop below 5 seconds
+    const safeAmount = delta < 0 ? Math.max(delta, -(restTimerRemaining - 5)) : delta;
+    if (safeAmount !== 0) addRestTime(safeAmount);
+  }
 
   const isCountdown = restTimerActive && restTimerRemaining <= 3 && restTimerRemaining > 0;
   const isAlmostDone = restTimerRemaining <= 10 && restTimerActive;
@@ -80,6 +90,8 @@ export default function RestTimer() {
           ]}
         />
       </View>
+
+      {/* Timer row */}
       <View style={styles.row}>
         <Ionicons name="timer-outline" size={18} color={isAlmostDone ? colors.warning : colors.primary} />
         {isCountdown ? (
@@ -88,12 +100,30 @@ export default function RestTimer() {
           <Text style={[styles.timeText, isAlmostDone && styles.almostDone]}>{timeStr}</Text>
         )}
         <Text style={styles.label}>{isCountdown ? 'seconds' : 'rest'}</Text>
-        <TouchableOpacity onPress={() => addRestTime(30)} style={styles.addTimeBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <Text style={styles.addTimeText}>+30s</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={stopRestTimer} style={styles.skipBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+        <TouchableOpacity
+          onPress={stopRestTimer}
+          style={styles.skipBtn}
+          hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+        >
           <Text style={styles.skipText}>Skip</Text>
         </TouchableOpacity>
+      </View>
+
+      {/* Time adjustment row */}
+      <View style={styles.adjustRow}>
+        {TIME_ADJUSTMENTS.map(({ delta, label }) => {
+          const isNeg = delta < 0;
+          return (
+            <TouchableOpacity
+              key={delta}
+              style={[styles.adjBtn, isNeg && styles.adjBtnNeg]}
+              onPress={() => handleAdjust(delta)}
+              hitSlop={{ top: 10, bottom: 10, left: 4, right: 4 }}
+            >
+              <Text style={[styles.adjBtnText, isNeg && styles.adjBtnTextNeg]}>{label}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
     </View>
   );
@@ -106,19 +136,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginVertical: spacing.sm,
   },
-  progressBar: {
-    height: 3,
-    backgroundColor: colors.border,
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 2,
-  },
+  progressBar: { height: 3, backgroundColor: colors.border },
+  progressFill: { height: '100%', borderRadius: 2 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
     gap: spacing.sm,
   },
   timeText: {
@@ -128,9 +153,7 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
     minWidth: 52,
   },
-  almostDone: {
-    color: colors.warning,
-  },
+  almostDone: { color: colors.warning },
   countdownNum: {
     fontSize: fontSize.xxl,
     fontWeight: fontWeight.black,
@@ -138,23 +161,7 @@ const styles = StyleSheet.create({
     minWidth: 52,
     textAlign: 'center',
   },
-  label: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    flex: 1,
-  },
-  addTimeBtn: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  addTimeText: {
-    fontSize: fontSize.sm,
-    color: colors.primary,
-    fontWeight: fontWeight.medium,
-  },
+  label: { fontSize: fontSize.sm, color: colors.textSecondary, flex: 1 },
   skipBtn: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
@@ -162,11 +169,32 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  skipText: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    fontWeight: fontWeight.medium,
+  skipText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  adjustRow: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
   },
+  adjBtn: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.xs + 2,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.primary + '50',
+    backgroundColor: colors.primaryBg,
+  },
+  adjBtnNeg: {
+    borderColor: colors.border,
+    backgroundColor: colors.surface3,
+  },
+  adjBtnText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.primary,
+  },
+  adjBtnTextNeg: { color: colors.textSecondary },
   doneContainer: {
     flexDirection: 'row',
     alignItems: 'center',

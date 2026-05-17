@@ -134,8 +134,8 @@ export default function HomeScreen({ navigation }) {
       >
         {/* ── Branded header ── */}
         <View style={styles.header}>
-          <BrandTag size={18} />
-          <Text style={styles.headerDate}>{today}</Text>
+          <Text style={styles.pageTitle}>Train</Text>
+          <BrandTag size={13} color={colors.textMuted} />
         </View>
 
         {/* ── This week — progress bars ── */}
@@ -229,44 +229,45 @@ export default function HomeScreen({ navigation }) {
             </TouchableOpacity>
           </View>
         ) : (
-          <>
-            <View style={styles.noPlanCard}>
-              <Text style={styles.noPlanTitle}>No active plan</Text>
+          <View style={styles.noPlanSection}>
+            <View style={styles.noPlanHero}>
+              <View style={styles.noPlanIconWrap}>
+                <Ionicons name="barbell-outline" size={28} color={colors.primary} />
+              </View>
+              <Text style={styles.noPlanTitle}>Set up your training plan</Text>
               <Text style={styles.noPlanSub}>
-                Start a blank session now, or build a plan to track progressive overload week to week.
+                A structured plan tracks your progressive overload week to week. Choose how to get started below.
               </Text>
-              <TouchableOpacity
-                style={styles.primaryBtn}
-                onPress={() => navigation.navigate('BuildWorkout')}
-              >
-                <Ionicons name="add" size={18} color={colors.background} />
-                <Text style={styles.primaryBtnText}>Start Blank Workout</Text>
-              </TouchableOpacity>
             </View>
 
-            {/* Plan builder options — shown only when no plan, contextually correct here */}
-            <View style={styles.getStartedSection}>
-              <Text style={styles.sectionLabel}>BUILD A PLAN</Text>
-              <PlanBuilderCard
-                icon="sparkles"
-                title="Coach Builder"
-                desc="Answer 7 questions — get a personalised plan built around your schedule and goal."
-                onPress={() => navigation.navigate('PlansTab', { screen: 'CoachBuilder' })}
-              />
-              <PlanBuilderCard
-                icon="library-outline"
-                title="Plan Library"
-                desc="Browse proven training splits for every level, frequency and goal."
-                onPress={() => navigation.navigate('PlansTab', { screen: 'PlanLibrary' })}
-              />
-              <PlanBuilderCard
-                icon="create-outline"
-                title="Manual Builder"
-                desc="Build a fully custom plan from scratch with your own exercises."
-                onPress={() => navigation.navigate('PlansTab', { screen: 'ManualBuilder' })}
-              />
-            </View>
-          </>
+            <PlanBuilderCard
+              icon="sparkles"
+              title="Coach Builder"
+              desc="Answer a few questions — get a personalised plan built around your schedule and goal."
+              badge="Recommended"
+              onPress={() => navigation.navigate('PlansTab', { screen: 'CoachBuilder' })}
+            />
+            <PlanBuilderCard
+              icon="library-outline"
+              title="Plan Library"
+              desc="Browse proven training splits for every level, frequency and goal."
+              onPress={() => navigation.navigate('PlansTab', { screen: 'PlanLibrary' })}
+            />
+            <PlanBuilderCard
+              icon="create-outline"
+              title="Build Your Own"
+              desc="Create a fully custom plan from scratch with your own exercises and sets."
+              onPress={() => navigation.navigate('PlansTab', { screen: 'ManualBuilder' })}
+            />
+
+            <TouchableOpacity
+              style={styles.blankSessionLink}
+              onPress={() => navigation.navigate('BuildWorkout')}
+            >
+              <Text style={styles.blankSessionLinkText}>Start a blank session instead</Text>
+              <Ionicons name="chevron-forward" size={13} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
         )}
 
         {/* ── Last session ── */}
@@ -413,14 +414,21 @@ function WeekBar({ value, target, label, display }) {
   );
 }
 
-function PlanBuilderCard({ icon, title, desc, onPress }) {
+function PlanBuilderCard({ icon, title, desc, badge, onPress }) {
   return (
     <TouchableOpacity style={styles.builderCard} onPress={onPress} activeOpacity={0.75}>
       <View style={styles.builderIconWrap}>
         <Ionicons name={icon} size={20} color={colors.primary} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.builderTitle}>{title}</Text>
+        <View style={styles.builderTitleRow}>
+          <Text style={styles.builderTitle}>{title}</Text>
+          {badge && (
+            <View style={styles.builderBadge}>
+              <Text style={styles.builderBadgeText}>{badge}</Text>
+            </View>
+          )}
+        </View>
         <Text style={styles.builderDesc}>{desc}</Text>
       </View>
       <Ionicons name="chevron-forward" size={15} color={colors.textMuted} />
@@ -444,17 +452,17 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
 
-  // Header
+  // Header — matches Plans/Progress/Athlete Hub pattern
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingBottom: spacing.xs,
   },
-  headerDate: {
-    fontSize: fontSize.sm,
-    color: colors.textMuted,
-    fontWeight: fontWeight.medium,
+  pageTitle: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
   },
 
   // Week card with progress bars
@@ -589,20 +597,35 @@ const styles = StyleSheet.create({
   blankLink: { alignItems: 'center', paddingVertical: spacing.xs },
   blankLinkText: { fontSize: fontSize.sm, color: colors.textMuted },
 
-  // No plan card
-  noPlanCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: spacing.md,
+  // No plan — plan-first section
+  noPlanSection: { gap: spacing.md },
+  noPlanHero: {
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.md,
   },
-  noPlanTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  noPlanSub: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  noPlanIconWrap: {
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: colors.primaryBg, borderWidth: 1.5, borderColor: colors.primary + '50',
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: spacing.xs,
+  },
+  noPlanTitle: {
+    fontSize: fontSize.xl, fontWeight: fontWeight.bold,
+    color: colors.textPrimary, textAlign: 'center',
+  },
+  noPlanSub: {
+    fontSize: fontSize.sm, color: colors.textSecondary,
+    lineHeight: 20, textAlign: 'center',
+  },
+  blankSessionLink: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.xs, paddingVertical: spacing.md,
+  },
+  blankSessionLinkText: { fontSize: fontSize.sm, color: colors.textMuted },
 
-  // Plan builder cards (shown only when no plan)
-  getStartedSection: { gap: spacing.sm },
+  // Plan builder cards
   sectionLabel: {
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
@@ -622,19 +645,17 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   builderIconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surface2,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 40, height: 40, borderRadius: radius.sm,
+    backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
   },
-  builderTitle: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-    color: colors.textPrimary,
-    marginBottom: 2,
+  builderTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: 2 },
+  builderTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  builderBadge: {
+    backgroundColor: colors.primaryBg, borderRadius: radius.full,
+    paddingHorizontal: spacing.sm, paddingVertical: 2,
+    borderWidth: 1, borderColor: colors.primary + '40',
   },
+  builderBadgeText: { fontSize: 9, fontWeight: fontWeight.bold, color: colors.primary },
   builderDesc: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
 
   // Last session

@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { VolyumeMark } from '../components/BrandMark';
 import { signInWithEmail, signUpWithEmail, resetPassword } from '../lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../store/useAppStore';
@@ -28,17 +29,13 @@ export default function LoginScreen({ navigation }) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [localLoading, setLocalLoading] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
   const [crashLog, setCrashLog] = useState(null);
 
-  // On mount, check for a stored crash log from a previous fatal error
   React.useEffect(() => {
     AsyncStorage.getItem(CRASH_LOG_KEY).then(raw => {
-      if (raw) {
-        try {
-          const data = JSON.parse(raw);
-          setCrashLog(data);
-        } catch (_) {}
-      }
+      if (raw) { try { setCrashLog(JSON.parse(raw)); } catch (_) {} }
     }).catch(() => {});
   }, []);
 
@@ -66,17 +63,14 @@ export default function LoginScreen({ navigation }) {
 
   async function handleForgotPassword() {
     if (!email.trim()) {
-      Alert.alert('Enter email', 'Enter your email address first.');
+      Alert.alert('Enter email', 'Enter your email address above first.');
       return;
     }
     setLoading(true);
     const { error } = await resetPassword(email.trim());
     setLoading(false);
-    if (error) {
-      Alert.alert('Error', error.message);
-    } else {
-      Alert.alert('Email sent', 'Check your inbox for a password reset link.');
-    }
+    if (error) { Alert.alert('Error', error.message); }
+    else { Alert.alert('Email sent', 'Check your inbox for a password reset link.'); }
   }
 
   async function handleContinueLocally() {
@@ -85,146 +79,168 @@ export default function LoginScreen({ navigation }) {
     setLocalLoading(false);
   }
 
+  const isSignIn = mode === 'signin';
+
   return (
-    <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
-      >
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          {/* Crash log — only shown when a previous fatal error was stored */}
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      {/* Decorative background V mark — faint, centred */}
+      <View style={styles.bgDecor} pointerEvents="none">
+        <VolyumeMark size={340} color={colors.primary} accent={colors.primary} style={{ opacity: 0.028 }} />
+      </View>
+
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Crash log — shown only when a previous fatal error was stored */}
           {crashLog && (
-            <View style={{ backgroundColor: '#1a0000', borderWidth: 1, borderColor: '#FF3B30', borderRadius: 8, padding: 12, margin: 8 }}>
-              <Text style={{ color: '#FF3B30', fontWeight: 'bold', marginBottom: 4 }}>Previous crash detected — screenshot this:</Text>
-              <Text style={{ color: '#FF8080', fontSize: 12 }}>{crashLog.message}</Text>
-              <Text style={{ color: '#999', fontSize: 10, marginTop: 4 }}>{crashLog.stack?.slice(0, 400)}</Text>
-              <TouchableOpacity onPress={() => { AsyncStorage.removeItem(CRASH_LOG_KEY); setCrashLog(null); }} style={{ marginTop: 8 }}>
-                <Text style={{ color: '#FF3B30', fontSize: 12 }}>Dismiss</Text>
+            <View style={styles.crashBanner}>
+              <Text style={styles.crashTitle}>Previous crash detected — screenshot this:</Text>
+              <Text style={styles.crashMsg}>{crashLog.message}</Text>
+              <Text style={styles.crashStack}>{crashLog.stack?.slice(0, 400)}</Text>
+              <TouchableOpacity onPress={() => { AsyncStorage.removeItem(CRASH_LOG_KEY); setCrashLog(null); }}>
+                <Text style={styles.crashDismiss}>Dismiss</Text>
               </TouchableOpacity>
             </View>
           )}
-          {/* Logo */}
-          <View style={styles.logoContainer}>
-            <View style={styles.logoMark}>
-              <Text style={styles.logoV}>V</Text>
+
+          {/* ── Brand block ── */}
+          <View style={styles.brand}>
+            <View style={styles.brandMark}>
+              <VolyumeMark size={72} color={colors.textPrimary} accent={colors.primary} />
             </View>
-            <Text style={styles.appName}>VOLYUME</Text>
-            <Text style={styles.tagline}>Intelligent Hypertrophy Logbook</Text>
+            <Text style={styles.brandName}>Volyume</Text>
+            <Text style={styles.brandTagline}>Intelligent Hypertrophy Logbook</Text>
           </View>
 
-          {/* Mode Toggle */}
-          <View style={styles.modeToggle}>
-            <TouchableOpacity
-              style={[styles.modeBtn, mode === 'signin' && styles.modeBtnActive]}
-              onPress={() => setMode('signin')}
-            >
-              <Text style={[styles.modeBtnText, mode === 'signin' && styles.modeBtnTextActive]}>
-                Sign In
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.modeBtn, mode === 'signup' && styles.modeBtnActive]}
-              onPress={() => setMode('signup')}
-            >
-              <Text style={[styles.modeBtnText, mode === 'signup' && styles.modeBtnTextActive]}>
-                Create Account
-              </Text>
-            </TouchableOpacity>
-          </View>
+          {/* Thin divider below brand */}
+          <View style={styles.brandDivider} />
 
-          {/* Email Field */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Email</Text>
-            <TextInput
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-              placeholder="you@example.com"
-              placeholderTextColor={colors.textMuted}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoComplete="email"
-            />
-          </View>
+          {/* ── Form block ── */}
+          <View style={styles.formBlock}>
+            <Text style={styles.formTitle}>
+              {isSignIn ? 'Sign in to your account' : 'Create your account'}
+            </Text>
 
-          {/* Password Field */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Password</Text>
-            <View style={styles.passwordRow}>
-              <TextInput
-                style={[styles.input, styles.passwordInput]}
-                value={password}
-                onChangeText={setPassword}
-                placeholder={mode === 'signup' ? 'Min 8 characters' : 'Your password'}
-                placeholderTextColor={colors.textMuted}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoComplete={mode === 'signup' ? 'new-password' : 'password'}
-              />
-              <TouchableOpacity
-                style={styles.eyeBtn}
-                onPress={() => setShowPassword(v => !v)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Ionicons
-                  name={showPassword ? 'eye-off' : 'eye'}
-                  size={20}
-                  color={colors.textSecondary}
+            {/* Email */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Email</Text>
+              <View style={[styles.fieldWrap, emailFocused && styles.fieldWrapFocused]}>
+                <TextInput
+                  style={styles.fieldInput}
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="you@example.com"
+                  placeholderTextColor={colors.textDisabled}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="email"
+                  onFocus={() => setEmailFocused(true)}
+                  onBlur={() => setEmailFocused(false)}
                 />
-              </TouchableOpacity>
+              </View>
             </View>
+
+            {/* Password */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Password</Text>
+              <View style={[styles.fieldWrap, passwordFocused && styles.fieldWrapFocused]}>
+                <TextInput
+                  style={[styles.fieldInput, styles.fieldInputPassword]}
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder={isSignIn ? 'Your password' : 'Min 8 characters'}
+                  placeholderTextColor={colors.textDisabled}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete={isSignIn ? 'password' : 'new-password'}
+                  onFocus={() => setPasswordFocused(true)}
+                  onBlur={() => setPasswordFocused(false)}
+                />
+                <TouchableOpacity
+                  style={styles.eyeBtn}
+                  onPress={() => setShowPassword(v => !v)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons
+                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={19}
+                    color={colors.textMuted}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Forgot password */}
+            {isSignIn && (
+              <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotBtn}>
+                <Text style={styles.forgotText}>Forgot password?</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
-          {mode === 'signin' && (
-            <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotBtn}>
-              <Text style={styles.forgotText}>Forgot password?</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Email Auth CTA */}
+          {/* ── Primary CTA ── */}
           <TouchableOpacity
-            style={[styles.primaryBtn, loading && styles.primaryBtnDisabled]}
+            style={[styles.primaryBtn, loading && styles.btnDisabled]}
             onPress={handleEmailAuth}
             disabled={loading}
+            activeOpacity={0.88}
           >
             {loading ? (
               <ActivityIndicator color={colors.background} />
             ) : (
               <Text style={styles.primaryBtnText}>
-                {mode === 'signup' ? 'Create Account' : 'Sign In'}
+                {isSignIn ? 'Sign In' : 'Create Account'}
               </Text>
             )}
           </TouchableOpacity>
 
+          {/* Mode switch */}
+          <TouchableOpacity
+            style={styles.modeSwitch}
+            onPress={() => setMode(isSignIn ? 'signup' : 'signin')}
+          >
+            <Text style={styles.modeSwitchText}>
+              {isSignIn ? "Don't have an account? " : 'Already have an account? '}
+              <Text style={styles.modeSwitchAction}>
+                {isSignIn ? 'Create one' : 'Sign in'}
+              </Text>
+            </Text>
+          </TouchableOpacity>
+
+          {/* ── Divider ── */}
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
             <Text style={styles.dividerText}>or</Text>
             <View style={styles.dividerLine} />
           </View>
 
-          {/* Continue Locally — primary Stage 1 path */}
+          {/* ── Continue locally ── */}
           <TouchableOpacity
-            style={[styles.localBtn, localLoading && styles.primaryBtnDisabled]}
+            style={[styles.localBtn, localLoading && styles.btnDisabled]}
             onPress={handleContinueLocally}
             disabled={localLoading}
+            activeOpacity={0.8}
           >
             {localLoading ? (
-              <ActivityIndicator color={colors.textPrimary} />
+              <ActivityIndicator color={colors.textSecondary} size="small" />
             ) : (
               <>
-                <Ionicons name="phone-portrait-outline" size={18} color={colors.textPrimary} />
+                <Ionicons name="phone-portrait-outline" size={17} color={colors.textSecondary} />
                 <Text style={styles.localBtnText}>Continue without an account</Text>
               </>
             )}
           </TouchableOpacity>
 
           <Text style={styles.localNote}>
-            Your data stays on this device. You can add an account later to sync across devices.
+            Your data stays on this device. You can add an account later to sync across devices and back up your history.
           </Text>
 
-          <Text style={styles.betaNote}>Free during beta — no subscription required</Text>
+          <Text style={styles.betaNote}>Free during beta · No subscription required</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -233,110 +249,173 @@ export default function LoginScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
+
+  bgDecor: {
+    position: 'absolute',
+    top: '15%',
+    alignSelf: 'center',
+    zIndex: 0,
+  },
+
   scroll: {
     flexGrow: 1,
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.xxl,
-    justifyContent: 'center',
+    paddingTop: spacing.xxxl,
+    paddingBottom: spacing.xxl,
   },
-  logoContainer: { alignItems: 'center', marginBottom: spacing.xxxl },
-  logoMark: {
-    width: 72,
-    height: 72,
-    borderRadius: 20,
-    backgroundColor: colors.primary,
+
+  crashBanner: {
+    backgroundColor: colors.errorBg, borderWidth: 1, borderColor: colors.error,
+    borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.lg,
+  },
+  crashTitle: { color: colors.error, fontWeight: fontWeight.bold, marginBottom: 4, fontSize: fontSize.sm },
+  crashMsg: { color: colors.error, fontSize: fontSize.xs },
+  crashStack: { color: colors.textMuted, fontSize: 10, marginTop: spacing.xs },
+  crashDismiss: { color: colors.error, fontSize: fontSize.xs, marginTop: spacing.sm },
+
+  // Brand block
+  brand: {
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
+    gap: spacing.sm,
+    paddingBottom: spacing.xl,
   },
-  logoV: { fontSize: 40, fontWeight: fontWeight.black, color: colors.background, lineHeight: 44 },
-  appName: {
-    fontSize: fontSize.xxxl,
+  brandMark: {
+    marginBottom: spacing.sm,
+  },
+  brandName: {
+    fontSize: 38,
     fontWeight: fontWeight.black,
     color: colors.textPrimary,
-    letterSpacing: 4,
+    letterSpacing: -0.5,
+    lineHeight: 42,
   },
-  tagline: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: spacing.xs, letterSpacing: 0.5 },
-  modeToggle: {
-    flexDirection: 'row',
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: 4,
-    marginBottom: spacing.xl,
-  },
-  modeBtn: { flex: 1, paddingVertical: spacing.md, borderRadius: radius.md, alignItems: 'center' },
-  modeBtnActive: { backgroundColor: colors.primary },
-  modeBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textSecondary },
-  modeBtnTextActive: { color: colors.background },
-  inputGroup: { marginBottom: spacing.lg },
-  inputLabel: {
+  brandTagline: {
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
-    color: colors.textSecondary,
+    color: colors.textMuted,
+    letterSpacing: 0.3,
+  },
+  brandDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginBottom: spacing.xxl,
+  },
+
+  // Form
+  formBlock: { gap: spacing.lg, marginBottom: spacing.xl },
+  formTitle: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
     marginBottom: spacing.xs,
   },
-  input: {
+  fieldGroup: { gap: spacing.xs },
+  fieldLabel: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.textMuted,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  fieldWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.surface,
     borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+  },
+  fieldWrapFocused: {
+    borderColor: colors.primary + '80',
+    backgroundColor: colors.surface,
+  },
+  fieldInput: {
+    flex: 1,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md + 2,
     fontSize: fontSize.md,
     color: colors.textPrimary,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
-  passwordRow: { position: 'relative' },
-  passwordInput: { paddingRight: 52 },
+  fieldInputPassword: { paddingRight: 48 },
   eyeBtn: {
     position: 'absolute',
-    right: spacing.lg,
-    top: 0,
-    bottom: 0,
+    right: spacing.md,
+    top: 0, bottom: 0,
     justifyContent: 'center',
+    paddingHorizontal: 4,
   },
-  forgotBtn: { alignSelf: 'flex-end', marginBottom: spacing.xl, marginTop: -spacing.sm },
-  forgotText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.medium },
+  forgotBtn: {
+    alignSelf: 'flex-end',
+    marginTop: -spacing.sm,
+  },
+  forgotText: {
+    fontSize: fontSize.sm,
+    color: colors.primary,
+    fontWeight: fontWeight.medium,
+  },
+
+  // Primary button
   primaryBtn: {
     backgroundColor: colors.primary,
     borderRadius: radius.lg,
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.lg + 2,
     alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  btnDisabled: { opacity: 0.55 },
+  primaryBtnText: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.background,
+    letterSpacing: 0.3,
+  },
+
+  // Mode switch
+  modeSwitch: {
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
     marginBottom: spacing.xl,
   },
-  primaryBtnDisabled: { opacity: 0.6 },
-  primaryBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.background },
+  modeSwitchText: {
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+  },
+  modeSwitchAction: {
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
+  },
+
+  // Divider
   divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.xl,
+    flexDirection: 'row', alignItems: 'center',
+    gap: spacing.md, marginBottom: spacing.xl,
   },
   dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
-  dividerText: { fontSize: fontSize.sm, color: colors.textMuted },
+  dividerText: { fontSize: fontSize.xs, color: colors.textMuted },
+
+  // Local mode
   localBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.sm, borderRadius: radius.lg,
     paddingVertical: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: 1.5, borderColor: colors.border,
+    marginBottom: spacing.md,
   },
-  localBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  localBtnText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.medium,
+    color: colors.textSecondary,
+  },
   localNote: {
     textAlign: 'center',
     fontSize: fontSize.xs,
     color: colors.textMuted,
-    marginTop: spacing.md,
     lineHeight: 18,
     paddingHorizontal: spacing.sm,
+    marginBottom: spacing.xl,
   },
   betaNote: {
     textAlign: 'center',
     fontSize: fontSize.xs,
-    color: colors.textMuted,
-    marginTop: spacing.xl,
+    color: colors.textDisabled,
   },
 });
