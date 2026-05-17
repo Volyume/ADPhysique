@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -147,8 +147,16 @@ function AuthStack() {
 
 const LOCAL_USER_KEY = '@volyume_local_user_id';
 
+const SPLASH_MIN_MS = 2000;
+
 export default function RootNavigator() {
   const { user, isAuthLoading, setUser, setSession, setAuthLoading } = useAppStore();
+  const [splashReady, setSplashReady] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setSplashReady(true), SPLASH_MIN_MS);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     async function bootstrap() {
@@ -200,7 +208,7 @@ export default function RootNavigator() {
     return () => subscription?.unsubscribe();
   }, []);
 
-  if (isAuthLoading) {
+  if (isAuthLoading || !splashReady) {
     return <SplashScreen />;
   }
 
