@@ -146,6 +146,58 @@ async function _doInit() {
     CREATE INDEX IF NOT EXISTS idx_mesocycles_user ON mesocycles(user_id);
   `);
 
+  // Nutrition & body data tables (idempotent)
+  await _db.execAsync(`
+    CREATE TABLE IF NOT EXISTS nutrition_targets (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      bmr REAL,
+      tdee REAL,
+      target_kcal REAL,
+      protein_g REAL,
+      carbs_g REAL,
+      fat_g REAL,
+      phase TEXT,
+      bmr_method TEXT,
+      activity_level TEXT,
+      confidence TEXT,
+      warnings TEXT,
+      gdpr_consented INTEGER DEFAULT 0,
+      created_at INTEGER,
+      updated_at INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS body_metric_log (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      logged_at INTEGER,
+      weight_kg REAL,
+      body_fat_percent REAL,
+      body_fat_source TEXT,
+      waist_cm REAL,
+      chest_cm REAL,
+      hips_cm REAL,
+      thigh_cm REAL,
+      arm_cm REAL,
+      notes TEXT,
+      created_at INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS user_body_profile (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL UNIQUE,
+      sex TEXT,
+      date_of_birth TEXT,
+      height_cm REAL,
+      experience_level TEXT,
+      training_age_years REAL,
+      primary_goal TEXT,
+      gdpr_consented INTEGER DEFAULT 0,
+      created_at INTEGER,
+      updated_at INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_nutrition_user ON nutrition_targets(user_id);
+    CREATE INDEX IF NOT EXISTS idx_body_log_user ON body_metric_log(user_id, logged_at);
+  `);
+
   // Backward-compatible column migrations
   const colMigrations = [
     'ALTER TABLE routine_exercises ADD COLUMN starting_weight REAL',
@@ -182,7 +234,7 @@ async function db() {
   return _db || initDatabase();
 }
 
-// ─── Exercises ─────────────────────────────────────────────────────────────────────────────
+// ─── Exercises ───────────────────────────────────────────────────────────────────────────────────
 
 export async function getAllExercises() {
   const d = await db();
@@ -236,7 +288,7 @@ export async function insertExercise(data) {
   return { id, ...data, createdAt: now, updatedAt: now };
 }
 
-// ─── Workouts ────────────────────────────────────────────────────────────────────────────────
+// ─── Workouts ─────────────────────────────────────────────────────────────────────────────────────
 
 export async function getAllWorkouts(userId) {
   const d = await db();
@@ -294,7 +346,7 @@ export async function updateWorkout(id, data) {
   await d.runAsync(`UPDATE workouts SET ${fields.join(', ')} WHERE id = ?`, values);
 }
 
-// ─── Workout Sets ─────────────────────────────────────────────────────────────────────────────
+// ─── Workout Sets ──────────────────────────────────────────────────────────────────────────────────────
 
 export async function getAllWorkoutSets(userId) {
   const d = await db();
@@ -374,7 +426,7 @@ export async function createWorkoutSet(data) {
   return { id, ...data, createdAt: now, updatedAt: now };
 }
 
-// ─── Routines ─────────────────────────────────────────────────────────────────────────────
+// ─── Routines ───────────────────────────────────────────────────────────────────────────────────
 
 export async function getAllRoutines(userId) {
   const d = await db();
@@ -411,7 +463,7 @@ export async function softDeleteRoutine(id) {
   );
 }
 
-// ─── Programmes ───────────────────────────────────────────────────────────────────────────────
+// ─── Programmes ───────────────────────────────────────────────────────────────────────────────────────
 
 export async function createProgramme(userId, name, description = null, isLibrary = 0) {
   const d = await db();
@@ -451,7 +503,7 @@ export async function copyRoutineFromLibrary(routineId, userId) {
   return { ...newRoutine, sourceRoutineId: routineId, isLibrary: 0 };
 }
 
-// ─── Routine Exercises ────────────────────────────────────────────────────────────────────────
+// ─── Routine Exercises ────────────────────────────────────────────────────────────────────────────────────
 
 export async function getRoutineExercisesWithDetails(routineId) {
   const d = await db();
@@ -570,7 +622,7 @@ export async function removeExerciseFromRoutine(id) {
   await d.runAsync('DELETE FROM routine_exercises WHERE id = ?', [id]);
 }
 
-// ─── Plans (active plan logic, workout templates) ─────────────────────────────
+// ─── Plans (active plan logic, workout templates) ────────────────────
 
 export async function getActivePlan(userId) {
   const d = await db();
@@ -736,7 +788,7 @@ export async function updateProgrammeName(id, name) {
   await d.runAsync('UPDATE programmes SET name = ?, updated_at = ? WHERE id = ?', [name, Date.now(), id]);
 }
 
-// ─── Mesocycles ─────────────────────────────────────────────────────────────────────────────
+// ─── Mesocycles ───────────────────────────────────────────────────────────────────────────────────
 
 export async function getAllMesocycles(userId) {
   const d = await db();
@@ -772,4 +824,142 @@ export async function createMesocycle(data) {
     ],
   );
   return { id, ...data, createdAt: now, updatedAt: now };
+}
+
+// ─── Nutrition Targets ────────────────────────────────────
+
+export async function saveNutritionTargets(userId, targets) {
+  const d = await db();
+  const now = Date.now();
+  const existing = await d.getFirstAsync(
+    'SELECT id FROM nutrition_targets WHERE user_id = ? LIMIT 1',
+    [userId],
+  );
+  if (existing) {
+    await d.runAsync(
+      `UPDATE nutrition_targets SET
+        bmr=?, tdee=?, target_kcal=?, protein_g=?, carbs_g=?, fat_g=?,
+        phase=?, bmr_method=?, activity_level=?, confidence=?, warnings=?,
+        gdpr_consented=?, updated_at=?
+       WHERE user_id=?`,
+      [
+        targets.bmr ?? null, targets.tdee ?? null, targets.targetKcal ?? null,
+        targets.proteinG ?? null, targets.carbsG ?? null, targets.fatG ?? null,
+        targets.phase ?? null, targets.bmrMethod ?? null, targets.activityLevel ?? null,
+        targets.confidence ?? null,
+        targets.warnings ? JSON.stringify(targets.warnings) : null,
+        targets.gdprConsented ? 1 : 0,
+        now, userId,
+      ],
+    );
+    return existing.id;
+  }
+  const id = uid();
+  await d.runAsync(
+    `INSERT INTO nutrition_targets
+      (id, user_id, bmr, tdee, target_kcal, protein_g, carbs_g, fat_g,
+       phase, bmr_method, activity_level, confidence, warnings, gdpr_consented, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id, userId,
+      targets.bmr ?? null, targets.tdee ?? null, targets.targetKcal ?? null,
+      targets.proteinG ?? null, targets.carbsG ?? null, targets.fatG ?? null,
+      targets.phase ?? null, targets.bmrMethod ?? null, targets.activityLevel ?? null,
+      targets.confidence ?? null,
+      targets.warnings ? JSON.stringify(targets.warnings) : null,
+      targets.gdprConsented ? 1 : 0, now, now,
+    ],
+  );
+  return id;
+}
+
+export async function getNutritionTargets(userId) {
+  const d = await db();
+  const row = await d.getFirstAsync(
+    'SELECT * FROM nutrition_targets WHERE user_id = ? LIMIT 1',
+    [userId],
+  );
+  if (!row) return null;
+  const result = rowToCamel(row);
+  if (result.warnings && typeof result.warnings === 'string') {
+    try { result.warnings = JSON.parse(result.warnings); } catch { result.warnings = []; }
+  }
+  return result;
+}
+
+// ─── Body Metrics ─────────────────────────────────────────────
+
+export async function logBodyMetric(userId, data) {
+  const d = await db();
+  const id = uid();
+  const now = Date.now();
+  await d.runAsync(
+    `INSERT INTO body_metric_log
+      (id, user_id, logged_at, weight_kg, body_fat_percent, body_fat_source,
+       waist_cm, chest_cm, hips_cm, thigh_cm, arm_cm, notes, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id, userId, data.loggedAt ?? now,
+      data.weightKg ?? null, data.bodyFatPercent ?? null, data.bodyFatSource ?? null,
+      data.waistCm ?? null, data.chestCm ?? null, data.hipsCm ?? null,
+      data.thighCm ?? null, data.armCm ?? null, data.notes ?? null, now,
+    ],
+  );
+  return { id, userId, createdAt: now, ...data };
+}
+
+export async function getBodyMetricLog(userId, limitRows = 90) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    'SELECT * FROM body_metric_log WHERE user_id = ? ORDER BY logged_at DESC LIMIT ?',
+    [userId, limitRows],
+  );
+  return rows.map(rowToCamel);
+}
+
+// ─── User Body Profile ────────────────────────────────────────────
+
+export async function saveUserBodyProfile(userId, profile) {
+  const d = await db();
+  const now = Date.now();
+  const existing = await d.getFirstAsync(
+    'SELECT id FROM user_body_profile WHERE user_id = ? LIMIT 1',
+    [userId],
+  );
+  if (existing) {
+    await d.runAsync(
+      `UPDATE user_body_profile SET
+        sex=?, date_of_birth=?, height_cm=?, experience_level=?,
+        training_age_years=?, primary_goal=?, gdpr_consented=?, updated_at=?
+       WHERE user_id=?`,
+      [
+        profile.sex ?? null, profile.dateOfBirth ?? null, profile.heightCm ?? null,
+        profile.experienceLevel ?? null, profile.trainingAgeYears ?? null,
+        profile.primaryGoal ?? null, profile.gdprConsented ? 1 : 0, now, userId,
+      ],
+    );
+    return existing.id;
+  }
+  const id = uid();
+  await d.runAsync(
+    `INSERT INTO user_body_profile
+      (id, user_id, sex, date_of_birth, height_cm, experience_level,
+       training_age_years, primary_goal, gdpr_consented, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id, userId, profile.sex ?? null, profile.dateOfBirth ?? null, profile.heightCm ?? null,
+      profile.experienceLevel ?? null, profile.trainingAgeYears ?? null,
+      profile.primaryGoal ?? null, profile.gdprConsented ? 1 : 0, now, now,
+    ],
+  );
+  return id;
+}
+
+export async function getUserBodyProfile(userId) {
+  const d = await db();
+  const row = await d.getFirstAsync(
+    'SELECT * FROM user_body_profile WHERE user_id = ? LIMIT 1',
+    [userId],
+  );
+  return rowToCamel(row);
 }
