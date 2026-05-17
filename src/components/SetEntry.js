@@ -41,6 +41,7 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
             <Text style={styles.stepBtnText}>−</Text>
           </TouchableOpacity>
           <TextInput
+            testID="volyume-weight-input"
             style={styles.valueInput}
             value={String(weight || '')}
             onChangeText={v => {
@@ -65,6 +66,7 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
             <Text style={styles.stepBtnText}>−</Text>
           </TouchableOpacity>
           <TextInput
+            testID="volyume-reps-input"
             style={styles.valueInput}
             value={String(reps || '')}
             onChangeText={v => {
@@ -82,7 +84,7 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
       </View>
 
       {/* Set Type — compact inline row */}
-      <TouchableOpacity style={styles.setTypeRow} onPress={onOpenSetTypePicker} activeOpacity={0.7}>
+      <TouchableOpacity testID="volyume-set-type-btn" style={styles.setTypeRow} onPress={onOpenSetTypePicker} activeOpacity={0.7}>
         <Text style={styles.setTypeLabel}>Set type</Text>
         <View style={styles.setTypeRight}>
           <Text style={styles.setTypeValue}>{setTypeLabel}</Text>

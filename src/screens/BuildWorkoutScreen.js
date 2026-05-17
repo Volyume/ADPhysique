@@ -114,7 +114,7 @@ export default function BuildWorkoutScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleSkip} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <TouchableOpacity testID="volyume-btn-skip-setup" onPress={handleSkip} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Text style={styles.skipText}>Skip Setup</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Build Workout</Text>
@@ -230,7 +230,7 @@ export default function BuildWorkoutScreen({ navigation }) {
           </View>
         ))}
 
-        <TouchableOpacity style={styles.addBtn} onPress={openPicker}>
+        <TouchableOpacity testID="volyume-btn-add-exercise" style={styles.addBtn} onPress={openPicker}>
           <Ionicons name="add" size={20} color={colors.primary} />
           <Text style={styles.addBtnText}>Add Exercise</Text>
         </TouchableOpacity>
@@ -240,6 +240,7 @@ export default function BuildWorkoutScreen({ navigation }) {
 
       <View style={styles.footer}>
         <TouchableOpacity
+          testID="volyume-btn-start-training"
           style={[styles.startBtn, (starting || exercises.length === 0) && styles.startBtnDisabled]}
           onPress={handleStartTraining}
           disabled={starting || exercises.length === 0}
