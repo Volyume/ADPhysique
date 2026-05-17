@@ -13,8 +13,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { generatePlan, GOAL_LABELS, SPLIT_LABELS } from '../lib/planEngine';
 import { getPlanNutritionContext } from '../lib/nutritionEngine';
+
+const NUTRITION_STORAGE_KEY = '@volyume_nutrition_targets';
 import {
   createProgramme,
   createRoutine,
@@ -253,9 +256,19 @@ export default function CoachBuilderScreen({ navigation, route }) {
 
     await new Promise(resolve => setTimeout(resolve, 300));
 
+    let nutritionContext = null;
+    try {
+      const raw = await AsyncStorage.getItem(NUTRITION_STORAGE_KEY);
+      if (raw) {
+        const targets = JSON.parse(raw);
+        nutritionContext = getPlanNutritionContext(targets);
+      }
+    } catch (_e) {}
+
     const result = generatePlan({
       ...inputs,
-      nutritionPhase: inputs.nutritionPhase ?? nutritionPhaseFromRoute,
+      nutritionPhase: inputs.nutritionPhase ?? nutritionPhaseFromRoute ?? nutritionContext?.phaseType ?? null,
+      nutritionContext,
     });
     setPlan(result);
     setPlanName(result.name);

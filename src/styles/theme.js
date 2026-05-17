@@ -1,34 +1,44 @@
 export const colors = {
-  background: '#0D0D0D',
-  surface: '#1A1A1A',
-  surface2: '#252525',
-  surface3: '#2E2E2E',
-  border: '#333333',
-  borderLight: '#404040',
+  // Obsidian Precision — deep neutral backgrounds with steel-blue undertones
+  background: '#0B0D10',
+  surface: '#131820',
+  surface2: '#1A2230',
+  surface3: '#212C3A',
+  border: '#283040',
+  borderLight: '#364050',
 
-  primary: '#00E5FF',
-  primaryDim: '#0097A7',
-  primaryBg: 'rgba(0, 229, 255, 0.1)',
+  // Primary accent — electric blue, precise, clinical
+  primary: '#00B4FF',
+  primaryDim: '#0070A8',
+  primaryBg: 'rgba(0, 180, 255, 0.10)',
 
-  success: '#4CAF50',
-  successBg: 'rgba(76, 175, 80, 0.15)',
-  warning: '#FFC107',
-  warningBg: 'rgba(255, 193, 7, 0.15)',
-  error: '#F44336',
-  errorBg: 'rgba(244, 67, 54, 0.15)',
+  // Semantic status
+  success: '#22C55E',
+  successBg: 'rgba(34, 197, 94, 0.12)',
+  warning: '#F59E0B',
+  warningBg: 'rgba(245, 158, 11, 0.12)',
+  error: '#EF4444',
+  errorBg: 'rgba(239, 68, 68, 0.12)',
 
-  textPrimary: '#FFFFFF',
-  textSecondary: '#9E9E9E',
-  textMuted: '#616161',
-  textDisabled: '#424242',
+  // Text hierarchy
+  textPrimary: '#F0F4F8',
+  textSecondary: '#8A9BB0',
+  textMuted: '#4A5870',
+  textDisabled: '#2E3A48',
 
-  tabBar: '#111111',
-  tabBarBorder: '#222222',
-  inputBg: '#1E1E1E',
+  // Tab bar
+  tabBar: '#0E1218',
+  tabBarBorder: '#1C2530',
+  inputBg: '#151D28',
 
-  gold: '#FFD700',
-  silver: '#C0C0C0',
-  bronze: '#CD7F32',
+  // Trophy tier
+  gold: '#F5C842',
+  silver: '#A8B8C8',
+  bronze: '#C07840',
+
+  // Chart / volume status colours (semantic only, not used for generic UI)
+  chartLine: '#00B4FF',
+  chartFill: 'rgba(0, 180, 255, 0.08)',
 };
 
 export const spacing = {
@@ -100,4 +110,12 @@ export const volumeColors = {
   optimal: colors.success,
   overMav: colors.warning,
   overMrv: colors.error,
+};
+
+// Convenience: consistent icon button size used across screens
+export const iconSize = {
+  sm: 16,
+  md: 20,
+  lg: 24,
+  xl: 32,
 };

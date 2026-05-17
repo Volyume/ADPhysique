@@ -14,15 +14,34 @@ try { FileSystem = require('expo-file-system'); } catch (_) {}
 try { Sharing = require('expo-sharing'); } catch (_) {}
 
 // ---------- Canvas HTML that renders in the hidden WebView ----------
+// Obsidian Precision brand palette (mirrors theme.js but as static hex for canvas use)
+const BRAND = {
+  bg0:     '#0B0D10',
+  bg1:     '#131820',
+  surface: '#1A2230',
+  border:  '#283040',
+  accent:  '#00B4FF',
+  accentA: 'rgba(0,180,255,0.12)',
+  text:    '#F0F4F8',
+  muted:   '#4A5870',
+  dim:     '#8A9BB0',
+};
+
 const WEBVIEW_HTML = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 </head>
-<body style="margin:0;padding:0;background:#000;">
+<body style="margin:0;padding:0;background:#0B0D10;">
 <canvas id="c" style="display:block;"></canvas>
 <script>
+var B = {
+  bg0:'#0B0D10', bg1:'#131820', surface:'#1A2230', border:'#283040',
+  accent:'#00B4FF', accentA:'rgba(0,180,255,0.10)',
+  text:'#F0F4F8', muted:'#4A5870', dim:'#8A9BB0'
+};
+
 function lsText(ctx, text, x, y, ls) {
   String(text).split('').reduce(function(cx, ch) {
     ctx.fillText(ch, cx, y);
@@ -49,70 +68,94 @@ function wrapText(ctx, text, maxW) {
   return lines;
 }
 
+// Draw abstract V-mark (5 bars at varying heights)
+function drawBrandMark(ctx, x, y, sz, color) {
+  var barW = Math.round(sz * 0.14);
+  var gap  = Math.round(sz * 0.11);
+  var fracs = [1.0, 0.72, 0.44, 0.72, 1.0];
+  ctx.fillStyle = color;
+  fracs.forEach(function(f, i) {
+    var bh = Math.round(f * sz);
+    var bx = x + i * (barW + gap);
+    var by = y + sz - bh;
+    var br = Math.round(barW / 2);
+    rrect(ctx, bx, by, barW, bh, br);
+    ctx.fillStyle = (i === 2) ? color + '88' : color;
+    ctx.fill();
+    ctx.fillStyle = color;
+  });
+}
+
 function drawSession(ctx, W, H, p) {
   var pad = Math.round(W * 0.074);
   var grad = ctx.createLinearGradient(0,0,W,H);
-  grad.addColorStop(0,'#131313'); grad.addColorStop(1,'#1A1A1A');
+  grad.addColorStop(0, B.bg0); grad.addColorStop(1, B.bg1);
   ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
 
-  ctx.fillStyle='#00E5FF'; ctx.fillRect(0,0,W,6);
-  ctx.fillStyle='#00E5FF'; ctx.fillRect(0,H-4,W,4);
+  // Accent line top
+  ctx.fillStyle=B.accent; ctx.fillRect(0,0,W,6);
+  // Subtle bottom
+  ctx.fillStyle=B.border; ctx.fillRect(0,H-2,W,2);
 
-  var y = pad + 56;
-  ctx.fillStyle='#3A3A3A'; ctx.font='bold 26px Arial,sans-serif';
-  lsText(ctx,'VOLYUME',pad,y,3.5);
-  y += 28;
+  var y = pad + 60;
+
+  // Brand mark + wordmark
+  drawBrandMark(ctx, pad, y - 44, 34, B.accent + '60');
+  ctx.fillStyle=B.muted; ctx.font='600 24px Arial,sans-serif';
+  lsText(ctx,'VOLYUME', pad + 34 + 8, y - 20, 3.5);
+  y += 8;
 
   if (p.showDate && p.date) {
-    ctx.fillStyle='#545454'; ctx.font='400 22px Arial,sans-serif';
-    ctx.fillText(p.date,pad,y+22); y += 52;
+    ctx.fillStyle=B.muted; ctx.font='400 22px Arial,sans-serif';
+    ctx.fillText(p.date, pad, y+22); y += 52;
   }
-  y += 36;
+  y += 32;
 
   if (p.showPlanName && p.planName) {
-    ctx.fillStyle='#00E5FF'; ctx.font='bold 20px Arial,sans-serif';
-    lsText(ctx,p.planName.toUpperCase(),pad,y,2.5); y += 46;
+    ctx.fillStyle=B.accent; ctx.font='700 20px Arial,sans-serif';
+    lsText(ctx, p.planName.toUpperCase(), pad, y, 2); y += 46;
   }
 
-  var heroSize = p.isSquare ? 64 : 72;
-  ctx.fillStyle='#FFFFFF'; ctx.font='900 '+heroSize+'px Arial,sans-serif';
+  var heroSize = p.isSquare ? 62 : 68;
+  ctx.fillStyle=B.text; ctx.font='900 '+heroSize+'px Arial,sans-serif';
   var heroLines = wrapText(ctx, p.sessionName||'Session Complete', W - pad*2);
   heroLines.forEach(function(l) {
-    ctx.fillText(l,pad,y+Math.round(heroSize*0.86));
+    ctx.fillText(l, pad, y+Math.round(heroSize*0.86));
     y += Math.round(heroSize*1.12);
   });
   y += 20;
 
   if (p.showExercises && p.exercises && p.exercises.length > 0) {
-    ctx.fillStyle='#686868'; ctx.font='400 24px Arial,sans-serif';
-    ctx.fillText(p.exercises.slice(0,4).join('  ·  '),pad,y); y += 48;
+    ctx.fillStyle=B.dim; ctx.font='400 22px Arial,sans-serif';
+    ctx.fillText(p.exercises.slice(0,4).join('  ·  '), pad, y); y += 48;
   }
 
-  var stats = [{label:'WORKING SETS',value:String(p.workingSets||0)},{label:'DURATION',value:(p.duration||0)+'m'}];
+  var stats = [{label:'SETS',value:String(p.workingSets||0)},{label:'DURATION',value:(p.duration||0)+'m'}];
   if (p.showVolume) stats.push({label:'VOLUME',value:((p.tonnage||0)/1000).toFixed(1)+'t'});
-  if (p.isSquare && p.prCount>0) stats.push({label:'NEW PRs',value:String(p.prCount)});
+  if (p.isSquare && p.prCount>0) stats.push({label:'PRs',value:String(p.prCount)});
 
-  var boxY = p.isSquare ? H - pad - 140 : y + 44;
-  var gap = 16; var boxH = 128;
+  var boxY = p.isSquare ? H - pad - 150 : y + 44;
+  var gap = 14; var boxH = 130;
   var boxW = Math.floor((W - pad*2 - gap*(stats.length-1)) / stats.length);
-  var valSize = stats.length > 3 ? 38 : 46;
+  var valSize = stats.length > 3 ? 40 : 48;
 
   stats.forEach(function(s,i) {
     var bx = pad + i*(boxW+gap);
-    ctx.fillStyle='#1E1E1E'; rrect(ctx,bx,boxY,boxW,boxH,14); ctx.fill();
-    ctx.strokeStyle='#2C2C2C'; ctx.lineWidth=1; rrect(ctx,bx,boxY,boxW,boxH,14); ctx.stroke();
-    ctx.fillStyle='#FFFFFF'; ctx.font='900 '+valSize+'px Arial,sans-serif';
-    ctx.textAlign='center'; ctx.fillText(s.value,bx+boxW/2,boxY+Math.round(boxH*0.52));
-    ctx.fillStyle='#424242'; ctx.font='bold 16px Arial,sans-serif';
-    ctx.fillText(s.label,bx+boxW/2,boxY+boxH-16); ctx.textAlign='left';
+    ctx.fillStyle=B.surface; rrect(ctx,bx,boxY,boxW,boxH,16); ctx.fill();
+    ctx.strokeStyle=B.border; ctx.lineWidth=1.5; rrect(ctx,bx,boxY,boxW,boxH,16); ctx.stroke();
+    ctx.fillStyle=B.text; ctx.font='900 '+valSize+'px Arial,sans-serif';
+    ctx.textAlign='center'; ctx.fillText(s.value, bx+boxW/2, boxY+Math.round(boxH*0.54));
+    ctx.fillStyle=B.muted; ctx.font='600 15px Arial,sans-serif';
+    ctx.fillText(s.label, bx+boxW/2, boxY+boxH-18); ctx.textAlign='left';
   });
 
   if (!p.isSquare && p.prCount>0) {
-    var by2 = boxY+boxH+36;
-    ctx.fillStyle='rgba(0,229,255,0.12)';
-    rrect(ctx,pad,by2,256,54,27); ctx.fill();
-    ctx.fillStyle='#00E5FF'; ctx.font='bold 22px Arial,sans-serif'; ctx.textAlign='center';
-    ctx.fillText(p.prCount+' NEW PR'+(p.prCount!==1?'s':''),pad+128,by2+34);
+    var by2 = boxY+boxH+38;
+    ctx.fillStyle=B.accentA;
+    rrect(ctx,pad,by2,270,56,28); ctx.fill();
+    ctx.strokeStyle=B.accent+'50'; ctx.lineWidth=1; rrect(ctx,pad,by2,270,56,28); ctx.stroke();
+    ctx.fillStyle=B.accent; ctx.font='700 22px Arial,sans-serif'; ctx.textAlign='center';
+    ctx.fillText(p.prCount+' NEW PR'+(p.prCount!==1?'s':''), pad+135, by2+35);
     ctx.textAlign='left';
   }
 }
@@ -120,37 +163,38 @@ function drawSession(ctx, W, H, p) {
 function drawPR(ctx, W, H, p) {
   var pad = Math.round(W * 0.074);
   var grad = ctx.createLinearGradient(0,0,W,H);
-  grad.addColorStop(0,'#131313'); grad.addColorStop(1,'#1A1A1A');
+  grad.addColorStop(0, B.bg0); grad.addColorStop(1, B.bg1);
   ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
-  ctx.fillStyle='#00E5FF'; ctx.fillRect(0,0,W,6);
-  ctx.fillStyle='#00E5FF'; ctx.fillRect(0,H-4,W,4);
+  ctx.fillStyle=B.accent; ctx.fillRect(0,0,W,6);
+  ctx.fillStyle=B.border; ctx.fillRect(0,H-2,W,2);
 
-  ctx.fillStyle='#3A3A3A'; ctx.font='bold 26px Arial,sans-serif';
-  lsText(ctx,'VOLYUME',pad,pad+56,3.5);
+  drawBrandMark(ctx, pad, pad + 8, 34, B.accent + '60');
+  ctx.fillStyle=B.muted; ctx.font='600 24px Arial,sans-serif';
+  lsText(ctx,'VOLYUME', pad + 34 + 8, pad + 36, 3.5);
 
-  var midY = Math.round(H * 0.38);
-  ctx.fillStyle='#00E5FF'; ctx.font='bold 22px Arial,sans-serif'; ctx.textAlign='center';
-  lsText(ctx,'NEW PERSONAL RECORD',W/2-ctx.measureText('NEW PERSONAL RECORD').width/2-11,midY,2.2);
+  var midY = Math.round(H * 0.36);
+  ctx.fillStyle=B.accent; ctx.font='700 22px Arial,sans-serif'; ctx.textAlign='center';
+  lsText(ctx,'NEW PERSONAL RECORD', W/2-ctx.measureText('NEW PERSONAL RECORD').width/2-11, midY, 2.2);
 
-  var exSize = p.isSquare ? 54 : 62;
-  ctx.fillStyle='#FFFFFF'; ctx.font='bold '+exSize+'px Arial,sans-serif'; ctx.textAlign='center';
-  var exLines = wrapText(ctx,p.exerciseName||'Exercise',W-pad*2);
-  var ey = midY + 52;
+  var exSize = p.isSquare ? 52 : 60;
+  ctx.fillStyle=B.text; ctx.font='800 '+exSize+'px Arial,sans-serif'; ctx.textAlign='center';
+  var exLines = wrapText(ctx, p.exerciseName||'Exercise', W-pad*2);
+  var ey = midY + 54;
   exLines.forEach(function(l){ ctx.fillText(l,W/2,ey); ey+=Math.round(exSize*1.1); });
 
-  var wSize = p.isSquare ? 100 : 120;
+  var wSize = p.isSquare ? 96 : 112;
   var wStr = p.showPRWeight
     ? (p.weight||'—')+(p.units||'kg')+' × '+(p.reps||'—')
     : (p.reps||'—')+' reps';
-  ctx.fillStyle='#00E5FF'; ctx.font='900 '+wSize+'px Arial,sans-serif';
-  ctx.fillText(wStr,W/2,ey+wSize+4);
+  ctx.fillStyle=B.accent; ctx.font='900 '+wSize+'px Arial,sans-serif';
+  ctx.fillText(wStr, W/2, ey+wSize+4);
 
   var metaParts = [];
   if (p.showDate && p.date) metaParts.push(p.date);
   if (p.showPrevBest && p.previousBest) metaParts.push('Prev: '+p.previousBest+(p.units||'kg'));
   if (metaParts.length) {
-    ctx.fillStyle='#616161'; ctx.font='400 26px Arial,sans-serif';
-    ctx.fillText(metaParts.join('  ·  '),W/2,ey+wSize+68);
+    ctx.fillStyle=B.dim; ctx.font='400 26px Arial,sans-serif';
+    ctx.fillText(metaParts.join('  ·  '), W/2, ey+wSize+68);
   }
   ctx.textAlign='left';
 }
@@ -512,35 +556,35 @@ const styles = StyleSheet.create({
 
   previewCard: {
     alignSelf: 'center', borderRadius: radius.md, overflow: 'hidden',
-    backgroundColor: '#131313', borderWidth: 1, borderColor: colors.border,
+    backgroundColor: '#0B0D10', borderWidth: 1, borderColor: colors.border,
   },
   previewSquare: { width: 260, height: 260 },
   previewStory: { width: 160, height: 284 },
   previewInner: {
-    flex: 1, padding: spacing.md, gap: spacing.xs, backgroundColor: '#131313',
+    flex: 1, padding: spacing.md, gap: spacing.xs, backgroundColor: '#0B0D10',
   },
   previewInnerStory: { padding: spacing.sm },
   previewInnerPR: { justifyContent: 'center' },
   previewTopBar: { height: 2, backgroundColor: colors.primary, marginBottom: spacing.xs },
-  previewBottomBar: { height: 2, backgroundColor: colors.primary, marginTop: 'auto' },
+  previewBottomBar: { height: 1, backgroundColor: colors.border, marginTop: 'auto' },
   previewLogo: {
-    fontSize: fontSize.xs - 1, fontWeight: fontWeight.black, color: '#3A3A3A', letterSpacing: 2,
+    fontSize: fontSize.xs - 1, fontWeight: fontWeight.black, color: colors.textMuted, letterSpacing: 2,
   },
-  previewDate: { fontSize: fontSize.xs - 1, color: '#545454' },
+  previewDate: { fontSize: fontSize.xs - 1, color: colors.textMuted },
   previewPlan: { fontSize: fontSize.xs - 1, color: colors.primary, fontWeight: fontWeight.bold, letterSpacing: 1 },
   previewSessionName: { fontSize: fontSize.md, fontWeight: fontWeight.black, color: colors.textPrimary, lineHeight: 22 },
-  previewExercises: { fontSize: fontSize.xs - 1, color: '#686868' },
+  previewExercises: { fontSize: fontSize.xs - 1, color: colors.textSecondary },
   previewStats: { flexDirection: 'row', gap: spacing.xs, marginTop: 'auto' },
   previewStatBox: {
-    flex: 1, backgroundColor: '#1E1E1E', borderRadius: radius.sm,
-    padding: spacing.xs, alignItems: 'center', borderWidth: 1, borderColor: '#2A2A2A',
+    flex: 1, backgroundColor: colors.surface2, borderRadius: radius.sm,
+    padding: spacing.xs, alignItems: 'center', borderWidth: 1, borderColor: colors.border,
   },
   previewStatValue: { fontSize: fontSize.sm, fontWeight: fontWeight.black, color: colors.textPrimary },
-  previewStatLabel: { fontSize: fontSize.xs - 2, color: '#424242', fontWeight: fontWeight.bold, letterSpacing: 0.5 },
+  previewStatLabel: { fontSize: fontSize.xs - 2, color: colors.textMuted, fontWeight: fontWeight.bold, letterSpacing: 0.5 },
   previewPRLabel: { fontSize: fontSize.xs - 1, color: colors.primary, fontWeight: fontWeight.bold, letterSpacing: 2, marginTop: spacing.xs },
   previewPRExercise: { fontSize: fontSize.md, fontWeight: fontWeight.black, color: colors.textPrimary, lineHeight: 22 },
   previewPRWeight: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.primary },
-  previewPRMeta: { fontSize: fontSize.xs - 1, color: '#616161' },
+  previewPRMeta: { fontSize: fontSize.xs - 1, color: colors.textMuted },
 
   togglesCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg,

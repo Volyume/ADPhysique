@@ -335,19 +335,19 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       </ScrollView>
 
       <View style={[styles.stickyFooter, { paddingBottom: Math.max(spacing.lg, insets.bottom) }]}>
+        {!readOnly && (
+          <TouchableOpacity style={styles.shareFooterBtn} onPress={handleShareCard}>
+            <Ionicons name="share-social-outline" size={18} color={colors.primary} />
+            <Text style={styles.shareFooterBtnText}>Share Session Card</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={[styles.doneBtn, saving && styles.btnDisabled]}
           onPress={handleDone}
           disabled={saving}
         >
-          <Text style={styles.doneBtnText}>Done</Text>
+          <Text style={styles.doneBtnText}>{readOnly ? 'Close' : 'Save & Close'}</Text>
         </TouchableOpacity>
-        {!readOnly && (
-          <TouchableOpacity style={styles.shareFooterBtn} onPress={handleShareCard}>
-            <Ionicons name="share-outline" size={16} color={colors.primary} />
-            <Text style={styles.shareFooterBtnText}>Share Session Card</Text>
-          </TouchableOpacity>
-        )}
       </View>
     </SafeAreaView>
   );

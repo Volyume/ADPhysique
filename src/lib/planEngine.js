@@ -258,10 +258,12 @@ function volMid(experience) {
   return Math.round((min + max) / 2);
 }
 
-// Total weekly sets for a muscle, with weak-point and nutrition modifiers
-function weeklySetTarget(muscle, experience, weakPoints, nutritionPhase, goal) {
+// Total weekly sets for a muscle, with weak-point and nutrition modifiers.
+// inputs._ncMod is an optional extra recovery multiplier from nutritionContext.
+function weeklySetTarget(muscle, experience, weakPoints, nutritionPhase, goal, inputs = {}) {
   const nutritionMod = NUTRITION_VOLUME_MOD[nutritionPhase] ?? 1.0;
-  let sets = volMid(experience) * nutritionMod;
+  const ncMod = inputs._ncMod ?? 1.0;
+  let sets = volMid(experience) * nutritionMod * ncMod;
 
   if (weakPoints.includes(muscle)) {
     // weak_point_spec goal gets 40% extra; general weak-point flag gets 25%
@@ -272,8 +274,8 @@ function weeklySetTarget(muscle, experience, weakPoints, nutritionPhase, goal) {
 }
 
 // Sets per session for a muscle, given how many sessions it appears in
-function setsPerSession(muscle, experience, weakPoints, nutritionPhase, goal, sessions) {
-  const weekly = weeklySetTarget(muscle, experience, weakPoints, nutritionPhase, goal);
+function setsPerSession(muscle, experience, weakPoints, nutritionPhase, goal, sessions, inputs = {}) {
+  const weekly = weeklySetTarget(muscle, experience, weakPoints, nutritionPhase, goal, inputs);
   return Math.max(2, Math.round(weekly / sessions));
 }
 
@@ -331,25 +333,25 @@ function buildFullBody(inputs, effectiveDays) {
       targetMuscles: muscles,
       exercises: [
         makeExercise(pick(getList('quads', 'compound', eq), slot), cKey,
-          setsPerSession('quads', experience, weakPoints, nutritionPhase, goal, effectiveDays),
+          setsPerSession('quads', experience, weakPoints, nutritionPhase, goal, effectiveDays, inputs),
           experience, nutritionPhase),
         makeExercise(pick(getList('hamstrings', 'compound', eq), slot), cKey,
-          setsPerSession('hamstrings', experience, weakPoints, nutritionPhase, goal, effectiveDays),
+          setsPerSession('hamstrings', experience, weakPoints, nutritionPhase, goal, effectiveDays, inputs),
           experience, nutritionPhase),
         makeExercise(pick(getList('chest', 'compound', eq), slot), cKey,
-          setsPerSession('chest', experience, weakPoints, nutritionPhase, goal, effectiveDays),
+          setsPerSession('chest', experience, weakPoints, nutritionPhase, goal, effectiveDays, inputs),
           experience, nutritionPhase),
         makeExercise(pick(getList('back', 'compound', eq), slot), cKey,
-          setsPerSession('back', experience, weakPoints, nutritionPhase, goal, effectiveDays),
+          setsPerSession('back', experience, weakPoints, nutritionPhase, goal, effectiveDays, inputs),
           experience, nutritionPhase),
         makeExercise(pick(getList('shoulders', 'isolation', eq), slot + 1), 'machine',
-          setsPerSession('shoulders', experience, weakPoints, nutritionPhase, goal, effectiveDays),
+          setsPerSession('shoulders', experience, weakPoints, nutritionPhase, goal, effectiveDays, inputs),
           experience, nutritionPhase),
         makeExercise(pick(getList('biceps', 'isolation', eq), slot), 'isolation',
-          setsPerSession('biceps', experience, weakPoints, nutritionPhase, goal, effectiveDays),
+          setsPerSession('biceps', experience, weakPoints, nutritionPhase, goal, effectiveDays, inputs),
           experience, nutritionPhase),
         makeExercise(pick(getList('triceps', 'isolation', eq), slot), 'isolation',
-          setsPerSession('triceps', experience, weakPoints, nutritionPhase, goal, effectiveDays),
+          setsPerSession('triceps', experience, weakPoints, nutritionPhase, goal, effectiveDays, inputs),
           experience, nutritionPhase),
       ],
     };
@@ -369,25 +371,25 @@ function buildUpperLower(inputs) {
     targetMuscles: ['chest', 'back', 'shoulders', 'biceps', 'triceps'],
     exercises: [
       makeExercise(pick(getList('chest', 'compound', eq), slot), cKey,
-        setsPerSession('chest', experience, weakPoints, nutritionPhase, goal, 2),
+        setsPerSession('chest', experience, weakPoints, nutritionPhase, goal, 2, inputs),
         experience, nutritionPhase),
       makeExercise(pick(getList('back', 'compound', eq), slot), cKey,
-        setsPerSession('back', experience, weakPoints, nutritionPhase, goal, 2),
+        setsPerSession('back', experience, weakPoints, nutritionPhase, goal, 2, inputs),
         experience, nutritionPhase),
       makeExercise(pick(getList('shoulders', 'compound', eq), slot), 'machine',
-        setsPerSession('shoulders', experience, weakPoints, nutritionPhase, goal, 2),
+        setsPerSession('shoulders', experience, weakPoints, nutritionPhase, goal, 2, inputs),
         experience, nutritionPhase),
       makeExercise(pick(getList('shoulders', 'isolation', eq), slot), 'isolation',
-        setsPerSession('shoulders', experience, weakPoints, nutritionPhase, goal, 2),
+        setsPerSession('shoulders', experience, weakPoints, nutritionPhase, goal, 2, inputs),
         experience, nutritionPhase, 'Lead with elbows, keep torso upright'),
       makeExercise(pick(getList('back', 'isolation', eq), slot), 'machine',
-        setsPerSession('back', experience, weakPoints, nutritionPhase, goal, 2),
+        setsPerSession('back', experience, weakPoints, nutritionPhase, goal, 2, inputs),
         experience, nutritionPhase),
       makeExercise(pick(getList('biceps', 'isolation', eq), slot), 'isolation',
-        setsPerSession('biceps', experience, weakPoints, nutritionPhase, goal, 2),
+        setsPerSession('biceps', experience, weakPoints, nutritionPhase, goal, 2, inputs),
         experience, nutritionPhase),
       makeExercise(pick(getList('triceps', 'isolation', eq), slot), 'isolation',
-        setsPerSession('triceps', experience, weakPoints, nutritionPhase, goal, 2),
+        setsPerSession('triceps', experience, weakPoints, nutritionPhase, goal, 2, inputs),
         experience, nutritionPhase),
     ],
   });
@@ -398,19 +400,19 @@ function buildUpperLower(inputs) {
     targetMuscles: ['quads', 'hamstrings', 'glutes', 'calves'],
     exercises: [
       makeExercise(pick(getList('quads', 'compound', eq), slot), cKey,
-        setsPerSession('quads', experience, weakPoints, nutritionPhase, goal, 2),
+        setsPerSession('quads', experience, weakPoints, nutritionPhase, goal, 2, inputs),
         experience, nutritionPhase),
       makeExercise(pick(getList('hamstrings', 'compound', eq), slot), cKey,
-        setsPerSession('hamstrings', experience, weakPoints, nutritionPhase, goal, 2),
+        setsPerSession('hamstrings', experience, weakPoints, nutritionPhase, goal, 2, inputs),
         experience, nutritionPhase),
       makeExercise(pick(getList('glutes', 'compound', eq), slot), cKey,
-        setsPerSession('glutes', experience, weakPoints, nutritionPhase, goal, 2),
+        setsPerSession('glutes', experience, weakPoints, nutritionPhase, goal, 2, inputs),
         experience, nutritionPhase),
       makeExercise(pick(getList('quads', 'isolation', eq), slot), 'isolation',
-        setsPerSession('quads', experience, weakPoints, nutritionPhase, goal, 2),
+        setsPerSession('quads', experience, weakPoints, nutritionPhase, goal, 2, inputs),
         experience, nutritionPhase),
       makeExercise(pick(getList('hamstrings', 'isolation', eq), slot), 'isolation',
-        setsPerSession('hamstrings', experience, weakPoints, nutritionPhase, goal, 2),
+        setsPerSession('hamstrings', experience, weakPoints, nutritionPhase, goal, 2, inputs),
         experience, nutritionPhase),
       makeExercise(pick(getList('calves', 'isolation', eq), 0), 'isolation', 3,
         experience, nutritionPhase, null),
@@ -435,21 +437,21 @@ function buildPPL(inputs, effectiveDays) {
     targetMuscles: ['chest', 'shoulders', 'triceps'],
     exercises: [
       makeExercise(pick(getList('chest', 'compound', eq), slot), cKey,
-        setsPerSession('chest', experience, weakPoints, nutritionPhase, goal, 2),
+        setsPerSession('chest', experience, weakPoints, nutritionPhase, goal, 2, inputs),
         experience, nutritionPhase),
       makeExercise(pick(getList('chest', 'compound', eq), slot + 1), cKey,
-        setsPerSession('chest', experience, weakPoints, nutritionPhase, goal, 2),
+        setsPerSession('chest', experience, weakPoints, nutritionPhase, goal, 2, inputs),
         experience, nutritionPhase, 'Incline angle — upper chest emphasis'),
       makeExercise(pick(getList('shoulders', 'compound', eq), slot), 'machine',
-        setsPerSession('shoulders', experience, weakPoints, nutritionPhase, goal, 2),
+        setsPerSession('shoulders', experience, weakPoints, nutritionPhase, goal, 2, inputs),
         experience, nutritionPhase),
       makeExercise(pick(getList('shoulders', 'isolation', eq), slot), 'isolation',
-        setsPerSession('shoulders', experience, weakPoints, nutritionPhase, goal, 2),
+        setsPerSession('shoulders', experience, weakPoints, nutritionPhase, goal, 2, inputs),
         experience, nutritionPhase),
       makeExercise(pick(getList('chest', 'isolation', eq), slot), 'isolation', 3,
         experience, nutritionPhase),
       makeExercise(pick(getList('triceps', 'isolation', eq), slot), 'isolation',
-        setsPerSession('triceps', experience, weakPoints, nutritionPhase, goal, 2),
+        setsPerSession('triceps', experience, weakPoints, nutritionPhase, goal, 2, inputs),
         experience, nutritionPhase),
       makeExercise(pick(getList('triceps', 'isolation', eq), slot + 1), 'isolation', 3,
         experience, nutritionPhase),
@@ -462,18 +464,18 @@ function buildPPL(inputs, effectiveDays) {
     targetMuscles: ['back', 'biceps', 'traps'],
     exercises: [
       makeExercise(pick(getList('back', 'compound', eq), slot), cKey,
-        setsPerSession('back', experience, weakPoints, nutritionPhase, goal, 2),
+        setsPerSession('back', experience, weakPoints, nutritionPhase, goal, 2, inputs),
         experience, nutritionPhase),
       makeExercise(pick(getList('back', 'compound', eq), slot + 1), cKey,
-        setsPerSession('back', experience, weakPoints, nutritionPhase, goal, 2),
+        setsPerSession('back', experience, weakPoints, nutritionPhase, goal, 2, inputs),
         experience, nutritionPhase, 'Row variation — retract scapulae at peak contraction'),
       makeExercise(pick(getList('back', 'isolation', eq), slot), 'machine', 3,
         experience, nutritionPhase),
       makeExercise(pick(getList('shoulders', 'isolation', eq), slot + 1), 'isolation',
-        setsPerSession('shoulders', experience, weakPoints, nutritionPhase, goal, 2),
+        setsPerSession('shoulders', experience, weakPoints, nutritionPhase, goal, 2, inputs),
         experience, nutritionPhase, 'Rear delts — essential for balanced shoulder development'),
       makeExercise(pick(getList('biceps', 'isolation', eq), slot), 'isolation',
-        setsPerSession('biceps', experience, weakPoints, nutritionPhase, goal, 2),
+        setsPerSession('biceps', experience, weakPoints, nutritionPhase, goal, 2, inputs),
         experience, nutritionPhase),
       makeExercise(pick(getList('biceps', 'isolation', eq), slot + 1), 'isolation', 3,
         experience, nutritionPhase),
@@ -488,19 +490,19 @@ function buildPPL(inputs, effectiveDays) {
     targetMuscles: ['quads', 'hamstrings', 'glutes', 'calves'],
     exercises: [
       makeExercise(pick(getList('quads', 'compound', eq), slot), cKey,
-        setsPerSession('quads', experience, weakPoints, nutritionPhase, goal, 2),
+        setsPerSession('quads', experience, weakPoints, nutritionPhase, goal, 2, inputs),
         experience, nutritionPhase),
       makeExercise(pick(getList('hamstrings', 'compound', eq), slot), cKey,
-        setsPerSession('hamstrings', experience, weakPoints, nutritionPhase, goal, 2),
+        setsPerSession('hamstrings', experience, weakPoints, nutritionPhase, goal, 2, inputs),
         experience, nutritionPhase),
       makeExercise(pick(getList('glutes', 'compound', eq), slot), cKey,
-        setsPerSession('glutes', experience, weakPoints, nutritionPhase, goal, 2),
+        setsPerSession('glutes', experience, weakPoints, nutritionPhase, goal, 2, inputs),
         experience, nutritionPhase),
       makeExercise(pick(getList('quads', 'isolation', eq), slot), 'isolation',
-        setsPerSession('quads', experience, weakPoints, nutritionPhase, goal, 2),
+        setsPerSession('quads', experience, weakPoints, nutritionPhase, goal, 2, inputs),
         experience, nutritionPhase),
       makeExercise(pick(getList('hamstrings', 'isolation', eq), slot), 'isolation',
-        setsPerSession('hamstrings', experience, weakPoints, nutritionPhase, goal, 2),
+        setsPerSession('hamstrings', experience, weakPoints, nutritionPhase, goal, 2, inputs),
         experience, nutritionPhase),
       makeExercise(pick(getList('calves', 'isolation', eq), 0), 'isolation', 4,
         experience, nutritionPhase),
@@ -630,11 +632,11 @@ function applyStrengthNotes(workouts) {
 
 const ALL_MUSCLES = ['chest', 'back', 'shoulders', 'biceps', 'triceps', 'quads', 'hamstrings', 'glutes', 'calves', 'traps'];
 
-function buildVolumeSummary(experience, weakPoints, nutritionPhase, goal) {
+function buildVolumeSummary(experience, weakPoints, nutritionPhase, goal, inputs = {}) {
   const summary = {};
   ALL_MUSCLES.forEach((m) => {
     summary[m] = {
-      plannedSets:  weeklySetTarget(m, experience, weakPoints, nutritionPhase, goal),
+      plannedSets:  weeklySetTarget(m, experience, weakPoints, nutritionPhase, goal, inputs),
       isWeakPoint:  weakPoints.includes(m),
     };
   });
@@ -822,6 +824,7 @@ export function generatePlan(inputs) {
     weakPoints    = [],
     recoveryRating = 'average',
     nutritionPhase = null,
+    nutritionContext = null, // optional: result of getPlanNutritionContext(nutritionTargets)
   } = inputs;
 
   // Enforce weak-point cap of 3 for determinism
@@ -832,7 +835,10 @@ export function generatePlan(inputs) {
 
   const splitType = selectSplit(experience, effectiveDays, goal);
 
-  const planInputs = { ...inputs, weakPoints: safeWeakPoints };
+  // If a nutritionContext was supplied, blend its recoveryModifier into inputs so
+  // downstream volume helpers (weeklySetTarget) apply it on top of the phase modifier.
+  const ncMod = nutritionContext?.recoveryModifier ?? 1.0;
+  const planInputs = { ...inputs, weakPoints: safeWeakPoints, _ncMod: ncMod };
 
   // Build raw workout array
   let workouts;
@@ -865,7 +871,7 @@ export function generatePlan(inputs) {
   }
 
   const warnings             = buildWarnings(planInputs, effectiveDays);
-  const weeklyVolumeSummary  = buildVolumeSummary(experience, safeWeakPoints, nutritionPhase, goal);
+  const weeklyVolumeSummary  = buildVolumeSummary(experience, safeWeakPoints, nutritionPhase, goal, planInputs);
   const personalisationSummary = buildPersonalisationSummary(planInputs, effectiveDays, splitType);
   const whyThis              = buildWhyThis(planInputs, splitType, effectiveDays);
 
@@ -897,5 +903,6 @@ export function generatePlan(inputs) {
     personalisationSummary,
     whyThis,
     warnings,
+    nutritionContext: nutritionContext ?? null,
   };
 }
