@@ -206,11 +206,6 @@ export default function AnalyticsScreen({ navigation }) {
               <Text style={styles.linkTitle}>Volume Heatmap</Text>
               <Text style={styles.linkSub}>MEV/MAV/MRV</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.linkCard} onPress={() => navigation.navigate('BodyMetrics')}>
-              <Ionicons name="body" size={24} color={colors.success} />
-              <Text style={styles.linkTitle}>Body Metrics</Text>
-              <Text style={styles.linkSub}>Weight & measurements</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
