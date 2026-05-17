@@ -21,12 +21,13 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import SetEntry from '../components/SetEntry';
 import RestTimer from '../components/RestTimer';
 import useAppStore from '../store/useAppStore';
-import { getPreviousWorkoutSets, getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, getAllExercises } from '../lib/database';
+import { getPreviousWorkoutSets, getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, getAllExercises, insertExercise } from '../lib/database';
 import {
   detectPR,
   getProgressionSuggestion,
   calculate1RM,
   calculateTonnage,
+  MUSCLE_DISPLAY_NAMES,
 } from '../lib/algorithms';
 import { rankSwaps } from '../lib/swapEngine';
 
@@ -881,12 +882,20 @@ function EmptyExerciseView({ onAdd, onFinish, onCancel, elapsed, workoutExercise
   );
 }
 
+const PICKER_MUSCLES = Object.keys(MUSCLE_DISPLAY_NAMES);
+const PICKER_EQUIPMENT = ['Barbell', 'Dumbbell', 'Cable', 'Machine', 'Bodyweight', 'Smith Machine', 'Bands'];
+
 function ExercisePickerModal({ visible, onClose, onSelect }) {
   const [query, setQuery] = useState('');
   const [exercises, setExercises] = useState([]);
+  const [showCreate, setShowCreate] = useState(false);
+  const [createName, setCreateName] = useState('');
+  const [createMuscle, setCreateMuscle] = useState('');
+  const [createEquipment, setCreateEquipment] = useState('');
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    if (visible) loadExercises();
+    if (visible) { loadExercises(); setShowCreate(false); setQuery(''); }
   }, [visible]);
 
   async function loadExercises() {
@@ -894,46 +903,155 @@ function ExercisePickerModal({ visible, onClose, onSelect }) {
     setExercises(all);
   }
 
+  async function handleCreate() {
+    if (!createName.trim()) {
+      Alert.alert('Name required', 'Please enter a name for the exercise.');
+      return;
+    }
+    setCreating(true);
+    try {
+      const created = await insertExercise({
+        name: createName.trim(),
+        primaryMuscle: createMuscle || null,
+        equipment: createEquipment || null,
+        isCustom: 1,
+      });
+      await loadExercises();
+      const all = await getAllExercises();
+      const newEx = all.find(e => e.name === createName.trim()) || { id: created.id, name: createName.trim(), primaryMuscle: createMuscle, equipment: createEquipment };
+      onSelect(newEx);
+      onClose();
+    } catch (_e) {
+      Alert.alert('Error', 'Could not save exercise. Please try again.');
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  function openCreate() {
+    setCreateName(query.trim());
+    setCreateMuscle('');
+    setCreateEquipment('');
+    setShowCreate(true);
+  }
+
   const filtered = query.trim()
     ? exercises.filter(e => e.name.toLowerCase().includes(query.toLowerCase()))
     : exercises.slice(0, 50);
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" onRequestClose={showCreate ? () => setShowCreate(false) : onClose}>
       <SafeAreaView style={styles.pickerSafe}>
-        <View style={styles.pickerHeader}>
-          <TextInput
-            style={styles.pickerSearch}
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Search exercises..."
-            placeholderTextColor={colors.textMuted}
-            autoFocus
-          />
-          <TouchableOpacity onPress={onClose} style={styles.pickerClose}>
-            <Ionicons name="close" size={22} color={colors.textSecondary} />
-          </TouchableOpacity>
-        </View>
-        <FlatList
-          data={filtered}
-          keyExtractor={item => item.id}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.pickerItem}
-              onPress={() => onSelect(item)}
-            >
-              <View>
-                <Text style={styles.pickerItemName}>{item.name}</Text>
-                <Text style={styles.pickerItemMuscle}>
-                  {(item.primaryMuscle || '').charAt(0).toUpperCase() + (item.primaryMuscle || '').slice(1)}
-                  {item.equipment ? ` · ${item.equipment}` : ''}
-                </Text>
+        {showCreate ? (
+          <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <View style={styles.pickerHeader}>
+              <TouchableOpacity onPress={() => setShowCreate(false)} style={styles.pickerClose}>
+                <Ionicons name="arrow-back" size={22} color={colors.textSecondary} />
+              </TouchableOpacity>
+              <Text style={styles.createTitle}>New Exercise</Text>
+              <TouchableOpacity onPress={onClose} style={styles.pickerClose}>
+                <Ionicons name="close" size={22} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView contentContainerStyle={styles.createContent} keyboardShouldPersistTaps="handled">
+              <TextInput
+                style={styles.createNameInput}
+                value={createName}
+                onChangeText={setCreateName}
+                placeholder="Exercise name"
+                placeholderTextColor={colors.textMuted}
+                autoFocus
+                autoCapitalize="words"
+              />
+              <Text style={styles.createLabel}>Muscle Group</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
+                <View style={styles.chipRow}>
+                  {PICKER_MUSCLES.map(m => (
+                    <TouchableOpacity
+                      key={m}
+                      style={[styles.chip, createMuscle === m && styles.chipActive]}
+                      onPress={() => setCreateMuscle(prev => prev === m ? '' : m)}
+                    >
+                      <Text style={[styles.chipText, createMuscle === m && styles.chipTextActive]}>
+                        {MUSCLE_DISPLAY_NAMES[m]}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+              <Text style={styles.createLabel}>Equipment</Text>
+              <View style={styles.chipRow}>
+                {PICKER_EQUIPMENT.map(eq => (
+                  <TouchableOpacity
+                    key={eq}
+                    style={[styles.chip, createEquipment === eq && styles.chipActive]}
+                    onPress={() => setCreateEquipment(prev => prev === eq ? '' : eq)}
+                  >
+                    <Text style={[styles.chipText, createEquipment === eq && styles.chipTextActive]}>{eq}</Text>
+                  </TouchableOpacity>
+                ))}
               </View>
-              <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
-            </TouchableOpacity>
-          )}
-          ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: colors.border }} />}
-        />
+              <TouchableOpacity
+                style={[styles.createSaveBtn, creating && { opacity: 0.5 }]}
+                onPress={handleCreate}
+                disabled={creating}
+              >
+                <Ionicons name="add-circle" size={20} color={colors.background} />
+                <Text style={styles.createSaveBtnText}>Add to Workout</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        ) : (
+          <>
+            <View style={styles.pickerHeader}>
+              <TextInput
+                style={styles.pickerSearch}
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Search exercises..."
+                placeholderTextColor={colors.textMuted}
+                autoFocus
+              />
+              <TouchableOpacity onPress={onClose} style={styles.pickerClose}>
+                <Ionicons name="close" size={22} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={filtered}
+              keyExtractor={item => item.id}
+              keyboardShouldPersistTaps="handled"
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.pickerItem}
+                  onPress={() => onSelect(item)}
+                >
+                  <View>
+                    <Text style={styles.pickerItemName}>{item.name}</Text>
+                    <Text style={styles.pickerItemMuscle}>
+                      {(item.primaryMuscle || '').charAt(0).toUpperCase() + (item.primaryMuscle || '').slice(1)}
+                      {item.equipment ? ` · ${item.equipment}` : ''}
+                    </Text>
+                  </View>
+                  <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
+                </TouchableOpacity>
+              )}
+              ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: colors.border }} />}
+              ListEmptyComponent={
+                <View style={styles.pickerEmptyWrap}>
+                  <Text style={styles.pickerEmptyText}>No exercises found</Text>
+                  {query.trim().length > 0 && (
+                    <TouchableOpacity style={styles.createNewBtn} onPress={openCreate}>
+                      <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
+                      <Text style={styles.createNewBtnText}>
+                        Create "{query.trim()}" as custom exercise
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              }
+            />
+          </>
+        )}
       </SafeAreaView>
     </Modal>
   );
@@ -1017,6 +1135,22 @@ const styles = StyleSheet.create({
   pickerItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.lg },
   pickerItemName: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary, marginBottom: 2 },
   pickerItemMuscle: { fontSize: fontSize.sm, color: colors.textSecondary },
+  pickerEmptyWrap: { alignItems: 'center', paddingTop: spacing.xxxl, gap: spacing.lg, paddingHorizontal: spacing.xl },
+  pickerEmptyText: { fontSize: fontSize.md, color: colors.textMuted },
+  createNewBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.primaryBg, borderRadius: radius.lg, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderWidth: 1, borderColor: colors.primary },
+  createNewBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary, flex: 1 },
+  createTitle: { flex: 1, fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary, textAlign: 'center' },
+  createContent: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxxl },
+  createNameInput: { backgroundColor: colors.inputBg || colors.surface, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, fontSize: fontSize.lg, fontWeight: fontWeight.semibold, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border },
+  createLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textMuted, letterSpacing: 1.2, textTransform: 'uppercase' },
+  chipScroll: { marginHorizontal: -spacing.lg },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, paddingHorizontal: spacing.lg },
+  chip: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.full, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border },
+  chipActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
+  chipText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  chipTextActive: { color: colors.primary, fontWeight: fontWeight.semibold },
+  createSaveBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: spacing.lg, marginTop: spacing.sm },
+  createSaveBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.background },
   emptyView: { flex: 1, backgroundColor: colors.background },
   emptyContent: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.lg, paddingHorizontal: spacing.xxl },
   emptyTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, textAlign: 'center' },
