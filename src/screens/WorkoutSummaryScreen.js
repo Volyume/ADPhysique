@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { getAllWorkoutSets, getAllExercises, getAllWorkouts, updateWorkout } from '../lib/database';
+import { getAllWorkoutSets, getAllExercises, getAllWorkouts, updateWorkout, getActivePlan, getRoutinesForPlan, advancePlanNextWorkout } from '../lib/database';
 import { calculateWeeklyVolume, getVolumeStatus, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 
@@ -43,8 +43,11 @@ function RatingRow({ label, field, value, max, onChange }) {
 }
 
 export default function WorkoutSummaryScreen({ navigation, route }) {
-  const { workoutId, durationMinutes, exerciseCount, setCount, workingSetCount, tonnage, exerciseNames = [], readOnly = false } =
-    route.params || {};
+  const {
+    workoutId, durationMinutes, exerciseCount, setCount, workingSetCount, tonnage,
+    exerciseNames = [], readOnly = false,
+    routineId = null, detectedPRs = [], exerciseData = [],
+  } = route.params || {};
   const { user, units } = useAppStore();
 
   const [feedback, setFeedback] = useState({
@@ -95,10 +98,58 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         fatigueLevel: feedback.fatigueLevel,
         notes: notes || null,
       });
+
+      // Advance active plan pointer if this workout came from a plan routine
+      if (routineId && user?.id) {
+        try {
+          const activePlan = await getActivePlan(user.id);
+          if (activePlan) {
+            const planRoutines = await getRoutinesForPlan(activePlan.id);
+            if (planRoutines.some(r => r.id === routineId)) {
+              await advancePlanNextWorkout(activePlan.id, planRoutines.length);
+            }
+          }
+        } catch (_e) {}
+      }
     } finally {
       setSaving(false);
       navigation.popToTop();
     }
+  }
+
+  function handleShareCard() {
+    const sessionData = {
+      sessionName: exerciseNames.length > 0
+        ? exerciseNames.slice(0, 2).join(' & ') + (exerciseNames.length > 2 ? ' +more' : '')
+        : 'Session Complete',
+      duration: durationMinutes || 0,
+      workingSets: workingSetCount ?? setCount ?? 0,
+      exerciseCount: exerciseCount || 0,
+      tonnage: tonnage || 0,
+      exercises: exerciseNames,
+      prCount: detectedPRs.length,
+    };
+    const prData = detectedPRs.length > 0 ? detectedPRs[0] : null;
+    navigation.navigate('ShareCard', { sessionData, prData });
+  }
+
+  async function handleSaveAsTemplate() {
+    if (!exerciseData.length) {
+      Alert.alert('No exercises', 'No exercise data available to save as template.');
+      return;
+    }
+    Alert.prompt(
+      'Save as Workout Template',
+      'Name this template:',
+      async (name) => {
+        if (!name?.trim()) return;
+        const { createWorkoutTemplateFromWorkout } = require('../lib/database');
+        await createWorkoutTemplateFromWorkout(user.id, name.trim(), exerciseData);
+        Alert.alert('Template Saved', `"${name.trim()}" added to Workout Templates in Plans.`);
+      },
+      'plain-text',
+      exerciseNames.slice(0, 2).join(' & ') || 'My Workout',
+    );
   }
 
   const musclesWorked = Object.keys(weeklyVolume)
@@ -189,44 +240,13 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 <Text style={styles.optionalLabel}>optional</Text>
               </View>
               <View style={styles.feedbackCard}>
-                <RatingRow
-                  label="Difficulty"
-                  field="sessionDifficulty"
-                  value={feedback.sessionDifficulty}
-                  max={5}
-                  onChange={v => setFeedback(f => ({ ...f, sessionDifficulty: v }))}
-                />
-                <RatingRow
-                  label="Pump quality"
-                  field="overallPump"
-                  value={feedback.overallPump}
-                  max={3}
-                  onChange={v => setFeedback(f => ({ ...f, overallPump: v }))}
-                />
-                <RatingRow
-                  label="Soreness coming in"
-                  field="soreness24hBefore"
-                  value={feedback.soreness24hBefore}
-                  max={3}
-                  onChange={v => setFeedback(f => ({ ...f, soreness24hBefore: v }))}
-                />
-                <RatingRow
-                  label="Fatigue"
-                  field="fatigueLevel"
-                  value={feedback.fatigueLevel}
-                  max={5}
-                  onChange={v => setFeedback(f => ({ ...f, fatigueLevel: v }))}
-                />
-                <RatingRow
-                  label="Joint discomfort"
-                  field="jointDiscomfort"
-                  value={feedback.jointDiscomfort}
-                  max={3}
-                  onChange={v => setFeedback(f => ({ ...f, jointDiscomfort: v }))}
-                />
+                <RatingRow label="Difficulty" field="sessionDifficulty" value={feedback.sessionDifficulty} max={5} onChange={v => setFeedback(f => ({ ...f, sessionDifficulty: v }))} />
+                <RatingRow label="Pump quality" field="overallPump" value={feedback.overallPump} max={3} onChange={v => setFeedback(f => ({ ...f, overallPump: v }))} />
+                <RatingRow label="Soreness coming in" field="soreness24hBefore" value={feedback.soreness24hBefore} max={3} onChange={v => setFeedback(f => ({ ...f, soreness24hBefore: v }))} />
+                <RatingRow label="Fatigue" field="fatigueLevel" value={feedback.fatigueLevel} max={5} onChange={v => setFeedback(f => ({ ...f, fatigueLevel: v }))} />
+                <RatingRow label="Joint discomfort" field="jointDiscomfort" value={feedback.jointDiscomfort} max={3} onChange={v => setFeedback(f => ({ ...f, jointDiscomfort: v }))} />
               </View>
             </View>
-
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>SESSION NOTES (optional)</Text>
               <TextInput
@@ -239,6 +259,22 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               />
             </View>
           </>
+        )}
+
+        {/* Share & Template actions */}
+        {!readOnly && (
+          <View style={styles.secondaryActions}>
+            <TouchableOpacity style={styles.shareCardBtn} onPress={handleShareCard}>
+              <Ionicons name="share-outline" size={18} color={colors.primary} />
+              <Text style={styles.shareCardBtnText}>Share Session Card</Text>
+            </TouchableOpacity>
+            {!routineId && exerciseData.length > 0 && (
+              <TouchableOpacity style={styles.templateBtn} onPress={handleSaveAsTemplate}>
+                <Ionicons name="bookmark-outline" size={18} color={colors.textSecondary} />
+                <Text style={styles.templateBtnText}>Save as Workout Template</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         )}
 
         {/* CTA */}
@@ -267,194 +303,69 @@ function StatBox({ icon, value, label }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxxl },
-  completionHeader: {
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
-  },
-  checkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  completionTitle: {
-    fontSize: fontSize.xxl,
-    fontWeight: fontWeight.black,
-    color: colors.textPrimary,
-  },
-  completionSub: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-  },
+  completionHeader: { gap: spacing.sm, paddingVertical: spacing.md },
+  checkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  completionTitle: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary },
+  completionSub: { fontSize: fontSize.sm, color: colors.textSecondary },
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   statBox: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    alignItems: 'center',
-    gap: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.border,
+    flex: 1, minWidth: '45%', backgroundColor: colors.surface, borderRadius: radius.md,
+    padding: spacing.lg, alignItems: 'center', gap: spacing.xs, borderWidth: 1, borderColor: colors.border,
   },
-  statValue: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.black,
-    color: colors.textPrimary,
-  },
-  statLabel: {
-    fontSize: fontSize.xs,
-    color: colors.textSecondary,
-  },
+  statValue: { fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.textPrimary },
+  statLabel: { fontSize: fontSize.xs, color: colors.textSecondary },
   section: { gap: spacing.md },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  sectionTitle: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.black,
-    color: colors.textMuted,
-    letterSpacing: 1.5,
-  },
-  optionalLabel: {
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
-  },
+  sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  sectionTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.black, color: colors.textMuted, letterSpacing: 1.5 },
+  optionalLabel: { fontSize: fontSize.xs, color: colors.textMuted },
   volumeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md,
+    borderWidth: 1, borderColor: colors.border,
   },
-  muscleName: {
-    flex: 1,
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.medium,
-    color: colors.textPrimary,
-  },
-  muscleSetCount: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-  },
-  statusBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    borderRadius: radius.sm,
-  },
-  statusText: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-  },
-  limitedCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  limitedText: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    lineHeight: 20,
-  },
+  muscleName: { flex: 1, fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.textPrimary },
+  muscleSetCount: { fontSize: fontSize.sm, color: colors.textSecondary },
+  statusBadge: { paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radius.sm },
+  statusText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold },
+  limitedCard: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.lg, borderWidth: 1, borderColor: colors.border },
+  limitedText: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
   suggestionRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
+    backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md,
+    borderWidth: 1, borderColor: colors.border,
   },
-  suggestionText: {
-    flex: 1,
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    lineHeight: 20,
-  },
-  feedbackCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    gap: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  ratingRow: {
-    gap: spacing.sm,
-  },
-  ratingLabelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  ratingLabel: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
-    color: colors.textSecondary,
-  },
-  ratingBtns: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
+  suggestionText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  feedbackCard: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.lg, borderWidth: 1, borderColor: colors.border },
+  ratingRow: { gap: spacing.sm },
+  ratingLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  ratingLabel: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textSecondary },
+  ratingBtns: { flexDirection: 'row', gap: spacing.xs },
   ratingBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.surface2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
+    width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface2,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border,
   },
-  ratingBtnActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  ratingBtnText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
-    color: colors.textSecondary,
-  },
-  ratingBtnTextActive: {
-    color: colors.background,
-  },
-  ratingValueLabel: {
-    fontSize: fontSize.xs,
-    color: colors.primary,
-    fontWeight: fontWeight.medium,
-  },
+  ratingBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  ratingBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textSecondary },
+  ratingBtnTextActive: { color: colors.background },
+  ratingValueLabel: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.medium },
   notesInput: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    fontSize: fontSize.md,
-    color: colors.textPrimary,
-    borderWidth: 1,
-    borderColor: colors.border,
-    minHeight: 80,
+    backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.lg,
+    fontSize: fontSize.md, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, minHeight: 80,
   },
-  saveBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-  },
+  saveBtn: { backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: spacing.lg, alignItems: 'center' },
   btnDisabled: { opacity: 0.6 },
-  saveBtnText: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
-    color: colors.background,
+  saveBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.background },
+  secondaryActions: { gap: spacing.sm },
+  shareCardBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    backgroundColor: colors.primaryBg, borderRadius: radius.lg, paddingVertical: spacing.md,
+    borderWidth: 1, borderColor: colors.primary + '40',
   },
+  shareCardBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.primary },
+  templateBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    backgroundColor: colors.surface, borderRadius: radius.lg, paddingVertical: spacing.md,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  templateBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textSecondary },
 });
