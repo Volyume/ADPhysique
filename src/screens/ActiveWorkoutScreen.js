@@ -58,6 +58,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [currentSet, setCurrentSet] = useState({ ...DEFAULT_SET });
   const [prevSets, setPrevSets] = useState([]);
   const [loggedSets, setLoggedSets] = useState([]);
+  const [detectedPRs, setDetectedPRs] = useState([]);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showPlateCalc, setShowPlateCalc] = useState(false);
   const [showExercisePicker, setShowExercisePicker] = useState(false);
@@ -193,6 +194,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       const prs = detectPR(setData, prevSets, exercise, units);
       if (prs.length > 0) {
         showPRCelebration({ ...prs[0], exerciseName: exercise.name });
+        setDetectedPRs(prev => [...prev, ...prs.map(p => ({ ...p, exerciseName: exercise.name, units }))]);
       }
 
       // Recalculate suggestion
@@ -240,12 +242,21 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             endWorkout();
             navigation.replace('WorkoutSummary', {
               workoutId: activeWorkout.id,
+              routineId: activeWorkout.routineId || null,
               durationMinutes: Math.round(elapsedSeconds / 60),
               exerciseCount: workoutExercises.length,
               setCount: allSets.length,
               workingSetCount,
               tonnage: calculateTonnage(allSets),
               exerciseNames: workoutExercises.map(e => e.exercise?.name).filter(Boolean),
+              detectedPRs,
+              exerciseData: workoutExercises.map(e => ({
+                exerciseId: e.exercise?.id,
+                name: e.exercise?.name,
+                recommendedSets: e.sets.filter(s => s.setType !== 'warmup').length || 3,
+                repsMin: e.routineExercise?.recommendedRepsMin || 8,
+                repsMax: e.routineExercise?.recommendedRepsMax || 12,
+              })).filter(e => e.exerciseId),
             });
           },
         },
@@ -304,6 +315,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </Text>
           </View>
           <TouchableOpacity
+            testID="volyume-btn-add-mid-workout"
             style={styles.addExerciseBtn}
             onPress={() => setShowExercisePicker(true)}
           >
@@ -439,17 +451,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           {targetComplete ? (
             <>
               {isLastExercise ? (
-                <TouchableOpacity style={styles.completeBtn} onPress={handleFinishWorkout}>
+                <TouchableOpacity testID="volyume-btn-finish-primary" style={styles.completeBtn} onPress={handleFinishWorkout}>
                   <Ionicons name="checkmark-done" size={24} color={colors.background} />
                   <Text style={styles.completeBtnText}>FINISH WORKOUT</Text>
                 </TouchableOpacity>
               ) : (
-                <TouchableOpacity style={styles.completeBtn} onPress={handleNextExercise}>
+                <TouchableOpacity testID="volyume-btn-next-exercise" style={styles.completeBtn} onPress={handleNextExercise}>
                   <Ionicons name="arrow-forward-circle" size={24} color={colors.background} />
                   <Text style={styles.completeBtnText}>NEXT EXERCISE</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity
+                testID="volyume-btn-extra-set"
                 style={[styles.extraSetBtn, saving && styles.btnDisabled]}
                 onPress={handleCompleteSet}
                 disabled={saving}
@@ -459,6 +472,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </>
           ) : (
             <TouchableOpacity
+              testID="volyume-btn-complete-set"
               style={[styles.completeBtn, saving && styles.btnDisabled]}
               onPress={handleCompleteSet}
               disabled={saving}
@@ -512,12 +526,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           {/* Ghost navigation — Next/Finish shown below when target not yet complete */}
           {!targetComplete && (
             isLastExercise ? (
-              <TouchableOpacity style={styles.finishWorkoutLargeBtn} onPress={handleFinishWorkout}>
+              <TouchableOpacity testID="volyume-btn-finish-ghost" style={styles.finishWorkoutLargeBtn} onPress={handleFinishWorkout}>
                 <Ionicons name="checkmark-done" size={18} color={colors.success} />
                 <Text style={styles.finishWorkoutLargeBtnText}>Finish Workout</Text>
               </TouchableOpacity>
             ) : (
-              <TouchableOpacity style={styles.nextExerciseBtn} onPress={handleNextExercise}>
+              <TouchableOpacity testID="volyume-btn-next-exercise-ghost" style={styles.nextExerciseBtn} onPress={handleNextExercise}>
                 <Text style={styles.nextExerciseBtnText}>Next Exercise</Text>
                 <Ionicons name="arrow-forward" size={18} color={colors.primary} />
               </TouchableOpacity>
