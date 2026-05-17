@@ -28,6 +28,7 @@ import {
   calculate1RM,
   calculateTonnage,
 } from '../lib/algorithms';
+import { rankSwaps } from '../lib/swapEngine';
 
 const DEFAULT_SET = { weight: 0, reps: 8, setType: 'straight', notes: '' };
 
@@ -70,6 +71,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [showExecution, setShowExecution] = useState(false);
   const [showStaleModal, setShowStaleModal] = useState(false);
   const [addedMsg, setAddedMsg] = useState('');
+  const [showSwapModal, setShowSwapModal] = useState(false);
+  const [swapCandidates, setSwapCandidates] = useState([]);
 
   const scrollRef = useRef(null);
   const insets = useSafeAreaInsets();
@@ -83,6 +86,30 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   function handleNextExercise() {
     setCurrentExerciseIndex(currentExerciseIndex + 1);
     setTimeout(() => scrollRef.current?.scrollTo({ y: 0, animated: true }), 50);
+  }
+
+  async function handleOpenSwap() {
+    const allExercises = await getAllExercises();
+    const alreadyInWorkout = workoutExercises.map(e => e.exercise?.id).filter(Boolean);
+    const ranked = rankSwaps(exercise, allExercises, { excludeIds: alreadyInWorkout, numResults: 8 });
+    setSwapCandidates(ranked);
+    setShowSwapModal(true);
+  }
+
+  function handleConfirmSwap(newExercise) {
+    const store = useAppStore.getState();
+    const updatedExercises = [...workoutExercises];
+    updatedExercises[currentExerciseIndex] = {
+      ...updatedExercises[currentExerciseIndex],
+      exercise: newExercise,
+      sets: [],
+    };
+    store.setWorkoutExercises(updatedExercises);
+    setSwapCandidates([]);
+    setShowSwapModal(false);
+    setPrevSets([]);
+    setLoggedSets([]);
+    setProgression(null);
   }
 
   // Stale workout check (>4h since last activity)
@@ -290,7 +317,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           onClose={() => setShowExercisePicker(false)}
           onSelect={ex => {
             addExerciseToWorkout(ex);
-            // Jump to the first exercise when starting from empty
             setCurrentExerciseIndex(workoutExercises.length);
             setShowExercisePicker(false);
           }}
@@ -361,7 +387,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         >
           {/* Exercise Title */}
           <View style={styles.exerciseHeader}>
-            <Text style={styles.exerciseName}>{exercise.name}</Text>
+            <View style={styles.exerciseNameRow}>
+              <Text style={styles.exerciseName}>{exercise.name}</Text>
+              <TouchableOpacity
+                style={styles.swapBtn}
+                onPress={handleOpenSwap}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="swap-horizontal" size={16} color={colors.primary} />
+                <Text style={styles.swapBtnText}>Swap</Text>
+              </TouchableOpacity>
+            </View>
             <Text style={styles.exerciseMuscle}>
               {(exercise.primaryMuscle || exercise.primary_muscle || '').charAt(0).toUpperCase() +
                 (exercise.primaryMuscle || exercise.primary_muscle || '').slice(1)} (Primary)
@@ -447,7 +483,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             ) : null}
           </View>
 
-          {/* Action Buttons — when target complete, primary CTA is Next/Finish */}
+          {/* Action Buttons */}
           {targetComplete ? (
             <>
               {isLastExercise ? (
@@ -523,7 +559,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </View>
           )}
 
-          {/* Ghost navigation — Next/Finish shown below when target not yet complete */}
+          {/* Ghost navigation */}
           {!targetComplete && (
             isLastExercise ? (
               <TouchableOpacity testID="volyume-btn-finish-ghost" style={styles.finishWorkoutLargeBtn} onPress={handleFinishWorkout}>
@@ -558,7 +594,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           </View>
         </Modal>
 
-        {/* Exercise Picker Modal — does NOT jump to new exercise; shows confirmation */}
+        {/* Exercise Picker Modal */}
         <ExercisePickerModal
           visible={showExercisePicker}
           onClose={() => setShowExercisePicker(false)}
@@ -676,6 +712,42 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </Text>
           </View>
         </Modal>
+
+        {/* Exercise Swap Modal */}
+        <Modal visible={showSwapModal} animationType="slide" onRequestClose={() => setShowSwapModal(false)}>
+          <SafeAreaView style={styles.swapSafe} edges={['top', 'bottom']}>
+            <View style={styles.swapHeader}>
+              <Text style={styles.swapTitle}>Swap Exercise</Text>
+              <TouchableOpacity onPress={() => setShowSwapModal(false)}>
+                <Ionicons name="close" size={24} color={colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.swapSubtitle}>
+              Replacing: <Text style={{ color: colors.primary }}>{exercise?.name}</Text>
+            </Text>
+            <Text style={styles.swapNote}>Session-only — your plan is not changed.</Text>
+            <FlatList
+              data={swapCandidates}
+              keyExtractor={item => item.exercise.id}
+              contentContainerStyle={{ padding: spacing.lg }}
+              ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
+              renderItem={({ item }) => (
+                <TouchableOpacity style={styles.swapItem} onPress={() => handleConfirmSwap(item.exercise)}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.swapItemName}>{item.exercise.name}</Text>
+                    <Text style={styles.swapItemReason}>{item.reason}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                </TouchableOpacity>
+              )}
+              ListEmptyComponent={
+                <Text style={{ color: colors.textMuted, textAlign: 'center', marginTop: spacing.xl }}>
+                  No similar exercises found.
+                </Text>
+              }
+            />
+          </SafeAreaView>
+        </Modal>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -777,576 +849,113 @@ function ExercisePickerModal({ visible, onClose, onSelect }) {
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
+  safe: { flex: 1, backgroundColor: colors.background },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  finishBtn: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.error,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-  },
-  headerCenter: {
-    alignItems: 'center',
-  },
-  timerText: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
-    color: colors.primary,
-    fontVariant: ['tabular-nums'],
-  },
-  headerMuscle: {
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
-    marginTop: 1,
-  },
-  addExerciseBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primaryBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  exerciseNav: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    maxHeight: 48,
-  },
-  exerciseNavContent: {
-    paddingHorizontal: spacing.lg,
-    gap: spacing.sm,
-    alignItems: 'center',
-  },
-  navTab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    backgroundColor: colors.surface2,
-    maxWidth: 140,
-  },
-  navTabActive: {
-    backgroundColor: colors.primaryBg,
-  },
-  navTabText: {
-    fontSize: fontSize.xs,
-    color: colors.textSecondary,
-    fontWeight: fontWeight.medium,
-  },
-  navTabTextActive: {
-    color: colors.primary,
-  },
-  navTabBadge: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navTabBadgeText: {
-    fontSize: 9,
-    fontWeight: fontWeight.black,
-    color: colors.background,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: spacing.lg,
-    gap: spacing.md,
-  },
-  exerciseHeader: {
-    gap: spacing.xs,
-  },
-  exerciseName: {
-    fontSize: fontSize.xxl,
-    fontWeight: fontWeight.black,
-    color: colors.textPrimary,
-  },
-  exerciseMuscle: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-  },
-  prevCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: spacing.sm,
-  },
-  prevTitle: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
-    color: colors.textMuted,
-    letterSpacing: 1,
-  },
-  prevSetsSummary: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.textPrimary,
-    lineHeight: 22,
-  },
-  prevEmpty: {
-    fontSize: fontSize.sm,
-    color: colors.textMuted,
-    fontStyle: 'italic',
-  },
-  progressionBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.primaryBg,
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    alignSelf: 'flex-start',
-  },
-  progressionText: {
-    fontSize: fontSize.xs,
-    color: colors.primary,
-    fontWeight: fontWeight.medium,
-    flexShrink: 1,
-  },
-  targetRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  targetText: {
-    fontSize: fontSize.sm,
-    color: colors.textMuted,
-  },
-  setEntryCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: spacing.md,
-  },
-  setEntryTitle: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.black,
-    color: colors.textMuted,
-    letterSpacing: 1.5,
-  },
-  noteInput: {
-    backgroundColor: colors.surface2,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    fontSize: fontSize.sm,
-    color: colors.textPrimary,
-    borderWidth: 1,
-    borderColor: colors.border,
-    minHeight: 60,
-  },
-  completeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    paddingVertical: spacing.lg + 2,
-  },
-  btnDisabled: {
-    opacity: 0.5,
-  },
-  completeBtnText: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.black,
-    color: colors.background,
-    letterSpacing: 1,
-  },
-  extraSetBtn: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.lg,
-    paddingVertical: spacing.md,
-  },
-  extraSetBtnText: {
-    fontSize: fontSize.md,
-    color: colors.textSecondary,
-    fontWeight: fontWeight.medium,
-  },
-  secondaryActions: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  actionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  actionBtnText: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    fontWeight: fontWeight.medium,
-  },
-  nextExerciseBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    borderWidth: 1.5,
-    borderColor: colors.primary,
-    borderRadius: radius.lg,
-    paddingVertical: spacing.lg,
-  },
-  nextExerciseBtnText: {
-    fontSize: fontSize.md,
-    color: colors.primary,
-    fontWeight: fontWeight.bold,
-  },
-  finishWorkoutLargeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    borderWidth: 1.5,
-    borderColor: colors.success,
-    borderRadius: radius.lg,
-    paddingVertical: spacing.lg,
-  },
-  finishWorkoutLargeBtnText: {
-    fontSize: fontSize.md,
-    color: colors.success,
-    fontWeight: fontWeight.bold,
-  },
-  loggedSection: {
-    gap: spacing.sm,
-  },
-  loggedTitle: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
-    color: colors.textMuted,
-    letterSpacing: 1,
-  },
-  loggedSetRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  setNumBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.surface2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  setNumText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
-    color: colors.textSecondary,
-  },
-  loggedSetText: {
-    flex: 1,
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.textPrimary,
-  },
-  loggedEst1RM: {
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxl,
-  },
-  pickerSafe: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  pickerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  pickerSearch: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    fontSize: fontSize.md,
-    color: colors.textPrimary,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  pickerClose: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pickerItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: spacing.lg,
-  },
-  pickerItemName: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.textPrimary,
-    marginBottom: 2,
-  },
-  pickerItemMuscle: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-  },
-  emptyView: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  emptyContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.lg,
-    paddingHorizontal: spacing.xxl,
-  },
-  emptyTitle: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
-    color: colors.textPrimary,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    fontSize: fontSize.md,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  addFirstBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    paddingHorizontal: spacing.xxl,
-    paddingVertical: spacing.lg,
-    marginTop: spacing.lg,
-  },
-  sheetOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-  },
-  sheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
-  },
-  sheetHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.border,
-    alignSelf: 'center',
-    marginBottom: spacing.lg,
-  },
-  sheetTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-  },
-  sheetExplainer: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    lineHeight: 20,
-    marginBottom: spacing.lg,
-  },
-  sheetSection: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
-    color: colors.textMuted,
-    letterSpacing: 1.2,
-    marginBottom: spacing.sm,
-    marginTop: spacing.md,
-  },
-  sheetOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  sheetOptionActive: {
-    backgroundColor: 'transparent',
-  },
-  sheetOptionText: {
-    flex: 1,
-    gap: 2,
-  },
-  sheetOptionLabel: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.textPrimary,
-  },
-  sheetOptionLabelActive: {
-    color: colors.primary,
-  },
-  sheetOptionDesc: {
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
-  },
-  infoTarget: {
-    fontSize: fontSize.sm,
-    color: colors.primary,
-    fontWeight: fontWeight.medium,
-    marginBottom: spacing.xs,
-  },
-  infoMuscle: {
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
-    marginBottom: spacing.lg,
-  },
-  infoNotes: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    lineHeight: 22,
-    paddingVertical: spacing.sm,
-  },
-  addFirstBtnText: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
-    color: colors.background,
-  },
-  targetBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.successBg,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.success,
-  },
-  targetBannerText: {
-    fontSize: fontSize.sm,
-    color: colors.success,
-    fontWeight: fontWeight.semibold,
-    flex: 1,
-  },
-  addedBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primaryBg,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-  },
-  addedBannerText: {
-    fontSize: fontSize.sm,
-    color: colors.primary,
-    fontWeight: fontWeight.medium,
-  },
-  staleOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.75)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.xl,
-  },
-  staleSheet: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.xl,
-    padding: spacing.xl,
-    width: '100%',
-    alignItems: 'center',
-    gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  staleTitle: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
-    color: colors.textPrimary,
-    textAlign: 'center',
-  },
-  staleBody: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: spacing.md,
-  },
-  staleResume: {
-    width: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
-  staleResumeText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
-    color: colors.background,
-  },
-  staleFinish: {
-    width: '100%',
-    backgroundColor: colors.surface2,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
-  staleFinishText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.medium,
-    color: colors.textPrimary,
-  },
-  staleDiscard: {
-    width: '100%',
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
-  staleDiscardText: {
-    fontSize: fontSize.sm,
-    color: colors.error,
-    fontWeight: fontWeight.medium,
-  },
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
+  finishBtn: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.error, paddingVertical: spacing.xs, paddingHorizontal: spacing.sm },
+  headerCenter: { alignItems: 'center' },
+  timerText: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.primary, fontVariant: ['tabular-nums'] },
+  headerMuscle: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 1 },
+  addExerciseBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center' },
+  exerciseNav: { borderBottomWidth: 1, borderBottomColor: colors.border, maxHeight: 48 },
+  exerciseNavContent: { paddingHorizontal: spacing.lg, gap: spacing.sm, alignItems: 'center' },
+  navTab: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.full, backgroundColor: colors.surface2, maxWidth: 140 },
+  navTabActive: { backgroundColor: colors.primaryBg },
+  navTabText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  navTabTextActive: { color: colors.primary },
+  navTabBadge: { width: 16, height: 16, borderRadius: 8, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  navTabBadgeText: { fontSize: 9, fontWeight: fontWeight.black, color: colors.background },
+  scroll: { flex: 1 },
+  scrollContent: { padding: spacing.lg, gap: spacing.md },
+  exerciseHeader: { gap: spacing.xs },
+  exerciseNameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+  exerciseName: { flex: 1, fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary },
+  swapBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.surface2, borderRadius: radius.sm, paddingVertical: 4, paddingHorizontal: spacing.sm, borderWidth: 1, borderColor: colors.border },
+  swapBtnText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary },
+  swapSafe: { flex: 1, backgroundColor: colors.background },
+  swapHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border },
+  swapTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  swapSubtitle: { fontSize: fontSize.sm, color: colors.textSecondary, paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
+  swapNote: { fontSize: fontSize.xs, color: colors.textMuted, paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
+  swapItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.lg, borderWidth: 1, borderColor: colors.border },
+  swapItemName: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary, marginBottom: 2 },
+  swapItemReason: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
+  exerciseMuscle: { fontSize: fontSize.sm, color: colors.textSecondary },
+  prevCard: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, gap: spacing.sm },
+  prevTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textMuted, letterSpacing: 1 },
+  prevSetsSummary: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary, lineHeight: 22 },
+  prevEmpty: { fontSize: fontSize.sm, color: colors.textMuted, fontStyle: 'italic' },
+  progressionBadge: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: colors.primaryBg, borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, alignSelf: 'flex-start' },
+  progressionText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.medium, flexShrink: 1 },
+  targetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  targetText: { fontSize: fontSize.sm, color: colors.textMuted },
+  setEntryCard: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, gap: spacing.md },
+  setEntryTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.black, color: colors.textMuted, letterSpacing: 1.5 },
+  noteInput: { backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md, fontSize: fontSize.sm, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, minHeight: 60 },
+  completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: spacing.lg + 2 },
+  btnDisabled: { opacity: 0.5 },
+  completeBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.black, color: colors.background, letterSpacing: 1 },
+  extraSetBtn: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, paddingVertical: spacing.md },
+  extraSetBtnText: { fontSize: fontSize.md, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  secondaryActions: { flexDirection: 'row', gap: spacing.md },
+  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, backgroundColor: colors.surface, borderRadius: radius.md, paddingVertical: spacing.md, borderWidth: 1, borderColor: colors.border },
+  actionBtnText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  nextExerciseBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderWidth: 1.5, borderColor: colors.primary, borderRadius: radius.lg, paddingVertical: spacing.lg },
+  nextExerciseBtnText: { fontSize: fontSize.md, color: colors.primary, fontWeight: fontWeight.bold },
+  finishWorkoutLargeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderWidth: 1.5, borderColor: colors.success, borderRadius: radius.lg, paddingVertical: spacing.lg },
+  finishWorkoutLargeBtnText: { fontSize: fontSize.md, color: colors.success, fontWeight: fontWeight.bold },
+  loggedSection: { gap: spacing.sm },
+  loggedTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textMuted, letterSpacing: 1 },
+  loggedSetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border },
+  setNumBadge: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
+  setNumText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textSecondary },
+  loggedSetText: { flex: 1, fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  loggedEst1RM: { fontSize: fontSize.xs, color: colors.textMuted },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+  modalContent: { padding: spacing.lg, paddingBottom: spacing.xxl },
+  pickerSafe: { flex: 1, backgroundColor: colors.background },
+  pickerHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border },
+  pickerSearch: { flex: 1, backgroundColor: colors.surface, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, fontSize: fontSize.md, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border },
+  pickerClose: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  pickerItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.lg },
+  pickerItemName: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary, marginBottom: 2 },
+  pickerItemMuscle: { fontSize: fontSize.sm, color: colors.textSecondary },
+  emptyView: { flex: 1, backgroundColor: colors.background },
+  emptyContent: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.lg, paddingHorizontal: spacing.xxl },
+  emptyTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, textAlign: 'center' },
+  emptySubtitle: { fontSize: fontSize.md, color: colors.textSecondary, textAlign: 'center' },
+  addFirstBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.primary, borderRadius: radius.lg, paddingHorizontal: spacing.xxl, paddingVertical: spacing.lg, marginTop: spacing.lg },
+  addFirstBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.background },
+  sheetOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' },
+  sheet: { backgroundColor: colors.surface, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, paddingHorizontal: spacing.xl, paddingTop: spacing.md },
+  sheetHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginBottom: spacing.lg },
+  sheetTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.sm },
+  sheetExplainer: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20, marginBottom: spacing.lg },
+  sheetSection: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textMuted, letterSpacing: 1.2, marginBottom: spacing.sm, marginTop: spacing.md },
+  sheetOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
+  sheetOptionActive: { backgroundColor: 'transparent' },
+  sheetOptionText: { flex: 1, gap: 2 },
+  sheetOptionLabel: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  sheetOptionLabelActive: { color: colors.primary },
+  sheetOptionDesc: { fontSize: fontSize.xs, color: colors.textMuted },
+  infoTarget: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.medium, marginBottom: spacing.xs },
+  infoMuscle: { fontSize: fontSize.xs, color: colors.textMuted, marginBottom: spacing.lg },
+  infoNotes: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 22, paddingVertical: spacing.sm },
+  targetBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.successBg, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderWidth: 1, borderColor: colors.success },
+  targetBannerText: { fontSize: fontSize.sm, color: colors.success, fontWeight: fontWeight.semibold, flex: 1 },
+  addedBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.primaryBg, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
+  addedBannerText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.medium },
+  staleOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
+  staleSheet: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.xl, width: '100%', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.border },
+  staleTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, textAlign: 'center' },
+  staleBody: { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: spacing.md },
+  staleResume: { width: '100%', backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center' },
+  staleResumeText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
+  staleFinish: { width: '100%', backgroundColor: colors.surface2, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center' },
+  staleFinishText: { fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.textPrimary },
+  staleDiscard: { width: '100%', paddingVertical: spacing.md, alignItems: 'center' },
+  staleDiscardText: { fontSize: fontSize.sm, color: colors.error, fontWeight: fontWeight.medium },
 });
