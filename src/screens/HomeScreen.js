@@ -25,6 +25,7 @@ export default function HomeScreen({ navigation }) {
   const [planAllWorkouts, setPlanAllWorkouts] = useState([]);
   const [selectedWorkoutOverride, setSelectedWorkoutOverride] = useState(null);
   const [showChangeWorkout, setShowChangeWorkout] = useState(false);
+  const [isStartingWorkout, setIsStartingWorkout] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -85,21 +86,26 @@ export default function HomeScreen({ navigation }) {
   async function handleStartNextWorkout() {
     const target = selectedWorkoutOverride || nextWorkout;
     if (!target?.routine) return;
-    const routine = target.routine;
-    const workout = await createWorkout(user.id, routine.id);
-    const withExercises = await getRoutineExercisesWithDetails(routine.id);
-    const initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
-      exercise, routineExercise, sets: [],
-    }));
-    startWorkout(workout, initialExercises);
-    navigation.navigate('ActiveWorkout');
+    setIsStartingWorkout(true);
+    try {
+      const routine = target.routine;
+      const workout = await createWorkout(user.id, routine.id);
+      const withExercises = await getRoutineExercisesWithDetails(routine.id);
+      const initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
+        exercise, routineExercise, sets: [],
+      }));
+      startWorkout(workout, initialExercises);
+      navigation.navigate('ActiveWorkout');
+    } finally {
+      setIsStartingWorkout(false);
+    }
   }
 
   function handleContinueWorkout() {
     navigation.navigate('ActiveWorkout');
   }
 
-  const hasActiveWorkout = !!activeWorkout;
+  const hasActiveWorkout = !!activeWorkout && !isStartingWorkout;
   const displayWorkout = selectedWorkoutOverride || nextWorkout;
 
   return (
@@ -151,9 +157,9 @@ export default function HomeScreen({ navigation }) {
                   </Text>
                 ) : null}
               </View>
-              <TouchableOpacity style={styles.changeWorkoutLink} onPress={() => setShowChangeWorkout(true)}>
-                <Ionicons name="swap-horizontal-outline" size={13} color={colors.textMuted} />
-                <Text style={styles.changeWorkoutLinkText}>Change workout</Text>
+              <TouchableOpacity style={styles.changeWorkoutBtn} onPress={() => setShowChangeWorkout(true)}>
+                <Ionicons name="swap-horizontal-outline" size={16} color={colors.primary} />
+                <Text style={styles.changeWorkoutBtnText}>Change Workout</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.primaryBtn} onPress={handleStartNextWorkout}>
                 <Ionicons name="play-circle" size={22} color={colors.background} />
@@ -364,17 +370,20 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   quickActionText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
-  changeWorkoutLink: {
+  changeWorkoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.sm,
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.primary + '60',
+    borderRadius: radius.lg,
+    paddingVertical: spacing.md,
   },
-  changeWorkoutLinkText: {
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
-    fontWeight: fontWeight.medium,
+  changeWorkoutBtnText: {
+    fontSize: fontSize.sm,
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
   },
   sheetBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' },
   changeWorkoutSheet: {

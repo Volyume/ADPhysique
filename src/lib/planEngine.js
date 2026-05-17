@@ -13,8 +13,8 @@ export const GOAL_LABELS = {
   balanced_bodybuilding: 'Balanced Bodybuilding',
   aesthetic_v_taper:     'Aesthetic / V-Taper',
   weak_point_spec:       'Weak Point Specialisation',
-  strength_hypertrophy:  'Strength–Hypertrophy',
-  recomp:                'Body Recomposition',
+  strength_hypertrophy:  'Strength-Bias Hypertrophy',
+  recomp:                'Fat Loss / Recomp Support',
 };
 
 export const SPLIT_LABELS = {

@@ -4,7 +4,7 @@ import {
   createProgramme,
 } from './database';
 
-const SEED_KEY = '@volyume_routines_seeded_v2';
+const SEED_KEY = '@volyume_routines_seeded_v3';
 
 const REQUIRED_EXERCISES = [
   { name: 'HS Plate-Loaded Lat Pulldown',        primaryMuscle: 'back',      equipment: 'machine',    movementPattern: 'pull', compoundIsolation: 'compound', defaultRepMin: 8,  defaultRepMax: 12, fatigueCost: 3, stimulusToFatigueRatio: 4 },
@@ -21,7 +21,7 @@ const REQUIRED_EXERCISES = [
 ];
 
 const LIBRARY_PROGRAMME = {
-  name: "Men's Physique Upper Rotation",
+  name: 'Aesthetic Upper Rotation',
   description: 'Two-day upper-body rotation focused on width, rear delts, lateral delts and upper chest. Shoulder-safe execution throughout.',
   workouts: [
     {

@@ -253,11 +253,7 @@ export default function ManualBuilderScreen({ navigation }) {
     try {
       await persistDays();
       await setActivePlan(user.id, programmeId);
-      Alert.alert(
-        'Plan activated!',
-        `"${editablePlanName}" is now your active plan.`,
-        [{ text: 'Done', onPress: () => navigation.navigate('PlansTab') }],
-      );
+      navigation.navigate('HomeTab');
     } catch (e) {
       Alert.alert('Error', e.message || 'Could not save plan.');
     } finally {
@@ -270,11 +266,7 @@ export default function ManualBuilderScreen({ navigation }) {
     setSaving(true);
     try {
       await persistDays();
-      Alert.alert(
-        'Draft saved',
-        `"${editablePlanName}" saved. You can activate it from Plans.`,
-        [{ text: 'Done', onPress: () => navigation.navigate('PlansTab') }],
-      );
+      navigation.navigate('PlansTab');
     } catch (e) {
       Alert.alert('Error', e.message || 'Could not save draft.');
     } finally {

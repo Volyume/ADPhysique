@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   FlatList,
+  BackHandler,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -73,6 +74,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [addedMsg, setAddedMsg] = useState('');
   const [showSwapModal, setShowSwapModal] = useState(false);
   const [swapCandidates, setSwapCandidates] = useState([]);
+  const [showDiscardModal, setShowDiscardModal] = useState(false);
 
   const scrollRef = useRef(null);
   const insets = useSafeAreaInsets();
@@ -111,6 +113,26 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setLoggedSets([]);
     setProgression(null);
   }
+
+  function handleCancelWorkout() {
+    const store = useAppStore.getState();
+    const totalSets = store.workoutExercises.reduce((sum, e) => sum + e.sets.length, 0);
+    if (totalSets === 0) {
+      store.endWorkout();
+      navigation.goBack();
+    } else {
+      setShowDiscardModal(true);
+    }
+  }
+
+  // Hardware back → cancel flow
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      handleCancelWorkout();
+      return true;
+    });
+    return () => sub.remove();
+  }, []);
 
   // Stale workout check (>4h since last activity)
   useEffect(() => {
@@ -307,6 +329,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         <EmptyExerciseView
           onAdd={() => setShowExercisePicker(true)}
           onFinish={handleFinishWorkout}
+          onCancel={handleCancelWorkout}
           elapsed={elapsedStr}
           workoutExercises={workoutExercises}
           setCurrentExerciseIndex={setCurrentExerciseIndex}
@@ -330,8 +353,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleFinishWorkout} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={styles.finishBtn}>Finish</Text>
+          <TouchableOpacity onPress={handleCancelWorkout} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="close" size={22} color={colors.textSecondary} />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Text style={styles.timerText}>{elapsedStr}</Text>
@@ -340,12 +363,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 (exercise.primaryMuscle || exercise.primary_muscle || '').slice(1)}
             </Text>
           </View>
-          <TouchableOpacity
-            testID="volyume-btn-add-mid-workout"
-            style={styles.addExerciseBtn}
-            onPress={() => setShowExercisePicker(true)}
-          >
-            <Ionicons name="add" size={22} color={colors.primary} />
+          <TouchableOpacity onPress={handleFinishWorkout} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={styles.finishBtn}>Finish</Text>
           </TouchableOpacity>
         </View>
 
@@ -530,6 +549,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             <TouchableOpacity style={styles.actionBtn} onPress={() => setShowExecution(true)}>
               <Ionicons name="information-circle-outline" size={18} color={colors.textSecondary} />
               <Text style={styles.actionBtnText}>Info</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              testID="volyume-btn-add-mid-workout"
+              style={styles.actionBtn}
+              onPress={() => setShowExercisePicker(true)}
+            >
+              <Ionicons name="add-circle-outline" size={18} color={colors.textSecondary} />
+              <Text style={styles.actionBtnText}>Add</Text>
             </TouchableOpacity>
           </View>
 
@@ -748,20 +775,43 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             />
           </SafeAreaView>
         </Modal>
+        {/* Discard Workout Modal */}
+        <Modal visible={showDiscardModal} transparent animationType="fade" onRequestClose={() => setShowDiscardModal(false)}>
+          <View style={styles.discardOverlay}>
+            <View style={styles.discardSheet}>
+              <Text style={styles.discardTitle}>Discard workout?</Text>
+              <Text style={styles.discardBody}>
+                This will delete the current workout session. Your plan will not advance.
+              </Text>
+              <TouchableOpacity style={styles.keepTrainingBtn} onPress={() => setShowDiscardModal(false)}>
+                <Text style={styles.keepTrainingBtnText}>Keep Training</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.discardConfirmBtn}
+                onPress={() => { endWorkout(); navigation.goBack(); }}
+              >
+                <Text style={styles.discardConfirmBtnText}>Discard Workout</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-function EmptyExerciseView({ onAdd, onFinish, elapsed, workoutExercises, setCurrentExerciseIndex, currentExerciseIndex }) {
+function EmptyExerciseView({ onAdd, onFinish, onCancel, elapsed, workoutExercises, setCurrentExerciseIndex, currentExerciseIndex }) {
   return (
     <View style={styles.emptyView}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={onFinish}>
-          <Text style={styles.finishBtn}>Finish</Text>
+        <TouchableOpacity onPress={onCancel} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Ionicons name="close" size={22} color={colors.textSecondary} />
         </TouchableOpacity>
         <Text style={styles.timerText}>{elapsed}</Text>
-        <View style={{ width: 44 }} />
+        <TouchableOpacity onPress={onFinish} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Text style={styles.finishBtn}>Finish</Text>
+        </TouchableOpacity>
       </View>
 
       {workoutExercises.length > 0 && (
@@ -958,4 +1008,12 @@ const styles = StyleSheet.create({
   staleFinishText: { fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.textPrimary },
   staleDiscard: { width: '100%', paddingVertical: spacing.md, alignItems: 'center' },
   staleDiscardText: { fontSize: fontSize.sm, color: colors.error, fontWeight: fontWeight.medium },
+  discardOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
+  discardSheet: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.xl, width: '100%', gap: spacing.md, borderWidth: 1, borderColor: colors.border },
+  discardTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, textAlign: 'center' },
+  discardBody: { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: spacing.xs },
+  keepTrainingBtn: { backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md + 2, alignItems: 'center' },
+  keepTrainingBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
+  discardConfirmBtn: { alignItems: 'center', paddingVertical: spacing.md },
+  discardConfirmBtnText: { fontSize: fontSize.sm, color: colors.error, fontWeight: fontWeight.medium },
 });

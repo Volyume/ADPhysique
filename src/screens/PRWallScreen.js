@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
+import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { getAllWorkoutSets, getAllExercises } from '../lib/database';
 import { calculate1RM } from '../lib/algorithms';
@@ -21,7 +22,7 @@ export default function PRWallScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState('all');
 
-  useEffect(() => { loadData(); }, [user?.id]);
+  useFocusEffect(useCallback(() => { if (user?.id) loadData(); }, [user?.id]));
 
   async function loadData() {
     if (!user?.id) return;

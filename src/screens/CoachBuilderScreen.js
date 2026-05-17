@@ -59,8 +59,8 @@ const GOAL_OPTIONS = [
   { value: 'balanced_bodybuilding',       icon: 'grid-outline',           subtitle: 'Structured physique focus with even volume distribution' },
   { value: 'aesthetic_v_taper',           icon: 'triangle-outline',       subtitle: 'Prioritises upper-body width, shoulder-to-waist ratio' },
   { value: 'weak_point_spec',             icon: 'warning-outline',        subtitle: 'Extra volume and priority on muscles you want to bring up' },
-  { value: 'strength_biased_hypertrophy', icon: 'flash-outline',          subtitle: 'Heavier compounds with muscle growth as the goal' },
-  { value: 'recomposition',               icon: 'swap-horizontal-outline', subtitle: 'Build or preserve muscle with controlled fatigue' },
+  { value: 'strength_hypertrophy', icon: 'flash-outline',          subtitle: 'Heavier compounds with muscle growth as the goal' },
+  { value: 'recomp',               icon: 'swap-horizontal-outline', subtitle: 'Build or preserve muscle with controlled fatigue' },
 ];
 
 const WEAK_POINT_MUSCLES = [

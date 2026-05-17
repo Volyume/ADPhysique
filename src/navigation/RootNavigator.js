@@ -37,6 +37,7 @@ import ShareCardScreen from '../screens/ShareCardScreen';
 import ManualBuilderScreen from '../screens/ManualBuilderScreen';
 import CoachBuilderScreen from '../screens/CoachBuilderScreen';
 import NutritionTargetsScreen from '../screens/NutritionTargetsScreen';
+import PlanLibraryScreen from '../screens/PlanLibraryScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -70,6 +71,7 @@ function PlansStack() {
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise' }} />
       <Stack.Screen name="ManualBuilder" component={ManualBuilderScreen} options={{ title: 'Build a Plan' }} />
       <Stack.Screen name="CoachBuilder" component={CoachBuilderScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ title: 'Plan Library' }} />
     </Stack.Navigator>
   );
 }
