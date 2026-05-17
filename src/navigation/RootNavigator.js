@@ -34,6 +34,9 @@ import PlanDetailScreen from '../screens/PlanDetailScreen';
 import RoutineDetailScreen from '../screens/RoutineDetailScreen';
 import MesocycleBuilderScreen from '../screens/MesocycleBuilderScreen';
 import ShareCardScreen from '../screens/ShareCardScreen';
+import ManualBuilderScreen from '../screens/ManualBuilderScreen';
+import CoachBuilderScreen from '../screens/CoachBuilderScreen';
+import NutritionTargetsScreen from '../screens/NutritionTargetsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -65,6 +68,8 @@ function PlansStack() {
       <Stack.Screen name="RoutineDetail" component={RoutineDetailScreen} options={{ title: 'Edit Workout' }} />
       <Stack.Screen name="ExerciseLibrary" component={ExerciseLibraryScreen} options={{ title: 'Exercise Library' }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise' }} />
+      <Stack.Screen name="ManualBuilder" component={ManualBuilderScreen} options={{ title: 'Build a Plan' }} />
+      <Stack.Screen name="CoachBuilder" component={CoachBuilderScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
@@ -87,6 +92,7 @@ function ProfileStack() {
     <Stack.Navigator screenOptions={stackOptions}>
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Profile & Settings' }} />
       <Stack.Screen name="MesocycleBuilder" component={MesocycleBuilderScreen} options={{ title: 'Training Blocks' }} />
+      <Stack.Screen name="NutritionTargets" component={NutritionTargetsScreen} options={{ title: 'Nutrition Targets' }} />
     </Stack.Navigator>
   );
 }
