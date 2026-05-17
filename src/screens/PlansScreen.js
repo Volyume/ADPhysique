@@ -17,6 +17,22 @@ import {
 } from '../lib/database';
 import useAppStore from '../store/useAppStore';
 
+const FILTER_CHIPS = ['All', "Men's Physique", 'Upper / Lower', 'Full Body', 'PPL', 'Specialisation'];
+
+function matchesFilter(plan, filter) {
+  if (filter === 'All') return true;
+  const haystack = [plan.name, plan.description, plan.splitType, plan.tags]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  if (filter === "Men's Physique") return haystack.includes('men') || haystack.includes('physique');
+  if (filter === 'Upper / Lower') return haystack.includes('upper') || haystack.includes('lower');
+  if (filter === 'Full Body') return haystack.includes('full body') || haystack.includes('fullbody');
+  if (filter === 'PPL') return haystack.includes('ppl') || haystack.includes('push pull');
+  if (filter === 'Specialisation') return haystack.includes('special');
+  return haystack.includes(filter.toLowerCase());
+}
+
 export default function PlansScreen({ navigation }) {
   const { user, startWorkout } = useAppStore();
   const [activePlan, setActivePlanData] = useState(null);
@@ -27,7 +43,7 @@ export default function PlansScreen({ navigation }) {
   const [exerciseCounts, setExerciseCounts] = useState({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [librarySearch, setLibrarySearch] = useState('');
+  const [activeFilter, setActiveFilter] = useState('All');
   const [showNewPlan, setShowNewPlan] = useState(false);
   const [newPlanName, setNewPlanName] = useState('');
   const [creating, setCreating] = useState(false);
@@ -89,32 +105,18 @@ export default function PlansScreen({ navigation }) {
     await loadData();
   }
 
-  async function handleDeactivate() {
-    Alert.alert(
-      'Deactivate Plan?',
-      'Train will show no plan until you set another one as active.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Deactivate',
-          onPress: async () => {
-            await setActivePlan(user.id, null);
-            await loadData();
-          },
-        },
-      ],
-    );
-  }
-
   async function handlePlanOptions(plan) {
     Alert.alert(plan.name, undefined, [
       { text: 'View Plan', onPress: () => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false }) },
       { text: 'Set Active', onPress: () => handleSetActive(plan.id) },
-      { text: 'Duplicate', onPress: async () => {
-        const copy = await duplicatePlan(plan.id, user.id);
-        await loadData();
-        navigation.navigate('PlanDetail', { planId: copy.id, isLibrary: false });
-      }},
+      {
+        text: 'Duplicate',
+        onPress: async () => {
+          const copy = await duplicatePlan(plan.id, user.id);
+          await loadData();
+          navigation.navigate('PlanDetail', { planId: copy.id, isLibrary: false });
+        },
+      },
       {
         text: 'Archive',
         style: 'destructive',
@@ -212,9 +214,11 @@ export default function PlansScreen({ navigation }) {
     }
   }
 
-  const filteredLibrary = librarySearch.trim()
-    ? libraryPlans.filter(p => p.name.toLowerCase().includes(librarySearch.toLowerCase()))
-    : libraryPlans;
+  function handleStartBlankWorkout() {
+    navigation.navigate('HomeTab', { screen: 'BuildWorkout' });
+  }
+
+  const filteredLibrary = libraryPlans.filter(p => matchesFilter(p, activeFilter));
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
@@ -257,8 +261,34 @@ export default function PlansScreen({ navigation }) {
               </View>
             </View>
           ) : (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyCardText}>No active plan. Set a plan as active to see your next workout on Train.</Text>
+            <View style={styles.noActivePlanCard}>
+              <Ionicons name="calendar-outline" size={32} color={colors.textMuted} style={{ marginBottom: spacing.sm }} />
+              <Text style={styles.noActivePlanTitle}>No Active Plan</Text>
+              <Text style={styles.noActivePlanDesc}>
+                Choose a plan to track your training progress and get day-by-day guidance.
+              </Text>
+              <View style={styles.noActivePlanActions}>
+                <TouchableOpacity
+                  style={styles.noActivePrimaryBtn}
+                  onPress={() => {}}
+                >
+                  <Ionicons name="library-outline" size={16} color={colors.background} />
+                  <Text style={styles.noActivePrimaryBtnText}>Browse Plan Library</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.noActiveSecondaryBtn}
+                  onPress={() => setShowNewPlan(true)}
+                >
+                  <Ionicons name="add-outline" size={16} color={colors.primary} />
+                  <Text style={styles.noActiveSecondaryBtnText}>Build a Plan</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.noActiveTertiaryBtn}
+                  onPress={handleStartBlankWorkout}
+                >
+                  <Text style={styles.noActiveTertiaryBtnText}>Start Blank Workout</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           )}
         </View>
@@ -269,14 +299,17 @@ export default function PlansScreen({ navigation }) {
             <Text style={styles.sectionTitle}>MY PLANS</Text>
             {myPlans.map(plan => (
               <View key={plan.id} style={styles.planCard}>
-                <View style={styles.planCardMain}>
+                <TouchableOpacity
+                  style={styles.planCardMain}
+                  onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
+                >
                   <Text style={styles.planCardName} numberOfLines={2}>{plan.name}</Text>
                   {planWorkoutCounts[plan.id] ? (
                     <Text style={styles.planCardMeta}>
                       {planWorkoutCounts[plan.id]} workout{planWorkoutCounts[plan.id] !== 1 ? 's' : ''}
                     </Text>
                   ) : null}
-                </View>
+                </TouchableOpacity>
                 <View style={styles.planCardActions}>
                   <TouchableOpacity style={styles.setActiveBtn} onPress={() => handleSetActive(plan.id)}>
                     <Text style={styles.setActiveBtnText}>Set Active</Text>
@@ -328,20 +361,25 @@ export default function PlansScreen({ navigation }) {
         {/* Plan Library */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>PLAN LIBRARY</Text>
-          <Text style={styles.sectionSubtitle}>Built-in plans. Add to My Plans to use.</Text>
-          <View style={styles.searchBox}>
-            <Ionicons name="search-outline" size={16} color={colors.textMuted} />
-            <TextInput
-              style={styles.searchInput}
-              value={librarySearch}
-              onChangeText={setLibrarySearch}
-              placeholder="Search plans..."
-              placeholderTextColor={colors.textMuted}
-            />
-          </View>
+          <Text style={styles.sectionSubtitle}>Built-in plans. Preview or add to My Plans.</Text>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll} contentContainerStyle={styles.chipsRow}>
+            {FILTER_CHIPS.map(chip => (
+              <TouchableOpacity
+                key={chip}
+                style={[styles.chip, activeFilter === chip && styles.chipActive]}
+                onPress={() => setActiveFilter(chip)}
+              >
+                <Text style={[styles.chipText, activeFilter === chip && styles.chipTextActive]}>{chip}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
           {filteredLibrary.length === 0 ? (
             <View style={styles.emptyCard}>
-              <Text style={styles.emptyCardText}>No plans in library yet.</Text>
+              <Text style={styles.emptyCardText}>
+                {activeFilter === 'All' ? 'No plans in library yet.' : `No ${activeFilter} plans available yet.`}
+              </Text>
             </View>
           ) : (
             filteredLibrary.map(plan => (
@@ -350,26 +388,49 @@ export default function PlansScreen({ navigation }) {
                   style={styles.libraryCardMain}
                   onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: true })}
                 >
-                  <View style={styles.libraryBadge}>
-                    <Text style={styles.libraryBadgeText}>Library</Text>
+                  <View style={styles.libraryCardTopRow}>
+                    <View style={styles.libraryBadge}>
+                      <Text style={styles.libraryBadgeText}>Library</Text>
+                    </View>
+                    {planWorkoutCounts[plan.id] ? (
+                      <Text style={styles.libraryCardWorkoutCount}>
+                        {planWorkoutCounts[plan.id]} workout{planWorkoutCounts[plan.id] !== 1 ? 's' : ''}
+                      </Text>
+                    ) : null}
                   </View>
                   <Text style={styles.libraryCardName} numberOfLines={2}>{plan.name}</Text>
                   {plan.description ? (
                     <Text style={styles.libraryCardDesc} numberOfLines={2}>{plan.description}</Text>
                   ) : null}
-                  {planWorkoutCounts[plan.id] ? (
-                    <Text style={styles.libraryCardMeta}>
-                      {planWorkoutCounts[plan.id]} workout{planWorkoutCounts[plan.id] !== 1 ? 's' : ''}
-                    </Text>
-                  ) : null}
+                  <View style={styles.libraryCardTagRow}>
+                    {plan.splitType ? (
+                      <View style={styles.libraryTag}>
+                        <Text style={styles.libraryTagText}>{plan.splitType}</Text>
+                      </View>
+                    ) : null}
+                    {plan.difficulty != null ? (
+                      <View style={styles.libraryTag}>
+                        <Text style={styles.libraryTagText}>
+                          {['Beginner', 'Intermediate', 'Advanced'][plan.difficulty] || 'Intermediate'}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  testID="volyume-btn-copy-from-library"
-                  style={styles.addToMyPlansBtn}
-                  onPress={() => handleAddToMyPlans(plan)}
-                >
-                  <Text style={styles.addToMyPlansBtnText}>Add to My Plans</Text>
-                </TouchableOpacity>
+                <View style={styles.libraryCardFooter}>
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: true })}
+                  >
+                    <Text style={styles.previewPlanText}>Preview Plan</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    testID="volyume-btn-copy-from-library"
+                    style={styles.addToMyPlansBtn}
+                    onPress={() => handleAddToMyPlans(plan)}
+                  >
+                    <Text style={styles.addToMyPlansBtnText}>Add to My Plans</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             ))
           )}
@@ -429,22 +490,16 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs, fontWeight: fontWeight.black, color: colors.textMuted, letterSpacing: 1.5,
   },
   sectionSubtitle: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: -spacing.sm },
+
   activePlanCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.primary + '40',
-    gap: spacing.md,
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
+    borderWidth: 1, borderColor: colors.primary + '40', gap: spacing.md,
   },
   activePlanHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   activeBadge: {
-    backgroundColor: colors.primaryBg,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: colors.primary + '60',
+    backgroundColor: colors.primaryBg, borderRadius: radius.full,
+    paddingHorizontal: spacing.sm, paddingVertical: 3,
+    borderWidth: 1, borderColor: colors.primary + '60',
   },
   activeBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.black, letterSpacing: 1 },
   activePlanName: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
@@ -460,6 +515,31 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border,
   },
   viewPlanBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textSecondary },
+
+  noActivePlanCard: {
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.xl,
+    borderWidth: 1, borderColor: colors.border, alignItems: 'center', gap: spacing.md,
+  },
+  noActivePlanTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  noActivePlanDesc: {
+    fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', lineHeight: 20,
+    paddingHorizontal: spacing.lg,
+  },
+  noActivePlanActions: { width: '100%', gap: spacing.sm, marginTop: spacing.xs },
+  noActivePrimaryBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md,
+  },
+  noActivePrimaryBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.background },
+  noActiveSecondaryBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    backgroundColor: colors.surface2, borderRadius: radius.md, paddingVertical: spacing.md,
+    borderWidth: 1, borderColor: colors.primary + '50',
+  },
+  noActiveSecondaryBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
+  noActiveTertiaryBtn: { alignItems: 'center', paddingVertical: spacing.sm },
+  noActiveTertiaryBtnText: { fontSize: fontSize.sm, color: colors.textMuted, fontWeight: fontWeight.medium },
+
   planCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
     borderWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: spacing.md,
@@ -474,6 +554,7 @@ const styles = StyleSheet.create({
   },
   setActiveBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
   moreBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+
   templateCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
     borderWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: spacing.md,
@@ -487,41 +568,60 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
   },
   startTemplateBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.background },
-  searchBox: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md,
+
+  chipsScroll: { marginTop: -spacing.xs },
+  chipsRow: { gap: spacing.sm, paddingRight: spacing.lg },
+  chip: {
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    borderRadius: radius.full, backgroundColor: colors.surface,
     borderWidth: 1, borderColor: colors.border,
   },
-  searchInput: { flex: 1, fontSize: fontSize.sm, color: colors.textPrimary },
+  chipActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary + '80' },
+  chipText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  chipTextActive: { color: colors.primary, fontWeight: fontWeight.bold },
+
   libraryCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg,
     borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
   },
   libraryCardMain: { padding: spacing.lg, gap: spacing.sm },
+  libraryCardTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   libraryBadge: {
     alignSelf: 'flex-start', backgroundColor: colors.surface2, borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: 2, borderWidth: 1, borderColor: colors.border,
   },
   libraryBadgeText: { fontSize: fontSize.xs, color: colors.textMuted, fontWeight: fontWeight.semibold },
+  libraryCardWorkoutCount: { fontSize: fontSize.xs, color: colors.textMuted },
   libraryCardName: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
   libraryCardDesc: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
-  libraryCardMeta: { fontSize: fontSize.xs, color: colors.textMuted },
-  addToMyPlansBtn: {
-    backgroundColor: colors.primaryBg, borderTopWidth: 1, borderTopColor: colors.primary + '30',
-    padding: spacing.md, alignItems: 'center',
+  libraryCardTagRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
+  libraryTag: {
+    backgroundColor: colors.surface2, borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm, paddingVertical: 2, borderWidth: 1, borderColor: colors.border,
   },
+  libraryTagText: { fontSize: fontSize.xs, color: colors.textMuted },
+  libraryCardFooter: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    borderTopWidth: 1, borderTopColor: colors.border,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+  },
+  previewPlanText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  addToMyPlansBtn: { paddingVertical: spacing.xs, paddingHorizontal: spacing.md },
   addToMyPlansBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary },
+
   emptyCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.xl,
     borderWidth: 1, borderColor: colors.border, alignItems: 'center',
   },
   emptyCardText: { fontSize: fontSize.sm, color: colors.textMuted, textAlign: 'center', lineHeight: 20 },
+
   buildBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
     backgroundColor: colors.surface2, borderRadius: radius.lg, paddingVertical: spacing.lg,
     borderWidth: 1, borderColor: colors.border,
   },
   buildBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
+
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
   modalSheet: {
     backgroundColor: colors.surface, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,

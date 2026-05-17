@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +22,9 @@ export default function HomeScreen({ navigation }) {
   const [exerciseCounts, setExerciseCounts] = useState({});
   const [refreshing, setRefreshing] = useState(false);
   const [seeded, setSeeded] = useState(false);
+  const [planAllWorkouts, setPlanAllWorkouts] = useState([]);
+  const [selectedWorkoutOverride, setSelectedWorkoutOverride] = useState(null);
+  const [showChangeWorkout, setShowChangeWorkout] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -59,13 +62,17 @@ export default function HomeScreen({ navigation }) {
     try {
       const plan = await getActivePlan(user.id);
       setActivePlanData(plan || null);
-      if (!plan) { setNextWorkout(null); return; }
+      if (!plan) { setNextWorkout(null); setPlanAllWorkouts([]); setSelectedWorkoutOverride(null); return; }
       const routines = await getRoutinesForPlan(plan.id);
+      setPlanAllWorkouts(routines);
+      setSelectedWorkoutOverride(null);
       if (routines.length === 0) { setNextWorkout(null); return; }
       const idx = (plan.nextWorkoutIndex || 0) % routines.length;
       setNextWorkout({ routine: routines[idx], total: routines.length, idx });
     } catch (_e) {
       setNextWorkout(null);
+      setPlanAllWorkouts([]);
+      setSelectedWorkoutOverride(null);
     }
   }
 
@@ -76,8 +83,9 @@ export default function HomeScreen({ navigation }) {
   }
 
   async function handleStartNextWorkout() {
-    if (!nextWorkout?.routine) return;
-    const routine = nextWorkout.routine;
+    const target = selectedWorkoutOverride || nextWorkout;
+    if (!target?.routine) return;
+    const routine = target.routine;
     const workout = await createWorkout(user.id, routine.id);
     const withExercises = await getRoutineExercisesWithDetails(routine.id);
     const initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
@@ -92,6 +100,7 @@ export default function HomeScreen({ navigation }) {
   }
 
   const hasActiveWorkout = !!activeWorkout;
+  const displayWorkout = selectedWorkoutOverride || nextWorkout;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -102,7 +111,6 @@ export default function HomeScreen({ navigation }) {
       >
         <Text style={styles.appTitle}>VOLYUME</Text>
 
-        {/* Compact week snapshot */}
         <View style={styles.snapshotRow}>
           <View style={styles.snapshotCard}>
             <Text style={styles.snapshotValue}>{weekStats.sessions}</Text>
@@ -117,7 +125,6 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        {/* Main CTA block */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>NEXT UP</Text>
 
@@ -132,18 +139,22 @@ export default function HomeScreen({ navigation }) {
                 <View style={styles.planCardTop}>
                   <Text style={styles.planName} numberOfLines={1}>{activePlan.name}</Text>
                   <Text style={styles.planProgress}>
-                    Day {nextWorkout.idx + 1} of {nextWorkout.total}
+                    Day {(selectedWorkoutOverride?.idx ?? nextWorkout?.idx ?? 0) + 1} of {nextWorkout.total}
                   </Text>
                 </View>
                 <Text style={styles.workoutName} numberOfLines={2}>
-                  {nextWorkout.routine.name}
+                  {displayWorkout?.routine?.name}
                 </Text>
-                {exerciseCounts[nextWorkout.routine.id] ? (
+                {exerciseCounts[displayWorkout?.routine?.id] ? (
                   <Text style={styles.workoutMeta}>
-                    {exerciseCounts[nextWorkout.routine.id]} exercises
+                    {exerciseCounts[displayWorkout?.routine?.id]} exercises
                   </Text>
                 ) : null}
               </View>
+              <TouchableOpacity style={styles.changeWorkoutLink} onPress={() => setShowChangeWorkout(true)}>
+                <Ionicons name="swap-horizontal-outline" size={13} color={colors.textMuted} />
+                <Text style={styles.changeWorkoutLinkText}>Change workout</Text>
+              </TouchableOpacity>
               <TouchableOpacity style={styles.primaryBtn} onPress={handleStartNextWorkout}>
                 <Ionicons name="play-circle" size={22} color={colors.background} />
                 <Text style={styles.primaryBtnText}>Start Workout</Text>
@@ -168,7 +179,6 @@ export default function HomeScreen({ navigation }) {
           )}
         </View>
 
-        {/* Quick actions */}
         <View style={styles.quickActions}>
           <TouchableOpacity
             style={styles.quickAction}
@@ -200,6 +210,66 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={showChangeWorkout}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowChangeWorkout(false)}
+      >
+        <TouchableOpacity
+          style={styles.sheetBackdrop}
+          activeOpacity={1}
+          onPress={() => setShowChangeWorkout(false)}
+        />
+        <View style={styles.changeWorkoutSheet}>
+          <View style={styles.sheetHandle} />
+          <Text style={styles.sheetTitle}>Choose Workout</Text>
+          <Text style={styles.sheetSubtitle}>{activePlan?.name}</Text>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {planAllWorkouts.map((routine, i) => {
+              const isNextUp = i === nextWorkout?.idx && !selectedWorkoutOverride;
+              const isSelected = selectedWorkoutOverride?.idx === i;
+              return (
+                <TouchableOpacity
+                  key={routine.id ?? i}
+                  style={[styles.workoutPickerRow, isSelected && styles.workoutPickerRowActive]}
+                  onPress={() => {
+                    if (i === nextWorkout?.idx) {
+                      setSelectedWorkoutOverride(null);
+                    } else {
+                      setSelectedWorkoutOverride({ routine, total: planAllWorkouts.length, idx: i });
+                    }
+                    setShowChangeWorkout(false);
+                  }}
+                >
+                  <View style={[styles.dayBadge, (isNextUp || isSelected) && styles.dayBadgeActive]}>
+                    <Text style={[styles.dayNum, (isNextUp || isSelected) && styles.dayNumActive]}>
+                      D{i + 1}
+                    </Text>
+                  </View>
+                  <View style={styles.workoutPickerInfo}>
+                    <Text style={styles.workoutPickerName} numberOfLines={1}>{routine.name}</Text>
+                    {exerciseCounts[routine.id] ? (
+                      <Text style={styles.workoutPickerMeta}>{exerciseCounts[routine.id]} exercises</Text>
+                    ) : null}
+                  </View>
+                  {isNextUp ? (
+                    <View style={styles.nextUpBadge}>
+                      <Text style={styles.nextUpBadgeText}>Next up</Text>
+                    </View>
+                  ) : isSelected ? (
+                    <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                  ) : null}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+          <TouchableOpacity style={styles.sheetCancelBtn} onPress={() => setShowChangeWorkout(false)}>
+            <Text style={styles.sheetCancelText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -294,4 +364,105 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   quickActionText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  changeWorkoutLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+  },
+  changeWorkoutLinkText: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    fontWeight: fontWeight.medium,
+  },
+  sheetBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' },
+  changeWorkoutSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xxxl,
+    maxHeight: '80%',
+  },
+  sheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.border,
+    alignSelf: 'center',
+    marginBottom: spacing.lg,
+  },
+  sheetTitle: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
+  },
+  sheetSubtitle: {
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+    marginBottom: spacing.lg,
+  },
+  workoutPickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  workoutPickerRowActive: {
+    backgroundColor: colors.primaryBg,
+    marginHorizontal: -spacing.xl,
+    paddingHorizontal: spacing.xl,
+    borderRadius: 0,
+  },
+  dayBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surface2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  dayBadgeActive: {
+    backgroundColor: colors.primaryBg,
+    borderColor: colors.primary + '60',
+  },
+  dayNum: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.textSecondary,
+  },
+  dayNumActive: { color: colors.primary },
+  workoutPickerInfo: { flex: 1, gap: 2 },
+  workoutPickerName: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+  },
+  workoutPickerMeta: { fontSize: fontSize.xs, color: colors.textMuted },
+  nextUpBadge: {
+    backgroundColor: colors.primaryBg,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: colors.primary + '40',
+  },
+  nextUpBadgeText: {
+    fontSize: fontSize.xs,
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
+  },
+  sheetCancelBtn: {
+    marginTop: spacing.lg,
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+  },
+  sheetCancelText: { fontSize: fontSize.md, color: colors.textSecondary },
 });

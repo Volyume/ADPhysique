@@ -1,11 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { getAllWorkoutSets, getAllExercises, getAllWorkouts, updateWorkout, getActivePlan, getRoutinesForPlan, advancePlanNextWorkout } from '../lib/database';
+import {
+  getAllWorkoutSets, getAllExercises, getAllWorkouts, updateWorkout,
+  getActivePlan, getRoutinesForPlan, advancePlanNextWorkout,
+} from '../lib/database';
 import { calculateWeeklyVolume, getVolumeStatus, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 
@@ -49,6 +52,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     routineId = null, detectedPRs = [], exerciseData = [],
   } = route.params || {};
   const { user, units } = useAppStore();
+  const insets = useSafeAreaInsets();
 
   const [feedback, setFeedback] = useState({
     sessionDifficulty: 3,
@@ -62,6 +66,25 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const [autoRegSuggestions, setAutoRegSuggestions] = useState([]);
   const [saving, setSaving] = useState(false);
   const [completedWorkoutCount, setCompletedWorkoutCount] = useState(null);
+  const [feedbackExpanded, setFeedbackExpanded] = useState(false);
+
+  const feedbackDebounceRef = useRef(null);
+
+  useEffect(() => {
+    if (!readOnly && routineId && user?.id) {
+      (async () => {
+        try {
+          const activePlan = await getActivePlan(user.id);
+          if (activePlan) {
+            const planRoutines = await getRoutinesForPlan(activePlan.id);
+            if (planRoutines.some(r => r.id === routineId)) {
+              await advancePlanNextWorkout(activePlan.id, planRoutines.length);
+            }
+          }
+        } catch (_e) {}
+      })();
+    }
+  }, []);
 
   useEffect(() => {
     loadVolumeAndHistory();
@@ -71,6 +94,25 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     const suggestions = getAutoRegSuggestion(feedback, weeklyVolume);
     setAutoRegSuggestions(suggestions);
   }, [feedback, weeklyVolume]);
+
+  useEffect(() => {
+    if (!workoutId || readOnly) return;
+    if (feedbackDebounceRef.current) clearTimeout(feedbackDebounceRef.current);
+    feedbackDebounceRef.current = setTimeout(async () => {
+      try {
+        await updateWorkout(workoutId, {
+          sessionDifficulty: feedback.sessionDifficulty,
+          overallPump: feedback.overallPump,
+          soreness24hBefore: feedback.soreness24hBefore,
+          fatigueLevel: feedback.fatigueLevel,
+          notes: notes || null,
+        });
+      } catch (_e) {}
+    }, 1000);
+    return () => {
+      if (feedbackDebounceRef.current) clearTimeout(feedbackDebounceRef.current);
+    };
+  }, [feedback]);
 
   async function loadVolumeAndHistory() {
     if (!user?.id) return;
@@ -87,9 +129,14 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     setCompletedWorkoutCount(allWorkouts.filter(w => w.isCompleted).length);
   }
 
-  async function handleSave() {
+  async function handleDone() {
+    if (readOnly) {
+      navigation.goBack();
+      return;
+    }
     if (!workoutId) { navigation.popToTop(); return; }
     setSaving(true);
+    if (feedbackDebounceRef.current) clearTimeout(feedbackDebounceRef.current);
     try {
       await updateWorkout(workoutId, {
         sessionDifficulty: feedback.sessionDifficulty,
@@ -98,23 +145,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         fatigueLevel: feedback.fatigueLevel,
         notes: notes || null,
       });
-
-      // Advance active plan pointer if this workout came from a plan routine
-      if (routineId && user?.id) {
-        try {
-          const activePlan = await getActivePlan(user.id);
-          if (activePlan) {
-            const planRoutines = await getRoutinesForPlan(activePlan.id);
-            if (planRoutines.some(r => r.id === routineId)) {
-              await advancePlanNextWorkout(activePlan.id, planRoutines.length);
-            }
-          }
-        } catch (_e) {}
-      }
-    } finally {
-      setSaving(false);
-      navigation.popToTop();
-    }
+    } catch (_e) {}
+    setSaving(false);
+    navigation.popToTop();
   }
 
   function handleShareCard() {
@@ -160,24 +193,34 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const displayWorkingSets = workingSetCount ?? setCount ?? 0;
   const dataLimited = completedWorkoutCount !== null && completedWorkoutCount < 4;
 
+  const completionDate = new Date().toLocaleDateString('en-GB', {
+    day: 'numeric', month: 'long', year: 'numeric',
+  });
+
+  const sessionLabel = exerciseNames.length > 0
+    ? exerciseNames.slice(0, 3).join(' · ') + (exerciseNames.length > 3 ? ` +${exerciseNames.length - 3} more` : '')
+    : null;
+
+  const prExerciseNames = detectedPRs
+    .slice(0, 3)
+    .map(pr => pr.exerciseName || pr.exercise || '')
+    .filter(Boolean)
+    .join(', ');
+
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Header */}
         <View style={styles.completionHeader}>
           <View style={styles.checkRow}>
             <Ionicons name="checkmark-circle" size={28} color={colors.success} />
-            <Text style={styles.completionTitle}>Session Logged</Text>
+            <Text style={styles.completionTitle}>Session Complete</Text>
           </View>
-          {exerciseNames.length > 0 && (
-            <Text style={styles.completionSub}>
-              {exerciseNames.slice(0, 3).join(' · ')}
-              {exerciseNames.length > 3 ? ` +${exerciseNames.length - 3} more` : ''}
-            </Text>
+          <Text style={styles.completionDate}>{completionDate}</Text>
+          {sessionLabel && (
+            <Text style={styles.completionSub}>{sessionLabel}</Text>
           )}
         </View>
 
-        {/* Stats */}
         <View style={styles.statsGrid}>
           <StatBox icon="barbell-outline" value={String(exerciseCount || 0)} label="Exercises" />
           <StatBox icon="layers-outline" value={String(displayWorkingSets)} label="Working Sets" />
@@ -185,7 +228,18 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           <StatBox icon="trending-up-outline" value={`${((tonnage || 0) / 1000).toFixed(1)}t`} label="Total Volume" />
         </View>
 
-        {/* Volume by Muscle */}
+        {detectedPRs.length > 0 && (
+          <View style={styles.prRow}>
+            <Ionicons name="trophy-outline" size={18} color={colors.warning} />
+            <Text style={styles.prRowText}>
+              {detectedPRs.length} new PR{detectedPRs.length !== 1 ? 's' : ''}
+              {prExerciseNames ? ` · ${prExerciseNames}` : ''}
+            </Text>
+          </View>
+        )}
+
+        <View style={styles.divider} />
+
         {musclesWorked.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>THIS WEEK AFTER SESSION</Text>
@@ -205,7 +259,6 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* Recommendations */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>RECOMMENDATIONS</Text>
           {dataLimited ? (
@@ -231,61 +284,71 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           )}
         </View>
 
-        {/* Session Feedback — hidden in read-only mode */}
         {!readOnly && (
-          <>
-            <View style={styles.section}>
-              <View style={styles.sectionHeaderRow}>
-                <Text style={styles.sectionTitle}>SESSION FEEDBACK</Text>
-                <Text style={styles.optionalLabel}>optional</Text>
-              </View>
+          <View style={styles.section}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>SESSION FEEDBACK</Text>
+              <Text style={styles.optionalLabel}>optional</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.feedbackToggleBtn}
+              onPress={() => setFeedbackExpanded(e => !e)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.feedbackToggleBtnText}>
+                {feedbackExpanded ? 'Hide session feedback' : 'Add session feedback'}
+              </Text>
+              <Ionicons
+                name={feedbackExpanded ? 'chevron-up' : 'chevron-down'}
+                size={18}
+                color={colors.textSecondary}
+              />
+            </TouchableOpacity>
+            {feedbackExpanded && (
               <View style={styles.feedbackCard}>
                 <RatingRow label="Difficulty" field="sessionDifficulty" value={feedback.sessionDifficulty} max={5} onChange={v => setFeedback(f => ({ ...f, sessionDifficulty: v }))} />
                 <RatingRow label="Pump quality" field="overallPump" value={feedback.overallPump} max={3} onChange={v => setFeedback(f => ({ ...f, overallPump: v }))} />
                 <RatingRow label="Soreness coming in" field="soreness24hBefore" value={feedback.soreness24hBefore} max={3} onChange={v => setFeedback(f => ({ ...f, soreness24hBefore: v }))} />
                 <RatingRow label="Fatigue" field="fatigueLevel" value={feedback.fatigueLevel} max={5} onChange={v => setFeedback(f => ({ ...f, fatigueLevel: v }))} />
                 <RatingRow label="Joint discomfort" field="jointDiscomfort" value={feedback.jointDiscomfort} max={3} onChange={v => setFeedback(f => ({ ...f, jointDiscomfort: v }))} />
+                <TextInput
+                  style={styles.notesInput}
+                  value={notes}
+                  onChangeText={setNotes}
+                  placeholder="Anything notable from this session..."
+                  placeholderTextColor={colors.textMuted}
+                  multiline
+                />
               </View>
-            </View>
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>SESSION NOTES (optional)</Text>
-              <TextInput
-                style={styles.notesInput}
-                value={notes}
-                onChangeText={setNotes}
-                placeholder="Anything notable from this session..."
-                placeholderTextColor={colors.textMuted}
-                multiline
-              />
-            </View>
-          </>
-        )}
-
-        {/* Share & Template actions */}
-        {!readOnly && (
-          <View style={styles.secondaryActions}>
-            <TouchableOpacity style={styles.shareCardBtn} onPress={handleShareCard}>
-              <Ionicons name="share-outline" size={18} color={colors.primary} />
-              <Text style={styles.shareCardBtnText}>Share Session Card</Text>
-            </TouchableOpacity>
-            {!routineId && exerciseData.length > 0 && (
-              <TouchableOpacity style={styles.templateBtn} onPress={handleSaveAsTemplate}>
-                <Ionicons name="bookmark-outline" size={18} color={colors.textSecondary} />
-                <Text style={styles.templateBtnText}>Save as Workout Template</Text>
-              </TouchableOpacity>
             )}
           </View>
         )}
 
-        {/* CTA */}
+        {!readOnly && !routineId && exerciseData.length > 0 && (
+          <View style={styles.secondaryActions}>
+            <TouchableOpacity style={styles.templateBtn} onPress={handleSaveAsTemplate}>
+              <Ionicons name="bookmark-outline" size={18} color={colors.textSecondary} />
+              <Text style={styles.templateBtnText}>Save as Workout Template</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </ScrollView>
+
+      <View style={[styles.stickyFooter, { paddingBottom: Math.max(spacing.lg, insets.bottom) }]}>
         <TouchableOpacity
-          style={[styles.saveBtn, saving && styles.btnDisabled]}
-          onPress={readOnly ? () => navigation.goBack() : handleSave}
+          style={[styles.doneBtn, saving && styles.btnDisabled]}
+          onPress={handleDone}
           disabled={saving}
         >
-          <Text style={styles.saveBtnText}>{readOnly ? 'Done' : 'Save & Return'}</Text>
+          <Text style={styles.doneBtnText}>Done</Text>
         </TouchableOpacity>
-      </ScrollView>
+        {!readOnly && (
+          <TouchableOpacity style={styles.shareFooterBtn} onPress={handleShareCard}>
+            <Ionicons name="share-outline" size={16} color={colors.primary} />
+            <Text style={styles.shareFooterBtnText}>Share Session Card</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </SafeAreaView>
   );
 }
@@ -303,9 +366,10 @@ function StatBox({ icon, value, label }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxxl },
-  completionHeader: { gap: spacing.sm, paddingVertical: spacing.md },
+  completionHeader: { gap: spacing.xs, paddingVertical: spacing.md },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   completionTitle: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary },
+  completionDate: { fontSize: fontSize.sm, color: colors.textMuted },
   completionSub: { fontSize: fontSize.sm, color: colors.textSecondary },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   statBox: {
@@ -314,6 +378,13 @@ const styles = StyleSheet.create({
   },
   statValue: { fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.textPrimary },
   statLabel: { fontSize: fontSize.xs, color: colors.textSecondary },
+  prRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: colors.warningBg, borderRadius: radius.md, padding: spacing.md,
+    borderWidth: 1, borderColor: colors.warning + '40',
+  },
+  prRowText: { flex: 1, fontSize: fontSize.sm, color: colors.warning, fontWeight: fontWeight.semibold },
+  divider: { height: 1, backgroundColor: colors.border },
   section: { gap: spacing.md },
   sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   sectionTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.black, color: colors.textMuted, letterSpacing: 1.5 },
@@ -335,6 +406,12 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   suggestionText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  feedbackToggleBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.lg,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  feedbackToggleBtnText: { fontSize: fontSize.md, color: colors.textSecondary, fontWeight: fontWeight.medium },
   feedbackCard: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.lg, borderWidth: 1, borderColor: colors.border },
   ratingRow: { gap: spacing.sm },
   ratingLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
@@ -352,20 +429,24 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.lg,
     fontSize: fontSize.md, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, minHeight: 80,
   },
-  saveBtn: { backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: spacing.lg, alignItems: 'center' },
-  btnDisabled: { opacity: 0.6 },
-  saveBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.background },
   secondaryActions: { gap: spacing.sm },
-  shareCardBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    backgroundColor: colors.primaryBg, borderRadius: radius.lg, paddingVertical: spacing.md,
-    borderWidth: 1, borderColor: colors.primary + '40',
-  },
-  shareCardBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.primary },
   templateBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
     backgroundColor: colors.surface, borderRadius: radius.lg, paddingVertical: spacing.md,
     borderWidth: 1, borderColor: colors.border,
   },
   templateBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textSecondary },
+  stickyFooter: {
+    backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.border,
+    padding: spacing.lg, gap: spacing.sm,
+  },
+  doneBtn: { backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: spacing.lg, alignItems: 'center' },
+  btnDisabled: { opacity: 0.6 },
+  doneBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.background },
+  shareFooterBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    backgroundColor: colors.primaryBg, borderRadius: radius.md, paddingVertical: spacing.md,
+    borderWidth: 1, borderColor: colors.primary + '40',
+  },
+  shareFooterBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
 });
