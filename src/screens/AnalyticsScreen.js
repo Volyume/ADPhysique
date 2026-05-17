@@ -5,17 +5,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { format } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import VolumeBars from '../components/VolumeBars';
 import { getAllWorkoutSets, getAllWorkouts, getAllExercises } from '../lib/database';
 import {
-  calculateWeeklyVolume, calculateTonnage, shouldDeload, MUSCLE_DISPLAY_NAMES,
+  calculateWeeklyVolume, calculateTonnage, shouldDeload,
 } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
-
-const NUTRITION_KEY = '@volyume_nutrition_targets';
 
 export default function AnalyticsScreen({ navigation }) {
   const { user, units } = useAppStore();
@@ -23,14 +20,13 @@ export default function AnalyticsScreen({ navigation }) {
   const [weekStats, setWeekStats] = useState(null);
   const [deloadCheck, setDeloadCheck] = useState(null);
   const [recentSessions, setRecentSessions] = useState([]);
-  const [nutritionTargets, setNutritionTargets] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
   useFocusEffect(useCallback(() => { loadData(); }, [user?.id]));
 
   async function loadData() {
     if (!user?.id) return;
-    await Promise.all([loadWeeklyData(), checkDeload(), loadRecentSessions(), loadNutrition()]);
+    await Promise.all([loadWeeklyData(), checkDeload(), loadRecentSessions()]);
   }
 
   async function loadRecentSessions() {
@@ -41,13 +37,6 @@ export default function AnalyticsScreen({ navigation }) {
         .sort((a, b) => b.startedAt - a.startedAt)
         .slice(0, 3);
       setRecentSessions(completed);
-    } catch (_e) {}
-  }
-
-  async function loadNutrition() {
-    try {
-      const raw = await AsyncStorage.getItem(NUTRITION_KEY);
-      if (raw) setNutritionTargets(JSON.parse(raw));
     } catch (_e) {}
   }
 
@@ -175,38 +164,6 @@ export default function AnalyticsScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Nutrition snapshot */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>NUTRITION</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('ProfileTab', { screen: 'NutritionTargets' })}>
-              <Text style={styles.seeAll}>{nutritionTargets ? 'Edit' : 'Set targets'}</Text>
-            </TouchableOpacity>
-          </View>
-          {nutritionTargets ? (
-            <View style={styles.nutritionCard}>
-              <View style={styles.nutritionPhase}>
-                <Text style={styles.nutritionPhaseLabel}>{nutritionTargets.phase?.toUpperCase() ?? 'TARGETS'}</Text>
-                <Text style={styles.nutritionCals}>{nutritionTargets.calories} kcal</Text>
-              </View>
-              <View style={styles.macroRow}>
-                <MacroChip label="Protein" value={`${nutritionTargets.protein}g`} color={colors.primary} />
-                <MacroChip label="Carbs" value={`${nutritionTargets.carbs}g`} color={colors.success} />
-                <MacroChip label="Fat" value={`${nutritionTargets.fat}g`} color={colors.warning} />
-              </View>
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={styles.emptyCard}
-              onPress={() => navigation.navigate('ProfileTab', { screen: 'NutritionTargets' })}
-            >
-              <Ionicons name="nutrition-outline" size={24} color={colors.textMuted} />
-              <Text style={styles.emptyCardText}>Set nutrition targets to track calories and macros alongside your training.</Text>
-              <Text style={styles.emptyCardCta}>Set targets →</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
         {/* Recent Sessions */}
         {recentSessions.length > 0 && (
           <View style={styles.section}>
@@ -272,15 +229,6 @@ function StatCard({ value, label, icon }) {
       <Ionicons name={icon} size={18} color={colors.primary} />
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
-}
-
-function MacroChip({ label, value, color }) {
-  return (
-    <View style={styles.macroChip}>
-      <Text style={[styles.macroValue, { color }]}>{value}</Text>
-      <Text style={styles.macroLabel}>{label}</Text>
     </View>
   );
 }
@@ -375,70 +323,6 @@ const styles = StyleSheet.create({
   linkSub: {
     fontSize: fontSize.xs,
     color: colors.textSecondary,
-  },
-  nutritionCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: spacing.md,
-  },
-  nutritionPhase: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  nutritionPhaseLabel: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.black,
-    color: colors.primary,
-    letterSpacing: 1.2,
-  },
-  nutritionCals: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.black,
-    color: colors.textPrimary,
-  },
-  macroRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  macroChip: {
-    flex: 1,
-    backgroundColor: colors.surface2,
-    borderRadius: radius.md,
-    padding: spacing.sm,
-    alignItems: 'center',
-  },
-  macroValue: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
-  },
-  macroLabel: {
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
-    marginTop: 2,
-  },
-  emptyCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  emptyCardText: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  emptyCardCta: {
-    fontSize: fontSize.sm,
-    color: colors.primary,
-    fontWeight: fontWeight.semibold,
   },
   sessionRow: {
     flexDirection: 'row',

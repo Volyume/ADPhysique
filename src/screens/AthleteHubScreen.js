@@ -215,29 +215,6 @@ export default function AthleteHubScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Data & Privacy Card */}
-        <View style={styles.sectionCard}>
-          <View style={styles.cardHeader}>
-            <View style={styles.cardIconWrap}>
-              <Ionicons name="lock-closed" size={20} color={colors.textSecondary} />
-            </View>
-            <View style={styles.cardHeaderText}>
-              <Text style={styles.cardTitle}>Data & Privacy</Text>
-              <Text style={styles.cardSubtitle}>All data stored locally on your device</Text>
-            </View>
-          </View>
-          <Text style={styles.privacyNote}>
-            Volyume stores your training data locally. Nutrition and body data are only
-            saved after explicit consent. No data is shared with third parties.
-          </Text>
-          <TouchableOpacity
-            style={styles.privacyLink}
-            onPress={() => navigation.navigate('Settings')}
-          >
-            <Text style={styles.privacyLinkText}>Export data / Account settings →</Text>
-          </TouchableOpacity>
-        </View>
-
         {/* About */}
         <View style={styles.about}>
           <Text style={styles.aboutName}>Volyume</Text>

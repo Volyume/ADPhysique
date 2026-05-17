@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -201,13 +201,7 @@ export default function RootNavigator() {
   }, []);
 
   if (isAuthLoading) {
-    return (
-      <View style={splashStyles.container}>
-        <VolyumeMark size={52} />
-        <Text style={splashStyles.wordmark}>VOLYUME</Text>
-        <Text style={splashStyles.tagline}>Intelligent Hypertrophy Logbook</Text>
-      </View>
-    );
+    return <SplashScreen />;
   }
 
   return (
@@ -229,6 +223,76 @@ export default function RootNavigator() {
   );
 }
 
+function SplashScreen() {
+  const markOpacity = useRef(new Animated.Value(0)).current;
+  const markScale = useRef(new Animated.Value(0.7)).current;
+  const wordmarkOpacity = useRef(new Animated.Value(0)).current;
+  const wordmarkY = useRef(new Animated.Value(12)).current;
+  const taglineOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.sequence([
+      // Mark fades + scales in
+      Animated.parallel([
+        Animated.timing(markOpacity, {
+          toValue: 1,
+          duration: 500,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.spring(markScale, {
+          toValue: 1,
+          friction: 6,
+          tension: 80,
+          useNativeDriver: true,
+        }),
+      ]),
+      // Small pause, then wordmark slides up + fades in
+      Animated.delay(80),
+      Animated.parallel([
+        Animated.timing(wordmarkOpacity, {
+          toValue: 1,
+          duration: 380,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(wordmarkY, {
+          toValue: 0,
+          duration: 380,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+      // Tagline fades in last
+      Animated.timing(taglineOpacity, {
+        toValue: 1,
+        duration: 320,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  return (
+    <View style={splashStyles.container}>
+      <Animated.View style={{ opacity: markOpacity, transform: [{ scale: markScale }] }}>
+        <VolyumeMark size={64} />
+      </Animated.View>
+      <Animated.Text
+        style={[
+          splashStyles.wordmark,
+          { opacity: wordmarkOpacity, transform: [{ translateY: wordmarkY }] },
+        ]}
+      >
+        Volyume
+      </Animated.Text>
+      <Animated.Text style={[splashStyles.tagline, { opacity: taglineOpacity }]}>
+        Intelligent Hypertrophy Logbook
+      </Animated.Text>
+    </View>
+  );
+}
+
 const splashStyles = StyleSheet.create({
   container: {
     flex: 1,
@@ -238,16 +302,15 @@ const splashStyles = StyleSheet.create({
     gap: spacing.lg,
   },
   wordmark: {
-    fontSize: 26,
+    fontSize: 32,
     fontWeight: fontWeight.black,
     color: colors.textPrimary,
-    letterSpacing: 3,
-    marginTop: spacing.xs,
+    letterSpacing: 1,
   },
   tagline: {
-    fontSize: 12,
+    fontSize: 13,
     color: colors.textMuted,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
     fontWeight: fontWeight.medium,
   },
 });
