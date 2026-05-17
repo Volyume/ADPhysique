@@ -225,7 +225,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           <StatBox icon="barbell-outline" value={String(exerciseCount || 0)} label="Exercises" />
           <StatBox icon="layers-outline" value={String(displayWorkingSets)} label="Working Sets" />
           <StatBox icon="time-outline" value={`${durationMinutes || 0}m`} label="Duration" />
-          <StatBox icon="trending-up-outline" value={`${((tonnage || 0) / 1000).toFixed(1)}t`} label="Total Volume" />
+          <StatBox icon="trending-up-outline" value={`${Math.round(tonnage || 0).toLocaleString('en-GB')} kg`} label="Total kg" />
         </View>
 
         {detectedPRs.length > 0 && (

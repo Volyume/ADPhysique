@@ -66,7 +66,7 @@ export default function AnalyticsScreen({ navigation }) {
       setWeekStats({
         workoutCount: recentWorkouts.length,
         totalSets: recentSets.length,
-        tonnage: (tonnage / 1000).toFixed(1),
+        totalKg: Math.round(tonnage),
         avgDuration,
         avgDifficulty,
       });
@@ -140,7 +140,7 @@ export default function AnalyticsScreen({ navigation }) {
             <View style={styles.statsGrid}>
               <StatCard value={String(weekStats.workoutCount)} label="Workouts" icon="barbell" />
               <StatCard value={String(weekStats.totalSets)} label="Working Sets" icon="layers" />
-              <StatCard value={`${weekStats.tonnage}t`} label="Tonnage" icon="trending-up" />
+              <StatCard value={`${weekStats.totalKg.toLocaleString('en-GB')} kg`} label="Total kg" icon="trending-up" />
               <StatCard value={weekStats.avgDuration > 0 ? `${weekStats.avgDuration}m` : '—'} label="Avg Session" icon="time" />
             </View>
           ) : (

@@ -858,20 +858,19 @@ function buildPersonalisationSummary(inputs, effectiveDays, splitType) {
 }
 
 // ---------------------------------------------------------------------------
-// whyThis explanations — dynamically generated from the actual plan output
+// whyThis — every sentence references this person's inputs or plan outputs
 // ---------------------------------------------------------------------------
 
-// Receives the finalised `workouts` array so content reflects real exercise/set
-// counts, estimated durations, and any trimming that was applied.
 function buildWhyThis(inputs, splitType, effectiveDays, workouts) {
-  const { experience, goal, weakPoints, nutritionPhase, equipment, sessionLengthMinutes } = inputs;
-  const mod = NUTRITION_VOLUME_MOD[nutritionPhase] ?? 1.0;
+  const { experience, goal, weakPoints, nutritionPhase, equipment,
+          sessionLengthMinutes, recoveryRating, daysPerWeek } = inputs;
+  const mod  = NUTRITION_VOLUME_MOD[nutritionPhase] ?? 1.0;
   const { min, max } = BASE_VOLUME[experience];
   const adjMin = Math.round(min * mod);
   const adjMax = Math.round(max * mod);
   const eqLabel = EQUIPMENT_LABELS[equipment] ?? equipment;
 
-  // ── Actual plan stats from the finalised workouts ──
+  // Real plan stats
   const avgExercises = workouts.length
     ? Math.round(workouts.reduce((s, w) => s + w.exercises.length, 0) / workouts.length)
     : 0;
@@ -883,55 +882,99 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts) {
   const maxDur = Math.max(...durations);
   const durText = minDur === maxDur ? `${minDur} min` : `${minDur}–${maxDur} min`;
 
-  // ── Split rationale ──
-  const splitExplain = {
-    full_body:      'Full Body training hits every muscle group each session, maximising frequency. Ideal for beginners who benefit from repetition to build motor patterns, and for building a strong base before transitioning to split training.',
-    upper_lower:    'Upper / Lower splits train each muscle group twice per week, balancing frequency with sufficient per-session volume. Well suited to intermediates who can handle more work per session without excess systemic fatigue.',
-    ppl:            'Push / Pull / Legs groups muscles by movement pattern, reducing overlap fatigue and enabling high per-muscle volume. The go-to structure for advanced lifters who need more total weekly sets than full body or upper-lower allows.',
-    ppl_ab:         'PPL A/B rotates two variants of each Push, Pull and Legs session across 6 days. Rotating exercise selection manages fatigue and provides stimulus variety while maintaining high weekly frequency for each muscle.',
-    upper_lower_wp: 'Upper / Lower distributes base volume twice across four sessions. The fifth day targets your specific weak points with focused volume — an efficient structure for lifters who want broad development and targeted specialisation.',
-  };
+  // Actual compound lifts from the first session (highest rest = heaviest exercise)
+  const firstSession = workouts[0];
+  const anchorLifts  = (firstSession?.exercises ?? [])
+    .filter(e => e.restSec >= 150)
+    .slice(0, 2)
+    .map(e => e.exerciseName);
 
-  // ── Session length — references actual estimated durations and any trimming ──
-  let sessionLengthText;
+  // ── 1. Why this split for this person ──
+  const splitText = {
+    full_body: experience === 'beginner'
+      ? `Full Body was chosen because you're at beginner level with ${effectiveDays} training days. Hitting every muscle group each session means you practise each movement pattern ${effectiveDays}× per week — the repetition is what drives most early progress. A chest-only or push day at this stage would leave you practising that movement too infrequently to build quality motor patterns.`
+      : `Full Body was chosen for your ${effectiveDays}-day week. A split here would leave some muscles 7+ days between sessions — too long for an ${experience} lifter. Full Body squeezes ${effectiveDays}× weekly stimulus into every muscle group within the day count.`,
+
+    upper_lower: experience === 'advanced' || experience === 'competitive'
+      ? `Upper / Lower was selected for your ${effectiveDays} days at ${experience} level. PPL needs 5–6 days to deliver adequate weekly frequency; with ${effectiveDays} days, Upper / Lower trains each muscle group twice per week — the minimum frequency to sustain progress at your training age without leaving gaps that blunt adaptation.`
+      : `Upper / Lower was selected for your ${effectiveDays}-day week at ${experience} level. Training each muscle twice per week sits at the frequency sweet spot for intermediates: enough repetition to keep reinforcing adaptations, enough per-session volume to make the sessions worth doing, and 48–72 h between sessions for recovery.`,
+
+    ppl: effectiveDays >= 6
+      ? `Push / Pull / Legs was selected for your ${effectiveDays}-day week. At ${experience} level you need higher weekly sets than Upper / Lower can deliver in ${effectiveDays} days without sessions running over time. PPL groups muscles by movement pattern so your pressing muscles recover fully during Pull and Legs days — no residual chest fatigue when shoulder pressing arrives.`
+      : `Push / Pull / Legs was selected for your ${effectiveDays} days at ${experience} level. Grouping muscles by movement pattern means each group gets a full 48+ h recovery before it's trained again. At ${experience} level you can sustain the per-session volume PPL demands, which Upper / Lower spreads thinner.`,
+
+    ppl_ab:
+      `PPL A/B was selected for your ${effectiveDays}-day week. At ${experience} level, two complete Push / Pull / Legs rotations per week give each muscle group twice-weekly frequency — necessary to keep driving adaptation at your stage. Rotating A and B exercise variants across the two cycles varies stimulus enough to manage long-term fatigue while sustaining high weekly volume.`,
+
+    upper_lower_wp:
+      `Upper / Lower on 4 days trains every muscle group twice per week. The fifth session is reserved entirely for ${weakPoints.length ? weakPoints.join(' and ') : 'your selected weak points'} — targeted volume on top of the base structure, timed so it doesn't compromise recovery on the main training days. This is the most efficient way to specialise without dismantling a sound weekly structure.`,
+  }[splitType] ?? `${SPLIT_LABELS[splitType]} was selected to match your ${effectiveDays} days, ${experience} level, and ${GOAL_LABELS[goal] ?? goal} goal.`;
+
+  // ── 2. What this session actually contains ──
+  const anchorText = anchorLifts.length >= 2
+    ? `${anchorLifts[0]} and ${anchorLifts[1]} anchor your first session`
+    : anchorLifts.length === 1
+    ? `${anchorLifts[0]} anchors your first session`
+    : 'Compound lifts anchor each session';
+  const sessionText = `${anchorText} — the highest stimulus-to-fatigue lifts available with ${eqLabel}. Sessions average ${avgExercises} exercises and ${avgSets} sets, structured compounds first while you're fresh, isolation and machine work as fatigue builds.`;
+
+  // ── 3. Session length ──
   const budgetMin = sessionLengthMinutes ?? 60;
+  let sessionLengthText;
   if (maxDur <= budgetMin) {
     const spare = budgetMin - Math.round((minDur + maxDur) / 2);
-    if (spare >= 10) {
-      sessionLengthText = `Sessions estimate ${durText} — ${spare} minutes inside your ${budgetMin}-minute budget. Time is calculated from real rest periods (${rir === 1 ? '60–180' : '75–150'} s) plus setup and transition buffers, not a rough guess. The spare time gives room for warm-up sets on heavy compounds.`;
-    } else {
-      sessionLengthText = `Sessions estimate ${durText}, sitting close to your ${budgetMin}-minute target. Each figure is built from actual rep counts, rest periods, and equipment setup time — not a flat estimate.`;
-    }
+    sessionLengthText = spare >= 10
+      ? `Sessions estimate ${durText} — ${spare} minutes inside your ${budgetMin}-minute budget. That buffer covers warm-up sets on heavier compounds and any equipment wait time. Duration is calculated from actual set rep counts, rest periods (${Math.round(150 / 60 * 10) / 10} min for compounds, ${Math.round(75 / 60 * 10) / 10} min for isolation), and setup time per exercise type.`
+      : `Sessions estimate ${durText} against your ${budgetMin}-minute budget. Duration is calculated from actual rest periods and rep counts, not a flat approximation.`;
   } else {
     const over = Math.round((minDur + maxDur) / 2) - budgetMin;
-    sessionLengthText = `Your ${budgetMin}-minute limit is tight for this split. Accessory sets were trimmed and, where needed, exercises removed to honour the time cap — compounds are always preserved first as they deliver the highest stimulus per minute. Sessions now estimate ${durText}. To fit full volume (${over} more minutes), extend your budget or switch to fewer training days.`;
+    sessionLengthText = `Your ${budgetMin}-minute budget is tight for ${effectiveDays}-day ${SPLIT_LABELS[splitType] ?? splitType}. Accessory exercises were removed back-to-front — compounds preserved, isolation trimmed — until sessions fit. They now estimate ${durText}. Adding ${over} minutes to your budget would restore full volume.`;
   }
 
-  // ── Volume — references actual set counts from the plan ──
-  const volumeText = `Your ${experience} level targets ${adjMin}–${adjMax} working sets per muscle per week. Sessions average ${avgSets} sets across ${avgExercises} exercises. ${nutritionPhase && mod !== 1 ? `${mod > 1 ? 'Surplus nutrition raises' : 'Cut phase reduces'} this by ${Math.abs(Math.round((1 - mod) * 100))}% to match your recovery capacity.` : ''}`.trim();
+  // ── 4. Why these volume targets ──
+  const baseMin = min, baseMax = max;
+  let volumeText;
+  if (mod > 1) {
+    volumeText = `At ${experience} level in a surplus, the plan targets ${adjMin}–${adjMax} sets per muscle per week — ${Math.round((mod - 1) * 100)}% above the ${baseMin}–${baseMax} maintenance baseline because surplus calories accelerate recovery and let you absorb more volume productively. Sessions average ${avgSets} sets across ${avgExercises} exercises.`;
+  } else if (mod < 1) {
+    volumeText = `At ${experience} level on a cut, weekly targets drop to ${adjMin}–${adjMax} sets per muscle — ${Math.round((1 - mod) * 100)}% below the ${baseMin}–${baseMax} maintenance baseline. Reduced calories shrink your recovery window; matching volume to that reduced capacity prevents cumulative fatigue from causing muscle loss. Sessions average ${avgSets} sets.`;
+  } else {
+    volumeText = `At ${experience} level on maintenance, the plan targets ${adjMin}–${adjMax} sets per muscle per week — the MEV-to-MAV range where training stimulus is high enough to drive progress without exceeding recovery capacity. Sessions average ${avgSets} sets across ${avgExercises} exercises.`;
+  }
 
-  // ── Weak points ──
-  const weakText = weakPoints.length
-    ? `Your selected weak points (${weakPoints.join(', ')}) receive 25–40% extra weekly sets above baseline, exploiting higher frequency to accelerate lagging muscles and bring them in line with stronger areas.`
-    : 'No specific weak points were flagged, so sets are distributed evenly across all major muscle groups for balanced development.';
+  // ── Conditional entries — only included when they apply to this person ──
+  const result = { split: splitText, sessionComposition: sessionText, sessionLength: sessionLengthText, volume: volumeText };
 
-  // ── Nutrition impact ──
-  const nutritionText = mod > 1
-    ? `A caloric surplus (${nutritionPhase?.replace(/_/g, ' ')}) raises your volume ceiling by ~10%, supporting more sets per session, faster recovery between sessions, and more aggressive progressive overload.`
-    : mod < 1
-    ? `Your cut phase (${nutritionPhase?.replace(/_/g, ' ')}) reduces volume by ${Math.round((1 - mod) * 100)}% to match reduced recovery capacity. RIR is raised by 1 (to ${rir}) to protect recovery. Keep protein at ≥ 2 g/kg to minimise muscle loss.`
-    : 'Maintenance or recomposition intake keeps volume at baseline — enough stimulus to retain or slowly accrue muscle without accumulating excessive fatigue.';
+  // Weak points — only if selected
+  if (weakPoints.length) {
+    result.weakPoints = `${weakPoints.join(' and ')} ${weakPoints.length === 1 ? 'is' : 'are'} flagged as weak points and receive${weakPoints.length === 1 ? 's' : ''} 25–40% more weekly sets than the baseline for your experience level. That targeted overload, held across the full mesocycle, is how lagging muscles close the gap — the rest of the programme stays at baseline so recovery capacity is directed where you need it most.`;
+  }
 
-  return {
-    split:          splitExplain[splitType] ?? 'Split selected to match your frequency, experience level, and goal.',
-    sessionLength:  sessionLengthText,
-    volume:         volumeText,
-    weakPoints:     weakText,
-    exercises:      `Exercises are matched to ${eqLabel}. Compound lifts anchor each session — they provide maximum mechanical tension and progressive overload potential. Machine and isolation work follows, adding metabolic stress and targeted muscle activation.`,
-    repRanges:      'Compound lifts use 5–10 reps to maximise mechanical tension. Machine movements use 8–12 reps. Isolation exercises use 10–20 reps — a wider range exploits metabolic stress and pump, which is especially effective for smaller muscles.',
-    restPeriods:    'Compounds receive 2–3 min rest, allowing near-full phosphocreatine resynthesis for peak performance next set. Machine work gets 90–120 s; isolations 60–90 s — enough recovery without a complete drop in heart rate and blood flow.',
-    nutritionImpact: nutritionText,
-  };
+  // Goal-specific choices — only if non-default
+  if (goal === 'aesthetic_v_taper') {
+    result.goalChoices = `V-taper goal: extra lateral raise and rear delt sets have been added to your shoulder and back sessions. Shoulder width and upper-back depth are the primary visual levers for a V-taper — these muscles are getting additional volume on top of the baseline structure, which is why shoulder sessions look heavier on isolation work than a standard hypertrophy plan.`;
+  } else if (goal === 'strength_hypertrophy') {
+    result.goalChoices = `Strength–Hypertrophy goal: your main compound lifts are programmed at 5–8 reps with heavier loading than a standard hypertrophy plan. This rep range builds the strength base that underpins continued hypertrophy at ${experience} level — particularly relevant when accumulated strength becomes the limiting factor for muscle gain.`;
+  } else if (goal === 'recomp') {
+    result.goalChoices = `Recomposition goal: volume is set at maintenance level rather than the surplus-boosted ceiling. Recomp works by maintaining training stimulus in a small deficit — the ${avgSets}-set average reflects the balance between enough stimulus to retain muscle and little enough volume for deficit recovery to cope.`;
+  } else if (goal === 'balanced_bodybuilding') {
+    result.goalChoices = `Balanced Bodybuilding goal: sets are distributed so no single muscle group dominates relative to others. This prevents the common imbalances — overdeveloped chest, underdeveloped back, neglected rear delts — that accumulate over years of unstructured training and become hard to reverse.`;
+  }
+
+  // Nutrition — only if it modified volume
+  if (mod !== 1 && nutritionPhase) {
+    const phaseLabel = NUTRITION_PHASE_LABELS[nutritionPhase] ?? nutritionPhase;
+    result.nutritionImpact = mod > 1
+      ? `${phaseLabel} phase: the caloric surplus supports ${Math.round((mod - 1) * 100)}% more volume than maintenance. More food means faster recovery between sessions — you can absorb more sets productively, which is reflected in the higher ${adjMin}–${adjMax} weekly target.`
+      : `${phaseLabel} phase: the ${Math.round((1 - mod) * 100)}% volume reduction keeps weekly targets at ${adjMin}–${adjMax} instead of ${baseMin}–${baseMax}. Training on a deficit means slower recovery — reducing volume prevents the cumulative fatigue that would otherwise cause the muscle loss you're trying to avoid.`;
+  }
+
+  // Recovery — only if flagged as poor
+  if (recoveryRating === 'poor') {
+    result.recoveryNote = `Poor recovery was flagged (sleep or life stress). Volume is set at the lower end of the ${adjMin}–${adjMax} target range and session count is kept at ${effectiveDays} days. Recovery quality limits how much training you can absorb regardless of programme quality — improving sleep and reducing external stressors will raise the ceiling more than adding sets.`;
+  }
+
+  return result;
 }
 
 // ---------------------------------------------------------------------------

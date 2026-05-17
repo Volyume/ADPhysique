@@ -177,7 +177,7 @@ function drawSession(ctx, W, H, p) {
     { label: 'DURATION', value: (p.duration || 0) + 'm' },
   ];
   if (p.showVolume && (p.tonnage || 0) > 0) {
-    stats.push({ label: 'VOLUME', value: ((p.tonnage || 0) / 1000).toFixed(1) + 't' });
+    stats.push({ label: 'TOTAL KG', value: Math.round(p.tonnage || 0).toLocaleString('en-GB') + ' kg' });
   }
   if (p.prCount > 0) stats.push({ label: 'PRs', value: String(p.prCount) });
 
@@ -574,7 +574,7 @@ function SessionPreview({ sessionData: s, showVolume, showDate, showPlanName, sh
   const stats = [
     { label: 'Sets', value: String(d.workingSets || 0) },
     { label: 'Duration', value: `${d.duration || 0}m` },
-    ...(showVolume ? [{ label: 'Volume', value: `${((d.tonnage || 0) / 1000).toFixed(1)}t` }] : []),
+    ...(showVolume ? [{ label: 'Total kg', value: `${Math.round(d.tonnage || 0).toLocaleString('en-GB')} kg` }] : []),
     ...(d.prCount > 0 ? [{ label: 'PRs', value: String(d.prCount), gold: true }] : []),
   ];
 

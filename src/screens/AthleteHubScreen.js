@@ -186,33 +186,6 @@ export default function AthleteHubScreen({ navigation }) {
           )}
         </TouchableOpacity>
 
-        {/* Training Intelligence Card */}
-        <View style={styles.sectionCard}>
-          <View style={styles.cardHeader}>
-            <View style={styles.cardIconWrap}>
-              <Ionicons name="analytics" size={20} color={colors.warning} />
-            </View>
-            <View style={styles.cardHeaderText}>
-              <Text style={styles.cardTitle}>Training Intelligence</Text>
-              <Text style={styles.cardSubtitle}>Volume landmarks & deload signals</Text>
-            </View>
-          </View>
-          <View style={styles.intelligenceLinks}>
-            <IntelligenceLink
-              icon="grid-outline"
-              label="Volume Heatmap"
-              sub="Weekly MEV / MAV / MRV"
-              onPress={() => navigation.navigate('ProgressTab', { screen: 'VolumeHeatmap' })}
-            />
-            <IntelligenceLink
-              icon="trophy-outline"
-              label="Personal Records"
-              sub="All-time bests"
-              onPress={() => navigation.navigate('ProgressTab', { screen: 'PRWall' })}
-            />
-          </View>
-        </View>
-
         {/* About */}
         <View style={styles.about}>
           <Text style={styles.aboutName}>Volyume</Text>
@@ -239,19 +212,6 @@ function MetricChip({ label, value }) {
       <Text style={styles.metricChipValue}>{value}</Text>
       <Text style={styles.metricChipLabel}>{label}</Text>
     </View>
-  );
-}
-
-function IntelligenceLink({ icon, label, sub, onPress }) {
-  return (
-    <TouchableOpacity style={styles.intelligenceRow} onPress={onPress}>
-      <Ionicons name={icon} size={18} color={colors.primary} />
-      <View style={styles.intelligenceText}>
-        <Text style={styles.intelligenceLabel}>{label}</Text>
-        <Text style={styles.intelligenceSub}>{sub}</Text>
-      </View>
-      <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
-    </TouchableOpacity>
   );
 }
 
@@ -409,25 +369,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.textMuted,
     marginTop: 2,
-  },
-  intelligenceLinks: { gap: spacing.xs },
-  intelligenceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  intelligenceText: { flex: 1 },
-  intelligenceLabel: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-    color: colors.textPrimary,
-  },
-  intelligenceSub: {
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
   },
   privacyNote: {
     fontSize: fontSize.sm,
