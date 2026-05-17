@@ -74,7 +74,7 @@ export default function AthleteHubScreen({ navigation }) {
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>You</Text>
+        <Text style={styles.headerTitle}>Athlete Hub</Text>
         <View style={styles.headerRight}>
           <BrandTag size={13} color={colors.textMuted} />
           <TouchableOpacity
@@ -203,12 +203,6 @@ export default function AthleteHubScreen({ navigation }) {
               label="Volume Heatmap"
               sub="Weekly MEV / MAV / MRV"
               onPress={() => navigation.navigate('ProgressTab', { screen: 'VolumeHeatmap' })}
-            />
-            <IntelligenceLink
-              icon="calendar-outline"
-              label="Training Blocks"
-              sub="Mesocycle planning"
-              onPress={() => navigation.navigate('MesocycleBuilder')}
             />
             <IntelligenceLink
               icon="trophy-outline"

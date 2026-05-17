@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
   valueInput: {
     flex: 1,
     textAlign: 'center',
-    fontSize: fontSize.xxl,
+    fontSize: fontSize.xl,
     fontWeight: fontWeight.bold,
     color: colors.textPrimary,
     paddingVertical: spacing.sm,

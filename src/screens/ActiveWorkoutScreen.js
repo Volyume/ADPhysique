@@ -20,7 +20,6 @@ import * as Haptics from 'expo-haptics';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import SetEntry from '../components/SetEntry';
 import RestTimer from '../components/RestTimer';
-import PlateCalculator from '../components/PlateCalculator';
 import useAppStore from '../store/useAppStore';
 import { getPreviousWorkoutSets, createWorkoutSet, updateWorkout, getAllExercises } from '../lib/database';
 import {
@@ -31,7 +30,7 @@ import {
 } from '../lib/algorithms';
 import { rankSwaps } from '../lib/swapEngine';
 
-const DEFAULT_SET = { weight: 0, reps: 8, setType: 'straight', notes: '' };
+const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '' };
 
 const SET_TYPE_DISPLAY = {
   straight: 'Working',
@@ -62,7 +61,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [loggedSets, setLoggedSets] = useState([]);
   const [detectedPRs, setDetectedPRs] = useState([]);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [showPlateCalc, setShowPlateCalc] = useState(false);
   const [showExercisePicker, setShowExercisePicker] = useState(false);
   const [noteText, setNoteText] = useState('');
   const [showNoteInput, setShowNoteInput] = useState(false);
@@ -75,6 +73,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [showSwapModal, setShowSwapModal] = useState(false);
   const [swapCandidates, setSwapCandidates] = useState([]);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
+  const autoAdvanceRef = useRef(null);
 
   const scrollRef = useRef(null);
   const insets = useSafeAreaInsets();
@@ -86,8 +85,36 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const isLastExercise = currentExerciseIndex === workoutExercises.length - 1;
 
   function handleNextExercise() {
+    if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
     setCurrentExerciseIndex(currentExerciseIndex + 1);
     setTimeout(() => scrollRef.current?.scrollTo({ y: 0, animated: true }), 50);
+  }
+
+  function handleRemoveExercise() {
+    if (workoutExercises.length <= 1) {
+      Alert.alert('Cannot remove', 'This is the only exercise in your session.');
+      return;
+    }
+    Alert.alert(
+      'Remove exercise?',
+      `Remove ${exercise.name} from this session. Your plan is not changed.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => {
+            if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
+            const store = useAppStore.getState();
+            const updated = workoutExercises.filter((_, i) => i !== currentExerciseIndex);
+            store.setWorkoutExercises(updated);
+            setCurrentExerciseIndex(Math.min(currentExerciseIndex, updated.length - 1));
+            setLoggedSets([]);
+            setPrevSets([]);
+          },
+        },
+      ],
+    );
   }
 
   async function handleOpenSwap() {
@@ -160,17 +187,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
       if (prev.length > 0) {
         const lastSet = prev[prev.length - 1];
-        setCurrentSet(c => ({
-          ...c,
-          weight: lastSet.weight || c.weight,
-          reps: lastSet.actualReps || c.reps,
-        }));
-      } else if (routineExercise) {
-        setCurrentSet(c => ({
-          ...c,
-          weight: routineExercise.startingWeight || c.weight,
-          reps: routineExercise.recommendedRepsMax || c.reps,
-        }));
+        setCurrentSet({
+          ...DEFAULT_SET,
+          weight: lastSet.weight != null ? lastSet.weight : '',
+          reps: lastSet.actualReps || DEFAULT_SET.reps,
+        });
+      } else {
+        setCurrentSet({
+          ...DEFAULT_SET,
+          weight: routineExercise?.startingWeight ?? '',
+          reps: routineExercise?.recommendedRepsMax || DEFAULT_SET.reps,
+        });
       }
 
       const allLoggedForExercise = workoutExercises[currentExerciseIndex]?.sets || [];
@@ -261,6 +288,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
       // Start rest timer with per-exercise duration
       startRestTimer(routineExercise?.restSeconds || 90);
+
+      // Auto-advance to next exercise when target sets just completed
+      const newWorkingCount = newLoggedSets.filter(s => s.setType !== 'warmup').length;
+      const justHitTarget = targetSets && newWorkingCount >= targetSets && workingLogged < targetSets;
+      if (justHitTarget && !isLastExercise) {
+        if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
+        autoAdvanceRef.current = setTimeout(() => {
+          handleNextExercise();
+        }, 1800);
+      }
 
       // Prepare next set
       setNoteText('');
@@ -353,9 +390,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleCancelWorkout} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="close" size={22} color={colors.textSecondary} />
-          </TouchableOpacity>
+          <View style={styles.headerSide}>
+            <TouchableOpacity onPress={handleCancelWorkout} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="close" size={22} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
           <View style={styles.headerCenter}>
             <Text style={styles.timerText}>{elapsedStr}</Text>
             <Text style={styles.headerMuscle}>
@@ -363,9 +402,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 (exercise.primaryMuscle || exercise.primary_muscle || '').slice(1)}
             </Text>
           </View>
-          <TouchableOpacity onPress={handleFinishWorkout} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={styles.finishBtn}>Finish</Text>
-          </TouchableOpacity>
+          <View style={styles.headerSideRight}>
+            <TouchableOpacity onPress={handleFinishWorkout} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Text style={styles.finishBtn}>Finish</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Exercise Navigator */}
@@ -403,6 +444,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
         >
           {/* Exercise Title */}
           <View style={styles.exerciseHeader}>
@@ -538,10 +580,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           )}
 
           <View style={styles.secondaryActions}>
-            <TouchableOpacity style={styles.actionBtn} onPress={() => setShowPlateCalc(true)}>
-              <Ionicons name="calculator-outline" size={18} color={colors.textSecondary} />
-              <Text style={styles.actionBtnText}>Plates</Text>
-            </TouchableOpacity>
             <TouchableOpacity style={styles.actionBtn} onPress={() => setShowNoteInput(v => !v)}>
               <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
               <Text style={styles.actionBtnText}>Note</Text>
@@ -557,6 +595,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             >
               <Ionicons name="add-circle-outline" size={18} color={colors.textSecondary} />
               <Text style={styles.actionBtnText}>Add</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.actionBtn, styles.actionBtnDanger]} onPress={handleRemoveExercise}>
+              <Ionicons name="trash-outline" size={18} color={colors.error} />
+              <Text style={[styles.actionBtnText, { color: colors.error }]}>Remove</Text>
             </TouchableOpacity>
           </View>
 
@@ -603,23 +645,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
           <View style={{ height: Math.max(spacing.xxl, insets.bottom + spacing.lg) }} />
         </ScrollView>
-
-        {/* Plate Calculator Modal */}
-        <Modal
-          visible={showPlateCalc}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setShowPlateCalc(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <PlateCalculator
-                targetWeight={parseFloat(currentSet.weight) || 60}
-                onClose={() => setShowPlateCalc(false)}
-              />
-            </View>
-          </View>
-        </Modal>
 
         {/* Exercise Picker Modal */}
         <ExercisePickerModal
@@ -901,12 +926,14 @@ function ExercisePickerModal({ visible, onClose, onSelect }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  finishBtn: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.error, paddingVertical: spacing.xs, paddingHorizontal: spacing.sm },
-  headerCenter: { alignItems: 'center' },
+  headerSide: { width: 64, alignItems: 'flex-start', justifyContent: 'center' },
+  headerSideRight: { width: 64, alignItems: 'flex-end', justifyContent: 'center' },
+  finishBtn: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.error, paddingVertical: spacing.xs },
+  headerCenter: { flex: 1, alignItems: 'center' },
   timerText: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.primary, fontVariant: ['tabular-nums'] },
   headerMuscle: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 1 },
   addExerciseBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center' },
@@ -947,12 +974,13 @@ const styles = StyleSheet.create({
   noteInput: { backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md, fontSize: fontSize.sm, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, minHeight: 60 },
   completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: spacing.lg + 2 },
   btnDisabled: { opacity: 0.5 },
-  completeBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.black, color: colors.background, letterSpacing: 1 },
+  completeBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background, letterSpacing: 0.8 },
   extraSetBtn: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, paddingVertical: spacing.md },
   extraSetBtnText: { fontSize: fontSize.md, color: colors.textSecondary, fontWeight: fontWeight.medium },
-  secondaryActions: { flexDirection: 'row', gap: spacing.md },
+  secondaryActions: { flexDirection: 'row', gap: spacing.sm },
   actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, backgroundColor: colors.surface, borderRadius: radius.md, paddingVertical: spacing.md, borderWidth: 1, borderColor: colors.border },
-  actionBtnText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  actionBtnDanger: { borderColor: colors.error + '40' },
+  actionBtnText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
   nextExerciseBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderWidth: 1.5, borderColor: colors.primary, borderRadius: radius.lg, paddingVertical: spacing.lg },
   nextExerciseBtnText: { fontSize: fontSize.md, color: colors.primary, fontWeight: fontWeight.bold },
   finishWorkoutLargeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderWidth: 1.5, borderColor: colors.success, borderRadius: radius.lg, paddingVertical: spacing.lg },

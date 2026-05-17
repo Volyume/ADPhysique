@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Modal,
+  View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Modal, ScrollView, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import ExerciseCard from '../components/ExerciseCard';
-import { getAllExercises, getAllWorkoutSets } from '../lib/database';
+import { getAllExercises, getAllWorkoutSets, insertExercise } from '../lib/database';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 
@@ -21,6 +21,11 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
   const [filterEquipment, setFilterEquipment] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [recentSets, setRecentSets] = useState([]);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newMuscle, setNewMuscle] = useState('');
+  const [newEquipment, setNewEquipment] = useState('');
+  const [savingNew, setSavingNew] = useState(false);
 
   const addToWorkout = route.params?.onSelect;
 
@@ -34,6 +39,31 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
     if (user?.id) {
       const sets = await getAllWorkoutSets(user.id);
       setRecentSets(sets);
+    }
+  }
+
+  async function handleSaveCustomExercise() {
+    if (!newName.trim()) {
+      Alert.alert('Name required', 'Please enter a name for the exercise.');
+      return;
+    }
+    setSavingNew(true);
+    try {
+      await insertExercise({
+        name: newName.trim(),
+        primaryMuscle: newMuscle || null,
+        equipment: newEquipment || null,
+        isCustom: 1,
+      });
+      await loadExercises();
+      setShowAddModal(false);
+      setNewName('');
+      setNewMuscle('');
+      setNewEquipment('');
+    } catch (_e) {
+      Alert.alert('Error', 'Could not save exercise. Please try again.');
+    } finally {
+      setSavingNew(false);
     }
   }
 
@@ -97,6 +127,12 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
             color={(filterMuscle || filterEquipment) ? colors.background : colors.textSecondary}
           />
         </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.addNewBtn}
+          onPress={() => setShowAddModal(true)}
+        >
+          <Ionicons name="add" size={20} color={colors.primary} />
+        </TouchableOpacity>
       </View>
 
       {/* Active Filters */}
@@ -139,6 +175,68 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
           </View>
         }
       />
+
+      {/* Add Custom Exercise Modal */}
+      <Modal visible={showAddModal} animationType="slide" onRequestClose={() => setShowAddModal(false)}>
+        <SafeAreaView style={styles.addModalSafe} edges={['top', 'bottom']}>
+          <View style={styles.addModalHeader}>
+            <Text style={styles.addModalTitle}>Add Exercise</Text>
+            <TouchableOpacity onPress={() => setShowAddModal(false)}>
+              <Ionicons name="close" size={24} color={colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
+          <ScrollView contentContainerStyle={styles.addModalContent} keyboardShouldPersistTaps="handled">
+            <Text style={styles.addFieldLabel}>EXERCISE NAME *</Text>
+            <TextInput
+              style={styles.addFieldInput}
+              value={newName}
+              onChangeText={setNewName}
+              placeholder="e.g. Cable Rope Pushdown"
+              placeholderTextColor={colors.textMuted}
+              autoFocus
+              autoCapitalize="words"
+            />
+
+            <Text style={[styles.addFieldLabel, { marginTop: spacing.xl }]}>PRIMARY MUSCLE</Text>
+            <View style={styles.chipGrid}>
+              {Object.entries(MUSCLE_DISPLAY_NAMES).map(([key, label]) => (
+                <TouchableOpacity
+                  key={key}
+                  style={[styles.chip, newMuscle === key && styles.chipActive]}
+                  onPress={() => setNewMuscle(newMuscle === key ? '' : key)}
+                >
+                  <Text style={[styles.chipText, newMuscle === key && styles.chipTextActive]}>{label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={[styles.addFieldLabel, { marginTop: spacing.xl }]}>EQUIPMENT</Text>
+            <View style={styles.chipGrid}>
+              {['Barbell', 'Dumbbell', 'Cable', 'Machine', 'Bodyweight', 'Smith Machine', 'Bands', 'EZ Bar', 'Kettlebell', 'Plate', 'Other'].map(eq => (
+                <TouchableOpacity
+                  key={eq}
+                  style={[styles.chip, newEquipment === eq && styles.chipActive]}
+                  onPress={() => setNewEquipment(newEquipment === eq ? '' : eq)}
+                >
+                  <Text style={[styles.chipText, newEquipment === eq && styles.chipTextActive]}>{eq}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.addCustomNote}>
+              This exercise will be added to your personal library and visible only to you.
+            </Text>
+
+            <TouchableOpacity
+              style={[styles.saveCustomBtn, savingNew && { opacity: 0.6 }]}
+              onPress={handleSaveCustomExercise}
+              disabled={savingNew}
+            >
+              <Text style={styles.saveCustomBtnText}>{savingNew ? 'Saving...' : 'Save Exercise'}</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
 
       {/* Filter Modal */}
       <Modal visible={showFilters} animationType="slide" transparent onRequestClose={() => setShowFilters(false)}>
@@ -337,4 +435,47 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.bold,
     color: colors.background,
   },
+  addNewBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.primary + '50',
+  },
+  addModalSafe: { flex: 1, backgroundColor: colors.background },
+  addModalHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
+  addModalTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  addModalContent: { padding: spacing.lg, paddingBottom: spacing.xxxl },
+  addFieldLabel: {
+    fontSize: fontSize.xs, fontWeight: fontWeight.black, color: colors.textMuted,
+    letterSpacing: 1.5, marginBottom: spacing.sm,
+  },
+  addFieldInput: {
+    backgroundColor: colors.surface, borderRadius: radius.md, paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md, fontSize: fontSize.md, color: colors.textPrimary,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  chip: {
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.full,
+    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border,
+  },
+  chipActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
+  chipText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  chipTextActive: { color: colors.primary },
+  addCustomNote: {
+    fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18,
+    marginTop: spacing.xl, marginBottom: spacing.lg,
+  },
+  saveCustomBtn: {
+    backgroundColor: colors.primary, borderRadius: radius.lg,
+    paddingVertical: spacing.lg, alignItems: 'center',
+  },
+  saveCustomBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.background },
 });

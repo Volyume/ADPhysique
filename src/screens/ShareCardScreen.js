@@ -9,45 +9,33 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 let WebView;
 let FileSystem;
 let Sharing;
+let LinearGradient;
 try { WebView = require('react-native-webview').WebView; } catch (_) {}
 try { FileSystem = require('expo-file-system'); } catch (_) {}
 try { Sharing = require('expo-sharing'); } catch (_) {}
+try { LinearGradient = require('expo-linear-gradient').LinearGradient; } catch (_) {}
 
-// ---------- Canvas HTML that renders in the hidden WebView ----------
-// Obsidian Precision brand palette (mirrors theme.js but as static hex for canvas use)
-const BRAND = {
-  bg0:     '#0B0D10',
-  bg1:     '#131820',
-  surface: '#1A2230',
-  border:  '#283040',
-  accent:  '#00B4FF',
-  accentA: 'rgba(0,180,255,0.12)',
-  text:    '#F0F4F8',
-  muted:   '#4A5870',
-  dim:     '#8A9BB0',
-};
-
+// ---------- Canvas HTML — renders off-screen, exports a high-res PNG ----------
 const WEBVIEW_HTML = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 </head>
-<body style="margin:0;padding:0;background:#0B0D10;">
+<body style="margin:0;padding:0;background:#090A0F;">
 <canvas id="c" style="display:block;"></canvas>
 <script>
+// Brand palette — mirrors theme.js tokens
 var B = {
-  bg0:'#0B0D10', bg1:'#131820', surface:'#1A2230', border:'#283040',
-  accent:'#00B4FF', accentA:'rgba(0,180,255,0.10)',
-  text:'#F0F4F8', muted:'#4A5870', dim:'#8A9BB0'
+  bg0:'#090A0F', bg1:'#0E0F18', bg2:'#131620',
+  surface:'#181B24', surface2:'#1F2330',
+  border:'#252A38', borderFaint:'#1B1F2A',
+  accent:'#00E5FF', accentDim:'rgba(0,229,255,0.15)',
+  accentGlow:'rgba(0,229,255,0.06)',
+  gold:'#FFD700', goldDim:'rgba(255,215,0,0.15)',
+  text:'#FFFFFF', textSecondary:'#9E9E9E', textMuted:'#5A6070'
 };
 
-function lsText(ctx, text, x, y, ls) {
-  String(text).split('').reduce(function(cx, ch) {
-    ctx.fillText(ch, cx, y);
-    return cx + ctx.measureText(ch).width + ls;
-  }, x);
-}
 function rrect(ctx, x, y, w, h, r) {
   ctx.beginPath();
   ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
@@ -56,159 +44,270 @@ function rrect(ctx, x, y, w, h, r) {
   ctx.quadraticCurveTo(x,y+h,x,y+h-r); ctx.lineTo(x,y+r);
   ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath();
 }
+
 function wrapText(ctx, text, maxW) {
-  var words = String(text).split(' ');
-  var lines = []; var line = '';
+  var words = String(text).split(' '), lines = [], line = '';
   words.forEach(function(w) {
     var test = line ? line+' '+w : w;
-    if (ctx.measureText(test).width > maxW && line) { lines.push(line); line=w; }
-    else { line=test; }
+    if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; }
+    else { line = test; }
   });
   if (line) lines.push(line);
   return lines;
 }
 
-// Draw abstract V-mark (5 bars at varying heights)
-function drawBrandMark(ctx, x, y, sz, color) {
-  var barW = Math.round(sz * 0.14);
-  var gap  = Math.round(sz * 0.11);
-  var fracs = [1.0, 0.72, 0.44, 0.72, 1.0];
-  ctx.fillStyle = color;
-  fracs.forEach(function(f, i) {
-    var bh = Math.round(f * sz);
-    var bx = x + i * (barW + gap);
-    var by = y + sz - bh;
-    var br = Math.round(barW / 2);
-    rrect(ctx, bx, by, barW, bh, br);
-    ctx.fillStyle = (i === 2) ? color + '88' : color;
-    ctx.fill();
-    ctx.fillStyle = color;
-  });
+// Draw the Volyume V mark (exact SVG paths scaled)
+function drawVMark(ctx, ox, oy, sz, mainColor, accentColor) {
+  // viewBox 0 0 28 24 → scale = sz/28
+  var scale = sz / 28;
+  ctx.save();
+  ctx.translate(ox, oy);
+  ctx.lineCap = 'round';
+  // Left arm
+  ctx.beginPath();
+  ctx.moveTo(2*scale, 2*scale);
+  ctx.lineTo(14*scale, 22*scale);
+  ctx.strokeStyle = mainColor;
+  ctx.lineWidth = 3.2 * scale;
+  ctx.stroke();
+  // Right arm
+  ctx.beginPath();
+  ctx.moveTo(14*scale, 22*scale);
+  ctx.lineTo(26*scale, 2*scale);
+  ctx.strokeStyle = mainColor;
+  ctx.lineWidth = 3.2 * scale;
+  ctx.stroke();
+  // Accent stroke on right arm
+  ctx.beginPath();
+  ctx.moveTo(16.5*scale, 22*scale);
+  ctx.lineTo(26*scale, 6*scale);
+  ctx.strokeStyle = accentColor;
+  ctx.lineWidth = 1.8 * scale;
+  ctx.globalAlpha = 0.85;
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function drawBackground(ctx, W, H) {
+  var grad = ctx.createLinearGradient(0, 0, W * 0.4, H);
+  grad.addColorStop(0, B.bg1);
+  grad.addColorStop(0.5, B.bg0);
+  grad.addColorStop(1, B.bg2);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+  // Subtle diagonal accent stripe (top-right corner)
+  ctx.save();
+  ctx.globalAlpha = 0.04;
+  ctx.fillStyle = B.accent;
+  ctx.beginPath();
+  ctx.moveTo(W * 0.55, 0);
+  ctx.lineTo(W, 0);
+  ctx.lineTo(W, H * 0.45);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawTopAccentBar(ctx, W) {
+  var grad = ctx.createLinearGradient(0, 0, W, 0);
+  grad.addColorStop(0, B.accent);
+  grad.addColorStop(0.6, B.accent + 'AA');
+  grad.addColorStop(1, 'transparent');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, 5);
+}
+
+function drawBrand(ctx, pad, y, textColor) {
+  var markSz = 28;
+  drawVMark(ctx, pad, y - markSz * 0.86, markSz, textColor, B.accent);
+  ctx.fillStyle = textColor;
+  ctx.font = '700 20px Arial,sans-serif';
+  ctx.fillText('olyume', pad + markSz + 4, y - 2);
 }
 
 function drawSession(ctx, W, H, p) {
   var pad = Math.round(W * 0.074);
-  var grad = ctx.createLinearGradient(0,0,W,H);
-  grad.addColorStop(0, B.bg0); grad.addColorStop(1, B.bg1);
-  ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
+  drawBackground(ctx, W, H);
+  drawTopAccentBar(ctx, W);
 
-  // Accent line top
-  ctx.fillStyle=B.accent; ctx.fillRect(0,0,W,6);
-  // Subtle bottom
-  ctx.fillStyle=B.border; ctx.fillRect(0,H-2,W,2);
+  var y = pad + 56;
 
-  var y = pad + 60;
-
-  // Brand mark + wordmark
-  drawBrandMark(ctx, pad, y - 44, 34, B.accent + '60');
-  ctx.fillStyle=B.muted; ctx.font='600 24px Arial,sans-serif';
-  lsText(ctx,'VOLYUME', pad + 34 + 8, y - 20, 3.5);
-  y += 8;
-
+  // Brand top-left
+  drawBrand(ctx, pad, y, B.textMuted);
+  // Date top-right
   if (p.showDate && p.date) {
-    ctx.fillStyle=B.muted; ctx.font='400 22px Arial,sans-serif';
-    ctx.fillText(p.date, pad, y+22); y += 52;
+    ctx.fillStyle = B.textMuted;
+    ctx.font = '400 20px Arial,sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(p.date, W - pad, y - 2);
+    ctx.textAlign = 'left';
   }
-  y += 32;
+  y += 60;
 
   if (p.showPlanName && p.planName) {
-    ctx.fillStyle=B.accent; ctx.font='700 20px Arial,sans-serif';
-    lsText(ctx, p.planName.toUpperCase(), pad, y, 2); y += 46;
+    ctx.fillStyle = B.accent;
+    ctx.font = '600 20px Arial,sans-serif';
+    var planLetterSpaced = p.planName.toUpperCase();
+    ctx.fillText(planLetterSpaced, pad, y);
+    y += 40;
   }
 
-  var heroSize = p.isSquare ? 62 : 68;
-  ctx.fillStyle=B.text; ctx.font='900 '+heroSize+'px Arial,sans-serif';
-  var heroLines = wrapText(ctx, p.sessionName||'Session Complete', W - pad*2);
+  // Session name — large hero text
+  var heroFont = p.isSquare ? 66 : 74;
+  ctx.fillStyle = B.text;
+  ctx.font = '900 ' + heroFont + 'px Arial,sans-serif';
+  var heroLines = wrapText(ctx, p.sessionName || 'Session Complete', W - pad * 2);
   heroLines.forEach(function(l) {
-    ctx.fillText(l, pad, y+Math.round(heroSize*0.86));
-    y += Math.round(heroSize*1.12);
+    ctx.fillText(l, pad, y + Math.round(heroFont * 0.82));
+    y += Math.round(heroFont * 1.1);
   });
-  y += 20;
+  y += 24;
 
-  if (p.showExercises && p.exercises && p.exercises.length > 0) {
-    ctx.fillStyle=B.dim; ctx.font='400 22px Arial,sans-serif';
-    ctx.fillText(p.exercises.slice(0,4).join('  ·  '), pad, y); y += 48;
+  if (p.showExercises && p.exercises && p.exercises.length) {
+    ctx.fillStyle = B.textSecondary;
+    ctx.font = '400 22px Arial,sans-serif';
+    ctx.fillText(p.exercises.slice(0, 3).join('  ·  '), pad, y);
+    y += 46;
   }
 
-  var stats = [{label:'SETS',value:String(p.workingSets||0)},{label:'DURATION',value:(p.duration||0)+'m'}];
-  if (p.showVolume) stats.push({label:'VOLUME',value:((p.tonnage||0)/1000).toFixed(1)+'t'});
-  if (p.isSquare && p.prCount>0) stats.push({label:'PRs',value:String(p.prCount)});
+  // Stats grid
+  var stats = [
+    { label: 'SETS', value: String(p.workingSets || 0) },
+    { label: 'DURATION', value: (p.duration || 0) + 'm' },
+  ];
+  if (p.showVolume && (p.tonnage || 0) > 0) {
+    stats.push({ label: 'VOLUME', value: ((p.tonnage || 0) / 1000).toFixed(1) + 't' });
+  }
+  if (p.prCount > 0) stats.push({ label: 'PRs', value: String(p.prCount) });
 
-  var boxY = p.isSquare ? H - pad - 150 : y + 44;
-  var gap = 14; var boxH = 130;
-  var boxW = Math.floor((W - pad*2 - gap*(stats.length-1)) / stats.length);
-  var valSize = stats.length > 3 ? 40 : 48;
+  var boxY = p.isSquare ? H - pad - 168 : Math.max(y + 60, H - pad - 200);
+  var boxGap = 16, boxH = 148;
+  var boxW = Math.floor((W - pad * 2 - boxGap * (stats.length - 1)) / stats.length);
+  var valSize = stats.length > 3 ? 48 : 56;
 
-  stats.forEach(function(s,i) {
-    var bx = pad + i*(boxW+gap);
-    ctx.fillStyle=B.surface; rrect(ctx,bx,boxY,boxW,boxH,16); ctx.fill();
-    ctx.strokeStyle=B.border; ctx.lineWidth=1.5; rrect(ctx,bx,boxY,boxW,boxH,16); ctx.stroke();
-    ctx.fillStyle=B.text; ctx.font='900 '+valSize+'px Arial,sans-serif';
-    ctx.textAlign='center'; ctx.fillText(s.value, bx+boxW/2, boxY+Math.round(boxH*0.54));
-    ctx.fillStyle=B.muted; ctx.font='600 15px Arial,sans-serif';
-    ctx.fillText(s.label, bx+boxW/2, boxY+boxH-18); ctx.textAlign='left';
+  stats.forEach(function(s, i) {
+    var bx = pad + i * (boxW + boxGap);
+    // Box fill
+    ctx.fillStyle = B.surface;
+    rrect(ctx, bx, boxY, boxW, boxH, 18);
+    ctx.fill();
+    // Box border
+    ctx.strokeStyle = B.border;
+    ctx.lineWidth = 1.5;
+    rrect(ctx, bx, boxY, boxW, boxH, 18);
+    ctx.stroke();
+    // If PRs box, accent border
+    if (s.label === 'PRs') {
+      ctx.strokeStyle = B.gold + '60';
+      ctx.lineWidth = 1.5;
+      rrect(ctx, bx, boxY, boxW, boxH, 18);
+      ctx.stroke();
+    }
+    // Value
+    ctx.fillStyle = s.label === 'PRs' ? B.gold : B.text;
+    ctx.font = '900 ' + valSize + 'px Arial,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(s.value, bx + boxW / 2, boxY + Math.round(boxH * 0.56));
+    // Label
+    ctx.fillStyle = B.textMuted;
+    ctx.font = '600 16px Arial,sans-serif';
+    ctx.fillText(s.label, bx + boxW / 2, boxY + boxH - 20);
+    ctx.textAlign = 'left';
   });
 
-  if (!p.isSquare && p.prCount>0) {
-    var by2 = boxY+boxH+38;
-    ctx.fillStyle=B.accentA;
-    rrect(ctx,pad,by2,270,56,28); ctx.fill();
-    ctx.strokeStyle=B.accent+'50'; ctx.lineWidth=1; rrect(ctx,pad,by2,270,56,28); ctx.stroke();
-    ctx.fillStyle=B.accent; ctx.font='700 22px Arial,sans-serif'; ctx.textAlign='center';
-    ctx.fillText(p.prCount+' NEW PR'+(p.prCount!==1?'s':''), pad+135, by2+35);
-    ctx.textAlign='left';
-  }
+  // Bottom accent
+  ctx.fillStyle = B.border;
+  ctx.fillRect(0, H - 2, W, 2);
 }
 
 function drawPR(ctx, W, H, p) {
   var pad = Math.round(W * 0.074);
-  var grad = ctx.createLinearGradient(0,0,W,H);
-  grad.addColorStop(0, B.bg0); grad.addColorStop(1, B.bg1);
-  ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
-  ctx.fillStyle=B.accent; ctx.fillRect(0,0,W,6);
-  ctx.fillStyle=B.border; ctx.fillRect(0,H-2,W,2);
+  drawBackground(ctx, W, H);
+  drawTopAccentBar(ctx, W);
 
-  drawBrandMark(ctx, pad, pad + 8, 34, B.accent + '60');
-  ctx.fillStyle=B.muted; ctx.font='600 24px Arial,sans-serif';
-  lsText(ctx,'VOLYUME', pad + 34 + 8, pad + 36, 3.5);
+  // Radial glow behind the weight number
+  var glowY = H * 0.6;
+  var glowR = W * 0.48;
+  var glowGrad = ctx.createRadialGradient(W / 2, glowY, 0, W / 2, glowY, glowR);
+  glowGrad.addColorStop(0, 'rgba(0,229,255,0.07)');
+  glowGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = glowGrad;
+  ctx.fillRect(0, 0, W, H);
 
-  var midY = Math.round(H * 0.36);
-  ctx.fillStyle=B.accent; ctx.font='700 22px Arial,sans-serif'; ctx.textAlign='center';
-  lsText(ctx,'NEW PERSONAL RECORD', W/2-ctx.measureText('NEW PERSONAL RECORD').width/2-11, midY, 2.2);
+  // Brand — top left
+  var brandY = pad + 44;
+  drawBrand(ctx, pad, brandY, B.textMuted);
 
-  var exSize = p.isSquare ? 52 : 60;
-  ctx.fillStyle=B.text; ctx.font='800 '+exSize+'px Arial,sans-serif'; ctx.textAlign='center';
-  var exLines = wrapText(ctx, p.exerciseName||'Exercise', W-pad*2);
-  var ey = midY + 54;
-  exLines.forEach(function(l){ ctx.fillText(l,W/2,ey); ey+=Math.round(exSize*1.1); });
+  // Trophy icon (drawn as simple star-ish shape)
+  var trophyX = W / 2, trophyY = H * 0.28;
+  ctx.save();
+  ctx.fillStyle = B.goldDim;
+  rrect(ctx, trophyX - 70, trophyY - 18, 140, 46, 23);
+  ctx.fill();
+  ctx.strokeStyle = B.gold + '70';
+  ctx.lineWidth = 1;
+  rrect(ctx, trophyX - 70, trophyY - 18, 140, 46, 23);
+  ctx.stroke();
+  ctx.restore();
 
-  var wSize = p.isSquare ? 96 : 112;
+  ctx.fillStyle = B.gold;
+  ctx.font = '700 22px Arial,sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('★  PERSONAL RECORD  ★', trophyX, trophyY + 14);
+  ctx.textAlign = 'left';
+
+  // Exercise name
+  var exFont = p.isSquare ? 54 : 62;
+  ctx.fillStyle = B.text;
+  ctx.font = '800 ' + exFont + 'px Arial,sans-serif';
+  ctx.textAlign = 'center';
+  var exLines = wrapText(ctx, p.exerciseName || 'Exercise', W - pad * 2.5);
+  var ey = trophyY + 76;
+  exLines.forEach(function(l) {
+    ctx.fillText(l, W / 2, ey);
+    ey += Math.round(exFont * 1.1);
+  });
+
+  // Weight × reps — the hero number
+  var wFont = p.isSquare ? 100 : 116;
   var wStr = p.showPRWeight
-    ? (p.weight||'—')+(p.units||'kg')+' × '+(p.reps||'—')
-    : (p.reps||'—')+' reps';
-  ctx.fillStyle=B.accent; ctx.font='900 '+wSize+'px Arial,sans-serif';
-  ctx.fillText(wStr, W/2, ey+wSize+4);
+    ? (p.weight || '—') + (p.units || 'kg') + ' × ' + (p.reps || '—')
+    : (p.reps || '—') + ' reps';
+  ctx.fillStyle = B.accent;
+  ctx.font = '900 ' + wFont + 'px Arial,sans-serif';
+  var wMetrics = ctx.measureText(wStr);
+  if (wMetrics.width > W - pad * 2) {
+    wFont = Math.floor(wFont * ((W - pad * 2) / wMetrics.width));
+    ctx.font = '900 ' + wFont + 'px Arial,sans-serif';
+  }
+  ctx.fillText(wStr, W / 2, ey + wFont + 12);
 
+  // Meta line
   var metaParts = [];
   if (p.showDate && p.date) metaParts.push(p.date);
-  if (p.showPrevBest && p.previousBest) metaParts.push('Prev: '+p.previousBest+(p.units||'kg'));
+  if (p.showPrevBest && p.previousBest) metaParts.push('Prev best: ' + p.previousBest + (p.units || 'kg'));
   if (metaParts.length) {
-    ctx.fillStyle=B.dim; ctx.font='400 26px Arial,sans-serif';
-    ctx.fillText(metaParts.join('  ·  '), W/2, ey+wSize+68);
+    ctx.fillStyle = B.textMuted;
+    ctx.font = '400 26px Arial,sans-serif';
+    ctx.fillText(metaParts.join('  ·  '), W / 2, ey + wFont + 74);
   }
-  ctx.textAlign='left';
+  ctx.textAlign = 'left';
+
+  // Bottom divider
+  ctx.fillStyle = B.border;
+  ctx.fillRect(0, H - 2, W, 2);
 }
 
 window.drawCard = function() {
   var p = window.__cardParams;
   if (!p) return;
-  var W = 1080; var H = p.isSquare ? 1080 : 1920;
+  var W = 1080, H = p.isSquare ? 1080 : 1920;
   var c = document.getElementById('c');
-  c.width=W; c.height=H;
+  c.width = W; c.height = H;
   var ctx = c.getContext('2d');
-  if (p.cardType==='pr') { drawPR(ctx,W,H,p); } else { drawSession(ctx,W,H,p); }
-  var base64 = c.toDataURL('image/png');
-  window.ReactNativeWebView.postMessage(JSON.stringify({base64:base64,isSquare:p.isSquare}));
+  if (p.cardType === 'pr') { drawPR(ctx, W, H, p); } else { drawSession(ctx, W, H, p); }
+  window.ReactNativeWebView.postMessage(JSON.stringify({ base64: c.toDataURL('image/png'), isSquare: p.isSquare }));
 };
 <\/script>
 </body>
@@ -250,12 +349,7 @@ export default function ShareCardScreen({ navigation, route }) {
     if (isSession) {
       const s = sessionData || {};
       return {
-        cardType: 'session',
-        isSquare,
-        showVolume,
-        showDate,
-        showPlanName,
-        showExercises,
+        cardType: 'session', isSquare, showVolume, showDate, showPlanName, showExercises,
         date: showDate ? (s.date || fallbackDate) : '',
         planName: showPlanName ? (s.planName || '') : '',
         sessionName: s.sessionName || 'Session Complete',
@@ -268,11 +362,7 @@ export default function ShareCardScreen({ navigation, route }) {
     } else {
       const p = prData || {};
       return {
-        cardType: 'pr',
-        isSquare,
-        showDate,
-        showPRWeight,
-        showPrevBest,
+        cardType: 'pr', isSquare, showDate, showPRWeight, showPrevBest,
         date: showDate ? (p.date || fallbackDate) : '',
         exerciseName: p.exerciseName || 'Exercise',
         weight: p.weight || '',
@@ -285,10 +375,7 @@ export default function ShareCardScreen({ navigation, route }) {
 
   async function handleShare() {
     if (!WebView || !FileSystem || !Sharing) {
-      Alert.alert(
-        'Sharing unavailable',
-        'The app needs to be rebuilt with the sharing packages installed.',
-      );
+      Alert.alert('Sharing unavailable', 'The app needs to be rebuilt with the sharing packages installed.');
       return;
     }
     if (!webViewRef.current || !webViewReady) {
@@ -309,22 +396,16 @@ export default function ShareCardScreen({ navigation, route }) {
     try {
       const { base64, isSquare: sq } = JSON.parse(event.nativeEvent.data);
       const pure = base64.replace(/^data:image\/png;base64,/, '');
-      const filename = `volyume-session-card-${sq ? 'square' : 'story'}.png`;
+      const filename = `volyume-${isSession ? 'session' : 'pr'}-card-${sq ? 'square' : 'story'}.png`;
       const uri = (FileSystem.cacheDirectory || '') + filename;
-      await FileSystem.writeAsStringAsync(uri, pure, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
+      await FileSystem.writeAsStringAsync(uri, pure, { encoding: FileSystem.EncodingType.Base64 });
       const canShare = await Sharing.isAvailableAsync();
-      if (!canShare) {
-        Alert.alert('Sharing not available on this device.');
-        return;
-      }
+      if (!canShare) { Alert.alert('Sharing not available on this device.'); return; }
       await Sharing.shareAsync(uri, {
-        mimeType: 'image/png',
-        UTI: 'public.png',
+        mimeType: 'image/png', UTI: 'public.png',
         dialogTitle: isSession ? 'Share Session Card' : 'Share PR Card',
       });
-    } catch (e) {
+    } catch (_e) {
       Alert.alert('Error', 'Could not generate card. Please try again.');
     } finally {
       setSharing(false);
@@ -335,21 +416,11 @@ export default function ShareCardScreen({ navigation, route }) {
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
 
-        {/* Card type tabs */}
+        {/* Card type */}
         <View style={styles.segmentRow}>
-          <TouchableOpacity
-            style={[styles.segment, isSession && styles.segmentActive]}
-            onPress={() => setCardType('session')}
-          >
-            <Text style={[styles.segmentText, isSession && styles.segmentTextActive]}>Session</Text>
-          </TouchableOpacity>
+          <SegmentBtn label="Session" active={isSession} onPress={() => setCardType('session')} />
           {prData && (
-            <TouchableOpacity
-              style={[styles.segment, !isSession && styles.segmentActive]}
-              onPress={() => setCardType('pr')}
-            >
-              <Text style={[styles.segmentText, !isSession && styles.segmentTextActive]}>New PR</Text>
-            </TouchableOpacity>
+            <SegmentBtn label="New PR" active={!isSession} onPress={() => setCardType('pr')} />
           )}
         </View>
 
@@ -357,27 +428,25 @@ export default function ShareCardScreen({ navigation, route }) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>FORMAT</Text>
           <View style={styles.segmentRow}>
-            <TouchableOpacity
-              style={[styles.segment, isSquare && styles.segmentActive]}
+            <SegmentBtn
+              label="Square 1:1"
+              active={isSquare}
               onPress={() => setFormat('square')}
-            >
-              <Ionicons name="square-outline" size={16} color={isSquare ? colors.primary : colors.textMuted} />
-              <Text style={[styles.segmentText, isSquare && styles.segmentTextActive]}>Square 1:1</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.segment, !isSquare && styles.segmentActive]}
+              icon={<Ionicons name="square-outline" size={15} color={isSquare ? colors.primary : colors.textMuted} />}
+            />
+            <SegmentBtn
+              label="Story 9:16"
+              active={!isSquare}
               onPress={() => setFormat('story')}
-            >
-              <Ionicons name="phone-portrait-outline" size={16} color={!isSquare ? colors.primary : colors.textMuted} />
-              <Text style={[styles.segmentText, !isSquare && styles.segmentTextActive]}>Story 9:16</Text>
-            </TouchableOpacity>
+              icon={<Ionicons name="phone-portrait-outline" size={15} color={!isSquare ? colors.primary : colors.textMuted} />}
+            />
           </View>
         </View>
 
         {/* Preview */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>PREVIEW</Text>
-          <View style={[styles.previewCard, isSquare ? styles.previewSquare : styles.previewStory]}>
+          <View style={[styles.previewOuter, !isSquare && styles.previewOuterStory]}>
             {isSession ? (
               <SessionPreview
                 sessionData={sessionData}
@@ -423,7 +492,7 @@ export default function ShareCardScreen({ navigation, route }) {
           </Text>
         </View>
 
-        {/* Share */}
+        {/* Share button */}
         <TouchableOpacity
           style={[styles.shareBtn, sharing && styles.btnDisabled]}
           onPress={handleShare}
@@ -442,7 +511,6 @@ export default function ShareCardScreen({ navigation, route }) {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Hidden WebView — renders off-screen, executes canvas JS on demand */}
       {WebView ? (
         <WebView
           ref={webViewRef}
@@ -455,6 +523,163 @@ export default function ShareCardScreen({ navigation, route }) {
         />
       ) : null}
     </SafeAreaView>
+  );
+}
+
+// ─── Preview Components ───────────────────────────────────────────────────────
+
+function GradientBg({ children, style }) {
+  if (LinearGradient) {
+    return (
+      <LinearGradient
+        colors={['#0E0F18', '#090A0F', '#131620']}
+        locations={[0, 0.5, 1]}
+        start={{ x: 0.2, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={style}
+      >
+        {children}
+      </LinearGradient>
+    );
+  }
+  return <View style={[style, { backgroundColor: '#090A0F' }]}>{children}</View>;
+}
+
+function VMarkPreview({ size = 14, color = colors.textMuted }) {
+  // Minimal text-based fallback — the real SVG is in BrandMark.js
+  // At small preview sizes this is fine
+  return (
+    <Text style={{ fontSize: size * 1.1, fontWeight: fontWeight.black, color, lineHeight: size * 1.2, includeFontPadding: false }}>
+      V
+    </Text>
+  );
+}
+
+function BrandRowPreview({ size = 11, color = colors.textMuted }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+      <VMarkPreview size={size} color={color} />
+      <Text style={{ fontSize: size, fontWeight: fontWeight.bold, color, letterSpacing: 0.3, includeFontPadding: false }}>
+        olyume
+      </Text>
+    </View>
+  );
+}
+
+function SessionPreview({ sessionData: s, showVolume, showDate, showPlanName, showExercises, isSquare }) {
+  const d = s || {};
+  const now = new Date();
+  const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+
+  const stats = [
+    { label: 'Sets', value: String(d.workingSets || 0) },
+    { label: 'Duration', value: `${d.duration || 0}m` },
+    ...(showVolume ? [{ label: 'Volume', value: `${((d.tonnage || 0) / 1000).toFixed(1)}t` }] : []),
+    ...(d.prCount > 0 ? [{ label: 'PRs', value: String(d.prCount), gold: true }] : []),
+  ];
+
+  return (
+    <GradientBg style={[pvStyles.card, isSquare ? pvStyles.square : pvStyles.story]}>
+      {/* Top accent */}
+      <View style={pvStyles.topAccent} />
+
+      {/* Brand row */}
+      <View style={pvStyles.brandRow}>
+        <BrandRowPreview size={isSquare ? 10 : 9} color={colors.textMuted} />
+        {showDate && (
+          <Text style={[pvStyles.metaText, { fontSize: isSquare ? 8 : 7 }]}>{d.date || dateStr}</Text>
+        )}
+      </View>
+
+      {showPlanName && d.planName ? (
+        <Text style={pvStyles.planLabel} numberOfLines={1}>{d.planName.toUpperCase()}</Text>
+      ) : null}
+
+      {/* Session name hero */}
+      <Text style={[pvStyles.heroText, isSquare ? pvStyles.heroTextSq : pvStyles.heroTextSt]} numberOfLines={2}>
+        {d.sessionName || 'Session Complete'}
+      </Text>
+
+      {showExercises && d.exercises?.length > 0 && (
+        <Text style={pvStyles.exercisesText} numberOfLines={1}>
+          {d.exercises.slice(0, 3).join(' · ')}
+        </Text>
+      )}
+
+      {/* Stats */}
+      <View style={pvStyles.statsRow}>
+        {stats.slice(0, isSquare ? 4 : 3).map((st, i) => (
+          <View key={i} style={[pvStyles.statBox, st.gold && pvStyles.statBoxGold]}>
+            <Text style={[pvStyles.statValue, st.gold && pvStyles.statValueGold]}>{st.value}</Text>
+            <Text style={pvStyles.statLabel}>{st.label}</Text>
+          </View>
+        ))}
+      </View>
+
+      <View style={pvStyles.bottomAccent} />
+    </GradientBg>
+  );
+}
+
+function PRPreview({ prData: p, showPRWeight, showPrevBest, showDate, isSquare }) {
+  const d = p || {};
+  const now = new Date();
+  const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+  const weightStr = showPRWeight
+    ? `${d.weight || '—'}${d.units || 'kg'} × ${d.reps || '—'}`
+    : `${d.reps || '—'} reps`;
+
+  return (
+    <GradientBg style={[pvStyles.card, pvStyles.cardPR, isSquare ? pvStyles.square : pvStyles.story]}>
+      {/* Top accent */}
+      <View style={pvStyles.topAccent} />
+
+      {/* Brand */}
+      <View style={pvStyles.brandRowPR}>
+        <BrandRowPreview size={isSquare ? 10 : 9} color={colors.textMuted} />
+      </View>
+
+      {/* Central content */}
+      <View style={pvStyles.prCenter}>
+        {/* PR badge */}
+        <View style={pvStyles.prBadge}>
+          <Text style={pvStyles.prBadgeText}>★  PERSONAL RECORD  ★</Text>
+        </View>
+
+        {/* Exercise name */}
+        <Text style={[pvStyles.prExercise, isSquare ? pvStyles.prExerciseSq : pvStyles.prExerciseSt]} numberOfLines={2}>
+          {d.exerciseName || 'Exercise'}
+        </Text>
+
+        {/* Weight — hero */}
+        <Text style={[pvStyles.prWeight, isSquare ? pvStyles.prWeightSq : pvStyles.prWeightSt]} numberOfLines={1} adjustsFontSizeToFit>
+          {weightStr}
+        </Text>
+
+        {/* Meta */}
+        {(showDate || (showPrevBest && d.previousBest)) ? (
+          <Text style={pvStyles.prMeta} numberOfLines={1}>
+            {[showDate ? (d.date || dateStr) : null, showPrevBest && d.previousBest ? `Prev: ${d.previousBest}${d.units || 'kg'}` : null].filter(Boolean).join('  ·  ')}
+          </Text>
+        ) : null}
+      </View>
+
+      <View style={pvStyles.bottomAccent} />
+    </GradientBg>
+  );
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function SegmentBtn({ label, active, onPress, icon }) {
+  return (
+    <TouchableOpacity
+      style={[styles.segment, active && styles.segmentActive]}
+      onPress={onPress}
+    >
+      {icon}
+      <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{label}</Text>
+    </TouchableOpacity>
   );
 }
 
@@ -472,67 +697,72 @@ function ToggleRow({ label, value, onChange, last }) {
   );
 }
 
-function SessionPreview({ sessionData: s, showVolume, showDate, showPlanName, showExercises, isSquare }) {
-  const d = s || {};
-  const now = new Date();
-  const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
-  return (
-    <View style={[styles.previewInner, !isSquare && styles.previewInnerStory]}>
-      <View style={styles.previewTopBar} />
-      <Text style={styles.previewLogo}>VOLYUME</Text>
-      {showDate && <Text style={styles.previewDate}>{d.date || dateStr}</Text>}
-      {showPlanName && d.planName ? (
-        <Text style={styles.previewPlan}>{d.planName.toUpperCase()}</Text>
-      ) : <View style={{ height: spacing.md }} />}
-      <Text style={styles.previewSessionName} numberOfLines={2}>{d.sessionName || 'Session Complete'}</Text>
-      {showExercises && d.exercises?.length > 0 && (
-        <Text style={styles.previewExercises} numberOfLines={1}>
-          {d.exercises.slice(0, 3).join(' · ')}
-        </Text>
-      )}
-      <View style={styles.previewStats}>
-        <View style={styles.previewStatBox}>
-          <Text style={styles.previewStatValue}>{d.workingSets || 0}</Text>
-          <Text style={styles.previewStatLabel}>Sets</Text>
-        </View>
-        <View style={styles.previewStatBox}>
-          <Text style={styles.previewStatValue}>{d.duration || 0}m</Text>
-          <Text style={styles.previewStatLabel}>Duration</Text>
-        </View>
-        {showVolume && (
-          <View style={styles.previewStatBox}>
-            <Text style={styles.previewStatValue}>{((d.tonnage || 0) / 1000).toFixed(1)}t</Text>
-            <Text style={styles.previewStatLabel}>Volume</Text>
-          </View>
-        )}
-      </View>
-      <View style={styles.previewBottomBar} />
-    </View>
-  );
-}
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
-function PRPreview({ prData: p, showPRWeight, showPrevBest, showDate, isSquare }) {
-  const d = p || {};
-  const now = new Date();
-  const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
-  const weightStr = showPRWeight
-    ? `${d.weight || '—'}${d.units || 'kg'} × ${d.reps || '—'}`
-    : `${d.reps || '—'} reps`;
-  return (
-    <View style={[styles.previewInner, styles.previewInnerPR, !isSquare && styles.previewInnerStory]}>
-      <View style={styles.previewTopBar} />
-      <Text style={styles.previewLogo}>VOLYUME</Text>
-      <Text style={styles.previewPRLabel}>NEW PERSONAL RECORD</Text>
-      <Text style={styles.previewPRExercise} numberOfLines={2}>{d.exerciseName || 'Exercise'}</Text>
-      <Text style={styles.previewPRWeight}>{weightStr}</Text>
-      <Text style={styles.previewPRMeta}>
-        {showDate ? (d.date || dateStr) : ''}
-        {showPrevBest && d.previousBest ? `  ·  Prev: ${d.previousBest}${d.units || 'kg'}` : ''}
-      </Text>
-      <View style={styles.previewBottomBar} />
-    </View>
-  );
-}
+const pvStyles = StyleSheet.create({
+  card: {
+    borderRadius: radius.md, overflow: 'hidden',
+    borderWidth: 1, borderColor: colors.border,
+  },
+  cardPR: { alignItems: 'stretch' },
+  square: { width: 270, height: 270 },
+  story: { width: 162, height: 288 },
+  topAccent: { height: 3, backgroundColor: colors.primary },
+  bottomAccent: { height: 1, backgroundColor: colors.border, marginTop: 'auto' },
+  brandRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: spacing.sm, paddingTop: spacing.sm, paddingBottom: 2,
+  },
+  brandRowPR: {
+    paddingHorizontal: spacing.sm, paddingTop: spacing.sm,
+  },
+  metaText: { color: colors.textMuted, fontWeight: fontWeight.medium },
+  planLabel: {
+    fontSize: 8, color: colors.primary, fontWeight: fontWeight.bold,
+    letterSpacing: 1, paddingHorizontal: spacing.sm,
+  },
+  heroText: {
+    fontWeight: fontWeight.black, color: colors.textPrimary,
+    paddingHorizontal: spacing.sm, flex: 1, marginTop: 4,
+  },
+  heroTextSq: { fontSize: 18, lineHeight: 22 },
+  heroTextSt: { fontSize: 14, lineHeight: 17 },
+  exercisesText: {
+    fontSize: 8, color: colors.textSecondary,
+    paddingHorizontal: spacing.sm, marginBottom: 4,
+  },
+  statsRow: {
+    flexDirection: 'row', gap: 4,
+    paddingHorizontal: spacing.sm, paddingBottom: spacing.sm,
+    marginTop: 'auto',
+  },
+  statBox: {
+    flex: 1, backgroundColor: colors.surface2, borderRadius: 6,
+    paddingVertical: 5, alignItems: 'center',
+    borderWidth: 1, borderColor: colors.border,
+  },
+  statBoxGold: { borderColor: colors.gold + '50', backgroundColor: colors.warningBg },
+  statValue: { fontSize: 11, fontWeight: fontWeight.black, color: colors.textPrimary, lineHeight: 14 },
+  statValueGold: { color: colors.gold },
+  statLabel: { fontSize: 6.5, color: colors.textMuted, fontWeight: fontWeight.bold, letterSpacing: 0.3, marginTop: 1 },
+  prCenter: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: spacing.sm, gap: 6,
+  },
+  prBadge: {
+    backgroundColor: colors.warningBg, borderRadius: 30,
+    paddingHorizontal: spacing.md, paddingVertical: 3,
+    borderWidth: 1, borderColor: colors.gold + '60',
+  },
+  prBadgeText: { fontSize: 7.5, fontWeight: fontWeight.bold, color: colors.gold, letterSpacing: 0.5 },
+  prExercise: { fontWeight: fontWeight.black, color: colors.textPrimary, textAlign: 'center', lineHeight: 20 },
+  prExerciseSq: { fontSize: 14 },
+  prExerciseSt: { fontSize: 11 },
+  prWeight: { fontWeight: fontWeight.black, color: colors.primary, textAlign: 'center' },
+  prWeightSq: { fontSize: 26 },
+  prWeightSt: { fontSize: 20 },
+  prMeta: { fontSize: 8, color: colors.textMuted, textAlign: 'center' },
+});
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
@@ -542,50 +772,19 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs, fontWeight: fontWeight.black, color: colors.textMuted, letterSpacing: 1.5,
   },
   segmentRow: {
-    flexDirection: 'row', gap: spacing.sm,
+    flexDirection: 'row', gap: spacing.xs,
     backgroundColor: colors.surface, borderRadius: radius.md, padding: 4,
     borderWidth: 1, borderColor: colors.border,
   },
   segment: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.xs, paddingVertical: spacing.sm, borderRadius: radius.sm,
+    gap: spacing.xs, paddingVertical: spacing.sm + 1, borderRadius: radius.sm,
   },
-  segmentActive: { backgroundColor: colors.surface2 },
+  segmentActive: { backgroundColor: colors.surface3 },
   segmentText: { fontSize: fontSize.sm, color: colors.textMuted, fontWeight: fontWeight.semibold },
   segmentTextActive: { color: colors.textPrimary },
-
-  previewCard: {
-    alignSelf: 'center', borderRadius: radius.md, overflow: 'hidden',
-    backgroundColor: '#0B0D10', borderWidth: 1, borderColor: colors.border,
-  },
-  previewSquare: { width: 260, height: 260 },
-  previewStory: { width: 160, height: 284 },
-  previewInner: {
-    flex: 1, padding: spacing.md, gap: spacing.xs, backgroundColor: '#0B0D10',
-  },
-  previewInnerStory: { padding: spacing.sm },
-  previewInnerPR: { justifyContent: 'center' },
-  previewTopBar: { height: 2, backgroundColor: colors.primary, marginBottom: spacing.xs },
-  previewBottomBar: { height: 1, backgroundColor: colors.border, marginTop: 'auto' },
-  previewLogo: {
-    fontSize: fontSize.xs - 1, fontWeight: fontWeight.black, color: colors.textMuted, letterSpacing: 2,
-  },
-  previewDate: { fontSize: fontSize.xs - 1, color: colors.textMuted },
-  previewPlan: { fontSize: fontSize.xs - 1, color: colors.primary, fontWeight: fontWeight.bold, letterSpacing: 1 },
-  previewSessionName: { fontSize: fontSize.md, fontWeight: fontWeight.black, color: colors.textPrimary, lineHeight: 22 },
-  previewExercises: { fontSize: fontSize.xs - 1, color: colors.textSecondary },
-  previewStats: { flexDirection: 'row', gap: spacing.xs, marginTop: 'auto' },
-  previewStatBox: {
-    flex: 1, backgroundColor: colors.surface2, borderRadius: radius.sm,
-    padding: spacing.xs, alignItems: 'center', borderWidth: 1, borderColor: colors.border,
-  },
-  previewStatValue: { fontSize: fontSize.sm, fontWeight: fontWeight.black, color: colors.textPrimary },
-  previewStatLabel: { fontSize: fontSize.xs - 2, color: colors.textMuted, fontWeight: fontWeight.bold, letterSpacing: 0.5 },
-  previewPRLabel: { fontSize: fontSize.xs - 1, color: colors.primary, fontWeight: fontWeight.bold, letterSpacing: 2, marginTop: spacing.xs },
-  previewPRExercise: { fontSize: fontSize.md, fontWeight: fontWeight.black, color: colors.textPrimary, lineHeight: 22 },
-  previewPRWeight: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.primary },
-  previewPRMeta: { fontSize: fontSize.xs - 1, color: colors.textMuted },
-
+  previewOuter: { alignSelf: 'center' },
+  previewOuterStory: {},
   togglesCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg,
     borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
@@ -598,7 +797,6 @@ const styles = StyleSheet.create({
   toggleRowLast: { borderBottomWidth: 0 },
   toggleLabel: { fontSize: fontSize.sm, color: colors.textPrimary },
   privacyNote: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
-
   shareBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.sm, backgroundColor: colors.primary, borderRadius: radius.lg,
@@ -606,8 +804,5 @@ const styles = StyleSheet.create({
   },
   btnDisabled: { opacity: 0.5 },
   shareBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
-
-  hiddenWebView: {
-    position: 'absolute', opacity: 0, width: 1, height: 1, bottom: 0, left: 0, zIndex: -1,
-  },
+  hiddenWebView: { position: 'absolute', opacity: 0, width: 1, height: 1, bottom: 0, left: 0, zIndex: -1 },
 });

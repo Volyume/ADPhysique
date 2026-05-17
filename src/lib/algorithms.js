@@ -176,7 +176,7 @@ export function detectPR(newSet, historicalSets, exercise, units = 'kg') {
     return est > best ? est : best;
   }, 0);
 
-  if (new1RM > best1RM * 1.001) {
+  if (best1RM > 0 && new1RM > best1RM * 1.001) {
     prs.push({
       type: '1rm_estimate',
       value: new1RM,
