@@ -96,6 +96,18 @@ async function _doInit() {
       description TEXT,
       split_type TEXT,
       is_active INTEGER DEFAULT 1,
+      is_library INTEGER DEFAULT 0,
+      source_routine_id TEXT,
+      programme_id TEXT,
+      created_at INTEGER,
+      updated_at INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS programmes (
+      id TEXT PRIMARY KEY,
+      user_id TEXT,
+      name TEXT NOT NULL,
+      description TEXT,
+      is_library INTEGER DEFAULT 0,
       created_at INTEGER,
       updated_at INTEGER
     );
@@ -140,6 +152,18 @@ async function _doInit() {
     'ALTER TABLE routine_exercises ADD COLUMN rest_seconds INTEGER',
     'ALTER TABLE workouts ADD COLUMN last_activity_at INTEGER',
     'ALTER TABLE workouts ADD COLUMN active_elapsed_seconds INTEGER',
+    'ALTER TABLE routines ADD COLUMN is_library INTEGER DEFAULT 0',
+    'ALTER TABLE routines ADD COLUMN source_routine_id TEXT',
+    'ALTER TABLE routines ADD COLUMN programme_id TEXT',
+    `CREATE TABLE IF NOT EXISTS programmes (
+      id TEXT PRIMARY KEY,
+      user_id TEXT,
+      name TEXT NOT NULL,
+      description TEXT,
+      is_library INTEGER DEFAULT 0,
+      created_at INTEGER,
+      updated_at INTEGER
+    )`,
   ];
   for (const sql of colMigrations) {
     try { await _db.execAsync(sql); } catch (_) {}
@@ -298,9 +322,10 @@ export async function getWorkoutSetsForExercise(exerciseId, userId, limit = 100)
 export async function getPreviousWorkoutSets(exerciseId, currentWorkoutId) {
   const d = await db();
   const rows = await d.getAllAsync(
-    `SELECT * FROM workout_sets
-     WHERE exercise_id = ? AND workout_id != ?
-     ORDER BY created_at DESC`,
+    `SELECT ws.* FROM workout_sets ws
+     JOIN workouts w ON w.id = ws.workout_id
+     WHERE ws.exercise_id = ? AND ws.workout_id != ? AND w.is_completed = 1
+     ORDER BY ws.created_at DESC`,
     [exerciseId, currentWorkoutId],
   );
   if (rows.length === 0) return [];
@@ -360,16 +385,16 @@ export async function getRoutineById(id) {
   return rowToCamel(row);
 }
 
-export async function createRoutine(userId, name, description = null, splitType = null) {
+export async function createRoutine(userId, name, description = null, splitType = null, isLibrary = 0, sourceRoutineId = null, programmeId = null) {
   const d = await db();
   const id = uid();
   const now = Date.now();
   await d.runAsync(
-    `INSERT INTO routines (id, user_id, name, description, split_type, is_active, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
-    [id, userId, name, description, splitType, now, now],
+    `INSERT INTO routines (id, user_id, name, description, split_type, is_active, is_library, source_routine_id, programme_id, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)`,
+    [id, userId, name, description, splitType, isLibrary, sourceRoutineId, programmeId, now, now],
   );
-  return { id, userId, name, description, splitType, isActive: 1, createdAt: now, updatedAt: now };
+  return { id, userId, name, description, splitType, isActive: 1, isLibrary, sourceRoutineId, programmeId, createdAt: now, updatedAt: now };
 }
 
 export async function softDeleteRoutine(id) {
@@ -378,6 +403,46 @@ export async function softDeleteRoutine(id) {
     'UPDATE routines SET is_active = 0, updated_at = ? WHERE id = ?',
     [Date.now(), id],
   );
+}
+
+// ─── Programmes ───────────────────────────────────────────────────────────────────────────────
+
+export async function createProgramme(userId, name, description = null, isLibrary = 0) {
+  const d = await db();
+  const id = uid();
+  const now = Date.now();
+  await d.runAsync(
+    `INSERT INTO programmes (id, user_id, name, description, is_library, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [id, userId || null, name, description, isLibrary, now, now],
+  );
+  return { id, userId, name, description, isLibrary, createdAt: now, updatedAt: now };
+}
+
+export async function getAllProgrammes(userId) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    'SELECT * FROM programmes WHERE user_id = ? OR is_library = 1 ORDER BY created_at ASC',
+    [userId],
+  );
+  return rows.map(rowToCamel);
+}
+
+export async function getProgrammeById(id) {
+  const d = await db();
+  const row = await d.getFirstAsync('SELECT * FROM programmes WHERE id = ?', [id]);
+  return rowToCamel(row);
+}
+
+export async function copyRoutineFromLibrary(routineId, userId) {
+  const original = await getRoutineById(routineId);
+  if (!original) throw new Error('Routine not found');
+  const newRoutine = await duplicateRoutine(routineId, userId, original.name);
+  await (await db()).runAsync(
+    'UPDATE routines SET source_routine_id = ?, is_library = 0 WHERE id = ?',
+    [routineId, newRoutine.id],
+  );
+  return { ...newRoutine, sourceRoutineId: routineId, isLibrary: 0 };
 }
 
 // ─── Routine Exercises ────────────────────────────────────────────────────────────────────────

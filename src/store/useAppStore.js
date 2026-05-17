@@ -104,6 +104,10 @@ const useAppStore = create((set, get) => ({
     restTimerRemaining: duration,
   }),
   stopRestTimer: () => set({ restTimerActive: false, restTimerRemaining: 0 }),
+  addRestTime: (seconds = 30) => {
+    const { restTimerActive, restTimerRemaining } = get();
+    if (restTimerActive) set({ restTimerRemaining: restTimerRemaining + seconds });
+  },
   tickRestTimer: () => {
     const { restTimerRemaining } = get();
     if (restTimerRemaining <= 1) {

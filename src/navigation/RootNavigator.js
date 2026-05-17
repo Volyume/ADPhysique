@@ -29,7 +29,7 @@ import VolumeHeatmapScreen from '../screens/VolumeHeatmapScreen';
 import PRWallScreen from '../screens/PRWallScreen';
 import BodyMetricsScreen from '../screens/BodyMetricsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
-import RoutinesScreen from '../screens/RoutinesScreen';
+import ProgrammesScreen from '../screens/ProgrammesScreen';
 import RoutineDetailScreen from '../screens/RoutineDetailScreen';
 import MesocycleBuilderScreen from '../screens/MesocycleBuilderScreen';
 
@@ -55,12 +55,12 @@ function HomeStack() {
   );
 }
 
-// Routines tab: routine management + exercise library
-function RoutinesStack() {
+// Programmes tab: workout management + exercise library
+function ProgrammesStack() {
   return (
     <Stack.Navigator screenOptions={stackOptions}>
-      <Stack.Screen name="Routines" component={RoutinesScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="RoutineDetail" component={RoutineDetailScreen} options={{ title: 'Edit Routine' }} />
+      <Stack.Screen name="Programmes" component={ProgrammesScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="RoutineDetail" component={RoutineDetailScreen} options={{ title: 'Edit Workout' }} />
       <Stack.Screen name="ExerciseLibrary" component={ExerciseLibraryScreen} options={{ title: 'Exercise Library' }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise' }} />
     </Stack.Navigator>
@@ -108,7 +108,7 @@ function MainTabs() {
         tabBarIcon: ({ focused, color }) => {
           const icons = {
             HomeTab: focused ? 'home' : 'home-outline',
-            RoutinesTab: focused ? 'list' : 'list-outline',
+            ProgrammesTab: focused ? 'list' : 'list-outline',
             ProgressTab: focused ? 'stats-chart' : 'stats-chart-outline',
             ProfileTab: focused ? 'person' : 'person-outline',
           };
@@ -117,7 +117,7 @@ function MainTabs() {
       })}
     >
       <Tab.Screen name="HomeTab" component={HomeStack} options={{ title: 'Train' }} />
-      <Tab.Screen name="RoutinesTab" component={RoutinesStack} options={{ title: 'Routines' }} />
+      <Tab.Screen name="ProgrammesTab" component={ProgrammesStack} options={{ title: 'Programmes' }} />
       <Tab.Screen name="ProgressTab" component={ProgressStack} options={{ title: 'Progress' }} />
       <Tab.Screen name="ProfileTab" component={ProfileStack} options={{ title: 'You' }} />
     </Tab.Navigator>

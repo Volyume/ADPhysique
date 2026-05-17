@@ -78,7 +78,7 @@ export default function HomeScreen({ navigation }) {
   async function loadRoutines() {
     try {
       const routines = await getAllRoutines(user.id);
-      const active = routines.filter(r => r.isActive);
+      const active = routines.filter(r => r.isActive && !r.isLibrary);
       setHasRoutines(active.length > 0);
       setSuggestedRoutine(active[0] || null);
     } catch (_e) {}
@@ -180,9 +180,9 @@ export default function HomeScreen({ navigation }) {
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.ghostBtn}
-                onPress={() => navigation.navigate('RoutinesTab')}
+                onPress={() => navigation.navigate('ProgrammesTab')}
               >
-                <Text style={styles.ghostBtnText}>Create a Routine</Text>
+                <Text style={styles.ghostBtnText}>Browse Programmes</Text>
               </TouchableOpacity>
             </>
           )}
@@ -223,14 +223,14 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickAction}
-            onPress={() => navigation.navigate('RoutinesTab')}
+            onPress={() => navigation.navigate('ProgrammesTab')}
           >
             <Ionicons name="list" size={22} color={colors.primary} />
-            <Text style={styles.quickActionText}>Routines</Text>
+            <Text style={styles.quickActionText}>Programmes</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickAction}
-            onPress={() => navigation.navigate('RoutinesTab', { screen: 'ExerciseLibrary' })}
+            onPress={() => navigation.navigate('ProgrammesTab', { screen: 'ExerciseLibrary' })}
           >
             <Ionicons name="barbell-outline" size={22} color={colors.primary} />
             <Text style={styles.quickActionText}>Exercises</Text>
