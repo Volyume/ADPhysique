@@ -181,7 +181,8 @@ const EXERCISES = {
     compound: {
       full_gym:        ['Romanian Deadlift (Barbell)', 'Stiff-Leg Deadlift', 'Good Morning'],
       barbell_plates:  ['Romanian Deadlift (Barbell)', 'Stiff-Leg Deadlift', 'Good Morning'],
-      machines_cables: ['Lying Leg Curl', 'Seated Leg Curl', 'Romanian Deadlift (Barbell)'],
+      // For machines/cables use hip-hinge patterns first so compound ≠ isolation slot
+      machines_cables: ['Romanian Deadlift (Barbell)', 'Stiff-Leg Deadlift', 'Seated Leg Curl'],
       dumbbells_only:  ['Romanian Deadlift (Dumbbell)', 'Single-Leg Romanian Deadlift'],
       home_gym:        ['Romanian Deadlift (Dumbbell)', 'Nordic Hamstring Curl'],
       bodyweight:      ['Nordic Hamstring Curl', 'Glute Bridge', 'Single-Leg Romanian Deadlift'],
@@ -281,13 +282,50 @@ function weeklySetTarget(muscle, experience, weakPoints, nutritionPhase, goal, i
 // `numEx` = how many exercises in each session target that muscle (defaults to 1).
 // Per-exercise cap scales with experience so beginners don't accumulate excessive
 // total session volume before they've built the work capacity to handle it.
-const PER_EX_CAP = { beginner: 3, intermediate: 4, advanced: 4, competitive: 5 };
+const PER_EX_CAP = { beginner: 2, intermediate: 3, advanced: 4, competitive: 5 };
+
+// Maximum TOTAL working sets per session (systemic fatigue ceiling).
+// Per-muscle MRV and session-total capacity are separate constraints — you cannot
+// stack max volume for every muscle group simultaneously and recover from it.
+const SESSION_MAX_SETS = { beginner: 14, intermediate: 20, advanced: 25, competitive: 30 };
 
 function setsPerSession(muscle, experience, weakPoints, nutritionPhase, goal, sessions, inputs = {}, numEx = 1) {
   const weekly = weeklySetTarget(muscle, experience, weakPoints, nutritionPhase, goal, inputs);
   const perSession = Math.round(weekly / Math.max(1, sessions));
-  const cap = PER_EX_CAP[experience] ?? 4;
+  const cap = PER_EX_CAP[experience] ?? 3;
   return Math.min(cap, Math.max(2, Math.round(perSession / Math.max(1, numEx))));
+}
+
+// Remove any exercise appearing more than once in a session (same name).
+function deduplicateExercises(exercises) {
+  const seen = new Set();
+  return exercises.filter(e => {
+    if (seen.has(e.exerciseName)) return false;
+    seen.add(e.exerciseName);
+    return true;
+  });
+}
+
+// Trim total session sets to the experience-appropriate ceiling.
+// Reduction works back-to-front so accessories (placed last) are trimmed first,
+// preserving the compound lifts that open each session.
+function capSessionVolume(exercises, experience) {
+  const max = SESSION_MAX_SETS[experience] ?? 20;
+  let total = exercises.reduce((s, e) => s + e.sets, 0);
+  if (total <= max) return exercises;
+  const result = exercises.map(e => ({ ...e }));
+  while (total > max) {
+    let reduced = false;
+    for (let i = result.length - 1; i >= 0 && total > max; i--) {
+      if (result[i].sets > 2) {
+        result[i].sets--;
+        total--;
+        reduced = true;
+      }
+    }
+    if (!reduced) break;
+  }
+  return result;
 }
 
 // Build a single exercise entry for a workout
@@ -896,6 +934,12 @@ export function generatePlan(inputs) {
   if (goal === 'strength_hypertrophy') {
     applyStrengthNotes(workouts);
   }
+
+  // Finalise every session: remove duplicate exercises then enforce session total cap.
+  // Done after all post-processing so V-taper injections are also counted.
+  workouts.forEach(w => {
+    w.exercises = capSessionVolume(deduplicateExercises(w.exercises), experience);
+  });
 
   const warnings             = buildWarnings(planInputs, effectiveDays);
   const weeklyVolumeSummary  = buildVolumeSummary(experience, safeWeakPoints, nutritionPhase, goal, planInputs);
