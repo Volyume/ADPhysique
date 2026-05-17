@@ -587,7 +587,7 @@ export default function CoachBuilderScreen({ navigation, route }) {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.exerciseName}>{ex.exerciseName}</Text>
                   <Text style={styles.exerciseMeta}>
-                    {ex.sets} × {ex.repMin}–{ex.repMax} reps
+                    {ex.sets} × {ex.repMin}–{ex.repMax} reps · {ex.restSec}s rest
                   </Text>
                 </View>
               </View>

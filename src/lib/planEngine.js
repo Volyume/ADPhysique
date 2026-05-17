@@ -307,17 +307,21 @@ function deduplicateExercises(exercises) {
 }
 
 // Trim total session sets to the experience-appropriate ceiling.
-// Reduction works back-to-front so accessories (placed last) are trimmed first,
-// preserving the compound lifts that open each session.
+// Phase 1: reduce sets back-to-front down to a minimum of 3 (below 3 is not a
+//   useful training stimulus — remove the exercise instead).
+// Phase 2: if the cap still cannot be met at 3 sets/exercise, drop whole
+//   exercises from the back (accessories first, compounds protected at front).
 function capSessionVolume(exercises, experience) {
   const max = SESSION_MAX_SETS[experience] ?? 20;
   let total = exercises.reduce((s, e) => s + e.sets, 0);
   if (total <= max) return exercises;
   const result = exercises.map(e => ({ ...e }));
+
+  // Phase 1: reduce sets to minimum 3
   while (total > max) {
     let reduced = false;
     for (let i = result.length - 1; i >= 0 && total > max; i--) {
-      if (result[i].sets > 2) {
+      if (result[i].sets > 3) {
         result[i].sets--;
         total--;
         reduced = true;
@@ -325,6 +329,85 @@ function capSessionVolume(exercises, experience) {
     }
     if (!reduced) break;
   }
+
+  // Phase 2: remove whole exercises from the back
+  while (total > max && result.length > 3) {
+    total -= result[result.length - 1].sets;
+    result.pop();
+  }
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Session time estimation
+// ---------------------------------------------------------------------------
+
+// Approximate time spent performing one set (concentric + eccentric, ~3.5 s/rep).
+function setWorkSeconds(ex) {
+  return Math.round(((ex.repMin + ex.repMax) / 2) * 3.5);
+}
+
+// Setup time at the start of each exercise (loading plates, adjusting machine seat,
+// finding the right dumbbells). Derived from restSec which correlates with complexity.
+function exerciseSetupSeconds(ex) {
+  if (ex.restSec >= 150) return 120; // barbell compound — load plates, set j-hooks
+  if (ex.restSec >= 100) return 60;  // machine / cable — adjust pin, seat, handle
+  return 40;                         // isolation / dumbbell — grab, set up
+}
+
+// Total seconds for one exercise block:
+// setup + (work + rest) × sets − trailing rest (absorbed into next exercise setup).
+function exerciseBlockSeconds(ex) {
+  const perSet = setWorkSeconds(ex) + ex.restSec;
+  return exerciseSetupSeconds(ex) + ex.sets * perSet - ex.restSec;
+}
+
+// Estimated total session duration in seconds.
+// Includes a 5-minute arrival/warmup buffer and 30 seconds between exercises
+// for moving between stations, chalk up, logging, etc.
+function estimateWorkoutSeconds(exercises) {
+  const warmup = 5 * 60;
+  const transitions = Math.max(0, exercises.length - 1) * 30;
+  return warmup + transitions + exercises.reduce((s, e) => s + exerciseBlockSeconds(e), 0);
+}
+
+// Exported so screens can show a live duration estimate.
+export function estimateWorkoutMinutes(exercises) {
+  return Math.ceil(estimateWorkoutSeconds(exercises) / 60);
+}
+
+// Trim a session to fit within sessionMinutes.
+// Phase 1: reduce sets back-to-front down to 3 minimum (below 3 is not a useful
+//   training stimulus — remove the exercise instead).
+// Phase 2: drop whole exercises from the back if still over budget.
+// Always preserves at least 3 exercises — absolute minimum for a useful session.
+function fitToSessionLength(exercises, sessionMinutes) {
+  if (!sessionMinutes || sessionMinutes <= 0) return exercises;
+  const budgetSec = sessionMinutes * 60;
+  if (estimateWorkoutSeconds(exercises) <= budgetSec) return exercises;
+
+  const result = exercises.map(e => ({ ...e }));
+
+  // Phase 1: reduce sets (min 3) back-to-front
+  let safety = 60;
+  while (estimateWorkoutSeconds(result) > budgetSec && safety-- > 0) {
+    let trimmed = false;
+    for (let i = result.length - 1; i >= 0; i--) {
+      if (result[i].sets > 3) {
+        result[i].sets--;
+        trimmed = true;
+        break;
+      }
+    }
+    if (!trimmed) break;
+  }
+
+  // Phase 2: remove whole exercises from the back
+  while (estimateWorkoutSeconds(result) > budgetSec && result.length > 3) {
+    result.pop();
+  }
+
   return result;
 }
 
@@ -775,17 +858,32 @@ function buildPersonalisationSummary(inputs, effectiveDays, splitType) {
 }
 
 // ---------------------------------------------------------------------------
-// whyThis explanations (7 plain-English tooltips, ≤ 80 words each)
+// whyThis explanations — dynamically generated from the actual plan output
 // ---------------------------------------------------------------------------
 
-function buildWhyThis(inputs, splitType, effectiveDays) {
-  const { experience, goal, weakPoints, nutritionPhase, equipment } = inputs;
+// Receives the finalised `workouts` array so content reflects real exercise/set
+// counts, estimated durations, and any trimming that was applied.
+function buildWhyThis(inputs, splitType, effectiveDays, workouts) {
+  const { experience, goal, weakPoints, nutritionPhase, equipment, sessionLengthMinutes } = inputs;
   const mod = NUTRITION_VOLUME_MOD[nutritionPhase] ?? 1.0;
   const { min, max } = BASE_VOLUME[experience];
   const adjMin = Math.round(min * mod);
   const adjMax = Math.round(max * mod);
   const eqLabel = EQUIPMENT_LABELS[equipment] ?? equipment;
 
+  // ── Actual plan stats from the finalised workouts ──
+  const avgExercises = workouts.length
+    ? Math.round(workouts.reduce((s, w) => s + w.exercises.length, 0) / workouts.length)
+    : 0;
+  const avgSets = workouts.length
+    ? Math.round(workouts.reduce((s, w) => s + w.exercises.reduce((t, e) => t + e.sets, 0), 0) / workouts.length)
+    : 0;
+  const durations = workouts.map(w => w.estimatedDurationMinutes ?? estimateWorkoutMinutes(w.exercises));
+  const minDur = Math.min(...durations);
+  const maxDur = Math.max(...durations);
+  const durText = minDur === maxDur ? `${minDur} min` : `${minDur}–${maxDur} min`;
+
+  // ── Split rationale ──
   const splitExplain = {
     full_body:      'Full Body training hits every muscle group each session, maximising frequency. Ideal for beginners who benefit from repetition to build motor patterns, and for building a strong base before transitioning to split training.',
     upper_lower:    'Upper / Lower splits train each muscle group twice per week, balancing frequency with sufficient per-session volume. Well suited to intermediates who can handle more work per session without excess systemic fatigue.',
@@ -794,34 +892,44 @@ function buildWhyThis(inputs, splitType, effectiveDays) {
     upper_lower_wp: 'Upper / Lower distributes base volume twice across four sessions. The fifth day targets your specific weak points with focused volume — an efficient structure for lifters who want broad development and targeted specialisation.',
   };
 
+  // ── Session length — references actual estimated durations and any trimming ──
+  let sessionLengthText;
+  const budgetMin = sessionLengthMinutes ?? 60;
+  if (maxDur <= budgetMin) {
+    const spare = budgetMin - Math.round((minDur + maxDur) / 2);
+    if (spare >= 10) {
+      sessionLengthText = `Sessions estimate ${durText} — ${spare} minutes inside your ${budgetMin}-minute budget. Time is calculated from real rest periods (${rir === 1 ? '60–180' : '75–150'} s) plus setup and transition buffers, not a rough guess. The spare time gives room for warm-up sets on heavy compounds.`;
+    } else {
+      sessionLengthText = `Sessions estimate ${durText}, sitting close to your ${budgetMin}-minute target. Each figure is built from actual rep counts, rest periods, and equipment setup time — not a flat estimate.`;
+    }
+  } else {
+    const over = Math.round((minDur + maxDur) / 2) - budgetMin;
+    sessionLengthText = `Your ${budgetMin}-minute limit is tight for this split. Accessory sets were trimmed and, where needed, exercises removed to honour the time cap — compounds are always preserved first as they deliver the highest stimulus per minute. Sessions now estimate ${durText}. To fit full volume (${over} more minutes), extend your budget or switch to fewer training days.`;
+  }
+
+  // ── Volume — references actual set counts from the plan ──
+  const volumeText = `Your ${experience} level targets ${adjMin}–${adjMax} working sets per muscle per week. Sessions average ${avgSets} sets across ${avgExercises} exercises. ${nutritionPhase && mod !== 1 ? `${mod > 1 ? 'Surplus nutrition raises' : 'Cut phase reduces'} this by ${Math.abs(Math.round((1 - mod) * 100))}% to match your recovery capacity.` : ''}`.trim();
+
+  // ── Weak points ──
   const weakText = weakPoints.length
     ? `Your selected weak points (${weakPoints.join(', ')}) receive 25–40% extra weekly sets above baseline, exploiting higher frequency to accelerate lagging muscles and bring them in line with stronger areas.`
     : 'No specific weak points were flagged, so sets are distributed evenly across all major muscle groups for balanced development.';
 
+  // ── Nutrition impact ──
   const nutritionText = mod > 1
     ? `A caloric surplus (${nutritionPhase?.replace(/_/g, ' ')}) raises your volume ceiling by ~10%, supporting more sets per session, faster recovery between sessions, and more aggressive progressive overload.`
     : mod < 1
-    ? `Your cut phase (${nutritionPhase?.replace(/_/g, ' ')}) reduces volume by ${Math.round((1 - mod) * 100)}% to match reduced recovery capacity. Lower volume limits muscle protein breakdown and preserves lean mass during the deficit.`
+    ? `Your cut phase (${nutritionPhase?.replace(/_/g, ' ')}) reduces volume by ${Math.round((1 - mod) * 100)}% to match reduced recovery capacity. RIR is raised by 1 (to ${rir}) to protect recovery. Keep protein at ≥ 2 g/kg to minimise muscle loss.`
     : 'Maintenance or recomposition intake keeps volume at baseline — enough stimulus to retain or slowly accrue muscle without accumulating excessive fatigue.';
 
   return {
-    split:
-      (splitExplain[splitType] ?? 'Split selected to match your frequency, experience level, and goal.'),
-    volume:
-      `Your ${experience} experience level targets ${adjMin}–${adjMax} working sets per muscle per week. This range reflects current evidence for effective hypertrophy stimulus without exceeding your recovery ceiling.`,
-    weakPoints: weakText,
-    exercises:
-      `Exercises are matched to ${eqLabel}. Compound lifts anchor each session — they provide maximum mechanical tension and progressive overload potential. Machine and isolation work follows, adding metabolic stress and targeted muscle activation.`,
-    repRanges:
-      'Compound lifts use 5–10 reps to maximise mechanical tension. Machine movements use 8–12 reps. Isolation exercises use 10–20 reps — a wider range exploits metabolic stress and pump, which is especially effective for smaller muscles.',
-    restPeriods:
-      'Compounds receive 2–3 min rest, allowing near-full phosphocreatine resynthesis for peak performance next set. Machine work gets 90–120 s; isolations 60–90 s — enough recovery without a complete drop in heart rate and blood flow.',
-    rirGuidance:
-      experience === 'beginner'
-        ? 'RIR 3 means stopping 3 reps before failure. For beginners this keeps technique clean and avoids excess fatigue while neural adaptations are still the primary driver of strength gains.'
-        : experience === 'intermediate'
-        ? 'RIR 2 keeps you close to failure without hitting it every set. This intensity is sufficient to drive hypertrophy while preserving recovery for the next session — the sweet spot for intermediates.'
-        : 'RIR 1 means you have just one rep left in the tank. Advanced lifters need to approach failure regularly to provide the high-threshold motor unit recruitment required for continued hypertrophic gains.',
+    split:          splitExplain[splitType] ?? 'Split selected to match your frequency, experience level, and goal.',
+    sessionLength:  sessionLengthText,
+    volume:         volumeText,
+    weakPoints:     weakText,
+    exercises:      `Exercises are matched to ${eqLabel}. Compound lifts anchor each session — they provide maximum mechanical tension and progressive overload potential. Machine and isolation work follows, adding metabolic stress and targeted muscle activation.`,
+    repRanges:      'Compound lifts use 5–10 reps to maximise mechanical tension. Machine movements use 8–12 reps. Isolation exercises use 10–20 reps — a wider range exploits metabolic stress and pump, which is especially effective for smaller muscles.',
+    restPeriods:    'Compounds receive 2–3 min rest, allowing near-full phosphocreatine resynthesis for peak performance next set. Machine work gets 90–120 s; isolations 60–90 s — enough recovery without a complete drop in heart rate and blood flow.',
     nutritionImpact: nutritionText,
   };
 }
@@ -935,16 +1043,24 @@ export function generatePlan(inputs) {
     applyStrengthNotes(workouts);
   }
 
-  // Finalise every session: remove duplicate exercises then enforce session total cap.
-  // Done after all post-processing so V-taper injections are also counted.
+  // Finalise every session:
+  // 1. Remove duplicate exercises (same lift in compound + isolation slot).
+  // 2. Enforce the set-count ceiling (systemic fatigue cap per experience level).
+  // 3. Trim further so the session actually fits within the requested time budget,
+  //    accounting for set work time, rest periods, setup, and transition buffers.
+  // Done after all post-processing so V-taper injections are counted.
   workouts.forEach(w => {
-    w.exercises = capSessionVolume(deduplicateExercises(w.exercises), experience);
+    w.exercises = fitToSessionLength(
+      capSessionVolume(deduplicateExercises(w.exercises), experience),
+      sessionLengthMinutes,
+    );
+    w.estimatedDurationMinutes = estimateWorkoutMinutes(w.exercises);
   });
 
   const warnings             = buildWarnings(planInputs, effectiveDays);
   const weeklyVolumeSummary  = buildVolumeSummary(experience, safeWeakPoints, nutritionPhase, goal, planInputs);
   const personalisationSummary = buildPersonalisationSummary(planInputs, effectiveDays, splitType);
-  const whyThis              = buildWhyThis(planInputs, splitType, effectiveDays);
+  const whyThis              = buildWhyThis(planInputs, splitType, effectiveDays, workouts);
 
   const goalShort = {
     general_hypertrophy:   'Hypertrophy',
