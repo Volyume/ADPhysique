@@ -43,7 +43,7 @@ function RatingRow({ label, field, value, max, onChange }) {
 }
 
 export default function WorkoutSummaryScreen({ navigation, route }) {
-  const { workoutId, durationMinutes, exerciseCount, setCount, workingSetCount, tonnage, exerciseNames = [] } =
+  const { workoutId, durationMinutes, exerciseCount, setCount, workingSetCount, tonnage, exerciseNames = [], readOnly = false } =
     route.params || {};
   const { user, units } = useAppStore();
 
@@ -180,71 +180,74 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           )}
         </View>
 
-        {/* Session Feedback */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>SESSION FEEDBACK</Text>
-            <Text style={styles.optionalLabel}>optional</Text>
-          </View>
-          <View style={styles.feedbackCard}>
-            <RatingRow
-              label="Difficulty"
-              field="sessionDifficulty"
-              value={feedback.sessionDifficulty}
-              max={5}
-              onChange={v => setFeedback(f => ({ ...f, sessionDifficulty: v }))}
-            />
-            <RatingRow
-              label="Pump quality"
-              field="overallPump"
-              value={feedback.overallPump}
-              max={3}
-              onChange={v => setFeedback(f => ({ ...f, overallPump: v }))}
-            />
-            <RatingRow
-              label="Soreness coming in"
-              field="soreness24hBefore"
-              value={feedback.soreness24hBefore}
-              max={3}
-              onChange={v => setFeedback(f => ({ ...f, soreness24hBefore: v }))}
-            />
-            <RatingRow
-              label="Fatigue"
-              field="fatigueLevel"
-              value={feedback.fatigueLevel}
-              max={5}
-              onChange={v => setFeedback(f => ({ ...f, fatigueLevel: v }))}
-            />
-            <RatingRow
-              label="Joint discomfort"
-              field="jointDiscomfort"
-              value={feedback.jointDiscomfort}
-              max={3}
-              onChange={v => setFeedback(f => ({ ...f, jointDiscomfort: v }))}
-            />
-          </View>
-        </View>
+        {/* Session Feedback — hidden in read-only mode */}
+        {!readOnly && (
+          <>
+            <View style={styles.section}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionTitle}>SESSION FEEDBACK</Text>
+                <Text style={styles.optionalLabel}>optional</Text>
+              </View>
+              <View style={styles.feedbackCard}>
+                <RatingRow
+                  label="Difficulty"
+                  field="sessionDifficulty"
+                  value={feedback.sessionDifficulty}
+                  max={5}
+                  onChange={v => setFeedback(f => ({ ...f, sessionDifficulty: v }))}
+                />
+                <RatingRow
+                  label="Pump quality"
+                  field="overallPump"
+                  value={feedback.overallPump}
+                  max={3}
+                  onChange={v => setFeedback(f => ({ ...f, overallPump: v }))}
+                />
+                <RatingRow
+                  label="Soreness coming in"
+                  field="soreness24hBefore"
+                  value={feedback.soreness24hBefore}
+                  max={3}
+                  onChange={v => setFeedback(f => ({ ...f, soreness24hBefore: v }))}
+                />
+                <RatingRow
+                  label="Fatigue"
+                  field="fatigueLevel"
+                  value={feedback.fatigueLevel}
+                  max={5}
+                  onChange={v => setFeedback(f => ({ ...f, fatigueLevel: v }))}
+                />
+                <RatingRow
+                  label="Joint discomfort"
+                  field="jointDiscomfort"
+                  value={feedback.jointDiscomfort}
+                  max={3}
+                  onChange={v => setFeedback(f => ({ ...f, jointDiscomfort: v }))}
+                />
+              </View>
+            </View>
 
-        {/* Notes */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>SESSION NOTES (optional)</Text>
-          <TextInput
-            style={styles.notesInput}
-            value={notes}
-            onChangeText={setNotes}
-            placeholder="Anything notable from this session..."
-            placeholderTextColor={colors.textMuted}
-            multiline
-          />
-        </View>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>SESSION NOTES (optional)</Text>
+              <TextInput
+                style={styles.notesInput}
+                value={notes}
+                onChangeText={setNotes}
+                placeholder="Anything notable from this session..."
+                placeholderTextColor={colors.textMuted}
+                multiline
+              />
+            </View>
+          </>
+        )}
 
         {/* CTA */}
         <TouchableOpacity
           style={[styles.saveBtn, saving && styles.btnDisabled]}
-          onPress={handleSave}
+          onPress={readOnly ? () => navigation.goBack() : handleSave}
           disabled={saving}
         >
-          <Text style={styles.saveBtnText}>Save & Return</Text>
+          <Text style={styles.saveBtnText}>{readOnly ? 'Done' : 'Save & Return'}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

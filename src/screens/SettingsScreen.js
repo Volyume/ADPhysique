@@ -116,8 +116,8 @@ export default function SettingsScreen({ navigation }) {
         <View style={styles.section}>
           <SettingRow
             icon="barbell-outline"
-            label="Routines"
-            onPress={() => navigation.navigate('RoutineBuilder')}
+            label="Programmes"
+            onPress={() => navigation.navigate('ProgrammesTab')}
           />
           <SettingRow
             icon="calendar-outline"
@@ -127,7 +127,7 @@ export default function SettingsScreen({ navigation }) {
           <SettingRow
             icon="fitness-outline"
             label="Volume Landmarks"
-            onPress={() => navigation.navigate('AnalyticsTab', { screen: 'VolumeHeatmap' })}
+            onPress={() => navigation.navigate('ProgressTab', { screen: 'VolumeHeatmap' })}
           />
         </View>
 
@@ -184,7 +184,7 @@ export default function SettingsScreen({ navigation }) {
           <SettingRow
             icon="refresh-outline"
             label="Reset volume landmarks"
-            onPress={() => navigation.navigate('AnalyticsTab', { screen: 'VolumeHeatmap' })}
+            onPress={() => navigation.navigate('ProgressTab', { screen: 'VolumeHeatmap' })}
           />
         </View>
 

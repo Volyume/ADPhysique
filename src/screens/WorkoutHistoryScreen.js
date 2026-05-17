@@ -34,6 +34,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
 
       const withSets = mine.slice(0, 50).map(w => {
         const mySets = allSets.filter(s => s.workoutId === w.id);
+        const workingSets = mySets.filter(s => s.setType !== 'warmup');
         const exerciseIds = [...new Set(mySets.map(s => s.exerciseId))];
         const exerciseNames = exerciseIds.slice(0, 4)
           .map(id => exerciseMap[id]?.name)
@@ -41,6 +42,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
         return {
           workout: w,
           setCount: mySets.length,
+          workingSetCount: workingSets.length,
           exerciseCount: exerciseIds.length,
           tonnage: calculateTonnage(mySets),
           exerciseNames,
@@ -55,19 +57,18 @@ export default function WorkoutHistoryScreen({ navigation }) {
   async function handleRepeatWorkout(workout) {
     const newWorkout = await createWorkout(user.id, workout.routineId || null);
     startWorkout(newWorkout);
-    navigation.navigate('ActiveWorkout');
+    navigation.navigate('HomeTab', { screen: 'ActiveWorkout' });
   }
 
   function renderItem({ item }) {
-    const { workout, setCount, exerciseCount, tonnage, exerciseNames } = item;
+    const { workout, setCount, workingSetCount, exerciseCount, tonnage, exerciseNames } = item;
     const date = new Date(workout.startedAt);
-    const isRecent = Date.now() - workout.startedAt < 7 * 24 * 60 * 60 * 1000;
 
     return (
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <View>
-            <Text style={styles.cardDate}>{format(date, 'EEEE, MMM d')}</Text>
+            <Text style={styles.cardDate}>{format(date, 'd MMM yyyy')}</Text>
             <Text style={styles.cardTime}>{formatDistanceToNow(date, { addSuffix: true })}</Text>
           </View>
           <View style={styles.cardMeta}>
@@ -75,7 +76,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
             <Text style={styles.cardMetaText}>{workout.durationMinutes || 0}m</Text>
             <Text style={styles.cardMetaDivider}>·</Text>
             <Ionicons name="layers-outline" size={14} color={colors.textMuted} />
-            <Text style={styles.cardMetaText}>{setCount} sets</Text>
+            <Text style={styles.cardMetaText}>{workingSetCount} working sets</Text>
           </View>
         </View>
         <Text style={styles.exerciseList} numberOfLines={2}>
@@ -90,8 +91,10 @@ export default function WorkoutHistoryScreen({ navigation }) {
                 durationMinutes: workout.durationMinutes,
                 exerciseCount,
                 setCount,
+                workingSetCount,
                 tonnage,
                 exerciseNames,
+                readOnly: true,
               })
             }
           >

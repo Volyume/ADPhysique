@@ -6,7 +6,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 
 export default function RestTimer() {
-  const { restTimerActive, restTimerRemaining, restTimerDuration, stopRestTimer, tickRestTimer } =
+  const { restTimerActive, restTimerRemaining, restTimerDuration, stopRestTimer, tickRestTimer, addRestTime } =
     useAppStore();
   const intervalRef = useRef(null);
   const progressAnim = useRef(new Animated.Value(1)).current;
@@ -88,6 +88,9 @@ export default function RestTimer() {
           <Text style={[styles.timeText, isAlmostDone && styles.almostDone]}>{timeStr}</Text>
         )}
         <Text style={styles.label}>{isCountdown ? 'seconds' : 'rest'}</Text>
+        <TouchableOpacity onPress={() => addRestTime(30)} style={styles.addTimeBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <Text style={styles.addTimeText}>+30s</Text>
+        </TouchableOpacity>
         <TouchableOpacity onPress={stopRestTimer} style={styles.skipBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
           <Text style={styles.skipText}>Skip</Text>
         </TouchableOpacity>
@@ -139,6 +142,18 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textSecondary,
     flex: 1,
+  },
+  addTimeBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  addTimeText: {
+    fontSize: fontSize.sm,
+    color: colors.primary,
+    fontWeight: fontWeight.medium,
   },
   skipBtn: {
     paddingHorizontal: spacing.md,
