@@ -8,6 +8,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { getSupabaseClient, signOut } from '../lib/supabase';
 import useAppStore from '../store/useAppStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { clearWorkoutHistory } from '../lib/database';
 
 function SettingRow({ icon, label, value, onPress, destructive, rightElement, showArrow = true }) {
   return (
@@ -81,6 +82,25 @@ export default function SettingsScreen({ navigation }) {
     Alert.alert('Export coming soon', 'CSV export will be available in the next update.');
   }
 
+  async function handleClearHistory() {
+    Alert.alert(
+      'Clear workout history?',
+      'This permanently deletes all your logged sessions and sets. Your personal records will also be cleared as they are calculated from your history. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear Everything',
+          style: 'destructive',
+          onPress: async () => {
+            if (!user?.id) return;
+            await clearWorkoutHistory(user.id).catch(() => {});
+            Alert.alert('Done', 'Your workout history has been cleared.');
+          },
+        },
+      ],
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -126,6 +146,16 @@ export default function SettingsScreen({ navigation }) {
           />
         </View>
 
+        {/* Exercise Library */}
+        <SectionHeader title="EXERCISE LIBRARY" />
+        <View style={styles.section}>
+          <SettingRow
+            icon="barbell-outline"
+            label="Browse & manage exercises"
+            onPress={() => navigation.navigate('ExerciseLibrary')}
+          />
+        </View>
+
         {/* Data */}
         <SectionHeader title="DATA & PRIVACY" />
         <View style={styles.section}>
@@ -135,9 +165,10 @@ export default function SettingsScreen({ navigation }) {
             onPress={exportData}
           />
           <SettingRow
-            icon="refresh-outline"
-            label="Reset volume landmarks"
-            onPress={() => navigation.navigate('ProgressTab', { screen: 'VolumeHeatmap' })}
+            icon="trash-outline"
+            label="Clear workout history"
+            destructive
+            onPress={handleClearHistory}
           />
         </View>
 

@@ -975,3 +975,9 @@ export async function getUserBodyProfile(userId) {
   );
   return rowToCamel(row);
 }
+
+export async function clearWorkoutHistory(userId) {
+  const d = await db();
+  await d.runAsync('DELETE FROM workout_sets WHERE user_id = ?', [userId]);
+  await d.runAsync('DELETE FROM workouts WHERE user_id = ?', [userId]);
+}

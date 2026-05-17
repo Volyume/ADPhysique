@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAllWorkoutSets, getAllExercises } from '../lib/database';
@@ -90,6 +91,14 @@ export default function VolumeHeatmapScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
+        {/* Rolling window note */}
+        <View style={styles.windowNote}>
+          <Ionicons name="time-outline" size={14} color={colors.textMuted} />
+          <Text style={styles.windowNoteText}>
+            Rolling 7-day window — sets from the last 7 days, always up to date
+          </Text>
+        </View>
+
         {/* Legend */}
         <View style={styles.legendRow}>
           <LegendItem color={colors.textMuted} label="Below MEV" />
@@ -186,6 +195,17 @@ function LegendItem({ color, label }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
+  windowNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  windowNoteText: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    flex: 1,
+    lineHeight: 18,
+  },
   legendRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
