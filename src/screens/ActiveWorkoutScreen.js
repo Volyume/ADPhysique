@@ -435,15 +435,38 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             ) : null}
           </View>
 
-          {/* Action Buttons */}
-          <TouchableOpacity
-            style={[styles.completeBtn, saving && styles.btnDisabled]}
-            onPress={handleCompleteSet}
-            disabled={saving}
-          >
-            <Ionicons name="checkmark-circle" size={24} color={colors.background} />
-            <Text style={styles.completeBtnText}>{targetComplete ? 'COMPLETE EXTRA SET' : 'COMPLETE SET'}</Text>
-          </TouchableOpacity>
+          {/* Action Buttons — when target complete, primary CTA is Next/Finish */}
+          {targetComplete ? (
+            <>
+              {isLastExercise ? (
+                <TouchableOpacity style={styles.completeBtn} onPress={handleFinishWorkout}>
+                  <Ionicons name="checkmark-done" size={24} color={colors.background} />
+                  <Text style={styles.completeBtnText}>FINISH WORKOUT</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity style={styles.completeBtn} onPress={handleNextExercise}>
+                  <Ionicons name="arrow-forward-circle" size={24} color={colors.background} />
+                  <Text style={styles.completeBtnText}>NEXT EXERCISE</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={[styles.extraSetBtn, saving && styles.btnDisabled]}
+                onPress={handleCompleteSet}
+                disabled={saving}
+              >
+                <Text style={styles.extraSetBtnText}>+ Complete Extra Set</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <TouchableOpacity
+              style={[styles.completeBtn, saving && styles.btnDisabled]}
+              onPress={handleCompleteSet}
+              disabled={saving}
+            >
+              <Ionicons name="checkmark-circle" size={24} color={colors.background} />
+              <Text style={styles.completeBtnText}>COMPLETE SET</Text>
+            </TouchableOpacity>
+          )}
 
           <View style={styles.secondaryActions}>
             <TouchableOpacity style={styles.actionBtn} onPress={() => setShowPlateCalc(true)}>
@@ -486,17 +509,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </View>
           )}
 
-          {/* Exercise Navigation — Next Exercise or Finish Workout */}
-          {isLastExercise ? (
-            <TouchableOpacity style={styles.finishWorkoutLargeBtn} onPress={handleFinishWorkout}>
-              <Ionicons name="checkmark-done" size={18} color={colors.success} />
-              <Text style={styles.finishWorkoutLargeBtnText}>Finish Workout</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity style={styles.nextExerciseBtn} onPress={handleNextExercise}>
-              <Text style={styles.nextExerciseBtnText}>Next Exercise</Text>
-              <Ionicons name="arrow-forward" size={18} color={colors.primary} />
-            </TouchableOpacity>
+          {/* Ghost navigation — Next/Finish shown below when target not yet complete */}
+          {!targetComplete && (
+            isLastExercise ? (
+              <TouchableOpacity style={styles.finishWorkoutLargeBtn} onPress={handleFinishWorkout}>
+                <Ionicons name="checkmark-done" size={18} color={colors.success} />
+                <Text style={styles.finishWorkoutLargeBtnText}>Finish Workout</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={styles.nextExerciseBtn} onPress={handleNextExercise}>
+                <Text style={styles.nextExerciseBtnText}>Next Exercise</Text>
+                <Ionicons name="arrow-forward" size={18} color={colors.primary} />
+              </TouchableOpacity>
+            )
           )}
 
           <View style={{ height: Math.max(spacing.xxl, insets.bottom + spacing.lg) }} />
@@ -934,6 +959,19 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.black,
     color: colors.background,
     letterSpacing: 1,
+  },
+  extraSetBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.md,
+  },
+  extraSetBtnText: {
+    fontSize: fontSize.md,
+    color: colors.textSecondary,
+    fontWeight: fontWeight.medium,
   },
   secondaryActions: {
     flexDirection: 'row',
