@@ -23,6 +23,7 @@ const ACTION_CARDS = [
     title: 'Coach Builder',
     description: 'Answer 7 questions — get a personalised plan tailored to your schedule and goals.',
     screen: 'CoachBuilder',
+    badge: 'Recommended',
   },
   {
     id: 'library',
@@ -282,18 +283,25 @@ export default function PlansScreen({ navigation }) {
           {ACTION_CARDS.map(card => (
             <TouchableOpacity
               key={card.id}
-              style={styles.actionCard}
+              style={[styles.actionCard, card.badge && styles.actionCardFeatured]}
               onPress={() => navigation.navigate(card.screen)}
               activeOpacity={0.75}
             >
-              <View style={styles.actionCardIcon}>
+              <View style={[styles.actionCardIcon, card.badge && styles.actionCardIconFeatured]}>
                 <Ionicons name={card.icon} size={24} color={colors.primary} />
               </View>
               <View style={styles.actionCardBody}>
-                <Text style={styles.actionCardTitle}>{card.title}</Text>
+                <View style={styles.actionCardTitleRow}>
+                  <Text style={styles.actionCardTitle}>{card.title}</Text>
+                  {card.badge && (
+                    <View style={styles.actionCardBadge}>
+                      <Text style={styles.actionCardBadgeText}>{card.badge}</Text>
+                    </View>
+                  )}
+                </View>
                 <Text style={styles.actionCardDesc}>{card.description}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+              <Ionicons name="chevron-forward" size={18} color={card.badge ? colors.primary : colors.textMuted} />
             </TouchableOpacity>
           ))}
         </View>
@@ -387,6 +395,21 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   actionCardBody: { flex: 1 },
-  actionCardTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary, marginBottom: 3 },
+  actionCardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: 3 },
+  actionCardTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  actionCardBadge: {
+    backgroundColor: colors.primaryBg, borderRadius: radius.full,
+    paddingHorizontal: spacing.sm, paddingVertical: 2,
+    borderWidth: 1, borderColor: colors.primary + '40',
+  },
+  actionCardBadgeText: { fontSize: 9, fontWeight: fontWeight.black, color: colors.primary, letterSpacing: 0.5 },
   actionCardDesc: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
+  actionCardFeatured: {
+    borderColor: colors.primary + '40',
+    backgroundColor: colors.primaryBg,
+  },
+  actionCardIconFeatured: {
+    backgroundColor: colors.surface,
+    borderColor: colors.primary + '40',
+  },
 });
