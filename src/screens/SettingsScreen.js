@@ -125,6 +125,11 @@ export default function SettingsScreen({ navigation }) {
             onPress={() => navigation.navigate('MesocycleBuilder')}
           />
           <SettingRow
+            icon="nutrition-outline"
+            label="Nutrition Targets"
+            onPress={() => navigation.navigate('NutritionTargets')}
+          />
+          <SettingRow
             icon="fitness-outline"
             label="Volume Landmarks"
             onPress={() => navigation.navigate('ProgressTab', { screen: 'VolumeHeatmap' })}
