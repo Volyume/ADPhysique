@@ -116,8 +116,8 @@ export default function SettingsScreen({ navigation }) {
         <View style={styles.section}>
           <SettingRow
             icon="barbell-outline"
-            label="Programmes"
-            onPress={() => navigation.navigate('ProgrammesTab')}
+            label="Plans"
+            onPress={() => navigation.navigate('PlansTab')}
           />
           <SettingRow
             icon="calendar-outline"

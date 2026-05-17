@@ -164,6 +164,12 @@ async function _doInit() {
       created_at INTEGER,
       updated_at INTEGER
     )`,
+    'ALTER TABLE programmes ADD COLUMN is_active INTEGER DEFAULT 0',
+    'ALTER TABLE programmes ADD COLUMN next_workout_index INTEGER DEFAULT 0',
+    'ALTER TABLE programmes ADD COLUMN tags TEXT',
+    'ALTER TABLE programmes ADD COLUMN split_type TEXT',
+    'ALTER TABLE programmes ADD COLUMN is_archived INTEGER DEFAULT 0',
+    'ALTER TABLE routines ADD COLUMN is_template INTEGER DEFAULT 0',
   ];
   for (const sql of colMigrations) {
     try { await _db.execAsync(sql); } catch (_) {}
@@ -562,6 +568,172 @@ export async function duplicateRoutine(routineId, userId, newName) {
 export async function removeExerciseFromRoutine(id) {
   const d = await db();
   await d.runAsync('DELETE FROM routine_exercises WHERE id = ?', [id]);
+}
+
+// ─── Plans (active plan logic, workout templates) ─────────────────────────────
+
+export async function getActivePlan(userId) {
+  const d = await db();
+  const row = await d.getFirstAsync(
+    'SELECT * FROM programmes WHERE user_id = ? AND is_active = 1 AND (is_library = 0 OR is_library IS NULL) LIMIT 1',
+    [userId],
+  );
+  return rowToCamel(row);
+}
+
+export async function setActivePlan(userId, planId) {
+  const d = await db();
+  const now = Date.now();
+  await d.runAsync(
+    'UPDATE programmes SET is_active = 0, updated_at = ? WHERE user_id = ?',
+    [now, userId],
+  );
+  if (planId) {
+    await d.runAsync(
+      'UPDATE programmes SET is_active = 1, updated_at = ? WHERE id = ?',
+      [now, planId],
+    );
+  }
+}
+
+export async function getAllPlansForUser(userId) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT * FROM programmes
+     WHERE user_id = ? AND (is_library = 0 OR is_library IS NULL) AND (is_archived = 0 OR is_archived IS NULL)
+     ORDER BY is_active DESC, updated_at DESC`,
+    [userId],
+  );
+  return rows.map(rowToCamel);
+}
+
+export async function getLibraryPlans() {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    'SELECT * FROM programmes WHERE is_library = 1 ORDER BY created_at ASC',
+  );
+  return rows.map(rowToCamel);
+}
+
+export async function getRoutinesForPlan(planId) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    'SELECT * FROM routines WHERE programme_id = ? AND (is_active = 1 OR is_active IS NULL) ORDER BY created_at ASC',
+    [planId],
+  );
+  return rows.map(rowToCamel);
+}
+
+export async function advancePlanNextWorkout(planId, totalWorkouts) {
+  if (!totalWorkouts || totalWorkouts < 1) return;
+  const d = await db();
+  const plan = await getProgrammeById(planId);
+  if (!plan) return;
+  const currentIndex = plan.nextWorkoutIndex || 0;
+  const nextIndex = (currentIndex + 1) % totalWorkouts;
+  await d.runAsync(
+    'UPDATE programmes SET next_workout_index = ?, updated_at = ? WHERE id = ?',
+    [nextIndex, Date.now(), planId],
+  );
+}
+
+export async function copyPlanFromLibrary(libraryPlanId, userId) {
+  const d = await db();
+  const libPlan = await getProgrammeById(libraryPlanId);
+  if (!libPlan) throw new Error('Plan not found');
+
+  const newPlan = await createProgramme(userId, libPlan.name, libPlan.description, 0);
+
+  const libRoutineRows = await d.getAllAsync(
+    'SELECT * FROM routines WHERE programme_id = ? AND (is_active = 1 OR is_active IS NULL) ORDER BY created_at ASC',
+    [libraryPlanId],
+  );
+
+  for (const row of libRoutineRows) {
+    const libRoutine = rowToCamel(row);
+    const newRoutine = await duplicateRoutine(libRoutine.id, userId, libRoutine.name);
+    await d.runAsync(
+      'UPDATE routines SET programme_id = ?, is_library = 0, source_routine_id = ?, is_template = 0 WHERE id = ?',
+      [newPlan.id, libRoutine.id, newRoutine.id],
+    );
+  }
+
+  return newPlan;
+}
+
+export async function archivePlan(planId) {
+  const d = await db();
+  await d.runAsync(
+    'UPDATE programmes SET is_active = 0, is_archived = 1, updated_at = ? WHERE id = ?',
+    [Date.now(), planId],
+  );
+}
+
+export async function duplicatePlan(planId, userId) {
+  const plan = await getProgrammeById(planId);
+  if (!plan) throw new Error('Plan not found');
+
+  const newPlan = await createProgramme(userId, `Copy of ${plan.name}`, plan.description, 0);
+
+  const d = await db();
+  const routineRows = await d.getAllAsync(
+    'SELECT * FROM routines WHERE programme_id = ? AND (is_active = 1 OR is_active IS NULL) ORDER BY created_at ASC',
+    [planId],
+  );
+
+  for (const row of routineRows) {
+    const routine = rowToCamel(row);
+    const newRoutine = await duplicateRoutine(routine.id, userId, routine.name);
+    await d.runAsync(
+      'UPDATE routines SET programme_id = ?, is_library = 0 WHERE id = ?',
+      [newPlan.id, newRoutine.id],
+    );
+  }
+
+  return newPlan;
+}
+
+export async function getWorkoutTemplates(userId) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT * FROM routines
+     WHERE user_id = ? AND (programme_id IS NULL OR programme_id = '') AND (is_library = 0 OR is_library IS NULL) AND (is_active = 1 OR is_active IS NULL)
+     ORDER BY updated_at DESC`,
+    [userId],
+  );
+  return rows.map(rowToCamel);
+}
+
+export async function createWorkoutTemplateFromWorkout(userId, name, exerciseData) {
+  const d = await db();
+  const id = uid();
+  const now = Date.now();
+  await d.runAsync(
+    `INSERT INTO routines (id, user_id, name, is_active, is_library, is_template, created_at, updated_at)
+     VALUES (?, ?, ?, 1, 0, 1, ?, ?)`,
+    [id, userId, name, now, now],
+  );
+  for (let i = 0; i < exerciseData.length; i++) {
+    const ex = exerciseData[i];
+    if (!ex.exerciseId) continue;
+    await addExerciseToRoutine(id, ex.exerciseId, i, ex.repsMin || 8, ex.repsMax || 12, null, ex.recommendedSets || 3);
+  }
+  return { id, userId, name, isActive: 1, isLibrary: 0, isTemplate: 1, createdAt: now, updatedAt: now };
+}
+
+export async function getPlanWorkoutCounts() {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT programme_id, COUNT(*) as cnt FROM routines
+     WHERE programme_id IS NOT NULL AND programme_id != '' AND (is_active = 1 OR is_active IS NULL)
+     GROUP BY programme_id`,
+  );
+  return Object.fromEntries(rows.map(r => [r.programme_id, r.cnt]));
+}
+
+export async function updateProgrammeName(id, name) {
+  const d = await db();
+  await d.runAsync('UPDATE programmes SET name = ?, updated_at = ? WHERE id = ?', [name, Date.now(), id]);
 }
 
 // ─── Mesocycles ─────────────────────────────────────────────────────────────────────────────

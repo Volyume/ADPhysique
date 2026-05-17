@@ -29,9 +29,11 @@ import VolumeHeatmapScreen from '../screens/VolumeHeatmapScreen';
 import PRWallScreen from '../screens/PRWallScreen';
 import BodyMetricsScreen from '../screens/BodyMetricsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
-import ProgrammesScreen from '../screens/ProgrammesScreen';
+import PlansScreen from '../screens/PlansScreen';
+import PlanDetailScreen from '../screens/PlanDetailScreen';
 import RoutineDetailScreen from '../screens/RoutineDetailScreen';
 import MesocycleBuilderScreen from '../screens/MesocycleBuilderScreen';
+import ShareCardScreen from '../screens/ShareCardScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -43,7 +45,6 @@ const stackOptions = {
   cardStyle: { backgroundColor: colors.background },
 };
 
-// Train tab: Home + workout flow
 function HomeStack() {
   return (
     <Stack.Navigator screenOptions={stackOptions}>
@@ -51,15 +52,16 @@ function HomeStack() {
       <Stack.Screen name="BuildWorkout" component={BuildWorkoutScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} options={{ headerShown: false }} />
       <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ title: 'Session Complete' }} />
+      <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ title: 'Share Card' }} />
     </Stack.Navigator>
   );
 }
 
-// Programmes tab: workout management + exercise library
-function ProgrammesStack() {
+function PlansStack() {
   return (
     <Stack.Navigator screenOptions={stackOptions}>
-      <Stack.Screen name="Programmes" component={ProgrammesScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Plans" component={PlansScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ title: 'Plan' }} />
       <Stack.Screen name="RoutineDetail" component={RoutineDetailScreen} options={{ title: 'Edit Workout' }} />
       <Stack.Screen name="ExerciseLibrary" component={ExerciseLibraryScreen} options={{ title: 'Exercise Library' }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise' }} />
@@ -67,7 +69,6 @@ function ProgrammesStack() {
   );
 }
 
-// Progress tab: analytics + history
 function ProgressStack() {
   return (
     <Stack.Navigator screenOptions={stackOptions}>
@@ -81,12 +82,11 @@ function ProgressStack() {
   );
 }
 
-// You tab: settings + mesocycles
 function ProfileStack() {
   return (
     <Stack.Navigator screenOptions={stackOptions}>
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Profile & Settings' }} />
-      <Stack.Screen name="MesocycleBuilder" component={MesocycleBuilderScreen} options={{ title: 'Mesocycles' }} />
+      <Stack.Screen name="MesocycleBuilder" component={MesocycleBuilderScreen} options={{ title: 'Training Blocks' }} />
     </Stack.Navigator>
   );
 }
@@ -108,7 +108,7 @@ function MainTabs() {
         tabBarIcon: ({ focused, color }) => {
           const icons = {
             HomeTab: focused ? 'home' : 'home-outline',
-            ProgrammesTab: focused ? 'list' : 'list-outline',
+            PlansTab: focused ? 'list' : 'list-outline',
             ProgressTab: focused ? 'stats-chart' : 'stats-chart-outline',
             ProfileTab: focused ? 'person' : 'person-outline',
           };
@@ -117,7 +117,7 @@ function MainTabs() {
       })}
     >
       <Tab.Screen name="HomeTab" component={HomeStack} options={{ title: 'Train' }} />
-      <Tab.Screen name="ProgrammesTab" component={ProgrammesStack} options={{ title: 'Programmes' }} />
+      <Tab.Screen name="PlansTab" component={PlansStack} options={{ title: 'Plans' }} />
       <Tab.Screen name="ProgressTab" component={ProgressStack} options={{ title: 'Progress' }} />
       <Tab.Screen name="ProfileTab" component={ProfileStack} options={{ title: 'You' }} />
     </Tab.Navigator>
