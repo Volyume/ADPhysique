@@ -160,9 +160,7 @@ export default function HomeScreen({ navigation }) {
               value={weekStats.volume}
               target={WEEK_TARGETS.volume}
               label="Volume"
-              display={weekStats.volume >= 1000
-                ? `${(weekStats.volume / 1000).toFixed(1)}t`
-                : `${weekStats.volume}kg`}
+              display={`${Math.round(weekStats.volume).toLocaleString('en-GB')} kg`}
             />
           </View>
         </View>
@@ -305,9 +303,7 @@ export default function HomeScreen({ navigation }) {
                 <View style={styles.lastSessionStatPill}>
                   <Ionicons name="barbell-outline" size={12} color={colors.textMuted} />
                   <Text style={styles.lastSessionStatText}>
-                    {lastSession.totalVolume >= 1000
-                      ? `${(lastSession.totalVolume / 1000).toFixed(1)}t`
-                      : `${lastSession.totalVolume}kg`}
+                    {Math.round(lastSession.totalVolume).toLocaleString('en-GB')} kg
                   </Text>
                 </View>
               ) : null}
@@ -331,11 +327,6 @@ export default function HomeScreen({ navigation }) {
             icon="grid-outline"
             label="Volume"
             onPress={() => navigation.navigate('ProgressTab', { screen: 'VolumeHeatmap' })}
-          />
-          <QuickLink
-            icon="barbell-outline"
-            label="Exercises"
-            onPress={() => navigation.navigate('PlansTab', { screen: 'ExerciseLibrary' })}
           />
         </View>
       </ScrollView>
