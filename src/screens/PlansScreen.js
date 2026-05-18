@@ -171,7 +171,7 @@ export default function PlansScreen({ navigation }) {
       >
         <View style={styles.screenHeader}>
           <Text style={styles.pageTitle}>Plans</Text>
-          <VolyumeMark size={22} color={colors.textMuted} />
+          <VolyumeMark size={38} color={colors.textMuted} />
         </View>
 
         {/* Active Plan */}

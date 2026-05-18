@@ -8,8 +8,8 @@
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0D0D0D",
     "splash": {
-      "image": "./assets/splash.png",
-      "backgroundColor": "#0D0D0D",
+      "image": "./assets/volyume-splash-hero.png",
+      "backgroundColor": "#000000",
       "resizeMode": "contain"
     },
     "ios": {

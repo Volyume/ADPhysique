@@ -329,7 +329,7 @@ export default function AnalyticsScreen({ navigation }) {
         {/* ── Header ────────────────────────────────────────── */}
         <View style={styles.header}>
           <Text style={styles.pageTitle}>Progress</Text>
-          <VolyumeMark size={22} color={colors.textMuted} />
+          <VolyumeMark size={38} color={colors.textMuted} />
         </View>
 
         {/* ── 1 · Mesocycle Pulse Card ───────────────────────── */}

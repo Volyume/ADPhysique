@@ -240,7 +240,7 @@ export default function HomeScreen({ navigation }) {
         {/* ── Branded header ── */}
         <View style={styles.header}>
           <Text style={styles.pageTitle}>Train</Text>
-          <VolyumeMark size={22} color={colors.textMuted} />
+          <VolyumeMark size={38} color={colors.textMuted} />
         </View>
 
         {/* ── This week — progress bars ── */}

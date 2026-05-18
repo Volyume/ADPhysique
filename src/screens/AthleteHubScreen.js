@@ -232,7 +232,7 @@ export default function AthleteHubScreen({ navigation }) {
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Athlete Hub</Text>
-        <VolyumeMark size={22} color={colors.textMuted} />
+        <VolyumeMark size={38} color={colors.textMuted} />
       </View>
 
       <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>

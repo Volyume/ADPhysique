@@ -339,7 +339,7 @@ function SplashScreen() {
 const splashStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#000000',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.lg,

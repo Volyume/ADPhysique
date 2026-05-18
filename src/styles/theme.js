@@ -1,6 +1,6 @@
 export const colors = {
   // Core backgrounds — neutral charcoal (no blue tint)
-  background: '#0D0D0D',
+  background: '#000000',
   surface: '#1A1A1A',
   surface2: '#242424',
   surface3: '#2E2E2E',
