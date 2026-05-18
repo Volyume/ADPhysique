@@ -11,7 +11,7 @@ import { colors, fontSize, fontWeight, spacing, radius, shadow } from '../styles
 import { BrandTag } from '../components/BrandMark';
 import useAppStore from '../store/useAppStore';
 import {
-  getAllWorkouts, getAllWorkoutSets, getBodyMetricLog, getNutritionTargets,
+  getAllWorkouts, getCompletedWorkoutSets, getBodyMetricLog, getNutritionTargets,
 } from '../lib/database';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
 
@@ -75,7 +75,7 @@ export default function AthleteHubScreen({ navigation }) {
     try {
       const [workouts, sets] = await Promise.all([
         getAllWorkouts(user.id),
-        getAllWorkoutSets(user.id),
+        getCompletedWorkoutSets(user.id),
       ]);
       const completed = workouts.filter(w => w.isCompleted ?? w.is_completed ?? false);
       setTotalWorkouts(completed.length);

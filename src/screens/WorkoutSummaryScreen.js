@@ -6,7 +6,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import {
-  getAllWorkoutSets, getAllExercises, getAllWorkouts, updateWorkout,
+  getCompletedWorkoutSets, getAllExercises, getAllWorkouts, updateWorkout,
   getActivePlan, getRoutinesForPlan, advancePlanNextWorkout,
 } from '../lib/database';
 import { calculateWeeklyVolume, getVolumeStatus, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
@@ -144,7 +144,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     if (!user?.id) return;
     const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
     const [allSets, allExercises, allWorkouts] = await Promise.all([
-      getAllWorkoutSets(user.id),
+      getCompletedWorkoutSets(user.id),
       getAllExercises(),
       getAllWorkouts(user.id),
     ]);

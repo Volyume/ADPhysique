@@ -10,7 +10,7 @@ import { format } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { BrandTag } from '../components/BrandMark';
 import {
-  getAllWorkouts, getAllWorkoutSets, getActivePlan, getRoutinesForPlan,
+  getAllWorkouts, getCompletedWorkoutSets, getActivePlan, getRoutinesForPlan,
   getAllRoutineExerciseCounts, createWorkout, getRoutineExercisesWithDetails,
 } from '../lib/database';
 import { calculateTonnage } from '../lib/algorithms';
@@ -58,7 +58,7 @@ export default function HomeScreen({ navigation }) {
       const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
       const [allWorkouts, allSets] = await Promise.all([
         getAllWorkouts(user.id),
-        getAllWorkoutSets(user.id),
+        getCompletedWorkoutSets(user.id),
       ]);
       const thisWeek = allWorkouts.filter(w => w.startedAt >= weekAgo && w.isCompleted);
       const workoutIds = new Set(thisWeek.map(w => w.id));

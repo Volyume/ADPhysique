@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { getAllWorkoutSets, getAllExercises, getLatestBodyWeight } from '../lib/database';
+import { getCompletedWorkoutSets, getAllExercises, getLatestBodyWeight } from '../lib/database';
 import { calculate1RM, getStrengthStandard } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 
@@ -40,7 +40,7 @@ export default function PRWallScreen({ navigation }) {
     if (!user?.id) return;
     try {
       const [allSets, allExercises, bw] = await Promise.all([
-        getAllWorkoutSets(user.id),
+        getCompletedWorkoutSets(user.id),
         getAllExercises(),
         getLatestBodyWeight(user.id),
       ]);

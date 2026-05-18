@@ -83,11 +83,11 @@ export default function VolumeHeatmapScreen() {
     await AsyncStorage.setItem(`@volyume_landmarks_${user.id}`, JSON.stringify(map));
     setCustomLandmarks(map);
     setEditing(false);
-    Alert.alert('Saved', 'Volume landmarks updated.');
+    Alert.alert('Saved', 'Volume targets updated.');
   }
 
   async function resetToDefaults() {
-    Alert.alert('Reset landmarks?', 'This will restore default values.', [
+    Alert.alert('Reset volume targets?', 'This will restore the default recommended values.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Reset',
@@ -198,18 +198,18 @@ export default function VolumeHeatmapScreen() {
           })}
         </View>
 
-        {/* Edit Landmarks */}
+        {/* Edit Volume Targets */}
         {editing ? (
           <View style={styles.editSection}>
-            <Text style={styles.editTitle}>Edit Volume Landmarks</Text>
-            <Text style={styles.editSubtitle}>Sets per week per muscle group</Text>
+            <Text style={styles.editTitle}>Edit Volume Targets</Text>
+            <Text style={styles.editSubtitle}>Weekly sets per muscle — Min / Target / Max</Text>
             {muscles.map(muscle => (
               <View key={muscle} style={styles.editRow}>
                 <Text style={styles.editMuscleName}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
                 <View style={styles.editInputs}>
-                  {['mev', 'mav', 'mrv'].map(key => (
+                  {[['mev', 'Min'], ['mav', 'Target'], ['mrv', 'Max']].map(([key, label]) => (
                     <View key={key} style={styles.editInputGroup}>
-                      <Text style={styles.editInputLabel}>{key.toUpperCase()}</Text>
+                      <Text style={styles.editInputLabel}>{label}</Text>
                       <TextInput
                         style={styles.editInput}
                         value={String(editValues[muscle]?.[key] ?? '')}
@@ -237,7 +237,7 @@ export default function VolumeHeatmapScreen() {
         ) : (
           <View style={styles.actionRow}>
             <TouchableOpacity style={styles.editBtn} onPress={() => setEditing(true)}>
-              <Text style={styles.editBtnText}>Edit Landmarks</Text>
+              <Text style={styles.editBtnText}>Edit Volume Targets</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.resetBtn} onPress={resetToDefaults}>
               <Text style={styles.resetBtnText}>Reset to Defaults</Text>

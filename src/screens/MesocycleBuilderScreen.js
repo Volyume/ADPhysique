@@ -10,7 +10,7 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import {
-  getAllMesocycles, createMesocycle, getAllWorkouts, getAllWorkoutSets,
+  getAllMesocycles, createMesocycle, getAllWorkouts, getCompletedWorkoutSets,
 } from '../lib/database';
 import { calculateTonnage } from '../lib/algorithms';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
@@ -54,7 +54,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
       const [mesoRows, workouts, sets] = await Promise.all([
         getAllMesocycles(user.id),
         getAllWorkouts(user.id),
-        getAllWorkoutSets(user.id),
+        getCompletedWorkoutSets(user.id),
       ]);
       const active = mesoRows.find(m => m.isActive === 1 || m.isActive === true);
       if (!active?.startDate) { setActiveStats(null); return; }
