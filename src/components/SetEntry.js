@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import React, { useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Keyboard } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 
@@ -15,6 +15,7 @@ const SET_TYPE_LABELS = {
 
 export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypePicker }) {
   const { weight, reps, setType } = value;
+  const repsRef = useRef(null);
 
   function adjust(field, delta) {
     Haptics.selectionAsync();
@@ -51,6 +52,8 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
               else if (v === '' || v === '.') setField('weight', v);
             }}
             keyboardType="decimal-pad"
+            returnKeyType="next"
+            onSubmitEditing={() => repsRef.current?.focus()}
             selectTextOnFocus
           />
           <TouchableOpacity style={styles.stepBtn} onPress={() => adjust('weight', 1)}>
@@ -68,6 +71,7 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
           </TouchableOpacity>
           <TextInput
             testID="volyume-reps-input"
+            ref={repsRef}
             style={styles.valueInput}
             value={String(reps || '')}
             onChangeText={v => {
@@ -76,6 +80,8 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
               else if (v === '') setField('reps', '');
             }}
             keyboardType="number-pad"
+            returnKeyType="done"
+            onSubmitEditing={() => Keyboard.dismiss()}
             selectTextOnFocus
           />
           <TouchableOpacity style={styles.stepBtn} onPress={() => adjust('reps', 1)}>

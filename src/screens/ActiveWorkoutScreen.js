@@ -818,6 +818,21 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 </Text>
               </View>
             )}
+            {currentSet.setType !== 'warmup' && prevSets[workingLogged] && (() => {
+              const prev = prevSets[workingLogged];
+              const cw = parseFloat(currentSet.weight) || 0;
+              const sameWeight = Math.abs(cw - prev.weight) < 0.1;
+              return (
+                <View style={styles.beatChip}>
+                  <Ionicons name="time-outline" size={11} color={colors.textMuted} />
+                  <Text style={styles.beatChipText}>
+                    {sameWeight
+                      ? `Last time: ${prev.weight}${units} × ${prev.actualReps} reps — can you hit ${prev.actualReps + 1}?`
+                      : `Last time: ${prev.weight}${units} × ${prev.actualReps} reps`}
+                  </Text>
+                </View>
+              );
+            })()}
             <SetEntry
               value={currentSet}
               onChange={setCurrentSet}
@@ -1520,6 +1535,12 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start', marginBottom: spacing.xs,
   },
   inlineTargetText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
+  beatChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    marginBottom: spacing.xs,
+    alignSelf: 'flex-start',
+  },
+  beatChipText: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
   deloadBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: colors.warningBg || '#2A2000',

@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -14,6 +14,7 @@ import * as Sharing from 'expo-sharing';
 import { clearWorkoutHistory, buildWorkoutCSV } from '../lib/database';
 import { exportBackup, importBackup } from '../lib/dataBackup';
 import { getWellbeingMode, setWellbeingMode, WELLBEING_HELPLINE } from '../lib/wellbeing';
+import { METHODOLOGY_SOURCES } from '../lib/methodologySources';
 
 const WELLBEING_LABELS = {
   calm: 'Calmer experience',
@@ -50,6 +51,7 @@ export default function SettingsScreen({ navigation }) {
     useAppStore();
   const [physiqueEnabled, setPhysiqueEnabled] = useState(false);
   const [wellbeing, setWellbeing] = useState('unspecified');
+  const [showMethodology, setShowMethodology] = useState(false);
 
   function changeWellbeing() {
     Alert.alert(
@@ -339,6 +341,16 @@ export default function SettingsScreen({ navigation }) {
           />
         </View>
 
+        {/* Legal / Info */}
+        <SectionHeader title="LEGAL" />
+        <View style={styles.section}>
+          <SettingRow
+            icon="document-text-outline"
+            label="Methodology & Sources"
+            onPress={() => setShowMethodology(true)}
+          />
+        </View>
+
         {/* About */}
         <View style={styles.about}>
           <Text style={styles.appName}>Volyume</Text>
@@ -346,6 +358,26 @@ export default function SettingsScreen({ navigation }) {
           <Text style={styles.tagline}>Intelligent Hypertrophy Logbook</Text>
         </View>
       </ScrollView>
+
+      {/* Methodology & Sources Modal */}
+      <Modal
+        visible={showMethodology}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowMethodology(false)}
+      >
+        <SafeAreaView style={styles.methodologySheet}>
+          <View style={styles.methodologyHeader}>
+            <Text style={styles.methodologyTitle}>Methodology & Sources</Text>
+            <TouchableOpacity onPress={() => setShowMethodology(false)} style={styles.methodologyClose}>
+              <Ionicons name="close" size={22} color={colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={styles.methodologyScroll} contentContainerStyle={styles.methodologyContent}>
+            <Text style={styles.methodologyBody}>{METHODOLOGY_SOURCES}</Text>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -404,4 +436,16 @@ const styles = StyleSheet.create({
   appName: { fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.textPrimary, letterSpacing: 2 },
   appVersion: { fontSize: fontSize.sm, color: colors.textMuted },
   tagline: { fontSize: fontSize.xs, color: colors.textMuted },
+  methodologySheet: { flex: 1, backgroundColor: colors.background },
+  methodologyHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
+  methodologyTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  methodologyClose: { padding: spacing.xs },
+  methodologyScroll: { flex: 1 },
+  methodologyContent: { padding: spacing.lg, paddingBottom: spacing.xxl },
+  methodologyBody: {
+    fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 22, fontFamily: 'monospace',
+  },
 });
