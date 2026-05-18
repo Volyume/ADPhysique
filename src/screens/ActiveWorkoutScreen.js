@@ -36,7 +36,7 @@ import { applyTimeCrunch } from '../lib/mesocycle';
 import { getTimeCrunchMessage } from '../lib/whyThisTemplates';
 import { estimateWorkoutMinutes } from '../lib/planEngine';
 
-const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '' };
+const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '', rir: null };
 
 const SET_TYPE_DISPLAY = {
   straight: 'Working',
@@ -229,6 +229,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         routineExercise?.recommendedRepsMin,
         routineExercise?.recommendedRepsMax,
         units,
+        {
+          exerciseCategory: exercise?.exerciseCategory || exercise?.exercise_category || 'compound',
+          incrementKg: exercise?.incrementKg || exercise?.increment_kg || null,
+        },
       );
       setSetTargets(computed);
       setTargetReason(computedReason);
@@ -324,7 +328,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         targetRepsMax: routineExercise?.recommendedRepsMax ?? null,
         actualReps: parseInt(currentSet.reps, 10),
         weight: parseFloat(currentSet.weight) || 0,
-        rir: null,
+        rir: currentSet.rir != null ? parseInt(currentSet.rir, 10) : null,
         rpe: null,
         failed: false,
         notes: noteText || null,
@@ -339,7 +343,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         setType: currentSet.setType,
         actualReps: parseInt(currentSet.reps, 10),
         weight: parseFloat(currentSet.weight) || 0,
-        rir: null,
+        rir: currentSet.rir ?? null,
         rpe: null,
       };
 

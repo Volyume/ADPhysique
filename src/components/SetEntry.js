@@ -84,6 +84,24 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
         </View>
       </View>
 
+      {/* RIR Row */}
+      <View style={styles.inputRow}>
+        <Text style={styles.fieldLabel}>RIR</Text>
+        <View style={styles.rirRow}>
+          {[null, 0, 1, 2, 3, 4].map(v => (
+            <TouchableOpacity
+              key={String(v)}
+              style={[styles.rirBtn, value.rir === v && styles.rirBtnActive]}
+              onPress={() => { Haptics.selectionAsync(); onChange({ ...value, rir: v }); }}
+            >
+              <Text style={[styles.rirBtnText, value.rir === v && styles.rirBtnTextActive]}>
+                {v === null ? '—' : v}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
       {/* Set Type — compact inline row */}
       <TouchableOpacity testID="volyume-set-type-btn" style={styles.setTypeRow} onPress={onOpenSetTypePicker} activeOpacity={0.7}>
         <Text style={styles.setTypeLabel}>Set type</Text>
@@ -142,6 +160,33 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     paddingVertical: spacing.sm,
     fontVariant: ['tabular-nums'],
+  },
+  rirRow: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  rirBtn: {
+    flex: 1,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface2,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  rirBtnActive: {
+    backgroundColor: colors.primaryBg,
+    borderColor: colors.primary,
+  },
+  rirBtnText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    fontWeight: fontWeight.semibold,
+  },
+  rirBtnTextActive: {
+    color: colors.primary,
   },
   setTypeRow: {
     flexDirection: 'row',

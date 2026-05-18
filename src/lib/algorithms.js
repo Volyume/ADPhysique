@@ -170,8 +170,8 @@ export function getProgressionSuggestion(currentSets, prevWorkoutSets, targetRep
   };
 }
 
-// Per-set targets for next session using double-progression model
-export function computeSetTargets(prevSets, repMin, repMax, units = 'kg') {
+// Per-set targets for next session using double-progression model with RIR awareness
+export function computeSetTargets(prevSets, repMin, repMax, units = 'kg', options = {}) {
   if (!prevSets || prevSets.length === 0) return { targets: [], reason: null };
 
   const prevWorking = prevSets.filter(
@@ -181,11 +181,23 @@ export function computeSetTargets(prevSets, repMin, repMax, units = 'kg') {
 
   const min = repMin || 6;
   const max = repMax || 12;
+
+  // Increment by exercise category
+  const { exerciseCategory = 'compound', incrementKg = null } = options;
+  function getIncrement(weight) {
+    if (incrementKg != null) return incrementKg;
+    if (exerciseCategory === 'isolation') return weight >= 20 ? 1 : 0.5;
+    if (exerciseCategory === 'accessory') return weight >= 40 ? 1.25 : 0.75;
+    // compound default
+    return weight >= 60 ? 2.5 : 1.25;
+  }
+
   const targets = [];
 
   for (const set of prevWorking) {
     const prevWeight = set.weight || 0;
     const prevReps = set.actualReps || set.actual_reps || 0;
+    const prevRIR = set.rir ?? null; // null = not logged
 
     let targetWeight = prevWeight;
     let targetMin = min;
@@ -193,24 +205,41 @@ export function computeSetTargets(prevSets, repMin, repMax, units = 'kg') {
     let action = 'maintain';
 
     if (prevReps >= max) {
-      const increment = prevWeight >= 60 ? 2.5 : 1.25;
-      targetWeight = prevWeight + increment;
-      action = 'increase';
+      // Hit top of band — only increase load if RIR was ≥ 1 (had gas left)
+      // If RIR null (not logged), increase anyway (optimistic default)
+      const hadHeadroom = prevRIR === null || prevRIR >= 1;
+      if (hadHeadroom) {
+        const increment = getIncrement(prevWeight);
+        // 5% session-over-session cap
+        const maxJump = prevWeight * 0.05;
+        const capped = Math.min(increment, maxJump > 0.5 ? maxJump : increment);
+        // Round to nearest 0.25
+        const rounded = Math.round(capped * 4) / 4;
+        targetWeight = prevWeight + Math.max(0.25, rounded);
+        action = 'increase';
+      } else {
+        // Grinded it out with RIR 0 — same weight, push for +1 rep is not valid
+        // so just hold and let RIR recover
+        targetMin = min;
+        action = 'maintain';
+      }
     } else if (prevReps < min && min > 1) {
-      const decrement = prevWeight >= 60 ? 2.5 : 1.25;
+      const decrement = getIncrement(prevWeight);
       targetWeight = Math.max(0, prevWeight - decrement);
       action = 'decrease';
     } else {
+      // In range — same weight, +1 rep
       targetMin = Math.min(prevReps + 1, max);
       action = 'add_rep';
     }
 
-    targets.push({ weight: targetWeight, repsMin: targetMin, repsMax: targetMax, prevWeight, prevReps, action });
+    targets.push({ weight: targetWeight, repsMin: targetMin, repsMax: targetMax, prevWeight, prevReps, prevRIR, action });
   }
 
   const allIncrease = targets.every(t => t.action === 'increase');
   const anyDecrease = targets.some(t => t.action === 'decrease');
   const anyIncrease = targets.some(t => t.action === 'increase');
+  const allMaintain = targets.every(t => t.action === 'maintain');
 
   let reason;
   if (allIncrease) {
@@ -220,6 +249,8 @@ export function computeSetTargets(prevSets, repMin, repMax, units = 'kg') {
     reason = `Load reduced on underperforming sets — hit ${min}–${max} reps with good form.`;
   } else if (anyIncrease) {
     reason = `Partial progression — add weight where you hit ${max} reps.`;
+  } else if (allMaintain) {
+    reason = `Same load — you were at RIR 0 with ${max}+ reps. Let recovery catch up first.`;
   } else {
     reason = `Keep the load — push for ${max} reps on each set, then increase weight.`;
   }
