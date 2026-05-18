@@ -10,7 +10,7 @@ import { format } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { calculateNutritionTargets } from '../lib/nutritionEngine';
-import { saveNutritionTargets, getNutritionTargets } from '../lib/database';
+import { saveNutritionTargets, getNutritionTargets, logBodyMetric } from '../lib/database';
 import useAppStore from '../store/useAppStore';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 
@@ -117,7 +117,8 @@ export default function NutritionTargetsScreen() {
   // ── Form state ────────────────────────────────────────────────────────────────
   const [sex,          setSex]          = useState('male');
   const [age,          setAge]          = useState('');
-  const [height,       setHeight]       = useState('');
+  const [heightFt,     setHeightFt]     = useState('');
+  const [heightIn,     setHeightIn]     = useState('');
   const [weight,       setWeight]       = useState('');
   const [bodyFat,      setBodyFat]      = useState('');
   const [bfSource,     setBfSource]     = useState('visual');
@@ -161,16 +162,18 @@ export default function NutritionTargetsScreen() {
 
   // ── Derived ──────────────────────────────────────────────────────────────────
   const formComplete =
-    sex && age.trim() && height.trim() && weight.trim() && consent;
+    sex && age.trim() && heightFt.trim() && weight.trim() && consent;
 
   // ── Calculate ──────────────────────────────────────────────────────────────
   async function handleCalculate() {
     if (!formComplete) return;
 
-    const ageNum    = parseInt(age,    10);
-    const heightNum = parseFloat(height);
+    const ageNum    = parseInt(age, 10);
     const weightNum = parseFloat(weight);
     const bfNum     = bodyFat.trim() ? parseFloat(bodyFat) : null;
+    const ftNum     = parseInt(heightFt, 10) || 0;
+    const inNum     = parseFloat(heightIn) || 0;
+    const heightNum = ftNum * 30.48 + inNum * 2.54; // convert to cm
 
     if (!ageNum || !heightNum || !weightNum) {
       Alert.alert('Invalid input', 'Age, height, and weight must be valid numbers.');
@@ -210,6 +213,13 @@ export default function NutritionTargetsScreen() {
             if (bfNum) entry.body_fat = bfNum;
             entries.unshift(entry);
             await AsyncStorage.setItem(metricsKey, JSON.stringify(entries));
+            // Also write to SQLite so BodyMetricsScreen picks it up
+            logBodyMetric(user.id, {
+              weightKg: weightNum,
+              bodyFatPercent: bfNum ?? null,
+              bodyFatSource: bfNum != null ? bfSource : null,
+              loggedAt: Date.now(),
+            }).catch(() => {});
           }
         } catch (_e) {}
       }
@@ -267,16 +277,33 @@ export default function NutritionTargetsScreen() {
 
           {/* Height */}
           <View style={styles.formGroup}>
-            <Text style={styles.fieldLabel}>Height (cm)</Text>
-            <TextInput
-              style={styles.numInput}
-              value={height}
-              onChangeText={setHeight}
-              placeholder="e.g. 178"
-              placeholderTextColor={colors.textMuted}
-              keyboardType="decimal-pad"
-              maxLength={5}
-            />
+            <Text style={styles.fieldLabel}>Height</Text>
+            <View style={styles.heightRow}>
+              <View style={styles.heightUnit}>
+                <TextInput
+                  style={styles.numInput}
+                  value={heightFt}
+                  onChangeText={setHeightFt}
+                  placeholder="5"
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="number-pad"
+                  maxLength={1}
+                />
+                <Text style={styles.unitLabel}>ft</Text>
+              </View>
+              <View style={styles.heightUnit}>
+                <TextInput
+                  style={styles.numInput}
+                  value={heightIn}
+                  onChangeText={setHeightIn}
+                  placeholder="10"
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="decimal-pad"
+                  maxLength={4}
+                />
+                <Text style={styles.unitLabel}>in</Text>
+              </View>
+            </View>
           </View>
 
           {/* Weight */}
@@ -604,6 +631,20 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     alignSelf: 'flex-start',
     minWidth: 120,
+  },
+  heightRow: {
+    flexDirection: 'row',
+    gap: spacing.lg,
+  },
+  heightUnit: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  unitLabel: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textSecondary,
   },
 
   // ── Pills ────────────────────────────────────────────────────────────────────────
