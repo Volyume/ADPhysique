@@ -12,6 +12,7 @@ import {
   Platform,
   FlatList,
   BackHandler,
+  AppState,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -181,14 +182,27 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     }
   }, []);
 
-  // Workout timer — initialize from workoutStartTime so it survives tab switches
+  // Workout timer — always derived from workoutStartTime so backgrounding never
+  // causes drift. Re-syncs on every tick and on app-foreground events.
   useEffect(() => {
-    if (workoutStartTime) {
+    if (!workoutStartTime) return;
+
+    function syncElapsed() {
       setElapsedSeconds(Math.floor((Date.now() - workoutStartTime) / 1000));
     }
-    timerRef.current = setInterval(() => setElapsedSeconds(s => s + 1), 1000);
-    return () => clearInterval(timerRef.current);
-  }, []);
+
+    syncElapsed();
+    timerRef.current = setInterval(syncElapsed, 1000);
+
+    const appStateSub = AppState.addEventListener('change', nextState => {
+      if (nextState === 'active') syncElapsed();
+    });
+
+    return () => {
+      clearInterval(timerRef.current);
+      appStateSub.remove();
+    };
+  }, [workoutStartTime]);
 
   // Load previous performance and set defaults when exercise changes
   useEffect(() => {
