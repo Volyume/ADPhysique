@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +15,7 @@ import {
   getAllWorkouts, getCompletedWorkoutSets, getBodyMetricLog, getNutritionTargets,
 } from '../lib/database';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
+import { exportCoachReport } from '../lib/coachExport';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -65,6 +66,27 @@ export default function AthleteHubScreen({ navigation }) {
   const [recovery, setRecovery]                 = useState({ soreness: null, fatigue: null, joint: null });
   const [weekVolume, setWeekVolume]             = useState(null);
   const [physiqueEnabled, setPhysiqueEnabled]   = useState(false);
+  const [exporting, setExporting]               = useState(false);
+
+  async function handleCoachExport() {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const res = await exportCoachReport(user?.id, {
+        units,
+        nutritionConsented: physiqueEnabled,
+      });
+      if (!res.ok && res.reason === 'unavailable') {
+        Alert.alert('Export unavailable', 'PDF export is not available on this device.');
+      } else if (!res.ok && res.reason !== 'no-share') {
+        Alert.alert('Nothing to export', 'Log a few sessions first, then share with your coach.');
+      }
+    } catch (e) {
+      Alert.alert('Export failed', e?.message ?? 'Please try again.');
+    } finally {
+      setExporting(false);
+    }
+  }
 
   useFocusEffect(useCallback(() => {
     if (user?.id) load();
@@ -286,6 +308,12 @@ export default function AthleteHubScreen({ navigation }) {
           {physiqueEnabled && (
             <NavRow icon="flame" label="Peak Week" sub="Contest carb-load &amp; water taper planner" onPress={() => navigation.navigate('PeakWeek')} />
           )}
+          <NavRow
+            icon="document-text-outline"
+            label={exporting ? 'Preparing report…' : 'Send report to coach'}
+            sub="Last 4 weeks as a PDF — volume, PRs, bodyweight"
+            onPress={handleCoachExport}
+          />
           <NavRow icon="trophy" label="Personal Records" sub="All-time bests" onPress={() => navigation.navigate('BodyMetrics')} />
           <NavRow icon="settings-outline" label="Settings" sub="Units, data export, preferences" onPress={() => navigation.navigate('Settings')} />
         </View>
