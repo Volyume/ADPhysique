@@ -40,6 +40,7 @@ import ManualBuilderScreen from '../screens/ManualBuilderScreen';
 import CoachBuilderScreen from '../screens/CoachBuilderScreen';
 import NutritionTargetsScreen from '../screens/NutritionTargetsScreen';
 import PlanLibraryScreen from '../screens/PlanLibraryScreen';
+import FirstRunScreen from '../screens/FirstRunScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -145,10 +146,22 @@ function AuthStack() {
   );
 }
 
+function FirstRunStack() {
+  return (
+    <Stack.Navigator screenOptions={{ ...stackOptions, headerShown: false }}>
+      <Stack.Screen name="FirstRunBranch" component={FirstRunScreen} />
+      <Stack.Screen name="CoachBuilder" component={CoachBuilderScreen} />
+    </Stack.Navigator>
+  );
+}
+
 const SPLASH_MIN_MS = 2000;
 
 export default function RootNavigator() {
-  const { user, isAuthLoading, setUser, setSession, setAuthLoading, initLocalUser } = useAppStore();
+  const {
+    user, isAuthLoading, setUser, setSession, setAuthLoading, initLocalUser,
+    firstRunComplete, firstRunChecked, checkFirstRun,
+  } = useAppStore();
   const [splashReady, setSplashReady] = useState(false);
 
   useEffect(() => {
@@ -162,6 +175,8 @@ export default function RootNavigator() {
         initDatabase()
           .then(() => seedExercisesIfNeeded().catch(console.warn))
           .catch(console.warn);
+
+        checkFirstRun().catch(console.warn);
 
         try {
           const client = getSupabaseClient();
@@ -202,7 +217,7 @@ export default function RootNavigator() {
     return () => subscription?.unsubscribe();
   }, []);
 
-  if (isAuthLoading || !splashReady) {
+  if (isAuthLoading || !splashReady || !firstRunChecked) {
     return <SplashScreen />;
   }
 
@@ -220,9 +235,11 @@ export default function RootNavigator() {
         },
       }}
     >
-      {/* Auth gate removed for local-first phase — re-enable when cloud sync is added */}
-      <MainTabs />
+      {/* Auth gate removed for local-first phase — re-enable when cloud sync is added.
+          First-run gate: unified onboarding until completed. */}
+      {firstRunComplete ? <MainTabs /> : <FirstRunStack />}
     </NavigationContainer>
+
   );
 }
 

@@ -181,9 +181,10 @@ function PillButton({ label, selected, onPress }) {
 
 export default function CoachBuilderScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
-  const { user } = useAppStore();
+  const { user, completeFirstRun } = useAppStore();
 
   const nutritionPhaseFromRoute = route?.params?.nutritionPhase ?? null;
+  const isFirstRun = route?.params?.firstRun === true;
 
   const [step, setStep]   = useState(1);
   const [inputs, setInputs] = useState({
@@ -357,6 +358,11 @@ export default function CoachBuilderScreen({ navigation, route }) {
         await setActivePlan(userId, prog.id);
       }
 
+      if (isFirstRun) {
+        // First-run: marking complete swaps RootNavigator to the main tabs.
+        await completeFirstRun();
+        return;
+      }
       navigation.navigate('PlansTab', { screen: 'Plans' });
     } catch (err) {
       Alert.alert('Error saving plan', err?.message ?? 'Something went wrong.');

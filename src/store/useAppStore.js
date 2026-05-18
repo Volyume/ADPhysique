@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LOCAL_USER_KEY = '@volyume_local_user_id';
+const FIRST_RUN_KEY = '@volyume_first_run_complete';
 
 function generateUUID() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
@@ -42,6 +43,26 @@ const useAppStore = create((set, get) => ({
   clearLocalUser: async () => {
     await AsyncStorage.removeItem(LOCAL_USER_KEY);
     set({ user: null, session: null });
+  },
+
+  // First-run / onboarding gate
+  firstRunComplete: true,        // assume complete until checked (avoids flash)
+  firstRunChecked: false,
+
+  checkFirstRun: async () => {
+    try {
+      const done = await AsyncStorage.getItem(FIRST_RUN_KEY);
+      set({ firstRunComplete: done === 'true', firstRunChecked: true });
+    } catch (_e) {
+      set({ firstRunComplete: true, firstRunChecked: true });
+    }
+  },
+
+  completeFirstRun: async () => {
+    try {
+      await AsyncStorage.setItem(FIRST_RUN_KEY, 'true');
+    } catch (_e) {}
+    set({ firstRunComplete: true });
   },
 
   // Active workout
