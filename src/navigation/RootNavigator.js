@@ -89,6 +89,8 @@ function ProgressStack() {
       <Stack.Screen name="VolumeHeatmap" component={VolumeHeatmapScreen} options={{ title: 'Volume Heatmap' }} />
       <Stack.Screen name="PRWall" component={PRWallScreen} options={{ title: 'Personal Records' }} />
       <Stack.Screen name="BodyMetrics" component={BodyMetricsScreen} options={{ title: 'Body Metrics' }} />
+      <Stack.Screen name="ExerciseLibrary" component={ExerciseLibraryScreen} options={{ title: 'Lift Progress' }} />
+      <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise' }} />
     </Stack.Navigator>
   );
 }
