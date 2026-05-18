@@ -5,6 +5,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import InfoTooltip from '../components/InfoTooltip';
 import {
   getCompletedWorkoutSets, getAllExercises, getAllWorkouts, updateWorkout,
   getActivePlan, getRoutinesForPlan, advancePlanNextWorkout,
@@ -346,9 +347,19 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
 
         <View style={styles.statsGrid}>
           <StatBox icon="barbell-outline" value={String(exerciseCount || 0)} label="Exercises" />
-          <StatBox icon="layers-outline" value={String(displayWorkingSets)} label="Working Sets" />
+          <StatBox
+            icon="layers-outline"
+            value={String(displayWorkingSets)}
+            label="Working Sets"
+            tooltip={'Hard sets that count towards your training volume. Warm-up sets are excluded.\n\nA working set is any set where you trained close to your limit — typically 0–3 reps from failure.'}
+          />
           <StatBox icon="time-outline" value={`${durationMinutes || 0}m`} label="Duration" />
-          <StatBox icon="trending-up-outline" value={`${Math.round(tonnage || 0).toLocaleString('en-GB')} kg`} label="Total kg" />
+          <StatBox
+            icon="trending-up-outline"
+            value={`${Math.round(tonnage || 0).toLocaleString('en-GB')} kg`}
+            label="Total kg"
+            tooltip={'Total load lifted this session — sets × reps × weight added together.\n\nAlso called tonnage. A useful measure of total session workload. Higher isn\'t always better; quality of effort matters more.'}
+          />
         </View>
 
         {exerciseData.length > 0 && (
@@ -378,7 +389,17 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
 
         {musclesWorked.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>THIS WEEK AFTER SESSION</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+              <Text style={styles.sectionTitle}>THIS WEEK AFTER SESSION</Text>
+              <InfoTooltip size={11} text={
+                'How much you\'ve trained each muscle group this week.\n\n' +
+                'Green = Optimal range — you\'re getting growth stimulus without overdoing it\n' +
+                'Yellow = Near your ceiling — one more session and you may exceed it\n' +
+                'Red = Over ceiling — consider reducing volume next week\n' +
+                'Grey = Below minimum — not enough to stimulate growth yet\n\n' +
+                'These targets are personalised and adjust over time based on how your body responds.'
+              } />
+            </View>
             {musclesWorked.map(muscle => {
               const data = weeklyVolume[muscle];
               const { color, label } = getVolumeStatus(data.workingSets, muscle);
@@ -449,7 +470,17 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           {/* Adaptive engine decisions */}
           {Object.keys(adaptiveDecisions).length > 0 && (
             <View style={styles.adaptiveCard}>
-              <Text style={styles.adaptiveTitle}>ENGINE DECISIONS — NEXT WEEK</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                <Text style={styles.adaptiveTitle}>ENGINE DECISIONS — NEXT WEEK</Text>
+                <InfoTooltip size={11} text={
+                  'Volyume\'s training engine analysed your session feedback and adjusted next week\'s plan.\n\n' +
+                  '↑ Add set — you recovered well and can handle more volume\n' +
+                  '↓ Drop set — signs of fatigue; reducing load will help you recover\n' +
+                  '⚠ Deload — recovery signals are low across the board; a lighter week is recommended\n' +
+                  '→ Hold — volume looks right, continue as planned\n\n' +
+                  'These suggestions are written into your next planned week automatically.'
+                } />
+              </View>
               {Object.entries(adaptiveDecisions)
                 .filter(([, d]) => d.decision !== 'hold' || d.delta !== 0)
                 .map(([muscle, d]) => (
@@ -576,12 +607,15 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   );
 }
 
-function StatBox({ icon, value, label }) {
+function StatBox({ icon, value, label, tooltip }) {
   return (
     <View style={styles.statBox}>
       <Ionicons name={icon} size={20} color={colors.primary} />
       <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+        <Text style={styles.statLabel}>{label}</Text>
+        {tooltip ? <InfoTooltip size={10} text={tooltip} /> : null}
+      </View>
     </View>
   );
 }

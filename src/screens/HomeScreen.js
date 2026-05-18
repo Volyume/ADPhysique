@@ -1,10 +1,10 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
@@ -38,8 +38,11 @@ export default function HomeScreen({ navigation }) {
   const [isStartingWorkout, setIsStartingWorkout] = useState(false);
   const [lastSession, setLastSession] = useState(null);
   const [lastSessionTonnage, setLastSessionTonnage] = useState(null);
-  const [blockProgress, setBlockProgress] = useState([]); // [{ muscle, planned, actual, label }]
+  const [blockProgress, setBlockProgress] = useState([]);
   const [currentMesoWeek, setCurrentMesoWeek] = useState(null);
+
+  const scrollRef = useRef(null);
+  useScrollToTop(scrollRef);
 
   useFocusEffect(
     useCallback(() => {
@@ -229,6 +232,7 @@ export default function HomeScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <ScrollView
+        ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}

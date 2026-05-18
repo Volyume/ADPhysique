@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns';
 import { BarChart } from 'react-native-gifted-charts';
 
@@ -102,7 +102,10 @@ export default function AnalyticsScreen({ navigation }) {
   const [recentSessions, setRecentSessions] = useState([]);
   const [allSets, setAllSets]               = useState([]);
   const [exerciseMap, setExerciseMap]       = useState({});
-  const [deloadAlert, setDeloadAlert]       = useState(null); // { deload: true, reasons: [] }
+  const [deloadAlert, setDeloadAlert]       = useState(null);
+
+  const scrollRef = useRef(null);
+  useScrollToTop(scrollRef);
 
   useFocusEffect(useCallback(() => { load(); }, [user?.id]));
 
@@ -313,6 +316,7 @@ export default function AnalyticsScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl

@@ -1,10 +1,10 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { format, differenceInDays } from 'date-fns';
 
@@ -119,6 +119,9 @@ export default function AthleteHubScreen({ navigation }) {
   const [adaptationHistory, setAdaptationHistory] = useState([]);
   const [repWarnings, setRepWarnings] = useState([]);
 
+  const scrollRef = useRef(null);
+  useScrollToTop(scrollRef);
+
   async function handleCoachExport() {
     if (exporting) return;
     setExporting(true);
@@ -232,7 +235,7 @@ export default function AthleteHubScreen({ navigation }) {
         <BrandTag size={13} color={colors.textMuted} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
 
         {/* ── Profile card ──────────────────────────────── */}
         <View style={styles.profileCard}>

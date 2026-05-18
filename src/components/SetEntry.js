@@ -113,18 +113,19 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
         </View>
       </View>
 
-      {/* RIR Row */}
+      {/* Effort Row */}
       <View style={styles.inputRow}>
         <View style={styles.fieldLabelRow}>
-          <Text style={styles.fieldLabel}>RIR</Text>
+          <Text style={styles.fieldLabel}>Effort</Text>
           <InfoTooltip size={12} text={
-            'Reps In Reserve — how many more reps you could do before technical failure.\n\n' +
-            'RIR 4 = very easy, 4 reps left\n' +
-            'RIR 2 = moderately hard, 2 reps left\n' +
-            'RIR 1 = hard, 1 rep left\n' +
-            'RIR 0 = maximal effort, nothing left\n\n' +
-            'Early in a training block aim for RIR 2–3. As the block progresses you push to RIR 0–1. ' +
-            'Volyume uses RIR to track intensity and calculate progression targets.'
+            'How hard did that set feel? Rate how many reps you had left in the tank.\n\n' +
+            '4 — Easy, plenty left\n' +
+            '3 — Moderate, could have done a few more\n' +
+            '2 — Hard, about 2 reps left\n' +
+            '1 — Very hard, barely one more\n' +
+            '0 — All out, nothing left in the tank\n\n' +
+            'Aim for a 3 or 2 early in your training block. Push closer to 0 near the end. ' +
+            'Volyume uses this to track intensity and suggest your next session targets.'
           } />
         </View>
         <View style={styles.rirRow}>
@@ -134,7 +135,7 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
               style={[styles.rirBtn, value.rir === v && styles.rirBtnActive]}
               onPress={() => { Haptics.selectionAsync(); onChange({ ...value, rir: v }); }}
               accessibilityRole="button"
-              accessibilityLabel={v === null ? 'RIR not set' : `${v} reps in reserve`}
+              accessibilityLabel={v === null ? 'Effort not set' : v === 0 ? 'All out' : `${v} reps left in tank`}
               accessibilityState={{ selected: value.rir === v }}
             >
               <Text style={[styles.rirBtnText, value.rir === v && styles.rirBtnTextActive]}>

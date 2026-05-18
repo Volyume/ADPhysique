@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import InfoTooltip from '../components/InfoTooltip';
 import { getCompletedWorkoutSets, getAllExercises } from '../lib/database';
 import {
   calculateWeeklyVolume, VOLUME_LANDMARKS, MUSCLE_DISPLAY_NAMES, getVolumeStatus,
@@ -157,6 +158,14 @@ export default function VolumeHeatmapScreen() {
           <LegendItem color={colors.success} label="Optimal" />
           <LegendItem color={colors.warning} label="Near ceiling" />
           <LegendItem color={colors.error} label="Over ceiling" />
+          <InfoTooltip size={11} text={
+            'Each bar shows weekly working sets for a muscle group.\n\n' +
+            'The two tick marks on each bar are:\n' +
+            '  First tick = Minimum Effective Volume (MEV) — the least amount needed to maintain or grow\n' +
+            '  Second tick = Target (MAV) — the sweet spot for growth\n' +
+            '  End of bar = Ceiling (MRV) — beyond this, recovery suffers\n\n' +
+            'Aim to stay between the two ticks most weeks. You can customise these targets using the "Edit Volume Targets" button below.'
+          } />
         </View>
 
         {/* Muscle Rows */}
@@ -202,7 +211,7 @@ export default function VolumeHeatmapScreen() {
         {editing ? (
           <View style={styles.editSection}>
             <Text style={styles.editTitle}>Edit Volume Targets</Text>
-            <Text style={styles.editSubtitle}>Weekly sets per muscle — Min / Target / Max</Text>
+            <Text style={styles.editSubtitle}>Weekly working sets per muscle — Minimum / Target / Ceiling</Text>
             {muscles.map(muscle => (
               <View key={muscle} style={styles.editRow}>
                 <Text style={styles.editMuscleName}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
