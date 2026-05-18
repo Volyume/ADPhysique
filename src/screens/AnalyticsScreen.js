@@ -332,7 +332,7 @@ export default function AnalyticsScreen({ navigation }) {
           tonnageBars={mesoTonnage}
           onPress={() => activeMeso?._isPlan
             ? navigation.getParent()?.navigate('PlansTab')
-            : navigation.navigate('MesocycleBuilder')}
+            : navigation.getParent()?.navigate('ProfileTab', { screen: 'MesocycleBuilder' })}
           onBuild={() => navigation.getParent()?.navigate('PlansTab', { screen: 'CoachBuilder' })}
         />
 

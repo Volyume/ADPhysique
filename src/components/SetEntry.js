@@ -20,8 +20,9 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
     Haptics.selectionAsync();
     const steps = { weight: 2.5, reps: 1 };
     const limits = { weight: [0, 500], reps: [1, 100] };
+    const fieldLimits = limits[field] || [0, 9999];
     const current = value[field] || 0;
-    const next = Math.min(Math.max(current + delta * (steps[field] || 1), limits[field][0]), limits[field][1]);
+    const next = Math.min(Math.max(current + delta * (steps[field] || 1), fieldLimits[0]), fieldLimits[1]);
     onChange({ ...value, [field]: field === 'weight' ? Math.round(next * 100) / 100 : Math.round(next) });
   }
 

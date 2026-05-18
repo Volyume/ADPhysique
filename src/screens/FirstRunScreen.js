@@ -8,7 +8,6 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { VolyumeMark } from '../components/BrandMark';
 import useAppStore from '../store/useAppStore';
 import { logBodyMetric } from '../lib/database';
-import { setWellbeingMode, WELLBEING_HELPLINE } from '../lib/wellbeing';
 
 const VALUE_BULLETS = [
   'Volume-landmark hypertrophy intelligence',
@@ -18,12 +17,7 @@ const VALUE_BULLETS = [
 
 export default function FirstRunScreen({ navigation }) {
   const { user, units, setUnits, saveLocalProfile, completeFirstRun } = useAppStore();
-  const [mode, setMode] = useState('wellbeing'); // 'wellbeing' | 'branch' | 'quick'
-
-  async function answerWellbeing(value) {
-    await setWellbeingMode(value);
-    setMode('branch');
-  }
+  const [mode, setMode] = useState('branch'); // 'branch' | 'quick'
   const [localUnits, setLocalUnits] = useState(units || 'kg');
   const [bodyWeight, setBodyWeight] = useState('');
   const [busy, setBusy] = useState(false);
@@ -46,54 +40,6 @@ export default function FirstRunScreen({ navigation }) {
       Alert.alert('Something went wrong', e?.message ?? 'Please try again.');
       setBusy(false);
     }
-  }
-
-  if (mode === 'wellbeing') {
-    return (
-      <SafeAreaView style={styles.safe}>
-        <ScrollView contentContainerStyle={styles.content}>
-          <View style={styles.brandRow}>
-            <VolyumeMark size={40} />
-            <Text style={styles.brandName}>Volyume</Text>
-          </View>
-
-          <Text style={styles.title}>Before we start</Text>
-          <Text style={styles.subtitle}>
-            Have you experienced, or are you in recovery from, an eating disorder
-            or a body-image condition? You can change this anytime in Settings.
-          </Text>
-
-          <View style={styles.wbGroup}>
-            <TouchableOpacity
-              style={styles.wbBtn}
-              onPress={() => answerWellbeing('calm')}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="heart-outline" size={18} color={colors.primary} />
-              <Text style={styles.wbBtnText}>Yes — please show me a calmer experience</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.wbBtn}
-              onPress={() => answerWellbeing('normal')}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.wbBtnText}>No</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.wbBtn}
-              onPress={() => answerWellbeing('unspecified')}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.wbBtnText}>Prefer not to say</Text>
-            </TouchableOpacity>
-          </View>
-
-          <Text style={styles.wbHelpline}>{WELLBEING_HELPLINE}</Text>
-        </ScrollView>
-      </SafeAreaView>
-    );
   }
 
   if (mode === 'quick') {

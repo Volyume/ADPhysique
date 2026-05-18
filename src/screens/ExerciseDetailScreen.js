@@ -24,6 +24,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   async function loadData() {
     try {
       const ex = await getExerciseById(exerciseId);
+      if (!ex) return; // exercise not found — screen will stay on null guard
       setExercise(ex);
       navigation.setOptions({ title: ex.name });
 
@@ -62,10 +63,10 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   }, 0);
 
   // Build chart data: one point per session (oldest → newest)
-  const chartData = [...history].reverse().map((sessionSets, i) => ({
-    x: i,
-    est1rm: Math.max(...sessionSets.map(s => calculate1RM(s.weight || 0, s.actualReps || 0))),
-  }));
+  const chartData = [...history].reverse().map((sessionSets, i) => {
+    const vals = sessionSets.map(s => calculate1RM(s.weight || 0, s.actualReps || 0));
+    return { x: i, est1rm: vals.length > 0 ? Math.max(...vals) : 0 };
+  });
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
