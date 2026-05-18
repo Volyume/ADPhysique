@@ -164,6 +164,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           sessionDifficulty: feedback.sessionDifficulty,
           overallPump: feedback.overallPump,
           soreness24hBefore: feedback.soreness24hBefore,
+          jointDiscomfort: feedback.jointDiscomfort,
           fatigueLevel: feedback.fatigueLevel,
           notes: notes || null,
         });
@@ -223,6 +224,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         sessionDifficulty: feedback.sessionDifficulty,
         overallPump: feedback.overallPump,
         soreness24hBefore: feedback.soreness24hBefore,
+        jointDiscomfort: feedback.jointDiscomfort,
         fatigueLevel: feedback.fatigueLevel,
         notes: notes || null,
       });

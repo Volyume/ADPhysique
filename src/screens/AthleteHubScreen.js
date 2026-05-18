@@ -14,7 +14,7 @@ import InfoTooltip from '../components/InfoTooltip';
 import useAppStore from '../store/useAppStore';
 import {
   getAllWorkouts, getCompletedWorkoutSets, getBodyMetricLog, getNutritionTargets,
-  getRecentAdaptationEvents,
+  getRecentAdaptationEvents, getAllExercises,
 } from '../lib/database';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
@@ -39,26 +39,70 @@ function nextMilestone(total) {
   return MILESTONES.find(m => m.sessions > total) ?? null;
 }
 
-// Consecutive weeks (rolling 7-day buckets) with at least one completed
-// session. Tolerates any rest-day pattern within a week, so a normal
-// training split no longer breaks the streak.
+// Returns the Mon-aligned ISO calendar week index for a UTC timestamp.
+function mondayWeekIndex(ts) {
+  if (!ts) return -1;
+  const d = new Date(ts);
+  const daysFromMon = (d.getUTCDay() + 6) % 7; // Mon=0 … Sun=6
+  const mondayMidnight = ts - (ts % 86400000) - daysFromMon * 86400000;
+  return Math.floor(mondayMidnight / (7 * 86400000));
+}
+
+// Consecutive calendar weeks (Mon–Sun) with at least one completed session.
 function computeStreak(workouts) {
-  const now = Date.now();
-  const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
   const trainedWeeks = new Set(
     workouts
       .filter(w => w.isCompleted ?? w.is_completed ?? false)
-      .map(w => Math.floor((w.startedAt ?? w.createdAt ?? 0) / WEEK_MS)),
+      .map(w => mondayWeekIndex(w.startedAt ?? w.createdAt ?? 0)),
   );
   let streak = 0;
-  let week = Math.floor(now / WEEK_MS);
-  // Allow this week or last week to start the streak
+  let week = mondayWeekIndex(Date.now());
   if (!trainedWeeks.has(week)) week -= 1;
   while (trainedWeeks.has(week)) {
     streak++;
     week--;
   }
   return streak;
+}
+
+// Detects exercises with 2+ consecutive weeks of declining average reps (≥2 rep drop each week).
+function detectRepRegressions(sets, exerciseMap) {
+  const now = Date.now();
+  const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+  const byExerciseWeek = {};
+  for (const set of sets) {
+    if ((set.setType ?? set.set_type) === 'warmup') continue;
+    const ts = set.createdAt ?? set.created_at ?? 0;
+    const weeksAgo = Math.floor((now - ts) / WEEK_MS);
+    if (weeksAgo > 2) continue;
+    const exId = set.exerciseId ?? set.exercise_id;
+    if (!exId) continue;
+    if (!byExerciseWeek[exId]) byExerciseWeek[exId] = {};
+    if (!byExerciseWeek[exId][weeksAgo]) byExerciseWeek[exId][weeksAgo] = [];
+    byExerciseWeek[exId][weeksAgo].push(set);
+  }
+  const warnings = [];
+  for (const [exId, weeks] of Object.entries(byExerciseWeek)) {
+    const w0 = weeks[0] ?? []; // this week
+    const w1 = weeks[1] ?? []; // last week
+    const w2 = weeks[2] ?? []; // two weeks ago
+    if (w0.length < 2 || w1.length < 2 || w2.length < 2) continue;
+    const avg = arr => arr.reduce((s, x) => s + (x.actualReps ?? x.actual_reps ?? 0), 0) / arr.length;
+    const r0 = avg(w0); const r1 = avg(w1); const r2 = avg(w2);
+    if (r1 - r0 >= 2 && r2 - r1 >= 2) {
+      const ex = exerciseMap?.[exId];
+      warnings.push({
+        id: `reg_${exId}`,
+        exercise_id: exId,
+        exerciseName: ex?.name ?? 'Unknown exercise',
+        muscle: ex?.primaryMuscle ?? ex?.primary_muscle ?? null,
+        reason_text: `Avg reps: ${Math.round(r2 * 10) / 10} → ${Math.round(r1 * 10) / 10} → ${Math.round(r0 * 10) / 10} over 3 weeks — consider a deload or load reduction`,
+        decision: 'rep_regression',
+        created_at: now,
+      });
+    }
+  }
+  return warnings;
 }
 
 export default function AthleteHubScreen({ navigation }) {
@@ -73,6 +117,7 @@ export default function AthleteHubScreen({ navigation }) {
   const [exporting, setExporting]               = useState(false);
   const [calm, setCalm]                         = useState(false);
   const [adaptationHistory, setAdaptationHistory] = useState([]);
+  const [repWarnings, setRepWarnings] = useState([]);
 
   async function handleCoachExport() {
     if (exporting) return;
@@ -125,9 +170,10 @@ export default function AthleteHubScreen({ navigation }) {
 
   async function loadWorkoutStats() {
     try {
-      const [workouts, sets] = await Promise.all([
+      const [workouts, sets, exercises] = await Promise.all([
         getAllWorkouts(user.id),
         getCompletedWorkoutSets(user.id),
+        getAllExercises(),
       ]);
       const completed = workouts.filter(w => w.isCompleted ?? w.is_completed ?? false);
       setTotalWorkouts(completed.length);
@@ -143,6 +189,10 @@ export default function AthleteHubScreen({ navigation }) {
         (s.createdAt ?? s.created_at ?? 0) >= weekAgo && (s.setType ?? s.set_type) !== 'warmup',
       );
       setWeekVolume(weekSets.length);
+
+      // Rep regression detection
+      const exMap = Object.fromEntries(exercises.map(e => [e.id, e]));
+      setRepWarnings(detectRepRegressions(sets, exMap));
     } catch (_e) {}
   }
 
@@ -337,10 +387,23 @@ export default function AthleteHubScreen({ navigation }) {
           <Text style={styles.aboutVersion}>Intelligent Hypertrophy Logbook · Private by design</Text>
         </View>
 
-              {/* Adaptation History */}
-              {adaptationHistory.length > 0 && (
+              {/* Adaptation History + Rep Regression Warnings */}
+              {(adaptationHistory.length > 0 || repWarnings.length > 0) && (
                 <View style={styles.adaptHistCard}>
                   <Text style={styles.adaptHistTitle}>ENGINE LOG</Text>
+                  {repWarnings.map((w, i) => (
+                    <View key={w.id || `reg_${i}`} style={styles.adaptHistRow}>
+                      <Ionicons name="alert-circle-outline" size={14} color={colors.warning} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.adaptHistMuscle, { color: colors.warning }]}>
+                          {w.exerciseName} — Rep regression
+                        </Text>
+                        {w.reason_text ? (
+                          <Text style={styles.adaptHistReason} numberOfLines={3}>{w.reason_text}</Text>
+                        ) : null}
+                      </View>
+                    </View>
+                  ))}
                   {adaptationHistory.map((event, i) => {
                     const icon =
                       event.decision === 'add_set' ? 'trending-up' :

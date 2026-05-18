@@ -83,14 +83,20 @@ export default function HomeScreen({ navigation }) {
         setLastSessionTonnage(null);
       }
 
-      // Weekly streak: consecutive 7-day buckets with a completed session.
-      // Tolerates rest days so a normal training split keeps the streak.
-      const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+      // Weekly streak: consecutive calendar weeks (Mon–Sun) with at least one session.
+      // Uses UTC Monday as the week boundary so the bucket aligns to the calendar.
+      function mondayWeekIndex(ts) {
+        if (!ts) return -1;
+        const d = new Date(ts);
+        const daysFromMon = (d.getUTCDay() + 6) % 7; // Mon=0 … Sun=6
+        const mondayMidnight = ts - (ts % 86400000) - daysFromMon * 86400000;
+        return Math.floor(mondayMidnight / (7 * 86400000));
+      }
       const trainedWeeks = new Set(
-        completed.map(w => Math.floor((w.startedAt ?? w.createdAt ?? 0) / WEEK_MS)),
+        completed.map(w => mondayWeekIndex(w.startedAt ?? w.createdAt ?? 0)),
       );
       let streak = 0;
-      let week = Math.floor(Date.now() / WEEK_MS);
+      let week = mondayWeekIndex(Date.now());
       if (!trainedWeeks.has(week)) week -= 1;
       while (trainedWeeks.has(week)) {
         streak += 1;

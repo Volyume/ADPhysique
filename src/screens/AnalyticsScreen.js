@@ -202,11 +202,14 @@ export default function AnalyticsScreen({ navigation }) {
         const avgSoreness = wkWorkouts.length > 0
           ? wkWorkouts.reduce((sum, w) => sum + (w.soreness24hBefore ?? w.soreness_24h_before ?? 0), 0) / wkWorkouts.length
           : 0;
+        const avgJointDiscomfort = wkWorkouts.length > 0
+          ? wkWorkouts.reduce((sum, w) => sum + (w.jointDiscomfort ?? w.joint_discomfort ?? 0), 0) / wkWorkouts.length
+          : 0;
         const avgReps = wkSets.length > 0
           ? wkSets.reduce((sum, s) => sum + (s.actualReps ?? s.actual_reps ?? 0), 0) / wkSets.length
           : 0;
         // Estimate weeks since last lighter week: scan backwards for a low-volume week (< 15 total working sets)
-        last4.push({ avgReps, avgSoreness, hasOverMRV, weeksSinceLastDeload: 4 - wk });
+        last4.push({ avgReps, avgSoreness, avgJointDiscomfort, hasOverMRV, weeksSinceLastDeload: 4 - wk });
       }
       // Compute weeks since last lighter week more accurately using full set history
       const weeksSinceLighter = (() => {
