@@ -153,7 +153,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     const volume = calculateWeeklyVolume(recentSets, exerciseMap);
     setWeeklyVolume(volume);
 
-    const completed = allWorkouts.filter(w => w.isCompleted);
+    const fourWeeksAgo = Date.now() - 28 * 24 * 60 * 60 * 1000;
+    const completed = allWorkouts.filter(w => w.isCompleted && w.startedAt >= fourWeeksAgo);
     setCompletedWorkoutCount(completed.length);
 
     // Build feedback history from last 4 completed workouts for meso autoReg

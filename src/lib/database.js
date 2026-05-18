@@ -392,6 +392,19 @@ export async function getAllWorkoutSets(userId) {
   return rows.map(rowToCamel);
 }
 
+// Returns only sets from completed workouts — use for volume analytics.
+export async function getCompletedWorkoutSets(userId) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT ws.* FROM workout_sets ws
+     JOIN workouts w ON ws.workout_id = w.id
+     WHERE ws.user_id = ? AND w.is_completed = 1
+     ORDER BY ws.created_at DESC`,
+    [userId],
+  );
+  return rows.map(rowToCamel);
+}
+
 export async function getWorkoutSetsForWorkout(workoutId) {
   const d = await db();
   const rows = await d.getAllAsync(

@@ -14,7 +14,7 @@ import { colors, fontSize, fontWeight, spacing, radius, volumeColors, motion } f
 import { BrandTag } from '../components/BrandMark';
 import useAppStore from '../store/useAppStore';
 import {
-  getAllWorkoutSets, getAllWorkouts, getAllExercises, getAllMesocycles,
+  getCompletedWorkoutSets, getAllWorkouts, getAllExercises, getAllMesocycles,
   getActiveInsights, dismissInsight, runInsightsEngine,
 } from '../lib/database';
 import {
@@ -110,7 +110,7 @@ export default function AnalyticsScreen({ navigation }) {
     try {
       const [workouts, sets, exercises] = await Promise.all([
         getAllWorkouts(user.id),
-        getAllWorkoutSets(user.id),
+        getCompletedWorkoutSets(user.id),
         getAllExercises(),
       ]);
       const exMap = Object.fromEntries(exercises.map(e => [e.id, e]));

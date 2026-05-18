@@ -22,9 +22,14 @@ export default function RestTimer() {
   useEffect(() => {
     if (restTimerActive) {
       setShowDone(false);
+      progressAnim.stopAnimation();
+      // Use restTimerRemaining so bar stays in sync if user adjusts time or resumes mid-timer
+      const remaining = restTimerRemaining > 0 ? restTimerRemaining : restTimerDuration;
+      const startValue = restTimerDuration > 0 ? remaining / restTimerDuration : 1;
+      progressAnim.setValue(startValue);
       Animated.timing(progressAnim, {
         toValue: 0,
-        duration: restTimerDuration * 1000,
+        duration: remaining * 1000,
         useNativeDriver: false,
       }).start();
       intervalRef.current = setInterval(() => { tickRestTimer(); }, 1000);

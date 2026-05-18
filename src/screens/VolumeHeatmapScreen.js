@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getAllWorkoutSets, getAllExercises } from '../lib/database';
+import { getCompletedWorkoutSets, getAllExercises } from '../lib/database';
 import {
   calculateWeeklyVolume, VOLUME_LANDMARKS, MUSCLE_DISPLAY_NAMES, getVolumeStatus,
 } from '../lib/algorithms';
@@ -40,7 +40,7 @@ export default function VolumeHeatmapScreen() {
     const windowStart = now - windowMs;
     const prevWindowStart = now - 2 * windowMs;
 
-    const allSets = await getAllWorkoutSets(user.id);
+    const allSets = await getCompletedWorkoutSets(user.id);
     const recentSets = allSets.filter(s => s.createdAt >= windowStart);
     const prevSets = allSets.filter(s => s.createdAt >= prevWindowStart && s.createdAt < windowStart);
 
