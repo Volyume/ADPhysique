@@ -8,6 +8,7 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { getLibraryPlans, getPlanWorkoutCounts, copyPlanFromLibrary, setActivePlan } from '../lib/database';
+import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import useAppStore from '../store/useAppStore';
 
 const FILTER_CHIPS = [
@@ -54,6 +55,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
 
   async function loadData() {
     try {
+      if (user?.id) await seedRoutinesIfNeeded(user.id);
       const [lib, pwc] = await Promise.all([getLibraryPlans(), getPlanWorkoutCounts()]);
       setPlans(lib);
       setWorkoutCounts(pwc);

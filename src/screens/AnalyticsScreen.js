@@ -483,7 +483,12 @@ function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, onPress,
       {/* Tonnage sparkline */}
       {tonnageBars.some(b => b.value > 0) && (
         <View style={styles.sparkWrap}>
-          <Text style={styles.sparkLabel}>Weekly load (total kg moved)</Text>
+          <View style={styles.sparkLabelRow}>
+            <Text style={styles.sparkLabel}>Weekly load</Text>
+            <Text style={styles.sparkValue}>
+              {(tonnageBars[tonnageBars.length - 1]?.value ?? 0).toLocaleString('en-GB')} kg
+            </Text>
+          </View>
           <BarChart
             data={tonnageBars}
             barWidth={28}
@@ -496,8 +501,6 @@ function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, onPress,
             xAxisThickness={0}
             yAxisThickness={0}
             hideYAxisText
-            showValuesAsTopLabel
-            topLabelTextStyle={{ fontSize: 8, color: colors.textMuted }}
             xAxisLabelTextStyle={styles.barAxisLabel}
             isAnimated
           />
@@ -729,7 +732,9 @@ const styles = StyleSheet.create({
   mesoProgressFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
   mesoProgressLabel: { fontSize: fontSize.xs, color: colors.textMuted },
   sparkWrap:        { marginTop: spacing.xs },
-  sparkLabel:       { fontSize: fontSize.xs, color: colors.textMuted, marginBottom: spacing.xs },
+  sparkLabelRow:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: spacing.xs },
+  sparkLabel:       { fontSize: fontSize.xs, color: colors.textMuted },
+  sparkValue:       { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
   barAxisLabel:     { fontSize: 9, color: colors.textMuted },
 
   // ── Insight rows ──

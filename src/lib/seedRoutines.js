@@ -4,8 +4,8 @@ import {
   createProgramme,
 } from './database';
 
-// Bump version key to re-seed with 18 plans on existing installs
-const SEED_KEY = '@volyume_routines_seeded_v5';
+// Bump to v6: stores tags, splitType, difficulty in DB so filter chips work
+const SEED_KEY = '@volyume_routines_seeded_v6';
 
 // Extra exercises the plan templates rely on that may not be in the base exercise seed
 const REQUIRED_EXERCISES = [
@@ -795,13 +795,11 @@ export async function seedRoutinesIfNeeded(userId) {
         userId,
         plan.name,
         plan.description,
-        1,          // is_library = 1
+        1,                         // is_library = 1
+        plan.tags || null,
+        plan.splitType || null,
+        plan.difficulty ?? null,
       );
-
-      // Store tags as part of description if database doesn't have a tags column
-      // (tags are used by PlanLibraryScreen.matchesFilter which searches description)
-      // We append tags as a hidden string in the description for filtering
-      // This is already handled since matchesFilter searches plan.description
 
       for (const workoutDef of plan.workouts) {
         const routine = await createRoutine(

@@ -354,6 +354,10 @@ const SCHEMA_MIGRATIONS = [
   [
     `ALTER TABLE workouts ADD COLUMN joint_discomfort INTEGER`,
   ],
+  // v5 — add difficulty to programmes so library filter chips work
+  [
+    'ALTER TABLE programmes ADD COLUMN difficulty INTEGER',
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
@@ -698,16 +702,16 @@ export async function softDeleteRoutine(id) {
 
 // ─── Programmes ───────────────────────────────────────────────────────────────────────────────────────
 
-export async function createProgramme(userId, name, description = null, isLibrary = 0) {
+export async function createProgramme(userId, name, description = null, isLibrary = 0, tags = null, splitType = null, difficulty = null) {
   const d = await db();
   const id = uid();
   const now = Date.now();
   await d.runAsync(
-    `INSERT INTO programmes (id, user_id, name, description, is_library, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [id, userId || null, name, description, isLibrary, now, now],
+    `INSERT INTO programmes (id, user_id, name, description, is_library, tags, split_type, difficulty, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, userId || null, name, description, isLibrary, tags, splitType, difficulty, now, now],
   );
-  return { id, userId, name, description, isLibrary, createdAt: now, updatedAt: now };
+  return { id, userId, name, description, isLibrary, tags, splitType, difficulty, createdAt: now, updatedAt: now };
 }
 
 export async function getAllProgrammes(userId) {
