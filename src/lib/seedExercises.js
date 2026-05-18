@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAllExercises, insertExercise } from './database';
 
-const SEEDED_KEY = '@volyume_exercises_seeded_v3';
+const SEEDED_KEY = '@volyume_exercises_seeded_v4';
 
 // Anatomical subregion tags — used by planEngine v2 to enforce balanced muscle coverage.
 // Muscles not listed here (e.g. biceps, forearms) do not have enforced subregion requirements.
@@ -50,7 +50,7 @@ const SUBREGION_MAP = {
   'Weighted Dips (Chest)':         'decline',
   'Push-Up':                       'flat',
 
-  // Shoulders — overhead press vs lateral raise vs face pull
+  // Delts — overhead press (front) vs lateral raise (side) vs face pull / fly (rear)
   'Barbell Overhead Press':        'overhead_press',
   'Dumbbell Shoulder Press':       'overhead_press',
   'Arnold Press':                  'overhead_press',
@@ -118,27 +118,27 @@ const SUBREGION_MAP = {
 // [name, primaryMuscle, secondaryMuscles, equipment, movementPattern, isCompound, minReps, maxReps, fatigueCost, sfr]
 const RAW = [
   // CHEST
-  ['Barbell Bench Press', 'chest', ['triceps', 'shoulders'], 'barbell', 'push', true, 4, 8, 4, 3],
-  ['Incline Barbell Bench Press', 'chest', ['triceps', 'shoulders'], 'barbell', 'push', true, 5, 10, 4, 3],
+  ['Barbell Bench Press', 'chest', ['triceps', 'front_delts'], 'barbell', 'push', true, 4, 8, 4, 3],
+  ['Incline Barbell Bench Press', 'chest', ['triceps', 'front_delts'], 'barbell', 'push', true, 5, 10, 4, 3],
   ['Decline Barbell Bench Press', 'chest', ['triceps'], 'barbell', 'push', true, 6, 10, 3, 3],
-  ['Dumbbell Bench Press', 'chest', ['triceps', 'shoulders'], 'dumbbell', 'push', true, 6, 12, 3, 4],
-  ['Incline Dumbbell Press', 'chest', ['triceps', 'shoulders'], 'dumbbell', 'push', true, 8, 15, 3, 4],
+  ['Dumbbell Bench Press', 'chest', ['triceps', 'front_delts'], 'dumbbell', 'push', true, 6, 12, 3, 4],
+  ['Incline Dumbbell Press', 'chest', ['triceps', 'front_delts'], 'dumbbell', 'push', true, 8, 15, 3, 4],
   ['Decline Dumbbell Press', 'chest', ['triceps'], 'dumbbell', 'push', true, 8, 15, 3, 4],
   ['Cable Fly (Low to High)', 'chest', [], 'cable', 'isolation', false, 12, 20, 2, 5],
   ['Cable Crossover (High to Low)', 'chest', [], 'cable', 'isolation', false, 12, 20, 2, 5],
   ['Dumbbell Fly', 'chest', [], 'dumbbell', 'isolation', false, 10, 15, 2, 4],
   ['Incline Dumbbell Fly', 'chest', [], 'dumbbell', 'isolation', false, 10, 15, 2, 4],
   ['Pec Deck (Machine Fly)', 'chest', [], 'machine', 'isolation', false, 12, 20, 2, 5],
-  ['Machine Chest Press', 'chest', ['triceps', 'shoulders'], 'machine', 'push', true, 8, 15, 3, 4],
-  ['Incline Machine Press', 'chest', ['triceps', 'shoulders'], 'machine', 'push', true, 8, 15, 3, 4],
-  ['Weighted Dips (Chest)', 'chest', ['triceps', 'shoulders'], 'bodyweight', 'push', true, 6, 15, 4, 3],
-  ['Push-Up', 'chest', ['triceps', 'shoulders'], 'bodyweight', 'push', true, 10, 20, 2, 3],
-  ['Landmine Press', 'chest', ['shoulders'], 'barbell', 'push', true, 8, 15, 3, 4],
-  ['Smith Machine Bench Press', 'chest', ['triceps', 'shoulders'], 'machine', 'push', true, 6, 12, 3, 3],
+  ['Machine Chest Press', 'chest', ['triceps', 'front_delts'], 'machine', 'push', true, 8, 15, 3, 4],
+  ['Incline Machine Press', 'chest', ['triceps', 'front_delts'], 'machine', 'push', true, 8, 15, 3, 4],
+  ['Weighted Dips (Chest)', 'chest', ['triceps', 'front_delts'], 'bodyweight', 'push', true, 6, 15, 4, 3],
+  ['Push-Up', 'chest', ['triceps', 'front_delts'], 'bodyweight', 'push', true, 10, 20, 2, 3],
+  ['Landmine Press', 'chest', ['front_delts'], 'barbell', 'push', true, 8, 15, 3, 4],
+  ['Smith Machine Bench Press', 'chest', ['triceps', 'front_delts'], 'machine', 'push', true, 6, 12, 3, 3],
   ['Cable Fly (Neutral)', 'chest', [], 'cable', 'isolation', false, 12, 20, 2, 5],
 
   // BACK
-  ['Barbell Row (Bent Over)', 'back', ['biceps', 'shoulders'], 'barbell', 'pull', true, 5, 10, 4, 3],
+  ['Barbell Row (Bent Over)', 'back', ['biceps', 'rear_delts'], 'barbell', 'pull', true, 5, 10, 4, 3],
   ['Dumbbell Row', 'back', ['biceps'], 'dumbbell', 'pull', true, 8, 15, 3, 4],
   ['T-Bar Row', 'back', ['biceps'], 'barbell', 'pull', true, 6, 12, 4, 3],
   ['Seated Cable Row', 'back', ['biceps'], 'cable', 'pull', true, 10, 15, 3, 4],
@@ -161,23 +161,23 @@ const RAW = [
   ['Cable Lat Pullover', 'back', [], 'cable', 'pull', false, 12, 20, 2, 5],
   ['Single-Arm Lat Pulldown', 'back', ['biceps'], 'cable', 'pull', true, 10, 15, 3, 4],
 
-  // SHOULDERS
-  ['Barbell Overhead Press', 'shoulders', ['triceps'], 'barbell', 'push', true, 5, 10, 4, 3],
-  ['Dumbbell Shoulder Press', 'shoulders', ['triceps'], 'dumbbell', 'push', true, 8, 15, 3, 4],
-  ['Arnold Press', 'shoulders', ['triceps'], 'dumbbell', 'push', true, 8, 12, 3, 4],
-  ['Machine Shoulder Press', 'shoulders', ['triceps'], 'machine', 'push', true, 8, 15, 3, 4],
-  ['Dumbbell Lateral Raise', 'shoulders', [], 'dumbbell', 'isolation', false, 15, 25, 2, 5],
-  ['Cable Lateral Raise', 'shoulders', [], 'cable', 'isolation', false, 15, 25, 2, 5],
-  ['Machine Lateral Raise', 'shoulders', [], 'machine', 'isolation', false, 15, 25, 2, 5],
-  ['Dumbbell Rear Delt Fly', 'shoulders', ['back'], 'dumbbell', 'isolation', false, 15, 25, 2, 5],
-  ['Cable Rear Delt Fly', 'shoulders', ['back'], 'cable', 'isolation', false, 15, 25, 2, 5],
-  ['Reverse Pec Deck', 'shoulders', ['back'], 'machine', 'isolation', false, 15, 25, 2, 5],
-  ['Upright Row', 'shoulders', ['biceps', 'traps'], 'barbell', 'pull', false, 10, 15, 3, 3],
-  ['Dumbbell Front Raise', 'shoulders', [], 'dumbbell', 'isolation', false, 12, 20, 2, 3],
-  ['Cable Front Raise', 'shoulders', [], 'cable', 'isolation', false, 12, 20, 2, 3],
-  ['Cable Y-Raise (Prone)', 'shoulders', ['back'], 'cable', 'pull', false, 12, 20, 2, 5],
-  ['Face Pull', 'shoulders', ['back', 'traps'], 'cable', 'pull', false, 15, 25, 2, 5],
-  ['Dumbbell Side-Lying Rear Delt', 'shoulders', [], 'dumbbell', 'isolation', false, 15, 25, 1, 5],
+  // SHOULDERS (split by delt head)
+  ['Barbell Overhead Press', 'front_delts', ['triceps', 'side_delts'], 'barbell', 'push', true, 5, 10, 4, 3],
+  ['Dumbbell Shoulder Press', 'front_delts', ['triceps', 'side_delts'], 'dumbbell', 'push', true, 8, 15, 3, 4],
+  ['Arnold Press', 'front_delts', ['triceps', 'side_delts'], 'dumbbell', 'push', true, 8, 12, 3, 4],
+  ['Machine Shoulder Press', 'side_delts', ['triceps', 'front_delts'], 'machine', 'push', true, 8, 15, 3, 4],
+  ['Dumbbell Lateral Raise', 'side_delts', [], 'dumbbell', 'isolation', false, 15, 25, 2, 5],
+  ['Cable Lateral Raise', 'side_delts', [], 'cable', 'isolation', false, 15, 25, 2, 5],
+  ['Machine Lateral Raise', 'side_delts', [], 'machine', 'isolation', false, 15, 25, 2, 5],
+  ['Dumbbell Rear Delt Fly', 'rear_delts', ['back'], 'dumbbell', 'isolation', false, 15, 25, 2, 5],
+  ['Cable Rear Delt Fly', 'rear_delts', ['back'], 'cable', 'isolation', false, 15, 25, 2, 5],
+  ['Reverse Pec Deck', 'rear_delts', ['back'], 'machine', 'isolation', false, 15, 25, 2, 5],
+  ['Upright Row', 'side_delts', ['biceps', 'traps'], 'barbell', 'pull', false, 10, 15, 3, 3],
+  ['Dumbbell Front Raise', 'front_delts', [], 'dumbbell', 'isolation', false, 12, 20, 2, 3],
+  ['Cable Front Raise', 'front_delts', [], 'cable', 'isolation', false, 12, 20, 2, 3],
+  ['Cable Y-Raise (Prone)', 'rear_delts', ['back'], 'cable', 'pull', false, 12, 20, 2, 5],
+  ['Face Pull', 'rear_delts', ['back', 'traps'], 'cable', 'pull', false, 15, 25, 2, 5],
+  ['Dumbbell Side-Lying Rear Delt', 'rear_delts', [], 'dumbbell', 'isolation', false, 15, 25, 1, 5],
 
   // BICEPS
   ['Barbell Curl', 'biceps', [], 'barbell', 'isolation', false, 8, 12, 2, 4],
@@ -194,13 +194,13 @@ const RAW = [
   ['Spider Curl', 'biceps', [], 'barbell', 'isolation', false, 8, 12, 2, 5],
 
   // TRICEPS
-  ['Close-Grip Bench Press', 'triceps', ['chest', 'shoulders'], 'barbell', 'push', true, 6, 12, 3, 3],
+  ['Close-Grip Bench Press', 'triceps', ['chest', 'front_delts'], 'barbell', 'push', true, 6, 12, 3, 3],
   ['EZ Bar Skull Crusher', 'triceps', [], 'barbell', 'isolation', false, 8, 15, 2, 4],
   ['Cable Pushdown (Straight Bar)', 'triceps', [], 'cable', 'isolation', false, 10, 20, 2, 4],
   ['Rope Pushdown', 'triceps', [], 'cable', 'isolation', false, 12, 20, 2, 4],
   ['Overhead Cable Tricep Extension', 'triceps', [], 'cable', 'isolation', false, 12, 20, 2, 5],
   ['Overhead Dumbbell Extension', 'triceps', [], 'dumbbell', 'isolation', false, 10, 15, 2, 4],
-  ['Weighted Dips (Triceps)', 'triceps', ['chest', 'shoulders'], 'bodyweight', 'push', true, 8, 15, 4, 3],
+  ['Weighted Dips (Triceps)', 'triceps', ['chest', 'front_delts'], 'bodyweight', 'push', true, 8, 15, 4, 3],
   ['Machine Tricep Extension', 'triceps', [], 'machine', 'isolation', false, 12, 20, 2, 4],
   ['JM Press', 'triceps', ['chest'], 'barbell', 'push', true, 8, 12, 3, 4],
   ['Tricep Kickback', 'triceps', [], 'dumbbell', 'isolation', false, 12, 20, 2, 3],
@@ -301,17 +301,17 @@ const RAW = [
   ['Chest-Supported Row (Dumbbell)', 'back', ['biceps'], 'dumbbell', 'pull', true, 8, 15, 3, 5],
   ['Landmine Row', 'back', ['biceps'], 'barbell', 'pull', true, 8, 15, 3, 4],
   ['Seated Machine Row (Wide)', 'back', ['biceps'], 'machine', 'pull', true, 10, 15, 3, 4],
-  ['Face Pull (Rope)', 'back', ['shoulders', 'traps'], 'cable', 'pull', false, 15, 25, 2, 5],
+  ['Face Pull (Rope)', 'back', ['rear_delts', 'traps'], 'cable', 'pull', false, 15, 25, 2, 5],
 
   // CHEST (additional)
   ['Svend Press', 'chest', [], 'barbell', 'isolation', false, 15, 25, 2, 4],
   ['Cable Fly (Chest Height)', 'chest', [], 'cable', 'isolation', false, 12, 20, 2, 5],
   ['Dumbbell Pullover', 'chest', ['back'], 'dumbbell', 'isolation', false, 10, 15, 2, 4],
 
-  // SHOULDERS (additional)
-  ['Seated Dumbbell Press', 'shoulders', ['triceps'], 'dumbbell', 'push', true, 8, 15, 3, 4],
-  ['Leaning Lateral Raise', 'shoulders', [], 'dumbbell', 'isolation', false, 15, 25, 2, 5],
-  ['Lying Rear Delt Row', 'shoulders', ['back'], 'dumbbell', 'pull', false, 15, 25, 2, 5],
+  // SHOULDERS additional (split by delt head)
+  ['Seated Dumbbell Press', 'front_delts', ['triceps', 'side_delts'], 'dumbbell', 'push', true, 8, 15, 3, 4],
+  ['Leaning Lateral Raise', 'side_delts', [], 'dumbbell', 'isolation', false, 15, 25, 2, 5],
+  ['Lying Rear Delt Row', 'rear_delts', ['back'], 'dumbbell', 'pull', false, 15, 25, 2, 5],
 
   // BICEPS (additional)
   ['Cable Hammer Curl (Rope)', 'biceps', ['forearms'], 'cable', 'isolation', false, 10, 15, 2, 4],
@@ -319,7 +319,7 @@ const RAW = [
 
   // TRICEPS (additional)
   ['Decline Skull Crusher', 'triceps', [], 'barbell', 'isolation', false, 8, 15, 2, 4],
-  ['Bench Dip', 'triceps', ['chest', 'shoulders'], 'bodyweight', 'push', true, 10, 20, 2, 3],
+  ['Bench Dip', 'triceps', ['chest', 'front_delts'], 'bodyweight', 'push', true, 10, 20, 2, 3],
 
   // QUADS (additional)
   ['Sissy Squat', 'quads', [], 'bodyweight', 'isolation', false, 10, 20, 3, 4],

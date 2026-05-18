@@ -1,24 +1,28 @@
 // All 10 hypertrophy algorithms — pure functions, no side effects
 
 export const VOLUME_LANDMARKS = {
-  chest:      { mev: 6,  mav: 14, mrv: 22 },
-  back:       { mev: 10, mav: 18, mrv: 25 },
-  shoulders:  { mev: 8,  mav: 18, mrv: 26 },
-  biceps:     { mev: 8,  mav: 16, mrv: 26 },
-  triceps:    { mev: 6,  mav: 12, mrv: 18 },
-  forearms:   { mev: 8,  mav: 14, mrv: 20 },
-  quads:      { mev: 8,  mav: 14, mrv: 20 },
-  hamstrings: { mev: 6,  mav: 12, mrv: 20 },
-  glutes:     { mev: 0,  mav: 8,  mrv: 16 },
-  calves:     { mev: 8,  mav: 14, mrv: 20 },
-  abs:        { mev: 0,  mav: 18, mrv: 25 },
-  traps:      { mev: 6,  mav: 12, mrv: 20 },
+  chest:       { mev: 6,  mav: 14, mrv: 22 },
+  back:        { mev: 10, mav: 18, mrv: 25 },
+  front_delts: { mev: 0,  mav: 6,  mrv: 12 },
+  side_delts:  { mev: 8,  mav: 16, mrv: 26 },
+  rear_delts:  { mev: 4,  mav: 16, mrv: 22 },
+  biceps:      { mev: 8,  mav: 16, mrv: 26 },
+  triceps:     { mev: 6,  mav: 12, mrv: 18 },
+  forearms:    { mev: 8,  mav: 14, mrv: 20 },
+  quads:       { mev: 8,  mav: 14, mrv: 20 },
+  hamstrings:  { mev: 6,  mav: 12, mrv: 20 },
+  glutes:      { mev: 0,  mav: 8,  mrv: 16 },
+  calves:      { mev: 8,  mav: 14, mrv: 20 },
+  abs:         { mev: 0,  mav: 18, mrv: 25 },
+  traps:       { mev: 6,  mav: 12, mrv: 20 },
 };
 
 export const MUSCLE_DISPLAY_NAMES = {
   chest: 'Chest',
   back: 'Back',
-  shoulders: 'Shoulders',
+  front_delts: 'Front delts',
+  side_delts: 'Side delts',
+  rear_delts: 'Rear delts',
   biceps: 'Biceps',
   triceps: 'Triceps',
   forearms: 'Forearms',
@@ -69,7 +73,10 @@ export function calculateWeeklyVolume(sets, exerciseMap = {}) {
     const exercise = exerciseMap[exerciseId];
     if (!exercise) continue;
 
-    const primaryMuscle = (exercise.primaryMuscle || exercise.primary_muscle || '').toLowerCase();
+    let primaryMuscle = (exercise.primaryMuscle || exercise.primary_muscle || '').toLowerCase();
+    // Legacy normalisation: old 'shoulders' data maps to side_delts (largest delt head)
+    if (primaryMuscle === 'shoulders') primaryMuscle = 'side_delts';
+
     const secondaryMuscles = exercise.secondaryMuscles ||
       (exercise.secondary_muscles ? JSON.parse(exercise.secondary_muscles) : []);
 
@@ -84,7 +91,9 @@ export function calculateWeeklyVolume(sets, exerciseMap = {}) {
     }
 
     for (const sec of secondaryMuscles) {
-      const muscle = (sec.muscle || sec).toLowerCase();
+      let muscle = (sec.muscle || sec).toLowerCase();
+      // Legacy normalisation for secondary muscles
+      if (muscle === 'shoulders') muscle = 'front_delts';
       const contribution = sec.contribution || 0.5;
       if (!volumeByMuscle[muscle]) {
         volumeByMuscle[muscle] = { workingSets: 0, reps: 0, tonnage: 0 };

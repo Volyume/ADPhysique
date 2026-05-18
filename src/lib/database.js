@@ -254,6 +254,31 @@ async function _doInit() {
     try { await _db.execAsync(sql); } catch (_) {}
   }
 
+  // One-time migration: remap exercises.primary_muscle from 'shoulders' to the correct delt head
+  // based on exercise name patterns. Idempotent — no-ops once rows are updated.
+  const deltMigrations = [
+    `UPDATE exercises SET primary_muscle = 'front_delts'
+     WHERE primary_muscle = 'shoulders'
+     AND (name LIKE '%Overhead Press%' OR name LIKE '%Military Press%'
+       OR name LIKE '%Front Raise%' OR name LIKE '%Arnold%'
+       OR name LIKE '%Seated Dumbbell Press%')`,
+    `UPDATE exercises SET primary_muscle = 'side_delts'
+     WHERE primary_muscle = 'shoulders'
+     AND (name LIKE '%Lateral%' OR name LIKE '%Upright Row%'
+       OR name LIKE '%Machine Shoulder Press%' OR name LIKE '%Shoulder Press%')`,
+    `UPDATE exercises SET primary_muscle = 'rear_delts'
+     WHERE primary_muscle = 'shoulders'
+     AND (name LIKE '%Rear Delt%' OR name LIKE '%Face Pull%'
+       OR name LIKE '%Y-Raise%' OR name LIKE '%Pec Deck%'
+       OR name LIKE '%Rear%')`,
+    // Catch-all: any remaining 'shoulders' exercises map to side_delts
+    `UPDATE exercises SET primary_muscle = 'side_delts'
+     WHERE primary_muscle = 'shoulders'`,
+  ];
+  for (const sql of deltMigrations) {
+    try { await _db.execAsync(sql); } catch (_) {}
+  }
+
   return _db;
 }
 
