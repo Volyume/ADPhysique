@@ -245,7 +245,9 @@ function computePlanVolume(days) {
 function muscleStatus(muscle, totalSets) {
   const lm = VOLUME_LANDMARKS[muscle];
   if (!lm) return null;
-  if (totalSets === 0)      return 'none';
+  // Muscles with a 0 minimum (e.g. glutes) grow from compound work alone —
+  // zero direct sets is acceptable, so don't flag them as missing.
+  if (totalSets === 0)      return lm.mev === 0 ? 'good' : 'none';
   if (totalSets < lm.mev)   return 'low';
   if (totalSets <= lm.mav)  return 'good';
   if (totalSets <= lm.mrv)  return 'high';
