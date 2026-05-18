@@ -56,9 +56,13 @@ class ErrorBoundary extends React.Component {
         <View style={eb.container}>
           <Text style={eb.title}>Volyume — Crash Report</Text>
           <Text style={eb.subtitle}>Send this to support:</Text>
+          <View style={eb.msgBox}>
+            <Text selectable style={eb.msg}>
+              {this.state.error?.message || String(this.state.error)}
+            </Text>
+          </View>
           <ScrollView style={eb.scroll}>
-            <Text style={eb.msg}>{this.state.error?.message}</Text>
-            <Text style={eb.stack}>{this.state.error?.stack}</Text>
+            <Text selectable style={eb.stack}>{this.state.error?.stack}</Text>
           </ScrollView>
           <TouchableOpacity style={eb.btn} onPress={() => this.setState({ error: null })}>
             <Text style={eb.btnText}>Retry</Text>
@@ -75,7 +79,8 @@ const eb = StyleSheet.create({
   title: { color: '#FF3B30', fontSize: 18, fontWeight: 'bold', marginBottom: 8 },
   subtitle: { color: '#aaa', fontSize: 14, marginBottom: 12 },
   scroll: { flex: 1, backgroundColor: '#1a1a1a', borderRadius: 8, padding: 12 },
-  msg: { color: '#FF3B30', fontSize: 14, fontWeight: 'bold', marginBottom: 8 },
+  msgBox: { backgroundColor: '#2a1212', borderRadius: 8, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#FF3B30' },
+  msg: { color: '#FF6B60', fontSize: 14, fontWeight: 'bold' },
   stack: { color: '#ccc', fontSize: 11, fontFamily: 'monospace' },
   btn: { marginTop: 16, backgroundColor: '#2979FF', borderRadius: 8, padding: 14, alignItems: 'center' },
   btnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },

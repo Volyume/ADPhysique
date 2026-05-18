@@ -13,18 +13,10 @@
 
 import { addDays, format } from 'date-fns';
 
-// UK federations — listed most-to-least common on the amateur circuit.
-// Federation only informs posing emphasis; it does not alter macro numbers.
+// UK federations. Federation only informs posing emphasis; it does not
+// alter water/sodium/carb numbers.
 export const FEDERATIONS = [
-  'UKBFF',   // UK Bodybuilding & Fitness Federation (IFBB Pro qualifier)
-  'NABBA',   // National Amateur Bodybuilders' Association (oldest UK fed, est. 1950)
-  'PCA',     // Physical Culture Association
-  'BNBF',    // British Natural Bodybuilding Federation (drug-tested)
-  'ANB',     // Amateur National Bodybuilding
-  'NPA',     // Natural Physique Association (tested)
-  'WFF',     // World Fitness Federation UK
-  'WABBA',   // World Amateur Bodybuilding Association UK
-  'IFBB Pro', // IFBB Professional League
+  'BPA', '2BROS', 'FitX', 'FMX', 'IBFA', 'NABBA', 'NPC', 'PCA', 'UKBFF',
 ];
 
 export const PEAK_WEEK_DISCLAIMER =
