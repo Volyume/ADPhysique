@@ -100,6 +100,7 @@ function ProfileStack() {
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
       <Stack.Screen name="NutritionTargets" component={NutritionTargetsScreen} options={{ title: 'Nutrition Targets' }} />
       <Stack.Screen name="BodyMetrics" component={BodyMetricsScreen} options={{ title: 'Body Metrics' }} />
+      <Stack.Screen name="PRWall" component={PRWallScreen} options={{ title: 'Personal Records' }} />
       <Stack.Screen name="MesocycleBuilder" component={MesocycleBuilderScreen} options={{ title: 'Training Blocks' }} />
       <Stack.Screen name="PeakWeek" component={PeakWeekScreen} options={{ title: 'Peak Week' }} />
     </Stack.Navigator>
@@ -153,6 +154,8 @@ function FirstRunStack() {
     <Stack.Navigator screenOptions={{ ...stackOptions, headerShown: false }}>
       <Stack.Screen name="FirstRunBranch" component={FirstRunScreen} />
       <Stack.Screen name="CoachBuilder" component={CoachBuilderScreen} />
+      <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ headerShown: true, title: 'Plan Library' }} />
+      <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ headerShown: true, title: 'Plan' }} />
     </Stack.Navigator>
   );
 }

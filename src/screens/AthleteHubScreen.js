@@ -317,7 +317,7 @@ export default function AthleteHubScreen({ navigation }) {
             sub="Last 4 weeks as a PDF — volume, PRs, bodyweight"
             onPress={handleCoachExport}
           />
-          <NavRow icon="trophy" label="Personal Records" sub="All-time bests" onPress={() => navigation.navigate('BodyMetrics')} />
+          <NavRow icon="trophy" label="Personal Records" sub="All-time bests" onPress={() => navigation.navigate('PRWall')} />
           <NavRow icon="settings-outline" label="Settings" sub="Units, data export, preferences" onPress={() => navigation.navigate('Settings')} />
         </View>
 

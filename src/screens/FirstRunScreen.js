@@ -189,6 +189,23 @@ export default function FirstRunScreen({ navigation }) {
 
         <TouchableOpacity
           style={styles.pathCard}
+          onPress={() => navigation.navigate('PlanLibrary', { fromFirstRun: true })}
+          activeOpacity={0.85}
+        >
+          <View style={styles.pathIconWrap}>
+            <Ionicons name="library-outline" size={22} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.pathTitle}>Browse plan library</Text>
+            <Text style={styles.pathText}>
+              Pick from curated splits — Beginner, Push/Pull/Legs, Upper/Lower and more.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.pathCard}
           onPress={() => setMode('quick')}
           activeOpacity={0.85}
         >

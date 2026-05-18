@@ -15,7 +15,7 @@ import { BrandTag } from '../components/BrandMark';
 import useAppStore from '../store/useAppStore';
 import {
   getCompletedWorkoutSets, getAllWorkouts, getAllExercises, getAllMesocycles,
-  getActiveInsights, dismissInsight, runInsightsEngine,
+  getActiveInsights, dismissInsight, runInsightsEngine, getActivePlan,
 } from '../lib/database';
 import {
   calculateWeeklyVolume, VOLUME_LANDMARKS, MUSCLE_DISPLAY_NAMES,
@@ -135,7 +135,11 @@ export default function AnalyticsScreen({ navigation }) {
   async function loadMesocycle(workouts, sets, exMap) {
     try {
       const mesoRows = await getAllMesocycles(user.id);
-      const active = mesoRows.find(m => m.isActive === 1 || m.isActive === true) ?? mesoRows[0] ?? null;
+      let active = mesoRows.find(m => m.isActive === 1 || m.isActive === true) ?? null;
+      if (!active) {
+        const plan = await getActivePlan(user.id);
+        if (plan) active = { ...plan, _isPlan: true };
+      }
       setActiveMeso(active);
 
       // Build weekly tonnage sparkline: last 4 weeks
@@ -327,7 +331,9 @@ export default function AnalyticsScreen({ navigation }) {
           currentWeek={mesoCurrentWeek()}
           progress={mesoProgress()}
           tonnageBars={mesoTonnage}
-          onPress={() => navigation.navigate('MesocycleBuilder')}
+          onPress={() => activeMeso?._isPlan
+            ? navigation.getParent()?.navigate('PlansTab')
+            : navigation.navigate('MesocycleBuilder')}
           onBuild={() => navigation.navigate('CoachBuilder')}
         />
 
@@ -435,24 +441,32 @@ function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, onPress,
     );
   }
 
+  const isPlan = meso._isPlan;
+
   return (
     <TouchableOpacity style={[styles.card, styles.mesoCard]} onPress={onPress} activeOpacity={0.85}>
       <View style={styles.mesoTop}>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text style={styles.mesoName} numberOfLines={1}>{meso.name ?? 'Training Block'}</Text>
           <Text style={styles.mesoWeek}>
-            Week {currentWeek}{meso.durationWeeks ? ` of ${meso.durationWeeks}` : ''}
-            {meso.focus ? `  ·  ${meso.focus}` : ''}
+            {isPlan
+              ? (meso.splitType ? meso.splitType : 'Active plan')
+              : `Week ${currentWeek}${meso.durationWeeks ? ` of ${meso.durationWeeks}` : ''}${meso.focus ? `  ·  ${meso.focus}` : ''}`
+            }
           </Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
       </View>
 
-      {/* Progress bar */}
-      <View style={styles.mesoProgressTrack}>
-        <View style={[styles.mesoProgressFill, { width: progWidth }]} />
-      </View>
-      <Text style={styles.mesoProgressLabel}>{Math.round(progress * 100)}% complete</Text>
+      {/* Progress bar — only for mesocycles with a known duration */}
+      {!isPlan && meso.durationWeeks > 0 && (
+        <>
+          <View style={styles.mesoProgressTrack}>
+            <View style={[styles.mesoProgressFill, { width: progWidth }]} />
+          </View>
+          <Text style={styles.mesoProgressLabel}>{Math.round(progress * 100)}% complete</Text>
+        </>
+      )}
 
       {/* Tonnage sparkline */}
       {tonnageBars.some(b => b.value > 0) && (

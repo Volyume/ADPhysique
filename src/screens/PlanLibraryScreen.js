@@ -39,8 +39,9 @@ function matchesFilter(plan, key) {
 
 const DIFFICULTY_LABELS = ['Beginner', 'Intermediate', 'Advanced'];
 
-export default function PlanLibraryScreen({ navigation }) {
-  const { user } = useAppStore();
+export default function PlanLibraryScreen({ navigation, route }) {
+  const { user, completeFirstRun } = useAppStore();
+  const fromFirstRun = route?.params?.fromFirstRun ?? false;
   const [plans, setPlans] = useState([]);
   const [workoutCounts, setWorkoutCounts] = useState({});
   const [query, setQuery] = useState('');
@@ -78,12 +79,21 @@ export default function PlanLibraryScreen({ navigation }) {
               const copy = await copyPlanFromLibrary(plan.id, user.id);
               Alert.alert(
                 'Added to My Plans',
-                'Set this as your Active Plan now?',
+                fromFirstRun
+                  ? `"${plan.name}" added. Set it as your active plan and start logging?`
+                  : 'Set this as your Active Plan now?',
                 [
-                  { text: 'Not Now', style: 'cancel' },
                   {
-                    text: 'Set Active',
-                    onPress: async () => { await setActivePlan(user.id, copy.id); },
+                    text: fromFirstRun ? 'Not Now' : 'Not Now',
+                    style: 'cancel',
+                    onPress: fromFirstRun ? () => completeFirstRun() : undefined,
+                  },
+                  {
+                    text: fromFirstRun ? 'Start Training' : 'Set Active',
+                    onPress: async () => {
+                      await setActivePlan(user.id, copy.id);
+                      if (fromFirstRun) await completeFirstRun();
+                    },
                   },
                 ],
               );
@@ -219,7 +229,7 @@ const styles = StyleSheet.create({
     flex: 1, paddingVertical: spacing.md,
     fontSize: fontSize.md, color: colors.textPrimary,
   },
-  chipsList: { maxHeight: 44 },
+  chipsList: { maxHeight: 52 },
   chipsContent: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, gap: spacing.sm },
   chip: {
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
