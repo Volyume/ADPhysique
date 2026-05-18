@@ -780,4 +780,14 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontWeight: fontWeight.semibold,
   },
+  deloadCard: {
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.warning,
+    padding: spacing.lg, gap: spacing.sm, marginBottom: spacing.lg,
+  },
+  deloadCardWarning: { borderColor: colors.border },
+  deloadCardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  deloadCardTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.warning, letterSpacing: 0.5 },
+  deloadCardBody: { fontSize: fontSize.sm, color: colors.textPrimary, lineHeight: 20 },
+  deloadCardNote: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18 },
 });
