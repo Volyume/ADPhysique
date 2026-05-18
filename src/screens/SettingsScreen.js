@@ -34,10 +34,39 @@ function SectionHeader({ title }) {
   return <Text style={styles.sectionHeader}>{title}</Text>;
 }
 
+const PHYSIQUE_PREF_KEY = '@volyume_physique_tracking_enabled';
+
 export default function SettingsScreen({ navigation }) {
   const { user, setUser, setSession, units, setUnits, barWeight, setBarWeight } =
     useAppStore();
   const [notifications, setNotifications] = useState(true);
+  const [physiqueEnabled, setPhysiqueEnabled] = useState(false);
+
+  React.useEffect(() => {
+    AsyncStorage.getItem(PHYSIQUE_PREF_KEY).then(v => setPhysiqueEnabled(v === 'true'));
+  }, []);
+
+  async function togglePhysique(value) {
+    if (value) {
+      Alert.alert(
+        'Enable Physique Tracking',
+        'This feature stores your body weight and measurements on this device. Your data never leaves your phone.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Enable',
+            onPress: async () => {
+              await AsyncStorage.setItem(PHYSIQUE_PREF_KEY, 'true');
+              setPhysiqueEnabled(true);
+            },
+          },
+        ],
+      );
+    } else {
+      await AsyncStorage.setItem(PHYSIQUE_PREF_KEY, 'false');
+      setPhysiqueEnabled(false);
+    }
+  }
 
   async function handleSignOut() {
     Alert.alert('Sign out?', 'You will need to sign in again.', [
@@ -155,6 +184,19 @@ export default function SettingsScreen({ navigation }) {
                 { text: '20 kg', onPress: () => setBarWeight(20) },
                 { text: 'Cancel', style: 'cancel' },
               ])
+            }
+          />
+          <SettingRow
+            icon="body-outline"
+            label="Physique tracking"
+            showArrow={false}
+            rightElement={
+              <Switch
+                value={physiqueEnabled}
+                onValueChange={togglePhysique}
+                trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                thumbColor={physiqueEnabled ? colors.primary : colors.textMuted}
+              />
             }
           />
           <SettingRow

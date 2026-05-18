@@ -1,14 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
+import { useFocusEffect } from '@react-navigation/native';
+import { LineChart } from 'react-native-gifted-charts';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logBodyMetric, getBodyMetricLog } from '../lib/database';
 import useAppStore from '../store/useAppStore';
+
+const PHYSIQUE_PREF_KEY = '@volyume_physique_tracking_enabled';
 
 // form key  →  logBodyMetric() data field
 const FIELD_MAP = {
@@ -24,7 +28,6 @@ const FIELD_MAP = {
   calves:      'calfCm',
 };
 
-// SQLite row (camelCase) → UI entry shape used by the rest of this screen
 function rowToEntry(row) {
   return {
     id: row.id,
@@ -57,12 +60,136 @@ const MEASUREMENTS = [
 ];
 
 const NUTRITION_KEY = '@volyume_nutrition_targets';
+const SCREEN_W = Dimensions.get('window').width;
+
+// ─── Phase detection ──────────────────────────────────────────────────────────
+
+function detectPhase(entries) {
+  const withWeight = entries.filter(e => e.body_weight != null);
+  if (withWeight.length < 3) return null;
+
+  // Use most recent 8 entries (sorted oldest first)
+  const sorted = [...withWeight]
+    .sort((a, b) => a.metric_date.localeCompare(b.metric_date))
+    .slice(-8);
+
+  const n = sorted.length;
+  const xMean = (n - 1) / 2;
+  const yMean = sorted.reduce((s, e) => s + e.body_weight, 0) / n;
+
+  let num = 0, den = 0;
+  sorted.forEach((e, i) => {
+    num += (i - xMean) * (e.body_weight - yMean);
+    den += (i - xMean) ** 2;
+  });
+  const slope = den === 0 ? 0 : num / den; // kg per entry
+
+  if (slope > 0.15)       return { label: 'Gaining',     color: colors.success,  icon: 'trending-up' };
+  if (slope < -0.15)      return { label: 'Cutting',      color: colors.warning,  icon: 'trending-down' };
+  return { label: 'Maintaining', color: colors.primary, icon: 'remove-outline' };
+}
+
+// ─── Weight Trend Chart ───────────────────────────────────────────────────────
+
+function WeightTrendChart({ entries, units }) {
+  const withWeight = useMemo(() => {
+    const sorted = entries
+      .filter(e => e.body_weight != null)
+      .sort((a, b) => a.metric_date.localeCompare(b.metric_date))
+      .slice(-12);
+    return sorted;
+  }, [entries]);
+
+  if (withWeight.length < 2) {
+    return (
+      <View style={chartStyles.emptyHint}>
+        <Text style={chartStyles.emptyHintText}>
+          Log weight at least twice to see your trend chart.
+        </Text>
+      </View>
+    );
+  }
+
+  const weights = withWeight.map(e => e.body_weight);
+  const minW = Math.floor(Math.min(...weights) - 1);
+  const maxW = Math.ceil(Math.max(...weights) + 1);
+
+  const data = withWeight.map((e, i) => ({
+    value: e.body_weight,
+    label: i === 0 || i === withWeight.length - 1
+      ? format(parseISO(e.metric_date), 'MMM d')
+      : '',
+  }));
+
+  const chartWidth = SCREEN_W - spacing.lg * 2 - 32;
+
+  return (
+    <View style={chartStyles.wrap}>
+      <LineChart
+        data={data}
+        width={chartWidth}
+        height={120}
+        color={colors.primary}
+        thickness={2}
+        startFillColor={colors.primary + '30'}
+        endFillColor={colors.primary + '05'}
+        areaChart
+        curved
+        hideDataPoints={withWeight.length > 6}
+        dataPointsColor={colors.primary}
+        dataPointsRadius={3}
+        yAxisLabelSuffix={` ${units}`}
+        yAxisTextStyle={chartStyles.axisText}
+        xAxisLabelTextStyle={chartStyles.axisText}
+        noOfSections={3}
+        minValue={minW}
+        maxValue={maxW}
+        backgroundColor={colors.surface}
+        xAxisColor={colors.border}
+        yAxisColor={colors.border}
+        rulesColor={colors.border}
+        rulesType="dashed"
+        showVerticalLines={false}
+      />
+    </View>
+  );
+}
+
+const chartStyles = StyleSheet.create({
+  wrap: { marginTop: spacing.sm, marginHorizontal: -spacing.xs },
+  emptyHint: { paddingTop: spacing.md },
+  emptyHintText: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
+  axisText: { color: colors.textMuted, fontSize: 10 },
+});
+
+// ─── Opt-in gate ─────────────────────────────────────────────────────────────
+
+function PhysiqueOptIn({ onEnable }) {
+  return (
+    <View style={styles.optInCard}>
+      <Ionicons name="lock-closed-outline" size={36} color={colors.textMuted} />
+      <Text style={styles.optInTitle}>Physique Tracking</Text>
+      <Text style={styles.optInBody}>
+        Track your body weight and measurements over time. All data stays on your
+        device — it is never shared or uploaded.
+      </Text>
+      <TouchableOpacity style={styles.optInBtn} onPress={onEnable}>
+        <Ionicons name="body-outline" size={18} color={colors.background} />
+        <Text style={styles.optInBtnText}>Enable Physique Tracking</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function BodyMetricsScreen({ navigation }) {
   const { user, units } = useAppStore();
+  const [physiqueEnabled, setPhysiqueEnabled] = useState(null); // null = loading
   const [history, setHistory] = useState([]);
   const [nutritionTargets, setNutritionTargets] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [showMeasurements, setShowMeasurements] = useState(false);
   const [form, setForm] = useState({
     body_weight: '', chest: '', shoulders: '', arms: '', forearms: '',
     waist: '', hips: '', quads: '', hamstrings: '', calves: '',
@@ -73,21 +200,26 @@ export default function BodyMetricsScreen({ navigation }) {
   const STORAGE_KEY = `@volyume_body_metrics_${user?.id}`;
   const MIGRATED_KEY = `@volyume_body_metrics_migrated_${user?.id}`;
 
+  useFocusEffect(
+    useCallback(() => {
+      AsyncStorage.getItem(PHYSIQUE_PREF_KEY).then(v => setPhysiqueEnabled(v === 'true'));
+    }, []),
+  );
+
   useEffect(() => {
+    if (!physiqueEnabled) return;
     (async () => {
       await migrateFromAsyncStorage();
       await loadHistory();
       await loadNutritionTargets();
     })();
-  }, [user?.id]);
+  }, [physiqueEnabled, user?.id]);
 
-  // One-time, idempotent migration of legacy AsyncStorage body metrics into SQLite.
   async function migrateFromAsyncStorage() {
     if (!user?.id) return;
     try {
       const done = await AsyncStorage.getItem(MIGRATED_KEY);
       if (done === 'true') return;
-
       const raw = await AsyncStorage.getItem(STORAGE_KEY);
       const legacy = raw ? JSON.parse(raw) : [];
       for (const entry of legacy) {
@@ -102,16 +234,14 @@ export default function BodyMetricsScreen({ navigation }) {
         await logBodyMetric(user.id, data);
       }
       await AsyncStorage.setItem(MIGRATED_KEY, 'true');
-    } catch (_e) {
-      // Migration is best-effort; never block the screen.
-    }
+    } catch (_e) {}
   }
 
   async function loadHistory() {
     if (!user?.id) return;
     try {
       const rows = await getBodyMetricLog(user.id, 50);
-      setHistory(rows.map(rowToEntry).slice(0, 20));
+      setHistory(rows.map(rowToEntry));
     } catch (_e) { setHistory([]); }
   }
 
@@ -120,6 +250,11 @@ export default function BodyMetricsScreen({ navigation }) {
       const raw = await AsyncStorage.getItem(NUTRITION_KEY);
       setNutritionTargets(raw ? JSON.parse(raw) : null);
     } catch (_e) { setNutritionTargets(null); }
+  }
+
+  async function enablePhysique() {
+    await AsyncStorage.setItem(PHYSIQUE_PREF_KEY, 'true');
+    setPhysiqueEnabled(true);
   }
 
   async function saveMetrics() {
@@ -151,8 +286,23 @@ export default function BodyMetricsScreen({ navigation }) {
     }
   }
 
+  // Loading state
+  if (physiqueEnabled === null) return null;
+
+  // Opt-in gate
+  if (!physiqueEnabled) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['bottom']}>
+        <ScrollView contentContainerStyle={styles.optInContent}>
+          <PhysiqueOptIn onEnable={enablePhysique} />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
   const latest = history[0];
   const prev = history[1];
+  const phase = detectPhase(history);
 
   function getDelta(key) {
     if (!latest?.[key] || !prev?.[key]) return null;
@@ -213,10 +363,22 @@ export default function BodyMetricsScreen({ navigation }) {
           )}
         </View>
 
-        {/* Latest Snapshot or Empty State */}
+        {/* Weight trend + snapshot */}
         {history.length > 0 ? (
           <View style={styles.snapshotCard}>
-            <Text style={styles.sectionTitle}>LATEST — {format(new Date(latest.metric_date), 'MMM d, yyyy')}</Text>
+            {/* Header row with phase chip */}
+            <View style={styles.snapshotHeader}>
+              <Text style={styles.sectionTitle}>
+                WEIGHT — {format(new Date(latest.metric_date), 'MMM d, yyyy')}
+              </Text>
+              {phase && (
+                <View style={[styles.phaseChip, { borderColor: phase.color }]}>
+                  <Ionicons name={phase.icon} size={12} color={phase.color} />
+                  <Text style={[styles.phaseLabel, { color: phase.color }]}>{phase.label}</Text>
+                </View>
+              )}
+            </View>
+
             {latest.body_weight && (
               <View style={styles.weightRow}>
                 <Text style={styles.weightValue}>{latest.body_weight} {units}</Text>
@@ -225,22 +387,15 @@ export default function BodyMetricsScreen({ navigation }) {
                 )}
               </View>
             )}
+
+            {/* Weight trend chart */}
+            <WeightTrendChart entries={history} units={units} />
+
             {history.length < 3 && (
               <Text style={styles.trendHint}>
-                Log weight 3 times per week to build a smoother trend.
+                Log weight 3 or more times to reveal a clearer trend.
               </Text>
             )}
-            <View style={styles.measureGrid}>
-              {MEASUREMENTS.map(m => latest[m.key] ? (
-                <View key={m.key} style={styles.measureCell}>
-                  <Text style={styles.measureValue}>{latest[m.key]} cm</Text>
-                  <Text style={styles.measureLabel}>{m.label}</Text>
-                  {getDelta(m.key) && (
-                    <DeltaBadge delta={parseFloat(getDelta(m.key))} units="cm" small />
-                  )}
-                </View>
-              ) : null)}
-            </View>
           </View>
         ) : (
           <View style={styles.emptyCard}>
@@ -253,9 +408,9 @@ export default function BodyMetricsScreen({ navigation }) {
         )}
 
         {/* Log Button */}
-        <TouchableOpacity style={styles.logBtn} onPress={() => setShowForm(!showForm)}>
+        <TouchableOpacity style={styles.logBtn} onPress={() => { setShowForm(!showForm); setShowMeasurements(false); }}>
           <Ionicons name={showForm ? 'chevron-up' : 'add-circle'} size={20} color={colors.background} />
-          <Text style={styles.logBtnText}>{showForm ? 'Cancel' : 'Log Body Weight'}</Text>
+          <Text style={styles.logBtnText}>{showForm ? 'Cancel' : 'Log Weight'}</Text>
         </TouchableOpacity>
 
         {/* Log Form */}
@@ -273,7 +428,7 @@ export default function BodyMetricsScreen({ navigation }) {
               />
             </View>
             <View style={styles.formRow}>
-              <Text style={styles.formLabel}>Body Weight ({units})</Text>
+              <Text style={styles.formLabel}>Body weight ({units})</Text>
               <TextInput
                 style={styles.formInput}
                 value={form.body_weight}
@@ -283,7 +438,23 @@ export default function BodyMetricsScreen({ navigation }) {
                 placeholderTextColor={colors.textMuted}
               />
             </View>
-            {MEASUREMENTS.map(m => (
+
+            {/* Measurements section — collapsed by default */}
+            <TouchableOpacity
+              style={styles.measureToggle}
+              onPress={() => setShowMeasurements(v => !v)}
+            >
+              <Text style={styles.measureToggleText}>
+                {showMeasurements ? 'Hide measurements' : 'Add measurements (optional)'}
+              </Text>
+              <Ionicons
+                name={showMeasurements ? 'chevron-up' : 'chevron-down'}
+                size={16}
+                color={colors.textMuted}
+              />
+            </TouchableOpacity>
+
+            {showMeasurements && MEASUREMENTS.map(m => (
               <View key={m.key} style={styles.formRow}>
                 <Text style={styles.formLabel}>{m.label} (cm)</Text>
                 <TextInput
@@ -296,6 +467,7 @@ export default function BodyMetricsScreen({ navigation }) {
                 />
               </View>
             ))}
+
             <TextInput
               style={[styles.formInput, styles.notesInput]}
               value={form.notes}
@@ -311,6 +483,24 @@ export default function BodyMetricsScreen({ navigation }) {
             >
               <Text style={styles.saveBtnText}>Save Entry</Text>
             </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Measurements snapshot */}
+        {latest && MEASUREMENTS.some(m => latest[m.key]) && (
+          <View style={styles.snapshotCard}>
+            <Text style={styles.sectionTitle}>MEASUREMENTS</Text>
+            <View style={styles.measureGrid}>
+              {MEASUREMENTS.map(m => latest[m.key] ? (
+                <View key={m.key} style={styles.measureCell}>
+                  <Text style={styles.measureValue}>{latest[m.key]} cm</Text>
+                  <Text style={styles.measureLabel}>{m.label}</Text>
+                  {getDelta(m.key) && (
+                    <DeltaBadge delta={parseFloat(getDelta(m.key))} units="cm" small />
+                  )}
+                </View>
+              ) : null)}
+            </View>
           </View>
         )}
 
@@ -349,9 +539,25 @@ function DeltaBadge({ delta, units, small }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
+  optInContent: { padding: spacing.lg, paddingTop: spacing.xxl },
   sectionTitle: {
     fontSize: fontSize.xs, fontWeight: fontWeight.black, color: colors.textMuted, letterSpacing: 1.5,
   },
+
+  optInCard: {
+    backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.xxl,
+    borderWidth: 1, borderColor: colors.border, alignItems: 'center', gap: spacing.lg,
+  },
+  optInTitle: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary },
+  optInBody: {
+    fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', lineHeight: 20,
+  },
+  optInBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    backgroundColor: colors.primary, borderRadius: radius.lg,
+    paddingVertical: spacing.lg, paddingHorizontal: spacing.xl, marginTop: spacing.md,
+  },
+  optInBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
 
   nutritionCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
@@ -376,8 +582,17 @@ const styles = StyleSheet.create({
 
   snapshotCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    gap: spacing.lg, borderWidth: 1, borderColor: colors.border,
+    gap: spacing.md, borderWidth: 1, borderColor: colors.border,
   },
+  snapshotHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+  },
+  phaseChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderWidth: 1, borderRadius: radius.full,
+    paddingHorizontal: spacing.sm, paddingVertical: 2,
+  },
+  phaseLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.bold },
   weightRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   weightValue: { fontSize: fontSize.xxxl, fontWeight: fontWeight.black, color: colors.textPrimary },
   trendHint: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
@@ -400,13 +615,19 @@ const styles = StyleSheet.create({
   },
   formTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
   formRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  formLabel: { width: 130, fontSize: fontSize.sm, color: colors.textSecondary },
+  formLabel: { width: 140, fontSize: fontSize.sm, color: colors.textSecondary },
   formInput: {
     flex: 1, backgroundColor: colors.surface2, borderRadius: radius.sm,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     fontSize: fontSize.md, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border,
   },
   notesInput: { flex: undefined, minHeight: 60 },
+  measureToggle: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1, borderTopColor: colors.border,
+  },
+  measureToggleText: { fontSize: fontSize.sm, color: colors.textMuted },
   saveBtn: {
     backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md,
     alignItems: 'center', marginTop: spacing.sm,
