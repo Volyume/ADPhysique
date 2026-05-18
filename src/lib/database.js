@@ -1,4 +1,5 @@
 import * as SQLite from 'expo-sqlite';
+import { generateInsights } from './insightsEngine';
 
 let _db = null;
 let _initPromise = null;
@@ -186,6 +187,17 @@ async function _doInit() {
       notes TEXT,
       created_at INTEGER
     );
+    CREATE TABLE IF NOT EXISTS user_insights (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      insight_key TEXT NOT NULL,
+      type TEXT,
+      severity INTEGER,
+      copy TEXT,
+      action_payload TEXT,
+      generated_at INTEGER,
+      dismissed_at INTEGER
+    );
     CREATE TABLE IF NOT EXISTS user_body_profile (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL UNIQUE,
@@ -201,6 +213,7 @@ async function _doInit() {
     );
     CREATE INDEX IF NOT EXISTS idx_nutrition_user ON nutrition_targets(user_id);
     CREATE INDEX IF NOT EXISTS idx_body_log_user ON body_metric_log(user_id, logged_at);
+    CREATE INDEX IF NOT EXISTS idx_insights_user ON user_insights(user_id, dismissed_at, type);
   `);
 
   // Backward-compatible column migrations
@@ -1021,6 +1034,103 @@ export async function buildWorkoutCSV(userId) {
   }
 
   return { csv: lines.join('\n'), rowCount: rows.length };
+}
+
+// ─── User Insights ────────────────────────────────────────────────
+
+/**
+ * Upserts freshly-generated insights. An insight is keyed by `insight_key`.
+ * If a non-dismissed row with the same key exists, it is refreshed in place
+ * (so the same condition doesn't stack). Dismissed insights are NOT
+ * resurrected unless their key disappears and reappears after dismissal age.
+ */
+export async function persistInsights(userId, insights) {
+  const d = await db();
+  const now = Date.now();
+  for (const ins of insights) {
+    const existing = await d.getFirstAsync(
+      `SELECT id, dismissed_at FROM user_insights
+       WHERE user_id = ? AND insight_key = ?
+       ORDER BY generated_at DESC LIMIT 1`,
+      [userId, ins.key],
+    );
+    if (existing) {
+      // Don't resurrect something the user dismissed in the last 14 days.
+      if (existing.dismissed_at && now - existing.dismissed_at < 14 * 24 * 60 * 60 * 1000) {
+        continue;
+      }
+      if (!existing.dismissed_at) {
+        await d.runAsync(
+          `UPDATE user_insights
+           SET type=?, severity=?, copy=?, action_payload=?, generated_at=?
+           WHERE id=?`,
+          [ins.type, ins.severity, ins.copy,
+           ins.actionPayload ? JSON.stringify(ins.actionPayload) : null,
+           now, existing.id],
+        );
+        continue;
+      }
+    }
+    await d.runAsync(
+      `INSERT INTO user_insights
+        (id, user_id, insight_key, type, severity, copy, action_payload, generated_at, dismissed_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
+      [uid(), userId, ins.key, ins.type, ins.severity, ins.copy,
+       ins.actionPayload ? JSON.stringify(ins.actionPayload) : null, now],
+    );
+  }
+}
+
+export async function getActiveInsights(userId, limitRows = 3) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT * FROM user_insights
+     WHERE user_id = ? AND dismissed_at IS NULL
+     ORDER BY severity DESC, generated_at DESC
+     LIMIT ?`,
+    [userId, limitRows],
+  );
+  return rows.map(r => {
+    const c = rowToCamel(r);
+    if (c.actionPayload) {
+      try { c.actionPayload = JSON.parse(c.actionPayload); } catch { c.actionPayload = null; }
+    }
+    return c;
+  });
+}
+
+export async function dismissInsight(insightId) {
+  const d = await db();
+  await d.runAsync(
+    'UPDATE user_insights SET dismissed_at = ? WHERE id = ?',
+    [Date.now(), insightId],
+  );
+}
+
+/**
+ * Loads the last 28 days of training, runs the deterministic insight engine,
+ * and persists results. Safe to call on screen mount + post-session.
+ */
+export async function runInsightsEngine(userId) {
+  if (!userId) return [];
+  try {
+    const [workouts, sets, exercises] = await Promise.all([
+      getAllWorkouts(userId),
+      getAllWorkoutSets(userId),
+      getAllExercises(),
+    ]);
+    const exerciseMap = Object.fromEntries(exercises.map(e => [e.id, e]));
+    const cutoff = Date.now() - 28 * 24 * 60 * 60 * 1000;
+    const recentSets = sets.filter(s => (s.createdAt ?? s.created_at ?? 0) >= cutoff);
+    const insights = generateInsights({
+      workouts, sets: recentSets, exerciseMap, now: Date.now(),
+    });
+    await persistInsights(userId, insights);
+    return getActiveInsights(userId, 3);
+  } catch (e) {
+    console.warn('runInsightsEngine failed:', e);
+    return [];
+  }
 }
 
 // ─── User Body Profile ────────────────────────────────────────────
