@@ -118,31 +118,37 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
         <View style={styles.fieldLabelRow}>
           <Text style={styles.fieldLabel}>Effort</Text>
           <InfoTooltip size={12} text={
-            'How hard did that set feel? Rate how many reps you had left in the tank.\n\n' +
-            '4 — Easy, plenty left\n' +
-            '3 — Moderate, could have done a few more\n' +
-            '2 — Hard, about 2 reps left\n' +
-            '1 — Very hard, barely one more\n' +
-            '0 — All out, nothing left in the tank\n\n' +
-            'Aim for a 3 or 2 early in your training block. Push closer to 0 near the end. ' +
+            'How hard did that set feel? Rate from 1 (easy) to 5 (all out).\n\n' +
+            '1 — Easy, plenty left in the tank\n' +
+            '2 — Moderate, could have done more\n' +
+            '3 — Hard, a couple of reps left\n' +
+            '4 — Very hard, barely one more\n' +
+            '5 — All out, nothing left\n\n' +
+            'Aim for a 2 or 3 early in your training block. Push to 4–5 near the end. ' +
             'Volyume uses this to track intensity and suggest your next session targets.'
           } />
         </View>
         <View style={styles.rirRow}>
-          {[null, 0, 1, 2, 3, 4].map(v => (
-            <TouchableOpacity
-              key={String(v)}
-              style={[styles.rirBtn, value.rir === v && styles.rirBtnActive]}
-              onPress={() => { Haptics.selectionAsync(); onChange({ ...value, rir: v }); }}
-              accessibilityRole="button"
-              accessibilityLabel={v === null ? 'Effort not set' : v === 0 ? 'All out' : `${v} reps left in tank`}
-              accessibilityState={{ selected: value.rir === v }}
-            >
-              <Text style={[styles.rirBtnText, value.rir === v && styles.rirBtnTextActive]}>
-                {v === null ? '—' : v}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {[null, 1, 2, 3, 4, 5].map(v => {
+            const isActive = v === null ? value.rir === null : value.rir === (5 - v);
+            return (
+              <TouchableOpacity
+                key={String(v)}
+                style={[styles.rirBtn, isActive && styles.rirBtnActive]}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  onChange({ ...value, rir: v === null ? null : 5 - v });
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={v === null ? 'Effort not set' : v === 5 ? 'Maximum effort, all out' : `Effort level ${v} out of 5`}
+                accessibilityState={{ selected: isActive }}
+              >
+                <Text style={[styles.rirBtnText, isActive && styles.rirBtnTextActive]}>
+                  {v === null ? '—' : v}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </View>
 

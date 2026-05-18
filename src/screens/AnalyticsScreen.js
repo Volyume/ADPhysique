@@ -338,8 +338,8 @@ export default function AnalyticsScreen({ navigation }) {
             <Text style={styles.sectionLabel}>TRAINING BLOCK</Text>
             <InfoTooltip text={
               'A Training Block (mesocycle) is a structured phase where volume and intensity build week by week.\n\n' +
-              'Week 1–5: progressively harder training. RIR (Reps In Reserve) drops each week — ' +
-              'from 3 (easy) down to 0 (maximum effort) — so you gradually push closer to your limit.\n\n' +
+              'Week 1–5: progressively harder training. Your target effort level climbs each week — ' +
+              'starting around 2–3 (moderate) and building to 4–5 (near maximum) — so you gradually push closer to your limit.\n\n' +
               'Week 6 (Deload): deliberately lighter. This flushes accumulated fatigue so you recover fully ' +
               'and come back stronger.\n\n' +
               'After the deload you start a fresh block on the same plan — usually with a little more volume ' +
@@ -369,7 +369,7 @@ export default function AnalyticsScreen({ navigation }) {
               </Text>
             </View>
             <InfoTooltip text={
-              'A deload week uses lighter loads — target RIR 4 (4 reps left in the tank) — to flush ' +
+              'A deload week uses lighter loads — aim for effort level 1–2 (plenty left in the tank) — to flush ' +
               'accumulated fatigue without losing muscle or strength.\n\n' +
               'Keep all the same exercises. Drop weights by ~10–20% and stop well before failure. ' +
               'Sessions should feel almost too easy.\n\n' +
