@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert,
 } from 'react-native';
@@ -89,6 +89,12 @@ export default function AthleteHubScreen({ navigation }) {
       setExporting(false);
     }
   }
+
+  // Covers the case where the screen is already focused when the local user
+  // ID first becomes available (async bootstrap finishes after mount).
+  useEffect(() => {
+    if (user?.id) load();
+  }, [user?.id]);
 
   useFocusEffect(useCallback(() => {
     if (user?.id) load();

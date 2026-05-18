@@ -334,7 +334,7 @@ export default function AnalyticsScreen({ navigation }) {
           onPress={() => activeMeso?._isPlan
             ? navigation.getParent()?.navigate('PlansTab')
             : navigation.navigate('MesocycleBuilder')}
-          onBuild={() => navigation.navigate('CoachBuilder')}
+          onBuild={() => navigation.getParent()?.navigate('PlansTab', { screen: 'CoachBuilder' })}
         />
 
         {/* ── Lighter week banner ──────────────────────────────── */}

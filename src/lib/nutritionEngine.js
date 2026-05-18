@@ -36,21 +36,24 @@ const PHASE_LABELS = {
   contest_prep: 'Contest Prep',
 };
 
+// Bodybuilding-appropriate rates (g protein per kg body weight).
+// Lean/build phases: 2.2 g/kg (~1 g/lb). Deficit phases raised further
+// to protect muscle when calories are restricted.
 const PROTEIN_G_PER_KG = {
-  lean_gain: 1.8,
-  build: 1.8,
-  maintain: 1.8,
-  recomp: 2.0,
-  mild_cut: 2.0,
-  aggressive_cut: 2.2,
-  contest_prep: 2.2,
+  lean_gain: 2.2,
+  build: 2.0,
+  maintain: 2.0,
+  recomp: 2.5,
+  mild_cut: 2.5,
+  aggressive_cut: 2.7,
+  contest_prep: 2.7,
 };
 
 const KCAL_PER_G_PROTEIN = 4;
 const KCAL_PER_G_CARB = 4;
 const KCAL_PER_G_FAT = 9;
 const FAT_FRACTION = 0.25;
-const PROTEIN_FLOOR_G_PER_KG = 1.6;
+const PROTEIN_FLOOR_G_PER_KG = 2.0;
 const MAX_SAFE_LOSS_RATE = 0.008;   // 0.8 % BW/week
 const HARD_GATE_LOSS_RATE = 0.015;  // 1.5 % BW/week
 const KCAL_PER_KG_FAT = 7700;       // rough energy equivalent of 1 kg body fat
@@ -101,7 +104,7 @@ function calcProtein(goal, weightKg, lbm, bodyFatSource) {
 
   let proteinG;
   if (highCutGoals.has(goal) && hasCredibleLbm) {
-    proteinG = 2.5 * lbm;
+    proteinG = 3.1 * lbm;  // ~1.4 g/lb LBM for deep-cut phases
   } else {
     proteinG = baseRate * weightKg;
   }

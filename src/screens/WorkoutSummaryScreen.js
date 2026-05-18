@@ -138,7 +138,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     return () => {
       if (feedbackDebounceRef.current) clearTimeout(feedbackDebounceRef.current);
     };
-  }, [feedback]);
+  }, [feedback, notes]);
 
   async function loadVolumeAndHistory() {
     if (!user?.id) return;
@@ -420,7 +420,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             onPress={handleDone}
             disabled={saving}
           >
-            <Text style={styles.doneBtnText}>{readOnly ? 'Close' : 'Save & Close'}</Text>
+            <Text style={styles.doneBtnText}>Close</Text>
           </TouchableOpacity>
           {!readOnly && (
             <TouchableOpacity style={styles.shareFooterBtn} onPress={handleShareCard}>
