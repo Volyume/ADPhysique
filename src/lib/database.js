@@ -350,6 +350,10 @@ const SCHEMA_MIGRATIONS = [
     `ALTER TABLE workout_sets ADD COLUMN rir INTEGER`,
     `ALTER TABLE workout_sets ADD COLUMN rpe REAL`,
   ],
+  // v4 — add joint_discomfort to workouts so feedback is fully persisted
+  [
+    `ALTER TABLE workouts ADD COLUMN joint_discomfort INTEGER`,
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
@@ -506,6 +510,7 @@ export async function updateWorkout(id, data) {
     sessionDifficulty: 'session_difficulty',
     overallPump: 'overall_pump',
     soreness24hBefore: 'soreness_24h_before',
+    jointDiscomfort: 'joint_discomfort',
     fatigueLevel: 'fatigue_level',
     lastActivityAt: 'last_activity_at',
     activeElapsedSeconds: 'active_elapsed_seconds',
@@ -1762,37 +1767,77 @@ export async function restoreAllTables(dump) {
 }
 
 // ─── Adaptive Volume Landmarks ──────────────────────────────────────────────
-// Queries workout_feedback joined with per-muscle set counts to produce the
-// history array consumed by computeAdaptiveLandmarks() in algorithms.js.
+// Builds the history array consumed by computeAdaptiveLandmarks() in algorithms.js.
+// Uses the workouts table (not the old workout_feedback table which never existed).
+// Derives performanceTrend from rep history and missedReps from target vs actual.
 export async function getAdaptiveLandmarkHistory(userId) {
   try {
     const d = await db();
-    // Get feedback joined with workout volume per muscle
-    // Returns array of {muscle, pumpScore, sorenessScore, jointDiscomfort, weeklyVolume, performanceTrend}
-    const feedbacks = await d.getAllAsync(
-      `SELECT wf.pump_score, wf.soreness_score, wf.joint_discomfort, wf.session_difficulty,
-              ws.exercise_id, e.primary_muscle as muscle, COUNT(*) as set_count
-       FROM workout_feedback wf
-       JOIN workouts w ON w.id = wf.workout_id
-       JOIN workout_sets ws ON ws.workout_id = wf.workout_id AND ws.set_type != 'warmup'
+    const rows = await d.getAllAsync(
+      `SELECT
+         w.id AS workout_id,
+         w.started_at,
+         w.overall_pump,
+         w.soreness_24h_before,
+         w.joint_discomfort,
+         e.primary_muscle AS muscle,
+         COUNT(*) AS set_count,
+         AVG(ws.actual_reps) AS avg_reps,
+         AVG(
+           CASE
+             WHEN ws.target_reps_min IS NOT NULL
+              AND ws.actual_reps < ws.target_reps_min
+             THEN ws.target_reps_min - ws.actual_reps
+             ELSE 0
+           END
+         ) AS avg_missed
+       FROM workouts w
+       JOIN workout_sets ws ON ws.workout_id = w.id AND ws.set_type != 'warmup'
        JOIN exercises e ON e.id = ws.exercise_id
-       WHERE w.user_id = ? AND wf.pump_score IS NOT NULL
-       GROUP BY wf.id, e.primary_muscle
+       WHERE w.user_id = ? AND w.is_completed = 1 AND w.overall_pump IS NOT NULL
+       GROUP BY w.id, e.primary_muscle
        ORDER BY w.started_at DESC
        LIMIT 200`,
       [userId],
     );
 
-    // Transform into muscle-keyed history entries
-    return feedbacks.map(row => ({
+    if (rows.length === 0) return [];
+
+    // Derive performanceTrend per muscle: compare avg reps from last 3 sessions vs 3 before.
+    // -1 = declining, 0 = flat, 1 = improving.
+    const byMuscle = {};
+    for (const row of rows) {
+      if (!row.muscle) continue;
+      if (!byMuscle[row.muscle]) byMuscle[row.muscle] = [];
+      byMuscle[row.muscle].push(row); // already DESC by started_at
+    }
+    const trendKey = {};
+    for (const [muscle, sessions] of Object.entries(byMuscle)) {
+      const recent  = sessions.slice(0, 3);
+      const earlier = sessions.slice(3, 6);
+      if (recent.length >= 2 && earlier.length >= 1) {
+        const rAvg = recent.reduce((s, r)  => s + (r.avg_reps || 0), 0) / recent.length;
+        const eAvg = earlier.reduce((s, r) => s + (r.avg_reps || 0), 0) / earlier.length;
+        const trend = rAvg > eAvg + 1 ? 1 : rAvg < eAvg - 1 ? -1 : 0;
+        for (const s of sessions) trendKey[`${s.workout_id}_${muscle}`] = trend;
+      }
+    }
+
+    // Scale mapping: workouts store 1–3 sliders; computeAdaptiveLandmarks expects
+    // pumpScore on a 1–5 scale (centred at 3) and sorenessScore on 1–5 (centred at 2).
+    // These match the RP-scale conversions used in WorkoutSummaryScreen.
+    const PUMP_MAP    = [1, 2, 4]; // overall_pump 1→1, 2→2, 3→4
+    const SORENESS_MAP = [2, 3, 4]; // soreness_24h_before 1→2, 2→3, 3→4
+
+    return rows.map(row => ({
       muscle: row.muscle,
-      pumpScore: row.pump_score,
-      sorenessScore: row.soreness_score,
+      pumpScore:       PUMP_MAP[(row.overall_pump || 2) - 1]     ?? 3,
+      sorenessScore:   SORENESS_MAP[(row.soreness_24h_before || 1) - 1] ?? 2,
       jointDiscomfort: row.joint_discomfort || 0,
-      weeklyVolume: row.set_count,
-      performanceTrend: 0, // TODO: derive from rep trend
-      prFrequency: 0,
-      missedReps: 0,
+      weeklyVolume:    row.set_count,
+      performanceTrend: trendKey[`${row.workout_id}_${row.muscle}`] ?? 0,
+      prFrequency:     0,
+      missedReps:      Math.round((row.avg_missed || 0) * 10) / 10,
     }));
   } catch (_e) {
     return [];

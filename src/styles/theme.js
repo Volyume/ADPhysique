@@ -23,8 +23,8 @@ export const colors = {
   // Text hierarchy
   textPrimary: '#FFFFFF',
   textSecondary: '#9E9E9E',
-  textMuted: '#616161',
-  textDisabled: '#424242',
+  textMuted: '#787878',    // bumped from #616161 — passes WCAG 2.1 AA 4.5:1 on #0D0D0D
+  textDisabled: '#555555', // bumped from #424242 for minimum 3:1 on dark bg
 
   // Tab bar
   tabBar: '#111111',
