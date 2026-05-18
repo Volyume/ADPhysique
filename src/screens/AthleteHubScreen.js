@@ -31,21 +31,24 @@ function nextMilestone(total) {
   return MILESTONES.find(m => m.sessions > total) ?? null;
 }
 
+// Consecutive weeks (rolling 7-day buckets) with at least one completed
+// session. Tolerates any rest-day pattern within a week, so a normal
+// training split no longer breaks the streak.
 function computeStreak(workouts) {
   const now = Date.now();
-  const DAY_MS = 24 * 60 * 60 * 1000;
-  const trainedDays = new Set(
+  const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+  const trainedWeeks = new Set(
     workouts
       .filter(w => w.isCompleted ?? w.is_completed ?? false)
-      .map(w => Math.floor((w.startedAt ?? w.createdAt ?? 0) / DAY_MS)),
+      .map(w => Math.floor((w.startedAt ?? w.createdAt ?? 0) / WEEK_MS)),
   );
   let streak = 0;
-  let day = Math.floor(now / DAY_MS);
-  // Allow today or yesterday to start the streak
-  if (!trainedDays.has(day)) day -= 1;
-  while (trainedDays.has(day)) {
+  let week = Math.floor(now / WEEK_MS);
+  // Allow this week or last week to start the streak
+  if (!trainedWeeks.has(week)) week -= 1;
+  while (trainedWeeks.has(week)) {
     streak++;
-    day--;
+    week--;
   }
   return streak;
 }
@@ -156,7 +159,7 @@ export default function AthleteHubScreen({ navigation }) {
               {streak >= 2 && (
                 <>
                   <Text style={styles.profileDot}>·</Text>
-                  <Text style={[styles.profileStat, { color: colors.warning }]}>{streak} day streak</Text>
+                  <Text style={[styles.profileStat, { color: colors.warning }]}>{streak} week streak</Text>
                 </>
               )}
             </View>

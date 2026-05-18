@@ -24,7 +24,7 @@ export default function HomeScreen({ navigation }) {
   const { user, startWorkout, activeWorkout } = useAppStore();
 
   const [weekStats, setWeekStats] = useState({ sessions: 0, sets: 0, volume: 0 });
-  const [streakDays, setStreakDays] = useState(0);
+  const [streakWeeks, setStreakWeeks] = useState(0);
   const [activePlan, setActivePlanData] = useState(null);
   const [nextWorkout, setNextWorkout] = useState(null);
   const [exerciseCounts, setExerciseCounts] = useState({});
@@ -66,7 +66,6 @@ export default function HomeScreen({ navigation }) {
       const totalVol = weekSets.reduce((t, s) => t + (s.weight || 0) * (s.actualReps || 0), 0);
       setWeekStats({ sessions: thisWeek.length, sets: weekSets.length, volume: totalVol });
 
-      // Streak: count back from today how many consecutive calendar days had a completed workout
       const completed = allWorkouts.filter(w => w.isCompleted).sort((a, b) => b.startedAt - a.startedAt);
       setLastSession(completed[0] || null);
 
@@ -80,28 +79,20 @@ export default function HomeScreen({ navigation }) {
         setLastSessionTonnage(null);
       }
 
-      // Streak computation
-      const completedDates = new Set(
-        completed.map(w => {
-          const d = new Date(w.startedAt);
-          return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-        }),
+      // Weekly streak: consecutive 7-day buckets with a completed session.
+      // Tolerates rest days so a normal training split keeps the streak.
+      const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+      const trainedWeeks = new Set(
+        completed.map(w => Math.floor((w.startedAt ?? w.createdAt ?? 0) / WEEK_MS)),
       );
       let streak = 0;
-      const now = new Date();
-      for (let i = 0; i < 365; i++) {
-        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-        const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-        if (completedDates.has(key)) {
-          streak += 1;
-        } else if (i === 0) {
-          // No workout today — check if yesterday had one (allow current-day gap)
-          continue;
-        } else {
-          break;
-        }
+      let week = Math.floor(Date.now() / WEEK_MS);
+      if (!trainedWeeks.has(week)) week -= 1;
+      while (trainedWeeks.has(week)) {
+        streak += 1;
+        week -= 1;
       }
-      setStreakDays(streak);
+      setStreakWeeks(streak);
     } catch (_e) {}
   }
 
@@ -191,9 +182,9 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.weekCard}>
           <View style={styles.weekCardHeader}>
             <Text style={styles.weekLabel}>This week</Text>
-            {streakDays >= 2 && (
+            {streakWeeks >= 2 && (
               <View style={styles.streakChip}>
-                <Text style={styles.streakChipText}>{streakDays} day streak 🔥</Text>
+                <Text style={styles.streakChipText}>{streakWeeks} week streak 🔥</Text>
               </View>
             )}
           </View>
