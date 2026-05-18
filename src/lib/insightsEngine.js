@@ -60,8 +60,20 @@ function sessionsByDay(sets) {
 export function generateInsights({ workouts = [], sets = [], exerciseMap = {}, now = Date.now() }) {
   const insights = [];
 
+  // A "low volume for 3 weeks" nudge only makes sense once there is an
+  // actual 3-week training base. For brand-new users (no history, or a
+  // first session only days ago) it is meaningless noise — there is no
+  // trend to be down from. Require completed sessions spanning ≥ 3 weeks.
+  const completed = workouts.filter(w => w.isCompleted ?? w.is_completed ?? false);
+  const earliestStart = completed.reduce(
+    (min, w) => Math.min(min, w.startedAt ?? w.createdAt ?? now),
+    now,
+  );
+  const hasThreeWeekBase =
+    completed.length >= 6 && (now - earliestStart) >= 3 * WEEK_MS;
+
   // ---- Rule 1: under-target muscle for 3 rolling weeks --------------------
-  for (let muscleKey of Object.keys(VOLUME_LANDMARKS)) {
+  for (let muscleKey of (hasThreeWeekBase ? Object.keys(VOLUME_LANDMARKS) : [])) {
     const lm = VOLUME_LANDMARKS[muscleKey];
     if (!lm || lm.mev <= 0) continue;
     let trainedAtAll = false;

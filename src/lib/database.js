@@ -1194,6 +1194,27 @@ export async function buildWorkoutCSV(userId) {
 export async function persistInsights(userId, insights) {
   const d = await db();
   const now = Date.now();
+
+  // Prune active (non-dismissed) insights that are no longer generated, so a
+  // condition that has resolved — or a rule that no longer applies after a
+  // logic fix — stops showing instead of lingering forever. Dismissed rows
+  // are kept so the 14-day "don't resurrect" window still works.
+  const liveKeys = insights.map(i => i.key);
+  if (liveKeys.length > 0) {
+    const placeholders = liveKeys.map(() => '?').join(', ');
+    await d.runAsync(
+      `DELETE FROM user_insights
+       WHERE user_id = ? AND dismissed_at IS NULL
+       AND insight_key NOT IN (${placeholders})`,
+      [userId, ...liveKeys],
+    );
+  } else {
+    await d.runAsync(
+      'DELETE FROM user_insights WHERE user_id = ? AND dismissed_at IS NULL',
+      [userId],
+    );
+  }
+
   for (const ins of insights) {
     const existing = await d.getFirstAsync(
       `SELECT id, dismissed_at FROM user_insights
