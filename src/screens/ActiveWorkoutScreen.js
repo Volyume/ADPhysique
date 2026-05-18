@@ -251,14 +251,21 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       setSetTargets(computed);
       setTargetReason(computedReason);
 
-      // Pre-fill: use target for the current working set position
+      // Pre-fill: use target for the current working set position.
+      // Reps: prefer (prev session reps + 1) when it sits inside the target range
+      // so the input starts at the beat-chip suggestion, not the range floor.
       const currentWorkingCount = allLoggedForExercise.filter(s => s.setType !== 'warmup').length;
       const currentTarget = computed[currentWorkingCount];
       if (currentTarget) {
+        const prevSet = prev[currentWorkingCount];
+        const beatRep = prevSet ? prevSet.actualReps + 1 : null;
+        const prefillReps = (beatRep && beatRep >= currentTarget.repsMin && beatRep <= currentTarget.repsMax)
+          ? beatRep
+          : currentTarget.repsMin;
         setCurrentSet({
           ...DEFAULT_SET,
           weight: currentTarget.weight,
-          reps: currentTarget.repsMin,
+          reps: prefillReps,
         });
       } else if (prev.length > 0) {
         const lastSet = prev[prev.length - 1];
@@ -436,12 +443,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       );
       setProgression(suggestion);
 
-      // Pre-fill next set from per-set targets
+      // Pre-fill next set from per-set targets (same beat-rep logic as initial load)
       if (currentSet.setType !== 'warmup') {
         const nextWorkingCount = newLoggedSets.filter(s => s.setType !== 'warmup').length;
         const nextTarget = setTargets[nextWorkingCount];
         if (nextTarget) {
-          setCurrentSet(cs => ({ ...cs, weight: nextTarget.weight, reps: nextTarget.repsMin }));
+          const prevSetForNext = prevSets[nextWorkingCount];
+          const beatRep = prevSetForNext ? prevSetForNext.actualReps + 1 : null;
+          const prefillReps = (beatRep && beatRep >= nextTarget.repsMin && beatRep <= nextTarget.repsMax)
+            ? beatRep
+            : nextTarget.repsMin;
+          setCurrentSet(cs => ({ ...cs, weight: nextTarget.weight, reps: prefillReps }));
         }
       }
 
@@ -467,12 +479,24 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // If warmup was just completed, auto-switch to straight (working) and pre-fill from first target
       if (currentSet.setType === 'warmup') {
         const firstTarget = setTargets[0];
-        setCurrentSet(cs => ({
-          ...cs,
-          setType: 'straight',
-          weight: firstTarget ? firstTarget.weight : cs.weight,
-          reps: firstTarget ? firstTarget.repsMin : (routineExercise?.recommendedRepsMin || 8),
-        }));
+        if (firstTarget) {
+          const beatRep = prevSets[0] ? prevSets[0].actualReps + 1 : null;
+          const prefillReps = (beatRep && beatRep >= firstTarget.repsMin && beatRep <= firstTarget.repsMax)
+            ? beatRep
+            : firstTarget.repsMin;
+          setCurrentSet(cs => ({
+            ...cs,
+            setType: 'straight',
+            weight: firstTarget.weight,
+            reps: prefillReps,
+          }));
+        } else {
+          setCurrentSet(cs => ({
+            ...cs,
+            setType: 'straight',
+            reps: routineExercise?.recommendedRepsMin || 8,
+          }));
+        }
       }
     } finally {
       setSaving(false);
