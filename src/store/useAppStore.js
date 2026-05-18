@@ -85,7 +85,10 @@ const useAppStore = create((set, get) => ({
   lastActivityAt: null,
 
   setActiveWorkout: (workout) => set({ activeWorkout: workout }),
-  setWorkoutExercises: (workoutExercises) => set({ workoutExercises }),
+  setWorkoutExercises: (next) => set((state) => ({
+    workoutExercises:
+      typeof next === 'function' ? next(state.workoutExercises) : next,
+  })),
   setCurrentExerciseIndex: (i) => set({ currentExerciseIndex: i }),
   updateLastActivity: () => set({ lastActivityAt: Date.now() }),
 
@@ -101,10 +104,12 @@ const useAppStore = create((set, get) => ({
 
   addSetToCurrentExercise: (setData) => {
     const { workoutExercises, currentExerciseIndex } = get();
+    const entry = workoutExercises[currentExerciseIndex];
+    if (!entry) return;
     const updated = [...workoutExercises];
     updated[currentExerciseIndex] = {
-      ...updated[currentExerciseIndex],
-      sets: [...(updated[currentExerciseIndex].sets || []), setData],
+      ...entry,
+      sets: [...(entry.sets || []), setData],
     };
     set({ workoutExercises: updated });
   },

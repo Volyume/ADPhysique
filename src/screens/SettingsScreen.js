@@ -12,6 +12,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { clearWorkoutHistory, buildWorkoutCSV } from '../lib/database';
+import { exportBackup, importBackup } from '../lib/dataBackup';
 import { getWellbeingMode, setWellbeingMode, WELLBEING_HELPLINE } from '../lib/wellbeing';
 
 const WELLBEING_LABELS = {
@@ -170,6 +171,45 @@ export default function SettingsScreen({ navigation }) {
     }
   }
 
+  async function handleFullBackup() {
+    try {
+      const { bytes } = await exportBackup();
+      Alert.alert(
+        'Backup created',
+        `Your entire Volyume database (${(bytes / 1024).toFixed(0)} KB) was exported. Save it to Files, email it to yourself, or move it to your new device — then use "Restore from backup" there.`,
+      );
+    } catch (e) {
+      Alert.alert('Backup failed', e?.message ?? 'Could not create a backup. Please try again.');
+    }
+  }
+
+  function handleRestoreBackup() {
+    Alert.alert(
+      'Restore from backup?',
+      'This replaces ALL current data — workouts, routines, plans, body metrics and settings — with the contents of the backup file you choose. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Choose file',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const res = await importBackup();
+              if (res?.cancelled) return;
+              const total = Object.values(res.counts || {}).reduce((a, b) => a + b, 0);
+              Alert.alert(
+                'Restore complete',
+                `${total} records restored. Please fully close and reopen Volyume so every screen reloads from the restored data.`,
+              );
+            } catch (e) {
+              Alert.alert('Restore failed', e?.message ?? 'Could not read that backup file.');
+            }
+          },
+        },
+      ],
+    );
+  }
+
   async function handleClearHistory() {
     Alert.alert(
       'Clear workout history?',
@@ -260,8 +300,18 @@ export default function SettingsScreen({ navigation }) {
         <SectionHeader title="DATA & PRIVACY" />
         <View style={styles.section}>
           <SettingRow
+            icon="save-outline"
+            label="Back up everything (JSON)"
+            onPress={handleFullBackup}
+          />
+          <SettingRow
+            icon="cloud-upload-outline"
+            label="Restore from backup"
+            onPress={handleRestoreBackup}
+          />
+          <SettingRow
             icon="download-outline"
-            label="Export my data (CSV)"
+            label="Export workout log (CSV)"
             onPress={exportData}
           />
           <SettingRow

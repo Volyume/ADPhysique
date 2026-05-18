@@ -230,8 +230,25 @@ async function _doInit() {
     CREATE INDEX IF NOT EXISTS idx_insights_user ON user_insights(user_id, dismissed_at, type);
   `);
 
-  // Backward-compatible column migrations
-  const colMigrations = [
+  await runMigrations(_db);
+  return _db;
+}
+
+// ─── Structured migration system ────────────────────────────────────────────
+//
+// Each entry in SCHEMA_MIGRATIONS is one schema version: an ordered list of
+// SQL statements. The applied version is tracked in SQLite's own
+// `PRAGMA user_version`, so every migration runs exactly once and future
+// schema changes only need a new array entry appended here — existing user
+// data is never wiped or re-migrated.
+//
+// IMPORTANT: never edit or reorder an existing migration once shipped. Only
+// append new ones. To change the schema, add a new sub-array.
+const SCHEMA_MIGRATIONS = [
+  // v1 — additive columns + the programmes table. These predate version
+  // tracking, so on installs upgrading from the old swallow-all loop the
+  // columns may already exist; "duplicate column" is tolerated below.
+  [
     'ALTER TABLE routine_exercises ADD COLUMN starting_weight REAL',
     'ALTER TABLE routine_exercises ADD COLUMN rest_seconds INTEGER',
     'ALTER TABLE workouts ADD COLUMN last_activity_at INTEGER',
@@ -263,14 +280,10 @@ async function _doInit() {
     'ALTER TABLE body_metric_log ADD COLUMN ham_cm REAL',
     'ALTER TABLE body_metric_log ADD COLUMN calf_cm REAL',
     'ALTER TABLE workout_sets ADD COLUMN missed_reps INTEGER',
-  ];
-  for (const sql of colMigrations) {
-    try { await _db.execAsync(sql); } catch (_) {}
-  }
-
-  // One-time migration: remap exercises.primary_muscle from 'shoulders' to the correct delt head
-  // based on exercise name patterns. Idempotent — no-ops once rows are updated.
-  const deltMigrations = [
+  ],
+  // v2 — remap exercises.primary_muscle from generic 'shoulders' to the
+  // correct delt head. Idempotent: no-ops once rows are updated.
+  [
     `UPDATE exercises SET primary_muscle = 'front_delts'
      WHERE primary_muscle = 'shoulders'
      AND (name LIKE '%Overhead Press%' OR name LIKE '%Military Press%'
@@ -285,15 +298,42 @@ async function _doInit() {
      AND (name LIKE '%Rear Delt%' OR name LIKE '%Face Pull%'
        OR name LIKE '%Y-Raise%' OR name LIKE '%Pec Deck%'
        OR name LIKE '%Rear%')`,
-    // Catch-all: any remaining 'shoulders' exercises map to side_delts
     `UPDATE exercises SET primary_muscle = 'side_delts'
      WHERE primary_muscle = 'shoulders'`,
-  ];
-  for (const sql of deltMigrations) {
-    try { await _db.execAsync(sql); } catch (_) {}
-  }
+  ],
+];
 
-  return _db;
+// Errors that are safe to ignore when re-applying additive migrations on
+// installs that pre-date version tracking (the column/table already exists).
+function isBenignMigrationError(err) {
+  const m = String(err?.message || err).toLowerCase();
+  return m.includes('duplicate column')
+    || m.includes('already exists')
+    || m.includes('duplicate column name');
+}
+
+async function runMigrations(d) {
+  let current = 0;
+  try {
+    const row = await d.getFirstAsync('PRAGMA user_version');
+    current = row?.user_version ?? 0;
+  } catch (_) { current = 0; }
+
+  for (let v = current; v < SCHEMA_MIGRATIONS.length; v++) {
+    for (const sql of SCHEMA_MIGRATIONS[v]) {
+      try {
+        await d.execAsync(sql);
+      } catch (e) {
+        if (isBenignMigrationError(e)) continue;
+        // A genuine migration failure — surface it instead of silently
+        // corrupting the schema and crashing later at an unrelated query.
+        console.warn(`[db] migration v${v + 1} failed:`, e?.message || e);
+        throw e;
+      }
+    }
+    // PRAGMA does not accept bound params; v is an integer we control.
+    await d.execAsync(`PRAGMA user_version = ${v + 1}`);
+  }
 }
 
 async function db() {
@@ -1291,4 +1331,70 @@ export async function clearWorkoutHistory(userId) {
   const d = await db();
   await d.runAsync('DELETE FROM workout_sets WHERE user_id = ?', [userId]);
   await d.runAsync('DELETE FROM workouts WHERE user_id = ?', [userId]);
+}
+
+// ─── Full local backup / restore ────────────────────────────────────────────
+//
+// Every user-owned table. exercises is intentionally excluded: it is seed
+// data, not user data, and is re-seeded on launch — dumping ~150 canonical
+// rows would only bloat the backup. Custom exercises are preserved because
+// they're referenced by workout_sets via exercise_id; if a restore lands on
+// a fresh install the seed covers the canonical set.
+export const BACKUP_TABLES = [
+  'workouts',
+  'workout_sets',
+  'routines',
+  'routine_exercises',
+  'programmes',
+  'mesocycles',
+  'nutrition_targets',
+  'peak_week_plans',
+  'body_metric_log',
+  'user_insights',
+  'user_body_profile',
+];
+
+// Returns { schemaVersion, tables: { tableName: [rawRows...] } }.
+// Raw rows (snake_case) are dumped as-is so a restore is a faithful round-trip.
+export async function dumpAllTables() {
+  const d = await db();
+  let schemaVersion = 0;
+  try {
+    const v = await d.getFirstAsync('PRAGMA user_version');
+    schemaVersion = v?.user_version ?? 0;
+  } catch (_) {}
+  const tables = {};
+  for (const t of BACKUP_TABLES) {
+    try {
+      tables[t] = await d.getAllAsync(`SELECT * FROM ${t}`);
+    } catch (_) {
+      tables[t] = [];
+    }
+  }
+  return { schemaVersion, tables };
+}
+
+// Wipes BACKUP_TABLES and reinserts the supplied rows inside one
+// transaction. All-or-nothing: a failure rolls back and leaves the
+// existing data untouched.
+export async function restoreAllTables(dump) {
+  const d = await db();
+  const tables = dump?.tables || {};
+  await d.withTransactionAsync(async () => {
+    for (const t of BACKUP_TABLES) {
+      const rows = tables[t];
+      if (!Array.isArray(rows)) continue;
+      await d.runAsync(`DELETE FROM ${t}`);
+      for (const row of rows) {
+        const cols = Object.keys(row);
+        if (cols.length === 0) continue;
+        const placeholders = cols.map(() => '?').join(', ');
+        const values = cols.map(c => row[c]);
+        await d.runAsync(
+          `INSERT OR REPLACE INTO ${t} (${cols.join(', ')}) VALUES (${placeholders})`,
+          values,
+        );
+      }
+    }
+  });
 }
