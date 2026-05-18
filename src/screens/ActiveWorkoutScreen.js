@@ -621,7 +621,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerSide}>
-            <TouchableOpacity onPress={handleCancelWorkout} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <TouchableOpacity
+              onPress={handleCancelWorkout}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel workout"
+            >
               <Ionicons name="close" size={22} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
@@ -633,7 +638,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </Text>
           </View>
           <View style={styles.headerSideRight}>
-            <TouchableOpacity onPress={handleFinishWorkout} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <TouchableOpacity
+              onPress={handleFinishWorkout}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Finish workout"
+            >
               <Text style={styles.finishBtn}>Finish</Text>
             </TouchableOpacity>
           </View>
@@ -652,6 +662,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 key={i}
                 style={[styles.navTab, i === currentExerciseIndex && styles.navTabActive]}
                 onPress={() => setCurrentExerciseIndex(i)}
+                accessibilityRole="button"
+                accessibilityLabel={entry.exercise?.name || `Exercise ${i + 1}`}
+                accessibilityState={{ selected: i === currentExerciseIndex }}
               >
                 <Text
                   style={[styles.navTabText, i === currentExerciseIndex && styles.navTabTextActive]}
@@ -684,6 +697,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 style={styles.swapBtn}
                 onPress={handleOpenSwap}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Swap exercise"
               >
                 <Ionicons name="swap-horizontal" size={16} color={colors.primary} />
                 <Text style={styles.swapBtnText}>Swap</Text>
@@ -705,7 +720,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   <Text style={styles.deloadBannerSub}>Light loads · full recovery · no PRs</Text>
                 </View>
               </View>
-              <TouchableOpacity onPress={() => setDeloadDismissed(true)}>
+              <TouchableOpacity
+                onPress={() => setDeloadDismissed(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Dismiss deload banner"
+              >
                 <Text style={styles.deloadSkip}>Skip</Text>
               </TouchableOpacity>
             </View>
@@ -866,12 +885,24 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           {targetComplete ? (
             <>
               {isLastExercise ? (
-                <TouchableOpacity testID="volyume-btn-finish-primary" style={styles.completeBtn} onPress={handleFinishWorkout}>
+                <TouchableOpacity
+                  testID="volyume-btn-finish-primary"
+                  style={styles.completeBtn}
+                  onPress={handleFinishWorkout}
+                  accessibilityRole="button"
+                  accessibilityLabel="Finish workout"
+                >
                   <Ionicons name="checkmark-done" size={20} color={colors.success} />
                   <Text style={styles.completeBtnText}>FINISH WORKOUT</Text>
                 </TouchableOpacity>
               ) : (
-                <TouchableOpacity testID="volyume-btn-next-exercise" style={styles.completeBtn} onPress={handleNextExercise}>
+                <TouchableOpacity
+                  testID="volyume-btn-next-exercise"
+                  style={styles.completeBtn}
+                  onPress={handleNextExercise}
+                  accessibilityRole="button"
+                  accessibilityLabel="Move to next exercise"
+                >
                   <Ionicons name="arrow-forward-circle" size={20} color={colors.primary} />
                   <Text style={styles.completeBtnText}>NEXT EXERCISE</Text>
                 </TouchableOpacity>
@@ -881,6 +912,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 style={[styles.extraSetBtn, saving && styles.btnDisabled]}
                 onPress={handleCompleteSet}
                 disabled={saving}
+                accessibilityRole="button"
+                accessibilityLabel="Complete extra set"
               >
                 <Text style={styles.extraSetBtnText}>+ Complete Extra Set</Text>
               </TouchableOpacity>
@@ -891,6 +924,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               style={[styles.completeBtn, saving && styles.btnDisabled, currentSet.setType === 'warmup' && styles.completeBtnWarmup]}
               onPress={handleCompleteSet}
               disabled={saving}
+              accessibilityRole="button"
+              accessibilityLabel={currentSet.setType === 'warmup' ? 'Log warm-up set' : 'Complete set'}
             >
               <Ionicons name="checkmark-circle" size={20} color={currentSet.setType === 'warmup' ? colors.warning : colors.primary} />
               <Text style={[styles.completeBtnText, currentSet.setType === 'warmup' && styles.completeBtnTextWarmup]}>
@@ -900,11 +935,21 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           )}
 
           <View style={styles.secondaryActions}>
-            <TouchableOpacity style={styles.actionBtn} onPress={() => setShowNoteInput(v => !v)}>
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => setShowNoteInput(v => !v)}
+              accessibilityRole="button"
+              accessibilityLabel="Add note to set"
+            >
               <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
               <Text style={styles.actionBtnText}>Note</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionBtn} onPress={() => setShowExecution(true)}>
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => setShowExecution(true)}
+              accessibilityRole="button"
+              accessibilityLabel="View exercise info"
+            >
               <Ionicons name="information-circle-outline" size={18} color={colors.textSecondary} />
               <Text style={styles.actionBtnText}>Info</Text>
             </TouchableOpacity>
@@ -912,11 +957,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               testID="volyume-btn-add-mid-workout"
               style={styles.actionBtn}
               onPress={() => setShowExercisePicker(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Add exercise to workout"
             >
               <Ionicons name="add-circle-outline" size={18} color={colors.textSecondary} />
               <Text style={styles.actionBtnText}>Add</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionBtn, styles.actionBtnDanger]} onPress={handleRemoveExercise}>
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.actionBtnDanger]}
+              onPress={handleRemoveExercise}
+              accessibilityRole="button"
+              accessibilityLabel="Remove exercise from workout"
+            >
               <Ionicons name="trash-outline" size={18} color={colors.error} />
               <Text style={[styles.actionBtnText, { color: colors.error }]}>Remove</Text>
             </TouchableOpacity>

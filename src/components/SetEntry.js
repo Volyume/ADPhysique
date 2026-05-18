@@ -39,7 +39,12 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
       <View style={styles.inputRow}>
         <Text style={styles.fieldLabel}>Weight ({units})</Text>
         <View style={styles.stepper}>
-          <TouchableOpacity style={styles.stepBtn} onPress={() => adjust('weight', -1)}>
+          <TouchableOpacity
+            style={styles.stepBtn}
+            onPress={() => adjust('weight', -1)}
+            accessibilityRole="button"
+            accessibilityLabel="Decrease weight"
+          >
             <Text style={styles.stepBtnText}>−</Text>
           </TouchableOpacity>
           <TextInput
@@ -55,8 +60,14 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
             returnKeyType="next"
             onSubmitEditing={() => repsRef.current?.focus()}
             selectTextOnFocus
+            accessibilityLabel={`Weight in ${units}`}
           />
-          <TouchableOpacity style={styles.stepBtn} onPress={() => adjust('weight', 1)}>
+          <TouchableOpacity
+            style={styles.stepBtn}
+            onPress={() => adjust('weight', 1)}
+            accessibilityRole="button"
+            accessibilityLabel="Increase weight"
+          >
             <Text style={styles.stepBtnText}>+</Text>
           </TouchableOpacity>
         </View>
@@ -66,7 +77,12 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
       <View style={styles.inputRow}>
         <Text style={styles.fieldLabel}>Reps</Text>
         <View style={styles.stepper}>
-          <TouchableOpacity style={styles.stepBtn} onPress={() => adjust('reps', -1)}>
+          <TouchableOpacity
+            style={styles.stepBtn}
+            onPress={() => adjust('reps', -1)}
+            accessibilityRole="button"
+            accessibilityLabel="Decrease reps"
+          >
             <Text style={styles.stepBtnText}>−</Text>
           </TouchableOpacity>
           <TextInput
@@ -83,8 +99,14 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
             returnKeyType="done"
             onSubmitEditing={() => Keyboard.dismiss()}
             selectTextOnFocus
+            accessibilityLabel="Number of reps"
           />
-          <TouchableOpacity style={styles.stepBtn} onPress={() => adjust('reps', 1)}>
+          <TouchableOpacity
+            style={styles.stepBtn}
+            onPress={() => adjust('reps', 1)}
+            accessibilityRole="button"
+            accessibilityLabel="Increase reps"
+          >
             <Text style={styles.stepBtnText}>+</Text>
           </TouchableOpacity>
         </View>
@@ -99,6 +121,9 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
               key={String(v)}
               style={[styles.rirBtn, value.rir === v && styles.rirBtnActive]}
               onPress={() => { Haptics.selectionAsync(); onChange({ ...value, rir: v }); }}
+              accessibilityRole="button"
+              accessibilityLabel={v === null ? 'RIR not set' : `${v} reps in reserve`}
+              accessibilityState={{ selected: value.rir === v }}
             >
               <Text style={[styles.rirBtnText, value.rir === v && styles.rirBtnTextActive]}>
                 {v === null ? '—' : v}
@@ -109,7 +134,14 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
       </View>
 
       {/* Set Type — compact inline row */}
-      <TouchableOpacity testID="volyume-set-type-btn" style={styles.setTypeRow} onPress={onOpenSetTypePicker} activeOpacity={0.7}>
+      <TouchableOpacity
+        testID="volyume-set-type-btn"
+        style={styles.setTypeRow}
+        onPress={onOpenSetTypePicker}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={`Set type: ${setTypeLabel}, tap to change`}
+      >
         <Text style={styles.setTypeLabel}>Set type</Text>
         <View style={styles.setTypeRight}>
           <Text style={styles.setTypeValue}>{setTypeLabel}</Text>

@@ -279,6 +279,8 @@ export default function HomeScreen({ navigation }) {
             style={styles.continueCard}
             onPress={() => navigation.navigate('ActiveWorkout')}
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Continue active workout"
           >
             <View style={styles.continueInner}>
               <View style={styles.continueIcon}>
@@ -313,6 +315,8 @@ export default function HomeScreen({ navigation }) {
                 onPress={handleStartNextWorkout}
                 disabled={isStartingWorkout}
                 activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel={isStartingWorkout ? 'Starting workout' : `Start ${displayWorkout?.routine?.name || 'workout'}`}
               >
                 <Ionicons name="play" size={16} color={colors.background} />
                 <Text style={styles.primaryBtnText}>
@@ -322,6 +326,8 @@ export default function HomeScreen({ navigation }) {
               <TouchableOpacity
                 style={styles.changeBtn}
                 onPress={() => setShowChangeWorkout(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Change planned workout"
               >
                 <Ionicons name="swap-horizontal-outline" size={16} color={colors.primary} />
                 <Text style={styles.changeBtnText}>Change</Text>
@@ -330,6 +336,8 @@ export default function HomeScreen({ navigation }) {
             <TouchableOpacity
               style={styles.blankLink}
               onPress={() => navigation.navigate('BuildWorkout')}
+              accessibilityRole="button"
+              accessibilityLabel="Start a blank workout instead"
             >
               <Ionicons name="add-circle-outline" size={14} color={colors.textMuted} />
               <Text style={styles.blankLinkText}>Start Blank Workout instead</Text>
@@ -390,6 +398,8 @@ export default function HomeScreen({ navigation }) {
             <TouchableOpacity
               style={styles.blankSessionLink}
               onPress={() => navigation.navigate('BuildWorkout')}
+              accessibilityRole="button"
+              accessibilityLabel="Start a blank session"
             >
               <Text style={styles.blankSessionLinkText}>Start a blank session instead</Text>
               <Ionicons name="chevron-forward" size={13} color={colors.textMuted} />
@@ -414,6 +424,8 @@ export default function HomeScreen({ navigation }) {
                 onPress={e => { e.stopPropagation(); handleRepeatLastSession(); }}
                 activeOpacity={0.75}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Repeat last session"
               >
                 <Ionicons name="refresh-outline" size={13} color={colors.primary} />
                 <Text style={styles.repeatBtnText}>Repeat</Text>

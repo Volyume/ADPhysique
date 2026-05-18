@@ -25,7 +25,13 @@ const WELLBEING_LABELS = {
 
 function SettingRow({ icon, label, value, onPress, destructive, rightElement, showArrow = true }) {
   return (
-    <TouchableOpacity style={styles.settingRow} onPress={onPress} disabled={!onPress && !rightElement}>
+    <TouchableOpacity
+      style={styles.settingRow}
+      onPress={onPress}
+      disabled={!onPress && !rightElement}
+      accessibilityRole={onPress ? 'button' : 'none'}
+      accessibilityLabel={value ? `${label}: ${value}` : label}
+    >
       <View style={[styles.settingIcon, destructive && styles.settingIconDestructive]}>
         <Ionicons name={icon} size={18} color={destructive ? colors.error : colors.primary} />
       </View>
