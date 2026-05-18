@@ -10,6 +10,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { getCompletedWorkoutSets, getAllExercises, getLatestBodyWeight } from '../lib/database';
 import { calculate1RM, getStrengthStandard } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
+import InfoTooltip from '../components/InfoTooltip';
 
 // Maps a logged exercise name to a strength-standard lift key.
 const STRENGTH_LIFT_MAP = [
@@ -146,12 +147,17 @@ export default function PRWallScreen({ navigation }) {
         ListHeaderComponent={
           bodyWeight && Object.keys(strengthStandards).length > 0 ? (
             <View style={styles.standardsCard}>
-              <Text style={styles.standardsTitle}>STRENGTH STANDARDS</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                <Text style={styles.standardsTitle}>STRENGTH STANDARDS</Text>
+                <InfoTooltip text={`Your estimated 1-rep max as a multiple of your bodyweight.\n\n1.0× = you can lift your own bodyweight\n1.5× = strong for most people\n2.0× = advanced\n\nBeginner → Novice → Intermediate → Advanced → Elite`} size={13} />
+              </View>
               <Text style={styles.standardsSubtitle}>vs {bodyWeight} {units} bodyweight</Text>
               {Object.entries(strengthStandards).map(([name, std]) => std ? (
                 <View key={name} style={styles.standardRow}>
                   <Text style={styles.standardExercise} numberOfLines={1}>{name}</Text>
-                  <Text style={styles.standardRatio}>{std.ratio}×</Text>
+                  <Text style={styles.standardRatio}>
+                    {parseFloat(std.ratio) >= 1 ? `${std.ratio}×` : `${Math.round(parseFloat(std.ratio) * 100)}%`}
+                  </Text>
                   <View style={[styles.standardBadge, { backgroundColor: getLevelColor(std.label) + '25' }]}>
                     <Text style={[styles.standardLabel, { color: getLevelColor(std.label) }]}>{std.label}</Text>
                   </View>
@@ -202,7 +208,11 @@ export default function PRWallScreen({ navigation }) {
               {standard && (
                 <View style={styles.standardInCard}>
                   <Text style={styles.standardInCardText}>
-                    {standard.ratio}× bodyweight · <Text style={{ color: getLevelColor(standard.label) }}>{standard.label}</Text>
+                    {standard.ratio >= 1
+                      ? `${standard.ratio}× bodyweight · `
+                      : `${Math.round(standard.ratio * 100)}% of bodyweight · `
+                    }
+                    <Text style={{ color: getLevelColor(standard.label) }}>{standard.label}</Text>
                   </Text>
                 </View>
               )}

@@ -229,8 +229,8 @@ const styles = StyleSheet.create({
     flex: 1, paddingVertical: spacing.md,
     fontSize: fontSize.md, color: colors.textPrimary,
   },
-  chipsList: { maxHeight: 52 },
-  chipsContent: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, gap: spacing.sm },
+  chipsList: { height: 56, flexShrink: 0 },
+  chipsContent: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, gap: spacing.sm, alignItems: 'center' },
   chip: {
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     borderRadius: radius.full, backgroundColor: colors.surface,

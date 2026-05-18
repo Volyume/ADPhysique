@@ -11,6 +11,7 @@ import { BarChart } from 'react-native-gifted-charts';
 
 import { colors, fontSize, fontWeight, spacing, radius, volumeColors, motion } from '../styles/theme';
 import { BrandTag } from '../components/BrandMark';
+import InfoTooltip from '../components/InfoTooltip';
 import useAppStore from '../store/useAppStore';
 import {
   getCompletedWorkoutSets, getAllWorkouts, getAllExercises, getAllMesocycles,
@@ -362,7 +363,10 @@ export default function AnalyticsScreen({ navigation }) {
         {/* ── 3 · Volume Snapshot ───────────────────────────── */}
         <View style={styles.section}>
           <View style={styles.rowBetween}>
-            <Text style={styles.sectionLabel}>THIS WEEK'S VOLUME</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+              <Text style={styles.sectionLabel}>THIS WEEK'S VOLUME</Text>
+              <InfoTooltip text="Working sets per muscle group this week. Colours show how your volume compares to your recommended minimum (orange), optimal range (green), or over maximum (red). Based on hypertrophy research volume landmarks." />
+            </View>
             <TouchableOpacity onPress={() => navigation.navigate('VolumeHeatmap')}>
               <Text style={styles.seeAll}>Full view</Text>
             </TouchableOpacity>
@@ -373,7 +377,10 @@ export default function AnalyticsScreen({ navigation }) {
         {/* ── 4 · PR Rate Sparkline ─────────────────────────── */}
         <View style={styles.section}>
           <View style={styles.rowBetween}>
-            <Text style={styles.sectionLabel}>NEW BESTS</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+              <Text style={styles.sectionLabel}>NEW BESTS</Text>
+              <InfoTooltip text="Each bar is a week. A bar appears when you set a new estimated 1-rep max on any exercise — a higher weight for the same reps, or more reps at the same weight. More bars = more PRs that week." />
+            </View>
             <TouchableOpacity
               style={styles.windowToggle}
               onPress={handlePrWindowToggle}
@@ -388,7 +395,10 @@ export default function AnalyticsScreen({ navigation }) {
 
         {/* ── 5 · Training Day Calendar ─────────────────────── */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>TRAINING DAYS — LAST 12 WEEKS</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+            <Text style={styles.sectionLabel}>TRAINING DAYS — LAST 12 WEEKS</Text>
+            <InfoTooltip text="Each square is one day. Blue = you trained, dark = rest day. Scroll back 12 weeks to see your consistency over time." />
+          </View>
           <TrainingCalendar values={calValues} />
         </View>
 
@@ -470,20 +480,21 @@ function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, onPress,
       {/* Tonnage sparkline */}
       {tonnageBars.some(b => b.value > 0) && (
         <View style={styles.sparkWrap}>
-          <Text style={styles.sparkLabel}>Weekly load (kg moved)</Text>
+          <Text style={styles.sparkLabel}>Weekly load (total kg moved)</Text>
           <BarChart
             data={tonnageBars}
             barWidth={28}
             spacing={10}
             roundedTop
             hideRules
-            hideAxesAndRules
             noOfSections={3}
             height={56}
             barBorderRadius={3}
             xAxisThickness={0}
             yAxisThickness={0}
-            yAxisTextStyle={{ display: 'none' }}
+            hideYAxisText
+            showValuesAsTopLabel
+            topLabelTextStyle={{ fontSize: 8, color: colors.textMuted }}
             xAxisLabelTextStyle={styles.barAxisLabel}
             isAnimated
           />
@@ -522,10 +533,24 @@ function VolumeSnapshotGrid({ volume }) {
           <View key={m} style={styles.volCell}>
             <View style={[styles.volDot, { backgroundColor: dot }]} />
             <Text style={styles.volMuscle}>{MUSCLE_DISPLAY_NAMES[m]}</Text>
-            <Text style={styles.volSets}>{ws > 0 ? `${ws}s` : '—'}</Text>
+            <Text style={styles.volSets}>{ws > 0 ? `${ws} sets` : '—'}</Text>
           </View>
         );
       })}
+      <View style={styles.volLegend}>
+        <View style={styles.volLegendItem}>
+          <View style={[styles.volLegendDot, { backgroundColor: '#F97316' }]} />
+          <Text style={styles.volLegendText}>Below target</Text>
+        </View>
+        <View style={styles.volLegendItem}>
+          <View style={[styles.volLegendDot, { backgroundColor: '#22C55E' }]} />
+          <Text style={styles.volLegendText}>Good</Text>
+        </View>
+        <View style={styles.volLegendItem}>
+          <View style={[styles.volLegendDot, { backgroundColor: '#EF4444' }]} />
+          <Text style={styles.volLegendText}>Over max</Text>
+        </View>
+      </View>
     </View>
   );
 }
@@ -558,6 +583,9 @@ function PRSparkline({ bars, windowDays }) {
                   backgroundColor: bar.value > 0 ? colors.gold : colors.surface3,
                 },
               ]} />
+              {bar.value > 0 && (
+                <Text style={styles.prBarCount}>{bar.value}</Text>
+              )}
             </View>
           );
         })}
@@ -568,6 +596,7 @@ function PRSparkline({ bars, windowDays }) {
 
 function TrainingCalendar({ values }) {
   const trainedDates = new Set(values.map(v => v.date));
+  const trainedCount = values.length;
   const today = new Date();
   // Build 84 days oldest→newest, grouped into 12 weeks of 7 days
   const SQ = Math.max(10, Math.floor((SCREEN_W - 90) / 14)); // square size
@@ -600,6 +629,7 @@ function TrainingCalendar({ values }) {
         <Text style={styles.calLegendText}>Rest</Text>
         <View style={[styles.calDot, { backgroundColor: colors.primary }]} />
         <Text style={styles.calLegendText}>Trained</Text>
+        <Text style={[styles.calLegendText, { marginLeft: 'auto' }]}>{trainedCount} days trained</Text>
       </View>
     </View>
   );
@@ -719,6 +749,10 @@ const styles = StyleSheet.create({
   volDot:    { width: 10, height: 10, borderRadius: 5 },
   volMuscle: { fontSize: 10, color: colors.textSecondary, textAlign: 'center' },
   volSets:   { fontSize: 10, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  volLegend: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
+  volLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  volLegendDot: { width: 8, height: 8, borderRadius: 4 },
+  volLegendText: { fontSize: 9, color: colors.textMuted },
 
   // ── PR Sparkline ──
   windowToggle: {
@@ -735,6 +769,7 @@ const styles = StyleSheet.create({
   },
   prBarCol:  { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
   prBar:     { width: '100%', borderRadius: 2 },
+  prBarCount: { fontSize: 8, color: colors.gold, marginTop: 2, fontWeight: '700' },
   prEmpty:   {
     backgroundColor: colors.surface, borderRadius: radius.md,
     padding: spacing.lg, borderWidth: 1, borderColor: colors.border,

@@ -10,6 +10,7 @@ import { format, differenceInDays } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius, shadow } from '../styles/theme';
 import { BrandTag } from '../components/BrandMark';
+import InfoTooltip from '../components/InfoTooltip';
 import useAppStore from '../store/useAppStore';
 import {
   getAllWorkouts, getCompletedWorkoutSets, getBodyMetricLog, getNutritionTargets,
@@ -219,14 +220,17 @@ export default function AthleteHubScreen({ navigation }) {
 
         {/* ── Recovery signals ──────────────────────────── */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>RECOVERY SIGNALS</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+            <Text style={styles.sectionLabel}>RECOVERY SIGNALS</Text>
+            <InfoTooltip text="Weighted 7-day average of your session check-ins. Scored 1–5 where lower is better for Soreness and Fatigue (1 = fresh, 5 = very sore/tired). Joint Comfort is also 1–5 where 1 = comfortable. If scores are consistently high, consider a lighter week." />
+          </View>
           <View style={styles.recoveryGrid}>
             <RecoveryGauge label="Soreness" value={recovery.soreness} />
             <RecoveryGauge label="Fatigue" value={recovery.fatigue} />
             <RecoveryGauge label="Joint comfort" value={recovery.joint} invertGood />
           </View>
           <Text style={styles.recoveryNote}>
-            7-day weighted average of your session feedback.
+            Scale 1–5 · Lower is better for soreness & fatigue
           </Text>
         </View>
 
@@ -305,9 +309,6 @@ export default function AthleteHubScreen({ navigation }) {
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>MANAGE</Text>
           <NavRow icon="layers" label="Training Blocks" sub="Create and track multi-week blocks" onPress={() => navigation.navigate('MesocycleBuilder')} />
-          {physiqueEnabled && (
-            <NavRow icon="flame" label="Peak Week" sub="Contest carb-load &amp; water taper planner" onPress={() => navigation.navigate('PeakWeek')} />
-          )}
           <NavRow
             icon="document-text-outline"
             label={exporting ? 'Preparing report…' : 'Send report to coach'}
@@ -336,14 +337,17 @@ function RecoveryGauge({ label, value, invertGood = false }) {
   const display = hasValue ? value.toFixed(1) : '—';
 
   let dotColor = colors.textMuted;
+  let scaleNote = 'No data yet';
   if (hasValue) {
     const v = parseFloat(value);
     if (invertGood) {
       // Joint discomfort: lower is better
       dotColor = v >= 3 ? colors.error : v >= 2 ? colors.warning : colors.success;
+      scaleNote = v >= 3 ? 'High discomfort' : v >= 2 ? 'Moderate' : 'Comfortable';
     } else {
       // Soreness/fatigue: lower is better
       dotColor = v >= 4 ? colors.error : v >= 3 ? colors.warning : colors.success;
+      scaleNote = v >= 4 ? 'High' : v >= 3 ? 'Elevated' : v >= 2 ? 'Moderate' : 'Low / Fresh';
     }
   }
 
@@ -352,6 +356,7 @@ function RecoveryGauge({ label, value, invertGood = false }) {
       <View style={[styles.gaugeDot, { backgroundColor: dotColor }]} />
       <Text style={styles.gaugeValue}>{display}</Text>
       <Text style={styles.gaugeLabel}>{label}</Text>
+      <Text style={styles.gaugeScale}>{scaleNote}</Text>
     </View>
   );
 }
@@ -461,6 +466,7 @@ const styles = StyleSheet.create({
   gaugeDot:    { width: 12, height: 12, borderRadius: 6 },
   gaugeValue:  { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
   gaugeLabel:  { fontSize: 10, color: colors.textMuted, textAlign: 'center' },
+  gaugeScale:  { fontSize: 9, color: colors.textMuted, textAlign: 'center' },
   recoveryNote: { fontSize: fontSize.xs, color: colors.textMuted, textAlign: 'center' },
 
   // Quick stats

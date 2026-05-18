@@ -25,6 +25,7 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
   const [newName, setNewName] = useState('');
   const [newMuscle, setNewMuscle] = useState('');
   const [newEquipment, setNewEquipment] = useState('');
+  const [newSecondaryMuscles, setNewSecondaryMuscles] = useState([]);
   const [savingNew, setSavingNew] = useState(false);
 
   const addToWorkout = route.params?.onSelect;
@@ -42,6 +43,12 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
     }
   }
 
+  function toggleSecondaryMuscle(key) {
+    setNewSecondaryMuscles(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
+  }
+
   async function handleSaveCustomExercise() {
     if (!newName.trim()) {
       Alert.alert('Name required', 'Please enter a name for the exercise.');
@@ -52,6 +59,7 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
       await insertExercise({
         name: newName.trim(),
         primaryMuscle: newMuscle || null,
+        secondaryMuscles: newSecondaryMuscles.length > 0 ? newSecondaryMuscles : null,
         equipment: newEquipment || null,
         isCustom: 1,
       });
@@ -60,6 +68,7 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
       setNewName('');
       setNewMuscle('');
       setNewEquipment('');
+      setNewSecondaryMuscles([]);
     } catch (_e) {
       Alert.alert('Error', 'Could not save exercise. Please try again.');
     } finally {
@@ -208,6 +217,24 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
                   <Text style={[styles.chipText, newMuscle === key && styles.chipTextActive]}>{label}</Text>
                 </TouchableOpacity>
               ))}
+            </View>
+
+            <Text style={[styles.addFieldLabel, { marginTop: spacing.xl }]}>SECONDARY MUSCLES (OPTIONAL)</Text>
+            <Text style={styles.addFieldNote}>Select all muscles this exercise also works</Text>
+            <View style={styles.chipGrid}>
+              {Object.entries(MUSCLE_DISPLAY_NAMES)
+                .filter(([key]) => key !== newMuscle)
+                .map(([key, label]) => (
+                  <TouchableOpacity
+                    key={key}
+                    style={[styles.chip, newSecondaryMuscles.includes(key) && styles.chipActive]}
+                    onPress={() => toggleSecondaryMuscle(key)}
+                  >
+                    <Text style={[styles.chipText, newSecondaryMuscles.includes(key) && styles.chipTextActive]}>
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
             </View>
 
             <Text style={[styles.addFieldLabel, { marginTop: spacing.xl }]}>EQUIPMENT</Text>
@@ -456,6 +483,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs, fontWeight: fontWeight.black, color: colors.textMuted,
     letterSpacing: 1.5, marginBottom: spacing.sm,
   },
+  addFieldNote: { fontSize: fontSize.xs, color: colors.textMuted, marginBottom: spacing.sm, marginTop: -spacing.xs },
   addFieldInput: {
     backgroundColor: colors.surface, borderRadius: radius.md, paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md, fontSize: fontSize.md, color: colors.textPrimary,

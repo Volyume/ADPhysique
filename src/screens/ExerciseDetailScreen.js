@@ -8,6 +8,8 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { getExerciseById, getWorkoutSetsForExercise, getAllExercises } from '../lib/database';
 import { calculate1RM, getExerciseSubstitutes, MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
+import { FORM_TIPS } from '../lib/formTips';
+import InfoTooltip from '../components/InfoTooltip';
 
 export default function ExerciseDetailScreen({ navigation, route }) {
   const { exerciseId } = route.params || {};
@@ -53,6 +55,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
 
   if (!exercise) return null;
 
+  const formTip = FORM_TIPS[exercise.name] ?? null;
   const primaryMuscle = MUSCLE_DISPLAY_NAMES[(exercise.primaryMuscle || '').toLowerCase()] || exercise.primaryMuscle;
   const secondaryMuscles = exercise.secondaryMuscles || [];
 
@@ -108,12 +111,18 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           <View style={styles.sfrRow}>
             <View style={styles.sfrItem}>
               <Text style={styles.sfrValue}>{exercise.stimulusToFatigueRatio || 3}/5</Text>
-              <Text style={styles.sfrLabel}>SFR</Text>
+              <View style={styles.sfrLabelRow}>
+                <Text style={styles.sfrLabel}>SFR</Text>
+                <InfoTooltip text="Stimulus-to-Fatigue Ratio: how much muscle growth stimulus this exercise provides relative to the systemic fatigue it creates. 5/5 = high stimulus, low fatigue (cable fly). 3/5 = moderate. 1/5 = very taxing for the return." size={11} />
+              </View>
             </View>
             <View style={styles.sfrDivider} />
             <View style={styles.sfrItem}>
               <Text style={styles.sfrValue}>{exercise.fatigueCost || 3}/5</Text>
-              <Text style={styles.sfrLabel}>Fatigue</Text>
+              <View style={styles.sfrLabelRow}>
+                <Text style={styles.sfrLabel}>Fatigue</Text>
+                <InfoTooltip text="How much systemic fatigue this exercise creates. 5/5 = very demanding (deadlift). 1/5 = minimal fatigue. High-fatigue exercises need more recovery between sessions." size={11} />
+              </View>
             </View>
             <View style={styles.sfrDivider} />
             <View style={styles.sfrItem}>
@@ -223,9 +232,12 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           </View>
         )}
 
-        {exercise.notes && (
-          <View style={styles.notesCard}>
-            <Text style={styles.notesText}>{exercise.notes}</Text>
+        {(formTip || exercise.notes) && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>HOW TO PERFORM</Text>
+            <View style={styles.notesCard}>
+              <Text style={styles.notesText}>{formTip ?? exercise.notes}</Text>
+            </View>
           </View>
         )}
       </ScrollView>
@@ -276,6 +288,7 @@ const styles = StyleSheet.create({
   sfrItem: { flex: 1, alignItems: 'center', gap: 2 },
   sfrValue: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
   sfrLabel: { fontSize: fontSize.xs, color: colors.textMuted },
+  sfrLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   sfrDivider: { width: 1, height: 36, backgroundColor: colors.border },
   chartSection: { gap: spacing.sm },
   chartLabel: {
