@@ -115,7 +115,7 @@ export function buildSwapReason(original, candidate) {
   }
 
   if (similarSFR) {
-    parts.push('similar stimulus-to-fatigue ratio');
+    parts.push('similar stimulus quality');
   }
 
   if (parts.length === 0) {

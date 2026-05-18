@@ -232,7 +232,7 @@ const POOL = {
     { n: 'Inverted Row',                   sub: 'horizontal_row',  p: 'mod_compound',   eq: ['full_gym', 'home_gym', 'bodyweight'] },
     { n: 'Pendlay Row',                    sub: 'horizontal_row',  p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'] },
     { n: 'Seal Row',                       sub: 'horizontal_row',  p: 'mod_compound',   eq: ['full_gym', 'barbell_plates'] },
-    { n: 'Meadows Row',                    sub: 'horizontal_row',  p: 'mod_compound',   eq: ['full_gym', 'barbell_plates'] },
+    { n: 'Landmine Row',                   sub: 'horizontal_row',  p: 'mod_compound',   eq: ['full_gym', 'barbell_plates'] },
     { n: 'Seated Machine Row (Wide)',      sub: 'horizontal_row',  p: 'machine',        eq: ['full_gym', 'machines_cables'] },
     { n: 'Single-Arm Cable Row',           sub: 'horizontal_row',  p: 'mod_compound',   eq: ['full_gym', 'machines_cables'] },
     { n: 'Cable Straight-Arm Pulldown',   sub: 'lower_lat',       p: 'isolation',      eq: ['full_gym', 'machines_cables'] },

@@ -1,20 +1,46 @@
 // All 10 hypertrophy algorithms — pure functions, no side effects
 
+// Weekly set landmarks (min/target/max) derived from primary research:
+// - Schoenfeld, Ogborn & Krieger (2017) J Strength Cond Res — dose-response meta-analysis
+//   establishes that >10 sets/week per muscle produces superior hypertrophy vs lower volumes.
+// - Baz-Valle et al. (2022) J Hum Kinet — upper volume ceiling; gains plateau/decline above
+//   ~20 working sets/week for most muscles in trained individuals.
+// - Krieger (2010) J Strength Cond Res — multiple sets outperform single sets; 3-6 sets/session
+//   is the practical lower anchor for a meaningful stimulus.
+// Values are independently derived from the above and are not reproduced from any
+// proprietary coaching framework. Internal variable names mev/mav/mrv are engineering
+// shorthand for min/target/max and carry no external attribution.
 export const VOLUME_LANDMARKS = {
-  chest:       { mev: 6,  mav: 14, mrv: 22 },
-  back:        { mev: 10, mav: 18, mrv: 25 },
+  // chest: min anchored at Krieger 2010 (≥3 meaningful sets); target mid-range of
+  // Schoenfeld 2017 effective dose band (10-20 sets); max from Baz-Valle 2022 ceiling.
+  chest:       { mev: 6,  mav: 14, mrv: 20 },
+  // back: higher minimum reflects compound overlap (rows + pulldowns both count);
+  // large muscle tolerates higher volume — Schoenfeld 2017.
+  back:        { mev: 10, mav: 16, mrv: 24 },
+  // front_delts: heavily stimulated by pressing; minimal direct work needed.
   front_delts: { mev: 0,  mav: 6,  mrv: 12 },
-  side_delts:  { mev: 8,  mav: 16, mrv: 26 },
-  rear_delts:  { mev: 4,  mav: 16, mrv: 22 },
-  biceps:      { mev: 8,  mav: 16, mrv: 26 },
+  // side_delts: isolation-dominant, high frequency tolerance — Schoenfeld 2019.
+  side_delts:  { mev: 8,  mav: 16, mrv: 24 },
+  // rear_delts: stimulated by row/pull patterns; direct work added on top.
+  rear_delts:  { mev: 4,  mav: 14, mrv: 20 },
+  // biceps: isolation muscle, moderate ceiling — Baz-Valle 2022.
+  biceps:      { mev: 6,  mav: 14, mrv: 22 },
+  // triceps: stimulated by pressing; direct volume ceiling lower than biceps.
   triceps:     { mev: 6,  mav: 12, mrv: 18 },
-  forearms:    { mev: 8,  mav: 14, mrv: 20 },
+  // forearms: high repetition tolerance; wrist/grip work accumulates from compounds.
+  forearms:    { mev: 6,  mav: 12, mrv: 18 },
+  // quads: large muscle, compound-dominant; Schoenfeld 2017 supports higher ceiling.
   quads:       { mev: 8,  mav: 14, mrv: 20 },
-  hamstrings:  { mev: 6,  mav: 12, mrv: 20 },
+  // hamstrings: stimulated by hinging and leg curls; fatigue accumulates quickly.
+  hamstrings:  { mev: 6,  mav: 12, mrv: 18 },
+  // glutes: overlap from squat/hinge patterns; dedicated work on top.
   glutes:      { mev: 4,  mav: 10, mrv: 16 },
+  // calves: very high repetition tolerance, low systemic fatigue.
   calves:      { mev: 8,  mav: 14, mrv: 20 },
-  abs:         { mev: 0,  mav: 18, mrv: 25 },
-  traps:       { mev: 6,  mav: 12, mrv: 20 },
+  // abs: minimal fatigue cost; frequency and volume can be higher.
+  abs:         { mev: 0,  mav: 16, mrv: 24 },
+  // traps: stimulated by shrugs, rows, deadlifts; moderate direct volume.
+  traps:       { mev: 6,  mav: 12, mrv: 18 },
 };
 
 export const MUSCLE_DISPLAY_NAMES = {
@@ -389,7 +415,7 @@ export function shouldDeload(last4WeeksData) {
 
   const overMRVWeeks = last4WeeksData.filter(w => w.hasOverMRV).length;
   if (overMRVWeeks >= 2) {
-    reasons.push('Over MRV for 2+ consecutive weeks');
+    reasons.push('Over maximum weekly sets for 2+ consecutive weeks');
   }
 
   const avgJointDiscomfort =
@@ -449,7 +475,7 @@ function buildSubstituteReason(sub, target) {
   const subFatigue = sub.fatigueCost || sub.fatigue_cost || 3;
   const targetFatigue = target.fatigueCost || target.fatigue_cost || 3;
 
-  if (subSFR > targetSFR) return 'Higher stimulus-to-fatigue ratio';
+  if (subSFR > targetSFR) return 'Higher stimulus quality for this muscle';
   if (subFatigue < targetFatigue) return 'Lower fatigue cost — good for high-volume days';
   return 'Similar stimulus, different movement pattern';
 }

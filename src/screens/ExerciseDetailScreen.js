@@ -112,8 +112,8 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             <View style={styles.sfrItem}>
               <Text style={styles.sfrValue}>{exercise.stimulusToFatigueRatio || 3}/5</Text>
               <View style={styles.sfrLabelRow}>
-                <Text style={styles.sfrLabel}>SFR</Text>
-                <InfoTooltip text="Stimulus-to-Fatigue Ratio: how much muscle growth stimulus this exercise provides relative to the systemic fatigue it creates. 5/5 = high stimulus, low fatigue (cable fly). 3/5 = moderate. 1/5 = very taxing for the return." size={11} />
+                <Text style={styles.sfrLabel}>Quality</Text>
+                <InfoTooltip text="Stimulus Quality: how much muscle growth stimulus this exercise provides relative to the systemic fatigue it creates. 5/5 = high stimulus, low fatigue (e.g. cable fly). 3/5 = moderate. 1/5 = very demanding for the return." size={11} />
               </View>
             </View>
             <View style={styles.sfrDivider} />
