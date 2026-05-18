@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { getLibraryPlans, getPlanWorkoutCounts, copyPlanFromLibrary, setActivePlan } from '../lib/database';
+import { getLibraryPlans, getPlanWorkoutCounts, copyPlanFromLibrary, activatePlanWithBlock } from '../lib/database';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import useAppStore from '../store/useAppStore';
 
@@ -93,7 +93,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
                   {
                     text: fromFirstRun ? 'Start Training' : 'Set Active',
                     onPress: async () => {
-                      await setActivePlan(user.id, copy.id);
+                      await activatePlanWithBlock(user.id, copy.id, plan.name);
                       if (fromFirstRun) await completeFirstRun();
                     },
                   },

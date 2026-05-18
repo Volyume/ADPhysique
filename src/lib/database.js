@@ -885,6 +885,36 @@ export async function setActivePlan(userId, planId) {
   }
 }
 
+// Sets a plan active AND creates a matching training block so the Analytics
+// card is populated immediately. Deactivates any existing active mesocycle first.
+export async function activatePlanWithBlock(userId, planId, planName) {
+  await setActivePlan(userId, planId);
+
+  const d = await db();
+  const now = Date.now();
+  await d.runAsync(
+    'UPDATE mesocycles SET is_active = 0, updated_at = ? WHERE user_id = ?',
+    [now, userId],
+  );
+
+  const id = uid();
+  const startDate = new Date().toISOString().slice(0, 10);
+  // 6 weeks: 5 accumulation (RIR 3→2→1→0→0) + 1 deload (RIR 4)
+  await d.runAsync(
+    `INSERT INTO mesocycles
+      (id, user_id, name, start_date, duration_weeks, planned_weeks, focus,
+       block_type, rir_ladder, is_active, auto_regulation_enabled, created_at, updated_at)
+     VALUES (?, ?, ?, ?, 6, 6, ?, ?, ?, 1, 1, ?, ?)`,
+    [id, userId, planName, startDate, 'hypertrophy', 'offseason_hypertrophy', '[3,2,1,0,0,4]', now, now],
+  );
+
+  await generateMesocycleWeeks(id);
+  const { VOLUME_LANDMARKS } = await import('./algorithms');
+  await generateInitialPlannedVolume(id, VOLUME_LANDMARKS);
+
+  return id;
+}
+
 export async function getAllPlansForUser(userId) {
   const d = await db();
   const rows = await d.getAllAsync(

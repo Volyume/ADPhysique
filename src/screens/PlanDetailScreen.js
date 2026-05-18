@@ -9,7 +9,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import {
   getProgrammeById, getRoutinesForPlan, getAllRoutineExerciseCounts,
-  setActivePlan, archivePlan, duplicatePlan, copyPlanFromLibrary,
+  setActivePlan, activatePlanWithBlock, archivePlan, duplicatePlan, copyPlanFromLibrary,
   createWorkout, getRoutineExercisesWithDetails, getActivePlan,
 } from '../lib/database';
 import useAppStore from '../store/useAppStore';
@@ -67,7 +67,7 @@ export default function PlanDetailScreen({ navigation, route }) {
                   {
                     text: 'Set Active',
                     onPress: async () => {
-                      await setActivePlan(user.id, copy.id);
+                      await activatePlanWithBlock(user.id, copy.id, plan?.name ?? 'Training Plan');
                       navigation.goBack();
                     },
                   },
@@ -83,7 +83,7 @@ export default function PlanDetailScreen({ navigation, route }) {
   }
 
   async function handleSetActive() {
-    await setActivePlan(user.id, planId);
+    await activatePlanWithBlock(user.id, planId, plan?.name ?? 'Training Plan');
     await loadData();
     Alert.alert('Plan Activated', `"${plan?.name}" is now your active plan. Train will show the next workout.`);
   }

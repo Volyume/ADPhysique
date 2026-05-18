@@ -26,7 +26,7 @@ import {
   createRoutine,
   addExerciseToRoutine,
   getAllExercises,
-  setActivePlan,
+  activatePlanWithBlock,
 } from '../lib/database';
 import useAppStore from '../store/useAppStore';
 
@@ -355,7 +355,7 @@ export default function CoachBuilderScreen({ navigation, route }) {
       }
 
       if (activate) {
-        await setActivePlan(userId, prog.id);
+        await activatePlanWithBlock(userId, prog.id, planName.trim() || plan.name);
       }
 
       if (isFirstRun) {

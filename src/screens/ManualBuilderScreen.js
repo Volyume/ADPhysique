@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import {
   createProgramme, createRoutine, addExerciseToRoutine,
-  setActivePlan, getAllExercises, insertExercise,
+  activatePlanWithBlock, getAllExercises, insertExercise,
 } from '../lib/database';
 import { MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
@@ -490,7 +490,7 @@ export default function ManualBuilderScreen({ navigation }) {
     setSaving(true);
     try {
       await persistDays();
-      await setActivePlan(user.id, programmeId);
+      await activatePlanWithBlock(user.id, programmeId, planName.trim() || 'My Plan');
       setSavedPlanName(planName.trim() || 'Your plan');
       setSuccessModal(true);
     } catch (e) {

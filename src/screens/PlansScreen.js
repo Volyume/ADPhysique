@@ -11,7 +11,7 @@ import { BrandTag } from '../components/BrandMark';
 import {
   getActivePlan, getAllPlansForUser,
   getWorkoutTemplates, getPlanWorkoutCounts, getAllRoutineExerciseCounts,
-  setActivePlan, getRoutinesForPlan, createWorkout, getRoutineExercisesWithDetails,
+  activatePlanWithBlock, getRoutinesForPlan, createWorkout, getRoutineExercisesWithDetails,
   archivePlan, duplicatePlan, softDeleteRoutine,
 } from '../lib/database';
 import useAppStore from '../store/useAppStore';
@@ -97,15 +97,15 @@ export default function PlansScreen({ navigation }) {
     navigation.navigate('HomeTab', { screen: 'ActiveWorkout' });
   }
 
-  async function handleSetActive(planId) {
-    await setActivePlan(user.id, planId);
+  async function handleSetActive(plan) {
+    await activatePlanWithBlock(user.id, plan.id, plan.name);
     await loadData();
   }
 
   async function handlePlanOptions(plan) {
     Alert.alert(plan.name, undefined, [
       { text: 'View Plan', onPress: () => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false }) },
-      { text: 'Set Active', onPress: () => handleSetActive(plan.id) },
+      { text: 'Set Active', onPress: () => handleSetActive(plan) },
       {
         text: 'Duplicate',
         onPress: async () => {
