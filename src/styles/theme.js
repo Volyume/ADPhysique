@@ -119,3 +119,13 @@ export const iconSize = {
   lg: 24,
   xl: 32,
 };
+
+// Motion timing tokens (single source of truth for animation durations).
+// Respect Reduce Motion at call sites by collapsing to 0 when enabled.
+export const motion = {
+  card: 220,        // card enter/exit (ms)
+  state: 160,       // state changes (ms)
+  micro: 90,        // micro-interactions / taps (ms)
+  easeOut: 'ease-out',
+  easeInOut: 'ease-in-out',
+};

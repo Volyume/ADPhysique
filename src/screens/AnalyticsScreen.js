@@ -8,9 +8,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { format } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { BrandTag } from '../components/BrandMark';
-import { getAllWorkoutSets, getAllWorkouts } from '../lib/database';
+import { getAllWorkoutSets, getAllWorkouts, getAllExercises } from '../lib/database';
 import {
-  calculateTonnage, shouldDeload,
+  calculateTonnage, shouldDeload, calculateWeeklyVolume, VOLUME_LANDMARKS,
 } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 
@@ -70,8 +70,12 @@ export default function AnalyticsScreen({ navigation }) {
 
   async function checkDeload() {
     try {
-      const allWorkouts = await getAllWorkouts(user.id);
-      const allSets = await getAllWorkoutSets(user.id);
+      const [allWorkouts, allSets, allExercises] = await Promise.all([
+        getAllWorkouts(user.id),
+        getAllWorkoutSets(user.id),
+        getAllExercises(),
+      ]);
+      const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
 
       const last4Weeks = Array.from({ length: 4 }, (_, i) => {
         const weekStart = Date.now() - (i + 1) * 7 * 24 * 60 * 60 * 1000;
@@ -88,11 +92,21 @@ export default function AnalyticsScreen({ navigation }) {
         const avgSoreness = weekWorkouts.length > 0
           ? weekWorkouts.reduce((sum, w) => sum + (w.soreness24hBefore || 0), 0) / weekWorkouts.length
           : 0;
-        return { avgReps, avgSoreness, hasOverMRV: false, weeksSinceLastDeload: 4 - i };
+
+        // Real over-MRV detection: any muscle whose weekly hard-set count
+        // exceeds its MRV landmark flags the week as over-MRV.
+        const volume = calculateWeeklyVolume(weekSets, exerciseMap);
+        const hasOverMRV = Object.entries(volume).some(([muscle, v]) => {
+          const lm = VOLUME_LANDMARKS[muscle];
+          return lm && v.workingSets > lm.mrv;
+        });
+
+        return { avgReps, avgSoreness, hasOverMRV, weeksSinceLastDeload: 4 - i };
       });
 
       const result = shouldDeload(last4Weeks.reverse());
       if (result.deload) setDeloadCheck(result);
+      else setDeloadCheck(null);
     } catch (e) {}
   }
 

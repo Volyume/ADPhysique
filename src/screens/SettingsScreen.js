@@ -8,7 +8,9 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { getSupabaseClient, signOut } from '../lib/supabase';
 import useAppStore from '../store/useAppStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { clearWorkoutHistory } from '../lib/database';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import { clearWorkoutHistory, buildWorkoutCSV } from '../lib/database';
 
 function SettingRow({ icon, label, value, onPress, destructive, rightElement, showArrow = true }) {
   return (
@@ -79,7 +81,31 @@ export default function SettingsScreen({ navigation }) {
   }
 
   async function exportData() {
-    Alert.alert('Export coming soon', 'CSV export will be available in the next update.');
+    if (!user?.id) return;
+    try {
+      const { csv, rowCount } = await buildWorkoutCSV(user.id);
+      if (rowCount === 0) {
+        Alert.alert('Nothing to export', 'Log some workouts first, then export your data here.');
+        return;
+      }
+      const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const fileUri = `${FileSystem.cacheDirectory}volyume_export_${date}.csv`;
+      await FileSystem.writeAsStringAsync(fileUri, csv, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: 'text/csv',
+          dialogTitle: 'Export Volyume data',
+          UTI: 'public.comma-separated-values-text',
+        });
+      } else {
+        Alert.alert('Export saved', `${rowCount} sets written to ${fileUri}`);
+      }
+    } catch (e) {
+      Alert.alert('Export failed', e?.message ?? 'Could not export your data. Please try again.');
+    }
   }
 
   async function handleClearHistory() {

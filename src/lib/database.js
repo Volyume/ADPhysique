@@ -179,6 +179,10 @@ async function _doInit() {
       hips_cm REAL,
       thigh_cm REAL,
       arm_cm REAL,
+      shoulders_cm REAL,
+      forearm_cm REAL,
+      ham_cm REAL,
+      calf_cm REAL,
       notes TEXT,
       created_at INTEGER
     );
@@ -227,6 +231,11 @@ async function _doInit() {
     'ALTER TABLE workouts ADD COLUMN set_count INTEGER',
     'ALTER TABLE workouts ADD COLUMN total_volume REAL',
     'ALTER TABLE exercises ADD COLUMN subregion TEXT',
+    'ALTER TABLE body_metric_log ADD COLUMN shoulders_cm REAL',
+    'ALTER TABLE body_metric_log ADD COLUMN forearm_cm REAL',
+    'ALTER TABLE body_metric_log ADD COLUMN ham_cm REAL',
+    'ALTER TABLE body_metric_log ADD COLUMN calf_cm REAL',
+    'ALTER TABLE workout_sets ADD COLUMN missed_reps INTEGER',
   ];
   for (const sql of colMigrations) {
     try { await _db.execAsync(sql); } catch (_) {}
@@ -921,13 +930,16 @@ export async function logBodyMetric(userId, data) {
   await d.runAsync(
     `INSERT INTO body_metric_log
       (id, user_id, logged_at, weight_kg, body_fat_percent, body_fat_source,
-       waist_cm, chest_cm, hips_cm, thigh_cm, arm_cm, notes, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       waist_cm, chest_cm, hips_cm, thigh_cm, arm_cm,
+       shoulders_cm, forearm_cm, ham_cm, calf_cm, notes, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id, userId, data.loggedAt ?? now,
       data.weightKg ?? null, data.bodyFatPercent ?? null, data.bodyFatSource ?? null,
       data.waistCm ?? null, data.chestCm ?? null, data.hipsCm ?? null,
-      data.thighCm ?? null, data.armCm ?? null, data.notes ?? null, now,
+      data.thighCm ?? null, data.armCm ?? null,
+      data.shouldersCm ?? null, data.forearmCm ?? null, data.hamCm ?? null,
+      data.calfCm ?? null, data.notes ?? null, now,
     ],
   );
   return { id, userId, createdAt: now, ...data };
@@ -940,6 +952,75 @@ export async function getBodyMetricLog(userId, limitRows = 90) {
     [userId, limitRows],
   );
   return rows.map(rowToCamel);
+}
+
+export async function getLatestBodyWeight(userId) {
+  const d = await db();
+  const row = await d.getFirstAsync(
+    `SELECT weight_kg, logged_at FROM body_metric_log
+     WHERE user_id = ? AND weight_kg IS NOT NULL
+     ORDER BY logged_at DESC LIMIT 1`,
+    [userId],
+  );
+  if (!row || row.weight_kg == null) return null;
+  return { weightKg: row.weight_kg, loggedAt: row.logged_at };
+}
+
+// ─── CSV / JSON export ────────────────────────────────────────────
+
+function csvEscape(value) {
+  if (value == null) return '';
+  const s = String(value);
+  if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
+}
+
+export async function buildWorkoutCSV(userId) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT
+       ws.created_at        AS set_created_at,
+       w.name               AS workout_name,
+       r.name               AS routine_name,
+       p.name               AS programme_name,
+       e.name               AS exercise_name,
+       ws.set_number, ws.set_type, ws.weight, ws.actual_reps,
+       ws.rir, ws.rpe, ws.failed, ws.missed_reps, ws.notes
+     FROM workout_sets ws
+     LEFT JOIN workouts   w ON ws.workout_id = w.id
+     LEFT JOIN routines   r ON w.routine_id  = r.id
+     LEFT JOIN programmes p ON r.programme_id = p.id
+     LEFT JOIN exercises  e ON ws.exercise_id = e.id
+     WHERE ws.user_id = ?
+     ORDER BY ws.created_at ASC`,
+    [userId],
+  );
+
+  const header = [
+    'date', 'time', 'routine', 'programme', 'exercise',
+    'set_n', 'set_type', 'weight_kg', 'weight_lb', 'reps',
+    'rir', 'rpe', 'failed', 'missed_reps', 'notes',
+  ];
+  const lines = [header.join(',')];
+
+  for (const r of rows) {
+    const dt = r.set_created_at ? new Date(r.set_created_at) : null;
+    const date = dt ? dt.toISOString().slice(0, 10) : '';
+    const time = dt ? dt.toISOString().slice(11, 19) : '';
+    const wkg = r.weight ?? '';
+    const wlb = r.weight != null ? Math.round(r.weight * 2.20462 * 10) / 10 : '';
+    lines.push([
+      date, time,
+      csvEscape(r.routine_name), csvEscape(r.programme_name), csvEscape(r.exercise_name),
+      r.set_number ?? '', csvEscape(r.set_type), wkg, wlb, r.actual_reps ?? '',
+      r.rir ?? '', r.rpe ?? '', r.failed ? 1 : 0, r.missed_reps ?? '',
+      csvEscape(r.notes),
+    ].join(','));
+  }
+
+  return { csv: lines.join('\n'), rowCount: rows.length };
 }
 
 // ─── User Body Profile ────────────────────────────────────────────

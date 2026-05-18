@@ -7,11 +7,23 @@ import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { getAllWorkoutSets, getAllExercises } from '../lib/database';
-import { calculate1RM } from '../lib/algorithms';
+import { getAllWorkoutSets, getAllExercises, getLatestBodyWeight } from '../lib/database';
+import { calculate1RM, getStrengthStandard } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 
-const STRENGTH_EXERCISES = ['Barbell Bench Press', 'Barbell Squat', 'Deadlift'];
+// Maps a logged exercise name to a strength-standard lift key.
+const STRENGTH_LIFT_MAP = [
+  { match: /bench press/i,  lift: 'bench' },
+  { match: /squat/i,        lift: 'squat' },
+  { match: /deadlift/i,     lift: 'deadlift' },
+];
+
+function liftKeyFor(name) {
+  for (const { match, lift } of STRENGTH_LIFT_MAP) {
+    if (match.test(name)) return lift;
+  }
+  return null;
+}
 
 export default function PRWallScreen({ navigation }) {
   const { user, units } = useAppStore();
@@ -27,9 +39,10 @@ export default function PRWallScreen({ navigation }) {
   async function loadData() {
     if (!user?.id) return;
     try {
-      const [allSets, allExercises] = await Promise.all([
+      const [allSets, allExercises, bw] = await Promise.all([
         getAllWorkoutSets(user.id),
         getAllExercises(),
+        getLatestBodyWeight(user.id),
       ]);
       const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
       const byExercise = {};
@@ -60,6 +73,26 @@ export default function PRWallScreen({ navigation }) {
         }
       }
       setGrouped(newGrouped);
+
+      // Body weight is stored raw in the user's chosen unit (unit-agnostic,
+      // matching how workout set weights are stored), so use it directly.
+      if (bw?.weightKg) {
+        const bwValue = Math.round(bw.weightKg * 10) / 10;
+        setBodyWeight(bwValue);
+
+        const standards = {};
+        for (const [name, types] of Object.entries(newGrouped)) {
+          const lift = liftKeyFor(name);
+          const est1RM = types['1rm_estimate']?.value;
+          if (lift && est1RM) {
+            standards[name] = getStrengthStandard(lift, est1RM, bwValue);
+          }
+        }
+        setStrengthStandards(standards);
+      } else {
+        setBodyWeight(null);
+        setStrengthStandards({});
+      }
     } catch (e) {
       console.error('PRWallScreen loadData:', e);
     }
@@ -111,7 +144,7 @@ export default function PRWallScreen({ navigation }) {
         }
         contentContainerStyle={styles.list}
         ListHeaderComponent={
-          bodyWeight ? (
+          bodyWeight && Object.keys(strengthStandards).length > 0 ? (
             <View style={styles.standardsCard}>
               <Text style={styles.standardsTitle}>STRENGTH STANDARDS</Text>
               <Text style={styles.standardsSubtitle}>vs {bodyWeight} {units} bodyweight</Text>
@@ -125,6 +158,21 @@ export default function PRWallScreen({ navigation }) {
                 </View>
               ) : null)}
             </View>
+          ) : !bodyWeight ? (
+            <TouchableOpacity
+              style={styles.bwPromptCard}
+              onPress={() => navigation.navigate('ProfileTab', { screen: 'BodyMetrics' })}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="body-outline" size={20} color={colors.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.bwPromptTitle}>Add your body weight</Text>
+                <Text style={styles.bwPromptText}>
+                  Log it once to unlock Strength Standards — see how your lifts rank against your bodyweight.
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
           ) : null
         }
         renderItem={({ item: name }) => {
@@ -210,6 +258,19 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     marginBottom: spacing.md,
   },
+  bwPromptCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.primary + '44',
+    marginBottom: spacing.md,
+  },
+  bwPromptTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  bwPromptText: { fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 17, marginTop: 2 },
   standardsTitle: {
     fontSize: fontSize.xs,
     fontWeight: fontWeight.black,

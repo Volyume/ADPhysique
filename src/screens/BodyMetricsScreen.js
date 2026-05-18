@@ -7,7 +7,42 @@ import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { logBodyMetric, getBodyMetricLog } from '../lib/database';
 import useAppStore from '../store/useAppStore';
+
+// form key  →  logBodyMetric() data field
+const FIELD_MAP = {
+  body_weight: 'weightKg',
+  chest:       'chestCm',
+  shoulders:   'shouldersCm',
+  arms:        'armCm',
+  forearms:    'forearmCm',
+  waist:       'waistCm',
+  hips:        'hipsCm',
+  quads:       'thighCm',
+  hamstrings:  'hamCm',
+  calves:      'calfCm',
+};
+
+// SQLite row (camelCase) → UI entry shape used by the rest of this screen
+function rowToEntry(row) {
+  return {
+    id: row.id,
+    metric_date: new Date(row.loggedAt ?? row.createdAt ?? Date.now())
+      .toISOString().slice(0, 10),
+    body_weight: row.weightKg ?? null,
+    chest:       row.chestCm ?? null,
+    shoulders:   row.shouldersCm ?? null,
+    arms:        row.armCm ?? null,
+    forearms:    row.forearmCm ?? null,
+    waist:       row.waistCm ?? null,
+    hips:        row.hipsCm ?? null,
+    quads:       row.thighCm ?? null,
+    hamstrings:  row.hamCm ?? null,
+    calves:      row.calfCm ?? null,
+    notes:       row.notes ?? '',
+  };
+}
 
 const MEASUREMENTS = [
   { key: 'chest',       label: 'Chest' },
@@ -36,18 +71,47 @@ export default function BodyMetricsScreen({ navigation }) {
   const [saving, setSaving] = useState(false);
 
   const STORAGE_KEY = `@volyume_body_metrics_${user?.id}`;
+  const MIGRATED_KEY = `@volyume_body_metrics_migrated_${user?.id}`;
 
   useEffect(() => {
-    loadHistory();
-    loadNutritionTargets();
+    (async () => {
+      await migrateFromAsyncStorage();
+      await loadHistory();
+      await loadNutritionTargets();
+    })();
   }, [user?.id]);
+
+  // One-time, idempotent migration of legacy AsyncStorage body metrics into SQLite.
+  async function migrateFromAsyncStorage() {
+    if (!user?.id) return;
+    try {
+      const done = await AsyncStorage.getItem(MIGRATED_KEY);
+      if (done === 'true') return;
+
+      const raw = await AsyncStorage.getItem(STORAGE_KEY);
+      const legacy = raw ? JSON.parse(raw) : [];
+      for (const entry of legacy) {
+        const data = { notes: entry.notes || null };
+        const d = entry.metric_date ? new Date(entry.metric_date) : new Date();
+        data.loggedAt = isNaN(d.getTime()) ? Date.now() : d.getTime();
+        for (const [formKey, dbField] of Object.entries(FIELD_MAP)) {
+          if (entry[formKey] != null && entry[formKey] !== '') {
+            data[dbField] = parseFloat(entry[formKey]);
+          }
+        }
+        await logBodyMetric(user.id, data);
+      }
+      await AsyncStorage.setItem(MIGRATED_KEY, 'true');
+    } catch (_e) {
+      // Migration is best-effort; never block the screen.
+    }
+  }
 
   async function loadHistory() {
     if (!user?.id) return;
     try {
-      const raw = await AsyncStorage.getItem(STORAGE_KEY);
-      const all = raw ? JSON.parse(raw) : [];
-      setHistory(all.sort((a, b) => b.metric_date.localeCompare(a.metric_date)).slice(0, 20));
+      const rows = await getBodyMetricLog(user.id, 50);
+      setHistory(rows.map(rowToEntry).slice(0, 20));
     } catch (_e) { setHistory([]); }
   }
 
@@ -65,15 +129,16 @@ export default function BodyMetricsScreen({ navigation }) {
     }
     setSaving(true);
     try {
-      const entry = { id: Date.now().toString() };
-      for (const [k, v] of Object.entries(form)) {
-        if (k === 'notes' || k === 'metric_date') entry[k] = v;
-        else if (v !== '') entry[k] = parseFloat(v);
+      const data = { notes: form.notes || null };
+      const d = form.metric_date ? new Date(form.metric_date) : new Date();
+      data.loggedAt = isNaN(d.getTime()) ? Date.now() : d.getTime();
+      for (const [formKey, dbField] of Object.entries(FIELD_MAP)) {
+        if (form[formKey] !== '' && form[formKey] != null) {
+          const n = parseFloat(form[formKey]);
+          if (!isNaN(n)) data[dbField] = n;
+        }
       }
-      const raw = await AsyncStorage.getItem(STORAGE_KEY);
-      const all = raw ? JSON.parse(raw) : [];
-      all.unshift(entry);
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+      await logBodyMetric(user.id, data);
       setShowForm(false);
       setForm({
         body_weight: '', chest: '', shoulders: '', arms: '', forearms: '',
