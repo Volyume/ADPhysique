@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
+import { CartesianChart, Line, Area } from 'victory-native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { getExerciseById, getWorkoutSetsForExercise, getAllExercises } from '../lib/database';
 import { calculate1RM, getExerciseSubstitutes, MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
@@ -60,6 +61,12 @@ export default function ExerciseDetailScreen({ navigation, route }) {
     return est > best ? est : best;
   }, 0);
 
+  // Build chart data: one point per session (oldest → newest)
+  const chartData = [...history].reverse().map((sessionSets, i) => ({
+    x: i,
+    est1rm: Math.max(...sessionSets.map(s => calculate1RM(s.weight || 0, s.actualReps || 0))),
+  }));
+
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -114,6 +121,31 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             </View>
           </View>
         </View>
+
+        {/* Strength trend chart */}
+        {history.length >= 2 && (
+          <View style={styles.chartSection}>
+            <Text style={styles.chartLabel}>Strength trend</Text>
+            <View style={styles.chartContainer}>
+              <CartesianChart data={chartData} xKey="x" yKeys={['est1rm']}>
+                {({ points, chartBounds }) => (
+                  <>
+                    <Area
+                      points={points.est1rm}
+                      y0={chartBounds.bottom}
+                      color="rgba(0,229,255,0.08)"
+                    />
+                    <Line
+                      points={points.est1rm}
+                      color={colors.primary}
+                      strokeWidth={2}
+                    />
+                  </>
+                )}
+              </CartesianChart>
+            </View>
+          </View>
+        )}
 
         {/* History */}
         {history.length > 0 && (
@@ -244,6 +276,22 @@ const styles = StyleSheet.create({
   sfrValue: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
   sfrLabel: { fontSize: fontSize.xs, color: colors.textMuted },
   sfrDivider: { width: 1, height: 36, backgroundColor: colors.border },
+  chartSection: { gap: spacing.sm },
+  chartLabel: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.textMuted,
+    letterSpacing: 0.5,
+  },
+  chartContainer: {
+    height: 120,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
   section: { gap: spacing.md },
   sectionTitle: {
     fontSize: fontSize.xs,

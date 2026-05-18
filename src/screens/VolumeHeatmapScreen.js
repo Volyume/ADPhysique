@@ -13,25 +13,44 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import useAppStore from '../store/useAppStore';
 
+const WINDOW_OPTIONS = [
+  { weeks: 1, label: '1 week' },
+  { weeks: 2, label: '2 weeks' },
+  { weeks: 4, label: '4 weeks' },
+];
+
 export default function VolumeHeatmapScreen() {
   const { user, units } = useAppStore();
   const [weeklyVolume, setWeeklyVolume] = useState({});
+  const [previousVolume, setPreviousVolume] = useState({});
+  const [windowWeeks, setWindowWeeks] = useState(1);
   const [customLandmarks, setCustomLandmarks] = useState(null);
   const [editing, setEditing] = useState(false);
   const [editValues, setEditValues] = useState({});
 
-  useFocusEffect(useCallback(() => { loadData(); }, [user?.id]));
+  useFocusEffect(useCallback(() => { loadData(); }, [user?.id, windowWeeks]));
+
+  useEffect(() => { loadData(); }, [windowWeeks]);
 
   async function loadData() {
     if (!user?.id) return;
 
-    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const windowMs = windowWeeks * 7 * 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    const windowStart = now - windowMs;
+    const prevWindowStart = now - 2 * windowMs;
+
     const allSets = await getAllWorkoutSets(user.id);
-    const recentSets = allSets.filter(s => s.createdAt >= weekAgo);
+    const recentSets = allSets.filter(s => s.createdAt >= windowStart);
+    const prevSets = allSets.filter(s => s.createdAt >= prevWindowStart && s.createdAt < windowStart);
+
     const allExercises = await getAllExercises();
     const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
+
     const volume = calculateWeeklyVolume(recentSets, exerciseMap);
+    const prevVolume = calculateWeeklyVolume(prevSets, exerciseMap);
     setWeeklyVolume(volume);
+    setPreviousVolume(prevVolume);
 
     // Load locally stored custom landmarks (Stage 1 — no Supabase yet)
     const stored = await AsyncStorage.getItem(`@volyume_landmarks_${user.id}`).catch(() => null);
@@ -68,7 +87,7 @@ export default function VolumeHeatmapScreen() {
   }
 
   async function resetToDefaults() {
-    Alert.alert('Reset landmarks?', 'This will restore RP Hypertrophy defaults.', [
+    Alert.alert('Reset landmarks?', 'This will restore default values.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Reset',
@@ -87,39 +106,87 @@ export default function VolumeHeatmapScreen() {
   const effectiveLandmarks = customLandmarks || null;
   const muscles = Object.keys(VOLUME_LANDMARKS);
 
+  const windowNoteText =
+    windowWeeks === 1
+      ? 'Showing sets from the last week'
+      : windowWeeks === 2
+      ? 'Showing sets from the last 2 weeks'
+      : 'Showing sets from the last 4 weeks';
+
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
+        {/* Rolling window selector */}
+        <View style={styles.windowSelector}>
+          {WINDOW_OPTIONS.map(opt => {
+            const active = windowWeeks === opt.weeks;
+            return (
+              <TouchableOpacity
+                key={opt.weeks}
+                style={[
+                  styles.windowBtn,
+                  active
+                    ? { backgroundColor: colors.primaryBg, borderColor: colors.primary }
+                    : { backgroundColor: colors.surface, borderColor: colors.border },
+                ]}
+                onPress={() => setWindowWeeks(opt.weeks)}
+                activeOpacity={0.75}
+              >
+                <Text
+                  style={[
+                    styles.windowBtnText,
+                    { color: active ? colors.primary : colors.textSecondary },
+                  ]}
+                >
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
         {/* Rolling window note */}
         <View style={styles.windowNote}>
           <Ionicons name="time-outline" size={14} color={colors.textMuted} />
-          <Text style={styles.windowNoteText}>
-            Rolling 7-day window — sets from the last 7 days, always up to date
-          </Text>
+          <Text style={styles.windowNoteText}>{windowNoteText}</Text>
         </View>
 
         {/* Legend */}
         <View style={styles.legendRow}>
-          <LegendItem color={colors.textMuted} label="Below MEV" />
-          <LegendItem color={colors.success} label="Optimal (MEV–MAV)" />
-          <LegendItem color={colors.warning} label="Near MRV" />
-          <LegendItem color={colors.error} label="Over MRV" />
+          <LegendItem color={colors.textMuted} label="Below minimum" />
+          <LegendItem color={colors.success} label="Optimal" />
+          <LegendItem color={colors.warning} label="Near ceiling" />
+          <LegendItem color={colors.error} label="Over ceiling" />
         </View>
 
         {/* Muscle Rows */}
         <View style={styles.heatmapCard}>
           {muscles.map(muscle => {
             const data = weeklyVolume[muscle] || { workingSets: 0 };
+            const prevData = previousVolume[muscle] || { workingSets: 0 };
             const sets = Math.round(data.workingSets || 0);
+            const prevSets = Math.round(prevData.workingSets || 0);
             const landmarks = effectiveLandmarks?.[muscle] || VOLUME_LANDMARKS[muscle];
             const { color } = getVolumeStatus(sets, muscle, effectiveLandmarks);
             const mrv = landmarks.mrv || 20;
             const fillPct = Math.min(sets / mrv, 1);
+            const ghostFillPct = Math.min(prevSets / mrv, 1);
 
             return (
               <View key={muscle} style={styles.muscleRow}>
                 <Text style={styles.muscleName}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
                 <View style={styles.barTrack}>
+                  <View
+                    style={[
+                      styles.barFill,
+                      {
+                        width: `${ghostFillPct * 100}%`,
+                        backgroundColor: colors.textMuted,
+                        opacity: 0.25,
+                        position: 'absolute',
+                      },
+                    ]}
+                  />
                   <View style={[styles.barFill, { width: `${fillPct * 100}%`, backgroundColor: color }]} />
                   <View style={[styles.landmark, { left: `${(landmarks.mev / mrv) * 100}%` }]} />
                   <View style={[styles.landmark, { left: `${(landmarks.mav / mrv) * 100}%` }]} />
@@ -194,6 +261,21 @@ function LegendItem({ color, label }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
+  windowSelector: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  windowBtn: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  windowBtnText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+  },
   windowNote: {
     flexDirection: 'row',
     alignItems: 'center',

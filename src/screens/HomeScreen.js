@@ -13,6 +13,7 @@ import {
   getAllWorkouts, getAllWorkoutSets, getActivePlan, getRoutinesForPlan,
   getAllRoutineExerciseCounts, createWorkout, getRoutineExercisesWithDetails,
 } from '../lib/database';
+import { calculateTonnage } from '../lib/algorithms';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import useAppStore from '../store/useAppStore';
 
@@ -23,6 +24,7 @@ export default function HomeScreen({ navigation }) {
   const { user, startWorkout, activeWorkout } = useAppStore();
 
   const [weekStats, setWeekStats] = useState({ sessions: 0, sets: 0, volume: 0 });
+  const [streakDays, setStreakDays] = useState(0);
   const [activePlan, setActivePlanData] = useState(null);
   const [nextWorkout, setNextWorkout] = useState(null);
   const [exerciseCounts, setExerciseCounts] = useState({});
@@ -33,6 +35,7 @@ export default function HomeScreen({ navigation }) {
   const [showChangeWorkout, setShowChangeWorkout] = useState(false);
   const [isStartingWorkout, setIsStartingWorkout] = useState(false);
   const [lastSession, setLastSession] = useState(null);
+  const [lastSessionTonnage, setLastSessionTonnage] = useState(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -62,8 +65,43 @@ export default function HomeScreen({ navigation }) {
       const weekSets = allSets.filter(s => workoutIds.has(s.workoutId) && s.setType !== 'warmup');
       const totalVol = weekSets.reduce((t, s) => t + (s.weight || 0) * (s.actualReps || 0), 0);
       setWeekStats({ sessions: thisWeek.length, sets: weekSets.length, volume: totalVol });
+
+      // Streak: count back from today how many consecutive calendar days had a completed workout
       const completed = allWorkouts.filter(w => w.isCompleted).sort((a, b) => b.startedAt - a.startedAt);
       setLastSession(completed[0] || null);
+
+      // Compute tonnage for last session
+      if (completed[0]) {
+        const lastId = completed[0].id;
+        const lastSets = allSets.filter(s => s.workoutId === lastId);
+        const tonnage = calculateTonnage(lastSets);
+        setLastSessionTonnage(tonnage > 0 ? tonnage : null);
+      } else {
+        setLastSessionTonnage(null);
+      }
+
+      // Streak computation
+      const completedDates = new Set(
+        completed.map(w => {
+          const d = new Date(w.startedAt);
+          return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+        }),
+      );
+      let streak = 0;
+      const now = new Date();
+      for (let i = 0; i < 365; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+        const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+        if (completedDates.has(key)) {
+          streak += 1;
+        } else if (i === 0) {
+          // No workout today — check if yesterday had one (allow current-day gap)
+          continue;
+        } else {
+          break;
+        }
+      }
+      setStreakDays(streak);
     } catch (_e) {}
   }
 
@@ -121,6 +159,13 @@ export default function HomeScreen({ navigation }) {
     }
   }
 
+  async function handleRepeatLastSession() {
+    if (!lastSession) return;
+    const newWorkout = await createWorkout(user.id, lastSession.routineId || null);
+    startWorkout(newWorkout);
+    navigation.navigate('ActiveWorkout');
+  }
+
   const hasActiveWorkout = !!activeWorkout && !isStartingWorkout;
   const displayWorkout = selectedWorkoutOverride || nextWorkout;
   const planProgress = displayWorkout
@@ -144,7 +189,14 @@ export default function HomeScreen({ navigation }) {
 
         {/* ── This week — progress bars ── */}
         <View style={styles.weekCard}>
-          <Text style={styles.weekLabel}>This week</Text>
+          <View style={styles.weekCardHeader}>
+            <Text style={styles.weekLabel}>This week</Text>
+            {streakDays >= 2 && (
+              <View style={styles.streakChip}>
+                <Text style={styles.streakChipText}>{streakDays} day streak 🔥</Text>
+              </View>
+            )}
+          </View>
           <View style={styles.weekStats}>
             <WeekBar
               value={weekStats.sessions}
@@ -243,6 +295,26 @@ export default function HomeScreen({ navigation }) {
               </Text>
             </View>
 
+            {/* Progress at a glance — shown when there's history but no plan */}
+            {lastSession != null && (
+              <View style={styles.glanceCard}>
+                <Text style={styles.glanceTitle}>Your progress at a glance</Text>
+                <View style={styles.glanceRow}>
+                  <View style={styles.glanceStat}>
+                    <Text style={styles.glanceStatValue}>{weekStats.sessions}</Text>
+                    <Text style={styles.glanceStatLabel}>Sessions this week</Text>
+                  </View>
+                  <View style={styles.glanceDivider} />
+                  <View style={styles.glanceStat}>
+                    <Text style={styles.glanceStatValue}>
+                      {getRelativeDay(lastSession.startedAt)}
+                    </Text>
+                    <Text style={styles.glanceStatLabel}>Last session</Text>
+                  </View>
+                </View>
+              </View>
+            )}
+
             <PlanBuilderCard
               icon="sparkles"
               title="Coach Builder"
@@ -285,7 +357,15 @@ export default function HomeScreen({ navigation }) {
                 <Text style={styles.lastSessionLabel}>LAST SESSION</Text>
                 <Text style={styles.lastSessionRelDate}>{getRelativeDay(lastSession.startedAt)}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              <TouchableOpacity
+                style={styles.repeatBtn}
+                onPress={e => { e.stopPropagation(); handleRepeatLastSession(); }}
+                activeOpacity={0.75}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="refresh-outline" size={13} color={colors.primary} />
+                <Text style={styles.repeatBtnText}>Repeat</Text>
+              </TouchableOpacity>
             </View>
             <Text style={styles.lastSessionName} numberOfLines={1}>
               {lastSession.name || lastSession.routineName || 'Session'}
@@ -308,6 +388,13 @@ export default function HomeScreen({ navigation }) {
                   <Ionicons name="barbell-outline" size={12} color={colors.textMuted} />
                   <Text style={styles.lastSessionStatText}>
                     {Math.round(lastSession.totalVolume).toLocaleString('en-GB')} kg
+                  </Text>
+                </View>
+              ) : lastSessionTonnage ? (
+                <View style={styles.lastSessionStatPill}>
+                  <Ionicons name="barbell-outline" size={12} color={colors.textMuted} />
+                  <Text style={styles.lastSessionStatText}>
+                    {Math.round(lastSessionTonnage).toLocaleString('en-GB')} kg
                   </Text>
                 </View>
               ) : null}
@@ -481,12 +568,30 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: spacing.md,
   },
+  weekCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   weekLabel: {
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
     color: colors.textMuted,
     letterSpacing: 1,
     textTransform: 'uppercase',
+  },
+  streakChip: {
+    backgroundColor: colors.surface2,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  streakChipText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.textSecondary,
   },
   weekStats: {
     flexDirection: 'row',
@@ -636,6 +741,47 @@ const styles = StyleSheet.create({
   },
   blankSessionLinkText: { fontSize: fontSize.sm, color: colors.textMuted },
 
+  // Progress at a glance (no-plan + has history)
+  glanceCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  glanceTitle: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.textMuted,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  glanceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  glanceStat: {
+    flex: 1,
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  glanceStatValue: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.black,
+    color: colors.textPrimary,
+  },
+  glanceStatLabel: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    textAlign: 'center',
+  },
+  glanceDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: colors.border,
+  },
+
   // Plan builder cards
   sectionLabel: {
     fontSize: fontSize.xs,
@@ -687,6 +833,22 @@ const styles = StyleSheet.create({
   },
   lastSessionRelDate: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary,
+  },
+  repeatBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.primaryBg,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: colors.primary + '40',
+  },
+  repeatBtnText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.primary,
   },
   lastSessionName: {
     fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary,

@@ -1,19 +1,39 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { format, formatDistanceToNow } from 'date-fns';
+import {
+  format, formatDistanceToNow,
+  startOfMonth, getDaysInMonth, getDay,
+  addMonths, subMonths, isSameDay,
+} from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { getAllWorkouts, getAllWorkoutSets, getAllExercises, createWorkout } from '../lib/database';
 import { calculateTonnage } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 
+const FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'month', label: 'This month' },
+  { key: 'upper', label: 'Upper' },
+  { key: 'lower', label: 'Lower' },
+  { key: 'full', label: 'Full body' },
+];
+
+const DAY_HEADERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
 export default function WorkoutHistoryScreen({ navigation }) {
   const { user, startWorkout } = useAppStore();
   const [workouts, setWorkouts] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Filter + view state
+  const [filter, setFilter] = useState('all');
+  const [viewMode, setViewMode] = useState('list'); // 'list' | 'calendar'
+  const [calendarDate, setCalendarDate] = useState(new Date());
+  const [selectedDay, setSelectedDay] = useState(null); // Date | null
 
   useEffect(() => {
     loadWorkouts();
@@ -60,6 +80,76 @@ export default function WorkoutHistoryScreen({ navigation }) {
     navigation.navigate('HomeTab', { screen: 'ActiveWorkout' });
   }
 
+  // ─── Filtering logic ────────────────────────────────────────────────────────
+  const filteredWorkouts = useMemo(() => {
+    let result = workouts;
+
+    // Calendar day selection takes priority in calendar mode
+    if (viewMode === 'calendar' && selectedDay) {
+      return result.filter(item => isSameDay(new Date(item.workout.startedAt), selectedDay));
+    }
+
+    const now = new Date();
+    const monthStart = startOfMonth(now);
+
+    switch (filter) {
+      case 'month':
+        result = result.filter(item => new Date(item.workout.startedAt) >= monthStart);
+        break;
+      case 'upper':
+        result = result.filter(item =>
+          item.workout.name?.toLowerCase().includes('upper') ||
+          item.exerciseNames.some(n => n.toLowerCase().includes('upper'))
+        );
+        break;
+      case 'lower':
+        result = result.filter(item =>
+          item.workout.name?.toLowerCase().includes('lower') ||
+          item.exerciseNames.some(n => n.toLowerCase().includes('lower'))
+        );
+        break;
+      case 'full':
+        result = result.filter(item =>
+          item.workout.name?.toLowerCase().includes('full') ||
+          item.exerciseNames.some(n => n.toLowerCase().includes('full'))
+        );
+        break;
+      default:
+        break;
+    }
+
+    // In calendar mode with no day selected, show only sessions in the displayed month
+    if (viewMode === 'calendar') {
+      const calMonthStart = startOfMonth(calendarDate);
+      const calMonthEnd = new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 0, 23, 59, 59, 999);
+      result = result.filter(item => {
+        const d = new Date(item.workout.startedAt);
+        return d >= calMonthStart && d <= calMonthEnd;
+      });
+    }
+
+    return result;
+  }, [workouts, filter, viewMode, calendarDate, selectedDay]);
+
+  // ─── Calendar helpers ────────────────────────────────────────────────────────
+  const trainedDatesSet = useMemo(() => {
+    return new Set(workouts.map(item => format(new Date(item.workout.startedAt), 'yyyy-MM-dd')));
+  }, [workouts]);
+
+  function buildCalendarCells() {
+    const firstOfMonth = startOfMonth(calendarDate);
+    // getDay returns 0=Sun..6=Sat; convert to Mon-first (0=Mon..6=Sun)
+    const rawDay = getDay(firstOfMonth);
+    const startOffset = rawDay === 0 ? 6 : rawDay - 1;
+    const totalDays = getDaysInMonth(calendarDate);
+    const cells = [];
+    // Leading empty cells
+    for (let i = 0; i < startOffset; i++) cells.push(null);
+    for (let d = 1; d <= totalDays; d++) cells.push(d);
+    return cells;
+  }
+
+  // ─── Render helpers ──────────────────────────────────────────────────────────
   function renderItem({ item }) {
     const { workout, setCount, workingSetCount, exerciseCount, tonnage, exerciseNames } = item;
     const date = new Date(workout.startedAt);
@@ -112,13 +202,168 @@ export default function WorkoutHistoryScreen({ navigation }) {
     );
   }
 
+  const calendarCells = viewMode === 'calendar' ? buildCalendarCells() : [];
+  const today = new Date();
+
+  function renderCalendarHeader() {
+    return (
+      <View style={styles.calendarHeader}>
+        <TouchableOpacity
+          onPress={() => {
+            setCalendarDate(prev => subMonths(prev, 1));
+            setSelectedDay(null);
+          }}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
+        </TouchableOpacity>
+        <Text style={styles.calendarMonthTitle}>{format(calendarDate, 'MMMM yyyy')}</Text>
+        <TouchableOpacity
+          onPress={() => {
+            setCalendarDate(prev => addMonths(prev, 1));
+            setSelectedDay(null);
+          }}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  function renderCalendarGrid() {
+    const rows = [];
+    let row = [];
+
+    for (let i = 0; i < calendarCells.length; i++) {
+      const dayNum = calendarCells[i];
+      row.push(dayNum);
+      if (row.length === 7 || i === calendarCells.length - 1) {
+        // Pad last row
+        while (row.length < 7) row.push(null);
+        rows.push([...row]);
+        row = [];
+      }
+    }
+
+    return rows.map((week, wi) => (
+      <View key={wi} style={styles.calendarRow}>
+        {week.map((dayNum, di) => {
+          if (dayNum === null) {
+            return <View key={di} style={styles.calendarCell} />;
+          }
+          const cellDate = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), dayNum);
+          const dateStr = format(cellDate, 'yyyy-MM-dd');
+          const trained = trainedDatesSet.has(dateStr);
+          const isToday = isSameDay(cellDate, today);
+          const isSelected = selectedDay && isSameDay(cellDate, selectedDay);
+
+          return (
+            <TouchableOpacity
+              key={di}
+              style={styles.calendarCell}
+              onPress={() => {
+                if (!trained) return;
+                setSelectedDay(prev => (prev && isSameDay(prev, cellDate) ? null : cellDate));
+              }}
+              activeOpacity={trained ? 0.7 : 1}
+            >
+              <View style={[
+                styles.dayCircle,
+                trained && styles.dayCircleTrained,
+                isToday && styles.dayCircleToday,
+                isSelected && styles.dayCircleSelected,
+              ]}>
+                <Text style={[
+                  styles.dayNum,
+                  trained && styles.dayNumTrained,
+                  isSelected && styles.dayNumSelected,
+                ]}>
+                  {dayNum}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    ));
+  }
+
+  const listHeader = (
+    <View style={styles.listHeaderWrap}>
+      {/* Top bar: title + toggle */}
+      <View style={styles.topBar}>
+        <Text style={styles.topBarTitle}>
+          {workouts.length} session{workouts.length !== 1 ? 's' : ''}
+        </Text>
+        <TouchableOpacity
+          style={[styles.toggleBtn, viewMode === 'calendar' && styles.toggleBtnActive]}
+          onPress={() => {
+            setViewMode(prev => (prev === 'list' ? 'calendar' : 'list'));
+            setSelectedDay(null);
+          }}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons
+            name={viewMode === 'calendar' ? 'list-outline' : 'calendar-outline'}
+            size={18}
+            color={viewMode === 'calendar' ? colors.primary : colors.textSecondary}
+          />
+        </TouchableOpacity>
+      </View>
+
+      {/* Filter chips */}
+      <View style={styles.filterRow}>
+        {FILTERS.map(f => {
+          const active = filter === f.key;
+          return (
+            <TouchableOpacity
+              key={f.key}
+              style={[styles.chip, active && styles.chipActive]}
+              onPress={() => {
+                setFilter(f.key);
+                setSelectedDay(null);
+              }}
+            >
+              <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                {f.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* Calendar grid */}
+      {viewMode === 'calendar' && (
+        <View style={styles.calendarCard}>
+          {renderCalendarHeader()}
+          {/* Day-of-week headers */}
+          <View style={styles.calendarRow}>
+            {DAY_HEADERS.map((h, i) => (
+              <View key={i} style={styles.calendarCell}>
+                <Text style={styles.dayHeader}>{h}</Text>
+              </View>
+            ))}
+          </View>
+          {renderCalendarGrid()}
+          {selectedDay && (
+            <TouchableOpacity onPress={() => setSelectedDay(null)} style={styles.clearDayBtn}>
+              <Text style={styles.clearDayText}>Show all this month</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <FlatList
-        data={workouts}
+        data={filteredWorkouts}
         keyExtractor={item => item.workout.id}
         renderItem={renderItem}
         contentContainerStyle={styles.list}
+        ListHeaderComponent={listHeader}
         ListEmptyComponent={
           !loading ? (
             <View style={styles.empty}>
@@ -136,7 +381,135 @@ export default function WorkoutHistoryScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  list: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
+  list: { padding: spacing.lg, paddingBottom: spacing.xxl },
+
+  // ── Header ─────────────────────────────────────────────────────────────────
+  listHeaderWrap: { gap: spacing.md, marginBottom: spacing.md },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  topBarTitle: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textMuted,
+  },
+  toggleBtn: {
+    padding: spacing.xs,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  toggleBtnActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryBg,
+  },
+
+  // ── Filter chips ───────────────────────────────────────────────────────────
+  filterRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  chip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  chipActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryBg,
+  },
+  chipText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    fontWeight: fontWeight.medium,
+  },
+  chipTextActive: {
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
+  },
+
+  // ── Calendar ───────────────────────────────────────────────────────────────
+  calendarCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: spacing.sm,
+  },
+  calendarMonthTitle: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+  },
+  calendarRow: {
+    flexDirection: 'row',
+  },
+  calendarCell: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 3,
+  },
+  dayHeader: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    fontWeight: fontWeight.semibold,
+  },
+  dayCircle: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  dayCircleTrained: {
+    backgroundColor: colors.primaryBg,
+  },
+  dayCircleToday: {
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  dayCircleSelected: {
+    backgroundColor: colors.primary,
+  },
+  dayNum: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+  },
+  dayNumTrained: {
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
+  },
+  dayNumSelected: {
+    color: colors.background,
+    fontWeight: fontWeight.bold,
+  },
+  clearDayBtn: {
+    marginTop: spacing.xs,
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+  },
+  clearDayText: {
+    fontSize: fontSize.xs,
+    color: colors.primaryDim,
+    fontWeight: fontWeight.medium,
+  },
+
+  // ── Cards ──────────────────────────────────────────────────────────────────
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
