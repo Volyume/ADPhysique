@@ -11,7 +11,7 @@ import {
   createProgramme, createRoutine, addExerciseToRoutine,
   setActivePlan, getAllExercises, insertExercise,
 } from '../lib/database';
-import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
+import { MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -226,6 +226,117 @@ function ExercisePickerModal({ visible, onClose, onSelect }) {
   );
 }
 
+// ─── Plan Balance Helpers ─────────────────────────────────────────────────────
+
+const PRIORITY_MUSCLES = ['chest', 'back', 'shoulders', 'quads', 'hamstrings', 'biceps', 'triceps', 'glutes'];
+
+function computePlanVolume(days) {
+  const sets = {};
+  for (const day of days) {
+    for (const ex of day.exercises) {
+      const m = ex.primaryMuscle;
+      if (!m) continue;
+      sets[m] = (sets[m] || 0) + (ex.sets || 3);
+    }
+  }
+  return sets;
+}
+
+function muscleStatus(muscle, totalSets) {
+  const lm = VOLUME_LANDMARKS[muscle];
+  if (!lm) return null;
+  if (totalSets === 0)      return 'none';
+  if (totalSets < lm.mev)   return 'low';
+  if (totalSets <= lm.mav)  return 'good';
+  if (totalSets <= lm.mrv)  return 'high';
+  return 'over';
+}
+
+const STATUS_COLOR = {
+  none: '#555',
+  low:  '#F5A623',
+  good: '#4CAF50',
+  high: '#4CAF50',
+  over: '#F44336',
+};
+const STATUS_DOT = {
+  none: '○',
+  low:  '◐',
+  good: '●',
+  high: '●',
+  over: '●',
+};
+
+function PlanBalanceCard({ days }) {
+  const volume = computePlanVolume(days);
+  const hasAnyExercise = days.some(d => d.exercises.length > 0);
+  if (!hasAnyExercise) return null;
+
+  const rows = PRIORITY_MUSCLES.map(m => {
+    const sets = volume[m] || 0;
+    const status = muscleStatus(m, sets);
+    return { muscle: m, sets, status };
+  }).filter(r => r.status !== null);
+
+  const warnings = rows.filter(r => r.status === 'none' || r.status === 'low');
+  const overloaded = rows.filter(r => r.status === 'over');
+
+  return (
+    <View style={balanceStyles.card}>
+      <View style={balanceStyles.header}>
+        <Ionicons name="pie-chart-outline" size={16} color={colors.textSecondary} />
+        <Text style={balanceStyles.title}>Plan Balance</Text>
+      </View>
+
+      <View style={balanceStyles.grid}>
+        {rows.map(({ muscle, sets, status }) => (
+          <View key={muscle} style={balanceStyles.cell}>
+            <Text style={[balanceStyles.dot, { color: STATUS_COLOR[status] }]}>
+              {STATUS_DOT[status]}
+            </Text>
+            <Text style={balanceStyles.muscleName}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
+            {sets > 0 && (
+              <Text style={balanceStyles.setCount}>{sets}×</Text>
+            )}
+          </View>
+        ))}
+      </View>
+
+      {warnings.length > 0 && (
+        <View style={balanceStyles.warningBox}>
+          {warnings.map(({ muscle, status }) => (
+            <View key={muscle} style={balanceStyles.warningRow}>
+              <Ionicons
+                name={status === 'none' ? 'alert-circle-outline' : 'information-circle-outline'}
+                size={14}
+                color={status === 'none' ? colors.warning : colors.textMuted}
+              />
+              <Text style={[balanceStyles.warningText, status === 'none' && { color: colors.warning }]}>
+                {status === 'none'
+                  ? `No ${MUSCLE_DISPLAY_NAMES[muscle]} work in this plan`
+                  : `${MUSCLE_DISPLAY_NAMES[muscle]} work is low — consider adding a set or two`}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {overloaded.length > 0 && (
+        <View style={balanceStyles.warningBox}>
+          {overloaded.map(({ muscle }) => (
+            <View key={muscle} style={balanceStyles.warningRow}>
+              <Ionicons name="warning-outline" size={14} color={colors.error} />
+              <Text style={[balanceStyles.warningText, { color: colors.error }]}>
+                {`${MUSCLE_DISPLAY_NAMES[muscle]} volume is very high — this may limit recovery`}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function ManualBuilderScreen({ navigation }) {
@@ -291,12 +402,13 @@ export default function ManualBuilderScreen({ navigation }) {
         exercises: [
           ...d.exercises,
           {
-            localId: `${Date.now()}-${Math.random()}`,
-            id:      exercise.id,
-            name:    exercise.name,
-            sets:    3,
-            repsMin: exercise.defaultRepMin || 8,
-            repsMax: exercise.defaultRepMax || 12,
+            localId:      `${Date.now()}-${Math.random()}`,
+            id:           exercise.id,
+            name:         exercise.name,
+            primaryMuscle: (exercise.primaryMuscle || exercise.primary_muscle || '').toLowerCase() || null,
+            sets:         3,
+            repsMin:      exercise.defaultRepMin || exercise.default_rep_min || 8,
+            repsMax:      exercise.defaultRepMax || exercise.default_rep_max || 12,
           },
         ],
       };
@@ -554,6 +666,9 @@ export default function ManualBuilderScreen({ navigation }) {
           <Ionicons name="add-circle-outline" size={20} color={colors.textSecondary} />
           <Text style={styles.addDayText}>Add Day</Text>
         </TouchableOpacity>
+
+        {/* Plan balance */}
+        <PlanBalanceCard days={days} />
 
         {/* Action buttons */}
         <View style={styles.actionRow}>
@@ -1077,5 +1192,73 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     fontWeight: fontWeight.bold,
     color: colors.background,
+  },
+});
+
+const balanceStyles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  title: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  cell: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    minWidth: '45%',
+    flex: 1,
+  },
+  dot: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  muscleName: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    flex: 1,
+  },
+  setCount: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    fontWeight: fontWeight.semibold,
+    minWidth: 24,
+    textAlign: 'right',
+  },
+  warningBox: {
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  warningRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  warningText: {
+    flex: 1,
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    lineHeight: 16,
   },
 });
