@@ -10,6 +10,8 @@ import {
   getActivePlan, getRoutinesForPlan, advancePlanNextWorkout,
 } from '../lib/database';
 import { calculateWeeklyVolume, getVolumeStatus, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
+import { evaluateAutoReg, predictDeloadWeek, getMesoSchedule } from '../lib/mesocycle';
+import { getDeloadPredictionMessage, getAutoRegMessage } from '../lib/whyThisTemplates';
 import useAppStore from '../store/useAppStore';
 
 const RATING_LABELS = {
@@ -67,6 +69,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const [saving, setSaving] = useState(false);
   const [completedWorkoutCount, setCompletedWorkoutCount] = useState(null);
   const [feedbackExpanded, setFeedbackExpanded] = useState(false);
+  const [mesoAdvice, setMesoAdvice] = useState(null);
+  const [deloadPrediction, setDeloadPrediction] = useState(null);
+  const [feedbackHistory, setFeedbackHistory] = useState([]);
 
   const feedbackDebounceRef = useRef(null);
 
@@ -93,7 +98,28 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   useEffect(() => {
     const suggestions = getAutoRegSuggestion(feedback, weeklyVolume);
     setAutoRegSuggestions(suggestions);
-  }, [feedback, weeklyVolume]);
+
+    // Mesocycle autoregulation (Phase 4 engine)
+    const window = [...feedbackHistory, feedback];
+    const autoReg = evaluateAutoReg(window);
+    const experience = user?.profile?.experience ?? 'intermediate';
+    const mesoWeek = user?.profile?.currentMesoWeek ?? 1;
+    const schedule = getMesoSchedule(experience);
+    const currentEntry = schedule.find(s => s.week === mesoWeek) ?? schedule[0];
+
+    setMesoAdvice({
+      action: autoReg.action,
+      message: getAutoRegMessage(autoReg.action, mesoWeek),
+      setsAdjust: autoReg.setsAdjust,
+      weekLabel: currentEntry.label,
+    });
+
+    const deload = predictDeloadWeek(window, mesoWeek, experience);
+    setDeloadPrediction({
+      weeksUntilDeload: deload.weeksUntilDeload,
+      message: getDeloadPredictionMessage(deload.weeksUntilDeload, deload.reason),
+    });
+  }, [feedback, weeklyVolume, feedbackHistory]);
 
   useEffect(() => {
     if (!workoutId || readOnly) return;
@@ -126,7 +152,23 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
     const volume = calculateWeeklyVolume(recentSets, exerciseMap);
     setWeeklyVolume(volume);
-    setCompletedWorkoutCount(allWorkouts.filter(w => w.isCompleted).length);
+
+    const completed = allWorkouts.filter(w => w.isCompleted);
+    setCompletedWorkoutCount(completed.length);
+
+    // Build feedback history from last 4 completed workouts for meso autoReg
+    const sorted = completed
+      .filter(w => w.sessionDifficulty != null)
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, 4)
+      .reverse();
+    setFeedbackHistory(sorted.map(w => ({
+      sessionDifficulty: w.sessionDifficulty ?? 3,
+      overallPump:       w.overallPump ?? 2,
+      soreness24hBefore: w.soreness24hBefore ?? 1,
+      fatigueLevel:      w.fatigueLevel ?? 2,
+      jointDiscomfort:   w.jointDiscomfort ?? 0,
+    })));
   }
 
   async function handleDone() {
@@ -274,7 +316,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           {dataLimited ? (
             <View style={styles.limitedCard}>
               <Text style={styles.limitedText}>
-                Learning your landmarks. Complete more sessions before recommendations become reliable.
+                Learning your patterns. Complete more sessions before recommendations become reliable.
               </Text>
             </View>
           ) : (
@@ -291,6 +333,32 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 <Text style={styles.suggestionText}>{s.message}</Text>
               </View>
             ))
+          )}
+
+          {/* Phase 4: Mesocycle autoregulation advice */}
+          {mesoAdvice && mesoAdvice.action !== 'continue' && (
+            <View style={[styles.mesoAdviceCard, mesoAdvice.action === 'deload_now' && styles.mesoAdviceCardUrgent]}>
+              <View style={styles.mesoAdviceHeader}>
+                <Ionicons
+                  name={mesoAdvice.action === 'deload_now' ? 'warning-outline' :
+                        mesoAdvice.action === 'reduce_volume' ? 'trending-down-outline' : 'pause-circle-outline'}
+                  size={16}
+                  color={mesoAdvice.action === 'deload_now' ? colors.error : colors.warning}
+                />
+                <Text style={[styles.mesoAdviceTitle, mesoAdvice.action === 'deload_now' && { color: colors.error }]}>
+                  Training Load Check
+                </Text>
+              </View>
+              <Text style={styles.mesoAdviceText}>{mesoAdvice.message}</Text>
+            </View>
+          )}
+
+          {/* Phase 6: Deload prediction display */}
+          {deloadPrediction && deloadPrediction.weeksUntilDeload != null && deloadPrediction.weeksUntilDeload <= 2 && (
+            <View style={styles.deloadPredictionCard}>
+              <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
+              <Text style={styles.deloadPredictionText}>{deloadPrediction.message}</Text>
+            </View>
           )}
         </View>
 
@@ -417,6 +485,25 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   suggestionText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  mesoAdviceCard: {
+    flexDirection: 'column', gap: spacing.xs,
+    backgroundColor: colors.warningBg ?? colors.surface,
+    borderRadius: radius.md, padding: spacing.md,
+    borderWidth: 1, borderColor: colors.warning + '55',
+    marginTop: spacing.sm,
+  },
+  mesoAdviceCardUrgent: {
+    backgroundColor: colors.errorBg ?? colors.surface,
+    borderColor: colors.error + '55',
+  },
+  mesoAdviceHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  mesoAdviceTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.warning, letterSpacing: 0.5 },
+  mesoAdviceText: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  deloadPredictionCard: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs,
+    marginTop: spacing.xs, paddingHorizontal: spacing.xs,
+  },
+  deloadPredictionText: { flex: 1, fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 18, fontStyle: 'italic' },
   feedbackToggleBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.lg,

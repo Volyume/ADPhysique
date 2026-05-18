@@ -44,6 +44,7 @@ async function _doInit() {
       default_rep_max INTEGER,
       fatigue_cost INTEGER,
       stimulus_to_fatigue_ratio INTEGER,
+      subregion TEXT,
       is_custom INTEGER DEFAULT 0,
       notes TEXT,
       created_at INTEGER,
@@ -225,6 +226,7 @@ async function _doInit() {
     'ALTER TABLE workouts ADD COLUMN name TEXT',
     'ALTER TABLE workouts ADD COLUMN set_count INTEGER',
     'ALTER TABLE workouts ADD COLUMN total_volume REAL',
+    'ALTER TABLE exercises ADD COLUMN subregion TEXT',
   ];
   for (const sql of colMigrations) {
     try { await _db.execAsync(sql); } catch (_) {}
@@ -268,8 +270,8 @@ export async function insertExercise(data) {
     `INSERT OR IGNORE INTO exercises
       (id, name, primary_muscle, secondary_muscles, equipment, movement_pattern,
        compound_isolation, default_rep_min, default_rep_max, fatigue_cost,
-       stimulus_to_fatigue_ratio, is_custom, notes, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       stimulus_to_fatigue_ratio, subregion, is_custom, notes, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       data.name,
@@ -282,6 +284,7 @@ export async function insertExercise(data) {
       data.defaultRepMax ?? null,
       data.fatigueCost ?? null,
       data.stimulusToFatigueRatio ?? null,
+      data.subregion ?? null,
       data.isCustom ? 1 : 0,
       data.notes || null,
       now,

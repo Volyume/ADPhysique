@@ -30,6 +30,9 @@ import {
   MUSCLE_DISPLAY_NAMES,
 } from '../lib/algorithms';
 import { rankSwaps } from '../lib/swapEngine';
+import { applyTimeCrunch } from '../lib/mesocycle';
+import { getTimeCrunchMessage } from '../lib/whyThisTemplates';
+import { estimateWorkoutMinutes } from '../lib/planEngine';
 
 const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '' };
 
@@ -50,12 +53,13 @@ const SET_TYPE_OPTIONS = [
 ];
 
 export default function ActiveWorkoutScreen({ navigation, route }) {
+  const store = useAppStore();
   const {
     user, units, activeWorkout, workoutExercises, currentExerciseIndex,
     setCurrentExerciseIndex, addExerciseToWorkout, addSetToCurrentExercise,
     startRestTimer, showPRCelebration, endWorkout, workoutStartTime,
     lastActivityAt, updateLastActivity,
-  } = useAppStore();
+  } = store;
 
   const [currentSet, setCurrentSet] = useState({ ...DEFAULT_SET });
   const [prevSets, setPrevSets] = useState([]);
@@ -75,6 +79,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [showSwapModal, setShowSwapModal] = useState(false);
   const [swapCandidates, setSwapCandidates] = useState([]);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
+  const [timeCrunchActive, setTimeCrunchActive] = useState(false);
+  const [timeCrunchMsg, setTimeCrunchMsg] = useState('');
   const autoAdvanceRef = useRef(null);
   const sessionSetsRef = useRef([]);   // tracks sets in this session — used for PR detection
 
@@ -345,6 +351,60 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     } finally {
       setSaving(false);
     }
+  }
+
+  function handleTimeCrunch() {
+    if (timeCrunchActive) return;
+    const remainingExercises = workoutExercises.slice(currentExerciseIndex);
+    if (!remainingExercises.length) return;
+
+    // Build exercise list in planEngine format for estimator
+    const asExercises = remainingExercises.map(e => ({
+      exerciseName:       e.exercise?.name ?? '',
+      sets:               Math.max(1, (e.exercise?.recommendedSets ?? 3) - e.sets.length),
+      restSec:            e.exercise?.restSec ?? 90,
+      compoundIsolation:  e.exercise?.compoundIsolation ?? 'isolation',
+    }));
+
+    // Target: fit remaining in half of a standard session (≈ 25 min max)
+    const targetMins = 25;
+    const { exercises: trimmed, restReduction, dropped } = applyTimeCrunch(
+      asExercises,
+      targetMins,
+      (exs) => exs.reduce((t, ex) => t + (ex.sets * (ex.restSec / 60 + 0.75)), 0)
+    );
+
+    const newEstimate = Math.round(trimmed.reduce((t, ex) => t + (ex.sets * ((ex.restSec ?? 60) / 60 + 0.75)), 0));
+    const msg = getTimeCrunchMessage(dropped, restReduction, newEstimate);
+
+    // Apply reduced rest to current session's pending exercises
+    const trimmedNames = new Set(trimmed.map(e => e.exerciseName));
+    const droppedNames = new Set(dropped);
+
+    if (store.setWorkoutExercises) {
+      store.setWorkoutExercises(prev => {
+        const updated = [...prev];
+        for (let i = currentExerciseIndex; i < updated.length; i++) {
+          const name = updated[i].exercise?.name ?? '';
+          if (droppedNames.has(name) && updated[i].sets.length === 0) {
+            updated[i] = { ...updated[i], _timeCrunchSkipped: true };
+          } else if (updated[i].exercise) {
+            updated[i] = {
+              ...updated[i],
+              exercise: {
+                ...updated[i].exercise,
+                restSec: Math.round((updated[i].exercise.restSec ?? 90) * 0.70),
+              },
+            };
+          }
+        }
+        return updated;
+      });
+    }
+
+    setTimeCrunchActive(true);
+    setTimeCrunchMsg(msg);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
   }
 
   async function handleFinishWorkout() {
@@ -704,6 +764,20 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <Ionicons name="arrow-forward" size={18} color={colors.primary} />
               </TouchableOpacity>
             )
+          )}
+
+          {/* Phase 6: Time Crunch button */}
+          {!timeCrunchActive && workoutExercises.length > currentExerciseIndex + 1 && (
+            <TouchableOpacity style={styles.timeCrunchBtn} onPress={handleTimeCrunch} activeOpacity={0.75}>
+              <Ionicons name="timer-outline" size={15} color={colors.warning} />
+              <Text style={styles.timeCrunchBtnText}>Time crunch today</Text>
+            </TouchableOpacity>
+          )}
+          {timeCrunchActive && !!timeCrunchMsg && (
+            <View style={styles.timeCrunchActiveBar}>
+              <Ionicons name="timer" size={14} color={colors.warning} />
+              <Text style={styles.timeCrunchActiveText} numberOfLines={2}>{timeCrunchMsg}</Text>
+            </View>
           )}
 
           <View style={{ height: Math.max(spacing.xxl, insets.bottom + spacing.lg) }} />
@@ -1170,6 +1244,10 @@ const styles = StyleSheet.create({
   nextExerciseBtnText: { fontSize: fontSize.md, color: colors.primary, fontWeight: fontWeight.bold },
   finishWorkoutLargeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderWidth: 1.5, borderColor: colors.success, borderRadius: radius.lg, paddingVertical: spacing.lg },
   finishWorkoutLargeBtnText: { fontSize: fontSize.md, color: colors.success, fontWeight: fontWeight.bold },
+  timeCrunchBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, borderRadius: radius.md, borderWidth: 1, borderColor: colors.warning + '55', backgroundColor: colors.warningBg ?? colors.surface },
+  timeCrunchBtnText: { fontSize: fontSize.xs, color: colors.warning, fontWeight: fontWeight.medium },
+  timeCrunchActiveBar: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, padding: spacing.sm, backgroundColor: colors.warningBg ?? colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.warning + '44' },
+  timeCrunchActiveText: { flex: 1, fontSize: fontSize.xs, color: colors.warning, lineHeight: 18 },
   loggedSection: { gap: spacing.sm },
   loggedTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textMuted, letterSpacing: 1 },
   loggedSetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border },

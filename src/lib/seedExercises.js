@@ -3,6 +3,118 @@ import { getAllExercises, insertExercise } from './database';
 
 const SEEDED_KEY = '@volyume_exercises_seeded_v3';
 
+// Anatomical subregion tags — used by planEngine v2 to enforce balanced muscle coverage.
+// Muscles not listed here (e.g. biceps, forearms) do not have enforced subregion requirements.
+const SUBREGION_MAP = {
+  // Back — vertical pull vs horizontal row
+  'Lat Pulldown (Wide Grip)':      'vertical_pull',
+  'Lat Pulldown (Close Grip)':     'vertical_pull',
+  'Pull-Up':                       'vertical_pull',
+  'Weighted Pull-Up':              'vertical_pull',
+  'Chin-Up':                       'vertical_pull',
+  'Single-Arm Lat Pulldown':       'vertical_pull',
+  'Cable Lat Pullover':            'vertical_pull',
+  'Cable Straight-Arm Pulldown':   'vertical_pull',
+  'Barbell Row (Bent Over)':       'horizontal_row',
+  'Dumbbell Row':                  'horizontal_row',
+  'T-Bar Row':                     'horizontal_row',
+  'Seated Cable Row':              'horizontal_row',
+  'Machine Row (Chest Supported)': 'horizontal_row',
+  'Meadows Row':                   'horizontal_row',
+  'Pendlay Row':                   'horizontal_row',
+  'Inverted Row':                  'horizontal_row',
+  'Cable High Row':                'horizontal_row',
+  'Single-Arm Cable Row':          'horizontal_row',
+  'Conventional Deadlift':         'lower_lat',
+  'Sumo Deadlift':                 'lower_lat',
+  'Rack Pull':                     'lower_lat',
+  'Trap Bar Deadlift':             'lower_lat',
+
+  // Chest — incline vs flat vs decline
+  'Barbell Bench Press':           'flat',
+  'Dumbbell Bench Press':          'flat',
+  'Machine Chest Press':           'flat',
+  'Cable Fly (Neutral)':           'flat',
+  'Cable Crossover (High to Low)': 'flat',
+  'Dumbbell Fly':                  'flat',
+  'Pec Deck (Machine Fly)':        'flat',
+  'Smith Machine Bench Press':     'flat',
+  'Incline Barbell Bench Press':   'incline',
+  'Incline Dumbbell Press':        'incline',
+  'Incline Dumbbell Fly':          'incline',
+  'Incline Machine Press':         'incline',
+  'Cable Fly (Low to High)':       'incline',
+  'Landmine Press':                'incline',
+  'Decline Barbell Bench Press':   'decline',
+  'Decline Dumbbell Press':        'decline',
+  'Weighted Dips (Chest)':         'decline',
+  'Push-Up':                       'flat',
+
+  // Shoulders — overhead press vs lateral raise vs face pull
+  'Barbell Overhead Press':        'overhead_press',
+  'Dumbbell Shoulder Press':       'overhead_press',
+  'Arnold Press':                  'overhead_press',
+  'Machine Shoulder Press':        'overhead_press',
+  'Seated Dumbbell Press':         'overhead_press',
+  'Dumbbell Lateral Raise':        'lateral_raise',
+  'Cable Lateral Raise':           'lateral_raise',
+  'Machine Lateral Raise':         'lateral_raise',
+  'Leaning Lateral Raise':         'lateral_raise',
+  'Dumbbell Rear Delt Fly':        'horiz_abduction',
+  'Cable Rear Delt Fly':           'horiz_abduction',
+  'Machine Rear Delt Fly':         'horiz_abduction',
+  'Reverse Pec Deck':              'horiz_abduction',
+  'Cable Face Pull':               'face_pull',
+  'Band Face Pull':                'face_pull',
+  'Lying Rear Delt Row':           'horiz_abduction',
+
+  // Hamstrings — hip extension vs knee flexion
+  'Romanian Deadlift':             'hip_extension',
+  'Stiff-Leg Deadlift':            'hip_extension',
+  'Good Morning':                  'hip_extension',
+  'Single-Leg Romanian Deadlift':  'hip_extension',
+  'Lying Leg Curl':                'knee_flexion',
+  'Seated Leg Curl':               'knee_flexion',
+  'Standing Leg Curl':             'knee_flexion',
+  'Nordic Hamstring Curl':         'knee_flexion',
+  'Swiss Ball Leg Curl':           'knee_flexion',
+
+  // Triceps — overhead (long head) vs pushdown
+  'EZ Bar Skull Crusher':          'overhead',
+  'Dumbbell Skull Crusher':        'overhead',
+  'Decline Skull Crusher':         'overhead',
+  'Cable Overhead Tricep Extension': 'overhead',
+  'Dumbbell Overhead Tricep Extension': 'overhead',
+  'Tricep Pushdown (Bar)':         'pushdown',
+  'Tricep Pushdown (Rope)':        'pushdown',
+  'Machine Tricep Dip':            'pushdown',
+  'Close-Grip Bench Press':        'pushdown',
+  'Bench Dip':                     'pushdown',
+  'Diamond Push-Up':               'pushdown',
+
+  // Calves — gastrocnemius vs soleus
+  'Standing Calf Raise':           'gastro',
+  'Leg Press Calf Raise':          'gastro',
+  'Smith Machine Calf Raise':      'gastro',
+  'Donkey Calf Raise':             'gastro',
+  'Seated Calf Raise':             'soleus',
+  'Seated Machine Calf Raise':     'soleus',
+
+  // Abs — flexion vs anti-extension vs rotation
+  'Cable Crunch':                  'flexion',
+  'Decline Crunch':                'flexion',
+  'Machine Crunch':                'flexion',
+  'Hanging Leg Raise':             'flexion',
+  'Reverse Crunch':                'flexion',
+  'Ab Wheel Rollout':              'anti_extension',
+  'Plank':                         'anti_extension',
+  'Dead Bug':                      'anti_extension',
+  'Pallof Press':                  'anti_extension',
+  'Russian Twist':                 'rotation',
+  'Cable Woodchop':                'rotation',
+  'Landmine Rotation':             'rotation',
+};
+
 // [name, primaryMuscle, secondaryMuscles, equipment, movementPattern, isCompound, minReps, maxReps, fatigueCost, sfr]
 const RAW = [
   // CHEST
@@ -243,6 +355,7 @@ export async function seedExercisesIfNeeded() {
         defaultRepMax: max,
         fatigueCost: fatigue,
         stimulusToFatigueRatio: sfr,
+        subregion: SUBREGION_MAP[name] ?? null,
         isCustom: false,
       });
     }

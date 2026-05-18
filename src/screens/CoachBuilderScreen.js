@@ -16,6 +16,9 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { generatePlan, GOAL_LABELS, SPLIT_LABELS } from '../lib/planEngine';
 import { getPlanNutritionContext } from '../lib/nutritionEngine';
+import { getMesoSchedule, getCurrentMesoWeek } from '../lib/mesocycle';
+import { applyPhaseToInputs, getPhaseLabel, getPhaseDescription, buildSessionAddons } from '../lib/phaseEngine';
+import { annotateSessionSetTypes } from '../lib/setTypeEngine';
 
 const NUTRITION_STORAGE_KEY = '@volyume_nutrition_targets';
 import {
@@ -265,13 +268,47 @@ export default function CoachBuilderScreen({ navigation, route }) {
       }
     } catch (_e) {}
 
-    const result = generatePlan({
-      ...inputs,
-      nutritionPhase: inputs.nutritionPhase ?? nutritionPhaseFromRoute ?? nutritionContext?.phaseType ?? null,
-      nutritionContext,
-    });
-    setPlan(result);
-    setPlanName(result.name);
+    // Phase 7: apply competition phase modifiers before generating
+    const compDateMs = user?.profile?.competitionDate ?? null;
+    const { inputs: phaseInputs, phase, modifiers, weeksToComp } = applyPhaseToInputs(
+      {
+        ...inputs,
+        nutritionPhase: inputs.nutritionPhase ?? nutritionPhaseFromRoute ?? nutritionContext?.phaseType ?? null,
+        nutritionContext,
+        age: user?.profile?.age ?? null,
+      },
+      compDateMs
+    );
+
+    const result = generatePlan(phaseInputs);
+
+    // Phase 8: annotate session exercises with advanced set-type intelligence
+    const experience = phaseInputs.experience ?? 'intermediate';
+    const mesoWeek = 1; // new plan always starts at week 1
+    const mesoSchedule = getMesoSchedule(experience);
+    const mesoEntry = mesoSchedule.find(s => s.week === mesoWeek) ?? mesoSchedule[0];
+    const setTypeContext = { mesoWeek, mesoPhase: mesoEntry.phase, isTimeCrunch: false, experience };
+
+    const annotatedWorkouts = result.workouts.map(w => ({
+      ...w,
+      exercises: annotateSessionSetTypes(w.exercises, setTypeContext),
+    }));
+
+    // Phase 7: attach competition phase metadata and session add-ons
+    const sessionAddons = buildSessionAddons(phase, weeksToComp);
+
+    const finalResult = {
+      ...result,
+      workouts: annotatedWorkouts,
+      compPhase: phase,
+      compPhaseLabel: getPhaseLabel(phase),
+      compPhaseDescription: getPhaseDescription(phase, weeksToComp),
+      weeksToComp,
+      sessionAddons: sessionAddons.length > 0 ? sessionAddons : undefined,
+    };
+
+    setPlan(finalResult);
+    setPlanName(finalResult.name);
     setGenerating(false);
   }
 
@@ -534,6 +571,37 @@ export default function CoachBuilderScreen({ navigation, route }) {
           </View>
         )}
 
+        {/* Competition phase banner (Phase 7) */}
+        {plan.compPhase && plan.compPhase !== 'offseason' && (
+          <View style={styles.phaseBanner}>
+            <Ionicons name="ribbon-outline" size={15} color={colors.warning} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.phaseBannerTitle}>{plan.compPhaseLabel}</Text>
+              <Text style={styles.phaseBannerDesc}>{plan.compPhaseDescription}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Session add-ons (posing / conditioning) */}
+        {plan.sessionAddons?.length > 0 && (
+          <View style={styles.addonsCard}>
+            <Text style={styles.addonsTitle}>Added to every session</Text>
+            {plan.sessionAddons.map((addon, i) => (
+              <View key={i} style={styles.addonRow}>
+                <Ionicons
+                  name={addon.type === 'posing' ? 'body-outline' : 'bicycle-outline'}
+                  size={14}
+                  color={colors.primary}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.addonLabel}>{addon.durationMinutes} min {addon.type === 'posing' ? 'Posing Practice' : 'Conditioning'}</Text>
+                  <Text style={styles.addonInstructions} numberOfLines={3}>{addon.instructions}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
         {/* Built around you */}
         <View style={styles.summaryCard}>
           <Text style={styles.summaryCardTitle}>Built around you</Text>
@@ -589,6 +657,9 @@ export default function CoachBuilderScreen({ navigation, route }) {
                   <Text style={styles.exerciseMeta}>
                     {ex.sets} × {ex.repMin}–{ex.repMax} reps · {ex.restSec}s rest
                   </Text>
+                  {ex.advancedSetType && (
+                    <Text style={styles.advancedSetBadge}>{ex.advancedSetNote}</Text>
+                  )}
                 </View>
               </View>
             ))}
@@ -832,6 +903,15 @@ const styles = StyleSheet.create({
   exerciseDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primaryDim, marginTop: 6 },
   exerciseName: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textPrimary },
   exerciseMeta: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2 },
+  advancedSetBadge: { fontSize: fontSize.xs, color: colors.primary, marginTop: 3, lineHeight: 16, fontStyle: 'italic' },
+  phaseBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, backgroundColor: colors.warningBg ?? colors.surface, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.warning + '55', marginBottom: spacing.sm },
+  phaseBannerTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.warning, letterSpacing: 0.5 },
+  phaseBannerDesc: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2, lineHeight: 18 },
+  addonsCard: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.lg, gap: spacing.md, marginBottom: spacing.sm },
+  addonsTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textMuted, letterSpacing: 1 },
+  addonRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  addonLabel: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textPrimary },
+  addonInstructions: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2, lineHeight: 18 },
 
   footerWrapper: { borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.background, paddingHorizontal: spacing.lg, paddingTop: spacing.md },
   footer: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },

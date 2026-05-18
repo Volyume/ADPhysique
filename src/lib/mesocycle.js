@@ -1,0 +1,415 @@
+/**
+ * mesocycle.js
+ * Standalone mesocycle scheduler, week progression, deload detection,
+ * and autoregulation reader for the Volyume Coach Engine v2.
+ *
+ * Pure functions — no DB calls, no side effects.
+ * All inputs are plain values or serialisable objects.
+ */
+
+// ---------------------------------------------------------------------------
+// Mesocycle schedule constants
+// ---------------------------------------------------------------------------
+
+const MESO_SCHEDULE = {
+  // beginner / intermediate: 4 accumulation + 1 recovery = 5 weeks
+  standard: [
+    { week: 1, phase: 'intro',   setsMultiplier: 1.00, label: 'Introduction week — settle into the movements' },
+    { week: 2, phase: 'build',   setsMultiplier: 1.10, label: 'Build week — push a little harder' },
+    { week: 3, phase: 'build',   setsMultiplier: 1.20, label: 'Build week — keep climbing' },
+    { week: 4, phase: 'peak',    setsMultiplier: 1.25, label: 'Peak week — best effort this block' },
+    { week: 5, phase: 'recovery', setsMultiplier: 0.50, label: 'Recovery week — back off and recharge' },
+  ],
+  // advanced / competitive: 5 accumulation + 1 recovery = 6 weeks
+  advanced: [
+    { week: 1, phase: 'intro',   setsMultiplier: 1.00, label: 'Introduction week — settle into the movements' },
+    { week: 2, phase: 'build',   setsMultiplier: 1.07, label: 'Build week — add a little' },
+    { week: 3, phase: 'build',   setsMultiplier: 1.14, label: 'Build week — keep climbing' },
+    { week: 4, phase: 'build',   setsMultiplier: 1.20, label: 'Build week — push harder' },
+    { week: 5, phase: 'peak',    setsMultiplier: 1.25, label: 'Peak week — best effort this block' },
+    { week: 6, phase: 'recovery', setsMultiplier: 0.50, label: 'Recovery week — back off and recharge' },
+  ],
+};
+
+// ---------------------------------------------------------------------------
+// Week calculation
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns which week of the current mesocycle we are in (1-indexed).
+ * Wraps back to 1 after the schedule length.
+ *
+ * @param {string|number} startDateMs - epoch ms (or ISO string) of mesocycle start
+ * @param {'beginner'|'intermediate'|'advanced'|'competitive'} experience
+ * @returns {number} 1-based week number
+ */
+export function getCurrentMesoWeek(startDateMs, experience = 'intermediate') {
+  const schedule = getMesoSchedule(experience);
+  const start = typeof startDateMs === 'string' ? new Date(startDateMs).getTime() : startDateMs;
+  const now = Date.now();
+  const daysElapsed = Math.max(0, Math.floor((now - start) / (1000 * 60 * 60 * 24)));
+  const weeksElapsed = Math.floor(daysElapsed / 7);
+  return (weeksElapsed % schedule.length) + 1;
+}
+
+/**
+ * Returns the full mesocycle schedule array for this experience level.
+ *
+ * @param {'beginner'|'intermediate'|'advanced'|'competitive'} experience
+ * @returns {Array<{week, phase, setsMultiplier, label}>}
+ */
+export function getMesoSchedule(experience) {
+  return (experience === 'advanced' || experience === 'competitive')
+    ? MESO_SCHEDULE.advanced
+    : MESO_SCHEDULE.standard;
+}
+
+/**
+ * Returns the sets multiplier for a given mesocycle week.
+ *
+ * @param {number} mesoWeek - 1-indexed
+ * @param {'beginner'|'intermediate'|'advanced'|'competitive'} experience
+ * @returns {number}
+ */
+export function getWeekSetsMultiplier(mesoWeek, experience = 'intermediate') {
+  const schedule = getMesoSchedule(experience);
+  const entry = schedule.find(s => s.week === mesoWeek) ?? schedule[0];
+  return entry.setsMultiplier;
+}
+
+/**
+ * Returns whether the current week is a recovery (deload) week.
+ *
+ * @param {number} mesoWeek - 1-indexed
+ * @param {'beginner'|'intermediate'|'advanced'|'competitive'} experience
+ * @returns {boolean}
+ */
+export function isRecoveryWeek(mesoWeek, experience = 'intermediate') {
+  const schedule = getMesoSchedule(experience);
+  const entry = schedule.find(s => s.week === mesoWeek);
+  return entry?.phase === 'recovery' ?? false;
+}
+
+// ---------------------------------------------------------------------------
+// Weekly set targets with mesocycle progression
+// ---------------------------------------------------------------------------
+
+/**
+ * Applies the mesocycle multiplier to a set of base targets (MEV-start values).
+ *
+ * @param {Object.<string, number>} baseSets - { muscle: weeklySetCount }
+ * @param {number} mesoWeek - 1-indexed
+ * @param {'beginner'|'intermediate'|'advanced'|'competitive'} experience
+ * @returns {Object.<string, number>} adjusted set counts (rounded to nearest integer)
+ */
+export function getVolumeTargetsForWeek(baseSets, mesoWeek, experience = 'intermediate') {
+  const multiplier = getWeekSetsMultiplier(mesoWeek, experience);
+  const out = {};
+  for (const [muscle, sets] of Object.entries(baseSets)) {
+    out[muscle] = Math.round(sets * multiplier);
+  }
+  return out;
+}
+
+/**
+ * Builds the complete week-by-week set progression table for one muscle.
+ *
+ * @param {number} baseSets - MEV start-of-block set count for this muscle
+ * @param {number} mrvSets - MRV ceiling for this muscle (caps peak week)
+ * @param {'beginner'|'intermediate'|'advanced'|'competitive'} experience
+ * @returns {Array<{week, phase, setsMultiplier, plannedSets, label}>}
+ */
+export function buildWeeklyProgression(baseSets, mrvSets, experience = 'intermediate') {
+  const schedule = getMesoSchedule(experience);
+  return schedule.map(entry => ({
+    ...entry,
+    plannedSets: Math.min(mrvSets, Math.round(baseSets * entry.setsMultiplier)),
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Autoregulation reader
+// ---------------------------------------------------------------------------
+
+/**
+ * Computes the autoregulation adjustment recommendation based on a
+ * window of recent session feedback objects.
+ *
+ * Feedback object shape:
+ *   {
+ *     sessionDifficulty:  1-5  (1=Very Easy, 5=Brutal)
+ *     overallPump:        1-3  (1=None, 3=Good)
+ *     soreness24hBefore:  1-3  (1=Fresh, 3=Sore)
+ *     fatigueLevel:       1-5  (1=Fresh, 5=Exhausted)
+ *     jointDiscomfort:    0-3  (0=None, 3=Significant)
+ *   }
+ *
+ * Returns an action object:
+ *   {
+ *     action:    'continue' | 'hold_volume' | 'reduce_volume' | 'deload_now'
+ *     setsAdjust: number  (signed %; e.g. -10 means drop 10%)
+ *     message:   string   (plain English, jargon-free, ≤25 words)
+ *   }
+ *
+ * @param {Object[]} feedbackWindow - last 1–4 sessions (most recent last)
+ * @returns {{ action: string, setsAdjust: number, message: string }}
+ */
+export function evaluateAutoReg(feedbackWindow = []) {
+  if (!feedbackWindow.length) {
+    return { action: 'continue', setsAdjust: 0, message: 'Keep going — log sessions to unlock personalised adjustments.' };
+  }
+
+  // Weight recent sessions more heavily
+  const weights = feedbackWindow.map((_, i) => i + 1);
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+
+  function weightedAvg(field) {
+    return feedbackWindow.reduce((sum, fb, i) => sum + (fb[field] ?? 0) * weights[i], 0) / totalWeight;
+  }
+
+  const avgDifficulty    = weightedAvg('sessionDifficulty');   // 1–5
+  const avgFatigue       = weightedAvg('fatigueLevel');         // 1–5
+  const avgSoreness      = weightedAvg('soreness24hBefore');    // 1–3
+  const avgPump          = weightedAvg('overallPump');           // 1–3
+  const avgJoint         = weightedAvg('jointDiscomfort');       // 0–3
+
+  // Joint discomfort is an emergency brake
+  const latestFb = feedbackWindow[feedbackWindow.length - 1];
+  if ((latestFb?.jointDiscomfort ?? 0) >= 3) {
+    return {
+      action: 'deload_now',
+      setsAdjust: -50,
+      message: 'Joint discomfort is significant — drop to half volume this week and avoid any painful movements.',
+    };
+  }
+
+  // Multi-session joint discomfort (≥2 twice in window)
+  const jointAlerts = feedbackWindow.filter(fb => (fb.jointDiscomfort ?? 0) >= 2).length;
+  if (jointAlerts >= 2) {
+    return {
+      action: 'reduce_volume',
+      setsAdjust: -20,
+      message: 'Persistent joint discomfort detected — reducing volume 20% this week. Swap painful exercises.',
+    };
+  }
+
+  // Exhaustion pattern
+  if (avgFatigue >= 4.5 && avgDifficulty >= 4.5) {
+    return {
+      action: 'deload_now',
+      setsAdjust: -50,
+      message: 'Multiple very hard sessions with high fatigue — your body is asking for a lighter week.',
+    };
+  }
+
+  // Overreaching signals: high fatigue + coming in sore
+  if (avgFatigue >= 4 && avgSoreness >= 2.5) {
+    return {
+      action: 'reduce_volume',
+      setsAdjust: -15,
+      message: 'Coming into sessions sore with high fatigue — trim volume 15% this week to protect recovery.',
+    };
+  }
+
+  // Sessions brutally hard with poor pump (poor recovery/absorption)
+  if (avgDifficulty >= 4.2 && avgPump <= 1.3) {
+    return {
+      action: 'hold_volume',
+      setsAdjust: 0,
+      message: 'Sessions feel hard but pump quality is low — hold your volume here until recovery improves.',
+    };
+  }
+
+  // Positive signal: sessions feel manageable, good pump, low soreness
+  if (avgDifficulty <= 2.5 && avgPump >= 2.5 && avgSoreness <= 1.5 && avgFatigue <= 2.5) {
+    return {
+      action: 'continue',
+      setsAdjust: 0,
+      message: 'Recovery is excellent — stay on track. You may add a set where sessions feel short.',
+    };
+  }
+
+  // Slightly hard but managing
+  if (avgDifficulty >= 3.8 && avgFatigue >= 3.5) {
+    return {
+      action: 'hold_volume',
+      setsAdjust: 0,
+      message: 'Training is challenging — keep volume steady this week and focus on sleep and nutrition.',
+    };
+  }
+
+  return {
+    action: 'continue',
+    setsAdjust: 0,
+    message: 'All signals normal — continue the plan as written.',
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Deload prediction
+// ---------------------------------------------------------------------------
+
+/**
+ * Predicts how many weeks until a recovery week is likely needed,
+ * based on current mesocycle position and recent feedback trend.
+ *
+ * @param {Object[]} feedbackWindow - recent sessions
+ * @param {number}   mesoWeek       - current 1-indexed week
+ * @param {'beginner'|'intermediate'|'advanced'|'competitive'} experience
+ * @returns {{ weeksUntilDeload: number | null, reason: string }}
+ */
+export function predictDeloadWeek(feedbackWindow = [], mesoWeek = 1, experience = 'intermediate') {
+  const schedule = getMesoSchedule(experience);
+  const totalWeeks = schedule.length;
+  const recoveryWeek = schedule.find(s => s.phase === 'recovery')?.week ?? totalWeeks;
+
+  // Weeks left in this block before the scheduled recovery week
+  const weeksToScheduled = recoveryWeek - mesoWeek;
+
+  if (weeksToScheduled <= 0) {
+    return { weeksUntilDeload: 0, reason: 'This is your rest week — lighter sessions this week.' };
+  }
+
+  if (!feedbackWindow.length) {
+    return {
+      weeksUntilDeload: weeksToScheduled,
+      reason: `Scheduled rest week is in ${weeksToScheduled} ${weeksToScheduled === 1 ? 'week' : 'weeks'}.`,
+    };
+  }
+
+  // Check autoReg result
+  const autoReg = evaluateAutoReg(feedbackWindow);
+
+  if (autoReg.action === 'deload_now') {
+    return {
+      weeksUntilDeload: 0,
+      reason: 'Fatigue signals suggest taking a lighter week now rather than waiting.',
+    };
+  }
+
+  if (autoReg.action === 'reduce_volume') {
+    const early = Math.max(1, weeksToScheduled - 1);
+    return {
+      weeksUntilDeload: early,
+      reason: `Fatigue is building — rest week likely in about ${early} ${early === 1 ? 'week' : 'weeks'}.`,
+    };
+  }
+
+  return {
+    weeksUntilDeload: weeksToScheduled,
+    reason: `Scheduled rest week is in ${weeksToScheduled} ${weeksToScheduled === 1 ? 'week' : 'weeks'}.`,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Time-crunch session trimmer
+// ---------------------------------------------------------------------------
+
+/**
+ * Applies a "time crunch" adjustment to a session plan:
+ * - Reduces rest between sets by 30%
+ * - Drops the lowest-priority isolation exercises until the session fits
+ *
+ * @param {Object[]} exercises      - array of exercise objects with restSec, sets, etc.
+ * @param {number}   targetMinutes  - hard cap for the trimmed session
+ * @param {number}   estimateFn     - function(exercises) => estimated minutes
+ * @returns {{ exercises: Object[], restReduction: number, dropped: string[] }}
+ */
+export function applyTimeCrunch(exercises, targetMinutes, estimateFn) {
+  if (!exercises?.length) {
+    return { exercises: [], restReduction: 0.30, dropped: [] };
+  }
+
+  // Step 1: reduce rest by 30%
+  const withReducedRest = exercises.map(ex => ({
+    ...ex,
+    restSec: Math.round((ex.restSec ?? 90) * 0.70),
+  }));
+
+  if (estimateFn(withReducedRest) <= targetMinutes) {
+    return { exercises: withReducedRest, restReduction: 0.30, dropped: [] };
+  }
+
+  // Step 2: drop lowest-priority isolation exercises (compound always protected)
+  // Priority order: compound > isolation (by compoundIsolation tag); within each, sort by sets
+  const dropped = [];
+
+  // Sort a working copy: compounds first, then isolations by fewest sets (easiest to drop)
+  const sorted = [...withReducedRest].sort((a, b) => {
+    const aIsIso = (a.compoundIsolation === 'isolation') ? 1 : 0;
+    const bIsIso = (b.compoundIsolation === 'isolation') ? 1 : 0;
+    if (aIsIso !== bIsIso) return aIsIso - bIsIso; // compounds first
+    return (a.sets ?? 0) - (b.sets ?? 0); // fewer sets → drop first (still within isolation)
+  });
+
+  // We need to maintain original order for the exercises we keep;
+  // build a removable set index
+  const removable = sorted
+    .filter(ex => ex.compoundIsolation === 'isolation')
+    .reverse(); // last in sorted (highest sets) comes first in candidates
+
+  let result = [...withReducedRest];
+  for (const candidate of removable) {
+    if (estimateFn(result) <= targetMinutes) break;
+    const idx = result.findIndex(ex => ex.exerciseName === candidate.exerciseName && ex.sets === candidate.sets);
+    if (idx !== -1) {
+      dropped.push(result[idx].exerciseName);
+      result.splice(idx, 1);
+    }
+  }
+
+  return { exercises: result, restReduction: 0.30, dropped };
+}
+
+// ---------------------------------------------------------------------------
+// Double-progression gate
+// ---------------------------------------------------------------------------
+
+/**
+ * Determines whether an athlete is ready to progress weight (double progression).
+ * Rule: completed all target sets at the top of the rep range with RIR ≥ 1
+ * for 2 consecutive sessions.
+ *
+ * @param {Object[]} sessionHistory - last 2–3 sessions for this exercise
+ *   Each session: { sets: [{ weight, reps, rir, rpe }], targetRepsMax }
+ * @returns {{ ready: boolean, message: string }}
+ */
+export function checkDoubleProgressionReady(sessionHistory = []) {
+  if (sessionHistory.length < 2) {
+    return { ready: false, message: 'Log a couple more sessions to unlock weight progression guidance.' };
+  }
+
+  const lastTwo = sessionHistory.slice(-2);
+
+  const bothQualify = lastTwo.every(session => {
+    const { sets, targetRepsMax } = session;
+    if (!sets?.length || !targetRepsMax) return false;
+    // All working sets must have hit the top of the rep range
+    return sets.every(s => {
+      const hitsTopReps = (s.reps ?? 0) >= targetRepsMax;
+      const hasRIRRoom  = (s.rir ?? 9) >= 1; // RIR ≥ 1 means not grinding
+      return hitsTopReps && hasRIRRoom;
+    });
+  });
+
+  if (bothQualify) {
+    return {
+      ready: true,
+      message: 'You hit the top of the rep range with something left in the tank for 2 sessions — add weight next time.',
+    };
+  }
+
+  const lastSession = lastTwo[lastTwo.length - 1];
+  const { sets, targetRepsMax } = lastSession;
+  if (sets?.every(s => (s.reps ?? 0) >= (targetRepsMax ?? 99))) {
+    return {
+      ready: false,
+      message: 'Good session — repeat the same weight next time. Hit it again to confirm before adding more.',
+    };
+  }
+
+  return {
+    ready: false,
+    message: 'Keep working — match your best set next time before adding weight.',
+  };
+}

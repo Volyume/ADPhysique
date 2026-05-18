@@ -2,6 +2,8 @@
  * swapEngine.js
  * Pure-function exercise swap scoring for the Volyume app.
  * No side effects, no DB calls — scores and ranks alternatives.
+ *
+ * Extended (Phase 6) with joint-discomfort pattern detection and auto-swap logic.
  */
 
 // ---------------------------------------------------------------------------
@@ -180,4 +182,86 @@ export function rankSwaps(originalExercise, allExercises, options = {}) {
     }));
 
   return scored;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 6 extension: Joint discomfort pattern detection
+// ---------------------------------------------------------------------------
+
+/**
+ * Analyses a log of joint discomfort reports for a specific exercise and
+ * determines whether the exercise should be automatically swapped out.
+ *
+ * Trigger rule (from spec Part 7.3):
+ *   jointDiscomfort >= 2 on TWO sessions → flag for auto-swap
+ *
+ * @param {Array<{ exerciseId: string, jointDiscomfort: number, sessionDate: number }>} discomfortLog
+ *   Sorted ascending by sessionDate.
+ * @param {string} exerciseId - the exercise to check
+ * @param {number} [windowMs]  - look back window in ms (default: 30 days)
+ * @returns {{ shouldSwap: boolean, alertCount: number, message: string }}
+ */
+export function detectJointDiscomfortPattern(discomfortLog = [], exerciseId, windowMs = 30 * 24 * 60 * 60 * 1000) {
+  const cutoff = Date.now() - windowMs;
+  const relevant = discomfortLog.filter(
+    entry => entry.exerciseId === exerciseId &&
+             entry.sessionDate >= cutoff &&
+             (entry.jointDiscomfort ?? 0) >= 2
+  );
+
+  const shouldSwap = relevant.length >= 2;
+  const alertCount = relevant.length;
+
+  if (shouldSwap) {
+    return {
+      shouldSwap: true,
+      alertCount,
+      message: `This movement caused joint discomfort in ${alertCount} recent sessions — it's been flagged for a swap in your next plan.`,
+    };
+  }
+
+  if (alertCount === 1) {
+    return {
+      shouldSwap: false,
+      alertCount,
+      message: `One session with joint discomfort noted. Log another session — if it happens again the exercise will be swapped out automatically.`,
+    };
+  }
+
+  return { shouldSwap: false, alertCount: 0, message: '' };
+}
+
+/**
+ * Given a list of flagged exercise IDs (from detectJointDiscomfortPattern),
+ * returns the recommended swap for each, avoiding other flagged exercises.
+ *
+ * @param {string[]}  flaggedExerciseIds    - exercises to replace
+ * @param {object[]}  exerciseLibrary       - full exercise library
+ * @param {object}    options
+ * @param {string|null} options.equipment   - equipment filter
+ * @param {number}    options.numResults    - candidates per exercise
+ * @returns {Array<{ originalId: string, originalName: string, swaps: Array }>}
+ */
+export function autoSwapForJointDiscomfort(flaggedExerciseIds = [], exerciseLibrary = [], options = {}) {
+  const { equipment = null, numResults = 3 } = options;
+
+  return flaggedExerciseIds.map(id => {
+    const original = exerciseLibrary.find(ex => ex.id === id);
+    if (!original) return { originalId: id, originalName: id, swaps: [] };
+
+    // Exclude all flagged exercises from candidates
+    const excludeIds = flaggedExerciseIds.filter(fid => fid !== id);
+
+    // Prefer lower fatigue-cost alternatives — they're more joint-friendly
+    const swaps = rankSwaps(original, exerciseLibrary, {
+      equipment,
+      numResults,
+      excludeIds,
+    }).map(s => ({
+      ...s,
+      autoSwapReason: `Replaces ${original.name} — lower joint stress option for this muscle group.`,
+    }));
+
+    return { originalId: id, originalName: original.name, swaps };
+  });
 }
