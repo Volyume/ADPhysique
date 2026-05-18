@@ -9,8 +9,9 @@ import {
   getCompletedWorkoutSets, getAllExercises, getAllWorkouts, updateWorkout,
   getActivePlan, getRoutinesForPlan, advancePlanNextWorkout,
   createAdaptationEvent, getCurrentMesocycleWeek,
+  getNextMesocycleWeek, upsertPlannedMuscleVolume,
 } from '../lib/database';
-import { calculateWeeklyVolume, getVolumeStatus, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine, computeAdaptiveDecision } from '../lib/algorithms';
+import { calculateWeeklyVolume, getVolumeStatus, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine, computeAdaptiveDecision, VOLUME_LANDMARKS } from '../lib/algorithms';
 import { evaluateAutoReg, predictDeloadWeek, getMesoSchedule } from '../lib/mesocycle';
 import { getDeloadPredictionMessage, getAutoRegMessage } from '../lib/whyThisTemplates';
 import useAppStore from '../store/useAppStore';
@@ -243,6 +244,23 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               nextWeekSets: dec.nextWeekSets,
             },
           });
+        }
+
+        // Write next-week planned volume from engine decisions
+        const nextWeek = await getNextMesocycleWeek(currentWeek.id);
+        if (nextWeek) {
+          for (const [muscle, dec] of Object.entries(adaptiveDecisions)) {
+            const base = VOLUME_LANDMARKS[muscle] || { mev: 6, mav: 14, mrv: 22 };
+            await upsertPlannedMuscleVolume({
+              mesocycleWeekId: nextWeek.id,
+              muscle,
+              plannedSets: dec.nextWeekSets,
+              mev: base.mev,
+              mav: base.mav,
+              mrv: base.mrv,
+              source: 'engine',
+            });
+          }
         }
       }
     } catch (_e) {}

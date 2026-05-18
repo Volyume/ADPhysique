@@ -1044,9 +1044,24 @@ export async function generateMesocycleWeeks(mesocycleId) {
 export async function getCurrentMesocycleWeek(userId) {
   try {
     const d = await db();
-    const row = await d.getFirstAsync(
-      `SELECT mw.*, m.name AS meso_name, m.block_type, m.planned_weeks, m.rir_ladder,
-              m.deload_protocol, m.status AS meso_status
+
+    // Find the week linked to the most recent workout — that's the current week
+    const fromWorkout = await d.getFirstAsync(
+      `SELECT mw.*, m.name AS meso_name, m.block_type, m.planned_weeks,
+              m.rir_ladder, m.deload_protocol, m.status AS meso_status
+       FROM mesocycle_weeks mw
+       JOIN mesocycles m ON m.id = mw.mesocycle_id
+       JOIN workouts w ON w.mesocycle_week_id = mw.id
+       WHERE m.user_id = ? AND m.is_active = 1
+       ORDER BY w.started_at DESC
+       LIMIT 1`,
+      [userId],
+    );
+
+    // Fall back to the first week if no workouts have been linked yet
+    const row = fromWorkout ?? await d.getFirstAsync(
+      `SELECT mw.*, m.name AS meso_name, m.block_type, m.planned_weeks,
+              m.rir_ladder, m.deload_protocol, m.status AS meso_status
        FROM mesocycle_weeks mw
        JOIN mesocycles m ON m.id = mw.mesocycle_id
        WHERE m.user_id = ? AND m.is_active = 1 AND m.status = 'active'
@@ -1057,8 +1072,6 @@ export async function getCurrentMesocycleWeek(userId) {
 
     if (!row) return null;
 
-    // Check if there are any workouts this week — if so, this is the current week
-    // Simple heuristic: return week_index that matches the oldest incomplete week
     return {
       id: row.id,
       mesocycleId: row.mesocycle_id,
@@ -1073,6 +1086,69 @@ export async function getCurrentMesocycleWeek(userId) {
   } catch (_e) {
     return null;
   }
+}
+
+export async function getNextMesocycleWeek(currentWeekId) {
+  try {
+    const d = await db();
+    const current = await d.getFirstAsync(
+      'SELECT * FROM mesocycle_weeks WHERE id = ?',
+      [currentWeekId],
+    );
+    if (!current) return null;
+    return await d.getFirstAsync(
+      'SELECT * FROM mesocycle_weeks WHERE mesocycle_id = ? AND week_index = ?',
+      [current.mesocycle_id, current.week_index + 1],
+    );
+  } catch (_e) {
+    return null;
+  }
+}
+
+// Seed planned_muscle_volume for all weeks of a mesocycle with a MEV→MAV ramp
+// Called once when a mesocycle is created (or can be called again to re-seed)
+export async function generateInitialPlannedVolume(mesocycleId, volumeLandmarks) {
+  try {
+    const d = await db();
+    const weeks = await d.getAllAsync(
+      'SELECT * FROM mesocycle_weeks WHERE mesocycle_id = ? ORDER BY week_index ASC',
+      [mesocycleId],
+    );
+    if (weeks.length === 0) return;
+
+    const accWeeks = weeks.filter(w => !w.is_deload);
+    const deloadWeek = weeks.find(w => w.is_deload);
+    const totalAcc = accWeeks.length;
+
+    for (const [muscle, landmarks] of Object.entries(volumeLandmarks)) {
+      const { mev, mav, mrv } = landmarks;
+      // Ramp from MEV to MAV over accumulation weeks
+      for (let i = 0; i < accWeeks.length; i++) {
+        const week = accWeeks[i];
+        const progress = totalAcc <= 1 ? 1 : i / (totalAcc - 1);
+        const planned = Math.round(mev + (mav - mev) * progress);
+        const id = `pmv_${week.id}_${muscle}`;
+        const now = Date.now();
+        await d.runAsync(
+          `INSERT OR IGNORE INTO planned_muscle_volume
+             (id, mesocycle_week_id, muscle, planned_sets, mev, mav, mrv, source, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 'template', ?, ?)`,
+          [id, week.id, muscle, planned, mev, mav, mrv, now, now],
+        );
+      }
+      // Deload week = MEV
+      if (deloadWeek) {
+        const id = `pmv_${deloadWeek.id}_${muscle}`;
+        const now = Date.now();
+        await d.runAsync(
+          `INSERT OR IGNORE INTO planned_muscle_volume
+             (id, mesocycle_week_id, muscle, planned_sets, mev, mav, mrv, source, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 'template', ?, ?)`,
+          [id, deloadWeek.id, muscle, mev, mev, mav, mrv, now, now],
+        );
+      }
+    }
+  } catch (_e) {}
 }
 
 // Get all weeks for a mesocycle
@@ -1161,6 +1237,9 @@ export async function createMesocycle(data) {
   );
   // Auto-generate week schedule
   await generateMesocycleWeeks(id);
+  // Seed planned volume from default landmarks
+  const { VOLUME_LANDMARKS } = await import('./algorithms');
+  await generateInitialPlannedVolume(id, VOLUME_LANDMARKS);
   return { id, ...data, createdAt: now, updatedAt: now };
 }
 

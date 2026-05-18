@@ -22,7 +22,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import SetEntry from '../components/SetEntry';
 import RestTimer from '../components/RestTimer';
 import useAppStore from '../store/useAppStore';
-import { getPreviousWorkoutSets, getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, getAllExercises, insertExercise } from '../lib/database';
+import { getPreviousWorkoutSets, getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, getAllExercises, insertExercise, getCurrentMesocycleWeek, getPlannedMuscleVolume } from '../lib/database';
 import {
   detectPR,
   getProgressionSuggestion,
@@ -85,6 +85,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [timeCrunchActive, setTimeCrunchActive] = useState(false);
   const [timeCrunchMsg, setTimeCrunchMsg] = useState('');
+  const [weeklyPlan, setWeeklyPlan] = useState(null);  // { plannedSets, muscle } for this exercise
+  const [weeklyActual, setWeeklyActual] = useState(0); // sets this week for this muscle
   const autoAdvanceRef = useRef(null);
   const sessionSetsRef = useRef([]);   // tracks sets in this session — used for PR detection
 
@@ -278,6 +280,24 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           reps: 10,
         }));
       }
+
+      // Load planned volume for this exercise's muscle this week
+      try {
+        const currentWeek = await getCurrentMesocycleWeek(user?.id);
+        if (currentWeek) {
+          const plannedVols = await getPlannedMuscleVolume(currentWeek.id);
+          const primaryMuscle = (exercise.primaryMuscle || exercise.primary_muscle || '').toLowerCase();
+          const plan = plannedVols.find(p => p.muscle === primaryMuscle);
+          setWeeklyPlan(plan ? { plannedSets: plan.planned_sets, muscle: plan.muscle } : null);
+
+          // Count actual working sets logged this week for this muscle
+          const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+          const weekSets = allTime.filter(s =>
+            s.setType !== 'warmup' && s.createdAt >= weekAgo
+          );
+          setWeeklyActual(weekSets.length);
+        }
+      } catch (_e) {}
     }
 
     loadHistory();
@@ -687,6 +707,22 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               <Text style={styles.targetText}>
                 Target: {routineExercise.recommendedSets || 3} sets · {routineExercise.recommendedRepsMin}–{routineExercise.recommendedRepsMax} reps
               </Text>
+            </View>
+          )}
+
+          {/* Weekly plan progress */}
+          {weeklyPlan && (
+            <View style={styles.weeklyPlanRow}>
+              <Ionicons name="calendar-outline" size={13} color={colors.textMuted} />
+              <Text style={styles.weeklyPlanText}>
+                {weeklyActual}/{weeklyPlan.plannedSets} sets this week
+              </Text>
+              <View style={[
+                styles.weeklyPlanDot,
+                weeklyActual >= weeklyPlan.plannedSets ? styles.dotGreen :
+                weeklyActual >= weeklyPlan.plannedSets - 2 ? styles.dotAmber :
+                styles.dotMuted,
+              ]} />
             </View>
           )}
 
