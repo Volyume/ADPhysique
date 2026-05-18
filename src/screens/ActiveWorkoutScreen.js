@@ -33,6 +33,7 @@ import {
   generateDeloadPrescription,
 } from '../lib/algorithms';
 import { rankSwaps } from '../lib/swapEngine';
+import { FORM_TIPS } from '../lib/formTips';
 import { applyTimeCrunch } from '../lib/mesocycle';
 import { getTimeCrunchMessage } from '../lib/whyThisTemplates';
 import { estimateWorkoutMinutes } from '../lib/planEngine';
@@ -1179,7 +1180,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               </Text>
             ) : null}
             <Text style={styles.infoNotes}>
-              {routineExercise?.notes || 'No execution notes for this exercise.'}
+              {routineExercise?.notes || FORM_TIPS[exercise?.name] || exercise?.notes || 'No execution notes for this exercise.'}
             </Text>
           </View>
         </Modal>
