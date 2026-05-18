@@ -4,7 +4,7 @@
     "slug": "volyume",
     "version": "1.1.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/volyume-icon.png",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0D0D0D",
     "splash": {
@@ -22,7 +22,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/volyume-icon.png",
         "backgroundColor": "#0D0D0D"
       },
       "package": "app.volyume",

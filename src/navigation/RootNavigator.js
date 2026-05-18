@@ -2,12 +2,15 @@ import React, { useEffect, useRef, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
-import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import { View, Text, Image, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+
+const SPLASH_HERO = require('../../assets/volyume-splash-hero.png');
+const HERO_ASPECT = 941 / 1672;
+const SPLASH_W = Math.round(Dimensions.get('window').width * 0.55);
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { colors, fontWeight, spacing } from '../styles/theme';
-import { VolyumeMark } from '../components/BrandMark';
 import useAppStore from '../store/useAppStore';
 import { getSupabaseClient } from '../lib/supabase';
 import { initDatabase } from '../lib/database';
@@ -252,49 +255,55 @@ export default function RootNavigator() {
 }
 
 function SplashScreen() {
-  const markOpacity = useRef(new Animated.Value(0)).current;
-  const markScale = useRef(new Animated.Value(0.7)).current;
-  const wordmarkOpacity = useRef(new Animated.Value(0)).current;
-  const wordmarkY = useRef(new Animated.Value(12)).current;
-  const taglineOpacity = useRef(new Animated.Value(0)).current;
+  const heroOpacity  = useRef(new Animated.Value(0)).current;
+  const heroScale    = useRef(new Animated.Value(0.82)).current;
+  const heroY        = useRef(new Animated.Value(20)).current;
+  const wordOpacity  = useRef(new Animated.Value(0)).current;
+  const wordY        = useRef(new Animated.Value(14)).current;
+  const tagOpacity   = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.sequence([
-      // Mark fades + scales in
+      // Hero image rises + fades in
       Animated.parallel([
-        Animated.timing(markOpacity, {
+        Animated.timing(heroOpacity, {
           toValue: 1,
-          duration: 500,
+          duration: 600,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
-        Animated.spring(markScale, {
+        Animated.timing(heroScale, {
           toValue: 1,
-          friction: 6,
-          tension: 80,
+          duration: 700,
+          easing: Easing.out(Easing.back(1.4)),
+          useNativeDriver: true,
+        }),
+        Animated.timing(heroY, {
+          toValue: 0,
+          duration: 600,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
       ]),
-      // Small pause, then wordmark slides up + fades in
-      Animated.delay(80),
+      // Wordmark slides up
       Animated.parallel([
-        Animated.timing(wordmarkOpacity, {
+        Animated.timing(wordOpacity, {
           toValue: 1,
-          duration: 380,
+          duration: 360,
           easing: Easing.out(Easing.quad),
           useNativeDriver: true,
         }),
-        Animated.timing(wordmarkY, {
+        Animated.timing(wordY, {
           toValue: 0,
-          duration: 380,
+          duration: 360,
           easing: Easing.out(Easing.quad),
           useNativeDriver: true,
         }),
       ]),
       // Tagline fades in last
-      Animated.timing(taglineOpacity, {
+      Animated.timing(tagOpacity, {
         toValue: 1,
-        duration: 320,
+        duration: 340,
         easing: Easing.out(Easing.quad),
         useNativeDriver: true,
       }),
@@ -303,18 +312,24 @@ function SplashScreen() {
 
   return (
     <View style={splashStyles.container}>
-      <Animated.View style={{ opacity: markOpacity, transform: [{ scale: markScale }] }}>
-        <VolyumeMark size={64} />
+      <Animated.View
+        style={{
+          opacity: heroOpacity,
+          transform: [{ scale: heroScale }, { translateY: heroY }],
+        }}
+      >
+        <Image
+          source={SPLASH_HERO}
+          style={{ width: SPLASH_W, height: Math.round(SPLASH_W / HERO_ASPECT) }}
+          resizeMode="contain"
+        />
       </Animated.View>
       <Animated.Text
-        style={[
-          splashStyles.wordmark,
-          { opacity: wordmarkOpacity, transform: [{ translateY: wordmarkY }] },
-        ]}
+        style={[splashStyles.wordmark, { opacity: wordOpacity, transform: [{ translateY: wordY }] }]}
       >
         Volyume
       </Animated.Text>
-      <Animated.Text style={[splashStyles.tagline, { opacity: taglineOpacity }]}>
+      <Animated.Text style={[splashStyles.tagline, { opacity: tagOpacity }]}>
         Intelligent Hypertrophy Logbook
       </Animated.Text>
     </View>
