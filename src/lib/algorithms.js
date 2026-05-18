@@ -292,16 +292,57 @@ export function computeSetTargets(prevSets, repMin, repMax, units = 'kg', option
     targets.push({ weight: targetWeight, repsMin: targetMin, repsMax: targetMax, prevWeight, prevReps, prevRIR, action });
   }
 
+  // Second pass: ensure no set targets below the session's overall best weight.
+  // If Set 1 was 5kg×12 but Set 3 was 8kg×10, Set 1's target should be anchored
+  // to 8kg (the session high-water mark), not to its own 5kg history.
+  const bestPrevW = prevWorking.reduce((m, s) => Math.max(m, s.weight || 0), 0);
+  const bestPrevSet = bestPrevW > 0
+    ? prevWorking.find(s => (s.weight || 0) === bestPrevW) ?? null
+    : null;
+
+  if (bestPrevSet) {
+    const bw = bestPrevW;
+    const br = bestPrevSet.actualReps ?? bestPrevSet.actual_reps ?? 0;
+    const bRIR = bestPrevSet.rir ?? null;
+    for (let i = 0; i < targets.length; i++) {
+      if (targets[i].prevWeight < bw) {
+        let newWeight = bw;
+        let newAction = 'anchor';
+        if (br >= max) {
+          const hadHeadroom = bRIR === null || bRIR >= 1;
+          if (hadHeadroom) {
+            const inc = getIncrement(bw);
+            const cap = bw * 0.05;
+            const capped = Math.min(inc, cap > 0.5 ? cap : inc);
+            newWeight = bw + Math.max(0.25, Math.round(capped * 4) / 4);
+            newAction = 'increase';
+          } else {
+            newAction = 'maintain';
+          }
+        } else if (br >= min) {
+          newAction = 'add_rep';
+        } else {
+          newAction = 'maintain';
+        }
+        targets[i] = { ...targets[i], weight: newWeight, action: newAction, anchored: true };
+      }
+    }
+  }
+
   const allIncrease = targets.every(t => t.action === 'increase');
   const anyDecrease = targets.some(t => t.action === 'decrease');
   const anyIncrease = targets.some(t => t.action === 'increase');
   const allMaintain = targets.every(t => t.action === 'maintain');
+  const anyAnchored = targets.some(t => t.anchored);
   const isLayoff = layoffMultiplier < 1.0;
 
   let reason;
   if (isLayoff) {
     const pct = Math.round((1 - layoffMultiplier) * 100);
     reason = `Loads reduced by ${pct}% — first session back after a break. Rebuild over the next 1–2 weeks.`;
+  } else if (anyAnchored) {
+    const n = targets.filter(t => t.anchored).length;
+    reason = `${n === targets.length ? 'All' : n} set target${n > 1 ? 's' : ''} raised to match your session best (${bestPrevW}${units}) — your overall high-water mark, not just that set's history.`;
   } else if (allIncrease) {
     const inc = (targets[0].weight - targets[0].prevWeight).toFixed(2).replace(/\.?0+$/, '');
     reason = `All sets hit the top of the range — load up by ${inc}${units}.`;
@@ -310,7 +351,7 @@ export function computeSetTargets(prevSets, repMin, repMax, units = 'kg', option
   } else if (anyIncrease) {
     reason = `Partial progression — add weight where you hit ${max} reps.`;
   } else if (allMaintain) {
-    reason = `Same load — you were at RIR 0 with ${max}+ reps. Let recovery catch up first.`;
+    reason = `Same load — maximum effort already at ${max}+ reps. Let recovery catch up first.`;
   } else {
     reason = `Keep the load — push for ${max} reps on each set, then increase weight.`;
   }

@@ -56,6 +56,18 @@ const SET_TYPE_OPTIONS = [
   { value: 'dropset', label: 'Drop Set', description: 'Reduced load after a working set. Counts toward weekly volume.' },
 ];
 
+// Returns the set to use as the rep-progression anchor.
+// If the same-indexed set was lighter than the session best, anchor to the best set
+// so the pre-fill targets beating the overall high-water mark, not just that slot's history.
+function getBestAnchorSet(sets, workingIdx) {
+  if (!sets || sets.length === 0) return null;
+  const working = sets.filter(s => (s.setType ?? s.set_type ?? 'straight') !== 'warmup');
+  const indexed = working[workingIdx] ?? null;
+  const best = working.reduce((b, s) => (!b || (s.weight || 0) > (b.weight || 0)) ? s : b, null);
+  if (!indexed || !best || (indexed.weight || 0) >= (best.weight || 0)) return indexed ?? best;
+  return best;
+}
+
 export default function ActiveWorkoutScreen({ navigation, route }) {
   const store = useAppStore();
   const {
@@ -258,7 +270,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       const currentWorkingCount = allLoggedForExercise.filter(s => s.setType !== 'warmup').length;
       const currentTarget = computed[currentWorkingCount];
       if (currentTarget) {
-        const prevSet = prev[currentWorkingCount];
+        const prevSet = getBestAnchorSet(prev, currentWorkingCount);
         const beatRep = prevSet ? prevSet.actualReps + 1 : null;
         const prefillReps = (beatRep && beatRep >= currentTarget.repsMin && beatRep <= currentTarget.repsMax)
           ? beatRep
@@ -449,7 +461,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         const nextWorkingCount = newLoggedSets.filter(s => s.setType !== 'warmup').length;
         const nextTarget = setTargets[nextWorkingCount];
         if (nextTarget) {
-          const prevSetForNext = prevSets[nextWorkingCount];
+          const prevSetForNext = getBestAnchorSet(prevSets, nextWorkingCount);
           const beatRep = prevSetForNext ? prevSetForNext.actualReps + 1 : null;
           const prefillReps = (beatRep && beatRep >= nextTarget.repsMin && beatRep <= nextTarget.repsMax)
             ? beatRep
@@ -481,7 +493,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       if (currentSet.setType === 'warmup') {
         const firstTarget = setTargets[0];
         if (firstTarget) {
-          const beatRep = prevSets[0] ? prevSets[0].actualReps + 1 : null;
+          const anchorSet0 = getBestAnchorSet(prevSets, 0);
+          const beatRep = anchorSet0 ? anchorSet0.actualReps + 1 : null;
           const prefillReps = (beatRep && beatRep >= firstTarget.repsMin && beatRep <= firstTarget.repsMax)
             ? beatRep
             : firstTarget.repsMin;
