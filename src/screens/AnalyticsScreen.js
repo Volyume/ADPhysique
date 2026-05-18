@@ -1,235 +1,345 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  RefreshControl, Animated, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { format } from 'date-fns';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { format, subDays } from 'date-fns';
+import { BarChart } from 'react-native-gifted-charts';
+import CalendarHeatmap from 'react-native-calendar-heatmap';
+
+import { colors, fontSize, fontWeight, spacing, radius, volumeColors, motion } from '../styles/theme';
 import { BrandTag } from '../components/BrandMark';
-import { getAllWorkoutSets, getAllWorkouts, getAllExercises } from '../lib/database';
-import {
-  calculateTonnage, shouldDeload, calculateWeeklyVolume, VOLUME_LANDMARKS,
-} from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
+import {
+  getAllWorkoutSets, getAllWorkouts, getAllExercises, getAllMesocycles,
+  getActiveInsights, dismissInsight, runInsightsEngine,
+} from '../lib/database';
+import {
+  calculateWeeklyVolume, VOLUME_LANDMARKS, MUSCLE_DISPLAY_NAMES,
+  calculate1RM, calculateTonnage, shouldDeload,
+} from '../lib/algorithms';
+
+const { width: SCREEN_W } = Dimensions.get('window');
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Severity → icon + color mapping (jargon-free UI)
+const SEVERITY_STYLE = {
+  0: { icon: 'information-circle-outline', color: colors.primary },
+  1: { icon: 'alert-circle-outline',       color: colors.warning },
+  2: { icon: 'warning-outline',            color: colors.error },
+};
+
+// Computes how many novel per-exercise 1RM bests occurred within each
+// calendar week that falls inside [windowStart, now].
+function computePRsPerWeek(allSets, exerciseMap, windowDays, now = Date.now()) {
+  const windowStart = now - windowDays * DAY_MS;
+  // Group all sets by exercise, time-ordered (all history needed for running max)
+  const byEx = {};
+  for (const s of allSets) {
+    const exId = s.exerciseId ?? s.exercise_id;
+    if (!exId) continue;
+    (byEx[exId] ??= []).push(s);
+  }
+  // Sort each exercise's sets ascending
+  for (const id of Object.keys(byEx)) {
+    byEx[id].sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
+  }
+  // Iterate sets; whenever a new running-max 1RM is set, record the date
+  const prEvents = [];
+  for (const [, sets] of Object.entries(byEx)) {
+    let runningMax = 0;
+    for (const s of sets) {
+      const at = s.createdAt ?? s.created_at ?? 0;
+      const w = s.weight ?? 0;
+      const r = s.actualReps ?? s.actual_reps ?? 0;
+      if (w <= 0 || r <= 0) continue;
+      const est = calculate1RM(w, r);
+      if (est > runningMax) {
+        runningMax = est;
+        if (at >= windowStart) prEvents.push(at);
+      }
+    }
+  }
+  // Bin into week slots (0 = oldest week in window, n-1 = most recent)
+  const totalWeeks = Math.ceil(windowDays / 7);
+  const weeks = Array.from({ length: totalWeeks }, () => 0);
+  for (const at of prEvents) {
+    const daysAgo = Math.floor((now - at) / DAY_MS);
+    const weekIdx = totalWeeks - 1 - Math.floor(daysAgo / 7);
+    if (weekIdx >= 0 && weekIdx < totalWeeks) weeks[weekIdx]++;
+  }
+  return weeks;
+}
+
+// Returns volume status color for a muscle's current working-set count
+function volumeDotColor(muscleKey, workingSets) {
+  const lm = VOLUME_LANDMARKS[muscleKey];
+  if (!lm) return colors.textMuted;
+  if (workingSets === 0) return colors.border;
+  if (workingSets < lm.mev) return volumeColors.below;
+  if (workingSets <= lm.mav) return volumeColors.optimal;
+  if (workingSets <= lm.mrv) return volumeColors.overMav;
+  return volumeColors.overMrv;
+}
 
 export default function AnalyticsScreen({ navigation }) {
   const { user, units } = useAppStore();
-  const [weekStats, setWeekStats] = useState(null);
-  const [deloadCheck, setDeloadCheck] = useState(null);
-  const [recentSessions, setRecentSessions] = useState([]);
+
   const [refreshing, setRefreshing] = useState(false);
 
-  useFocusEffect(useCallback(() => { loadData(); }, [user?.id]));
+  // Section data
+  const [activeMeso, setActiveMeso]         = useState(null);
+  const [mesoTonnage, setMesoTonnage]       = useState([]);   // [{value, label}]
+  const [insights, setInsights]             = useState([]);
+  const [weeklyVolume, setWeeklyVolume]     = useState({});
+  const [prBars, setPrBars]                 = useState([]);   // [{value}] 30d by default
+  const [prWindow, setPrWindow]             = useState(30);
+  const [calValues, setCalValues]           = useState([]);   // [{date, count}]
+  const [recentSessions, setRecentSessions] = useState([]);
+  const [allSets, setAllSets]               = useState([]);
+  const [exerciseMap, setExerciseMap]       = useState({});
 
-  async function loadData() {
+  useFocusEffect(useCallback(() => { load(); }, [user?.id]));
+
+  async function load() {
     if (!user?.id) return;
-    await Promise.all([loadWeeklyData(), checkDeload(), loadRecentSessions()]);
-  }
-
-  async function loadRecentSessions() {
     try {
-      const all = await getAllWorkouts(user.id);
-      const completed = all
-        .filter(w => w.isCompleted)
-        .sort((a, b) => b.startedAt - a.startedAt)
-        .slice(0, 3);
-      setRecentSessions(completed);
-    } catch (_e) {}
-  }
-
-  async function loadWeeklyData() {
-    try {
-      const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-      const allSets = await getAllWorkoutSets(user.id);
-      const recentSets = allSets.filter(s => s.createdAt >= weekAgo);
-      const allWorkouts = await getAllWorkouts(user.id);
-      const recentWorkouts = allWorkouts.filter(
-        w => w.startedAt >= weekAgo && w.isCompleted,
-      );
-      const tonnage = calculateTonnage(recentSets);
-      const avgDuration = recentWorkouts.length > 0
-        ? Math.round(recentWorkouts.reduce((s, w) => s + (w.durationMinutes || 0), 0) / recentWorkouts.length)
-        : 0;
-      const avgDifficulty = recentWorkouts.length > 0
-        ? (recentWorkouts.reduce((s, w) => s + (w.sessionDifficulty || 3), 0) / recentWorkouts.length).toFixed(1)
-        : null;
-
-      setWeekStats({
-        workoutCount: recentWorkouts.length,
-        totalSets: recentSets.length,
-        totalKg: Math.round(tonnage),
-        avgDuration,
-        avgDifficulty,
-      });
-    } catch (e) {
-      console.error('loadWeeklyData:', e);
-    }
-  }
-
-  async function checkDeload() {
-    try {
-      const [allWorkouts, allSets, allExercises] = await Promise.all([
+      const [workouts, sets, exercises] = await Promise.all([
         getAllWorkouts(user.id),
         getAllWorkoutSets(user.id),
         getAllExercises(),
       ]);
-      const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
+      const exMap = Object.fromEntries(exercises.map(e => [e.id, e]));
+      setAllSets(sets);
+      setExerciseMap(exMap);
 
-      const last4Weeks = Array.from({ length: 4 }, (_, i) => {
-        const weekStart = Date.now() - (i + 1) * 7 * 24 * 60 * 60 * 1000;
-        const weekEnd = weekStart + 7 * 24 * 60 * 60 * 1000;
-        const weekWorkouts = allWorkouts.filter(
-          w => w.startedAt >= weekStart && w.startedAt < weekEnd,
-        );
-        const weekSets = allSets.filter(
-          s => s.createdAt >= weekStart && s.createdAt < weekEnd,
-        );
-        const avgReps = weekSets.length > 0
-          ? weekSets.reduce((sum, s) => sum + (s.actualReps || 0), 0) / weekSets.length
-          : 0;
-        const avgSoreness = weekWorkouts.length > 0
-          ? weekWorkouts.reduce((sum, w) => sum + (w.soreness24hBefore || 0), 0) / weekWorkouts.length
-          : 0;
+      await Promise.all([
+        loadMesocycle(workouts, sets, exMap),
+        loadInsights(),
+        loadVolumeSnapshot(sets, exMap),
+        loadPRBars(sets, exMap, 30),
+        loadCalendar(workouts),
+        loadRecentSessions(workouts),
+      ]);
+    } catch (e) {
+      console.error('AnalyticsScreen load:', e);
+    }
+  }
 
-        // Real over-MRV detection: any muscle whose weekly hard-set count
-        // exceeds its MRV landmark flags the week as over-MRV.
-        const volume = calculateWeeklyVolume(weekSets, exerciseMap);
-        const hasOverMRV = Object.entries(volume).some(([muscle, v]) => {
-          const lm = VOLUME_LANDMARKS[muscle];
-          return lm && v.workingSets > lm.mrv;
+  async function loadMesocycle(workouts, sets, exMap) {
+    try {
+      const mesoRows = await getAllMesocycles(user.id);
+      const active = mesoRows.find(m => m.isActive === 1 || m.isActive === true) ?? mesoRows[0] ?? null;
+      setActiveMeso(active);
+
+      // Build weekly tonnage sparkline: last 4 weeks
+      const bars = [];
+      const now = Date.now();
+      for (let wk = 3; wk >= 0; wk--) {
+        const end   = now - wk * WEEK_MS;
+        const start = end - WEEK_MS;
+        const wkSets = sets.filter(s => {
+          const at = s.createdAt ?? s.created_at ?? 0;
+          return at >= start && at < end;
         });
+        const tonnage = calculateTonnage(wkSets);
+        bars.push({
+          value: Math.round(tonnage),
+          label: wk === 0 ? 'Now' : `-${wk}w`,
+          frontColor: wk === 0 ? colors.primary : colors.primaryDim,
+        });
+      }
+      setMesoTonnage(bars);
+    } catch (_) {}
+  }
 
-        return { avgReps, avgSoreness, hasOverMRV, weeksSinceLastDeload: 4 - i };
-      });
+  async function loadInsights() {
+    try {
+      const fresh = await runInsightsEngine(user.id);
+      setInsights(fresh);
+    } catch (_) {}
+  }
 
-      const result = shouldDeload(last4Weeks.reverse());
-      if (result.deload) setDeloadCheck(result);
-      else setDeloadCheck(null);
-    } catch (e) {}
+  async function loadVolumeSnapshot(sets, exMap) {
+    const now = Date.now();
+    const weekAgo = now - WEEK_MS;
+    const recentSets = sets.filter(s => (s.createdAt ?? s.created_at ?? 0) >= weekAgo);
+    const vol = calculateWeeklyVolume(recentSets, exMap);
+    setWeeklyVolume(vol);
+  }
+
+  function loadPRBars(sets, exMap, windowDays) {
+    const bars = computePRsPerWeek(sets, exMap, windowDays).map((v, i) => ({
+      value: v,
+      frontColor: v > 0 ? colors.gold : colors.surface2,
+      label: i === 0 ? `${windowDays}d` : '',
+    }));
+    setPrBars(bars);
+  }
+
+  async function loadCalendar(workouts) {
+    const now = Date.now();
+    const completedDays = new Set();
+    for (const w of workouts) {
+      if (!(w.isCompleted ?? w.is_completed ?? false)) continue;
+      const at = w.startedAt ?? w.createdAt ?? w.created_at ?? 0;
+      if (!at) continue;
+      completedDays.add(Math.floor(at / DAY_MS));
+    }
+    // Build {date, count} for the last 84 days (12 weeks)
+    const vals = [];
+    for (let i = 0; i < 84; i++) {
+      const day = Math.floor((now - i * DAY_MS) / DAY_MS);
+      if (completedDays.has(day)) {
+        vals.push({ date: new Date(day * DAY_MS).toISOString().slice(0, 10), count: 1 });
+      }
+    }
+    setCalValues(vals);
+  }
+
+  async function loadRecentSessions(workouts) {
+    const completed = workouts
+      .filter(w => w.isCompleted ?? w.is_completed ?? false)
+      .sort((a, b) => (b.startedAt ?? 0) - (a.startedAt ?? 0))
+      .slice(0, 3);
+    setRecentSessions(completed);
+  }
+
+  async function handleDismiss(insightId) {
+    await dismissInsight(insightId);
+    setInsights(prev => prev.filter(i => i.id !== insightId));
+  }
+
+  function handlePrWindowToggle() {
+    const next = prWindow === 30 ? 90 : 30;
+    setPrWindow(next);
+    loadPRBars(allSets, exerciseMap, next);
   }
 
   async function handleRefresh() {
     setRefreshing(true);
-    await loadData();
+    await load();
     setRefreshing(false);
   }
 
+  // Mesocycle progress (0–1)
+  function mesoProgress() {
+    if (!activeMeso) return 0;
+    const total = activeMeso.durationWeeks ?? 0;
+    if (!total || !activeMeso.startDate) return 0;
+    const start = typeof activeMeso.startDate === 'string'
+      ? new Date(activeMeso.startDate).getTime()
+      : activeMeso.startDate;
+    const weeksSinceStart = Math.max(0, (Date.now() - start) / WEEK_MS);
+    return Math.min(1, weeksSinceStart / total);
+  }
+
+  function mesoCurrentWeek() {
+    if (!activeMeso?.startDate) return 1;
+    const start = typeof activeMeso.startDate === 'string'
+      ? new Date(activeMeso.startDate).getTime()
+      : activeMeso.startDate;
+    return Math.max(1, Math.ceil((Date.now() - start) / WEEK_MS));
+  }
+
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.primary}
+          />
         }
       >
-        <View style={styles.screenHeader}>
+        {/* ── Header ────────────────────────────────────────── */}
+        <View style={styles.header}>
           <Text style={styles.pageTitle}>Progress</Text>
           <BrandTag size={13} color={colors.textMuted} />
         </View>
 
-        {/* Deload Warning */}
-        {deloadCheck?.deload && (
-          <View style={styles.deloadAlert}>
-            <Ionicons name="warning" size={20} color={colors.warning} />
-            <View style={styles.deloadText}>
-              <Text style={styles.deloadTitle}>Deload Recommended</Text>
-              <Text style={styles.deloadReasons}>{deloadCheck.reasons.join(' · ')}</Text>
-            </View>
+        {/* ── 1 · Mesocycle Pulse Card ───────────────────────── */}
+        <MesocyclePulseCard
+          meso={activeMeso}
+          currentWeek={mesoCurrentWeek()}
+          progress={mesoProgress()}
+          tonnageBars={mesoTonnage}
+          onPress={() => navigation.navigate('MesocycleBuilder')}
+          onBuild={() => navigation.navigate('CoachBuilder')}
+        />
+
+        {/* ── 2 · Insight Stack ─────────────────────────────── */}
+        {insights.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>FOR YOU</Text>
+            {insights.map(ins => (
+              <InsightRow key={ins.id} insight={ins} onDismiss={() => handleDismiss(ins.id)} />
+            ))}
           </View>
         )}
 
-        {/* This Week Stats */}
+        {/* ── 3 · Volume Snapshot ───────────────────────────── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>THIS WEEK</Text>
-          {weekStats ? (
-            <View style={styles.statsGrid}>
-              <StatCard value={String(weekStats.workoutCount)} label="Workouts" icon="barbell" />
-              <StatCard value={String(weekStats.totalSets)} label="Working Sets" icon="layers" />
-              <StatCard value={`${weekStats.totalKg.toLocaleString('en-GB')} kg`} label="Total kg" icon="trending-up" />
-              <StatCard value={weekStats.avgDuration > 0 ? `${weekStats.avgDuration}m` : '—'} label="Avg Session" icon="time" />
-            </View>
-          ) : (
-            <View style={styles.card}>
-              <Text style={styles.emptyState}>No sessions this week. Time to train.</Text>
-            </View>
-          )}
+          <View style={styles.rowBetween}>
+            <Text style={styles.sectionLabel}>THIS WEEK'S VOLUME</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('VolumeHeatmap')}>
+              <Text style={styles.seeAll}>Full view</Text>
+            </TouchableOpacity>
+          </View>
+          <VolumeSnapshotGrid volume={weeklyVolume} />
         </View>
 
-        {/* Volume Heatmap link */}
-        <TouchableOpacity
-          style={styles.heatmapNavCard}
-          onPress={() => navigation.navigate('VolumeHeatmap')}
-          activeOpacity={0.75}
-        >
-          <View style={styles.heatmapNavLeft}>
-            <Ionicons name="grid-outline" size={22} color={colors.primary} />
-            <View>
-              <Text style={styles.heatmapNavTitle}>Volume Heatmap</Text>
-              <Text style={styles.heatmapNavSub}>Weekly sets by muscle group with MEV / MRV landmarks</Text>
-            </View>
+        {/* ── 4 · PR Rate Sparkline ─────────────────────────── */}
+        <View style={styles.section}>
+          <View style={styles.rowBetween}>
+            <Text style={styles.sectionLabel}>NEW BESTS</Text>
+            <TouchableOpacity
+              style={styles.windowToggle}
+              onPress={handlePrWindowToggle}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.windowToggleText}>{prWindow}d</Text>
+              <Ionicons name="chevron-forward" size={12} color={colors.primary} />
+            </TouchableOpacity>
           </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
+          <PRSparkline bars={prBars} windowDays={prWindow} />
+        </View>
 
-        {/* Recent Sessions */}
+        {/* ── 5 · Training Day Calendar ─────────────────────── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>TRAINING DAYS — LAST 12 WEEKS</Text>
+          <TrainingCalendar values={calValues} />
+        </View>
+
+        {/* ── 6 · Recent Sessions Strip ─────────────────────── */}
         {recentSessions.length > 0 && (
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>RECENT SESSIONS</Text>
+            <View style={styles.rowBetween}>
+              <Text style={styles.sectionLabel}>RECENT SESSIONS</Text>
               <TouchableOpacity onPress={() => navigation.navigate('WorkoutHistory')}>
                 <Text style={styles.seeAll}>All sessions</Text>
               </TouchableOpacity>
             </View>
             {recentSessions.map(w => (
-              <View key={w.id} style={styles.sessionRow}>
-                <View style={styles.sessionLeft}>
-                  <Text style={styles.sessionName}>{w.name || 'Session'}</Text>
-                  <Text style={styles.sessionMeta}>
-                    {format(new Date(w.startedAt), 'EEE d MMM')}
-                    {w.durationMinutes ? ` · ${w.durationMinutes}m` : ''}
-                  </Text>
-                </View>
-                {w.sessionDifficulty != null && (
-                  <View style={styles.rpeChip}>
-                    <Text style={styles.rpeText}>RPE {w.sessionDifficulty}</Text>
-                  </View>
-                )}
-              </View>
+              <SessionCard key={w.id} workout={w} units={units} />
             ))}
           </View>
         )}
 
-        {/* Analyse */}
+        {/* ── Quick nav tiles ────────────────────────────────── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>ANALYSE</Text>
-          <View style={styles.linkGrid}>
-            <TouchableOpacity style={styles.linkCard} onPress={() => navigation.navigate('WorkoutHistory')}>
-              <Ionicons name="time" size={24} color={colors.primary} />
-              <Text style={styles.linkTitle}>Session History</Text>
-              <Text style={styles.linkSub}>All past sessions</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.linkCard} onPress={() => navigation.navigate('PRWall')}>
-              <Ionicons name="trophy" size={24} color={colors.gold} />
-              <Text style={styles.linkTitle}>Personal Records</Text>
-              <Text style={styles.linkSub}>All-time bests</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.linkCard} onPress={() => navigation.navigate('VolumeHeatmap')}>
-              <Ionicons name="grid" size={24} color={colors.primary} />
-              <Text style={styles.linkTitle}>Volume Heatmap</Text>
-              <Text style={styles.linkSub}>Weekly sets vs MEV–MRV</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.linkCard} onPress={() => navigation.navigate('BodyMetrics')}>
-              <Ionicons name="body" size={24} color={colors.success} />
-              <Text style={styles.linkTitle}>Body Metrics</Text>
-              <Text style={styles.linkSub}>Weight & measurements</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.linkCard} onPress={() => navigation.navigate('ExerciseLibrary')}>
-              <Ionicons name="barbell" size={24} color={colors.textSecondary} />
-              <Text style={styles.linkTitle}>Lift Progress</Text>
-              <Text style={styles.linkSub}>Per-exercise history</Text>
-            </TouchableOpacity>
+          <Text style={styles.sectionLabel}>EXPLORE</Text>
+          <View style={styles.navGrid}>
+            <NavTile icon="trophy" color={colors.gold} label="Personal Records" onPress={() => navigation.navigate('PRWall')} />
+            <NavTile icon="body" color={colors.success} label="Body Metrics" onPress={() => navigation.navigate('BodyMetrics')} />
+            <NavTile icon="barbell" color={colors.primary} label="Lift Progress" onPress={() => navigation.navigate('ExerciseLibrary')} />
+            <NavTile icon="time" color={colors.textSecondary} label="Full History" onPress={() => navigation.navigate('WorkoutHistory')} />
           </View>
         </View>
       </ScrollView>
@@ -237,92 +347,224 @@ export default function AnalyticsScreen({ navigation }) {
   );
 }
 
-function StatCard({ value, label, icon }) {
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, onPress, onBuild }) {
+  const progWidth = `${Math.round(progress * 100)}%`;
+
+  if (!meso) {
+    return (
+      <TouchableOpacity style={[styles.card, styles.mesoEmpty]} onPress={onBuild} activeOpacity={0.8}>
+        <Ionicons name="layers-outline" size={32} color={colors.primaryDim} />
+        <Text style={styles.mesoEmptyTitle}>No training block active</Text>
+        <Text style={styles.mesoEmptySub}>Generate a structured plan to track your block progress here.</Text>
+        <View style={styles.mesoEmptyBtn}>
+          <Text style={styles.mesoEmptyBtnText}>Build a plan</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  }
+
   return (
-    <View style={styles.statCard}>
-      <Ionicons name={icon} size={18} color={colors.primary} />
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+    <TouchableOpacity style={[styles.card, styles.mesoCard]} onPress={onPress} activeOpacity={0.85}>
+      <View style={styles.mesoTop}>
+        <View>
+          <Text style={styles.mesoName} numberOfLines={1}>{meso.name ?? 'Training Block'}</Text>
+          <Text style={styles.mesoWeek}>
+            Week {currentWeek}{meso.durationWeeks ? ` of ${meso.durationWeeks}` : ''}
+            {meso.focus ? `  ·  ${meso.focus}` : ''}
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+      </View>
+
+      {/* Progress bar */}
+      <View style={styles.mesoProgressTrack}>
+        <View style={[styles.mesoProgressFill, { width: progWidth }]} />
+      </View>
+      <Text style={styles.mesoProgressLabel}>{Math.round(progress * 100)}% complete</Text>
+
+      {/* Tonnage sparkline */}
+      {tonnageBars.some(b => b.value > 0) && (
+        <View style={styles.sparkWrap}>
+          <Text style={styles.sparkLabel}>Weekly load (kg moved)</Text>
+          <BarChart
+            data={tonnageBars}
+            barWidth={28}
+            spacing={10}
+            roundedTop
+            hideRules
+            hideAxesAndRules
+            noOfSections={3}
+            height={56}
+            barBorderRadius={3}
+            xAxisThickness={0}
+            yAxisThickness={0}
+            yAxisTextStyle={{ display: 'none' }}
+            xAxisLabelTextStyle={styles.barAxisLabel}
+            isAnimated
+          />
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+}
+
+function InsightRow({ insight, onDismiss }) {
+  const sev = SEVERITY_STYLE[insight.severity ?? 0] ?? SEVERITY_STYLE[0];
+  return (
+    <View style={[styles.insightRow, { borderLeftColor: sev.color }]}>
+      <Ionicons name={sev.icon} size={18} color={sev.color} style={{ marginTop: 1 }} />
+      <Text style={styles.insightCopy} numberOfLines={3}>{insight.copy}</Text>
+      <TouchableOpacity
+        onPress={onDismiss}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        style={styles.insightDismiss}
+      >
+        <Ionicons name="close" size={14} color={colors.textMuted} />
+      </TouchableOpacity>
     </View>
   );
 }
 
+const MUSCLES = Object.keys(VOLUME_LANDMARKS);
+
+function VolumeSnapshotGrid({ volume }) {
+  return (
+    <View style={styles.volGrid}>
+      {MUSCLES.map(m => {
+        const ws = volume[m]?.workingSets ?? 0;
+        const dot = volumeDotColor(m, ws);
+        return (
+          <View key={m} style={styles.volCell}>
+            <View style={[styles.volDot, { backgroundColor: dot }]} />
+            <Text style={styles.volMuscle}>{MUSCLE_DISPLAY_NAMES[m]}</Text>
+            <Text style={styles.volSets}>{ws > 0 ? `${ws}s` : '—'}</Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function PRSparkline({ bars, windowDays }) {
+  const total = bars.reduce((s, b) => s + b.value, 0);
+  if (total === 0) {
+    return (
+      <View style={styles.prEmpty}>
+        <Text style={styles.prEmptyText}>No new bests in the last {windowDays} days — keep pushing the limits.</Text>
+      </View>
+    );
+  }
+  return (
+    <View style={styles.prWrap}>
+      <Text style={styles.prTotal}>{total} new bests in {windowDays} days</Text>
+      <BarChart
+        data={bars}
+        barWidth={Math.max(12, Math.floor((SCREEN_W - 80) / bars.length - 8))}
+        spacing={4}
+        roundedTop
+        hideAxesAndRules
+        noOfSections={3}
+        height={64}
+        barBorderRadius={3}
+        isAnimated
+        xAxisThickness={0}
+        yAxisThickness={0}
+        yAxisTextStyle={{ display: 'none' }}
+        xAxisLabelTextStyle={styles.barAxisLabel}
+      />
+    </View>
+  );
+}
+
+function TrainingCalendar({ values }) {
+  const endDate = new Date();
+  const startDate = subDays(endDate, 83);
+  return (
+    <View style={styles.calWrap}>
+      <CalendarHeatmap
+        values={values}
+        startDate={startDate}
+        endDate={endDate}
+        colorArray={[colors.surface2, colors.primary]}
+        gutterSize={3}
+        horizontal
+        showMonthLabels={false}
+        squareSize={10}
+      />
+      <View style={styles.calLegend}>
+        <View style={[styles.calDot, { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border }]} />
+        <Text style={styles.calLegendText}>Rest</Text>
+        <View style={[styles.calDot, { backgroundColor: colors.primary }]} />
+        <Text style={styles.calLegendText}>Trained</Text>
+      </View>
+    </View>
+  );
+}
+
+function SessionCard({ workout, units }) {
+  const name = workout.name || 'Session';
+  const at = workout.startedAt ?? workout.createdAt ?? workout.created_at ?? 0;
+  const diff = workout.sessionDifficulty ?? null;
+  return (
+    <View style={styles.sessionCard}>
+      <View style={styles.sessionLeft}>
+        <Text style={styles.sessionName} numberOfLines={1}>{name}</Text>
+        <Text style={styles.sessionMeta}>
+          {at ? format(new Date(at), 'EEE d MMM') : ''}
+          {workout.durationMinutes ? ` · ${workout.durationMinutes}m` : ''}
+        </Text>
+      </View>
+      {diff != null && (
+        <View style={[styles.diffChip, { backgroundColor: diffChipBg(diff) }]}>
+          <Text style={[styles.diffText, { color: diffChipColor(diff) }]}>
+            {diff}/10
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+function NavTile({ icon, color, label, onPress }) {
+  return (
+    <TouchableOpacity style={styles.navTile} onPress={onPress} activeOpacity={0.75}>
+      <Ionicons name={icon} size={22} color={color} />
+      <Text style={styles.navTileLabel}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function diffChipBg(d) {
+  if (d >= 8) return colors.errorBg;
+  if (d >= 6) return colors.warningBg;
+  return colors.surface2;
+}
+function diffChipColor(d) {
+  if (d >= 8) return colors.error;
+  if (d >= 6) return colors.warning;
+  return colors.textSecondary;
+}
+
+// ─── Styles ──────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
-  screenHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  safe:        { flex: 1, backgroundColor: colors.background },
+  content:     { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxxl },
+  header:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  pageTitle:   { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
+
+  section:     { gap: spacing.md },
+  sectionLabel: {
+    fontSize: fontSize.xs, fontWeight: fontWeight.black,
+    color: colors.textMuted, letterSpacing: 1.5,
   },
-  pageTitle: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
-    color: colors.textPrimary,
-  },
-  deloadAlert: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    backgroundColor: colors.warningBg,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.warning,
-  },
-  deloadText: { flex: 1 },
-  deloadTitle: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
-    color: colors.warning,
-    marginBottom: 4,
-  },
-  deloadReasons: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    lineHeight: 18,
-  },
-  section: { gap: spacing.md },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  sectionTitle: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.black,
-    color: colors.textMuted,
-    letterSpacing: 1.5,
-  },
-  seeAll: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.medium },
-  heatmapNavCard: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    padding: spacing.lg, borderWidth: 1, borderColor: colors.border,
-  },
-  heatmapNavLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 },
-  heatmapNavTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  heatmapNavSub: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
-  statCard: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    alignItems: 'center',
-    gap: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  statValue: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.black,
-    color: colors.textPrimary,
-  },
-  statLabel: { fontSize: fontSize.xs, color: colors.textSecondary },
-  emptyState: {
-    fontSize: fontSize.sm,
-    color: colors.textMuted,
-    textAlign: 'center',
-    paddingVertical: spacing.md,
-    lineHeight: 20,
-  },
+  rowBetween:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  seeAll:      { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.medium },
+
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
@@ -330,57 +572,101 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  linkGrid: { gap: spacing.md },
-  linkCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
+
+  // ── Mesocycle card ──
+  mesoCard:         { gap: spacing.md },
+  mesoEmpty:        { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl },
+  mesoEmptyTitle:   { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  mesoEmptySub:     { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', lineHeight: 19 },
+  mesoEmptyBtn:     {
+    backgroundColor: colors.primaryBg, borderRadius: radius.full,
+    paddingHorizontal: spacing.xl, paddingVertical: spacing.sm,
+    borderWidth: 1, borderColor: colors.primary, marginTop: spacing.xs,
   },
-  linkTitle: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.textPrimary,
-    flex: 1,
+  mesoEmptyBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
+  mesoTop:          { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  mesoName:         { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary, flex: 1 },
+  mesoWeek:         { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2 },
+  mesoProgressTrack: {
+    height: 4, borderRadius: radius.full,
+    backgroundColor: colors.surface2, overflow: 'hidden',
   },
-  linkSub: {
-    fontSize: fontSize.xs,
-    color: colors.textSecondary,
+  mesoProgressFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
+  mesoProgressLabel: { fontSize: fontSize.xs, color: colors.textMuted },
+  sparkWrap:        { marginTop: spacing.xs },
+  sparkLabel:       { fontSize: fontSize.xs, color: colors.textMuted, marginBottom: spacing.xs },
+  barAxisLabel:     { fontSize: 9, color: colors.textMuted },
+
+  // ── Insight rows ──
+  insightRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,
+    backgroundColor: colors.surface, borderRadius: radius.md,
+    padding: spacing.md, borderWidth: 1, borderColor: colors.border,
+    borderLeftWidth: 3,
   },
-  sessionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
+  insightCopy:    { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+  insightDismiss: { padding: 2 },
+
+  // ── Volume snapshot ──
+  volGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm,
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    padding: spacing.md, borderWidth: 1, borderColor: colors.border,
+  },
+  volCell:   { width: '30%', alignItems: 'center', gap: 4, paddingVertical: spacing.xs },
+  volDot:    { width: 10, height: 10, borderRadius: 5 },
+  volMuscle: { fontSize: 10, color: colors.textSecondary, textAlign: 'center' },
+  volSets:   { fontSize: 10, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+
+  // ── PR Sparkline ──
+  windowToggle: {
+    flexDirection: 'row', alignItems: 'center', gap: 2,
+    backgroundColor: colors.primaryBg, borderRadius: radius.full,
+    paddingHorizontal: spacing.sm, paddingVertical: 3,
+    borderWidth: 1, borderColor: colors.primary,
+  },
+  windowToggleText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.bold },
+  prWrap:    { gap: spacing.xs },
+  prTotal:   { fontSize: fontSize.xs, color: colors.textMuted },
+  prEmpty:   {
+    backgroundColor: colors.surface, borderRadius: radius.md,
+    padding: spacing.lg, borderWidth: 1, borderColor: colors.border,
+  },
+  prEmptyText: { fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 18 },
+
+  // ── Calendar ──
+  calWrap: {
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    padding: spacing.md, borderWidth: 1, borderColor: colors.border,
     gap: spacing.md,
   },
-  sessionLeft: { flex: 1 },
-  sessionName: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.textPrimary,
+  calLegend:     { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  calDot:        { width: 10, height: 10, borderRadius: 2 },
+  calLegendText: { fontSize: fontSize.xs, color: colors.textMuted },
+
+  // ── Recent sessions ──
+  sessionCard: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: colors.surface, borderRadius: radius.md,
+    padding: spacing.lg, borderWidth: 1, borderColor: colors.border,
+    gap: spacing.md,
   },
-  sessionMeta: {
-    fontSize: fontSize.xs,
-    color: colors.textSecondary,
-    marginTop: 2,
+  sessionLeft:  { flex: 1 },
+  sessionName:  { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  sessionMeta:  { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2 },
+  diffChip:     { borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: 3 },
+  diffText:     { fontSize: fontSize.xs, fontWeight: fontWeight.bold },
+
+  // ── Nav tiles ──
+  navGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  navTile: {
+    flex: 1, minWidth: '45%',
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    padding: spacing.lg, alignItems: 'center', gap: spacing.sm,
+    borderWidth: 1, borderColor: colors.border,
   },
-  rpeChip: {
-    backgroundColor: colors.surface2,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  rpeText: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-    color: colors.textSecondary,
+  navTileLabel: {
+    fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
+    color: colors.textSecondary, textAlign: 'center',
   },
 });
