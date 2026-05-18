@@ -209,7 +209,13 @@ export function computeSetTargets(prevSets, repMin, repMax, units = 'kg', option
   const max = repMax || 12;
 
   // Increment by exercise category
-  const { exerciseCategory = 'compound', incrementKg = null } = options;
+  const {
+    exerciseCategory = 'compound',
+    incrementKg = null,
+    prevPrevSets = [],  // sets from the workout before last — for consecutive-miss detection
+    layoffMultiplier = 1.0, // < 1 when returning from a training break
+  } = options;
+
   function getIncrement(weight) {
     if (incrementKg != null) return incrementKg;
     if (exerciseCategory === 'isolation') return weight >= 20 ? 1 : 0.5;
@@ -218,9 +224,14 @@ export function computeSetTargets(prevSets, repMin, repMax, units = 'kg', option
     return weight >= 60 ? 2.5 : 1.25;
   }
 
+  const prevPrevWorking = prevPrevSets.filter(
+    s => (s.setType || s.set_type || 'straight') !== 'warmup',
+  );
+
   const targets = [];
 
-  for (const set of prevWorking) {
+  for (let i = 0; i < prevWorking.length; i++) {
+    const set = prevWorking[i];
     const prevWeight = set.weight || 0;
     const prevReps = set.actualReps || set.actual_reps || 0;
     const prevRIR = set.rir ?? null; // null = not logged
@@ -250,13 +261,32 @@ export function computeSetTargets(prevSets, repMin, repMax, units = 'kg', option
         action = 'maintain';
       }
     } else if (prevReps < min && min > 1) {
-      const decrement = getIncrement(prevWeight);
-      targetWeight = Math.max(0, prevWeight - decrement);
-      action = 'decrease';
+      const missAmount = min - prevReps;
+      // Only auto-drop if: missed by ≥2 AND the session before that also missed by ≥2.
+      // A single miss → hold weight and aim for the rep minimum again.
+      const prevPrevSet = prevPrevWorking[i];
+      const prevPrevReps = prevPrevSet
+        ? (prevPrevSet.actualReps ?? prevPrevSet.actual_reps ?? 9999)
+        : 9999;
+      const consecutiveMiss = missAmount >= 2 && (min - prevPrevReps) >= 2;
+      if (consecutiveMiss) {
+        const decrement = getIncrement(prevWeight);
+        targetWeight = Math.max(0, prevWeight - decrement);
+        action = 'decrease';
+      } else {
+        action = 'maintain';
+      }
     } else {
       // In range — same weight, +1 rep
       targetMin = Math.min(prevReps + 1, max);
       action = 'add_rep';
+    }
+
+    // Apply layoff multiplier (returning from a training break ≥7 days).
+    // Rounds to nearest 0.25 to stay on standard plate increments.
+    if (layoffMultiplier < 1.0 && targetWeight > 0) {
+      targetWeight = Math.round(targetWeight * layoffMultiplier * 4) / 4;
+      action = 'decrease';
     }
 
     targets.push({ weight: targetWeight, repsMin: targetMin, repsMax: targetMax, prevWeight, prevReps, prevRIR, action });
@@ -266,13 +296,17 @@ export function computeSetTargets(prevSets, repMin, repMax, units = 'kg', option
   const anyDecrease = targets.some(t => t.action === 'decrease');
   const anyIncrease = targets.some(t => t.action === 'increase');
   const allMaintain = targets.every(t => t.action === 'maintain');
+  const isLayoff = layoffMultiplier < 1.0;
 
   let reason;
-  if (allIncrease) {
+  if (isLayoff) {
+    const pct = Math.round((1 - layoffMultiplier) * 100);
+    reason = `Loads reduced by ${pct}% — first session back after a break. Rebuild over the next 1–2 weeks.`;
+  } else if (allIncrease) {
     const inc = (targets[0].weight - targets[0].prevWeight).toFixed(2).replace(/\.?0+$/, '');
     reason = `All sets hit the top of the range — load up by ${inc}${units}.`;
   } else if (anyDecrease) {
-    reason = `Load reduced on underperforming sets — hit ${min}–${max} reps with good form.`;
+    reason = `Load dropped — reps missed by 2+ for two sessions in a row. Reset and rebuild.`;
   } else if (anyIncrease) {
     reason = `Partial progression — add weight where you hit ${max} reps.`;
   } else if (allMaintain) {

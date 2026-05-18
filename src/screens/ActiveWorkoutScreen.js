@@ -22,7 +22,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import SetEntry from '../components/SetEntry';
 import RestTimer from '../components/RestTimer';
 import useAppStore from '../store/useAppStore';
-import { getPreviousWorkoutSets, getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, getAllExercises, insertExercise, getCurrentMesocycleWeek, getPlannedMuscleVolume, getWeek1SetsForExercise } from '../lib/database';
+import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, getAllExercises, insertExercise, getCurrentMesocycleWeek, getPlannedMuscleVolume, getWeek1SetsForExercise, getLastNWorkoutSets } from '../lib/database';
 import {
   detectPR,
   getProgressionSuggestion,
@@ -218,12 +218,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     sessionSetsRef.current = [];
 
     async function loadHistory() {
-      const [prev, allTime] = await Promise.all([
-        getPreviousWorkoutSets(exercise.id, activeWorkout.id),
+      const [lastN, allTime] = await Promise.all([
+        getLastNWorkoutSets(exercise.id, activeWorkout.id, 2),
         getAllCompletedSetsForExercise(exercise.id, activeWorkout.id),
       ]);
+      const prev = lastN[0] || [];
+      const prevPrev = lastN[1] || [];
       setPrevSets(prev);
       setAllTimeSets(allTime);
+
+      // Layoff detection: last session was more than 7 days ago
+      const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+      const lastTs = prev.reduce((m, s) => Math.max(m, s.createdAt ?? s.created_at ?? 0), 0);
+      const layoffMultiplier = lastTs > 0 && (Date.now() - lastTs) > SEVEN_DAYS ? 0.9 : 1.0;
 
       const allLoggedForExercise = workoutExercises[currentExerciseIndex]?.sets || [];
       setLoggedSets(allLoggedForExercise);
@@ -237,6 +244,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         {
           exerciseCategory: exercise?.exerciseCategory || exercise?.exercise_category || 'compound',
           incrementKg: exercise?.incrementKg || exercise?.increment_kg || null,
+          prevPrevSets: prevPrev,
+          layoffMultiplier,
         },
       );
       setSetTargets(computed);

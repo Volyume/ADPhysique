@@ -586,6 +586,28 @@ export async function getPreviousWorkoutSets(exerciseId, currentWorkoutId) {
   return mapped.filter(s => s.workoutId === mostRecentWorkoutId);
 }
 
+// Returns sets from the last n completed workouts for an exercise,
+// grouped as an array of arrays: [mostRecentSets, previousSets, ...].
+export async function getLastNWorkoutSets(exerciseId, currentWorkoutId, n = 2) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT ws.* FROM workout_sets ws
+     JOIN workouts w ON w.id = ws.workout_id
+     WHERE ws.exercise_id = ? AND ws.workout_id != ? AND w.is_completed = 1
+     ORDER BY w.started_at DESC, ws.set_number ASC`,
+    [exerciseId, currentWorkoutId],
+  );
+  if (rows.length === 0) return [];
+  const mapped = rows.map(rowToCamel);
+  const order = [];
+  const byWorkout = {};
+  for (const s of mapped) {
+    if (!byWorkout[s.workoutId]) { byWorkout[s.workoutId] = []; order.push(s.workoutId); }
+    byWorkout[s.workoutId].push(s);
+  }
+  return order.slice(0, n).map(wId => byWorkout[wId]);
+}
+
 export async function getAllCompletedSetsForExercise(exerciseId, currentWorkoutId) {
   const d = await db();
   const rows = await d.getAllAsync(
