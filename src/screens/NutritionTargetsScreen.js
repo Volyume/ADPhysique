@@ -419,16 +419,25 @@ export default function NutritionTargetsScreen() {
 
           {results ? (
             <View style={styles.resultsSection}>
-              {/* Hero card */}
-              <View style={styles.heroCard}>
-                <Text style={styles.heroLabel}>Daily Energy Target</Text>
-                <Text style={styles.heroKcal}>
-                  {results.targetKcal.toLocaleString()} kcal
-                </Text>
-                <Text style={styles.heroRange}>
-                  Estimated range: {results.kcalMin.toLocaleString()} – {results.kcalMax.toLocaleString()} kcal
-                </Text>
-              </View>
+              {/* Hero card. targetKcal is persisted but the ±10% range is
+                  not, so a record loaded from the DB has no kcalMin/kcalMax
+                  — derive them rather than crash on undefined. */}
+              {(() => {
+                const tk = Math.round(Number(results.targetKcal) || 0);
+                const kMin = Math.round(Number(results.kcalMin) || tk * 0.9);
+                const kMax = Math.round(Number(results.kcalMax) || tk * 1.1);
+                return (
+                  <View style={styles.heroCard}>
+                    <Text style={styles.heroLabel}>Daily Energy Target</Text>
+                    <Text style={styles.heroKcal}>
+                      {tk.toLocaleString()} kcal
+                    </Text>
+                    <Text style={styles.heroRange}>
+                      Estimated range: {kMin.toLocaleString()} – {kMax.toLocaleString()} kcal
+                    </Text>
+                  </View>
+                );
+              })()}
 
               {/* Macro cards */}
               <View style={styles.macroRow}>
