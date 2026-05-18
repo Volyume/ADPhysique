@@ -26,6 +26,8 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
   const [newMuscle, setNewMuscle] = useState('');
   const [newEquipment, setNewEquipment] = useState('');
   const [newSecondaryMuscles, setNewSecondaryMuscles] = useState([]);
+  const [newExerciseCategory, setNewExerciseCategory] = useState('compound');
+  const [newIncrementKg, setNewIncrementKg] = useState(2.5);
   const [savingNew, setSavingNew] = useState(false);
 
   const addToWorkout = route.params?.onSelect;
@@ -62,6 +64,8 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
         secondaryMuscles: newSecondaryMuscles.length > 0 ? newSecondaryMuscles : null,
         equipment: newEquipment || null,
         isCustom: 1,
+        exerciseCategory: newExerciseCategory,
+        incrementKg: newIncrementKg,
       });
       await loadExercises();
       setShowAddModal(false);
@@ -69,6 +73,8 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
       setNewMuscle('');
       setNewEquipment('');
       setNewSecondaryMuscles([]);
+      setNewExerciseCategory('compound');
+      setNewIncrementKg(2.5);
     } catch (_e) {
       Alert.alert('Error', 'Could not save exercise. Please try again.');
     } finally {
@@ -249,6 +255,42 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
                 </TouchableOpacity>
               ))}
             </View>
+
+                {/* Exercise Category */}
+                <Text style={[styles.addFieldLabel, { marginTop: spacing.xl }]}>EXERCISE CATEGORY</Text>
+                <View style={styles.chipGrid}>
+                  {[
+                    { label: 'Compound', value: 'compound' },
+                    { label: 'Accessory', value: 'accessory' },
+                    { label: 'Isolation', value: 'isolation' },
+                  ].map(opt => (
+                    <TouchableOpacity
+                      key={opt.value}
+                      style={[styles.chip, newExerciseCategory === opt.value && styles.chipActive]}
+                      onPress={() => setNewExerciseCategory(opt.value)}
+                    >
+                      <Text style={[styles.chipText, newExerciseCategory === opt.value && styles.chipTextActive]}>
+                        {opt.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Increment */}
+                <Text style={[styles.addFieldLabel, { marginTop: spacing.xl }]}>WEIGHT INCREMENT ({units})</Text>
+                <View style={styles.chipGrid}>
+                  {[0.5, 1, 1.25, 2.5, 5].map(inc => (
+                    <TouchableOpacity
+                      key={inc}
+                      style={[styles.chip, newIncrementKg === inc && styles.chipActive]}
+                      onPress={() => setNewIncrementKg(inc)}
+                    >
+                      <Text style={[styles.chipText, newIncrementKg === inc && styles.chipTextActive]}>
+                        {inc}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
 
             <Text style={styles.addCustomNote}>
               This exercise will be added to your personal library and visible only to you.

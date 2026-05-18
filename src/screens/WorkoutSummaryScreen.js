@@ -8,8 +8,9 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import {
   getCompletedWorkoutSets, getAllExercises, getAllWorkouts, updateWorkout,
   getActivePlan, getRoutinesForPlan, advancePlanNextWorkout,
+  createAdaptationEvent, getCurrentMesocycleWeek,
 } from '../lib/database';
-import { calculateWeeklyVolume, getVolumeStatus, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
+import { calculateWeeklyVolume, getVolumeStatus, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine, computeAdaptiveDecision } from '../lib/algorithms';
 import { evaluateAutoReg, predictDeloadWeek, getMesoSchedule } from '../lib/mesocycle';
 import { getDeloadPredictionMessage, getAutoRegMessage } from '../lib/whyThisTemplates';
 import useAppStore from '../store/useAppStore';
@@ -72,6 +73,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const [mesoAdvice, setMesoAdvice] = useState(null);
   const [deloadPrediction, setDeloadPrediction] = useState(null);
   const [feedbackHistory, setFeedbackHistory] = useState([]);
+  const [adaptiveDecisions, setAdaptiveDecisions] = useState({});
 
   const feedbackDebounceRef = useRef(null);
 
@@ -119,6 +121,36 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       weeksUntilDeload: deload.weeksUntilDeload,
       message: getDeloadPredictionMessage(deload.weeksUntilDeload, deload.reason),
     });
+
+    // Map feedback to RP decision-tree scales per muscle, then run adaptive engine
+    // soreness24hBefore: 1=fresh→2, 2=mild→3, 3=sore→4
+    // sessionDifficulty: 1=veryEasy→1(exceeded), 2=easy→1, 3=moderate→2(met), 4=hard→3(struggled), 5=brutal→4(failed)
+    // overallPump: 1=none→1, 2=mild→2, 3=good→4
+    // jointDiscomfort: 0=none→0, 1=slight→1, 2=moderate→2, 3=significant→3
+    const soreness = [0, 2, 3, 4][feedback.soreness24hBefore - 1] ?? 2;
+    const performance = [0, 1, 1, 2, 3, 4][feedback.sessionDifficulty] ?? 2;
+    const pump = [1, 1, 2, 4][feedback.overallPump - 1] ?? 3;
+    const joint = feedback.jointDiscomfort ?? 0;
+
+    // Build per-muscle feedback using the weekly volume
+    const muscleFeedback = {};
+    for (const [muscle, volData] of Object.entries(weeklyVolume)) {
+      const { mev = 6, mav = 14, mrv = 22 } = (typeof getVolumeStatus === 'function'
+        ? (getVolumeStatus(volData.workingSets, muscle)?.landmarks || {})
+        : {});
+      muscleFeedback[muscle] = {
+        soreness,
+        performance,
+        pump,
+        joint,
+        currentSets: volData.workingSets,
+        mev,
+        mav,
+        mrv,
+      };
+    }
+    const decisions = runAdaptiveEngine(muscleFeedback);
+    setAdaptiveDecisions(decisions);
   }, [feedback, weeklyVolume, feedbackHistory]);
 
   useEffect(() => {
@@ -189,6 +221,32 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         notes: notes || null,
       });
     } catch (_e) {}
+
+    // Write adaptation events for engine decisions
+    try {
+      const currentWeek = await getCurrentMesocycleWeek(user?.id);
+      if (currentWeek?.id && Object.keys(adaptiveDecisions).length > 0) {
+        for (const [muscle, dec] of Object.entries(adaptiveDecisions)) {
+          await createAdaptationEvent({
+            mesocycleWeekId: currentWeek.id,
+            muscle,
+            decision: dec.decision,
+            delta: dec.delta,
+            reasonCode: dec.reasonCode,
+            reasonText: dec.reasonText,
+            signals: {
+              soreness: dec.soreness ?? null,
+              performance: dec.performance ?? null,
+              pump: dec.pump ?? null,
+              joint: dec.joint ?? null,
+              currentSets: dec.currentSets,
+              nextWeekSets: dec.nextWeekSets,
+            },
+          });
+        }
+      }
+    } catch (_e) {}
+
     setSaving(false);
     navigation.popToTop();
   }
@@ -362,6 +420,47 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             </View>
           )}
         </View>
+
+          {/* Adaptive engine decisions */}
+          {Object.keys(adaptiveDecisions).length > 0 && (
+            <View style={styles.adaptiveCard}>
+              <Text style={styles.adaptiveTitle}>ENGINE DECISIONS — NEXT WEEK</Text>
+              {Object.entries(adaptiveDecisions)
+                .filter(([, d]) => d.decision !== 'hold' || d.delta !== 0)
+                .map(([muscle, d]) => (
+                  <View key={muscle} style={styles.adaptiveRow}>
+                    <Ionicons
+                      name={
+                        d.decision === 'add_set' ? 'trending-up' :
+                        d.decision === 'drop_set' ? 'trending-down' :
+                        d.decision === 'deload_trigger' ? 'warning-outline' :
+                        d.decision === 'rotate_exercise' ? 'swap-horizontal' :
+                        'remove-outline'
+                      }
+                      size={14}
+                      color={
+                        d.decision === 'add_set' ? colors.primary :
+                        d.decision === 'drop_set' || d.decision === 'deload_trigger' ? colors.error :
+                        colors.textMuted
+                      }
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.adaptiveMuscle}>
+                        {(MUSCLE_DISPLAY_NAMES[muscle] || muscle)}{' '}
+                        <Text style={styles.adaptiveSetCount}>
+                          {d.nextWeekSets} sets
+                          {d.delta > 0 ? ` (+${d.delta})` : d.delta < 0 ? ` (${d.delta})` : ''}
+                        </Text>
+                      </Text>
+                      <Text style={styles.adaptiveReason}>{d.reasonText}</Text>
+                    </View>
+                  </View>
+                ))}
+              {Object.values(adaptiveDecisions).every(d => d.decision === 'hold' && d.delta === 0) && (
+                <Text style={styles.adaptiveHold}>All muscles on track — continue as planned.</Text>
+              )}
+            </View>
+          )}
 
         {!readOnly && (
           <View style={styles.section}>
@@ -570,6 +669,46 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  adaptiveCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  adaptiveTitle: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    fontWeight: fontWeight.semibold,
+    letterSpacing: 0.5,
+  },
+  adaptiveRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  adaptiveMuscle: {
+    fontSize: fontSize.sm,
+    color: colors.textPrimary,
+    fontWeight: fontWeight.semibold,
+  },
+  adaptiveSetCount: {
+    color: colors.primary,
+    fontWeight: fontWeight.bold,
+  },
+  adaptiveReason: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  adaptiveHold: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
   },
   exerciseList: {
     backgroundColor: colors.surface,

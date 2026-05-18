@@ -420,8 +420,9 @@ export async function insertExercise(data) {
     `INSERT OR IGNORE INTO exercises
       (id, name, primary_muscle, secondary_muscles, equipment, movement_pattern,
        compound_isolation, default_rep_min, default_rep_max, fatigue_cost,
-       stimulus_to_fatigue_ratio, subregion, is_custom, notes, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       stimulus_to_fatigue_ratio, subregion, is_custom, notes, created_at, updated_at,
+       exercise_category, increment_kg)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       data.name,
@@ -439,6 +440,8 @@ export async function insertExercise(data) {
       data.notes || null,
       now,
       now,
+      data.exerciseCategory ?? 'compound',
+      data.incrementKg ?? 2.5,
     ],
   );
   return { id, ...data, createdAt: now, updatedAt: now };
