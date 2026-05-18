@@ -49,12 +49,17 @@ jobs:
       - name: Make Gradlew executable
         run: chmod +x android/gradlew
 
-      - name: Build Debug APK
-        run: cd android && ./gradlew assembleDebug --no-daemon
+      # Release build embeds the JS bundle (index.android.bundle) into the APK,
+      # so it runs standalone without a Metro dev server. Expo's prebuild
+      # template signs the release buildType with the debug keystore by
+      # default, so this APK installs and runs without a custom keystore —
+      # suitable for sideloaded testing (not for Play Store submission).
+      - name: Build Release APK
+        run: cd android && ./gradlew assembleRelease --no-daemon
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: volyume-debug-${{ github.run_number }}
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: volyume-release-${{ github.run_number }}
+          path: android/app/build/outputs/apk/release/app-release.apk
           retention-days: 30
