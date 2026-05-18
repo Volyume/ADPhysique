@@ -12,6 +12,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { calculateNutritionTargets } from '../lib/nutritionEngine';
 import { saveNutritionTargets, getNutritionTargets } from '../lib/database';
 import useAppStore from '../store/useAppStore';
+import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -123,8 +124,19 @@ export default function NutritionTargetsScreen() {
   const [results,      setResults]      = useState(null);
   const [expanded,     setExpanded]     = useState(false);
   const [calculating,  setCalculating]  = useState(false);
+  const [calm,         setCalm]         = useState(false);
 
   // ── Load saved targets on mount — SQLite primary, AsyncStorage fallback ────────────
+  useEffect(() => {
+    getWellbeingMode().then(m => {
+      const c = isCalm(m);
+      setCalm(c);
+      // If the aggressive cut was previously selected, step back to a
+      // gentler default when calmer experience is on.
+      if (c) setGoal(g => (g === 'aggressive_cut' ? 'mild_cut' : g));
+    });
+  }, []);
+
   useEffect(() => {
     async function loadSaved() {
       try {
@@ -330,7 +342,7 @@ export default function NutritionTargetsScreen() {
           <SectionHeading title="GOAL & PHASE" />
 
           <View style={styles.goalGrid}>
-            {GOALS.map(g => {
+            {GOALS.filter(g => !(calm && g.key === 'aggressive_cut')).map(g => {
               const active = goal === g.key;
               return (
                 <TouchableOpacity

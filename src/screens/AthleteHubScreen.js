@@ -16,6 +16,7 @@ import {
 } from '../lib/database';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
 import { exportCoachReport } from '../lib/coachExport';
+import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -67,6 +68,7 @@ export default function AthleteHubScreen({ navigation }) {
   const [weekVolume, setWeekVolume]             = useState(null);
   const [physiqueEnabled, setPhysiqueEnabled]   = useState(false);
   const [exporting, setExporting]               = useState(false);
+  const [calm, setCalm]                         = useState(false);
 
   async function handleCoachExport() {
     if (exporting) return;
@@ -91,6 +93,7 @@ export default function AthleteHubScreen({ navigation }) {
   useFocusEffect(useCallback(() => {
     if (user?.id) load();
     AsyncStorage.getItem(PHYSIQUE_PREF_KEY).then(v => setPhysiqueEnabled(v === 'true'));
+    getWellbeingMode().then(m => setCalm(isCalm(m)));
   }, [user?.id]));
 
   async function load() {
@@ -183,7 +186,7 @@ export default function AthleteHubScreen({ navigation }) {
             {trainingAge && <Text style={styles.profileMeta}>{trainingAge}</Text>}
             <View style={styles.profileStats}>
               <Text style={styles.profileStat}>{totalWorkouts} sessions</Text>
-              {streak >= 2 && (
+              {!calm && streak >= 2 && (
                 <>
                   <Text style={styles.profileDot}>·</Text>
                   <Text style={[styles.profileStat, { color: colors.warning }]}>{streak} week streak</Text>

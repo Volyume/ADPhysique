@@ -29,13 +29,20 @@ function createParticle(index) {
   };
 }
 
-export default function PRCelebration({ pr, onDismiss }) {
+export default function PRCelebration({ pr, onDismiss, subdued = false }) {
   const particles = useRef(Array.from({ length: NUM_PARTICLES }, (_, i) => createParticle(i))).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const cardScale = useRef(new Animated.Value(0.5)).current;
   const cardOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    if (subdued) {
+      Haptics.selectionAsync();
+      Animated.timing(cardOpacity, { toValue: 1, duration: 220, useNativeDriver: true }).start();
+      const t = setTimeout(onDismiss, 2200);
+      return () => clearTimeout(t);
+    }
+
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 150);
     setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 300);
@@ -75,6 +82,24 @@ export default function PRCelebration({ pr, onDismiss }) {
 
   const prLabel = pr.type === '1rm_estimate' ? 'New Estimated 1RM' :
     pr.type === 'heaviest_weight' ? 'New Heaviest Weight' : 'Most Reps at Weight';
+
+  if (subdued) {
+    return (
+      <TouchableOpacity
+        style={styles.toastWrap}
+        activeOpacity={0.9}
+        onPress={onDismiss}
+      >
+        <Animated.View style={[styles.toast, { opacity: cardOpacity }]}>
+          <Ionicons name={prIcon} size={20} color={colors.primary} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.toastTitle}>{prLabel}</Text>
+            <Text style={styles.toastValue}>{pr.label}</Text>
+          </View>
+        </Animated.View>
+      </TouchableOpacity>
+    );
+  }
 
   return (
     <TouchableOpacity
@@ -178,5 +203,33 @@ const styles = StyleSheet.create({
   dismiss: {
     fontSize: fontSize.sm,
     color: colors.textMuted,
+  },
+  toastWrap: {
+    position: 'absolute',
+    top: spacing.xxl,
+    left: spacing.lg,
+    right: spacing.lg,
+  },
+  toast: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  toastTitle: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    fontWeight: fontWeight.semibold,
+  },
+  toastValue: {
+    fontSize: fontSize.md,
+    color: colors.textPrimary,
+    fontWeight: fontWeight.bold,
+    marginTop: 1,
   },
 });

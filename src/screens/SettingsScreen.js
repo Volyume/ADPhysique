@@ -12,6 +12,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { clearWorkoutHistory, buildWorkoutCSV } from '../lib/database';
+import { getWellbeingMode, setWellbeingMode, WELLBEING_HELPLINE } from '../lib/wellbeing';
+
+const WELLBEING_LABELS = {
+  calm: 'Calmer experience',
+  normal: 'Standard',
+  unspecified: 'Not set',
+};
 
 function SettingRow({ icon, label, value, onPress, destructive, rightElement, showArrow = true }) {
   return (
@@ -41,12 +48,34 @@ export default function SettingsScreen({ navigation }) {
   const { user, setUser, setSession, units, setUnits, barWeight, setBarWeight } =
     useAppStore();
   const [physiqueEnabled, setPhysiqueEnabled] = useState(false);
+  const [wellbeing, setWellbeing] = useState('unspecified');
+
+  function changeWellbeing() {
+    Alert.alert(
+      'Wellbeing',
+      'Have you experienced, or are you in recovery from, an eating disorder or a body-image condition?\n\n'
+        + WELLBEING_HELPLINE,
+      [
+        {
+          text: 'Yes — calmer experience',
+          onPress: async () => { await setWellbeingMode('calm'); setWellbeing('calm'); },
+        },
+        {
+          text: 'No',
+          onPress: async () => { await setWellbeingMode('normal'); setWellbeing('normal'); },
+        },
+        { text: 'Prefer not to say', style: 'cancel',
+          onPress: async () => { await setWellbeingMode('unspecified'); setWellbeing('unspecified'); } },
+      ],
+    );
+  }
 
   // Re-read on focus so the toggle stays in sync if the user enabled
   // tracking from the BodyMetrics opt-in screen.
   useFocusEffect(
     useCallback(() => {
       AsyncStorage.getItem(PHYSIQUE_PREF_KEY).then(v => setPhysiqueEnabled(v === 'true'));
+      getWellbeingMode().then(setWellbeing);
     }, []),
   );
 
@@ -202,6 +231,12 @@ export default function SettingsScreen({ navigation }) {
                 thumbColor={physiqueEnabled ? colors.primary : colors.textMuted}
               />
             }
+          />
+          <SettingRow
+            icon="heart-outline"
+            label="Wellbeing"
+            value={WELLBEING_LABELS[wellbeing] || 'Not set'}
+            onPress={changeWellbeing}
           />
           <SettingRow
             icon="notifications-outline"

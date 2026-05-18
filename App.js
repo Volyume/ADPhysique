@@ -1,6 +1,6 @@
 import 'react-native-gesture-handler';
 import 'react-native-url-polyfill/auto';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -10,6 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import RootNavigator from './src/navigation/RootNavigator';
 import PRCelebration from './src/components/PRCelebration';
 import useAppStore from './src/store/useAppStore';
+import { getWellbeingMode, isCalm } from './src/lib/wellbeing';
 
 const CRASH_LOG_KEY = '@volyume_crash_log';
 
@@ -83,6 +84,11 @@ const eb = StyleSheet.create({
 export default function App() {
   const prCelebration = useAppStore(s => s.prCelebration);
   const hidePRCelebration = useAppStore(s => s.hidePRCelebration);
+  const [calm, setCalm] = useState(false);
+
+  useEffect(() => {
+    if (prCelebration) getWellbeingMode().then(m => setCalm(isCalm(m)));
+  }, [prCelebration]);
 
   return (
     <ErrorBoundary>
@@ -94,6 +100,7 @@ export default function App() {
             <PRCelebration
               pr={prCelebration}
               onDismiss={hidePRCelebration}
+              subdued={calm}
             />
           )}
         </SafeAreaProvider>

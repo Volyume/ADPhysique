@@ -11,8 +11,12 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logBodyMetric, getBodyMetricLog } from '../lib/database';
 import useAppStore from '../store/useAppStore';
+import { getWellbeingMode, isCalm, WELLBEING_HELPLINE } from '../lib/wellbeing';
 
 const PHYSIQUE_PREF_KEY = '@volyume_physique_tracking_enabled';
+
+// Resets when the app process restarts → "re-confirmation each session".
+let bodyMetricsSessionConfirmed = false;
 
 // form key  →  logBodyMetric() data field
 const FIELD_MAP = {
@@ -190,6 +194,8 @@ function PhysiqueOptIn({ onEnable }) {
 export default function BodyMetricsScreen({ navigation }) {
   const { user, units } = useAppStore();
   const [physiqueEnabled, setPhysiqueEnabled] = useState(null); // null = loading
+  const [calm, setCalm] = useState(false);
+  const [sessionConfirmed, setSessionConfirmed] = useState(bodyMetricsSessionConfirmed);
   const [history, setHistory] = useState([]);
   const [nutritionTargets, setNutritionTargets] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -207,6 +213,7 @@ export default function BodyMetricsScreen({ navigation }) {
   useFocusEffect(
     useCallback(() => {
       AsyncStorage.getItem(PHYSIQUE_PREF_KEY).then(v => setPhysiqueEnabled(v === 'true'));
+      getWellbeingMode().then(m => setCalm(isCalm(m)));
     }, []),
   );
 
@@ -299,6 +306,35 @@ export default function BodyMetricsScreen({ navigation }) {
       <SafeAreaView style={styles.safe} edges={['bottom']}>
         <ScrollView contentContainerStyle={styles.optInContent}>
           <PhysiqueOptIn onEnable={enablePhysique} />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // Calmer experience: gentle re-confirmation once per app session.
+  if (calm && !sessionConfirmed) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['bottom']}>
+        <ScrollView contentContainerStyle={styles.optInContent}>
+          <View style={styles.confirmCard}>
+            <Ionicons name="leaf-outline" size={32} color={colors.primary} />
+            <Text style={styles.confirmTitle}>A gentle check-in</Text>
+            <Text style={styles.confirmBody}>
+              You asked for a calmer experience. Body measurements can be a
+              sensitive space — open it only if it feels right for you today.
+            </Text>
+            <TouchableOpacity
+              style={styles.confirmBtn}
+              onPress={() => {
+                bodyMetricsSessionConfirmed = true;
+                setSessionConfirmed(true);
+              }}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.confirmBtnText}>Continue</Text>
+            </TouchableOpacity>
+            <Text style={styles.confirmHelpline}>{WELLBEING_HELPLINE}</Text>
+          </View>
         </ScrollView>
       </SafeAreaView>
     );
@@ -562,6 +598,18 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg, paddingHorizontal: spacing.xl, marginTop: spacing.md,
   },
   optInBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
+  confirmCard: {
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.xl,
+    borderWidth: 1, borderColor: colors.border, gap: spacing.md, alignItems: 'flex-start',
+  },
+  confirmTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  confirmBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 21 },
+  confirmBtn: {
+    alignSelf: 'stretch', alignItems: 'center', backgroundColor: colors.primary,
+    borderRadius: radius.lg, paddingVertical: spacing.lg, marginTop: spacing.sm,
+  },
+  confirmBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
+  confirmHelpline: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18, marginTop: spacing.sm },
 
   nutritionCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
