@@ -89,13 +89,19 @@ function PillGroup({ options, selected, onSelect, keyExtractor, labelExtractor }
   );
 }
 
-function MacroCard({ label, grams, perKg }) {
+function MacroCard({ label, grams, perKg, perKgLbm, basis }) {
+  const ratioText =
+    basis === 'lbm' && perKgLbm != null
+      ? `${perKgLbm} g/kg lean`
+      : perKg != null
+        ? `${perKg} g/kg`
+        : null;
   return (
     <View style={styles.macroCard}>
       <Text style={styles.macroGrams}>{grams}g</Text>
       <Text style={styles.macroLabel}>{label}</Text>
-      {perKg != null ? (
-        <Text style={styles.macroPerKg}>{perKg} g/kg</Text>
+      {ratioText ? (
+        <Text style={styles.macroPerKg}>{ratioText}</Text>
       ) : null}
     </View>
   );
@@ -430,6 +436,8 @@ export default function NutritionTargetsScreen() {
                   label="Protein"
                   grams={results.proteinG}
                   perKg={results.proteinGPerKg}
+                  perKgLbm={results.proteinGPerKgLbm}
+                  basis={results.proteinBasis}
                 />
                 <MacroCard label="Carbs" grams={results.carbsG} />
                 <MacroCard label="Fat"   grams={results.fatG}   />
