@@ -102,6 +102,7 @@ export default function AnalyticsScreen({ navigation }) {
   const [recentSessions, setRecentSessions] = useState([]);
   const [allSets, setAllSets]               = useState([]);
   const [exerciseMap, setExerciseMap]       = useState({});
+  const [deloadAlert, setDeloadAlert]       = useState(null); // { deload: true, reasons: [] }
 
   useFocusEffect(useCallback(() => { load(); }, [user?.id]));
 
@@ -121,6 +122,7 @@ export default function AnalyticsScreen({ navigation }) {
         loadMesocycle(workouts, sets, exMap),
         loadInsights(),
         loadVolumeSnapshot(sets, exMap),
+        loadDeloadCheck(sets, exMap, workouts),
         loadPRBars(sets, exMap, 30),
         loadCalendar(workouts),
         loadRecentSessions(workouts),
@@ -170,6 +172,61 @@ export default function AnalyticsScreen({ navigation }) {
     const recentSets = sets.filter(s => (s.createdAt ?? s.created_at ?? 0) >= weekAgo);
     const vol = calculateWeeklyVolume(recentSets, exMap);
     setWeeklyVolume(vol);
+  }
+
+  function loadDeloadCheck(sets, exMap, workouts) {
+    try {
+      const now = Date.now();
+      // Build per-week data for last 4 weeks
+      const last4 = [];
+      for (let wk = 3; wk >= 0; wk--) {
+        const end   = now - wk * WEEK_MS;
+        const start = end - WEEK_MS;
+        const wkSets = sets.filter(s => {
+          const at = s.createdAt ?? s.created_at ?? 0;
+          return at >= start && at < end;
+        });
+        const vol = calculateWeeklyVolume(wkSets, exMap);
+        const hasOverMRV = Object.entries(vol).some(([muscle, data]) => {
+          const lm = VOLUME_LANDMARKS[muscle];
+          return lm && data.workingSets > lm.mrv;
+        });
+        const wkWorkouts = workouts.filter(w => {
+          const at = w.startedAt ?? w.createdAt ?? 0;
+          return at >= start && at < end && (w.isCompleted ?? w.is_completed);
+        });
+        const avgSoreness = wkWorkouts.length > 0
+          ? wkWorkouts.reduce((sum, w) => sum + (w.soreness24hBefore ?? w.soreness_24h_before ?? 0), 0) / wkWorkouts.length
+          : 0;
+        const avgReps = wkSets.length > 0
+          ? wkSets.reduce((sum, s) => sum + (s.actualReps ?? s.actual_reps ?? 0), 0) / wkSets.length
+          : 0;
+        // Estimate weeks since last lighter week: scan backwards for a low-volume week (< 15 total working sets)
+        last4.push({ avgReps, avgSoreness, hasOverMRV, weeksSinceLastDeload: 4 - wk });
+      }
+      // Compute weeks since last lighter week more accurately using full set history
+      const weeksSinceLighter = (() => {
+        for (let wk = 1; wk <= 12; wk++) {
+          const end   = now - wk * WEEK_MS;
+          const start = end - WEEK_MS;
+          const wkSets = sets.filter(s => {
+            const at = s.createdAt ?? 0;
+            return at >= start && at < end;
+          });
+          const vol = calculateWeeklyVolume(wkSets, exMap);
+          const totalSets = Object.values(vol).reduce((sum, v) => sum + v.workingSets, 0);
+          if (totalSets < 15) return wk;  // found a low-volume / rest week
+        }
+        return 12; // no lighter week found in last 12 weeks
+      })();
+      // Patch weeksSinceLastDeload into all 4 entries
+      const patched = last4.map((entry, i) => ({
+        ...entry,
+        weeksSinceLastDeload: weeksSinceLighter + (3 - i),
+      }));
+      const result = shouldDeload(patched);
+      setDeloadAlert(result.deload ? result : null);
+    } catch (_) {}
   }
 
   function loadPRBars(sets, exMap, windowDays) {
@@ -273,6 +330,19 @@ export default function AnalyticsScreen({ navigation }) {
           onPress={() => navigation.navigate('MesocycleBuilder')}
           onBuild={() => navigation.navigate('CoachBuilder')}
         />
+
+        {/* ── Lighter week banner ──────────────────────────────── */}
+        {deloadAlert && (
+          <View style={styles.deloadBanner}>
+            <Ionicons name="moon-outline" size={18} color={colors.warning} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.deloadTitle}>Lighter week recommended</Text>
+              <Text style={styles.deloadSub}>
+                {deloadAlert.reasons?.[0] ?? 'Your body is signalling it needs a recovery week.'}
+              </Text>
+            </View>
+          </View>
+        )}
 
         {/* ── 2 · Insight Stack ─────────────────────────────── */}
         {insights.length > 0 && (
@@ -669,4 +739,15 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
     color: colors.textSecondary, textAlign: 'center',
   },
+  deloadBanner: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.warning + '60',
+    padding: spacing.lg,
+  },
+  deloadTitle: {
+    fontSize: fontSize.md, fontWeight: fontWeight.semibold,
+    color: colors.warning, marginBottom: 2,
+  },
+  deloadSub: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
 });

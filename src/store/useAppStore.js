@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const LOCAL_USER_KEY = '@volyume_local_user_id';
-const FIRST_RUN_KEY = '@volyume_first_run_complete';
+const LOCAL_USER_KEY   = '@volyume_local_user_id';
+const FIRST_RUN_KEY    = '@volyume_first_run_complete';
+const PROFILE_KEY_PFX  = '@volyume_user_profile_';
 
 function generateUUID() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
@@ -23,7 +24,7 @@ const useAppStore = create((set, get) => ({
   setUserProfile: (userProfile) => set({ userProfile }),
   setAuthLoading: (isAuthLoading) => set({ isAuthLoading }),
 
-  // Creates or restores a local (offline) user from AsyncStorage
+  // Creates or restores a local (offline) user from AsyncStorage, then loads their saved profile
   initLocalUser: async () => {
     try {
       let userId = await AsyncStorage.getItem(LOCAL_USER_KEY);
@@ -32,11 +33,22 @@ const useAppStore = create((set, get) => ({
         await AsyncStorage.setItem(LOCAL_USER_KEY, userId);
       }
       const localUser = { id: userId, email: 'local@device', isLocal: true };
-      set({ user: localUser, isAuthLoading: false });
+      // Restore onboarding selections (trainingFocus, trainingAgeYears, primaryEquipment, units)
+      const raw = await AsyncStorage.getItem(PROFILE_KEY_PFX + userId).catch(() => null);
+      const profile = raw ? JSON.parse(raw) : null;
+      set({ user: localUser, userProfile: profile, isAuthLoading: false });
       return localUser;
     } catch (e) {
       console.error('initLocalUser failed:', e);
     }
+  },
+
+  // Persists userProfile to AsyncStorage so it survives app restarts for local users
+  saveLocalProfile: async (userId, profile) => {
+    try {
+      await AsyncStorage.setItem(PROFILE_KEY_PFX + userId, JSON.stringify(profile));
+    } catch (_) {}
+    set({ userProfile: profile });
   },
 
   // Clears local user from AsyncStorage and store

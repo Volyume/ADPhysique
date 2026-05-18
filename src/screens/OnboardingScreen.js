@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { upsertUserProfile } from '../lib/supabase';
+import { saveUserBodyProfile } from '../lib/database';
 import useAppStore from '../store/useAppStore';
 
 const STEPS = [
@@ -86,7 +87,7 @@ function OptionButton({ option, selected, onPress }) {
 }
 
 export default function OnboardingScreen({ navigation, route }) {
-  const { user, setUnits } = useAppStore();
+  const { user, setUnits, saveLocalProfile } = useAppStore();
   const [step, setStep] = useState(0);
   const [selections, setSelections] = useState({
     training_focus: 'bodybuilding',
@@ -113,6 +114,16 @@ export default function OnboardingScreen({ navigation, route }) {
     }
     setLoading(true);
     try {
+      // Persist profile for all users so it survives app restarts
+      const profileData = {
+        trainingFocus: selections.training_focus,
+        trainingAgeYears: selections.training_age,
+        primaryEquipment: selections.primary_equipment,
+        units: selections.units,
+      };
+      await saveLocalProfile(user.id, profileData);
+      // Also write to SQLite body profile (physical attributes) and Supabase for cloud users
+      await saveUserBodyProfile(user.id, { trainingAgeYears: selections.training_age }).catch(() => {});
       if (!user?.isLocal) {
         await upsertUserProfile(user.id, selections).catch(() => {});
       }

@@ -16,7 +16,7 @@ const VALUE_BULLETS = [
 ];
 
 export default function FirstRunScreen({ navigation }) {
-  const { user, units, setUnits, completeFirstRun } = useAppStore();
+  const { user, units, setUnits, saveLocalProfile, completeFirstRun } = useAppStore();
   const [mode, setMode] = useState('branch');   // 'branch' | 'quick'
   const [localUnits, setLocalUnits] = useState(units || 'kg');
   const [bodyWeight, setBodyWeight] = useState('');
@@ -30,6 +30,7 @@ export default function FirstRunScreen({ navigation }) {
     setBusy(true);
     try {
       if (setUnits) setUnits(localUnits);
+      if (user?.id) await saveLocalProfile(user.id, { units: localUnits });
       const bw = parseFloat(bodyWeight);
       if (user?.id && !isNaN(bw) && bw > 0) {
         await logBodyMetric(user.id, { weightKg: bw, loggedAt: Date.now() });

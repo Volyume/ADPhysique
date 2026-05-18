@@ -339,14 +339,20 @@ export async function getWorkoutById(id) {
 
 export async function createWorkout(userId, routineId = null) {
   const d = await db();
+  // Auto-link to the active mesocycle so tonnage + recovery data flows into the block dashboard
+  const activeMeso = await d.getFirstAsync(
+    'SELECT id FROM mesocycles WHERE user_id = ? AND is_active = 1 LIMIT 1',
+    [userId],
+  );
+  const mesocycleId = activeMeso?.id ?? null;
   const id = uid();
   const now = Date.now();
   await d.runAsync(
-    `INSERT INTO workouts (id, user_id, routine_id, started_at, is_completed, created_at, updated_at)
-     VALUES (?, ?, ?, ?, 0, ?, ?)`,
-    [id, userId, routineId, now, now, now],
+    `INSERT INTO workouts (id, user_id, routine_id, mesocycle_id, started_at, is_completed, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, 0, ?, ?)`,
+    [id, userId, routineId, mesocycleId, now, now, now],
   );
-  return { id, userId, routineId, startedAt: now, isCompleted: 0, createdAt: now, updatedAt: now };
+  return { id, userId, routineId, mesocycleId, startedAt: now, isCompleted: 0, createdAt: now, updatedAt: now };
 }
 
 export async function updateWorkout(id, data) {

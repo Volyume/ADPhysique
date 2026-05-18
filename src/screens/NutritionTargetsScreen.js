@@ -10,6 +10,7 @@ import { format } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { calculateNutritionTargets } from '../lib/nutritionEngine';
+import { saveNutritionTargets, getNutritionTargets } from '../lib/database';
 import useAppStore from '../store/useAppStore';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -123,17 +124,22 @@ export default function NutritionTargetsScreen() {
   const [expanded,     setExpanded]     = useState(false);
   const [calculating,  setCalculating]  = useState(false);
 
-  // ── Load saved targets on mount ────────────────────────────────────────────────────
+  // ── Load saved targets on mount — SQLite primary, AsyncStorage fallback ────────────
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY)
-      .then(raw => {
-        if (raw) {
-          const saved = JSON.parse(raw);
-          setResults(saved);
+    async function loadSaved() {
+      try {
+        // Try SQLite first (authoritative store)
+        if (user?.id) {
+          const fromDb = await getNutritionTargets(user.id).catch(() => null);
+          if (fromDb) { setResults(fromDb); return; }
         }
-      })
-      .catch(() => {});
-  }, []);
+        // Fall back to AsyncStorage (legacy or pre-SQLite data)
+        const raw = await AsyncStorage.getItem(STORAGE_KEY);
+        if (raw) setResults(JSON.parse(raw));
+      } catch (_) {}
+    }
+    loadSaved();
+  }, [user?.id]);
 
   // ── Derived ──────────────────────────────────────────────────────────────────
   const formComplete =
@@ -167,7 +173,11 @@ export default function NutritionTargetsScreen() {
       });
 
       setResults(targets);
+      // Write to both stores: SQLite (primary) + AsyncStorage (read by other screens)
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(targets));
+      if (user?.id) {
+        saveNutritionTargets(user.id, { ...targets, gdprConsented: true }).catch(() => {});
+      }
 
       // Auto-seed Body Metrics with today's weight if no entry exists for today
       if (user?.id && weightNum) {
