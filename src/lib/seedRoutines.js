@@ -5,7 +5,7 @@ import {
 } from './database';
 
 // Bump version key to re-seed with 18 plans on existing installs
-const SEED_KEY = '@volyume_routines_seeded_v4';
+const SEED_KEY = '@volyume_routines_seeded_v5';
 
 // Extra exercises the plan templates rely on that may not be in the base exercise seed
 const REQUIRED_EXERCISES = [
@@ -31,7 +31,7 @@ const LIBRARY_PLANS = [
   // ── 1. Aesthetic Upper Rotation ──────────────────────────────────────────
   {
     name: 'Aesthetic Upper Rotation',
-    description: 'Two-day upper rotation focused on width, rear delts, lateral delts and upper chest. Shoulder-safe execution throughout.',
+    description: 'Two-day upper-body rotation built around physique priorities: lat width, capped side delts, upper-chest fullness, and rear-delt health. Day 1 targets the back and posterior shoulder; Day 2 develops upper chest and lateral delt detail. Progress using double progression — add a rep each session until you reach the top of the range, then add the smallest available weight increment. Target RIR 1–2 on all working sets. Pair with any lower-body plan for a complete programme.',
     tags: 'aesthetic upper bodybuilding',
     difficulty: 1,
     workouts: [
@@ -61,7 +61,7 @@ const LIBRARY_PLANS = [
   // ── 2. Beginner Full Body 3×/week ────────────────────────────────────────
   {
     name: 'Beginner Full Body 3×/Week',
-    description: 'Three identical full-body sessions per week. Master the fundamental movement patterns before adding complexity.',
+    description: 'Three full-body sessions per week using linear progression — the fastest approach for a beginner nervous system adapting to new loads. The five fundamental movement patterns are trained every session: squat, hinge, horizontal press, horizontal pull, and vertical pull. Add weight each session (2.5 kg on compound barbell lifts) and focus on technique above all else. Expect consistent weekly strength increases for the first 6–12 months. Target RIR 2–3 on all sets.',
     tags: 'beginner full body barbell',
     difficulty: 0,
     workouts: [
@@ -91,7 +91,7 @@ const LIBRARY_PLANS = [
   // ── 3. Beginner Push / Pull / Legs ────────────────────────────────────────
   {
     name: 'Beginner Push / Pull / Legs',
-    description: 'Simple 3-day split. Each muscle trained once per week. Ideal for first 3–6 months.',
+    description: 'A clean three-day split that keeps sessions focused and manageable. Push day builds chest, shoulders, and triceps; Pull day develops back and biceps; Leg day handles quads, hamstrings, glutes, and calves. Each muscle is trained once per week with enough volume to produce a clear training signal. Use linear progression — increase the load by 2.5 kg on compounds and 1.25 kg on isolations when all reps are completed with good technique. Ideal for the first 3–6 months. Target RIR 2–3.',
     tags: 'beginner ppl push pull legs',
     difficulty: 0,
     workouts: [
@@ -131,7 +131,7 @@ const LIBRARY_PLANS = [
   // ── 4. Upper / Lower 4×/Week (Intermediate) ──────────────────────────────
   {
     name: 'Upper / Lower 4×/Week',
-    description: 'Classic 4-day split. Upper twice, lower twice per week. Strong stimulus-to-recovery balance for intermediate lifters.',
+    description: 'The most evidence-supported split for intermediate hypertrophy: each muscle group trained twice per week, separated by 48–72 hours for optimal recovery and re-stimulation. Upper A focuses on heavier compound work (5–8 reps); Upper B shifts to higher-volume hypertrophy ranges (10–15 reps) targeting the same muscles from different angles. Use double progression throughout — reach the top of the rep range, then add weight. Suits lifters with 6+ months of consistent training. Target RIR 1–2 on working sets.',
     tags: 'upper_lower intermediate 4 days',
     difficulty: 1,
     workouts: [
@@ -183,7 +183,7 @@ const LIBRARY_PLANS = [
   // ── 5. PPL 3×/Week (Intermediate) ────────────────────────────────────────
   {
     name: 'Push Pull Legs 3×/Week',
-    description: 'Solid 3-day PPL. Each session targets one movement pattern. Great for building size with 3 days in the gym.',
+    description: 'Each muscle group trained once per week with focused, high-quality volume. Push day attacks chest, shoulders, and triceps; Pull day builds the back and biceps; Leg day develops the full lower body. The lower frequency compared to upper/lower makes this ideal as a first split after outgrowing full-body training, or during phases of lower recovery capacity. Use double progression. Target RIR 1–2 on all working sets.',
     tags: 'ppl push pull legs intermediate 3 days',
     difficulty: 1,
     workouts: [
@@ -226,7 +226,7 @@ const LIBRARY_PLANS = [
   // ── 6. PPL 6×/Week (Advanced) ─────────────────────────────────────────────
   {
     name: 'Push Pull Legs 6×/Week',
-    description: 'High-frequency 6-day PPL. Each muscle trained twice per week. Requires strong recovery. Intermediate–advanced.',
+    description: 'High-frequency PPL for lifters who can handle — and recover from — six sessions per week. Each muscle is trained twice per week, producing a greater hypertrophy stimulus than the 3-day version. The two weekly cycles allow a different emphasis each rotation: heavier compound work first, higher-rep isolation emphasis second. Requires consistent sleep, nutrition, and stress management to recover fully. Target RIR 1–2. Recommended for lifters with 18+ months of consistent training.',
     tags: 'ppl push pull legs advanced 6 days high frequency',
     difficulty: 2,
     workouts: [
@@ -296,7 +296,7 @@ const LIBRARY_PLANS = [
   // ── 7. 4-Day Bodybuilding Bro Split ──────────────────────────────────────
   {
     name: '4-Day Hypertrophy Bro Split',
-    description: 'Classic bodybuilder-style split. Chest & triceps, back & biceps, shoulders, legs. Focused sessions.',
+    description: 'The classic bodybuilder split: each major muscle group gets a dedicated session, allowing maximum per-session volume before fatigue compromises quality. Chest and triceps on Day 1, back and biceps on Day 2, shoulders and traps on Day 3, legs on Day 4. Each muscle is trained once per week at high volume. Suits intermediate-to-advanced lifters who recover well from high intra-session fatigue and prefer focused, high-effort sessions. Use double progression. Target RIR 1 on the final working set of each exercise.',
     tags: 'bodybuilding bro split 4 days',
     difficulty: 1,
     workouts: [
@@ -346,7 +346,7 @@ const LIBRARY_PLANS = [
   // ── 8. 3-Day Full Body Express (45 min sessions) ─────────────────────────
   {
     name: 'Full Body Express 3×/Week',
-    description: '45-minute full-body sessions. Three days per week. Efficient — big compound movements only.',
+    description: '45-minute full-body sessions, three days per week, using only the highest-value compound movements. No isolation work — every exercise trains multiple muscles simultaneously to maximise efficiency. Ideal for time-pressed lifters who want to maintain or build muscle with minimal gym time. Because each session covers the full body, skipping one session does not leave any muscle group undertrained that week. Use double progression. Target RIR 2 on all working sets.',
     tags: 'full_body short 3 days express beginner intermediate',
     difficulty: 1,
     workouts: [
@@ -383,7 +383,7 @@ const LIBRARY_PLANS = [
   // ── 9. Upper / Lower Express (4 × 40 min) ────────────────────────────────
   {
     name: 'Upper / Lower Express 4×/Week',
-    description: 'Four 40-minute sessions. Upper twice, lower twice. Minimal rest, efficient supersets optional.',
+    description: 'Four 40-minute sessions per week using a tight exercise selection and brisk rest periods. Built on the proven upper/lower split structure but with each session trimmed to its highest-value exercises. Suitable for intermediate lifters managing a busy schedule who want twice-per-week frequency without long sessions. Double progression on all compound movements. Optional supersets (pairing non-competing exercises) can shave a further 10 minutes off each session. Target RIR 1–2.',
     tags: 'upper_lower short 4 days express',
     difficulty: 1,
     workouts: [
@@ -429,7 +429,7 @@ const LIBRARY_PLANS = [
   // ── 10. Chest & Shoulder Specialisation ──────────────────────────────────
   {
     name: 'Chest & Shoulder Specialisation',
-    description: 'Prioritise chest and shoulder development with higher frequency and volume. Other muscles maintained.',
+    description: 'A specialisation phase for lifters who have identified chest and shoulder development as a clear weak point. Volume for these muscles is elevated to the upper end of the weekly effective range; all other muscle groups are maintained with sufficient but lower volume. Run for 6–8 weeks as a focused block, then return to a balanced programme. Double progression on all chest and shoulder work. Expect visible improvement in shoulder roundness and upper-chest fullness within 8–10 weeks. Target RIR 1–2.',
     tags: 'weak_point bodybuilding chest shoulders aesthetic',
     difficulty: 1,
     workouts: [
@@ -478,7 +478,7 @@ const LIBRARY_PLANS = [
   // ── 11. Back Width & Thickness Specialisation ────────────────────────────
   {
     name: 'Back Width & Thickness',
-    description: 'Maximise lat width and mid-back thickness. High back volume. Strong V-taper focus.',
+    description: 'A back specialisation block for lifters who prioritise lat width and mid-back density — the two components of a strong V-taper. Width comes from vertical pulling (lat pulldown variations, straight-arm pulldowns); thickness from horizontal rowing. Both are trained at high volume and twice per week. Other muscle groups are maintained at effective volumes. Run for 6–8 weeks within a broader training year. Double progression. Target RIR 1–2 on all back work.',
     tags: 'weak_point back bodybuilding aesthetic v-taper',
     difficulty: 1,
     workouts: [
@@ -517,7 +517,7 @@ const LIBRARY_PLANS = [
   // ── 12. Leg Development Priority ─────────────────────────────────────────
   {
     name: 'Leg Development Priority',
-    description: 'Bring up lagging legs. High quad and hamstring volume. Upper body maintained with fewer sessions.',
+    description: 'For lifters with underdeveloped legs relative to their upper body. Quad and hamstring volume is elevated to the high end of the weekly effective range; upper body is maintained at a lower frequency. Three leg sessions per week (two quad-dominant, one hip-dominant) provide a strong training stimulus across the full lower body. Run for 8–12 weeks, then reassess proportions. Double progression. Target RIR 1–2 on leg compounds, RIR 2 on isolation work.',
     tags: 'weak_point legs quads hamstrings bodybuilding',
     difficulty: 1,
     workouts: [
@@ -556,7 +556,7 @@ const LIBRARY_PLANS = [
   // ── 13. Glute & Hamstring Focus ───────────────────────────────────────────
   {
     name: 'Glute & Hamstring Focus',
-    description: 'Hip-dominant training with high glute and hamstring volume. Great for glute development and posterior-chain strength.',
+    description: 'Hip-dominant training with an emphasis on the posterior chain — glutes, hamstrings, and spinal erectors. Ideal for athletes wanting stronger hip extension, or physique athletes prioritising glute development. Sessions are built around hip hinges, hip thrusts, and leg curl variations, with upper-body maintenance work included. Run as a 6–8 week specialisation phase. Double progression on all major movements. Target RIR 1–2 on working sets.',
     tags: 'weak_point glutes hamstrings legs bodybuilding',
     difficulty: 1,
     workouts: [
@@ -586,7 +586,7 @@ const LIBRARY_PLANS = [
   // ── 14. V-Taper Aesthetic (Lats + Side Delts) ────────────────────────────
   {
     name: 'V-Taper Aesthetic',
-    description: 'Maximise the V-taper look. Heavy lat-width work and high side-delt volume. Waist kept small through controlled abs.',
+    description: 'Maximising the V-taper silhouette: wide upper back, capped side delts, and a visually narrow waist. Lat-width work and side-delt volume are both elevated; direct waist-expanding exercises are excluded. Sessions are structured so the muscles that create visual width are trained first, when freshest, with maximum quality. Run as a 6–8 week specialisation phase. Double progression. Target RIR 1–2 on all working sets.',
     tags: 'aesthetic v-taper bodybuilding back shoulders weak_point',
     difficulty: 1,
     workouts: [
@@ -617,7 +617,7 @@ const LIBRARY_PLANS = [
   // ── 15. 2-Day Minimalist (Busy Schedule) ─────────────────────────────────
   {
     name: 'Minimalist 2×/Week',
-    description: 'Two sessions per week covering every major muscle group. Perfect for busy weeks or maintenance phases.',
+    description: 'Two full-body sessions per week, covering every major muscle group in around 60 minutes each. Suitable for maintenance phases, very busy schedules, or as a bridge between structured blocks. Volume is at the lower end of the effective range — enough to preserve muscle and strength, not enough for significant growth. Prioritises the highest-value compound movements. Double progression; progress will be slower than with higher-frequency plans. Target RIR 2 on all working sets.',
     tags: 'short 2 days full_body beginner intermediate minimalist',
     difficulty: 1,
     workouts: [
@@ -645,7 +645,7 @@ const LIBRARY_PLANS = [
   // ── 16. 3-Day Power Hypertrophy ────────────────────────────────────────────
   {
     name: '3-Day Power Hypertrophy',
-    description: 'Blend heavy strength work (3–5 reps) with hypertrophy assistance (8–15 reps). Build size and strength together.',
+    description: 'Combines heavy strength work (3–5 reps, close to maximal effort) with hypertrophy assistance (8–15 reps) in the same session. The heavy work builds neural efficiency and maximal strength; the assistance work produces the volume needed for sustained muscle growth. This approach develops both qualities simultaneously rather than optimising for just one. Suitable for intermediate-to-advanced lifters who want to be both strong and muscular. Target RIR 2–3 on heavy sets, RIR 1–2 on all assistance work.',
     tags: 'bodybuilding 3 days intermediate advanced strength',
     difficulty: 2,
     workouts: [
@@ -685,7 +685,7 @@ const LIBRARY_PLANS = [
   // ── 17. Arms & Upper Body Aesthetic ──────────────────────────────────────
   {
     name: 'Arms & Upper Body Aesthetic',
-    description: 'Prioritise arm size and upper-body aesthetics. High bicep and tricep volume alongside chest and shoulder work.',
+    description: 'Built for lifters who want to prioritise arm development alongside overall upper-body aesthetics. Bicep and tricep volume is elevated well beyond what a balanced programme provides; chest, shoulders, and back are maintained at effective volumes. Three upper sessions per week, each with a different structural emphasis. Run for 6–8 weeks within a mesocycle. Double progression on all exercises. Target RIR 1–2 on final working sets.',
     tags: 'aesthetic bodybuilding arms weak_point upper',
     difficulty: 1,
     workouts: [
@@ -727,7 +727,7 @@ const LIBRARY_PLANS = [
   // ── 18. Female Bodybuilding Foundation ───────────────────────────────────
   {
     name: 'Female Bodybuilding Foundation',
-    description: 'Glute, hamstring and upper-body development. Three lower sessions and two upper sessions per week.',
+    description: 'A physique-focused programme structured around the muscle groups most impactful for female bodybuilding and fitness: glutes, hamstrings, upper-body detail, and shoulder width. Three lower-body sessions per week provide the volume and frequency needed for visible glute and posterior-chain development; two upper sessions balance the physique. Double progression throughout. Target RIR 1–2 on all working sets. Suitable for intermediate female lifters with 6+ months of consistent resistance training.',
     tags: 'bodybuilding full_body glutes hamstrings upper intermediate',
     difficulty: 1,
     workouts: [

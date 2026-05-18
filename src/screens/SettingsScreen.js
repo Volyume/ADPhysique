@@ -15,6 +15,7 @@ import { clearWorkoutHistory, buildWorkoutCSV } from '../lib/database';
 import { exportBackup, importBackup } from '../lib/dataBackup';
 import { getWellbeingMode, setWellbeingMode, WELLBEING_HELPLINE } from '../lib/wellbeing';
 import { METHODOLOGY_SOURCES } from '../lib/methodologySources';
+import Constants from 'expo-constants';
 
 const WELLBEING_LABELS = {
   calm: 'Calmer experience',
@@ -354,7 +355,7 @@ export default function SettingsScreen({ navigation }) {
         {/* About */}
         <View style={styles.about}>
           <Text style={styles.appName}>Volyume</Text>
-          <Text style={styles.appVersion}>v1.0.0 · Free during beta</Text>
+          <Text style={styles.appVersion}>v{Constants.expoConfig?.version ?? '1.1.0'} · Free during beta</Text>
           <Text style={styles.tagline}>Intelligent Hypertrophy Logbook</Text>
         </View>
       </ScrollView>

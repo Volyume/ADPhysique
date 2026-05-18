@@ -36,7 +36,13 @@ const useAppStore = create((set, get) => ({
       // Restore onboarding selections (trainingFocus, trainingAgeYears, primaryEquipment, units)
       const raw = await AsyncStorage.getItem(PROFILE_KEY_PFX + userId).catch(() => null);
       const profile = raw ? JSON.parse(raw) : null;
-      set({ user: localUser, userProfile: profile, isAuthLoading: false });
+      set({
+        user: localUser,
+        userProfile: profile,
+        units: profile?.units || 'kg',
+        barWeight: profile?.barWeight || 20,
+        isAuthLoading: false,
+      });
       return localUser;
     } catch (e) {
       console.error('initLocalUser failed:', e);
@@ -160,13 +166,29 @@ const useAppStore = create((set, get) => ({
   showPRCelebration: (pr) => set({ prCelebration: pr }),
   hidePRCelebration: () => set({ prCelebration: null }),
 
-  // Units
+  // Units — persisted to AsyncStorage so Settings changes survive restarts
   units: 'kg',
-  setUnits: (units) => set({ units }),
+  setUnits: async (units) => {
+    set({ units });
+    const { user, userProfile } = get();
+    if (user?.id) {
+      const updated = { ...(userProfile || {}), units };
+      try { await AsyncStorage.setItem(PROFILE_KEY_PFX + user.id, JSON.stringify(updated)); } catch (_) {}
+      set({ userProfile: updated });
+    }
+  },
 
-  // Bar weight for plate calculator
+  // Bar weight for plate calculator — persisted alongside units
   barWeight: 20,
-  setBarWeight: (w) => set({ barWeight: w }),
+  setBarWeight: async (w) => {
+    set({ barWeight: w });
+    const { user, userProfile } = get();
+    if (user?.id) {
+      const updated = { ...(userProfile || {}), barWeight: w };
+      try { await AsyncStorage.setItem(PROFILE_KEY_PFX + user.id, JSON.stringify(updated)); } catch (_) {}
+      set({ userProfile: updated });
+    }
+  },
 }));
 
 export default useAppStore;
