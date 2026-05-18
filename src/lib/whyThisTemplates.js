@@ -25,7 +25,7 @@ function assertNoJargon(str) {
 }
 
 function clean(str) {
-  if (__DEV__) assertNoJargon(str);
+  if (typeof __DEV__ !== 'undefined' && __DEV__) assertNoJargon(str);
   return str.trim();
 }
 
