@@ -14,8 +14,10 @@ import InfoTooltip from '../components/InfoTooltip';
 import useAppStore from '../store/useAppStore';
 import {
   getAllWorkouts, getCompletedWorkoutSets, getBodyMetricLog, getNutritionTargets,
+  getRecentAdaptationEvents,
 } from '../lib/database';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
+import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { exportCoachReport } from '../lib/coachExport';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 
@@ -70,6 +72,7 @@ export default function AthleteHubScreen({ navigation }) {
   const [physiqueEnabled, setPhysiqueEnabled]   = useState(false);
   const [exporting, setExporting]               = useState(false);
   const [calm, setCalm]                         = useState(false);
+  const [adaptationHistory, setAdaptationHistory] = useState([]);
 
   async function handleCoachExport() {
     if (exporting) return;
@@ -108,7 +111,16 @@ export default function AthleteHubScreen({ navigation }) {
       loadWorkoutStats(),
       loadBodyMetrics(),
       loadNutrition(),
+      loadAdaptationHistory(),
     ]);
+  }
+
+  async function loadAdaptationHistory() {
+    if (!user?.id) return;
+    try {
+      const events = await getRecentAdaptationEvents(user.id, 4); // last 4 weeks
+      setAdaptationHistory(events.slice(0, 12)); // show max 12 most recent
+    } catch (_e) {}
   }
 
   async function loadWorkoutStats() {
@@ -325,6 +337,46 @@ export default function AthleteHubScreen({ navigation }) {
           <Text style={styles.aboutVersion}>Intelligent Hypertrophy Logbook · Private by design</Text>
         </View>
 
+              {/* Adaptation History */}
+              {adaptationHistory.length > 0 && (
+                <View style={styles.adaptHistCard}>
+                  <Text style={styles.adaptHistTitle}>ENGINE LOG</Text>
+                  {adaptationHistory.map((event, i) => {
+                    const icon =
+                      event.decision === 'add_set' ? 'trending-up' :
+                      event.decision === 'drop_set' ? 'trending-down' :
+                      event.decision === 'deload_trigger' ? 'warning-outline' :
+                      event.decision === 'rotate_exercise' ? 'swap-horizontal' :
+                      'remove-outline';
+                    const iconColor =
+                      event.decision === 'add_set' ? colors.primary :
+                      event.decision === 'drop_set' || event.decision === 'deload_trigger' ? colors.error :
+                      colors.textMuted;
+                    const muscleLabel = MUSCLE_DISPLAY_NAMES[event.muscle] || event.muscle || '—';
+                    const date = event.created_at
+                      ? new Date(event.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+                      : '';
+                    return (
+                      <View key={event.id || i} style={styles.adaptHistRow}>
+                        <Ionicons name={icon} size={14} color={iconColor} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.adaptHistMuscle}>
+                            {muscleLabel}
+                            {event.delta != null && event.delta !== 0
+                              ? ` ${event.delta > 0 ? '+' : ''}${event.delta} set`
+                              : ''}
+                          </Text>
+                          {event.reason_text ? (
+                            <Text style={styles.adaptHistReason} numberOfLines={2}>{event.reason_text}</Text>
+                          ) : null}
+                        </View>
+                        <Text style={styles.adaptHistDate}>{date}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -525,4 +577,16 @@ const styles = StyleSheet.create({
   about: { alignItems: 'center', paddingTop: spacing.md, gap: spacing.xs },
   aboutName:    { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textMuted },
   aboutVersion: { fontSize: fontSize.xs, color: colors.textMuted },
+
+  // Adaptation history
+  adaptHistCard: {
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.border,
+    padding: spacing.lg, gap: spacing.md, marginBottom: spacing.lg,
+  },
+  adaptHistTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.5, marginBottom: spacing.xs },
+  adaptHistRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  adaptHistMuscle: { fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.semibold },
+  adaptHistReason: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2, lineHeight: 16 },
+  adaptHistDate: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
 });

@@ -13,8 +13,9 @@ import {
   getAllWorkouts, getCompletedWorkoutSets, getActivePlan, getRoutinesForPlan,
   getAllRoutineExerciseCounts, createWorkout, getRoutineExercisesWithDetails,
   getWorkoutSetsForWorkout, getExerciseById,
+  getCurrentMesocycleWeek, getPlannedMuscleVolume, getAllExercises,
 } from '../lib/database';
-import { calculateTonnage } from '../lib/algorithms';
+import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import useAppStore from '../store/useAppStore';
 
@@ -37,6 +38,8 @@ export default function HomeScreen({ navigation }) {
   const [isStartingWorkout, setIsStartingWorkout] = useState(false);
   const [lastSession, setLastSession] = useState(null);
   const [lastSessionTonnage, setLastSessionTonnage] = useState(null);
+  const [blockProgress, setBlockProgress] = useState([]); // [{ muscle, planned, actual, label }]
+  const [currentMesoWeek, setCurrentMesoWeek] = useState(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -51,7 +54,7 @@ export default function HomeScreen({ navigation }) {
   );
 
   async function loadData() {
-    await Promise.all([loadWeekStats(), loadNextWorkout(), loadExerciseCounts()]);
+    await Promise.all([loadWeekStats(), loadNextWorkout(), loadExerciseCounts(), loadBlockProgress()]);
   }
 
   async function loadWeekStats() {
@@ -101,6 +104,39 @@ export default function HomeScreen({ navigation }) {
     try {
       const counts = await getAllRoutineExerciseCounts();
       setExerciseCounts(counts);
+    } catch (_e) {}
+  }
+
+  async function loadBlockProgress() {
+    if (!user?.id) return;
+    try {
+      const week = await getCurrentMesocycleWeek(user.id);
+      setCurrentMesoWeek(week);
+      if (!week) return;
+
+      const [planned, allSets, allExercises] = await Promise.all([
+        getPlannedMuscleVolume(week.id),
+        getCompletedWorkoutSets(user.id),
+        getAllExercises(),
+      ]);
+
+      const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      const recentSets = allSets.filter(s => (s.createdAt || 0) >= weekAgo);
+      const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
+      const actual = calculateWeeklyVolume(recentSets, exerciseMap);
+
+      const progress = planned
+        .filter(p => p.planned_sets > 0)
+        .map(p => ({
+          muscle: p.muscle,
+          planned: p.planned_sets,
+          actual: Math.round(actual[p.muscle]?.workingSets || 0),
+          label: MUSCLE_DISPLAY_NAMES[p.muscle] || p.muscle,
+        }))
+        .sort((a, b) => b.planned - a.planned)
+        .slice(0, 8); // top 8 muscles by volume
+
+      setBlockProgress(progress);
     } catch (_e) {}
   }
 
@@ -411,6 +447,37 @@ export default function HomeScreen({ navigation }) {
             </View>
           </TouchableOpacity>
         )}
+
+        {/* Block progress — planned vs actual this week */}
+          {blockProgress.length > 0 && (
+            <View style={styles.blockCard}>
+              <View style={styles.blockCardHeader}>
+                <Text style={styles.blockCardTitle}>THIS WEEK'S PLAN</Text>
+                {currentMesoWeek && (
+                  <Text style={styles.blockCardWeek}>
+                    Week {currentMesoWeek.weekIndex}/{currentMesoWeek.plannedWeeks}
+                    {currentMesoWeek.isDeload ? ' · DELOAD' : ` · RIR ${currentMesoWeek.rirTarget}`}
+                  </Text>
+                )}
+              </View>
+              {blockProgress.map(p => {
+                const pct = p.planned > 0 ? Math.min(1, p.actual / p.planned) : 0;
+                const barColor = pct >= 1 ? colors.primary : pct >= 0.7 ? colors.warning : colors.surface3;
+                return (
+                  <View key={p.muscle} style={styles.blockRow}>
+                    <Text style={styles.blockMuscle} numberOfLines={1}>{p.label}</Text>
+                    <View style={styles.blockBarBg}>
+                      <View style={[styles.blockBarFill, { width: `${Math.round(pct * 100)}%`, backgroundColor: barColor }]} />
+                    </View>
+                    <Text style={styles.blockSets}>
+                      {p.actual}/{p.planned}
+                    </Text>
+                  </View>
+                );
+              })}
+              <Text style={styles.blockNote}>Sets completed vs planned · resets Monday</Text>
+            </View>
+          )}
 
         {/* ── Quick nav ── */}
         <View style={styles.quickRow}>
@@ -932,4 +999,23 @@ const styles = StyleSheet.create({
   nextBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
   sheetCancel: { marginTop: spacing.lg, alignItems: 'center', paddingVertical: spacing.md },
   sheetCancelText: { fontSize: fontSize.md, color: colors.textSecondary },
+
+  // Block progress card
+  blockCard: {
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.border,
+    padding: spacing.lg, marginBottom: spacing.lg, gap: spacing.md,
+  },
+  blockCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  blockCardTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.5 },
+  blockCardWeek: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.medium },
+  blockRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  blockMuscle: { width: 80, fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  blockBarBg: {
+    flex: 1, height: 6, backgroundColor: colors.surface2,
+    borderRadius: radius.full, overflow: 'hidden',
+  },
+  blockBarFill: { height: '100%', borderRadius: radius.full },
+  blockSets: { width: 36, fontSize: fontSize.xs, color: colors.textMuted, textAlign: 'right' },
+  blockNote: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic', marginTop: spacing.xs },
 });
