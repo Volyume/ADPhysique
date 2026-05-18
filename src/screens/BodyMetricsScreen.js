@@ -113,6 +113,10 @@ function WeightTrendChart({ entries, units }) {
   const weights = withWeight.map(e => e.body_weight);
   const minW = Math.floor(Math.min(...weights) - 1);
   const maxW = Math.ceil(Math.max(...weights) + 1);
+  // gifted-charts subtracts yAxisOffset from every value internally, so the
+  // axis max must be the range (not the absolute max) for the line to fill
+  // the chart height. Axis labels add yAxisOffset back for display.
+  const axisRange = Math.max(maxW - minW, 1);
 
   const data = withWeight.map((e, i) => ({
     value: e.body_weight,
@@ -142,8 +146,8 @@ function WeightTrendChart({ entries, units }) {
         yAxisTextStyle={chartStyles.axisText}
         xAxisLabelTextStyle={chartStyles.axisText}
         noOfSections={3}
-        minValue={minW}
-        maxValue={maxW}
+        yAxisOffset={minW}
+        maxValue={axisRange}
         backgroundColor={colors.surface}
         xAxisColor={colors.border}
         yAxisColor={colors.border}
