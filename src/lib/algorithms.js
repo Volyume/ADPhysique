@@ -170,6 +170,63 @@ export function getProgressionSuggestion(currentSets, prevWorkoutSets, targetRep
   };
 }
 
+// Per-set targets for next session using double-progression model
+export function computeSetTargets(prevSets, repMin, repMax, units = 'kg') {
+  if (!prevSets || prevSets.length === 0) return { targets: [], reason: null };
+
+  const prevWorking = prevSets.filter(
+    s => (s.setType || s.set_type || 'straight') !== 'warmup',
+  );
+  if (prevWorking.length === 0) return { targets: [], reason: null };
+
+  const min = repMin || 6;
+  const max = repMax || 12;
+  const targets = [];
+
+  for (const set of prevWorking) {
+    const prevWeight = set.weight || 0;
+    const prevReps = set.actualReps || set.actual_reps || 0;
+
+    let targetWeight = prevWeight;
+    let targetMin = min;
+    let targetMax = max;
+    let action = 'maintain';
+
+    if (prevReps >= max) {
+      const increment = prevWeight >= 60 ? 2.5 : 1.25;
+      targetWeight = prevWeight + increment;
+      action = 'increase';
+    } else if (prevReps < min && min > 1) {
+      const decrement = prevWeight >= 60 ? 2.5 : 1.25;
+      targetWeight = Math.max(0, prevWeight - decrement);
+      action = 'decrease';
+    } else {
+      targetMin = Math.min(prevReps + 1, max);
+      action = 'add_rep';
+    }
+
+    targets.push({ weight: targetWeight, repsMin: targetMin, repsMax: targetMax, prevWeight, prevReps, action });
+  }
+
+  const allIncrease = targets.every(t => t.action === 'increase');
+  const anyDecrease = targets.some(t => t.action === 'decrease');
+  const anyIncrease = targets.some(t => t.action === 'increase');
+
+  let reason;
+  if (allIncrease) {
+    const inc = (targets[0].weight - targets[0].prevWeight).toFixed(2).replace(/\.?0+$/, '');
+    reason = `All sets hit the top of the range — load up by ${inc}${units}.`;
+  } else if (anyDecrease) {
+    reason = `Load reduced on underperforming sets — hit ${min}–${max} reps with good form.`;
+  } else if (anyIncrease) {
+    reason = `Partial progression — add weight where you hit ${max} reps.`;
+  } else {
+    reason = `Keep the load — push for ${max} reps on each set, then increase weight.`;
+  }
+
+  return { targets, reason };
+}
+
 // Algorithm 3: PR Detection
 export function detectPR(newSet, historicalSets, exercise, units = 'kg') {
   const prs = [];
@@ -460,4 +517,87 @@ export function getStrengthStandard(lift, estimated1RM, bodyWeight) {
     if (ratio >= standard.ratio) label = standard.label;
   }
   return { ratio: ratio.toFixed(2), label };
+}
+
+// Adaptive volume landmarks — adjusts MEV/MAV/MRV per muscle based on user's feedback signals
+// history: array of { muscle, pumpScore, sorenessScore, jointDiscomfort, performanceTrend, prFrequency, missedReps, weeklyVolume }
+// Each entry = one logged session/week for that muscle
+export function computeAdaptiveLandmarks(history = [], baseDefaults = VOLUME_LANDMARKS) {
+  const adapted = {};
+
+  // Group history by muscle
+  const byMuscle = {};
+  for (const entry of history) {
+    if (!entry.muscle) continue;
+    if (!byMuscle[entry.muscle]) byMuscle[entry.muscle] = [];
+    byMuscle[entry.muscle].push(entry);
+  }
+
+  for (const muscle of Object.keys(baseDefaults)) {
+    const base = baseDefaults[muscle];
+    const entries = byMuscle[muscle] || [];
+
+    if (entries.length < 3) {
+      // Not enough data — use defaults
+      adapted[muscle] = { ...base, dataPoints: entries.length, isAdapted: false };
+      continue;
+    }
+
+    // Score: higher pump + lower soreness + no joint issues + performance improving = can handle more volume
+    // Signals (all 1–5 scale except missedReps which is a count):
+    // pump: 1=none → 5=great (higher = better, stimulus proxy)
+    // soreness: 1=none → 5=very sore (lower = better, recovery cost)
+    // jointDiscomfort: 0=none → 3=significant (lower = better, injury risk)
+    // performanceTrend: -1=declining, 0=flat, 1=improving (higher = better)
+    // prFrequency: PRs per 4 weeks (higher = adapting well)
+    // missedReps: avg reps missed per set (higher = fatigued)
+
+    const recent = entries.slice(-8); // last 8 data points
+    const avgPump = recent.reduce((s, e) => s + (e.pumpScore || 3), 0) / recent.length;
+    const avgSoreness = recent.reduce((s, e) => s + (e.sorenessScore || 2), 0) / recent.length;
+    const avgJoint = recent.reduce((s, e) => s + (e.jointDiscomfort || 0), 0) / recent.length;
+    const avgPerf = recent.reduce((s, e) => s + (e.performanceTrend || 0), 0) / recent.length;
+    const avgPRFreq = recent.reduce((s, e) => s + (e.prFrequency || 0), 0) / recent.length;
+    const avgMissed = recent.reduce((s, e) => s + (e.missedReps || 0), 0) / recent.length;
+
+    // Compute a net stimulus/recovery score: positive = can handle more, negative = need less
+    // Ranges from approximately -3 to +3
+    const stimulusScore = (avgPump - 3) * 0.5;          // pump above 3 = good
+    const recoveryScore = -(avgSoreness - 2) * 0.4;     // soreness above 2 = bad
+    const jointScore = -(avgJoint) * 0.8;               // any joint issues = bad
+    const perfScore = avgPerf * 0.5;                    // improving = good
+    const prScore = Math.min(avgPRFreq * 0.3, 0.6);     // PRs = adapting
+    const fatigueScore = -(avgMissed * 0.3);            // missing reps = fatigued
+
+    const netScore = stimulusScore + recoveryScore + jointScore + perfScore + prScore + fatigueScore;
+
+    // Adjust landmarks by up to ±4 sets based on net score
+    const adjustment = Math.round(Math.max(-4, Math.min(4, netScore * 2)));
+
+    // Find the volume that produced best results (highest pump × performance, lowest soreness)
+    const scoredEntries = recent.map(e => ({
+      volume: e.weeklyVolume || base.mav,
+      quality: ((e.pumpScore || 3) + (e.performanceTrend || 0) - (e.sorenessScore || 2) - (e.jointDiscomfort || 0)),
+    })).sort((a, b) => b.quality - a.quality);
+
+    const bestVolume = scoredEntries[0]?.volume || base.mav;
+    const worstVolume = scoredEntries[scoredEntries.length - 1]?.volume || base.mrv;
+
+    adapted[muscle] = {
+      mev: Math.max(0, base.mev + adjustment),
+      mav: Math.max(base.mev + 1, Math.min(base.mrv - 1, Math.round(bestVolume))),
+      mrv: Math.max(base.mav + 1, base.mrv + Math.floor(adjustment / 2)),
+      isAdapted: true,
+      dataPoints: entries.length,
+      netScore: Math.round(netScore * 10) / 10,
+      bestVolume,
+      note: netScore > 1
+        ? `You recover well here — landmark raised by ${adjustment} sets`
+        : netScore < -1
+        ? `Recovery cost is high — landmark lowered by ${Math.abs(adjustment)} sets`
+        : 'Landmark based on your response data',
+    };
+  }
+
+  return adapted;
 }

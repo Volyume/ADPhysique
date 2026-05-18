@@ -26,6 +26,7 @@ import { getPreviousWorkoutSets, getAllCompletedSetsForExercise, createWorkoutSe
 import {
   detectPR,
   getProgressionSuggestion,
+  computeSetTargets,
   calculate1RM,
   calculateTonnage,
   MUSCLE_DISPLAY_NAMES,
@@ -73,6 +74,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [saving, setSaving] = useState(false);
   const [progression, setProgression] = useState(null);
+  const [setTargets, setSetTargets] = useState([]);
+  const [targetReason, setTargetReason] = useState(null);
   const [showSetTypePicker, setShowSetTypePicker] = useState(false);
   const [showExecution, setShowExecution] = useState(false);
   const [showStaleModal, setShowStaleModal] = useState(false);
@@ -217,7 +220,29 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       setPrevSets(prev);
       setAllTimeSets(allTime);
 
-      if (prev.length > 0) {
+      const allLoggedForExercise = workoutExercises[currentExerciseIndex]?.sets || [];
+      setLoggedSets(allLoggedForExercise);
+
+      // Compute per-set targets for next session
+      const { targets: computed, reason: computedReason } = computeSetTargets(
+        prev,
+        routineExercise?.recommendedRepsMin,
+        routineExercise?.recommendedRepsMax,
+        units,
+      );
+      setSetTargets(computed);
+      setTargetReason(computedReason);
+
+      // Pre-fill: use target for the current working set position
+      const currentWorkingCount = allLoggedForExercise.filter(s => s.setType !== 'warmup').length;
+      const currentTarget = computed[currentWorkingCount];
+      if (currentTarget) {
+        setCurrentSet({
+          ...DEFAULT_SET,
+          weight: currentTarget.weight,
+          reps: currentTarget.repsMin,
+        });
+      } else if (prev.length > 0) {
         const lastSet = prev[prev.length - 1];
         setCurrentSet({
           ...DEFAULT_SET,
@@ -231,9 +256,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           reps: routineExercise?.recommendedRepsMax || DEFAULT_SET.reps,
         });
       }
-
-      const allLoggedForExercise = workoutExercises[currentExerciseIndex]?.sets || [];
-      setLoggedSets(allLoggedForExercise);
 
       // Auto-select warmup type if no sets logged yet for this exercise
       if (allLoggedForExercise.length === 0) {
@@ -349,6 +371,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       );
       setProgression(suggestion);
 
+      // Pre-fill next set from per-set targets
+      if (currentSet.setType !== 'warmup') {
+        const nextWorkingCount = newLoggedSets.filter(s => s.setType !== 'warmup').length;
+        const nextTarget = setTargets[nextWorkingCount];
+        if (nextTarget) {
+          setCurrentSet(cs => ({ ...cs, weight: nextTarget.weight, reps: nextTarget.repsMin }));
+        }
+      }
+
       // Update last activity timestamp
       updateLastActivity();
 
@@ -368,9 +399,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // Prepare next set
       setNoteText('');
       setShowNoteInput(false);
-      // If warmup was just completed, auto-switch to straight (working) set
+      // If warmup was just completed, auto-switch to straight (working) and pre-fill from first target
       if (currentSet.setType === 'warmup') {
-        setCurrentSet(cs => ({ ...cs, setType: 'straight' }));
+        const firstTarget = setTargets[0];
+        setCurrentSet(cs => ({
+          ...cs,
+          setType: 'straight',
+          weight: firstTarget ? firstTarget.weight : cs.weight,
+          reps: firstTarget ? firstTarget.repsMin : (routineExercise?.recommendedRepsMin || 8),
+        }));
       }
     } finally {
       setSaving(false);
@@ -601,7 +638,29 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <Text style={styles.prevSetsSummary}>
                   {prevSets.map(s => `${s.weight}${units} × ${s.actualReps}`).join('   ')}
                 </Text>
-                {progression && progression.action !== 'baseline' && (
+                {setTargets.length > 0 && (
+                  <View style={styles.setTargetsBlock}>
+                    <Text style={styles.setTargetsLabel}>NEXT SESSION</Text>
+                    {setTargets.map((t, i) => (
+                      <View key={i} style={styles.setTargetRow}>
+                        <Text style={styles.setTargetNum}>Set {i + 1}</Text>
+                        <Text style={styles.setTargetVal}>
+                          {t.weight}{units} × {t.repsMin === t.repsMax ? t.repsMin : `${t.repsMin}–${t.repsMax}`}
+                        </Text>
+                        {t.action === 'increase' && (
+                          <Ionicons name="trending-up" size={12} color={colors.primary} />
+                        )}
+                        {t.action === 'decrease' && (
+                          <Ionicons name="trending-down" size={12} color={colors.error} />
+                        )}
+                      </View>
+                    ))}
+                    {targetReason && (
+                      <Text style={styles.setTargetReason}>{targetReason}</Text>
+                    )}
+                  </View>
+                )}
+                {!setTargets.length && progression && progression.action !== 'baseline' && (
                   <View style={styles.progressionBadge}>
                     <Ionicons
                       name={progression.action === 'increase_weight' ? 'trending-up' : 'arrow-forward'}
@@ -660,6 +719,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   ? `SET ${workingLogged + 1} / ${routineExercise.recommendedSets} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working'}`
                   : `SET ${workingLogged + 1} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working'}`}
             </Text>
+            {currentSet.setType !== 'warmup' && setTargets[workingLogged] && (
+              <View style={styles.inlineTargetChip}>
+                <Ionicons name="flag-outline" size={11} color={colors.primary} />
+                <Text style={styles.inlineTargetText}>
+                  Target: {setTargets[workingLogged].weight}{units} × {setTargets[workingLogged].repsMin === setTargets[workingLogged].repsMax ? setTargets[workingLogged].repsMin : `${setTargets[workingLogged].repsMin}–${setTargets[workingLogged].repsMax}`}
+                  {setTargets[workingLogged].action === 'increase' ? ' ↑' : setTargets[workingLogged].action === 'decrease' ? ' ↓' : ''}
+                </Text>
+              </View>
+            )}
             <SetEntry
               value={currentSet}
               onChange={setCurrentSet}
@@ -1349,4 +1417,17 @@ const styles = StyleSheet.create({
   keepTrainingBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
   discardConfirmBtn: { alignItems: 'center', paddingVertical: spacing.md },
   discardConfirmBtnText: { fontSize: fontSize.sm, color: colors.error, fontWeight: fontWeight.medium },
+  setTargetsBlock: { marginTop: spacing.sm, gap: 4 },
+  setTargetsLabel: { fontSize: fontSize.xs, color: colors.textMuted, fontWeight: fontWeight.semibold, marginBottom: 2 },
+  setTargetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  setTargetNum: { fontSize: fontSize.xs, color: colors.textMuted, width: 36 },
+  setTargetVal: { fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.semibold },
+  setTargetReason: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: spacing.xs, fontStyle: 'italic' },
+  inlineTargetChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: colors.primaryBg, borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm, paddingVertical: 3,
+    alignSelf: 'flex-start', marginBottom: spacing.xs,
+  },
+  inlineTargetText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
 });
