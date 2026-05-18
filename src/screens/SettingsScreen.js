@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { getSupabaseClient, signOut } from '../lib/supabase';
@@ -42,9 +43,13 @@ export default function SettingsScreen({ navigation }) {
   const [notifications, setNotifications] = useState(true);
   const [physiqueEnabled, setPhysiqueEnabled] = useState(false);
 
-  React.useEffect(() => {
-    AsyncStorage.getItem(PHYSIQUE_PREF_KEY).then(v => setPhysiqueEnabled(v === 'true'));
-  }, []);
+  // Re-read on focus so the toggle stays in sync if the user enabled
+  // tracking from the BodyMetrics opt-in screen.
+  useFocusEffect(
+    useCallback(() => {
+      AsyncStorage.getItem(PHYSIQUE_PREF_KEY).then(v => setPhysiqueEnabled(v === 'true'));
+    }, []),
+  );
 
   async function togglePhysique(value) {
     if (value) {
