@@ -5,6 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { format, differenceInDays } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius, shadow } from '../styles/theme';
@@ -16,6 +17,8 @@ import {
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
 
 const { width: SCREEN_W } = Dimensions.get('window');
+
+const PHYSIQUE_PREF_KEY = '@volyume_physique_tracking_enabled';
 
 const MILESTONES = [
   { sessions: 1,    label: 'First session',      icon: 'star-outline' },
@@ -61,9 +64,11 @@ export default function AthleteHubScreen({ navigation }) {
   const [streak, setStreak]                     = useState(0);
   const [recovery, setRecovery]                 = useState({ soreness: null, fatigue: null, joint: null });
   const [weekVolume, setWeekVolume]             = useState(null);
+  const [physiqueEnabled, setPhysiqueEnabled]   = useState(false);
 
   useFocusEffect(useCallback(() => {
     if (user?.id) load();
+    AsyncStorage.getItem(PHYSIQUE_PREF_KEY).then(v => setPhysiqueEnabled(v === 'true'));
   }, [user?.id]));
 
   async function load() {
@@ -278,6 +283,9 @@ export default function AthleteHubScreen({ navigation }) {
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>MANAGE</Text>
           <NavRow icon="layers" label="Training Blocks" sub="Create and track multi-week blocks" onPress={() => navigation.navigate('MesocycleBuilder')} />
+          {physiqueEnabled && (
+            <NavRow icon="flame" label="Peak Week" sub="Contest carb-load &amp; water taper planner" onPress={() => navigation.navigate('PeakWeek')} />
+          )}
           <NavRow icon="trophy" label="Personal Records" sub="All-time bests" onPress={() => navigation.navigate('BodyMetrics')} />
           <NavRow icon="settings-outline" label="Settings" sub="Units, data export, preferences" onPress={() => navigation.navigate('Settings')} />
         </View>

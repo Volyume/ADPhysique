@@ -40,7 +40,6 @@ const PHYSIQUE_PREF_KEY = '@volyume_physique_tracking_enabled';
 export default function SettingsScreen({ navigation }) {
   const { user, setUser, setSession, units, setUnits, barWeight, setBarWeight } =
     useAppStore();
-  const [notifications, setNotifications] = useState(true);
   const [physiqueEnabled, setPhysiqueEnabled] = useState(false);
 
   // Re-read on focus so the toggle stays in sync if the user enabled
@@ -208,14 +207,7 @@ export default function SettingsScreen({ navigation }) {
             icon="notifications-outline"
             label="Notifications"
             showArrow={false}
-            rightElement={
-              <Switch
-                value={notifications}
-                onValueChange={setNotifications}
-                trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
-                thumbColor={notifications ? colors.primary : colors.textMuted}
-              />
-            }
+            rightElement={<Text style={styles.comingSoon}>Coming soon</Text>}
           />
         </View>
 
@@ -317,6 +309,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   settingValue: { fontSize: fontSize.sm, color: colors.textSecondary },
+  comingSoon: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
   about: {
     alignItems: 'center',
     gap: spacing.xs,

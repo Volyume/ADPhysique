@@ -168,6 +168,20 @@ async function _doInit() {
       created_at INTEGER,
       updated_at INTEGER
     );
+    CREATE TABLE IF NOT EXISTS peak_week_plans (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      show_date TEXT,
+      federation TEXT,
+      current_bodyweight REAL,
+      lean_estimate REAL,
+      prep_carbs_per_kg REAL,
+      prep_sodium_mg REAL,
+      prep_water_l REAL,
+      status TEXT DEFAULT 'active',
+      created_at INTEGER,
+      updated_at INTEGER
+    );
     CREATE TABLE IF NOT EXISTS body_metric_log (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL,
@@ -976,6 +990,55 @@ export async function getNutritionTargets(userId) {
     try { result.warnings = JSON.parse(result.warnings); } catch { result.warnings = []; }
   }
   return result;
+}
+
+// ─── Peak Week Plans ──────────────────────────────────────────
+
+export async function savePeakWeekPlan(userId, plan) {
+  const d = await db();
+  const now = Date.now();
+  const existing = await d.getFirstAsync(
+    "SELECT id FROM peak_week_plans WHERE user_id = ? AND status = 'active' LIMIT 1",
+    [userId],
+  );
+  if (existing) {
+    await d.runAsync(
+      `UPDATE peak_week_plans SET
+        show_date=?, federation=?, current_bodyweight=?, lean_estimate=?,
+        prep_carbs_per_kg=?, prep_sodium_mg=?, prep_water_l=?, updated_at=?
+       WHERE id=?`,
+      [
+        plan.showDate ?? null, plan.federation ?? null,
+        plan.bodyweightKg ?? null, plan.leanKg ?? null,
+        plan.prepCarbsPerKg ?? null, plan.prepSodiumMg ?? null,
+        plan.prepWaterL ?? null, now, existing.id,
+      ],
+    );
+    return existing.id;
+  }
+  const id = uid();
+  await d.runAsync(
+    `INSERT INTO peak_week_plans
+      (id, user_id, show_date, federation, current_bodyweight, lean_estimate,
+       prep_carbs_per_kg, prep_sodium_mg, prep_water_l, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)`,
+    [
+      id, userId, plan.showDate ?? null, plan.federation ?? null,
+      plan.bodyweightKg ?? null, plan.leanKg ?? null,
+      plan.prepCarbsPerKg ?? null, plan.prepSodiumMg ?? null,
+      plan.prepWaterL ?? null, now, now,
+    ],
+  );
+  return id;
+}
+
+export async function getActivePeakWeekPlan(userId) {
+  const d = await db();
+  const row = await d.getFirstAsync(
+    "SELECT * FROM peak_week_plans WHERE user_id = ? AND status = 'active' ORDER BY updated_at DESC LIMIT 1",
+    [userId],
+  );
+  return row ? rowToCamel(row) : null;
 }
 
 // ─── Body Metrics ─────────────────────────────────────────────
