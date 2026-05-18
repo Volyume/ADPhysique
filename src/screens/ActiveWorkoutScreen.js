@@ -22,7 +22,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import SetEntry from '../components/SetEntry';
 import RestTimer from '../components/RestTimer';
 import useAppStore from '../store/useAppStore';
-import { getPreviousWorkoutSets, getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, getAllExercises, insertExercise, getCurrentMesocycleWeek, getPlannedMuscleVolume } from '../lib/database';
+import { getPreviousWorkoutSets, getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, getAllExercises, insertExercise, getCurrentMesocycleWeek, getPlannedMuscleVolume, getWeek1SetsForExercise } from '../lib/database';
 import {
   detectPR,
   getProgressionSuggestion,
@@ -30,6 +30,7 @@ import {
   calculate1RM,
   calculateTonnage,
   MUSCLE_DISPLAY_NAMES,
+  generateDeloadPrescription,
 } from '../lib/algorithms';
 import { rankSwaps } from '../lib/swapEngine';
 import { applyTimeCrunch } from '../lib/mesocycle';
@@ -87,6 +88,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [timeCrunchMsg, setTimeCrunchMsg] = useState('');
   const [weeklyPlan, setWeeklyPlan] = useState(null);  // { plannedSets, muscle } for this exercise
   const [weeklyActual, setWeeklyActual] = useState(0); // sets this week for this muscle
+  const [isDeloadWeek, setIsDeloadWeek] = useState(false);
+  const [deloadDismissed, setDeloadDismissed] = useState(false);
   const autoAdvanceRef = useRef(null);
   const sessionSetsRef = useRef([]);   // tracks sets in this session — used for PR detection
 
@@ -296,6 +299,35 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             s.setType !== 'warmup' && s.createdAt >= weekAgo
           );
           setWeeklyActual(weekSets.length);
+
+          setIsDeloadWeek(!!currentWeek.isDeload);
+
+          // If this is a deload week, generate deload prescription from week-1 sets
+          if (currentWeek.isDeload && currentWeek.mesocycleId && exercise?.id) {
+            const week1Sets = await getWeek1SetsForExercise(currentWeek.mesocycleId, exercise.id);
+            if (week1Sets.length > 0) {
+              // Use first-half prescription (week-1 weight, 50% reps) as default
+              const deloadTargets = generateDeloadPrescription(week1Sets, true);
+              if (deloadTargets.length > 0) {
+                const firstDeload = deloadTargets[0];
+                setCurrentSet(cs => ({
+                  ...cs,
+                  weight: firstDeload.weight,
+                  reps: firstDeload.reps,
+                  rir: firstDeload.rir,
+                }));
+                // Store deload targets in setTargets shape so the inline chip renders them
+                setSetTargets(deloadTargets.map(t => ({
+                  weight: t.weight,
+                  repsMin: t.reps,
+                  repsMax: t.reps,
+                  action: 'deload',
+                  isDeload: true,
+                })));
+                setTargetReason('Deload week — RP classic protocol. Very easy effort, full recovery focus.');
+              }
+            }
+          }
         }
       } catch (_e) {}
     }
@@ -654,6 +686,22 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </Text>
           </View>
 
+          {/* Deload Week Banner */}
+          {isDeloadWeek && !deloadDismissed && (
+            <View style={styles.deloadBanner}>
+              <View style={styles.deloadBannerLeft}>
+                <Ionicons name="battery-charging-outline" size={18} color={colors.warning} />
+                <View>
+                  <Text style={styles.deloadBannerTitle}>DELOAD WEEK</Text>
+                  <Text style={styles.deloadBannerSub}>Light loads · full recovery · no PRs</Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={() => setDeloadDismissed(true)}>
+                <Text style={styles.deloadSkip}>Skip</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           {/* Previous Performance */}
           <View style={styles.prevCard}>
             <Text style={styles.prevTitle}>PREVIOUS SESSION</Text>
@@ -755,9 +803,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             <Text style={styles.setEntryTitle}>
               {currentSet.setType === 'warmup'
                 ? 'WARM UP SET'
-                : routineExercise?.recommendedSets
-                  ? `SET ${workingLogged + 1} / ${routineExercise.recommendedSets} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working'}`
-                  : `SET ${workingLogged + 1} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working'}`}
+                : isDeloadWeek
+                  ? `DELOAD SET ${workingLogged + 1} · Easy`
+                  : routineExercise?.recommendedSets
+                    ? `SET ${workingLogged + 1} / ${routineExercise.recommendedSets} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working'}`
+                    : `SET ${workingLogged + 1} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working'}`}
             </Text>
             {currentSet.setType !== 'warmup' && setTargets[workingLogged] && (
               <View style={styles.inlineTargetChip}>
@@ -1470,4 +1520,14 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start', marginBottom: spacing.xs,
   },
   inlineTargetText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
+  deloadBanner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: colors.warningBg || '#2A2000',
+    borderRadius: radius.md, marginHorizontal: spacing.lg, marginBottom: spacing.sm,
+    padding: spacing.md, borderWidth: 1, borderColor: colors.warning,
+  },
+  deloadBannerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
+  deloadBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.warning },
+  deloadBannerSub: { fontSize: fontSize.xs, color: colors.textMuted },
+  deloadSkip: { fontSize: fontSize.sm, color: colors.textMuted, fontWeight: fontWeight.medium },
 });

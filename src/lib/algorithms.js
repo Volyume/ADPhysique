@@ -754,3 +754,58 @@ export function computeAdaptiveLandmarks(history = [], baseDefaults = VOLUME_LAN
 
   return adapted;
 }
+
+// RP-classic deload prescription
+// prevSets: last session's working sets for this exercise (to anchor week-1 loads)
+// isFirstHalf: true = first 2 sessions of deload week (week-1 load, 50% reps)
+//              false = last 2 sessions (50% of week-1 load, 50% reps)
+// Returns array of { weight, reps, setType, rir, isDeload } per working set
+export function generateDeloadPrescription(prevSets, isFirstHalf = true) {
+  if (!prevSets || prevSets.length === 0) return [];
+
+  const working = prevSets.filter(
+    s => (s.setType || s.set_type || 'straight') !== 'warmup',
+  );
+  if (!working.length) return [];
+
+  return working.map(set => {
+    const baseWeight = set.weight || 0;
+    const baseReps = set.actualReps || set.actual_reps || set.reps || 8;
+    const deloadWeight = isFirstHalf ? baseWeight : Math.round(baseWeight * 0.5 * 4) / 4;
+    const deloadReps = Math.max(1, Math.round(baseReps * 0.5));
+
+    return {
+      weight: deloadWeight,
+      reps: deloadReps,
+      setType: 'straight',
+      rir: 4,
+      isDeload: true,
+    };
+  });
+}
+
+// Check if a deload is recommended based on adaptation events from the current week
+// events: array of adaptation_event objects
+// Returns { shouldDeload, triggeredMuscles, reason }
+export function evaluateDeloadTriggers(events = []) {
+  const triggers = events.filter(e => e.decision === 'deload_trigger');
+  const triggeredMuscles = [...new Set(triggers.map(e => e.muscle).filter(Boolean))];
+
+  if (triggeredMuscles.length >= 2) {
+    return {
+      shouldDeload: true,
+      triggeredMuscles,
+      reason: `${triggeredMuscles.length} muscle groups hit recovery ceiling — deload recommended next week.`,
+    };
+  }
+
+  if (triggeredMuscles.length === 1) {
+    return {
+      shouldDeload: false,
+      triggeredMuscles,
+      reason: `${MUSCLE_DISPLAY_NAMES[triggeredMuscles[0]] || triggeredMuscles[0]} is at recovery ceiling — monitor next session.`,
+    };
+  }
+
+  return { shouldDeload: false, triggeredMuscles: [], reason: null };
+}

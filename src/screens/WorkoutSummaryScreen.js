@@ -9,9 +9,9 @@ import {
   getCompletedWorkoutSets, getAllExercises, getAllWorkouts, updateWorkout,
   getActivePlan, getRoutinesForPlan, advancePlanNextWorkout,
   createAdaptationEvent, getCurrentMesocycleWeek,
-  getNextMesocycleWeek, upsertPlannedMuscleVolume,
+  getNextMesocycleWeek, upsertPlannedMuscleVolume, getRecentAdaptationEvents,
 } from '../lib/database';
-import { calculateWeeklyVolume, getVolumeStatus, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine, computeAdaptiveDecision, VOLUME_LANDMARKS } from '../lib/algorithms';
+import { calculateWeeklyVolume, getVolumeStatus, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine, computeAdaptiveDecision, VOLUME_LANDMARKS, evaluateDeloadTriggers } from '../lib/algorithms';
 import { evaluateAutoReg, predictDeloadWeek, getMesoSchedule } from '../lib/mesocycle';
 import { getDeloadPredictionMessage, getAutoRegMessage } from '../lib/whyThisTemplates';
 import useAppStore from '../store/useAppStore';
@@ -75,6 +75,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const [deloadPrediction, setDeloadPrediction] = useState(null);
   const [feedbackHistory, setFeedbackHistory] = useState([]);
   const [adaptiveDecisions, setAdaptiveDecisions] = useState({});
+  const [deloadRecommendation, setDeloadRecommendation] = useState(null);
 
   const feedbackDebounceRef = useRef(null);
 
@@ -203,6 +204,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       fatigueLevel:      w.fatigueLevel ?? 2,
       jointDiscomfort:   w.jointDiscomfort ?? 0,
     })));
+
+    const events = await getRecentAdaptationEvents(user?.id || '', 1);
+    const deloadEval = evaluateDeloadTriggers(events);
+    if (deloadEval.reason) setDeloadRecommendation(deloadEval);
   }
 
   async function handleDone() {
@@ -477,6 +482,25 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               {Object.values(adaptiveDecisions).every(d => d.decision === 'hold' && d.delta === 0) && (
                 <Text style={styles.adaptiveHold}>All muscles on track — continue as planned.</Text>
               )}
+            </View>
+          )}
+
+          {/* Deload recommendation */}
+          {deloadRecommendation?.shouldDeload && (
+            <View style={styles.deloadCard}>
+              <View style={styles.deloadCardHeader}>
+                <Ionicons name="battery-charging-outline" size={18} color={colors.warning} />
+                <Text style={styles.deloadCardTitle}>DELOAD RECOMMENDED</Text>
+              </View>
+              <Text style={styles.deloadCardBody}>{deloadRecommendation.reason}</Text>
+              <Text style={styles.deloadCardNote}>
+                Next week will auto-generate deload loads (week 1 weight × 50% reps). You can skip at any time.
+              </Text>
+            </View>
+          )}
+          {deloadRecommendation && !deloadRecommendation.shouldDeload && deloadRecommendation.reason && (
+            <View style={[styles.deloadCard, styles.deloadCardWarning]}>
+              <Text style={styles.deloadCardBody}>{deloadRecommendation.reason}</Text>
             </View>
           )}
 

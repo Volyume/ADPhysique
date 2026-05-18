@@ -1196,6 +1196,53 @@ export async function getPlannedMuscleVolume(mesocycleWeekId) {
   }
 }
 
+// Fetch recent adaptation_events for the current mesocycle week (to evaluate deload triggers)
+export async function getRecentAdaptationEvents(userId, limitWeeks = 1) {
+  try {
+    const d = await db();
+    const cutoff = Date.now() - limitWeeks * 7 * 24 * 60 * 60 * 1000;
+    const rows = await d.getAllAsync(
+      `SELECT ae.*
+       FROM adaptation_events ae
+       JOIN mesocycle_weeks mw ON mw.id = ae.mesocycle_week_id
+       JOIN mesocycles m ON m.id = mw.mesocycle_id
+       WHERE m.user_id = ? AND ae.created_at >= ?
+       ORDER BY ae.created_at DESC`,
+      [userId, cutoff],
+    );
+    return rows;
+  } catch (_e) {
+    return [];
+  }
+}
+
+// Get the week-1 sets for an exercise within a mesocycle (for deload anchoring)
+export async function getWeek1SetsForExercise(mesocycleId, exerciseId) {
+  try {
+    const d = await db();
+    const week1 = await d.getFirstAsync(
+      'SELECT id FROM mesocycle_weeks WHERE mesocycle_id = ? AND week_index = 1',
+      [mesocycleId],
+    );
+    if (!week1) return [];
+    const sets = await d.getAllAsync(
+      `SELECT ws.* FROM workout_sets ws
+       JOIN workouts w ON w.id = ws.workout_id
+       WHERE w.mesocycle_week_id = ? AND ws.exercise_id = ? AND ws.set_type != 'warmup'
+       ORDER BY ws.set_number ASC`,
+      [week1.id, exerciseId],
+    );
+    return sets.map(s => ({
+      weight: s.weight,
+      actualReps: s.actual_reps ?? s.actualReps,
+      setType: s.set_type ?? s.setType ?? 'straight',
+      rir: s.rir,
+    }));
+  } catch (_e) {
+    return [];
+  }
+}
+
 // Write or update planned muscle volume for a week (engine writes here)
 export async function upsertPlannedMuscleVolume({ mesocycleWeekId, muscle, plannedSets, mev, mav, mrv, source = 'engine' }) {
   try {
