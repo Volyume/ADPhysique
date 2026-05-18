@@ -301,6 +301,55 @@ const SCHEMA_MIGRATIONS = [
     `UPDATE exercises SET primary_muscle = 'side_delts'
      WHERE primary_muscle = 'shoulders'`,
   ],
+  // v3 — mesocycle week scaffold: week table, planned volume, adaptation events,
+  // plus additive columns on mesocycles / workouts / exercises / workout_sets.
+  [
+    `ALTER TABLE mesocycles ADD COLUMN block_type TEXT DEFAULT 'offseason_hypertrophy'`,
+    `ALTER TABLE mesocycles ADD COLUMN planned_weeks INTEGER DEFAULT 5`,
+    `ALTER TABLE mesocycles ADD COLUMN deload_protocol TEXT DEFAULT 'rp_classic'`,
+    `ALTER TABLE mesocycles ADD COLUMN rir_ladder TEXT DEFAULT '[3,2,1,0,4]'`,
+    `ALTER TABLE mesocycles ADD COLUMN status TEXT DEFAULT 'active'`,
+    `CREATE TABLE IF NOT EXISTS mesocycle_weeks (
+      id TEXT PRIMARY KEY,
+      mesocycle_id TEXT NOT NULL,
+      week_index INTEGER NOT NULL,
+      is_deload INTEGER NOT NULL DEFAULT 0,
+      rir_target INTEGER NOT NULL,
+      started_at INTEGER,
+      completed_at INTEGER,
+      notes TEXT,
+      created_at INTEGER NOT NULL
+    )`,
+    `CREATE TABLE IF NOT EXISTS planned_muscle_volume (
+      id TEXT PRIMARY KEY,
+      mesocycle_week_id TEXT NOT NULL,
+      muscle TEXT NOT NULL,
+      planned_sets INTEGER NOT NULL,
+      mev INTEGER NOT NULL,
+      mav INTEGER NOT NULL,
+      mrv INTEGER NOT NULL,
+      source TEXT NOT NULL DEFAULT 'template',
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )`,
+    `CREATE TABLE IF NOT EXISTS adaptation_events (
+      id TEXT PRIMARY KEY,
+      mesocycle_week_id TEXT NOT NULL,
+      muscle TEXT,
+      exercise_id TEXT,
+      decision TEXT NOT NULL,
+      delta INTEGER,
+      reason_code TEXT NOT NULL,
+      reason_text TEXT,
+      signals_json TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    )`,
+    `ALTER TABLE workouts ADD COLUMN mesocycle_week_id TEXT`,
+    `ALTER TABLE exercises ADD COLUMN increment_kg REAL DEFAULT 2.5`,
+    `ALTER TABLE exercises ADD COLUMN exercise_category TEXT DEFAULT 'compound'`,
+    `ALTER TABLE workout_sets ADD COLUMN rir INTEGER`,
+    `ALTER TABLE workout_sets ADD COLUMN rpe REAL`,
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
@@ -424,14 +473,23 @@ export async function createWorkout(userId, routineId = null) {
     [userId],
   );
   const mesocycleId = activeMeso?.id ?? null;
+  // Also link to the current mesocycle week if one exists
+  let mesocycleWeekId = null;
+  if (mesocycleId) {
+    const activeWeek = await d.getFirstAsync(
+      `SELECT id FROM mesocycle_weeks WHERE mesocycle_id = ? ORDER BY week_index ASC LIMIT 1`,
+      [mesocycleId],
+    );
+    mesocycleWeekId = activeWeek?.id ?? null;
+  }
   const id = uid();
   const now = Date.now();
   await d.runAsync(
-    `INSERT INTO workouts (id, user_id, routine_id, mesocycle_id, started_at, is_completed, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, 0, ?, ?)`,
-    [id, userId, routineId, mesocycleId, now, now, now],
+    `INSERT INTO workouts (id, user_id, routine_id, mesocycle_id, mesocycle_week_id, started_at, is_completed, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)`,
+    [id, userId, routineId, mesocycleId, mesocycleWeekId, now, now, now],
   );
-  return { id, userId, routineId, mesocycleId, startedAt: now, isCompleted: 0, createdAt: now, updatedAt: now };
+  return { id, userId, routineId, mesocycleId, mesocycleWeekId, startedAt: now, isCompleted: 0, createdAt: now, updatedAt: now };
 }
 
 export async function updateWorkout(id, data) {
@@ -944,6 +1002,136 @@ export async function getAllMesocycles(userId) {
   return rows.map(rowToCamel);
 }
 
+// Generate mesocycle_week rows for a mesocycle based on its RIR ladder
+export async function generateMesocycleWeeks(mesocycleId) {
+  const d = await db();
+  const meso = await d.getFirstAsync('SELECT * FROM mesocycles WHERE id = ?', [mesocycleId]);
+  if (!meso) return [];
+
+  const plannedWeeks = meso.planned_weeks || 5;
+  let rirLadder;
+  try {
+    rirLadder = JSON.parse(meso.rir_ladder || '[3,2,1,0,4]');
+  } catch (_) {
+    rirLadder = [3, 2, 1, 0, 4];
+  }
+
+  const now = Date.now();
+  const weeks = [];
+
+  for (let i = 0; i < plannedWeeks; i++) {
+    const weekIndex = i + 1;
+    const isDeload = weekIndex === plannedWeeks ? 1 : 0;
+    const rirTarget = rirLadder[i] ?? (isDeload ? 4 : Math.max(0, 3 - i));
+    const id = `mw_${mesocycleId}_${weekIndex}`;
+
+    await d.runAsync(
+      `INSERT OR IGNORE INTO mesocycle_weeks (id, mesocycle_id, week_index, is_deload, rir_target, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [id, mesocycleId, weekIndex, isDeload, rirTarget, now],
+    );
+
+    weeks.push({ id, mesocycleId, weekIndex, isDeload, rirTarget });
+  }
+
+  return weeks;
+}
+
+// Get the current active mesocycle week for a user
+export async function getCurrentMesocycleWeek(userId) {
+  try {
+    const d = await db();
+    const row = await d.getFirstAsync(
+      `SELECT mw.*, m.name AS meso_name, m.block_type, m.planned_weeks, m.rir_ladder,
+              m.deload_protocol, m.status AS meso_status
+       FROM mesocycle_weeks mw
+       JOIN mesocycles m ON m.id = mw.mesocycle_id
+       WHERE m.user_id = ? AND m.is_active = 1 AND m.status = 'active'
+       ORDER BY mw.week_index ASC
+       LIMIT 1`,
+      [userId],
+    );
+
+    if (!row) return null;
+
+    // Check if there are any workouts this week — if so, this is the current week
+    // Simple heuristic: return week_index that matches the oldest incomplete week
+    return {
+      id: row.id,
+      mesocycleId: row.mesocycle_id,
+      weekIndex: row.week_index,
+      isDeload: row.is_deload === 1,
+      rirTarget: row.rir_target,
+      mesoName: row.meso_name,
+      blockType: row.block_type,
+      plannedWeeks: row.planned_weeks,
+      deloadProtocol: row.deload_protocol,
+    };
+  } catch (_e) {
+    return null;
+  }
+}
+
+// Get all weeks for a mesocycle
+export async function getMesocycleWeeks(mesocycleId) {
+  try {
+    const d = await db();
+    const rows = await d.getAllAsync(
+      'SELECT * FROM mesocycle_weeks WHERE mesocycle_id = ? ORDER BY week_index ASC',
+      [mesocycleId],
+    );
+    return rows;
+  } catch (_e) {
+    return [];
+  }
+}
+
+// Write an adaptation event (engine decision log)
+export async function createAdaptationEvent({ mesocycleWeekId, muscle, exerciseId, decision, delta, reasonCode, reasonText, signals }) {
+  try {
+    const d = await db();
+    const id = `ae_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const now = Date.now();
+    await d.runAsync(
+      `INSERT INTO adaptation_events (id, mesocycle_week_id, muscle, exercise_id, decision, delta, reason_code, reason_text, signals_json, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, mesocycleWeekId, muscle || null, exerciseId || null, decision, delta ?? null, reasonCode, reasonText || null, JSON.stringify(signals || {}), now],
+    );
+    return { id };
+  } catch (_e) {
+    return null;
+  }
+}
+
+// Get planned muscle volume for a week
+export async function getPlannedMuscleVolume(mesocycleWeekId) {
+  try {
+    const d = await db();
+    const rows = await d.getAllAsync(
+      'SELECT * FROM planned_muscle_volume WHERE mesocycle_week_id = ? ORDER BY muscle ASC',
+      [mesocycleWeekId],
+    );
+    return rows;
+  } catch (_e) {
+    return [];
+  }
+}
+
+// Write or update planned muscle volume for a week (engine writes here)
+export async function upsertPlannedMuscleVolume({ mesocycleWeekId, muscle, plannedSets, mev, mav, mrv, source = 'engine' }) {
+  try {
+    const d = await db();
+    const id = `pmv_${mesocycleWeekId}_${muscle}`;
+    const now = Date.now();
+    await d.runAsync(
+      `INSERT INTO planned_muscle_volume (id, mesocycle_week_id, muscle, planned_sets, mev, mav, mrv, source, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET planned_sets = excluded.planned_sets, source = excluded.source, updated_at = excluded.updated_at`,
+      [id, mesocycleWeekId, muscle, plannedSets, mev, mav, mrv, source, now, now],
+    );
+  } catch (_e) {}
+}
+
 export async function createMesocycle(data) {
   const d = await db();
   const id = uid();
@@ -968,6 +1156,8 @@ export async function createMesocycle(data) {
       now,
     ],
   );
+  // Auto-generate week schedule
+  await generateMesocycleWeeks(id);
   return { id, ...data, createdAt: now, updatedAt: now };
 }
 

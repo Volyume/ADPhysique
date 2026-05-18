@@ -519,6 +519,128 @@ export function getStrengthStandard(lift, estimated1RM, bodyWeight) {
   return { ratio: ratio.toFixed(2), label };
 }
 
+// RP-style soreness × performance → volume decision
+// Inputs use numeric scales:
+//   soreness:    1=none  2=healed_early  3=healed_on_time  4=still_sore
+//   performance: 1=exceeded  2=met  3=struggled  4=failed_to_match
+//   pump:        1=none  2=low  3=moderate  4=great
+//   joint:       0=none  1=low  2=moderate  3=high
+// Returns: { decision, delta, reasonCode, reasonText }
+export function computeAdaptiveDecision({ soreness = 2, performance = 2, pump = 3, joint = 0 } = {}) {
+  // Joint pain overrides everything — rotate the exercise
+  if (joint >= 3) {
+    return {
+      decision: 'rotate_exercise',
+      delta: 0,
+      reasonCode: 'joint_high',
+      reasonText: 'High joint discomfort — rotate to a lower-risk exercise.',
+    };
+  }
+
+  // Systemic MRV breach — deload trigger
+  if (performance === 4 && soreness >= 3) {
+    return {
+      decision: 'deload_trigger',
+      delta: 0,
+      reasonCode: 'systemic_mrv_breach',
+      reasonText: 'Could not match previous performance and still sore — recovery debt detected. Consider deloading.',
+    };
+  }
+
+  // Still sore at next session → drop a set
+  if (soreness === 4) {
+    return {
+      decision: 'drop_set',
+      delta: -1,
+      reasonCode: 'residual_soreness',
+      reasonText: 'Still sore at next session — reduce volume by 1 set to allow recovery.',
+    };
+  }
+
+  // Joint discomfort (moderate) — hold volume, no increase
+  if (joint >= 2) {
+    return {
+      decision: 'hold',
+      delta: 0,
+      reasonCode: 'joint_moderate',
+      reasonText: 'Moderate joint discomfort — maintain current volume. Monitor for escalation.',
+    };
+  }
+
+  // RP 2-axis: soreness ≤ 2 (none or healed early) AND performance ≤ 2 (exceeded or met)
+  if (soreness <= 2 && performance <= 2) {
+    if (pump === 1) {
+      // No pump = clear under-stimulus → add 2 sets
+      return {
+        decision: 'add_set',
+        delta: 2,
+        reasonCode: 'under_stimulus',
+        reasonText: 'Full recovery + no pump signal — significantly under minimum stimulus. Add 2 sets.',
+      };
+    }
+    if (pump === 4 && soreness === 2) {
+      // Great pump, healed early — still productive but recovering fine
+      return {
+        decision: 'hold',
+        delta: 0,
+        reasonCode: 'optimal_response',
+        reasonText: 'Excellent stimulus with early recovery — volume is working well. Hold.',
+      };
+    }
+    return {
+      decision: 'add_set',
+      delta: 1,
+      reasonCode: 'good_recovery_good_performance',
+      reasonText: 'Good recovery and performance — add 1 set next week.',
+    };
+  }
+
+  // Struggling or failed but still recovering — hold
+  if (performance >= 3 && soreness <= 3) {
+    return {
+      decision: 'hold',
+      delta: 0,
+      reasonCode: 'performance_struggle',
+      reasonText: 'Performance struggled — hold volume and focus on execution quality.',
+    };
+  }
+
+  // Default: hold
+  return {
+    decision: 'hold',
+    delta: 0,
+    reasonCode: 'hold_default',
+    reasonText: 'Volume is appropriate — continue as planned.',
+  };
+}
+
+// Run the adaptive engine for all muscles after a session week
+// weekFeedback: { [muscle]: { soreness, performance, pump, joint, currentSets, mev, mav, mrv } }
+// Returns: { [muscle]: adaptiveDecision & { nextWeekSets } }
+export function runAdaptiveEngine(weekFeedback = {}) {
+  const results = {};
+
+  for (const [muscle, data] of Object.entries(weekFeedback)) {
+    const decision = computeAdaptiveDecision({
+      soreness: data.soreness ?? 2,
+      performance: data.performance ?? 2,
+      pump: data.pump ?? 3,
+      joint: data.joint ?? 0,
+    });
+
+    const current = data.currentSets ?? data.mav ?? 10;
+    const mev = data.mev ?? 6;
+    const mrv = data.mrv ?? 20;
+
+    let nextWeekSets = current + (decision.delta ?? 0);
+    nextWeekSets = Math.max(mev, Math.min(mrv, nextWeekSets));
+
+    results[muscle] = { ...decision, nextWeekSets, currentSets: current };
+  }
+
+  return results;
+}
+
 // Adaptive volume landmarks — adjusts MEV/MAV/MRV per muscle based on user's feedback signals
 // history: array of { muscle, pumpScore, sorenessScore, jointDiscomfort, performanceTrend, prFrequency, missedReps, weeklyVolume }
 // Each entry = one logged session/week for that muscle
