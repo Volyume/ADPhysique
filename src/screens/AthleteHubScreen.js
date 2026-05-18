@@ -9,7 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { format, differenceInDays } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius, shadow } from '../styles/theme';
-import { BrandTag } from '../components/BrandMark';
+import { VolyumeMark } from '../components/BrandMark';
 import InfoTooltip from '../components/InfoTooltip';
 import useAppStore from '../store/useAppStore';
 import {
@@ -232,7 +232,7 @@ export default function AthleteHubScreen({ navigation }) {
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Athlete Hub</Text>
-        <BrandTag size={13} color={colors.textMuted} />
+        <VolyumeMark size={22} color={colors.textMuted} />
       </View>
 
       <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>

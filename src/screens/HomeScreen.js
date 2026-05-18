@@ -8,7 +8,7 @@ import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { BrandTag } from '../components/BrandMark';
+import { VolyumeMark } from '../components/BrandMark';
 import {
   getAllWorkouts, getCompletedWorkoutSets, getActivePlan, getRoutinesForPlan,
   getAllRoutineExerciseCounts, createWorkout, getRoutineExercisesWithDetails,
@@ -240,7 +240,7 @@ export default function HomeScreen({ navigation }) {
         {/* ── Branded header ── */}
         <View style={styles.header}>
           <Text style={styles.pageTitle}>Train</Text>
-          <BrandTag size={13} color={colors.textMuted} />
+          <VolyumeMark size={22} color={colors.textMuted} />
         </View>
 
         {/* ── This week — progress bars ── */}

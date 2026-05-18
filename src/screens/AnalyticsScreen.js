@@ -10,7 +10,7 @@ import { format } from 'date-fns';
 import { BarChart } from 'react-native-gifted-charts';
 
 import { colors, fontSize, fontWeight, spacing, radius, volumeColors, motion } from '../styles/theme';
-import { BrandTag } from '../components/BrandMark';
+import { VolyumeMark } from '../components/BrandMark';
 import InfoTooltip from '../components/InfoTooltip';
 import useAppStore from '../store/useAppStore';
 import {
@@ -329,7 +329,7 @@ export default function AnalyticsScreen({ navigation }) {
         {/* ── Header ────────────────────────────────────────── */}
         <View style={styles.header}>
           <Text style={styles.pageTitle}>Progress</Text>
-          <BrandTag size={13} color={colors.textMuted} />
+          <VolyumeMark size={22} color={colors.textMuted} />
         </View>
 
         {/* ── 1 · Mesocycle Pulse Card ───────────────────────── */}

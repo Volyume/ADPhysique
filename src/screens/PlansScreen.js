@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { BrandTag } from '../components/BrandMark';
+import { VolyumeMark } from '../components/BrandMark';
 import {
   getActivePlan, getAllPlansForUser,
   getWorkoutTemplates, getPlanWorkoutCounts, getAllRoutineExerciseCounts,
@@ -171,7 +171,7 @@ export default function PlansScreen({ navigation }) {
       >
         <View style={styles.screenHeader}>
           <Text style={styles.pageTitle}>Plans</Text>
-          <BrandTag size={13} color={colors.textMuted} />
+          <VolyumeMark size={22} color={colors.textMuted} />
         </View>
 
         {/* Active Plan */}
