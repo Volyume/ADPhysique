@@ -329,6 +329,20 @@ export default function AnalyticsScreen({ navigation }) {
         </View>
 
         {/* ── 1 · Mesocycle Pulse Card ───────────────────────── */}
+        <View style={[styles.rowBetween, { paddingHorizontal: spacing.lg, marginBottom: spacing.sm }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+            <Text style={styles.sectionLabel}>TRAINING BLOCK</Text>
+            <InfoTooltip text={
+              'A Training Block (mesocycle) is a structured phase where volume and intensity build week by week.\n\n' +
+              'Week 1–5: progressively harder training. RIR (Reps In Reserve) drops each week — ' +
+              'from 3 (easy) down to 0 (maximum effort) — so you gradually push closer to your limit.\n\n' +
+              'Week 6 (Deload): deliberately lighter. This flushes accumulated fatigue so you recover fully ' +
+              'and come back stronger.\n\n' +
+              'After the deload you start a fresh block on the same plan — usually with a little more volume ' +
+              'than last time. The plan stays; only the block resets.'
+            } />
+          </View>
+        </View>
         <MesocyclePulseCard
           meso={activeMeso}
           currentWeek={mesoCurrentWeek()}
@@ -350,6 +364,14 @@ export default function AnalyticsScreen({ navigation }) {
                 {deloadAlert.reasons?.[0] ?? 'Your body is signalling it needs a recovery week.'}
               </Text>
             </View>
+            <InfoTooltip text={
+              'A deload week uses lighter loads — target RIR 4 (4 reps left in the tank) — to flush ' +
+              'accumulated fatigue without losing muscle or strength.\n\n' +
+              'Keep all the same exercises. Drop weights by ~10–20% and stop well before failure. ' +
+              'Sessions should feel almost too easy.\n\n' +
+              'Muscle is built during recovery, not during the hard sets. Most people feel noticeably ' +
+              'stronger in the first session after a proper deload.'
+            } size={13} />
           </View>
         )}
 
@@ -368,7 +390,13 @@ export default function AnalyticsScreen({ navigation }) {
           <View style={styles.rowBetween}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
               <Text style={styles.sectionLabel}>THIS WEEK'S VOLUME</Text>
-              <InfoTooltip text="Working sets per muscle group this week. Colours show how your volume compares to your recommended minimum (orange), optimal range (green), or over maximum (red). Based on hypertrophy research volume landmarks." />
+              <InfoTooltip text={
+                'Working sets per muscle group this week.\n\n' +
+                '🟠 Below MEV — under your Minimum Effective Volume. Not enough stimulus for growth.\n\n' +
+                '🟢 MEV → MAV — in your optimal Minimum Adaptive Volume range. This is the sweet spot for progress.\n\n' +
+                '🔴 Over MRV — above your Maximum Recoverable Volume. Fatigue is outpacing stimulus; consider reducing sets.\n\n' +
+                'MEV, MAV, and MRV are volume landmarks from hypertrophy research. Your personal landmarks adjust as Volyume learns your recovery.'
+              } />
             </View>
             <TouchableOpacity onPress={() => navigation.navigate('VolumeHeatmap')}>
               <Text style={styles.seeAll}>Full view</Text>

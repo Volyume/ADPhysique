@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Keyboard } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import InfoTooltip from './InfoTooltip';
 
 const SET_TYPE_LABELS = {
   straight: 'Working',
@@ -114,7 +115,18 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
 
       {/* RIR Row */}
       <View style={styles.inputRow}>
-        <Text style={styles.fieldLabel}>RIR</Text>
+        <View style={styles.fieldLabelRow}>
+          <Text style={styles.fieldLabel}>RIR</Text>
+          <InfoTooltip size={12} text={
+            'Reps In Reserve — how many more reps you could do before technical failure.\n\n' +
+            'RIR 4 = very easy, 4 reps left\n' +
+            'RIR 2 = moderately hard, 2 reps left\n' +
+            'RIR 1 = hard, 1 rep left\n' +
+            'RIR 0 = maximal effort, nothing left\n\n' +
+            'Early in a training block aim for RIR 2–3. As the block progresses you push to RIR 0–1. ' +
+            'Volyume uses RIR to track intensity and calculate progression targets.'
+          } />
+        </View>
         <View style={styles.rirRow}>
           {[null, 0, 1, 2, 3, 4].map(v => (
             <TouchableOpacity
@@ -161,8 +173,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
   },
-  fieldLabel: {
+  fieldLabelRow: {
     width: 90,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  fieldLabel: {
     fontSize: fontSize.sm,
     color: colors.textSecondary,
     fontWeight: fontWeight.medium,
