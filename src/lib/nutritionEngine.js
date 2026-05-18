@@ -37,23 +37,30 @@ const PHASE_LABELS = {
 };
 
 // Bodybuilding-appropriate rates (g protein per kg body weight).
-// Lean/build phases: 2.2 g/kg (~1 g/lb). Deficit phases raised further
-// to protect muscle when calories are restricted.
+// Evidence base for trained physique athletes:
+//   - Morton et al. 2018 (meta-analysis): gains plateau ~1.6 g/kg on
+//     average, individual variation supports up to ~2.2 g/kg.
+//   - ISSN position stand (Jäger 2017): physique athletes benefit from
+//     the upper end of the protein range.
+//   - Helms et al. 2014 (JISSN, natural contest prep): 2.3–3.1 g/kg of
+//     LEAN mass during a calorie deficit to preserve muscle.
+// Bodybuilding floor is ~1 g/lb (2.2 g/kg); deficit phases scale up the
+// harder the cut, because protein protects muscle when energy is low.
 const PROTEIN_G_PER_KG = {
-  lean_gain: 2.2,
-  build: 2.0,
-  maintain: 2.0,
-  recomp: 2.5,
-  mild_cut: 2.5,
-  aggressive_cut: 2.7,
-  contest_prep: 2.7,
+  lean_gain: 2.4,
+  build: 2.2,
+  maintain: 2.2,
+  recomp: 2.6,
+  mild_cut: 2.6,
+  aggressive_cut: 2.9,
+  contest_prep: 3.1,
 };
 
 const KCAL_PER_G_PROTEIN = 4;
 const KCAL_PER_G_CARB = 4;
 const KCAL_PER_G_FAT = 9;
 const FAT_FRACTION = 0.25;
-const PROTEIN_FLOOR_G_PER_KG = 2.0;
+const PROTEIN_FLOOR_G_PER_KG = 2.2;
 const MAX_SAFE_LOSS_RATE = 0.008;   // 0.8 % BW/week
 const HARD_GATE_LOSS_RATE = 0.015;  // 1.5 % BW/week
 const KCAL_PER_KG_FAT = 7700;       // rough energy equivalent of 1 kg body fat
