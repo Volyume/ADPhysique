@@ -11,6 +11,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import {
   getAllMesocycles, createMesocycle, getAllWorkouts, getCompletedWorkoutSets,
+  getActivePlan, getRoutinesForPlan,
 } from '../lib/database';
 import { calculateTonnage } from '../lib/algorithms';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
@@ -22,6 +23,7 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 export default function MesocycleBuilderScreen({ navigation }) {
   const { user } = useAppStore();
   const [mesocycles, setMesocycles] = useState([]);
+  const [activePlan, setActivePlanData] = useState(null);  // coach/manual-built plan
   const [activeStats, setActiveStats] = useState(null);   // { tonnageBars, recovery, deload }
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({
@@ -39,13 +41,25 @@ export default function MesocycleBuilderScreen({ navigation }) {
   }, [user?.id]));
 
   async function loadAll() {
-    await Promise.all([loadMesocycles(), loadActiveStats()]);
+    await Promise.all([loadMesocycles(), loadActiveStats(), loadActivePlan()]);
   }
 
   async function loadMesocycles() {
     if (!user?.id) return;
     const mine = await getAllMesocycles(user.id);
     setMesocycles(mine);
+  }
+
+  async function loadActivePlan() {
+    if (!user?.id) return;
+    try {
+      const plan = await getActivePlan(user.id);
+      if (!plan) { setActivePlanData(null); return; }
+      const routines = await getRoutinesForPlan(plan.id).catch(() => []);
+      setActivePlanData({ ...plan, workoutCount: routines.length });
+    } catch (_) {
+      setActivePlanData(null);
+    }
   }
 
   async function loadActiveStats() {
@@ -153,6 +167,26 @@ export default function MesocycleBuilderScreen({ navigation }) {
         contentContainerStyle={styles.list}
         ListHeaderComponent={
           <>
+            {/* ── Active plan (coach / manual built) ───── */}
+            {activePlan && (
+              <View style={styles.planCard}>
+                <View style={styles.planCardHead}>
+                  <Ionicons name="barbell" size={18} color={colors.primary} />
+                  <Text style={styles.planCardTag}>YOUR ACTIVE PLAN</Text>
+                </View>
+                <Text style={styles.planCardName}>{activePlan.name}</Text>
+                <Text style={styles.planCardMeta}>
+                  {activePlan.splitType ? `${activePlan.splitType} · ` : ''}
+                  {activePlan.workoutCount} workout{activePlan.workoutCount !== 1 ? 's' : ''}
+                </Text>
+                <Text style={styles.planCardNote}>
+                  This is the training your coach built. A training block is an
+                  optional multi-week layer on top of it — set a start date,
+                  duration and recovery week to track periodised progress.
+                </Text>
+              </View>
+            )}
+
             {/* ── Active block dashboard ───────────────── */}
             {activeStats && (
               <ActiveMesoDashboard
@@ -220,7 +254,9 @@ export default function MesocycleBuilderScreen({ navigation }) {
             <Ionicons name="calendar-outline" size={48} color={colors.surface3} />
             <Text style={styles.emptyTitle}>No training blocks yet</Text>
             <Text style={styles.emptyText}>
-              Create a block to track your multi-week training progress.
+              {activePlan
+                ? 'Your plan above is active and ready to train. A training block is optional — add one to track periodised, multi-week progress.'
+                : 'Create a block to track your multi-week training progress.'}
             </Text>
           </View>
         }
@@ -463,6 +499,23 @@ const styles = StyleSheet.create({
   mesoName:   { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
   mesoMeta:   { flexDirection: 'row', gap: spacing.lg, flexWrap: 'wrap' },
   metaItem:   { fontSize: fontSize.sm, color: colors.textSecondary },
+
+  planCard: {
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.primary + '40',
+    padding: spacing.lg, gap: spacing.xs, marginBottom: spacing.lg,
+  },
+  planCardHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  planCardTag: {
+    fontSize: fontSize.xs, fontWeight: fontWeight.black,
+    color: colors.primary, letterSpacing: 1,
+  },
+  planCardName: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  planCardMeta: { fontSize: fontSize.sm, color: colors.textSecondary },
+  planCardNote: {
+    fontSize: fontSize.sm, color: colors.textMuted,
+    lineHeight: 20, marginTop: spacing.sm,
+  },
   weekProgress: { gap: spacing.sm },
   weekLabel:  { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary },
   weekBar:    { flexDirection: 'row', gap: spacing.sm },

@@ -246,9 +246,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           ...cs,
           setType: 'warmup',
           weight: warmupWeight || cs.weight,
-          reps: routineExercise?.recommendedRepsMax
-            ? Math.min(routineExercise.recommendedRepsMax + 4, 20)
-            : 15,
+          // A general warmup is light weight for ~10 reps regardless of the
+          // working rep target — high-rep warmups before low-rep work are
+          // illogical, so keep this a clean fixed default.
+          reps: 10,
         }));
       }
     }
