@@ -276,6 +276,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       Alert.alert('Enter reps', 'Please enter the number of reps completed.');
       return;
     }
+    // Weight is required unless this is a bodyweight movement. A blank or
+    // non-numeric field means the user hasn't entered a load yet — block
+    // rather than silently saving a 0 kg set.
+    const isBodyweight = /body\s*weight/i.test(exercise.equipment || '');
+    const weightNum = parseFloat(currentSet.weight);
+    if (!isBodyweight && (currentSet.weight === '' || currentSet.weight == null || isNaN(weightNum))) {
+      Alert.alert('Enter weight', `Enter the weight used (in ${units}) before completing this set.`);
+      return;
+    }
 
     setSaving(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -756,7 +765,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                       {s.weight}{units} × {s.actualReps}
                       {isWarmup ? ' · Warm-up' : ''}
                     </Text>
-                    {!isWarmup && est1RM && (
+                    {!isWarmup && est1RM > 0 && (
                       <Text style={styles.loggedEst1RM}>≈{est1RM.toFixed(0)}{units} 1RM</Text>
                     )}
                     <Ionicons name="checkmark-circle" size={16} color={isWarmup ? colors.warning : colors.success} />
