@@ -1419,3 +1419,41 @@ export async function restoreAllTables(dump) {
     }
   });
 }
+
+// ─── Adaptive Volume Landmarks ──────────────────────────────────────────────
+// Queries workout_feedback joined with per-muscle set counts to produce the
+// history array consumed by computeAdaptiveLandmarks() in algorithms.js.
+export async function getAdaptiveLandmarkHistory(userId) {
+  try {
+    const d = await db();
+    // Get feedback joined with workout volume per muscle
+    // Returns array of {muscle, pumpScore, sorenessScore, jointDiscomfort, weeklyVolume, performanceTrend}
+    const feedbacks = await d.getAllAsync(
+      `SELECT wf.pump_score, wf.soreness_score, wf.joint_discomfort, wf.session_difficulty,
+              ws.exercise_id, e.primary_muscle as muscle, COUNT(*) as set_count
+       FROM workout_feedback wf
+       JOIN workouts w ON w.id = wf.workout_id
+       JOIN workout_sets ws ON ws.workout_id = wf.workout_id AND ws.set_type != 'warmup'
+       JOIN exercises e ON e.id = ws.exercise_id
+       WHERE w.user_id = ? AND wf.pump_score IS NOT NULL
+       GROUP BY wf.id, e.primary_muscle
+       ORDER BY w.started_at DESC
+       LIMIT 200`,
+      [userId],
+    );
+
+    // Transform into muscle-keyed history entries
+    return feedbacks.map(row => ({
+      muscle: row.muscle,
+      pumpScore: row.pump_score,
+      sorenessScore: row.soreness_score,
+      jointDiscomfort: row.joint_discomfort || 0,
+      weeklyVolume: row.set_count,
+      performanceTrend: 0, // TODO: derive from rep trend
+      prFrequency: 0,
+      missedReps: 0,
+    }));
+  } catch (_e) {
+    return [];
+  }
+}
