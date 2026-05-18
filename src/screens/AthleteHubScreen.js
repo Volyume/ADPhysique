@@ -166,16 +166,7 @@ export default function AthleteHubScreen({ navigation }) {
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Athlete Hub</Text>
-        <View style={styles.headerRight}>
-          <BrandTag size={13} color={colors.textMuted} />
-          <TouchableOpacity
-            style={styles.settingsCog}
-            onPress={() => navigation.navigate('Settings')}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          >
-            <Ionicons name="settings-outline" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
-        </View>
+        <BrandTag size={13} color={colors.textMuted} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -418,7 +409,6 @@ const styles = StyleSheet.create({
   },
   headerTitle:   { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
   headerRight:   { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  settingsCog:   { padding: spacing.xs },
 
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxxl },
 

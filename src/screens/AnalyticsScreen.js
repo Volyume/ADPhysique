@@ -6,9 +6,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { format, subDays } from 'date-fns';
+import { format } from 'date-fns';
 import { BarChart } from 'react-native-gifted-charts';
-import CalendarHeatmap from 'react-native-calendar-heatmap';
 
 import { colors, fontSize, fontWeight, spacing, radius, volumeColors, motion } from '../styles/theme';
 import { BrandTag } from '../components/BrandMark';
@@ -540,43 +539,62 @@ function PRSparkline({ bars, windowDays }) {
       </View>
     );
   }
+  const maxVal = Math.max(...bars.map(b => b.value), 1);
+  const BAR_MAX_H = 56;
   return (
     <View style={styles.prWrap}>
       <Text style={styles.prTotal}>{total} new bests in {windowDays} days</Text>
-      <BarChart
-        data={bars}
-        barWidth={Math.max(12, Math.floor((SCREEN_W - 80) / bars.length - 8))}
-        spacing={4}
-        roundedTop
-        hideAxesAndRules
-        noOfSections={3}
-        height={64}
-        barBorderRadius={3}
-        isAnimated
-        xAxisThickness={0}
-        yAxisThickness={0}
-        yAxisTextStyle={{ display: 'none' }}
-        xAxisLabelTextStyle={styles.barAxisLabel}
-      />
+      <View style={styles.prBarsRow}>
+        {bars.map((bar, i) => {
+          const barH = bar.value > 0
+            ? Math.max(8, Math.round((bar.value / maxVal) * BAR_MAX_H))
+            : 3;
+          return (
+            <View key={i} style={styles.prBarCol}>
+              <View style={[
+                styles.prBar,
+                {
+                  height: barH,
+                  backgroundColor: bar.value > 0 ? colors.gold : colors.surface3,
+                },
+              ]} />
+            </View>
+          );
+        })}
+      </View>
     </View>
   );
 }
 
 function TrainingCalendar({ values }) {
-  const endDate = new Date();
-  const startDate = subDays(endDate, 83);
+  const trainedDates = new Set(values.map(v => v.date));
+  const today = new Date();
+  // Build 84 days oldest→newest, grouped into 12 weeks of 7 days
+  const SQ = Math.max(10, Math.floor((SCREEN_W - 90) / 14)); // square size
+  const weeks = Array.from({ length: 12 }, (_, wi) =>
+    Array.from({ length: 7 }, (_, di) => {
+      const dayOffset = 83 - (wi * 7 + di);
+      const d = new Date(today.getTime() - dayOffset * 86400000);
+      return trainedDates.has(d.toISOString().slice(0, 10));
+    }),
+  );
   return (
     <View style={styles.calWrap}>
-      <CalendarHeatmap
-        values={values}
-        startDate={startDate}
-        endDate={endDate}
-        colorArray={[colors.surface2, colors.primary]}
-        gutterSize={3}
-        horizontal
-        showMonthLabels={false}
-        squareSize={10}
-      />
+      <View style={styles.calGrid}>
+        {weeks.map((week, wi) => (
+          <View key={wi} style={styles.calCol}>
+            {week.map((trained, di) => (
+              <View
+                key={di}
+                style={{
+                  width: SQ, height: SQ, borderRadius: 2,
+                  backgroundColor: trained ? colors.primary : colors.surface2,
+                }}
+              />
+            ))}
+          </View>
+        ))}
+      </View>
       <View style={styles.calLegend}>
         <View style={[styles.calDot, { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border }]} />
         <Text style={styles.calLegendText}>Rest</Text>
@@ -710,8 +728,13 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.primary,
   },
   windowToggleText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.bold },
-  prWrap:    { gap: spacing.xs },
+  prWrap:    { gap: spacing.sm },
   prTotal:   { fontSize: fontSize.xs, color: colors.textMuted },
+  prBarsRow: {
+    flexDirection: 'row', alignItems: 'flex-end', gap: 4, height: 60,
+  },
+  prBarCol:  { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
+  prBar:     { width: '100%', borderRadius: 2 },
   prEmpty:   {
     backgroundColor: colors.surface, borderRadius: radius.md,
     padding: spacing.lg, borderWidth: 1, borderColor: colors.border,
@@ -724,6 +747,8 @@ const styles = StyleSheet.create({
     padding: spacing.md, borderWidth: 1, borderColor: colors.border,
     gap: spacing.md,
   },
+  calGrid:       { flexDirection: 'row', gap: 3 },
+  calCol:        { flex: 1, gap: 3 },
   calLegend:     { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   calDot:        { width: 10, height: 10, borderRadius: 2 },
   calLegendText: { fontSize: fontSize.xs, color: colors.textMuted },

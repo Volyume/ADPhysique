@@ -41,7 +41,7 @@ export default function PeakWeekScreen({ navigation }) {
   const { user } = useAppStore();
 
   const [showDateText, setShowDateText] = useState('');
-  const [federation, setFederation] = useState('NPC');
+  const [federation, setFederation] = useState('UKBFF');
   const [bodyweight, setBodyweight] = useState('');
   const [lean, setLean] = useState('');
   const [prepCarbs, setPrepCarbs] = useState('3');

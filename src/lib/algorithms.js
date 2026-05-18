@@ -11,7 +11,7 @@ export const VOLUME_LANDMARKS = {
   forearms:    { mev: 8,  mav: 14, mrv: 20 },
   quads:       { mev: 8,  mav: 14, mrv: 20 },
   hamstrings:  { mev: 6,  mav: 12, mrv: 20 },
-  glutes:      { mev: 0,  mav: 8,  mrv: 16 },
+  glutes:      { mev: 4,  mav: 10, mrv: 16 },
   calves:      { mev: 8,  mav: 14, mrv: 20 },
   abs:         { mev: 0,  mav: 18, mrv: 25 },
   traps:       { mev: 6,  mav: 12, mrv: 20 },
