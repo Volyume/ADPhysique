@@ -164,14 +164,12 @@ export default function WeeklyCheckInScreen({ navigation }) {
   const [sorenessScore, setSorenessScore] = useState(null); // 1–5
   const [calsAdherence, setCalsAdherence] = useState(null); // 'yes' | 'no' | 'untracked'
   const [stepsAdherence, setStepsAdherence] = useState(null); // 'hit' | 'mostly' | 'missed'
-  const [cycleOverride, setCycleOverride] = useState(false);
   const [sleepHours, setSleepHours] = useState('');
   const [notes, setNotes] = useState('');
 
   // Profile-derived flags
   const hasNutritionTarget = Boolean(nutritionTargets?.targetKcal);
   const hasStepsTarget = Boolean(userProfile?.stepsTarget ?? userProfile?.steps_target);
-  const trackCycle = userProfile?.trackCycle === true || userProfile?.track_cycle === true;
 
   // Load morning weights for the week summary
   const [weekWeights, setWeekWeights] = useState([]);
@@ -217,7 +215,6 @@ export default function WeeklyCheckInScreen({ navigation }) {
         sleepHours: sleepHours.trim() ? parseFloat(sleepHours) : null,
         calsAdherence: calsAdherence ?? null,
         stepsAdherence: stepsAdherence ?? null,
-        cycleOverride: cycleOverride ? 1 : 0,
         notes: notes.trim() || null,
       });
 
@@ -251,7 +248,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
   }, [
     canSubmit, busy, user?.id, morningWeight, alreadyLoggedToday,
     energyScore, sorenessScore, sleepHours, calsAdherence, stepsAdherence,
-    cycleOverride, notes, weekStart, navigation,
+    notes, weekStart, navigation,
   ]);
 
   // ─── Render ────────────────────────────────────────────────────────────────
@@ -394,30 +391,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             </View>
           )}
 
-          {/* ── 6. Cycle phase (optional) ─────────────────────────────────── */}
-          {trackCycle && (
-            <View style={styles.section}>
-              <SectionLabel>
-                Anything affecting your weight this week?{'\n'}(cycle phase, travel, illness)
-              </SectionLabel>
-              <TouchableOpacity
-                style={[styles.toggleBtn, cycleOverride && styles.toggleBtnSelected]}
-                onPress={() => setCycleOverride((v) => !v)}
-                activeOpacity={0.75}
-              >
-                <View style={[styles.checkbox, cycleOverride && styles.checkboxSelected]}>
-                  {cycleOverride && (
-                    <Ionicons name="checkmark" size={13} color={colors.background} />
-                  )}
-                </View>
-                <Text style={[styles.toggleBtnText, cycleOverride && styles.toggleBtnTextSelected]}>
-                  Weight may be unreliable this week
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* ── 7. Sleep (optional) ───────────────────────────────────────── */}
+          {/* ── 6. Sleep (optional) ───────────────────────────────────────── */}
           <View style={styles.section}>
             <SectionLabel>Average sleep? (hours, optional)</SectionLabel>
             <TextInput

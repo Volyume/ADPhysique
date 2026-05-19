@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -136,10 +135,6 @@ export default function ProGoalSetupScreen({ navigation, route }) {
   const [selectedSteps, setSelectedSteps] = useState(
     userProfile?.stepsTarget ?? 8000,
   );
-  const [trackCycle, setTrackCycle] = useState(
-    userProfile?.trackCycle ?? false,
-  );
-
   const canSave = selectedPhase !== null;
 
   const handleSave = async () => {
@@ -150,7 +145,6 @@ export default function ProGoalSetupScreen({ navigation, route }) {
       goalPhase: selectedPhase,
       phaseStartedAt: now,
       stepsTarget: selectedSteps,
-      trackCycle,
     });
     navigation.goBack();
   };
@@ -204,27 +198,6 @@ export default function ProGoalSetupScreen({ navigation, route }) {
               onPress={() => setSelectedSteps(steps)}
             />
           ))}
-        </View>
-
-        {/* ── Section 3: Cycle tracking ── */}
-        <SectionLabel style={styles.sectionLabelSpaced}>Cycle-aware weight tracking</SectionLabel>
-        <SectionSubtitle>
-          If your weight fluctuates with your menstrual cycle, enabling this lets you flag weeks where the
-          number on the scale isn't reliable. Volyume will pause calorie advice on those weeks.
-        </SectionSubtitle>
-
-        <View style={styles.cycleRow}>
-          <View style={styles.cycleTextWrap}>
-            <Text style={styles.cycleLabel}>Track my cycle</Text>
-            <Text style={styles.cycleNote}>Optional. You can change this anytime.</Text>
-          </View>
-          <Switch
-            value={trackCycle}
-            onValueChange={setTrackCycle}
-            trackColor={{ false: colors.surface2, true: colors.primaryDim }}
-            thumbColor={trackCycle ? colors.primary : colors.textSecondary}
-            accessibilityLabel="Enable cycle-aware weight tracking"
-          />
         </View>
 
         {/* ── Footer note ── */}
@@ -387,32 +360,6 @@ const styles = StyleSheet.create({
   stepChipTextSelected: {
     color: colors.primary,
     fontWeight: fontWeight.semibold,
-  },
-
-  // Cycle toggle row
-  cycleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-  },
-  cycleTextWrap: {
-    flex: 1,
-    marginRight: spacing.lg,
-  },
-  cycleLabel: {
-    color: colors.textPrimary,
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.medium,
-    marginBottom: spacing.xs,
-  },
-  cycleNote: {
-    color: colors.textMuted,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.regular,
   },
 
   // Footer note
