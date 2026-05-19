@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +23,7 @@ import {
   getWeeklyPRCount,
 } from '../lib/database';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { requestNotificationPermissions, getNotificationPermissionStatus } from '../lib/notifications';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -218,8 +220,28 @@ export default function WeeklyCheckInScreen({ navigation }) {
         notes: notes.trim() || null,
       });
 
-      // 3. Navigate to the coaching output
-      navigation.navigate('CoachOutput', { weekStart: weekStart.getTime() });
+      // 3. Offer notification permission if never asked
+      const goCoach = () => navigation.navigate('CoachOutput', { weekStart: weekStart.getTime() });
+      const permStatus = await getNotificationPermissionStatus();
+      if (permStatus === 'undetermined') {
+        Alert.alert(
+          'Daily weight reminders',
+          'A morning nudge to log your weight makes your weekly coaching more accurate. Enable it?',
+          [
+            { text: 'Not now', style: 'cancel', onPress: goCoach },
+            {
+              text: 'Yes please',
+              onPress: async () => {
+                await requestNotificationPermissions().catch(() => {});
+                goCoach();
+              },
+            },
+          ],
+          { cancelable: false },
+        );
+      } else {
+        goCoach();
+      }
     } catch (e) {
       console.warn('[WeeklyCheckIn] submit failed', e);
     } finally {

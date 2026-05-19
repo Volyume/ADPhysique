@@ -19,6 +19,8 @@ import {
 } from '../lib/database';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
 import { getBetaBannerText } from '../lib/proGate';
+import { computeEWMA } from '../lib/weeklyCoach';
+import { LineChart } from 'react-native-gifted-charts';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { exportCoachReport } from '../lib/coachExport';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
@@ -107,6 +109,66 @@ function detectRepRegressions(sets, exerciseMap) {
   return warnings;
 }
 
+// ─── Weight sparkline ─────────────────────────────────────────────────────────
+
+function WeightSparkline({ data, units }) {
+  const CHART_W = SCREEN_W - 72;
+  const ewmaPoints = data.map(d => ({ value: d.ewmaKg }));
+  const rawPoints  = data.map(d => ({ value: d.rawKg }));
+  const allVals    = data.flatMap(d => [d.rawKg, d.ewmaKg]).filter(Boolean);
+  const minVal     = Math.min(...allVals);
+  const maxVal     = Math.max(...allVals);
+  const latest     = data[data.length - 1];
+
+  return (
+    <View style={styles.sparklineWrap}>
+      <LineChart
+        data={ewmaPoints}
+        data2={rawPoints}
+        width={CHART_W}
+        height={72}
+        color={colors.primary}
+        color2={`${colors.textMuted}66`}
+        thickness={2}
+        thickness2={1}
+        dataPointsRadius={0}
+        dataPointsRadius2={2.5}
+        dataPointsColor2={`${colors.textMuted}66`}
+        hideDataPoints
+        curved
+        areaChart
+        startFillColor={colors.primary}
+        endFillColor={colors.primary}
+        startOpacity={0.12}
+        endOpacity={0}
+        initialSpacing={0}
+        endSpacing={4}
+        hideYAxisText
+        hideAxesAndRules
+        maxValue={maxVal + 0.5}
+        minValue={minVal - 0.5}
+        yAxisExtraHeight={8}
+        scrollToEnd={false}
+        disableScroll
+      />
+      {latest && (
+        <View style={styles.sparklineLegend}>
+          <View style={styles.sparklineLegendRow}>
+            <View style={[styles.sparklineDot, { backgroundColor: colors.primary }]} />
+            <Text style={styles.sparklineLegendText}>Trend</Text>
+            <Text style={styles.sparklineLegendVal}>{latest.ewmaKg?.toFixed(1)} {units === 'lbs' ? 'lbs' : 'kg'}</Text>
+          </View>
+          <View style={styles.sparklineLegendRow}>
+            <View style={[styles.sparklineDot, { backgroundColor: colors.textMuted }]} />
+            <Text style={styles.sparklineLegendText}>Daily</Text>
+            <Text style={styles.sparklineLegendVal}>{latest.rawKg?.toFixed(1)} {units === 'lbs' ? 'lbs' : 'kg'}</Text>
+          </View>
+        </View>
+      )}
+    </View>
+  );
+}
+
 export default function AthleteHubScreen({ navigation }) {
   const { user, userProfile, units } = useAppStore();
   const [nutritionTargets, setNutritionTargets] = useState(null);
@@ -123,6 +185,7 @@ export default function AthleteHubScreen({ navigation }) {
   const [engineLogOpen, setEngineLogOpen] = useState(false);
   const [checkinDoneThisWeek, setCheckinDoneThisWeek] = useState(false);
   const [morningWeightCount, setMorningWeightCount] = useState(0);
+  const [weightTrend, setWeightTrend] = useState([]);
 
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
@@ -169,6 +232,9 @@ export default function AthleteHubScreen({ navigation }) {
       setCheckinDoneThisWeek(!!ci);
       const weights = await getMorningWeightsLast14Days(user.id);
       setMorningWeightCount(weights.length);
+      if (weights.length >= 3) {
+        setWeightTrend(computeEWMA(weights, 0.2));
+      }
     } catch (_) {}
 
     await Promise.all([
@@ -364,6 +430,28 @@ export default function AthleteHubScreen({ navigation }) {
             <Text style={styles.betaBanner}>{getBetaBannerText()}</Text>
           )}
         </TouchableOpacity>
+
+        {/* ── Weight trend ──────────────────────────────── */}
+        {weightTrend.length >= 3 && (
+          <View style={styles.sectionCard}>
+            <View style={styles.cardHeader}>
+              <View style={[styles.cardIconWrap, { backgroundColor: colors.primaryBg }]}>
+                <Ionicons name="trending-down-outline" size={20} color={colors.primary} />
+              </View>
+              <View style={styles.cardHeaderText}>
+                <Text style={styles.cardTitle}>Weight trend</Text>
+                <Text style={styles.cardSubtitle}>
+                  {weightTrend.length}-day EWMA · {units === 'lbs' ? 'lbs' : 'kg'}
+                </Text>
+              </View>
+              <InfoTooltip
+                size={13}
+                text="Smooth trend line through your daily weigh-ins. Day-to-day swings from water, food, and sleep are normal — the trend is what matters. A steady downward line on a cut, or slow upward on a bulk, means things are working."
+              />
+            </View>
+            <WeightSparkline data={weightTrend} units={units} />
+          </View>
+        )}
 
         {/* ── Nutrition ─────────────────────────────────── */}
         <TouchableOpacity
@@ -769,4 +857,10 @@ const styles = StyleSheet.create({
   adaptHistMuscle: { fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.semibold },
   adaptHistReason: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2, lineHeight: 16 },
   adaptHistDate: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
+  sparklineWrap: { marginTop: spacing.sm, overflow: 'hidden' },
+  sparklineLegend: { flexDirection: 'row', gap: spacing.xl, marginTop: spacing.sm, paddingHorizontal: 2 },
+  sparklineLegendRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  sparklineDot: { width: 7, height: 7, borderRadius: 4 },
+  sparklineLegendText: { fontSize: fontSize.xs, color: colors.textSecondary },
+  sparklineLegendVal: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textPrimary },
 });
