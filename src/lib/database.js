@@ -358,6 +358,50 @@ const SCHEMA_MIGRATIONS = [
   [
     'ALTER TABLE programmes ADD COLUMN difficulty INTEGER',
   ],
+  // v6 — Pro coaching tables: morning weights, weekly check-ins, coach outputs
+  [
+    `CREATE TABLE IF NOT EXISTS morning_weights (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      logged_at INTEGER NOT NULL,
+      weight_kg REAL NOT NULL,
+      notes TEXT,
+      created_at INTEGER NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_morning_weights_user ON morning_weights(user_id, logged_at)`,
+    `CREATE TABLE IF NOT EXISTS weekly_checkins (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      week_start INTEGER NOT NULL,
+      energy_score INTEGER,
+      soreness_score INTEGER,
+      stress_score INTEGER,
+      sleep_hours REAL,
+      cals_adherence TEXT,
+      steps_adherence TEXT,
+      cycle_override INTEGER DEFAULT 0,
+      notes TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_weekly_checkins_user ON weekly_checkins(user_id, week_start)`,
+    `CREATE TABLE IF NOT EXISTS coach_outputs (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      week_start INTEGER NOT NULL,
+      goal_phase TEXT,
+      volume_signal INTEGER,
+      load_signal TEXT,
+      recovery_flag TEXT,
+      calorie_change INTEGER,
+      steps_target INTEGER,
+      cardio_prescription TEXT,
+      why_this TEXT,
+      output_json TEXT,
+      created_at INTEGER NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_coach_outputs_user ON coach_outputs(user_id, week_start)`,
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
@@ -1876,4 +1920,225 @@ export async function getAdaptiveLandmarkHistory(userId) {
   } catch (_e) {
     return [];
   }
+}
+
+// ─── Pro: Morning Weights ─────────────────────────────────────────────────────
+
+export async function logMorningWeight(userId, { weightKg, loggedAt = Date.now(), notes = null } = {}) {
+  const d = await db();
+  const id = uid();
+  const now = Date.now();
+  const dayStart = loggedAt - (loggedAt % 86400000);
+  const existing = await d.getFirstAsync(
+    'SELECT id FROM morning_weights WHERE user_id = ? AND logged_at >= ? AND logged_at < ?',
+    [userId, dayStart, dayStart + 86400000],
+  );
+  if (existing?.id) {
+    await d.runAsync(
+      'UPDATE morning_weights SET weight_kg = ?, notes = ? WHERE id = ?',
+      [weightKg, notes, existing.id],
+    );
+    return existing.id;
+  }
+  await d.runAsync(
+    'INSERT INTO morning_weights (id, user_id, logged_at, weight_kg, notes, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+    [id, userId, loggedAt, weightKg, notes, now],
+  );
+  return id;
+}
+
+export async function getMorningWeightsLast14Days(userId) {
+  const d = await db();
+  const since = Date.now() - 14 * 86400000;
+  const rows = await d.getAllAsync(
+    'SELECT * FROM morning_weights WHERE user_id = ? AND logged_at >= ? ORDER BY logged_at ASC',
+    [userId, since],
+  );
+  return rows.map(rowToCamel);
+}
+
+export async function getMorningWeights(userId, limit = 90) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    'SELECT * FROM morning_weights WHERE user_id = ? ORDER BY logged_at DESC LIMIT ?',
+    [userId, limit],
+  );
+  return rows.map(rowToCamel).reverse();
+}
+
+export async function getMorningWeightToday(userId) {
+  const d = await db();
+  const dayStart = Date.now() - (Date.now() % 86400000);
+  const row = await d.getFirstAsync(
+    'SELECT * FROM morning_weights WHERE user_id = ? AND logged_at >= ? AND logged_at < ?',
+    [userId, dayStart, dayStart + 86400000],
+  );
+  return rowToCamel(row);
+}
+
+// ─── Pro: Weekly Check-Ins ────────────────────────────────────────────────────
+
+export async function saveWeeklyCheckin(userId, data) {
+  const d = await db();
+  const now = Date.now();
+  const existing = await d.getFirstAsync(
+    'SELECT id FROM weekly_checkins WHERE user_id = ? AND week_start = ?',
+    [userId, data.weekStart],
+  );
+  if (existing?.id) {
+    await d.runAsync(
+      `UPDATE weekly_checkins SET
+        energy_score = ?, soreness_score = ?, stress_score = ?, sleep_hours = ?,
+        cals_adherence = ?, steps_adherence = ?, cycle_override = ?, notes = ?, updated_at = ?
+       WHERE id = ?`,
+      [
+        data.energyScore ?? null, data.sorenessScore ?? null, data.stressScore ?? null,
+        data.sleepHours ?? null, data.calsAdherence ?? null, data.stepsAdherence ?? null,
+        data.cycleOverride ? 1 : 0, data.notes ?? null, now, existing.id,
+      ],
+    );
+    return existing.id;
+  }
+  const id = uid();
+  await d.runAsync(
+    `INSERT INTO weekly_checkins
+      (id, user_id, week_start, energy_score, soreness_score, stress_score, sleep_hours,
+       cals_adherence, steps_adherence, cycle_override, notes, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id, userId, data.weekStart,
+      data.energyScore ?? null, data.sorenessScore ?? null, data.stressScore ?? null,
+      data.sleepHours ?? null, data.calsAdherence ?? null, data.stepsAdherence ?? null,
+      data.cycleOverride ? 1 : 0, data.notes ?? null, now, now,
+    ],
+  );
+  return id;
+}
+
+export async function getLatestCheckin(userId, weekStart = null) {
+  const d = await db();
+  if (weekStart != null) {
+    const row = await d.getFirstAsync(
+      'SELECT * FROM weekly_checkins WHERE user_id = ? AND week_start = ?',
+      [userId, weekStart],
+    );
+    return rowToCamel(row);
+  }
+  const row = await d.getFirstAsync(
+    'SELECT * FROM weekly_checkins WHERE user_id = ? ORDER BY week_start DESC LIMIT 1',
+    [userId],
+  );
+  return rowToCamel(row);
+}
+
+export async function getRecentCheckins(userId, count = 4) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    'SELECT * FROM weekly_checkins WHERE user_id = ? ORDER BY week_start DESC LIMIT ?',
+    [userId, count],
+  );
+  return rows.map(rowToCamel);
+}
+
+// ─── Pro: Weekly session stats ────────────────────────────────────────────────
+
+export async function getWeeklySessionStats(userId, weekStart) {
+  const d = await db();
+  const weekEnd = weekStart + 7 * 86400000;
+  const row = await d.getFirstAsync(
+    `SELECT COUNT(*) AS completed FROM workouts
+     WHERE user_id = ? AND is_completed = 1 AND started_at >= ? AND started_at < ?`,
+    [userId, weekStart, weekEnd],
+  );
+  const prev4 = await d.getAllAsync(
+    `SELECT COUNT(*) AS wk_count FROM workouts
+     WHERE user_id = ? AND is_completed = 1
+       AND started_at >= ? AND started_at < ?
+     GROUP BY CAST((started_at - ?) / (7 * 86400000) AS INTEGER)`,
+    [userId, weekStart - 28 * 86400000, weekStart, weekStart - 28 * 86400000],
+  );
+  const avgPrev = prev4.length
+    ? prev4.reduce((s, r) => s + (r.wk_count ?? 0), 0) / prev4.length
+    : 3;
+  return {
+    completed: row?.completed ?? 0,
+    planned: Math.max(row?.completed ?? 0, Math.round(avgPrev) || 3),
+  };
+}
+
+export async function getWeeklyPRCount(userId, weekStart) {
+  const d = await db();
+  const weekEnd = weekStart + 7 * 86400000;
+  const row = await d.getFirstAsync(
+    `SELECT COUNT(DISTINCT ws.exercise_id) AS pr_count
+     FROM workout_sets ws
+     JOIN workouts w ON ws.workout_id = w.id
+     WHERE ws.user_id = ? AND w.is_completed = 1
+       AND w.started_at >= ? AND w.started_at < ?
+       AND ws.weight > (
+         SELECT COALESCE(MAX(ws2.weight), 0)
+         FROM workout_sets ws2
+         JOIN workouts w2 ON ws2.workout_id = w2.id
+         WHERE ws2.exercise_id = ws.exercise_id
+           AND ws2.user_id = ws.user_id
+           AND w2.is_completed = 1
+           AND w2.started_at < ?
+       )`,
+    [userId, weekStart, weekEnd, weekStart],
+  );
+  return row?.pr_count ?? 0;
+}
+
+// ─── Pro: Coach Outputs ───────────────────────────────────────────────────────
+
+export async function saveCoachOutput(userId, data) {
+  const d = await db();
+  const now = Date.now();
+  const existing = await d.getFirstAsync(
+    'SELECT id FROM coach_outputs WHERE user_id = ? AND week_start = ?',
+    [userId, data.weekStart],
+  );
+  const json = JSON.stringify(data);
+  if (existing?.id) {
+    await d.runAsync(
+      `UPDATE coach_outputs SET
+        goal_phase = ?, volume_signal = ?, load_signal = ?, recovery_flag = ?,
+        calorie_change = ?, steps_target = ?, why_this = ?, output_json = ?
+       WHERE id = ?`,
+      [
+        data.goalPhase ?? null, data.volumeSignal ?? null, data.loadSignal ?? null,
+        data.recoveryFlag ?? null,
+        data.adjustments?.calories?.change ?? null,
+        data.adjustments?.steps?.target ?? null,
+        data.whyThisWeek ?? null, json, existing.id,
+      ],
+    );
+    return existing.id;
+  }
+  const id = uid();
+  await d.runAsync(
+    `INSERT INTO coach_outputs
+      (id, user_id, week_start, goal_phase, volume_signal, load_signal, recovery_flag,
+       calorie_change, steps_target, why_this, output_json, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id, userId, data.weekStart,
+      data.goalPhase ?? null, data.volumeSignal ?? null, data.loadSignal ?? null,
+      data.recoveryFlag ?? null,
+      data.adjustments?.calories?.change ?? null,
+      data.adjustments?.steps?.target ?? null,
+      data.whyThisWeek ?? null, json, now,
+    ],
+  );
+  return id;
+}
+
+export async function getLatestCoachOutput(userId) {
+  const d = await db();
+  const row = await d.getFirstAsync(
+    'SELECT * FROM coach_outputs WHERE user_id = ? ORDER BY week_start DESC LIMIT 1',
+    [userId],
+  );
+  if (!row) return null;
+  try { return JSON.parse(row.output_json); } catch { return rowToCamel(row); }
 }

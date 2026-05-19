@@ -15,8 +15,10 @@ import useAppStore from '../store/useAppStore';
 import {
   getAllWorkouts, getCompletedWorkoutSets, getBodyMetricLog, getNutritionTargets,
   getRecentAdaptationEvents, getAllExercises,
+  getLatestCheckin, getMorningWeightsLast14Days,
 } from '../lib/database';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
+import { getBetaBannerText } from '../lib/proGate';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { exportCoachReport } from '../lib/coachExport';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
@@ -119,6 +121,8 @@ export default function AthleteHubScreen({ navigation }) {
   const [adaptationHistory, setAdaptationHistory] = useState([]);
   const [repWarnings, setRepWarnings] = useState([]);
   const [engineLogOpen, setEngineLogOpen] = useState(false);
+  const [checkinDoneThisWeek, setCheckinDoneThisWeek] = useState(false);
+  const [morningWeightCount, setMorningWeightCount] = useState(0);
 
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
@@ -156,6 +160,17 @@ export default function AthleteHubScreen({ navigation }) {
   }, [user?.id]));
 
   async function load() {
+    // Load Pro check-in state
+    try {
+      const d = new Date();
+      const daysFromMon = (d.getUTCDay() + 6) % 7;
+      const monMs = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - daysFromMon * 86400000;
+      const ci = await getLatestCheckin(user.id, monMs);
+      setCheckinDoneThisWeek(!!ci);
+      const weights = await getMorningWeightsLast14Days(user.id);
+      setMorningWeightCount(weights.length);
+    } catch (_) {}
+
     await Promise.all([
       loadWorkoutStats(),
       loadBodyMetrics(),
@@ -313,6 +328,42 @@ export default function AthleteHubScreen({ navigation }) {
             <QuickStat value={String(totalWorkouts)} label="All-time sessions" icon="barbell-outline" color={colors.success} />
           </View>
         )}
+
+        {/* ── Weekly coaching card ──────────────────────── */}
+        <TouchableOpacity
+          style={[styles.sectionCard, styles.checkinCard]}
+          onPress={() => navigation.navigate('WeeklyCheckIn')}
+          activeOpacity={0.85}
+        >
+          <View style={styles.cardHeader}>
+            <View style={[styles.cardIconWrap, { backgroundColor: colors.primaryBg }]}>
+              <Ionicons name={checkinDoneThisWeek ? 'checkmark-circle' : 'pulse-outline'} size={20} color={colors.primary} />
+            </View>
+            <View style={styles.cardHeaderText}>
+              <Text style={styles.cardTitle}>Weekly check-in</Text>
+              <Text style={styles.cardSubtitle}>
+                {checkinDoneThisWeek
+                  ? 'Done this week — tap to review your plan'
+                  : morningWeightCount >= 4
+                    ? 'Ready — tap to get your weekly coaching'
+                    : `${morningWeightCount}/4 morning weights logged`}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </View>
+          {!checkinDoneThisWeek && (
+            <View style={styles.checkinPrompt}>
+              <Text style={styles.checkinPromptText}>
+                {morningWeightCount < 4
+                  ? 'Log your morning weight each day to unlock weekly coaching.'
+                  : 'Check in now to get your training and calorie adjustments for next week.'}
+              </Text>
+            </View>
+          )}
+          {getBetaBannerText() && (
+            <Text style={styles.betaBanner}>{getBetaBannerText()}</Text>
+          )}
+        </TouchableOpacity>
 
         {/* ── Nutrition ─────────────────────────────────── */}
         <TouchableOpacity
@@ -639,6 +690,12 @@ const styles = StyleSheet.create({
   sectionCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
     gap: spacing.md, borderWidth: 1, borderColor: colors.border,
+  },
+  checkinCard: { borderColor: colors.primaryDim },
+  checkinPrompt: { paddingTop: spacing.xs },
+  checkinPromptText: { fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 18 },
+  betaBanner: {
+    fontSize: fontSize.xs, color: colors.primaryDim, fontStyle: 'italic', marginTop: spacing.xs,
   },
   cardHeader:     { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   cardIconWrap:   {

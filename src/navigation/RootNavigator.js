@@ -44,6 +44,8 @@ import CoachBuilderScreen from '../screens/CoachBuilderScreen';
 import NutritionTargetsScreen from '../screens/NutritionTargetsScreen';
 import PlanLibraryScreen from '../screens/PlanLibraryScreen';
 import FirstRunScreen from '../screens/FirstRunScreen';
+import WeeklyCheckInScreen from '../screens/WeeklyCheckInScreen';
+import CoachOutputScreen from '../screens/CoachOutputScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -109,6 +111,8 @@ function ProfileStack() {
       <Stack.Screen name="ExerciseLibrary" component={ExerciseLibraryScreen} options={{ title: 'Exercise Library' }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise' }} />
       <Stack.Screen name="MesocycleBuilder" component={MesocycleBuilderScreen} options={{ title: 'Training Blocks' }} />
+      <Stack.Screen name="WeeklyCheckIn" component={WeeklyCheckInScreen} options={{ title: 'Weekly Check-In' }} />
+      <Stack.Screen name="CoachOutput" component={CoachOutputScreen} options={{ title: 'Your Week' }} />
     </Stack.Navigator>
   );
 }
