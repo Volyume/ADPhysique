@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const LOCAL_USER_KEY   = '@volyume_local_user_id';
 const FIRST_RUN_KEY    = '@volyume_first_run_complete';
 const PROFILE_KEY_PFX  = '@volyume_user_profile_';
+const TIER_KEY         = '@volyume_tier';
 
 function generateUUID() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
@@ -61,6 +62,33 @@ const useAppStore = create((set, get) => ({
   clearLocalUser: async () => {
     await AsyncStorage.removeItem(LOCAL_USER_KEY);
     set({ user: null, session: null });
+  },
+
+  // Tier — 'free' | 'pro' | null (null = not yet chosen → show WelcomeScreen)
+  tier: null,
+  tierChecked: false,
+
+  checkTier: async () => {
+    try {
+      const saved = await AsyncStorage.getItem(TIER_KEY);
+      // Existing users who completed first-run before tiers existed → grant pro
+      if (!saved) {
+        const firstRunDone = await AsyncStorage.getItem(FIRST_RUN_KEY);
+        if (firstRunDone === 'true') {
+          await AsyncStorage.setItem(TIER_KEY, 'pro');
+          set({ tier: 'pro', tierChecked: true });
+          return;
+        }
+      }
+      set({ tier: saved || null, tierChecked: true });
+    } catch (_e) {
+      set({ tier: null, tierChecked: true });
+    }
+  },
+
+  setTier: async (tier) => {
+    try { await AsyncStorage.setItem(TIER_KEY, tier); } catch (_) {}
+    set({ tier });
   },
 
   // First-run / onboarding gate

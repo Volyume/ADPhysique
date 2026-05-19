@@ -11,6 +11,7 @@ import { format, differenceInDays } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius, shadow } from '../styles/theme';
 import { VolyumeMark } from '../components/BrandMark';
 import InfoTooltip from '../components/InfoTooltip';
+import { ProBadge } from '../components/ProGate';
 import useAppStore from '../store/useAppStore';
 import {
   getAllWorkouts, getCompletedWorkoutSets, getBodyMetricLog, getNutritionTargets,
@@ -170,7 +171,7 @@ function WeightSparkline({ data, units }) {
 }
 
 export default function AthleteHubScreen({ navigation }) {
-  const { user, userProfile, units } = useAppStore();
+  const { user, userProfile, units, tier } = useAppStore();
   const [nutritionTargets, setNutritionTargets] = useState(null);
   const [latestMetric, setLatestMetric]         = useState(null);
   const [totalWorkouts, setTotalWorkouts]       = useState(0);
@@ -330,7 +331,10 @@ export default function AthleteHubScreen({ navigation }) {
             </Text>
           </View>
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{displayName}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <Text style={styles.profileName}>{displayName}</Text>
+              {tier === 'pro' && <ProBadge size="sm" />}
+            </View>
             {trainingAge && <Text style={styles.profileMeta}>{trainingAge}</Text>}
             <View style={styles.profileStats}>
               <Text style={styles.profileStat}>{totalWorkouts} sessions</Text>

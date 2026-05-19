@@ -8,11 +8,13 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { VolyumeMark } from '../components/BrandMark';
 import useAppStore from '../store/useAppStore';
 import { logBodyMetric } from '../lib/database';
+import { ProBadge } from '../components/ProGate';
 
 
 export default function FirstRunScreen({ navigation }) {
-  const { user, units, setUnits, userProfile, saveLocalProfile, completeFirstRun } = useAppStore();
-  const [mode, setMode] = useState('branch'); // 'branch' | 'quick'
+  const { user, units, setUnits, userProfile, saveLocalProfile, completeFirstRun, tier } = useAppStore();
+  // Free users skip plan-selection and go straight to quick setup
+  const [mode, setMode] = useState(tier === 'free' ? 'quick' : 'branch');
   const [localUnits, setLocalUnits] = useState(units || 'kg');
   const [bodyWeight, setBodyWeight] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -74,7 +76,9 @@ export default function FirstRunScreen({ navigation }) {
 
           <Text style={styles.title}>Almost there.</Text>
           <Text style={styles.subtitle}>
-            Just a couple of things and you're ready to go. You can update these anytime in Settings.
+            {tier === 'free'
+              ? 'A couple of details and you\'re ready to start logging. Change these any time in Settings.'
+              : 'Just a couple of things and you\'re ready to go. You can update these anytime in Settings.'}
           </Text>
 
           <Text style={styles.fieldLabel}>What should we call you?</Text>
@@ -138,11 +142,16 @@ export default function FirstRunScreen({ navigation }) {
         <View style={styles.brandRow}>
           <VolyumeMark size={48} />
           <Text style={styles.brandName}>Volyume</Text>
+          {tier === 'pro' && <ProBadge size="md" />}
         </View>
 
-        <Text style={styles.title}>Welcome to Volyume.</Text>
+        <Text style={styles.title}>
+          {tier === 'pro' ? 'Welcome to Volyume Pro.' : 'Welcome to Volyume.'}
+        </Text>
         <Text style={styles.welcomeDesc}>
-          Training is hard enough. Volyume handles the details: what you lifted, how you're progressing, what to do next. So your head is free to focus on the work. Show up, train, and let us take care of the rest.
+          {tier === 'pro'
+            ? 'You have the full experience unlocked. Set up your plan and we\'ll track your volume, coach your week, and keep your progress on course.'
+            : 'Training is hard enough. Volyume handles the details: what you lifted, how you\'re progressing, what to do next. Show up, train, and let us take care of the rest.'}
         </Text>
 
         <View style={styles.nameBlock}>

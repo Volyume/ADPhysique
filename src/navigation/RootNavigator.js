@@ -21,6 +21,7 @@ import { configureNotificationHandler, restoreNotifications } from '../lib/notif
 // Auth screens
 import LoginScreen from '../screens/LoginScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
+import WelcomeScreen from '../screens/WelcomeScreen';
 
 // Main screens
 import HomeScreen from '../screens/HomeScreen';
@@ -158,6 +159,16 @@ function MainTabs() {
   );
 }
 
+function WelcomeStack() {
+  return (
+    <Stack.Navigator screenOptions={{ ...stackOptions, headerShown: false }}>
+      <Stack.Screen name="Welcome" component={WelcomeScreen} />
+      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+    </Stack.Navigator>
+  );
+}
+
 function AuthStack() {
   return (
     <Stack.Navigator screenOptions={{ ...stackOptions, headerShown: false }}>
@@ -184,6 +195,7 @@ export default function RootNavigator() {
   const {
     user, isAuthLoading, setUser, setSession, setAuthLoading, initLocalUser,
     firstRunComplete, firstRunChecked, checkFirstRun,
+    tier, tierChecked, checkTier,
   } = useAppStore();
   const [splashReady, setSplashReady] = useState(false);
 
@@ -204,6 +216,7 @@ export default function RootNavigator() {
           .catch(console.warn);
 
         checkFirstRun().catch(console.warn);
+        checkTier().catch(console.warn);
 
         try {
           const client = getSupabaseClient();
@@ -248,8 +261,18 @@ export default function RootNavigator() {
     return () => subscription?.unsubscribe();
   }, []);
 
-  if (isAuthLoading || !splashReady || !firstRunChecked) {
+  if (isAuthLoading || !splashReady || !firstRunChecked || !tierChecked) {
     return <SplashScreen />;
+  }
+
+  // Navigation priority:
+  // 1. No tier chosen yet → WelcomeScreen (tier selection)
+  // 2. Tier chosen, first-run not done → FirstRunStack (onboarding)
+  // 3. Both done → MainTabs
+  function renderNavigator() {
+    if (!tier) return <WelcomeStack />;
+    if (!firstRunComplete) return <FirstRunStack />;
+    return <MainTabs />;
   }
 
   return (
@@ -266,11 +289,8 @@ export default function RootNavigator() {
         },
       }}
     >
-      {/* Auth gate removed for local-first phase — re-enable when cloud sync is added.
-          First-run gate: unified onboarding until completed. */}
-      {firstRunComplete ? <MainTabs /> : <FirstRunStack />}
+      {renderNavigator()}
     </NavigationContainer>
-
   );
 }
 
