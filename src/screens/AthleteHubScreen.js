@@ -391,7 +391,7 @@ export default function AthleteHubScreen({ navigation }) {
         {weekVolume != null && (
           <View style={styles.quickStatsRow}>
             <QuickStat value={String(weekVolume)} label="Sets this week" icon="layers-outline" color={colors.primary} />
-            <QuickStat value={String(totalWorkouts)} label="All-time sessions" icon="barbell-outline" color={colors.success} />
+            <QuickStat value={String(totalWorkouts)} label="All-time sessions" icon="barbell-outline" color={colors.primary} />
           </View>
         )}
 
@@ -491,8 +491,8 @@ export default function AthleteHubScreen({ navigation }) {
           activeOpacity={0.8}
         >
           <View style={styles.cardHeader}>
-            <View style={[styles.cardIconWrap, { backgroundColor: colors.successBg }]}>
-              <Ionicons name="body" size={20} color={colors.success} />
+            <View style={[styles.cardIconWrap, { backgroundColor: colors.primaryBg }]}>
+              <Ionicons name="body" size={20} color={colors.primary} />
             </View>
             <View style={styles.cardHeaderText}>
               <Text style={styles.cardTitle}>Body Metrics</Text>
