@@ -298,7 +298,7 @@ export default function NutritionTargetsScreen() {
 
           {/* ── SECTION 1: ABOUT YOU ───────────────────────────────────────────────────── */}
 
-          <SectionHeading title="ABOUT YOU" />
+          <SectionHeading title="About you" />
 
           {/* Biological sex */}
           <View style={styles.formGroup}>
@@ -397,7 +397,7 @@ export default function NutritionTargetsScreen() {
 
           {/* ── SECTION 2: ACTIVITY & TRAINING ────────────────────────────────────────── */}
 
-          <SectionHeading title="ACTIVITY & TRAINING" />
+          <SectionHeading title="Activity & training" />
 
           <View style={styles.formGroup}>
             <Text style={styles.fieldLabel}>Activity level</Text>
@@ -421,7 +421,7 @@ export default function NutritionTargetsScreen() {
 
           {/* ── SECTION 3: GOAL & PHASE ────────────────────────────────────────────────────── */}
 
-          <SectionHeading title="GOAL & PHASE" />
+          <SectionHeading title="Goal & phase" />
 
           <View style={styles.goalGrid}>
             {GOALS.filter(g => !(calm && g.key === 'aggressive_cut')).map(g => {
@@ -453,7 +453,7 @@ export default function NutritionTargetsScreen() {
 
           {/* ── SECTION 4: PROTEIN APPROACH ───────────────────────────────────────────────── */}
 
-          <SectionHeading title="PROTEIN TARGET" />
+          <SectionHeading title="Protein target" />
 
           <View style={styles.approachNote}>
             <InfoTooltip size={12} text={

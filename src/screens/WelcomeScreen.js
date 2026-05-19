@@ -10,17 +10,17 @@ import useAppStore from '../store/useAppStore';
 const HERO = require('../../assets/volyume-icon.png');
 
 const FREE_BULLETS = [
-  'Unlimited workout logging',
+  'Unlimited workout logging, fully offline',
   'Exercise library and Personal Records',
-  'Works offline, no account needed',
-  'Create an account anytime to back up your data',
+  'Plan library and custom plan builder',
+  'Training blocks and full progress stats',
 ];
 
 const PRO_BULLETS = [
-  'Weekly coaching and volume tracking',
-  'Nutrition and body composition tools',
-  'Training block planner',
-  'Progress insights and coach export PDF',
+  'An intelligent plan built around you',
+  'Weekly coaching that adapts as you go',
+  'Nutrition targets and body tracking',
+  'Your week summarised, with coach export',
 ];
 
 export default function WelcomeScreen({ navigation }) {
