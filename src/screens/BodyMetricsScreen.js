@@ -297,8 +297,8 @@ export default function BodyMetricsScreen({ navigation }) {
     }
   }
 
-  // Loading state
-  if (physiqueEnabled === null) return null;
+  // Loading state — return the dark background, not null, to avoid a white flash
+  if (physiqueEnabled === null) return <SafeAreaView style={styles.safe} edges={['bottom']} />;
 
   // Opt-in gate
   if (!physiqueEnabled) {

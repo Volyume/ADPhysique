@@ -116,6 +116,8 @@ export default function NotificationSettingsScreen({ navigation }) {
   const [checkinMinute, setCheckinMinute] = useState(0);
   const [permissionStatus, setPermissionStatus] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const savedTimer = useRef(null);
 
   const debounceTimer = useRef(null);
 
@@ -150,8 +152,12 @@ export default function NotificationSettingsScreen({ navigation }) {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(async () => {
       setSaving(true);
+      setSaved(false);
       try {
         await applyNotifications(nextPrefs, permissionStatus);
+        setSaved(true);
+        if (savedTimer.current) clearTimeout(savedTimer.current);
+        savedTimer.current = setTimeout(() => setSaved(false), 2000);
       } catch (_) {}
       setSaving(false);
     }, 600);
@@ -358,10 +364,9 @@ export default function NotificationSettingsScreen({ navigation }) {
           </Text>
         </View>
 
-        {/* Saving indicator */}
-        {saving && (
-          <Text style={styles.savingText}>Saving...</Text>
-        )}
+        {/* Save status */}
+        {saving && <Text style={styles.savingText}>Saving...</Text>}
+        {!saving && saved && <Text style={styles.savedText}>Saved</Text>}
       </ScrollView>
     </SafeAreaView>
   );
@@ -573,10 +578,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Saving indicator
   savingText: {
     fontSize: fontSize.xs,
     color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+  },
+  savedText: {
+    fontSize: fontSize.xs,
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
     textAlign: 'center',
     marginTop: spacing.sm,
   },
