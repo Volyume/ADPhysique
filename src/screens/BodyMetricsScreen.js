@@ -89,7 +89,7 @@ function detectPhase(entries) {
   const slope = den === 0 ? 0 : num / den; // kg per entry
 
   if (slope > 0.15)       return { label: 'Gaining',     color: colors.success,  icon: 'trending-up' };
-  if (slope < -0.15)      return { label: 'Cutting',      color: colors.warning,  icon: 'trending-down' };
+  if (slope < -0.15)      return { label: 'Losing weight', color: colors.warning,  icon: 'trending-down' };
   return { label: 'Maintaining', color: colors.primary, icon: 'remove-outline' };
 }
 
@@ -398,7 +398,7 @@ export default function BodyMetricsScreen({ navigation }) {
             </View>
           ) : (
             <Text style={styles.nutritionEmpty}>
-              No targets set. Calculate your daily calorie and macro targets.
+              No targets set yet. Head to Profile to calculate your daily calories and macros.
             </Text>
           )}
         </View>
@@ -409,7 +409,7 @@ export default function BodyMetricsScreen({ navigation }) {
             {/* Header row with phase chip */}
             <View style={styles.snapshotHeader}>
               <Text style={styles.sectionTitle}>
-                WEIGHT · {latest?.metric_date ? format(new Date(latest.metric_date), 'MMM d, yyyy') : 'Today'}
+                Weight · {latest?.metric_date ? format(new Date(latest.metric_date), 'MMM d, yyyy') : 'Today'}
               </Text>
               {phase && (
                 <View style={[styles.phaseChip, { borderColor: phase.color }]}>

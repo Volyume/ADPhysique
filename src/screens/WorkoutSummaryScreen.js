@@ -462,8 +462,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               <InfoTooltip size={11} text={
                 'How much you\'ve trained each muscle group this week.\n\n' +
                 'Green = Good range: enough training to grow without overdoing it\n' +
-                'Yellow = Near your ceiling: one more session and you may exceed it\n' +
-                'Red = Over ceiling: consider reducing volume next week\n' +
+                'Yellow = Getting close: one more session and it may be too much\n' +
+                'Red = Too much: consider doing a little less next week\n' +
                 'Grey = Below minimum: not quite enough to drive growth yet\n\n' +
                 'These targets are personalised and adjust over time based on how your body responds.'
               } />

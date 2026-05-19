@@ -180,7 +180,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
                       'A Training Block is a structured period, usually 4 to 8 weeks, ' +
                       'where your weekly volume gradually builds, then drops during a lighter recovery week to let your body absorb the gains.\n\n' +
                       'Your plan (the workouts and exercises) lives independently. A block is an ' +
-                      'optional layer you add on top to track periodised progress across those weeks.\n\n' +
+                      'optional layer you add on top to track week-by-week progress across those weeks.\n\n' +
                       'After the block ends:\n' +
                       '• The block is archived in All Blocks below\n' +
                       '• Your plan keeps going. The workouts are still there.\n' +
