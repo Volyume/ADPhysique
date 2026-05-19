@@ -30,7 +30,7 @@ const PHASE_LABELS = {
   lean_gain: 'Build muscle (slow)',
   build: 'Build muscle (fast)',
   maintain: 'Maintain weight',
-  recomp: 'Recomposition',
+  recomp: 'Hold muscle, lose fat',
   mild_cut: 'Lose weight (steady)',
   aggressive_cut: 'Lose weight (fast)',
   contest_prep: 'Contest preparation',

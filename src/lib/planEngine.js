@@ -937,7 +937,7 @@ const NUTRITION_PHASE_LABELS = {
   lean_gain:      'Build muscle slowly',
   build:          'Build muscle quickly',
   maintain:       'Maintain weight',
-  recomp:         'Recomposition',
+  recomp:         'Hold muscle, lose fat',
   mild_cut:       'Lose weight steadily',
   aggressive_cut: 'Lose weight fast',
   contest_prep:   'Contest preparation',
@@ -1042,7 +1042,7 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
       mild_cut:       `${phaseLabel}: eating less slows recovery slightly. Volume is modest and you should stop a rep or two further from failure than usual. This preserves muscle and keeps recovery manageable while in a deficit.`,
       aggressive_cut: `${phaseLabel}: a significant calorie cut reduces how much your body can recover from. Volume is reduced. Keep protein at or above 2 g per kg of bodyweight and focus on your main compound lifts to protect muscle.`,
       contest_prep:   `Contest prep: your recovery is severely limited. Volume is at the lower end and caution is warranted. Prioritise sleep, protein intake, and managing life stress outside the gym.`,
-      recomp:         `Body Recomposition: training volume is kept at a level your body can handle while eating at a slight deficit. The goal is doing enough to hold on to your muscle while your nutrition gradually shifts your body composition.`,
+      recomp:         `Hold muscle, lose fat: training volume is kept at a level your body can handle while eating at a slight deficit. The goal is doing enough to hold on to your muscle while your nutrition gradually shifts your body composition.`,
     };
     result.nutrition = nutMap[nutPhase] ?? `${phaseLabel} phase influences how much volume the plan uses.`;
   }
@@ -1195,7 +1195,7 @@ export function generatePlan(inputs) {
     aesthetic_v_taper:     'V-Taper',
     weak_point_spec:       'Specialisation',
     strength_hypertrophy:  'Strength + Size',
-    recomp:                'Recomp',
+    recomp:                'Lean',
   }[goal] ?? 'Training';
 
   const splitShort = {
