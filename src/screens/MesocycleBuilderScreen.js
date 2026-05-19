@@ -249,7 +249,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
                       size={13}
                       text={
                         `This block runs for ${totalWeeks} weeks` +
-                        (meso.deloadWeek ? ` — Week ${meso.deloadWeek} is your recovery (deload) week.` : '.') +
+                        (meso.deloadWeek ? ` — Week ${meso.deloadWeek} is your lighter recovery week.` : '.') +
                         '\n\nEach week you accumulate a little more training volume until the recovery week, where the load drops so your body can absorb the adaptations.\n\n' +
                         `When Week ${totalWeeks} is complete, the block closes and moves to All Blocks below. ` +
                         'Your plan keeps running — start a new block to begin the next training phase.'

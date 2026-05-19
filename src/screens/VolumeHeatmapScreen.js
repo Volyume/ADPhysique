@@ -161,9 +161,9 @@ export default function VolumeHeatmapScreen() {
           <InfoTooltip size={11} text={
             'Each bar shows weekly working sets for a muscle group.\n\n' +
             'The two tick marks on each bar are:\n' +
-            '  First tick = Minimum Effective Volume (MEV) — the least amount needed to maintain or grow\n' +
-            '  Second tick = Target (MAV) — the sweet spot for growth\n' +
-            '  End of bar = Ceiling (MRV) — beyond this, recovery suffers\n\n' +
+            '  First tick — the least amount needed to maintain or grow\n' +
+            '  Second tick — the sweet spot for growth\n' +
+            '  End of bar — beyond this, recovery suffers\n\n' +
             'Aim to stay between the two ticks most weeks. You can customise these targets using the "Edit Volume Targets" button below.'
           } />
         </View>

@@ -582,7 +582,7 @@ export default function CoachBuilderScreen({ navigation, route }) {
                 </Text>
                 <InfoTooltip
                   size={13}
-                  text={`A mesocycle is a structured training block — typically 4–6 weeks — where volume and effort increase week by week, followed by a lighter recovery week. After completing one block, you can start another (or a different plan) in Training Blocks to keep progressing long-term.`}
+                  text={`A Training Block is a structured period — typically 4–6 weeks — where volume and effort increase week by week, followed by a lighter recovery week. After completing one block, you can start another (or a different plan) in Training Blocks to keep progressing long-term.`}
                 />
               </View>
               <Text style={styles.overviewSub}>

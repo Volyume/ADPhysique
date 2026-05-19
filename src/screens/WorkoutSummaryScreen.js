@@ -578,11 +578,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             <View style={styles.deloadCard}>
               <View style={styles.deloadCardHeader}>
                 <Ionicons name="battery-charging-outline" size={18} color={colors.warning} />
-                <Text style={styles.deloadCardTitle}>DELOAD RECOMMENDED</Text>
+                <Text style={styles.deloadCardTitle}>RECOVERY WEEK RECOMMENDED</Text>
               </View>
               <Text style={styles.deloadCardBody}>{deloadRecommendation.reason}</Text>
               <Text style={styles.deloadCardNote}>
-                Next week will auto-generate deload loads (week 1 weight × 50% reps). You can skip at any time.
+                Next week will auto-generate lighter loads (week 1 weight × 50% reps). You can skip at any time.
               </Text>
             </View>
           )}

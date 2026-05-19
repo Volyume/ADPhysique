@@ -337,12 +337,12 @@ export default function AnalyticsScreen({ navigation }) {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
             <Text style={styles.sectionLabel}>TRAINING BLOCK</Text>
             <InfoTooltip text={
-              'A Training Block (mesocycle) is a structured phase where volume and intensity build week by week.\n\n' +
+              'A Training Block is a structured phase where volume and intensity build week by week.\n\n' +
               'Week 1–5: progressively harder training. Your target effort level climbs each week — ' +
               'starting around 2–3 (moderate) and building to 4–5 (near maximum) — so you gradually push closer to your limit.\n\n' +
-              'Week 6 (Deload): deliberately lighter. This flushes accumulated fatigue so you recover fully ' +
+              'Recovery week: deliberately lighter. This flushes accumulated fatigue so you recover fully ' +
               'and come back stronger.\n\n' +
-              'After the deload you start a fresh block on the same plan — usually with a little more volume ' +
+              'After the recovery week you start a fresh block on the same plan — usually with a little more volume ' +
               'than last time. The plan stays; only the block resets.'
             } />
           </View>
@@ -369,12 +369,12 @@ export default function AnalyticsScreen({ navigation }) {
               </Text>
             </View>
             <InfoTooltip text={
-              'A deload week uses lighter loads — aim for effort level 1–2 (plenty left in the tank) — to flush ' +
+              'A lighter recovery week uses reduced loads — aim for effort level 1–2 (plenty left in the tank) — to flush ' +
               'accumulated fatigue without losing muscle or strength.\n\n' +
               'Keep all the same exercises. Drop weights by ~10–20% and stop well before failure. ' +
               'Sessions should feel almost too easy.\n\n' +
               'Muscle is built during recovery, not during the hard sets. Most people feel noticeably ' +
-              'stronger in the first session after a proper deload.'
+              'stronger in the first session back after a proper recovery week.'
             } size={13} />
           </View>
         )}
@@ -396,10 +396,10 @@ export default function AnalyticsScreen({ navigation }) {
               <Text style={styles.sectionLabel}>THIS WEEK'S VOLUME</Text>
               <InfoTooltip text={
                 'Working sets per muscle group this week.\n\n' +
-                '🟠 Below MEV — under your Minimum Effective Volume. Not enough stimulus for growth.\n\n' +
-                '🟢 MEV → MAV — in your optimal Minimum Adaptive Volume range. This is the sweet spot for progress.\n\n' +
-                '🔴 Over MRV — above your Maximum Recoverable Volume. Fatigue is outpacing stimulus; consider reducing sets.\n\n' +
-                'MEV, MAV, and MRV are volume landmarks from hypertrophy research. Your personal landmarks adjust as Volyume learns your recovery.'
+                '🟠 Below threshold — not enough stimulus for growth this week.\n\n' +
+                '🟢 Optimal range — the sweet spot for progress.\n\n' +
+                '🔴 Over ceiling — fatigue is outpacing stimulus; consider reducing sets.\n\n' +
+                'Volume targets adjust as Volyume learns your recovery pattern over time.'
               } />
             </View>
             <TouchableOpacity onPress={() => navigation.navigate('VolumeHeatmap')}>

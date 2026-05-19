@@ -784,7 +784,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               <View style={styles.deloadBannerLeft}>
                 <Ionicons name="battery-charging-outline" size={18} color={colors.warning} />
                 <View>
-                  <Text style={styles.deloadBannerTitle}>DELOAD WEEK</Text>
+                  <Text style={styles.deloadBannerTitle}>RECOVERY WEEK</Text>
                   <Text style={styles.deloadBannerSub}>Light loads · full recovery · no PRs</Text>
                 </View>
               </View>
@@ -946,7 +946,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 : currentSet.setType === 'dropset'
                   ? `DROP SET · after Set ${workingLogged}`
                   : isDeloadWeek
-                    ? `DELOAD SET ${workingLogged + 1} · Easy`
+                    ? `LIGHT SET ${workingLogged + 1} · Easy`
                     : routineExercise?.recommendedSets
                       ? `SET ${workingLogged + 1} / ${routineExercise.recommendedSets} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working'}`
                       : `SET ${workingLogged + 1} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working'}`}

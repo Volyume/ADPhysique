@@ -100,7 +100,7 @@ function detectRepRegressions(sets, exerciseMap) {
         exercise_id: exId,
         exerciseName: ex?.name ?? 'Unknown exercise',
         muscle: ex?.primaryMuscle ?? ex?.primary_muscle ?? null,
-        reason_text: `Avg reps: ${Math.round(r2 * 10) / 10} → ${Math.round(r1 * 10) / 10} → ${Math.round(r0 * 10) / 10} over 3 weeks — consider a deload or load reduction`,
+        reason_text: `Avg reps: ${Math.round(r2 * 10) / 10} → ${Math.round(r1 * 10) / 10} → ${Math.round(r0 * 10) / 10} over 3 weeks — consider a lighter week or load reduction`,
         decision: 'rep_regression',
         created_at: now,
       });
@@ -522,8 +522,8 @@ export default function AthleteHubScreen({ navigation }) {
           <NavRow
             icon="layers"
             label="Training Blocks"
-            sub="Plan and track multi-week mesocycles"
-            tooltip={"A Training Block (mesocycle) is a structured 5–6 week period where volume and effort increase each week, followed by a lighter recovery week. Running blocks back-to-back is how you create long-term progressive overload — each block starts slightly heavier than the last. Create one here to link your plan to a block and track your week-by-week progress."}
+            sub="Plan and track multi-week training blocks"
+            tooltip={"A Training Block is a structured 5–6 week period where volume and effort increase each week, followed by a lighter recovery week. Running blocks back-to-back is how you create long-term progressive overload — each block starts slightly heavier than the last. Create one here to link your plan to a block and track your week-by-week progress."}
             onPress={() => navigation.navigate('MesocycleBuilder')}
           />
           <NavRow
