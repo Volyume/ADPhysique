@@ -121,7 +121,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             <View style={styles.est1RM}>
               <Ionicons name="trophy-outline" size={16} color={colors.gold} />
               <Text style={styles.est1RMText}>Est. max lift: {best1RM.toFixed(1)} {units}</Text>
-              <InfoTooltip text="Your estimated one-rep max — the most weight you could lift for a single rep, calculated from the sets you've logged. It updates automatically as you get stronger." size={12} />
+              <InfoTooltip text="Your estimated max lift: the most weight you could lift for a single rep, calculated from the sets you've logged. It updates automatically as you get stronger." size={12} />
             </View>
           )}
 

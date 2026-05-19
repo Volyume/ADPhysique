@@ -36,7 +36,7 @@ const DIVISIONS_MEN = [
   {
     key: 'classic_physique',
     label: 'Classic Physique',
-    desc: "Balanced golden-era build — capped shoulders, full chest, and legs.",
+    desc: "Balanced golden-era build: capped shoulders, full chest, and legs.",
   },
   {
     key: 'mens_bodybuilding',
@@ -59,7 +59,7 @@ const DIVISIONS_WOMEN = [
   {
     key: 'figure',
     label: 'Figure',
-    desc: "Athletic and muscular — strong shoulders and back with proportional legs.",
+    desc: "Athletic and muscular: strong shoulders and back with proportional legs.",
   },
   {
     key: 'womens_physique',
