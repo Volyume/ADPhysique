@@ -2153,3 +2153,47 @@ export async function getLatestCoachOutput(userId) {
   if (!row) return null;
   try { return JSON.parse(row.output_json); } catch { return rowToCamel(row); }
 }
+
+// ─── Cloud restore helpers (used by sync.js pullFromCloud) ────────────────────
+
+export async function insertWorkoutFromCloud(userId, w) {
+  const d = await db();
+  const toMs = iso => iso ? new Date(iso).getTime() : null;
+  await d.runAsync(
+    `INSERT OR IGNORE INTO workouts
+      (id, user_id, routine_id, mesocycle_id, started_at, ended_at, duration_minutes,
+       notes, session_difficulty, overall_pump, soreness_24h_before, fatigue_level,
+       is_completed, created_at, updated_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,1,?,?)`,
+    [
+      w.id, userId, w.routine_id ?? null, w.mesocycle_id ?? null,
+      toMs(w.started_at), toMs(w.ended_at), w.duration_minutes ?? null,
+      w.notes ?? null, w.session_difficulty ?? null, w.overall_pump ?? null,
+      w.soreness_24h_before ?? null, w.fatigue_level ?? null,
+      toMs(w.started_at) ?? Date.now(), Date.now(),
+    ],
+  );
+}
+
+export async function insertWorkoutSetFromCloud(userId, s) {
+  const d = await db();
+  await d.runAsync(
+    `INSERT OR IGNORE INTO workout_sets
+      (id, user_id, workout_id, exercise_id, set_number, set_type,
+       target_reps_min, target_reps_max, actual_reps, weight, rir, rpe,
+       failed, notes, post_set_pump, post_set_muscle_connection, joint_discomfort,
+       is_amrap, amrap_reps, created_at, updated_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [
+      s.id, userId, s.workout_id, s.exercise_id,
+      s.set_number ?? 1, s.set_type ?? 'straight',
+      s.target_reps_min ?? null, s.target_reps_max ?? null,
+      s.actual_reps ?? 0, s.weight ?? null, s.rir ?? null, s.rpe ?? null,
+      s.failed ? 1 : 0, s.notes ?? null,
+      s.post_set_pump ?? null, s.post_set_muscle_connection ?? null,
+      s.joint_discomfort ?? null,
+      s.is_amrap ? 1 : 0, s.amrap_reps ?? null,
+      Date.now(), Date.now(),
+    ],
+  );
+}

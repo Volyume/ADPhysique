@@ -17,6 +17,7 @@ import { calculateWeeklyVolume, getVolumeStatus, getAutoRegSuggestion, MUSCLE_DI
 import { evaluateAutoReg, predictDeloadWeek, getMesoSchedule } from '../lib/mesocycle';
 import { getDeloadPredictionMessage, getAutoRegMessage } from '../lib/whyThisTemplates';
 import useAppStore from '../store/useAppStore';
+import { syncWorkout } from '../lib/sync';
 
 const RATING_LABELS = {
   sessionDifficulty: ['', 'Very Easy', 'Easy', 'Moderate', 'Hard', 'Brutal'],
@@ -57,7 +58,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     exerciseNames = [], readOnly = false,
     routineId = null, detectedPRs = [], exerciseData = [],
   } = route.params || {};
-  const { user, units, userProfile } = useAppStore();
+  const { user, units, userProfile, session } = useAppStore();
   const insets = useSafeAreaInsets();
 
   const [feedback, setFeedback] = useState({
@@ -306,6 +307,12 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         }
       }
     } catch (_e) {}
+
+    // Background sync to Supabase — fire and forget, never blocks navigation
+    const supabaseUserId = session?.user?.id;
+    if (supabaseUserId && workoutId) {
+      syncWorkout(supabaseUserId, workoutId).catch(() => {});
+    }
 
     setSaving(false);
     navigation.popToTop();

@@ -5,10 +5,13 @@
 CREATE TABLE users_profile (
   id UUID PRIMARY KEY REFERENCES auth.users(id),
   username TEXT UNIQUE,
+  first_name TEXT,
   training_focus TEXT DEFAULT 'bodybuilding',
-  training_age INTEGER DEFAULT 3,
+  training_age NUMERIC,
   primary_equipment TEXT,
   units TEXT DEFAULT 'kg',
+  tier TEXT DEFAULT 'free',
+  bar_weight NUMERIC DEFAULT 20,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );

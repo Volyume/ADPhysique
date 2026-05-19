@@ -16,13 +16,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { VolyumeMark } from '../components/BrandMark';
 import { signInWithEmail, signUpWithEmail, resetPassword } from '../lib/supabase';
+import { syncProfile, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../store/useAppStore';
 
 const CRASH_LOG_KEY = '@volyume_crash_log';
 
 export default function LoginScreen({ navigation }) {
-  const { initLocalUser } = useAppStore();
+  const { initLocalUser, user: localUser, userProfile, tier } = useAppStore();
   const [mode, setMode] = useState('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -53,8 +54,19 @@ export default function LoginScreen({ navigation }) {
       } else if (mode === 'signup' && data.user && !data.session) {
         Alert.alert('Check your email', 'We sent you a confirmation link. Confirm then sign in.');
         setMode('signin');
-      } else if (mode === 'signup' && data.session) {
-        navigation.replace('Onboarding');
+      } else if (data.session) {
+        const supabaseUserId = data.session.user.id;
+        const localUserId = localUser?.id;
+        // Fire-and-forget: sync profile then upload local data in background
+        syncProfile(supabaseUserId, userProfile, tier).catch(() => {});
+        if (mode === 'signup') {
+          // New account — push local history up
+          bulkUploadLocalData(supabaseUserId, localUserId).catch(() => {});
+          navigation.replace('Onboarding');
+        } else {
+          // Existing account — pull cloud data down (new device scenario)
+          pullFromCloud(supabaseUserId).catch(() => {});
+        }
       }
     } finally {
       setLoading(false);
