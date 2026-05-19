@@ -1027,7 +1027,7 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
 
   // recovery (conditional)
   if (recoveryRating === 'poor') {
-    result.recovery = `You flagged poor recovery — limited sleep or high life stress. The plan uses lower overall volume than it would at average recovery, and the session count is kept at ${effectiveDays} days. Recovery quality sets a hard ceiling on how much training you can absorb; improving sleep and managing external stress will raise that ceiling more than adding sets would.`;
+    result.recovery = `You flagged poor recovery — limited sleep or high life stress. The plan uses less volume than it would at average recovery, and sessions are kept to ${effectiveDays} days. Sleep and stress management will do more for your progress right now than adding sets.`;
   } else if (recoveryRating === 'good') {
     result.recovery = `Good recovery allows slightly more volume than average, which is reflected in this plan. You are sleeping well and managing stress — take advantage of that by keeping nutrition consistent throughout the block.`;
   }
@@ -1037,12 +1037,12 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
   if (nutPhase && nutPhase !== 'maintain') {
     const phaseLabel = NUTRITION_PHASE_LABELS[nutPhase] ?? nutPhase;
     const nutMap = {
-      lean_gain:      `${phaseLabel}: you have surplus calories to work with. Volume is slightly increased because extra food speeds recovery and lets you productively absorb more sets. Take advantage of the surplus by keeping training intensity high throughout the block.`,
+      lean_gain:      `${phaseLabel}: you have extra calories to work with. Volume is slightly higher because extra food speeds up recovery and lets you get more out of your training. Keep the intensity up and you'll make the most of it.`,
       build:          `${phaseLabel}: eating more supports higher training volumes. This plan uses more weekly sets than it would at maintenance, because your body can recover from more. Keep protein high to direct those extra calories toward muscle rather than fat.`,
       mild_cut:       `${phaseLabel}: eating less slows recovery slightly. Volume is modest and you should stop a rep or two further from failure than usual — this preserves muscle and keeps recovery manageable while in a deficit.`,
       aggressive_cut: `${phaseLabel}: a significant calorie cut reduces how much your body can recover from. Volume is reduced. Keep protein at or above 2 g per kg of bodyweight and focus on your main compound lifts to protect muscle.`,
       contest_prep:   `Contest prep: your recovery is severely limited. Volume is at the lower end and caution is warranted. Prioritise sleep, protein intake, and managing life stress outside the gym.`,
-      recomp:         `Body Recomposition: training volume sits at a level sustainable in a slight deficit. The goal is keeping the training stimulus high enough to maintain muscle while your nutrition gradually reduces body fat.`,
+      recomp:         `Body Recomposition: training volume is kept at a level your body can handle while eating at a slight deficit. The goal is doing enough to hold on to your muscle while your nutrition gradually shifts your body composition.`,
     };
     result.nutrition = nutMap[nutPhase] ?? `${phaseLabel} phase influences how much volume the plan uses.`;
   }
