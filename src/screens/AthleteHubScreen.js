@@ -118,6 +118,7 @@ export default function AthleteHubScreen({ navigation }) {
   const [calm, setCalm]                         = useState(false);
   const [adaptationHistory, setAdaptationHistory] = useState([]);
   const [repWarnings, setRepWarnings] = useState([]);
+  const [engineLogOpen, setEngineLogOpen] = useState(false);
 
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
@@ -178,7 +179,10 @@ export default function AthleteHubScreen({ navigation }) {
         getCompletedWorkoutSets(user.id),
         getAllExercises(),
       ]);
-      const completed = workouts.filter(w => w.isCompleted ?? w.is_completed ?? false);
+      const completed = workouts.filter(w =>
+        (w.isCompleted ?? w.is_completed ?? false) &&
+        (w.setCount ?? w.set_count ?? 0) > 0,
+      );
       setTotalWorkouts(completed.length);
       setStreak(computeStreak(workouts));
 
@@ -270,9 +274,12 @@ export default function AthleteHubScreen({ navigation }) {
                 </View>
               )}
               {next && (
-                <Text style={styles.milestoneNext}>
-                  {next.sessions - totalWorkouts} to go — {next.label}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Text style={styles.milestoneNext}>
+                    {next.sessions - totalWorkouts} to go — {next.label}
+                  </Text>
+                  <InfoTooltip size={11} text={"Session milestones track long-term training consistency — the biggest predictor of muscle growth.\n\nEach session adds to your progressive overload history: your body adapts only through accumulated stimulus over time. The more quality sessions you log, the richer the data Volyume has to personalise your progression, spot rep regressions early, and time your deloads correctly.\n\nHitting milestones means you're building the habit, the mind-muscle connection, and the training base that makes long-term physique change inevitable."} />
+                </View>
               )}
             </View>
             {next && (
@@ -387,19 +394,30 @@ export default function AthleteHubScreen({ navigation }) {
             onPress={handleCoachExport}
           />
           <NavRow icon="trophy" label="Personal Records" sub="All-time bests" onPress={() => navigation.navigate('PRWall')} />
-          <NavRow icon="settings-outline" label="Settings" sub="Units, data export, preferences" onPress={() => navigation.navigate('Settings')} />
-        </View>
 
-        {/* ── About ─────────────────────────────────────── */}
-        <View style={styles.about}>
-          <Text style={styles.aboutName}>Volyume</Text>
-          <Text style={styles.aboutVersion}>Intelligent Hypertrophy Logbook · Private by design</Text>
-        </View>
-
-              {/* Adaptation History + Rep Regression Warnings */}
-              {(adaptationHistory.length > 0 || repWarnings.length > 0) && (
-                <View style={styles.adaptHistCard}>
-                  <Text style={styles.adaptHistTitle}>ENGINE LOG</Text>
+          {/* Engine Log — collapsible */}
+          {(adaptationHistory.length > 0 || repWarnings.length > 0) && (
+            <View style={styles.adaptHistCard}>
+              <TouchableOpacity
+                style={styles.adaptHistHeader}
+                onPress={() => setEngineLogOpen(v => !v)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.adaptHistHeaderLeft}>
+                  <View style={styles.adaptHistIconWrap}>
+                    <Ionicons name="pulse" size={18} color={colors.primary} />
+                  </View>
+                  <View>
+                    <Text style={styles.adaptHistHeaderLabel}>Engine Log</Text>
+                    <Text style={styles.adaptHistHeaderSub}>
+                      {repWarnings.length + adaptationHistory.length} recent coaching decisions
+                    </Text>
+                  </View>
+                </View>
+                <Ionicons name={engineLogOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
+              </TouchableOpacity>
+              {engineLogOpen && (
+                <View style={styles.adaptHistBody}>
                   {repWarnings.map((w, i) => (
                     <View key={w.id || `reg_${i}`} style={styles.adaptHistRow}>
                       <Ionicons name="alert-circle-outline" size={14} color={colors.warning} />
@@ -448,6 +466,17 @@ export default function AthleteHubScreen({ navigation }) {
                   })}
                 </View>
               )}
+            </View>
+          )}
+
+          <NavRow icon="settings-outline" label="Settings" sub="Units, data export, preferences" onPress={() => navigation.navigate('Settings')} />
+        </View>
+
+        {/* ── About ─────────────────────────────────────── */}
+        <View style={styles.about}>
+          <Text style={styles.aboutName}>Volyume</Text>
+          <Text style={styles.aboutVersion}>Intelligent Hypertrophy Logbook · Private by design</Text>
+        </View>
 
       </ScrollView>
     </SafeAreaView>
@@ -653,11 +682,30 @@ const styles = StyleSheet.create({
   aboutName:    { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textMuted },
   aboutVersion: { fontSize: fontSize.xs, color: colors.textMuted },
 
-  // Adaptation history
+  // Adaptation history / Engine Log
   adaptHistCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg,
     borderWidth: 1, borderColor: colors.border,
-    padding: spacing.lg, gap: spacing.md, marginBottom: spacing.lg,
+    padding: spacing.lg, gap: spacing.md,
+  },
+  adaptHistHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+  },
+  adaptHistHeaderLeft: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1,
+  },
+  adaptHistIconWrap: {
+    width: 36, height: 36, borderRadius: radius.md, backgroundColor: colors.primaryBg,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  adaptHistHeaderLabel: {
+    fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary,
+  },
+  adaptHistHeaderSub: {
+    fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2,
+  },
+  adaptHistBody: {
+    borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md, gap: spacing.md,
   },
   adaptHistTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.5, marginBottom: spacing.xs },
   adaptHistRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },

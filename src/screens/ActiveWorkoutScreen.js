@@ -38,7 +38,7 @@ import { applyTimeCrunch } from '../lib/mesocycle';
 import { getTimeCrunchMessage } from '../lib/whyThisTemplates';
 import { estimateWorkoutMinutes } from '../lib/planEngine';
 
-const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '', rir: null };
+const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '', rir: 2 };
 
 const SET_TYPE_DISPLAY = {
   straight: 'Working',
@@ -66,6 +66,15 @@ function getBestAnchorSet(sets, workingIdx) {
   const best = working.reduce((b, s) => (!b || (s.weight || 0) > (b.weight || 0)) ? s : b, null);
   if (!indexed || !best || (indexed.weight || 0) >= (best.weight || 0)) return indexed ?? best;
   return best;
+}
+
+// Drop sets count for weekly volume but NOT toward the set-target progress.
+// Only straight, amrap, myo-reps, rest-pause and superset sets tick the target counter.
+function countProgressSets(sets) {
+  return sets.filter(s => {
+    const t = s.setType ?? s.set_type ?? 'straight';
+    return t !== 'warmup' && t !== 'dropset';
+  }).length;
 }
 
 export default function ActiveWorkoutScreen({ navigation, route }) {
@@ -458,7 +467,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
       // Pre-fill next set from per-set targets (same beat-rep logic as initial load)
       if (currentSet.setType !== 'warmup') {
-        const nextWorkingCount = newLoggedSets.filter(s => s.setType !== 'warmup').length;
+        const nextWorkingCount = countProgressSets(newLoggedSets);
         const nextTarget = setTargets[nextWorkingCount];
         if (nextTarget) {
           const prevSetForNext = getBestAnchorSet(prevSets, nextWorkingCount);
@@ -477,7 +486,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       startRestTimer(routineExercise?.restSeconds || 90);
 
       // Auto-advance to next exercise when target sets just completed
-      const newWorkingCount = newLoggedSets.filter(s => s.setType !== 'warmup').length;
+      const newWorkingCount = countProgressSets(newLoggedSets);
       const justHitTarget = targetSets && newWorkingCount >= targetSets && workingLogged < targetSets;
       if (justHitTarget && !isLastExercise) {
         if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
@@ -489,6 +498,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // Prepare next set
       setNoteText('');
       setShowNoteInput(false);
+      // After a drop set, revert to straight so the count stays clean
+      if (currentSet.setType === 'dropset') {
+        setCurrentSet(cs => ({ ...cs, setType: 'straight' }));
+      }
       // If warmup was just completed, auto-switch to straight (working) and pre-fill from first target
       if (currentSet.setType === 'warmup') {
         const firstTarget = setTargets[0];
@@ -625,7 +638,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const elapsedStr = `${elapsed.mins}:${elapsed.secs.toString().padStart(2, '0')}`;
 
   const targetSets = routineExercise?.recommendedSets;
-  const workingLogged = loggedSets.filter(s => s.setType !== 'warmup').length;
+  const workingLogged = countProgressSets(loggedSets);
   const targetComplete = targetSets && workingLogged >= targetSets;
 
   if (!exercise) {
@@ -859,21 +872,33 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           ) : null}
 
           {/* Set Entry */}
-          <View style={[styles.setEntryCard, currentSet.setType === 'warmup' && styles.setEntryCardWarmup]}>
+          <View style={[
+            styles.setEntryCard,
+            currentSet.setType === 'warmup' && styles.setEntryCardWarmup,
+            currentSet.setType === 'dropset' && styles.setEntryCardDrop,
+          ]}>
             {currentSet.setType === 'warmup' && (
               <View style={styles.warmupBanner}>
                 <Ionicons name="flame-outline" size={14} color={colors.warning} />
                 <Text style={styles.warmupBannerText}>WARM UP · not counted in volume</Text>
               </View>
             )}
+            {currentSet.setType === 'dropset' && (
+              <View style={styles.dropBanner}>
+                <Ionicons name="arrow-down-circle-outline" size={14} color={colors.gold} />
+                <Text style={styles.dropBannerText}>DROP SET ↓ · lower the weight, keep going</Text>
+              </View>
+            )}
             <Text style={styles.setEntryTitle}>
               {currentSet.setType === 'warmup'
                 ? 'WARM UP SET'
-                : isDeloadWeek
-                  ? `DELOAD SET ${workingLogged + 1} · Easy`
-                  : routineExercise?.recommendedSets
-                    ? `SET ${workingLogged + 1} / ${routineExercise.recommendedSets} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working'}`
-                    : `SET ${workingLogged + 1} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working'}`}
+                : currentSet.setType === 'dropset'
+                  ? `DROP SET · after Set ${workingLogged}`
+                  : isDeloadWeek
+                    ? `DELOAD SET ${workingLogged + 1} · Easy`
+                    : routineExercise?.recommendedSets
+                      ? `SET ${workingLogged + 1} / ${routineExercise.recommendedSets} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working'}`
+                      : `SET ${workingLogged + 1} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working'}`}
             </Text>
             {currentSet.setType !== 'warmup' && setTargets[workingLogged] && (
               <View style={styles.inlineTargetChip}>
@@ -1021,26 +1046,32 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               <Text style={styles.loggedTitle}>THIS WORKOUT</Text>
               {loggedSets.map((s, i) => {
                 const isWarmup = s.setType === 'warmup';
-                const est1RM = isWarmup ? null : calculate1RM(s.weight, s.actualReps);
+                const isDrop   = s.setType === 'dropset';
+                const est1RM = (isWarmup || isDrop) ? null : calculate1RM(s.weight, s.actualReps);
+                const progressNum = loggedSets.slice(0, i + 1).filter(x => countProgressSets([x]) > 0).reduce((n, x) => n + 1, 0);
                 return (
-                  <View key={i} style={[styles.loggedSetRow, isWarmup && styles.loggedSetRowWarmup]}>
+                  <View key={i} style={[
+                    styles.loggedSetRow,
+                    isWarmup && styles.loggedSetRowWarmup,
+                    isDrop && styles.loggedSetRowDrop,
+                  ]}>
                     {isWarmup ? (
                       <Ionicons name="flame" size={14} color={colors.warning} style={{ width: 22, textAlign: 'center' }} />
+                    ) : isDrop ? (
+                      <Ionicons name="arrow-down-circle" size={16} color={colors.gold} style={{ width: 22, textAlign: 'center' }} />
                     ) : (
                       <View style={styles.setNumBadge}>
-                        <Text style={styles.setNumText}>
-                          {loggedSets.slice(0, i + 1).filter(x => x.setType !== 'warmup').length}
-                        </Text>
+                        <Text style={styles.setNumText}>{progressNum}</Text>
                       </View>
                     )}
-                    <Text style={[styles.loggedSetText, isWarmup && styles.loggedSetTextWarmup]}>
+                    <Text style={[styles.loggedSetText, isWarmup && styles.loggedSetTextWarmup, isDrop && styles.loggedSetTextDrop]}>
                       {s.weight}{units} × {s.actualReps}
-                      {isWarmup ? ' · Warm-up' : ''}
+                      {isWarmup ? ' · Warm-up' : isDrop ? ' · Drop' : ''}
                     </Text>
-                    {!isWarmup && est1RM > 0 && (
+                    {!isWarmup && !isDrop && est1RM > 0 && (
                       <Text style={styles.loggedEst1RM}>≈{est1RM.toFixed(0)}{units} 1RM</Text>
                     )}
-                    <Ionicons name="checkmark-circle" size={16} color={isWarmup ? colors.warning : colors.success} />
+                    <Ionicons name="checkmark-circle" size={16} color={isWarmup ? colors.warning : isDrop ? colors.gold : colors.success} />
                   </View>
                 );
               })}
@@ -1521,8 +1552,11 @@ const styles = StyleSheet.create({
   targetText: { fontSize: fontSize.sm, color: colors.textMuted },
   setEntryCard: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, gap: spacing.md },
   setEntryCardWarmup: { borderColor: colors.warning, backgroundColor: colors.warningBg || colors.surface },
+  setEntryCardDrop: { borderColor: colors.gold, backgroundColor: 'rgba(255,215,0,0.06)' },
   warmupBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   warmupBannerText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.warning, letterSpacing: 0.8 },
+  dropBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  dropBannerText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.gold, letterSpacing: 0.8 },
   setEntryTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.black, color: colors.textMuted, letterSpacing: 1.5 },
   noteInput: { backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md, fontSize: fontSize.sm, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, minHeight: 60 },
   completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderWidth: 1.5, borderColor: colors.primary + '80', borderRadius: radius.lg, paddingVertical: spacing.lg, backgroundColor: colors.primaryBg },
@@ -1549,6 +1583,8 @@ const styles = StyleSheet.create({
   loggedSetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border },
   loggedSetRowWarmup: { borderColor: colors.warning + '60', backgroundColor: colors.warningBg || colors.surface },
   loggedSetTextWarmup: { color: colors.warning },
+  loggedSetRowDrop: { borderColor: colors.gold + '50', backgroundColor: 'rgba(255,215,0,0.05)' },
+  loggedSetTextDrop: { color: colors.gold },
   setNumBadge: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
   setNumText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textSecondary },
   loggedSetText: { flex: 1, fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },

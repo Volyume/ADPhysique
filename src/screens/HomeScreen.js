@@ -199,24 +199,33 @@ export default function HomeScreen({ navigation }) {
 
   async function handleRepeatLastSession() {
     if (!lastSession) return;
-    const newWorkout = await createWorkout(user.id, lastSession.routineId || null);
+    const routineId = lastSession.routineId || lastSession.routine_id || null;
+    const newWorkout = await createWorkout(user.id, routineId);
 
-    // Rebuild the exercise list from the previous session's sets so the new
-    // workout opens pre-populated rather than blank.
-    const prevSets = await getWorkoutSetsForWorkout(lastSession.id);
-    const seenIds = [];
-    const orderedExerciseIds = [];
-    for (const s of prevSets) {
-      if (s.exerciseId && !seenIds.includes(s.exerciseId)) {
-        seenIds.push(s.exerciseId);
-        orderedExerciseIds.push(s.exerciseId);
+    let initialExercises;
+    if (routineId) {
+      // Load the FULL routine — not just what was done last time
+      const withExercises = await getRoutineExercisesWithDetails(routineId);
+      initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
+        exercise, routineExercise, sets: [],
+      }));
+    } else {
+      // No routine linked — fall back to exercises from the session's sets
+      const prevSets = await getWorkoutSetsForWorkout(lastSession.id);
+      const seenIds = [];
+      const orderedExerciseIds = [];
+      for (const s of prevSets) {
+        if (s.exerciseId && !seenIds.includes(s.exerciseId)) {
+          seenIds.push(s.exerciseId);
+          orderedExerciseIds.push(s.exerciseId);
+        }
       }
+      initialExercises = (
+        await Promise.all(orderedExerciseIds.map(id => getExerciseById(id).catch(() => null)))
+      )
+        .filter(Boolean)
+        .map(exercise => ({ exercise, routineExercise: null, sets: [] }));
     }
-    const initialExercises = (
-      await Promise.all(orderedExerciseIds.map(id => getExerciseById(id).catch(() => null)))
-    )
-      .filter(Boolean)
-      .map(exercise => ({ exercise, routineExercise: null, sets: [] }));
 
     startWorkout(newWorkout, initialExercises);
     navigation.navigate('ActiveWorkout');
