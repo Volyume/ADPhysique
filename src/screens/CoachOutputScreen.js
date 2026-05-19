@@ -83,7 +83,7 @@ function WhatsWorkingCard({ bullets }) {
   if (!bullets || bullets.length === 0) return null;
   return (
     <View style={styles.whatsWorkingCard}>
-      <SectionHeader title="WHAT'S WORKING" />
+      <SectionHeader title="What's working" />
       <View style={styles.bulletList}>
         {bullets.map((item, i) => (
           <View key={i} style={styles.bulletRow}>
@@ -124,7 +124,7 @@ function NextWeekCard({ adjustments }) {
 
   return (
     <View style={styles.card}>
-      <SectionHeader title="NEXT WEEK" />
+      <SectionHeader title="Next week" />
       <AdjustmentRow
         iconName="barbell-outline"
         label={TRAINING_SIGNAL_LABEL[training.signal] ?? training.signal}

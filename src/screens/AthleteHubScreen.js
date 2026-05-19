@@ -749,8 +749,8 @@ const styles = StyleSheet.create({
   // Recovery
   section:       { gap: spacing.md },
   sectionLabel:  {
-    fontSize: fontSize.xs, fontWeight: fontWeight.black,
-    color: colors.textMuted, letterSpacing: 1.5,
+    fontSize: fontSize.sm, fontWeight: fontWeight.semibold,
+    color: colors.textSecondary, letterSpacing: 0.2,
   },
   recoveryGrid: {
     flexDirection: 'row',

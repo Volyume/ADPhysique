@@ -225,12 +225,11 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
   stepNum: {
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
-    fontWeight: fontWeight.medium,
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    fontWeight: fontWeight.semibold,
     marginBottom: spacing.sm,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
+    letterSpacing: 0.2,
   },
   title: {
     fontSize: fontSize.xxl,

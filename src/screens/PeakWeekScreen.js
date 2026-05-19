@@ -350,8 +350,8 @@ const styles = StyleSheet.create({
     color: colors.textSecondary, marginTop: spacing.sm, marginBottom: spacing.xs,
   },
   sectionLabel: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.black,
-    color: colors.textMuted, letterSpacing: 1.5, marginTop: spacing.md,
+    fontSize: fontSize.sm, fontWeight: fontWeight.semibold,
+    color: colors.textSecondary, letterSpacing: 0.2, marginTop: spacing.md,
   },
   input: {
     backgroundColor: colors.inputBg, borderRadius: radius.md,
