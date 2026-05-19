@@ -312,8 +312,8 @@ export default function SettingsScreen({ navigation }) {
           <SettingRow
             icon="notifications-outline"
             label="Notifications"
-            showArrow={false}
-            rightElement={<Text style={styles.comingSoon}>Coming soon</Text>}
+            sub="Morning weight reminder and weekly check-in"
+            onPress={() => navigation.navigate('NotificationSettings')}
           />
         </View>
 

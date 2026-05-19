@@ -33,7 +33,20 @@
       "bundler": "metro"
     },
     "plugins": [
-      "expo-secure-store"
-    ]
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/volyume-icon.png",
+          "color": "#00E5FF",
+          "sounds": []
+        }
+      ]
+    ],
+    "notification": {
+      "icon": "./assets/volyume-icon.png",
+      "color": "#00E5FF",
+      "androidMode": "default"
+    }
   }
 }

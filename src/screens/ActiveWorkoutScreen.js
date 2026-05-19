@@ -901,48 +901,25 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               </View>
             )}
             {currentSet.setType === 'warmup' && (() => {
-              const isCompound = (exercise?.compoundIsolation ?? exercise?.compound_isolation ?? 'compound') === 'compound';
               const targetW = setTargets[0]?.weight || prevSets[0]?.weight || null;
-              const warmupsDone = currentEntry?.sets?.filter(s => (s.setType ?? s.set_type) === 'warmup').length ?? 0;
-              const protocol = isCompound
-                ? [
-                    { pct: 0.40, reps: 10 },
-                    { pct: 0.60, reps: 6 },
-                    { pct: 0.80, reps: 3 },
-                  ]
-                : [{ pct: 0.50, reps: 12 }];
+              const kg = targetW ? (Math.round(targetW * 0.50 * 2) / 2) : null;
               return (
                 <View style={styles.warmupGuide}>
                   <View style={styles.warmupGuideHeader}>
-                    <Text style={styles.warmupGuideTitle}>
-                      {isCompound ? 'Compound ramp-up' : 'Feeler set'}
-                    </Text>
+                    <Text style={styles.warmupGuideTitle}>Feeler set</Text>
                     <InfoTooltip
                       size={13}
-                      text={
-                        isCompound
-                          ? 'For compound lifts, a progressive ramp primes your muscles and nervous system without tiring them.\n\n40% × 10 — blood flow, groove the movement\n60% × 6 — building toward working load\n80% × 3 — prime the nervous system, not exhaust it\n\nRest 60–90s between warmup sets. Then move into your working sets.'
-                          : 'One light feeler set before isolation work is plenty. Use around 50% of your working weight for 10–12 easy reps. Focus on feeling the target muscle — not tiring it.'
-                      }
+                      text="One light feeler set is all you need. Use around 50% of your working weight for 10–12 easy reps. Focus on feeling the target muscle — not tiring it."
                     />
                   </View>
                   <View style={styles.warmupProtocolRow}>
-                    {protocol.map((step, i) => {
-                      const kg = targetW ? (Math.round(targetW * step.pct * 2) / 2) : null;
-                      const isThis = i === warmupsDone;
-                      const isDone = i < warmupsDone;
-                      return (
-                        <View key={i} style={[styles.warmupStep, isThis && styles.warmupStepActive, isDone && styles.warmupStepFaded]}>
-                          <Text style={[styles.warmupStepPct, isThis && styles.warmupStepPctActive]}>
-                            {Math.round(step.pct * 100)}%
-                          </Text>
-                          {kg !== null && (
-                            <Text style={[styles.warmupStepKg, isDone && styles.warmupStepFadedText]}>{kg}{units}</Text>
-                          )}
-                          <Text style={[styles.warmupStepReps, isDone && styles.warmupStepFadedText]}>× {step.reps}</Text>
-                        </View>
-                      );
-                    })}
+                    <View style={[styles.warmupStep, styles.warmupStepActive]}>
+                      <Text style={[styles.warmupStepPct, styles.warmupStepPctActive]}>50%</Text>
+                      {kg !== null && (
+                        <Text style={styles.warmupStepKg}>{kg}{units}</Text>
+                      )}
+                      <Text style={styles.warmupStepReps}>× 10–12</Text>
+                    </View>
                     {targetW ? (
                       <View style={[styles.warmupStep, styles.warmupStepWorking]}>
                         <Text style={styles.warmupStepPct}>100%</Text>

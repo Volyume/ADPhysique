@@ -15,6 +15,7 @@ import useAppStore from '../store/useAppStore';
 import { getSupabaseClient } from '../lib/supabase';
 import { initDatabase } from '../lib/database';
 import { seedExercisesIfNeeded } from '../lib/seedExercises';
+import { configureNotificationHandler, restoreNotifications } from '../lib/notifications';
 
 // Auth screens
 import LoginScreen from '../screens/LoginScreen';
@@ -47,6 +48,7 @@ import FirstRunScreen from '../screens/FirstRunScreen';
 import WeeklyCheckInScreen from '../screens/WeeklyCheckInScreen';
 import CoachOutputScreen from '../screens/CoachOutputScreen';
 import ProGoalSetupScreen from '../screens/ProGoalSetupScreen';
+import NotificationSettingsScreen from '../screens/NotificationSettingsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -115,6 +117,7 @@ function ProfileStack() {
       <Stack.Screen name="WeeklyCheckIn" component={WeeklyCheckInScreen} options={{ title: 'Weekly Check-In' }} />
       <Stack.Screen name="CoachOutput" component={CoachOutputScreen} options={{ title: 'Your Week' }} />
       <Stack.Screen name="ProGoalSetup" component={ProGoalSetupScreen} options={{ title: 'Pro Setup' }} />
+      <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ title: 'Notifications' }} />
     </Stack.Navigator>
   );
 }
@@ -187,6 +190,10 @@ export default function RootNavigator() {
   }, []);
 
   useEffect(() => {
+    configureNotificationHandler();
+  }, []);
+
+  useEffect(() => {
     async function bootstrap() {
       try {
         initDatabase()
@@ -210,6 +217,10 @@ export default function RootNavigator() {
 
         // No cloud session — auto-restore or create a local user (no login screen)
         await initLocalUser();
+        try {
+          const raw = await AsyncStorage.getItem('@volyume_notification_prefs');
+          if (raw) restoreNotifications(JSON.parse(raw)).catch(() => {});
+        } catch (_e) {}
       } catch (err) {
         console.error('bootstrap failed:', err);
         // Failsafe: ensure auth loading clears even if initLocalUser throws
