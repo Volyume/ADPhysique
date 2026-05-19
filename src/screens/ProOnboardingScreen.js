@@ -38,9 +38,9 @@ function estimateLBM(weightKg, heightCm, sex) {
 function getProteinTargets(weightKg, heightCm, sex) {
   const lbm = estimateLBM(weightKg, heightCm, sex);
   return {
-    standard: Math.max(Math.round(lbm * 2.0), Math.round(weightKg * 1.8)), // min 1.8 g/kg BW
-    high:     Math.max(Math.round(lbm * 2.4), Math.round(weightKg * 2.0)), // min 2.0 g/kg BW
-    max:      Math.max(Math.round(lbm * 2.7), Math.round(weightKg * 2.2)), // min 2.2 g/kg BW
+    standard: Math.max(Math.round(lbm * 2.0), Math.round(weightKg * 2.0)), // min 2.0 g/kg BW
+    high:     Math.max(Math.round(lbm * 2.4), Math.round(weightKg * 2.2)), // min 2.2 g/kg BW
+    max:      Math.max(Math.round(lbm * 2.7), Math.round(weightKg * 2.5)), // min 2.5 g/kg BW
   };
 }
 
@@ -97,17 +97,17 @@ const PROTEIN_LEVELS = [
   {
     id: 'standard',
     label: 'Standard',
-    sub: 'The research-backed minimum for active people. A consistent, achievable daily target.',
+    sub: 'A solid daily target for active people. Plenty to support muscle building and recovery.',
   },
   {
     id: 'high',
     label: 'High',
-    sub: 'Solid for regular training and building muscle. A reliable everyday target.',
+    sub: 'The sweet spot for serious training. Maximises muscle growth without being excessive.',
   },
   {
     id: 'max',
     label: 'Maximum',
-    sub: 'Upper end of the evidence base. Best for dedicated competitors and hard training.',
+    sub: 'Used by competitive athletes and those cutting hard. High but sustainable for most people.',
   },
 ];
 

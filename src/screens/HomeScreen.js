@@ -61,12 +61,6 @@ export default function HomeScreen({ navigation }) {
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
 
-  useEffect(() => {
-    if (tier !== 'pro') return;
-    AsyncStorage.getItem('@volyume_seen_coaching_nudge').then(val => {
-      if (val !== 'true') setShowCoachingNudge(true);
-    });
-  }, [tier]);
 
   function dismissCoachingNudge() {
     setShowCoachingNudge(false);
@@ -126,6 +120,13 @@ export default function HomeScreen({ navigation }) {
 
       const completed = allWorkouts.filter(w => w.isCompleted).sort((a, b) => b.startedAt - a.startedAt);
       setLastSession(completed[0] || null);
+
+      // Only show the coaching nudge once the user has real training data to review
+      if (tier === 'pro' && completed.length >= 3) {
+        AsyncStorage.getItem('@volyume_seen_coaching_nudge').then(val => {
+          if (val !== 'true') setShowCoachingNudge(true);
+        });
+      }
 
       // Compute tonnage for last session
       if (completed[0]) {
@@ -627,9 +628,9 @@ export default function HomeScreen({ navigation }) {
               <Ionicons name="pulse-outline" size={20} color={colors.primary} />
             </View>
             <View style={{ flex: 1, gap: 4 }}>
-              <Text style={styles.coachingNudgeTitle}>Your weekly coaching report is ready</Text>
+              <Text style={styles.coachingNudgeTitle}>Your weekly coaching review is here</Text>
               <Text style={styles.coachingNudgeBody}>
-                Every week Volyume reviews your training and gives you personalised feedback on how to adjust things going forward.
+                Each week Volyume looks at how your training went and suggests what to adjust going forward. Tap to see yours.
               </Text>
               <TouchableOpacity
                 style={styles.coachingNudgeBtn}
