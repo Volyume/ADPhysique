@@ -10,7 +10,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { VolyumeMark } from '../components/BrandMark';
 import useAppStore from '../store/useAppStore';
 import { logBodyMetric, saveNutritionTargets, saveUserBodyProfile, migrateLocalUserId } from '../lib/database';
-import { stoneLbsToKg, lbsToKg, usesImperialHeight, ftInToCm, parseBodyWeightToKg } from '../lib/units';
+import { stoneLbsToKg, ftInToCm, parseBodyWeightToKg } from '../lib/units';
 import { signUpWithEmail } from '../lib/supabase';
 import { bulkUploadLocalData, syncProfile } from '../lib/sync';
 import {
@@ -159,6 +159,8 @@ export default function ProOnboardingScreen({ navigation }) {
   const [bodyWeightStLbs, setBodyWeightStLbs] = useState('0');
   // Single-field entry (kg or lbs)
   const [bodyWeight, setBodyWeight] = useState('');
+  // Height units independent of body weight units — UK default is imperial (ft+in)
+  const [localHeightUnits, setLocalHeightUnits] = useState('imperial');
   const [sex, setSex] = useState('male');
   const [age, setAge] = useState('');
   const [heightCm, setHeightCm] = useState('');
@@ -233,10 +235,9 @@ export default function ProOnboardingScreen({ navigation }) {
     const bwKg = localBWUnits === 'st'
       ? (stoneLbsToKg(bodyWeightSt || '12', bodyWeightStLbs || '0') || 80)
       : (parseBodyWeightToKg(bodyWeight || (localBWUnits === 'lbs' ? '176' : '80'), localBWUnits) || 80);
-    const imperial = usesImperialHeight(localBWUnits);
-    const hcm = !imperial
-      ? (parseFloat(heightCm) || 175)
-      : ftInToCm(parseInt(heightFt, 10) || 5, parseInt(heightIn, 10) || 9);
+    const hcm = localHeightUnits === 'imperial'
+      ? ftInToCm(parseInt(heightFt, 10) || 5, parseInt(heightIn, 10) || 9)
+      : (parseFloat(heightCm) || 175);
     const ageNum = parseInt(age, 10) || 28;
 
     // Build protein targets from lean mass + training frequency, then auto-recommend a level
@@ -274,10 +275,9 @@ export default function ProOnboardingScreen({ navigation }) {
       if (user?.id && !isNaN(bwKg) && bwKg > 0) {
         await logBodyMetric(user.id, { weightKg: bwKg, loggedAt: Date.now() });
       }
-      const imperial = usesImperialHeight(localBWUnits);
-      const hcm = !imperial
-        ? (parseFloat(heightCm) || null)
-        : (!isNaN(parseInt(heightFt, 10)) ? ftInToCm(heightFt, heightIn) : null);
+      const hcm = localHeightUnits === 'imperial'
+        ? (!isNaN(parseInt(heightFt, 10)) ? ftInToCm(heightFt, heightIn) : null)
+        : (parseFloat(heightCm) || null);
       const ageNum = parseInt(age, 10) || null;
       if (user?.id && (sex || hcm || ageNum)) {
         await saveUserBodyProfile(user.id, {
@@ -501,17 +501,23 @@ export default function ProOnboardingScreen({ navigation }) {
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.fieldLabel}>Height</Text>
-              {!usesImperialHeight(localBWUnits) ? (
-                <TextInput
-                  style={styles.input}
-                  value={heightCm}
-                  onChangeText={setHeightCm}
-                  placeholder="e.g. 178 cm"
-                  placeholderTextColor={colors.textDisabled}
-                  keyboardType="decimal-pad"
-                />
-              ) : (
+              <View style={styles.fieldLabelRow}>
+                <Text style={[styles.fieldLabel, { marginBottom: 0 }]}>Height</Text>
+                <View style={styles.segmentRowSmall}>
+                  {[{ key: 'imperial', label: 'ft + in' }, { key: 'metric', label: 'cm' }].map(u => (
+                    <TouchableOpacity
+                      key={u.key}
+                      style={[styles.segmentSmall, localHeightUnits === u.key && styles.segmentActive]}
+                      onPress={() => setLocalHeightUnits(u.key)}
+                    >
+                      <Text style={[styles.segmentTextSmall, localHeightUnits === u.key && styles.segmentTextActive]}>
+                        {u.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+              {localHeightUnits === 'imperial' ? (
                 <View style={styles.heightImperialRow}>
                   <View style={{ flex: 1 }}>
                     <TextInput
@@ -536,6 +542,15 @@ export default function ProOnboardingScreen({ navigation }) {
                     />
                   </View>
                 </View>
+              ) : (
+                <TextInput
+                  style={styles.input}
+                  value={heightCm}
+                  onChangeText={setHeightCm}
+                  placeholder="e.g. 178 cm"
+                  placeholderTextColor={colors.textDisabled}
+                  keyboardType="decimal-pad"
+                />
               )}
             </View>
 
@@ -1148,6 +1163,22 @@ const styles = StyleSheet.create({
   },
 
   heightImperialRow: { flexDirection: 'row', gap: spacing.md },
+
+  // Inline label + small toggle on same row
+  fieldLabelRow: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', marginBottom: spacing.sm,
+  },
+  segmentRowSmall: {
+    flexDirection: 'row', backgroundColor: colors.surface,
+    borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border,
+    padding: 2,
+  },
+  segmentSmall: {
+    paddingVertical: 4, paddingHorizontal: spacing.sm,
+    borderRadius: radius.sm - 2, alignItems: 'center',
+  },
+  segmentTextSmall: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted },
 
   // Segment control (units)
   segmentRow: {
