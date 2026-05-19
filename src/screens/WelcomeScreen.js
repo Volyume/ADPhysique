@@ -11,9 +11,9 @@ const HERO = require('../../assets/volyume-icon.png');
 
 const FREE_BULLETS = [
   'Unlimited workout logging',
-  'Exercise library',
-  'Personal Records',
-  'No account needed',
+  'Exercise library and Personal Records',
+  'Works offline, no account needed',
+  'Create an account anytime to back up your data',
 ];
 
 const PRO_BULLETS = [
@@ -65,7 +65,7 @@ export default function WelcomeScreen({ navigation }) {
                     <Text style={styles.betaBadgeText}>FREE BETA</Text>
                   </View>
                 </View>
-                <Text style={styles.proSubtitle}>The full coaching experience.</Text>
+                <Text style={styles.proSubtitle}>The full coaching experience. Account required.</Text>
               </View>
             </View>
 
@@ -107,6 +107,13 @@ export default function WelcomeScreen({ navigation }) {
                   <Text style={styles.freeBulletText}>{b}</Text>
                 </View>
               ))}
+            </View>
+
+            <View style={styles.freeBackupNote}>
+              <Ionicons name="shield-checkmark-outline" size={13} color={colors.textMuted} />
+              <Text style={styles.freeBackupText}>
+                Your data stays on your device. Sign up anytime to sync and protect it.
+              </Text>
             </View>
           </TouchableOpacity>
         </Animated.View>
@@ -202,6 +209,12 @@ const styles = StyleSheet.create({
   freeSubtitle: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 1 },
   freeBullets: { gap: spacing.xs, paddingLeft: spacing.xs },
   freeBulletText: { fontSize: fontSize.xs, color: colors.textMuted, flex: 1 },
+  freeBackupNote: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs,
+    marginTop: spacing.xs, paddingTop: spacing.sm,
+    borderTopWidth: 1, borderTopColor: colors.border,
+  },
+  freeBackupText: { fontSize: 11, color: colors.textMuted, flex: 1, lineHeight: 16 },
 
   signInLink: {
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center',

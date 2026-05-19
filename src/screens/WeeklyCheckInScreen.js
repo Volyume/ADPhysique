@@ -173,7 +173,8 @@ export default function WeeklyCheckInScreen({ navigation }) {
   const hasStepsTarget = Boolean(userProfile?.stepsTarget ?? userProfile?.steps_target);
   const trackCycle = userProfile?.trackCycle === true || userProfile?.track_cycle === true;
 
-  // Load today's weight status on mount
+  // Load morning weights for the week summary
+  const [weekWeights, setWeekWeights] = useState([]);
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -183,9 +184,10 @@ export default function WeeklyCheckInScreen({ navigation }) {
         if (cancelled) return;
         const logged = hasLoggedToday(weights);
         setAlreadyLoggedToday(logged);
-        if (logged) {
-          setTodayLoggedValue(todayWeightValue(weights));
-        }
+        if (logged) setTodayLoggedValue(todayWeightValue(weights));
+        // Last 7 days only for the check-in summary
+        const weekAgo = Date.now() - 7 * 86400000;
+        setWeekWeights(weights.filter(w => (w.loggedAt ?? 0) >= weekAgo));
       } catch (e) {
         console.warn('[WeeklyCheckIn] failed to load morning weights', e);
       } finally {
@@ -206,16 +208,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
       const userId = user?.id;
       if (!userId) return;
 
-      // 1. Log morning weight if entered and not already logged today
-      const parsedWeight = morningWeight.trim() ? parseFloat(morningWeight) : null;
-      if (parsedWeight !== null && !isNaN(parsedWeight) && !alreadyLoggedToday) {
-        await logMorningWeight(userId, {
-          weightKg: parsedWeight,
-          loggedAt: Date.now(),
-        });
-      }
-
-      // 2. Save the weekly check-in record
+      // Save the weekly check-in record
       await saveWeeklyCheckin(userId, {
         weekStart: weekStart.getTime(),
         energyScore,
@@ -297,31 +290,30 @@ export default function WeeklyCheckInScreen({ navigation }) {
             </Text>
           </View>
 
-          {/* ── 1. Morning weight ─────────────────────────────────────────── */}
+          {/* ── 1. Morning weight summary (read-only — logged daily from Train tab) ── */}
           {!loading && (
             <View style={styles.section}>
-              <SectionLabel>This morning's weight ({unitLabel})</SectionLabel>
-              {alreadyLoggedToday ? (
-                <View style={styles.loggedTodayRow}>
-                  <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-                  <Text style={styles.loggedTodayText}>
-                    Logged today
-                    {todayLoggedValue != null
-                      ? `: ${todayLoggedValue} ${unitLabel}`
-                      : ''}
-                  </Text>
+              <SectionLabel>Morning weight this week</SectionLabel>
+              {weekWeights.length > 0 ? (
+                <View style={styles.weightSummaryRow}>
+                  <View style={styles.weightSummaryLeft}>
+                    <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                    <Text style={styles.weightSummaryText}>
+                      {weekWeights.length} {weekWeights.length === 1 ? 'day' : 'days'} logged
+                      {weekWeights.length >= 1 && (() => {
+                        const avg = weekWeights.reduce((s, w) => s + (w.weightKg ?? 0), 0) / weekWeights.length;
+                        return ` · avg ${avg.toFixed(1)} ${unitLabel}`;
+                      })()}
+                    </Text>
+                  </View>
+                  {!alreadyLoggedToday && (
+                    <Text style={styles.weightSummaryMissed}>Not yet today</Text>
+                  )}
                 </View>
               ) : (
-                <TextInput
-                  style={styles.weightInput}
-                  value={morningWeight}
-                  onChangeText={setMorningWeight}
-                  keyboardType="decimal-pad"
-                  placeholder={unitLabel === 'lbs' ? '185.0' : '82.5'}
-                  placeholderTextColor={colors.textMuted}
-                  returnKeyType="done"
-                  maxLength={7}
-                />
+                <Text style={styles.skipNote}>
+                  No morning weights logged this week. Log from the Train tab each morning.
+                </Text>
               )}
             </View>
           )}
@@ -668,6 +660,15 @@ const styles = StyleSheet.create({
   },
 
   // ── Skip note (when no nutrition target)
+  weightSummaryRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: colors.surface2, borderRadius: radius.md,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  weightSummaryLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  weightSummaryText: { fontSize: fontSize.sm, color: colors.textSecondary },
+  weightSummaryMissed: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
   skipNote: {
     fontSize: fontSize.sm,
     color: colors.textMuted,

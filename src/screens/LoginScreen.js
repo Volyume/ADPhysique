@@ -22,9 +22,10 @@ import useAppStore from '../store/useAppStore';
 
 const CRASH_LOG_KEY = '@volyume_crash_log';
 
-export default function LoginScreen({ navigation }) {
+export default function LoginScreen({ navigation, route }) {
   const { initLocalUser, user: localUser, userProfile, tier } = useAppStore();
-  const [mode, setMode] = useState('signin');
+  const promptSignup = route?.params?.promptSignup === true;
+  const [mode, setMode] = useState(promptSignup ? 'signup' : 'signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -135,6 +136,14 @@ export default function LoginScreen({ navigation }) {
             <Text style={styles.formTitle}>
               {isSignIn ? 'Sign in to your account' : 'Create your account'}
             </Text>
+            {promptSignup && !isSignIn && (
+              <View style={styles.backupPrompt}>
+                <Ionicons name="shield-checkmark-outline" size={16} color={colors.primary} />
+                <Text style={styles.backupPromptText}>
+                  Create a free account to keep your plan, workouts, and progress safe. If you lose or change your phone, everything restores instantly.
+                </Text>
+              </View>
+            )}
 
             {/* Email */}
             <View style={styles.fieldGroup}>
@@ -403,6 +412,16 @@ const styles = StyleSheet.create({
   },
   dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
   dividerText: { fontSize: fontSize.xs, color: colors.textMuted },
+
+  backupPrompt: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
+    backgroundColor: colors.primaryBg, borderRadius: radius.md,
+    padding: spacing.md, borderWidth: 1, borderColor: colors.primary + '40',
+    marginBottom: spacing.sm,
+  },
+  backupPromptText: {
+    fontSize: fontSize.sm, color: colors.textSecondary, flex: 1, lineHeight: 20,
+  },
 
   // Local mode
   localBtn: {

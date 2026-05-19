@@ -183,7 +183,7 @@ function PillButton({ label, selected, onPress }) {
 
 export default function CoachBuilderScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
-  const { user, completeFirstRun } = useAppStore();
+  const { user, completeFirstRun, tier } = useAppStore();
 
   const nutritionPhaseFromRoute = route?.params?.nutritionPhase ?? null;
   const isFirstRun = route?.params?.firstRun === true;
@@ -361,8 +361,12 @@ export default function CoachBuilderScreen({ navigation, route }) {
       }
 
       if (isFirstRun) {
-        // First-run: marking complete swaps RootNavigator to the main tabs.
         await completeFirstRun();
+        // Pro users: prompt to create an account so their data is backed up.
+        // The prompt is shown via the Login screen with a signup-first flag.
+        if (tier === 'pro' && user?.isLocal) {
+          navigation.navigate('Login', { promptSignup: true });
+        }
         return;
       }
       navigation.navigate('PlansTab', { screen: 'Plans' });
