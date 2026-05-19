@@ -768,6 +768,470 @@ const LIBRARY_PLANS = [
     ],
   },
 
+  // ── 19. Women's Full Body Foundation ──────────────────────────────────────
+  {
+    name: 'Women\'s Full Body Foundation',
+    description: 'Three full-body sessions per week covering every major muscle group with an emphasis on the lower body and glutes. Designed as a first programme for anyone starting out, or returning after a break. Each session covers a squat, a hinge, a push, and a pull — the four movements you need to build strength from scratch. Add small amounts of weight each week and focus on technique before chasing numbers. Leave 2 to 3 reps in the tank on every set.',
+    tags: 'beginner full_body gender:women goal:build_muscle days:3 audience:beginner featured',
+    difficulty: 0,
+    workouts: [
+      {
+        name: 'Full Body A',
+        exercises: [
+          { name: 'Dumbbell Goblet Squat', sets: 3, repsMin: 10, repsMax: 15, rest: 90, notes: 'Hold dumbbell at chest. Sit deep into the squat. Push knees out.' },
+          { name: 'Romanian Deadlift (Barbell)', sets: 3, repsMin: 10, repsMax: 12, rest: 90, notes: 'Hip hinge. Feel the hamstring stretch. Keep bar close to legs.' },
+          { name: 'Dumbbell Bench Press', sets: 3, repsMin: 10, repsMax: 15, rest: 90, notes: 'Control the descent. Press smoothly. Full range.' },
+          { name: 'Dumbbell Row', sets: 3, repsMin: 10, repsMax: 15, rest: 90, notes: 'Brace core. Pull elbow back and up. Squeeze back.' },
+          { name: 'Glute Bridge', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Drive hips up. Squeeze glutes hard at top. Hold 1 second.' },
+        ],
+      },
+      {
+        name: 'Full Body B',
+        exercises: [
+          { name: 'Leg Press', sets: 3, repsMin: 12, repsMax: 15, rest: 90, notes: 'Higher foot placement for more glute and hamstring. Full range.' },
+          { name: 'Lying Leg Curl', sets: 3, repsMin: 12, repsMax: 15, rest: 60, notes: 'Curl towards glutes. Hold a second at top.' },
+          { name: 'Incline Dumbbell Press', sets: 3, repsMin: 10, repsMax: 15, rest: 90, notes: 'Slight incline. Upper chest emphasis. Control down.' },
+          { name: 'Lat Pulldown (Wide Grip)', sets: 3, repsMin: 10, repsMax: 15, rest: 90, notes: 'Pull elbows down to sides. Arch chest toward bar.' },
+          { name: 'Dumbbell Lateral Raise', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Light weight. Raise to shoulder height. Slow and controlled.' },
+        ],
+      },
+      {
+        name: 'Full Body C',
+        exercises: [
+          { name: 'Bulgarian Split Squat', sets: 3, repsMin: 10, repsMax: 12, rest: 90, notes: 'Rear foot on bench. Front knee tracks over toes. Drive through front heel.' },
+          { name: 'Seated Leg Curl', sets: 3, repsMin: 12, repsMax: 15, rest: 60, notes: 'Full stretch at start. Curl to full contraction. Squeeze.' },
+          { name: 'Dumbbell Shoulder Press', sets: 3, repsMin: 10, repsMax: 15, rest: 90, notes: 'Seated. Press overhead. Lower slowly.' },
+          { name: 'Seated Cable Row', sets: 3, repsMin: 12, repsMax: 15, rest: 90, notes: 'Full stretch. Row to belly. Elbows back.' },
+          { name: 'Face Pull', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Rope at eye height. Elbows high. Rear-delt and shoulder health.' },
+        ],
+      },
+    ],
+  },
+
+  // ── 20. Women's Glute & Strength ──────────────────────────────────────────
+  {
+    name: 'Women\'s Glute & Strength',
+    description: 'A four-day programme built around glute and hamstring development, with upper-body strength work to balance proportions. Days one and three focus on the lower body with a different emphasis each session — one session heavier and compound-led, the other detail-oriented. Days two and four train the upper body with enough volume to build visible strength in the shoulders, back, and arms. Progress by adding weight when all reps are completed with good technique.',
+    tags: 'intermediate upper_lower gender:women goal:build_muscle days:4 glutes featured',
+    difficulty: 1,
+    workouts: [
+      {
+        name: 'Lower A — Glutes & Hamstrings',
+        exercises: [
+          { name: 'Hip Thrust (Barbell)', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Shoulders on bench. Drive hips fully up. Squeeze hard at top.' },
+          { name: 'Romanian Deadlift (Barbell)', sets: 4, repsMin: 8, repsMax: 12, rest: 90, notes: 'Hip hinge. Long hamstring stretch. Control the descent.' },
+          { name: 'Bulgarian Split Squat', sets: 3, repsMin: 10, repsMax: 12, rest: 90, notes: 'Rear foot elevated. Drive through front heel. Knee tracks toes.' },
+          { name: 'Lying Leg Curl', sets: 3, repsMin: 12, repsMax: 15, rest: 60, notes: 'Curl hard. Squeeze glutes as you curl. Hold at top.' },
+          { name: 'Cable Kickback', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Full hip extension. Squeeze glute at top. Slow and controlled.' },
+        ],
+      },
+      {
+        name: 'Upper A — Back & Shoulders',
+        exercises: [
+          { name: 'Lat Pulldown (Wide Grip)', sets: 4, repsMin: 10, repsMax: 12, rest: 90, notes: 'Pull elbows to sides. Stretch fully overhead between reps.' },
+          { name: 'Seated Cable Row', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Full stretch. Row elbows back. Squeeze shoulder blades.' },
+          { name: 'Dumbbell Shoulder Press', sets: 3, repsMin: 10, repsMax: 15, rest: 90, notes: 'Press overhead. Full range. Lower slowly.' },
+          { name: 'Dumbbell Lateral Raise', sets: 4, repsMin: 15, repsMax: 20, rest: 60, notes: 'Raise to shoulder height only. Slow eccentric.' },
+          { name: 'Face Pull', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Rope at eye height. Elbows high. Rear-delt health.' },
+        ],
+      },
+      {
+        name: 'Lower B — Quads & Glutes',
+        exercises: [
+          { name: 'Barbell Back Squat', sets: 4, repsMin: 8, repsMax: 12, rest: 120, notes: 'Full depth. Knees out. Drive through heels.' },
+          { name: 'Leg Press', sets: 3, repsMin: 12, repsMax: 15, rest: 90, notes: 'High foot for glutes. Lower foot for quads. Mix it up.' },
+          { name: 'Leg Extension', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Quad isolation. Squeeze hard at the top. Slow descent.' },
+          { name: 'Glute Bridge', sets: 4, repsMin: 15, repsMax: 20, rest: 60, notes: 'Body-weight or load on hips. Drive hips up. Squeeze.' },
+          { name: 'Seated Leg Curl', sets: 3, repsMin: 12, repsMax: 15, rest: 60, notes: 'Full stretch. Curl to contraction. Slow and controlled.' },
+        ],
+      },
+      {
+        name: 'Upper B — Chest, Arms & Core',
+        exercises: [
+          { name: 'Incline Dumbbell Press', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Slight incline. Upper chest. Control the descent.' },
+          { name: 'Machine Row (Chest Supported)', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Chest on pad. Row elbows back. Squeeze back.' },
+          { name: 'Dumbbell Curl', sets: 3, repsMin: 10, repsMax: 15, rest: 60, notes: 'Full range. Squeeze at top. Lower slowly.' },
+          { name: 'Rope Pushdown', sets: 3, repsMin: 12, repsMax: 15, rest: 60, notes: 'Elbows pinned. Full extension. Squeeze triceps.' },
+          { name: 'Dumbbell Lateral Raise', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Shoulder-width only. Slow, controlled arc.' },
+        ],
+      },
+    ],
+  },
+
+  // ── 21. Dumbbell Only — Full Body ─────────────────────────────────────────
+  {
+    name: 'Dumbbell Only — Full Body',
+    description: 'A three-day full-body programme that requires nothing but a set of dumbbells. Every major muscle group is trained each session using dumbbell-friendly movement patterns: squat, hinge, press, and row. Great for home training, travel, or gyms with limited equipment. Progress by adding reps first — once you hit the top of the rep range, move up to the next dumbbell weight.',
+    tags: 'full_body equipment:dumbbell gender:all goal:build_muscle days:3 beginner intermediate featured',
+    difficulty: 0,
+    workouts: [
+      {
+        name: 'Full Body A',
+        exercises: [
+          { name: 'Dumbbell Goblet Squat', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Hold dumbbell at chest. Sit deep. Push knees out.' },
+          { name: 'Romanian Deadlift (Barbell)', sets: 3, repsMin: 10, repsMax: 12, rest: 90, notes: 'Use dumbbells. Hip hinge. Long hamstring stretch.' },
+          { name: 'Dumbbell Bench Press', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Flat bench or floor press if no bench. Full range.' },
+          { name: 'Dumbbell Row', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Brace core. Pull elbow back and up. Squeeze back at top.' },
+          { name: 'Dumbbell Lateral Raise', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Light. Raise to shoulder height. Slow and controlled.' },
+        ],
+      },
+      {
+        name: 'Full Body B',
+        exercises: [
+          { name: 'Bulgarian Split Squat', sets: 3, repsMin: 10, repsMax: 15, rest: 90, notes: 'Rear foot on chair. Dumbbells at sides. Drive through front heel.' },
+          { name: 'Glute Bridge', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Dumbbell on hips for load. Drive hips up. Squeeze at top.' },
+          { name: 'Incline Dumbbell Press', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Incline bench or floor. Upper chest. Control down.' },
+          { name: 'Dumbbell Shoulder Press', sets: 3, repsMin: 10, repsMax: 15, rest: 90, notes: 'Seated or standing. Full overhead range.' },
+          { name: 'EZ Bar Curl', sets: 3, repsMin: 10, repsMax: 15, rest: 60, notes: 'Use dumbbells. Full range. Squeeze at top.' },
+        ],
+      },
+      {
+        name: 'Full Body C',
+        exercises: [
+          { name: 'Lunge', sets: 3, repsMin: 10, repsMax: 15, rest: 90, notes: 'Walking or stationary. Dumbbells at sides. Front knee tracks toes.' },
+          { name: 'Romanian Deadlift (Barbell)', sets: 3, repsMin: 10, repsMax: 12, rest: 90, notes: 'Use dumbbells. Slow eccentric. Feel the stretch.' },
+          { name: 'Dumbbell Bench Press', sets: 3, repsMin: 10, repsMax: 15, rest: 90, notes: 'Vary grip — neutral or pronated.' },
+          { name: 'Dumbbell Row', sets: 3, repsMin: 10, repsMax: 15, rest: 90, notes: 'Other side. Match reps on both arms.' },
+          { name: 'Overhead Dumbbell Extension', sets: 3, repsMin: 12, repsMax: 15, rest: 60, notes: 'Both hands on one dumbbell. Full range overhead. Slow down.' },
+          { name: 'Hammer Curl', sets: 3, repsMin: 10, repsMax: 15, rest: 60, notes: 'Neutral grip. Brachialis focus. Keep elbows pinned.' },
+        ],
+      },
+    ],
+  },
+
+  // ── 22. Home — No Equipment ───────────────────────────────────────────────
+  {
+    name: 'Home — No Equipment',
+    description: 'Three sessions per week using only your bodyweight. Designed to build genuine strength and control across the whole body without needing a gym or any equipment. Progressions are built in — as movements become too easy, there are harder variations to move towards. A good starting point if you are completely new to training, or to maintain fitness when you cannot get to a gym.',
+    tags: 'full_body equipment:bodyweight home gender:all goal:build_muscle goal:conditioning days:3 beginner audience:beginner',
+    difficulty: 0,
+    workouts: [
+      {
+        name: 'Session A',
+        exercises: [
+          { name: 'Bodyweight Squat', sets: 4, repsMin: 15, repsMax: 25, rest: 60, notes: 'Sit as deep as possible. Push knees out. Drive through heels. When this feels easy, progress to Bulgarian split squat.' },
+          { name: 'Push-Up', sets: 4, repsMin: 8, repsMax: 20, rest: 60, notes: 'Full range. Chest to floor. Lock elbows at top. Elevate hands on a surface to make it easier; feet for harder.' },
+          { name: 'Lunge', sets: 3, repsMin: 10, repsMax: 15, rest: 60, notes: 'Per leg. Front knee tracks toes. Upright torso.' },
+          { name: 'Inverted Row', sets: 3, repsMin: 8, repsMax: 15, rest: 60, notes: 'Under a table or bar. Body straight. Pull chest to bar. If you have a bar, progress to pull-up.' },
+          { name: 'Glute Bridge', sets: 3, repsMin: 15, repsMax: 25, rest: 60, notes: 'Drive hips up. Squeeze glutes at top. Single-leg to progress.' },
+        ],
+      },
+      {
+        name: 'Session B',
+        exercises: [
+          { name: 'Bulgarian Split Squat', sets: 3, repsMin: 8, repsMax: 15, rest: 90, notes: 'Rear foot on a chair or sofa. Front knee tracks toes. Drive through the front heel.' },
+          { name: 'Push-Up', sets: 3, repsMin: 10, repsMax: 20, rest: 60, notes: 'Try a closer grip for more tricep emphasis. Keep elbows at 45 degrees.' },
+          { name: 'Bodyweight Squat', sets: 3, repsMin: 20, repsMax: 30, rest: 60, notes: 'Higher rep today. Smooth and controlled. Pause at the bottom.' },
+          { name: 'Inverted Row', sets: 3, repsMin: 8, repsMax: 15, rest: 60, notes: 'Pull hard. Pause at the top. Slow descent.' },
+          { name: 'Glute Bridge', sets: 4, repsMin: 15, repsMax: 20, rest: 60, notes: 'Add a hold of 2 seconds at the top this session.' },
+        ],
+      },
+      {
+        name: 'Session C',
+        exercises: [
+          { name: 'Lunge', sets: 4, repsMin: 12, repsMax: 20, rest: 60, notes: 'Walking lunges if space allows. Maintain an upright torso throughout.' },
+          { name: 'Push-Up', sets: 4, repsMin: 10, repsMax: 20, rest: 60, notes: 'Vary width. Wide grip for chest. Close for triceps. Find your challenge point.' },
+          { name: 'Bodyweight Squat', sets: 3, repsMin: 15, repsMax: 25, rest: 60, notes: 'Add a pause at the bottom if regular squats feel easy.' },
+          { name: 'Inverted Row', sets: 4, repsMin: 8, repsMax: 15, rest: 60, notes: 'Keep hips up. Body straight. Scapulae retract as you pull.' },
+          { name: 'Glute Bridge', sets: 3, repsMin: 20, repsMax: 25, rest: 60, notes: 'High rep set. Full squeeze every rep.' },
+        ],
+      },
+    ],
+  },
+
+  // ── 23. Men's Physique — Off-Season ──────────────────────────────────────
+  {
+    name: "Men's Physique — Off-Season",
+    description: "Five-day programme built around the Men's Physique division. Judged from the waist up in board shorts, the division rewards a broad back, capped shoulders, full chest, and defined arms over a lean midsection. Legs are trained once per week to maintain health and proportion. The programme runs for 8 to 12 weeks off-season, prioritising shoulder width, upper-chest development, lat width, and rear-delt health. Progress conservatively — this is a muscle-building phase, not a strength-testing phase.",
+    tags: 'bodybuilding category:division division:mens_physique gender:men goal:stage_prep days:5 advanced intermediate featured',
+    difficulty: 2,
+    workouts: [
+      {
+        name: 'Day 1 — Shoulders & Arms',
+        exercises: [
+          { name: 'Barbell Overhead Press', sets: 4, repsMin: 8, repsMax: 12, rest: 120, notes: 'Primary shoulder builder. Control the descent. Stop 1 to 2 reps short of failure.' },
+          { name: 'Dumbbell Lateral Raise', sets: 5, repsMin: 15, repsMax: 20, rest: 60, notes: 'Width is key in this division. Lead with elbow. 4 s eccentric.' },
+          { name: 'Cable Lateral Raise', sets: 4, repsMin: 15, repsMax: 20, rest: 60, notes: 'Cables keep constant tension. Alternate arms or use both. Keep strict form.' },
+          { name: 'EZ Bar Curl', sets: 4, repsMin: 8, repsMax: 12, rest: 60, notes: 'Full range. Squeeze at top. Slow 3 s descent.' },
+          { name: 'Rope Pushdown', sets: 4, repsMin: 12, repsMax: 15, rest: 60, notes: 'Elbows pinned. Full extension. Squeeze at bottom.' },
+          { name: 'Overhead Dumbbell Extension', sets: 3, repsMin: 10, repsMax: 15, rest: 60, notes: 'Long head emphasis. Full overhead stretch.' },
+        ],
+      },
+      {
+        name: 'Day 2 — Back Width & Thickness',
+        exercises: [
+          { name: 'Lat Pulldown (Wide Grip)', sets: 4, repsMin: 8, repsMax: 12, rest: 90, notes: 'Lat width is a judging priority. Full stretch. Pull elbows to pockets.' },
+          { name: 'Seated Cable Row', sets: 4, repsMin: 10, repsMax: 12, rest: 90, notes: 'Full stretch forward. Row to lower chest. Squeeze mid-back.' },
+          { name: 'T-Bar Row', sets: 4, repsMin: 8, repsMax: 12, rest: 90, notes: 'Chest against pad. Controlled. Squeeze at top.' },
+          { name: 'Cable Straight-Arm Pulldown', sets: 3, repsMin: 12, repsMax: 15, rest: 60, notes: 'Lat activation. Slight elbow bend. Slow arc down.' },
+          { name: 'Face Pull', sets: 4, repsMin: 20, repsMax: 25, rest: 60, notes: 'Rear-delt and rotator cuff health. Rope at chest height. Elbows high.' },
+        ],
+      },
+      {
+        name: 'Day 3 — Chest & Triceps',
+        exercises: [
+          { name: 'Incline Barbell Bench Press', sets: 4, repsMin: 8, repsMax: 12, rest: 120, notes: 'Upper chest fills the board-shorts look from the front. Control descent.' },
+          { name: 'Incline Dumbbell Press', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Greater range of motion than barbell. Slow 3 s descent.' },
+          { name: 'Pec Deck (Machine Fly)', sets: 4, repsMin: 12, repsMax: 15, rest: 90, notes: 'Chest isolation. Full stretch. Squeeze hard at the contraction point.' },
+          { name: 'Close-Grip Bench Press', sets: 4, repsMin: 8, repsMax: 12, rest: 90, notes: 'Tricep compound. Elbows at 45 degrees. Full extension at top.' },
+          { name: 'Rope Pushdown', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Finishing volume on triceps. Squeeze every rep.' },
+        ],
+      },
+      {
+        name: 'Day 4 — Legs (Maintenance)',
+        exercises: [
+          { name: 'Barbell Back Squat', sets: 3, repsMin: 8, repsMax: 12, rest: 120, notes: 'Legs are not displayed in board shorts but must be trained for balance and health. One moderate leg session per week is enough in off-season.' },
+          { name: 'Leg Press', sets: 3, repsMin: 12, repsMax: 15, rest: 90, notes: 'Moderate volume. No need to push to the limit on this day.' },
+          { name: 'Romanian Deadlift (Barbell)', sets: 3, repsMin: 10, repsMax: 12, rest: 90, notes: 'Hamstring and glute work. Keep it solid, not extreme.' },
+          { name: 'Leg Extension', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Quad detail. High reps, pump-focused.' },
+          { name: 'Lying Leg Curl', sets: 3, repsMin: 12, repsMax: 15, rest: 60, notes: 'Hamstring curl. Full range. Squeeze at top.' },
+        ],
+      },
+      {
+        name: 'Day 5 — Shoulders & Back Detail',
+        exercises: [
+          { name: 'Dumbbell Lateral Raise', sets: 5, repsMin: 15, repsMax: 20, rest: 60, notes: 'Second shoulder session of the week. Men\'s Physique is won on shoulder width. Strict form, slow descent.' },
+          { name: 'Cable Rear Delt Fly', sets: 4, repsMin: 15, repsMax: 20, rest: 60, notes: 'Rear-delt detail. Essential for shoulder roundness from behind.' },
+          { name: 'Lat Pulldown (Wide Grip)', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Second lat session. Focus on the stretch and contraction.' },
+          { name: 'Machine Row (Chest Supported)', sets: 3, repsMin: 12, repsMax: 15, rest: 90, notes: 'Back detail and thickness without lower-back stress.' },
+          { name: 'Hammer Curl', sets: 3, repsMin: 12, repsMax: 15, rest: 60, notes: 'Brachialis and forearm development. Keep elbows pinned.' },
+        ],
+      },
+    ],
+  },
+
+  // ── 24. Bikini — Off-Season ───────────────────────────────────────────────
+  {
+    name: 'Bikini — Off-Season',
+    description: "Four-day programme built around the Bikini division off-season. Bikini rewards a lean, athletic physique with developed glutes, balanced shoulders, and a soft overall appearance — not extreme muscle mass. This programme trains glutes and hamstrings twice per week with a mix of heavy compound work and detail isolation, while upper body sessions build proportional shoulder width and a strong back. Progress on the compound movements week to week. Off-season means training to build, not to diet.",
+    tags: 'bodybuilding category:division division:bikini gender:women goal:stage_prep days:4 intermediate featured',
+    difficulty: 1,
+    workouts: [
+      {
+        name: 'Day 1 — Glutes & Hamstrings (Heavy)',
+        exercises: [
+          { name: 'Hip Thrust (Barbell)', sets: 5, repsMin: 8, repsMax: 12, rest: 120, notes: 'Primary glute builder in this division. Shoulders on bench, hips fully extended. Squeeze hard at top.' },
+          { name: 'Romanian Deadlift (Barbell)', sets: 4, repsMin: 8, repsMax: 12, rest: 90, notes: 'Long hamstring stretch. Slow 3 s eccentric. Hip hinge only — do not round the back.' },
+          { name: 'Bulgarian Split Squat', sets: 3, repsMin: 10, repsMax: 12, rest: 90, notes: 'Rear foot elevated. Drive through front heel. Squeeze glute at the top.' },
+          { name: 'Lying Leg Curl', sets: 3, repsMin: 12, repsMax: 15, rest: 60, notes: 'Curl hard. Squeeze at top. Slow descent.' },
+          { name: 'Cable Kickback', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Full hip extension. Squeeze glute. Control the return.' },
+        ],
+      },
+      {
+        name: 'Day 2 — Upper Body',
+        exercises: [
+          { name: 'Lat Pulldown (Wide Grip)', sets: 4, repsMin: 10, repsMax: 12, rest: 90, notes: 'Back width contributes to the V-shape even in Bikini. Full stretch overhead. Pull elbows down.' },
+          { name: 'Seated Cable Row', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Row elbows back. Squeeze mid-back. Full stretch forward between reps.' },
+          { name: 'Dumbbell Shoulder Press', sets: 3, repsMin: 10, repsMax: 15, rest: 90, notes: 'Balanced shoulder development. Press overhead. Control down.' },
+          { name: 'Dumbbell Lateral Raise', sets: 4, repsMin: 15, repsMax: 20, rest: 60, notes: 'Capped shoulders give the narrow-waist illusion. Raise to shoulder height. Slow eccentric.' },
+          { name: 'Dumbbell Curl', sets: 3, repsMin: 12, repsMax: 15, rest: 60, notes: 'Arms need enough development for stage confidence. Full range.' },
+        ],
+      },
+      {
+        name: 'Day 3 — Quads & Glutes',
+        exercises: [
+          { name: 'Barbell Back Squat', sets: 4, repsMin: 8, repsMax: 12, rest: 120, notes: 'Quad and glute compound. Full depth. Bikini rewards a tight quad sweep alongside developed glutes.' },
+          { name: 'Leg Press', sets: 4, repsMin: 12, repsMax: 15, rest: 90, notes: 'Higher foot position for glute emphasis. Control the descent.' },
+          { name: 'Glute Bridge', sets: 4, repsMin: 15, repsMax: 20, rest: 60, notes: 'Bodyweight or loaded. Squeeze fully at top. High reps for glute activation.' },
+          { name: 'Leg Extension', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Quad detail and sweep. Squeeze hard at top.' },
+          { name: 'Seated Leg Curl', sets: 3, repsMin: 12, repsMax: 15, rest: 60, notes: 'Hamstring tie-in. Full range. Controlled.' },
+        ],
+      },
+      {
+        name: 'Day 4 — Upper Body & Shoulders',
+        exercises: [
+          { name: 'Incline Dumbbell Press', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Upper chest fullness helps the overall shape on stage. Control the descent.' },
+          { name: 'Machine Row (Chest Supported)', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Back thickness without lower-back fatigue. Squeeze at the top.' },
+          { name: 'Dumbbell Lateral Raise', sets: 4, repsMin: 15, repsMax: 20, rest: 60, notes: 'Second shoulder session. Shoulder width helps frame the waist. Slow and strict.' },
+          { name: 'Reverse Pec Deck', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Rear-delt isolation. Round shoulders look. Essential for stage presence.' },
+          { name: 'Rope Pushdown', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Tricep detail. Arms at full extension look clean on stage.' },
+        ],
+      },
+    ],
+  },
+
+  // ── 25. Wellness — Off-Season ─────────────────────────────────────────────
+  {
+    name: 'Wellness — Off-Season',
+    description: "Four to five days per week built around the Wellness division — the most lower-body-forward division in women's physique sport. Wellness rewards a heavily developed lower body (glutes, quads, and hamstrings) relative to a smaller, more moderate upper body. This programme trains the lower body four times per week with two different emphasis days, and upper body twice with a maintenance volume approach. Progress on lower-body compounds is the priority.",
+    tags: 'bodybuilding category:division division:wellness gender:women goal:stage_prep days:5 advanced intermediate',
+    difficulty: 2,
+    workouts: [
+      {
+        name: 'Day 1 — Glutes & Hamstrings (Heavy)',
+        exercises: [
+          { name: 'Hip Thrust (Barbell)', sets: 5, repsMin: 6, repsMax: 10, rest: 120, notes: 'Heavy. This is your primary indicator of glute development. Load progressively each week.' },
+          { name: 'Romanian Deadlift (Barbell)', sets: 5, repsMin: 8, repsMax: 10, rest: 120, notes: 'Hip hinge. Maximum hamstring stretch. Bar close to legs. 3 s eccentric.' },
+          { name: 'Sumo Deadlift', sets: 3, repsMin: 5, repsMax: 8, rest: 120, notes: 'Wide stance. Targets inner thighs and glutes. Drive hips through at the top.' },
+          { name: 'Lying Leg Curl', sets: 4, repsMin: 10, repsMax: 15, rest: 60, notes: 'Knee flexion for hamstring lower-portion development. Squeeze hard at top.' },
+          { name: 'Cable Kickback', sets: 4, repsMin: 15, repsMax: 20, rest: 60, notes: 'Full hip extension. Squeeze glute at lockout. Slow return.' },
+        ],
+      },
+      {
+        name: 'Day 2 — Quads (Heavy)',
+        exercises: [
+          { name: 'Barbell Back Squat', sets: 5, repsMin: 6, repsMax: 10, rest: 120, notes: 'Primary quad builder. Full depth. Control the descent. More quad-dominant than hip thrust.' },
+          { name: 'Leg Press', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Lower foot placement for more quad. Push through heels. Full range.' },
+          { name: 'Bulgarian Split Squat', sets: 4, repsMin: 8, repsMax: 12, rest: 90, notes: 'Rear foot elevated. Drive through front heel. Quad and glute stimulus.' },
+          { name: 'Leg Extension', sets: 4, repsMin: 15, repsMax: 20, rest: 60, notes: 'Quad isolation. Full contraction. Slow descent.' },
+          { name: 'Seated Leg Curl', sets: 3, repsMin: 12, repsMax: 15, rest: 60, notes: 'Balance the quad volume with hamstring work.' },
+        ],
+      },
+      {
+        name: 'Day 3 — Upper Body (Maintenance)',
+        exercises: [
+          { name: 'Lat Pulldown (Wide Grip)', sets: 3, repsMin: 10, repsMax: 15, rest: 90, notes: 'Wellness has a smaller upper body by design. Moderate volume keeps the back healthy and proportional.' },
+          { name: 'Seated Cable Row', sets: 3, repsMin: 10, repsMax: 15, rest: 90, notes: 'Mid-back. Maintenance, not maximum.' },
+          { name: 'Dumbbell Shoulder Press', sets: 3, repsMin: 12, repsMax: 15, rest: 90, notes: 'Shoulder health and some cap development. Keep it moderate.' },
+          { name: 'Dumbbell Lateral Raise', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Some shoulder width still helps the overall shape. Light and controlled.' },
+          { name: 'Dumbbell Curl', sets: 2, repsMin: 12, repsMax: 15, rest: 60, notes: 'Arm maintenance. Keep arms proportional to the lower body.' },
+        ],
+      },
+      {
+        name: 'Day 4 — Glutes & Quads (Volume)',
+        exercises: [
+          { name: 'Glute Bridge', sets: 5, repsMin: 15, repsMax: 20, rest: 60, notes: 'Loaded glute bridge or body weight for high-rep pump session. Squeeze every rep.' },
+          { name: 'Leg Press', sets: 4, repsMin: 15, repsMax: 20, rest: 90, notes: 'Higher rep range today. Mix of foot positions. Pump session.' },
+          { name: 'Cable Kickback', sets: 4, repsMin: 20, repsMax: 25, rest: 60, notes: 'Detail work. Full range. Slow and controlled every rep.' },
+          { name: 'Lunge', sets: 3, repsMin: 12, repsMax: 15, rest: 90, notes: 'Walking or stationary. Balanced hip and quad stimulus.' },
+          { name: 'Lying Leg Curl', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'High-rep hamstring pump. Full range.' },
+        ],
+      },
+      {
+        name: 'Day 5 — Upper Body & Glute Detail',
+        exercises: [
+          { name: 'Machine Row (Chest Supported)', sets: 3, repsMin: 12, repsMax: 15, rest: 90, notes: 'Upper back maintenance. Chest support removes lower-back stress.' },
+          { name: 'Incline Dumbbell Press', sets: 3, repsMin: 12, repsMax: 15, rest: 90, notes: 'Upper chest. Moderate volume only in this division.' },
+          { name: 'Reverse Pec Deck', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Rear-delt health and rounding.' },
+          { name: 'Hip Thrust (Barbell)', sets: 4, repsMin: 12, repsMax: 15, rest: 90, notes: 'Second hip thrust session. Slightly lighter than Day 1. Focus on squeeze and contraction.' },
+          { name: 'Seated Leg Curl', sets: 3, repsMin: 12, repsMax: 15, rest: 60, notes: 'Hamstring detail to finish the week.' },
+        ],
+      },
+    ],
+  },
+
+  // ── 26. Classic Physique — Off-Season ─────────────────────────────────────
+  {
+    name: 'Classic Physique — Off-Season',
+    description: "Five-day programme for the Classic Physique division off-season. Classic Physique is judged on balanced, symmetrical development — a wide back, capped shoulders, full chest, narrow waist, well-developed legs, and a V-taper reminiscent of the golden era of bodybuilding. Unlike Men's Physique, legs are displayed and are a significant judging criterion. This programme gives equal attention to both upper and lower body with a slight emphasis on the key visual areas: back width, shoulder caps, and upper-chest fullness.",
+    tags: 'bodybuilding category:division division:classic_physique gender:men goal:stage_prep days:5 advanced',
+    difficulty: 2,
+    workouts: [
+      {
+        name: 'Day 1 — Chest & Shoulders',
+        exercises: [
+          { name: 'Incline Barbell Bench Press', sets: 4, repsMin: 8, repsMax: 12, rest: 120, notes: 'Upper chest is visually critical. Controlled eccentric. Stop 1 to 2 reps from failure.' },
+          { name: 'Barbell Bench Press', sets: 4, repsMin: 8, repsMax: 12, rest: 120, notes: 'Overall chest mass. Bar to chest. Press smoothly.' },
+          { name: 'Pec Deck (Machine Fly)', sets: 3, repsMin: 12, repsMax: 15, rest: 90, notes: 'Chest isolation. Full stretch. Squeeze hard at contraction.' },
+          { name: 'Barbell Overhead Press', sets: 4, repsMin: 8, repsMax: 12, rest: 120, notes: 'Shoulder mass. Control the descent.' },
+          { name: 'Dumbbell Lateral Raise', sets: 4, repsMin: 15, repsMax: 20, rest: 60, notes: 'Shoulder width. Lead with elbow. 4 s eccentric.' },
+          { name: 'Face Pull', sets: 3, repsMin: 20, repsMax: 25, rest: 60, notes: 'Rear-delt health. Rope at chest height. Elbows high.' },
+        ],
+      },
+      {
+        name: 'Day 2 — Back Width & Detail',
+        exercises: [
+          { name: 'Lat Pulldown (Wide Grip)', sets: 4, repsMin: 8, repsMax: 12, rest: 90, notes: 'Lat width is the core of the V-taper in this division. Full stretch. Pull elbows to pockets.' },
+          { name: 'T-Bar Row', sets: 4, repsMin: 8, repsMax: 12, rest: 90, notes: 'Back thickness. Chest against pad. Squeeze rhomboids.' },
+          { name: 'Seated Cable Row', sets: 4, repsMin: 10, repsMax: 12, rest: 90, notes: 'Mid-back detail. Full stretch forward. Row elbows back.' },
+          { name: 'Cable Straight-Arm Pulldown', sets: 3, repsMin: 12, repsMax: 15, rest: 60, notes: 'Lat length. Slight elbow bend. Slow arc.' },
+          { name: 'Cable Rear Delt Fly', sets: 4, repsMin: 15, repsMax: 20, rest: 60, notes: 'Rear-delt. Round shoulders from behind. Keep strict form.' },
+        ],
+      },
+      {
+        name: 'Day 3 — Legs',
+        exercises: [
+          { name: 'Barbell Back Squat', sets: 4, repsMin: 8, repsMax: 12, rest: 120, notes: 'Classic Physique legs must be well-developed. Full depth. Drive through heels.' },
+          { name: 'Leg Press', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Quad and glute. Mix foot positions across sets.' },
+          { name: 'Romanian Deadlift (Barbell)', sets: 3, repsMin: 8, repsMax: 12, rest: 90, notes: 'Hamstring and glute compound. Hip hinge. 3 s eccentric.' },
+          { name: 'Leg Extension', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Quad detail. Squeeze at top. Slow descent.' },
+          { name: 'Lying Leg Curl', sets: 3, repsMin: 12, repsMax: 15, rest: 60, notes: 'Hamstring curl. Full range. Squeeze at top.' },
+          { name: 'Glute Bridge', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Glute activation and development. Squeeze at top.' },
+        ],
+      },
+      {
+        name: 'Day 4 — Arms & Core',
+        exercises: [
+          { name: 'EZ Bar Curl', sets: 4, repsMin: 8, repsMax: 12, rest: 60, notes: 'Bicep mass. Full range. Squeeze at top. 3 s eccentric.' },
+          { name: 'Hammer Curl', sets: 3, repsMin: 10, repsMax: 15, rest: 60, notes: 'Brachialis development. Elbows pinned.' },
+          { name: 'Close-Grip Bench Press', sets: 4, repsMin: 8, repsMax: 12, rest: 90, notes: 'Tricep mass. Elbows at 45 degrees. Full extension.' },
+          { name: 'Overhead Dumbbell Extension', sets: 3, repsMin: 10, repsMax: 15, rest: 60, notes: 'Long head development. Full overhead stretch.' },
+          { name: 'Rope Pushdown', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Tricep finishing volume. Squeeze every rep.' },
+        ],
+      },
+      {
+        name: 'Day 5 — Back & Shoulders Detail',
+        exercises: [
+          { name: 'Lat Pulldown (Wide Grip)', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Second lat session. Focus on the stretch and full contraction.' },
+          { name: 'Dumbbell Lateral Raise', sets: 5, repsMin: 15, repsMax: 20, rest: 60, notes: 'Second shoulder session this week. Width is always a priority in Classic. Strict form.' },
+          { name: 'Machine Row (Chest Supported)', sets: 3, repsMin: 12, repsMax: 15, rest: 90, notes: 'Back detail. Chest on pad for strict form.' },
+          { name: 'Reverse Pec Deck', sets: 4, repsMin: 15, repsMax: 20, rest: 60, notes: 'Rear-delt rounding. Essential for shoulder completeness from behind.' },
+          { name: 'Cable Rear Delt Fly', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Rear-delt isolation. Strict form. Slow controlled movement.' },
+        ],
+      },
+    ],
+  },
+
+  // ── 27. Figure — Off-Season ───────────────────────────────────────────────
+  {
+    name: 'Figure — Off-Season',
+    description: "Five-day programme for the Figure division off-season. Figure sits between Bikini and Women's Physique in muscularity — athletic and muscular with visible shoulders, a strong and wide back, and proportional leg development. Shoulders and back are the priority visual features judged in Figure. This programme dedicates significant volume to back width, rear-delt development, and shoulder capping while maintaining balanced lower-body strength.",
+    tags: 'bodybuilding category:division division:figure gender:women goal:stage_prep days:5 advanced',
+    difficulty: 2,
+    workouts: [
+      {
+        name: 'Day 1 — Back Width & Detail',
+        exercises: [
+          { name: 'Lat Pulldown (Wide Grip)', sets: 5, repsMin: 8, repsMax: 12, rest: 90, notes: 'Back width is the single most judged attribute in Figure. Full stretch overhead. Pull elbows to pockets. 3 s eccentric.' },
+          { name: 'Seated Cable Row', sets: 4, repsMin: 10, repsMax: 12, rest: 90, notes: 'Mid-back thickness. Full stretch forward. Row elbows back to hips.' },
+          { name: 'T-Bar Row', sets: 4, repsMin: 8, repsMax: 12, rest: 90, notes: 'Back thickness. Chest on pad. Squeeze hard at the contraction point.' },
+          { name: 'Cable Straight-Arm Pulldown', sets: 3, repsMin: 12, repsMax: 15, rest: 60, notes: 'Lat length. Slight elbow bend. Slow arc down.' },
+          { name: 'Face Pull', sets: 4, repsMin: 20, repsMax: 25, rest: 60, notes: 'Rear-delt health and rounding. Essential in Figure.' },
+        ],
+      },
+      {
+        name: 'Day 2 — Legs',
+        exercises: [
+          { name: 'Barbell Back Squat', sets: 4, repsMin: 8, repsMax: 12, rest: 120, notes: 'Quad and glute compound. Full depth. Figure requires balanced leg development.' },
+          { name: 'Hip Thrust (Barbell)', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Glute emphasis. Shoulders on bench. Full extension at top.' },
+          { name: 'Romanian Deadlift (Barbell)', sets: 4, repsMin: 8, repsMax: 12, rest: 90, notes: 'Hamstring and glute. Hip hinge. 3 s eccentric.' },
+          { name: 'Leg Extension', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Quad detail. Full contraction at top.' },
+          { name: 'Lying Leg Curl', sets: 3, repsMin: 12, repsMax: 15, rest: 60, notes: 'Hamstring curl. Full range. Squeeze at top.' },
+        ],
+      },
+      {
+        name: 'Day 3 — Shoulders & Arms',
+        exercises: [
+          { name: 'Dumbbell Shoulder Press', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Figure has visible, capped shoulders. Press overhead, control the descent.' },
+          { name: 'Dumbbell Lateral Raise', sets: 5, repsMin: 15, repsMax: 20, rest: 60, notes: 'Width is critical. Lead with elbows. Raise to shoulder height. 4 s eccentric.' },
+          { name: 'Cable Rear Delt Fly', sets: 4, repsMin: 15, repsMax: 20, rest: 60, notes: 'Round shoulder from behind. Rear-delt detail.' },
+          { name: 'EZ Bar Curl', sets: 4, repsMin: 10, repsMax: 12, rest: 60, notes: 'Bicep development. Full range. Squeeze at top.' },
+          { name: 'Rope Pushdown', sets: 4, repsMin: 12, repsMax: 15, rest: 60, notes: 'Tricep detail. Elbows pinned. Full extension.' },
+        ],
+      },
+      {
+        name: 'Day 4 — Chest & Upper Back',
+        exercises: [
+          { name: 'Incline Dumbbell Press', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Upper chest development. Slow 3 s descent. Full range of motion.' },
+          { name: 'Machine Row (Chest Supported)', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Mid and upper-back thickness. Chest on pad. Strict form.' },
+          { name: 'Pec Deck (Machine Fly)', sets: 3, repsMin: 12, repsMax: 15, rest: 90, notes: 'Chest isolation. Full stretch. Squeeze at contraction.' },
+          { name: 'Reverse Pec Deck', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Rear-delt. Arm out to the sides. Control both directions.' },
+          { name: 'Dumbbell Lateral Raise', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Extra lateral delt volume this session.' },
+        ],
+      },
+      {
+        name: 'Day 5 — Glute & Back Detail',
+        exercises: [
+          { name: 'Hip Thrust (Barbell)', sets: 4, repsMin: 12, repsMax: 15, rest: 90, notes: 'Second glute session. Slightly lighter than Day 2. Focus on squeeze and contraction quality.' },
+          { name: 'Cable Kickback', sets: 4, repsMin: 15, repsMax: 20, rest: 60, notes: 'Glute isolation. Full hip extension. Slow and deliberate.' },
+          { name: 'Lat Pulldown (Wide Grip)', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Second back session. Focus on lat engagement and full stretch.' },
+          { name: 'Seated Cable Row', sets: 3, repsMin: 12, repsMax: 15, rest: 90, notes: 'Back detail. Control through full range.' },
+          { name: 'Face Pull', sets: 3, repsMin: 20, repsMax: 25, rest: 60, notes: 'Rear-delt health. End the week with this.' },
+        ],
+      },
+    ],
+  },
+
 ];
 
 // ─── Seed function ────────────────────────────────────────────────────────────
