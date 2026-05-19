@@ -159,7 +159,7 @@ export default function VolumeHeatmapScreen() {
           <LegendItem color={colors.warning} label="Near ceiling" />
           <LegendItem color={colors.error} label="Over ceiling" />
           <InfoTooltip size={11} text={
-            'Each bar shows weekly working sets for a muscle group.\n\n' +
+            'Each bar shows weekly sets for a muscle group.\n\n' +
             'The two tick marks on each bar are:\n' +
             '  First tick: the least amount needed to maintain or grow\n' +
             '  Second tick: the sweet spot for growth\n' +
@@ -211,7 +211,7 @@ export default function VolumeHeatmapScreen() {
         {editing ? (
           <View style={styles.editSection}>
             <Text style={styles.editTitle}>Edit Volume Targets</Text>
-            <Text style={styles.editSubtitle}>Weekly working sets per muscle — Minimum / Target / Ceiling</Text>
+            <Text style={styles.editSubtitle}>Weekly sets per muscle — Minimum / Target / Ceiling</Text>
             {muscles.map(muscle => (
               <View key={muscle} style={styles.editRow}>
                 <Text style={styles.editMuscleName}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>

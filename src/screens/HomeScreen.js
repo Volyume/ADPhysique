@@ -436,7 +436,7 @@ export default function HomeScreen({ navigation }) {
               </View>
               <Text style={styles.noPlanTitle}>Set up your training plan</Text>
               <Text style={styles.noPlanSub}>
-                A structured plan tracks your progressive overload week to week. Choose how to get started below.
+                A structured plan keeps your training on track week to week. Choose how to get started below.
               </Text>
             </View>
 

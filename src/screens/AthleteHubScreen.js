@@ -523,7 +523,7 @@ export default function AthleteHubScreen({ navigation }) {
             icon="layers"
             label="Training Blocks"
             sub="Plan and track multi-week training blocks"
-            tooltip={"A Training Block is a structured 5–6 week period where volume and effort increase each week, followed by a lighter recovery week. Running blocks back-to-back is how you create long-term progressive overload. Each block starts slightly heavier than the last. Create one here to link your plan to a block and track your week-by-week progress."}
+            tooltip={"A Training Block is a structured 5–6 week period where the work increases each week, followed by a lighter recovery week. Running blocks back-to-back is how you build long-term progress. Each block starts slightly heavier than the last. Create one here to link your plan to a block and track your week-by-week progress."}
             onPress={() => navigation.navigate('MesocycleBuilder')}
           />
           <NavRow

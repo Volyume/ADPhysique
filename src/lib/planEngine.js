@@ -1004,7 +1004,7 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
     aesthetic_v_taper:     `V-Taper prioritises the muscles that create shoulder-to-waist width: outer shoulders, back width, and rear delts. You will see more sets on these muscles than a general plan would assign. Abs use only anti-extension and rotation exercises — direct crunching work is de-emphasised.`,
     weak_point_spec:        `Weak Point Specialisation pushes${weakPointUILabels.length ? ' ' + weakPointUILabels.join(' and ') : ' your flagged muscles'} close to their maximum weekly volume while keeping everything else at the minimum needed to hold current size. Targeted overload, held across the full training block, is how lagging muscles close the gap.`,
     strength_hypertrophy:  `Muscle growth is still the goal, but your main compound lifts are loaded heavier and in a lower rep range. Building strength lets you use more weight over time, and more weight applied correctly means more muscle.`,
-    recomp:                `Fat Loss / Recomp Support sets volume at a level your body can recover from on reduced calories. The goal is preserving the muscle you already have while your nutrition creates a gradual caloric deficit. Training stimulus stays consistent; recovery capacity is the limiting factor, not your effort.`,
+    recomp:                `Fat Loss / Recomp Support sets volume at a level your body can recover from while eating at a slight deficit. The goal is preserving the muscle you already have while your nutrition gradually reduces body fat. Training stimulus stays consistent; recovery is the limiting factor, not your effort.`,
     x_frame_physique:      `X-Frame Physique concentrates volume on the four visual anchor points — outer shoulders, back width, glutes and hamstrings — that create a dramatic X silhouette when viewed from front and rear. Side delts, lats, and posterior chain receive additional sets each week; direct waist-widening ab work is minimised to preserve the illusion of a narrow mid-section.`,
   };
   result.goal = goalMap[goal] ?? `Goal: ${GOAL_LABELS[goal] ?? goal}.`;
@@ -1038,9 +1038,9 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
     const phaseLabel = NUTRITION_PHASE_LABELS[nutPhase] ?? nutPhase;
     const nutMap = {
       lean_gain:      `${phaseLabel}: you have surplus calories to work with. Volume is slightly increased because extra food speeds recovery and lets you productively absorb more sets. Take advantage of the surplus by keeping training intensity high throughout the block.`,
-      build:          `${phaseLabel}: a caloric surplus supports higher training volumes. This plan uses more weekly sets than it would at maintenance, because your recovery resources are elevated. Keep protein high to direct the surplus toward muscle rather than fat.`,
-      mild_cut:       `${phaseLabel}: reduced calories slow recovery slightly. Volume is modest and reps-in-reserve targets are raised by one rep — stopping a touch further from failure preserves recovery and muscle retention during the deficit.`,
-      aggressive_cut: `${phaseLabel}: significant caloric deficit means reduced recovery capacity. Volume is reduced and reps-in-reserve targets are raised. Keep protein at or above 2 g per kg of bodyweight and prioritise compound lifts to minimise muscle loss.`,
+      build:          `${phaseLabel}: eating more supports higher training volumes. This plan uses more weekly sets than it would at maintenance, because your body can recover from more. Keep protein high to direct those extra calories toward muscle rather than fat.`,
+      mild_cut:       `${phaseLabel}: eating less slows recovery slightly. Volume is modest and you should stop a rep or two further from failure than usual — this preserves muscle and keeps recovery manageable while in a deficit.`,
+      aggressive_cut: `${phaseLabel}: a significant calorie cut reduces how much your body can recover from. Volume is reduced. Keep protein at or above 2 g per kg of bodyweight and focus on your main compound lifts to protect muscle.`,
       contest_prep:   `Contest prep: your recovery is severely limited. Volume is at the lower end and caution is warranted. Prioritise sleep, protein intake, and managing life stress outside the gym.`,
       recomp:         `Body Recomposition: training volume sits at a level sustainable in a slight deficit. The goal is keeping the training stimulus high enough to maintain muscle while your nutrition gradually reduces body fat.`,
     };
@@ -1075,7 +1075,7 @@ function buildWarnings(inputs, effectiveDays, weakPointUILabels) {
   }
   if ((nutritionPhase === 'aggressive_cut' || nutritionPhase === 'contest_prep') && effectiveDays >= 5) {
     warnings.push(
-      'Running 5 or more days on a large caloric deficit is high-risk. Volume has been moderated, but consider reducing to 4 days to better match your reduced recovery resources.',
+      'Training 5 or more days on a significant calorie cut is hard on the body. Volume has been reduced, but consider dropping to 4 days to match your lower recovery capacity.',
     );
   }
   if (experience === 'competitive' && recoveryRating === 'poor') {

@@ -467,7 +467,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               return (
                 <View key={muscle} style={styles.volumeRow}>
                   <Text style={styles.muscleName}>{MUSCLE_DISPLAY_NAMES[muscle] || muscle}</Text>
-                  <Text style={styles.muscleSetCount}>{Math.round(data.workingSets)} working sets</Text>
+                  <Text style={styles.muscleSetCount}>{Math.round(data.workingSets)} sets</Text>
                   <View style={[styles.statusBadge, { backgroundColor: color + '22' }]}>
                     <Text style={[styles.statusText, { color }]}>{label}</Text>
                   </View>
