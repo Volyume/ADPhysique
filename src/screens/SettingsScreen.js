@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -53,8 +53,9 @@ function SectionHeader({ title }) {
 const PHYSIQUE_PREF_KEY = '@volyume_physique_tracking_enabled';
 
 export default function SettingsScreen({ navigation }) {
-  const { user, setUser, setSession, units, setUnits, barWeight, setBarWeight } =
+  const { user, setUser, setSession, units, setUnits, barWeight, setBarWeight, userProfile, saveLocalProfile } =
     useAppStore();
+  const [editName, setEditName] = useState(userProfile?.firstName ?? '');
   const [physiqueEnabled, setPhysiqueEnabled] = useState(false);
   const [wellbeing, setWellbeing] = useState('unspecified');
   function changeWellbeing() {
@@ -238,6 +239,30 @@ export default function SettingsScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
+        {/* Profile */}
+        <SectionHeader title="PROFILE" />
+        <View style={styles.section}>
+          <View style={styles.nameRow}>
+            <Ionicons name="person-outline" size={18} color={colors.primary} style={styles.nameIcon} />
+            <TextInput
+              style={styles.nameInput}
+              value={editName}
+              onChangeText={setEditName}
+              placeholder="Your first name"
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="words"
+              autoCorrect={false}
+              returnKeyType="done"
+              onBlur={async () => {
+                const name = editName.trim();
+                if (user?.id) {
+                  await saveLocalProfile(user.id, { ...(userProfile || {}), firstName: name || undefined });
+                }
+              }}
+            />
+          </View>
+        </View>
+
         {/* Preferences */}
         <SectionHeader title="PREFERENCES" />
         <View style={styles.section}>
@@ -375,6 +400,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    gap: spacing.md,
+  },
+  nameIcon: { marginTop: 1 },
+  nameInput: {
+    flex: 1,
+    fontSize: fontSize.md,
+    color: colors.textPrimary,
+    paddingVertical: spacing.sm,
   },
   settingRow: {
     flexDirection: 'row',

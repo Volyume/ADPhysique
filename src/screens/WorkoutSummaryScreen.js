@@ -56,7 +56,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     exerciseNames = [], readOnly = false,
     routineId = null, detectedPRs = [], exerciseData = [],
   } = route.params || {};
-  const { user, units } = useAppStore();
+  const { user, units, userProfile } = useAppStore();
   const insets = useSafeAreaInsets();
 
   const [feedback, setFeedback] = useState({
@@ -373,6 +373,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             <Ionicons name="checkmark-circle" size={28} color={colors.success} />
             <Text style={styles.completionTitle}>Session Complete</Text>
           </View>
+          {userProfile?.firstName ? (
+            <Text style={styles.completionGreeting}>Nice work, {userProfile.firstName}.</Text>
+          ) : null}
           <Text style={styles.completionDate}>{completionDate}</Text>
         </View>
 
@@ -678,6 +681,7 @@ const styles = StyleSheet.create({
   completionHeader: { gap: spacing.xs, paddingVertical: spacing.md },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   completionTitle: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary },
+  completionGreeting: { fontSize: fontSize.md, color: colors.textSecondary, fontWeight: fontWeight.medium },
   completionDate: { fontSize: fontSize.sm, color: colors.textMuted },
   completionSub: { fontSize: fontSize.sm, color: colors.textSecondary },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },

@@ -16,21 +16,37 @@ const VALUE_BULLETS = [
 ];
 
 export default function FirstRunScreen({ navigation }) {
-  const { user, units, setUnits, saveLocalProfile, completeFirstRun } = useAppStore();
+  const { user, units, setUnits, userProfile, saveLocalProfile, completeFirstRun } = useAppStore();
   const [mode, setMode] = useState('branch'); // 'branch' | 'quick'
   const [localUnits, setLocalUnits] = useState(units || 'kg');
   const [bodyWeight, setBodyWeight] = useState('');
+  const [firstName, setFirstName] = useState('');
   const [busy, setBusy] = useState(false);
 
-  function startPathA() {
+  async function saveNameIfEntered() {
+    const name = firstName.trim();
+    if (!name || !user?.id) return;
+    await saveLocalProfile(user.id, { ...(userProfile || {}), firstName: name });
+  }
+
+  async function startPathA() {
+    await saveNameIfEntered();
     navigation.navigate('CoachBuilder', { firstRun: true });
+  }
+
+  async function startPathLibrary() {
+    await saveNameIfEntered();
+    navigation.navigate('PlanLibrary', { fromFirstRun: true });
   }
 
   async function finishPathB() {
     setBusy(true);
     try {
       if (setUnits) setUnits(localUnits);
-      if (user?.id) await saveLocalProfile(user.id, { units: localUnits });
+      const merged = { ...(userProfile || {}), units: localUnits };
+      const name = firstName.trim();
+      if (name) merged.firstName = name;
+      if (user?.id) await saveLocalProfile(user.id, merged);
       const bw = parseFloat(bodyWeight);
       if (user?.id && !isNaN(bw) && bw > 0) {
         await logBodyMetric(user.id, { weightKg: bw, loggedAt: Date.now() });
@@ -57,8 +73,20 @@ export default function FirstRunScreen({ navigation }) {
 
           <Text style={styles.title}>Quick setup</Text>
           <Text style={styles.subtitle}>
-            Two things and you're logging. You can change these later in Settings.
+            A few things and you're in. You can change these later in Settings.
           </Text>
+
+          <Text style={styles.fieldLabel}>What should we call you? <Text style={styles.fieldOptional}>(optional)</Text></Text>
+          <TextInput
+            style={styles.input}
+            value={firstName}
+            onChangeText={setFirstName}
+            placeholder="First name"
+            placeholderTextColor={colors.textMuted}
+            autoCapitalize="words"
+            autoCorrect={false}
+            returnKeyType="next"
+          />
 
           <Text style={styles.fieldLabel}>Units</Text>
           <View style={styles.unitRow}>
@@ -120,6 +148,22 @@ export default function FirstRunScreen({ navigation }) {
           ))}
         </View>
 
+        <View style={styles.nameBlock}>
+          <Text style={styles.nameLabel}>
+            What should we call you? <Text style={styles.fieldOptional}>(optional)</Text>
+          </Text>
+          <TextInput
+            style={styles.nameInput}
+            value={firstName}
+            onChangeText={setFirstName}
+            placeholder="First name"
+            placeholderTextColor={colors.textMuted}
+            autoCapitalize="words"
+            autoCorrect={false}
+            returnKeyType="done"
+          />
+        </View>
+
         <TouchableOpacity style={styles.pathCard} onPress={startPathA} activeOpacity={0.85}>
           <View style={styles.pathIconWrap}>
             <Ionicons name="sparkles" size={22} color={colors.primary} />
@@ -135,7 +179,7 @@ export default function FirstRunScreen({ navigation }) {
 
         <TouchableOpacity
           style={styles.pathCard}
-          onPress={() => navigation.navigate('PlanLibrary', { fromFirstRun: true })}
+          onPress={startPathLibrary}
           activeOpacity={0.85}
         >
           <View style={styles.pathIconWrap}>
@@ -201,6 +245,14 @@ const styles = StyleSheet.create({
   backLink: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   backLinkText: { fontSize: fontSize.sm, color: colors.textSecondary },
   fieldLabel: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary, marginTop: spacing.md },
+  fieldOptional: { fontSize: fontSize.xs, fontWeight: fontWeight.regular, color: colors.textMuted },
+  nameBlock: { gap: spacing.xs },
+  nameLabel: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary },
+  nameInput: {
+    backgroundColor: colors.surface, borderRadius: radius.md,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.md,
+    fontSize: fontSize.md, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border,
+  },
   unitRow: { flexDirection: 'row', gap: spacing.sm },
   unitBtn: {
     flex: 1, alignItems: 'center', paddingVertical: spacing.md,

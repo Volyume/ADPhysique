@@ -23,8 +23,18 @@ import InfoTooltip from '../components/InfoTooltip';
 // Soft targets used only to size the weekly progress bars — not enforced
 const WEEK_TARGETS = { sessions: 5, sets: 80, volume: 15000 };
 
+function getGreeting(firstName) {
+  const h = new Date().getHours();
+  const name = firstName ? `, ${firstName}` : '';
+  if (h < 5)  return `Up early${name}.`;
+  if (h < 12) return `Morning${name}.`;
+  if (h < 17) return `Afternoon${name}.`;
+  if (h < 21) return `Evening${name}.`;
+  return `Late night${name}.`;
+}
+
 export default function HomeScreen({ navigation }) {
-  const { user, startWorkout, activeWorkout } = useAppStore();
+  const { user, userProfile, startWorkout, activeWorkout } = useAppStore();
 
   const [weekStats, setWeekStats] = useState({ sessions: 0, sets: 0, volume: 0 });
   const [streakWeeks, setStreakWeeks] = useState(0);
@@ -250,7 +260,10 @@ export default function HomeScreen({ navigation }) {
       >
         {/* ── Branded header ── */}
         <View style={styles.header}>
-          <Text style={styles.pageTitle}>Train</Text>
+          <View style={styles.headerText}>
+            <Text style={styles.pageTitle}>Train</Text>
+            <Text style={styles.greeting}>{getGreeting(userProfile?.firstName)}</Text>
+          </View>
           <VolyumeMark size={38} color={colors.textMuted} />
         </View>
 
@@ -669,10 +682,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingBottom: spacing.xs,
   },
+  headerText: { gap: 1 },
   pageTitle: {
     fontSize: fontSize.xl,
     fontWeight: fontWeight.bold,
     color: colors.textPrimary,
+  },
+  greeting: {
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+    fontWeight: fontWeight.regular,
   },
 
   // Week card with progress bars
