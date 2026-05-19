@@ -391,7 +391,7 @@ function SplashScreen() {
           { opacity: wordOpacity, transform: [{ translateY: wordY }] },
         ]}
       >
-        VOLYUME
+        Volyume
       </Animated.Text>
 
       <Animated.View style={[splashStyles.accent, { transform: [{ scaleX: accentScaleX }] }]} />
@@ -411,10 +411,10 @@ const splashStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   wordmark: {
-    fontSize: 30,
-    fontWeight: fontWeight.bold,
+    fontSize: 34,
+    fontWeight: fontWeight.black,
     color: colors.textPrimary,
-    letterSpacing: 6,
+    letterSpacing: -0.5,
     includeFontPadding: false,
     textAlign: 'center',
     marginTop: spacing.lg,

@@ -72,7 +72,7 @@ function fmt12(h) {
 
 export default function ProOnboardingScreen({ navigation }) {
   const {
-    user, units, setUnits, userProfile, saveLocalProfile, completeFirstRun,
+    user, units, setUnits, userProfile, saveLocalProfile,
   } = useAppStore();
 
   const [step, setStep] = useState(1);
@@ -234,16 +234,19 @@ export default function ProOnboardingScreen({ navigation }) {
       }
     } catch (_) {}
     setBusy(false);
-    await completeFirstRun();
-    navigation.replace('CoachBuilder', { firstRun: true });
+    // completeFirstRun is NOT called here. It fires only at the very end
+    // (ProSetupComplete "Start training"). Calling it now would flip the
+    // RootNavigator gate and skip CoachBuilder plus the summary entirely.
+    // navigate (not replace) so Back from CoachBuilder returns here.
+    navigation.navigate('CoachBuilder', { firstRun: true });
   }
 
   async function skipAccount() {
-    // No account = can't verify Pro after beta; downgrade to free locally
+    // Declining the account during Pro onboarding downgrades to Free —
+    // Pro can't be verified without an account after beta. Setting tier to
+    // 'free' re-renders RootNavigator into the Free first-run path.
     const { setTier } = useAppStore.getState();
     await setTier('free');
-    await completeFirstRun();
-    navigation.replace('CoachBuilder', { firstRun: true });
   }
 
   // ── Progress bar ─────────────────────────────────────────────────────────────

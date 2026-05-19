@@ -362,7 +362,7 @@ export default function CoachBuilderScreen({ navigation, route }) {
 
       if (isFirstRun) {
         if (tier === 'pro') {
-          // Pro first-run ends at ProSetupComplete, not here — completeFirstRun
+          // Pro first-run ends at ProSetupComplete, not here. completeFirstRun
           // is called from ProSetupCompleteScreen after the "Start training" tap.
           navigation.navigate('ProSetupComplete');
         } else {
@@ -820,7 +820,17 @@ export default function CoachBuilderScreen({ navigation, route }) {
       {/* Header */}
       <View style={styles.header}>
         <ProgressBar current={step} total={TOTAL_STEPS} />
-        <Text style={styles.headerTitle}>{stepTitle(step)}</Text>
+        <View style={styles.headerTitleRow}>
+          <Text style={styles.headerTitle}>{stepTitle(step)}</Text>
+          {isFirstRun && tier === 'pro' && (
+            <TouchableOpacity
+              onPress={() => navigation.navigate('ProSetupComplete')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.headerSkipText}>Set up later</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* Content */}
@@ -856,7 +866,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  headerTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  headerTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
+  headerTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, flex: 1 },
+  headerSkipText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
 
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.lg, gap: spacing.md },
