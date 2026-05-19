@@ -21,6 +21,7 @@ import {
   getMorningWeightsLast14Days,
   getWeeklySessionStats,
   getWeeklyPRCount,
+  getNutritionTargets,
 } from '../lib/database';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { requestNotificationPermissions, getNotificationPermissionStatus } from '../lib/notifications';
@@ -129,6 +130,7 @@ function OptionRow({ options, selected, onSelect }) {
 
 export default function WeeklyCheckInScreen({ navigation }) {
   const { user, userProfile, units } = useAppStore();
+  const [nutritionTargets, setNutritionTargets] = useState(null);
 
   // If no goal phase is set, send to setup first
   useEffect(() => {
@@ -136,6 +138,12 @@ export default function WeeklyCheckInScreen({ navigation }) {
       navigation.replace('ProGoalSetup', { fromCheckin: true });
     }
   }, [userProfile?.goalPhase]);
+
+  // Load nutrition targets from DB (not from userProfile — they live in SQLite)
+  useEffect(() => {
+    if (!user?.id) return;
+    getNutritionTargets(user.id).then(t => setNutritionTargets(t ?? null)).catch(() => {});
+  }, [user?.id]);
 
   // Derived constants
   const weekStart = getCurrentWeekStart();
@@ -161,7 +169,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
   const [notes, setNotes] = useState('');
 
   // Profile-derived flags
-  const hasNutritionTarget = Boolean(userProfile?.targetKcal ?? userProfile?.target_kcal);
+  const hasNutritionTarget = Boolean(nutritionTargets?.targetKcal);
   const hasStepsTarget = Boolean(userProfile?.stepsTarget ?? userProfile?.steps_target);
   const trackCycle = userProfile?.trackCycle === true || userProfile?.track_cycle === true;
 
@@ -367,9 +375,14 @@ export default function WeeklyCheckInScreen({ navigation }) {
           ) : (
             <View style={styles.section}>
               <SectionLabel>Calorie adherence</SectionLabel>
-              <Text style={styles.skipNote}>
-                Set targets in Nutrition for calorie coaching.
-              </Text>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('NutritionTargets')}
+                activeOpacity={0.75}
+              >
+                <Text style={styles.skipNoteTappable}>
+                  Nutrition targets not set. Tap to set them up and unlock calorie coaching.
+                </Text>
+              </TouchableOpacity>
             </View>
           )}
 
@@ -665,6 +678,16 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  skipNoteTappable: {
+    fontSize: fontSize.sm,
+    color: colors.primary,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.primaryBg,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.primary + '40',
   },
 
   // ── Cycle toggle
