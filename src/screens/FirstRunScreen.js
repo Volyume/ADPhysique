@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Alert,
 } from 'react-native';
@@ -22,30 +22,36 @@ export default function FirstRunScreen({ navigation }) {
   const [bodyWeight, setBodyWeight] = useState('');
   const [firstName, setFirstName] = useState('');
   const [busy, setBusy] = useState(false);
+  const nameRef = useRef(null);
+  const hasName = firstName.trim().length > 0;
 
-  async function saveNameIfEntered() {
+  useEffect(() => {
+    const t = setTimeout(() => nameRef.current?.focus(), 350);
+    return () => clearTimeout(t);
+  }, []);
+
+  async function saveName() {
     const name = firstName.trim();
     if (!name || !user?.id) return;
     await saveLocalProfile(user.id, { ...(userProfile || {}), firstName: name });
   }
 
   async function startPathA() {
-    await saveNameIfEntered();
+    await saveName();
     navigation.navigate('CoachBuilder', { firstRun: true });
   }
 
   async function startPathLibrary() {
-    await saveNameIfEntered();
+    await saveName();
     navigation.navigate('PlanLibrary', { fromFirstRun: true });
   }
 
   async function finishPathB() {
+    if (!hasName) return;
     setBusy(true);
     try {
       if (setUnits) setUnits(localUnits);
-      const merged = { ...(userProfile || {}), units: localUnits };
-      const name = firstName.trim();
-      if (name) merged.firstName = name;
+      const merged = { ...(userProfile || {}), units: localUnits, firstName: firstName.trim() };
       if (user?.id) await saveLocalProfile(user.id, merged);
       const bw = parseFloat(bodyWeight);
       if (user?.id && !isNaN(bw) && bw > 0) {
@@ -76,9 +82,10 @@ export default function FirstRunScreen({ navigation }) {
             A few things and you're in. You can change these later in Settings.
           </Text>
 
-          <Text style={styles.fieldLabel}>What should we call you? <Text style={styles.fieldOptional}>(optional)</Text></Text>
+          <Text style={styles.fieldLabel}>What should we call you?</Text>
           <TextInput
-            style={styles.input}
+            ref={nameRef}
+            style={[styles.input, hasName && styles.inputActive]}
             value={firstName}
             onChangeText={setFirstName}
             placeholder="First name"
@@ -117,9 +124,9 @@ export default function FirstRunScreen({ navigation }) {
           </Text>
 
           <TouchableOpacity
-            style={[styles.primaryBtn, busy && styles.btnDisabled]}
+            style={[styles.primaryBtn, (!hasName || busy) && styles.btnDisabled]}
             onPress={finishPathB}
-            disabled={busy}
+            disabled={!hasName || busy}
             activeOpacity={0.85}
           >
             <Text style={styles.primaryBtnText}>Start logging</Text>
@@ -149,11 +156,10 @@ export default function FirstRunScreen({ navigation }) {
         </View>
 
         <View style={styles.nameBlock}>
-          <Text style={styles.nameLabel}>
-            What should we call you? <Text style={styles.fieldOptional}>(optional)</Text>
-          </Text>
+          <Text style={styles.nameLabel}>What should we call you?</Text>
           <TextInput
-            style={styles.nameInput}
+            ref={nameRef}
+            style={[styles.nameInput, hasName && styles.inputActive]}
             value={firstName}
             onChangeText={setFirstName}
             placeholder="First name"
@@ -164,9 +170,14 @@ export default function FirstRunScreen({ navigation }) {
           />
         </View>
 
-        <TouchableOpacity style={styles.pathCard} onPress={startPathA} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={[styles.pathCard, !hasName && styles.pathCardDisabled]}
+          onPress={startPathA}
+          disabled={!hasName}
+          activeOpacity={0.85}
+        >
           <View style={styles.pathIconWrap}>
-            <Ionicons name="sparkles" size={22} color={colors.primary} />
+            <Ionicons name="sparkles" size={22} color={hasName ? colors.primary : colors.textMuted} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.pathTitle}>Generate my plan</Text>
@@ -174,16 +185,17 @@ export default function FirstRunScreen({ navigation }) {
               Answer a few questions and Coach builds a volume-landmark plan tuned to you. ~3 minutes.
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+          <Ionicons name="chevron-forward" size={20} color={hasName ? colors.textMuted : colors.border} />
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.pathCard}
+          style={[styles.pathCard, !hasName && styles.pathCardDisabled]}
           onPress={startPathLibrary}
+          disabled={!hasName}
           activeOpacity={0.85}
         >
           <View style={styles.pathIconWrap}>
-            <Ionicons name="library-outline" size={22} color={colors.primary} />
+            <Ionicons name="library-outline" size={22} color={hasName ? colors.primary : colors.textMuted} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.pathTitle}>Browse plan library</Text>
@@ -191,16 +203,17 @@ export default function FirstRunScreen({ navigation }) {
               Pick from curated splits — Beginner, Push/Pull/Legs, Upper/Lower and more.
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+          <Ionicons name="chevron-forward" size={20} color={hasName ? colors.textMuted : colors.border} />
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.pathCard}
+          style={[styles.pathCard, !hasName && styles.pathCardDisabled]}
           onPress={() => setMode('quick')}
+          disabled={!hasName}
           activeOpacity={0.85}
         >
           <View style={styles.pathIconWrap}>
-            <Ionicons name="create-outline" size={22} color={colors.primary} />
+            <Ionicons name="create-outline" size={22} color={hasName ? colors.primary : colors.textMuted} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.pathTitle}>I have my own plan</Text>
@@ -208,7 +221,7 @@ export default function FirstRunScreen({ navigation }) {
               Skip straight to logging. Just set your units and you're in.
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+          <Ionicons name="chevron-forward" size={20} color={hasName ? colors.textMuted : colors.border} />
         </TouchableOpacity>
 
         <Text style={styles.footnote}>
@@ -253,6 +266,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md, paddingVertical: spacing.md,
     fontSize: fontSize.md, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border,
   },
+  inputActive: { borderColor: colors.primary },
+  pathCardDisabled: { opacity: 0.35 },
   unitRow: { flexDirection: 'row', gap: spacing.sm },
   unitBtn: {
     flex: 1, alignItems: 'center', paddingVertical: spacing.md,
