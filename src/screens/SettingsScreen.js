@@ -317,6 +317,17 @@ export default function SettingsScreen({ navigation }) {
           />
         </View>
 
+        {/* Pro coaching setup */}
+        <SectionHeader title="WEEKLY COACHING" />
+        <View style={styles.section}>
+          <SettingRow
+            icon="pulse-outline"
+            label="Goal phase & step target"
+            sub="Update your current phase — cut, bulk, or maintain"
+            onPress={() => navigation.navigate('ProGoalSetup')}
+          />
+        </View>
+
         {/* Exercise Library */}
         <SectionHeader title="EXERCISE LIBRARY" />
         <View style={styles.section}>

@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +14,7 @@ import {
   getAllRoutineExerciseCounts, createWorkout, getRoutineExercisesWithDetails,
   getWorkoutSetsForWorkout, getExerciseById,
   getCurrentMesocycleWeek, getPlannedMuscleVolume, getAllExercises,
+  getMorningWeightToday, logMorningWeight,
 } from '../lib/database';
 import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
@@ -51,6 +52,9 @@ export default function HomeScreen({ navigation }) {
   const [lastSessionTonnage, setLastSessionTonnage] = useState(null);
   const [blockProgress, setBlockProgress] = useState([]);
   const [currentMesoWeek, setCurrentMesoWeek] = useState(null);
+  const [todayWeight, setTodayWeight] = useState(null);       // logged weight for today
+  const [weightInput, setWeightInput] = useState('');          // draft input value
+  const [savingWeight, setSavingWeight] = useState(false);
 
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
@@ -68,7 +72,26 @@ export default function HomeScreen({ navigation }) {
   );
 
   async function loadData() {
-    await Promise.all([loadWeekStats(), loadNextWorkout(), loadExerciseCounts(), loadBlockProgress()]);
+    await Promise.all([loadWeekStats(), loadNextWorkout(), loadExerciseCounts(), loadBlockProgress(), loadTodayWeight()]);
+  }
+
+  async function loadTodayWeight() {
+    try {
+      const entry = await getMorningWeightToday(user.id);
+      setTodayWeight(entry?.weightKg ?? null);
+    } catch (_) {}
+  }
+
+  async function handleLogWeight() {
+    const val = parseFloat(weightInput);
+    if (!val || val <= 0 || val > 500) return;
+    setSavingWeight(true);
+    try {
+      await logMorningWeight(user.id, { weightKg: val, loggedAt: Date.now() });
+      setTodayWeight(val);
+      setWeightInput('');
+    } catch (_) {}
+    setSavingWeight(false);
   }
 
   async function loadWeekStats() {
@@ -266,6 +289,40 @@ export default function HomeScreen({ navigation }) {
           </View>
           <VolyumeMark size={38} color={colors.textMuted} />
         </View>
+
+        {/* ── Morning weight card ── */}
+        {todayWeight != null ? (
+          <View style={styles.weightCard}>
+            <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+            <Text style={styles.weightCardText}>
+              {todayWeight}{userProfile?.units ?? 'kg'} logged today
+            </Text>
+            <TouchableOpacity onPress={() => setTodayWeight(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Text style={styles.weightCardEdit}>Edit</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.weightCard}>
+            <Ionicons name="scale-outline" size={16} color={colors.textMuted} />
+            <TextInput
+              style={styles.weightInput}
+              value={weightInput}
+              onChangeText={setWeightInput}
+              placeholder={`Morning weight (${userProfile?.units ?? 'kg'})`}
+              placeholderTextColor={colors.textMuted}
+              keyboardType="decimal-pad"
+              returnKeyType="done"
+              onSubmitEditing={handleLogWeight}
+            />
+            <TouchableOpacity
+              style={[styles.weightLogBtn, (!weightInput || savingWeight) && styles.weightLogBtnDisabled]}
+              onPress={handleLogWeight}
+              disabled={!weightInput || savingWeight}
+            >
+              <Text style={styles.weightLogBtnText}>Log</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* ── This week — progress bars ── */}
         <View style={styles.weekCard}>
@@ -674,6 +731,26 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
+
+  // Morning weight card
+  weightCard: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: colors.surface, borderRadius: radius.md,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  weightInput: {
+    flex: 1, fontSize: fontSize.sm, color: colors.textPrimary,
+    paddingVertical: spacing.xs,
+  },
+  weightCardText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary },
+  weightCardEdit: { fontSize: fontSize.xs, color: colors.primary },
+  weightLogBtn: {
+    backgroundColor: colors.primary, borderRadius: radius.sm,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
+  },
+  weightLogBtnDisabled: { backgroundColor: colors.surface3 },
+  weightLogBtnText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.background },
 
   // Header — matches Plans/Progress/Athlete Hub pattern
   header: {

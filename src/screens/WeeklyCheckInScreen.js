@@ -128,6 +128,13 @@ function OptionRow({ options, selected, onSelect }) {
 export default function WeeklyCheckInScreen({ navigation }) {
   const { user, userProfile, units } = useAppStore();
 
+  // If no goal phase is set, send to setup first
+  useEffect(() => {
+    if (!userProfile?.goalPhase) {
+      navigation.replace('ProGoalSetup', { fromCheckin: true });
+    }
+  }, [userProfile?.goalPhase]);
+
   // Derived constants
   const weekStart = getCurrentWeekStart();
   const weekLabel = formatWeekRange(weekStart);

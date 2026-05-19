@@ -8,11 +8,13 @@ import useAppStore from '../store/useAppStore';
 import { runWeeklyCoach } from '../lib/weeklyCoach';
 import {
   getLatestCheckin,
+  getRecentCheckins,
   getMorningWeightsLast14Days,
   getWeeklySessionStats,
   getWeeklyPRCount,
   getNutritionTargets,
   saveCoachOutput,
+  getLatestCoachOutput,
 } from '../lib/database';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 
@@ -223,6 +225,35 @@ export default function CoachOutputScreen({ navigation, route }) {
       const prs = await getWeeklyPRCount(user.id, weekStart);
       const nutrition = await getNutritionTargets(user.id);
 
+      // Compute weeksInPhase from stored start timestamp
+      const phaseStartedAt = userProfile?.phaseStartedAt ?? null;
+      const weeksInPhase = phaseStartedAt
+        ? Math.max(1, Math.floor((Date.now() - phaseStartedAt) / (7 * 86400000)) + 1)
+        : 1;
+
+      // Compute consecutivePoorRecoveryWeeks from recent check-ins
+      const recentCheckins = await getRecentCheckins(user.id, 4);
+      const consecutivePoorRecoveryWeeks = (() => {
+        let count = 0;
+        for (const ci of recentCheckins) {
+          if ((ci.energyScore ?? 3) <= 2 || (ci.sorenessScore ?? 3) >= 4) count++;
+          else break;
+        }
+        return count;
+      })();
+
+      // Compute consecutiveOffTargetWeeks from recent coach outputs
+      const lastOutput = await getLatestCoachOutput(user.id);
+      const consecutiveOffTargetWeeks = lastOutput?.trend?.onTarget === false
+        ? (lastOutput?.consecutiveOffTargetWeeks ?? 0) + 1
+        : 0;
+
+      // Last calorie adjustment direction (from previous output)
+      const lastCalAdjustmentDirection = lastOutput?.adjustments?.calories?.change
+        ? (lastOutput.adjustments.calories.change > 0 ? 'up' : 'down')
+        : null;
+      const lastCalAdjustmentWeeksAgo = lastCalAdjustmentDirection ? 1 : 99;
+
       const result = runWeeklyCoach({
         checkin,
         morningWeights: weights,
@@ -230,11 +261,11 @@ export default function CoachOutputScreen({ navigation, route }) {
         sessionsPlanned: sessionStats.planned,
         prsThisWeek: prs,
         goalPhase: userProfile?.goalPhase ?? 'maint',
-        weeksInPhase: userProfile?.weeksInPhase ?? 1,
-        consecutiveOffTargetWeeks: userProfile?.consecutiveOffTargetWeeks ?? 0,
-        consecutivePoorRecoveryWeeks: userProfile?.consecutivePoorRecoveryWeeks ?? 0,
-        lastCalAdjustmentDirection: userProfile?.lastCalAdjustmentDirection ?? null,
-        lastCalAdjustmentWeeksAgo: userProfile?.lastCalAdjustmentWeeksAgo ?? 99,
+        weeksInPhase,
+        consecutiveOffTargetWeeks,
+        consecutivePoorRecoveryWeeks,
+        lastCalAdjustmentDirection,
+        lastCalAdjustmentWeeksAgo,
         currentCalTarget: nutrition?.targetKcal ?? null,
         currentStepsTarget: userProfile?.stepsTarget ?? 8000,
         bodyweightKg: userProfile?.bodyweightKg ?? null,
