@@ -5,6 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { VolyumeMark } from '../components/BrandMark';
@@ -12,9 +13,12 @@ import {
   getActivePlan, getAllPlansForUser,
   getWorkoutTemplates, getPlanWorkoutCounts, getAllRoutineExerciseCounts,
   activatePlanWithBlock, getRoutinesForPlan, createWorkout, getRoutineExercisesWithDetails,
-  archivePlan, duplicatePlan, softDeleteRoutine,
+  archivePlan, duplicatePlan, softDeleteRoutine, getActiveBlock,
 } from '../lib/database';
+import { getBlockStatus } from '../lib/mesocycle';
 import useAppStore from '../store/useAppStore';
+
+const BLOCK_SNOOZE_KEY = '@volyume_block_snooze';
 
 const ACTION_CARDS = [
   {
@@ -49,6 +53,8 @@ export default function PlansScreen({ navigation }) {
   const [planWorkoutCounts, setPlanWorkoutCounts] = useState({});
   const [exerciseCounts, setExerciseCounts] = useState({});
   const [refreshing, setRefreshing] = useState(false);
+  const [blockStatus, setBlockStatus] = useState(null); // null | { status, currentWeek, totalWeeks, ... }
+  const [blockSnoozed, setBlockSnoozed] = useState(false);
 
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
@@ -62,18 +68,34 @@ export default function PlansScreen({ navigation }) {
   async function loadData() {
     if (!user?.id) return;
     try {
-      const [active, all, tmpl, pwc, exc] = await Promise.all([
+      const [active, all, tmpl, pwc, exc, block] = await Promise.all([
         getActivePlan(user.id),
         getAllPlansForUser(user.id),
         getWorkoutTemplates(user.id),
         getPlanWorkoutCounts(),
         getAllRoutineExerciseCounts(),
+        getActiveBlock(user.id),
       ]);
       setActivePlanData(active || null);
       setMyPlans(all.filter(p => !active || p.id !== active.id));
       setTemplates(tmpl);
       setPlanWorkoutCounts(pwc);
       setExerciseCounts(exc);
+
+      if (block) {
+        const status = getBlockStatus(block.startDate, block.plannedWeeks || block.durationWeeks || 5);
+        setBlockStatus(status.status !== 'active' ? status : null);
+
+        const snoozeRaw = await AsyncStorage.getItem(BLOCK_SNOOZE_KEY).catch(() => null);
+        if (snoozeRaw) {
+          const snoozeUntil = parseInt(snoozeRaw, 10);
+          setBlockSnoozed(Date.now() < snoozeUntil);
+        } else {
+          setBlockSnoozed(false);
+        }
+      } else {
+        setBlockStatus(null);
+      }
     } catch (_e) {}
   }
 
@@ -81,6 +103,31 @@ export default function PlansScreen({ navigation }) {
     setRefreshing(true);
     await loadData();
     setRefreshing(false);
+  }
+
+  async function handleRestartPlan() {
+    if (!activePlan) return;
+    Alert.alert(
+      'Restart this plan?',
+      'A new training block starts today with the same workouts. Try to beat your numbers from last time.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Start new block',
+          onPress: async () => {
+            await activatePlanWithBlock(user.id, activePlan.id, activePlan.name);
+            await AsyncStorage.removeItem(BLOCK_SNOOZE_KEY).catch(() => {});
+            await loadData();
+          },
+        },
+      ],
+    );
+  }
+
+  async function handleSnoozeBlock() {
+    const snoozeUntil = Date.now() + 7 * 24 * 60 * 60 * 1000;
+    await AsyncStorage.setItem(BLOCK_SNOOZE_KEY, String(snoozeUntil)).catch(() => {});
+    setBlockSnoozed(true);
   }
 
   async function handleStartNextWorkout(plan) {
@@ -173,6 +220,59 @@ export default function PlansScreen({ navigation }) {
           <Text style={styles.pageTitle}>Plans</Text>
           <VolyumeMark size={38} color={colors.textMuted} />
         </View>
+
+        {/* Block transition card */}
+        {blockStatus && !blockSnoozed && activePlan && (
+          <View style={[
+            styles.blockCard,
+            blockStatus.status === 'recovery' ? styles.blockCardRecovery : styles.blockCardComplete,
+          ]}>
+            <View style={styles.blockCardHeader}>
+              <View style={styles.blockCardIconWrap}>
+                <Ionicons
+                  name={blockStatus.status === 'recovery' ? 'moon-outline' : 'checkmark-circle-outline'}
+                  size={20}
+                  color={blockStatus.status === 'recovery' ? colors.warning : colors.success}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.blockCardTitle}>
+                  {blockStatus.status === 'recovery'
+                    ? 'Recovery week'
+                    : 'Training block complete'}
+                </Text>
+                <Text style={styles.blockCardSub}>
+                  {blockStatus.status === 'recovery'
+                    ? `Week ${blockStatus.currentWeek} of ${blockStatus.totalWeeks}. Lighter sessions this week. Decide what's next below.`
+                    : blockStatus.status === 'overdue'
+                      ? `Your block finished ${blockStatus.weeksOverdue + 1} week${blockStatus.weeksOverdue > 0 ? 's' : ''} ago. Choose what's next.`
+                      : 'Recovery week is done. Time to start your next block.'}
+                </Text>
+              </View>
+            </View>
+
+            <Text style={styles.blockNextLabel}>What's next?</Text>
+            <View style={styles.blockCardActions}>
+              <TouchableOpacity style={styles.blockRestartBtn} onPress={handleRestartPlan} activeOpacity={0.85}>
+                <Ionicons name="refresh-outline" size={15} color={colors.background} />
+                <Text style={styles.blockRestartBtnText}>Run this plan again</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.blockNewBtn}
+                onPress={() => navigation.navigate(tier === 'pro' ? 'CoachBuilder' : 'ProUpgrade')}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.blockNewBtnText}>Build a new plan</Text>
+              </TouchableOpacity>
+            </View>
+
+            {blockStatus.status === 'recovery' && (
+              <TouchableOpacity onPress={handleSnoozeBlock} style={styles.blockSnooze}>
+                <Text style={styles.blockSnoozeText}>Remind me after recovery week</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         {/* Active Plan */}
         {activePlan ? (
@@ -433,4 +533,40 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderColor: colors.primary + '40',
   },
+
+  blockCard: {
+    borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md,
+    borderWidth: 1,
+  },
+  blockCardRecovery: {
+    backgroundColor: colors.surface,
+    borderColor: colors.warning + '50',
+  },
+  blockCardComplete: {
+    backgroundColor: colors.surface,
+    borderColor: colors.success + '50',
+  },
+  blockCardHeader: { flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' },
+  blockCardIconWrap: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
+    marginTop: 2,
+  },
+  blockCardTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: 2 },
+  blockCardSub: { fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 17 },
+  blockNextLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.2 },
+  blockCardActions: { flexDirection: 'row', gap: spacing.md },
+  blockRestartBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.xs, backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md,
+  },
+  blockRestartBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.background },
+  blockNewBtn: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.surface2, borderRadius: radius.md, paddingVertical: spacing.md,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  blockNewBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textSecondary },
+  blockSnooze: { alignItems: 'center', paddingTop: spacing.xs },
+  blockSnoozeText: { fontSize: fontSize.xs, color: colors.textMuted },
 });

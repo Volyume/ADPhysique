@@ -1101,6 +1101,15 @@ export async function updateProgrammeName(id, name) {
 
 // ─── Mesocycles ───────────────────────────────────────────────────────────────────────────────────
 
+export async function getActiveBlock(userId) {
+  const d = await db();
+  const row = await d.getFirstAsync(
+    'SELECT * FROM mesocycles WHERE user_id = ? AND is_active = 1 ORDER BY created_at DESC LIMIT 1',
+    [userId],
+  );
+  return row ? rowToCamel(row) : null;
+}
+
 export async function getAllMesocycles(userId) {
   const d = await db();
   const rows = await d.getAllAsync(

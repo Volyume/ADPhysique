@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TextInput, Alert,
+  View, Text, StyleSheet, FlatList, TouchableOpacity, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,7 +11,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import InfoTooltip from '../components/InfoTooltip';
 import {
-  getAllMesocycles, createMesocycle, getAllWorkouts, getCompletedWorkoutSets,
+  getAllMesocycles, getAllWorkouts, getCompletedWorkoutSets,
   getActivePlan, getRoutinesForPlan,
 } from '../lib/database';
 import { calculateTonnage } from '../lib/algorithms';
@@ -26,16 +26,6 @@ export default function MesocycleBuilderScreen({ navigation }) {
   const [mesocycles, setMesocycles] = useState([]);
   const [activePlan, setActivePlanData] = useState(null);  // coach/manual-built plan
   const [activeStats, setActiveStats] = useState(null);   // { tonnageBars, recovery, deload }
-  const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({
-    name: '',
-    start_date: format(new Date(), 'yyyy-MM-dd'),
-    end_date: format(new Date(Date.now() + 28 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
-    focus: '',
-    deload_week: '4',
-    auto_regulation: true,
-  });
-  const [saving, setSaving] = useState(false);
 
   useFocusEffect(useCallback(() => {
     if (user?.id) loadAll();
@@ -120,39 +110,6 @@ export default function MesocycleBuilderScreen({ navigation }) {
     }
   }
 
-  async function handleCreateMesocycle() {
-    if (!form.name.trim()) { Alert.alert('Name required'); return; }
-    setSaving(true);
-    try {
-      const startDate = new Date(form.start_date);
-      const endDate = new Date(form.end_date);
-      const durationWeeks = Math.max(1, differenceInWeeks(endDate, startDate));
-      await createMesocycle({
-        userId: user.id,
-        name: form.name.trim(),
-        startDate: form.start_date,
-        endDate: form.end_date,
-        durationWeeks,
-        focus: form.focus || null,
-        isActive: true,
-        deloadWeek: parseInt(form.deload_week, 10) || 4,
-        autoRegulationEnabled: form.auto_regulation,
-      });
-      setShowCreate(false);
-      setForm({
-        name: '',
-        start_date: format(new Date(), 'yyyy-MM-dd'),
-        end_date: format(new Date(Date.now() + 28 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
-        focus: '',
-        deload_week: '4',
-        auto_regulation: true,
-      });
-      await loadAll();
-    } finally {
-      setSaving(false);
-    }
-  }
-
   function getCurrentWeek(mesocycle) {
     if (!mesocycle?.startDate) return 1;
     const start = new Date(mesocycle.startDate);
@@ -209,11 +166,6 @@ export default function MesocycleBuilderScreen({ navigation }) {
                 currentWeek={getCurrentWeek(activeStats.active)}
               />
             )}
-
-            <TouchableOpacity style={styles.createBtn} onPress={() => setShowCreate(true)}>
-              <Ionicons name="add-circle" size={22} color={colors.background} />
-              <Text style={styles.createBtnText}>New Training Block</Text>
-            </TouchableOpacity>
 
             {mesocycles.length > 0 && (
               <Text style={styles.historyLabel}>All blocks</Text>
@@ -290,77 +242,6 @@ export default function MesocycleBuilderScreen({ navigation }) {
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
       />
 
-      {/* ── Create modal ──────────────────────────────── */}
-      <Modal visible={showCreate} animationType="slide" transparent onRequestClose={() => setShowCreate(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalSheet}>
-            <Text style={styles.modalTitle}>New Training Block</Text>
-            <TextInput
-              style={styles.input}
-              value={form.name}
-              onChangeText={v => setForm(f => ({ ...f, name: v }))}
-              placeholder="e.g. Chest Priority Block"
-              placeholderTextColor={colors.textMuted}
-              autoFocus
-            />
-            <View style={styles.row}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Start date</Text>
-                <TextInput
-                  style={styles.input}
-                  value={form.start_date}
-                  onChangeText={v => setForm(f => ({ ...f, start_date: v }))}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={colors.textMuted}
-                />
-              </View>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>End date</Text>
-                <TextInput
-                  style={styles.input}
-                  value={form.end_date}
-                  onChangeText={v => setForm(f => ({ ...f, end_date: v }))}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={colors.textMuted}
-                />
-              </View>
-            </View>
-            <TextInput
-              style={styles.input}
-              value={form.focus}
-              onChangeText={v => setForm(f => ({ ...f, focus: v }))}
-              placeholder="Focus (e.g. Chest + Side Delts)"
-              placeholderTextColor={colors.textMuted}
-            />
-            <View style={styles.row}>
-              <Text style={styles.inputLabel}>Recovery week:</Text>
-              {['3', '4', '5', '6'].map(w => (
-                <TouchableOpacity
-                  key={w}
-                  style={[styles.weekChip, form.deload_week === w && styles.weekChipActive]}
-                  onPress={() => setForm(f => ({ ...f, deload_week: w }))}
-                >
-                  <Text style={[styles.weekChipText, form.deload_week === w && styles.weekChipTextActive]}>
-                    Week {w}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowCreate(false)}>
-                <Text style={styles.cancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.saveBtn, saving && { opacity: 0.6 }]}
-                onPress={handleCreateMesocycle}
-                disabled={saving}
-              >
-                <Text style={styles.saveText}>Create</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }

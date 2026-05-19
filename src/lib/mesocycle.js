@@ -413,3 +413,52 @@ export function checkDoubleProgressionReady(sessionHistory = []) {
     message: 'Keep working. Match your best set next time before adding weight.',
   };
 }
+
+// ---------------------------------------------------------------------------
+// Block completion detection
+// ---------------------------------------------------------------------------
+
+/**
+ * Determines where a training block is in its lifecycle.
+ *
+ * @param {string|number} startDateMs - ISO date string or epoch ms of block start
+ * @param {number} plannedWeeks - total weeks in the block (includes recovery week)
+ * @returns {{
+ *   status: 'active' | 'recovery' | 'complete' | 'overdue',
+ *   currentWeek: number,
+ *   totalWeeks: number,
+ *   weeksOverdue: number,
+ *   recoveryWeek: number,
+ * }}
+ *
+ * Status meaning:
+ *   active    — still in the accumulation phase, keep training
+ *   recovery  — currently in the final (lighter) week of the block
+ *   complete  — recovery week just finished (0–13 days overdue)
+ *   overdue   — block finished 2+ weeks ago, strongly prompt transition
+ */
+export function getBlockStatus(startDateMs, plannedWeeks = 5) {
+  const start = typeof startDateMs === 'string' ? new Date(startDateMs).getTime() : (startDateMs ?? Date.now());
+  const daysElapsed = Math.max(0, Math.floor((Date.now() - start) / (1000 * 60 * 60 * 24)));
+  const currentWeek = Math.floor(daysElapsed / 7) + 1;
+  const recoveryWeek = plannedWeeks; // last week is always recovery
+
+  let status;
+  if (currentWeek < recoveryWeek) {
+    status = 'active';
+  } else if (currentWeek === recoveryWeek) {
+    status = 'recovery';
+  } else if (currentWeek <= recoveryWeek + 1) {
+    status = 'complete';
+  } else {
+    status = 'overdue';
+  }
+
+  return {
+    status,
+    currentWeek,
+    totalWeeks: plannedWeeks,
+    weeksOverdue: Math.max(0, currentWeek - recoveryWeek - 1),
+    recoveryWeek,
+  };
+}
