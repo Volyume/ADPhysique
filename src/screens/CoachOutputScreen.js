@@ -581,11 +581,10 @@ const styles = StyleSheet.create({
 
   // Section header label
   sectionHeader: {
-    fontSize: fontSize.xs,
+    fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
     color: colors.textSecondary,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
+    letterSpacing: 0.2,
     marginBottom: spacing.xs,
   },
 
@@ -684,7 +683,6 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.bold,
     color: colors.warning,
     letterSpacing: 0.3,
-    textTransform: 'uppercase',
   },
   amberCardBody: {
     fontSize: fontSize.sm,

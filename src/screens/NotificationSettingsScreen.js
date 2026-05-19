@@ -436,10 +436,10 @@ const styles = StyleSheet.create({
 
   // Section label
   sectionLabel: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.black,
-    color: colors.textMuted,
-    letterSpacing: 1.5,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textSecondary,
+    letterSpacing: 0.2,
     paddingHorizontal: spacing.xs,
     paddingTop: spacing.lg,
     paddingBottom: spacing.sm,
@@ -493,8 +493,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
     color: colors.textMuted,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
+    letterSpacing: 0.2,
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.sm,
   },

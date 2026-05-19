@@ -529,7 +529,7 @@ export default function BodyMetricsScreen({ navigation }) {
         {/* Measurements snapshot */}
         {latest && MEASUREMENTS.some(m => latest[m.key]) && (
           <View style={styles.snapshotCard}>
-            <Text style={styles.sectionTitle}>MEASUREMENTS</Text>
+            <Text style={styles.sectionTitle}>Measurements</Text>
             <View style={styles.measureGrid}>
               {MEASUREMENTS.map(m => latest[m.key] ? (
                 <View key={m.key} style={styles.measureCell}>
@@ -547,7 +547,7 @@ export default function BodyMetricsScreen({ navigation }) {
         {/* History */}
         {history.length > 1 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>HISTORY</Text>
+            <Text style={styles.sectionTitle}>History</Text>
             {history.slice(0, 10).map(entry => (
               <View key={entry.id} style={styles.historyRow}>
                 <Text style={styles.historyDate}>{format(new Date(entry.metric_date), 'MMM d, yyyy')}</Text>
@@ -581,7 +581,7 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
   optInContent: { padding: spacing.lg, paddingTop: spacing.xxl },
   sectionTitle: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.black, color: colors.textMuted, letterSpacing: 1.5,
+    fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary, letterSpacing: 0.2,
   },
 
   optInCard: {

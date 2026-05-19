@@ -176,7 +176,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         {/* History */}
         {history.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>HISTORY (Last {history.length} sessions)</Text>
+            <Text style={styles.sectionTitle}>History (last {history.length} sessions)</Text>
             {history.map((sessionSets, i) => {
               const firstSet = sessionSets[0];
               const date = new Date(firstSet.createdAt);
@@ -205,7 +205,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         {/* PRs */}
         {prs.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>ALL-TIME PRs</Text>
+            <Text style={styles.sectionTitle}>All-time bests</Text>
             {prs.slice(0, 5).map((pr, i) => (
               <View key={pr.id} style={styles.prRow}>
                 <Text style={styles.prIcon}>
@@ -231,7 +231,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         {/* Substitutes */}
         {substitutes.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>SUBSTITUTES</Text>
+            <Text style={styles.sectionTitle}>Substitutes</Text>
             {substitutes.map(({ exercise: sub, reason }, i) => (
               <TouchableOpacity
                 key={sub.id}
@@ -250,7 +250,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
 
         {(formTip || exercise.notes) && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>HOW TO PERFORM</Text>
+            <Text style={styles.sectionTitle}>How to do it</Text>
             <View style={styles.notesCard}>
               <Text style={styles.notesText}>{formTip ?? exercise.notes}</Text>
             </View>
@@ -324,10 +324,10 @@ const styles = StyleSheet.create({
   },
   section: { gap: spacing.md },
   sectionTitle: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.black,
-    color: colors.textMuted,
-    letterSpacing: 1.5,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textSecondary,
+    letterSpacing: 0.2,
   },
   historyCard: {
     backgroundColor: colors.surface,

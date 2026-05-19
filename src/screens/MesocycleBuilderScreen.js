@@ -473,8 +473,8 @@ const styles = StyleSheet.create({
   list:  { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
 
   historyLabel: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.black, color: colors.textMuted,
-    letterSpacing: 1.5, marginBottom: spacing.sm,
+    fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary,
+    letterSpacing: 0.2, marginBottom: spacing.sm,
   },
 
   // Active dashboard

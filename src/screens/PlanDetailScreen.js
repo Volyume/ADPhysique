@@ -201,7 +201,7 @@ export default function PlanDetailScreen({ navigation, route }) {
 
         {/* Workouts list */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>WORKOUTS</Text>
+          <Text style={styles.sectionTitle}>Workouts</Text>
           {workouts.length === 0 ? (
             <View style={styles.emptyCard}>
               <Text style={styles.emptyCardText}>
@@ -248,7 +248,7 @@ export default function PlanDetailScreen({ navigation, route }) {
         {/* Manage actions (user plans only) */}
         {!isLibrary && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>MANAGE</Text>
+            <Text style={styles.sectionTitle}>Manage</Text>
             <View style={styles.manageCard}>
               <TouchableOpacity style={styles.manageRow} onPress={handleDuplicate}>
                 <Ionicons name="copy-outline" size={18} color={colors.primary} />
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
   deactivateBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.textSecondary },
   section: { gap: spacing.md },
   sectionTitle: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.black, color: colors.textMuted, letterSpacing: 1.5,
+    fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary, letterSpacing: 0.2,
   },
   emptyCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.xl,

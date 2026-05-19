@@ -478,7 +478,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         )}
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>RECOMMENDATIONS</Text>
+          <Text style={styles.sectionTitle}>Recommendations</Text>
           {dataLimited ? (
             <View style={styles.limitedCard}>
               <Text style={styles.limitedText}>
@@ -601,7 +601,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         {!readOnly && (
           <View style={styles.section}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>SESSION FEEDBACK</Text>
+              <Text style={styles.sectionTitle}>How did it feel?</Text>
               <Text style={styles.optionalLabel}>optional</Text>
             </View>
             <TouchableOpacity
@@ -749,7 +749,7 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: colors.border },
   section: { gap: spacing.md },
   sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  sectionTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.black, color: colors.textMuted, letterSpacing: 1.5 },
+  sectionTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary, letterSpacing: 0.2 },
   optionalLabel: { fontSize: fontSize.xs, color: colors.textMuted },
   volumeRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,

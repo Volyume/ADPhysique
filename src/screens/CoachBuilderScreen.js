@@ -928,7 +928,7 @@ const styles = StyleSheet.create({
   warningText: { fontSize: fontSize.sm, color: colors.warning, lineHeight: 18 },
 
   summaryCard: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.lg, gap: spacing.md },
-  summaryCardTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.black, color: colors.textMuted, letterSpacing: 1.2 },
+  summaryCardTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.2 },
   summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   summaryItem: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, width: '47%' },
   summaryItemWide: { width: '100%' },
@@ -945,7 +945,7 @@ const styles = StyleSheet.create({
   whyBullet: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary, marginTop: 6 },
   whyText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
 
-  sectionHeading: { fontSize: fontSize.xs, fontWeight: fontWeight.black, color: colors.textMuted, letterSpacing: 1.2, marginTop: spacing.sm },
+  sectionHeading: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.2, marginTop: spacing.sm },
 
   workoutCard: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.lg, gap: spacing.md },
   workoutCardName: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.xs },
