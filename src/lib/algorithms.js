@@ -147,7 +147,7 @@ export function getVolumeStatus(workingSets, muscle, customLandmarks = null) {
 // Algorithm 2: Double Progression Suggestion
 export function getProgressionSuggestion(currentSets, prevWorkoutSets, targetRepsMin, targetRepsMax, units = 'kg') {
   if (!prevWorkoutSets || prevWorkoutSets.length === 0) {
-    return { action: 'baseline', message: 'First time logging — establish a baseline.' };
+    return { action: 'baseline', message: 'First time logging. Establish a baseline today.' };
   }
 
   const prevAvgReps =
@@ -182,7 +182,7 @@ export function getProgressionSuggestion(currentSets, prevWorkoutSets, targetRep
 
   return {
     action: 'maintain',
-    message: `Keep ${prevAvgWeight.toFixed(1)}${units} — aim for ${Math.ceil(targetMax)} reps next set.`,
+    message: `Keep ${prevAvgWeight.toFixed(1)}${units}. Aim for ${Math.ceil(targetMax)} reps next set.`,
     suggestedWeight: prevAvgWeight,
   };
 }
@@ -330,21 +330,21 @@ export function computeSetTargets(prevSets, repMin, repMax, units = 'kg', option
   let reason;
   if (isLayoff) {
     const pct = Math.round((1 - layoffMultiplier) * 100);
-    reason = `Loads reduced by ${pct}% — first session back after a break. Rebuild over the next 1–2 weeks.`;
+    reason = `Loads reduced by ${pct}% for your first session back after a break. Rebuild over the next 1 to 2 weeks.`;
   } else if (anyAnchored) {
     const n = targets.filter(t => t.anchored).length;
-    reason = `${n === targets.length ? 'All' : n} set target${n > 1 ? 's' : ''} raised to match your session best (${bestPrevW}${units}) — your overall high-water mark, not just that set's history.`;
+    reason = `${n === targets.length ? 'All' : n} set target${n > 1 ? 's' : ''} raised to match your session best (${bestPrevW}${units}). That is your overall high-water mark, not just that set's history.`;
   } else if (allIncrease) {
     const inc = (targets[0].weight - targets[0].prevWeight).toFixed(2).replace(/\.?0+$/, '');
-    reason = `All sets hit the top of the range — load up by ${inc}${units}.`;
+    reason = `All sets hit the top of the range. Add ${inc}${units} next session.`;
   } else if (anyDecrease) {
-    reason = `Load dropped — reps missed by 2+ for two sessions in a row. Reset and rebuild.`;
+    reason = `Load dropped: reps missed by 2 or more for two sessions in a row. Reset and rebuild.`;
   } else if (anyIncrease) {
-    reason = `Partial progression — add weight where you hit ${max} reps.`;
+    reason = `Partial progression: add weight on the sets where you hit ${max} reps.`;
   } else if (allMaintain) {
-    reason = `Same load — maximum effort already at ${max}+ reps. Let recovery catch up first.`;
+    reason = `Same load for now. You're already hitting ${max}+ reps at maximum effort. Let recovery catch up first.`;
   } else {
-    reason = `Keep the load — push for ${max} reps on each set, then increase weight.`;
+    reason = `Keep the same load. Push for ${max} reps on each set before increasing weight.`;
   }
 
   return { targets, reason };
@@ -542,14 +542,14 @@ function buildSubstituteReason(sub, target) {
   const targetFatigue = target.fatigueCost || target.fatigue_cost || 3;
 
   if (subSFR > targetSFR) return 'Higher stimulus quality for this muscle';
-  if (subFatigue < targetFatigue) return 'Lower fatigue cost — good for high-volume days';
+  if (subFatigue < targetFatigue) return 'Lower fatigue cost, good for high-volume days';
   return 'Similar stimulus, different movement pattern';
 }
 
 // Algorithm 10: Progression Path
 export function getProgressionPath(thisWeekSets, lastWeekSets, units = 'kg') {
   if (!lastWeekSets || lastWeekSets.length === 0) {
-    return { action: 'establish_baseline', message: 'Keep tracking — building your baseline.' };
+    return { action: 'establish_baseline', message: 'Keep logging. Building your baseline.' };
   }
 
   const thisAvg =
@@ -566,7 +566,7 @@ export function getProgressionPath(thisWeekSets, lastWeekSets, units = 'kg') {
     const increment = lastWeight >= 60 ? 2.5 : 1.25;
     return {
       action: 'increase_weight',
-      message: `Rep count up — increase weight by ${increment}${units} next session.`,
+      message: `Rep count up. Increase weight by ${increment}${units} next session.`,
       delta: increment,
     };
   }
@@ -574,13 +574,13 @@ export function getProgressionPath(thisWeekSets, lastWeekSets, units = 'kg') {
   if (Math.abs(thisAvg - lastAvg) <= 0.5) {
     return {
       action: 'push_reps',
-      message: 'Weight steady — aim for +1 rep on each set, then bump weight.',
+      message: 'Weight steady. Aim for +1 rep on each set, then bump weight.',
     };
   }
 
   return {
     action: 'maintain',
-    message: 'Maintain current weight — focus on rep quality and full ROM.',
+    message: 'Maintain current weight. Focus on rep quality and full range of motion.',
   };
 }
 
@@ -656,7 +656,7 @@ export function computeAdaptiveDecision({ soreness = 2, performance = 2, pump = 
       decision: 'rotate_exercise',
       delta: 0,
       reasonCode: 'joint_high',
-      reasonText: 'High joint discomfort — rotate to a lower-risk exercise.',
+      reasonText: 'High joint discomfort. Rotating to a lower-risk exercise next session.',
     };
   }
 
@@ -666,7 +666,7 @@ export function computeAdaptiveDecision({ soreness = 2, performance = 2, pump = 
       decision: 'deload_trigger',
       delta: 0,
       reasonCode: 'systemic_mrv_breach',
-      reasonText: 'Could not match previous performance and still sore — recovery debt detected. Consider deloading.',
+      reasonText: 'Could not match previous performance and still sore. Recovery debt detected. A lighter week is recommended.',
     };
   }
 
@@ -676,7 +676,7 @@ export function computeAdaptiveDecision({ soreness = 2, performance = 2, pump = 
       decision: 'drop_set',
       delta: -1,
       reasonCode: 'residual_soreness',
-      reasonText: 'Still sore at next session — reduce volume by 1 set to allow recovery.',
+      reasonText: 'Still sore at next session. Reducing volume by 1 set to allow recovery.',
     };
   }
 
@@ -686,7 +686,7 @@ export function computeAdaptiveDecision({ soreness = 2, performance = 2, pump = 
       decision: 'hold',
       delta: 0,
       reasonCode: 'joint_moderate',
-      reasonText: 'Moderate joint discomfort — maintain current volume. Monitor for escalation.',
+      reasonText: 'Moderate joint discomfort. Maintaining current volume. Monitor for escalation.',
     };
   }
 
@@ -698,7 +698,7 @@ export function computeAdaptiveDecision({ soreness = 2, performance = 2, pump = 
         decision: 'add_set',
         delta: 2,
         reasonCode: 'under_stimulus',
-        reasonText: 'Full recovery + no pump signal — significantly under minimum stimulus. Add 2 sets.',
+        reasonText: 'Full recovery with no pump signal. You are significantly under stimulus. Add 2 sets.',
       };
     }
     if (pump === 4 && soreness === 2) {
@@ -707,14 +707,14 @@ export function computeAdaptiveDecision({ soreness = 2, performance = 2, pump = 
         decision: 'hold',
         delta: 0,
         reasonCode: 'optimal_response',
-        reasonText: 'Excellent stimulus with early recovery — volume is working well. Hold.',
+        reasonText: 'Excellent stimulus with early recovery. Volume is working well. Hold here.',
       };
     }
     return {
       decision: 'add_set',
       delta: 1,
       reasonCode: 'good_recovery_good_performance',
-      reasonText: 'Good recovery and performance — add 1 set next week.',
+      reasonText: 'Good recovery and performance. Add 1 set next week.',
     };
   }
 
@@ -724,7 +724,7 @@ export function computeAdaptiveDecision({ soreness = 2, performance = 2, pump = 
       decision: 'hold',
       delta: 0,
       reasonCode: 'performance_struggle',
-      reasonText: 'Performance struggled — hold volume and focus on execution quality.',
+      reasonText: 'Performance struggled. Hold volume and focus on execution quality.',
     };
   }
 

@@ -216,7 +216,7 @@ export function detectJointDiscomfortPattern(discomfortLog = [], exerciseId, win
     return {
       shouldSwap: true,
       alertCount,
-      message: `This movement caused joint discomfort in ${alertCount} recent sessions — it's been flagged for a swap in your next plan.`,
+      message: `This movement caused joint discomfort in ${alertCount} recent sessions. It has been flagged for a swap in your next plan.`,
     };
   }
 
@@ -224,7 +224,7 @@ export function detectJointDiscomfortPattern(discomfortLog = [], exerciseId, win
     return {
       shouldSwap: false,
       alertCount,
-      message: `One session with joint discomfort noted. Log another session — if it happens again the exercise will be swapped out automatically.`,
+      message: `One session with joint discomfort noted. Log another session and if it happens again, the exercise will be swapped out automatically.`,
     };
   }
 
@@ -259,7 +259,7 @@ export function autoSwapForJointDiscomfort(flaggedExerciseIds = [], exerciseLibr
       excludeIds,
     }).map(s => ({
       ...s,
-      autoSwapReason: `Replaces ${original.name} — lower joint stress option for this muscle group.`,
+      autoSwapReason: `Replaces ${original.name}. A lower joint stress option for this muscle group.`,
     }));
 
     return { originalId: id, originalName: original.name, swaps };

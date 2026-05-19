@@ -592,7 +592,7 @@ export default function ProOnboardingScreen({ navigation }) {
             <View style={styles.section}>
               <Text style={styles.fieldLabel}>Protein target</Text>
               <Text style={styles.fieldHint}>
-                Calculated from your estimated lean muscle mass — not just total weight. We've picked the level that best suits your stats, but you can change it.
+                Calculated from your estimated lean muscle mass, not just total weight. We've picked the level that best suits your stats, but you can change it.
               </Text>
               <View style={styles.goalList}>
                 {PROTEIN_LEVELS.map(lvl => (
