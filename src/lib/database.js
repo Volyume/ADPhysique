@@ -411,6 +411,10 @@ const SCHEMA_MIGRATIONS = [
   [
     'ALTER TABLE user_body_profile ADD COLUMN scoff_score INTEGER',
   ],
+  // v9 — pre-workout intent captured before each session
+  [
+    'ALTER TABLE workouts ADD COLUMN pre_workout_intent TEXT',
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
@@ -529,7 +533,7 @@ export async function getWorkoutById(id) {
   return rowToCamel(row);
 }
 
-export async function createWorkout(userId, routineId = null) {
+export async function createWorkout(userId, routineId = null, { intent = null } = {}) {
   const d = await db();
   // Auto-link to the active mesocycle so tonnage + recovery data flows into the block dashboard
   const activeMeso = await d.getFirstAsync(
@@ -549,11 +553,11 @@ export async function createWorkout(userId, routineId = null) {
   const id = uid();
   const now = Date.now();
   await d.runAsync(
-    `INSERT INTO workouts (id, user_id, routine_id, mesocycle_id, mesocycle_week_id, started_at, is_completed, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)`,
-    [id, userId, routineId, mesocycleId, mesocycleWeekId, now, now, now],
+    `INSERT INTO workouts (id, user_id, routine_id, mesocycle_id, mesocycle_week_id, started_at, is_completed, pre_workout_intent, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?)`,
+    [id, userId, routineId, mesocycleId, mesocycleWeekId, now, intent, now, now],
   );
-  return { id, userId, routineId, mesocycleId, mesocycleWeekId, startedAt: now, isCompleted: 0, createdAt: now, updatedAt: now };
+  return { id, userId, routineId, mesocycleId, mesocycleWeekId, startedAt: now, isCompleted: 0, preWorkoutIntent: intent, createdAt: now, updatedAt: now };
 }
 
 export async function updateWorkout(id, data) {
@@ -2129,6 +2133,19 @@ export async function getLatestCoachOutput(userId) {
   );
   if (!row) return null;
   try { return JSON.parse(row.output_json); } catch { return rowToCamel(row); }
+}
+
+export async function getCoachOutputHistory(userId, limit = 52) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    'SELECT week_start, output_json FROM coach_outputs WHERE user_id = ? ORDER BY week_start DESC LIMIT ?',
+    [userId, limit],
+  );
+  return rows.map(r => {
+    let parsed = {};
+    try { parsed = JSON.parse(r.output_json) ?? {}; } catch { /* ignore */ }
+    return { weekStart: r.week_start, ...parsed };
+  });
 }
 
 // ─── Cloud restore helpers (used by sync.js pullFromCloud) ────────────────────

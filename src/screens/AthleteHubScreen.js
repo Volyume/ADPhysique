@@ -538,6 +538,12 @@ export default function AthleteHubScreen({ navigation }) {
             sub="Last 4 weeks as a PDF: training summary, PRs, bodyweight"
             onPress={handleCoachExport}
           />
+          <NavRow
+            icon="pause-circle-outline"
+            label="What we held"
+            sub="Every coaching decision that was paused, and why"
+            onPress={() => navigation.navigate('CoachHeldHistory')}
+          />
           <NavRow icon="trophy" label="Personal Records" sub="All-time bests" onPress={() => navigation.navigate('PRWall')} />
 
           {/* Engine Log — collapsible */}

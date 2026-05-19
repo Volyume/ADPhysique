@@ -65,6 +65,8 @@ export default function HomeScreen({ navigation }) {
   const [savingWeight, setSavingWeight] = useState(false);
   const [showCoachingNudge, setShowCoachingNudge] = useState(false);
   const [totalSessions, setTotalSessions] = useState(0);
+  const [showIntentPrompt, setShowIntentPrompt] = useState(false);
+  const pendingStartRef = React.useRef(null); // ({ routineId, initialExercises })
 
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
@@ -250,28 +252,37 @@ export default function HomeScreen({ navigation }) {
   async function handleStartNextWorkout() {
     const target = selectedWorkoutOverride || nextWorkout;
     if (!target?.routine) return;
-    setIsStartingWorkout(true);
     try {
       const routine = target.routine;
-      const workout = await createWorkout(user.id, routine.id);
       const withExercises = await getRoutineExercisesWithDetails(routine.id);
       const initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
         exercise, routineExercise, sets: [],
       }));
-      startWorkout(workout, initialExercises);
-      navigation.navigate('ActiveWorkout');
-      // Do NOT reset isStartingWorkout here — useFocusEffect resets it when
-      // the screen regains focus, preventing the "Session in Progress" flash
-      // during the navigation transition.
-    } catch (e) {
+      pendingStartRef.current = { routineId: routine.id, initialExercises };
+      setShowIntentPrompt(true);
+    } catch (_) {
       setIsStartingWorkout(false);
     }
+  }
+
+  async function confirmStart(intent) {
+    setShowIntentPrompt(false);
+    const pending = pendingStartRef.current;
+    if (!pending) return;
+    setIsStartingWorkout(true);
+    try {
+      const workout = await createWorkout(user.id, pending.routineId, { intent });
+      startWorkout(workout, pending.initialExercises);
+      navigation.navigate('ActiveWorkout');
+    } catch (_) {
+      setIsStartingWorkout(false);
+    }
+    pendingStartRef.current = null;
   }
 
   async function handleRepeatLastSession() {
     if (!lastSession) return;
     const routineId = lastSession.routineId || lastSession.routine_id || null;
-    const newWorkout = await createWorkout(user.id, routineId);
 
     let initialExercises;
     if (routineId) {
@@ -298,9 +309,8 @@ export default function HomeScreen({ navigation }) {
         .map(exercise => ({ exercise, routineExercise: null, sets: [] }));
     }
 
-    setIsStartingWorkout(true);
-    startWorkout(newWorkout, initialExercises);
-    navigation.navigate('ActiveWorkout');
+    pendingStartRef.current = { routineId, initialExercises };
+    setShowIntentPrompt(true);
   }
 
   const hasActiveWorkout = !!activeWorkout && !isStartingWorkout;
@@ -648,6 +658,23 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         )}
 
+        {/* ── Training brain line ── */}
+        {totalSessions >= 10 && (
+          <TouchableOpacity
+            style={styles.trainingBrainRow}
+            onPress={() => navigation.navigate('ProgressTab', { screen: 'WorkoutHistory', initial: false })}
+            activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel="View your training history"
+          >
+            <Ionicons name="library-outline" size={14} color={colors.textMuted} />
+            <Text style={styles.trainingBrainText}>
+              {totalSessions.toLocaleString('en-GB')} sessions logged. This is your training brain.
+            </Text>
+            <Ionicons name="chevron-forward" size={13} color={colors.textMuted} />
+          </TouchableOpacity>
+        )}
+
         {/* Block progress — planned vs actual this week */}
           {blockProgress.length > 0 && (
             <View style={styles.blockCard}>
@@ -786,6 +813,48 @@ export default function HomeScreen({ navigation }) {
           <TouchableOpacity style={styles.sheetCancel} onPress={() => setShowChangeWorkout(false)}>
             <Text style={styles.sheetCancelText}>Cancel</Text>
           </TouchableOpacity>
+        </View>
+      </Modal>
+
+      {/* ── Pre-workout intent prompt ── */}
+      <Modal
+        visible={showIntentPrompt}
+        transparent
+        animationType="slide"
+        onRequestClose={() => { setShowIntentPrompt(false); pendingStartRef.current = null; }}
+      >
+        <View style={styles.intentOverlay}>
+          <View style={styles.intentSheet}>
+            <Text style={styles.intentTitle}>How are you feeling today?</Text>
+            <Text style={styles.intentSub}>Takes a second. Helps us read your sessions better over time.</Text>
+            {[
+              { key: 'sharp', label: 'Sharp', sub: 'Energised and ready', icon: 'flash-outline' },
+              { key: 'average', label: 'Average', sub: 'Normal day, feeling fine', icon: 'remove-outline' },
+              { key: 'below_par', label: 'Below par', sub: 'Tired, stressed, or off', icon: 'arrow-down-outline' },
+            ].map(opt => (
+              <TouchableOpacity
+                key={opt.key}
+                style={styles.intentOption}
+                onPress={() => confirmStart(opt.key)}
+                activeOpacity={0.85}
+              >
+                <View style={styles.intentOptionIcon}>
+                  <Ionicons name={opt.icon} size={20} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.intentOptionLabel}>{opt.label}</Text>
+                  <Text style={styles.intentOptionSub}>{opt.sub}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={styles.intentSkip}
+              onPress={() => confirmStart(null)}
+            >
+              <Text style={styles.intentSkipText}>Skip</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </Modal>
     </SafeAreaView>
@@ -1302,6 +1371,81 @@ const styles = StyleSheet.create({
   },
   coachingNudgeBtnText: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary,
+  },
+
+  trainingBrainRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.xs,
+  },
+  trainingBrainText: {
+    flex: 1,
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    lineHeight: 17,
+  },
+
+  intentOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  intentSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    padding: spacing.xl,
+    gap: spacing.md,
+    paddingBottom: spacing.xxxl,
+  },
+  intentTitle: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+    textAlign: 'center',
+  },
+  intentSub: {
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+  },
+  intentOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surface2 ?? colors.background,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  intentOptionIcon: {
+    width: 40, height: 40,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryBg,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  intentOptionLabel: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+  },
+  intentOptionSub: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  intentSkip: {
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  intentSkipText: {
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
   },
 
   proTeaserCard: {

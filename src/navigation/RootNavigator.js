@@ -54,6 +54,7 @@ import NotificationSettingsScreen from '../screens/NotificationSettingsScreen';
 import ProOnboardingScreen from '../screens/ProOnboardingScreen';
 import ProSetupCompleteScreen from '../screens/ProSetupCompleteScreen';
 import ProUpgradeScreen from '../screens/ProUpgradeScreen';
+import CoachHeldHistoryScreen from '../screens/CoachHeldHistoryScreen';
 import { withProGuard } from '../components/ProGate';
 
 const Tab = createBottomTabNavigator();
@@ -149,6 +150,7 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="MesocycleBuilder" component={MesocycleBuilderScreen} options={{ title: 'Training Blocks' }} />
       <Stack.Screen name="WeeklyCheckIn" component={GatedWeeklyCheckIn} options={{ title: 'Weekly Check-In' }} />
       <Stack.Screen name="CoachOutput" component={GatedCoachOutput} options={{ title: 'Your Week' }} />
+      <Stack.Screen name="CoachHeldHistory" component={CoachHeldHistoryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ProGoalSetup" component={GatedProGoalSetup} options={{ title: 'Goal Phase' }} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ title: 'Notifications' }} />
       <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
