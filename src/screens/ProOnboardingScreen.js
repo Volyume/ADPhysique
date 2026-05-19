@@ -32,33 +32,45 @@ function estimateLBM(weightKg, heightCm, sex) {
   return Math.max(lbm, weightKg * 0.6);
 }
 
-// Returns protein gram targets per level, calculated from lean mass.
-// The Boer LBM formula overestimates fat mass for heavier/athletic individuals,
-// so we take the higher of the LBM-based figure or a bodyweight floor.
-function getProteinTargets(weightKg, heightCm, sex) {
+// Per-frequency TDEE multipliers and protein floors (g/kg BW).
+// Protein floors scale with training load: more sessions = more muscle breakdown = more needed.
+const TRAINING_FREQ_CONFIG = {
+  '2-3': { tdeeMultiplier: 1.375, proteinFloor: { standard: 1.6, high: 1.9, max: 2.2 } },
+  '4-5': { tdeeMultiplier: 1.550, proteinFloor: { standard: 2.0, high: 2.2, max: 2.5 } },
+  '6+':  { tdeeMultiplier: 1.725, proteinFloor: { standard: 2.2, high: 2.5, max: 2.8 } },
+};
+
+// Returns protein gram targets per level, scaled by training frequency.
+// Takes the higher of LBM-based or the bodyweight floor so the Boer formula
+// can't suppress targets for heavier/athletic individuals.
+function getProteinTargets(weightKg, heightCm, sex, trainingFreq = '4-5') {
   const lbm = estimateLBM(weightKg, heightCm, sex);
+  const floors = TRAINING_FREQ_CONFIG[trainingFreq]?.proteinFloor ?? TRAINING_FREQ_CONFIG['4-5'].proteinFloor;
   return {
-    standard: Math.max(Math.round(lbm * 2.0), Math.round(weightKg * 2.0)), // min 2.0 g/kg BW
-    high:     Math.max(Math.round(lbm * 2.4), Math.round(weightKg * 2.2)), // min 2.2 g/kg BW
-    max:      Math.max(Math.round(lbm * 2.7), Math.round(weightKg * 2.5)), // min 2.5 g/kg BW
+    standard: Math.max(Math.round(lbm * 2.0), Math.round(weightKg * floors.standard)),
+    high:     Math.max(Math.round(lbm * 2.4), Math.round(weightKg * floors.high)),
+    max:      Math.max(Math.round(lbm * 2.7), Math.round(weightKg * floors.max)),
   };
 }
 
-// Auto-selects a protein level based on estimated body fat percentage.
-function recommendProteinLevel(weightKg, heightCm, sex) {
+// Auto-selects a protein level. Higher frequency = higher default recommendation.
+function recommendProteinLevel(weightKg, heightCm, sex, trainingFreq = '4-5') {
+  if (trainingFreq === '6+') return 'high';
   const lbm = estimateLBM(weightKg, heightCm, sex);
   const bfPct = ((weightKg - lbm) / weightKg) * 100;
-  if (bfPct > 28) return 'standard';  // higher body fat — moderate protein sufficient
-  if (bfPct > 18) return 'high';       // moderate body fat — elevated protein beneficial
-  return 'max';                          // lean — maximise protein for muscle retention
+  if (trainingFreq === '2-3') return bfPct > 25 ? 'standard' : 'high';
+  // 4-5 days
+  if (bfPct > 28) return 'standard';
+  if (bfPct > 18) return 'high';
+  return 'max';
 }
 
-function calcNutrition(weightKg, heightCm, ageYears, sex, goal, proteinG) {
-  // Mifflin-St Jeor BMR, then moderate activity multiplier (training 4-5x/week)
+function calcNutrition(weightKg, heightCm, ageYears, sex, goal, proteinG, trainingFreq = '4-5') {
   const bmr = sex === 'female'
     ? (10 * weightKg) + (6.25 * heightCm) - (5 * ageYears) - 161
     : (10 * weightKg) + (6.25 * heightCm) - (5 * ageYears) + 5;
-  const tdee = Math.round(bmr * 1.55);
+  const multiplier = TRAINING_FREQ_CONFIG[trainingFreq]?.tdeeMultiplier ?? 1.55;
+  const tdee = Math.round(bmr * multiplier);
   const adj = { cut: -400, maintain: 0, mild_bulk: 250, mod_bulk: 400 };
   const kcal = Math.max(tdee + (adj[goal] ?? 0), 1200);
   const fatG = Math.round(weightKg * 1.0);
@@ -139,8 +151,9 @@ export default function ProOnboardingScreen({ navigation }) {
   const [heightFt, setHeightFt] = useState('5');
   const [heightIn, setHeightIn] = useState('9');
 
-  // Step 2 — goal
+  // Step 2 — goal + training frequency
   const [goal, setGoal] = useState('mild_bulk');
+  const [trainingFreq, setTrainingFreq] = useState('4-5');
 
   // Step 3 — nutrition (computed, editable)
   const [nutrition, setNutrition] = useState(null);
@@ -205,13 +218,13 @@ export default function ProOnboardingScreen({ navigation }) {
       : Math.round(((parseInt(heightFt, 10) || 5) * 12 + (parseInt(heightIn, 10) || 9)) * 2.54);
     const ageNum = parseInt(age, 10) || 28;
 
-    // Build protein targets from lean mass, then auto-recommend a level
-    const targets = getProteinTargets(bwKg, hcm, sex);
-    const recommended = recommendProteinLevel(bwKg, hcm, sex);
+    // Build protein targets from lean mass + training frequency, then auto-recommend a level
+    const targets = getProteinTargets(bwKg, hcm, sex, trainingFreq);
+    const recommended = recommendProteinLevel(bwKg, hcm, sex, trainingFreq);
     setProteinTargets(targets);
     setProteinLevel(recommended);
 
-    const n = calcNutrition(bwKg, hcm, ageNum, sex, goal, targets[recommended]);
+    const n = calcNutrition(bwKg, hcm, ageNum, sex, goal, targets[recommended], trainingFreq);
     setNutrition(n);
     setKcalStr(String(n.targetKcal));
     setProteinStr(String(targets[recommended]));
@@ -562,6 +575,28 @@ export default function ProOnboardingScreen({ navigation }) {
                 )}
               </TouchableOpacity>
             ))}
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.fieldLabel}>How many days a week do you train?</Text>
+            <Text style={styles.fieldHint}>Used to calculate your calorie needs and protein targets accurately.</Text>
+            <View style={styles.segmentRow}>
+              {[
+                { key: '2-3', label: '2–3 days' },
+                { key: '4-5', label: '4–5 days' },
+                { key: '6+',  label: '6+ days'  },
+              ].map(opt => (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[styles.segment, trainingFreq === opt.key && styles.segmentActive]}
+                  onPress={() => setTrainingFreq(opt.key)}
+                >
+                  <Text style={[styles.segmentText, trainingFreq === opt.key && styles.segmentTextActive]}>
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
 
           <TouchableOpacity style={styles.primaryBtn} onPress={advanceFrom2} activeOpacity={0.88}>
