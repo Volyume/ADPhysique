@@ -274,13 +274,14 @@ export default function PlanLibraryScreen({ navigation, route }) {
                   {
                     text: 'Not now',
                     style: 'cancel',
-                    onPress: fromFirstRun ? () => completeFirstRun() : undefined,
+                    onPress: fromFirstRun ? () => completeFirstRun() : () => navigation.goBack(),
                   },
                   {
                     text: fromFirstRun ? 'Start training' : 'Set active',
                     onPress: async () => {
                       await activatePlanWithBlock(user.id, copy.id, plan.name);
                       if (fromFirstRun) await completeFirstRun();
+                      else navigation.goBack();
                     },
                   },
                 ],

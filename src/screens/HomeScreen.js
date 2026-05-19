@@ -35,7 +35,7 @@ function getGreeting(firstName) {
 }
 
 export default function HomeScreen({ navigation }) {
-  const { user, userProfile, startWorkout, activeWorkout } = useAppStore();
+  const { user, userProfile, startWorkout, activeWorkout, tier } = useAppStore();
 
   const [weekStats, setWeekStats] = useState({ sessions: 0, sets: 0, volume: 0 });
   const [streakWeeks, setStreakWeeks] = useState(0);
@@ -75,7 +75,7 @@ export default function HomeScreen({ navigation }) {
   );
 
   async function loadData() {
-    await Promise.all([loadWeekStats(), loadNextWorkout(), loadExerciseCounts(), loadBlockProgress(), loadTodayWeight()]);
+    await Promise.all([loadWeekStats(), loadNextWorkout(), loadExerciseCounts(), loadBlockProgress(), ...(tier === 'pro' ? [loadTodayWeight()] : [])]);
   }
 
   async function loadTodayWeight() {
@@ -298,7 +298,7 @@ export default function HomeScreen({ navigation }) {
         </View>
 
         {/* ── Morning weight card ── */}
-        {todayWeight != null ? (
+        {tier === 'pro' && (todayWeight != null ? (
           <View style={styles.weightCard}>
             <Ionicons name="checkmark-circle" size={16} color={colors.success} />
             <Text style={styles.weightCardText}>
@@ -329,7 +329,7 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.weightLogBtnText}>Log</Text>
             </TouchableOpacity>
           </View>
-        )}
+        ))}
 
         {/* ── This week — progress bars ── */}
         <View style={styles.weekCard}>

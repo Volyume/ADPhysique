@@ -7,7 +7,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { VolyumeMark } from '../components/BrandMark';
 import useAppStore from '../store/useAppStore';
-import { logBodyMetric } from '../lib/database';
 import { ProBadge } from '../components/ProGate';
 
 
@@ -16,7 +15,6 @@ export default function FirstRunScreen({ navigation }) {
   // Free users skip plan-selection and go straight to quick setup
   const [mode, setMode] = useState(tier === 'free' ? 'quick' : 'branch');
   const [localUnits, setLocalUnits] = useState(units || 'kg');
-  const [bodyWeight, setBodyWeight] = useState('');
   const [firstName, setFirstName] = useState('');
   const [busy, setBusy] = useState(false);
   const nameRef = useRef(null);
@@ -50,10 +48,6 @@ export default function FirstRunScreen({ navigation }) {
       if (setUnits) setUnits(localUnits);
       const merged = { ...(userProfile || {}), units: localUnits, firstName: firstName.trim() };
       if (user?.id) await saveLocalProfile(user.id, merged);
-      const bw = parseFloat(bodyWeight);
-      if (user?.id && !isNaN(bw) && bw > 0) {
-        await logBodyMetric(user.id, { weightKg: bw, loggedAt: Date.now() });
-      }
       await completeFirstRun();
     } catch (e) {
       Alert.alert('Something went wrong', e?.message ?? 'Please try again.');
@@ -108,19 +102,6 @@ export default function FirstRunScreen({ navigation }) {
               </TouchableOpacity>
             ))}
           </View>
-
-          <Text style={styles.fieldLabel}>Body weight ({localUnits}), optional</Text>
-          <TextInput
-            style={styles.input}
-            value={bodyWeight}
-            onChangeText={setBodyWeight}
-            keyboardType="decimal-pad"
-            placeholder={localUnits === 'kg' ? '82.5' : '182'}
-            placeholderTextColor={colors.textMuted}
-          />
-          <Text style={styles.hint}>
-            Logging this once unlocks Strength Standards on your PR wall.
-          </Text>
 
           <TouchableOpacity
             style={[styles.primaryBtn, (!hasName || busy) && styles.btnDisabled]}

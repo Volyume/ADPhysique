@@ -53,8 +53,11 @@ export default function LoginScreen({ navigation, route }) {
       if (error) {
         Alert.alert('Error', error.message);
       } else if (mode === 'signup' && data.user && !data.session) {
-        Alert.alert('Check your email', 'We sent you a confirmation link. Confirm then sign in.');
-        setMode('signin');
+        Alert.alert(
+          'Check your email',
+          'We\'ve sent a confirmation link to ' + email.trim() + '.\n\nOnce you\'ve confirmed, come back here and sign in with your email and password.',
+          [{ text: 'Got it', onPress: () => setMode('signin') }],
+        );
       } else if (data.session) {
         const supabaseUserId = data.session.user.id;
         const localUserId = localUser?.id;
