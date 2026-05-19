@@ -105,7 +105,7 @@ export function getPhaseModifiers(phase) {
       sessionLengthCap: 45,
       conditioningMinutes: 0,
       posingMinutes: 20,
-      note: 'Peak week: minimal volume — just enough to keep the muscles full. Posing practice twice daily.',
+      note: 'Peak week: minimal volume, just enough to keep the muscles full. Posing practice twice daily.',
     },
   };
   return modifiers[phase] ?? modifiers.offseason;
@@ -186,15 +186,15 @@ export function buildSessionAddons(phase, weeksToComp) {
 
 function getConditioningInstructions(phase, minutes) {
   if (phase === 'contest_prep') {
-    return `${minutes} minutes of steady-state cardio (bike, treadmill at incline, or elliptical). Keep the pace comfortable — you should be able to hold a conversation. Goal: support body composition without eating into recovery.`;
+    return `${minutes} minutes of steady-state cardio (bike, treadmill at incline, or elliptical). Keep the pace comfortable so you can hold a conversation. Goal: support body composition without eating into recovery.`;
   }
   return `${minutes} minutes of low-intensity steady cardio. Keep heart rate moderate. This supports fat use without compromising your training sessions.`;
 }
 
 function getPosingInstructions(phase, minutes, weeksToComp) {
   const urgency = weeksToComp != null && weeksToComp <= 8
-    ? `${weeksToComp} weeks to the show — every session counts.`
-    : `Start building the habit now — posing takes weeks to look natural.`;
+    ? `${weeksToComp} weeks to the show. Every session counts.`
+    : `Start building the habit now. Posing takes weeks to look natural.`;
   return `${minutes} minutes of posing practice. Hit all mandatory poses, hold each 30–60 seconds. ${urgency} Film yourself to check lines.`;
 }
 
@@ -229,13 +229,13 @@ export function getPhaseLabel(phase) {
 export function getPhaseDescription(phase, weeksToComp) {
   switch (phase) {
     case 'offseason':
-      return 'Offseason — focus on building size and strength. Eat in a surplus and push volume.';
+      return 'Offseason: focus on building size and strength. Eat in a surplus and push volume.';
     case 'early_prep':
-      return `Early prep — ${weeksToComp != null ? `${weeksToComp} weeks to the show` : 'competition approaching'}. Begin conditioning and posing. Slight volume reduction.`;
+      return `Early prep: ${weeksToComp != null ? `${weeksToComp} weeks to the show` : 'competition approaching'}. Begin conditioning and posing. Slight volume reduction.`;
     case 'contest_prep':
-      return `Contest prep — ${weeksToComp != null ? `${weeksToComp} weeks out` : 'competition is close'}. Protect your muscle. Conditioning and posing every session.`;
+      return `Contest prep: ${weeksToComp != null ? `${weeksToComp} weeks out` : 'competition is close'}. Protect your muscle. Conditioning and posing every session.`;
     case 'peak_week':
-      return `Peak week — show is this week. Minimal gym work. Posing practice twice daily. Trust your prep.`;
+      return `Peak week: show is this week. Minimal gym work. Posing practice twice daily. Trust your prep.`;
     default:
       return '';
   }
