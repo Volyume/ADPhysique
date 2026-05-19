@@ -9,7 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { VolyumeMark } from '../components/BrandMark';
 import useAppStore from '../store/useAppStore';
-import { logBodyMetric, saveNutritionTargets } from '../lib/database';
+import { logBodyMetric, saveNutritionTargets, saveUserBodyProfile } from '../lib/database';
 import { signUpWithEmail } from '../lib/supabase';
 import { bulkUploadLocalData, syncProfile } from '../lib/sync';
 import {
@@ -22,14 +22,46 @@ const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 
 const TOTAL_STEPS = 5;
 
-function calcNutrition(weightKg, goal) {
-  const maint = Math.round(weightKg * 33);
+// Boer formula — estimates lean body mass (kg) from weight, height, sex.
+// More accurate for protein targeting than total bodyweight.
+function estimateLBM(weightKg, heightCm, sex) {
+  const lbm = sex === 'female'
+    ? (0.252 * weightKg) + (0.473 * heightCm) - 48.3
+    : (0.407 * weightKg) + (0.267 * heightCm) - 19.2;
+  // Floor at 60% of total weight (guards against extreme inputs)
+  return Math.max(lbm, weightKg * 0.6);
+}
+
+// Returns protein gram targets per level, calculated from lean mass.
+function getProteinTargets(weightKg, heightCm, sex) {
+  const lbm = estimateLBM(weightKg, heightCm, sex);
+  return {
+    standard: Math.round(lbm * 2.0), // 2.0g per kg LBM — minimum effective
+    high:     Math.round(lbm * 2.4), // 2.4g per kg LBM — solid for regular training
+    max:      Math.round(lbm * 2.7), // 2.7g per kg LBM — upper evidence-based limit
+  };
+}
+
+// Auto-selects a protein level based on estimated body fat percentage.
+function recommendProteinLevel(weightKg, heightCm, sex) {
+  const lbm = estimateLBM(weightKg, heightCm, sex);
+  const bfPct = ((weightKg - lbm) / weightKg) * 100;
+  if (bfPct > 28) return 'standard';  // higher body fat — moderate protein sufficient
+  if (bfPct > 18) return 'high';       // moderate body fat — elevated protein beneficial
+  return 'max';                          // lean — maximise protein for muscle retention
+}
+
+function calcNutrition(weightKg, heightCm, ageYears, sex, goal, proteinG) {
+  // Mifflin-St Jeor BMR, then moderate activity multiplier (training 4-5x/week)
+  const bmr = sex === 'female'
+    ? (10 * weightKg) + (6.25 * heightCm) - (5 * ageYears) - 161
+    : (10 * weightKg) + (6.25 * heightCm) - (5 * ageYears) + 5;
+  const tdee = Math.round(bmr * 1.55);
   const adj = { cut: -400, maintain: 0, mild_bulk: 250, mod_bulk: 400 };
-  const kcal = maint + (adj[goal] ?? 0);
-  const proteinG = Math.round(weightKg * 2.2);
+  const kcal = Math.max(tdee + (adj[goal] ?? 0), 1200);
   const fatG = Math.round(weightKg * 1.0);
   const carbsG = Math.max(Math.round((kcal - proteinG * 4 - fatG * 9) / 4), 50);
-  return { targetKcal: kcal, proteinG, fatG, carbsG, maintenanceKcal: maint };
+  return { targetKcal: kcal, proteinG, fatG, carbsG, maintenanceKcal: tdee };
 }
 
 const GOALS = [
@@ -59,6 +91,24 @@ const GOALS = [
   },
 ];
 
+const PROTEIN_LEVELS = [
+  {
+    id: 'standard',
+    label: 'Standard',
+    sub: 'Minimum effective dose. Suitable for maintenance or lighter training weeks.',
+  },
+  {
+    id: 'high',
+    label: 'High',
+    sub: 'Solid for regular training and building muscle. A reliable everyday target.',
+  },
+  {
+    id: 'max',
+    label: 'Maximum',
+    sub: 'Upper end of the evidence base. Best for dedicated competitors and hard training.',
+  },
+];
+
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 5); // 5am–6pm
@@ -81,6 +131,11 @@ export default function ProOnboardingScreen({ navigation }) {
   const [firstName, setFirstName] = useState(userProfile?.firstName || '');
   const [localUnits, setLocalUnits] = useState(units || 'kg');
   const [bodyWeight, setBodyWeight] = useState('');
+  const [sex, setSex] = useState('male');
+  const [age, setAge] = useState('');
+  const [heightCm, setHeightCm] = useState('');
+  const [heightFt, setHeightFt] = useState('5');
+  const [heightIn, setHeightIn] = useState('9');
 
   // Step 2 — goal
   const [goal, setGoal] = useState('mild_bulk');
@@ -89,6 +144,8 @@ export default function ProOnboardingScreen({ navigation }) {
   const [nutrition, setNutrition] = useState(null);
   const [kcalStr, setKcalStr] = useState('');
   const [proteinStr, setProteinStr] = useState('');
+  const [proteinLevel, setProteinLevel] = useState('high');
+  const [proteinTargets, setProteinTargets] = useState({ standard: 128, high: 154, max: 173 });
 
   // Step 4 — notifications
   const [morningEnabled, setMorningEnabled] = useState(true);
@@ -129,20 +186,23 @@ export default function ProOnboardingScreen({ navigation }) {
   }
 
   function advanceFrom2() {
-    // Compute nutrition defaults based on current goal + bodyweight
-    const bw = parseFloat(bodyWeight);
-    if (bw > 0) {
-      const n = calcNutrition(bw, goal);
-      setNutrition(n);
-      setKcalStr(String(n.targetKcal));
-      setProteinStr(String(n.proteinG));
-    } else {
-      // No weight yet — use sensible placeholder (80 kg)
-      const n = calcNutrition(80, goal);
-      setNutrition(n);
-      setKcalStr(String(n.targetKcal));
-      setProteinStr(String(n.proteinG));
-    }
+    const bwRaw = parseFloat(bodyWeight) || (localUnits === 'lbs' ? 176 : 80);
+    const bwKg = localUnits === 'lbs' ? bwRaw / 2.205 : bwRaw;
+    const hcm = localUnits === 'kg'
+      ? (parseFloat(heightCm) || 175)
+      : Math.round(((parseInt(heightFt, 10) || 5) * 12 + (parseInt(heightIn, 10) || 9)) * 2.54);
+    const ageNum = parseInt(age, 10) || 28;
+
+    // Build protein targets from lean mass, then auto-recommend a level
+    const targets = getProteinTargets(bwKg, hcm, sex);
+    const recommended = recommendProteinLevel(bwKg, hcm, sex);
+    setProteinTargets(targets);
+    setProteinLevel(recommended);
+
+    const n = calcNutrition(bwKg, hcm, ageNum, sex, goal, targets[recommended]);
+    setNutrition(n);
+    setKcalStr(String(n.targetKcal));
+    setProteinStr(String(targets[recommended]));
     setStep(3);
   }
 
@@ -158,9 +218,22 @@ export default function ProOnboardingScreen({ navigation }) {
         goal,
       };
       if (user?.id) await saveLocalProfile(user.id, merged);
-      const bw = parseFloat(bodyWeight);
-      if (user?.id && !isNaN(bw) && bw > 0) {
-        await logBodyMetric(user.id, { weightKg: bw, loggedAt: Date.now() });
+      const bwRaw = parseFloat(bodyWeight);
+      const bwKg = localUnits === 'lbs' ? bwRaw / 2.205 : bwRaw;
+      if (user?.id && !isNaN(bwKg) && bwKg > 0) {
+        await logBodyMetric(user.id, { weightKg: bwKg, loggedAt: Date.now() });
+      }
+      const hcm = localUnits === 'kg'
+        ? (parseFloat(heightCm) || null)
+        : (!isNaN(parseInt(heightFt, 10)) ? Math.round(((parseInt(heightFt, 10) || 5) * 12 + (parseInt(heightIn, 10) || 9)) * 2.54) : null);
+      const ageNum = parseInt(age, 10) || null;
+      if (user?.id && (sex || hcm || ageNum)) {
+        await saveUserBodyProfile(user.id, {
+          sex,
+          heightCm: hcm,
+          dateOfBirth: ageNum ? new Date(new Date().getFullYear() - ageNum, 6, 1).toISOString().slice(0, 10) : null,
+          primaryGoal: goal,
+        }).catch(() => {});
       }
       const kcal = parseInt(kcalStr, 10);
       const protein = parseInt(proteinStr, 10);
@@ -249,6 +322,20 @@ export default function ProOnboardingScreen({ navigation }) {
     await setTier('free');
   }
 
+  function handleProteinLevel(levelId) {
+    setProteinLevel(levelId);
+    const grams = proteinTargets[levelId];
+    if (!grams) return;
+    setProteinStr(String(grams));
+    // Recalculate carbs automatically when protein changes
+    const kcal = parseInt(kcalStr, 10);
+    const fatG = nutrition?.fatG ?? 80;
+    if (!isNaN(kcal)) {
+      const carbs = Math.max(Math.round((kcal - grams * 4 - fatG * 9) / 4), 50);
+      setNutrition(prev => prev ? { ...prev, proteinG: grams, carbsG: carbs } : prev);
+    }
+  }
+
   // ── Progress bar ─────────────────────────────────────────────────────────────
 
   function ProgressBar() {
@@ -331,9 +418,77 @@ export default function ProOnboardingScreen({ navigation }) {
             </View>
 
             <View style={styles.section}>
+              <Text style={styles.fieldLabel}>Biological sex</Text>
+              <Text style={styles.fieldHint}>Used to calculate your calorie and nutrition targets accurately.</Text>
+              <View style={styles.segmentRow}>
+                {[{ key: 'male', label: 'Male' }, { key: 'female', label: 'Female' }].map(s => (
+                  <TouchableOpacity
+                    key={s.key}
+                    style={[styles.segment, sex === s.key && styles.segmentActive]}
+                    onPress={() => setSex(s.key)}
+                  >
+                    <Text style={[styles.segmentText, sex === s.key && styles.segmentTextActive]}>{s.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.fieldLabel}>Age</Text>
+              <TextInput
+                style={styles.input}
+                value={age}
+                onChangeText={setAge}
+                placeholder="e.g. 28"
+                placeholderTextColor={colors.textDisabled}
+                keyboardType="number-pad"
+                maxLength={3}
+              />
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.fieldLabel}>Height</Text>
+              {localUnits === 'kg' ? (
+                <TextInput
+                  style={styles.input}
+                  value={heightCm}
+                  onChangeText={setHeightCm}
+                  placeholder="e.g. 178 cm"
+                  placeholderTextColor={colors.textDisabled}
+                  keyboardType="decimal-pad"
+                />
+              ) : (
+                <View style={styles.heightImperialRow}>
+                  <View style={{ flex: 1 }}>
+                    <TextInput
+                      style={styles.input}
+                      value={heightFt}
+                      onChangeText={setHeightFt}
+                      placeholder="5 ft"
+                      placeholderTextColor={colors.textDisabled}
+                      keyboardType="number-pad"
+                      maxLength={1}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <TextInput
+                      style={styles.input}
+                      value={heightIn}
+                      onChangeText={setHeightIn}
+                      placeholder="9 in"
+                      placeholderTextColor={colors.textDisabled}
+                      keyboardType="number-pad"
+                      maxLength={2}
+                    />
+                  </View>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.section}>
               <Text style={styles.fieldLabel}>Current body weight ({localUnits})</Text>
               <Text style={styles.fieldHint}>
-                Used to calculate your nutrition targets. You can update this daily from the Train tab.
+                Used with your height and age to calculate your calorie targets. Update it daily from the home screen.
               </Text>
               <TextInput
                 style={styles.input}
@@ -421,7 +576,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
             <Header
               title="Your nutrition targets."
-              sub="Calculated from your goal and body weight. Adjust them here, or leave the defaults."
+              sub="Calculated from your goal, body stats, and estimated lean mass. Pick your protein level, then adjust the numbers if you need to."
             />
 
             <View style={styles.infoCard}>
@@ -432,6 +587,36 @@ export default function ProOnboardingScreen({ navigation }) {
                   ? ` · Estimated maintenance ${nutrition.maintenanceKcal} kcal`
                   : ''}
               </Text>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.fieldLabel}>Protein target</Text>
+              <Text style={styles.fieldHint}>
+                Calculated from your estimated lean muscle mass — not just total weight. We've picked the level that best suits your stats, but you can change it.
+              </Text>
+              <View style={styles.goalList}>
+                {PROTEIN_LEVELS.map(lvl => (
+                  <TouchableOpacity
+                    key={lvl.id}
+                    style={[styles.goalCard, proteinLevel === lvl.id && styles.goalCardActive]}
+                    onPress={() => handleProteinLevel(lvl.id)}
+                    activeOpacity={0.85}
+                  >
+                    <View style={[styles.goalIconWrap, proteinLevel === lvl.id && styles.goalIconWrapActive]}>
+                      <Text style={{ fontSize: 15, fontWeight: fontWeight.bold, color: proteinLevel === lvl.id ? colors.primary : colors.textSecondary }}>
+                        {proteinTargets[lvl.id]}g
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.goalLabel, proteinLevel === lvl.id && styles.goalLabelActive]}>{lvl.label}</Text>
+                      <Text style={styles.goalSub}>{lvl.sub}</Text>
+                    </View>
+                    {proteinLevel === lvl.id && (
+                      <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
 
             <View style={styles.nutritionGrid}>
@@ -816,6 +1001,8 @@ const styles = StyleSheet.create({
     position: 'absolute', right: spacing.md,
     top: 0, bottom: 0, justifyContent: 'center', paddingHorizontal: 4,
   },
+
+  heightImperialRow: { flexDirection: 'row', gap: spacing.md },
 
   // Segment control (units)
   segmentRow: {
