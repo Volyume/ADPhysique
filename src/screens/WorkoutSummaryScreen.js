@@ -542,10 +542,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 <Text style={styles.adaptiveTitle}>Adjustments for next week</Text>
                 <InfoTooltip size={11} text={
                   'Based on your session feedback, Volyume has tweaked next week\'s plan.\n\n' +
-                  '↑ Add set — you recovered well, you can handle a bit more\n' +
-                  '↓ Drop set — signs of fatigue, ease off to come back stronger\n' +
-                  '⚠ Recovery week — take a lighter week across the board\n' +
-                  '→ Hold — volume is right, keep going as planned'
+                  '↑ Add set: you recovered well, you can handle a bit more\n' +
+                  '↓ Drop set: signs of fatigue, ease off to come back stronger\n' +
+                  '⚠ Recovery week: take a lighter week across the board\n' +
+                  '→ Hold: volume is right, keep going as planned'
                 } />
               </View>
               {Object.entries(adaptiveDecisions)
@@ -590,7 +590,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             <View style={styles.deloadCard}>
               <View style={styles.deloadCardHeader}>
                 <Ionicons name="battery-charging-outline" size={18} color={colors.warning} />
-                <Text style={styles.deloadCardTitle}>RECOVERY WEEK RECOMMENDED</Text>
+                <Text style={styles.deloadCardTitle}>Recovery week recommended</Text>
               </View>
               <Text style={styles.deloadCardBody}>{deloadRecommendation.reason}</Text>
               <Text style={styles.deloadCardNote}>

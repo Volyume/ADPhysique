@@ -183,7 +183,7 @@ export default function SettingsScreen({ navigation }) {
       const { bytes } = await exportBackup();
       Alert.alert(
         'Backup created',
-        `Your entire Volyume database (${(bytes / 1024).toFixed(0)} KB) was exported. Save it to Files, email it to yourself, or move it to your new device — then use "Restore from backup" there.`,
+        `Your entire Volyume database (${(bytes / 1024).toFixed(0)} KB) was exported. Save it to Files, email it to yourself, or move it to your new device. Then use "Restore from backup" there.`,
       );
     } catch (e) {
       Alert.alert('Backup failed', e?.message ?? 'Could not create a backup. Please try again.');
@@ -323,7 +323,7 @@ export default function SettingsScreen({ navigation }) {
           <SettingRow
             icon="pulse-outline"
             label="Goal phase & step target"
-            sub="Update your current phase — cut, bulk, or maintain"
+            sub="Update your current phase: cut, bulk, or maintain"
             onPress={() => navigation.navigate('ProGoalSetup')}
           />
         </View>

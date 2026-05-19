@@ -173,7 +173,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
               <View style={styles.planCard}>
                 <View style={styles.planCardHead}>
                   <Ionicons name="barbell" size={18} color={colors.primary} />
-                  <Text style={styles.planCardTag}>YOUR ACTIVE PLAN</Text>
+                  <Text style={styles.planCardTag}>Your active plan</Text>
                   <InfoTooltip
                     size={14}
                     text={
@@ -196,7 +196,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
                 </Text>
                 <Text style={styles.planCardNote}>
                   This is the training your coach built. A training block is an
-                  optional multi-week layer on top of it — set a start date,
+                  optional multi-week layer on top of it. Set a start date,
                   duration and recovery week to track periodised progress.
                 </Text>
               </View>
@@ -216,7 +216,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
             </TouchableOpacity>
 
             {mesocycles.length > 0 && (
-              <Text style={styles.historyLabel}>ALL BLOCKS</Text>
+              <Text style={styles.historyLabel}>All blocks</Text>
             )}
           </>
         }

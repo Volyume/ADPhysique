@@ -177,7 +177,7 @@ export default function PlansScreen({ navigation }) {
         {/* Active Plan */}
         {activePlan ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>ACTIVE PLAN</Text>
+            <Text style={styles.sectionTitle}>Active plan</Text>
             <View style={styles.activePlanCard}>
               <View style={styles.activePlanHeader}>
                 <View style={styles.activeBadge}>
@@ -219,7 +219,7 @@ export default function PlansScreen({ navigation }) {
         {/* My Plans */}
         {myPlans.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>MY PLANS</Text>
+            <Text style={styles.sectionTitle}>My plans</Text>
             {myPlans.map(plan => (
               <View key={plan.id} style={styles.planCard}>
                 <TouchableOpacity
@@ -253,7 +253,7 @@ export default function PlansScreen({ navigation }) {
         {/* Workout Templates */}
         {templates.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>WORKOUT TEMPLATES</Text>
+            <Text style={styles.sectionTitle}>Workout templates</Text>
             <Text style={styles.sectionSubtitle}>Saved workouts you can start directly.</Text>
             {templates.map(routine => (
               <View key={routine.id} style={styles.templateCard}>
@@ -283,7 +283,7 @@ export default function PlansScreen({ navigation }) {
 
         {/* Decision Hub */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>START OR BUILD A PLAN</Text>
+          <Text style={styles.sectionTitle}>Start or build a plan</Text>
           {ACTION_CARDS.map(card => (
             <TouchableOpacity
               key={card.id}

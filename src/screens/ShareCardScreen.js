@@ -445,7 +445,7 @@ export default function ShareCardScreen({ navigation, route }) {
 
         {/* Preview */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>PREVIEW</Text>
+          <Text style={styles.sectionTitle}>Preview</Text>
           <View style={[styles.previewOuter, !isSquare && styles.previewOuterStory]}>
             {isSession ? (
               <SessionPreview
@@ -470,7 +470,7 @@ export default function ShareCardScreen({ navigation, route }) {
 
         {/* Privacy */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>PRIVACY</Text>
+          <Text style={styles.sectionTitle}>Privacy</Text>
           <View style={styles.togglesCard}>
             <ToggleRow label="Show date" value={showDate} onChange={setShowDate} />
             {isSession && (

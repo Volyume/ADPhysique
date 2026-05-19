@@ -119,11 +119,11 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
           <Text style={styles.fieldLabel}>Effort</Text>
           <InfoTooltip size={12} text={
             'How hard did that set feel? Rate from 1 (easy) to 5 (all out).\n\n' +
-            '1 — Easy, plenty left in the tank\n' +
-            '2 — Moderate, could have done more\n' +
-            '3 — Hard, a couple of reps left\n' +
-            '4 — Very hard, barely one more\n' +
-            '5 — All out, nothing left\n\n' +
+            '1: Easy, plenty left in the tank\n' +
+            '2: Moderate, could have done more\n' +
+            '3: Hard, a couple of reps left\n' +
+            '4: Very hard, barely one more\n' +
+            '5: All out, nothing left\n\n' +
             'Aim for a 2 or 3 early in your training block. Push to 4–5 near the end. ' +
             'Volyume uses this to track intensity and suggest your next session targets.'
           } />

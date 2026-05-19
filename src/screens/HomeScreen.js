@@ -508,7 +508,7 @@ export default function HomeScreen({ navigation }) {
           >
             <View style={styles.lastSessionTop}>
               <View style={{ gap: 2 }}>
-                <Text style={styles.lastSessionLabel}>LAST SESSION</Text>
+                <Text style={styles.lastSessionLabel}>Last session</Text>
                 <Text style={styles.lastSessionRelDate}>{getRelativeDay(lastSession.startedAt)}</Text>
               </View>
               <TouchableOpacity

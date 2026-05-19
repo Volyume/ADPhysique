@@ -212,7 +212,7 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
               autoCapitalize="words"
             />
 
-            <Text style={[styles.addFieldLabel, { marginTop: spacing.xl }]}>PRIMARY MUSCLE</Text>
+            <Text style={[styles.addFieldLabel, { marginTop: spacing.xl }]}>Primary muscle</Text>
             <View style={styles.chipGrid}>
               {Object.entries(MUSCLE_DISPLAY_NAMES).map(([key, label]) => (
                 <TouchableOpacity
@@ -243,7 +243,7 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
                 ))}
             </View>
 
-            <Text style={[styles.addFieldLabel, { marginTop: spacing.xl }]}>EQUIPMENT</Text>
+            <Text style={[styles.addFieldLabel, { marginTop: spacing.xl }]}>Equipment</Text>
             <View style={styles.chipGrid}>
               {['Barbell', 'Dumbbell', 'Cable', 'Machine', 'Bodyweight', 'Smith Machine', 'Bands', 'EZ Bar', 'Kettlebell', 'Plate', 'Other'].map(eq => (
                 <TouchableOpacity
@@ -257,7 +257,7 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
             </View>
 
                 {/* Exercise Category */}
-                <Text style={[styles.addFieldLabel, { marginTop: spacing.xl }]}>EXERCISE CATEGORY</Text>
+                <Text style={[styles.addFieldLabel, { marginTop: spacing.xl }]}>Exercise category</Text>
                 <View style={styles.chipGrid}>
                   {[
                     { label: 'Compound', value: 'compound' },
@@ -318,7 +318,7 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.filterGroupLabel}>MUSCLE GROUP</Text>
+            <Text style={styles.filterGroupLabel}>Muscle group</Text>
             <View style={styles.filterGrid}>
               {MUSCLES.map(m => (
                 <TouchableOpacity
@@ -333,7 +333,7 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
               ))}
             </View>
 
-            <Text style={[styles.filterGroupLabel, { marginTop: spacing.lg }]}>EQUIPMENT</Text>
+            <Text style={[styles.filterGroupLabel, { marginTop: spacing.lg }]}>Equipment</Text>
             <View style={styles.filterGrid}>
               {EQUIPMENT.map(eq => (
                 <TouchableOpacity

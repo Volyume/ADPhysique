@@ -378,7 +378,7 @@ export default function AthleteHubScreen({ navigation }) {
         {/* ── Recovery signals ──────────────────────────── */}
         <View style={styles.section}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-            <Text style={styles.sectionLabel}>RECOVERY SIGNALS</Text>
+            <Text style={styles.sectionLabel}>Recovery signals</Text>
             <InfoTooltip text="Weighted 7-day average of your session check-ins. Scored 1–5 where lower is better for Soreness and Fatigue (1 = fresh, 5 = very sore/tired). Joint Comfort is also 1–5 where 1 = comfortable. If scores are consistently high, consider a lighter week." />
           </View>
           <View style={styles.recoveryGrid}>

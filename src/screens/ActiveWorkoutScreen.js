@@ -364,7 +364,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   action: 'deload',
                   isDeload: true,
                 })));
-                setTargetReason('Deload week: very easy effort, full recovery focus.');
+                setTargetReason('Recovery week: very easy effort, full recovery focus.');
               }
             }
           }
@@ -784,7 +784,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               <View style={styles.deloadBannerLeft}>
                 <Ionicons name="battery-charging-outline" size={18} color={colors.warning} />
                 <View>
-                  <Text style={styles.deloadBannerTitle}>RECOVERY WEEK</Text>
+                  <Text style={styles.deloadBannerTitle}>Recovery week</Text>
                   <Text style={styles.deloadBannerSub}>Light loads · full recovery · no PRs</Text>
                 </View>
               </View>
@@ -800,7 +800,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
           {/* Previous Performance */}
           <View style={styles.prevCard}>
-            <Text style={styles.prevTitle}>PREVIOUS SESSION</Text>
+            <Text style={styles.prevTitle}>Previous session</Text>
             {prevSets.length > 0 ? (
               <>
                 <Text style={styles.prevSetsSummary}>
@@ -808,7 +808,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 </Text>
                 {setTargets.length > 0 && (
                   <View style={styles.setTargetsBlock}>
-                    <Text style={styles.setTargetsLabel}>NEXT SESSION</Text>
+                    <Text style={styles.setTargetsLabel}>Next session</Text>
                     {setTargets.map((t, i) => (
                       <View key={i} style={styles.setTargetRow}>
                         <Text style={styles.setTargetNum}>Set {i + 1}</Text>
@@ -937,19 +937,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             {currentSet.setType === 'dropset' && (
               <View style={styles.dropBanner}>
                 <Ionicons name="arrow-down-circle-outline" size={14} color={colors.gold} />
-                <Text style={styles.dropBannerText}>DROP SET ↓ · lower the weight, keep going</Text>
+                <Text style={styles.dropBannerText}>Drop set ↓ · lower the weight, keep going</Text>
               </View>
             )}
             <Text style={styles.setEntryTitle}>
               {currentSet.setType === 'warmup'
-                ? 'WARM UP SET'
+                ? 'Warm-up set'
                 : currentSet.setType === 'dropset'
-                  ? `DROP SET · after Set ${workingLogged}`
+                  ? `Drop set · after Set ${workingLogged}`
                   : isDeloadWeek
-                    ? `LIGHT SET ${workingLogged + 1} · Easy`
+                    ? `Light set ${workingLogged + 1} · Easy`
                     : routineExercise?.recommendedSets
-                      ? `SET ${workingLogged + 1} / ${routineExercise.recommendedSets} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working'}`
-                      : `SET ${workingLogged + 1} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working'}`}
+                      ? `Set ${workingLogged + 1} / ${routineExercise.recommendedSets} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working'}`
+                      : `Set ${workingLogged + 1} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working'}`}
             </Text>
             {currentSet.setType !== 'warmup' && setTargets[workingLogged] && (
               <View style={styles.inlineTargetChip}>
@@ -1007,7 +1007,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   accessibilityLabel="Finish workout"
                 >
                   <Ionicons name="checkmark-done" size={20} color={colors.success} />
-                  <Text style={styles.completeBtnText}>FINISH WORKOUT</Text>
+                  <Text style={styles.completeBtnText}>Finish workout</Text>
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity
@@ -1018,7 +1018,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   accessibilityLabel="Move to next exercise"
                 >
                   <Ionicons name="arrow-forward-circle" size={20} color={colors.primary} />
-                  <Text style={styles.completeBtnText}>NEXT EXERCISE</Text>
+                  <Text style={styles.completeBtnText}>Next exercise</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity
@@ -1094,7 +1094,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           {/* Logged Sets */}
           {loggedSets.length > 0 && (
             <View style={styles.loggedSection}>
-              <Text style={styles.loggedTitle}>THIS WORKOUT</Text>
+              <Text style={styles.loggedTitle}>This workout</Text>
               {loggedSets.map((s, i) => {
                 const isWarmup = s.setType === 'warmup';
                 const isDrop   = s.setType === 'dropset';

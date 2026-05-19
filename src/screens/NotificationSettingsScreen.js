@@ -252,7 +252,7 @@ export default function NotificationSettingsScreen({ navigation }) {
         )}
 
         {/* Section 1 — Morning weight reminder */}
-        <Text style={styles.sectionLabel}>MORNING WEIGHT REMINDER</Text>
+        <Text style={styles.sectionLabel}>Morning weight reminder</Text>
         <View style={styles.card}>
           {/* Toggle row */}
           <View style={styles.toggleRow}>
@@ -298,7 +298,7 @@ export default function NotificationSettingsScreen({ navigation }) {
         </View>
 
         {/* Section 2 — Weekly check-in reminder */}
-        <Text style={styles.sectionLabel}>WEEKLY CHECK-IN REMINDER</Text>
+        <Text style={styles.sectionLabel}>Weekly check-in reminder</Text>
         <View style={styles.card}>
           {/* Toggle row */}
           <View style={styles.toggleRow}>

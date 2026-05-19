@@ -391,9 +391,9 @@ export default function AnalyticsScreen({ navigation }) {
               <Text style={styles.sectionLabel}>This week's volume</Text>
               <InfoTooltip text={
                 'Sets per muscle group this week.\n\n' +
-                '🟠 Not enough — add a set or two next week.\n' +
-                '🟢 Good range — keep it here.\n' +
-                '🔴 Too much — dial it back next week.\n\n' +
+                '🟠 Not enough: add a set or two next week.\n' +
+                '🟢 Good range: keep it here.\n' +
+                '🔴 Too much: dial it back next week.\n\n' +
                 'Targets adjust over time as Volyume learns how you recover.'
               } />
             </View>
@@ -425,7 +425,7 @@ export default function AnalyticsScreen({ navigation }) {
         {/* ── 5 · Training Day Calendar ─────────────────────── */}
         <View style={styles.section}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-            <Text style={styles.sectionLabel}>Training days — last 12 weeks</Text>
+            <Text style={styles.sectionLabel}>Training days (last 12 weeks)</Text>
           </View>
           <TrainingCalendar values={calValues} />
         </View>
