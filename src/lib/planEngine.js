@@ -15,6 +15,7 @@ export const GOAL_LABELS = {
   weak_point_spec:       'Weak Point Specialisation',
   strength_hypertrophy:  'Strength-Bias Hypertrophy',
   recomp:                'Fat Loss / Recomp Support',
+  x_frame_physique:      'X-Frame Physique',
 };
 
 export const SPLIT_LABELS = {
@@ -158,6 +159,14 @@ function applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys) {
     t.biceps      = Math.round(t.biceps      * 1.10);
     t.abs         = Math.min(8, Math.round(t.abs * 0.75));
     t.traps       = Math.round(t.traps       * 0.80);
+  } else if (goal === 'x_frame_physique') {
+    t.side_delts  = Math.min(Math.round(t.side_delts  * 1.35), Math.round(landmarks.side_delts.MRV  * 1.10));
+    t.back        = Math.min(Math.round(t.back        * 1.25), Math.round(landmarks.back.MRV        * 1.10));
+    t.rear_delts  = Math.round(t.rear_delts  * 1.20);
+    t.glutes      = Math.min(Math.round(t.glutes      * 1.30), Math.round(landmarks.glutes.MRV      * 1.10));
+    t.hamstrings  = Math.round(t.hamstrings  * 1.20);
+    t.chest       = Math.round(t.chest       * 1.10);
+    t.abs         = Math.min(6, Math.round(t.abs * 0.60));
   } else if (goal === 'weak_point_spec') {
     for (const m of Object.keys(t)) {
       if (weakPointKeys.includes(m)) {
@@ -996,6 +1005,7 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
     weak_point_spec:        `Weak Point Specialisation pushes${weakPointUILabels.length ? ' ' + weakPointUILabels.join(' and ') : ' your flagged muscles'} close to their maximum weekly volume while keeping everything else at the minimum needed to hold current size. Targeted overload, held across the full training block, is how lagging muscles close the gap.`,
     strength_hypertrophy:  `Strength-Bias Hypertrophy keeps the goal as muscle growth but loads your main compound lifts heavier and in a lower rep range. Building strength is what lets you use more weight over time — and more weight, applied correctly, means more muscle.`,
     recomp:                `Fat Loss / Recomp Support sets volume at a level your body can recover from on reduced calories. The goal is preserving the muscle you already have while your nutrition creates a gradual caloric deficit. Training stimulus stays consistent; recovery capacity is the limiting factor, not your effort.`,
+    x_frame_physique:      `X-Frame Physique concentrates volume on the four visual anchor points — outer shoulders, back width, glutes and hamstrings — that create a dramatic X silhouette when viewed from front and rear. Side delts, lats, and posterior chain receive additional sets each week; direct waist-widening ab work is minimised to preserve the illusion of a narrow mid-section.`,
   };
   result.goal = goalMap[goal] ?? `Goal: ${GOAL_LABELS[goal] ?? goal}.`;
 

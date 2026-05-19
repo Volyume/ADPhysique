@@ -18,6 +18,7 @@ import {
 import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import useAppStore from '../store/useAppStore';
+import InfoTooltip from '../components/InfoTooltip';
 
 // Soft targets used only to size the weekly progress bars — not enforced
 const WEEK_TARGETS = { sessions: 5, sets: 80, volume: 15000 };
@@ -235,6 +236,7 @@ export default function HomeScreen({ navigation }) {
         ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={styles.content}
+        keyboardDismissMode="on-drag"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
       >
         {/* ── Branded header ── */}
@@ -474,7 +476,13 @@ export default function HomeScreen({ navigation }) {
           {blockProgress.length > 0 && (
             <View style={styles.blockCard}>
               <View style={styles.blockCardHeader}>
-                <Text style={styles.blockCardTitle}>THIS WEEK'S PLAN</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Text style={styles.blockCardTitle}>THIS WEEK'S PLAN</Text>
+                  <InfoTooltip
+                    size={11}
+                    text={"Planned sets vs completed this week, per muscle group. Based on your active training block target. Bars turn cyan when you hit your planned sets for that muscle."}
+                  />
+                </View>
                 {currentMesoWeek && (
                   <Text style={styles.blockCardWeek}>
                     Week {currentMesoWeek.weekIndex}/{currentMesoWeek.plannedWeeks}

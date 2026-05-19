@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
-  Alert, KeyboardAvoidingView, Platform,
+  Alert, KeyboardAvoidingView, Platform, Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -110,6 +110,7 @@ function MacroCard({ label, grams, perKg, perKgLbm, basis }) {
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 const BODY_METRICS_KEY_PREFIX = '@volyume_body_metrics_';
+const PHYSIQUE_PREF_KEY = '@volyume_physique_tracking_enabled';
 
 export default function NutritionTargetsScreen() {
   const { user } = useAppStore();
@@ -132,6 +133,7 @@ export default function NutritionTargetsScreen() {
   const [expanded,     setExpanded]     = useState(false);
   const [calculating,  setCalculating]  = useState(false);
   const [calm,         setCalm]         = useState(false);
+  const [formCollapsed, setFormCollapsed] = useState(false);
 
   // ── Load saved targets on mount — SQLite primary, AsyncStorage fallback ────────────
   useEffect(() => {
@@ -223,6 +225,11 @@ export default function NutritionTargetsScreen() {
           }
         } catch (_e) {}
       }
+
+      // Auto-enable physique tracking
+      AsyncStorage.setItem(PHYSIQUE_PREF_KEY, 'true').catch(() => {});
+      // Collapse form to show results prominently
+      setFormCollapsed(true);
     } catch (e) {
       Alert.alert('Calculation error', e.message || 'Something went wrong.');
     } finally {
@@ -241,11 +248,15 @@ export default function NutritionTargetsScreen() {
         <ScrollView
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
         >
           <Text style={styles.pageTitle}>Nutrition Targets</Text>
           <Text style={styles.pageSubtitle}>
             Calculate your personalised daily calorie and macro goals.
           </Text>
+
+          {!formCollapsed ? (
+          <>
 
           {/* ── SECTION 1: ABOUT YOU ───────────────────────────────────────────────────── */}
 
@@ -425,6 +436,25 @@ export default function NutritionTargetsScreen() {
             </View>
           </View>
 
+          </>) : null}
+
+          {formCollapsed ? (
+            <View style={styles.collapsedSummary}>
+              <View style={styles.collapsedRow}>
+                <Ionicons name="person-outline" size={14} color={colors.textMuted} />
+                <Text style={styles.collapsedText} numberOfLines={1}>
+                  {sex === 'male' ? 'Male' : 'Female'} · {age}yrs
+                  {heightFt ? ` · ${heightFt}ft ${heightIn}in` : ''}
+                  {weight ? ` · ${weight}kg` : ''} · {GOALS.find(g => g.key === goal)?.label ?? goal}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setFormCollapsed(false)} style={styles.reconfigureBtn}>
+                <Ionicons name="settings-outline" size={13} color={colors.primary} />
+                <Text style={styles.reconfigureBtnText}>Reconfigure</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
           {/* ── Calculate button ──────────────────────────────────────────────────────────────── */}
 
           <TouchableOpacity
@@ -433,12 +463,12 @@ export default function NutritionTargetsScreen() {
             disabled={!formComplete || calculating}
           >
             <Ionicons
-              name={calculating ? 'hourglass-outline' : 'calculator-outline'}
+              name={calculating ? 'hourglass-outline' : formCollapsed ? 'refresh-outline' : 'calculator-outline'}
               size={20}
               color={formComplete ? colors.background : colors.textDisabled}
             />
             <Text style={[styles.calcBtnText, !formComplete && styles.calcBtnTextDisabled]}>
-              {calculating ? 'Calculating…' : 'Calculate Targets'}
+              {calculating ? 'Calculating…' : formCollapsed ? 'Recalculate' : 'Calculate Targets'}
             </Text>
           </TouchableOpacity>
 
@@ -965,6 +995,43 @@ const styles = StyleSheet.create({
   },
   recalcBtnText: {
     fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.primary,
+  },
+
+  // ── Collapsed form summary ────────────────────────────────────────────────────────
+
+  collapsedSummary: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.sm,
+  },
+  collapsedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  collapsedText: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+  },
+  reconfigureBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.primary + '50',
+  },
+  reconfigureBtnText: {
+    fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
     color: colors.primary,
   },

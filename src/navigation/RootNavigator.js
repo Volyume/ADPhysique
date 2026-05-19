@@ -166,7 +166,7 @@ function FirstRunStack() {
   );
 }
 
-const SPLASH_MIN_MS = 2000;
+const SPLASH_MIN_MS = 3800;
 
 export default function RootNavigator() {
   const {

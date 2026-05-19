@@ -373,7 +373,13 @@ export default function AthleteHubScreen({ navigation }) {
         {/* ── Nav links ─────────────────────────────────── */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>MANAGE</Text>
-          <NavRow icon="layers" label="Training Blocks" sub="Create and track multi-week blocks" onPress={() => navigation.navigate('MesocycleBuilder')} />
+          <NavRow
+            icon="layers"
+            label="Training Blocks"
+            sub="Plan and track multi-week mesocycles"
+            tooltip={"A Training Block (mesocycle) is a structured 5–6 week period where volume and effort increase each week, followed by a lighter recovery week. Running blocks back-to-back is how you create long-term progressive overload — each block starts slightly heavier than the last. Create one here to link your plan to a block and track your week-by-week progress."}
+            onPress={() => navigation.navigate('MesocycleBuilder')}
+          />
           <NavRow
             icon="document-text-outline"
             label={exporting ? 'Preparing report…' : 'Send report to coach'}
@@ -507,14 +513,17 @@ function MetricChip({ label, value }) {
   );
 }
 
-function NavRow({ icon, label, sub, onPress }) {
+function NavRow({ icon, label, sub, onPress, tooltip }) {
   return (
     <TouchableOpacity style={styles.navRow} onPress={onPress} activeOpacity={0.8}>
       <View style={styles.navRowIcon}>
         <Ionicons name={icon} size={18} color={colors.primary} />
       </View>
       <View style={styles.navRowText}>
-        <Text style={styles.navRowLabel}>{label}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Text style={styles.navRowLabel}>{label}</Text>
+          {tooltip ? <InfoTooltip size={11} text={tooltip} /> : null}
+        </View>
         {sub && <Text style={styles.navRowSub}>{sub}</Text>}
       </View>
       <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />

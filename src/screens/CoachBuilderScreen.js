@@ -19,6 +19,7 @@ import { getPlanNutritionContext } from '../lib/nutritionEngine';
 import { getMesoSchedule, getCurrentMesoWeek } from '../lib/mesocycle';
 import { applyPhaseToInputs, getPhaseLabel, getPhaseDescription, buildSessionAddons } from '../lib/phaseEngine';
 import { annotateSessionSetTypes } from '../lib/setTypeEngine';
+import InfoTooltip from '../components/InfoTooltip';
 
 const NUTRITION_STORAGE_KEY = '@volyume_nutrition_targets';
 import {
@@ -64,6 +65,7 @@ const GOAL_OPTIONS = [
   { value: 'general_hypertrophy',         icon: 'trending-up-outline',   subtitle: 'Balanced muscle growth across the whole body' },
   { value: 'balanced_bodybuilding',       icon: 'grid-outline',           subtitle: 'Structured physique focus with even volume distribution' },
   { value: 'aesthetic_v_taper',           icon: 'triangle-outline',       subtitle: 'Prioritises upper-body width, shoulder-to-waist ratio' },
+  { value: 'x_frame_physique', icon: 'expand-outline', subtitle: 'Prioritises shoulders, lats, glutes and hamstrings for a dramatic X silhouette' },
   { value: 'weak_point_spec',             icon: 'warning-outline',        subtitle: 'Extra volume and priority on muscles you want to bring up' },
   { value: 'strength_hypertrophy', icon: 'flash-outline',          subtitle: 'Heavier compounds with muscle growth as the goal' },
   { value: 'recomp',               icon: 'swap-horizontal-outline', subtitle: 'Build or preserve muscle with controlled fatigue' },
@@ -85,7 +87,7 @@ const RECOVERY_OPTIONS = [
   { value: 'good',    label: 'Good',    subtitle: 'Sleeping well, low stress, nutrition on point' },
 ];
 
-const GOALS_WITH_WEAK_POINTS = ['aesthetic_v_taper', 'weak_point_spec', 'general_hypertrophy'];
+const GOALS_WITH_WEAK_POINTS = ['aesthetic_v_taper', 'weak_point_spec', 'general_hypertrophy', 'x_frame_physique'];
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -565,6 +567,48 @@ export default function CoachBuilderScreen({ navigation, route }) {
           />
         </View>
 
+        {/* ── Plan overview ── */}
+        {(() => {
+          const exp = inputs.experience ?? 'intermediate';
+          const isAdvanced = exp === 'advanced' || exp === 'competitive';
+          const totalWeeks = isAdvanced ? 6 : 5;
+          const peakWeek = isAdvanced ? 5 : 4;
+          const recoveryWeek = totalWeeks;
+          return (
+            <View style={styles.overviewCard}>
+              <View style={styles.overviewTitleRow}>
+                <Text style={styles.overviewTitle}>
+                  {totalWeeks}-Week Training Block
+                </Text>
+                <InfoTooltip
+                  size={13}
+                  text={`A mesocycle is a structured training block — typically 4–6 weeks — where volume and effort increase week by week, followed by a lighter recovery week. After completing one block, you can start another (or a different plan) in Training Blocks to keep progressing long-term.`}
+                />
+              </View>
+              <Text style={styles.overviewSub}>
+                Weeks 1–{peakWeek}: volume and effort build progressively each week.
+                Week {recoveryWeek} is a lighter recovery week — fewer sets, lower effort — so you recharge and come back stronger.
+              </Text>
+              <View style={styles.overviewWeekRow}>
+                {Array.from({ length: totalWeeks }, (_, i) => {
+                  const w = i + 1;
+                  const isRecovery = w === totalWeeks;
+                  const isPeak = w === peakWeek;
+                  return (
+                    <View key={w} style={[styles.overviewWeekDot, isRecovery && styles.overviewWeekDotRec, isPeak && styles.overviewWeekDotPeak]}>
+                      <Text style={[styles.overviewWeekNum, isRecovery && styles.overviewWeekNumRec]}>{w}</Text>
+                    </View>
+                  );
+                })}
+                <Text style={styles.overviewWeekLegend}> ← recovery</Text>
+              </View>
+              <Text style={styles.overviewStack}>
+                Tip: once complete, stack another block in Training Blocks to keep the progressive overload going.
+              </Text>
+            </View>
+          );
+        })()}
+
         {/* Warnings */}
         {plan.warnings?.length > 0 && (
           <View style={styles.warningBanner}>
@@ -932,4 +976,24 @@ const styles = StyleSheet.create({
   activateBtn: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.md, minHeight: 52, borderRadius: radius.lg, backgroundColor: colors.primary },
   activateBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.background },
   btnDisabled: { opacity: 0.5 },
+
+  overviewCard: {
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
+    borderWidth: 1, borderColor: colors.primary + '30', gap: spacing.sm,
+  },
+  overviewTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  overviewTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.primary },
+  overviewSub: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  overviewWeekRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs },
+  overviewWeekDot: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.primary + '40',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  overviewWeekDotPeak: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
+  overviewWeekDotRec: { borderColor: colors.textMuted, backgroundColor: colors.surface3 },
+  overviewWeekNum: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.primary },
+  overviewWeekNumRec: { color: colors.textMuted },
+  overviewWeekLegend: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
+  overviewStack: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17, fontStyle: 'italic' },
 });
