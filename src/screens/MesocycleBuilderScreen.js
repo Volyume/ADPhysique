@@ -9,6 +9,7 @@ import { BarChart } from 'react-native-gifted-charts';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import InfoTooltip from '../components/InfoTooltip';
 import {
   getAllMesocycles, createMesocycle, getAllWorkouts, getCompletedWorkoutSets,
   getActivePlan, getRoutinesForPlan,
@@ -173,6 +174,20 @@ export default function MesocycleBuilderScreen({ navigation }) {
                 <View style={styles.planCardHead}>
                   <Ionicons name="barbell" size={18} color={colors.primary} />
                   <Text style={styles.planCardTag}>YOUR ACTIVE PLAN</Text>
+                  <InfoTooltip
+                    size={14}
+                    text={
+                      'A Training Block (mesocycle) is a structured period — usually 4–8 weeks — ' +
+                      'where your weekly volume gradually builds, then drops during a lighter recovery week to let your body absorb the gains.\n\n' +
+                      'Your plan (the workouts and exercises) lives independently. A block is an ' +
+                      'optional layer you add on top to track periodised progress across those weeks.\n\n' +
+                      'After the block ends:\n' +
+                      '• The block is archived in All Blocks below\n' +
+                      '• Your plan continues — the workouts are still there\n' +
+                      '• Start a new block to begin the next training phase\n\n' +
+                      'Most athletes run 2–4 blocks per year, with each block slightly raising the volume floor from where the last one finished.'
+                    }
+                  />
                 </View>
                 <Text style={styles.planCardName}>{activePlan.name}</Text>
                 <Text style={styles.planCardMeta}>
@@ -228,7 +243,19 @@ export default function MesocycleBuilderScreen({ navigation }) {
               </View>
               {isActive && (
                 <View style={styles.weekProgress}>
-                  <Text style={styles.weekLabel}>Week {currentWeek} of {totalWeeks}</Text>
+                  <View style={styles.weekProgressHeader}>
+                    <Text style={styles.weekLabel}>Week {currentWeek} of {totalWeeks}</Text>
+                    <InfoTooltip
+                      size={13}
+                      text={
+                        `This block runs for ${totalWeeks} weeks` +
+                        (meso.deloadWeek ? ` — Week ${meso.deloadWeek} is your recovery (deload) week.` : '.') +
+                        '\n\nEach week you accumulate a little more training volume until the recovery week, where the load drops so your body can absorb the adaptations.\n\n' +
+                        `When Week ${totalWeeks} is complete, the block closes and moves to All Blocks below. ` +
+                        'Your plan keeps running — start a new block to begin the next training phase.'
+                      }
+                    />
+                  </View>
                   <View style={styles.weekBar}>
                     {Array.from({ length: totalWeeks }, (_, i) => (
                       <View
@@ -242,7 +269,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
                     ))}
                   </View>
                   {meso.deloadWeek && (
-                    <Text style={styles.deloadLabel}>Recovery week: Week {meso.deloadWeek}</Text>
+                    <Text style={styles.deloadLabel}>Week {meso.deloadWeek} = recovery week · {currentWeek < meso.deloadWeek ? `${meso.deloadWeek - currentWeek} week${meso.deloadWeek - currentWeek !== 1 ? 's' : ''} away` : currentWeek === meso.deloadWeek ? 'this week' : 'done'}</Text>
                   )}
                 </View>
               )}
@@ -505,7 +532,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.primary + '40',
     padding: spacing.lg, gap: spacing.xs, marginBottom: spacing.lg,
   },
-  planCardHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  planCardHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, justifyContent: 'space-between' },
   planCardTag: {
     fontSize: fontSize.xs, fontWeight: fontWeight.black,
     color: colors.primary, letterSpacing: 1,
@@ -517,6 +544,7 @@ const styles = StyleSheet.create({
     lineHeight: 20, marginTop: spacing.sm,
   },
   weekProgress: { gap: spacing.sm },
+  weekProgressHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   weekLabel:  { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary },
   weekBar:    { flexDirection: 'row', gap: spacing.sm },
   weekDot:    { flex: 1, height: 8, borderRadius: 4, backgroundColor: colors.surface2 },
