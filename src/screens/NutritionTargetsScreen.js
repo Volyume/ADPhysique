@@ -843,10 +843,10 @@ const styles = StyleSheet.create({
   // ── Section heading ───────────────────────────────────────────────────────────────────
 
   sectionHeading: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.black,
-    color: colors.textMuted,
-    letterSpacing: 1.5,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textSecondary,
+    letterSpacing: 0.2,
     marginTop: spacing.sm,
   },
 
@@ -1049,10 +1049,9 @@ const styles = StyleSheet.create({
   },
   heroLabel: {
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.black,
+    fontWeight: fontWeight.semibold,
     color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 0.2,
   },
   heroKcal: {
     fontSize: fontSize.display,
@@ -1088,8 +1087,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
     color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.2,
   },
   macroPerKg: {
     fontSize: fontSize.xs,

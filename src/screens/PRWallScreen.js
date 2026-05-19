@@ -148,7 +148,7 @@ export default function PRWallScreen({ navigation }) {
           bodyWeight && Object.keys(strengthStandards).length > 0 ? (
             <View style={styles.standardsCard}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                <Text style={styles.standardsTitle}>STRENGTH STANDARDS</Text>
+                <Text style={styles.standardsTitle}>Strength standards</Text>
                 <InfoTooltip text={`Your estimated 1-rep max as a multiple of your bodyweight.\n\n1.0× = you can lift your own bodyweight\n1.5× = strong for most people\n2.0× = advanced\n\nBeginner → Novice → Intermediate → Advanced → Elite`} size={13} />
               </View>
               <Text style={styles.standardsSubtitle}>vs {bodyWeight} {units} bodyweight</Text>
@@ -282,10 +282,10 @@ const styles = StyleSheet.create({
   bwPromptTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
   bwPromptText: { fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 17, marginTop: 2 },
   standardsTitle: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.black,
-    color: colors.textMuted,
-    letterSpacing: 1.5,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textSecondary,
+    letterSpacing: 0.2,
   },
   standardsSubtitle: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: -spacing.xs },
   standardRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
