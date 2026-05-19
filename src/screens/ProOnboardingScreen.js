@@ -9,7 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { VolyumeMark } from '../components/BrandMark';
 import useAppStore from '../store/useAppStore';
-import { logBodyMetric, saveNutritionTargets, saveUserBodyProfile } from '../lib/database';
+import { logBodyMetric, saveNutritionTargets, saveUserBodyProfile, migrateLocalUserId } from '../lib/database';
 import { signUpWithEmail } from '../lib/supabase';
 import { bulkUploadLocalData, syncProfile } from '../lib/sync';
 import {
@@ -77,6 +77,13 @@ function calcNutrition(weightKg, heightCm, ageYears, sex, goal, proteinG, traini
   const carbsG = Math.max(Math.round((kcal - proteinG * 4 - fatG * 9) / 4), 50);
   return { targetKcal: kcal, proteinG, fatG, carbsG, maintenanceKcal: tdee };
 }
+
+const EXPERIENCE_OPTIONS = [
+  { id: 'beginner',     label: 'Beginner',     sub: 'Less than 18 months of consistent training' },
+  { id: 'intermediate', label: 'Intermediate', sub: '18 months to 3 years of consistent training' },
+  { id: 'advanced',     label: 'Advanced',     sub: '3 to 5 years, consistently adding weight over time' },
+  { id: 'competitive',  label: 'Competitive',  sub: '5+ years, training for physique or performance' },
+];
 
 const GOALS = [
   {
@@ -151,9 +158,10 @@ export default function ProOnboardingScreen({ navigation }) {
   const [heightFt, setHeightFt] = useState('5');
   const [heightIn, setHeightIn] = useState('9');
 
-  // Step 2 — goal + training frequency
+  // Step 2 — goal + training frequency + experience
   const [goal, setGoal] = useState('mild_bulk');
   const [trainingFreq, setTrainingFreq] = useState('4-5');
+  const [experience, setExperience] = useState(null);
 
   // Step 3 — nutrition (computed, editable)
   const [nutrition, setNutrition] = useState(null);
@@ -211,6 +219,10 @@ export default function ProOnboardingScreen({ navigation }) {
   }
 
   function advanceFrom2() {
+    if (!experience) {
+      Alert.alert('Training experience', 'Please select your experience level to continue.');
+      return;
+    }
     const bwRaw = parseFloat(bodyWeight) || (localUnits === 'lbs' ? 176 : 80);
     const bwKg = localUnits === 'lbs' ? bwRaw / 2.205 : bwRaw;
     const hcm = localUnits === 'kg'
@@ -241,6 +253,8 @@ export default function ProOnboardingScreen({ navigation }) {
         firstName: firstName.trim(),
         units: localUnits,
         goal,
+        trainingFreq,
+        experience,
       };
       if (user?.id) await saveLocalProfile(user.id, merged);
       const bwRaw = parseFloat(bodyWeight);
@@ -327,6 +341,8 @@ export default function ProOnboardingScreen({ navigation }) {
       if (data.session) {
         const supabaseUserId = data.session.user.id;
         const localUserId = user?.id;
+        // Re-stamp local SQLite rows before uploading so the app reads them under the new ID
+        await migrateLocalUserId(localUserId, supabaseUserId).catch(() => {});
         syncProfile(supabaseUserId, userProfile, 'pro', { isBetaTester: true }).catch(() => {});
         bulkUploadLocalData(supabaseUserId, localUserId).catch(() => {});
       }
@@ -597,6 +613,27 @@ export default function ProOnboardingScreen({ navigation }) {
                 </TouchableOpacity>
               ))}
             </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.fieldLabel}>Training experience</Text>
+            <Text style={styles.fieldHint}>Shapes the volume and exercise complexity of your plan.</Text>
+            {EXPERIENCE_OPTIONS.map(opt => (
+              <TouchableOpacity
+                key={opt.id}
+                style={[styles.goalCard, experience === opt.id && styles.goalCardActive]}
+                onPress={() => setExperience(opt.id)}
+                activeOpacity={0.85}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.goalLabel, experience === opt.id && styles.goalLabelActive]}>{opt.label}</Text>
+                  <Text style={styles.goalSub}>{opt.sub}</Text>
+                </View>
+                {experience === opt.id && (
+                  <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                )}
+              </TouchableOpacity>
+            ))}
           </View>
 
           <TouchableOpacity style={styles.primaryBtn} onPress={advanceFrom2} activeOpacity={0.88}>

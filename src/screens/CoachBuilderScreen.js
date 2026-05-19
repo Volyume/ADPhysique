@@ -183,16 +183,23 @@ function PillButton({ label, selected, onPress }) {
 
 export default function CoachBuilderScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
-  const { user, completeFirstRun, tier } = useAppStore();
+  const { user, completeFirstRun, tier, userProfile } = useAppStore();
 
   const nutritionPhaseFromRoute = route?.params?.nutritionPhase ?? null;
   const isFirstRun = route?.params?.firstRun === true;
 
-  const [step, setStep]   = useState(1);
+  // Map the onboarding training frequency bucket to the nearest exact day count
+  const freqToDays = { '2-3': 3, '4-5': 4, '6+': 6 };
+  const daysFromProfile = freqToDays[userProfile?.trainingFreq] ?? null;
+
+  // During first run, skip step 1 (experience) if already captured in onboarding
+  const initialStep = isFirstRun && userProfile?.experience ? 2 : 1;
+
+  const [step, setStep]   = useState(initialStep);
   const [inputs, setInputs] = useState({
-    experience:            null,
+    experience:            userProfile?.experience ?? null,
     trainingAge:           null,
-    daysPerWeek:           4,
+    daysPerWeek:           daysFromProfile ?? 4,
     sessionLengthMinutes:  60,
     equipment:             null,
     goal:                  null,
@@ -223,7 +230,7 @@ export default function CoachBuilderScreen({ navigation, route }) {
   }
 
   function goBack() {
-    if (step === 1) {
+    if (step <= initialStep) {
       navigation.goBack();
       return;
     }
@@ -413,6 +420,12 @@ export default function CoachBuilderScreen({ navigation, route }) {
     return (
       <View style={styles.stepBody}>
         <Text style={styles.stepQuestion}>How many days per week can you train?</Text>
+        {daysFromProfile && isFirstRun && (
+          <View style={styles.prefillBanner}>
+            <Ionicons name="checkmark-circle-outline" size={14} color={colors.primary} />
+            <Text style={styles.prefillBannerText}>Pre-filled from your profile. Change it if needed.</Text>
+          </View>
+        )}
         <View style={styles.pillRow}>
           {DAYS_OPTIONS.map(d => (
             <PillButton
@@ -909,6 +922,12 @@ const styles = StyleSheet.create({
   muscleChipText: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textSecondary },
   muscleChipTextActive: { color: colors.primary, fontWeight: fontWeight.semibold },
   selectedMusclesHint: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
+
+  prefillBanner: {
+    flexDirection: 'row', gap: spacing.xs, alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  prefillBannerText: { fontSize: fontSize.xs, color: colors.primary },
 
   suggestionBanner: {
     flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start',

@@ -2126,6 +2126,26 @@ export async function insertWorkoutFromCloud(userId, w) {
   );
 }
 
+// Re-stamps all local data from localUserId → supabaseUserId so the app
+// reads it correctly after account creation during onboarding.
+export async function migrateLocalUserId(localUserId, supabaseUserId) {
+  if (!localUserId || !supabaseUserId || localUserId === supabaseUserId) return;
+  const d = await db();
+  const tables = [
+    'workouts', 'workout_sets', 'routines', 'programmes',
+    'nutrition_targets', 'body_metric_log', 'morning_weights',
+    'personal_records', 'adaptation_events',
+  ];
+  for (const table of tables) {
+    try {
+      await d.runAsync(
+        `UPDATE ${table} SET user_id = ? WHERE user_id = ?`,
+        [supabaseUserId, localUserId],
+      );
+    } catch (_) {}
+  }
+}
+
 export async function insertWorkoutSetFromCloud(userId, s) {
   const d = await db();
   await d.runAsync(

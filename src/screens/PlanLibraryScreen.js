@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput,
   Alert, RefreshControl, Modal, Pressable,
@@ -230,6 +230,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
   const [query, setQuery] = useState('');
   const [activeCollection, setActiveCollection] = useState('all');
   const [selectedDivision, setSelectedDivision] = useState(null);
+  const listRef = useRef(null);
   const [refreshing, setRefreshing] = useState(false);
 
   // Quiz state
@@ -389,6 +390,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
             onPress={() => {
               setActiveCollection(item.key);
               if (item.key !== 'division') setSelectedDivision(null);
+              listRef.current?.scrollToOffset({ offset: 0, animated: false });
             }}
           >
             {item.key === 'division' && (
@@ -416,6 +418,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
 
       {/* Plans list */}
       <FlatList
+        ref={listRef}
         data={filtered}
         keyExtractor={p => p.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}

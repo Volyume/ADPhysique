@@ -149,7 +149,7 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="MesocycleBuilder" component={MesocycleBuilderScreen} options={{ title: 'Training Blocks' }} />
       <Stack.Screen name="WeeklyCheckIn" component={GatedWeeklyCheckIn} options={{ title: 'Weekly Check-In' }} />
       <Stack.Screen name="CoachOutput" component={GatedCoachOutput} options={{ title: 'Your Week' }} />
-      <Stack.Screen name="ProGoalSetup" component={GatedProGoalSetup} options={{ title: 'Pro Setup' }} />
+      <Stack.Screen name="ProGoalSetup" component={GatedProGoalSetup} options={{ title: 'Goal Phase' }} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ title: 'Notifications' }} />
       <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
     </Stack.Navigator>
@@ -159,6 +159,7 @@ function ProfileStack({ navigation }) {
 function MainTabs() {
   return (
     <Tab.Navigator
+      lazy={false}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarStyle: {
