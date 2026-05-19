@@ -216,7 +216,7 @@ export function evaluateAutoReg(feedbackWindow = []) {
     return {
       action: 'hold_volume',
       setsAdjust: 0,
-      message: 'Sessions feel hard but pump quality is low. Hold your volume here until recovery improves.',
+      message: 'Sessions feel hard but muscles feel flat. Keep your sets steady for now until recovery improves.',
     };
   }
 
