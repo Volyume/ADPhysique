@@ -9,6 +9,7 @@ import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg } from '../lib/units';
 import { VolyumeMark } from '../components/BrandMark';
 import {
   getAllWorkouts, getCompletedWorkoutSets, getActivePlan, getRoutinesForPlan,
@@ -37,9 +38,10 @@ function getGreeting(firstName) {
 }
 
 export default function HomeScreen({ navigation }) {
-  const { user, userProfile, startWorkout, activeWorkout, tier } = useAppStore(
-    useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, tier: s.tier }))
+  const { user, userProfile, startWorkout, activeWorkout, tier, bodyWeightUnits } = useAppStore(
+    useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, tier: s.tier, bodyWeightUnits: s.bodyWeightUnits }))
   );
+  const bwu = bodyWeightUnits || 'st';
 
   const [weekStats, setWeekStats] = useState({ sessions: 0, sets: 0, volume: 0 });
   const [streakWeeks, setStreakWeeks] = useState(0);
@@ -57,7 +59,9 @@ export default function HomeScreen({ navigation }) {
   const [blockProgress, setBlockProgress] = useState([]);
   const [currentMesoWeek, setCurrentMesoWeek] = useState(null);
   const [todayWeight, setTodayWeight] = useState(null);       // logged weight for today
-  const [weightInput, setWeightInput] = useState('');          // draft input value
+  const [weightInput, setWeightInput] = useState('');          // draft for kg/lbs mode
+  const [weightInputSt, setWeightInputSt] = useState('');     // stone field (st mode)
+  const [weightInputStLbs, setWeightInputStLbs] = useState(''); // lbs field (st mode)
   const [savingWeight, setSavingWeight] = useState(false);
   const [showCoachingNudge, setShowCoachingNudge] = useState(false);
 
@@ -97,13 +101,21 @@ export default function HomeScreen({ navigation }) {
   }
 
   async function handleLogWeight() {
-    const val = parseFloat(weightInput);
-    if (!val || val <= 0 || val > 500) return;
+    let weightKg;
+    if (bwu === 'st') {
+      if (!weightInputSt) return;
+      weightKg = stoneLbsToKg(weightInputSt, weightInputStLbs || '0');
+    } else {
+      weightKg = parseBodyWeightToKg(weightInput, bwu);
+    }
+    if (!weightKg || isNaN(weightKg) || weightKg <= 0 || weightKg > 300) return;
     setSavingWeight(true);
     try {
-      await logMorningWeight(user.id, { weightKg: val, loggedAt: Date.now() });
-      setTodayWeight(val);
+      await logMorningWeight(user.id, { weightKg, loggedAt: Date.now() });
+      setTodayWeight(weightKg);
       setWeightInput('');
+      setWeightInputSt('');
+      setWeightInputStLbs('');
     } catch (_) {}
     setSavingWeight(false);
   }
@@ -320,7 +332,7 @@ export default function HomeScreen({ navigation }) {
           <View style={styles.weightCard}>
             <Ionicons name="checkmark-circle" size={16} color={colors.success} />
             <Text style={styles.weightCardText}>
-              {todayWeight}{userProfile?.units ?? 'kg'} logged today
+              {formatBodyWeightShort(todayWeight, bwu)} logged today
             </Text>
             <TouchableOpacity onPress={() => setTodayWeight(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <Text style={styles.weightCardEdit}>Edit</Text>
@@ -329,20 +341,45 @@ export default function HomeScreen({ navigation }) {
         ) : (
           <View style={styles.weightCard}>
             <Ionicons name="scale-outline" size={16} color={colors.textMuted} />
-            <TextInput
-              style={styles.weightInput}
-              value={weightInput}
-              onChangeText={setWeightInput}
-              placeholder={`Morning weight (${userProfile?.units ?? 'kg'})`}
-              placeholderTextColor={colors.textMuted}
-              keyboardType="decimal-pad"
-              returnKeyType="done"
-              onSubmitEditing={handleLogWeight}
-            />
+            {bwu === 'st' ? (
+              <>
+                <TextInput
+                  style={[styles.weightInput, { flex: 1 }]}
+                  value={weightInputSt}
+                  onChangeText={setWeightInputSt}
+                  placeholder="12 st"
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="number-pad"
+                  maxLength={3}
+                />
+                <TextInput
+                  style={[styles.weightInput, { flex: 1 }]}
+                  value={weightInputStLbs}
+                  onChangeText={setWeightInputStLbs}
+                  placeholder="7 lbs"
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="decimal-pad"
+                  maxLength={4}
+                  returnKeyType="done"
+                  onSubmitEditing={handleLogWeight}
+                />
+              </>
+            ) : (
+              <TextInput
+                style={styles.weightInput}
+                value={weightInput}
+                onChangeText={setWeightInput}
+                placeholder={`Morning weight (${bwu})`}
+                placeholderTextColor={colors.textMuted}
+                keyboardType="decimal-pad"
+                returnKeyType="done"
+                onSubmitEditing={handleLogWeight}
+              />
+            )}
             <TouchableOpacity
-              style={[styles.weightLogBtn, (!weightInput || savingWeight) && styles.weightLogBtnDisabled]}
+              style={[styles.weightLogBtn, ((!weightInput && !weightInputSt) || savingWeight) && styles.weightLogBtnDisabled]}
               onPress={handleLogWeight}
-              disabled={!weightInput || savingWeight}
+              disabled={(!weightInput && !weightInputSt) || savingWeight}
             >
               <Text style={styles.weightLogBtnText}>Log</Text>
             </TouchableOpacity>

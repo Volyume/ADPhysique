@@ -41,6 +41,7 @@ const useAppStore = create((set, get) => ({
         user: localUser,
         userProfile: profile,
         units: profile?.units || 'kg',
+        bodyWeightUnits: profile?.bodyWeightUnits || 'st',
         barWeight: profile?.barWeight || 20,
         isAuthLoading: false,
       });
@@ -212,13 +213,25 @@ const useAppStore = create((set, get) => ({
   showPRCelebration: (pr) => set({ prCelebration: pr }),
   hidePRCelebration: () => set({ prCelebration: null }),
 
-  // Units — persisted to AsyncStorage so Settings changes survive restarts
+  // Gym weight units (barbells, dumbbells) — 'kg' | 'lbs'
   units: 'kg',
   setUnits: async (units) => {
     set({ units });
     const { user, userProfile } = get();
     if (user?.id) {
       const updated = { ...(userProfile || {}), units };
+      try { await AsyncStorage.setItem(PROFILE_KEY_PFX + user.id, JSON.stringify(updated)); } catch (_) {}
+      set({ userProfile: updated });
+    }
+  },
+
+  // Body weight units — 'st' | 'kg' | 'lbs'. Default 'st' (UK convention).
+  bodyWeightUnits: 'st',
+  setBodyWeightUnits: async (bwu) => {
+    set({ bodyWeightUnits: bwu });
+    const { user, userProfile } = get();
+    if (user?.id) {
+      const updated = { ...(userProfile || {}), bodyWeightUnits: bwu };
       try { await AsyncStorage.setItem(PROFILE_KEY_PFX + user.id, JSON.stringify(updated)); } catch (_) {}
       set({ userProfile: updated });
     }

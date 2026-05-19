@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import useAppStore from '../store/useAppStore';
+import { formatBodyWeightShort } from '../lib/units';
 import {
   logMorningWeight,
   saveWeeklyCheckin,
@@ -129,7 +130,7 @@ function OptionRow({ options, selected, onSelect }) {
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function WeeklyCheckInScreen({ navigation }) {
-  const { user, userProfile, units } = useAppStore();
+  const { user, userProfile, units, bodyWeightUnits } = useAppStore();
   const [nutritionTargets, setNutritionTargets] = useState(null);
 
   // If no goal phase is set, send to setup first
@@ -148,7 +149,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
   // Derived constants
   const weekStart = getCurrentWeekStart();
   const weekLabel = formatWeekRange(weekStart);
-  const unitLabel = units === 'lbs' ? 'lbs' : 'kg';
+  const bwu = bodyWeightUnits || 'st';
 
   // Loading & persistence state
   const [loading, setLoading] = useState(true);
@@ -299,7 +300,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
                       {weekWeights.length} {weekWeights.length === 1 ? 'day' : 'days'} logged
                       {weekWeights.length >= 1 && (() => {
                         const avg = weekWeights.reduce((s, w) => s + (w.weightKg ?? 0), 0) / weekWeights.length;
-                        return ` · avg ${avg.toFixed(1)} ${unitLabel}`;
+                        return ` · avg ${formatBodyWeightShort(avg, bwu)}`;
                       })()}
                     </Text>
                   </View>

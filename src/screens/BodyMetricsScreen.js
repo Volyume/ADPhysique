@@ -11,6 +11,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logBodyMetric, getBodyMetricLog } from '../lib/database';
 import useAppStore from '../store/useAppStore';
+import { formatBodyWeight, formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg } from '../lib/units';
 import { getWellbeingMode, isCalm, WELLBEING_HELPLINE } from '../lib/wellbeing';
 
 const PHYSIQUE_PREF_KEY = '@volyume_physique_tracking_enabled';
@@ -95,7 +96,7 @@ function detectPhase(entries) {
 
 // ─── Weight Trend Chart ───────────────────────────────────────────────────────
 
-function WeightTrendChart({ entries, units }) {
+function WeightTrendChart({ entries, units, bodyWeightUnits }) {
   const withWeight = useMemo(() => {
     const sorted = entries
       .filter(e => e.body_weight != null)
@@ -146,7 +147,7 @@ function WeightTrendChart({ entries, units }) {
         hideDataPoints={withWeight.length > 6}
         dataPointsColor={colors.primary}
         dataPointsRadius={3}
-        yAxisLabelSuffix={` ${units}`}
+        yAxisLabelSuffix={bodyWeightUnits === 'st' ? ' kg' : ` ${bodyWeightUnits || 'kg'}`}
         yAxisTextStyle={chartStyles.axisText}
         xAxisLabelTextStyle={chartStyles.axisText}
         noOfSections={3}
@@ -192,7 +193,8 @@ function PhysiqueOptIn({ onEnable }) {
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function BodyMetricsScreen({ navigation }) {
-  const { user, units } = useAppStore();
+  const { user, units, bodyWeightUnits } = useAppStore();
+  const bwu = bodyWeightUnits || 'st';
   const [physiqueEnabled, setPhysiqueEnabled] = useState(null); // null = loading
   const [calm, setCalm] = useState(false);
   const [sessionConfirmed, setSessionConfirmed] = useState(bodyMetricsSessionConfirmed);
@@ -201,7 +203,8 @@ export default function BodyMetricsScreen({ navigation }) {
   const [showForm, setShowForm] = useState(false);
   const [showMeasurements, setShowMeasurements] = useState(false);
   const [form, setForm] = useState({
-    body_weight: '', chest: '', shoulders: '', arms: '', forearms: '',
+    body_weight: '', body_weight_st: '', body_weight_st_lbs: '0',
+    chest: '', shoulders: '', arms: '', forearms: '',
     waist: '', hips: '', quads: '', hamstrings: '', calves: '',
     metric_date: format(new Date(), 'yyyy-MM-dd'), notes: '',
   });
@@ -269,7 +272,8 @@ export default function BodyMetricsScreen({ navigation }) {
   }
 
   async function saveMetrics() {
-    if (!form.body_weight && !form.chest) {
+    const hasBW = bwu === 'st' ? !!form.body_weight_st : !!form.body_weight;
+    if (!hasBW && !form.chest) {
       Alert.alert('Missing data', 'Enter at least body weight or one measurement.');
       return;
     }
@@ -278,7 +282,17 @@ export default function BodyMetricsScreen({ navigation }) {
       const data = { notes: form.notes || null };
       const d = form.metric_date ? new Date(form.metric_date) : new Date();
       data.loggedAt = isNaN(d.getTime()) ? Date.now() : d.getTime();
+      // Body weight — convert to kg for storage
+      if (bwu === 'st' && form.body_weight_st) {
+        const kg = stoneLbsToKg(form.body_weight_st, form.body_weight_st_lbs || '0');
+        if (!isNaN(kg) && kg > 0) data.weightKg = kg;
+      } else if (form.body_weight) {
+        const kg = parseBodyWeightToKg(form.body_weight, bwu);
+        if (!isNaN(kg) && kg > 0) data.weightKg = kg;
+      }
+      // Measurements (cm) — stored as-is
       for (const [formKey, dbField] of Object.entries(FIELD_MAP)) {
+        if (formKey === 'body_weight') continue; // handled above
         if (form[formKey] !== '' && form[formKey] != null) {
           const n = parseFloat(form[formKey]);
           if (!isNaN(n)) data[dbField] = n;
@@ -287,7 +301,8 @@ export default function BodyMetricsScreen({ navigation }) {
       await logBodyMetric(user.id, data);
       setShowForm(false);
       setForm({
-        body_weight: '', chest: '', shoulders: '', arms: '', forearms: '',
+        body_weight: '', body_weight_st: '', body_weight_st_lbs: '0',
+        chest: '', shoulders: '', arms: '', forearms: '',
         waist: '', hips: '', quads: '', hamstrings: '', calves: '',
         metric_date: format(new Date(), 'yyyy-MM-dd'), notes: '',
       });
@@ -421,15 +436,15 @@ export default function BodyMetricsScreen({ navigation }) {
 
             {latest.body_weight && (
               <View style={styles.weightRow}>
-                <Text style={styles.weightValue}>{latest.body_weight} {units}</Text>
+                <Text style={styles.weightValue}>{formatBodyWeight(latest.body_weight, bwu)}</Text>
                 {getDelta('body_weight') && (
-                  <DeltaBadge delta={parseFloat(getDelta('body_weight'))} units={units} />
+                  <DeltaBadge delta={parseFloat(getDelta('body_weight'))} units={bwu === 'st' ? 'kg' : bwu} />
                 )}
               </View>
             )}
 
             {/* Weight trend chart */}
-            <WeightTrendChart entries={history} units={units} />
+            <WeightTrendChart entries={history} units={units} bodyWeightUnits={bwu} />
 
             {history.length < 3 && (
               <Text style={styles.trendHint}>
@@ -467,17 +482,43 @@ export default function BodyMetricsScreen({ navigation }) {
                 placeholderTextColor={colors.textMuted}
               />
             </View>
-            <View style={styles.formRow}>
-              <Text style={styles.formLabel}>Body weight ({units})</Text>
-              <TextInput
-                style={styles.formInput}
-                value={form.body_weight}
-                onChangeText={v => setForm(f => ({ ...f, body_weight: v }))}
-                keyboardType="decimal-pad"
-                placeholder="82.5"
-                placeholderTextColor={colors.textMuted}
-              />
-            </View>
+            {bwu === 'st' ? (
+              <View style={styles.formRow}>
+                <Text style={styles.formLabel}>Body weight</Text>
+                <View style={{ flex: 1, flexDirection: 'row', gap: 8 }}>
+                  <TextInput
+                    style={[styles.formInput, { flex: 1 }]}
+                    value={form.body_weight_st}
+                    onChangeText={v => setForm(f => ({ ...f, body_weight_st: v }))}
+                    keyboardType="number-pad"
+                    placeholder="12 st"
+                    placeholderTextColor={colors.textMuted}
+                    maxLength={3}
+                  />
+                  <TextInput
+                    style={[styles.formInput, { flex: 1 }]}
+                    value={form.body_weight_st_lbs}
+                    onChangeText={v => setForm(f => ({ ...f, body_weight_st_lbs: v }))}
+                    keyboardType="decimal-pad"
+                    placeholder="0 lbs"
+                    placeholderTextColor={colors.textMuted}
+                    maxLength={4}
+                  />
+                </View>
+              </View>
+            ) : (
+              <View style={styles.formRow}>
+                <Text style={styles.formLabel}>Body weight ({bwu})</Text>
+                <TextInput
+                  style={styles.formInput}
+                  value={form.body_weight}
+                  onChangeText={v => setForm(f => ({ ...f, body_weight: v }))}
+                  keyboardType="decimal-pad"
+                  placeholder={bwu === 'lbs' ? '176' : '82.5'}
+                  placeholderTextColor={colors.textMuted}
+                />
+              </View>
+            )}
 
             {/* Measurements section — collapsed by default */}
             <TouchableOpacity
@@ -552,7 +593,7 @@ export default function BodyMetricsScreen({ navigation }) {
               <View key={entry.id} style={styles.historyRow}>
                 <Text style={styles.historyDate}>{format(new Date(entry.metric_date), 'MMM d, yyyy')}</Text>
                 {entry.body_weight && (
-                  <Text style={styles.historyWeight}>{entry.body_weight} {units}</Text>
+                  <Text style={styles.historyWeight}>{formatBodyWeightShort(entry.body_weight, bwu)}</Text>
                 )}
               </View>
             ))}

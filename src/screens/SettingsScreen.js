@@ -54,10 +54,11 @@ function SectionHeader({ title }) {
 const PHYSIQUE_PREF_KEY = '@volyume_physique_tracking_enabled';
 
 export default function SettingsScreen({ navigation }) {
-  const { user, setUser, setSession, units, setUnits, barWeight, setBarWeight, userProfile, saveLocalProfile, tier } =
+  const { user, setUser, setSession, units, setUnits, bodyWeightUnits, setBodyWeightUnits, barWeight, setBarWeight, userProfile, saveLocalProfile, tier } =
     useAppStore(useShallow(s => ({
       user: s.user, setUser: s.setUser, setSession: s.setSession,
       units: s.units, setUnits: s.setUnits,
+      bodyWeightUnits: s.bodyWeightUnits, setBodyWeightUnits: s.setBodyWeightUnits,
       barWeight: s.barWeight, setBarWeight: s.setBarWeight,
       userProfile: s.userProfile, saveLocalProfile: s.saveLocalProfile,
       tier: s.tier,
@@ -290,12 +291,25 @@ export default function SettingsScreen({ navigation }) {
         <View style={styles.section}>
           <SettingRow
             icon="scale-outline"
-            label="Weight units"
+            label="Gym weight units"
             value={units}
             onPress={() =>
-              Alert.alert('Weight units', 'Choose your preferred unit', [
+              Alert.alert('Gym weight units', 'Used for barbells, dumbbells and machines', [
                 { text: 'kg', onPress: () => setUnits('kg') },
                 { text: 'lbs', onPress: () => setUnits('lbs') },
+                { text: 'Cancel', style: 'cancel' },
+              ])
+            }
+          />
+          <SettingRow
+            icon="body-outline"
+            label="Body weight units"
+            value={bodyWeightUnits === 'st' ? 'Stone+lbs' : bodyWeightUnits}
+            onPress={() =>
+              Alert.alert('Body weight units', 'Used for your morning weight and body tracking', [
+                { text: 'Stone + lbs', onPress: () => setBodyWeightUnits('st') },
+                { text: 'kg', onPress: () => setBodyWeightUnits('kg') },
+                { text: 'lbs', onPress: () => setBodyWeightUnits('lbs') },
                 { text: 'Cancel', style: 'cancel' },
               ])
             }

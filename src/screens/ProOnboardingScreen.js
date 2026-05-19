@@ -10,6 +10,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { VolyumeMark } from '../components/BrandMark';
 import useAppStore from '../store/useAppStore';
 import { logBodyMetric, saveNutritionTargets, saveUserBodyProfile, migrateLocalUserId } from '../lib/database';
+import { stoneLbsToKg, lbsToKg, usesImperialHeight, ftInToCm, parseBodyWeightToKg } from '../lib/units';
 import { signUpWithEmail } from '../lib/supabase';
 import { bulkUploadLocalData, syncProfile } from '../lib/sync';
 import {
@@ -143,7 +144,7 @@ function fmt12(h) {
 
 export default function ProOnboardingScreen({ navigation }) {
   const {
-    user, units, setUnits, userProfile, saveLocalProfile,
+    user, units, setUnits, bodyWeightUnits, setBodyWeightUnits, userProfile, saveLocalProfile,
   } = useAppStore();
 
   const [step, setStep] = useState(1);
@@ -151,6 +152,12 @@ export default function ProOnboardingScreen({ navigation }) {
   // Step 1 — profile
   const [firstName, setFirstName] = useState(userProfile?.firstName || '');
   const [localUnits, setLocalUnits] = useState(units || 'kg');
+  // Body weight units: 'st' (stone+lbs) | 'kg' | 'lbs'. Default 'st' for UK.
+  const [localBWUnits, setLocalBWUnits] = useState(bodyWeightUnits || 'st');
+  // Stone+lbs entry (used when localBWUnits === 'st')
+  const [bodyWeightSt, setBodyWeightSt] = useState('');
+  const [bodyWeightStLbs, setBodyWeightStLbs] = useState('0');
+  // Single-field entry (kg or lbs)
   const [bodyWeight, setBodyWeight] = useState('');
   const [sex, setSex] = useState('male');
   const [age, setAge] = useState('');
@@ -223,11 +230,13 @@ export default function ProOnboardingScreen({ navigation }) {
       Alert.alert('Training experience', 'Please select your experience level to continue.');
       return;
     }
-    const bwRaw = parseFloat(bodyWeight) || (localUnits === 'lbs' ? 176 : 80);
-    const bwKg = localUnits === 'lbs' ? bwRaw / 2.205 : bwRaw;
-    const hcm = localUnits === 'kg'
+    const bwKg = localBWUnits === 'st'
+      ? (stoneLbsToKg(bodyWeightSt || '12', bodyWeightStLbs || '0') || 80)
+      : (parseBodyWeightToKg(bodyWeight || (localBWUnits === 'lbs' ? '176' : '80'), localBWUnits) || 80);
+    const imperial = usesImperialHeight(localBWUnits);
+    const hcm = !imperial
       ? (parseFloat(heightCm) || 175)
-      : Math.round(((parseInt(heightFt, 10) || 5) * 12 + (parseInt(heightIn, 10) || 9)) * 2.54);
+      : ftInToCm(parseInt(heightFt, 10) || 5, parseInt(heightIn, 10) || 9);
     const ageNum = parseInt(age, 10) || 28;
 
     // Build protein targets from lean mass + training frequency, then auto-recommend a level
@@ -248,23 +257,27 @@ export default function ProOnboardingScreen({ navigation }) {
     setBusy(true);
     try {
       if (setUnits) setUnits(localUnits);
+      if (setBodyWeightUnits) setBodyWeightUnits(localBWUnits);
       const merged = {
         ...(userProfile || {}),
         firstName: firstName.trim(),
         units: localUnits,
+        bodyWeightUnits: localBWUnits,
         goal,
         trainingFreq,
         experience,
       };
       if (user?.id) await saveLocalProfile(user.id, merged);
-      const bwRaw = parseFloat(bodyWeight);
-      const bwKg = localUnits === 'lbs' ? bwRaw / 2.205 : bwRaw;
+      const bwKg = localBWUnits === 'st'
+        ? stoneLbsToKg(bodyWeightSt, bodyWeightStLbs)
+        : parseBodyWeightToKg(bodyWeight, localBWUnits);
       if (user?.id && !isNaN(bwKg) && bwKg > 0) {
         await logBodyMetric(user.id, { weightKg: bwKg, loggedAt: Date.now() });
       }
-      const hcm = localUnits === 'kg'
+      const imperial = usesImperialHeight(localBWUnits);
+      const hcm = !imperial
         ? (parseFloat(heightCm) || null)
-        : (!isNaN(parseInt(heightFt, 10)) ? Math.round(((parseInt(heightFt, 10) || 5) * 12 + (parseInt(heightIn, 10) || 9)) * 2.54) : null);
+        : (!isNaN(parseInt(heightFt, 10)) ? ftInToCm(heightFt, heightIn) : null);
       const ageNum = parseInt(age, 10) || null;
       if (user?.id && (sex || hcm || ageNum)) {
         await saveUserBodyProfile(user.id, {
@@ -489,7 +502,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
             <View style={styles.section}>
               <Text style={styles.fieldLabel}>Height</Text>
-              {localUnits === 'kg' ? (
+              {!usesImperialHeight(localBWUnits) ? (
                 <TextInput
                   style={styles.input}
                   value={heightCm}
@@ -527,18 +540,66 @@ export default function ProOnboardingScreen({ navigation }) {
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.fieldLabel}>Current body weight ({localUnits})</Text>
+              <Text style={styles.fieldLabel}>Body weight units</Text>
+              <View style={styles.segmentRow}>
+                {[
+                  { key: 'st', label: 'Stone+lbs' },
+                  { key: 'kg', label: 'kg' },
+                  { key: 'lbs', label: 'lbs' },
+                ].map(u => (
+                  <TouchableOpacity
+                    key={u.key}
+                    style={[styles.segment, localBWUnits === u.key && styles.segmentActive]}
+                    onPress={() => setLocalBWUnits(u.key)}
+                  >
+                    <Text style={[styles.segmentText, localBWUnits === u.key && styles.segmentTextActive]}>
+                      {u.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.fieldLabel}>Current body weight</Text>
               <Text style={styles.fieldHint}>
                 Used with your height and age to calculate your calorie targets. Update it daily from the home screen.
               </Text>
-              <TextInput
-                style={styles.input}
-                value={bodyWeight}
-                onChangeText={setBodyWeight}
-                placeholder={localUnits === 'kg' ? 'e.g. 80' : 'e.g. 176'}
-                placeholderTextColor={colors.textDisabled}
-                keyboardType="decimal-pad"
-              />
+              {localBWUnits === 'st' ? (
+                <View style={styles.heightImperialRow}>
+                  <View style={{ flex: 2 }}>
+                    <TextInput
+                      style={styles.input}
+                      value={bodyWeightSt}
+                      onChangeText={setBodyWeightSt}
+                      placeholder="12 st"
+                      placeholderTextColor={colors.textDisabled}
+                      keyboardType="number-pad"
+                      maxLength={3}
+                    />
+                  </View>
+                  <View style={{ flex: 3 }}>
+                    <TextInput
+                      style={styles.input}
+                      value={bodyWeightStLbs}
+                      onChangeText={setBodyWeightStLbs}
+                      placeholder="0 lbs"
+                      placeholderTextColor={colors.textDisabled}
+                      keyboardType="decimal-pad"
+                      maxLength={4}
+                    />
+                  </View>
+                </View>
+              ) : (
+                <TextInput
+                  style={styles.input}
+                  value={bodyWeight}
+                  onChangeText={setBodyWeight}
+                  placeholder={localBWUnits === 'kg' ? 'e.g. 80 kg' : 'e.g. 176 lbs'}
+                  placeholderTextColor={colors.textDisabled}
+                  keyboardType="decimal-pad"
+                />
+              )}
             </View>
 
             <TouchableOpacity style={styles.primaryBtn} onPress={advanceFrom1} activeOpacity={0.88}>

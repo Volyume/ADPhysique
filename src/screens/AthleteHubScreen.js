@@ -13,6 +13,7 @@ import { VolyumeMark } from '../components/BrandMark';
 import InfoTooltip from '../components/InfoTooltip';
 import { ProBadge } from '../components/ProGate';
 import useAppStore from '../store/useAppStore';
+import { formatBodyWeightShort } from '../lib/units';
 import {
   getAllWorkouts, getCompletedWorkoutSets, getBodyMetricLog, getNutritionTargets,
   getRecentAdaptationEvents, getAllExercises,
@@ -112,7 +113,8 @@ function detectRepRegressions(sets, exerciseMap) {
 
 // ─── Weight sparkline ─────────────────────────────────────────────────────────
 
-function WeightSparkline({ data, units }) {
+function WeightSparkline({ data, units, bodyWeightUnits }) {
+  const bwu = bodyWeightUnits || 'st';
   const CHART_W = SCREEN_W - 72;
   const ewmaPoints = data.map(d => ({ value: d.ewmaKg }));
   const rawPoints  = data.map(d => ({ value: d.rawKg }));
@@ -157,12 +159,12 @@ function WeightSparkline({ data, units }) {
           <View style={styles.sparklineLegendRow}>
             <View style={[styles.sparklineDot, { backgroundColor: colors.primary }]} />
             <Text style={styles.sparklineLegendText}>Trend</Text>
-            <Text style={styles.sparklineLegendVal}>{latest.ewmaKg?.toFixed(1)} {units === 'lbs' ? 'lbs' : 'kg'}</Text>
+            <Text style={styles.sparklineLegendVal}>{formatBodyWeightShort(latest.ewmaKg, bwu)}</Text>
           </View>
           <View style={styles.sparklineLegendRow}>
             <View style={[styles.sparklineDot, { backgroundColor: colors.textMuted }]} />
             <Text style={styles.sparklineLegendText}>Daily</Text>
-            <Text style={styles.sparklineLegendVal}>{latest.rawKg?.toFixed(1)} {units === 'lbs' ? 'lbs' : 'kg'}</Text>
+            <Text style={styles.sparklineLegendVal}>{formatBodyWeightShort(latest.rawKg, bwu)}</Text>
           </View>
         </View>
       )}
@@ -171,7 +173,7 @@ function WeightSparkline({ data, units }) {
 }
 
 export default function AthleteHubScreen({ navigation }) {
-  const { user, userProfile, units, tier } = useAppStore();
+  const { user, userProfile, units, bodyWeightUnits, tier } = useAppStore();
   const [nutritionTargets, setNutritionTargets] = useState(null);
   const [latestMetric, setLatestMetric]         = useState(null);
   const [totalWorkouts, setTotalWorkouts]       = useState(0);
@@ -445,7 +447,7 @@ export default function AthleteHubScreen({ navigation }) {
               <View style={styles.cardHeaderText}>
                 <Text style={styles.cardTitle}>Weight trend</Text>
                 <Text style={styles.cardSubtitle}>
-                  {weightTrend.length}-day trend · {units === 'lbs' ? 'lbs' : 'kg'}
+                  {weightTrend.length}-day trend · {bodyWeightUnits === 'st' ? 'Stone+lbs' : (bodyWeightUnits || 'kg')}
                 </Text>
               </View>
               <InfoTooltip
@@ -453,7 +455,7 @@ export default function AthleteHubScreen({ navigation }) {
                 text="Smooth trend line through your daily weigh-ins. Day-to-day swings from water, food, and sleep are normal. The trend is what matters. A steady downward line on a fat loss phase, or slow upward on a building phase, means things are working."
               />
             </View>
-            <WeightSparkline data={weightTrend} units={units} />
+            <WeightSparkline data={weightTrend} units={units} bodyWeightUnits={bodyWeightUnits} />
           </View>
         )}
 
@@ -502,7 +504,7 @@ export default function AthleteHubScreen({ navigation }) {
               <Text style={styles.cardTitle}>Body Metrics</Text>
               {latestMetric ? (
                 <Text style={styles.cardSubtitle}>
-                  {latestMetric.weightKg != null ? `${latestMetric.weightKg} ${units}` : 'Logged'}
+                  {latestMetric.weightKg != null ? formatBodyWeightShort(latestMetric.weightKg, bodyWeightUnits || 'st') : 'Logged'}
                   {latestMetric.loggedAt ? ` · ${format(new Date(latestMetric.loggedAt), 'MMM d')}` : ''}
                 </Text>
               ) : (
@@ -513,7 +515,7 @@ export default function AthleteHubScreen({ navigation }) {
           </View>
           {latestMetric && (
             <View style={styles.metricRow}>
-              {latestMetric.weightKg != null && <MetricChip label="Weight" value={`${latestMetric.weightKg} ${units}`} />}
+              {latestMetric.weightKg != null && <MetricChip label="Weight" value={formatBodyWeightShort(latestMetric.weightKg, bodyWeightUnits || 'st')} />}
               {latestMetric.bodyFatPercent != null && <MetricChip label="Body fat" value={`${latestMetric.bodyFatPercent}%`} />}
               {latestMetric.waistCm != null && <MetricChip label="Waist" value={`${latestMetric.waistCm} cm`} />}
             </View>
