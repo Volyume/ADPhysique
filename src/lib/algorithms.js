@@ -541,9 +541,9 @@ function buildSubstituteReason(sub, target) {
   const subFatigue = sub.fatigueCost || sub.fatigue_cost || 3;
   const targetFatigue = target.fatigueCost || target.fatigue_cost || 3;
 
-  if (subSFR > targetSFR) return 'Higher stimulus quality for this muscle';
-  if (subFatigue < targetFatigue) return 'Lower fatigue cost, good for high-volume days';
-  return 'Similar stimulus, different movement pattern';
+  if (subSFR > targetSFR) return 'Better match for this muscle with less overall fatigue';
+  if (subFatigue < targetFatigue) return 'Less demanding overall. Good for busy weeks.';
+  return 'Same muscles, different movement. Useful for variety.';
 }
 
 // Algorithm 10: Progression Path
@@ -666,7 +666,7 @@ export function computeAdaptiveDecision({ soreness = 2, performance = 2, pump = 
       decision: 'deload_trigger',
       delta: 0,
       reasonCode: 'systemic_mrv_breach',
-      reasonText: 'Could not match previous performance and still sore. Recovery debt detected. A lighter week is recommended.',
+      reasonText: 'Still sore and performance dropped. Your body needs more recovery. A lighter week is recommended.',
     };
   }
 
@@ -676,7 +676,7 @@ export function computeAdaptiveDecision({ soreness = 2, performance = 2, pump = 
       decision: 'drop_set',
       delta: -1,
       reasonCode: 'residual_soreness',
-      reasonText: 'Still sore at next session. Reducing volume by 1 set to allow recovery.',
+      reasonText: 'Still sore at the next session. Dropping 1 set to allow recovery.',
     };
   }
 
@@ -686,7 +686,7 @@ export function computeAdaptiveDecision({ soreness = 2, performance = 2, pump = 
       decision: 'hold',
       delta: 0,
       reasonCode: 'joint_moderate',
-      reasonText: 'Moderate joint discomfort. Maintaining current volume. Monitor for escalation.',
+      reasonText: 'Moderate joint discomfort. Keeping the same number of sets. Keep an eye on it.',
     };
   }
 
@@ -698,7 +698,7 @@ export function computeAdaptiveDecision({ soreness = 2, performance = 2, pump = 
         decision: 'add_set',
         delta: 2,
         reasonCode: 'under_stimulus',
-        reasonText: 'Full recovery with no pump signal. You are significantly under stimulus. Add 2 sets.',
+        reasonText: 'Full recovery between sessions. You are ready for more work. Add 2 sets next week.',
       };
     }
     if (pump === 4 && soreness === 2) {
@@ -707,7 +707,7 @@ export function computeAdaptiveDecision({ soreness = 2, performance = 2, pump = 
         decision: 'hold',
         delta: 0,
         reasonCode: 'optimal_response',
-        reasonText: 'Excellent stimulus with early recovery. Volume is working well. Hold here.',
+        reasonText: 'Good effort and quick recovery. Your current sets are working well. Hold here.',
       };
     }
     return {
@@ -724,7 +724,7 @@ export function computeAdaptiveDecision({ soreness = 2, performance = 2, pump = 
       decision: 'hold',
       delta: 0,
       reasonCode: 'performance_struggle',
-      reasonText: 'Performance struggled. Hold volume and focus on execution quality.',
+      reasonText: 'Performance struggled. Keep the same number of sets and focus on clean technique.',
     };
   }
 
@@ -733,7 +733,7 @@ export function computeAdaptiveDecision({ soreness = 2, performance = 2, pump = 
     decision: 'hold',
     delta: 0,
     reasonCode: 'hold_default',
-    reasonText: 'Volume is appropriate. Continue as planned.',
+    reasonText: 'Your set count looks good here. Continue as planned.',
   };
 }
 
