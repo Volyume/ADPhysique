@@ -261,6 +261,7 @@ function pickWhy(keys, seed = 0) {
  * @param {number}        inputs.currentStepsTarget
  * @param {number|null}   inputs.bodyweightKg
  * @param {string}        inputs.units                      - 'kg'|'lbs'
+ * @param {boolean}       inputs.scoffPositive              - wellbeing screen was positive; gates deficit suggestions
  */
 export function runWeeklyCoach(inputs) {
   const {
@@ -279,6 +280,7 @@ export function runWeeklyCoach(inputs) {
     currentStepsTarget = 8000,
     bodyweightKg = null,
     units = 'kg',
+    scoffPositive = false,
   } = inputs;
 
   // ── DATA CONFIDENCE ───────────────────────────────────────────────────────
@@ -416,6 +418,7 @@ export function runWeeklyCoach(inputs) {
 
   const canAdjustCals = (
     !cycleOverride &&
+    !scoffPositive &&
     currentCalTarget != null &&
     calsAdherence !== 'untracked' &&
     consecutiveOffTargetWeeks >= offTargetWeeksRequired &&
@@ -506,6 +509,14 @@ export function runWeeklyCoach(inputs) {
     };
   }
 
+  // ── RAPID WEIGHT LOSS SAFETY FLAG ────────────────────────────────────────
+  const rapidWeightLossFlag = !!(
+    actualRatePct !== null &&
+    actualRatePct < -1.5 &&
+    energyScore !== null && energyScore <= 2 &&
+    !cycleOverride
+  );
+
   // ── DELOAD / RECOVERY WEEK SUGGESTION ────────────────────────────────────
   let deloadSuggested = false;
   let deloadNote = null;
@@ -525,9 +536,33 @@ export function runWeeklyCoach(inputs) {
   let dietBreakSuggested = false;
   let dietBreakNote = null;
 
-  if (phase.isCut && weeksInPhase >= 8 && poorRecovery) {
+  // After 8+ weeks in deficit, suggest a break regardless of recovery state.
+  // At 12+ weeks the signal is stronger and the suggestion is more direct.
+  if (phase.isCut && weeksInPhase >= 8) {
     dietBreakSuggested = true;
-    dietBreakNote = 'After 8+ weeks in a calorie deficit, one week at maintenance restores energy and makes the next stretch of dieting more effective.';
+    dietBreakNote = weeksInPhase >= 12
+      ? `You've been eating below maintenance for ${weeksInPhase} weeks. A full week at maintenance will help your body reset before continuing.`
+      : 'Eight or more consecutive weeks eating below maintenance is a long time. One week at your full calorie need helps your body reset and makes the next stretch more effective.';
+  }
+
+  // ── HELD DECISIONS ────────────────────────────────────────────────────────
+  const heldDecisions = [];
+
+  if ((phase.isCut || phase.isBulk) && currentCalTarget !== null && calorieAdjustment === null) {
+    if (scoffPositive) {
+      heldDecisions.push({ type: 'calories', reason: 'Calorie suggestions paused. Focus on fuelling training well rather than restriction.' });
+    } else if (cycleOverride) {
+      heldDecisions.push({ type: 'calories', reason: 'Calories held. Your cycle flag means weight fluctuations this week aren\'t a reliable signal to act on.' });
+    } else if (onTarget) {
+      heldDecisions.push({ type: 'calories', reason: 'Calories held. Weight trend is right on track, no change needed.' });
+    } else if (lastCalAdjustmentWeeksAgo < 2) {
+      heldDecisions.push({ type: 'calories', reason: 'Calories held. A change was made recently and needs more time to show in the trend before adjusting again.' });
+    } else if (consecutiveOffTargetWeeks < offTargetWeeksRequired) {
+      const weeksLeft = offTargetWeeksRequired - consecutiveOffTargetWeeks;
+      heldDecisions.push({ type: 'calories', reason: `Calories held. ${weeksLeft} more week${weeksLeft !== 1 ? 's' : ''} trending the same direction needed before making a change. One week's data isn't enough.` });
+    } else if (calsAdherence === 'untracked') {
+      heldDecisions.push({ type: 'calories', reason: 'Calories held. Without knowing how closely you hit your target, any adjustment would just be a guess.' });
+    }
   }
 
   // ── WHAT'S WORKING ────────────────────────────────────────────────────────
@@ -609,6 +644,8 @@ export function runWeeklyCoach(inputs) {
     deloadNote,
     dietBreakSuggested,
     dietBreakNote,
+    heldDecisions,
+    rapidWeightLossFlag,
     adherenceNote: null,
     prsThisWeek,
     sessionsCompleted,

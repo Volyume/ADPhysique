@@ -164,6 +164,35 @@ function WhyBlock({ text }) {
   );
 }
 
+function RapidLossAlert() {
+  return (
+    <View style={styles.rapidLossCard}>
+      <View style={styles.rapidLossHeader}>
+        <Ionicons name="warning-outline" size={18} color={colors.error} />
+        <Text style={styles.rapidLossTitle}>Weight dropping quickly</Text>
+      </View>
+      <Text style={styles.rapidLossBody}>
+        Your weight is falling more than 1.5% of your bodyweight per week and your energy is low. Losing at this rate risks losing muscle alongside fat and makes training harder. Consider eating a little more this week.
+      </Text>
+    </View>
+  );
+}
+
+function HeldDecisionsCard({ decisions }) {
+  if (!decisions || decisions.length === 0) return null;
+  return (
+    <View style={styles.heldCard}>
+      <SectionHeader title="What we held this week" />
+      {decisions.map((d, i) => (
+        <View key={i} style={styles.heldRow}>
+          <Ionicons name="pause-circle-outline" size={16} color={colors.textMuted} style={{ marginTop: 2 }} />
+          <Text style={styles.heldText}>{d.reason}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function AmberAlertCard({ title, body, footnote }) {
   return (
     <View style={styles.amberCard}>
@@ -270,6 +299,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         currentStepsTarget: userProfile?.stepsTarget ?? 8000,
         bodyweightKg: userProfile?.bodyweightKg ?? null,
         units,
+        scoffPositive: (userProfile?.scoffScore ?? 0) >= 2,
       });
 
       await saveCoachOutput(user.id, { weekStart, ...result });
@@ -326,6 +356,8 @@ export default function CoachOutputScreen({ navigation, route }) {
     deloadNote,
     dietBreakSuggested,
     dietBreakNote,
+    heldDecisions,
+    rapidWeightLossFlag,
     adherenceNote,
     prsThisWeek,
     sessionsCompleted,
@@ -426,7 +458,15 @@ export default function CoachOutputScreen({ navigation, route }) {
           />
         )}
 
-        {/* 9. Done button */}
+        {/* 9. Rapid weight loss safety flag */}
+        {rapidWeightLossFlag && <RapidLossAlert />}
+
+        {/* 10. Held decisions — transparency on what wasn't changed and why */}
+        {heldDecisions && heldDecisions.length > 0 && (
+          <HeldDecisionsCard decisions={heldDecisions} />
+        )}
+
+        {/* 11. Done button */}
         <TouchableOpacity style={styles.doneBtn} onPress={handleClose} activeOpacity={0.8}>
           <Text style={styles.doneBtnText}>Done</Text>
         </TouchableOpacity>
@@ -710,5 +750,53 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
+  },
+
+  // Rapid weight loss safety flag
+  rapidLossCard: {
+    backgroundColor: colors.errorBg ?? colors.warningBg,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.error + '50',
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
+  rapidLossHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  rapidLossTitle: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.error,
+    letterSpacing: 0.3,
+  },
+  rapidLossBody: {
+    fontSize: fontSize.sm,
+    color: colors.textPrimary,
+    lineHeight: 21,
+  },
+
+  // Held decisions transparency card
+  heldCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
+  heldRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    paddingVertical: 2,
+  },
+  heldText: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 20,
   },
 });

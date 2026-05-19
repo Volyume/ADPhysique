@@ -21,7 +21,15 @@ import {
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 6;
+
+const SCOFF_QUESTIONS = [
+  'Have you ever made yourself sick after eating because you felt uncomfortably full?',
+  'Do you worry that you have lost control over how much you eat?',
+  'Have you lost a significant amount of weight in the past three months?',
+  'Do you think of yourself as overweight even when others say you are not?',
+  'Would you say that thoughts about food take up a large part of your day?',
+];
 
 // Boer formula — estimates lean body mass (kg) from weight, height, sex.
 // More accurate for protein targeting than total bodyweight.
@@ -185,7 +193,10 @@ export default function ProOnboardingScreen({ navigation }) {
   const [checkinEnabled, setCheckinEnabled] = useState(true);
   const [checkinDay, setCheckinDay] = useState(0); // Sunday
 
-  // Step 5 — account
+  // Step 5 — wellbeing check (SCOFF screening)
+  const [scoffAnswers, setScoffAnswers] = useState([null, null, null, null, null]);
+
+  // Step 6 — account
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -203,10 +214,10 @@ export default function ProOnboardingScreen({ navigation }) {
   }, [step]);
 
   // When the user confirms their email via deep link, the session arrives here.
-  // If we're on the account step (step 5), auto-advance to CoachBuilder so they
+  // If we're on the account step (step 6), auto-advance to CoachBuilder so they
   // don't have to press anything — the confirmation already proved ownership.
   useEffect(() => {
-    if (user?.id && step === 5) {
+    if (user?.id && step === 6) {
       syncProfile(user.id, userProfile, 'pro', { isBetaTester: true }).catch(() => {});
       navigation.navigate('CoachBuilder', { firstRun: true });
     }
@@ -323,6 +334,23 @@ export default function ProOnboardingScreen({ navigation }) {
       } catch (_) {}
     }
     setStep(5);
+  }
+
+  async function advanceFrom5() {
+    const score = scoffAnswers.filter(a => a === true).length;
+    if (user?.id) {
+      await saveLocalProfile(user.id, { ...(userProfile || {}), scoffScore: score });
+      await saveUserBodyProfile(user.id, { scoffScore: score }).catch(() => {});
+    }
+    if (score >= 2) {
+      Alert.alert(
+        'Before you continue',
+        'Some of your answers suggest it may be worth speaking to your GP or a registered dietitian alongside using this app. We\'ve set things up to focus on supporting your training rather than calorie restriction.',
+        [{ text: 'Understood', onPress: () => setStep(6) }],
+      );
+    } else {
+      setStep(6);
+    }
   }
 
   async function finishWithAccount() {
@@ -949,7 +977,78 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 5 — Account ─────────────────────────────────────────────────────────
+  // ── Step 5 — Wellbeing check ─────────────────────────────────────────────────
+
+  if (step === 5) {
+    const allAnswered = scoffAnswers.every(a => a !== null);
+    return (
+      <SafeAreaView style={styles.safe}>
+        <ScrollView contentContainerStyle={styles.scroll}>
+          <TouchableOpacity style={styles.backBtn} onPress={goBack} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
+            <Text style={styles.backBtnText}>Back</Text>
+          </TouchableOpacity>
+
+          <ProgressBar />
+          <Text style={styles.stepCount}>Step 5 of {TOTAL_STEPS}</Text>
+
+          <Header
+            title="A quick health check."
+            sub="Five short questions. There are no wrong answers. This helps us set the coaching up in a way that suits you."
+          />
+
+          <View style={styles.scoffList}>
+            {SCOFF_QUESTIONS.map((q, i) => (
+              <View key={i} style={styles.scoffItem}>
+                <Text style={styles.scoffQ}>{q}</Text>
+                <View style={styles.scoffBtns}>
+                  <TouchableOpacity
+                    style={[styles.scoffBtn, scoffAnswers[i] === true && styles.scoffBtnSelected]}
+                    onPress={() => {
+                      const next = [...scoffAnswers];
+                      next[i] = true;
+                      setScoffAnswers(next);
+                    }}
+                  >
+                    <Text style={[styles.scoffBtnText, scoffAnswers[i] === true && styles.scoffBtnTextSelected]}>
+                      Yes
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.scoffBtn, scoffAnswers[i] === false && styles.scoffBtnSelected]}
+                    onPress={() => {
+                      const next = [...scoffAnswers];
+                      next[i] = false;
+                      setScoffAnswers(next);
+                    }}
+                  >
+                    <Text style={[styles.scoffBtnText, scoffAnswers[i] === false && styles.scoffBtnTextSelected]}>
+                      No
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </View>
+
+          <Text style={styles.scoffNote}>
+            Your answers are private and stored only on this device.
+          </Text>
+
+          <TouchableOpacity
+            style={[styles.primaryBtn, !allAnswered && styles.primaryBtnDisabled]}
+            onPress={allAnswered ? advanceFrom5 : undefined}
+            activeOpacity={allAnswered ? 0.88 : 1}
+          >
+            <Text style={styles.primaryBtnText}>Continue</Text>
+            <Ionicons name="arrow-forward" size={18} color={colors.background} />
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Step 6 — Account ─────────────────────────────────────────────────────────
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -1375,5 +1474,54 @@ const styles = StyleSheet.create({
     textAlign: 'center', fontSize: fontSize.xs,
     color: colors.textDisabled, lineHeight: 18,
     marginTop: spacing.xs,
+  },
+
+  // SCOFF wellbeing check (step 5)
+  scoffList: {
+    gap: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  scoffItem: {
+    gap: spacing.sm,
+  },
+  scoffQ: {
+    fontSize: fontSize.md,
+    color: colors.textPrimary,
+    lineHeight: 22,
+  },
+  scoffBtns: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  scoffBtn: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+  },
+  scoffBtnSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryBg,
+  },
+  scoffBtnText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textSecondary,
+  },
+  scoffBtnTextSelected: {
+    color: colors.primary,
+  },
+  scoffNote: {
+    fontSize: fontSize.xs,
+    color: colors.textDisabled,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+    lineHeight: 18,
+  },
+  primaryBtnDisabled: {
+    opacity: 0.4,
   },
 });

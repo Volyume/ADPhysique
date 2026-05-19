@@ -407,6 +407,10 @@ const SCHEMA_MIGRATIONS = [
     'ALTER TABLE weekly_checkins ADD COLUMN training_performance TEXT',
     'ALTER TABLE weekly_checkins ADD COLUMN joint_pain INTEGER DEFAULT 0',
   ],
+  // v8 — wellbeing screening score on user body profile
+  [
+    'ALTER TABLE user_body_profile ADD COLUMN scoff_score INTEGER',
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
@@ -1714,12 +1718,14 @@ export async function saveUserBodyProfile(userId, profile) {
     await d.runAsync(
       `UPDATE user_body_profile SET
         sex=?, date_of_birth=?, height_cm=?, experience_level=?,
-        training_age_years=?, primary_goal=?, gdpr_consented=?, updated_at=?
+        training_age_years=?, primary_goal=?, gdpr_consented=?,
+        scoff_score=?, updated_at=?
        WHERE user_id=?`,
       [
         profile.sex ?? null, profile.dateOfBirth ?? null, profile.heightCm ?? null,
         profile.experienceLevel ?? null, profile.trainingAgeYears ?? null,
-        profile.primaryGoal ?? null, profile.gdprConsented ? 1 : 0, now, userId,
+        profile.primaryGoal ?? null, profile.gdprConsented ? 1 : 0,
+        profile.scoffScore ?? null, now, userId,
       ],
     );
     return existing.id;
@@ -1728,12 +1734,14 @@ export async function saveUserBodyProfile(userId, profile) {
   await d.runAsync(
     `INSERT INTO user_body_profile
       (id, user_id, sex, date_of_birth, height_cm, experience_level,
-       training_age_years, primary_goal, gdpr_consented, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       training_age_years, primary_goal, gdpr_consented, scoff_score,
+       created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id, userId, profile.sex ?? null, profile.dateOfBirth ?? null, profile.heightCm ?? null,
       profile.experienceLevel ?? null, profile.trainingAgeYears ?? null,
-      profile.primaryGoal ?? null, profile.gdprConsented ? 1 : 0, now, now,
+      profile.primaryGoal ?? null, profile.gdprConsented ? 1 : 0,
+      profile.scoffScore ?? null, now, now,
     ],
   );
   return id;
