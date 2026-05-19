@@ -1049,7 +1049,7 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
 
   // weakPoints (conditional)
   if (weakPointUILabels.length > 0) {
-    result.weakPoints = `${weakPointUILabels.join(' and ')} ${weakPointUILabels.length === 1 ? 'receives' : 'receive'} more weekly sets than the rest of the plan. Consistently directing extra volume at a lagging muscle across a full training block, while the rest of the programme stays balanced, is the most reliable way to close a development gap.`;
+    result.weakPoints = `${weakPointUILabels.join(' and ')} ${weakPointUILabels.length === 1 ? 'receives' : 'receive'} more weekly sets than the rest of the plan. Consistently giving extra attention to an area that's behind, over several weeks, while the rest of the programme stays balanced, is the most reliable way to close the gap.`;
   }
 
   return result;

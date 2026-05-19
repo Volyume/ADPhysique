@@ -1398,7 +1398,7 @@ const LIBRARY_PLANS = [
           { name: 'Leg Extension',                sets: 5, repsMin: 15, repsMax: 20, rest: 60,  notes: 'Quad isolation pump. Peak squeeze at full extension. Slow eccentric on each rep.' },
           { name: 'Romanian Deadlift (Barbell)', sets: 4, repsMin: 8,  repsMax: 12, rest: 90,  notes: 'Heavy hip hinge. Full hamstring stretch at bottom. Bar stays close to legs.' },
           { name: 'Lying Leg Curl',              sets: 4, repsMin: 10, repsMax: 15, rest: 60,  notes: 'Full range. Hips stay on the pad. 3 s eccentric. Hamstring isolation.' },
-          { name: 'Standing Calf Raise (Machine)', sets: 5, repsMin: 12, repsMax: 20, rest: 60, notes: 'Full stretch at bottom. Full contraction at top. Calves respond best to high volume.' },
+          { name: 'Standing Calf Raise (Machine)', sets: 5, repsMin: 12, repsMax: 20, rest: 60, notes: 'Full stretch at bottom. Full contraction at top. Calves respond well to high reps.' },
           { name: 'Seated Calf Raise',           sets: 4, repsMin: 15, repsMax: 25, rest: 60,  notes: 'Soleus emphasis. Bent knee. Full range. High rep pump.' },
         ],
       },

@@ -115,7 +115,7 @@ export function buildSwapReason(original, candidate) {
   }
 
   if (similarSFR) {
-    parts.push('similar stimulus quality');
+    parts.push('similar effort-to-return ratio');
   }
 
   if (parts.length === 0) {
