@@ -15,7 +15,7 @@ import {
   activatePlanWithBlock, getRoutinesForPlan, createWorkout, getRoutineExercisesWithDetails,
   archivePlan, duplicatePlan, softDeleteRoutine, getActiveBlock,
 } from '../lib/database';
-import { getBlockStatus } from '../lib/mesocycle';
+import { getBlockAdvice } from '../lib/blockAdvisor';
 import useAppStore from '../store/useAppStore';
 
 const BLOCK_SNOOZE_KEY = '@volyume_block_snooze';
@@ -45,15 +45,22 @@ const ACTION_CARDS = [
   },
 ];
 
+const BLOCK_ICON = {
+  heads_up: 'alert-circle-outline',
+  early_deload: 'battery-charging-outline',
+  in_recovery: 'moon-outline',
+  post_recovery: 'checkmark-circle-outline',
+};
+
 export default function PlansScreen({ navigation }) {
-  const { user, startWorkout, tier } = useAppStore();
+  const { user, startWorkout, tier, userProfile } = useAppStore();
   const [activePlan, setActivePlanData] = useState(null);
   const [myPlans, setMyPlans] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [planWorkoutCounts, setPlanWorkoutCounts] = useState({});
   const [exerciseCounts, setExerciseCounts] = useState({});
   const [refreshing, setRefreshing] = useState(false);
-  const [blockStatus, setBlockStatus] = useState(null); // null | { status, currentWeek, totalWeeks, ... }
+  const [blockAdvice, setBlockAdvice] = useState(null);
   const [blockSnoozed, setBlockSnoozed] = useState(false);
 
   const scrollRef = useRef(null);
@@ -83,18 +90,23 @@ export default function PlansScreen({ navigation }) {
       setExerciseCounts(exc);
 
       if (block) {
-        const status = getBlockStatus(block.startDate, block.plannedWeeks || block.durationWeeks || 5);
-        setBlockStatus(status.status !== 'active' ? status : null);
+        const advice = await getBlockAdvice(user.id, block, userProfile).catch(() => null);
+        setBlockAdvice(advice);
 
-        const snoozeRaw = await AsyncStorage.getItem(BLOCK_SNOOZE_KEY).catch(() => null);
-        if (snoozeRaw) {
-          const snoozeUntil = parseInt(snoozeRaw, 10);
-          setBlockSnoozed(Date.now() < snoozeUntil);
+        // heads_up always shows (informational, no snooze needed)
+        if (advice && advice.action !== 'continue' && advice.action !== 'heads_up') {
+          const snoozeRaw = await AsyncStorage.getItem(BLOCK_SNOOZE_KEY).catch(() => null);
+          if (snoozeRaw) {
+            setBlockSnoozed(Date.now() < parseInt(snoozeRaw, 10));
+          } else {
+            setBlockSnoozed(false);
+          }
         } else {
           setBlockSnoozed(false);
         }
       } else {
-        setBlockStatus(null);
+        setBlockAdvice(null);
+        setBlockSnoozed(false);
       }
     } catch (_e) {}
   }
@@ -209,6 +221,16 @@ export default function PlansScreen({ navigation }) {
     navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
   }
 
+  function blockIconColor(action) {
+    if (action === 'in_recovery') return colors.primary;
+    if (action === 'post_recovery') return colors.success;
+    return colors.warning;
+  }
+
+  const showBlockCard = blockAdvice && activePlan &&
+    blockAdvice.action !== 'continue' &&
+    (blockAdvice.action === 'heads_up' || !blockSnoozed);
+
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <ScrollView
@@ -221,54 +243,89 @@ export default function PlansScreen({ navigation }) {
           <VolyumeMark size={38} color={colors.textMuted} />
         </View>
 
-        {/* Block transition card */}
-        {blockStatus && !blockSnoozed && activePlan && (
+        {/* Block advisor card */}
+        {showBlockCard && (
           <View style={[
             styles.blockCard,
-            blockStatus.status === 'recovery' ? styles.blockCardRecovery : styles.blockCardComplete,
+            blockAdvice.action === 'heads_up' && styles.blockCardHeadsUp,
+            blockAdvice.action === 'early_deload' && styles.blockCardWarning,
+            blockAdvice.action === 'in_recovery' && styles.blockCardRecovery,
+            blockAdvice.action === 'post_recovery' && styles.blockCardComplete,
           ]}>
             <View style={styles.blockCardHeader}>
               <View style={styles.blockCardIconWrap}>
                 <Ionicons
-                  name={blockStatus.status === 'recovery' ? 'moon-outline' : 'checkmark-circle-outline'}
+                  name={BLOCK_ICON[blockAdvice.action] || 'information-circle-outline'}
                   size={20}
-                  color={blockStatus.status === 'recovery' ? colors.warning : colors.success}
+                  color={blockIconColor(blockAdvice.action)}
                 />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.blockCardTitle}>
-                  {blockStatus.status === 'recovery'
-                    ? 'Recovery week'
-                    : 'Training block complete'}
-                </Text>
-                <Text style={styles.blockCardSub}>
-                  {blockStatus.status === 'recovery'
-                    ? `Week ${blockStatus.currentWeek} of ${blockStatus.totalWeeks}. Lighter sessions this week. Decide what's next below.`
-                    : blockStatus.status === 'overdue'
-                      ? `Your block finished ${blockStatus.weeksOverdue + 1} week${blockStatus.weeksOverdue > 0 ? 's' : ''} ago. Choose what's next.`
-                      : 'Recovery week is done. Time to start your next block.'}
-                </Text>
+              <Text style={styles.blockCardTitle}>{blockAdvice.headline}</Text>
+            </View>
+
+            <Text style={styles.blockCardBody}>{blockAdvice.body}</Text>
+
+            {/* Signal chips — shown for early_deload and heads_up */}
+            {blockAdvice.signals?.filter(s => s.severity !== 'info').length > 0 && (
+              <View style={styles.signalRow}>
+                {blockAdvice.signals.filter(s => s.severity !== 'info').map((sig, i) => (
+                  <View key={i} style={[styles.signalChip, sig.severity === 'high' && styles.signalChipHigh]}>
+                    <Text style={[styles.signalChipText, sig.severity === 'high' && styles.signalChipTextHigh]}>
+                      {sig.label}
+                    </Text>
+                  </View>
+                ))}
               </View>
-            </View>
+            )}
 
-            <Text style={styles.blockNextLabel}>What's next?</Text>
-            <View style={styles.blockCardActions}>
-              <TouchableOpacity style={styles.blockRestartBtn} onPress={handleRestartPlan} activeOpacity={0.85}>
-                <Ionicons name="refresh-outline" size={15} color={colors.background} />
-                <Text style={styles.blockRestartBtnText}>Run this plan again</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.blockNewBtn}
-                onPress={() => navigation.navigate(tier === 'pro' ? 'CoachBuilder' : 'ProUpgrade')}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.blockNewBtnText}>Build a new plan</Text>
-              </TouchableOpacity>
-            </View>
+            {/* Next block recommendation */}
+            {blockAdvice.nextBlock && (
+              <View style={styles.nextBlockSection}>
+                {blockAdvice.action === 'in_recovery' && (
+                  <Text style={styles.nextBlockPreLabel}>After your recovery week</Text>
+                )}
+                <Text style={styles.nextBlockHeadline}>{blockAdvice.nextBlock.headline}</Text>
+                <Text style={styles.nextBlockBody}>{blockAdvice.nextBlock.body}</Text>
 
-            {blockStatus.status === 'recovery' && (
+                {/* CTAs only shown when block is complete and recovery is done */}
+                {blockAdvice.action === 'post_recovery' && (
+                  <View style={styles.blockCardActions}>
+                    <TouchableOpacity style={styles.blockRestartBtn} onPress={handleRestartPlan} activeOpacity={0.85}>
+                      <Ionicons name="refresh-outline" size={15} color={colors.background} />
+                      <Text style={styles.blockRestartBtnText}>{blockAdvice.nextBlock.actionLabel}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.blockNewBtn}
+                      onPress={() => navigation.navigate(tier === 'pro' ? 'CoachBuilder' : 'ProUpgrade')}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.blockNewBtnText}>{blockAdvice.nextBlock.secondaryLabel}</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Early deload dismiss options */}
+            {blockAdvice.action === 'early_deload' && (
+              <View style={styles.blockCardActions}>
+                <TouchableOpacity style={styles.blockRestartBtn} onPress={handleSnoozeBlock} activeOpacity={0.85}>
+                  <Text style={styles.blockRestartBtnText}>Got it, I'll ease off</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.blockNewBtn} onPress={handleSnoozeBlock} activeOpacity={0.85}>
+                  <Text style={styles.blockNewBtnText}>Keep going</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Snooze links for recovery states */}
+            {(blockAdvice.action === 'in_recovery' || blockAdvice.action === 'post_recovery') && (
               <TouchableOpacity onPress={handleSnoozeBlock} style={styles.blockSnooze}>
-                <Text style={styles.blockSnoozeText}>Remind me after recovery week</Text>
+                <Text style={styles.blockSnoozeText}>
+                  {blockAdvice.action === 'in_recovery'
+                    ? 'Remind me after recovery week'
+                    : 'Not quite ready — remind me later'}
+                </Text>
               </TouchableOpacity>
             )}
           </View>
@@ -293,6 +350,11 @@ export default function PlansScreen({ navigation }) {
                   {planWorkoutCounts[activePlan.id]} workout{planWorkoutCounts[activePlan.id] !== 1 ? 's' : ''}
                 </Text>
               ) : null}
+              {blockAdvice?.action === 'continue' && blockAdvice.blockStatus && (
+                <Text style={styles.activePlanWeek}>
+                  Week {blockAdvice.blockStatus.currentWeek} of {blockAdvice.blockStatus.totalWeeks}
+                </Text>
+              )}
               <View style={styles.activePlanActions}>
                 <TouchableOpacity style={styles.startNextBtn} onPress={() => handleStartNextWorkout(activePlan)}>
                   <Ionicons name="play" size={15} color={colors.background} />
@@ -334,7 +396,7 @@ export default function PlansScreen({ navigation }) {
                   ) : null}
                 </TouchableOpacity>
                 <View style={styles.planCardActions}>
-                  <TouchableOpacity style={styles.setActiveBtn} onPress={() => handleSetActive(plan.id)}>
+                  <TouchableOpacity style={styles.setActiveBtn} onPress={() => handleSetActive(plan)}>
                     <Text style={styles.setActiveBtnText}>Set Active</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -464,6 +526,7 @@ const styles = StyleSheet.create({
   activeBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.black, letterSpacing: 1 },
   activePlanName: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
   activePlanMeta: { fontSize: fontSize.sm, color: colors.textSecondary },
+  activePlanWeek: { fontSize: fontSize.xs, color: colors.textMuted },
   activePlanActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
   startNextBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
@@ -534,28 +597,80 @@ const styles = StyleSheet.create({
     borderColor: colors.primary + '40',
   },
 
+  // Block advisor card
   blockCard: {
     borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md,
     borderWidth: 1,
   },
-  blockCardRecovery: {
+  blockCardHeadsUp: {
     backgroundColor: colors.surface,
     borderColor: colors.warning + '50',
+  },
+  blockCardWarning: {
+    backgroundColor: colors.surface,
+    borderColor: colors.warning + '70',
+  },
+  blockCardRecovery: {
+    backgroundColor: colors.surface,
+    borderColor: colors.primary + '50',
   },
   blockCardComplete: {
     backgroundColor: colors.surface,
     borderColor: colors.success + '50',
   },
-  blockCardHeader: { flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' },
+  blockCardHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+  },
   blockCardIconWrap: {
     width: 36, height: 36, borderRadius: 18,
     backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
-    marginTop: 2,
+    flexShrink: 0,
   },
-  blockCardTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: 2 },
-  blockCardSub: { fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 17 },
-  blockNextLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.2 },
-  blockCardActions: { flexDirection: 'row', gap: spacing.md },
+  blockCardTitle: {
+    flex: 1, fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary,
+  },
+  blockCardBody: {
+    fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20,
+  },
+
+  // Signal chips
+  signalRow: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs,
+  },
+  signalChip: {
+    paddingHorizontal: spacing.sm, paddingVertical: 4,
+    backgroundColor: colors.surface2, borderRadius: radius.full,
+    borderWidth: 1, borderColor: colors.warning + '50',
+  },
+  signalChipHigh: {
+    borderColor: colors.error + '60',
+    backgroundColor: colors.error + '10',
+  },
+  signalChipText: {
+    fontSize: fontSize.xs, color: colors.warning, fontWeight: fontWeight.medium,
+  },
+  signalChipTextHigh: {
+    color: colors.error,
+  },
+
+  // Next block section
+  nextBlockSection: {
+    borderTopWidth: 1, borderTopColor: colors.border,
+    paddingTop: spacing.md, gap: spacing.sm,
+  },
+  nextBlockPreLabel: {
+    fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
+    color: colors.textMuted, letterSpacing: 0.2,
+  },
+  nextBlockHeadline: {
+    fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary,
+  },
+  nextBlockBody: {
+    fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20,
+  },
+
+  // Block card action buttons
+  blockCardActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
   blockRestartBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.xs, backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md,
