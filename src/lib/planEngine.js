@@ -11,11 +11,11 @@
 export const GOAL_LABELS = {
   general_hypertrophy:   'Build Muscle',
   balanced_bodybuilding: 'Balanced Bodybuilding',
-  aesthetic_v_taper:     'Aesthetic / V-Taper',
-  weak_point_spec:       'Weak Point Specialisation',
+  aesthetic_v_taper:     'V-Taper',
+  weak_point_spec:       'Bring Up a Weak Spot',
   strength_hypertrophy:  'Strength + Size',
   recomp:                'Hold Muscle, Lose Fat',
-  x_frame_physique:      'X-Frame Physique',
+  x_frame_physique:      'X-Frame',
 };
 
 export const SPLIT_LABELS = {
@@ -1000,12 +1000,12 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
   // goal
   const goalMap = {
     general_hypertrophy:   `Even, well-rounded muscle growth. Sets are spread across all major muscle groups so nothing gets systematically undertrained, which is the most common cause of stalled progress.`,
-    balanced_bodybuilding: `Balanced Bodybuilding spreads sets evenly so no single muscle dominates the plan. This prevents the common imbalances (overdeveloped chest, underdeveloped back, neglected rear delts) that build up over years of unstructured training.`,
-    aesthetic_v_taper:     `V-Taper prioritises the muscles that create shoulder-to-waist width: outer shoulders, back width, and rear delts. You will see more sets on these muscles than a general plan would assign. Abs use only anti-extension and rotation exercises. Direct crunching work is de-emphasised.`,
-    weak_point_spec:        `Weak Point Specialisation gives${weakPointUILabels.length ? ' ' + weakPointUILabels.join(' and ') : ' your selected muscles'} more sets than a balanced plan would assign, while keeping everything else at enough to hold current size. Sustained targeted effort over several weeks is how areas behind the rest close the gap.`,
+    balanced_bodybuilding: `This plan spreads sets evenly so no single muscle dominates the programme. It prevents the common imbalances — overdeveloped chest, underdeveloped back, neglected rear delts — that build up over years of unstructured training.`,
+    aesthetic_v_taper:     `V-Taper prioritises the muscles that create upper-body width: outer shoulders, back width, and rear delts. You will see more sets on these muscles than a general plan would assign. Ab work focuses on rotation and stability rather than crunches.`,
+    weak_point_spec:        `This goal gives${weakPointUILabels.length ? ' ' + weakPointUILabels.join(' and ') : ' your selected muscles'} more sets than a balanced plan would assign, while keeping everything else at enough to hold current size. Consistent targeted work over several weeks is how muscles behind the rest close the gap.`,
     strength_hypertrophy:  `Muscle growth is still the goal, but your main compound lifts are loaded heavier and in a lower rep range. Building strength lets you use more weight over time, and more weight applied correctly means more muscle.`,
     recomp:                `Hold Muscle, Lose Fat keeps your training load at a level your body can recover from while eating at a slight calorie deficit. The goal is holding the muscle you already have while your nutrition gradually reduces body fat. Training stays consistent; recovery is the limiting factor, not your effort.`,
-    x_frame_physique:      `X-Frame Physique concentrates volume on the four visual anchor points (outer shoulders, back width, glutes and hamstrings) that create a dramatic X silhouette when viewed from front and rear. Side delts, lats, and posterior chain receive additional sets each week; direct waist-widening ab work is minimised to preserve the illusion of a narrow mid-section.`,
+    x_frame_physique:      `X-Frame concentrates work on the four main anchor points: outer shoulders, back width, glutes, and hamstrings. These create a balanced, proportional build from every angle. Side delts, lats, and hamstrings each get extra sets each week. Direct ab work that widens the waist is kept minimal.`,
   };
   result.goal = goalMap[goal] ?? `Goal: ${GOAL_LABELS[goal] ?? goal}.`;
 
