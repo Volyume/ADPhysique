@@ -26,56 +26,14 @@ jobs:
         run: npm install --legacy-peer-deps
 
       # expo-modules-core 1.12.x uses `from components.release` inside
-      # afterEvaluate which fails with AGP 8.4+. Patch it to use
-      # findByName() so the build doesn't crash during configuration.
+      # afterEvaluate which fails with AGP 8.4+. Deleting that single line
+      # is safe — a MavenPublication without a component is valid and we
+      # never publish to Maven when building an APK.
       - name: Patch expo-modules-core for AGP 8.4+ compatibility
         run: |
-          python3 << 'PYEOF'
-          with open('node_modules/expo-modules-core/android/ExpoModulesCorePlugin.gradle') as f:
-              content = f.read()
-          old = (
-              '  project.afterEvaluate {\n'
-              '    publishing {\n'
-              '      publications {\n'
-              '        release(MavenPublication) {\n'
-              '          from components.release\n'
-              '        }\n'
-              '      }\n'
-              '      repositories {\n'
-              '        maven {\n'
-              '          url = mavenLocal().url\n'
-              '        }\n'
-              '      }\n'
-              '    }\n'
-              '  }'
-          )
-          new = (
-              '  project.afterEvaluate {\n'
-              '    def releaseComponent = components.findByName(\'release\')\n'
-              '    if (releaseComponent != null) {\n'
-              '      publishing {\n'
-              '        publications {\n'
-              '          release(MavenPublication) {\n'
-              '            from releaseComponent\n'
-              '          }\n'
-              '        }\n'
-              '        repositories {\n'
-              '          maven {\n'
-              '            url = mavenLocal().url\n'
-              '          }\n'
-              '        }\n'
-              '      }\n'
-              '    }\n'
-              '  }'
-          )
-          patched = content.replace(old, new)
-          if patched == content:
-              print('WARNING: pattern not found, file unchanged')
-          else:
-              with open('node_modules/expo-modules-core/android/ExpoModulesCorePlugin.gradle', 'w') as f:
-                  f.write(patched)
-              print('Patched ExpoModulesCorePlugin.gradle successfully')
-          PYEOF
+          FILE=node_modules/expo-modules-core/android/ExpoModulesCorePlugin.gradle
+          sed -i '/from components\.release/d' "$FILE"
+          echo "Patch applied. Remaining occurrences: $(grep -c 'components\.release' "$FILE" || echo 0)"
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
