@@ -4,7 +4,6 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { View, Text, Image, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { VolyumeMark } from '../components/BrandMark';
 
 const SPLASH_HERO = require('../../assets/volyume-splash-hero.png');
 const HERO_ASPECT = 941 / 1672;
@@ -386,10 +385,14 @@ function SplashScreen() {
         />
       </Animated.View>
 
-      <Animated.View style={[splashStyles.wordRow, { opacity: wordOpacity, transform: [{ translateY: wordY }] }]}>
-        <VolyumeMark size={30} />
-        <Text style={splashStyles.wordmark}>VOLYUME</Text>
-      </Animated.View>
+      <Animated.Text
+        style={[
+          splashStyles.wordmark,
+          { opacity: wordOpacity, transform: [{ translateY: wordY }] },
+        ]}
+      >
+        VOLYUME
+      </Animated.Text>
 
       <Animated.View style={[splashStyles.accent, { transform: [{ scaleX: accentScaleX }] }]} />
 
@@ -406,31 +409,29 @@ const splashStyles = StyleSheet.create({
     backgroundColor: '#000000',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.md,
-  },
-  wordRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginTop: spacing.sm,
   },
   wordmark: {
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: fontWeight.bold,
     color: colors.textPrimary,
-    letterSpacing: 4,
+    letterSpacing: 6,
     includeFontPadding: false,
+    textAlign: 'center',
+    marginTop: spacing.lg,
   },
   accent: {
-    width: 36,
+    width: 40,
     height: 2,
     borderRadius: 1,
     backgroundColor: colors.primary,
+    marginTop: spacing.md,
   },
   tagline: {
     fontSize: 13,
     color: colors.textMuted,
     letterSpacing: 0.4,
     fontWeight: fontWeight.regular,
+    textAlign: 'center',
+    marginTop: spacing.md,
   },
 });
