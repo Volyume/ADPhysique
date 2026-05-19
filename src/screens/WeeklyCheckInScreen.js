@@ -366,7 +366,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             </View>
           ) : (
             <View style={styles.section}>
-              <SectionLabel>Calorie adherence</SectionLabel>
+              <SectionLabel>Calorie target</SectionLabel>
               <TouchableOpacity
                 onPress={() => navigation.navigate('NutritionTargets')}
                 activeOpacity={0.75}

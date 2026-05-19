@@ -421,7 +421,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         {dietBreakSuggested && (
           <AmberAlertCard
             title="Maintenance break suggested"
-            body={dietBreakNote ?? 'A short period at maintenance calories can help reset hunger hormones and improve adherence.'}
+            body={dietBreakNote ?? 'A short period at maintenance calories can help reset hunger hormones and make it easier to stick to your plan.'}
             footnote="This is a suggestion. Your call."
           />
         )}

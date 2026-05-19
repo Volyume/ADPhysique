@@ -545,7 +545,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   '↑ Add set: you recovered well, you can handle a bit more\n' +
                   '↓ Drop set: signs of fatigue, ease off to come back stronger\n' +
                   '⚠ Recovery week: take a lighter week across the board\n' +
-                  '→ Hold: volume is right, keep going as planned'
+                  '→ Hold: sets are right, keep going as planned'
                 } />
               </View>
               {Object.entries(adaptiveDecisions)
@@ -594,7 +594,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               </View>
               <Text style={styles.deloadCardBody}>{deloadRecommendation.reason}</Text>
               <Text style={styles.deloadCardNote}>
-                Next week will auto-generate lighter loads (week 1 weight × 50% reps). You can skip at any time.
+                Next week's plan will use lighter weights and fewer reps. You can skip at any time.
               </Text>
             </View>
           )}

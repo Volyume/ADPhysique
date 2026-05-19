@@ -94,7 +94,7 @@ export function generateInsights({ workouts = [], sets = [], exerciseMap = {}, n
       const name = MUSCLE_DISPLAY_NAMES[muscleKey] ?? muscleKey;
       insights.push(mkInsight(
         'under_mev_muscle', 1,
-        `Your ${name.toLowerCase()} volume has been low for 3 weeks. Adding a set or two this week will get it growing again.`,
+        `Your ${name.toLowerCase()} hasn't had much work in 3 weeks. Adding a set or two this week will get it growing again.`,
         `under_mev_${muscleKey}`,
         { muscle: muscleKey },
       ));

@@ -101,7 +101,7 @@ function detectRepRegressions(sets, exerciseMap) {
         exercise_id: exId,
         exerciseName: ex?.name ?? 'Unknown exercise',
         muscle: ex?.primaryMuscle ?? ex?.primary_muscle ?? null,
-        reason_text: `Avg reps: ${Math.round(r2 * 10) / 10} → ${Math.round(r1 * 10) / 10} → ${Math.round(r0 * 10) / 10} over 3 weeks. Consider a lighter week or load reduction.`,
+        reason_text: `Avg reps: ${Math.round(r2 * 10) / 10} → ${Math.round(r1 * 10) / 10} → ${Math.round(r0 * 10) / 10} over 3 weeks. Consider dropping the weight slightly or taking a lighter week.`,
         decision: 'rep_regression',
         created_at: now,
       });
