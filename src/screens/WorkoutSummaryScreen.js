@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert,
+  Modal, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -78,6 +79,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const [adaptiveDecisions, setAdaptiveDecisions] = useState({});
   const [deloadRecommendation, setDeloadRecommendation] = useState(null);
   const [readOnlyExerciseData, setReadOnlyExerciseData] = useState([]);
+  const [templateModalVisible, setTemplateModalVisible] = useState(false);
+  const [templateName, setTemplateName] = useState('');
 
   const feedbackDebounceRef = useRef(null);
 
@@ -324,23 +327,26 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     navigation.navigate('ShareCard', { sessionData, prData });
   }
 
-  async function handleSaveAsTemplate() {
+  function handleSaveAsTemplate() {
     if (!exerciseData.length) {
       Alert.alert('No exercises', 'No exercise data available to save as template.');
       return;
     }
-    Alert.prompt(
-      'Save as Workout Template',
-      'Name this template:',
-      async (name) => {
-        if (!name?.trim()) return;
-        const { createWorkoutTemplateFromWorkout } = require('../lib/database');
-        await createWorkoutTemplateFromWorkout(user.id, name.trim(), exerciseData);
-        Alert.alert('Template Saved', `"${name.trim()}" added to Workout Templates in Plans.`);
-      },
-      'plain-text',
-      exerciseNames.slice(0, 2).join(' & ') || 'My Workout',
-    );
+    setTemplateName(exerciseNames.slice(0, 2).join(' & ') || 'My Workout');
+    setTemplateModalVisible(true);
+  }
+
+  async function confirmSaveTemplate() {
+    const name = templateName.trim();
+    if (!name) return;
+    setTemplateModalVisible(false);
+    try {
+      const { createWorkoutTemplateFromWorkout } = require('../lib/database');
+      await createWorkoutTemplateFromWorkout(user.id, name, exerciseData);
+      Alert.alert('Template Saved', `"${name}" added to Workout Templates in Plans.`);
+    } catch (_) {
+      Alert.alert('Error', 'Could not save template. Please try again.');
+    }
   }
 
   const musclesWorked = Object.keys(weeklyVolume)
@@ -658,6 +664,49 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           )}
         </View>
       </View>
+
+      {/* Template name modal — cross-platform alternative to Alert.prompt */}
+      <Modal
+        visible={templateModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setTemplateModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          style={styles.templateModalBg}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={styles.templateModalCard}>
+            <Text style={styles.templateModalTitle}>Save as Workout Template</Text>
+            <TextInput
+              style={styles.templateModalInput}
+              value={templateName}
+              onChangeText={setTemplateName}
+              placeholder="Template name"
+              placeholderTextColor={colors.textMuted}
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={confirmSaveTemplate}
+              selectTextOnFocus
+            />
+            <View style={styles.templateModalBtns}>
+              <TouchableOpacity
+                style={styles.templateModalCancel}
+                onPress={() => setTemplateModalVisible(false)}
+              >
+                <Text style={styles.templateModalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.templateModalSave, !templateName.trim() && { opacity: 0.4 }]}
+                onPress={confirmSaveTemplate}
+                disabled={!templateName.trim()}
+              >
+                <Text style={styles.templateModalSaveText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -895,4 +944,33 @@ const styles = StyleSheet.create({
   deloadCardTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.warning, letterSpacing: 0.5 },
   deloadCardBody: { fontSize: fontSize.sm, color: colors.textPrimary, lineHeight: 20 },
   deloadCardNote: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18 },
+
+  templateModalBg: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center', alignItems: 'center', padding: spacing.xl,
+  },
+  templateModalCard: {
+    backgroundColor: colors.surface, borderRadius: radius.xl,
+    padding: spacing.xl, width: '100%', gap: spacing.md,
+  },
+  templateModalTitle: {
+    fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary,
+  },
+  templateModalInput: {
+    backgroundColor: colors.surface2, borderRadius: radius.md,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm + 2,
+    fontSize: fontSize.md, color: colors.textPrimary,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  templateModalBtns: { flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end' },
+  templateModalCancel: {
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
+    borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
+  },
+  templateModalCancelText: { fontSize: fontSize.sm, color: colors.textSecondary },
+  templateModalSave: {
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
+    borderRadius: radius.md, backgroundColor: colors.primary,
+  },
+  templateModalSaveText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.background },
 });
