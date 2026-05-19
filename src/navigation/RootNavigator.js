@@ -51,6 +51,8 @@ import WeeklyCheckInScreen from '../screens/WeeklyCheckInScreen';
 import CoachOutputScreen from '../screens/CoachOutputScreen';
 import ProGoalSetupScreen from '../screens/ProGoalSetupScreen';
 import NotificationSettingsScreen from '../screens/NotificationSettingsScreen';
+import ProOnboardingScreen from '../screens/ProOnboardingScreen';
+import ProSetupCompleteScreen from '../screens/ProSetupCompleteScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -187,6 +189,18 @@ function FirstRunStack() {
   );
 }
 
+function ProOnboardingStack() {
+  return (
+    <Stack.Navigator screenOptions={{ ...stackOptions, headerShown: false }}>
+      <Stack.Screen name="ProOnboarding" component={ProOnboardingScreen} />
+      <Stack.Screen name="CoachBuilder" component={CoachBuilderScreen} />
+      <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ headerShown: true, title: 'Plan Library' }} />
+      <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ headerShown: true, title: 'Plan' }} />
+      <Stack.Screen name="ProSetupComplete" component={ProSetupCompleteScreen} />
+    </Stack.Navigator>
+  );
+}
+
 const SPLASH_MIN_MS = 3800;
 
 export default function RootNavigator() {
@@ -265,11 +279,14 @@ export default function RootNavigator() {
 
   // Navigation priority:
   // 1. No tier chosen yet → WelcomeScreen (tier selection)
-  // 2. Tier chosen, first-run not done → FirstRunStack (onboarding)
-  // 3. Both done → MainTabs
+  // 2. Pro + first-run not done → ProOnboardingStack (guided 5-step setup)
+  // 3. Free + first-run not done → FirstRunStack (quick setup)
+  // 4. Both done → MainTabs
   function renderNavigator() {
     if (!tier) return <WelcomeStack />;
-    if (!firstRunComplete) return <FirstRunStack />;
+    if (!firstRunComplete) {
+      return tier === 'pro' ? <ProOnboardingStack /> : <FirstRunStack />;
+    }
     return <MainTabs />;
   }
 

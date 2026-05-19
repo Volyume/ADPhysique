@@ -361,11 +361,12 @@ export default function CoachBuilderScreen({ navigation, route }) {
       }
 
       if (isFirstRun) {
-        await completeFirstRun();
-        // Pro users: prompt to create an account so their data is backed up.
-        // The prompt is shown via the Login screen with a signup-first flag.
-        if (tier === 'pro' && user?.isLocal) {
-          navigation.navigate('Login', { promptSignup: true });
+        if (tier === 'pro') {
+          // Pro first-run ends at ProSetupComplete, not here — completeFirstRun
+          // is called from ProSetupCompleteScreen after the "Start training" tap.
+          navigation.navigate('ProSetupComplete');
+        } else {
+          await completeFirstRun();
         }
         return;
       }

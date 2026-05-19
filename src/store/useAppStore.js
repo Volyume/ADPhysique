@@ -91,6 +91,24 @@ const useAppStore = create((set, get) => ({
     set({ tier });
   },
 
+  // Called after cloud sign-in: reads tier from Supabase and uses it as the
+  // authoritative value. During beta this is a no-op (Supabase tier = 'pro').
+  // After beta, this becomes the enforcement point — server wins.
+  refreshTierFromCloud: async (supabaseClient, supabaseUserId) => {
+    if (!supabaseClient || !supabaseUserId) return;
+    try {
+      const { data } = await supabaseClient
+        .from('users_profile')
+        .select('tier')
+        .eq('id', supabaseUserId)
+        .maybeSingle();
+      if (data?.tier) {
+        await AsyncStorage.setItem(TIER_KEY, data.tier);
+        set({ tier: data.tier });
+      }
+    } catch (_) {}
+  },
+
   // First-run / onboarding gate
   firstRunComplete: true,        // assume complete until checked (avoids flash)
   firstRunChecked: false,

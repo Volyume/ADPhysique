@@ -42,11 +42,11 @@ function getClient() {
 /**
  * Upsert user profile to Supabase after sign-in or profile update.
  */
-export async function syncProfile(supabaseUserId, userProfile, tier) {
+export async function syncProfile(supabaseUserId, userProfile, tier, { isBetaTester = false } = {}) {
   const sb = getClient();
   if (!sb || !supabaseUserId) return;
   try {
-    await sb.from('users_profile').upsert({
+    const payload = {
       id: supabaseUserId,
       first_name: userProfile?.firstName ?? null,
       units: userProfile?.units ?? 'kg',
@@ -56,7 +56,11 @@ export async function syncProfile(supabaseUserId, userProfile, tier) {
       tier: tier ?? 'free',
       bar_weight: userProfile?.barWeight ?? 20,
       updated_at: new Date().toISOString(),
-    }, { onConflict: 'id' });
+    };
+    // Mark beta testers on first sign-up so they can receive extended Pro at launch.
+    // Only set on creation (INSERT wins), never overwrite an existing false → true.
+    if (isBetaTester) payload.is_beta_tester = true;
+    await sb.from('users_profile').upsert(payload, { onConflict: 'id' });
   } catch (e) {
     console.warn('[sync] syncProfile failed:', e?.message);
   }
