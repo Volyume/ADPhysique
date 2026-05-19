@@ -22,7 +22,7 @@ const COLLECTIONS = [
   { key: 'beginner',  label: 'Beginner' },
   { key: 'dumbbell',  label: 'Dumbbells only' },
   { key: 'short',     label: 'Short sessions' },
-  { key: 'division',  label: 'Division prep' },
+  { key: 'division',  label: 'Bodybuilding Divisions' },
 ];
 
 // ─── Divisions ────────────────────────────────────────────────────────────────
@@ -174,6 +174,9 @@ function PlanBadge({ label, amber }) {
 function DivisionGrid({ selectedDivision, onSelectDivision }) {
   return (
     <View style={styles.divisionSection}>
+      <Text style={styles.divisionIntroDesc}>
+        These programmes are built around the specific visual priorities of each judged division. Designed for competitors — or anyone who trains with a division in mind.
+      </Text>
       <Text style={styles.divisionGroupLabel}>Men's divisions</Text>
       <View style={styles.divisionChips}>
         {DIVISIONS_MEN.map(d => (
@@ -636,6 +639,12 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
     color: colors.textMuted, letterSpacing: 0.3,
     marginBottom: spacing.sm,
+  },
+  divisionIntroDesc: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    lineHeight: 18,
+    marginBottom: spacing.md,
   },
   divisionChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   divisionChip: {
