@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { getAllExercises, createWorkout } from '../lib/database';
+import { generateTravelPlan } from '../lib/travelMode';
 import useAppStore from '../store/useAppStore';
 
 const DEFAULT_SETS = 3;
@@ -20,6 +21,8 @@ export default function BuildWorkoutScreen({ navigation }) {
   const [query, setQuery] = useState('');
   const [allExercises, setAllExercises] = useState([]);
   const [starting, setStarting] = useState(false);
+  const [showTravelModal, setShowTravelModal] = useState(false);
+  const [travelEquipment, setTravelEquipment] = useState('bodyweight');
 
   async function openPicker() {
     if (allExercises.length === 0) {
@@ -100,6 +103,35 @@ export default function BuildWorkoutScreen({ navigation }) {
     navigation.replace('ActiveWorkout');
   }
 
+  async function applyTravelMode() {
+    setShowTravelModal(false);
+    const all = allExercises.length > 0 ? allExercises : await getAllExercises();
+    if (allExercises.length === 0) setAllExercises(all);
+    const plan = generateTravelPlan({ equipment: travelEquipment, daysPerWeek: 4, splitType: 'full_body' });
+    const session = plan.sessions[0];
+    const newItems = session.exercises.map(ex => {
+      const nameLower = ex.exerciseName.toLowerCase();
+      const match = all.find(e => e.name.toLowerCase() === nameLower)
+        ?? all.find(e => e.name.toLowerCase().includes(nameLower.split(' ')[0]));
+      const exercise = match ?? {
+        id: `travel-${Date.now()}-${Math.random()}`,
+        name: ex.exerciseName,
+        primaryMuscle: '',
+        equipment: travelEquipment,
+      };
+      return {
+        key: `${exercise.id}-${Date.now()}-${Math.random()}`,
+        exercise,
+        sets: ex.sets,
+        repsMin: ex.repsMin,
+        repsMax: ex.repsMax,
+        restSeconds: ex.restSec,
+        startingWeight: 0,
+      };
+    });
+    setExercises(newItems);
+  }
+
   const filtered = query.trim()
     ? allExercises.filter(e => e.name.toLowerCase().includes(query.toLowerCase()))
     : allExercises.slice(0, 50);
@@ -123,6 +155,13 @@ export default function BuildWorkoutScreen({ navigation }) {
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <Text style={styles.subtitle}>Add exercises and set your targets before you start.</Text>
+
+        {/* Travel Mode quick-fill */}
+        <TouchableOpacity style={styles.travelChip} onPress={() => setShowTravelModal(true)}>
+          <Ionicons name="airplane-outline" size={15} color={colors.primary} />
+          <Text style={styles.travelChipText}>Travel / Hotel Gym Mode</Text>
+          <Ionicons name="chevron-forward" size={13} color={colors.textMuted} />
+        </TouchableOpacity>
 
         {exercises.map((item, index) => (
           <View key={item.key} style={styles.exerciseCard}>
@@ -251,6 +290,41 @@ export default function BuildWorkoutScreen({ navigation }) {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Travel Mode equipment picker */}
+      <Modal visible={showTravelModal} transparent animationType="fade" onRequestClose={() => setShowTravelModal(false)}>
+        <View style={styles.travelOverlay}>
+          <View style={styles.travelCard}>
+            <Text style={styles.travelTitle}>Travel / Hotel Gym</Text>
+            <Text style={styles.travelSub}>Choose available equipment. We'll build a full-body session that maintains your muscle while away from the gym.</Text>
+            <View style={styles.travelOptions}>
+              {[
+                { id: 'bodyweight', label: 'Bodyweight only', icon: 'body-outline' },
+                { id: 'dumbbells',  label: 'Dumbbells',       icon: 'barbell-outline' },
+                { id: 'hotel_gym',  label: 'Hotel gym',        icon: 'fitness-outline' },
+              ].map(opt => (
+                <TouchableOpacity
+                  key={opt.id}
+                  style={[styles.travelOpt, travelEquipment === opt.id && styles.travelOptActive]}
+                  onPress={() => setTravelEquipment(opt.id)}
+                >
+                  <Ionicons name={opt.icon} size={20} color={travelEquipment === opt.id ? colors.primary : colors.textSecondary} />
+                  <Text style={[styles.travelOptText, travelEquipment === opt.id && { color: colors.primary }]}>{opt.label}</Text>
+                  {travelEquipment === opt.id && <Ionicons name="checkmark-circle" size={16} color={colors.primary} />}
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={styles.travelBtns}>
+              <TouchableOpacity style={styles.travelCancel} onPress={() => setShowTravelModal(false)}>
+                <Text style={styles.travelCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.travelConfirm} onPress={applyTravelMode}>
+                <Text style={styles.travelConfirmText}>Build Session</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={showPicker} animationType="slide" onRequestClose={() => setShowPicker(false)}>
         <SafeAreaView style={styles.pickerSafe}>
@@ -499,4 +573,43 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   pickerItemMuscle: { fontSize: fontSize.sm, color: colors.textSecondary },
+
+  // Travel mode chip + modal
+  travelChip: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    borderWidth: 1, borderColor: colors.primary + '50',
+    borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    backgroundColor: colors.surface, alignSelf: 'flex-start',
+  },
+  travelChipText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.medium, flex: 1 },
+  travelOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center', alignItems: 'center', padding: spacing.lg,
+  },
+  travelCard: {
+    backgroundColor: colors.surface, borderRadius: radius.xl,
+    padding: spacing.xl, width: '100%', gap: spacing.md,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  travelTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  travelSub: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  travelOptions: { gap: spacing.sm },
+  travelOpt: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    padding: spacing.md, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  travelOptActive: { borderColor: colors.primary, backgroundColor: colors.surface2 },
+  travelOptText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  travelBtns: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
+  travelCancel: {
+    flex: 1, paddingVertical: spacing.md, alignItems: 'center',
+    borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
+  },
+  travelCancelText: { fontSize: fontSize.sm, color: colors.textSecondary },
+  travelConfirm: {
+    flex: 1, paddingVertical: spacing.md, alignItems: 'center',
+    borderRadius: radius.md, backgroundColor: colors.primary,
+  },
+  travelConfirmText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.background },
 });

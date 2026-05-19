@@ -359,7 +359,7 @@ export default function AthleteHubScreen({ navigation }) {
                   <Text style={styles.milestoneNext}>
                     {next.sessions - totalWorkouts} to go — {next.label}
                   </Text>
-                  <InfoTooltip size={11} text={"Session milestones track long-term training consistency — the biggest predictor of muscle growth.\n\nEach session adds to your progressive overload history: your body adapts only through accumulated stimulus over time. The more quality sessions you log, the richer the data Volyume has to personalise your progression, spot rep regressions early, and time your deloads correctly.\n\nHitting milestones means you're building the habit, the mind-muscle connection, and the training base that makes long-term physique change inevitable."} />
+                  <InfoTooltip size={11} text={"Session milestones track long-term training consistency — the biggest predictor of muscle growth.\n\nEach session adds to your progressive overload history: your body adapts only through accumulated stimulus over time. The more quality sessions you log, the richer the data Volyume has to personalise your progression, spot rep regressions early, and time your recovery weeks correctly.\n\nHitting milestones means you're building the habit, the mind-muscle connection, and the training base that makes long-term physique change inevitable."} />
                 </View>
               )}
             </View>

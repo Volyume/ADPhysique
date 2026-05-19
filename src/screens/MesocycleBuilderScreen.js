@@ -177,7 +177,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
                   <InfoTooltip
                     size={14}
                     text={
-                      'A Training Block (mesocycle) is a structured period — usually 4–8 weeks — ' +
+                      'A Training Block is a structured period — usually 4–8 weeks — ' +
                       'where your weekly volume gradually builds, then drops during a lighter recovery week to let your body absorb the gains.\n\n' +
                       'Your plan (the workouts and exercises) lives independently. A block is an ' +
                       'optional layer you add on top to track periodised progress across those weeks.\n\n' +
