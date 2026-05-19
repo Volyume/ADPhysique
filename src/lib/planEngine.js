@@ -1011,10 +1011,10 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
 
   // experience
   const expMap = {
-    beginner:     `At beginner level, your body responds strongly to almost any structured stimulus. Volume starts lower to let you build the movement quality and work capacity needed to absorb more sets as you progress through the plan.`,
-    intermediate: `At intermediate level, your muscles need more total weekly sets to keep adapting than they did early on. This plan sits in the range where enough work is done to drive progress without accumulating more fatigue than your body can clear between sessions.`,
-    advanced:     `At advanced level, gains come more slowly and require more specific programming. Higher weekly set counts are used here because your muscles have adapted to handle and recover from greater training volumes — lower volumes would not provide enough stimulus to progress.`,
-    competitive:  `At competitive level, your muscles have adapted to high volumes and need near-maximum weekly stimulus to keep changing. The plan uses the highest set counts across the board, balanced against recovery so you can sustain the training quality across the full block.`,
+    beginner:     `When you're starting out, your body responds well to almost any consistent training. Volume is kept lower here so you can build good technique and work capacity before adding more sets.`,
+    intermediate: `At this stage, your muscles need more total weekly sets to keep improving than they did early on. This plan does enough to keep you progressing without piling up more fatigue than you can recover from between sessions.`,
+    advanced:     `Progress comes more slowly now and needs more specific programming. Set counts are higher here because your body has adapted to handle more work — lower volumes simply would not be enough to keep you moving forward.`,
+    competitive:  `Your muscles have adapted to high training volumes and need a lot of weekly work to keep changing. This plan uses the highest set counts, balanced carefully against recovery so you can sustain quality across the full block.`,
   };
   result.experience = expMap[experience] ?? `Experience level: ${experience}.`;
 

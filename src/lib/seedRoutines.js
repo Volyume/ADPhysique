@@ -131,7 +131,7 @@ const LIBRARY_PLANS = [
   // ── 4. Upper / Lower 4×/Week (Intermediate) ──────────────────────────────
   {
     name: 'Upper / Lower 4×/Week',
-    description: 'The most evidence-supported split for building muscle: each muscle group trained twice per week, separated by 48–72 hours for optimal recovery and re-stimulation. Upper A focuses on heavier compound work (5–8 reps); Upper B shifts to higher-rep muscle building ranges (10–15 reps) targeting the same muscles from different angles. Add reps session by session; when you reach the top of the rep range, add a little weight and start again. Suits lifters with 6+ months of consistent training. Stop 1 to 2 reps before failure on each set.',
+    description: 'The most evidence-supported split for building muscle: each muscle group trained twice per week, giving each muscle 48 to 72 hours to recover before training it again. Upper A focuses on heavier compound work (5–8 reps); Upper B shifts to higher-rep muscle building ranges (10–15 reps) targeting the same muscles from different angles. Add reps session by session; when you reach the top of the rep range, add a little weight and start again. Suits lifters with 6+ months of consistent training. Stop 1 to 2 reps before failure on each set.',
     tags: 'upper_lower intermediate 4 days',
     difficulty: 1,
     workouts: [
@@ -296,7 +296,7 @@ const LIBRARY_PLANS = [
   // ── 7. 4-Day Bodybuilding Bro Split ──────────────────────────────────────
   {
     name: '4-Day Muscle Building Bro Split',
-    description: 'The classic bodybuilder split: each major muscle group gets a dedicated session, allowing maximum per-session volume before fatigue compromises quality. Chest and triceps on Day 1, back and biceps on Day 2, shoulders and traps on Day 3, legs on Day 4. Each muscle is trained once per week at high volume. Suits intermediate-to-advanced lifters who recover well from high intra-session fatigue and prefer focused, high-effort sessions. Add reps each session, then add weight when you reach the top of the range. Take the last set of each exercise close to failure.',
+    description: 'The classic bodybuilder split: each major muscle group gets a dedicated session, allowing maximum per-session volume before fatigue compromises quality. Chest and triceps on Day 1, back and biceps on Day 2, shoulders and traps on Day 3, legs on Day 4. Each muscle is trained once per week at high volume. Suits intermediate-to-advanced lifters who recover well from high fatigue during the session and prefer focused, high-effort sessions. Add reps each session, then add weight when you reach the top of the range. Take the last set of each exercise close to failure.',
     tags: 'bodybuilding bro split 4 days',
     difficulty: 1,
     workouts: [
@@ -727,7 +727,7 @@ const LIBRARY_PLANS = [
   // ── 18. Female Bodybuilding Foundation ───────────────────────────────────
   {
     name: 'Female Bodybuilding Foundation',
-    description: 'A physique-focused programme structured around the muscle groups most impactful for female bodybuilding and fitness: glutes, hamstrings, upper-body detail, and shoulder width. Three lower-body sessions per week provide the volume and frequency needed for visible glute and posterior-chain development; two upper sessions balance the physique. Add reps session by session, then add weight when you reach the top of the rep range. Stop 1 to 2 reps before failure on each set. Suitable for intermediate female lifters with 6+ months of consistent resistance training.',
+    description: 'A physique-focused programme structured around the muscle groups most impactful for female bodybuilding and fitness: glutes, hamstrings, upper-body detail, and shoulder width. Three lower-body sessions per week provide the volume and frequency needed for visible glute and glute and hamstring development; two upper sessions balance the physique. Add reps session by session, then add weight when you reach the top of the rep range. Stop 1 to 2 reps before failure on each set. Suitable for intermediate female lifters with 6+ months of consistent resistance training.',
     tags: 'bodybuilding full_body glutes hamstrings upper intermediate',
     difficulty: 1,
     workouts: [
