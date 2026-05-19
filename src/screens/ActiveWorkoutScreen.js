@@ -796,8 +796,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
             <Text style={styles.exerciseMuscle}>
-              {(exercise.primaryMuscle || exercise.primary_muscle || '').charAt(0).toUpperCase() +
-                (exercise.primaryMuscle || exercise.primary_muscle || '').slice(1)} (Primary)
+              {MUSCLE_DISPLAY_NAMES[exercise.primaryMuscle ?? exercise.primary_muscle] ??
+                ((exercise.primaryMuscle || exercise.primary_muscle || '').charAt(0).toUpperCase() +
+                  (exercise.primaryMuscle || exercise.primary_muscle || '').slice(1).replace(/_/g, ' '))}
+              {' · primary muscle'}
             </Text>
           </View>
 
@@ -998,6 +1000,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 </View>
               );
             })()}
+            {showInfoTipPulse && loggedSets.length === 0 && prevSets.length === 0 && (
+              <View style={styles.firstSetHint}>
+                <Ionicons name="sparkles-outline" size={14} color={colors.primary} />
+                <Text style={styles.firstSetHintText}>
+                  Choose a weight and reps, then tap Complete Set when done.
+                  Tap Info below to see how to do this exercise correctly.
+                </Text>
+              </View>
+            )}
             <SetEntry
               value={currentSet}
               onChange={setCurrentSet}
@@ -1678,6 +1689,8 @@ const styles = StyleSheet.create({
   warmupStepWorking: { borderColor: colors.primary + '55', backgroundColor: colors.primary + '0a' },
   warmupStepFadedText: { color: colors.textMuted },
   warmupNoDataHint: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
+  firstSetHint: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, backgroundColor: colors.primaryBg, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.sm },
+  firstSetHintText: { flex: 1, fontSize: fontSize.xs, color: colors.primary, lineHeight: 18 },
   dropBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   dropBannerText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.gold, letterSpacing: 0.8 },
   setEntryTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.2 },

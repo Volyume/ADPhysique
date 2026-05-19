@@ -441,10 +441,21 @@ export default function HomeScreen({ navigation }) {
               <View style={styles.noPlanIconWrap}>
                 <Ionicons name="barbell-outline" size={28} color={colors.primary} />
               </View>
-              <Text style={styles.noPlanTitle}>Set up your training plan</Text>
-              <Text style={styles.noPlanSub}>
-                A structured plan keeps your training on track week to week. Choose how to get started below.
-              </Text>
+              {lastSession == null ? (
+                <>
+                  <Text style={styles.noPlanTitle}>Welcome. Let's get you started.</Text>
+                  <Text style={styles.noPlanSub}>
+                    Not sure where to begin? Use Coach Builder and we'll put together a plan around your goals and schedule in two minutes.
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.noPlanTitle}>Pick up where you left off</Text>
+                  <Text style={styles.noPlanSub}>
+                    You've been training without a set plan. Setting one up will keep things structured and help Volyume track your progress properly.
+                  </Text>
+                </>
+              )}
             </View>
 
             {/* Progress at a glance — shown when there's history but no plan */}
@@ -470,20 +481,20 @@ export default function HomeScreen({ navigation }) {
             <PlanBuilderCard
               icon="sparkles"
               title="Coach Builder"
-              desc="Answer a few questions and get a personalised plan built around your schedule and goal."
+              desc="Answer 5 questions about your goals and time available. We'll build you a complete programme."
               badge="Recommended"
               onPress={() => navigation.navigate('PlansTab', { screen: 'CoachBuilder' })}
             />
             <PlanBuilderCard
               icon="library-outline"
               title="Plan Library"
-              desc="Browse proven training splits for every level, frequency and goal."
+              desc="Browse ready-made programmes for every level, schedule, and goal."
               onPress={() => navigation.navigate('PlansTab', { screen: 'PlanLibrary' })}
             />
             <PlanBuilderCard
               icon="create-outline"
               title="Build Your Own"
-              desc="Create a fully custom plan from scratch with your own exercises and sets."
+              desc="Already know exactly what you want to train? Build a custom programme from scratch."
               onPress={() => navigation.navigate('PlansTab', { screen: 'ManualBuilder' })}
             />
 
