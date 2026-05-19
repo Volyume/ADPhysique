@@ -47,7 +47,7 @@ const GOALS = [
 
 const PHASE_DESCRIPTIONS = {
   lean_gain:       'A modest calorie surplus with controlled volume supports steady lean tissue accrual.',
-  build:           'A larger surplus increases recovery capacity, allowing high training volume and progressive overload.',
+  build:           'A larger calorie surplus helps you recover from hard training and supports consistent muscle growth over time.',
   maintain:        'Maintenance calories sustain performance; moderate volume keeps adaptations without excessive fatigue.',
   recomp:          'A slight deficit with high protein enables simultaneous fat loss and muscle retention.',
   mild_cut:        'A conservative deficit preserves strength; volume is moderated to match reduced recovery.',
@@ -55,9 +55,9 @@ const PHASE_DESCRIPTIONS = {
 };
 
 const CONFIDENCE_LABELS = {
-  high:   'High confidence — body-fat measured by a precise method.',
-  medium: 'Medium confidence — based on formula estimate.',
-  low:    'Low confidence — body-fat estimated visually.',
+  high:   'High confidence. Body fat measured by a precise method.',
+  medium: 'Medium confidence. Based on a formula estimate.',
+  low:    'Low confidence. Body fat estimated visually.',
 };
 
 const CONFIDENCE_ICONS = { high: 'checkmark-circle', medium: 'information-circle', low: 'alert-circle' };
@@ -278,14 +278,14 @@ export default function NutritionTargetsScreen() {
               size={14}
               text={
                 'How calories are calculated:\n' +
-                '• BMR: a standard formula using sex, age, height, and weight. If you enter body fat from a measured source (BIA, caliper, or DEXA), a lean mass-adjusted formula is used instead — more accurate because it scales to your metabolically active tissue, not total weight.\n' +
-                '• TDEE: BMR × activity multiplier (1.2 sedentary → 1.9 very active).\n' +
-                '• Target: TDEE adjusted by your goal (e.g. +10% for Lean Gain, −13% for Mild Cut).\n\n' +
+                '• Calorie baseline: a standard formula using your sex, age, height, and weight to estimate how many calories you burn at rest. If you enter a measured body fat percentage (from a scan or caliper test), we use a more accurate formula that accounts for your actual muscle mass.\n' +
+                '• Maintenance: your baseline × an activity multiplier based on how much you move each day.\n' +
+                '• Target: your maintenance adjusted for your goal (e.g. +10% for Lean Gain, -13% for Mild Cut).\n\n' +
                 'How macros are calculated:\n' +
-                '• Protein: varies by your chosen approach (1.2–3.3 g/kg). Rates rise in deeper deficits to protect muscle — select your approach in the Protein Target section.\n' +
+                '• Protein: varies by your chosen approach (1.2 to 3.3 g/kg). Rates rise in deeper deficits to protect muscle. Select your approach in the Protein Target section.\n' +
                 '• Fat: 25% of total calories, minimum 0.5 g/kg bodyweight to support hormonal health.\n' +
                 '• Carbs: all remaining calories after protein and fat are set.\n\n' +
-                'Results are estimates — adjust based on real-world progress over 2–4 weeks.'
+                'These are estimates. Adjust based on real-world progress over 2 to 4 weeks.'
               }
             />
           </View>
@@ -458,9 +458,9 @@ export default function NutritionTargetsScreen() {
           <View style={styles.approachNote}>
             <InfoTooltip size={12} text={
               "Different guidelines recommend different protein targets:\n\n" +
-              "• 1.2–1.5 g/kg — general athletic guidelines. Adequate for muscle growth; easy to hit day-to-day.\n\n" +
-              "• 1.6–2.2 g/kg — current sports science consensus for hypertrophy. Research suggests muscle gains plateau around 1.62 g/kg bodyweight; the upper end of this range gives a comfortable buffer without being excessive.\n\n" +
-              "• 2.2–3.3 g/kg — higher-end competitive protocol. Rates are deliberately elevated in deficits to maximise lean mass protection. Effective, but harder to sustain.\n\n" +
+              "• 1.2 to 1.5 g/kg: general athletic guidelines. Adequate for muscle growth and easy to hit day-to-day.\n\n" +
+              "• 1.6 to 2.2 g/kg: the range most commonly recommended for building muscle. Research suggests gains plateau around 1.62 g/kg bodyweight; the upper end gives a comfortable buffer without being excessive.\n\n" +
+              "• 2.2 to 3.3 g/kg: a higher competitive approach. Protein is pushed up in deficits to protect as much muscle as possible. Effective, but harder to sustain.\n\n" +
               "There is no single right answer. The level you can consistently hit every day will produce better results than an aggressive target you miss half the time."
             } />
             <Text style={styles.approachNoteText}>Different guidelines use different targets. Pick the level you can consistently sustain.</Text>
@@ -635,10 +635,10 @@ export default function NutritionTargetsScreen() {
                 const isRecomp = results.goal === 'recomp';
 
                 const calorieWhy = isGain
-                  ? `Your maintenance is ${results.maintenanceKcal.toLocaleString()} kcal — what you need to stay the same weight. Adding a ${absPct}% surplus (+${surplusDelta} kcal) gives your muscles the extra energy and building blocks to grow. At ${rateAbs.toFixed(2)} kg/week projected gain, you're in the sweet spot: fast enough to accumulate lean mass, slow enough to keep fat gain minimal.`
+                  ? `Your maintenance is ${results.maintenanceKcal.toLocaleString()} kcal. That is what you need to stay the same weight. Adding a ${absPct}% surplus (+${surplusDelta} kcal) gives your muscles the extra energy and building blocks to grow. At ${rateAbs.toFixed(2)} kg/week projected gain, you're in a good spot: fast enough to build lean mass, slow enough to keep fat gain minimal.`
                   : isCut
-                  ? `Your maintenance is ${results.maintenanceKcal.toLocaleString()} kcal. A ${absPct}% deficit (−${Math.abs(surplusDelta)} kcal) puts you on track to ${rateDir} roughly ${rateAbs.toFixed(2)} kg/week. That rate is ${rateAbs <= 0.5 ? 'conservative — you\'ll lose mostly fat while retaining more muscle' : rateAbs <= 0.8 ? 'moderate — effective fat loss with manageable muscle risk' : 'aggressive — protein intake has been raised to protect lean mass'}. The key is consistency over weeks, not perfection each day.`
-                  : `Your maintenance is ${results.maintenanceKcal.toLocaleString()} kcal. A slight ${Math.abs(absPct)}% deficit puts you in recomposition territory — just enough of a deficit to mobilise body fat as fuel, while high protein and training stimulus tell your body to hold (and even build) muscle. Progress is slower than a dedicated bulk or cut, but body composition improves simultaneously.`;
+                  ? `Your maintenance is ${results.maintenanceKcal.toLocaleString()} kcal. A ${absPct}% deficit (${Math.abs(surplusDelta)} kcal below maintenance) puts you on track to ${rateDir} roughly ${rateAbs.toFixed(2)} kg/week. That rate is ${rateAbs <= 0.5 ? 'conservative. You will lose mostly fat while retaining more muscle' : rateAbs <= 0.8 ? 'moderate. Effective fat loss with manageable muscle risk' : 'aggressive. Protein intake has been raised to protect lean mass'}. Consistency over weeks matters far more than perfection each day.`
+                  : `Your maintenance is ${results.maintenanceKcal.toLocaleString()} kcal. A slight ${Math.abs(absPct)}% deficit gives you enough of a calorie gap to use body fat as fuel, while high protein and training stimulus tell your body to hold on to muscle. Progress is slower than a dedicated bulk or cut, but body composition improves at the same time.`;
 
                 const approachLabel =
                   results.proteinApproach === 'standard'
@@ -647,37 +647,37 @@ export default function NutritionTargetsScreen() {
                     ? 'a higher-end competitive protocol'
                     : results.proteinApproach === 'custom'
                     ? 'your custom target'
-                    : 'the current sports science consensus for hypertrophy';
+                    : 'the most commonly recommended range for building muscle';
 
                 const proteinWhy = results.proteinBasis === 'lbm'
                   ? (() => {
                       const lbmLine = `You have roughly ${lbmKg} kg of lean mass. At ${results.proteinGPerKgLbm} g/kg lean mass, ${results.proteinG}g is based on ${approachLabel}. `;
-                      const scalingLine = `We scale to lean mass rather than total weight because fat tissue doesn't need protein to maintain — this gives a more precise target regardless of body-fat level. `;
+                      const scalingLine = `We scale to lean mass rather than total weight because fat tissue doesn't need protein to maintain itself. This gives a more precise target regardless of body-fat level. `;
                       const purposeLine = isGain
-                        ? `Protein is the raw material your muscles rebuild with after every session. Research suggests muscle gains plateau around 1.62 g/kg bodyweight (~2.0 g/kg LBM); at ${results.proteinGPerKgLbm} g/kg LBM you're comfortably above that threshold.`
+                        ? `Protein is the raw material your muscles rebuild with after every session. Research suggests muscle gains plateau around 1.62 g/kg bodyweight (roughly 2.0 g/kg lean mass); at ${results.proteinGPerKgLbm} g/kg lean mass you're comfortably above that.`
                         : isRecomp
-                        ? `High protein does two jobs in a recomp: amino acids for muscle protein synthesis, and a signal for your body to spare muscle even as the slight deficit encourages fat oxidation. This dual role is what separates "losing weight" from "changing body composition."`
-                        : `In a deficit, the body can break down muscle for fuel — high protein is the primary tool to prevent this. ${results.proteinApproach === 'advanced' ? `Sports science research on competitive preparation supports 2.3–3.1 g/kg lean mass to protect muscle; at ${results.proteinGPerKgLbm} g/kg you're within that protective range.` : 'Your target keeps you well above the minimum needed to preserve lean mass.'}`;
+                        ? `High protein does two things in a recomp: it provides amino acids for muscle protein synthesis, and it signals your body to hold on to muscle even as the slight calorie gap encourages fat loss. That combination is what separates losing weight from actually improving your physique.`
+                        : `In a deficit, the body can start breaking down muscle for fuel. High protein is the main way to prevent that. ${results.proteinApproach === 'advanced' ? `Competitive prep protocols typically call for 2.3 to 3.1 g/kg lean mass to protect muscle; at ${results.proteinGPerKgLbm} g/kg you're within that range.` : 'Your target keeps you well above the minimum needed to preserve lean mass.'}`;
                       return lbmLine + scalingLine + purposeLine;
                     })()
                   : (() => {
                       const bwLine = `At ${results.proteinGPerKg} g/kg bodyweight (${results.proteinG}g), your target is based on ${approachLabel}. `;
-                      const tipLine = `Tip: entering a measured body fat % (BIA, caliper, or DEXA) lets us scale to lean mass instead — more precise, especially if your body-fat % is high or low. `;
+                      const tipLine = `Tip: entering a measured body fat % (BIA, caliper, or DEXA) lets us scale to lean mass instead. That gives a more precise target, especially if your body-fat % is high or low. `;
                       const purposeLine = isGain
-                        ? `Protein is the raw material muscles rebuild with after every session. At ${results.proteinGPerKg} g/kg you're above the threshold where muscle protein synthesis is saturated, giving you a comfortable margin.`
+                        ? `Protein is the raw material muscles rebuild with after every session. At ${results.proteinGPerKg} g/kg you're above the threshold where muscle protein synthesis is fully activated, which gives you a solid margin.`
                         : isRecomp
-                        ? `High protein in a recomp provides amino acids for muscle protein synthesis while signalling your body to spare lean mass as fat is mobilised for energy.`
-                        : `In a calorie deficit, muscle tissue becomes a fuel source if protein is too low — the primary driver of "skinny fat" outcomes. At ${results.proteinGPerKg} g/kg you're in the anti-catabolic range, and the high satiety of protein also helps adherence.`;
+                        ? `High protein in a recomp provides amino acids for building muscle while telling your body to hold on to lean mass as fat is used for energy.`
+                        : `In a calorie deficit, muscle tissue can become a fuel source if protein is too low. At ${results.proteinGPerKg} g/kg you're well above that threshold, and the high satiety of protein makes it easier to stick to your calories.`;
                       return bwLine + tipLine + purposeLine;
                     })();
 
-                const fatWhy = `Fat has two non-negotiable roles: testosterone and sex hormone production depend on dietary fat, and vitamins A, D, E, and K are fat-soluble — meaning they can't be absorbed without it. We set yours to ${fatPct}% of your calories (${results.fatG}g), with a hard floor of ${fatFloorG}g. Dropping below that floor — even temporarily during a cut — can suppress testosterone and impair recovery. Think of fat as your hormonal infrastructure budget: it's the last macro to cut.`;
+                const fatWhy = `Fat has two roles you cannot skip: sex hormone production depends on dietary fat, and vitamins A, D, E, and K cannot be absorbed without it. We have set yours to ${fatPct}% of your calories (${results.fatG}g), with a hard floor of ${fatFloorG}g. Dropping below that floor, even briefly during a cut, can suppress testosterone and slow recovery. Fat is the last macro you want to cut.`;
 
                 const carbWhy = isGain
-                  ? `Carbs are your primary training fuel. Glycogen (stored muscle carbohydrate) is what powers your working sets — by the fourth or fifth set, it's almost exclusively glycogen being used. Your ${results.carbsG}g gives you more than enough to top up glycogen between sessions and arrive at every workout ready to push hard. More training stimulus from better-fuelled sessions means more muscle growth stimulus — carbs in a surplus are the performance multiplier.`
+                  ? `Carbs are your main training fuel. Glycogen (the carbohydrate stored in muscle) powers your working sets. By the fourth or fifth set it is almost exclusively glycogen being used. Your ${results.carbsG}g gives you plenty to top up glycogen between sessions and arrive at every workout ready to push hard. Better-fuelled sessions mean more training stimulus, which means more muscle growth.`
                   : isCut
-                  ? `After protein (muscle preservation) and fat (hormones) are set, carbs fill the remaining ${carbKcal} kcal. Carbs are reduced in a deficit because — unlike protein and fat — they don't have critical structural roles. Your ${results.carbsG}g still provides meaningful glycogen for training. If you notice performance declining significantly late in your cut, that's a signal to increase calories slightly. Timing carbs around your training sessions (pre- and post-workout) will get you the most performance per gram.`
-                  : `Carbs fill the remaining ${carbKcal} kcal after protein and fat are set. In a recomp they're kept moderate — enough to fuel training and replenish glycogen, but not so many that they block the small deficit needed for fat loss. Prioritise carbs around your workouts: pre-session for fuel, post-session for glycogen replenishment. The rest of the day can be lower-carb without hurting performance.`;
+                  ? `After protein and fat are set, carbs fill the remaining ${carbKcal} kcal. They get reduced in a deficit because, unlike protein and fat, they do not have critical structural roles in the body. Your ${results.carbsG}g still provides meaningful glycogen for training. If performance drops significantly late in your cut, that is a signal to bring calories up slightly. Timing carbs around your sessions (before and after training) will give you the most out of each gram.`
+                  : `Carbs fill the remaining ${carbKcal} kcal after protein and fat are set. In a recomp they are kept moderate: enough to fuel training and replenish glycogen, but not so many that they cancel the small deficit needed for fat loss. Prioritise carbs around your sessions. The rest of the day can be lower-carb without affecting performance.`;
 
                 return (
                   <View style={styles.whyCard}>

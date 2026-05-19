@@ -34,12 +34,12 @@ function round(n, step = 1) {
 
 // dayOffset: -6 (Sunday before a Saturday show) through 0 (show day)
 const DAY_TEMPLATES = [
-  { dayOffset: -6, phase: 'depletion', carbsPerKg: 1.5, fatPerKgLean: 0.8, waterFactor: 1.00, sodiumFactor: 1.00, training: 'Full-body depletion — 15–20 reps, short rest', posingMin: 45 },
-  { dayOffset: -5, phase: 'depletion', carbsPerKg: 1.5, fatPerKgLean: 0.8, waterFactor: 1.00, sodiumFactor: 1.00, training: 'Full-body depletion — 15–20 reps, short rest', posingMin: 45 },
-  { dayOffset: -4, phase: 'depletion', carbsPerKg: 1.5, fatPerKgLean: 0.8, waterFactor: 1.00, sodiumFactor: 1.00, training: 'Full-body depletion — 15–20 reps, short rest', posingMin: 45 },
+  { dayOffset: -6, phase: 'depletion', carbsPerKg: 1.5, fatPerKgLean: 0.8, waterFactor: 1.00, sodiumFactor: 1.00, training: 'Full-body depletion: 15–20 reps, short rest', posingMin: 45 },
+  { dayOffset: -5, phase: 'depletion', carbsPerKg: 1.5, fatPerKgLean: 0.8, waterFactor: 1.00, sodiumFactor: 1.00, training: 'Full-body depletion: 15–20 reps, short rest', posingMin: 45 },
+  { dayOffset: -4, phase: 'depletion', carbsPerKg: 1.5, fatPerKgLean: 0.8, waterFactor: 1.00, sodiumFactor: 1.00, training: 'Full-body depletion: 15–20 reps, short rest', posingMin: 45 },
   { dayOffset: -3, phase: 'load',      carbsPerKg: 4.0, fatPerKgLean: 0.4, waterFactor: 1.00, sodiumFactor: 1.00, training: 'Light upper-body pump', posingMin: 40 },
-  { dayOffset: -2, phase: 'load',      carbsPerKg: 6.0, fatPerKgLean: 0.4, waterFactor: 0.75, sodiumFactor: 1.00, training: 'Rest — posing practice only', posingMin: 30 },
-  { dayOffset: -1, phase: 'taper',     carbsPerKg: 8.0, fatPerKgLean: 0.4, waterFactor: 0.50, sodiumFactor: 0.33, training: 'Light pump — bands / press-ups', posingMin: 20 },
+  { dayOffset: -2, phase: 'load',      carbsPerKg: 6.0, fatPerKgLean: 0.4, waterFactor: 0.75, sodiumFactor: 1.00, training: 'Rest. Posing practice only', posingMin: 30 },
+  { dayOffset: -1, phase: 'taper',     carbsPerKg: 8.0, fatPerKgLean: 0.4, waterFactor: 0.50, sodiumFactor: 0.33, training: 'Light pump (bands / press-ups)', posingMin: 20 },
   { dayOffset:  0, phase: 'show',      carbsPerKg: 2.5, fatPerKgLean: 0.3, waterFactor: 0.10, sodiumFactor: 0.15, training: 'Backstage pump-up', posingMin: 15 },
 ];
 
@@ -52,7 +52,7 @@ const PHASE_LABELS = {
 
 const PHASE_NOTES = {
   depletion: 'Low carbs, normal water and sodium. Deplete glycogen with high-rep, full-body training.',
-  load: 'Ramp carbohydrates upward. Keep fats and fibre low so glycogen — not gut bulk — fills the muscle.',
+  load: 'Ramp carbohydrates upward. Keep fats and fibre low so glycogen (not gut bulk) fills the muscle.',
   taper: 'Final carb hit. Water drops sharply and sodium is cut. Movement stays light to protect the look.',
   show: 'Sips of water only. A small morning carb top-up if you look flat. Pump up backstage, not too early.',
 };
@@ -137,7 +137,7 @@ export function buildPeakWeek(inputs) {
 // Plain-text export (CSV-ish) for sharing with a coach.
 export function peakWeekToText(plan, meta = {}) {
   const lines = [];
-  lines.push('VOLYUME — PEAK WEEK PLAN');
+  lines.push('VOLYUME: PEAK WEEK PLAN');
   if (meta.showDateLabel) lines.push(`Show: ${meta.showDateLabel}`);
   lines.push(`Federation: ${plan.federation}`);
   lines.push('');

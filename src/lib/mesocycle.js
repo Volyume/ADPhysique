@@ -14,20 +14,20 @@
 const MESO_SCHEDULE = {
   // beginner / intermediate: 4 accumulation + 1 recovery = 5 weeks
   standard: [
-    { week: 1, phase: 'intro',   setsMultiplier: 1.00, label: 'Introduction week — settle into the movements' },
-    { week: 2, phase: 'build',   setsMultiplier: 1.10, label: 'Build week — push a little harder' },
-    { week: 3, phase: 'build',   setsMultiplier: 1.20, label: 'Build week — keep climbing' },
-    { week: 4, phase: 'peak',    setsMultiplier: 1.25, label: 'Peak week — best effort this block' },
-    { week: 5, phase: 'recovery', setsMultiplier: 0.50, label: 'Recovery week — back off and recharge' },
+    { week: 1, phase: 'intro',   setsMultiplier: 1.00, label: 'Introduction week. Settle into the movements.' },
+    { week: 2, phase: 'build',   setsMultiplier: 1.10, label: 'Build week. Push a little harder.' },
+    { week: 3, phase: 'build',   setsMultiplier: 1.20, label: 'Build week. Keep the momentum going.' },
+    { week: 4, phase: 'peak',    setsMultiplier: 1.25, label: 'Peak week. Your best effort this block.' },
+    { week: 5, phase: 'recovery', setsMultiplier: 0.50, label: 'Recovery week. Back off and recharge.' },
   ],
   // advanced / competitive: 5 accumulation + 1 recovery = 6 weeks
   advanced: [
-    { week: 1, phase: 'intro',   setsMultiplier: 1.00, label: 'Introduction week — settle into the movements' },
-    { week: 2, phase: 'build',   setsMultiplier: 1.07, label: 'Build week — add a little' },
-    { week: 3, phase: 'build',   setsMultiplier: 1.14, label: 'Build week — keep climbing' },
-    { week: 4, phase: 'build',   setsMultiplier: 1.20, label: 'Build week — push harder' },
-    { week: 5, phase: 'peak',    setsMultiplier: 1.25, label: 'Peak week — best effort this block' },
-    { week: 6, phase: 'recovery', setsMultiplier: 0.50, label: 'Recovery week — back off and recharge' },
+    { week: 1, phase: 'intro',   setsMultiplier: 1.00, label: 'Introduction week. Settle into the movements.' },
+    { week: 2, phase: 'build',   setsMultiplier: 1.07, label: 'Build week. Add a little.' },
+    { week: 3, phase: 'build',   setsMultiplier: 1.14, label: 'Build week. Keep climbing.' },
+    { week: 4, phase: 'build',   setsMultiplier: 1.20, label: 'Build week. Push harder.' },
+    { week: 5, phase: 'peak',    setsMultiplier: 1.25, label: 'Peak week. Your best effort this block.' },
+    { week: 6, phase: 'recovery', setsMultiplier: 0.50, label: 'Recovery week. Back off and recharge.' },
   ],
 };
 
@@ -156,7 +156,7 @@ export function buildWeeklyProgression(baseSets, mrvSets, experience = 'intermed
  */
 export function evaluateAutoReg(feedbackWindow = []) {
   if (!feedbackWindow.length) {
-    return { action: 'continue', setsAdjust: 0, message: 'Keep going — log sessions to unlock personalised adjustments.' };
+    return { action: 'continue', setsAdjust: 0, message: 'Keep logging sessions and we\'ll start making personalised adjustments.' };
   }
 
   // Weight recent sessions more heavily
@@ -376,7 +376,7 @@ export function applyTimeCrunch(exercises, targetMinutes, estimateFn) {
  */
 export function checkDoubleProgressionReady(sessionHistory = []) {
   if (sessionHistory.length < 2) {
-    return { ready: false, message: 'Log a couple more sessions to unlock weight progression guidance.' };
+    return { ready: false, message: 'Log a couple more sessions and we\'ll start giving you weight progression guidance.' };
   }
 
   const lastTwo = sessionHistory.slice(-2);

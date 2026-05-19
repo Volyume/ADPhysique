@@ -101,7 +101,7 @@ describe('peakWeekToText', () => {
   test('produces a CSV-style export with all 7 days and the disclaimer', () => {
     const plan = buildPeakWeek(BASE);
     const text = peakWeekToText(plan, { showDateLabel: '03/10/2026 (NPC)' });
-    expect(text).toMatch(/VOLYUME — PEAK WEEK PLAN/);
+    expect(text).toMatch(/VOLYUME.{1,5}PEAK WEEK PLAN/);
     expect(text).toMatch(/Federation: NPC/);
     expect(text).toMatch(/Langan-Evans/);
     // header + 7 day rows

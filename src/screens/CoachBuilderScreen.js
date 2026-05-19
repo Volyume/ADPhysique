@@ -38,7 +38,7 @@ const TOTAL_STEPS = 7;
 const EXPERIENCE_OPTIONS = [
   { value: 'beginner',     label: 'Beginner',     subtitle: 'Less than 18 months of consistent training' },
   { value: 'intermediate', label: 'Intermediate', subtitle: '18 months to 3 years of consistent training' },
-  { value: 'advanced',     label: 'Advanced',     subtitle: '3–5 years, familiar with progressive overload' },
+  { value: 'advanced',     label: 'Advanced',     subtitle: '3 to 5 years, consistently adding weight over time' },
   { value: 'competitive',  label: 'Competitive',  subtitle: '5+ years, training for physique or performance' },
 ];
 
@@ -582,12 +582,12 @@ export default function CoachBuilderScreen({ navigation, route }) {
                 </Text>
                 <InfoTooltip
                   size={13}
-                  text={`A Training Block is a structured period — typically 4–6 weeks — where volume and effort increase week by week, followed by a lighter recovery week. After completing one block, you can start another (or a different plan) in Training Blocks to keep progressing long-term.`}
+                  text={`A Training Block is a structured period (typically 4–6 weeks) where volume and effort increase week by week, followed by a lighter recovery week. After completing one block, you can start another (or a different plan) in Training Blocks to keep progressing long-term.`}
                 />
               </View>
               <Text style={styles.overviewSub}>
                 Weeks 1–{peakWeek}: volume and effort build progressively each week.
-                Week {recoveryWeek} is a lighter recovery week — fewer sets, lower effort — so you recharge and come back stronger.
+                Week {recoveryWeek} is a lighter recovery week (fewer sets, lower effort) so you recharge and come back stronger.
               </Text>
               <View style={styles.overviewWeekRow}>
                 {Array.from({ length: totalWeeks }, (_, i) => {
@@ -603,7 +603,7 @@ export default function CoachBuilderScreen({ navigation, route }) {
                 <Text style={styles.overviewWeekLegend}> ← recovery</Text>
               </View>
               <Text style={styles.overviewStack}>
-                Tip: once complete, stack another block in Training Blocks to keep the progressive overload going.
+                Tip: once complete, start another block in Training Blocks to keep the momentum going.
               </Text>
             </View>
           );

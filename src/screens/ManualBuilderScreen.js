@@ -17,11 +17,11 @@ import useAppStore from '../store/useAppStore';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const GOALS = [
-  { key: 'hypertrophy', label: 'General Hypertrophy' },
+  { key: 'hypertrophy', label: 'Build Muscle' },
   { key: 'balanced',    label: 'Balanced Bodybuilding' },
   { key: 'aesthetic',   label: 'Aesthetic Focus' },
   { key: 'strength',    label: 'Strength-Biased' },
-  { key: 'recomp',      label: 'Recomposition' },
+  { key: 'recomp',      label: 'Lose Fat, Keep Muscle' },
 ];
 
 const DAYS_OPTIONS = [3, 4, 5, 6];

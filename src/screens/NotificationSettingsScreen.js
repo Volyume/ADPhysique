@@ -232,7 +232,7 @@ export default function NotificationSettingsScreen({ navigation }) {
         <View style={styles.headerText}>
           <Text style={styles.title}>Notifications</Text>
           <Text style={styles.subtitle}>
-            Volyume uses local notifications only — no marketing, ever.
+            Volyume uses local notifications only. No marketing, ever.
           </Text>
         </View>
       </View>
@@ -354,7 +354,7 @@ export default function NotificationSettingsScreen({ navigation }) {
         {/* Bottom note */}
         <View style={styles.bottomNote}>
           <Text style={styles.bottomNoteText}>
-            Volyume never sends marketing notifications. These are local-only reminders — no server involved. You can disable them anytime from your device settings.
+            Volyume never sends marketing notifications. These are local-only reminders with no server involved. You can disable them anytime from your device settings.
           </Text>
         </View>
 

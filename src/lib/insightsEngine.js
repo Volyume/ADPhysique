@@ -132,7 +132,7 @@ export function generateInsights({ workouts = [], sets = [], exerciseMap = {}, n
       if (peaked) {
         insights.push(mkInsight(
           'peaked_lift', 1,
-          `You hit the top of your rep range on ${exName} twice in a row — time to add a little weight next session.`,
+          `You hit the top of your rep range on ${exName} twice in a row. Time to add a little weight next session.`,
           `peaked_${exId}`,
           { exerciseId: exId },
         ));
@@ -167,7 +167,7 @@ export function generateInsights({ workouts = [], sets = [], exerciseMap = {}, n
   if (sorenessWoW != null && sorenessWoW >= 18) {
     insights.push(mkInsight(
       'recovery_warn', 2,
-      `Your soreness coming into sessions is trending up week-on-week. Prioritise sleep and protein — if it keeps climbing, a lighter week is coming.`,
+      `Your soreness coming into sessions is trending up week-on-week. Prioritise sleep and protein. If it keeps climbing, a lighter week is coming.`,
       'recovery_warn',
       { sorenessWoW: Math.round(sorenessWoW) },
     ));
@@ -195,7 +195,7 @@ export function generateInsights({ workouts = [], sets = [], exerciseMap = {}, n
   if (overMrvWeeks >= 2 || (fatigue != null && fatigue >= 4.3)) {
     insights.push(mkInsight(
       'deload_due', 2,
-      `Your training load and fatigue are both running high. A lighter week soon will let you come back stronger — not a setback, part of the plan.`,
+      `Your training load and fatigue are both running high. A lighter week soon will let you come back stronger. Not a setback, just part of the plan.`,
       'deload_due',
       { overMrvWeeks, fatigue: fatigue != null ? Math.round(fatigue * 10) / 10 : null },
     ));
@@ -213,7 +213,7 @@ export function generateInsights({ workouts = [], sets = [], exerciseMap = {}, n
   if (trainedDays.size >= 4) {
     insights.push(mkInsight(
       'gentle_rhythm', 0,
-      `You've trained ${trainedDays.size} of the last 21 days. Steady work — this is what progress looks like.`,
+      `You've trained ${trainedDays.size} of the last 21 days. Steady work. This is what progress looks like.`,
       'gentle_rhythm',
       { count: trainedDays.size },
     ));

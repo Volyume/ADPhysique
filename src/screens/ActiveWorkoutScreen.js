@@ -364,7 +364,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   action: 'deload',
                   isDeload: true,
                 })));
-                setTargetReason('Deload week — very easy effort, full recovery focus.');
+                setTargetReason('Deload week: very easy effort, full recovery focus.');
               }
             }
           }
@@ -875,7 +875,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             <View style={styles.targetBanner}>
               <Ionicons name="checkmark-circle" size={16} color={colors.success} />
               <Text style={styles.targetBannerText}>
-                Target reached — {targetSets} working set{targetSets !== 1 ? 's' : ''} done
+                Target reached: {targetSets} working set{targetSets !== 1 ? 's' : ''} done
               </Text>
             </View>
           )}
@@ -909,7 +909,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     <Text style={styles.warmupGuideTitle}>Feeler set</Text>
                     <InfoTooltip
                       size={13}
-                      text="One light feeler set is all you need. Use around 50% of your working weight for 10–12 easy reps. Focus on feeling the target muscle — not tiring it."
+                      text="One light feeler set is all you need. Use around 50% of your working weight for 10–12 easy reps. Focus on feeling the target muscle, not tiring it."
                     />
                   </View>
                   <View style={styles.warmupProtocolRow}>
@@ -969,7 +969,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   <Ionicons name="time-outline" size={11} color={colors.textMuted} />
                   <Text style={styles.beatChipText}>
                     {sameWeight
-                      ? `Last time: ${prev.weight}${units} × ${prev.actualReps} reps — can you hit ${prev.actualReps + 1}?`
+                      ? `Last time: ${prev.weight}${units} × ${prev.actualReps} reps. Can you hit ${prev.actualReps + 1}?`
                       : `Last time: ${prev.weight}${units} × ${prev.actualReps} reps`}
                   </Text>
                 </View>
@@ -1311,7 +1311,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             <Text style={styles.swapSubtitle}>
               Replacing: <Text style={{ color: colors.primary }}>{exercise?.name}</Text>
             </Text>
-            <Text style={styles.swapNote}>Session-only — your plan is not changed.</Text>
+            <Text style={styles.swapNote}>Session-only. Your plan is not changed.</Text>
             <FlatList
               data={swapCandidates}
               keyExtractor={item => item.exercise.id}

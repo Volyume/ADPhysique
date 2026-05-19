@@ -100,7 +100,7 @@ function detectRepRegressions(sets, exerciseMap) {
         exercise_id: exId,
         exerciseName: ex?.name ?? 'Unknown exercise',
         muscle: ex?.primaryMuscle ?? ex?.primary_muscle ?? null,
-        reason_text: `Avg reps: ${Math.round(r2 * 10) / 10} → ${Math.round(r1 * 10) / 10} → ${Math.round(r0 * 10) / 10} over 3 weeks — consider a lighter week or load reduction`,
+        reason_text: `Avg reps: ${Math.round(r2 * 10) / 10} → ${Math.round(r1 * 10) / 10} → ${Math.round(r0 * 10) / 10} over 3 weeks. Consider a lighter week or load reduction.`,
         decision: 'rep_regression',
         created_at: now,
       });
@@ -357,9 +357,9 @@ export default function AthleteHubScreen({ navigation }) {
               {next && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                   <Text style={styles.milestoneNext}>
-                    {next.sessions - totalWorkouts} to go — {next.label}
+                    {next.sessions - totalWorkouts} to go: {next.label}
                   </Text>
-                  <InfoTooltip size={11} text={"Session milestones track long-term training consistency — the biggest predictor of muscle growth.\n\nEach session adds to your progressive overload history: your body adapts only through accumulated stimulus over time. The more quality sessions you log, the richer the data Volyume has to personalise your progression, spot rep regressions early, and time your recovery weeks correctly.\n\nHitting milestones means you're building the habit, the mind-muscle connection, and the training base that makes long-term physique change inevitable."} />
+                  <InfoTooltip size={11} text={"Consistency is the biggest predictor of long-term progress. Every session counts.\n\nThe more sessions you log, the better Volyume understands how your body responds, so it can suggest the right weights, spot when your reps are slipping, and time your lighter weeks correctly.\n\nBuilding the habit is the foundation everything else sits on."} />
                 </View>
               )}
             </View>
@@ -409,9 +409,9 @@ export default function AthleteHubScreen({ navigation }) {
               <Text style={styles.cardTitle}>Weekly check-in</Text>
               <Text style={styles.cardSubtitle}>
                 {checkinDoneThisWeek
-                  ? 'Done this week — tap to review your plan'
+                  ? 'Done this week. Tap to review your plan.'
                   : morningWeightCount >= 4
-                    ? 'Ready — tap to get your weekly coaching'
+                    ? 'Ready. Tap to get your weekly coaching.'
                     : `${morningWeightCount}/4 morning weights logged`}
               </Text>
             </View>
@@ -421,7 +421,7 @@ export default function AthleteHubScreen({ navigation }) {
             <View style={styles.checkinPrompt}>
               <Text style={styles.checkinPromptText}>
                 {morningWeightCount < 4
-                  ? 'Log your morning weight each day to unlock weekly coaching.'
+                  ? 'Log your morning weight each day to access weekly coaching.'
                   : 'Check in now to get your training and calorie adjustments for next week.'}
               </Text>
             </View>
@@ -441,12 +441,12 @@ export default function AthleteHubScreen({ navigation }) {
               <View style={styles.cardHeaderText}>
                 <Text style={styles.cardTitle}>Weight trend</Text>
                 <Text style={styles.cardSubtitle}>
-                  {weightTrend.length}-day EWMA · {units === 'lbs' ? 'lbs' : 'kg'}
+                  {weightTrend.length}-day trend · {units === 'lbs' ? 'lbs' : 'kg'}
                 </Text>
               </View>
               <InfoTooltip
                 size={13}
-                text="Smooth trend line through your daily weigh-ins. Day-to-day swings from water, food, and sleep are normal — the trend is what matters. A steady downward line on a cut, or slow upward on a bulk, means things are working."
+                text="Smooth trend line through your daily weigh-ins. Day-to-day swings from water, food, and sleep are normal. The trend is what matters. A steady downward line on a cut, or slow upward on a bulk, means things are working."
               />
             </View>
             <WeightSparkline data={weightTrend} units={units} />
@@ -470,7 +470,7 @@ export default function AthleteHubScreen({ navigation }) {
                   {nutritionTargets.targetKcal ? `${Math.round(nutritionTargets.targetKcal)} kcal daily` : 'Configured'}
                 </Text>
               ) : (
-                <Text style={[styles.cardSubtitle, styles.alert]}>Not set — tap to configure</Text>
+                <Text style={[styles.cardSubtitle, styles.alert]}>Not set. Tap to configure.</Text>
               )}
             </View>
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
@@ -523,13 +523,13 @@ export default function AthleteHubScreen({ navigation }) {
             icon="layers"
             label="Training Blocks"
             sub="Plan and track multi-week training blocks"
-            tooltip={"A Training Block is a structured 5–6 week period where volume and effort increase each week, followed by a lighter recovery week. Running blocks back-to-back is how you create long-term progressive overload — each block starts slightly heavier than the last. Create one here to link your plan to a block and track your week-by-week progress."}
+            tooltip={"A Training Block is a structured 5–6 week period where volume and effort increase each week, followed by a lighter recovery week. Running blocks back-to-back is how you create long-term progressive overload. Each block starts slightly heavier than the last. Create one here to link your plan to a block and track your week-by-week progress."}
             onPress={() => navigation.navigate('MesocycleBuilder')}
           />
           <NavRow
             icon="document-text-outline"
             label={exporting ? 'Preparing report…' : 'Send report to coach'}
-            sub="Last 4 weeks as a PDF — volume, PRs, bodyweight"
+            sub="Last 4 weeks as a PDF: volume, PRs, bodyweight"
             onPress={handleCoachExport}
           />
           <NavRow icon="trophy" label="Personal Records" sub="All-time bests" onPress={() => navigation.navigate('PRWall')} />
@@ -563,7 +563,7 @@ export default function AthleteHubScreen({ navigation }) {
                       <Ionicons name="alert-circle-outline" size={14} color={colors.warning} />
                       <View style={{ flex: 1 }}>
                         <Text style={[styles.adaptHistMuscle, { color: colors.warning }]}>
-                          {w.exerciseName} — Rep regression
+                          {w.exerciseName}: Rep regression
                         </Text>
                         {w.reason_text ? (
                           <Text style={styles.adaptHistReason} numberOfLines={3}>{w.reason_text}</Text>
@@ -582,7 +582,7 @@ export default function AthleteHubScreen({ navigation }) {
                       event.decision === 'add_set' ? colors.primary :
                       event.decision === 'drop_set' || event.decision === 'deload_trigger' ? colors.error :
                       colors.textMuted;
-                    const muscleLabel = MUSCLE_DISPLAY_NAMES[event.muscle] || event.muscle || '—';
+                    const muscleLabel = MUSCLE_DISPLAY_NAMES[event.muscle] || event.muscle || 'Unknown';
                     const date = event.created_at
                       ? new Date(event.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
                       : '';
@@ -627,7 +627,7 @@ export default function AthleteHubScreen({ navigation }) {
 
 function RecoveryGauge({ label, value, invertGood = false }) {
   const hasValue = value != null && !isNaN(value);
-  const display = hasValue ? value.toFixed(1) : '—';
+  const display = hasValue ? value.toFixed(1) : 'N/A';
 
   let dotColor = colors.textMuted;
   let scaleNote = 'No data yet';

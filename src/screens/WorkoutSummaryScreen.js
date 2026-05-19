@@ -391,14 +391,14 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             icon="layers-outline"
             value={String(displayWorkingSets)}
             label="Working Sets"
-            tooltip={'Hard sets that count towards your training volume. Warm-up sets are excluded.\n\nA working set is any set where you trained close to your limit — typically 0–3 reps from failure.'}
+            tooltip={'Hard sets that count towards your training volume. Warm-up sets are excluded.\n\nA working set is any set where you trained close to your limit, typically 0 to 3 reps from failure.'}
           />
           <StatBox icon="time-outline" value={`${durationMinutes || 0}m`} label="Duration" />
           <StatBox
             icon="trending-up-outline"
             value={`${Math.round(tonnage || 0).toLocaleString('en-GB')} kg`}
             label="Total kg"
-            tooltip={'Total load lifted this session — sets × reps × weight added together.\n\nAlso called tonnage. A useful measure of total session workload. Higher isn\'t always better; quality of effort matters more.'}
+            tooltip={'Total weight moved this session: sets × reps × weight added together. A rough measure of how much work you did. More is not always better; quality of effort matters more than raw numbers.'}
           />
         </View>
 
@@ -454,10 +454,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               <Text style={styles.sectionTitle}>THIS WEEK AFTER SESSION</Text>
               <InfoTooltip size={11} text={
                 'How much you\'ve trained each muscle group this week.\n\n' +
-                'Green = Optimal range — you\'re getting growth stimulus without overdoing it\n' +
-                'Yellow = Near your ceiling — one more session and you may exceed it\n' +
-                'Red = Over ceiling — consider reducing volume next week\n' +
-                'Grey = Below minimum — not enough to stimulate growth yet\n\n' +
+                'Green = Optimal range: getting growth stimulus without overdoing it\n' +
+                'Yellow = Near your ceiling: one more session and you may exceed it\n' +
+                'Red = Over ceiling: consider reducing volume next week\n' +
+                'Grey = Below minimum: not enough to stimulate growth yet\n\n' +
                 'These targets are personalised and adjust over time based on how your body responds.'
               } />
             </View>
@@ -535,10 +535,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 <Text style={styles.adaptiveTitle}>ENGINE DECISIONS — NEXT WEEK</Text>
                 <InfoTooltip size={11} text={
                   'Volyume\'s training engine analysed your session feedback and adjusted next week\'s plan.\n\n' +
-                  '↑ Add set — you recovered well and can handle more volume\n' +
-                  '↓ Drop set — signs of fatigue; reducing load will help you recover\n' +
-                  '⚠ Deload — recovery signals are low across the board; a lighter week is recommended\n' +
-                  '→ Hold — volume looks right, continue as planned\n\n' +
+                  '↑ Add set: you recovered well and can handle more volume\n' +
+                  '↓ Drop set: signs of fatigue, reducing load will help you recover\n' +
+                  '⚠ Recovery week: signals are low across the board, a lighter week is recommended\n' +
+                  '→ Hold: volume looks right, continue as planned\n\n' +
                   'These suggestions are written into your next planned week automatically.'
                 } />
               </View>

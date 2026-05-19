@@ -338,11 +338,11 @@ export default function AnalyticsScreen({ navigation }) {
             <Text style={styles.sectionLabel}>TRAINING BLOCK</Text>
             <InfoTooltip text={
               'A Training Block is a structured phase where volume and intensity build week by week.\n\n' +
-              'Week 1–5: progressively harder training. Your target effort level climbs each week — ' +
-              'starting around 2–3 (moderate) and building to 4–5 (near maximum) — so you gradually push closer to your limit.\n\n' +
+              'Week 1–5: progressively harder training. Your target effort level climbs each week, ' +
+              'starting around 2–3 (moderate) and building to 4–5 (near maximum), so you gradually push closer to your limit.\n\n' +
               'Recovery week: deliberately lighter. This flushes accumulated fatigue so you recover fully ' +
               'and come back stronger.\n\n' +
-              'After the recovery week you start a fresh block on the same plan — usually with a little more volume ' +
+              'After the recovery week you start a fresh block on the same plan, usually with a little more volume ' +
               'than last time. The plan stays; only the block resets.'
             } />
           </View>
@@ -369,7 +369,7 @@ export default function AnalyticsScreen({ navigation }) {
               </Text>
             </View>
             <InfoTooltip text={
-              'A lighter recovery week uses reduced loads — aim for effort level 1–2 (plenty left in the tank) — to flush ' +
+              'A lighter recovery week uses reduced loads (aim for effort level 1–2, plenty left in the tank) to flush ' +
               'accumulated fatigue without losing muscle or strength.\n\n' +
               'Keep all the same exercises. Drop weights by ~10–20% and stop well before failure. ' +
               'Sessions should feel almost too easy.\n\n' +
@@ -396,9 +396,9 @@ export default function AnalyticsScreen({ navigation }) {
               <Text style={styles.sectionLabel}>THIS WEEK'S VOLUME</Text>
               <InfoTooltip text={
                 'Working sets per muscle group this week.\n\n' +
-                '🟠 Below threshold — not enough stimulus for growth this week.\n\n' +
-                '🟢 Optimal range — the sweet spot for progress.\n\n' +
-                '🔴 Over ceiling — fatigue is outpacing stimulus; consider reducing sets.\n\n' +
+                '🟠 Below threshold: not enough stimulus for growth this week.\n\n' +
+                '🟢 Optimal range: the sweet spot for progress.\n\n' +
+                '🔴 Over ceiling: fatigue is outpacing stimulus; consider reducing sets.\n\n' +
                 'Volume targets adjust as Volyume learns your recovery pattern over time.'
               } />
             </View>
@@ -414,7 +414,7 @@ export default function AnalyticsScreen({ navigation }) {
           <View style={styles.rowBetween}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
               <Text style={styles.sectionLabel}>NEW BESTS</Text>
-              <InfoTooltip text="Each bar is a week. A bar appears when you set a new estimated 1-rep max on any exercise — a higher weight for the same reps, or more reps at the same weight. More bars = more PRs that week." />
+              <InfoTooltip text="Each bar is a week. A bar appears when you set a new estimated 1-rep max on any exercise: a higher weight for the same reps, or more reps at the same weight. More bars = more PRs that week." />
             </View>
             <TouchableOpacity
               style={styles.windowToggle}
@@ -431,7 +431,7 @@ export default function AnalyticsScreen({ navigation }) {
         {/* ── 5 · Training Day Calendar ─────────────────────── */}
         <View style={styles.section}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-            <Text style={styles.sectionLabel}>TRAINING DAYS — LAST 12 WEEKS</Text>
+            <Text style={styles.sectionLabel}>TRAINING DAYS: LAST 12 WEEKS</Text>
             <InfoTooltip text="Each square is one day. Blue = you trained, dark = rest day. Scroll back 12 weeks to see your consistency over time." />
           </View>
           <TrainingCalendar values={calValues} />
@@ -598,7 +598,7 @@ function PRSparkline({ bars, windowDays }) {
   if (total === 0) {
     return (
       <View style={styles.prEmpty}>
-        <Text style={styles.prEmptyText}>No new bests in the last {windowDays} days — keep pushing the limits.</Text>
+        <Text style={styles.prEmptyText}>No new bests in the last {windowDays} days. Keep pushing.</Text>
       </View>
     );
   }

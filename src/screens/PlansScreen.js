@@ -21,7 +21,7 @@ const ACTION_CARDS = [
     id: 'coach',
     icon: 'sparkles',
     title: 'Coach Builder',
-    description: 'Answer 7 questions — get a personalised plan tailored to your schedule and goals.',
+    description: 'Answer a few questions and we\'ll build a plan that fits your schedule and goals.',
     screen: 'CoachBuilder',
     badge: 'Recommended',
   },
@@ -36,7 +36,7 @@ const ACTION_CARDS = [
     id: 'manual',
     icon: 'create-outline',
     title: 'Manual Builder',
-    description: 'Create a custom multi-day plan from scratch — you choose every exercise.',
+    description: 'Create a custom multi-day plan from scratch. You choose every exercise.',
     screen: 'ManualBuilder',
   },
 ];

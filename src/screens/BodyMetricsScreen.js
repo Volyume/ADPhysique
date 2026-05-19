@@ -409,7 +409,7 @@ export default function BodyMetricsScreen({ navigation }) {
             {/* Header row with phase chip */}
             <View style={styles.snapshotHeader}>
               <Text style={styles.sectionTitle}>
-                WEIGHT — {latest?.metric_date ? format(new Date(latest.metric_date), 'MMM d, yyyy') : 'Today'}
+                WEIGHT · {latest?.metric_date ? format(new Date(latest.metric_date), 'MMM d, yyyy') : 'Today'}
               </Text>
               {phase && (
                 <View style={[styles.phaseChip, { borderColor: phase.color }]}>

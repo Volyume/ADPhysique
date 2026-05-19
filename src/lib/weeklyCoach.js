@@ -89,48 +89,48 @@ function stepsBand(goalPhase, bodyweightKg = null) {
 
 const WHY_LIBRARY = {
   on_target_holding: [
-    "Weight's trending exactly as planned. The algorithm doesn't change what's working — that's a feature, not a bug.",
+    "Weight's trending exactly as planned. The algorithm doesn't change what's working (that's a feature, not a bug).",
     "Everything's on track this week. Hold the course and keep the effort level consistent.",
-    "Your trend is right where it needs to be. No changes needed — this is what good progress feels like.",
+    "Your trend is right where it needs to be. No changes needed. This is what good progress feels like.",
     "Solid week. Weight and performance are both trending the right way. Stay the course.",
   ],
   off_target_cal_up: [
     "Weight's moving faster than your target rate, so bringing calories up slightly will protect what you've built.",
-    "You're gaining a little more than planned — a small calorie bump will slow it down without disrupting momentum.",
+    "You're gaining a little more than planned, so a small calorie bump will slow it down without disrupting momentum.",
   ],
   off_target_cal_down: [
     "Weight isn't moving at the rate you're aiming for. A modest calorie reduction keeps the plan on track.",
     "Progress has stalled slightly versus your goal. A small calorie adjustment gets things moving again.",
-    "The trend's behind schedule — a controlled reduction moves things in the right direction without a dramatic cut.",
+    "The trend's behind schedule, so a controlled reduction moves things in the right direction without a dramatic cut.",
   ],
   recovery_lagging: [
-    "Recovery's lagging — sleep dropped, soreness is up. A lighter week now pays back the next four.",
+    "Recovery's lagging: sleep dropped, soreness is up. A lighter week now pays back the next four.",
     "Your body is asking for less right now. Backing off training slightly protects the quality of next week's sessions.",
-    "Energy and soreness signals are telling us to ease back. This isn't losing progress — it's protecting it.",
+    "Energy and soreness signals are telling us to ease back. This isn't losing progress. It's protecting it.",
   ],
   performance_regressed: [
-    "Performance dropped on some key lifts. Before changing volume, we recover first — then we push again.",
+    "Performance dropped on some key lifts. Before changing volume, we recover first. Then we push again.",
     "Strength has dipped recently. The priority is stabilising performance before any further increases.",
   ],
   building_baseline: [
-    "You're in the early weeks of logging. Volyume is building your baseline — adjustments start once the data is more established.",
+    "You're in the early weeks of logging. Volyume is building your baseline, and adjustments start once the data is more established.",
     "Not enough data yet to make confident adjustments. Keep logging weight and sessions and we'll start coaching properly soon.",
   ],
   stabilise_sessions: [
-    "Sessions were inconsistent this week. Stable training is the most important variable — we don't adjust anything else until that's solid.",
+    "Sessions were inconsistent this week. Stable training is the most important variable, and we don't adjust anything else until that's solid.",
     "Less than half your planned sessions were completed. Getting back on schedule takes priority over any programming tweak.",
   ],
   steps_bump: [
     "Weight trend is behind target and steps have room to increase. More daily movement is the most recovery-friendly way to close the gap.",
-    "Bumping the daily step target is the lowest-fatigue lever available — it won't affect training quality.",
+    "Bumping the daily step target is the lowest-fatigue lever available and it won't affect training quality.",
   ],
   deload_suggested: [
-    "Several signals — soreness, energy, and performance — are pointing in the same direction. A lighter week now sets up a stronger block after.",
+    "Several signals (soreness, energy, and performance) are pointing in the same direction. A lighter week now sets up a stronger block after.",
     "Fatigue is accumulating across multiple signals. One reduced week is the most efficient path to your next personal best.",
   ],
   diet_break_suggested: [
     "Eight or more consecutive weeks in a calorie deficit is a long time. One week at maintenance restores hormone levels and makes the next phase of dieting more effective.",
-    "A short maintenance break after an extended deficit pays compound interest — better adherence, better training, better results in the weeks that follow.",
+    "A short maintenance break after an extended deficit pays compound interest: better adherence, better training, better results in the weeks that follow.",
   ],
   push_volume: [
     "Recovery is solid, energy is high, and performance is climbing. This is the window to push volume a notch higher.",
@@ -138,13 +138,13 @@ const WHY_LIBRARY = {
   ],
   low_data_weight: [
     "Not enough weight data this week to make reliable trend calculations. Keep logging morning weight and the trend will stabilise.",
-    "Weight data is limited this week — the algorithm is working with what it has. More daily logs will sharpen the picture.",
+    "Weight data is limited this week, so the algorithm is working with what it has. More daily logs will sharpen the picture.",
   ],
 };
 
 function pickWhy(keys, seed = 0) {
   const pool = keys.flatMap(k => WHY_LIBRARY[k] ?? []);
-  if (!pool.length) return "Continue as planned — check back next week.";
+  if (!pool.length) return "Continue as planned. Check back next week.";
   return pool[seed % pool.length];
 }
 
@@ -250,8 +250,8 @@ export function runWeeklyCoach(inputs) {
   // Not enough data yet
   if (!hasEnoughData) {
     const dataNote = weeksInPhase < 2
-      ? 'Keep logging — adjustments start after your second week.'
-      : 'Log your morning weight at least 4 days this week to unlock trend coaching.';
+      ? 'Keep logging. Adjustments start after your second week.'
+      : 'Log your morning weight at least 4 days this week to get trend coaching.';
     return _buildBaselineOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, weightDelta, prsThisWeek, sessionsCompleted, sessionsPlanned, dataNote, weekSeed, onTarget });
   }
 
@@ -277,27 +277,27 @@ export function runWeeklyCoach(inputs) {
     volumeSignal = -2;
     loadSignal   = 'reduce';
     recoveryFlag = 'deload_suggested';
-    trainingNote = 'Recovery is flagged — cut sets back and focus on quality.';
+    trainingNote = 'Recovery is flagged. Cut sets back and focus on quality.';
   } else if (poorRecovery) {
     volumeSignal = 0;
     loadSignal   = 'hold';
     recoveryFlag = 'concerned';
-    trainingNote = 'Energy and soreness are elevated — hold the plan steady this week.';
+    trainingNote = 'Energy and soreness are elevated. Hold the plan steady this week.';
   } else if (excellentRec && prsThisWeek > 0) {
     volumeSignal = 2;
     loadSignal   = 'progress';
     recoveryFlag = 'normal';
-    trainingNote = 'Recovery is excellent and performance is climbing — push harder.';
+    trainingNote = 'Recovery is excellent and performance is climbing. Push harder.';
   } else if (excellentRec) {
     volumeSignal = 1;
     loadSignal   = 'progress';
     recoveryFlag = 'normal';
-    trainingNote = 'Recovery is solid — keep the effort level up.';
+    trainingNote = 'Recovery is solid. Keep the effort level up.';
   } else {
     volumeSignal = 0;
     loadSignal   = 'progress';
     recoveryFlag = 'normal';
-    trainingNote = 'Hold your current plan — performance and recovery look stable.';
+    trainingNote = 'Hold your current plan. Performance and recovery look stable.';
   }
 
   const trainingSignal = loadSignal === 'reduce' ? 'reduce' : loadSignal === 'hold' ? 'hold' : 'push';
@@ -320,19 +320,19 @@ export function runWeeklyCoach(inputs) {
     if (phase.isCut && offTargetDirection > 0) {
       // Losing too slowly
       change = calsAdherence === 'hit' ? -150 : -100;
-      calNote = `Reduce by ${Math.abs(change)} kcal/day — the deficit needs a small nudge.`;
+      calNote = `Reduce by ${Math.abs(change)} kcal/day. The deficit needs a small nudge.`;
     } else if (phase.isCut && offTargetDirection < 0) {
       // Losing too fast — protect muscle
       change = +125;
-      calNote = `Increase by ${change} kcal/day — you're losing faster than planned. Protecting muscle.`;
+      calNote = `Increase by ${change} kcal/day. You're losing faster than planned, so this protects muscle.`;
     } else if (phase.isBulk && offTargetDirection < 0) {
       // Gaining too slowly
       change = +150;
-      calNote = `Increase by ${change} kcal/day — you're gaining slower than planned.`;
+      calNote = `Increase by ${change} kcal/day. You're gaining slower than planned.`;
     } else if (phase.isBulk && offTargetDirection > 0) {
       // Gaining too fast
       change = -125;
-      calNote = `Reduce by ${Math.abs(change)} kcal/day — gaining a little faster than planned.`;
+      calNote = `Reduce by ${Math.abs(change)} kcal/day. You're gaining a little faster than planned.`;
     }
 
     // Cap at ±5% of current target
@@ -356,18 +356,18 @@ export function runWeeklyCoach(inputs) {
     if (newTarget > currentStepsTarget) {
       stepsAdjustment = {
         target: newTarget,
-        note: `${newTarget.toLocaleString()}/day target — more movement is the most recovery-friendly lever.`,
+        note: `${newTarget.toLocaleString()}/day target. More movement is the most recovery-friendly lever.`,
       };
     } else {
       stepsAdjustment = {
         target: currentStepsTarget,
-        note: `${currentStepsTarget.toLocaleString()}/day — steps are at the upper end. Consider light cardio next.`,
+        note: `${currentStepsTarget.toLocaleString()}/day. Steps are at the upper end, so consider light cardio next.`,
       };
     }
   } else if (phase.isCut || phase.goalRatePct === 0) {
     stepsAdjustment = {
       target: currentStepsTarget,
-      note: `${currentStepsTarget.toLocaleString()}/day — hold the current target.`,
+      note: `${currentStepsTarget.toLocaleString()}/day. Hold the current target.`,
     };
   }
 
@@ -386,14 +386,14 @@ export function runWeeklyCoach(inputs) {
       cardioAdjustment = {
         prescribed: true,
         type: 'LISS',
-        note: 'Add 3 × 20–30 min steady-state cardio (easy pace — you should be able to hold a conversation).',
+        note: 'Add 3 × 20–30 min steady-state cardio at an easy pace (you should be able to hold a conversation).',
       };
     }
   } else if (poorRecovery && cardioAdjustment?.prescribed) {
     cardioAdjustment = {
       prescribed: false,
       type: null,
-      note: 'Cardio paused this week — recovery takes priority.',
+      note: 'Cardio paused this week. Recovery takes priority.',
     };
   }
 
@@ -409,7 +409,7 @@ export function runWeeklyCoach(inputs) {
 
   if (deloadTriggers >= 2) {
     deloadSuggested = true;
-    deloadNote = 'Reduce sets by around half this week, keep the same exercises and weights. Your body is asking for a breather — one lighter week sets up a stronger block after.';
+    deloadNote = 'Reduce sets by around half this week, keep the same exercises and weights. Your body is asking for a breather. One lighter week sets up a stronger block after.';
   }
 
   // ── DIET BREAK SUGGESTION ─────────────────────────────────────────────────
@@ -425,9 +425,9 @@ export function runWeeklyCoach(inputs) {
   const whatWorking = [];
 
   if (sessionAdherence >= 1.0) {
-    whatWorking.push(`Sessions: ${sessionsCompleted}/${sessionsPlanned} — all done.`);
+    whatWorking.push(`Sessions: ${sessionsCompleted}/${sessionsPlanned}. All done.`);
   } else if (sessionAdherence >= 0.75) {
-    whatWorking.push(`Sessions: ${sessionsCompleted}/${sessionsPlanned} — solid week.`);
+    whatWorking.push(`Sessions: ${sessionsCompleted}/${sessionsPlanned}. Solid week.`);
   }
 
   if (prsThisWeek > 0) {
@@ -447,7 +447,7 @@ export function runWeeklyCoach(inputs) {
   if (excellentRec) {
     whatWorking.push('Energy and recovery are excellent.');
   } else if (!poorRecovery && energyScore != null) {
-    whatWorking.push('Recovery is manageable — no red flags.');
+    whatWorking.push('Recovery is manageable. No red flags.');
   }
 
   if (onTarget && weightDelta != null) {
@@ -456,7 +456,7 @@ export function runWeeklyCoach(inputs) {
 
   // Fallback — always show at least one bullet
   if (whatWorking.length === 0) {
-    whatWorking.push('Showing up and logging — that\'s the baseline everything else builds on.');
+    whatWorking.push('Showing up and logging. That\'s the baseline everything else builds on.');
   }
 
   // ── "WHY THIS WEEK" ───────────────────────────────────────────────────────
@@ -518,7 +518,7 @@ function _buildBaselineOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, we
     dataNote,
     weekLabel,
     trend: { ewma7: ewma7Today, delta: weightDelta, onTarget: onTarget ?? false, deltaLabel, rateLabel },
-    whatWorking: ['Logging consistently — the data is building.'],
+    whatWorking: ['Logging consistently. The data is building.'],
     adjustments: {
       training: { signal: 'hold', note: 'Continue your plan as written.' },
       calories: null,
@@ -559,7 +559,7 @@ function _buildAdherenceOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, w
     deloadNote: null,
     dietBreakSuggested: false,
     dietBreakNote: null,
-    adherenceNote: `${sessionsCompleted} of ${sessionsPlanned} sessions completed — getting back on schedule takes priority over any programming change.`,
+    adherenceNote: `${sessionsCompleted} of ${sessionsPlanned} sessions completed. Getting back on schedule takes priority over any programming change.`,
     prsThisWeek,
     sessionsCompleted,
     sessionsPlanned,

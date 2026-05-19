@@ -65,7 +65,7 @@ export default function SettingsScreen({ navigation }) {
         + WELLBEING_HELPLINE,
       [
         {
-          text: 'Yes — calmer experience',
+          text: 'Yes, switch to calmer experience',
           onPress: async () => { await setWellbeingMode('calm'); setWellbeing('calm'); },
         },
         {
@@ -193,7 +193,7 @@ export default function SettingsScreen({ navigation }) {
   function handleRestoreBackup() {
     Alert.alert(
       'Restore from backup?',
-      'This replaces ALL current data — workouts, routines, plans, body metrics and settings — with the contents of the backup file you choose. This cannot be undone.',
+      'This replaces ALL current data (workouts, routines, plans, body metrics and settings) with the contents of the backup file you choose. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {

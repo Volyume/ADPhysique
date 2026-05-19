@@ -177,15 +177,15 @@ export default function MesocycleBuilderScreen({ navigation }) {
                   <InfoTooltip
                     size={14}
                     text={
-                      'A Training Block is a structured period — usually 4–8 weeks — ' +
+                      'A Training Block is a structured period, usually 4 to 8 weeks, ' +
                       'where your weekly volume gradually builds, then drops during a lighter recovery week to let your body absorb the gains.\n\n' +
                       'Your plan (the workouts and exercises) lives independently. A block is an ' +
                       'optional layer you add on top to track periodised progress across those weeks.\n\n' +
                       'After the block ends:\n' +
                       '• The block is archived in All Blocks below\n' +
-                      '• Your plan continues — the workouts are still there\n' +
+                      '• Your plan keeps going. The workouts are still there.\n' +
                       '• Start a new block to begin the next training phase\n\n' +
-                      'Most athletes run 2–4 blocks per year, with each block slightly raising the volume floor from where the last one finished.'
+                      'Most people run 2 to 4 blocks per year, with each one slightly raising the volume floor from where the last one finished.'
                     }
                   />
                 </View>
@@ -249,10 +249,10 @@ export default function MesocycleBuilderScreen({ navigation }) {
                       size={13}
                       text={
                         `This block runs for ${totalWeeks} weeks` +
-                        (meso.deloadWeek ? ` — Week ${meso.deloadWeek} is your lighter recovery week.` : '.') +
+                        (meso.deloadWeek ? `. Week ${meso.deloadWeek} is your lighter recovery week.` : '.') +
                         '\n\nEach week you accumulate a little more training volume until the recovery week, where the load drops so your body can absorb the adaptations.\n\n' +
                         `When Week ${totalWeeks} is complete, the block closes and moves to All Blocks below. ` +
-                        'Your plan keeps running — start a new block to begin the next training phase.'
+                        'Your plan keeps running. Start a new block to begin the next training phase.'
                       }
                     />
                   </View>
@@ -282,7 +282,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
             <Text style={styles.emptyTitle}>No training blocks yet</Text>
             <Text style={styles.emptyText}>
               {activePlan
-                ? 'Your plan above is active and ready to train. A training block is optional — add one to track periodised, multi-week progress.'
+                ? 'Your plan above is active and ready to train. A training block is optional. Add one to track your week-by-week progress across a full training phase.'
                 : 'Create a block to track your multi-week training progress.'}
             </Text>
           </View>

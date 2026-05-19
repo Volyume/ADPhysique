@@ -23,21 +23,21 @@ const STEPS = [
     field: 'training_focus',
     options: [
       { value: 'bodybuilding', label: 'Bodybuilding', desc: 'Maximum muscle size and symmetry', icon: 'body' },
-      { value: 'hypertrophy', label: 'General Hypertrophy', desc: 'Build muscle efficiently', icon: 'fitness' },
-      { value: 'strength_hypertrophy', label: 'Strength + Hypertrophy', desc: 'Strength with muscle gain', icon: 'barbell' },
+      { value: 'hypertrophy', label: 'Build Muscle', desc: 'Focus on muscle size and growth', icon: 'fitness' },
+      { value: 'strength_hypertrophy', label: 'Strength + Size', desc: 'Get stronger and build muscle', icon: 'barbell' },
       { value: 'physique', label: 'Physique / Aesthetic', desc: 'Visual physique improvements', icon: 'star' },
     ],
   },
   {
     id: 'age',
     title: 'How long have you been training?',
-    subtitle: 'Your training age affects volume recommendations.',
+    subtitle: 'How long you have been training affects how we set up your plan.',
     field: 'training_age',
     options: [
-      { value: 1, label: 'Less than 1 year', desc: 'Beginner — still learning the basics', icon: 'leaf' },
-      { value: 2, label: '1–3 years', desc: 'Intermediate — solid foundation built', icon: 'trending-up' },
-      { value: 4, label: '3–5 years', desc: 'Experienced — advanced techniques needed', icon: 'flame' },
-      { value: 6, label: '5+ years', desc: 'Veteran — optimising every detail', icon: 'trophy' },
+      { value: 1, label: 'Less than 1 year', desc: 'Still getting to grips with the basics', icon: 'leaf' },
+      { value: 2, label: '1 to 3 years', desc: 'Solid foundation, building consistently', icon: 'trending-up' },
+      { value: 4, label: '3 to 5 years', desc: 'Experienced, chasing the finer details', icon: 'flame' },
+      { value: 6, label: '5+ years', desc: 'Veteran, sweating the small stuff', icon: 'trophy' },
     ],
   },
   {
