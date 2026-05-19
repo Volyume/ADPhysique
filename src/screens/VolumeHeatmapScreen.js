@@ -156,8 +156,8 @@ export default function VolumeHeatmapScreen() {
         <View style={styles.legendRow}>
           <LegendItem color={colors.textMuted} label="Below minimum" />
           <LegendItem color={colors.success} label="Optimal" />
-          <LegendItem color={colors.warning} label="Near ceiling" />
-          <LegendItem color={colors.error} label="Over ceiling" />
+          <LegendItem color={colors.warning} label="Getting close" />
+          <LegendItem color={colors.error} label="Too much" />
           <InfoTooltip size={11} text={
             'Each bar shows weekly sets for a muscle group.\n\n' +
             'The two tick marks on each bar are:\n' +

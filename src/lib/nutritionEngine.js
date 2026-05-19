@@ -27,13 +27,13 @@ const PHASE_ADJUSTMENTS = {
 };
 
 const PHASE_LABELS = {
-  lean_gain: 'Lean Gain',
-  build: 'Build',
-  maintain: 'Maintain',
-  recomp: 'Body Recomposition',
-  mild_cut: 'Mild Cut',
-  aggressive_cut: 'Aggressive Cut',
-  contest_prep: 'Contest Prep',
+  lean_gain: 'Build muscle (slow)',
+  build: 'Build muscle (fast)',
+  maintain: 'Maintain weight',
+  recomp: 'Recomposition',
+  mild_cut: 'Lose weight (steady)',
+  aggressive_cut: 'Lose weight (fast)',
+  contest_prep: 'Contest preparation',
 };
 
 // Three protein approaches — user selects which fits their preference.
@@ -267,7 +267,7 @@ export function calculateNutritionTargets(inputs) {
   const finalEstimatedRate = estimateWeeklyRate(actualTargetKcal, maintenanceKcal, weightKg);
 
   return {
-    bmrFormula: formula === 'mifflin' ? 'Standard BMR formula' : 'Lean mass-adjusted formula',
+    bmrFormula: formula === 'mifflin' ? 'Standard calorie formula' : 'Lean mass-adjusted formula',
     bmrKcal,
     maintenanceKcal,
     targetKcal: actualTargetKcal,

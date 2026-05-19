@@ -340,7 +340,7 @@ export default function SettingsScreen({ navigation }) {
               <SettingRow
                 icon="pulse-outline"
                 label="Goal phase & step target"
-                sub="Update your current phase: cut, bulk, or maintain"
+                sub="Update your current goal: fat loss, muscle building, or maintenance"
                 onPress={() => navigation.navigate('ProGoalSetup')}
               />
             </View>

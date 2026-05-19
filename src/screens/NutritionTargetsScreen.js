@@ -37,21 +37,21 @@ const BF_SOURCES = [
 ];
 
 const GOALS = [
-  { key: 'lean_gain',        label: 'Lean Gain',        detail: '+10% surplus' },
-  { key: 'build',            label: 'Build Mass',        detail: '+17% surplus' },
-  { key: 'maintain',         label: 'Maintain',          detail: '0%' },
-  { key: 'recomp',           label: 'Recomposition',     detail: '−5%' },
-  { key: 'mild_cut',         label: 'Mild Cut',          detail: '−13%' },
-  { key: 'aggressive_cut',   label: 'Aggressive Cut',    detail: '−22%' },
+  { key: 'lean_gain',        label: 'Build muscle (slow)',   detail: '+10% surplus' },
+  { key: 'build',            label: 'Build muscle (fast)',   detail: '+17% surplus' },
+  { key: 'maintain',         label: 'Maintain weight',       detail: '0%' },
+  { key: 'recomp',           label: 'Recomposition',         detail: '−5%' },
+  { key: 'mild_cut',         label: 'Lose weight (steady)',  detail: '−13%' },
+  { key: 'aggressive_cut',   label: 'Lose weight (fast)',    detail: '−22%' },
 ];
 
 const PHASE_DESCRIPTIONS = {
-  lean_gain:       'A modest calorie surplus with controlled volume supports steady lean tissue accrual.',
+  lean_gain:       'A modest calorie surplus supports steady muscle growth while keeping fat gain minimal.',
   build:           'A larger calorie surplus helps you recover from hard training and supports consistent muscle growth over time.',
-  maintain:        'Maintenance calories sustain performance; moderate volume keeps adaptations without excessive fatigue.',
-  recomp:          'A slight deficit with high protein enables simultaneous fat loss and muscle retention.',
-  mild_cut:        'A conservative deficit preserves strength; volume is moderated to match reduced recovery.',
-  aggressive_cut:  'A significant deficit impairs recovery; low volume limits muscle loss.',
+  maintain:        'Enough calories to fuel your training and hold your current body composition.',
+  recomp:          'A slight calorie reduction with high protein allows for gradual fat loss while holding muscle.',
+  mild_cut:        'A moderate calorie reduction that preserves strength and muscle while steadily losing fat.',
+  aggressive_cut:  'A significant calorie reduction for faster fat loss. Protein is raised to protect muscle during the deficit.',
 };
 
 const CONFIDENCE_LABELS = {
@@ -280,7 +280,7 @@ export default function NutritionTargetsScreen() {
                 'How calories are calculated:\n' +
                 '• Calorie baseline: a standard formula using your sex, age, height, and weight to estimate how many calories you burn at rest. If you enter a measured body fat percentage (from a scan or caliper test), we use a more accurate formula that accounts for your actual muscle mass.\n' +
                 '• Maintenance: your baseline × an activity multiplier based on how much you move each day.\n' +
-                '• Target: your maintenance adjusted for your goal (e.g. +10% for Lean Gain, -13% for Mild Cut).\n\n' +
+                '• Target: your maintenance adjusted for your goal (e.g. +10% for slow muscle building, -13% for steady fat loss).\n\n' +
                 'How macros are calculated:\n' +
                 '• Protein: varies by your chosen approach (1.2 to 3.3 g/kg). Rates rise in deeper deficits to protect muscle. Select your approach in the Protein Target section.\n' +
                 '• Fat: 25% of total calories, minimum 0.5 g/kg bodyweight to support hormonal health.\n' +
@@ -753,11 +753,11 @@ export default function NutritionTargetsScreen() {
                     <Text style={styles.calcValue}>{results.bmrFormula}</Text>
                   </View>
                   <View style={styles.calcRow}>
-                    <Text style={styles.calcKey}>BMR</Text>
+                    <Text style={styles.calcKey}>Resting calorie burn</Text>
                     <Text style={styles.calcValue}>{results.bmrKcal} kcal</Text>
                   </View>
                   <View style={styles.calcRow}>
-                    <Text style={styles.calcKey}>Maintenance (TDEE)</Text>
+                    <Text style={styles.calcKey}>Maintenance calories</Text>
                     <Text style={styles.calcValue}>{results.maintenanceKcal} kcal</Text>
                   </View>
                   <View style={styles.calcRow}>
@@ -765,7 +765,7 @@ export default function NutritionTargetsScreen() {
                     <Text style={styles.calcValue}>{results.phase}</Text>
                   </View>
                   <View style={styles.calcRow}>
-                    <Text style={styles.calcKey}>Est. rate</Text>
+                    <Text style={styles.calcKey}>Projected weekly change</Text>
                     <Text style={styles.calcValue}>
                       {results.targetRateKgPerWeek > 0 ? '+' : ''}
                       {results.targetRateKgPerWeek} kg/week

@@ -133,15 +133,15 @@ export function getVolumeStatus(workingSets, muscle, customLandmarks = null) {
     return { status: 'below', color: '#616161', label: 'Below target', landmarks };
   }
   if (mev > 0 && workingSets <= mev + 2) {
-    return { status: 'minimum', color: '#FFB300', label: 'Minimum stimulus', landmarks };
+    return { status: 'minimum', color: '#FFB300', label: 'Just enough', landmarks };
   }
   if (workingSets <= mav) {
-    return { status: 'optimal', color: '#00C853', label: 'Growth range', landmarks };
+    return { status: 'optimal', color: '#00C853', label: 'Good range', landmarks };
   }
   if (workingSets <= mrv) {
-    return { status: 'near_mrv', color: '#FFB300', label: 'Near recovery ceiling', landmarks };
+    return { status: 'near_mrv', color: '#FFB300', label: 'Getting close', landmarks };
   }
-  return { status: 'over_mrv', color: '#FF3D00', label: 'Recovery debt', landmarks };
+  return { status: 'over_mrv', color: '#FF3D00', label: 'Too much', landmarks };
 }
 
 // Algorithm 2: Double Progression Suggestion
@@ -449,7 +449,7 @@ export function getAutoRegSuggestion(workoutFeedback, weeklyVolumeByMuscle, cust
       suggestions.push({
         type: 'deload_muscle',
         muscle,
-        message: `${MUSCLE_DISPLAY_NAMES[muscle] || muscle}: near recovery ceiling (${Math.round(data.workingSets)} working sets). Consider reducing volume next session.`,
+        message: `${MUSCLE_DISPLAY_NAMES[muscle] || muscle}: over target this week (${Math.round(data.workingSets)} sets). Consider doing a little less next session.`,
       });
     }
   }
@@ -481,7 +481,7 @@ export function shouldDeload(last4WeeksData) {
 
   const overMRVWeeks = last4WeeksData.filter(w => w.hasOverMRV).length;
   if (overMRVWeeks >= 2) {
-    reasons.push('Over maximum weekly sets for 2+ consecutive weeks');
+    reasons.push('Exceeded your weekly training limit for 2 or more weeks in a row');
   }
 
   const avgJointDiscomfort =
@@ -887,7 +887,7 @@ export function evaluateDeloadTriggers(events = []) {
     return {
       shouldDeload: true,
       triggeredMuscles,
-      reason: `${triggeredMuscles.length} muscle groups hit recovery ceiling — deload recommended next week.`,
+      reason: `${triggeredMuscles.length} muscle groups exceeded their weekly limit — a lighter week is recommended.`,
     };
   }
 
@@ -895,7 +895,7 @@ export function evaluateDeloadTriggers(events = []) {
     return {
       shouldDeload: false,
       triggeredMuscles,
-      reason: `${MUSCLE_DISPLAY_NAMES[triggeredMuscles[0]] || triggeredMuscles[0]} is at recovery ceiling — monitor next session.`,
+      reason: `${MUSCLE_DISPLAY_NAMES[triggeredMuscles[0]] || triggeredMuscles[0]} is close to its weekly limit — keep an eye on it next session.`,
     };
   }
 

@@ -450,7 +450,7 @@ export default function AthleteHubScreen({ navigation }) {
               </View>
               <InfoTooltip
                 size={13}
-                text="Smooth trend line through your daily weigh-ins. Day-to-day swings from water, food, and sleep are normal. The trend is what matters. A steady downward line on a cut, or slow upward on a bulk, means things are working."
+                text="Smooth trend line through your daily weigh-ins. Day-to-day swings from water, food, and sleep are normal. The trend is what matters. A steady downward line on a fat loss phase, or slow upward on a building phase, means things are working."
               />
             </View>
             <WeightSparkline data={weightTrend} units={units} />
@@ -527,7 +527,7 @@ export default function AthleteHubScreen({ navigation }) {
             icon="layers"
             label="Training Blocks"
             sub="Plan and track multi-week training blocks"
-            tooltip={"A Training Block is a structured 5–6 week period where the work increases each week, followed by a lighter recovery week. Running blocks back-to-back is how you build long-term progress. Each block starts slightly heavier than the last. Create one here to link your plan to a block and track your week-by-week progress."}
+            tooltip={"A Training Block is a structured 5 to 6 week period where the work increases each week, followed by a lighter recovery week. Running blocks back-to-back is how you build long-term progress. Each block starts slightly heavier than the last. Create one here to link your plan to a block and track your week-by-week progress."}
             onPress={() => navigation.navigate('MesocycleBuilder')}
           />
           <NavRow
