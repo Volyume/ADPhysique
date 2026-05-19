@@ -297,8 +297,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
+    letterSpacing: 0.2,
     marginBottom: spacing.md,
   },
   sectionLabelSpaced: {

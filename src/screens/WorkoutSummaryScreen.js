@@ -454,10 +454,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               <Text style={styles.sectionTitle}>This week's volume</Text>
               <InfoTooltip size={11} text={
                 'How much you\'ve trained each muscle group this week.\n\n' +
-                'Green = Optimal range: getting growth stimulus without overdoing it\n' +
+                'Green = Good range: enough training to grow without overdoing it\n' +
                 'Yellow = Near your ceiling: one more session and you may exceed it\n' +
                 'Red = Over ceiling: consider reducing volume next week\n' +
-                'Grey = Below minimum: not enough to stimulate growth yet\n\n' +
+                'Grey = Below minimum: not quite enough to drive growth yet\n\n' +
                 'These targets are personalised and adjust over time based on how your body responds.'
               } />
             </View>
