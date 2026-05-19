@@ -19,6 +19,9 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
   const { weight, reps, setType } = value;
   const repsRef = useRef(null);
 
+  // Warm-up sets don't need input — values are pre-filled and logged as-is
+  if (isWarmup) return null;
+
   function adjust(field, delta) {
     Haptics.selectionAsync();
     const steps = { weight: 2.5, reps: 1 };
@@ -37,11 +40,6 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
 
   return (
     <View style={styles.container}>
-      {isWarmup && (
-        <Text style={styles.warmupHint}>
-          This is a warm-up set. Aim for about 50% of your working weight and 10–12 easy reps.
-        </Text>
-      )}
       {/* Weight Row */}
       <View style={styles.inputRow}>
         <Text style={styles.fieldLabel}>Weight ({units})</Text>
@@ -279,11 +277,5 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textPrimary,
     fontWeight: fontWeight.semibold,
-  },
-  warmupHint: {
-    fontSize: fontSize.sm,
-    color: colors.warning,
-    lineHeight: 20,
-    paddingBottom: spacing.xs,
   },
 });

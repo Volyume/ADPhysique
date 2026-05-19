@@ -118,6 +118,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [deloadDismissed, setDeloadDismissed] = useState(false);
   const autoAdvanceRef = useRef(null);
   const sessionSetsRef = useRef([]);   // tracks sets in this session — used for PR detection
+  const warmupHintSeenRef = useRef(false); // show one-liner warmup note only on first warmup of this session
 
   const scrollRef = useRef(null);
   const insets = useSafeAreaInsets();
@@ -527,8 +528,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       if (currentSet.setType === 'dropset') {
         setCurrentSet(cs => ({ ...cs, setType: 'straight' }));
       }
-      // If warmup was just completed, auto-switch to straight (working) and pre-fill from first target
+      // If warmup was just completed, mark hint seen and auto-switch to working set
       if (currentSet.setType === 'warmup') {
+        warmupHintSeenRef.current = true;
         const firstTarget = setTargets[0];
         if (firstTarget) {
           const anchorSet0 = getBestAnchorSet(prevSets, 0);
@@ -922,8 +924,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             {currentSet.setType === 'warmup' && (
               <View style={styles.warmupBanner}>
                 <Ionicons name="flame-outline" size={14} color={colors.warning} />
-                <Text style={styles.warmupBannerText}>WARM UP · not counted in volume</Text>
+                <Text style={styles.warmupBannerText}>Warm-up · not counted in your totals</Text>
               </View>
+            )}
+            {currentSet.setType === 'warmup' && !warmupHintSeenRef.current && (
+              <Text style={styles.warmupOneTimeHint}>
+                Get the muscles and joints ready. Light weight, easy reps. Tap Done when you're ready to work.
+              </Text>
             )}
             {currentSet.setType === 'dropset' && (
               <View style={styles.dropBanner}>
@@ -1040,11 +1047,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               onPress={handleCompleteSet}
               disabled={saving}
               accessibilityRole="button"
-              accessibilityLabel={currentSet.setType === 'warmup' ? 'Log warm-up set' : 'Complete set'}
+              accessibilityLabel={currentSet.setType === 'warmup' ? 'Done with warm-up' : 'Complete set'}
             >
               <Ionicons name="checkmark-circle" size={20} color={currentSet.setType === 'warmup' ? colors.warning : colors.primary} />
               <Text style={[styles.completeBtnText, currentSet.setType === 'warmup' && styles.completeBtnTextWarmup]}>
-                {currentSet.setType === 'warmup' ? 'Log warm-up' : 'Log set'}
+                {currentSet.setType === 'warmup' ? 'Done' : 'Log set'}
               </Text>
             </TouchableOpacity>
           )}
@@ -1641,7 +1648,11 @@ const styles = StyleSheet.create({
   setEntryCardWarmup: { borderColor: colors.warning, backgroundColor: colors.warningBg || colors.surface },
   setEntryCardDrop: { borderColor: colors.gold, backgroundColor: 'rgba(255,215,0,0.06)' },
   warmupBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  warmupBannerText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.warning, letterSpacing: 0.8 },
+  warmupBannerText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.warning, letterSpacing: 0.3 },
+  warmupOneTimeHint: {
+    fontSize: fontSize.sm, color: colors.textMuted,
+    lineHeight: 20, paddingTop: spacing.xs,
+  },
   firstSetHint: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, backgroundColor: colors.primaryBg, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.sm },
   firstSetHintText: { flex: 1, fontSize: fontSize.xs, color: colors.primary, lineHeight: 18 },
   dropBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
