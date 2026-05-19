@@ -25,16 +25,6 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
-      # expo-modules-core 1.12.x uses `from components.release` inside
-      # afterEvaluate which fails with AGP 8.4+. Deleting that single line
-      # is safe — a MavenPublication without a component is valid and we
-      # never publish to Maven when building an APK.
-      - name: Patch expo-modules-core for AGP 8.4+ compatibility
-        run: |
-          FILE=node_modules/expo-modules-core/android/ExpoModulesCorePlugin.gradle
-          sed -i '/from components\.release/d' "$FILE"
-          echo "Patch applied. Remaining occurrences: $(grep -c 'components\.release' "$FILE" || echo 0)"
-
       - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
@@ -59,13 +49,22 @@ jobs:
       - name: Make Gradlew executable
         run: chmod +x android/gradlew
 
+      # expo-modules-core 1.12.x uses `from components.release` inside
+      # afterEvaluate which fails with AGP 8.4+. Run this patch as the
+      # very last step before Gradle so nothing can undo it.
+      - name: Patch expo-modules-core for AGP 8.4+ compatibility
+        run: |
+          FILE=node_modules/expo-modules-core/android/ExpoModulesCorePlugin.gradle
+          sed -i '/from components\.release/d' "$FILE"
+          grep -n 'components' "$FILE" || echo "✓ No components references remain"
+
       # Release build embeds the JS bundle (index.android.bundle) into the APK,
       # so it runs standalone without a Metro dev server. Expo's prebuild
       # template signs the release buildType with the debug keystore by
       # default, so this APK installs and runs without a custom keystore —
       # suitable for sideloaded testing (not for Play Store submission).
       - name: Build Release APK
-        run: cd android && ./gradlew assembleRelease --no-daemon
+        run: cd android && ./gradlew assembleRelease --no-daemon --no-configuration-cache
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
