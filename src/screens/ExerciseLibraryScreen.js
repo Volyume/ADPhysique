@@ -201,7 +201,7 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
             </TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={styles.addModalContent} keyboardShouldPersistTaps="handled">
-            <Text style={styles.addFieldLabel}>EXERCISE NAME *</Text>
+            <Text style={styles.addFieldLabel}>Exercise name *</Text>
             <TextInput
               style={styles.addFieldInput}
               value={newName}
@@ -225,7 +225,7 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
               ))}
             </View>
 
-            <Text style={[styles.addFieldLabel, { marginTop: spacing.xl }]}>SECONDARY MUSCLES (OPTIONAL)</Text>
+            <Text style={[styles.addFieldLabel, { marginTop: spacing.xl }]}>Secondary muscles (optional)</Text>
             <Text style={styles.addFieldNote}>Select all muscles this exercise also works</Text>
             <View style={styles.chipGrid}>
               {Object.entries(MUSCLE_DISPLAY_NAMES)

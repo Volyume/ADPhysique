@@ -110,9 +110,12 @@ export default function ExerciseDetailScreen({ navigation, route }) {
 
           {secondaryMuscles.length > 0 && (
             <View style={styles.secMuscles}>
-              <Text style={styles.secMuscleLabel}>Secondary: </Text>
+              <Text style={styles.secMuscleLabel}>Also works: </Text>
               <Text style={styles.secMuscleText}>
-                {secondaryMuscles.map(m => m.muscle || m).join(', ')}
+                {secondaryMuscles.map(m => {
+                  const key = m.muscle || m;
+                  return MUSCLE_DISPLAY_NAMES[key] || key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
+                }).join(', ')}
               </Text>
             </View>
           )}

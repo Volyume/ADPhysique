@@ -147,7 +147,7 @@ export function getVolumeStatus(workingSets, muscle, customLandmarks = null) {
 // Algorithm 2: Double Progression Suggestion
 export function getProgressionSuggestion(currentSets, prevWorkoutSets, targetRepsMin, targetRepsMax, units = 'kg') {
   if (!prevWorkoutSets || prevWorkoutSets.length === 0) {
-    return { action: 'baseline', message: 'First time logging. Establish a baseline today.' };
+    return { action: 'baseline', message: 'First time logging this exercise. Any weight is a great starting point.' };
   }
 
   const prevAvgReps =
@@ -419,26 +419,26 @@ export function getAutoRegSuggestion(workoutFeedback, weeklyVolumeByMuscle, cust
   if (sessionDifficulty >= 4 && soreness24hBefore >= 2) {
     suggestions.push({
       type: 'reduce_volume',
-      message: 'Reduce volume by 1-2 sets next week. High fatigue indicated.',
+      message: 'Your body is showing fatigue. Drop 1 or 2 sets next week and let it catch up.',
     });
   } else if (sessionDifficulty <= 2 && soreness24hBefore === 0 && fatigueLevel >= 4) {
     suggestions.push({
       type: 'add_volume',
-      message: 'Recovery capacity available. Consider adding 1-2 sets next week.',
+      message: "You're recovering well. You can add a set or two next week if you want to push things forward.",
     });
   }
 
   if (jointDiscomfort >= 2) {
     suggestions.push({
       type: 'reduce_weight',
-      message: 'Maintain volume but reduce load 5-10%. Joint discomfort noted.',
+      message: 'Joint discomfort noted. Keep the same number of sets but ease off the weight slightly next session.',
     });
   }
 
   if (overallPump === 3 && sessionDifficulty <= 3) {
     suggestions.push({
       type: 'increase_load',
-      message: 'Strong response. Consider increasing load or adding a set next session.',
+      message: 'Good session. You can push a little harder next time: try adding weight or an extra set.',
     });
   }
 
@@ -455,7 +455,7 @@ export function getAutoRegSuggestion(workoutFeedback, weeklyVolumeByMuscle, cust
   }
 
   if (suggestions.length === 0) {
-    suggestions.push({ type: 'maintain', message: 'Volume is within target range. Continue planned progression.' });
+    suggestions.push({ type: 'maintain', message: "Training is on track. Keep doing what you're doing." });
   }
 
   return suggestions;
@@ -549,7 +549,7 @@ function buildSubstituteReason(sub, target) {
 // Algorithm 10: Progression Path
 export function getProgressionPath(thisWeekSets, lastWeekSets, units = 'kg') {
   if (!lastWeekSets || lastWeekSets.length === 0) {
-    return { action: 'establish_baseline', message: 'Keep logging. Building your baseline.' };
+    return { action: 'establish_baseline', message: 'Keep logging. After a week or two you will start seeing comparisons here.' };
   }
 
   const thisAvg =
