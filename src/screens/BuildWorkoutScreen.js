@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { getAllExercises, createWorkout } from '../lib/database';
+import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { generateTravelPlan } from '../lib/travelMode';
 import useAppStore from '../store/useAppStore';
 
@@ -172,8 +173,9 @@ export default function BuildWorkoutScreen({ navigation }) {
               <View style={styles.exerciseInfo}>
                 <Text style={styles.exerciseName}>{item.exercise.name}</Text>
                 <Text style={styles.exerciseMuscle}>
-                  {(item.exercise.primaryMuscle || '').charAt(0).toUpperCase() +
-                    (item.exercise.primaryMuscle || '').slice(1)}
+                  {MUSCLE_DISPLAY_NAMES[item.exercise.primaryMuscle] ||
+                    (item.exercise.primaryMuscle || '').charAt(0).toUpperCase() +
+                    (item.exercise.primaryMuscle || '').slice(1).replace(/_/g, ' ')}
                   {item.exercise.equipment ? ` · ${item.exercise.equipment}` : ''}
                 </Text>
               </View>

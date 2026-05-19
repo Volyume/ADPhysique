@@ -9,6 +9,7 @@ import {
   getRoutineById, getRoutineExercisesWithDetails, getAllExercises,
   addExerciseToRoutine, removeExerciseFromRoutine, createWorkout, updateRoutineExercise,
 } from '../lib/database';
+import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 
 export default function RoutineDetailScreen({ navigation, route }) {
@@ -151,8 +152,9 @@ export default function RoutineDetailScreen({ navigation, route }) {
                 </Text>
               ) : null}
               <Text style={styles.exerciseMuscle}>
-                {(exercise.primaryMuscle || '').charAt(0).toUpperCase() +
-                  (exercise.primaryMuscle || '').slice(1)}
+                {MUSCLE_DISPLAY_NAMES[exercise.primaryMuscle] ||
+                  (exercise.primaryMuscle || '').charAt(0).toUpperCase() +
+                  (exercise.primaryMuscle || '').slice(1).replace(/_/g, ' ')}
               </Text>
             </View>
             <View style={styles.cardActions}>

@@ -54,9 +54,9 @@ const SET_TYPE_DISPLAY = {
 };
 
 const SET_TYPE_OPTIONS = [
-  { value: 'straight', label: 'Working', description: 'Counts toward your weekly volume. Use for all main sets.' },
-  { value: 'warmup', label: 'Warm-up', description: 'Preparation set. Does not count toward weekly volume.' },
-  { value: 'dropset', label: 'Drop Set', description: 'Reduced load after a working set. Counts toward weekly volume.' },
+  { value: 'straight', label: 'Working', description: 'Counts as a full working set. Use this for all your main sets.' },
+  { value: 'warmup', label: 'Warm-up', description: 'Preparation set to get ready. Not counted in your weekly totals.' },
+  { value: 'dropset', label: 'Drop Set', description: 'Reduce the weight and keep going. Counted in your weekly totals.' },
 ];
 
 // Returns the set to use as the rep-progression anchor.
