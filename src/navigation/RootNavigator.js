@@ -52,9 +52,20 @@ import ProGoalSetupScreen from '../screens/ProGoalSetupScreen';
 import NotificationSettingsScreen from '../screens/NotificationSettingsScreen';
 import ProOnboardingScreen from '../screens/ProOnboardingScreen';
 import ProSetupCompleteScreen from '../screens/ProSetupCompleteScreen';
+import ProUpgradeScreen from '../screens/ProUpgradeScreen';
+import { withProGuard } from '../components/ProGate';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
+
+// Pro-only screens. The guard renders an upgrade prompt for free users,
+// enforcing Pro access no matter how the route is reached.
+const GatedCoachBuilder     = withProGuard(CoachBuilderScreen, 'Coach Builder');
+const GatedWeeklyCheckIn    = withProGuard(WeeklyCheckInScreen, 'Weekly check-in');
+const GatedNutritionTargets = withProGuard(NutritionTargetsScreen, 'Nutrition targets');
+const GatedBodyMetrics      = withProGuard(BodyMetricsScreen, 'Body metrics');
+const GatedCoachOutput      = withProGuard(CoachOutputScreen, 'Your week');
+const GatedProGoalSetup     = withProGuard(ProGoalSetupScreen, 'Pro goal setup');
 
 const stackOptions = {
   headerStyle: { backgroundColor: colors.surface, borderBottomColor: colors.border },
@@ -71,6 +82,7 @@ function HomeStack() {
       <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} options={{ headerShown: false }} />
       <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ title: 'Session Complete' }} />
       <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ title: 'Share Card' }} />
+      <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
     </Stack.Navigator>
   );
 }
@@ -84,8 +96,9 @@ function PlansStack() {
       <Stack.Screen name="ExerciseLibrary" component={ExerciseLibraryScreen} options={{ title: 'Exercise Library' }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise' }} />
       <Stack.Screen name="ManualBuilder" component={ManualBuilderScreen} options={{ title: 'Build a Plan' }} />
-      <Stack.Screen name="CoachBuilder" component={CoachBuilderScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="CoachBuilder" component={GatedCoachBuilder} options={{ headerShown: false }} />
       <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ title: 'Plan Library' }} />
+      <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
     </Stack.Navigator>
   );
 }
@@ -98,10 +111,11 @@ function ProgressStack() {
       <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ title: 'Session Complete' }} />
       <Stack.Screen name="VolumeHeatmap" component={VolumeHeatmapScreen} options={{ title: 'Volume Heatmap' }} />
       <Stack.Screen name="PRWall" component={PRWallScreen} options={{ title: 'Personal Records' }} />
-      <Stack.Screen name="BodyMetrics" component={BodyMetricsScreen} options={{ title: 'Body Metrics' }} />
+      <Stack.Screen name="BodyMetrics" component={GatedBodyMetrics} options={{ title: 'Body Metrics' }} />
       <Stack.Screen name="ExerciseLibrary" component={ExerciseLibraryScreen} options={{ title: 'Lift Progress' }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise' }} />
       <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ title: 'Share Card' }} />
+      <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
     </Stack.Navigator>
   );
 }
@@ -111,16 +125,17 @@ function ProfileStack() {
     <Stack.Navigator screenOptions={stackOptions}>
       <Stack.Screen name="AthleteHub" component={AthleteHubScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
-      <Stack.Screen name="NutritionTargets" component={NutritionTargetsScreen} options={{ title: 'Nutrition Targets' }} />
-      <Stack.Screen name="BodyMetrics" component={BodyMetricsScreen} options={{ title: 'Body Metrics' }} />
+      <Stack.Screen name="NutritionTargets" component={GatedNutritionTargets} options={{ title: 'Nutrition Targets' }} />
+      <Stack.Screen name="BodyMetrics" component={GatedBodyMetrics} options={{ title: 'Body Metrics' }} />
       <Stack.Screen name="PRWall" component={PRWallScreen} options={{ title: 'Personal Records' }} />
       <Stack.Screen name="ExerciseLibrary" component={ExerciseLibraryScreen} options={{ title: 'Exercise Library' }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise' }} />
       <Stack.Screen name="MesocycleBuilder" component={MesocycleBuilderScreen} options={{ title: 'Training Blocks' }} />
-      <Stack.Screen name="WeeklyCheckIn" component={WeeklyCheckInScreen} options={{ title: 'Weekly Check-In' }} />
-      <Stack.Screen name="CoachOutput" component={CoachOutputScreen} options={{ title: 'Your Week' }} />
-      <Stack.Screen name="ProGoalSetup" component={ProGoalSetupScreen} options={{ title: 'Pro Setup' }} />
+      <Stack.Screen name="WeeklyCheckIn" component={GatedWeeklyCheckIn} options={{ title: 'Weekly Check-In' }} />
+      <Stack.Screen name="CoachOutput" component={GatedCoachOutput} options={{ title: 'Your Week' }} />
+      <Stack.Screen name="ProGoalSetup" component={GatedProGoalSetup} options={{ title: 'Pro Setup' }} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ title: 'Notifications' }} />
+      <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
     </Stack.Navigator>
   );
 }

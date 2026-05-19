@@ -53,7 +53,7 @@ function SectionHeader({ title }) {
 const PHYSIQUE_PREF_KEY = '@volyume_physique_tracking_enabled';
 
 export default function SettingsScreen({ navigation }) {
-  const { user, setUser, setSession, units, setUnits, barWeight, setBarWeight, userProfile, saveLocalProfile } =
+  const { user, setUser, setSession, units, setUnits, barWeight, setBarWeight, userProfile, saveLocalProfile, tier } =
     useAppStore();
   const [editName, setEditName] = useState(userProfile?.firstName ?? '');
   const [physiqueEnabled, setPhysiqueEnabled] = useState(false);
@@ -239,8 +239,23 @@ export default function SettingsScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
+        {/* Go Pro — free users only */}
+        {tier !== 'pro' && (
+          <>
+            <SectionHeader title="Volyume Pro" />
+            <View style={styles.section}>
+              <SettingRow
+                icon="sparkles"
+                label="Go Pro"
+                value="Free in beta"
+                onPress={() => navigation.navigate('ProUpgrade')}
+              />
+            </View>
+          </>
+        )}
+
         {/* Profile */}
-        <SectionHeader title="PROFILE" />
+        <SectionHeader title="Profile" />
         <View style={styles.section}>
           <View style={styles.nameRow}>
             <Ionicons name="person-outline" size={18} color={colors.primary} style={styles.nameIcon} />
@@ -264,7 +279,7 @@ export default function SettingsScreen({ navigation }) {
         </View>
 
         {/* Preferences */}
-        <SectionHeader title="PREFERENCES" />
+        <SectionHeader title="Preferences" />
         <View style={styles.section}>
           <SettingRow
             icon="scale-outline"
@@ -317,19 +332,23 @@ export default function SettingsScreen({ navigation }) {
           />
         </View>
 
-        {/* Pro coaching setup */}
-        <SectionHeader title="WEEKLY COACHING" />
-        <View style={styles.section}>
-          <SettingRow
-            icon="pulse-outline"
-            label="Goal phase & step target"
-            sub="Update your current phase: cut, bulk, or maintain"
-            onPress={() => navigation.navigate('ProGoalSetup')}
-          />
-        </View>
+        {/* Pro coaching setup — Pro only */}
+        {tier === 'pro' && (
+          <>
+            <SectionHeader title="Weekly coaching" />
+            <View style={styles.section}>
+              <SettingRow
+                icon="pulse-outline"
+                label="Goal phase & step target"
+                sub="Update your current phase: cut, bulk, or maintain"
+                onPress={() => navigation.navigate('ProGoalSetup')}
+              />
+            </View>
+          </>
+        )}
 
         {/* Exercise Library */}
-        <SectionHeader title="EXERCISE LIBRARY" />
+        <SectionHeader title="Exercise library" />
         <View style={styles.section}>
           <SettingRow
             icon="barbell-outline"
@@ -339,7 +358,7 @@ export default function SettingsScreen({ navigation }) {
         </View>
 
         {/* Data */}
-        <SectionHeader title="DATA & PRIVACY" />
+        <SectionHeader title="Data & privacy" />
         <View style={styles.section}>
           <SettingRow
             icon="save-outline"
@@ -365,7 +384,7 @@ export default function SettingsScreen({ navigation }) {
         </View>
 
         {/* Account */}
-        <SectionHeader title="ACCOUNT" />
+        <SectionHeader title="Account" />
         <View style={styles.section}>
           <SettingRow
             icon="log-out-outline"
@@ -400,7 +419,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.black,
     color: colors.textMuted,
-    letterSpacing: 1.5,
+    letterSpacing: 0.5,
     paddingHorizontal: spacing.sm,
     paddingTop: spacing.lg,
     paddingBottom: spacing.sm,

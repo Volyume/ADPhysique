@@ -42,7 +42,7 @@ const ACTION_CARDS = [
 ];
 
 export default function PlansScreen({ navigation }) {
-  const { user, startWorkout } = useAppStore();
+  const { user, startWorkout, tier } = useAppStore();
   const [activePlan, setActivePlanData] = useState(null);
   const [myPlans, setMyPlans] = useState([]);
   const [templates, setTemplates] = useState([]);
@@ -284,30 +284,47 @@ export default function PlansScreen({ navigation }) {
         {/* Decision Hub */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Start or build a plan</Text>
-          {ACTION_CARDS.map(card => (
-            <TouchableOpacity
-              key={card.id}
-              style={[styles.actionCard, card.badge && styles.actionCardFeatured]}
-              onPress={() => navigation.navigate(card.screen)}
-              activeOpacity={0.75}
-            >
-              <View style={[styles.actionCardIcon, card.badge && styles.actionCardIconFeatured]}>
-                <Ionicons name={card.icon} size={24} color={colors.primary} />
-              </View>
-              <View style={styles.actionCardBody}>
-                <View style={styles.actionCardTitleRow}>
-                  <Text style={styles.actionCardTitle}>{card.title}</Text>
-                  {card.badge && (
-                    <View style={styles.actionCardBadge}>
-                      <Text style={styles.actionCardBadgeText}>{card.badge}</Text>
-                    </View>
-                  )}
+          {ACTION_CARDS.map(card => {
+            const isCoach = card.id === 'coach';
+            const proLocked = isCoach && tier !== 'pro';
+            const featured = Boolean(card.badge) || proLocked;
+            return (
+              <TouchableOpacity
+                key={card.id}
+                style={[styles.actionCard, featured && styles.actionCardFeatured]}
+                onPress={() => navigation.navigate(proLocked ? 'ProUpgrade' : card.screen)}
+                activeOpacity={0.75}
+              >
+                <View style={[styles.actionCardIcon, featured && styles.actionCardIconFeatured]}>
+                  <Ionicons
+                    name={proLocked ? 'lock-closed' : card.icon}
+                    size={24}
+                    color={colors.primary}
+                  />
                 </View>
-                <Text style={styles.actionCardDesc}>{card.description}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={card.badge ? colors.primary : colors.textMuted} />
-            </TouchableOpacity>
-          ))}
+                <View style={styles.actionCardBody}>
+                  <View style={styles.actionCardTitleRow}>
+                    <Text style={styles.actionCardTitle}>{card.title}</Text>
+                    {proLocked ? (
+                      <View style={styles.actionCardBadge}>
+                        <Text style={styles.actionCardBadgeText}>Pro</Text>
+                      </View>
+                    ) : card.badge ? (
+                      <View style={styles.actionCardBadge}>
+                        <Text style={styles.actionCardBadgeText}>{card.badge}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  <Text style={styles.actionCardDesc}>
+                    {proLocked
+                      ? 'An intelligent plan built around you. Part of Pro, free during beta.'
+                      : card.description}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={featured ? colors.primary : colors.textMuted} />
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </ScrollView>
     </SafeAreaView>
