@@ -108,6 +108,20 @@ function MacroCard({ label, grams, perKg, perKgLbm, basis }) {
   );
 }
 
+function WhySection({ icon, color, title, body }) {
+  return (
+    <View style={styles.whySection}>
+      <View style={styles.whySectionHeader}>
+        <View style={[styles.whySectionIcon, { backgroundColor: color + '20' }]}>
+          <Ionicons name={icon} size={14} color={color} />
+        </View>
+        <Text style={styles.whySectionTitle}>{title}</Text>
+      </View>
+      <Text style={styles.whySectionBody}>{body}</Text>
+    </View>
+  );
+}
+
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 const BODY_METRICS_KEY_PREFIX = '@volyume_body_metrics_';
@@ -132,6 +146,7 @@ export default function NutritionTargetsScreen() {
   // ── Results / UI state ──────────────────────────────────────────────────────────
   const [results,      setResults]      = useState(null);
   const [expanded,     setExpanded]     = useState(false);
+  const [whyExpanded,  setWhyExpanded]  = useState(true);
   const [calculating,  setCalculating]  = useState(false);
   const [calm,         setCalm]         = useState(false);
   const [formCollapsed, setFormCollapsed] = useState(false);
@@ -525,6 +540,81 @@ export default function NutritionTargetsScreen() {
                 <MacroCard label="Carbs" grams={results.carbsG} />
                 <MacroCard label="Fat"   grams={results.fatG}   />
               </View>
+
+              {/* ── Why these numbers for you? ─────────────────────── */}
+              {(() => {
+                // Derive weight from form state; fall back to back-calculation from protein ratio
+                const weightKg = parseFloat(weight) > 0
+                  ? parseFloat(weight)
+                  : results.proteinGPerKg > 0
+                    ? Math.round(results.proteinG / results.proteinGPerKg)
+                    : null;
+                const lbmKg = results.proteinBasis === 'lbm' && results.proteinGPerKgLbm > 0
+                  ? Math.round(results.proteinG / results.proteinGPerKgLbm * 10) / 10
+                  : null;
+                const surplusDelta = Math.round(results.targetKcal - results.maintenanceKcal);
+                const isUp = surplusDelta >= 0;
+                const absPct = Math.round(Math.abs(surplusDelta / results.maintenanceKcal) * 100);
+                const rateAbs = Math.abs(results.targetRateKgPerWeek);
+                const rateDir = results.targetRateKgPerWeek >= 0 ? 'gain' : 'lose';
+                const fatFloorG = weightKg ? Math.round(Math.max(0.5 * weightKg, 30)) : 30;
+                const fatKcal = results.fatG * 9;
+                const fatPct = Math.round(fatKcal / results.targetKcal * 100);
+                const carbKcal = results.carbsG * 4;
+
+                // Goal-aware text helpers
+                const isGain  = ['lean_gain', 'build'].includes(results.goal);
+                const isCut   = ['mild_cut', 'aggressive_cut', 'contest_prep'].includes(results.goal);
+                const isRecomp = results.goal === 'recomp';
+
+                const calorieWhy = isGain
+                  ? `Your maintenance is ${results.maintenanceKcal.toLocaleString()} kcal — what you need to stay the same weight. Adding a ${absPct}% surplus (+${surplusDelta} kcal) gives your muscles the extra energy and building blocks to grow. At ${rateAbs.toFixed(2)} kg/week projected gain, you're in the sweet spot: fast enough to accumulate lean mass, slow enough to keep fat gain minimal.`
+                  : isCut
+                  ? `Your maintenance is ${results.maintenanceKcal.toLocaleString()} kcal. A ${absPct}% deficit (−${Math.abs(surplusDelta)} kcal) puts you on track to ${rateDir} roughly ${rateAbs.toFixed(2)} kg/week. That rate is ${rateAbs <= 0.5 ? 'conservative — you\'ll lose mostly fat while retaining more muscle' : rateAbs <= 0.8 ? 'moderate — effective fat loss with manageable muscle risk' : 'aggressive — protein intake has been raised to protect lean mass'}. The key is consistency over weeks, not perfection each day.`
+                  : `Your maintenance is ${results.maintenanceKcal.toLocaleString()} kcal. A slight ${Math.abs(absPct)}% deficit puts you in recomposition territory — just enough of a deficit to mobilise body fat as fuel, while high protein and training stimulus tell your body to hold (and even build) muscle. Progress is slower than a dedicated bulk or cut, but body composition improves simultaneously.`;
+
+                const proteinWhy = results.proteinBasis === 'lbm'
+                  ? (isGain
+                    ? `You have roughly ${lbmKg} kg of lean mass. At ${results.proteinGPerKgLbm} g/kg lean mass, ${results.proteinG}g of protein sits at the research-backed optimum for maximising muscle protein synthesis during a gaining phase (Helms et al. 2014). We scale to lean mass — not total weight — because fat tissue doesn't need protein to maintain, so this gives you a more precise target regardless of body-fat level. Going below ~1.6 g/kg bodyweight caps your adaptation response; at ${results.proteinGPerKgLbm} g/kg LBM you have a meaningful buffer above that ceiling.`
+                    : isRecomp
+                    ? `With ${lbmKg} kg of lean mass, your ${results.proteinG}g target (${results.proteinGPerKgLbm} g/kg LBM) is intentionally elevated for a recomp. High protein does two jobs simultaneously: it provides the amino acids needed for muscle protein synthesis, and it signals your body to spare existing muscle even as the deficit encourages fat oxidation. This dual role is what makes recomposition possible — protein is the lever that separates "losing weight" from "changing body composition."`
+                    : `With ${lbmKg} kg of lean mass, ${results.proteinG}g (${results.proteinGPerKgLbm} g/kg LBM) sits near the top of the evidence-based range for muscle preservation in a deficit. When calories are restricted, the body can break down muscle for fuel — high protein intake is the primary tool to prevent this. The Helms et al. 2014 contest-prep review found 2.3–3.1 g/kg LBM optimal; at ${results.proteinGPerKgLbm} g/kg you're within that protective band.`)
+                  : (isGain
+                    ? `At ${results.proteinGPerKg} g/kg bodyweight, your ${results.proteinG}g target meets the practical upper threshold for gaining phases from the RP Hypertrophy framework. This is the "safety margin" level — enough to saturate muscle protein synthesis across all your training sessions without excess. Tip: if you add a measured body fat % (BIA, caliper, or DEXA), we can scale to your lean mass instead, which is more precise — especially if your body fat is high or low.`
+                    : `At ${results.proteinGPerKg} g/kg bodyweight, your ${results.proteinG}g target is deliberately elevated. In a calorie deficit, your body will break down muscle tissue for energy if protein is too low — this is the primary driver of "skinny fat" outcomes on poorly planned diets. High protein suppresses that breakdown (anti-catabolism) and keeps you feeling full, which helps adherence. Enter a measured body fat % to unlock lean-mass scaling, which is even more accurate.`);
+
+                const fatWhy = `Fat has two non-negotiable roles: testosterone and sex hormone production depend on dietary fat, and vitamins A, D, E, and K are fat-soluble — meaning they can't be absorbed without it. We set yours to ${fatPct}% of your calories (${results.fatG}g), with a hard floor of ${fatFloorG}g. Dropping below that floor — even temporarily during a cut — can suppress testosterone and impair recovery. Think of fat as your hormonal infrastructure budget: it's the last macro to cut.`;
+
+                const carbWhy = isGain
+                  ? `Carbs are your primary training fuel. Glycogen (stored muscle carbohydrate) is what powers your working sets — by the fourth or fifth set, it's almost exclusively glycogen being used. Your ${results.carbsG}g gives you more than enough to top up glycogen between sessions and arrive at every workout ready to push hard. More training stimulus from better-fuelled sessions means more muscle growth stimulus — carbs in a surplus are the performance multiplier.`
+                  : isCut
+                  ? `After protein (muscle preservation) and fat (hormones) are set, carbs fill the remaining ${carbKcal} kcal. Carbs are reduced in a deficit because — unlike protein and fat — they don't have critical structural roles. Your ${results.carbsG}g still provides meaningful glycogen for training. If you notice performance declining significantly late in your cut, that's a signal to increase calories slightly. Timing carbs around your training sessions (pre- and post-workout) will get you the most performance per gram.`
+                  : `Carbs fill the remaining ${carbKcal} kcal after protein and fat are set. In a recomp they're kept moderate — enough to fuel training and replenish glycogen, but not so many that they block the small deficit needed for fat loss. Prioritise carbs around your workouts: pre-session for fuel, post-session for glycogen replenishment. The rest of the day can be lower-carb without hurting performance.`;
+
+                return (
+                  <View style={styles.whyCard}>
+                    <TouchableOpacity
+                      style={styles.whyHeader}
+                      onPress={() => setWhyExpanded(v => !v)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.whyHeaderLeft}>
+                        <Ionicons name="school-outline" size={18} color={colors.primary} />
+                        <Text style={styles.whyHeaderLabel}>Why these numbers for you?</Text>
+                      </View>
+                      <Ionicons name={whyExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
+                    </TouchableOpacity>
+                    {whyExpanded && (
+                      <View style={styles.whyBody}>
+                        <WhySection icon="flame-outline" color={colors.warning} title={`Calories — ${results.targetKcal.toLocaleString()} kcal`} body={calorieWhy} />
+                        <WhySection icon="barbell-outline" color={colors.primary} title={`Protein — ${results.proteinG}g`} body={proteinWhy} />
+                        <WhySection icon="water-outline" color={colors.success} title={`Fat — ${results.fatG}g`} body={fatWhy} />
+                        <WhySection icon="leaf-outline" color="#A78BFA" title={`Carbs — ${results.carbsG}g`} body={carbWhy} />
+                      </View>
+                    )}
+                  </View>
+                );
+              })()}
 
               {/* Phase card */}
               <View style={styles.phaseCard}>
@@ -1070,5 +1160,63 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
     color: colors.primary,
+  },
+
+  // ── Why these numbers ────────────────────────────────────────────────────────
+
+  whyCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  whyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.lg,
+  },
+  whyHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  whyHeaderLabel: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+  },
+  whyBody: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    padding: spacing.lg,
+    gap: spacing.lg,
+  },
+  whySection: {
+    gap: spacing.sm,
+  },
+  whySectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  whySectionIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  whySectionTitle: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+  },
+  whySectionBody: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 21,
+    paddingLeft: 32,
   },
 });
