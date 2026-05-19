@@ -80,8 +80,8 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
   const prIcon = pr.type === '1rm_estimate' ? 'trophy' :
     pr.type === 'heaviest_weight' ? 'barbell' : 'flash';
 
-  const prLabel = pr.type === '1rm_estimate' ? 'New Estimated 1RM' :
-    pr.type === 'heaviest_weight' ? 'New Heaviest Weight' : 'Most Reps at Weight';
+  const prLabel = pr.type === '1rm_estimate' ? 'New estimated max lift' :
+    pr.type === 'heaviest_weight' ? 'New heaviest weight' : 'Most reps at weight';
 
   if (subdued) {
     return (
