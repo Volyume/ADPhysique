@@ -17,7 +17,7 @@ import { formatBodyWeightShort } from '../lib/units';
 import {
   getAllWorkouts, getCompletedWorkoutSets, getBodyMetricLog, getNutritionTargets,
   getRecentAdaptationEvents, getAllExercises,
-  getLatestCheckin, getMorningWeightsLast14Days,
+  getLatestCheckin, getMorningWeightsLast14Days, getRecentCheckins,
 } from '../lib/database';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
 import { getBetaBannerText } from '../lib/proGate';
@@ -189,6 +189,7 @@ export default function AthleteHubScreen({ navigation }) {
   const [checkinDoneThisWeek, setCheckinDoneThisWeek] = useState(false);
   const [morningWeightCount, setMorningWeightCount] = useState(0);
   const [weightTrend, setWeightTrend] = useState([]);
+  const [recoveryTrendInsight, setRecoveryTrendInsight] = useState(null);
 
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
@@ -245,7 +246,56 @@ export default function AthleteHubScreen({ navigation }) {
       loadBodyMetrics(),
       loadNutrition(),
       loadAdaptationHistory(),
+      loadRecoveryTrend(),
     ]);
+  }
+
+  async function loadRecoveryTrend() {
+    if (!user?.id) return;
+    try {
+      const checkins = await getRecentCheckins(user.id, 6);
+      if (checkins.length < 3) return;
+      const insight = computeRecoveryTrendInsight(checkins);
+      setRecoveryTrendInsight(insight);
+    } catch (_) {}
+  }
+
+  function computeRecoveryTrendInsight(checkins) {
+    // Checkins are in descending order (newest first)
+    const energies = checkins.map(c => c.energyScore ?? null).filter(v => v !== null);
+    const soreness = checkins.map(c => c.sorenessScore ?? null).filter(v => v !== null);
+    if (energies.length < 3 && soreness.length < 3) return null;
+
+    // Count consecutive weeks below/above threshold
+    const recentEnergy = energies.slice(0, 4);
+    const lowEnergyWeeks = recentEnergy.filter(e => e <= 2).length;
+    const highEnergyWeeks = recentEnergy.filter(e => e >= 4).length;
+    const recentSoreness = soreness.slice(0, 4);
+    const highSorenessWeeks = recentSoreness.filter(s => s >= 4).length;
+
+    if (lowEnergyWeeks >= 3) {
+      return { type: 'warning', text: `Energy has been low for ${lowEnergyWeeks} check-ins in a row. That's worth paying attention to.` };
+    }
+    if (highSorenessWeeks >= 3) {
+      return { type: 'warning', text: `High soreness has been reported ${highSorenessWeeks} weeks running. Recovery may need more attention.` };
+    }
+    if (highEnergyWeeks >= 3) {
+      return { type: 'good', text: `Energy has been consistently high across the last ${highEnergyWeeks} check-ins. Good sign.` };
+    }
+    // Check improving trend
+    if (energies.length >= 4) {
+      const older = energies.slice(2, 4);
+      const newer = energies.slice(0, 2);
+      const olderAvg = older.reduce((a, b) => a + b, 0) / older.length;
+      const newerAvg = newer.reduce((a, b) => a + b, 0) / newer.length;
+      if (newerAvg - olderAvg >= 1) {
+        return { type: 'good', text: 'Energy is trending upward over the last few weeks.' };
+      }
+      if (olderAvg - newerAvg >= 1) {
+        return { type: 'warning', text: 'Energy has been trending lower over the last few weeks.' };
+      }
+    }
+    return null;
   }
 
   async function loadAdaptationHistory() {
@@ -412,12 +462,16 @@ export default function AthleteHubScreen({ navigation }) {
               <Ionicons name={checkinDoneThisWeek ? 'checkmark-circle' : 'pulse-outline'} size={20} color={colors.primary} />
             </View>
             <View style={styles.cardHeaderText}>
-              <Text style={styles.cardTitle}>Weekly check-in</Text>
+              <Text style={styles.cardTitle}>
+                {new Date().toLocaleDateString('en-GB', { weekday: 'long' }) === 'Sunday'
+                  ? 'Sunday check-in'
+                  : 'Weekly check-in'}
+              </Text>
               <Text style={styles.cardSubtitle}>
                 {checkinDoneThisWeek
                   ? 'Done this week. Tap to review your plan.'
                   : morningWeightCount >= 4
-                    ? 'Ready. Tap to get your weekly coaching.'
+                    ? 'Ready. Four questions. Your coach reads them every week.'
                     : `${morningWeightCount}/4 morning weights logged`}
               </Text>
             </View>
@@ -436,6 +490,21 @@ export default function AthleteHubScreen({ navigation }) {
             <Text style={styles.betaBanner}>{getBetaBannerText()}</Text>
           )}
         </TouchableOpacity>
+
+        {/* ── Recovery capacity trend insight ──────────── */}
+        {recoveryTrendInsight && (
+          <View style={[
+            styles.trendInsightCard,
+            recoveryTrendInsight.type === 'good' ? styles.trendInsightGood : styles.trendInsightWarn,
+          ]}>
+            <Ionicons
+              name={recoveryTrendInsight.type === 'good' ? 'trending-up-outline' : 'alert-circle-outline'}
+              size={16}
+              color={recoveryTrendInsight.type === 'good' ? colors.success : colors.warning}
+            />
+            <Text style={styles.trendInsightText}>{recoveryTrendInsight.text}</Text>
+          </View>
+        )}
 
         {/* ── Weight trend ──────────────────────────────── */}
         {weightTrend.length >= 3 && (
@@ -545,6 +614,14 @@ export default function AthleteHubScreen({ navigation }) {
             onPress={() => navigation.navigate('CoachHeldHistory')}
           />
           <NavRow icon="trophy" label="Personal Records" sub="All-time bests" onPress={() => navigation.navigate('PRWall')} />
+          {totalWorkouts >= 50 && (
+            <NavRow
+              icon="calendar-outline"
+              label="Your year of lifts"
+              sub="365-day summary of your training"
+              onPress={() => navigation.navigate('YearOfLifts')}
+            />
+          )}
 
           {/* Engine Log — collapsible */}
           {(adaptationHistory.length > 0 || repWarnings.length > 0) && (
@@ -875,4 +952,20 @@ const styles = StyleSheet.create({
   sparklineDot: { width: 7, height: 7, borderRadius: 4 },
   sparklineLegendText: { fontSize: fontSize.xs, color: colors.textSecondary },
   sparklineLegendVal: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+
+  trendInsightCard: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
+    borderRadius: radius.lg, borderWidth: 1, padding: spacing.md,
+  },
+  trendInsightGood: {
+    backgroundColor: colors.successBg ?? colors.primaryBg,
+    borderColor: colors.success + '40',
+  },
+  trendInsightWarn: {
+    backgroundColor: colors.warningBg,
+    borderColor: colors.warning + '40',
+  },
+  trendInsightText: {
+    flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20,
+  },
 });

@@ -172,6 +172,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
   // Step 3 — Recovery
   const [sorenessScore, setSorenessScore] = useState(null); // 1–5
+  const [soreMuscles, setSoreMuscles] = useState([]);       // muscle group keys
   const [jointPain, setJointPain] = useState(null);         // 'yes'|'no'
   const [notes, setNotes] = useState('');
 
@@ -238,9 +239,11 @@ export default function WeeklyCheckInScreen({ navigation }) {
         stepsAdherence: stepsAdherence ?? null,
         trainingPerformance: trainingPerformance ?? null,
         jointPain: jointPain === 'yes',
+        soreMuscles: soreMuscles.length > 0 ? soreMuscles.join(',') : null,
         notes: [
           notes.trim(),
           jointPain === 'yes' ? 'Joint pain flagged this week.' : '',
+          soreMuscles.length > 0 ? `Sore: ${soreMuscles.join(', ')}.` : '',
         ].filter(Boolean).join(' ') || null,
       });
 
@@ -428,6 +431,36 @@ export default function WeeklyCheckInScreen({ navigation }) {
           />
         </View>
 
+        {sorenessScore !== null && sorenessScore >= 2 && (
+          <View style={styles.section}>
+            <SectionLabel hint="Tap any that feel sore or fatigued — optional">Which muscles?</SectionLabel>
+            <View style={styles.muscleChipGrid}>
+              {[
+                'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps',
+                'Quads', 'Hamstrings', 'Glutes', 'Calves', 'Core',
+              ].map(muscle => {
+                const sel = soreMuscles.includes(muscle);
+                return (
+                  <TouchableOpacity
+                    key={muscle}
+                    style={[styles.muscleChip, sel && styles.muscleChipSelected]}
+                    onPress={() =>
+                      setSoreMuscles(prev =>
+                        prev.includes(muscle) ? prev.filter(m => m !== muscle) : [...prev, muscle],
+                      )
+                    }
+                    activeOpacity={0.75}
+                  >
+                    <Text style={[styles.muscleChipText, sel && styles.muscleChipTextSelected]}>
+                      {muscle}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
         <View style={styles.section}>
           <SectionLabel hint="Joints, tendons — not normal muscle soreness">Any joint or tendon pain?</SectionLabel>
           <OptionRow
@@ -501,6 +534,9 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
   const stepTitles = ['How are you?', 'This week', 'Recovery', 'Training'];
 
+  const todayDayName = new Date().toLocaleDateString('en-GB', { weekday: 'long' });
+  const checkinDayLabel = todayDayName === 'Sunday' ? 'Your Sunday check-in' : 'Your weekly check-in';
+
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       {/* Header */}
@@ -513,7 +549,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
           <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Weekly check-in</Text>
+          <Text style={styles.headerTitle}>{checkinDayLabel}</Text>
           <StepBar current={step} total={TOTAL_STEPS} />
         </View>
         <View style={styles.headerSpacer} />
@@ -530,6 +566,14 @@ export default function WeeklyCheckInScreen({ navigation }) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          {/* Ritual intro — only on step 0 */}
+          {step === 0 && (
+            <View style={styles.ritualIntro}>
+              <Text style={styles.ritualIntroTitle}>{checkinDayLabel}</Text>
+              <Text style={styles.ritualIntroSub}>Four questions. Your coach reads them every week.</Text>
+            </View>
+          )}
+
           {/* Week label */}
           <Text style={styles.weekLabel}>{weekLabel}</Text>
 
@@ -748,4 +792,48 @@ const styles = StyleSheet.create({
   ctaHint: { textAlign: 'center', fontSize: fontSize.sm, color: colors.textMuted, marginTop: spacing.sm },
 
   bottomPad: { height: spacing.xxl },
+
+  ritualIntro: {
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
+  },
+  muscleChipGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  muscleChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full ?? 99,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2 ?? colors.surface,
+  },
+  muscleChipSelected: {
+    borderColor: colors.warning,
+    backgroundColor: colors.warningBg,
+  },
+  muscleChipText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+  },
+  muscleChipTextSelected: {
+    color: colors.warning,
+    fontWeight: fontWeight.semibold,
+  },
+
+  ritualIntroTitle: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.black,
+    color: colors.textPrimary,
+    textAlign: 'center',
+  },
+  ritualIntroSub: {
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+    textAlign: 'center',
+  },
 });

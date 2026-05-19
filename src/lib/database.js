@@ -415,6 +415,10 @@ const SCHEMA_MIGRATIONS = [
   [
     'ALTER TABLE workouts ADD COLUMN pre_workout_intent TEXT',
   ],
+  // v10 — muscle-specific soreness on weekly check-ins
+  [
+    'ALTER TABLE weekly_checkins ADD COLUMN sore_muscles TEXT',
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
@@ -1978,13 +1982,14 @@ export async function saveWeeklyCheckin(userId, data) {
       `UPDATE weekly_checkins SET
         energy_score = ?, soreness_score = ?, stress_score = ?, sleep_hours = ?,
         cals_adherence = ?, steps_adherence = ?, cycle_override = ?, notes = ?,
-        training_performance = ?, joint_pain = ?, updated_at = ?
+        training_performance = ?, joint_pain = ?, sore_muscles = ?, updated_at = ?
        WHERE id = ?`,
       [
         data.energyScore ?? null, data.sorenessScore ?? null, data.stressScore ?? null,
         data.sleepHours ?? null, data.calsAdherence ?? null, data.stepsAdherence ?? null,
         data.cycleOverride ? 1 : 0, data.notes ?? null,
-        data.trainingPerformance ?? null, data.jointPain ? 1 : 0, now, existing.id,
+        data.trainingPerformance ?? null, data.jointPain ? 1 : 0,
+        data.soreMuscles ?? null, now, existing.id,
       ],
     );
     return existing.id;
@@ -1994,14 +1999,15 @@ export async function saveWeeklyCheckin(userId, data) {
     `INSERT INTO weekly_checkins
       (id, user_id, week_start, energy_score, soreness_score, stress_score, sleep_hours,
        cals_adherence, steps_adherence, cycle_override, notes,
-       training_performance, joint_pain, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       training_performance, joint_pain, sore_muscles, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id, userId, data.weekStart,
       data.energyScore ?? null, data.sorenessScore ?? null, data.stressScore ?? null,
       data.sleepHours ?? null, data.calsAdherence ?? null, data.stepsAdherence ?? null,
       data.cycleOverride ? 1 : 0, data.notes ?? null,
-      data.trainingPerformance ?? null, data.jointPain ? 1 : 0, now, now,
+      data.trainingPerformance ?? null, data.jointPain ? 1 : 0,
+      data.soreMuscles ?? null, now, now,
     ],
   );
   return id;
@@ -2079,6 +2085,127 @@ export async function getWeeklyPRCount(userId, weekStart) {
     [userId, weekStart, weekEnd, weekStart],
   );
   return row?.pr_count ?? 0;
+}
+
+export async function getYearOfLiftsData(userId, yearMs = null) {
+  const d = await db();
+  const now = Date.now();
+  const yearStart = yearMs ?? (now - 365 * 86400000);
+
+  const workouts = await d.getAllAsync(
+    `SELECT w.id, w.started_at, w.duration_minutes, w.set_count
+     FROM workouts w
+     WHERE w.user_id = ? AND w.is_completed = 1 AND w.started_at >= ?
+     ORDER BY w.started_at ASC`,
+    [userId, yearStart],
+  );
+
+  const sets = await d.getAllAsync(
+    `SELECT ws.weight, ws.actual_reps, ws.exercise_id, ex.name AS exercise_name,
+            ex.primary_muscle_group AS muscle
+     FROM workout_sets ws
+     JOIN workouts w ON ws.workout_id = w.id
+     LEFT JOIN exercises ex ON ex.id = ws.exercise_id
+     WHERE ws.user_id = ? AND w.is_completed = 1 AND w.started_at >= ?
+       AND ws.set_type != 'warmup' AND ws.actual_reps > 0 AND ws.weight > 0`,
+    [userId, yearStart],
+  );
+
+  const totalSessions = workouts.length;
+  const totalSets = sets.length;
+  const tonnage = Math.round(sets.reduce((t, s) => t + s.weight * s.actual_reps, 0));
+  const avgSessionsPerWeek = totalSessions > 0 ? Math.round((totalSessions / 52) * 10) / 10 : 0;
+
+  // Top 3 exercises by set count
+  const exerciseCounts = {};
+  for (const s of sets) {
+    const key = s.exercise_name ?? 'Unknown';
+    exerciseCounts[key] = (exerciseCounts[key] ?? 0) + 1;
+  }
+  const topExercises = Object.entries(exerciseCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([name, count]) => ({ name, sets: count }));
+
+  // Most active month
+  const monthCounts = {};
+  for (const w of workouts) {
+    const m = new Date(w.started_at).getMonth();
+    monthCounts[m] = (monthCounts[m] ?? 0) + 1;
+  }
+  const topMonthEntry = Object.entries(monthCounts).sort((a, b) => b[1] - a[1])[0];
+  const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const topMonth = topMonthEntry ? MONTH_NAMES[parseInt(topMonthEntry[0])] : null;
+
+  return {
+    totalSessions,
+    totalSets,
+    tonnage,
+    avgSessionsPerWeek,
+    topExercises,
+    topMonth,
+    yearStart,
+    yearEnd: now,
+  };
+}
+
+export async function getBlockReflectionData(userId, mesocycleId) {
+  const d = await db();
+  const meso = await d.getFirstAsync('SELECT * FROM mesocycles WHERE id = ?', [mesocycleId]);
+  if (!meso) return null;
+  const workouts = await d.getAllAsync(
+    `SELECT w.id, w.started_at, w.duration_minutes, w.set_count, w.total_volume
+     FROM workouts w
+     WHERE w.user_id = ? AND w.mesocycle_id = ? AND w.is_completed = 1
+     ORDER BY w.started_at ASC`,
+    [userId, mesocycleId],
+  );
+  const sets = await d.getAllAsync(
+    `SELECT ws.weight, ws.actual_reps, ws.set_type, ws.exercise_id, ex.name AS exercise_name
+     FROM workout_sets ws
+     JOIN workouts w ON ws.workout_id = w.id
+     LEFT JOIN exercises ex ON ex.id = ws.exercise_id
+     WHERE ws.user_id = ? AND w.mesocycle_id = ? AND w.is_completed = 1
+       AND ws.set_type != 'warmup' AND ws.actual_reps > 0 AND ws.weight > 0`,
+    [userId, mesocycleId],
+  );
+  const totalSessions = workouts.length;
+  const totalSets = sets.length;
+  const tonnage = sets.reduce((t, s) => t + (s.weight ?? 0) * (s.actual_reps ?? 0), 0);
+
+  // First vs last week tonnage delta
+  const firstWeekCutoff = meso.start_date + 7 * 86400000;
+  const firstWeekSets = sets.filter(s => {
+    const w = workouts.find(w2 => w2.id === s.workout_id);
+    return w && w.started_at < firstWeekCutoff;
+  });
+  const lastWeekCutoff = meso.end_date ? meso.end_date - 7 * 86400000 : Date.now() - 7 * 86400000;
+  const lastWeekSets = sets.filter(s => {
+    const w = workouts.find(w2 => w2.id === s.workout_id);
+    return w && w.started_at >= lastWeekCutoff;
+  });
+  const firstTonnage = firstWeekSets.reduce((t, s) => t + s.weight * s.actual_reps, 0);
+  const lastTonnage = lastWeekSets.reduce((t, s) => t + s.weight * s.actual_reps, 0);
+  const tonnageDelta = firstTonnage > 0 ? Math.round(((lastTonnage - firstTonnage) / firstTonnage) * 100) : null;
+
+  // Most-trained muscle (by set count)
+  const muscleCounts = {};
+  for (const s of sets) {
+    const key = s.exercise_name ?? 'Unknown';
+    muscleCounts[key] = (muscleCounts[key] ?? 0) + 1;
+  }
+  const topExercise = Object.entries(muscleCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+
+  return {
+    meso: rowToCamel(meso),
+    totalSessions,
+    totalSets,
+    tonnage: Math.round(tonnage),
+    tonnageDelta,
+    topExercise,
+    startDate: meso.start_date,
+    endDate: meso.end_date,
+  };
 }
 
 // ─── Pro: Coach Outputs ───────────────────────────────────────────────────────

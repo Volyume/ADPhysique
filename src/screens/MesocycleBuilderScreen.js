@@ -193,6 +193,16 @@ export default function MesocycleBuilderScreen({ navigation }) {
                 )}
                 {meso.focus ? <Text style={styles.metaItem}>{meso.focus}</Text> : null}
               </View>
+              {!isActive && (
+                <TouchableOpacity
+                  style={styles.summaryBtn}
+                  onPress={() => navigation.navigate('BlockReflection', { mesocycleId: meso.id })}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="document-text-outline" size={14} color={colors.primary} />
+                  <Text style={styles.summaryBtnText}>View block summary</Text>
+                </TouchableOpacity>
+              )}
               {isActive && (
                 <View style={styles.weekProgress}>
                   <View style={styles.weekProgressHeader}>
@@ -472,4 +482,13 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg, backgroundColor: colors.primary,
   },
   saveText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
+
+  summaryBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    alignSelf: 'flex-start', marginTop: spacing.sm,
+    paddingVertical: spacing.xs, paddingHorizontal: spacing.sm,
+    borderRadius: radius.sm, borderWidth: 1, borderColor: colors.primary + '50',
+    backgroundColor: colors.primaryBg,
+  },
+  summaryBtnText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
 });

@@ -21,7 +21,12 @@ import {
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 
-const TOTAL_STEPS = 6;
+// Advanced users get an extra orientation step between step 2 and step 3.
+// The step bar expands accordingly.
+function getTotalSteps(experience) {
+  return ['advanced', 'competitive'].includes(experience) ? 7 : 6;
+}
+const TOTAL_STEPS = 6; // default; overridden per-render via getTotalSteps
 
 const SCOFF_QUESTIONS = [
   'Have you ever made yourself sick after eating because you felt uncomfortably full?',
@@ -193,6 +198,11 @@ export default function ProOnboardingScreen({ navigation }) {
   const [checkinEnabled, setCheckinEnabled] = useState(true);
   const [checkinDay, setCheckinDay] = useState(0); // Sunday
 
+  // Step 2b — advanced orientation (only for advanced/competitive)
+  const [weakPoints, setWeakPoints] = useState([]); // muscle group keys
+  const [physiqueOrientation, setPhysiqueOrientation] = useState(null);
+  const [recoveryConstraints, setRecoveryConstraints] = useState([]); // 'sleep'|'stress'|'physical_job'|'injury_history'
+
   // Step 5 — wellbeing check (SCOFF screening)
   const [scoffAnswers, setScoffAnswers] = useState([null, null, null, null, null]);
 
@@ -217,7 +227,7 @@ export default function ProOnboardingScreen({ navigation }) {
   // If we're on the account step (step 6), auto-advance to CoachBuilder so they
   // don't have to press anything — the confirmation already proved ownership.
   useEffect(() => {
-    if (user?.id && step === 6) {
+    if (user?.id && step >= 6) {
       syncProfile(user.id, userProfile, 'pro', { isBetaTester: true }).catch(() => {});
       navigation.navigate('CoachBuilder', { firstRun: true });
     }
@@ -261,7 +271,22 @@ export default function ProOnboardingScreen({ navigation }) {
     setNutrition(n);
     setKcalStr(String(n.targetKcal));
     setProteinStr(String(targets[recommended]));
+    // Advanced/competitive users see the orientation step first (step 3),
+    // everyone else goes straight to nutrition (also step 3 for non-advanced).
     setStep(3);
+  }
+
+  function advanceFrom2b() {
+    // Persist advanced orientation answers to local profile
+    if (user?.id) {
+      saveLocalProfile(user.id, {
+        ...(userProfile || {}),
+        physiqueOrientation,
+        weakPoints,
+        recoveryConstraints,
+      }).catch(() => {});
+    }
+    setStep(nutritionStep);
   }
 
   async function advanceFrom3() {
@@ -311,7 +336,7 @@ export default function ProOnboardingScreen({ navigation }) {
       return;
     }
     setBusy(false);
-    setStep(4);
+    setStep(notifStep);
   }
 
   async function advanceFrom4() {
@@ -333,7 +358,7 @@ export default function ProOnboardingScreen({ navigation }) {
         }
       } catch (_) {}
     }
-    setStep(5);
+    setStep(scoffStep);
   }
 
   async function advanceFrom5() {
@@ -346,10 +371,10 @@ export default function ProOnboardingScreen({ navigation }) {
       Alert.alert(
         'Before you continue',
         'Some of your answers suggest it may be worth speaking to your GP or a registered dietitian alongside using this app. We\'ve set things up to focus on supporting your training rather than calorie restriction.',
-        [{ text: 'Understood', onPress: () => setStep(6) }],
+        [{ text: 'Understood', onPress: () => setStep(accountStep) }],
       );
     } else {
-      setStep(6);
+      setStep(accountStep);
     }
   }
 
@@ -420,10 +445,17 @@ export default function ProOnboardingScreen({ navigation }) {
 
   // ── Progress bar ─────────────────────────────────────────────────────────────
 
+  const isAdvanced = ['advanced', 'competitive'].includes(experience);
+  const totalSteps = getTotalSteps(experience);
+  const nutritionStep = isAdvanced ? 4 : 3;
+  const notifStep     = isAdvanced ? 5 : 4;
+  const scoffStep     = isAdvanced ? 6 : 5;
+  const accountStep   = isAdvanced ? 7 : 6;
+
   function ProgressBar() {
     return (
       <View style={styles.progressRow}>
-        {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+        {Array.from({ length: totalSteps }).map((_, i) => (
           <View
             key={i}
             style={[
@@ -749,9 +781,129 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 3 — Nutrition ───────────────────────────────────────────────────────
+  // ── Step 3 — Advanced orientation (advanced/competitive only) ───────────────
 
-  if (step === 3) {
+  if (step === 3 && isAdvanced) {
+    const WEAK_POINT_OPTIONS = [
+      { key: 'chest', label: 'Chest' },
+      { key: 'back', label: 'Back' },
+      { key: 'shoulders', label: 'Shoulders' },
+      { key: 'arms', label: 'Arms' },
+      { key: 'legs', label: 'Legs' },
+      { key: 'glutes', label: 'Glutes' },
+      { key: 'calves', label: 'Calves' },
+      { key: 'core', label: 'Core' },
+    ];
+    const ORIENTATION_OPTIONS = [
+      { id: 'v_taper',    label: 'V-Taper',      sub: 'Broad shoulders and a tight waist' },
+      { id: 'x_frame',    label: 'X-Frame',       sub: 'Wide at shoulders and hips, narrow waist' },
+      { id: 'balanced',   label: 'Balanced',      sub: 'Even development across all muscle groups' },
+      { id: 'performance',label: 'Performance',   sub: 'Strength and function over aesthetics' },
+    ];
+    const CONSTRAINT_OPTIONS = [
+      { key: 'sleep',          label: 'Often poor sleep' },
+      { key: 'stress',         label: 'Chronically high stress' },
+      { key: 'physical_job',   label: 'Physical job or active lifestyle' },
+      { key: 'injury_history', label: 'Injury history to work around' },
+    ];
+    const toggleWeakPoint = (key) => setWeakPoints(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key],
+    );
+    const toggleConstraint = (key) => setRecoveryConstraints(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key],
+    );
+    return (
+      <SafeAreaView style={styles.safe}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+            <TouchableOpacity style={styles.backBtn} onPress={goBack} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="chevron-back" size={22} color={colors.textSecondary} />
+            </TouchableOpacity>
+            <Header
+              title="Let's set you up properly"
+              sub="You've put in the years. Tell us where to focus."
+            />
+            <ProgressBar />
+
+            <View style={styles.section}>
+              <Text style={styles.fieldLabel}>Physique orientation</Text>
+              <Text style={styles.fieldHint}>What shape are you training towards?</Text>
+              {ORIENTATION_OPTIONS.map(opt => (
+                <TouchableOpacity
+                  key={opt.id}
+                  style={[styles.goalCard, physiqueOrientation === opt.id && styles.goalCardActive]}
+                  onPress={() => setPhysiqueOrientation(opt.id)}
+                  activeOpacity={0.8}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.goalLabel, physiqueOrientation === opt.id && styles.goalLabelActive]}>{opt.label}</Text>
+                    <Text style={styles.goalSub}>{opt.sub}</Text>
+                  </View>
+                  {physiqueOrientation === opt.id && (
+                    <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.fieldLabel}>Weak points <Text style={styles.optionalTag}>(optional)</Text></Text>
+              <Text style={styles.fieldHint}>Muscle groups you want to prioritise. We'll bias your plan.</Text>
+              <View style={styles.chipGrid}>
+                {WEAK_POINT_OPTIONS.map(opt => {
+                  const sel = weakPoints.includes(opt.key);
+                  return (
+                    <TouchableOpacity
+                      key={opt.key}
+                      style={[styles.tagChip, sel && styles.tagChipSelected]}
+                      onPress={() => toggleWeakPoint(opt.key)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.tagChipText, sel && styles.tagChipTextSelected]}>{opt.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.fieldLabel}>Recovery constraints <Text style={styles.optionalTag}>(optional)</Text></Text>
+              <Text style={styles.fieldHint}>Anything that limits how fast your body recovers between sessions?</Text>
+              <View style={styles.chipGrid}>
+                {CONSTRAINT_OPTIONS.map(opt => {
+                  const sel = recoveryConstraints.includes(opt.key);
+                  return (
+                    <TouchableOpacity
+                      key={opt.key}
+                      style={[styles.tagChip, sel && styles.tagChipSelected]}
+                      onPress={() => toggleConstraint(opt.key)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.tagChipText, sel && styles.tagChipTextSelected]}>{opt.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.primaryBtn, !physiqueOrientation && styles.primaryBtnDisabled]}
+              onPress={advanceFrom2b}
+              disabled={!physiqueOrientation}
+              activeOpacity={0.88}
+            >
+              <Text style={styles.primaryBtnText}>Continue</Text>
+              <Ionicons name="arrow-forward" size={18} color={colors.background} />
+            </TouchableOpacity>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Step 4 (advanced) / Step 3 (basic) — Nutrition ──────────────────────────
+
+  if (step === nutritionStep) {
     const selectedGoal = GOALS.find(g => g.id === goal);
     return (
       <SafeAreaView style={styles.safe}>
@@ -858,9 +1010,9 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 4 — Notifications ───────────────────────────────────────────────────
+  // ── Step 5 (advanced) / Step 4 (basic) — Notifications ─────────────────────
 
-  if (step === 4) {
+  if (step === notifStep) {
     return (
       <SafeAreaView style={styles.safe}>
         <ScrollView contentContainerStyle={styles.scroll}>
@@ -969,7 +1121,7 @@ export default function ProOnboardingScreen({ navigation }) {
             <Ionicons name="arrow-forward" size={18} color={colors.background} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.skipBtn} onPress={() => setStep(5)}>
+          <TouchableOpacity style={styles.skipBtn} onPress={() => setStep(scoffStep)}>
             <Text style={styles.skipBtnText}>Skip reminders for now</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -977,9 +1129,9 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 5 — Wellbeing check ─────────────────────────────────────────────────
+  // ── Step 6 (advanced) / Step 5 (basic) — Wellbeing check ───────────────────
 
-  if (step === 5) {
+  if (step === scoffStep) {
     const allAnswered = scoffAnswers.every(a => a !== null);
     return (
       <SafeAreaView style={styles.safe}>
@@ -1523,5 +1675,43 @@ const styles = StyleSheet.create({
   },
   primaryBtnDisabled: {
     opacity: 0.4,
+  },
+
+  // Advanced orientation step
+  fieldHint: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    marginBottom: spacing.sm,
+    lineHeight: 17,
+  },
+  optionalTag: {
+    fontWeight: fontWeight.regular ?? '400',
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+  },
+  chipGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  tagChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full ?? 99,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2 ?? colors.surface,
+  },
+  tagChipSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryBg,
+  },
+  tagChipText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+  },
+  tagChipTextSelected: {
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
   },
 });

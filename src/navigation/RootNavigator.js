@@ -55,6 +55,8 @@ import ProOnboardingScreen from '../screens/ProOnboardingScreen';
 import ProSetupCompleteScreen from '../screens/ProSetupCompleteScreen';
 import ProUpgradeScreen from '../screens/ProUpgradeScreen';
 import CoachHeldHistoryScreen from '../screens/CoachHeldHistoryScreen';
+import BlockReflectionScreen from '../screens/BlockReflectionScreen';
+import YearOfLiftsScreen from '../screens/YearOfLiftsScreen';
 import { withProGuard } from '../components/ProGate';
 
 const Tab = createBottomTabNavigator();
@@ -151,6 +153,8 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="WeeklyCheckIn" component={GatedWeeklyCheckIn} options={{ title: 'Weekly Check-In' }} />
       <Stack.Screen name="CoachOutput" component={GatedCoachOutput} options={{ title: 'Your Week' }} />
       <Stack.Screen name="CoachHeldHistory" component={CoachHeldHistoryScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="BlockReflection" component={BlockReflectionScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="YearOfLifts" component={YearOfLiftsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ProGoalSetup" component={GatedProGoalSetup} options={{ title: 'Goal Phase' }} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ title: 'Notifications' }} />
       <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
