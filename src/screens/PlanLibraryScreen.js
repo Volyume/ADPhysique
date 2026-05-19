@@ -633,7 +633,7 @@ const styles = StyleSheet.create({
   },
   divisionGroupLabel: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
-    color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5,
+    color: colors.textMuted, letterSpacing: 0.3,
     marginBottom: spacing.sm,
   },
   divisionChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },

@@ -175,9 +175,8 @@ const styles = StyleSheet.create({
   },
   weekCardTitle: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
-    color: colors.textMuted, textTransform: 'uppercase',
-    letterSpacing: 0.8, padding: spacing.lg,
-    paddingBottom: spacing.md,
+    color: colors.textMuted, letterSpacing: 0.3,
+    padding: spacing.lg, paddingBottom: spacing.md,
   },
   weekStep: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,

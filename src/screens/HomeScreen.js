@@ -572,7 +572,7 @@ export default function HomeScreen({ navigation }) {
                 {currentMesoWeek && (
                   <Text style={styles.blockCardWeek}>
                     Week {currentMesoWeek.weekIndex}/{currentMesoWeek.plannedWeeks}
-                    {currentMesoWeek.isDeload ? ' · DELOAD' : ` · Effort ${currentMesoWeek.rirTarget != null ? 5 - currentMesoWeek.rirTarget : '–'}`}
+                    {currentMesoWeek.isDeload ? ' · Recovery week' : ` · Effort ${currentMesoWeek.rirTarget != null ? 5 - currentMesoWeek.rirTarget : '–'}`}
                   </Text>
                 )}
               </View>
