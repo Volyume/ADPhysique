@@ -993,7 +993,7 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
     ppl_ab:
       `${splitName} was chosen for your ${effectiveDays} days at ${experience} level. Two complete Push / Pull / Legs rotations per week give each muscle group twice-weekly training. Rotating A and B exercise choices across the two cycles keeps training varied enough to sustain progress without overloading any one muscle pattern.`,
     upper_lower_wp:
-      `Upper / Lower on 4 days trains every muscle group twice a week. The fifth session is reserved entirely for ${weakPointUILabels.length ? weakPointUILabels.join(' and ') : 'your selected weak points'}. The targeted extra volume is timed so it does not compromise recovery on your main training days.`,
+      `Upper / Lower on 4 days trains every muscle group twice a week. The fifth session is reserved entirely for ${weakPointUILabels.length ? weakPointUILabels.join(' and ') : 'your selected weak points'}. The extra sets are timed so they do not compromise recovery on your main training days.`,
   };
   result.schedule = scheduleMap[splitType] ?? `${splitName} was selected to match your ${effectiveDays} days, ${experience} level, and goal.`;
 
@@ -1080,12 +1080,12 @@ function buildWarnings(inputs, effectiveDays, weakPointUILabels) {
   }
   if (experience === 'competitive' && recoveryRating === 'poor') {
     warnings.push(
-      'Competitive-level training demands excellent recovery. With poor recovery flagged, you risk accumulating fatigue that masks progress. Address sleep and life stress before increasing training volume.',
+      'Competitive-level training demands excellent recovery. With poor recovery flagged, you risk building up fatigue that masks progress. Address sleep and life stress before adding more training.',
     );
   }
   if (weakPointUILabels.length === 3) {
     warnings.push(
-      'Three weak points are targeted (the maximum supported). Any additional muscles beyond three will not receive specialisation volume.',
+      'Three weak points are targeted (the maximum supported). Any additional muscles beyond three will not receive extra sets.',
     );
   }
 

@@ -179,7 +179,7 @@ export function evaluateAutoReg(feedbackWindow = []) {
     return {
       action: 'deload_now',
       setsAdjust: -50,
-      message: 'Joint discomfort is significant. Drop to half volume this week and avoid any painful movements.',
+      message: 'Joint discomfort is significant. Cut your sets roughly in half this week and avoid any painful movements.',
     };
   }
 
@@ -189,7 +189,7 @@ export function evaluateAutoReg(feedbackWindow = []) {
     return {
       action: 'reduce_volume',
       setsAdjust: -20,
-      message: 'Persistent joint discomfort detected. Reducing volume 20% this week. Swap painful exercises.',
+      message: 'Persistent joint discomfort detected. Dropping sets by around 20% this week. Swap any painful exercises.',
     };
   }
 
@@ -207,7 +207,7 @@ export function evaluateAutoReg(feedbackWindow = []) {
     return {
       action: 'reduce_volume',
       setsAdjust: -15,
-      message: 'Coming into sessions sore with high fatigue. Trim volume 15% this week to protect recovery.',
+      message: 'Coming into sessions sore with high fatigue. Trim your sets by around 15% this week to protect recovery.',
     };
   }
 
@@ -234,7 +234,7 @@ export function evaluateAutoReg(feedbackWindow = []) {
     return {
       action: 'hold_volume',
       setsAdjust: 0,
-      message: 'Training is challenging. Keep volume steady this week and focus on sleep and nutrition.',
+      message: 'Training is challenging. Keep your sets steady this week and focus on sleep and nutrition.',
     };
   }
 

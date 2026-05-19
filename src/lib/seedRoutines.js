@@ -187,7 +187,7 @@ const LIBRARY_PLANS = [
   // ── 5. PPL 3×/Week (Intermediate) ────────────────────────────────────────
   {
     name: 'Push Pull Legs 3×/Week',
-    description: 'Each muscle group trained once per week with focused, high-quality volume. Push day attacks chest, shoulders, and triceps; Pull day builds the back and biceps; Leg day develops the full lower body. The lower frequency compared to upper/lower makes this ideal as a first split after outgrowing full-body training, or during phases of lower recovery capacity. Add reps each session, then add weight when you reach the top of the range. Stop 1 to 2 reps before failure on each set.',
+    description: 'Each muscle group trained once per week with focused, high-quality sets. Push day attacks chest, shoulders, and triceps; Pull day builds the back and biceps; Leg day develops the full lower body. The lower frequency compared to upper/lower makes this ideal as a first split after outgrowing full-body training, or during phases of lower recovery capacity. Add reps each session, then add weight when you reach the top of the range. Stop 1 to 2 reps before failure on each set.',
     tags: 'ppl intermediate gender:all goal:build_muscle days:3',
     difficulty: 1,
     workouts: [

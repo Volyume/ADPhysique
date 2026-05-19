@@ -229,9 +229,9 @@ export function getPhaseLabel(phase) {
 export function getPhaseDescription(phase, weeksToComp) {
   switch (phase) {
     case 'offseason':
-      return 'Offseason: focus on building size and strength. Eat in a surplus and push volume.';
+      return 'Offseason: focus on building size and strength. Eat in a surplus and train hard.';
     case 'early_prep':
-      return `Early prep: ${weeksToComp != null ? `${weeksToComp} weeks to the show` : 'competition approaching'}. Begin conditioning and posing. Slight volume reduction.`;
+      return `Early prep: ${weeksToComp != null ? `${weeksToComp} weeks to the show` : 'competition approaching'}. Begin conditioning and posing. Slightly fewer sets per session.`;
     case 'contest_prep':
       return `Contest prep: ${weeksToComp != null ? `${weeksToComp} weeks out` : 'competition is close'}. Protect your muscle. Conditioning and posing every session.`;
     case 'peak_week':

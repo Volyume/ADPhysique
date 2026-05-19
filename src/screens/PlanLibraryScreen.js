@@ -41,7 +41,7 @@ const DIVISIONS_MEN = [
   {
     key: 'mens_bodybuilding',
     label: "Men's Bodybuilding",
-    desc: "Maximum muscular development across every group. High volume.",
+    desc: "Maximum muscular development across every group. High set count per week.",
   },
 ];
 

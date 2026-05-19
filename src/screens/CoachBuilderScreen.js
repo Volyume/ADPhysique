@@ -66,7 +66,7 @@ const GOAL_OPTIONS = [
   { value: 'balanced_bodybuilding',       icon: 'grid-outline',           subtitle: 'Structured programme with even coverage across all muscle groups' },
   { value: 'aesthetic_v_taper',           icon: 'triangle-outline',       subtitle: 'Prioritises upper-body width, shoulder-to-waist ratio' },
   { value: 'x_frame_physique', icon: 'expand-outline', subtitle: 'Prioritises shoulders, lats, glutes and hamstrings for a dramatic X silhouette' },
-  { value: 'weak_point_spec',             icon: 'warning-outline',        subtitle: 'Extra volume and priority on muscles you want to bring up' },
+  { value: 'weak_point_spec',             icon: 'warning-outline',        subtitle: 'Extra sets and priority on muscles you want to bring up' },
   { value: 'strength_hypertrophy', icon: 'flash-outline',          subtitle: 'Heavier compounds with muscle growth as the goal' },
   { value: 'recomp',               icon: 'swap-horizontal-outline', subtitle: 'Hold onto your muscle while losing fat. Eating around maintenance.' },
 ];
@@ -523,7 +523,7 @@ export default function CoachBuilderScreen({ navigation, route }) {
             <View style={{ flex: 1 }}>
               <Text style={styles.nutritionBannerTitle}>Nutrition Phase Detected</Text>
               <Text style={styles.nutritionBannerText}>
-                Phase "{inputs.nutritionPhase}" will be used to calibrate your volume.
+                Phase "{inputs.nutritionPhase}" will be used to shape your training plan.
               </Text>
             </View>
           </View>

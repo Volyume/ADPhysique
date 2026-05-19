@@ -533,7 +533,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
           <Header
             title="What's your goal?"
-            sub="This shapes your training volume and nutrition targets. You can change it at any time."
+            sub="This shapes your training plan and nutrition targets. You can change it at any time."
           />
 
           <View style={styles.goalList}>

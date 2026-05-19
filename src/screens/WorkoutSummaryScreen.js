@@ -398,7 +398,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             icon="layers-outline"
             value={String(displayWorkingSets)}
             label="Working Sets"
-            tooltip={'Hard sets that count towards your training volume. Warm-up sets are excluded.\n\nA working set is any set where you trained close to your limit, typically 0 to 3 reps from failure.'}
+            tooltip={'Hard sets counted in your weekly totals. Warm-up sets are excluded.\n\nA working set is any set where you trained close to your limit, typically 0 to 3 reps from failure.'}
           />
           <StatBox icon="time-outline" value={`${durationMinutes || 0}m`} label="Duration" />
           <StatBox
