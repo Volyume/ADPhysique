@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { VolyumeMark } from '../components/BrandMark';
-import { signInWithEmail, signUpWithEmail, resetPassword } from '../lib/supabase';
+import { signInWithEmail, signUpWithEmail, resetPassword, getSupabaseClient } from '../lib/supabase';
 import { syncProfile, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../store/useAppStore';
@@ -23,7 +23,7 @@ import useAppStore from '../store/useAppStore';
 const CRASH_LOG_KEY = '@volyume_crash_log';
 
 export default function LoginScreen({ navigation, route }) {
-  const { initLocalUser, user: localUser, userProfile, tier } = useAppStore();
+  const { initLocalUser, user: localUser, userProfile, tier, refreshTierFromCloud } = useAppStore();
   const promptSignup = route?.params?.promptSignup === true;
   const [mode, setMode] = useState(promptSignup ? 'signup' : 'signin');
   const [email, setEmail] = useState('');
@@ -67,6 +67,8 @@ export default function LoginScreen({ navigation, route }) {
         } else {
           // Existing account — pull cloud data down (new device scenario)
           pullFromCloud(supabaseUserId).catch(() => {});
+          // Server-authoritative tier — enforcement point after beta
+          refreshTierFromCloud(getSupabaseClient(), supabaseUserId).catch(() => {});
         }
       }
     } finally {

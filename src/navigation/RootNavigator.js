@@ -207,7 +207,7 @@ export default function RootNavigator() {
   const {
     user, isAuthLoading, setUser, setSession, setAuthLoading, initLocalUser,
     firstRunComplete, firstRunChecked, checkFirstRun,
-    tier, tierChecked, checkTier,
+    tier, tierChecked, checkTier, refreshTierFromCloud,
   } = useAppStore();
   const [splashReady, setSplashReady] = useState(false);
 
@@ -237,6 +237,8 @@ export default function RootNavigator() {
             if (session?.user) {
               setSession(session);
               setUser(session.user);
+              // Server-authoritative tier — enforcement point after beta
+              refreshTierFromCloud(client, session.user.id).catch(() => {});
               setAuthLoading(false);
               return;
             }
