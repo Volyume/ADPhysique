@@ -9,11 +9,6 @@ import { VolyumeMark } from '../components/BrandMark';
 import useAppStore from '../store/useAppStore';
 import { logBodyMetric } from '../lib/database';
 
-const VALUE_BULLETS = [
-  'Tracks every set and remembers exactly what you lifted last time',
-  'No social feed, no ads, no streak pressure — just your training',
-  'Stays on your phone. Nothing is sent anywhere.',
-];
 
 export default function FirstRunScreen({ navigation }) {
   const { user, units, setUnits, userProfile, saveLocalProfile, completeFirstRun } = useAppStore();
@@ -145,18 +140,10 @@ export default function FirstRunScreen({ navigation }) {
           <Text style={styles.brandName}>Volyume</Text>
         </View>
 
-        <Text style={styles.title}>Welcome.</Text>
+        <Text style={styles.title}>Welcome to Volyume.</Text>
         <Text style={styles.welcomeDesc}>
-          Volyume is a training logbook for serious bodybuilders. It tracks your sessions, remembers your progress, and helps you make better decisions each time you train.
+          A training logbook that does the thinking for you. Log your sessions, track your progress, and always know exactly where you left off — so you can just come in and train.
         </Text>
-        <View style={styles.bullets}>
-          {VALUE_BULLETS.map(b => (
-            <View key={b} style={styles.bulletRow}>
-              <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
-              <Text style={styles.bulletText}>{b}</Text>
-            </View>
-          ))}
-        </View>
 
         <View style={styles.nameBlock}>
           <Text style={styles.nameLabel}>What should we call you?</Text>
@@ -243,9 +230,6 @@ const styles = StyleSheet.create({
   title: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary, marginTop: spacing.md },
   welcomeDesc: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 21, marginTop: spacing.xs },
   subtitle: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
-  bullets: { gap: spacing.sm, marginVertical: spacing.sm },
-  bulletRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  bulletText: { fontSize: fontSize.sm, color: colors.textSecondary, flex: 1 },
   pathCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
