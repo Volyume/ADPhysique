@@ -402,6 +402,11 @@ const SCHEMA_MIGRATIONS = [
     )`,
     `CREATE INDEX IF NOT EXISTS idx_coach_outputs_user ON coach_outputs(user_id, week_start)`,
   ],
+  // v7 — add training performance and joint pain to weekly check-ins
+  [
+    'ALTER TABLE weekly_checkins ADD COLUMN training_performance TEXT',
+    'ALTER TABLE weekly_checkins ADD COLUMN joint_pain INTEGER DEFAULT 0',
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
@@ -1960,12 +1965,14 @@ export async function saveWeeklyCheckin(userId, data) {
     await d.runAsync(
       `UPDATE weekly_checkins SET
         energy_score = ?, soreness_score = ?, stress_score = ?, sleep_hours = ?,
-        cals_adherence = ?, steps_adherence = ?, cycle_override = ?, notes = ?, updated_at = ?
+        cals_adherence = ?, steps_adherence = ?, cycle_override = ?, notes = ?,
+        training_performance = ?, joint_pain = ?, updated_at = ?
        WHERE id = ?`,
       [
         data.energyScore ?? null, data.sorenessScore ?? null, data.stressScore ?? null,
         data.sleepHours ?? null, data.calsAdherence ?? null, data.stepsAdherence ?? null,
-        data.cycleOverride ? 1 : 0, data.notes ?? null, now, existing.id,
+        data.cycleOverride ? 1 : 0, data.notes ?? null,
+        data.trainingPerformance ?? null, data.jointPain ? 1 : 0, now, existing.id,
       ],
     );
     return existing.id;
@@ -1974,13 +1981,15 @@ export async function saveWeeklyCheckin(userId, data) {
   await d.runAsync(
     `INSERT INTO weekly_checkins
       (id, user_id, week_start, energy_score, soreness_score, stress_score, sleep_hours,
-       cals_adherence, steps_adherence, cycle_override, notes, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       cals_adherence, steps_adherence, cycle_override, notes,
+       training_performance, joint_pain, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id, userId, data.weekStart,
       data.energyScore ?? null, data.sorenessScore ?? null, data.stressScore ?? null,
       data.sleepHours ?? null, data.calsAdherence ?? null, data.stepsAdherence ?? null,
-      data.cycleOverride ? 1 : 0, data.notes ?? null, now, now,
+      data.cycleOverride ? 1 : 0, data.notes ?? null,
+      data.trainingPerformance ?? null, data.jointPain ? 1 : 0, now, now,
     ],
   );
   return id;

@@ -47,6 +47,98 @@ export function getEwmaSevenDaysAgo(weights, alpha = 0.1) {
   return older?.ewmaKg ?? series[0].ewmaKg;
 }
 
+// ─── Data confidence assessment ──────────────────────────────────────────────
+
+/**
+ * Returns a confidence level for the current check-in data set.
+ * Used to gate calorie/training adjustments — we hold the plan when data is thin.
+ *
+ * level: 'high' | 'medium' | 'low' | 'data_hold'
+ * reasons: array of plain-English strings explaining the level
+ * holdMessage: string to surface to the user when data_hold
+ */
+export function assessDataConfidence({ weigh_ins, adherenceKnown, weeksInPhase, hasUnusualEvent }) {
+  const reasons = [];
+  let level = 'high';
+
+  if (weigh_ins < 3) {
+    return {
+      level: 'data_hold',
+      reasons: ['Fewer than 3 weigh-ins this week'],
+      holdMessage: "We need at least 3 morning weights to calculate a reliable trend. Your plan stays the same this week. Keep logging each morning and we'll have enough data to coach you properly next check-in.",
+    };
+  }
+
+  if (hasUnusualEvent && weigh_ins < 5) {
+    return {
+      level: 'data_hold',
+      reasons: ['Unusual event flagged with limited weight data'],
+      holdMessage: "You flagged something unusual this week (illness, travel, stress) and weight data is limited. Scale readings aren't reliable enough to act on right now, so we're holding your plan. Log weight consistently next week for a clean read.",
+    };
+  }
+
+  if (weigh_ins < 5) { level = 'medium'; reasons.push('Fewer than 5 weigh-ins'); }
+  if (!adherenceKnown) { if (level === 'high') level = 'medium'; reasons.push('Nutrition adherence not reported'); }
+  if (weeksInPhase < 2) { level = 'low'; reasons.push('Less than 2 weeks of trend data'); }
+  if (hasUnusualEvent) { if (level === 'high') level = 'medium'; reasons.push('Unusual week flagged'); }
+
+  return { level, reasons, holdMessage: null };
+}
+
+// ─── Autoregulation matrix ────────────────────────────────────────────────────
+
+/**
+ * Maps check-in data to a recovery score 1–4.
+ *   1 = No soreness, healed early (energy ≥4, soreness ≤1)
+ *   2 = Healed just in time (energy ≥3, soreness ≤2)
+ *   3 = Still slightly sore (energy ≤3 or soreness ≥3)
+ *   4 = Soreness limits performance (soreness ≥4)
+ */
+function getRecoveryScore(energyScore, sorenessScore) {
+  const e = energyScore ?? 3;
+  const s = sorenessScore ?? 3;
+  if (s >= 4) return 4;
+  if (e <= 2 || s >= 3) return 3;
+  if (e >= 4 && s <= 1) return 1;
+  return 2;
+}
+
+/**
+ * Maps training data to a performance score 1–4.
+ * trainingPerformance: 'exceeded' | 'hit' | 'struggled' | 'dropped' | null
+ */
+function getPerformanceScore(sessionAdherence, prsThisWeek, trainingPerformance) {
+  if (trainingPerformance === 'exceeded' || (prsThisWeek > 0 && sessionAdherence >= 0.9)) return 1;
+  if (trainingPerformance === 'dropped' || sessionAdherence < 0.5) return 4;
+  if (trainingPerformance === 'struggled' || sessionAdherence < 0.75) return 3;
+  if (trainingPerformance === 'hit' || sessionAdherence >= 0.75) return 2;
+  return 2;
+}
+
+/**
+ * Autoregulation matrix: recovery (1–4) × performance (1–4) → volume signal.
+ * Returns: { volumeDelta: -2|-1|0|1|2|3, trainingSignal: 'reduce'|'hold'|'push', deloadFlag: boolean }
+ */
+function autoregulationMatrix(recoveryScore, performanceScore) {
+  // Deload: recovery 4 regardless of performance, or both 3+4
+  if (recoveryScore === 4 || (recoveryScore >= 3 && performanceScore >= 4)) {
+    return { volumeDelta: -2, trainingSignal: 'reduce', deloadFlag: true };
+  }
+  // Hold: either dimension is 3 (but not both at extreme)
+  if (recoveryScore === 3 || performanceScore === 3) {
+    return { volumeDelta: 0, trainingSignal: 'hold', deloadFlag: false };
+  }
+  // Push: both at 1 or 2
+  if (recoveryScore === 1 && performanceScore === 1) {
+    return { volumeDelta: 3, trainingSignal: 'push', deloadFlag: false };
+  }
+  if (recoveryScore === 1 || performanceScore === 1) {
+    return { volumeDelta: 2, trainingSignal: 'push', deloadFlag: false };
+  }
+  // Both 2
+  return { volumeDelta: 1, trainingSignal: 'push', deloadFlag: false };
+}
+
 // ─── Phase configuration ──────────────────────────────────────────────────────
 
 const PHASE_CONFIG = {
@@ -189,6 +281,31 @@ export function runWeeklyCoach(inputs) {
     units = 'kg',
   } = inputs;
 
+  // ── DATA CONFIDENCE ───────────────────────────────────────────────────────
+  const confidence = assessDataConfidence({
+    weigh_ins: morningWeights.length,
+    adherenceKnown: checkin?.calsAdherence !== 'untracked' && checkin?.calsAdherence != null,
+    weeksInPhase,
+    hasUnusualEvent: !!(checkin?.notes?.trim()),
+  });
+
+  if (confidence.level === 'data_hold') {
+    const ewmaNow = morningWeights.length ? getLatestEwma(morningWeights) : null;
+    return {
+      hasEnoughData: false,
+      dataNote: confidence.holdMessage,
+      confidence: confidence.level,
+      weekLabel: `Week ${weeksInPhase} · ${phaseConfig(goalPhase).label}`,
+      trend: { ewma7: ewmaNow, delta: null, onTarget: false, deltaLabel: 'Log morning weight', rateLabel: null },
+      whatWorking: ['Showing up and logging. That\'s the baseline everything else builds on.'],
+      adjustments: { training: { signal: 'hold', note: 'Hold your current plan. We need a few more weigh-ins to coach you accurately.' }, calories: null, steps: null, cardio: null },
+      whyThisWeek: confidence.holdMessage,
+      deloadSuggested: false, deloadNote: null, dietBreakSuggested: false, dietBreakNote: null,
+      adherenceNote: null, prsThisWeek, sessionsCompleted, sessionsPlanned,
+      volumeSignal: 0, loadSignal: 'hold', recoveryFlag: 'normal', goalPhase,
+    };
+  }
+
   const phase = phaseConfig(goalPhase);
   const energyScore    = checkin?.energyScore    ?? null;
   const sorenessScore  = checkin?.sorenessScore  ?? null;
@@ -261,55 +378,47 @@ export function runWeeklyCoach(inputs) {
     return _buildAdherenceOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, weightDelta, prsThisWeek, sessionsCompleted, sessionsPlanned, weekSeed, onTarget });
   }
 
-  // ── RECOVERY SIGNALS ─────────────────────────────────────────────────────
-  const poorEnergy    = energyScore != null && energyScore <= 2;
-  const highSoreness  = sorenessScore != null && sorenessScore >= 4;
-  const poorRecovery  = poorEnergy || highSoreness;
-  const excellentRec  = energyScore != null && energyScore >= 4 && sorenessScore != null && sorenessScore <= 2;
+  // ── RECOVERY & PERFORMANCE SIGNALS (autoregulation matrix) ─────────────
+  const poorEnergy   = energyScore != null && energyScore <= 2;
+  const highSoreness = sorenessScore != null && sorenessScore >= 4;
+  const poorRecovery = poorEnergy || highSoreness;
+  const excellentRec = energyScore != null && energyScore >= 4 && sorenessScore != null && sorenessScore <= 2;
 
-  // ── TRAINING SIGNAL ───────────────────────────────────────────────────────
-  let volumeSignal = 0;
-  let loadSignal   = 'progress';
-  let recoveryFlag = 'normal';
+  const trainingPerformance = checkin?.trainingPerformance ?? null;
+  const recoveryScore   = getRecoveryScore(energyScore, sorenessScore);
+  const performanceScore = getPerformanceScore(sessionAdherence, prsThisWeek, trainingPerformance);
+  const matrix = autoregulationMatrix(recoveryScore, performanceScore);
+
+  const volumeSignal = matrix.volumeDelta;
+  const trainingSignal = matrix.trainingSignal;
+  const matrixDeload = matrix.deloadFlag && consecutivePoorRecoveryWeeks >= 1;
+  const recoveryFlag = matrixDeload ? 'deload_suggested' : (poorRecovery ? 'concerned' : 'normal');
+  const loadSignal = trainingSignal === 'push' ? 'progress' : trainingSignal;
+
   let trainingNote = '';
-
-  if (poorRecovery && consecutivePoorRecoveryWeeks >= 1) {
-    volumeSignal = -2;
-    loadSignal   = 'reduce';
-    recoveryFlag = 'deload_suggested';
-    trainingNote = 'Recovery is flagged. Cut sets back and focus on quality.';
-  } else if (poorRecovery) {
-    volumeSignal = 0;
-    loadSignal   = 'hold';
-    recoveryFlag = 'concerned';
-    trainingNote = 'Energy and soreness are elevated. Hold the plan steady this week.';
-  } else if (excellentRec && prsThisWeek > 0) {
-    volumeSignal = 2;
-    loadSignal   = 'progress';
-    recoveryFlag = 'normal';
-    trainingNote = 'Recovery is excellent and performance is climbing. Push harder.';
-  } else if (excellentRec) {
-    volumeSignal = 1;
-    loadSignal   = 'progress';
-    recoveryFlag = 'normal';
-    trainingNote = 'Recovery is solid. Keep the effort level up.';
+  if (matrixDeload) {
+    trainingNote = 'Recovery is flagged across multiple signals. Cut sets back roughly in half and focus on quality over quantity.';
+  } else if (trainingSignal === 'hold') {
+    trainingNote = 'Hold your current plan. Performance and recovery need stabilising before adding more work.';
+  } else if (volumeSignal >= 2) {
+    trainingNote = 'Recovery is excellent and performance is climbing. This is the window to push harder.';
+  } else if (volumeSignal === 1) {
+    trainingNote = 'Recovery is solid. Keep the effort level consistent and look to progress where you can.';
   } else {
-    volumeSignal = 0;
-    loadSignal   = 'progress';
-    recoveryFlag = 'normal';
     trainingNote = 'Hold your current plan. Performance and recovery look stable.';
   }
 
-  const trainingSignal = loadSignal === 'reduce' ? 'reduce' : loadSignal === 'hold' ? 'hold' : 'push';
-
   // ── CALORIE ADJUSTMENT ────────────────────────────────────────────────────
   let calorieAdjustment = null;
+
+  // At low/medium confidence, require an extra week before adjusting
+  const offTargetWeeksRequired = confidence.level === 'high' ? 2 : 3;
 
   const canAdjustCals = (
     !cycleOverride &&
     currentCalTarget != null &&
     calsAdherence !== 'untracked' &&
-    consecutiveOffTargetWeeks >= 2 &&
+    consecutiveOffTargetWeeks >= offTargetWeeksRequired &&
     lastCalAdjustmentWeeksAgo >= 2  // cooldown: don't adjust two weeks in a row
   );
 
@@ -403,7 +512,7 @@ export function runWeeklyCoach(inputs) {
   let deloadTriggers = 0;
 
   if (consecutivePoorRecoveryWeeks >= 2)               deloadTriggers++;
-  if (recoveryFlag === 'deload_suggested')              deloadTriggers++;
+  if (matrixDeload)                                    deloadTriggers++;
   if (weeksInPhase >= 6 && phase.isCut)                deloadTriggers++;
   if (sleepHours != null && sleepHours < 6 && poorEnergy) deloadTriggers++;
 
@@ -479,6 +588,7 @@ export function runWeeklyCoach(inputs) {
   return {
     hasEnoughData: true,
     dataNote: null,
+    confidence: confidence.level,
     weekLabel,
     trend: {
       ewma7: ewma7Today,
