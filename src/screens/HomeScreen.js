@@ -571,7 +571,7 @@ export default function HomeScreen({ navigation }) {
               </View>
               {blockProgress.map(p => {
                 const pct = p.planned > 0 ? Math.min(1, p.actual / p.planned) : 0;
-                const barColor = pct >= 1 ? colors.primary : pct >= 0.7 ? colors.warning : 'rgba(0,229,255,0.30)';
+                const barColor = pct >= 1 ? colors.primary : pct >= 0.7 ? colors.warning : 'rgba(245,158,11,0.25)';
                 return (
                   <View key={p.muscle} style={styles.blockRow}>
                     <Text style={styles.blockMuscle} numberOfLines={1}>{p.label}</Text>

@@ -4,6 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { View, Text, Image, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { VolyumeMark } from '../components/BrandMark';
 
 const SPLASH_HERO = require('../../assets/volyume-splash-hero.png');
 const HERO_ASPECT = 941 / 1672;
@@ -275,54 +276,58 @@ export default function RootNavigator() {
 
 function SplashScreen() {
   const heroOpacity  = useRef(new Animated.Value(0)).current;
-  const heroScale    = useRef(new Animated.Value(0.82)).current;
-  const heroY        = useRef(new Animated.Value(20)).current;
+  const heroScale    = useRef(new Animated.Value(0.86)).current;
+  const heroY        = useRef(new Animated.Value(16)).current;
   const wordOpacity  = useRef(new Animated.Value(0)).current;
-  const wordY        = useRef(new Animated.Value(14)).current;
+  const wordY        = useRef(new Animated.Value(12)).current;
+  const accentScaleX = useRef(new Animated.Value(0)).current;
   const tagOpacity   = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.sequence([
-      // Hero image rises + fades in
       Animated.parallel([
         Animated.timing(heroOpacity, {
           toValue: 1,
-          duration: 600,
+          duration: 550,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.timing(heroScale, {
           toValue: 1,
-          duration: 700,
-          easing: Easing.out(Easing.back(1.4)),
+          duration: 650,
+          easing: Easing.out(Easing.back(1.2)),
           useNativeDriver: true,
         }),
         Animated.timing(heroY, {
           toValue: 0,
-          duration: 600,
+          duration: 550,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
       ]),
-      // Wordmark slides up
       Animated.parallel([
         Animated.timing(wordOpacity, {
           toValue: 1,
-          duration: 360,
+          duration: 320,
           easing: Easing.out(Easing.quad),
           useNativeDriver: true,
         }),
         Animated.timing(wordY, {
           toValue: 0,
-          duration: 360,
+          duration: 320,
           easing: Easing.out(Easing.quad),
           useNativeDriver: true,
         }),
       ]),
-      // Tagline fades in last
+      Animated.timing(accentScaleX, {
+        toValue: 1,
+        duration: 280,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
       Animated.timing(tagOpacity, {
         toValue: 1,
-        duration: 340,
+        duration: 300,
         easing: Easing.out(Easing.quad),
         useNativeDriver: true,
       }),
@@ -343,13 +348,16 @@ function SplashScreen() {
           resizeMode="contain"
         />
       </Animated.View>
-      <Animated.Text
-        style={[splashStyles.wordmark, { opacity: wordOpacity, transform: [{ translateY: wordY }] }]}
-      >
-        Volyume
-      </Animated.Text>
+
+      <Animated.View style={[splashStyles.wordRow, { opacity: wordOpacity, transform: [{ translateY: wordY }] }]}>
+        <VolyumeMark size={30} />
+        <Text style={splashStyles.wordmark}>VOLYUME</Text>
+      </Animated.View>
+
+      <Animated.View style={[splashStyles.accent, { transform: [{ scaleX: accentScaleX }] }]} />
+
       <Animated.Text style={[splashStyles.tagline, { opacity: tagOpacity }]}>
-        Intelligent Hypertrophy Logbook
+        Your training, sorted.
       </Animated.Text>
     </View>
   );
@@ -361,18 +369,31 @@ const splashStyles = StyleSheet.create({
     backgroundColor: '#000000',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.lg,
+    gap: spacing.md,
+  },
+  wordRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: spacing.sm,
   },
   wordmark: {
-    fontSize: 32,
-    fontWeight: fontWeight.black,
+    fontSize: 28,
+    fontWeight: fontWeight.bold,
     color: colors.textPrimary,
-    letterSpacing: 1,
+    letterSpacing: 4,
+    includeFontPadding: false,
+  },
+  accent: {
+    width: 36,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: colors.primary,
   },
   tagline: {
     fontSize: 13,
     color: colors.textMuted,
-    letterSpacing: 0.3,
-    fontWeight: fontWeight.medium,
+    letterSpacing: 0.4,
+    fontWeight: fontWeight.regular,
   },
 });

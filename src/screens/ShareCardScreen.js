@@ -30,8 +30,8 @@ var B = {
   bg0:'#090A0F', bg1:'#0E0F18', bg2:'#131620',
   surface:'#181B24', surface2:'#1F2330',
   border:'#252A38', borderFaint:'#1B1F2A',
-  accent:'#00E5FF', accentDim:'rgba(0,229,255,0.15)',
-  accentGlow:'rgba(0,229,255,0.06)',
+  accent:'#F59E0B', accentDim:'rgba(245,158,11,0.15)',
+  accentGlow:'rgba(245,158,11,0.06)',
   gold:'#FFD700', goldDim:'rgba(255,215,0,0.15)',
   text:'#FFFFFF', textSecondary:'#9E9E9E', textMuted:'#5A6070'
 };
@@ -230,7 +230,7 @@ function drawPR(ctx, W, H, p) {
   var glowY = H * 0.6;
   var glowR = W * 0.48;
   var glowGrad = ctx.createRadialGradient(W / 2, glowY, 0, W / 2, glowY, glowR);
-  glowGrad.addColorStop(0, 'rgba(0,229,255,0.07)');
+  glowGrad.addColorStop(0, 'rgba(245,158,11,0.07)');
   glowGrad.addColorStop(1, 'transparent');
   ctx.fillStyle = glowGrad;
   ctx.fillRect(0, 0, W, H);

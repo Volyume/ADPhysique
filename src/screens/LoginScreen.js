@@ -112,7 +112,7 @@ export default function LoginScreen({ navigation }) {
               <VolyumeMark size={72} color={colors.textPrimary} accent={colors.primary} />
             </View>
             <Text style={styles.brandName}>Volyume</Text>
-            <Text style={styles.brandTagline}>Intelligent Hypertrophy Logbook</Text>
+            <Text style={styles.brandTagline}>Your training, sorted.</Text>
           </View>
 
           {/* Thin divider below brand */}

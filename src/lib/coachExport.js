@@ -65,11 +65,11 @@ function buildBodyweightSVG(points) {
   });
   const dots = coords.map(c => {
     const [x, y] = c.split(',');
-    return `<circle cx="${x}" cy="${y}" r="2.5" fill="#00E5FF" />`;
+    return `<circle cx="${x}" cy="${y}" r="2.5" fill="#F59E0B" />`;
   }).join('');
   return `
     <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none">
-      <polyline points="${coords.join(' ')}" fill="none" stroke="#00E5FF" stroke-width="2" />
+      <polyline points="${coords.join(' ')}" fill="none" stroke="#F59E0B" stroke-width="2" />
       ${dots}
     </svg>`;
 }
@@ -139,8 +139,8 @@ function buildHTML(model) {
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background:#0D0D0D; color:#FFFFFF; font-family:-apple-system,Roboto,Helvetica,sans-serif; padding:28px; }
-    h1 { font-size:24px; color:#00E5FF; letter-spacing:0.5px; }
-    h2 { font-size:15px; color:#00E5FF; margin-bottom:10px; text-transform:uppercase; letter-spacing:1px; }
+    h1 { font-size:24px; color:#F59E0B; letter-spacing:0.5px; }
+    h2 { font-size:15px; color:#F59E0B; margin-bottom:10px; text-transform:uppercase; letter-spacing:1px; }
     .sub { color:#9E9E9E; font-size:12px; margin-top:4px; }
     .card { background:#1A1A1A; border:1px solid #333; border-radius:12px; padding:18px; margin-top:18px; }
     table { width:100%; border-collapse:collapse; font-size:12px; }
@@ -153,7 +153,7 @@ function buildHTML(model) {
     .stat .v { font-size:22px; font-weight:800; color:#FFD700; }
     .stat .l { font-size:11px; color:#9E9E9E; }
     .macros { display:flex; gap:20px; }
-    .macros .mv { font-size:18px; font-weight:700; color:#00E5FF; display:block; }
+    .macros .mv { font-size:18px; font-weight:700; color:#F59E0B; display:block; }
     .macros .ml { font-size:11px; color:#616161; }
     .foot { margin-top:24px; color:#616161; font-size:10px; text-align:center; }
   </style></head><body>

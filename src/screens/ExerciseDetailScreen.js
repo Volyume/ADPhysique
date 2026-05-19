@@ -159,7 +159,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                     <Area
                       points={points.est1rm}
                       y0={chartBounds.bottom}
-                      color="rgba(0,229,255,0.08)"
+                      color="rgba(245,158,11,0.08)"
                     />
                     <Line
                       points={points.est1rm}

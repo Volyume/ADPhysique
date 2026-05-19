@@ -7,10 +7,10 @@ export const colors = {
   border: '#333333',
   borderLight: '#404040',
 
-  // Primary accent — vivid cyan, premium training feel
-  primary: '#00E5FF',
-  primaryDim: '#0097A7',
-  primaryBg: 'rgba(0, 229, 255, 0.10)',
+  // Primary accent — amber gold
+  primary: '#F59E0B',
+  primaryDim: '#B45309',
+  primaryBg: 'rgba(245, 158, 11, 0.10)',
 
   // Semantic status
   success: '#4CAF50',
@@ -37,8 +37,8 @@ export const colors = {
   bronze: '#CD7F32',
 
   // Chart tokens
-  chartLine: '#00E5FF',
-  chartFill: 'rgba(0, 229, 255, 0.08)',
+  chartLine: '#F59E0B',
+  chartFill: 'rgba(245, 158, 11, 0.08)',
 };
 
 export const spacing = {

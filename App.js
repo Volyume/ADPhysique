@@ -54,7 +54,7 @@ class ErrorBoundary extends React.Component {
     if (this.state.error) {
       return (
         <View style={eb.container}>
-          <Text style={eb.title}>Volyume — Crash Report</Text>
+          <Text style={eb.title}>Volyume: Crash Report</Text>
           <Text style={eb.subtitle}>Send this to support:</Text>
           <View style={eb.msgBox}>
             <Text selectable style={eb.msg}>
