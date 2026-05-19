@@ -133,7 +133,7 @@ function buildHTML(model) {
          </div>
          ${nutrition.phase ? `<p class="muted">Phase: ${esc(nutrition.phase)}</p>` : ''}
        </div>`
-    : `<div class="card"><h2>Nutrition targets</h2><p class="muted">Not shared — nutrition consent not enabled.</p></div>`;
+    : `<div class="card"><h2>Nutrition targets</h2><p class="muted">Not shared. Nutrition sharing is not enabled.</p></div>`;
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8" />
   <style>

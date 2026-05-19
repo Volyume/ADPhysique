@@ -190,7 +190,7 @@ export function generateTravelPlan({
   }[equipment] ?? equipment;
 
   return {
-    name: `${weeks === 1 ? 'Travel Week' : `${weeks}-Week Travel Block`} — ${equipmentLabel}`,
+    name: `${weeks === 1 ? 'Travel Week' : `${weeks}-Week Travel Block`}: ${equipmentLabel}`,
     equipment,
     weeks,
     note: `Higher reps and shorter rest maintain your muscle while you're away from the gym. Same effort, different tools.`,
@@ -227,7 +227,7 @@ function makeExEntry(poolEntry, sets) {
     repsMax:             params.repsMax,
     restSec:             params.restSec,
     compoundIsolation:   poolEntry.c,
-    notes:               'Higher rep range — focus on squeezing the muscle, not just moving weight.',
+    notes:               'Higher rep range. Focus on squeezing the muscle, not just moving weight.',
   };
 }
 

@@ -733,7 +733,7 @@ export function computeAdaptiveDecision({ soreness = 2, performance = 2, pump = 
     decision: 'hold',
     delta: 0,
     reasonCode: 'hold_default',
-    reasonText: 'Volume is appropriate — continue as planned.',
+    reasonText: 'Volume is appropriate. Continue as planned.',
   };
 }
 
@@ -837,9 +837,9 @@ export function computeAdaptiveLandmarks(history = [], baseDefaults = VOLUME_LAN
       netScore: Math.round(netScore * 10) / 10,
       bestVolume,
       note: netScore > 1
-        ? `You recover well here — landmark raised by ${adjustment} sets`
+        ? `You recover well here. Target raised by ${adjustment} sets.`
         : netScore < -1
-        ? `Recovery cost is high — landmark lowered by ${Math.abs(adjustment)} sets`
+        ? `Recovery cost is high. Target lowered by ${Math.abs(adjustment)} sets.`
         : 'Landmark based on your response data',
     };
   }
