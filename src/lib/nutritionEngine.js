@@ -122,8 +122,8 @@ function calcConfidence(bodyFatSource) {
 }
 
 // Returns { proteinG, basis, proteinRateUsed } where basis is 'lbm' or 'bodyweight'.
-function calcProtein(goal, weightKg, lbm, bodyFatSource, proteinApproach = 'maximum', customGPerKg = null) {
-  const approach = PROTEIN_APPROACHES[proteinApproach] ?? PROTEIN_APPROACHES.maximum;
+function calcProtein(goal, weightKg, lbm, bodyFatSource, proteinApproach = 'optimised', customGPerKg = null) {
+  const approach = PROTEIN_APPROACHES[proteinApproach] ?? PROTEIN_APPROACHES.optimised;
   const floorG = approach.floor * weightKg;
 
   // Custom override — apply rate directly to bodyweight (coaches typically specify g/kg BW).
@@ -177,7 +177,7 @@ export function calculateNutritionTargets(inputs) {
     bodyFatSource = null,
     activityLevel,
     goal,
-    proteinApproach = 'maximum',
+    proteinApproach = 'optimised',
     customProteinGPerKg = null,
     targetRateKgPerWeek = null,
   } = inputs;

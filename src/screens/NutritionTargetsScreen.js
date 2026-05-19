@@ -141,7 +141,7 @@ export default function NutritionTargetsScreen() {
   const [activity,       setActivity]       = useState('moderate');
   const [trainingDays,   setTrainingDays]   = useState(4);
   const [goal,           setGoal]           = useState('lean_gain');
-  const [proteinApproach, setProteinApproach] = useState('maximum');
+  const [proteinApproach, setProteinApproach] = useState('optimised');
   const [customProteinGPerKg, setCustomProteinGPerKg] = useState('');
   const [consent,        setConsent]        = useState(false);
 
@@ -484,9 +484,9 @@ export default function NutritionTargetsScreen() {
                   <Text style={[styles.approachCardRange, active && styles.approachCardRangeActive]}>
                     {key !== 'custom' ? ap.range : ''}
                   </Text>
-                  {key === 'maximum' && (
+                  {key === 'optimised' && (
                     <View style={styles.recommendedBadge}>
-                      <Text style={styles.recommendedBadgeText}>Default</Text>
+                      <Text style={styles.recommendedBadgeText}>Recommended</Text>
                     </View>
                   )}
                 </View>
