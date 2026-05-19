@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { format } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import InfoTooltip from '../components/InfoTooltip';
 import { calculateNutritionTargets } from '../lib/nutritionEngine';
 import { saveNutritionTargets, getNutritionTargets, logBodyMetric } from '../lib/database';
 import useAppStore from '../store/useAppStore';
@@ -250,7 +251,23 @@ export default function NutritionTargetsScreen() {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
         >
-          <Text style={styles.pageTitle}>Nutrition Targets</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6, flexWrap: 'wrap' }}>
+            <Text style={styles.pageTitle}>Nutrition Targets</Text>
+            <InfoTooltip
+              size={14}
+              text={
+                'How calories are calculated:\n' +
+                '• BMR: Mifflin-St Jeor formula (sex, age, height, weight). If you enter body fat from a measured source (BIA, caliper, or DEXA), Katch-McArdle is used instead — it\'s more accurate because it scales to your actual lean mass, not total weight.\n' +
+                '• TDEE: BMR × activity multiplier (1.2 sedentary → 1.9 very active).\n' +
+                '• Target: TDEE adjusted by your goal (e.g. +10% for Lean Gain, −13% for Mild Cut).\n\n' +
+                'How macros are calculated:\n' +
+                '• Protein: 2.2–3.3 g/kg bodyweight (or g/kg lean mass if body fat was measured). Rates rise in deeper deficits to protect muscle — based on Helms et al. 2014 and the RP Hypertrophy framework.\n' +
+                '• Fat: 25% of total calories, minimum 0.5 g/kg bodyweight to support hormonal health.\n' +
+                '• Carbs: all remaining calories after protein and fat are set.\n\n' +
+                'Results are estimates — adjust based on real-world progress over 2–4 weeks.'
+              }
+            />
+          </View>
           <Text style={styles.pageSubtitle}>
             Calculate your personalised daily calorie and macro goals.
           </Text>
@@ -575,6 +592,25 @@ export default function NutritionTargetsScreen() {
                       {results.targetRateKgPerWeek > 0 ? '+' : ''}
                       {results.targetRateKgPerWeek} kg/week
                     </Text>
+                  </View>
+                  <View style={[styles.calcRow, { marginTop: 4, paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.border }]}>
+                    <Text style={[styles.calcKey, { fontWeight: fontWeight.bold }]}>Macro method</Text>
+                  </View>
+                  <View style={styles.calcRow}>
+                    <Text style={styles.calcKey}>Protein basis</Text>
+                    <Text style={styles.calcValue}>
+                      {results.proteinBasis === 'lbm'
+                        ? `${results.proteinGPerKgLbm ?? '—'} g/kg lean mass`
+                        : `${results.proteinGPerKg ?? '—'} g/kg bodyweight`}
+                    </Text>
+                  </View>
+                  <View style={styles.calcRow}>
+                    <Text style={styles.calcKey}>Fat</Text>
+                    <Text style={styles.calcValue}>25% of calories (min 0.5 g/kg BW)</Text>
+                  </View>
+                  <View style={styles.calcRow}>
+                    <Text style={styles.calcKey}>Carbs</Text>
+                    <Text style={styles.calcValue}>Remaining calories</Text>
                   </View>
                   <Text style={styles.disclaimer}>
                     These targets are estimates, not medical advice. Consult a qualified professional before making significant dietary changes.
