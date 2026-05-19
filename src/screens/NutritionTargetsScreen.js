@@ -11,7 +11,7 @@ import { format } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import InfoTooltip from '../components/InfoTooltip';
 import { calculateNutritionTargets, PROTEIN_APPROACHES } from '../lib/nutritionEngine';
-import { saveNutritionTargets, getNutritionTargets, logBodyMetric } from '../lib/database';
+import { saveNutritionTargets, getNutritionTargets, logBodyMetric, getUserBodyProfile } from '../lib/database';
 import useAppStore from '../store/useAppStore';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 
@@ -128,7 +128,7 @@ const BODY_METRICS_KEY_PREFIX = '@volyume_body_metrics_';
 const PHYSIQUE_PREF_KEY = '@volyume_physique_tracking_enabled';
 
 export default function NutritionTargetsScreen() {
-  const { user } = useAppStore();
+  const { user, userProfile } = useAppStore();
 
   // ── Form state ────────────────────────────────────────────────────────────────
   const [sex,            setSex]            = useState('male');
@@ -167,18 +167,45 @@ export default function NutritionTargetsScreen() {
   useEffect(() => {
     async function loadSaved() {
       try {
-        // Try SQLite first (authoritative store)
         if (user?.id) {
           const fromDb = await getNutritionTargets(user.id).catch(() => null);
           if (fromDb) { setResults(fromDb); return; }
         }
-        // Fall back to AsyncStorage (legacy or pre-SQLite data)
         const raw = await AsyncStorage.getItem(STORAGE_KEY);
         if (raw) setResults(JSON.parse(raw));
       } catch (_) {}
     }
     loadSaved();
   }, [user?.id]);
+
+  // Pre-populate form from saved body profile so users don't re-enter stats
+  useEffect(() => {
+    async function prefill() {
+      if (!user?.id) return;
+      try {
+        const profile = await getUserBodyProfile(user.id).catch(() => null);
+        if (!profile) return;
+        if (profile.sex) setSex(profile.sex);
+        if (profile.heightCm) {
+          const totalIn = Math.round(profile.heightCm / 2.54);
+          setHeightFt(String(Math.floor(totalIn / 12)));
+          setHeightIn(String(totalIn % 12));
+        }
+        if (profile.dateOfBirth) {
+          const ageNum = new Date().getFullYear() - new Date(profile.dateOfBirth).getFullYear();
+          if (ageNum > 0 && ageNum < 100) setAge(String(ageNum));
+        }
+      } catch (_) {}
+    }
+    prefill();
+  }, [user?.id]);
+
+  // Map ProOnboarding goal keys → NutritionTargets goal keys
+  useEffect(() => {
+    const MAP = { cut: 'mild_cut', maintain: 'maintain', mild_bulk: 'lean_gain', mod_bulk: 'build' };
+    const mapped = MAP[userProfile?.goal];
+    if (mapped) setGoal(mapped);
+  }, [userProfile?.goal]);
 
   // ── Derived ──────────────────────────────────────────────────────────────────
   const formComplete =
