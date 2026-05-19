@@ -522,7 +522,7 @@ export default function AthleteHubScreen({ navigation }) {
 
         {/* ── Nav links ─────────────────────────────────── */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>MANAGE</Text>
+          <Text style={styles.sectionLabel}>Manage</Text>
           <NavRow
             icon="layers"
             label="Training Blocks"

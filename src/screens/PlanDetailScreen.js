@@ -154,16 +154,24 @@ export default function PlanDetailScreen({ navigation, route }) {
       >
         {/* Plan header */}
         <View style={styles.planHeader}>
-          {isLibrary && (
-            <View style={styles.libraryBadge}>
-              <Text style={styles.libraryBadgeText}>Plan Library</Text>
-            </View>
-          )}
-          {isActive && (
-            <View style={styles.activeBadge}>
-              <Text style={styles.activeBadgeText}>ACTIVE PLAN</Text>
-            </View>
-          )}
+          <View style={styles.planHeaderBadgeRow}>
+            {isLibrary && (
+              <View style={styles.libraryBadge}>
+                <Text style={styles.libraryBadgeText}>Library</Text>
+              </View>
+            )}
+            {isActive && (
+              <View style={styles.activeBadge}>
+                <Text style={styles.activeBadgeText}>Active plan</Text>
+              </View>
+            )}
+            {plan.tags && plan.tags.includes('featured') && (
+              <View style={styles.featuredBadge}>
+                <Ionicons name="sparkles" size={9} color={colors.background} />
+                <Text style={styles.featuredBadgeText}>Featured</Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.planName}>{plan.name}</Text>
           {plan.description ? (
             <Text style={styles.planDesc}>{plan.description}</Text>
@@ -176,7 +184,15 @@ export default function PlanDetailScreen({ navigation, route }) {
             {totalWorkingSets > 0 && (
               <View style={styles.planStat}>
                 <Text style={styles.planStatValue}>~{totalWorkingSets}</Text>
-                <Text style={styles.planStatLabel}>Est. sets</Text>
+                <Text style={styles.planStatLabel}>Est. sets/week</Text>
+              </View>
+            )}
+            {plan.difficulty != null && (
+              <View style={styles.planStat}>
+                <Text style={styles.planStatValue}>
+                  {['Beginner', 'Intermediate', 'Advanced'][plan.difficulty] ?? 'Intermediate'}
+                </Text>
+                <Text style={styles.planStatLabel}>Level</Text>
               </View>
             )}
           </View>
@@ -186,7 +202,7 @@ export default function PlanDetailScreen({ navigation, route }) {
         {isLibrary ? (
           <TouchableOpacity style={styles.primaryBtn} onPress={handleAddToMyPlans}>
             <Ionicons name="copy-outline" size={20} color={colors.background} />
-            <Text style={styles.primaryBtnText}>Add to My Plans</Text>
+            <Text style={styles.primaryBtnText}>Add to my plans</Text>
           </TouchableOpacity>
         ) : isActive ? (
           <TouchableOpacity style={styles.deactivateBtn} onPress={handleDeactivate}>
@@ -195,7 +211,7 @@ export default function PlanDetailScreen({ navigation, route }) {
         ) : (
           <TouchableOpacity style={styles.primaryBtn} onPress={handleSetActive}>
             <Ionicons name="checkmark-circle" size={20} color={colors.background} />
-            <Text style={styles.primaryBtnText}>Set Active</Text>
+            <Text style={styles.primaryBtnText}>Set active</Text>
           </TouchableOpacity>
         )}
 
@@ -272,6 +288,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
   planHeader: { gap: spacing.md },
+  planHeaderBadgeRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
   libraryBadge: {
     alignSelf: 'flex-start', backgroundColor: colors.surface2, borderRadius: radius.full,
     paddingHorizontal: spacing.md, paddingVertical: 4, borderWidth: 1, borderColor: colors.border,
@@ -281,7 +298,13 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start', backgroundColor: colors.primaryBg, borderRadius: radius.full,
     paddingHorizontal: spacing.md, paddingVertical: 4, borderWidth: 1, borderColor: colors.primary + '60',
   },
-  activeBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.black, letterSpacing: 1 },
+  activeBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
+  featuredBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    alignSelf: 'flex-start', backgroundColor: colors.primary, borderRadius: radius.full,
+    paddingHorizontal: spacing.md, paddingVertical: 4,
+  },
+  featuredBadgeText: { fontSize: fontSize.xs, color: colors.background, fontWeight: fontWeight.bold },
   planName: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary },
   planDesc: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
   planStats: { flexDirection: 'row', gap: spacing.xl },
