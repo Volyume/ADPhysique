@@ -1,7 +1,8 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal, TextInput,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
@@ -55,9 +56,22 @@ export default function HomeScreen({ navigation }) {
   const [todayWeight, setTodayWeight] = useState(null);       // logged weight for today
   const [weightInput, setWeightInput] = useState('');          // draft input value
   const [savingWeight, setSavingWeight] = useState(false);
+  const [showCoachingNudge, setShowCoachingNudge] = useState(false);
 
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
+
+  useEffect(() => {
+    if (tier !== 'pro') return;
+    AsyncStorage.getItem('@volyume_seen_coaching_nudge').then(val => {
+      if (val !== 'true') setShowCoachingNudge(true);
+    });
+  }, [tier]);
+
+  function dismissCoachingNudge() {
+    setShowCoachingNudge(false);
+    AsyncStorage.setItem('@volyume_seen_coaching_nudge', 'true').catch(() => {});
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -605,6 +619,39 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.blockNote}>Sets completed vs planned · resets Monday</Text>
             </View>
           )}
+
+        {/* ── Coaching discovery nudge (Pro, one-time) ── */}
+        {showCoachingNudge && (
+          <View style={styles.coachingNudge}>
+            <View style={styles.coachingNudgeLeft}>
+              <Ionicons name="pulse-outline" size={20} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text style={styles.coachingNudgeTitle}>Your weekly coaching report is ready</Text>
+              <Text style={styles.coachingNudgeBody}>
+                Every week Volyume reviews your training and gives you personalised feedback on how to adjust things going forward.
+              </Text>
+              <TouchableOpacity
+                style={styles.coachingNudgeBtn}
+                onPress={() => {
+                  dismissCoachingNudge();
+                  navigation.navigate('ProgressTab', { screen: 'WeeklyCheckIn' });
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.coachingNudgeBtnText}>Show me</Text>
+                <Ionicons name="chevron-forward" size={12} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              onPress={dismissCoachingNudge}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityLabel="Dismiss coaching nudge"
+            >
+              <Ionicons name="close" size={16} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* ── Quick nav ── */}
         <View style={styles.quickRow}>
@@ -1168,4 +1215,34 @@ const styles = StyleSheet.create({
   blockBarFill: { height: '100%', borderRadius: radius.full },
   blockSets: { width: 36, fontSize: fontSize.xs, color: colors.textMuted, textAlign: 'right' },
   blockNote: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic', marginTop: spacing.xs },
+
+  // Pro coaching discovery nudge
+  coachingNudge: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.primary + '40',
+  },
+  coachingNudgeLeft: {
+    width: 36, height: 36, borderRadius: radius.sm,
+    backgroundColor: colors.primaryBg,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  coachingNudgeTitle: {
+    fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary,
+  },
+  coachingNudgeBody: {
+    fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 17,
+  },
+  coachingNudgeBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    alignSelf: 'flex-start', marginTop: spacing.xs,
+  },
+  coachingNudgeBtnText: {
+    fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary,
+  },
 });

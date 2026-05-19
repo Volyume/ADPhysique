@@ -1344,7 +1344,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             ) : null}
             <Text style={styles.infoNotesLabel}>How to do it</Text>
             <Text style={styles.infoNotes}>
-              {routineExercise?.notes || FORM_TIPS[exercise?.name] || exercise?.notes || 'No specific coaching notes yet. Focus on controlled movement, feel the target muscle working, and stop a couple of reps before you truly can\'t do any more.'}
+              {routineExercise?.notes || FORM_TIPS[exercise?.name] || exercise?.notes || 'No coaching notes yet for this exercise.\n\nIf you\'re not sure how much weight to use, start light. Pick something you could comfortably lift 15 to 20 times. Getting comfortable with the movement matters more than the weight, especially early on.\n\nFocus on controlled movement, feel the target muscle working, and stop a couple of reps before you truly cannot do any more.'}
             </Text>
           </View>
         </Modal>

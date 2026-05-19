@@ -157,7 +157,7 @@ function buildHTML(model) {
     .macros .ml { font-size:11px; color:#616161; }
     .foot { margin-top:24px; color:#616161; font-size:10px; text-align:center; }
   </style></head><body>
-    <h1>Volyume — Coach Report</h1>
+    <h1>Volyume Coach Report</h1>
     <div class="sub">Last 4 weeks · Generated ${esc(generatedAt)}</div>
 
     <div class="card">
