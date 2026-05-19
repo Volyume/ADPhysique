@@ -10,9 +10,9 @@ import useAppStore from '../store/useAppStore';
 import { logBodyMetric } from '../lib/database';
 
 const VALUE_BULLETS = [
-  'Smart progression — knows when to push harder and when to back off',
-  'No social feed, no ads, no streak guilt',
-  'Private by design — your data never leaves the device',
+  'Tracks every set and remembers exactly what you lifted last time',
+  'No social feed, no ads, no streak pressure — just your training',
+  'Stays on your phone. Nothing is sent anywhere.',
 ];
 
 export default function FirstRunScreen({ navigation }) {
@@ -77,9 +77,9 @@ export default function FirstRunScreen({ navigation }) {
             <Text style={styles.backLinkText}>Back</Text>
           </TouchableOpacity>
 
-          <Text style={styles.title}>Quick setup</Text>
+          <Text style={styles.title}>Almost there.</Text>
           <Text style={styles.subtitle}>
-            A few things and you're in. You can change these later in Settings.
+            Just a couple of things and you're ready to go. You can update these anytime in Settings.
           </Text>
 
           <Text style={styles.fieldLabel}>What should we call you?</Text>
@@ -145,7 +145,10 @@ export default function FirstRunScreen({ navigation }) {
           <Text style={styles.brandName}>Volyume</Text>
         </View>
 
-        <Text style={styles.title}>Train with intent</Text>
+        <Text style={styles.title}>Welcome.</Text>
+        <Text style={styles.welcomeDesc}>
+          Volyume is a training logbook for serious bodybuilders. It tracks your sessions, remembers your progress, and helps you make better decisions each time you train.
+        </Text>
         <View style={styles.bullets}>
           {VALUE_BULLETS.map(b => (
             <View key={b} style={styles.bulletRow}>
@@ -180,9 +183,9 @@ export default function FirstRunScreen({ navigation }) {
             <Ionicons name="sparkles" size={22} color={hasName ? colors.primary : colors.textMuted} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.pathTitle}>Generate my plan</Text>
+            <Text style={styles.pathTitle}>Build my plan with Coach</Text>
             <Text style={styles.pathText}>
-              Answer a few questions and Coach builds a plan around your schedule and goals. ~3 minutes.
+              Answer a few questions and we'll put together a plan that fits your schedule and goals.
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={hasName ? colors.textMuted : colors.border} />
@@ -198,9 +201,9 @@ export default function FirstRunScreen({ navigation }) {
             <Ionicons name="library-outline" size={22} color={hasName ? colors.primary : colors.textMuted} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.pathTitle}>Browse plan library</Text>
+            <Text style={styles.pathTitle}>Choose a ready-made plan</Text>
             <Text style={styles.pathText}>
-              Pick from curated splits — Beginner, Push/Pull/Legs, Upper/Lower and more.
+              Browse our library of tried-and-tested programmes — beginner to advanced.
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={hasName ? colors.textMuted : colors.border} />
@@ -216,16 +219,16 @@ export default function FirstRunScreen({ navigation }) {
             <Ionicons name="create-outline" size={22} color={hasName ? colors.primary : colors.textMuted} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.pathTitle}>I have my own plan</Text>
+            <Text style={styles.pathTitle}>I already have a plan</Text>
             <Text style={styles.pathText}>
-              Skip straight to logging. Just set your units and you're in.
+              Skip setup and go straight to logging. You can always add a plan later.
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={hasName ? colors.textMuted : colors.border} />
         </TouchableOpacity>
 
         <Text style={styles.footnote}>
-          No account needed. Everything stays on your device.
+          No account needed to start. Your data is yours.
         </Text>
       </ScrollView>
     </SafeAreaView>
@@ -238,6 +241,7 @@ const styles = StyleSheet.create({
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.lg },
   brandName: { fontSize: 26, fontWeight: fontWeight.black, color: colors.textPrimary, letterSpacing: 1 },
   title: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary, marginTop: spacing.md },
+  welcomeDesc: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 21, marginTop: spacing.xs },
   subtitle: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
   bullets: { gap: spacing.sm, marginVertical: spacing.sm },
   bulletRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
