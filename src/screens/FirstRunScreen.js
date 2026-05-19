@@ -142,7 +142,7 @@ export default function FirstRunScreen({ navigation }) {
 
         <Text style={styles.title}>Welcome to Volyume.</Text>
         <Text style={styles.welcomeDesc}>
-          A training logbook that does the thinking for you. Log your sessions, track your progress, and always know exactly where you left off — so you can just come in and train.
+          Training is hard enough. Volyume handles the details — what you lifted, how you're progressing, what to do next — so your head is free to focus on the work. Show up, train, and let us take care of the rest.
         </Text>
 
         <View style={styles.nameBlock}>
