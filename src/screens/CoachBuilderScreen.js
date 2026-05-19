@@ -63,12 +63,12 @@ const EQUIPMENT_OPTIONS = [
 
 const GOAL_OPTIONS = [
   { value: 'general_hypertrophy',         icon: 'trending-up-outline',   subtitle: 'Balanced muscle growth across the whole body' },
-  { value: 'balanced_bodybuilding',       icon: 'grid-outline',           subtitle: 'Structured physique focus with even volume distribution' },
+  { value: 'balanced_bodybuilding',       icon: 'grid-outline',           subtitle: 'Structured programme with even coverage across all muscle groups' },
   { value: 'aesthetic_v_taper',           icon: 'triangle-outline',       subtitle: 'Prioritises upper-body width, shoulder-to-waist ratio' },
   { value: 'x_frame_physique', icon: 'expand-outline', subtitle: 'Prioritises shoulders, lats, glutes and hamstrings for a dramatic X silhouette' },
   { value: 'weak_point_spec',             icon: 'warning-outline',        subtitle: 'Extra volume and priority on muscles you want to bring up' },
   { value: 'strength_hypertrophy', icon: 'flash-outline',          subtitle: 'Heavier compounds with muscle growth as the goal' },
-  { value: 'recomp',               icon: 'swap-horizontal-outline', subtitle: 'Build or preserve muscle with controlled fatigue' },
+  { value: 'recomp',               icon: 'swap-horizontal-outline', subtitle: 'Hold onto your muscle while losing fat. Eating around maintenance.' },
 ];
 
 const WEAK_POINT_MUSCLES = [

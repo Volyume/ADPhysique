@@ -14,7 +14,7 @@ export const GOAL_LABELS = {
   aesthetic_v_taper:     'Aesthetic / V-Taper',
   weak_point_spec:       'Weak Point Specialisation',
   strength_hypertrophy:  'Strength + Size',
-  recomp:                'Fat Loss / Recomp Support',
+  recomp:                'Hold Muscle, Lose Fat',
   x_frame_physique:      'X-Frame Physique',
 };
 
