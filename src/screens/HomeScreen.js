@@ -64,6 +64,7 @@ export default function HomeScreen({ navigation }) {
   const [weightInputStLbs, setWeightInputStLbs] = useState(''); // lbs field (st mode)
   const [savingWeight, setSavingWeight] = useState(false);
   const [showCoachingNudge, setShowCoachingNudge] = useState(false);
+  const [totalSessions, setTotalSessions] = useState(0);
 
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
@@ -135,6 +136,7 @@ export default function HomeScreen({ navigation }) {
 
       const completed = allWorkouts.filter(w => w.isCompleted).sort((a, b) => b.startedAt - a.startedAt);
       setLastSession(completed[0] || null);
+      setTotalSessions(completed.length);
 
       // Only show the coaching nudge once the user has real training data to review
       if (tier === 'pro' && completed.length >= 3) {
@@ -392,7 +394,7 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.weekLabel}>This week</Text>
             {streakWeeks >= 2 && (
               <View style={styles.streakChip}>
-                <Text style={styles.streakChipText}>{streakWeeks} week streak 🔥</Text>
+                <Text style={styles.streakChipText}>{streakWeeks} weeks consistent</Text>
               </View>
             )}
           </View>
@@ -419,6 +421,28 @@ export default function HomeScreen({ navigation }) {
             />
           </View>
         </View>
+
+        {/* ── Pro teaser (free tier only, after 3+ sessions) ── */}
+        {tier === 'free' && totalSessions >= 3 && (
+          <TouchableOpacity
+            style={styles.proTeaserCard}
+            onPress={() => navigation.navigate('ProUpgrade')}
+            activeOpacity={0.88}
+          >
+            <View style={styles.proTeaserLeft}>
+              <Ionicons name="sparkles" size={18} color={colors.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.proTeaserTitle}>
+                  {totalSessions >= 10
+                    ? `${totalSessions} sessions logged. Pro coaching uses all of it.`
+                    : 'Add a coach that adjusts your plan each week.'}
+                </Text>
+                <Text style={styles.proTeaserSub}>Free during beta</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </TouchableOpacity>
+        )}
 
         {/* ── Primary workout area ── */}
         {hasActiveWorkout ? (
@@ -1278,5 +1302,34 @@ const styles = StyleSheet.create({
   },
   coachingNudgeBtnText: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary,
+  },
+
+  proTeaserCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.primary + '40',
+    padding: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  proTeaserLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  proTeaserTitle: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+    flex: 1,
+    lineHeight: 19,
+  },
+  proTeaserSub: {
+    fontSize: fontSize.xs,
+    color: colors.primary,
+    marginTop: 1,
   },
 });

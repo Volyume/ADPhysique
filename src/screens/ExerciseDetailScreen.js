@@ -123,7 +123,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           {best1RM > 0 && (
             <View style={styles.est1RM}>
               <Ionicons name="trophy-outline" size={16} color={colors.gold} />
-              <Text style={styles.est1RMText}>Est. max lift: {best1RM.toFixed(1)} {units}</Text>
+              <Text style={styles.est1RMText}>Estimated max: {best1RM.toFixed(1)} {units}</Text>
               <InfoTooltip text="Your estimated max lift: the most weight you could lift for a single rep, calculated from the sets you've logged. It updates automatically as you get stronger." size={12} />
             </View>
           )}
@@ -228,7 +228,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                 </Text>
                 <View style={styles.prInfo}>
                   <Text style={styles.prLabel}>
-                    {pr.record_type === '1rm_estimate' ? 'Est. max lift' :
+                    {pr.record_type === '1rm_estimate' ? 'Estimated max' :
                      pr.record_type === 'heaviest_weight' ? 'Heaviest weight' : 'Most reps'}
                   </Text>
                   <Text style={styles.prValue}>

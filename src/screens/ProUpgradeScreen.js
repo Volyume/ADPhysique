@@ -11,10 +11,10 @@ import { signUpWithEmail, signInWithEmail, getSupabaseClient } from '../lib/supa
 import { syncProfile, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
 
 const PRO_PERKS = [
-  { icon: 'sparkles', text: 'An intelligent plan built around your schedule and goals' },
+  { icon: 'sparkles', text: 'A plan built around your schedule and goals' },
   { icon: 'calendar-outline', text: 'Weekly coaching that adjusts as your body responds' },
-  { icon: 'nutrition-outline', text: 'Nutrition targets and body-metric tracking' },
-  { icon: 'document-text-outline', text: 'Your week, summarised and ready to act on' },
+  { icon: 'nutrition-outline', text: 'Nutrition targets and body tracking' },
+  { icon: 'eye-outline', text: 'We tell you what we changed, what we held, and why' },
 ];
 
 export default function ProUpgradeScreen({ navigation }) {
@@ -139,7 +139,7 @@ export default function ProUpgradeScreen({ navigation }) {
           </View>
           <Text style={styles.title}>Go Pro</Text>
           <Text style={styles.subtitle}>
-            Free is a complete training logbook. Pro adds an intelligent coach that plans, adjusts, and guides every week.
+            Free is the logbook a coach would write in. Pro is the coach who writes back.
           </Text>
 
           <View style={styles.perks}>
@@ -156,11 +156,12 @@ export default function ProUpgradeScreen({ navigation }) {
           <View style={styles.offerCard}>
             <View style={styles.offerBadge}>
               <Ionicons name="star" size={11} color={colors.background} />
-              <Text style={styles.offerBadgeText}>BETA TESTER OFFER</Text>
+              <Text style={styles.offerBadgeText}>Beta tester offer</Text>
             </View>
             <Text style={styles.offerText}>
               Pro is free during beta. Sign up now and you keep extended Pro free when we launch fully. No card, no catch.
             </Text>
+            <Text style={styles.cancelNote}>Cancel anytime, two taps. No questions.</Text>
           </View>
 
           {hasAccount ? (
@@ -329,6 +330,7 @@ const styles = StyleSheet.create({
     color: colors.background, letterSpacing: 0.8,
   },
   offerText: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  cancelNote: { fontSize: 11, color: colors.textMuted, marginTop: spacing.xs },
 
   accountNote: {
     fontSize: fontSize.sm, color: colors.textMuted,

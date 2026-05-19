@@ -54,14 +54,14 @@ function SectionHeader({ title }) {
 const PHYSIQUE_PREF_KEY = '@volyume_physique_tracking_enabled';
 
 export default function SettingsScreen({ navigation }) {
-  const { user, setUser, setSession, units, setUnits, bodyWeightUnits, setBodyWeightUnits, barWeight, setBarWeight, userProfile, saveLocalProfile, tier } =
+  const { user, setUser, setSession, units, setUnits, bodyWeightUnits, setBodyWeightUnits, barWeight, setBarWeight, userProfile, saveLocalProfile, tier, setTier } =
     useAppStore(useShallow(s => ({
       user: s.user, setUser: s.setUser, setSession: s.setSession,
       units: s.units, setUnits: s.setUnits,
       bodyWeightUnits: s.bodyWeightUnits, setBodyWeightUnits: s.setBodyWeightUnits,
       barWeight: s.barWeight, setBarWeight: s.setBarWeight,
       userProfile: s.userProfile, saveLocalProfile: s.saveLocalProfile,
-      tier: s.tier,
+      tier: s.tier, setTier: s.setTier,
     })));
   const [editName, setEditName] = useState(userProfile?.firstName ?? '');
   const [physiqueEnabled, setPhysiqueEnabled] = useState(false);
@@ -403,10 +403,32 @@ export default function SettingsScreen({ navigation }) {
             onPress={handleClearHistory}
           />
         </View>
+        <Text style={styles.dataPrivacyNote}>
+          Your data is always yours. Export or back up any time, no account required.
+        </Text>
 
         {/* Account */}
         <SectionHeader title="Account" />
         <View style={styles.section}>
+          {tier === 'pro' && (
+            <SettingRow
+              icon="arrow-down-circle-outline"
+              label="Switch to Free"
+              onPress={() =>
+                Alert.alert(
+                  'Switch to Free?',
+                  'You can come back to Pro any time. Your logbook and history stay exactly as they are.',
+                  [
+                    { text: 'Keep Pro', style: 'cancel' },
+                    {
+                      text: 'Switch to Free',
+                      onPress: async () => { await setTier('free'); },
+                    },
+                  ],
+                )
+              }
+            />
+          )}
           <SettingRow
             icon="log-out-outline"
             label="Sign out"
@@ -501,4 +523,11 @@ const styles = StyleSheet.create({
   appName: { fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.textPrimary, letterSpacing: 2 },
   appVersion: { fontSize: fontSize.sm, color: colors.textMuted },
   tagline: { fontSize: fontSize.xs, color: colors.textMuted },
+  dataPrivacyNote: {
+    fontSize: 11,
+    color: colors.textMuted,
+    paddingHorizontal: spacing.xs,
+    paddingBottom: spacing.sm,
+    lineHeight: 16,
+  },
 });

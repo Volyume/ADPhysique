@@ -308,7 +308,7 @@ export default function NutritionTargetsScreen() {
                 '• Calorie baseline: a standard formula using your sex, age, height, and weight to estimate how many calories you burn at rest. If you enter a measured body fat percentage (from a scan or caliper test), we use a more accurate formula that accounts for your actual muscle mass.\n' +
                 '• Maintenance: your baseline × an activity multiplier based on how much you move each day.\n' +
                 '• Target: your maintenance adjusted for your goal (e.g. +10% for slow muscle building, -13% for steady fat loss).\n\n' +
-                'How macros are calculated:\n' +
+                'How your targets are calculated:\n' +
                 '• Protein: varies by your chosen approach (1.2 to 3.3 g/kg). Rates rise in deeper deficits to protect muscle. Select your approach in the Protein Target section.\n' +
                 '• Fat: 25% of total calories, minimum 0.5 g/kg bodyweight to support hormonal health.\n' +
                 '• Carbs: all remaining calories after protein and fat are set.\n\n' +
@@ -317,7 +317,7 @@ export default function NutritionTargetsScreen() {
             />
           </View>
           <Text style={styles.pageSubtitle}>
-            Calculate your personalised daily calorie and macro goals.
+            Calculate your personalised daily calorie and protein targets.
           </Text>
 
           {!formCollapsed ? (

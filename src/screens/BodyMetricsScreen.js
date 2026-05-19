@@ -413,7 +413,7 @@ export default function BodyMetricsScreen({ navigation }) {
             </View>
           ) : (
             <Text style={styles.nutritionEmpty}>
-              No targets set yet. Head to Profile to calculate your daily calories and macros.
+              No targets set yet. Head to Profile to calculate your daily calorie and protein targets.
             </Text>
           )}
         </View>

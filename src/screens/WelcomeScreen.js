@@ -17,10 +17,10 @@ const FREE_BULLETS = [
 ];
 
 const PRO_BULLETS = [
-  'An intelligent plan built around you',
-  'Weekly coaching that adapts as you go',
+  'A plan built around your schedule and goals',
+  'Weekly coaching that adjusts as your body responds',
   'Nutrition targets and body tracking',
-  'Your week summarised, with coach export',
+  'We tell you what we changed — and what we held, and why',
 ];
 
 export default function WelcomeScreen({ navigation }) {
@@ -62,10 +62,10 @@ export default function WelcomeScreen({ navigation }) {
                 <View style={styles.proTitleRow}>
                   <Text style={styles.proTitle}>Pro</Text>
                   <View style={styles.betaBadge}>
-                    <Text style={styles.betaBadgeText}>FREE BETA</Text>
+                    <Text style={styles.betaBadgeText}>Free beta</Text>
                   </View>
                 </View>
-                <Text style={styles.proSubtitle}>The full coaching experience. Account required.</Text>
+                <Text style={styles.proSubtitle}>The coach who writes back.</Text>
               </View>
             </View>
 
@@ -81,8 +81,10 @@ export default function WelcomeScreen({ navigation }) {
               ))}
             </View>
 
+            <Text style={styles.cancelNote}>Cancel anytime, two taps. No questions.</Text>
+
             <View style={styles.proCtaRow}>
-              <Text style={styles.proCtaText}>Go Pro, it's free right now</Text>
+              <Text style={styles.proCtaText}>Start your free Pro experience</Text>
               <Ionicons name="arrow-forward" size={16} color={colors.background} />
             </View>
           </TouchableOpacity>
@@ -95,7 +97,7 @@ export default function WelcomeScreen({ navigation }) {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.freeTitle}>Free</Text>
-                <Text style={styles.freeSubtitle}>Log your training, track your PRs.</Text>
+                <Text style={styles.freeSubtitle}>The logbook a coach would write in. Yours forever.</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
             </View>
@@ -127,6 +129,12 @@ export default function WelcomeScreen({ navigation }) {
             <Text style={styles.signInText}>Already have an account?</Text>
             <Text style={styles.signInAction}> Sign in</Text>
           </TouchableOpacity>
+        </Animated.View>
+
+        <Animated.View style={{ opacity: fadeIn }}>
+          <Text style={styles.founderNote}>
+            Built by a lifter, for lifters. Not a generic fitness app.
+          </Text>
         </Animated.View>
       </ScrollView>
     </SafeAreaView>
@@ -222,4 +230,14 @@ const styles = StyleSheet.create({
   },
   signInText: { fontSize: fontSize.sm, color: colors.textMuted },
   signInAction: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
+
+  cancelNote: {
+    fontSize: 11, color: colors.textMuted, textAlign: 'center',
+    marginHorizontal: spacing.lg, marginBottom: spacing.xs,
+  },
+
+  founderNote: {
+    fontSize: 11, color: colors.textMuted, textAlign: 'center',
+    paddingBottom: spacing.md, opacity: 0.6,
+  },
 });

@@ -178,6 +178,19 @@ function RapidLossAlert() {
   );
 }
 
+function ConfidencePill({ confidence }) {
+  if (!confidence || confidence === 'high') return null;
+  const label = confidence === 'data_hold'
+    ? 'Not enough data yet, holding the plan'
+    : 'Limited data this week, holding the plan';
+  return (
+    <View style={styles.confidencePill}>
+      <Ionicons name="time-outline" size={13} color={colors.textMuted} />
+      <Text style={styles.confidencePillText}>{label}</Text>
+    </View>
+  );
+}
+
 function HeldDecisionsCard({ decisions }) {
   if (!decisions || decisions.length === 0) return null;
   return (
@@ -359,6 +372,7 @@ export default function CoachOutputScreen({ navigation, route }) {
     heldDecisions,
     rapidWeightLossFlag,
     adherenceNote,
+    confidence,
     prsThisWeek,
     sessionsCompleted,
     sessionsPlanned,
@@ -426,10 +440,13 @@ export default function CoachOutputScreen({ navigation, route }) {
           )}
         </View>
 
-        {/* 3. Adherence note */}
+        {/* 3. Confidence pill */}
+        <ConfidencePill confidence={confidence} />
+
+        {/* 4. Adherence note */}
         {adherenceNote ? <AdherenceNote note={adherenceNote} /> : null}
 
-        {/* 4. What's working */}
+        {/* 5. What's working */}
         {whatWorking && whatWorking.length > 0 && (
           <WhatsWorkingCard bullets={whatWorking} />
         )}
@@ -798,5 +815,23 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textSecondary,
     lineHeight: 20,
+  },
+
+  // Confidence pill (medium/low/data_hold only — hidden at high)
+  confidencePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    alignSelf: 'flex-start',
+    backgroundColor: colors.surface2 ?? colors.surface,
+    borderRadius: radius.full ?? 99,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  confidencePillText: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
   },
 });
