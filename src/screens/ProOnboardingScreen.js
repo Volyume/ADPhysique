@@ -170,6 +170,16 @@ export default function ProOnboardingScreen({ navigation }) {
     }
   }, [step]);
 
+  // When the user confirms their email via deep link, the session arrives here.
+  // If we're on the account step (step 5), auto-advance to CoachBuilder so they
+  // don't have to press anything — the confirmation already proved ownership.
+  useEffect(() => {
+    if (user?.id && step === 5) {
+      syncProfile(user.id, userProfile, 'pro', { isBetaTester: true }).catch(() => {});
+      navigation.navigate('CoachBuilder', { firstRun: true });
+    }
+  }, [user?.id]);
+
   // ── Step transition helpers ──────────────────────────────────────────────────
 
   function goBack() {
@@ -810,7 +820,7 @@ export default function ProOnboardingScreen({ navigation }) {
             <View style={styles.offerBadgeRow}>
               <View style={styles.offerBadge}>
                 <Ionicons name="star" size={11} color={colors.background} />
-                <Text style={styles.offerBadgeText}>BETA TESTER OFFER</Text>
+                <Text style={styles.offerBadgeText}>Beta tester offer</Text>
               </View>
             </View>
             <Text style={styles.offerHeadline}>Get extended Pro free at launch.</Text>
