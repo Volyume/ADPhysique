@@ -38,19 +38,20 @@ const PHASE_LABELS = {
 
 // Three protein approaches — user selects which fits their preference.
 //
-// standard  — mainstream sports nutrition guidelines (ISSN, ACSM/AND/DC joint position).
-//             Adequate for muscle growth and easy to hit day-to-day.
-// optimised — midpoint of current hypertrophy meta-analyses (Morton et al. 2018 plateau
-//             ~1.62 g/kg BW; 2.0–2.3 g/kg LBM gives a practical buffer). DEFAULT.
-// maximum   — RP Hypertrophy / Helms et al. 2014 framework. Competitive bodybuilding
-//             protocol; rates rise aggressively in deficits to spare lean mass.
+// standard  — mainstream sports nutrition guidelines. Adequate for muscle
+//             growth and easy to sustain day-to-day.
+// optimised — midpoint of current hypertrophy research (gains plateau ~1.62 g/kg BW;
+//             2.0–2.3 g/kg LBM gives a practical buffer above that). DEFAULT.
+// advanced  — higher-end competitive protocol. Rates rise aggressively in
+//             deficits to maximise lean mass retention. Based on published
+//             contest-prep research (2.3–3.1 g/kg LBM range).
 //
 // Rates are g per kg of LEAN BODY MASS (preferred when body fat is measured):
 export const PROTEIN_APPROACHES = {
   standard: {
     label: 'Standard',
     range: '1.2–1.6 g/kg',
-    description: 'Mainstream sports nutrition guidelines. Plenty for muscle growth; easy to hit consistently.',
+    description: 'General athletic guidelines. Plenty for muscle growth; easy to hit consistently.',
     lbm: { lean_gain: 2.0, build: 2.0, maintain: 1.9, recomp: 2.2, mild_cut: 2.3, aggressive_cut: 2.5, contest_prep: 2.8 },
     bw:  { lean_gain: 1.4, build: 1.4, maintain: 1.3, recomp: 1.6, mild_cut: 1.8, aggressive_cut: 2.0, contest_prep: 2.2 },
     floor: 1.2,
@@ -58,15 +59,15 @@ export const PROTEIN_APPROACHES = {
   optimised: {
     label: 'Optimised',
     range: '1.6–2.2 g/kg',
-    description: 'Current hypertrophy meta-analysis consensus. Maximises gains without an extreme focus on protein.',
+    description: 'Current sports science consensus for hypertrophy. Maximises muscle gains without an extreme focus on protein.',
     lbm: { lean_gain: 2.3, build: 2.3, maintain: 2.2, recomp: 2.5, mild_cut: 2.6, aggressive_cut: 2.8, contest_prep: 3.0 },
     bw:  { lean_gain: 1.8, build: 1.8, maintain: 1.7, recomp: 2.0, mild_cut: 2.2, aggressive_cut: 2.5, contest_prep: 2.8 },
     floor: 1.6,
   },
-  maximum: {
-    label: 'RP Framework',
+  advanced: {
+    label: 'Advanced',
     range: '2.2–3.3 g/kg',
-    description: 'RP Hypertrophy / Helms et al. 2014 protocol. Used by competitive bodybuilders who want every marginal advantage.',
+    description: 'Higher-end competitive protocol. Used by experienced lifters who want maximum lean mass protection, especially in a deficit.',
     lbm: { lean_gain: 2.6, build: 2.6, maintain: 2.6, recomp: 2.9, mild_cut: 3.0, aggressive_cut: 3.2, contest_prep: 3.3 },
     bw:  { lean_gain: 2.2, build: 2.2, maintain: 2.2, recomp: 2.4, mild_cut: 2.6, aggressive_cut: 3.0, contest_prep: 3.3 },
     floor: 1.8,
@@ -266,7 +267,7 @@ export function calculateNutritionTargets(inputs) {
   const finalEstimatedRate = estimateWeeklyRate(actualTargetKcal, maintenanceKcal, weightKg);
 
   return {
-    bmrFormula: formula === 'mifflin' ? 'Mifflin-St Jeor' : 'Katch-McArdle',
+    bmrFormula: formula === 'mifflin' ? 'Standard BMR formula' : 'Lean mass-adjusted formula',
     bmrKcal,
     maintenanceKcal,
     targetKcal: actualTargetKcal,
@@ -278,7 +279,7 @@ export function calculateNutritionTargets(inputs) {
     proteinGPerKg: parseFloat((proteinG / weightKg).toFixed(2)),
     proteinBasis,        // 'lbm' (preferred) or 'bodyweight' (fallback)
     proteinGPerKgLbm: lbm ? parseFloat((proteinG / lbm).toFixed(2)) : null,
-    proteinApproach,     // 'standard' | 'optimised' | 'maximum'
+    proteinApproach,     // 'standard' | 'optimised' | 'advanced'
     proteinRateUsed,     // exact g/kg rate applied
     targetRateKgPerWeek: parseFloat(finalEstimatedRate.toFixed(3)),
     confidence: calcConfidence(bodyFatSource),

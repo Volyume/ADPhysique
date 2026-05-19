@@ -353,7 +353,7 @@ export default function SettingsScreen({ navigation }) {
         <View style={styles.section}>
           <SettingRow
             icon="document-text-outline"
-            label="Methodology & Sources"
+            label="How Volyume Works"
             onPress={() => setShowMethodology(true)}
           />
         </View>
@@ -366,7 +366,7 @@ export default function SettingsScreen({ navigation }) {
         </View>
       </ScrollView>
 
-      {/* Methodology & Sources Modal */}
+      {/* How Volyume Works Modal */}
       <Modal
         visible={showMethodology}
         animationType="slide"
@@ -375,7 +375,7 @@ export default function SettingsScreen({ navigation }) {
       >
         <SafeAreaView style={styles.methodologySheet}>
           <View style={styles.methodologyHeader}>
-            <Text style={styles.methodologyTitle}>Methodology & Sources</Text>
+            <Text style={styles.methodologyTitle}>How Volyume Works</Text>
             <TouchableOpacity onPress={() => setShowMethodology(false)} style={styles.methodologyClose}>
               <Ionicons name="close" size={22} color={colors.textPrimary} />
             </TouchableOpacity>

@@ -125,7 +125,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       message: getDeloadPredictionMessage(deload.weeksUntilDeload, deload.reason),
     });
 
-    // Map feedback to RP decision-tree scales per muscle, then run adaptive engine
+    // Map feedback to adaptive engine scales per muscle, then run adaptive engine
     // soreness24hBefore: 1=fresh→2, 2=mild→3, 3=sore→4
     // sessionDifficulty: 1=veryEasy→1(exceeded), 2=easy→1, 3=moderate→2(met), 4=hard→3(struggled), 5=brutal→4(failed)
     // overallPump: 1=none→1, 2=mild→2, 3=good→4

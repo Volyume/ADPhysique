@@ -278,11 +278,11 @@ export default function NutritionTargetsScreen() {
               size={14}
               text={
                 'How calories are calculated:\n' +
-                '• BMR: Mifflin-St Jeor formula (sex, age, height, weight). If you enter body fat from a measured source (BIA, caliper, or DEXA), Katch-McArdle is used instead — it\'s more accurate because it scales to your actual lean mass, not total weight.\n' +
+                '• BMR: a standard formula using sex, age, height, and weight. If you enter body fat from a measured source (BIA, caliper, or DEXA), a lean mass-adjusted formula is used instead — more accurate because it scales to your metabolically active tissue, not total weight.\n' +
                 '• TDEE: BMR × activity multiplier (1.2 sedentary → 1.9 very active).\n' +
                 '• Target: TDEE adjusted by your goal (e.g. +10% for Lean Gain, −13% for Mild Cut).\n\n' +
                 'How macros are calculated:\n' +
-                '• Protein: 2.2–3.3 g/kg bodyweight (or g/kg lean mass if body fat was measured). Rates rise in deeper deficits to protect muscle — based on Helms et al. 2014 and the RP Hypertrophy framework.\n' +
+                '• Protein: varies by your chosen approach (1.2–3.3 g/kg). Rates rise in deeper deficits to protect muscle — select your approach in the Protein Target section.\n' +
                 '• Fat: 25% of total calories, minimum 0.5 g/kg bodyweight to support hormonal health.\n' +
                 '• Carbs: all remaining calories after protein and fat are set.\n\n' +
                 'Results are estimates — adjust based on real-world progress over 2–4 weeks.'
@@ -457,16 +457,16 @@ export default function NutritionTargetsScreen() {
 
           <View style={styles.approachNote}>
             <InfoTooltip size={12} text={
-              "Different apps and guidelines use different protein targets:\n\n" +
-              "• 1.2–1.5 g/kg — mainstream sports nutrition (ISSN, NHS). Adequate for general athletes; easy to hit day-to-day.\n\n" +
-              "• 1.6–2.2 g/kg — current hypertrophy research consensus (Morton et al. 2018 meta-analysis). Most evidence suggests gains plateau around 1.62 g/kg bodyweight; going to 2.0 g/kg gives a comfortable buffer above that ceiling without being excessive.\n\n" +
-              "• 2.2–3.3 g/kg — RP Hypertrophy / Helms et al. 2014 framework, used by competitive bodybuilders. Rates rise in deficits specifically to prevent muscle breakdown. Effective but harder to sustain.\n\n" +
-              "There is no single right answer. Pick the level you can consistently hit. Consistency over weeks matters more than hitting an aggressive target occasionally."
+              "Different guidelines recommend different protein targets:\n\n" +
+              "• 1.2–1.5 g/kg — general athletic guidelines. Adequate for muscle growth; easy to hit day-to-day.\n\n" +
+              "• 1.6–2.2 g/kg — current sports science consensus for hypertrophy. Research suggests muscle gains plateau around 1.62 g/kg bodyweight; the upper end of this range gives a comfortable buffer without being excessive.\n\n" +
+              "• 2.2–3.3 g/kg — higher-end competitive protocol. Rates are deliberately elevated in deficits to maximise lean mass protection. Effective, but harder to sustain.\n\n" +
+              "There is no single right answer. The level you can consistently hit every day will produce better results than an aggressive target you miss half the time."
             } />
             <Text style={styles.approachNoteText}>Different guidelines use different targets. Pick the level you can consistently sustain.</Text>
           </View>
 
-          {['standard', 'optimised', 'maximum', 'custom'].map(key => {
+          {['standard', 'optimised', 'advanced', 'custom'].map(key => {
             const ap = PROTEIN_APPROACHES[key];
             const active = proteinApproach === key;
             return (
@@ -640,30 +640,28 @@ export default function NutritionTargetsScreen() {
                   ? `Your maintenance is ${results.maintenanceKcal.toLocaleString()} kcal. A ${absPct}% deficit (−${Math.abs(surplusDelta)} kcal) puts you on track to ${rateDir} roughly ${rateAbs.toFixed(2)} kg/week. That rate is ${rateAbs <= 0.5 ? 'conservative — you\'ll lose mostly fat while retaining more muscle' : rateAbs <= 0.8 ? 'moderate — effective fat loss with manageable muscle risk' : 'aggressive — protein intake has been raised to protect lean mass'}. The key is consistency over weeks, not perfection each day.`
                   : `Your maintenance is ${results.maintenanceKcal.toLocaleString()} kcal. A slight ${Math.abs(absPct)}% deficit puts you in recomposition territory — just enough of a deficit to mobilise body fat as fuel, while high protein and training stimulus tell your body to hold (and even build) muscle. Progress is slower than a dedicated bulk or cut, but body composition improves simultaneously.`;
 
-                const approachInfo = PROTEIN_APPROACHES[results.proteinApproach ?? 'optimised'];
-                const approachRef =
+                const approachLabel =
                   results.proteinApproach === 'standard'
-                    ? 'mainstream sports nutrition guidelines (ISSN)'
-                    : results.proteinApproach === 'maximum'
-                    ? 'the RP Hypertrophy / Helms et al. 2014 framework'
-                    : 'current hypertrophy meta-analysis consensus (Morton et al. 2018)';
-                const basisStr = results.proteinBasis === 'lbm'
-                  ? `${results.proteinGPerKgLbm} g/kg lean mass`
-                  : `${results.proteinGPerKg} g/kg bodyweight`;
+                    ? 'general athletic guidelines'
+                    : results.proteinApproach === 'advanced'
+                    ? 'a higher-end competitive protocol'
+                    : results.proteinApproach === 'custom'
+                    ? 'your custom target'
+                    : 'the current sports science consensus for hypertrophy';
 
                 const proteinWhy = results.proteinBasis === 'lbm'
                   ? (() => {
-                      const lbmLine = `You have roughly ${lbmKg} kg of lean mass. At ${results.proteinGPerKgLbm} g/kg lean mass, ${results.proteinG}g comes from ${approachRef}. `;
+                      const lbmLine = `You have roughly ${lbmKg} kg of lean mass. At ${results.proteinGPerKgLbm} g/kg lean mass, ${results.proteinG}g is based on ${approachLabel}. `;
                       const scalingLine = `We scale to lean mass rather than total weight because fat tissue doesn't need protein to maintain — this gives a more precise target regardless of body-fat level. `;
                       const purposeLine = isGain
-                        ? `Protein is the raw material your muscles rebuild with after every session. Research suggests gains plateau around 1.62 g/kg bodyweight (~2.0 g/kg LBM); at ${results.proteinGPerKgLbm} g/kg LBM you're above that threshold.`
+                        ? `Protein is the raw material your muscles rebuild with after every session. Research suggests muscle gains plateau around 1.62 g/kg bodyweight (~2.0 g/kg LBM); at ${results.proteinGPerKgLbm} g/kg LBM you're comfortably above that threshold.`
                         : isRecomp
                         ? `High protein does two jobs in a recomp: amino acids for muscle protein synthesis, and a signal for your body to spare muscle even as the slight deficit encourages fat oxidation. This dual role is what separates "losing weight" from "changing body composition."`
-                        : `In a deficit, the body can break down muscle for fuel — high protein is the primary tool to prevent this (anti-catabolism). ${results.proteinApproach === 'maximum' ? `Helms et al. 2014 found 2.3–3.1 g/kg LBM optimal for contest prep; at ${results.proteinGPerKgLbm} g/kg you're within that protective band.` : 'Your target keeps you well above the minimum needed to preserve lean mass.'}`;
+                        : `In a deficit, the body can break down muscle for fuel — high protein is the primary tool to prevent this. ${results.proteinApproach === 'advanced' ? `Sports science research on competitive preparation supports 2.3–3.1 g/kg lean mass to protect muscle; at ${results.proteinGPerKgLbm} g/kg you're within that protective range.` : 'Your target keeps you well above the minimum needed to preserve lean mass.'}`;
                       return lbmLine + scalingLine + purposeLine;
                     })()
                   : (() => {
-                      const bwLine = `At ${results.proteinGPerKg} g/kg bodyweight (${results.proteinG}g), your target is based on ${approachRef}. `;
+                      const bwLine = `At ${results.proteinGPerKg} g/kg bodyweight (${results.proteinG}g), your target is based on ${approachLabel}. `;
                       const tipLine = `Tip: entering a measured body fat % (BIA, caliper, or DEXA) lets us scale to lean mass instead — more precise, especially if your body-fat % is high or low. `;
                       const purposeLine = isGain
                         ? `Protein is the raw material muscles rebuild with after every session. At ${results.proteinGPerKg} g/kg you're above the threshold where muscle protein synthesis is saturated, giving you a comfortable margin.`

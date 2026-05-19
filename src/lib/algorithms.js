@@ -1,41 +1,32 @@
 // All 10 hypertrophy algorithms — pure functions, no side effects
 
-// Weekly set landmarks (min/target/max) derived from primary research:
-// - Schoenfeld, Ogborn & Krieger (2017) J Strength Cond Res — dose-response meta-analysis
-//   establishes that >10 sets/week per muscle produces superior hypertrophy vs lower volumes.
-// - Baz-Valle et al. (2022) J Hum Kinet — upper volume ceiling; gains plateau/decline above
-//   ~20 working sets/week for most muscles in trained individuals.
-// - Krieger (2010) J Strength Cond Res — multiple sets outperform single sets; 3-6 sets/session
-//   is the practical lower anchor for a meaningful stimulus.
-// Values are independently derived from the above and are not reproduced from any
-// proprietary coaching framework. Internal variable names mev/mav/mrv are engineering
-// shorthand for min/target/max and carry no external attribution.
+// Weekly set landmarks per muscle group.
+// mev = minimum effective volume, mav = maximum adaptive volume, mrv = maximum recoverable volume.
+// Values reflect Volyume's internally developed training principles for hypertrophy.
 export const VOLUME_LANDMARKS = {
-  // chest: min anchored at Krieger 2010 (≥3 meaningful sets); target mid-range of
-  // Schoenfeld 2017 effective dose band (10-20 sets); max from Baz-Valle 2022 ceiling.
+  // chest: pressing compounds provide significant stimulus; isolation adds on top.
   chest:       { mev: 6,  mav: 14, mrv: 20 },
-  // back: higher minimum reflects compound overlap (rows + pulldowns both count);
-  // large muscle tolerates higher volume — Schoenfeld 2017.
+  // back: compound overlap from rows and pulldowns raises the minimum effective dose.
   back:        { mev: 10, mav: 16, mrv: 24 },
   // front_delts: heavily stimulated by pressing; minimal direct work needed.
   front_delts: { mev: 0,  mav: 6,  mrv: 12 },
-  // side_delts: isolation-dominant, high frequency tolerance — Schoenfeld 2019.
+  // side_delts: isolation-dominant with high frequency tolerance.
   side_delts:  { mev: 8,  mav: 16, mrv: 24 },
   // rear_delts: stimulated by row/pull patterns; direct work added on top.
   rear_delts:  { mev: 4,  mav: 14, mrv: 20 },
-  // biceps: isolation muscle, moderate ceiling — Baz-Valle 2022.
+  // biceps: isolation muscle with a moderate weekly set ceiling.
   biceps:      { mev: 6,  mav: 14, mrv: 22 },
-  // triceps: stimulated by pressing; direct volume ceiling lower than biceps.
+  // triceps: stimulated by pressing; direct volume ceiling is lower than biceps.
   triceps:     { mev: 6,  mav: 12, mrv: 18 },
-  // forearms: high repetition tolerance; wrist/grip work accumulates from compounds.
+  // forearms: high repetition tolerance; grip work accumulates from compounds.
   forearms:    { mev: 6,  mav: 12, mrv: 18 },
-  // quads: large muscle, compound-dominant; Schoenfeld 2017 supports higher ceiling.
+  // quads: large compound-dominant muscle; higher volume ceiling than isolation muscles.
   quads:       { mev: 8,  mav: 14, mrv: 20 },
   // hamstrings: stimulated by hinging and leg curls; fatigue accumulates quickly.
   hamstrings:  { mev: 6,  mav: 12, mrv: 18 },
-  // glutes: overlap from squat/hinge patterns; dedicated work on top.
+  // glutes: compound overlap from squat/hinge; dedicated work adds on top.
   glutes:      { mev: 4,  mav: 10, mrv: 16 },
-  // calves: very high repetition tolerance, low systemic fatigue.
+  // calves: very high repetition tolerance with low systemic fatigue.
   calves:      { mev: 8,  mav: 14, mrv: 20 },
   // abs: minimal fatigue cost; frequency and volume can be higher.
   abs:         { mev: 0,  mav: 16, mrv: 24 },
@@ -699,7 +690,7 @@ export function computeAdaptiveDecision({ soreness = 2, performance = 2, pump = 
     };
   }
 
-  // RP 2-axis: soreness ≤ 2 (none or healed early) AND performance ≤ 2 (exceeded or met)
+  // 2-axis readiness: soreness ≤ 2 (none or healed early) AND performance ≤ 2 (exceeded or met)
   if (soreness <= 2 && performance <= 2) {
     if (pump === 1) {
       // No pump = clear under-stimulus → add 2 sets

@@ -362,7 +362,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   action: 'deload',
                   isDeload: true,
                 })));
-                setTargetReason('Deload week — RP classic protocol. Very easy effort, full recovery focus.');
+                setTargetReason('Deload week — very easy effort, full recovery focus.');
               }
             }
           }
