@@ -28,7 +28,7 @@ describe('buildPeakWeek — structure', () => {
     const plan = buildPeakWeek(BASE);
     expect(plan.federation).toBe('NPC');
     expect(plan.disclaimer).toMatch(/Langan-Evans/);
-    expect(FEDERATIONS).toContain('IFBB Pro');
+    expect(FEDERATIONS).toContain('NABBA');
   });
 });
 

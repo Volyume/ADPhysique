@@ -17,11 +17,11 @@ describe('VOLUME_LANDMARKS — delt split', () => {
   });
 
   test('side_delts landmark matches old shoulders values', () => {
-    expect(VOLUME_LANDMARKS.side_delts).toEqual({ mev: 8, mav: 16, mrv: 26 });
+    expect(VOLUME_LANDMARKS.side_delts).toEqual({ mev: 8, mav: 16, mrv: 24 });
   });
 
   test('rear_delts landmark exists', () => {
-    expect(VOLUME_LANDMARKS.rear_delts).toEqual({ mev: 4, mav: 16, mrv: 22 });
+    expect(VOLUME_LANDMARKS.rear_delts).toEqual({ mev: 4, mav: 14, mrv: 20 });
   });
 });
 
