@@ -171,7 +171,7 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
         <Text style={styles.setTypeLabel}>Set type</Text>
         <View style={styles.setTypeRight}>
           <Text style={styles.setTypeValue}>{setTypeLabel}</Text>
-          <Text style={styles.setTypeChange}> · Change</Text>
+          <Ionicons name="chevron-forward" size={13} color={colors.primary} style={{ marginLeft: 2 }} />
         </View>
       </TouchableOpacity>
     </View>
@@ -278,11 +278,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textPrimary,
     fontWeight: fontWeight.semibold,
-  },
-  setTypeChange: {
-    fontSize: fontSize.sm,
-    color: colors.primary,
-    fontWeight: fontWeight.medium,
   },
   warmupHint: {
     fontSize: fontSize.sm,

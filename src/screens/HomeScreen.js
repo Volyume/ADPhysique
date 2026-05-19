@@ -20,6 +20,7 @@ import {
 import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import InfoTooltip from '../components/InfoTooltip';
 
 // Soft targets used only to size the weekly progress bars — not enforced
@@ -36,7 +37,9 @@ function getGreeting(firstName) {
 }
 
 export default function HomeScreen({ navigation }) {
-  const { user, userProfile, startWorkout, activeWorkout, tier } = useAppStore();
+  const { user, userProfile, startWorkout, activeWorkout, tier } = useAppStore(
+    useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, tier: s.tier }))
+  );
 
   const [weekStats, setWeekStats] = useState({ sessions: 0, sets: 0, volume: 0 });
   const [streakWeeks, setStreakWeeks] = useState(0);
@@ -588,13 +591,7 @@ export default function HomeScreen({ navigation }) {
           {blockProgress.length > 0 && (
             <View style={styles.blockCard}>
               <View style={styles.blockCardHeader}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <Text style={styles.blockCardTitle}>This week's plan</Text>
-                  <InfoTooltip
-                    size={11}
-                    text={"Planned sets vs completed this week, per muscle group. Bars fill gold when you hit your planned sets for that muscle."}
-                  />
-                </View>
+                <Text style={styles.blockCardTitle}>This week's plan</Text>
                 {currentMesoWeek && (
                   <Text style={styles.blockCardWeek}>
                     Week {currentMesoWeek.weekIndex}/{currentMesoWeek.plannedWeeks}
@@ -617,7 +614,6 @@ export default function HomeScreen({ navigation }) {
                   </View>
                 );
               })}
-              <Text style={styles.blockNote}>Sets completed vs planned · resets Monday</Text>
             </View>
           )}
 

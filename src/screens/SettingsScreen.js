@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { getSupabaseClient, signOut } from '../lib/supabase';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
@@ -54,7 +55,13 @@ const PHYSIQUE_PREF_KEY = '@volyume_physique_tracking_enabled';
 
 export default function SettingsScreen({ navigation }) {
   const { user, setUser, setSession, units, setUnits, barWeight, setBarWeight, userProfile, saveLocalProfile, tier } =
-    useAppStore();
+    useAppStore(useShallow(s => ({
+      user: s.user, setUser: s.setUser, setSession: s.setSession,
+      units: s.units, setUnits: s.setUnits,
+      barWeight: s.barWeight, setBarWeight: s.setBarWeight,
+      userProfile: s.userProfile, saveLocalProfile: s.saveLocalProfile,
+      tier: s.tier,
+    })));
   const [editName, setEditName] = useState(userProfile?.firstName ?? '');
   const [physiqueEnabled, setPhysiqueEnabled] = useState(false);
   const [wellbeing, setWellbeing] = useState('unspecified');

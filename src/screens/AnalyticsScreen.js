@@ -13,6 +13,7 @@ import { colors, fontSize, fontWeight, spacing, radius, volumeColors, motion } f
 import { VolyumeMark } from '../components/BrandMark';
 import InfoTooltip from '../components/InfoTooltip';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import {
   getCompletedWorkoutSets, getAllWorkouts, getAllExercises, getAllMesocycles,
   getActiveInsights, dismissInsight, runInsightsEngine, getActivePlan,
@@ -87,7 +88,7 @@ function volumeDotColor(muscleKey, workingSets) {
 }
 
 export default function AnalyticsScreen({ navigation }) {
-  const { user, units } = useAppStore();
+  const { user, units } = useAppStore(useShallow(s => ({ user: s.user, units: s.units })));
 
   const [refreshing, setRefreshing] = useState(false);
 

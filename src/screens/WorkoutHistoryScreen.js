@@ -13,6 +13,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { getAllWorkouts, getAllWorkoutSets, getAllExercises, createWorkout } from '../lib/database';
 import { calculateTonnage } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 
 const FILTERS = [
   { key: 'all', label: 'All' },
@@ -25,7 +26,7 @@ const FILTERS = [
 const DAY_HEADERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 export default function WorkoutHistoryScreen({ navigation }) {
-  const { user, startWorkout } = useAppStore();
+  const { user, startWorkout } = useAppStore(useShallow(s => ({ user: s.user, startWorkout: s.startWorkout })));
   const [workouts, setWorkouts] = useState([]);
   const [loading, setLoading] = useState(true);
 

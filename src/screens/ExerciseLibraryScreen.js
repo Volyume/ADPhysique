@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Modal, ScrollView, Alert,
 } from 'react-native';
@@ -9,12 +9,13 @@ import ExerciseCard from '../components/ExerciseCard';
 import { getAllExercises, getCompletedWorkoutSets, insertExercise } from '../lib/database';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 
 const MUSCLES = Object.keys(MUSCLE_DISPLAY_NAMES);
 const EQUIPMENT = ['Barbell', 'Dumbbell', 'Cable', 'Machine', 'Bodyweight', 'Smith Machine', 'Bands'];
 
 export default function ExerciseLibraryScreen({ navigation, route }) {
-  const { user, units } = useAppStore();
+  const { user, units } = useAppStore(useShallow(s => ({ user: s.user, units: s.units })));
   const [query, setQuery] = useState('');
   const [exercises, setExercises] = useState([]);
   const [filterMuscle, setFilterMuscle] = useState(null);
@@ -31,6 +32,15 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
   const [savingNew, setSavingNew] = useState(false);
 
   const addToWorkout = route.params?.onSelect;
+
+  // Debounce search query so filtering doesn't fire on every keystroke
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const debounceRef = useRef(null);
+  useEffect(() => {
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedQuery(query), 200);
+    return () => clearTimeout(debounceRef.current);
+  }, [query]);
 
   useEffect(() => {
     loadExercises();
@@ -84,8 +94,8 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
 
   const filtered = useMemo(() => {
     let result = exercises;
-    if (query.trim()) {
-      const q = query.toLowerCase();
+    if (debouncedQuery.trim()) {
+      const q = debouncedQuery.toLowerCase();
       result = result.filter(e => e.name.toLowerCase().includes(q));
     }
     if (filterMuscle) {
@@ -99,14 +109,22 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
       );
     }
     return result.slice(0, 100);
-  }, [exercises, query, filterMuscle, filterEquipment]);
+  }, [exercises, debouncedQuery, filterMuscle, filterEquipment]);
+
+  // Pre-compute a map of exerciseId → last logged set so FlatList items don't do O(n) searches
+  const lastLoggedMap = useMemo(() => {
+    const map = new Map();
+    for (const s of recentSets) {
+      const id = s.exerciseId;
+      const existing = map.get(id);
+      if (!existing || s.createdAt > existing.createdAt) map.set(id, s);
+    }
+    return map;
+  }, [recentSets]);
 
   function getLastLogged(exerciseId) {
-    const exerciseSets = recentSets
-      .filter(s => s.exerciseId === exerciseId)
-      .sort((a, b) => b.createdAt - a.createdAt);
-    if (exerciseSets.length === 0) return null;
-    const last = exerciseSets[0];
+    const last = lastLoggedMap.get(exerciseId);
+    if (!last) return null;
     const daysAgo = Math.floor((Date.now() - last.createdAt) / (1000 * 60 * 60 * 24));
     return { weight: last.weight, reps: last.actualReps, daysAgo };
   }
@@ -226,7 +244,6 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
             </View>
 
             <Text style={[styles.addFieldLabel, { marginTop: spacing.xl }]}>Secondary muscles (optional)</Text>
-            <Text style={styles.addFieldNote}>Select all muscles this exercise also works</Text>
             <View style={styles.chipGrid}>
               {Object.entries(MUSCLE_DISPLAY_NAMES)
                 .filter(([key]) => key !== newMuscle)
@@ -291,10 +308,6 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
                     </TouchableOpacity>
                   ))}
                 </View>
-
-            <Text style={styles.addCustomNote}>
-              This exercise will be added to your personal library and visible only to you.
-            </Text>
 
             <TouchableOpacity
               style={[styles.saveCustomBtn, savingNew && { opacity: 0.6 }]}

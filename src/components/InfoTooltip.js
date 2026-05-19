@@ -18,7 +18,6 @@ export default function InfoTooltip({ text, size = 14 }) {
         <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setVisible(false)}>
           <View style={styles.box} pointerEvents="box-none">
             <Text style={styles.text}>{text}</Text>
-            <Text style={styles.dismiss}>Tap anywhere to close</Text>
           </View>
         </TouchableOpacity>
       </Modal>
@@ -42,16 +41,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     maxWidth: 320,
-    gap: spacing.md,
   },
   text: {
     fontSize: fontSize.sm,
     color: colors.textSecondary,
     lineHeight: 20,
-  },
-  dismiss: {
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
-    textAlign: 'center',
   },
 });

@@ -485,14 +485,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         )}
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recommendations</Text>
-          {dataLimited ? (
-            <View style={styles.limitedCard}>
-              <Text style={styles.limitedText}>
-                Learning your patterns. Complete more sessions before recommendations become reliable.
-              </Text>
-            </View>
-          ) : (
+          {dataLimited ? null : (
             autoRegSuggestions.map((s, i) => (
               <View key={i} style={styles.suggestionRow}>
                 <Ionicons
@@ -519,7 +512,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   color={mesoAdvice.action === 'deload_now' ? colors.error : colors.warning}
                 />
                 <Text style={[styles.mesoAdviceTitle, mesoAdvice.action === 'deload_now' && { color: colors.error }]}>
-                  Training Load Check
+                  Load check
                 </Text>
               </View>
               <Text style={styles.mesoAdviceText}>{mesoAdvice.message}</Text>
@@ -535,19 +528,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           )}
         </View>
 
-          {/* Adaptive engine decisions */}
-          {Object.keys(adaptiveDecisions).length > 0 && (
+          {/* Adaptive engine decisions — only shown when there's something to act on */}
+          {Object.keys(adaptiveDecisions).length > 0 &&
+           Object.values(adaptiveDecisions).some(d => d.decision !== 'hold' || d.delta !== 0) && (
             <View style={styles.adaptiveCard}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                <Text style={styles.adaptiveTitle}>Adjustments for next week</Text>
-                <InfoTooltip size={11} text={
-                  'Based on your session feedback, Volyume has tweaked next week\'s plan.\n\n' +
-                  '↑ Add set: you recovered well, you can handle a bit more\n' +
-                  '↓ Drop set: signs of fatigue, ease off to come back stronger\n' +
-                  '⚠ Recovery week: take a lighter week across the board\n' +
-                  '→ Hold: sets are right, keep going as planned'
-                } />
-              </View>
+              <Text style={styles.adaptiveTitle}>Next week's adjustments</Text>
               {Object.entries(adaptiveDecisions)
                 .filter(([, d]) => d.decision !== 'hold' || d.delta !== 0)
                 .map(([muscle, d]) => (
@@ -579,9 +564,6 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                     </View>
                   </View>
                 ))}
-              {Object.values(adaptiveDecisions).every(d => d.decision === 'hold' && d.delta === 0) && (
-                <Text style={styles.adaptiveHold}>All muscles on track. Continue as planned.</Text>
-              )}
             </View>
           )}
 
