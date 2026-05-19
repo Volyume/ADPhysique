@@ -965,8 +965,8 @@ const styles = StyleSheet.create({
   section: { marginBottom: spacing.xl },
   fieldLabel: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
-    color: colors.textMuted, letterSpacing: 0.8,
-    textTransform: 'uppercase', marginBottom: spacing.sm,
+    color: colors.textMuted, letterSpacing: 0.3,
+    marginBottom: spacing.sm,
   },
   fieldHint: {
     fontSize: fontSize.xs, color: colors.textMuted,
@@ -1060,8 +1060,7 @@ const styles = StyleSheet.create({
   },
   nutritionLabel: {
     fontSize: fontSize.xs, color: colors.textMuted,
-    textTransform: 'uppercase', letterSpacing: 0.6,
-    marginBottom: spacing.sm,
+    letterSpacing: 0.3, marginBottom: spacing.sm,
   },
   nutritionInput: {
     fontSize: 28, fontWeight: fontWeight.bold, color: colors.textPrimary,

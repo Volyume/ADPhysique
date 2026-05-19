@@ -338,8 +338,8 @@ const styles = StyleSheet.create({
   section: { marginBottom: spacing.lg },
   fieldLabel: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
-    color: colors.textMuted, letterSpacing: 0.8,
-    textTransform: 'uppercase', marginBottom: spacing.sm,
+    color: colors.textMuted, letterSpacing: 0.3,
+    marginBottom: spacing.sm,
   },
   fieldWrap: {
     flexDirection: 'row', alignItems: 'center',

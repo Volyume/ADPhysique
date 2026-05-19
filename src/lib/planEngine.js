@@ -934,13 +934,13 @@ const RECOVERY_LABELS = {
 };
 
 const NUTRITION_PHASE_LABELS = {
-  lean_gain:      'Lean Gain (modest surplus)',
-  build:          'Build (aggressive surplus)',
-  maintain:       'Maintenance',
-  recomp:         'Body Recomposition',
-  mild_cut:       'Mild Cut',
-  aggressive_cut: 'Aggressive Cut',
-  contest_prep:   'Contest Prep',
+  lean_gain:      'Build muscle slowly',
+  build:          'Build muscle quickly',
+  maintain:       'Maintain weight',
+  recomp:         'Recomposition',
+  mild_cut:       'Lose weight steadily',
+  aggressive_cut: 'Lose weight fast',
+  contest_prep:   'Contest preparation',
 };
 
 function buildPersonalisationSummary(inputs, effectiveDays, splitType, weakPointUILabels) {
