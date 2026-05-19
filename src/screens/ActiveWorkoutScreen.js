@@ -1580,7 +1580,7 @@ const styles = StyleSheet.create({
   },
   headerSide: { width: 64, alignItems: 'flex-start', justifyContent: 'center' },
   headerSideRight: { width: 64, alignItems: 'flex-end', justifyContent: 'center' },
-  finishBtn: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.error, paddingVertical: spacing.xs },
+  finishBtn: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.primary, paddingVertical: spacing.xs },
   headerCenter: { flex: 1, alignItems: 'center' },
   timerText: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.primary, fontVariant: ['tabular-nums'] },
   headerMuscle: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 1 },

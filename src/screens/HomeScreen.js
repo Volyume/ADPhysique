@@ -61,6 +61,9 @@ export default function HomeScreen({ navigation }) {
 
   useFocusEffect(
     useCallback(() => {
+      // Reset starting flag when screen regains focus (prevents "Session in Progress"
+      // flashing during the navigation transition away to ActiveWorkout)
+      setIsStartingWorkout(false);
       if (user?.id) {
         if (!seeded) {
           seedRoutinesIfNeeded(user.id).catch(console.warn);
@@ -225,7 +228,10 @@ export default function HomeScreen({ navigation }) {
       }));
       startWorkout(workout, initialExercises);
       navigation.navigate('ActiveWorkout');
-    } finally {
+      // Do NOT reset isStartingWorkout here — useFocusEffect resets it when
+      // the screen regains focus, preventing the "Session in Progress" flash
+      // during the navigation transition.
+    } catch (e) {
       setIsStartingWorkout(false);
     }
   }
@@ -261,6 +267,7 @@ export default function HomeScreen({ navigation }) {
     }
 
     startWorkout(newWorkout, initialExercises);
+    setIsStartingWorkout(true); // suppresses "Session in Progress" flash during transition
     navigation.navigate('ActiveWorkout');
   }
 
