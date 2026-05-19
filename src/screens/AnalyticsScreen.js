@@ -364,12 +364,10 @@ export default function AnalyticsScreen({ navigation }) {
               </Text>
             </View>
             <InfoTooltip text={
-              'A lighter recovery week uses reduced loads (aim for effort level 1–2, plenty left in the tank) to flush ' +
-              'accumulated fatigue without losing muscle or strength.\n\n' +
-              'Keep all the same exercises. Drop weights by ~10–20% and stop well before failure. ' +
-              'Sessions should feel almost too easy.\n\n' +
-              'Muscle is built during recovery, not during the hard sets. Most people feel noticeably ' +
-              'stronger in the first session back after a proper recovery week.'
+              'A lighter recovery week means keeping the same exercises but dropping the weights by around 10–20%. ' +
+              'Stop well before failure. Sessions should feel almost too easy.\n\n' +
+              'This gives your body a chance to recover and absorb all the work you have been putting in.\n\n' +
+              'Most people feel noticeably stronger in the first session back after a proper recovery week.'
             } size={13} />
           </View>
         )}

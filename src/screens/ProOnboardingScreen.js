@@ -95,7 +95,7 @@ const PROTEIN_LEVELS = [
   {
     id: 'standard',
     label: 'Standard',
-    sub: 'Minimum effective dose. Suitable for maintenance or lighter training weeks.',
+    sub: 'A solid starting point. Good for maintaining where you are or lighter training periods.',
   },
   {
     id: 'high',
@@ -586,7 +586,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
             <Header
               title="Your nutrition targets."
-              sub="Calculated from your goal, body stats, and estimated lean mass. Pick your protein level, then adjust the numbers if you need to."
+              sub="Calculated from your goal and body stats. Pick your protein level below, then adjust the numbers if you want to."
             />
 
             <View style={styles.infoCard}>
@@ -602,7 +602,7 @@ export default function ProOnboardingScreen({ navigation }) {
             <View style={styles.section}>
               <Text style={styles.fieldLabel}>Protein target</Text>
               <Text style={styles.fieldHint}>
-                Calculated from your estimated lean muscle mass, not just total weight. We've picked the level that best suits your stats, but you can change it.
+                Calculated from your weight and estimated body composition. We've picked the level that best fits your stats, but you can change it.
               </Text>
               <View style={styles.goalList}>
                 {PROTEIN_LEVELS.map(lvl => (

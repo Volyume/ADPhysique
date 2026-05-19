@@ -109,7 +109,7 @@ const WHY_LIBRARY = {
     "Energy and soreness signals are telling us to ease back. This isn't losing progress. It's protecting it.",
   ],
   performance_regressed: [
-    "Performance dropped on some key lifts. Before changing volume, we recover first. Then we push again.",
+    "Performance dropped on some key lifts. Before adding more work, we recover first. Then we push again.",
     "Strength has dipped recently. The priority is stabilising performance before any further increases.",
   ],
   building_baseline: [
@@ -125,15 +125,15 @@ const WHY_LIBRARY = {
     "Bumping the daily step target is the lowest-fatigue lever available and it won't affect training quality.",
   ],
   deload_suggested: [
-    "Several signals (soreness, energy, and performance) are pointing in the same direction. A lighter week now sets up a stronger block after.",
-    "Fatigue is accumulating across multiple signals. One reduced week is the most efficient path to your next personal best.",
+    "Several signals (soreness, energy, and performance) are all pointing the same way. A lighter week now sets you up for a stronger run after.",
+    "Your body is accumulating fatigue across multiple signals. One reduced week is the most efficient path to your next personal best.",
   ],
   diet_break_suggested: [
-    "Eight or more consecutive weeks in a calorie deficit is a long time. One week at maintenance restores hormone levels and makes the next phase of dieting more effective.",
-    "A short maintenance break after an extended deficit pays compound interest: better adherence, better training, better results in the weeks that follow.",
+    "Eight or more consecutive weeks eating below maintenance is a long time. One week at your full calorie need helps your body reset and makes the next stretch of dieting more effective.",
+    "A short break at normal calories after a long deficit pays dividends: more energy, better training, better results in the weeks that follow.",
   ],
   push_volume: [
-    "Recovery is solid, energy is high, and performance is climbing. This is the window to push volume a notch higher.",
+    "Recovery is solid, energy is high, and performance is climbing. This is the window to add a little more work.",
     "All the signals are green this week. Adding a little more work while recovery supports it is how progress compounds.",
   ],
   low_data_weight: [
@@ -409,7 +409,7 @@ export function runWeeklyCoach(inputs) {
 
   if (deloadTriggers >= 2) {
     deloadSuggested = true;
-    deloadNote = 'Reduce sets by around half this week, keep the same exercises and weights. Your body is asking for a breather. One lighter week sets up a stronger block after.';
+    deloadNote = 'Reduce sets by around half this week, keep the same exercises and weights. Your body is asking for a breather. One lighter week sets you up for a stronger run after.';
   }
 
   // ── DIET BREAK SUGGESTION ─────────────────────────────────────────────────

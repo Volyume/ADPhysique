@@ -172,7 +172,7 @@ export function getWeekPhaseDescription(phase, week) {
   const descriptions = {
     intro:    `Week ${week}: Settle in. Focus on technique and finding the right weights. Don't push to your limit yet. The real work starts next week.`,
     build:    `Week ${week}: Time to push. You should finish most sets feeling like you could do 1–2 more reps but chose not to. That's the zone.`,
-    peak:     `Week ${week}: Best effort. Give every set your full attention. This is the week that earns the most adaptation before the rest week.`,
+    peak:     `Week ${week}: Best effort. Give every set your full attention. This is the week where the most progress happens before the recovery week.`,
     recovery: `Week ${week}: Lighter week. Cut sets roughly in half, keep the same exercises and weights. Your muscles are rebuilding. Trust the process.`,
   };
   return clean(descriptions[phase] ?? `Week ${week}: Continue your training block.`);
@@ -186,8 +186,8 @@ const SPLIT_RATIONALE = {
   full_body: `Every session trains all your muscle groups. Frequent practice of each movement builds skill and strength faster, which suits your training frequency well.`,
   upper_lower: `Alternating upper and lower sessions means every muscle gets trained twice a week with 48–72 hours of recovery between. The most proven structure for consistent progress.`,
   ppl: `Grouping muscles by movement (Push, Pull, Legs) means each group is fully rested before it trains again. Clean separation of recovery windows.`,
-  ppl_ab: `Two Push / Pull / Legs rotations per week with different exercise choices (A and B). Twice-weekly frequency with varied stimulus, which is what continued progress at your level needs.`,
-  upper_lower_wp: `Upper-Lower on 4 days covers all muscle groups twice per week. The fifth session focuses entirely on your lagging muscles, giving targeted extra attention where it matters most.`,
+  ppl_ab: `Two Push / Pull / Legs rotations per week with different exercise choices (A and B). Each muscle group gets trained twice a week with varied exercises, which keeps progress moving.`,
+  upper_lower_wp: `Upper-Lower on 4 days covers all muscle groups twice per week. The fifth session focuses entirely on your weaker areas, giving them extra attention where it matters most.`,
 };
 
 /**

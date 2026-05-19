@@ -53,7 +53,7 @@ const PHASES = [
   {
     value: 'mod_bulk',
     title: 'Building muscle, standard pace',
-    description: 'Faster muscle gain, some fat expected. Works best for intermediates with room to grow.',
+    description: 'Faster muscle growth, some fat gain expected. Good for people who have been training consistently for a year or more.',
     icon: 'trending-up-outline',
     iconColor: colors.success,
   },
@@ -192,7 +192,7 @@ export default function ProGoalSetupScreen({ navigation, route }) {
         {/* ── Section 2: Daily step target ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Daily step target</SectionLabel>
         <SectionSubtitle>
-          Used to calibrate your activity prescription. Pick the band you're currently aiming for.
+          Helps Volyume work out how active you are each day. Pick the range you're currently hitting.
         </SectionSubtitle>
 
         <View style={styles.stepsRow}>
