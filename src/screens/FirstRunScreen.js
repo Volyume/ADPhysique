@@ -10,9 +10,9 @@ import useAppStore from '../store/useAppStore';
 import { logBodyMetric } from '../lib/database';
 
 const VALUE_BULLETS = [
-  'Volume-landmark hypertrophy intelligence',
+  'Smart progression — knows when to push harder and when to back off',
   'No social feed, no ads, no streak guilt',
-  'Yours, offline — your data never leaves the device',
+  'Private by design — your data never leaves the device',
 ];
 
 export default function FirstRunScreen({ navigation }) {
@@ -182,7 +182,7 @@ export default function FirstRunScreen({ navigation }) {
           <View style={{ flex: 1 }}>
             <Text style={styles.pathTitle}>Generate my plan</Text>
             <Text style={styles.pathText}>
-              Answer a few questions and Coach builds a volume-landmark plan tuned to you. ~3 minutes.
+              Answer a few questions and Coach builds a plan around your schedule and goals. ~3 minutes.
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={hasName ? colors.textMuted : colors.border} />
