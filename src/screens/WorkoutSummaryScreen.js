@@ -77,6 +77,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const [feedbackHistory, setFeedbackHistory] = useState([]);
   const [adaptiveDecisions, setAdaptiveDecisions] = useState({});
   const [deloadRecommendation, setDeloadRecommendation] = useState(null);
+  const [readOnlyExerciseData, setReadOnlyExerciseData] = useState([]);
 
   const feedbackDebounceRef = useRef(null);
 
@@ -210,6 +211,36 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     const events = await getRecentAdaptationEvents(user?.id || '', 1);
     const deloadEval = evaluateDeloadTriggers(events);
     if (deloadEval.reason) setDeloadRecommendation(deloadEval);
+
+    // For readOnly (history) view — load and group sets by exercise
+    if (readOnly && workoutId) {
+      try {
+        const { getWorkoutSetsForWorkout } = await import('../lib/database');
+        const wSets = await getWorkoutSetsForWorkout(workoutId);
+        const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
+        const grouped = [];
+        const seen = [];
+        for (const s of wSets) {
+          if (!seen.includes(s.exerciseId)) seen.push(s.exerciseId);
+        }
+        for (const exId of seen) {
+          const ex = exerciseMap[exId];
+          if (!ex) continue;
+          grouped.push({
+            exerciseId: exId,
+            name: ex.name,
+            loggedSets: wSets
+              .filter(s => s.exerciseId === exId)
+              .map(s => ({
+                weight: s.weight,
+                reps: s.actualReps ?? s.actual_reps,
+                setType: s.setType ?? s.set_type ?? 'straight',
+              })),
+          });
+        }
+        setReadOnlyExerciseData(grouped);
+      } catch (_e) {}
+    }
   }
 
   async function handleDone() {
@@ -362,18 +393,39 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           />
         </View>
 
-        {exerciseData.length > 0 && (
-          <View style={styles.exerciseList}>
-            {exerciseData.map((ex, i) => (
-              <View key={ex.exerciseId || i} style={styles.exerciseListRow}>
-                <Text style={styles.exerciseListName} numberOfLines={1}>{ex.name}</Text>
-                <Text style={styles.exerciseListMeta}>
-                  {ex.recommendedSets} × {ex.repsMin}–{ex.repsMax}
-                </Text>
-              </View>
-            ))}
-          </View>
-        )}
+        {(() => {
+          const display = readOnly
+            ? readOnlyExerciseData
+            : exerciseData.length > 0 ? exerciseData : [];
+          if (!display.length) return null;
+          return (
+            <View style={styles.exerciseList}>
+              {display.map((ex, i) => {
+                const workingSets = (ex.loggedSets ?? []).filter(
+                  s => (s.setType ?? 'straight') !== 'warmup'
+                );
+                return (
+                  <View key={ex.exerciseId || i} style={styles.exerciseListRow}>
+                    <Text style={styles.exerciseListName} numberOfLines={1}>{ex.name}</Text>
+                    {workingSets.length > 0 ? (
+                      <View style={styles.exerciseSetsList}>
+                        {workingSets.map((s, si) => (
+                          <Text key={si} style={styles.exerciseSetChip}>
+                            {s.weight > 0 ? `${s.weight}${units}` : 'BW'} × {s.reps}
+                          </Text>
+                        ))}
+                      </View>
+                    ) : (
+                      <Text style={styles.exerciseListMeta}>
+                        {ex.recommendedSets} × {ex.repsMin}–{ex.repsMax}
+                      </Text>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          );
+        })()}
 
         {detectedPRs.length > 0 && (
           <View style={styles.prRow}>
@@ -796,25 +848,38 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   exerciseListRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    gap: spacing.xs,
   },
   exerciseListName: {
-    flex: 1,
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
+    fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
-    marginRight: spacing.md,
   },
   exerciseListMeta: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     color: colors.textSecondary,
-    fontWeight: fontWeight.semibold,
+  },
+  exerciseSetsList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  exerciseSetChip: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    backgroundColor: colors.surface2 ?? colors.background,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
   },
   deloadCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg,

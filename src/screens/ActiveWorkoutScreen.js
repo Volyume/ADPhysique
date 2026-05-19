@@ -635,6 +635,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 recommendedSets: e.sets.filter(s => s.setType !== 'warmup').length || 3,
                 repsMin: e.routineExercise?.recommendedRepsMin || 8,
                 repsMax: e.routineExercise?.recommendedRepsMax || 12,
+                loggedSets: e.sets.map(s => ({
+                  weight: s.weight,
+                  reps: s.actualReps ?? s.reps,
+                  setType: s.setType,
+                })),
               })).filter(e => e.exerciseId),
             });
           },
