@@ -335,15 +335,10 @@ export default function AnalyticsScreen({ navigation }) {
         {/* ── 1 · Mesocycle Pulse Card ───────────────────────── */}
         <View style={[styles.rowBetween, { paddingHorizontal: spacing.lg, marginBottom: spacing.sm }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-            <Text style={styles.sectionLabel}>TRAINING BLOCK</Text>
+            <Text style={styles.sectionLabel}>Training block</Text>
             <InfoTooltip text={
-              'A Training Block is a structured phase where volume and intensity build week by week.\n\n' +
-              'Week 1–5: progressively harder training. Your target effort level climbs each week, ' +
-              'starting around 2–3 (moderate) and building to 4–5 (near maximum), so you gradually push closer to your limit.\n\n' +
-              'Recovery week: deliberately lighter. This flushes accumulated fatigue so you recover fully ' +
-              'and come back stronger.\n\n' +
-              'After the recovery week you start a fresh block on the same plan, usually with a little more volume ' +
-              'than last time. The plan stays; only the block resets.'
+              'Training gets harder each week across the block, then a lighter recovery week lets your body catch up.\n\n' +
+              'After the recovery week, a new block starts slightly heavier than the last. That is how you keep improving over months, not just weeks.'
             } />
           </View>
         </View>
@@ -382,7 +377,7 @@ export default function AnalyticsScreen({ navigation }) {
         {/* ── 2 · Insight Stack ─────────────────────────────── */}
         {insights.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>FOR YOU</Text>
+            <Text style={styles.sectionLabel}>For you</Text>
             {insights.map(ins => (
               <InsightRow key={ins.id} insight={ins} onDismiss={() => handleDismiss(ins.id)} />
             ))}
@@ -393,13 +388,13 @@ export default function AnalyticsScreen({ navigation }) {
         <View style={styles.section}>
           <View style={styles.rowBetween}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-              <Text style={styles.sectionLabel}>THIS WEEK'S VOLUME</Text>
+              <Text style={styles.sectionLabel}>This week's volume</Text>
               <InfoTooltip text={
-                'Working sets per muscle group this week.\n\n' +
-                '🟠 Below threshold: not enough stimulus for growth this week.\n\n' +
-                '🟢 Optimal range: the sweet spot for progress.\n\n' +
-                '🔴 Over ceiling: fatigue is outpacing stimulus; consider reducing sets.\n\n' +
-                'Volume targets adjust as Volyume learns your recovery pattern over time.'
+                'Sets per muscle group this week.\n\n' +
+                '🟠 Not enough — add a set or two next week.\n' +
+                '🟢 Good range — keep it here.\n' +
+                '🔴 Too much — dial it back next week.\n\n' +
+                'Targets adjust over time as Volyume learns how you recover.'
               } />
             </View>
             <TouchableOpacity onPress={() => navigation.navigate('VolumeHeatmap')}>
@@ -413,8 +408,7 @@ export default function AnalyticsScreen({ navigation }) {
         <View style={styles.section}>
           <View style={styles.rowBetween}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-              <Text style={styles.sectionLabel}>NEW BESTS</Text>
-              <InfoTooltip text="Each bar is a week. A bar appears when you set a new estimated 1-rep max on any exercise: a higher weight for the same reps, or more reps at the same weight. More bars = more PRs that week." />
+              <Text style={styles.sectionLabel}>New personal bests</Text>
             </View>
             <TouchableOpacity
               style={styles.windowToggle}
@@ -431,8 +425,7 @@ export default function AnalyticsScreen({ navigation }) {
         {/* ── 5 · Training Day Calendar ─────────────────────── */}
         <View style={styles.section}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-            <Text style={styles.sectionLabel}>TRAINING DAYS: LAST 12 WEEKS</Text>
-            <InfoTooltip text="Each square is one day. Blue = you trained, dark = rest day. Scroll back 12 weeks to see your consistency over time." />
+            <Text style={styles.sectionLabel}>Training days — last 12 weeks</Text>
           </View>
           <TrainingCalendar values={calValues} />
         </View>
@@ -441,7 +434,7 @@ export default function AnalyticsScreen({ navigation }) {
         {recentSessions.length > 0 && (
           <View style={styles.section}>
             <View style={styles.rowBetween}>
-              <Text style={styles.sectionLabel}>RECENT SESSIONS</Text>
+              <Text style={styles.sectionLabel}>Recent sessions</Text>
               <TouchableOpacity onPress={() => navigation.navigate('WorkoutHistory')}>
                 <Text style={styles.seeAll}>All sessions</Text>
               </TouchableOpacity>
@@ -454,7 +447,7 @@ export default function AnalyticsScreen({ navigation }) {
 
         {/* ── Quick nav tiles ────────────────────────────────── */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>EXPLORE</Text>
+          <Text style={styles.sectionLabel}>Explore</Text>
           <View style={styles.navGrid}>
             <NavTile icon="trophy" color={colors.gold} label="Personal Records" onPress={() => navigation.navigate('PRWall')} />
             <NavTile icon="body" color={colors.success} label="Body Metrics" onPress={() => navigation.navigate('BodyMetrics')} />
@@ -729,8 +722,8 @@ const styles = StyleSheet.create({
 
   section:     { gap: spacing.md },
   sectionLabel: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.black,
-    color: colors.textMuted, letterSpacing: 1.5,
+    fontSize: fontSize.sm, fontWeight: fontWeight.semibold,
+    color: colors.textSecondary, letterSpacing: 0.2,
   },
   rowBetween:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   seeAll:      { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.medium },
