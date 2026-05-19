@@ -1540,14 +1540,25 @@ export async function getBodyMetricLog(userId, limitRows = 90) {
 
 export async function getLatestBodyWeight(userId) {
   const d = await db();
-  const row = await d.getFirstAsync(
-    `SELECT weight_kg, logged_at FROM body_metric_log
-     WHERE user_id = ? AND weight_kg IS NOT NULL
-     ORDER BY logged_at DESC LIMIT 1`,
-    [userId],
-  );
-  if (!row || row.weight_kg == null) return null;
-  return { weightKg: row.weight_kg, loggedAt: row.logged_at };
+  const [bodyRow, morningRow] = await Promise.all([
+    d.getFirstAsync(
+      `SELECT weight_kg, logged_at FROM body_metric_log
+       WHERE user_id = ? AND weight_kg IS NOT NULL
+       ORDER BY logged_at DESC LIMIT 1`,
+      [userId],
+    ),
+    d.getFirstAsync(
+      `SELECT weight_kg, logged_at FROM morning_weights
+       WHERE user_id = ? AND weight_kg IS NOT NULL
+       ORDER BY logged_at DESC LIMIT 1`,
+      [userId],
+    ),
+  ]);
+  const bodyTs   = bodyRow?.logged_at ?? 0;
+  const morningTs = morningRow?.logged_at ?? 0;
+  const winner = bodyTs >= morningTs ? bodyRow : morningRow;
+  if (!winner || winner.weight_kg == null) return null;
+  return { weightKg: winner.weight_kg, loggedAt: winner.logged_at };
 }
 
 // ─── CSV / JSON export ────────────────────────────────────────────
