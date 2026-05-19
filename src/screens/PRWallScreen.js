@@ -174,7 +174,7 @@ export default function PRWallScreen({ navigation }) {
               <View style={{ flex: 1 }}>
                 <Text style={styles.bwPromptTitle}>Add your body weight</Text>
                 <Text style={styles.bwPromptText}>
-                  Log it once to unlock Strength Standards — see how your lifts rank against your bodyweight.
+                  Add your body weight once and we'll show you how your lifts compare to your bodyweight.
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />

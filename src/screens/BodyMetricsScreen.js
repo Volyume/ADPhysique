@@ -179,7 +179,7 @@ function PhysiqueOptIn({ onEnable }) {
       <Text style={styles.optInTitle}>Physique Tracking</Text>
       <Text style={styles.optInBody}>
         Track your body weight and measurements over time. All data stays on your
-        device — it is never shared or uploaded.
+        device. It is never shared or uploaded.
       </Text>
       <TouchableOpacity style={styles.optInBtn} onPress={onEnable}>
         <Ionicons name="body-outline" size={18} color={colors.background} />
@@ -321,7 +321,7 @@ export default function BodyMetricsScreen({ navigation }) {
             <Text style={styles.confirmTitle}>A gentle check-in</Text>
             <Text style={styles.confirmBody}>
               You asked for a calmer experience. Body measurements can be a
-              sensitive space — open it only if it feels right for you today.
+              sensitive space. Open it only if it feels right for you today.
             </Text>
             <TouchableOpacity
               style={styles.confirmBtn}

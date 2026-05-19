@@ -17,14 +17,14 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 const PHASES = [
   {
     value: 'agg_cut',
-    title: 'Losing weight — faster pace',
+    title: 'Losing weight, faster pace',
     description: 'Dropping weight quickly before an event or deadline. Accepts more hunger.',
     icon: 'trending-down-outline',
     iconColor: colors.warning,
   },
   {
     value: 'mod_cut',
-    title: 'Losing weight — steady pace',
+    title: 'Losing weight, steady pace',
     description: 'Consistent, sustainable fat loss while keeping strength. The default approach.',
     icon: 'trending-down-outline',
     iconColor: colors.warning,
@@ -45,14 +45,14 @@ const PHASES = [
   },
   {
     value: 'mild_bulk',
-    title: 'Building — controlled pace',
+    title: 'Building muscle, controlled pace',
     description: 'Adding muscle slowly with minimal fat gain. 0.5–1% bodyweight per month.',
     icon: 'trending-up-outline',
     iconColor: colors.success,
   },
   {
     value: 'mod_bulk',
-    title: 'Building — standard pace',
+    title: 'Building muscle, standard pace',
     description: 'Faster muscle gain, some fat expected. Works best for intermediates with room to grow.',
     icon: 'trending-up-outline',
     iconColor: colors.success,
@@ -216,7 +216,7 @@ export default function ProGoalSetupScreen({ navigation, route }) {
         <View style={styles.cycleRow}>
           <View style={styles.cycleTextWrap}>
             <Text style={styles.cycleLabel}>Track my cycle</Text>
-            <Text style={styles.cycleNote}>Optional — you can change this anytime</Text>
+            <Text style={styles.cycleNote}>Optional. You can change this anytime.</Text>
           </View>
           <Switch
             value={trackCycle}

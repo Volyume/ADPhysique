@@ -413,7 +413,7 @@ export default function CoachOutputScreen({ navigation, route }) {
           <AmberAlertCard
             title="Recovery week flagged"
             body={deloadNote ?? 'Your body is showing signs that a lighter week would help.'}
-            footnote="This is a suggestion — your call."
+            footnote="This is a suggestion. Your call."
           />
         )}
 
@@ -422,7 +422,7 @@ export default function CoachOutputScreen({ navigation, route }) {
           <AmberAlertCard
             title="Maintenance break suggested"
             body={dietBreakNote ?? 'A short period at maintenance calories can help reset hunger hormones and improve adherence.'}
-            footnote="This is a suggestion — your call."
+            footnote="This is a suggestion. Your call."
           />
         )}
 

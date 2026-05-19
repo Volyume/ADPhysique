@@ -181,7 +181,7 @@ export default function NotificationSettingsScreen({ navigation }) {
     if (value && permissionStatus !== 'granted') {
       Alert.alert(
         'Notifications disabled',
-        'Enable notifications in your device settings to use this feature.',
+        'You\'ll need to enable notifications in your device settings first.',
       );
       return;
     }
@@ -198,7 +198,7 @@ export default function NotificationSettingsScreen({ navigation }) {
     if (value && permissionStatus !== 'granted') {
       Alert.alert(
         'Notifications disabled',
-        'Enable notifications in your device settings to use this feature.',
+        'You\'ll need to enable notifications in your device settings first.',
       );
       return;
     }

@@ -1043,7 +1043,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             >
               <Ionicons name="checkmark-circle" size={20} color={currentSet.setType === 'warmup' ? colors.warning : colors.primary} />
               <Text style={[styles.completeBtnText, currentSet.setType === 'warmup' && styles.completeBtnTextWarmup]}>
-                {currentSet.setType === 'warmup' ? 'LOG WARM UP' : 'COMPLETE SET'}
+                {currentSet.setType === 'warmup' ? 'Log warm-up' : 'Log set'}
               </Text>
             </TouchableOpacity>
           )}

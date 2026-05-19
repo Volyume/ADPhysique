@@ -556,10 +556,10 @@ export default function HomeScreen({ navigation }) {
             <View style={styles.blockCard}>
               <View style={styles.blockCardHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <Text style={styles.blockCardTitle}>THIS WEEK'S PLAN</Text>
+                  <Text style={styles.blockCardTitle}>This week's plan</Text>
                   <InfoTooltip
                     size={11}
-                    text={"Planned sets vs completed this week, per muscle group. Based on your active training block target. Bars turn cyan when you hit your planned sets for that muscle."}
+                    text={"Planned sets vs completed this week, per muscle group. Bars fill gold when you hit your planned sets for that muscle."}
                   />
                 </View>
                 {currentMesoWeek && (

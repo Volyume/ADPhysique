@@ -451,7 +451,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         {musclesWorked.length > 0 && (
           <View style={styles.section}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-              <Text style={styles.sectionTitle}>THIS WEEK AFTER SESSION</Text>
+              <Text style={styles.sectionTitle}>This week's volume</Text>
               <InfoTooltip size={11} text={
                 'How much you\'ve trained each muscle group this week.\n\n' +
                 'Green = Optimal range: getting growth stimulus without overdoing it\n' +
@@ -532,7 +532,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           {Object.keys(adaptiveDecisions).length > 0 && (
             <View style={styles.adaptiveCard}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                <Text style={styles.adaptiveTitle}>ENGINE DECISIONS — NEXT WEEK</Text>
+                <Text style={styles.adaptiveTitle}>Adjustments for next week</Text>
                 <InfoTooltip size={11} text={
                   'Volyume\'s training engine analysed your session feedback and adjusted next week\'s plan.\n\n' +
                   '↑ Add set: you recovered well and can handle more volume\n' +
