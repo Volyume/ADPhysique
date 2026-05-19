@@ -533,6 +533,7 @@ export default function AthleteHubScreen({ navigation }) {
             onPress={handleCoachExport}
           />
           <NavRow icon="trophy" label="Personal Records" sub="All-time bests" onPress={() => navigation.navigate('PRWall')} />
+          <NavRow icon="ribbon-outline" label="Competition Prep" sub="Peak week carb, water & sodium plan" onPress={() => navigation.navigate('PeakWeek')} />
 
           {/* Engine Log — collapsible */}
           {(adaptationHistory.length > 0 || repWarnings.length > 0) && (
