@@ -4,13 +4,48 @@ import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import RootNavigator from './src/navigation/RootNavigator';
 import PRCelebration from './src/components/PRCelebration';
 import useAppStore from './src/store/useAppStore';
 import { getWellbeingMode, isCalm } from './src/lib/wellbeing';
+import { getSupabaseClient } from './src/lib/supabase';
+
+// Handles volyume:// deep links from Supabase auth emails.
+// Supports both PKCE (code=xxx) and implicit (access_token in fragment) flows.
+async function handleAuthDeepLink(url) {
+  if (!url) return;
+  const supabase = getSupabaseClient();
+  if (!supabase) return;
+
+  // PKCE flow — Supabase v2 default: volyume://?code=xxx
+  const codeMatch = url.match(/[?&]code=([^&#]+)/);
+  if (codeMatch) {
+    try { await supabase.auth.exchangeCodeForSession(decodeURIComponent(codeMatch[1])); } catch (_) {}
+    return;
+  }
+
+  // Implicit flow fallback — tokens in URL fragment: volyume://#access_token=xxx&refresh_token=xxx
+  const fragment = url.split('#')[1] || '';
+  if (fragment.includes('access_token')) {
+    const params = Object.fromEntries(
+      fragment.split('&').map(p => {
+        const [k, v] = p.split('=');
+        return [k, decodeURIComponent(v || '')];
+      }),
+    );
+    if (params.access_token && params.refresh_token) {
+      try {
+        await supabase.auth.setSession({
+          access_token: params.access_token,
+          refresh_token: params.refresh_token,
+        });
+      } catch (_) {}
+    }
+  }
+}
 
 const CRASH_LOG_KEY = '@volyume_crash_log';
 
@@ -94,6 +129,15 @@ export default function App() {
   useEffect(() => {
     if (prCelebration) getWellbeingMode().then(m => setCalm(isCalm(m)));
   }, [prCelebration]);
+
+  // Deep link handler — processes volyume:// auth callbacks from confirmation emails.
+  // RootNavigator's onAuthStateChange listener picks up the resulting session
+  // automatically and re-routes the user without any extra navigation calls.
+  useEffect(() => {
+    Linking.getInitialURL().then(url => { if (url) handleAuthDeepLink(url); }).catch(() => {});
+    const sub = Linking.addEventListener('url', ({ url }) => handleAuthDeepLink(url));
+    return () => sub.remove();
+  }, []);
 
   return (
     <ErrorBoundary>
