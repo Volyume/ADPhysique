@@ -13,10 +13,12 @@ import {
   FlatList,
   BackHandler,
   AppState,
+  Animated,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import SetEntry from '../components/SetEntry';
@@ -121,6 +123,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const timerRef = useRef(null);
 
+  // First-use info tip highlight
+  const [showInfoTipPulse, setShowInfoTipPulse] = useState(false);
+  const infoPulseAnim = useRef(new Animated.Value(1)).current;
+  const infoPulseLoop = useRef(null);
+
   const currentEntry = workoutExercises[currentExerciseIndex];
   const exercise = currentEntry?.exercise;
   const routineExercise = currentEntry?.routineExercise;
@@ -212,6 +219,22 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (lastActivityAt && Date.now() - lastActivityAt > 4 * 60 * 60 * 1000) {
       setShowStaleModal(true);
     }
+  }, []);
+
+  // First-use info tip: pulse the Info button until tapped
+  useEffect(() => {
+    AsyncStorage.getItem('@volyume_seen_workout_info').then(val => {
+      if (val === 'true') return;
+      setShowInfoTipPulse(true);
+      infoPulseLoop.current = Animated.loop(
+        Animated.sequence([
+          Animated.timing(infoPulseAnim, { toValue: 1.35, duration: 700, useNativeDriver: true }),
+          Animated.timing(infoPulseAnim, { toValue: 1.0,  duration: 700, useNativeDriver: true }),
+        ])
+      );
+      infoPulseLoop.current.start();
+    });
+    return () => { infoPulseLoop.current?.stop(); };
   }, []);
 
   // Workout timer — always derived from workoutStartTime so backgrounding never
@@ -1060,12 +1083,26 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.actionBtn}
-              onPress={() => setShowExecution(true)}
+              onPress={() => {
+                if (showInfoTipPulse) {
+                  infoPulseLoop.current?.stop();
+                  infoPulseAnim.setValue(1);
+                  setShowInfoTipPulse(false);
+                  AsyncStorage.setItem('@volyume_seen_workout_info', 'true').catch(() => {});
+                }
+                setShowExecution(true);
+              }}
               accessibilityRole="button"
               accessibilityLabel="View exercise info"
             >
-              <Ionicons name="information-circle-outline" size={18} color={colors.textSecondary} />
-              <Text style={styles.actionBtnText}>Info</Text>
+              <Animated.View style={showInfoTipPulse ? { transform: [{ scale: infoPulseAnim }] } : null}>
+                <Ionicons
+                  name="information-circle-outline"
+                  size={18}
+                  color={showInfoTipPulse ? colors.primary : colors.textSecondary}
+                />
+              </Animated.View>
+              <Text style={[styles.actionBtnText, showInfoTipPulse && { color: colors.primary }]}>Info</Text>
             </TouchableOpacity>
             <TouchableOpacity
               testID="volyume-btn-add-mid-workout"
@@ -1280,18 +1317,23 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           <View style={[styles.sheet, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}>
             <View style={styles.sheetHandle} />
             <Text style={styles.sheetTitle}>{exercise?.name}</Text>
-            {routineExercise?.recommendedSets ? (
-              <Text style={styles.infoTarget}>
-                Target: {routineExercise.recommendedSets} sets · {routineExercise.recommendedRepsMin}–{routineExercise.recommendedRepsMax} reps
-              </Text>
-            ) : null}
             {exercise?.primaryMuscle ? (
               <Text style={styles.infoMuscle}>
-                {(exercise.primaryMuscle || '').charAt(0).toUpperCase() + (exercise.primaryMuscle || '').slice(1)}{exercise.equipment ? ` · ${exercise.equipment}` : ''}
+                {MUSCLE_DISPLAY_NAMES[exercise.primaryMuscle] ?? ((exercise.primaryMuscle || '').charAt(0).toUpperCase() + (exercise.primaryMuscle || '').slice(1).replace('_', ' '))}
+                {exercise.equipment ? ` · ${exercise.equipment}` : ''}
               </Text>
             ) : null}
+            {routineExercise?.recommendedSets ? (
+              <View style={styles.infoTargetRow}>
+                <Ionicons name="checkmark-circle-outline" size={14} color={colors.primary} />
+                <Text style={styles.infoTarget}>
+                  {routineExercise.recommendedSets} sets of {routineExercise.recommendedRepsMin}–{routineExercise.recommendedRepsMax} reps
+                </Text>
+              </View>
+            ) : null}
+            <Text style={styles.infoNotesLabel}>How to do it</Text>
             <Text style={styles.infoNotes}>
-              {routineExercise?.notes || FORM_TIPS[exercise?.name] || exercise?.notes || 'No execution notes for this exercise.'}
+              {routineExercise?.notes || FORM_TIPS[exercise?.name] || exercise?.notes || 'No specific coaching notes yet. Focus on controlled movement, feel the target muscle working, and stop a couple of reps before you truly can\'t do any more.'}
             </Text>
           </View>
         </Modal>
@@ -1717,9 +1759,11 @@ const styles = StyleSheet.create({
   sheetOptionLabel: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   sheetOptionLabelActive: { color: colors.primary },
   sheetOptionDesc: { fontSize: fontSize.xs, color: colors.textMuted },
-  infoTarget: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.medium, marginBottom: spacing.xs },
-  infoMuscle: { fontSize: fontSize.xs, color: colors.textMuted, marginBottom: spacing.lg },
-  infoNotes: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 22, paddingVertical: spacing.sm },
+  infoTargetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.md },
+  infoTarget: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.medium },
+  infoMuscle: { fontSize: fontSize.xs, color: colors.textMuted, marginBottom: spacing.sm },
+  infoNotesLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: spacing.xs, marginTop: spacing.sm },
+  infoNotes: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 22 },
   targetBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.successBg, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderWidth: 1, borderColor: colors.success },
   targetBannerText: { fontSize: fontSize.sm, color: colors.success, fontWeight: fontWeight.semibold, flex: 1 },
   addedBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.primaryBg, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
