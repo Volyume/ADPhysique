@@ -1287,7 +1287,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             <View style={styles.sheetHandle} />
             <Text style={styles.sheetTitle}>Set type</Text>
             <Text style={styles.sheetExplainer}>
-              Working sets count toward your weekly volume. Warm-up sets do not.{'\n'}Use Working for the sets you want to track for progression. Use Warm-up for preparation sets before your main work.
+              Working sets are counted in your weekly totals. Warm-up sets are not.{'\n'}Use Working for the sets you want to track progress on. Use Warm-up for lighter preparation sets before your main work.
             </Text>
             {SET_TYPE_OPTIONS.map(opt => (
               <TouchableOpacity
