@@ -9,11 +9,11 @@
 // ---------------------------------------------------------------------------
 
 export const GOAL_LABELS = {
-  general_hypertrophy:   'General Hypertrophy',
+  general_hypertrophy:   'Build Muscle',
   balanced_bodybuilding: 'Balanced Bodybuilding',
   aesthetic_v_taper:     'Aesthetic / V-Taper',
   weak_point_spec:       'Weak Point Specialisation',
-  strength_hypertrophy:  'Strength-Bias Hypertrophy',
+  strength_hypertrophy:  'Strength + Size',
   recomp:                'Fat Loss / Recomp Support',
   x_frame_physique:      'X-Frame Physique',
 };
@@ -999,11 +999,11 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
 
   // goal
   const goalMap = {
-    general_hypertrophy:   `General Hypertrophy means even, well-rounded muscle growth. Volume is spread across all major groups so nothing gets systematically undertrained — the most common cause of stalled progress.`,
+    general_hypertrophy:   `Even, well-rounded muscle growth. Volume is spread across all major groups so nothing gets systematically undertrained, which is the most common cause of stalled progress.`,
     balanced_bodybuilding: `Balanced Bodybuilding distributes volume so no single muscle dominates the plan. This prevents the common imbalances — overdeveloped chest, underdeveloped back, neglected rear delts — that accumulate over years of unstructured training.`,
     aesthetic_v_taper:     `V-Taper prioritises the muscles that create shoulder-to-waist width: outer shoulders, back width, and rear delts. You will see more sets on these muscles than a general plan would assign. Abs use only anti-extension and rotation exercises — direct crunching work is de-emphasised.`,
     weak_point_spec:        `Weak Point Specialisation pushes${weakPointUILabels.length ? ' ' + weakPointUILabels.join(' and ') : ' your flagged muscles'} close to their maximum weekly volume while keeping everything else at the minimum needed to hold current size. Targeted overload, held across the full training block, is how lagging muscles close the gap.`,
-    strength_hypertrophy:  `Strength-Bias Hypertrophy keeps the goal as muscle growth but loads your main compound lifts heavier and in a lower rep range. Building strength is what lets you use more weight over time — and more weight, applied correctly, means more muscle.`,
+    strength_hypertrophy:  `Muscle growth is still the goal, but your main compound lifts are loaded heavier and in a lower rep range. Building strength lets you use more weight over time, and more weight applied correctly means more muscle.`,
     recomp:                `Fat Loss / Recomp Support sets volume at a level your body can recover from on reduced calories. The goal is preserving the muscle you already have while your nutrition creates a gradual caloric deficit. Training stimulus stays consistent; recovery capacity is the limiting factor, not your effort.`,
     x_frame_physique:      `X-Frame Physique concentrates volume on the four visual anchor points — outer shoulders, back width, glutes and hamstrings — that create a dramatic X silhouette when viewed from front and rear. Side delts, lats, and posterior chain receive additional sets each week; direct waist-widening ab work is minimised to preserve the illusion of a narrow mid-section.`,
   };
@@ -1190,11 +1190,11 @@ export function generatePlan(inputs) {
   const mesocycleSchedule     = buildMesocycleSchedule(experience);
 
   const goalShort = {
-    general_hypertrophy:   'Hypertrophy',
+    general_hypertrophy:   'Build Muscle',
     balanced_bodybuilding: 'Bodybuilding',
     aesthetic_v_taper:     'V-Taper',
     weak_point_spec:       'Specialisation',
-    strength_hypertrophy:  'Strength-Hypertrophy',
+    strength_hypertrophy:  'Strength + Size',
     recomp:                'Recomp',
   }[goal] ?? 'Training';
 

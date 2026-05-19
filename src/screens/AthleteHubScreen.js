@@ -615,7 +615,7 @@ export default function AthleteHubScreen({ navigation }) {
         {/* ── About ─────────────────────────────────────── */}
         <View style={styles.about}>
           <Text style={styles.aboutName}>Volyume</Text>
-          <Text style={styles.aboutVersion}>Intelligent Hypertrophy Logbook · Private by design</Text>
+          <Text style={styles.aboutVersion}>Less thinking. More lifting. · Private by design</Text>
         </View>
 
       </ScrollView>

@@ -131,7 +131,7 @@ const LIBRARY_PLANS = [
   // ── 4. Upper / Lower 4×/Week (Intermediate) ──────────────────────────────
   {
     name: 'Upper / Lower 4×/Week',
-    description: 'The most evidence-supported split for intermediate hypertrophy: each muscle group trained twice per week, separated by 48–72 hours for optimal recovery and re-stimulation. Upper A focuses on heavier compound work (5–8 reps); Upper B shifts to higher-volume hypertrophy ranges (10–15 reps) targeting the same muscles from different angles. Use double progression throughout — reach the top of the rep range, then add weight. Suits lifters with 6+ months of consistent training. Target RIR 1–2 on working sets.',
+    description: 'The most evidence-supported split for building muscle: each muscle group trained twice per week, separated by 48–72 hours for optimal recovery and re-stimulation. Upper A focuses on heavier compound work (5–8 reps); Upper B shifts to higher-rep muscle building ranges (10–15 reps) targeting the same muscles from different angles. Use double progression throughout — reach the top of the rep range, then add weight. Suits lifters with 6+ months of consistent training. Target RIR 1–2 on working sets.',
     tags: 'upper_lower intermediate 4 days',
     difficulty: 1,
     workouts: [
@@ -140,7 +140,7 @@ const LIBRARY_PLANS = [
         exercises: [
           { name: 'Barbell Bench Press',       sets: 4, repsMin: 5,  repsMax: 8,  rest: 120, notes: 'Strength focus. Add weight when top reps feel easy.' },
           { name: 'Barbell Row (Bent Over)',   sets: 4, repsMin: 5,  repsMax: 8,  rest: 120, notes: 'Pause at chest. Controlled descent.' },
-          { name: 'Incline Dumbbell Press',    sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Hypertrophy range. Slow negative.' },
+          { name: 'Incline Dumbbell Press',    sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Higher reps for growth. Slow negative.' },
           { name: 'Seated Cable Row',          sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Full stretch to full contraction.' },
           { name: 'EZ Bar Skull Crusher',      sets: 3, repsMin: 10, repsMax: 15, rest: 60,  notes: 'Elbows pointed up. Slow on way down.' },
           { name: 'EZ Bar Curl',               sets: 3, repsMin: 10, repsMax: 15, rest: 60,  notes: 'Full supination at top.' },
@@ -161,7 +161,7 @@ const LIBRARY_PLANS = [
         exercises: [
           { name: 'Barbell Overhead Press',    sets: 4, repsMin: 5,  repsMax: 8,  rest: 120, notes: 'Standing preferred. Full lockout overhead.' },
           { name: 'Lat Pulldown (Wide Grip)',  sets: 4, repsMin: 8,  repsMax: 12, rest: 90,  notes: 'Slight lean back. Drive elbows down.' },
-          { name: 'Dumbbell Shoulder Press',  sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Hypertrophy range. Touch ears at bottom.' },
+          { name: 'Dumbbell Shoulder Press',  sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Higher reps for growth. Touch ears at bottom.' },
           { name: 'Machine Row (Chest Supported)', sets: 3, repsMin: 12, repsMax: 15, rest: 90, notes: 'Strict, no body english.' },
           { name: 'Dumbbell Lateral Raise',   sets: 4, repsMin: 15, repsMax: 25, rest: 60,  notes: 'Slight internal rotation, lead with elbow.' },
           { name: 'Dumbbell Rear Delt Fly',   sets: 3, repsMin: 15, repsMax: 25, rest: 60,  notes: 'Slight elbow bend. Raise to shoulder height.' },
@@ -226,7 +226,7 @@ const LIBRARY_PLANS = [
   // ── 6. PPL 6×/Week (Advanced) ─────────────────────────────────────────────
   {
     name: 'Push Pull Legs 6×/Week',
-    description: 'High-frequency PPL for lifters who can handle — and recover from — six sessions per week. Each muscle is trained twice per week, producing a greater hypertrophy stimulus than the 3-day version. The two weekly cycles allow a different emphasis each rotation: heavier compound work first, higher-rep isolation emphasis second. Requires consistent sleep, nutrition, and stress management to recover fully. Target RIR 1–2. Recommended for lifters with 18+ months of consistent training.',
+    description: 'High-frequency PPL for lifters who can handle — and recover from — six sessions per week. Each muscle is trained twice per week, producing a stronger muscle building stimulus than the 3-day version. The two weekly cycles allow a different emphasis each rotation: heavier compound work first, higher-rep isolation emphasis second. Requires consistent sleep, nutrition, and stress management to recover fully. Target RIR 1–2. Recommended for lifters with 18+ months of consistent training.',
     tags: 'ppl push pull legs advanced 6 days high frequency',
     difficulty: 2,
     workouts: [
@@ -263,7 +263,7 @@ const LIBRARY_PLANS = [
       {
         name: 'Push Day 2 — Volume Focus',
         exercises: [
-          { name: 'Incline Dumbbell Press',    sets: 4, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Hypertrophy range. Controlled negative.' },
+          { name: 'Incline Dumbbell Press',    sets: 4, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Higher reps for growth. Controlled negative.' },
           { name: 'Pec Deck (Machine Fly)',    sets: 4, repsMin: 12, repsMax: 20, rest: 60,  notes: 'Full stretch. Mind-muscle. Pump work.' },
           { name: 'Dumbbell Shoulder Press',  sets: 4, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Seated. Full range of motion.' },
           { name: 'Cable Lateral Raise',      sets: 4, repsMin: 15, repsMax: 25, rest: 60,  notes: 'Constant tension cable version.' },
@@ -295,7 +295,7 @@ const LIBRARY_PLANS = [
 
   // ── 7. 4-Day Bodybuilding Bro Split ──────────────────────────────────────
   {
-    name: '4-Day Hypertrophy Bro Split',
+    name: '4-Day Muscle Building Bro Split',
     description: 'The classic bodybuilder split: each major muscle group gets a dedicated session, allowing maximum per-session volume before fatigue compromises quality. Chest and triceps on Day 1, back and biceps on Day 2, shoulders and traps on Day 3, legs on Day 4. Each muscle is trained once per week at high volume. Suits intermediate-to-advanced lifters who recover well from high intra-session fatigue and prefer focused, high-effort sessions. Use double progression. Target RIR 1 on the final working set of each exercise.',
     tags: 'bodybuilding bro split 4 days',
     difficulty: 1,
@@ -447,7 +447,7 @@ const LIBRARY_PLANS = [
         name: 'Shoulder Day',
         exercises: [
           { name: 'Barbell Overhead Press',   sets: 4, repsMin: 5,  repsMax: 8,  rest: 120, notes: 'Standing strength press.' },
-          { name: 'Dumbbell Shoulder Press',  sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Hypertrophy range.' },
+          { name: 'Dumbbell Shoulder Press',  sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Higher reps for growth.' },
           { name: 'Dumbbell Lateral Raise',  sets: 5, repsMin: 15, repsMax: 25, rest: 60,  notes: 'Side delt focus. 5 working sets.' },
           { name: 'Cable Lateral Raise',     sets: 3, repsMin: 15, repsMax: 25, rest: 60,  notes: 'Constant tension version of lateral raise.' },
           { name: 'Face Pull',               sets: 4, repsMin: 20, repsMax: 25, rest: 60,  notes: 'Rear delt health. Mandatory.' },
@@ -644,8 +644,8 @@ const LIBRARY_PLANS = [
 
   // ── 16. 3-Day Power Hypertrophy ────────────────────────────────────────────
   {
-    name: '3-Day Power Hypertrophy',
-    description: 'Combines heavy strength work (3–5 reps, close to maximal effort) with hypertrophy assistance (8–15 reps) in the same session. The heavy work builds neural efficiency and maximal strength; the assistance work produces the volume needed for sustained muscle growth. This approach develops both qualities simultaneously rather than optimising for just one. Suitable for intermediate-to-advanced lifters who want to be both strong and muscular. Target RIR 2–3 on heavy sets, RIR 1–2 on all assistance work.',
+    name: '3-Day Power + Muscle',
+    description: 'Combines heavy strength work (3–5 reps, close to maximal effort) with muscle-building assistance work (8–15 reps) in the same session. The heavy work builds neural efficiency and maximal strength; the assistance work produces the volume needed for sustained muscle growth. This approach develops both qualities simultaneously rather than optimising for just one. Suitable for intermediate-to-advanced lifters who want to be both strong and muscular. Target RIR 2–3 on heavy sets, RIR 1–2 on all assistance work.',
     tags: 'bodybuilding 3 days intermediate advanced strength',
     difficulty: 2,
     workouts: [
@@ -654,8 +654,8 @@ const LIBRARY_PLANS = [
         exercises: [
           { name: 'Barbell Back Squat',       sets: 5, repsMin: 3,  repsMax: 5,  rest: 180, notes: 'Work to a heavy top set then 4 back-off sets.' },
           { name: 'Barbell Bench Press',      sets: 5, repsMin: 3,  repsMax: 5,  rest: 180, notes: 'Heavy pressing. Strong arch.' },
-          { name: 'Leg Press',               sets: 3, repsMin: 12, repsMax: 20, rest: 90,  notes: 'Hypertrophy back-off after squats.' },
-          { name: 'Incline Dumbbell Press',  sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Chest hypertrophy after bench.' },
+          { name: 'Leg Press',               sets: 3, repsMin: 12, repsMax: 20, rest: 90,  notes: 'Back-off sets for leg growth.' },
+          { name: 'Incline Dumbbell Press',  sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Chest volume after bench.' },
           { name: 'Dumbbell Lateral Raise',  sets: 3, repsMin: 15, repsMax: 25, rest: 60,  notes: 'Side delts. Assistance work.' },
         ],
       },
@@ -664,8 +664,8 @@ const LIBRARY_PLANS = [
         exercises: [
           { name: 'Conventional Deadlift',    sets: 5, repsMin: 3,  repsMax: 5,  rest: 180, notes: 'Work up to a heavy top set. Brace everything.' },
           { name: 'Weighted Pull-Up',         sets: 4, repsMin: 5,  repsMax: 8,  rest: 120, notes: 'Weighted vertical pull.' },
-          { name: 'Romanian Deadlift (Barbell)', sets: 3, repsMin: 8, repsMax: 12, rest: 90, notes: 'Hamstring hypertrophy back-off.' },
-          { name: 'Seated Cable Row',         sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Back hypertrophy.' },
+          { name: 'Romanian Deadlift (Barbell)', sets: 3, repsMin: 8, repsMax: 12, rest: 90, notes: 'Hamstring back-off work.' },
+          { name: 'Seated Cable Row',         sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Back volume.' },
           { name: 'EZ Bar Curl',              sets: 3, repsMin: 8,  repsMax: 12, rest: 60,  notes: 'Bicep assistance.' },
         ],
       },
@@ -674,8 +674,8 @@ const LIBRARY_PLANS = [
         exercises: [
           { name: 'Barbell Overhead Press',   sets: 5, repsMin: 3,  repsMax: 5,  rest: 150, notes: 'Heavy overhead work.' },
           { name: 'Incline Barbell Bench Press', sets: 4, repsMin: 6, repsMax: 8, rest: 120, notes: 'Upper chest secondary.' },
-          { name: 'Dumbbell Shoulder Press',  sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Shoulder hypertrophy.' },
-          { name: 'EZ Bar Skull Crusher',     sets: 3, repsMin: 10, repsMax: 15, rest: 60,  notes: 'Tricep hypertrophy.' },
+          { name: 'Dumbbell Shoulder Press',  sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Shoulder volume.' },
+          { name: 'EZ Bar Skull Crusher',     sets: 3, repsMin: 10, repsMax: 15, rest: 60,  notes: 'Tricep volume.' },
           { name: 'Preacher Curl (EZ Bar)',   sets: 3, repsMin: 8,  repsMax: 12, rest: 60,  notes: 'Bicep peak.' },
         ],
       },
@@ -692,7 +692,7 @@ const LIBRARY_PLANS = [
       {
         name: 'Chest & Triceps',
         exercises: [
-          { name: 'Barbell Bench Press',       sets: 4, repsMin: 8,  repsMax: 12, rest: 90,  notes: 'Hypertrophy focus.' },
+          { name: 'Barbell Bench Press',       sets: 4, repsMin: 8,  repsMax: 12, rest: 90,  notes: 'Volume focus.' },
           { name: 'Incline Dumbbell Press',    sets: 4, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Upper chest.' },
           { name: 'Pec Deck (Machine Fly)',    sets: 3, repsMin: 12, repsMax: 20, rest: 60,  notes: 'Pump isolation.' },
           { name: 'Overhead Cable Tricep Extension', sets: 4, repsMin: 12, repsMax: 20, rest: 60, notes: 'Long-head stretch. Key for arm size.' },

@@ -59,7 +59,7 @@ export const PROTEIN_APPROACHES = {
   optimised: {
     label: 'Optimised',
     range: '1.6–2.2 g/kg',
-    description: 'Current sports science consensus for hypertrophy. Maximises muscle gains without an extreme focus on protein.',
+    description: 'Current approach that works best for building muscle. Maximises muscle gains without an extreme focus on protein.',
     lbm: { lean_gain: 2.3, build: 2.3, maintain: 2.2, recomp: 2.5, mild_cut: 2.6, aggressive_cut: 2.8, contest_prep: 3.0 },
     bw:  { lean_gain: 1.8, build: 1.8, maintain: 1.7, recomp: 2.0, mild_cut: 2.2, aggressive_cut: 2.5, contest_prep: 2.8 },
     floor: 1.6,
