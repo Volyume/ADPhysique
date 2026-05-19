@@ -760,12 +760,12 @@ export function runAdaptiveEngine(weekFeedback = {}) {
       joint: data.joint ?? 0,
     });
 
-    const current = data.currentSets ?? data.mav ?? 10;
+    const current = Math.round(data.currentSets ?? data.mav ?? 10);
     const mev = data.mev ?? 6;
     const mrv = data.mrv ?? 20;
 
     let nextWeekSets = current + (decision.delta ?? 0);
-    nextWeekSets = Math.max(mev, Math.min(mrv, nextWeekSets));
+    nextWeekSets = Math.round(Math.max(mev, Math.min(mrv, nextWeekSets)));
 
     results[muscle] = { ...decision, nextWeekSets, currentSets: current };
   }

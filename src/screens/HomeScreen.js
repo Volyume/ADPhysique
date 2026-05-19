@@ -492,7 +492,7 @@ export default function HomeScreen({ navigation }) {
               </View>
               {blockProgress.map(p => {
                 const pct = p.planned > 0 ? Math.min(1, p.actual / p.planned) : 0;
-                const barColor = pct >= 1 ? colors.primary : pct >= 0.7 ? colors.warning : colors.surface3;
+                const barColor = pct >= 1 ? colors.primary : pct >= 0.7 ? colors.warning : 'rgba(0,229,255,0.30)';
                 return (
                   <View key={p.muscle} style={styles.blockRow}>
                     <Text style={styles.blockMuscle} numberOfLines={1}>{p.label}</Text>
@@ -1042,7 +1042,7 @@ const styles = StyleSheet.create({
   blockRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   blockMuscle: { width: 80, fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
   blockBarBg: {
-    flex: 1, height: 6, backgroundColor: colors.surface2,
+    flex: 1, height: 6, backgroundColor: colors.border,
     borderRadius: radius.full, overflow: 'hidden',
   },
   blockBarFill: { height: '100%', borderRadius: radius.full },
