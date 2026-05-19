@@ -40,7 +40,7 @@ const GOALS = [
   { key: 'lean_gain',        label: 'Build muscle (slow)',   detail: '+10% surplus' },
   { key: 'build',            label: 'Build muscle (fast)',   detail: '+17% surplus' },
   { key: 'maintain',         label: 'Maintain weight',       detail: '0%' },
-  { key: 'recomp',           label: 'Recomposition',         detail: '−5%' },
+  { key: 'recomp',           label: 'Hold muscle, lose fat',  detail: '−5%' },
   { key: 'mild_cut',         label: 'Lose weight (steady)',  detail: '−13%' },
   { key: 'aggressive_cut',   label: 'Lose weight (fast)',    detail: '−22%' },
 ];
