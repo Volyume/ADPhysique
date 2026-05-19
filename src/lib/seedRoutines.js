@@ -5,7 +5,7 @@ import {
 } from './database';
 
 // Bump to v6: stores tags, splitType, difficulty in DB so filter chips work
-const SEED_KEY = '@volyume_routines_seeded_v7';
+const SEED_KEY = '@volyume_routines_seeded_v8';
 
 // Extra exercises the plan templates rely on that may not be in the base exercise seed
 const REQUIRED_EXERCISES = [
@@ -22,6 +22,10 @@ const REQUIRED_EXERCISES = [
   { name: 'Box Step-Up',                       primaryMuscle: 'quads',     equipment: 'bodyweight', movementPattern: 'squat',   compoundIsolation: 'compound',  defaultRepMin: 10, defaultRepMax: 20, fatigueCost: 2, stimulusToFatigueRatio: 4 },
   { name: 'Single-Arm Dumbbell Row',           primaryMuscle: 'back',      equipment: 'dumbbell', movementPattern: 'pull',      compoundIsolation: 'compound',  defaultRepMin: 10, defaultRepMax: 15, fatigueCost: 3, stimulusToFatigueRatio: 4 },
   { name: 'Trap Bar Deadlift (Low Handle)',    primaryMuscle: 'quads',     equipment: 'barbell',  movementPattern: 'hinge',     compoundIsolation: 'compound',  defaultRepMin: 4,  defaultRepMax: 8,  fatigueCost: 5, stimulusToFatigueRatio: 4 },
+  { name: 'Hip Thrust (Barbell)',    primaryMuscle: 'glutes',   equipment: 'barbell',    movementPattern: 'hinge',     compoundIsolation: 'compound',  defaultRepMin: 8,  defaultRepMax: 15, fatigueCost: 3, stimulusToFatigueRatio: 5 },
+  { name: 'Dumbbell Goblet Squat',   primaryMuscle: 'quads',    equipment: 'dumbbell',   movementPattern: 'squat',     compoundIsolation: 'compound',  defaultRepMin: 10, defaultRepMax: 20, fatigueCost: 2, stimulusToFatigueRatio: 4 },
+  { name: 'Lunge',                   primaryMuscle: 'quads',    equipment: 'bodyweight', movementPattern: 'squat',     compoundIsolation: 'compound',  defaultRepMin: 10, defaultRepMax: 20, fatigueCost: 2, stimulusToFatigueRatio: 4 },
+  { name: 'Bodyweight Squat',        primaryMuscle: 'quads',    equipment: 'bodyweight', movementPattern: 'squat',     compoundIsolation: 'compound',  defaultRepMin: 15, defaultRepMax: 30, fatigueCost: 1, stimulusToFatigueRatio: 3 },
 ];
 
 // ─── 18 Library Plans ────────────────────────────────────────────────────────
@@ -32,7 +36,7 @@ const LIBRARY_PLANS = [
   {
     name: 'Aesthetic Upper Rotation',
     description: 'Two-day upper-body rotation built around physique priorities: lat width, capped side delts, upper-chest fullness, and rear-delt health. Day 1 targets the back and posterior shoulder; Day 2 develops upper chest and lateral delt detail. Add a rep each session; once you hit the top of the rep range, add a little weight and start again. Stop 1 to 2 reps before failure on each set. Pair with any lower-body plan for a complete programme.',
-    tags: 'aesthetic upper bodybuilding',
+    tags: 'aesthetic upper bodybuilding gender:men goal:build_muscle days:2 featured',
     difficulty: 1,
     workouts: [
       {
@@ -62,7 +66,7 @@ const LIBRARY_PLANS = [
   {
     name: 'Beginner Full Body 3×/Week',
     description: 'Three full-body sessions per week adding weight each session — the fastest way to get stronger when you are starting out. The five fundamental movement patterns are trained every session: squat, hinge, horizontal press, horizontal pull, and vertical pull. Add weight each session (2.5 kg on compound barbell lifts) and focus on technique above all else. Expect consistent weekly strength increases for the first 6–12 months. Leave 2 to 3 reps in the tank on each set.',
-    tags: 'beginner full body barbell',
+    tags: 'beginner full_body barbell gender:all goal:build_muscle days:3 audience:beginner featured',
     difficulty: 0,
     workouts: [
       {
@@ -92,7 +96,7 @@ const LIBRARY_PLANS = [
   {
     name: 'Beginner Push / Pull / Legs',
     description: 'A clean three-day split that keeps sessions focused and manageable. Push day builds chest, shoulders, and triceps; Pull day develops back and biceps; Leg day handles quads, hamstrings, glutes, and calves. Each muscle is trained once per week with enough volume to produce a clear training signal. Increase the weight by 2.5 kg on compounds and 1.25 kg on isolations when all reps are completed with good technique. Ideal for the first 3–6 months. Leave 2 to 3 reps in the tank on each set.',
-    tags: 'beginner ppl push pull legs',
+    tags: 'beginner ppl gender:all goal:build_muscle days:3 audience:beginner',
     difficulty: 0,
     workouts: [
       {
@@ -132,7 +136,7 @@ const LIBRARY_PLANS = [
   {
     name: 'Upper / Lower 4×/Week',
     description: 'The most evidence-supported split for building muscle: each muscle group trained twice per week, giving each muscle 48 to 72 hours to recover before training it again. Upper A focuses on heavier compound work (5–8 reps); Upper B shifts to higher-rep muscle building ranges (10–15 reps) targeting the same muscles from different angles. Add reps session by session; when you reach the top of the rep range, add a little weight and start again. Suits lifters with 6+ months of consistent training. Stop 1 to 2 reps before failure on each set.',
-    tags: 'upper_lower intermediate 4 days',
+    tags: 'upper_lower intermediate gender:all goal:build_muscle days:4 featured',
     difficulty: 1,
     workouts: [
       {
@@ -184,7 +188,7 @@ const LIBRARY_PLANS = [
   {
     name: 'Push Pull Legs 3×/Week',
     description: 'Each muscle group trained once per week with focused, high-quality volume. Push day attacks chest, shoulders, and triceps; Pull day builds the back and biceps; Leg day develops the full lower body. The lower frequency compared to upper/lower makes this ideal as a first split after outgrowing full-body training, or during phases of lower recovery capacity. Add reps each session, then add weight when you reach the top of the range. Stop 1 to 2 reps before failure on each set.',
-    tags: 'ppl push pull legs intermediate 3 days',
+    tags: 'ppl intermediate gender:all goal:build_muscle days:3',
     difficulty: 1,
     workouts: [
       {
@@ -227,7 +231,7 @@ const LIBRARY_PLANS = [
   {
     name: 'Push Pull Legs 6×/Week',
     description: 'High-frequency PPL for lifters who can handle — and recover from — six sessions per week. Each muscle is trained twice per week, producing a stronger muscle building stimulus than the 3-day version. The two weekly cycles allow a different emphasis each rotation: heavier compound work first, higher-rep isolation emphasis second. Requires consistent sleep, nutrition, and stress management to recover fully. Stop 1 to 2 reps before failure on each set. Recommended for lifters with 18+ months of consistent training.',
-    tags: 'ppl push pull legs advanced 6 days high frequency',
+    tags: 'ppl advanced gender:all goal:build_muscle days:6',
     difficulty: 2,
     workouts: [
       {
@@ -297,7 +301,7 @@ const LIBRARY_PLANS = [
   {
     name: '4-Day Muscle Building Bro Split',
     description: 'The classic bodybuilder split: each major muscle group gets a dedicated session, allowing maximum per-session volume before fatigue compromises quality. Chest and triceps on Day 1, back and biceps on Day 2, shoulders and traps on Day 3, legs on Day 4. Each muscle is trained once per week at high volume. Suits intermediate-to-advanced lifters who recover well from high fatigue during the session and prefer focused, high-effort sessions. Add reps each session, then add weight when you reach the top of the range. Take the last set of each exercise close to failure.',
-    tags: 'bodybuilding bro split 4 days',
+    tags: 'bodybuilding bro_split gender:men goal:build_muscle days:4',
     difficulty: 1,
     workouts: [
       {
@@ -347,7 +351,7 @@ const LIBRARY_PLANS = [
   {
     name: 'Full Body Express 3×/Week',
     description: '45-minute full-body sessions, three days per week, using only the highest-value compound movements. No isolation work — every exercise trains multiple muscles simultaneously to maximise efficiency. Ideal for time-pressed lifters who want to maintain or build muscle with minimal gym time. Because each session covers the full body, skipping one session does not leave any muscle group undertrained that week. Add reps each session, then add weight when you reach the top of the range. Leave 2 reps in the tank on each set.',
-    tags: 'full_body short 3 days express beginner intermediate',
+    tags: 'full_body short gender:all goal:build_muscle days:3',
     difficulty: 1,
     workouts: [
       {
@@ -384,7 +388,7 @@ const LIBRARY_PLANS = [
   {
     name: 'Upper / Lower Express 4×/Week',
     description: 'Four 40-minute sessions per week using a tight exercise selection and brisk rest periods. Built on the proven upper/lower split structure but with each session trimmed to its highest-value exercises. Suitable for intermediate lifters managing a busy schedule who want twice-per-week frequency without long sessions. Add reps, then weight, on all compound movements. Optional supersets (pairing non-competing exercises) can shave a further 10 minutes off each session. Stop 1 to 2 reps before failure on each set.',
-    tags: 'upper_lower short 4 days express',
+    tags: 'upper_lower short gender:all goal:build_muscle days:4',
     difficulty: 1,
     workouts: [
       {
@@ -430,7 +434,7 @@ const LIBRARY_PLANS = [
   {
     name: 'Chest & Shoulder Specialisation',
     description: 'A specialisation phase for lifters who have identified chest and shoulder development as a clear weak point. Volume for these muscles is elevated to the upper end of the weekly effective range; all other muscle groups are maintained with sufficient but lower volume. Run for 6–8 weeks as a focused block, then return to a balanced programme. Add reps, then weight, on all chest and shoulder work. Expect visible improvement in shoulder roundness and upper-chest fullness within 8–10 weeks. Stop 1 to 2 reps before failure on each set.',
-    tags: 'weak_point bodybuilding chest shoulders aesthetic',
+    tags: 'weak_point bodybuilding chest shoulders aesthetic gender:all goal:build_muscle days:2',
     difficulty: 1,
     workouts: [
       {
@@ -479,7 +483,7 @@ const LIBRARY_PLANS = [
   {
     name: 'Back Width & Thickness',
     description: 'A back specialisation block for lifters who prioritise lat width and mid-back density — the two components of a strong V-taper. Width comes from vertical pulling (lat pulldown variations, straight-arm pulldowns); thickness from horizontal rowing. Both are trained at high volume and twice per week. Other muscle groups are maintained at effective volumes. Run for 6–8 weeks within a broader training year. Double progression. Stop 1 to 2 reps before failure on each back set.',
-    tags: 'weak_point back bodybuilding aesthetic v-taper',
+    tags: 'weak_point back bodybuilding aesthetic gender:all goal:build_muscle days:2',
     difficulty: 1,
     workouts: [
       {
@@ -518,7 +522,7 @@ const LIBRARY_PLANS = [
   {
     name: 'Leg Development Priority',
     description: 'For lifters with underdeveloped legs relative to their upper body. Quad and hamstring volume is elevated to the high end of the weekly effective range; upper body is maintained at a lower frequency. Three leg sessions per week (two quad-dominant, one hip-dominant) provide a strong training stimulus across the full lower body. Run for 8–12 weeks, then reassess proportions. Double progression. Push leg compounds close to failure. Leave 2 reps in the tank on isolation exercises.',
-    tags: 'weak_point legs quads hamstrings bodybuilding',
+    tags: 'weak_point legs quads hamstrings gender:all goal:build_muscle days:2',
     difficulty: 1,
     workouts: [
       {
@@ -557,7 +561,7 @@ const LIBRARY_PLANS = [
   {
     name: 'Glute & Hamstring Focus',
     description: 'Hip-dominant training with an emphasis on the posterior chain — glutes, hamstrings, and spinal erectors. Ideal for athletes wanting stronger hip extension, or physique athletes prioritising glute development. Sessions are built around hip hinges, hip thrusts, and leg curl variations, with upper-body maintenance work included. Run as a 6–8 week specialisation phase. Add reps, then weight, on all major movements. Stop 1 to 2 reps before failure on each set.',
-    tags: 'weak_point glutes hamstrings legs bodybuilding',
+    tags: 'weak_point glutes hamstrings gender:all goal:build_muscle days:2',
     difficulty: 1,
     workouts: [
       {
@@ -587,7 +591,7 @@ const LIBRARY_PLANS = [
   {
     name: 'V-Taper Aesthetic',
     description: 'Maximising the V-taper silhouette: wide upper back, capped side delts, and a visually narrow waist. Lat-width work and side-delt volume are both elevated; direct waist-expanding exercises are excluded. Sessions are structured so the muscles that create visual width are trained first, when freshest, with maximum quality. Run as a 6–8 week specialisation phase. Double progression. Stop 1 to 2 reps before failure on each set.',
-    tags: 'aesthetic v-taper bodybuilding back shoulders weak_point',
+    tags: 'aesthetic v_taper bodybuilding back shoulders gender:men goal:build_muscle days:2',
     difficulty: 1,
     workouts: [
       {
@@ -618,7 +622,7 @@ const LIBRARY_PLANS = [
   {
     name: 'Minimalist 2×/Week',
     description: 'Two full-body sessions per week, covering every major muscle group in around 60 minutes each. Suitable for maintenance phases, very busy schedules, or as a bridge between structured blocks. Volume is at the lower end of the effective range — enough to preserve muscle and strength, not enough for significant growth. Prioritises the highest-value compound movements. Add reps, then weight — progress will be slower than with higher-frequency plans. Leave 2 reps in the tank on each set.',
-    tags: 'short 2 days full_body beginner intermediate minimalist',
+    tags: 'minimalist full_body gender:all goal:build_muscle days:2 short',
     difficulty: 1,
     workouts: [
       {
@@ -646,7 +650,7 @@ const LIBRARY_PLANS = [
   {
     name: '3-Day Power + Muscle',
     description: 'Combines heavy strength work (3–5 reps, close to maximal effort) with muscle-building assistance work (8–15 reps) in the same session. The heavy work builds raw strength and power; the assistance work produces the volume needed for sustained muscle growth. This approach develops both qualities simultaneously rather than optimising for just one. Suitable for intermediate-to-advanced lifters who want to be both strong and muscular. Push the heavy sets hard but leave a couple of reps in the tank. Take assistance work close to failure.',
-    tags: 'bodybuilding 3 days intermediate advanced strength',
+    tags: 'bodybuilding strength gender:all goal:get_stronger days:3',
     difficulty: 2,
     workouts: [
       {
@@ -686,7 +690,7 @@ const LIBRARY_PLANS = [
   {
     name: 'Arms & Upper Body Aesthetic',
     description: 'Built for lifters who want to prioritise arm development alongside overall upper-body aesthetics. Bicep and tricep volume is elevated well beyond what a balanced programme provides; chest, shoulders, and back are maintained at effective volumes. Three upper sessions per week, each with a different structural emphasis. Run for 6–8 weeks within a training block. Add reps, then weight, on every exercise. Stop 1 to 2 reps before failure on your last set.',
-    tags: 'aesthetic bodybuilding arms weak_point upper',
+    tags: 'aesthetic bodybuilding arms gender:all goal:build_muscle days:2 weak_point',
     difficulty: 1,
     workouts: [
       {
@@ -728,7 +732,7 @@ const LIBRARY_PLANS = [
   {
     name: 'Female Bodybuilding Foundation',
     description: 'A physique-focused programme structured around the muscle groups most impactful for female bodybuilding and fitness: glutes, hamstrings, upper-body detail, and shoulder width. Three lower-body sessions per week provide the volume and frequency needed for visible glute and glute and hamstring development; two upper sessions balance the physique. Add reps session by session, then add weight when you reach the top of the rep range. Stop 1 to 2 reps before failure on each set. Suitable for intermediate female lifters with 6+ months of consistent resistance training.',
-    tags: 'bodybuilding full_body glutes hamstrings upper intermediate',
+    tags: 'bodybuilding glutes hamstrings gender:women goal:build_muscle days:5 intermediate',
     difficulty: 1,
     workouts: [
       {
