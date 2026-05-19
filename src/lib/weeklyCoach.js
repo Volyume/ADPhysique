@@ -53,7 +53,7 @@ const PHASE_CONFIG = {
   agg_cut:   { label: 'Aggressive cut',  goalRatePct: -1.00, isCut: true,  isBulk: false },
   mod_cut:   { label: 'Moderate cut',    goalRatePct: -0.625, isCut: true, isBulk: false },
   mild_cut:  { label: 'Mild cut',        goalRatePct: -0.375, isCut: true, isBulk: false },
-  recomp:    { label: 'Recomp',          goalRatePct: -0.125, isCut: false, isBulk: false },
+  recomp:    { label: 'Hold muscle, lose fat', goalRatePct: -0.125, isCut: false, isBulk: false },
   maint:     { label: 'Maintenance',     goalRatePct: 0,      isCut: false, isBulk: false },
   mild_bulk: { label: 'Lean bulk',       goalRatePct: 0.1875, isCut: false, isBulk: true },
   mod_bulk:  { label: 'Lean bulk',       goalRatePct: 0.375,  isCut: false, isBulk: true },
@@ -379,14 +379,14 @@ export function runWeeklyCoach(inputs) {
     if (consecutiveOffTargetWeeks >= 4 && goalPhase === 'agg_cut') {
       cardioAdjustment = {
         prescribed: true,
-        type: 'LISS + HIIT',
-        note: 'Add 1 HIIT session (10–15 min) on top of existing steady-state cardio.',
+        type: 'Cardio boost',
+        note: 'Add one short high-intensity interval session (10 to 15 min) on top of your steady-paced cardio.',
       };
     } else {
       cardioAdjustment = {
         prescribed: true,
-        type: 'LISS',
-        note: 'Add 3 × 20–30 min steady-state cardio at an easy pace (you should be able to hold a conversation).',
+        type: 'Steady cardio',
+        note: 'Add 3 sessions of 20 to 30 min at an easy pace. You should be able to hold a conversation throughout.',
       };
     }
   } else if (poorRecovery && cardioAdjustment?.prescribed) {

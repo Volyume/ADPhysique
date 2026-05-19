@@ -183,7 +183,7 @@ function LoadingView() {
   return (
     <View style={styles.centred}>
       <ActivityIndicator size="large" color={colors.primary} />
-      <Text style={styles.loadingText}>Building your weekly prescription…</Text>
+      <Text style={styles.loadingText}>Pulling together your weekly coaching…</Text>
     </View>
   );
 }
