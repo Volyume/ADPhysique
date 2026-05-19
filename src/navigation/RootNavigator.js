@@ -357,7 +357,7 @@ function SplashScreen() {
       <Animated.View style={[splashStyles.accent, { transform: [{ scaleX: accentScaleX }] }]} />
 
       <Animated.Text style={[splashStyles.tagline, { opacity: tagOpacity }]}>
-        Your training, sorted.
+        Less thinking. More lifting.
       </Animated.Text>
     </View>
   );
