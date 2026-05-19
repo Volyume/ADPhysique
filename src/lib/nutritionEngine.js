@@ -67,7 +67,7 @@ export const PROTEIN_APPROACHES = {
   advanced: {
     label: 'Advanced',
     range: '2.2–3.3 g/kg',
-    description: 'Higher-end competitive protocol. Used by experienced lifters who want maximum lean mass protection, especially in a deficit.',
+    description: 'The upper end, used by serious athletes and people cutting who want to hold onto as much muscle as possible.',
     lbm: { lean_gain: 2.6, build: 2.6, maintain: 2.6, recomp: 2.9, mild_cut: 3.0, aggressive_cut: 3.2, contest_prep: 3.3 },
     bw:  { lean_gain: 2.2, build: 2.2, maintain: 2.2, recomp: 2.4, mild_cut: 2.6, aggressive_cut: 3.0, contest_prep: 3.3 },
     floor: 1.8,

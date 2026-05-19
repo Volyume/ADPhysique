@@ -487,7 +487,7 @@ export default function NutritionTargetsScreen() {
               "Different guidelines recommend different protein targets:\n\n" +
               "• 1.2 to 1.5 g/kg: general athletic guidelines. Adequate for muscle growth and easy to hit day-to-day.\n\n" +
               "• 1.6 to 2.2 g/kg: the range most commonly recommended for building muscle. Research suggests gains plateau around 1.62 g/kg bodyweight; the upper end gives a comfortable buffer without being excessive.\n\n" +
-              "• 2.2 to 3.3 g/kg: a higher competitive approach. Protein is pushed up in deficits to protect as much muscle as possible. Effective, but harder to sustain.\n\n" +
+              "• 2.2 to 3.3 g/kg: the upper end, used by serious athletes and people cutting aggressively. Effective at preserving muscle, but harder to sustain day-to-day.\n\n" +
               "There is no single right answer. The level you can consistently hit every day will produce better results than an aggressive target you miss half the time."
             } />
             <Text style={styles.approachNoteText}>Different guidelines use different targets. Pick the level you can consistently sustain.</Text>
