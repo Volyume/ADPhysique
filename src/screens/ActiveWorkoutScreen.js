@@ -895,6 +895,63 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <Text style={styles.warmupBannerText}>WARM UP · not counted in volume</Text>
               </View>
             )}
+            {currentSet.setType === 'warmup' && (() => {
+              const isCompound = (exercise?.compoundIsolation ?? exercise?.compound_isolation ?? 'compound') === 'compound';
+              const targetW = setTargets[0]?.weight || prevSets[0]?.weight || null;
+              const warmupsDone = currentEntry?.sets?.filter(s => (s.setType ?? s.set_type) === 'warmup').length ?? 0;
+              const protocol = isCompound
+                ? [
+                    { pct: 0.40, reps: 10 },
+                    { pct: 0.60, reps: 6 },
+                    { pct: 0.80, reps: 3 },
+                  ]
+                : [{ pct: 0.50, reps: 12 }];
+              return (
+                <View style={styles.warmupGuide}>
+                  <View style={styles.warmupGuideHeader}>
+                    <Text style={styles.warmupGuideTitle}>
+                      {isCompound ? 'Compound ramp-up' : 'Feeler set'}
+                    </Text>
+                    <InfoTooltip
+                      size={13}
+                      text={
+                        isCompound
+                          ? 'For compound lifts, a progressive ramp primes your muscles and nervous system without tiring them.\n\n40% × 10 — blood flow, groove the movement\n60% × 6 — building toward working load\n80% × 3 — prime the nervous system, not exhaust it\n\nRest 60–90s between warmup sets. Then move into your working sets.'
+                          : 'One light feeler set before isolation work is plenty. Use around 50% of your working weight for 10–12 easy reps. Focus on feeling the target muscle — not tiring it.'
+                      }
+                    />
+                  </View>
+                  <View style={styles.warmupProtocolRow}>
+                    {protocol.map((step, i) => {
+                      const kg = targetW ? (Math.round(targetW * step.pct * 2) / 2) : null;
+                      const isThis = i === warmupsDone;
+                      const isDone = i < warmupsDone;
+                      return (
+                        <View key={i} style={[styles.warmupStep, isThis && styles.warmupStepActive, isDone && styles.warmupStepFaded]}>
+                          <Text style={[styles.warmupStepPct, isThis && styles.warmupStepPctActive]}>
+                            {Math.round(step.pct * 100)}%
+                          </Text>
+                          {kg !== null && (
+                            <Text style={[styles.warmupStepKg, isDone && styles.warmupStepFadedText]}>{kg}{units}</Text>
+                          )}
+                          <Text style={[styles.warmupStepReps, isDone && styles.warmupStepFadedText]}>× {step.reps}</Text>
+                        </View>
+                      );
+                    })}
+                    {targetW ? (
+                      <View style={[styles.warmupStep, styles.warmupStepWorking]}>
+                        <Text style={styles.warmupStepPct}>100%</Text>
+                        <Text style={styles.warmupStepKg}>{targetW}{units}</Text>
+                        <Text style={styles.warmupStepReps}>working</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  {!targetW && (
+                    <Text style={styles.warmupNoDataHint}>Weights shown after your first session on this lift.</Text>
+                  )}
+                </View>
+              );
+            })()}
             {currentSet.setType === 'dropset' && (
               <View style={styles.dropBanner}>
                 <Ionicons name="arrow-down-circle-outline" size={14} color={colors.gold} />
@@ -1586,6 +1643,20 @@ const styles = StyleSheet.create({
   setEntryCardDrop: { borderColor: colors.gold, backgroundColor: 'rgba(255,215,0,0.06)' },
   warmupBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   warmupBannerText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.warning, letterSpacing: 0.8 },
+  warmupGuide: { borderTopWidth: 1, borderTopColor: colors.warning + '28', paddingTop: spacing.sm, gap: spacing.sm },
+  warmupGuideHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  warmupGuideTitle: { fontSize: fontSize.xs, color: colors.textMuted, fontWeight: fontWeight.semibold, letterSpacing: 0.3 },
+  warmupProtocolRow: { flexDirection: 'row', gap: spacing.xs },
+  warmupStep: { flex: 1, alignItems: 'center', paddingVertical: spacing.xs, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, gap: 2 },
+  warmupStepActive: { borderColor: colors.warning + '99', backgroundColor: colors.warning + '12' },
+  warmupStepFaded: { opacity: 0.35 },
+  warmupStepPct: { fontSize: 10, color: colors.textMuted, fontWeight: fontWeight.bold },
+  warmupStepPctActive: { color: colors.warning },
+  warmupStepKg: { fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.bold },
+  warmupStepReps: { fontSize: 10, color: colors.textSecondary },
+  warmupStepWorking: { borderColor: colors.primary + '55', backgroundColor: colors.primary + '0a' },
+  warmupStepFadedText: { color: colors.textMuted },
+  warmupNoDataHint: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
   dropBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   dropBannerText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.gold, letterSpacing: 0.8 },
   setEntryTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.black, color: colors.textMuted, letterSpacing: 1.5 },
