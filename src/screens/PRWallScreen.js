@@ -149,7 +149,7 @@ export default function PRWallScreen({ navigation }) {
             <View style={styles.standardsCard}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
                 <Text style={styles.standardsTitle}>Strength standards</Text>
-                <InfoTooltip text={`Your estimated 1-rep max as a multiple of your bodyweight.\n\n1.0× = you can lift your own bodyweight\n1.5× = strong for most people\n2.0× = advanced\n\nBeginner → Novice → Intermediate → Advanced → Elite`} size={13} />
+                <InfoTooltip text={`Your estimated max single lift, shown as a multiple of your bodyweight.\n\n1.0× = you can lift your own bodyweight\n1.5× = strong for most people\n2.0× = advanced\n\nBeginner → Novice → Intermediate → Advanced → Elite`} size={13} />
               </View>
               <Text style={styles.standardsSubtitle}>vs {bodyWeight} {units} bodyweight</Text>
               {Object.entries(strengthStandards).map(([name, std]) => std ? (

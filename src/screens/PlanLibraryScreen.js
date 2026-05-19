@@ -175,7 +175,7 @@ function DivisionGrid({ selectedDivision, onSelectDivision }) {
   return (
     <View style={styles.divisionSection}>
       <Text style={styles.divisionIntroDesc}>
-        These programmes are built around the specific visual priorities of each judged division. Designed for competitors — or anyone who trains with a division in mind.
+        These programmes are built around the specific visual priorities of each judged division. Designed for competitors, or anyone who trains with a division in mind.
       </Text>
       <Text style={styles.divisionGroupLabel}>Men's divisions</Text>
       <View style={styles.divisionChips}>
@@ -546,7 +546,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
                   ))}
                 </View>
                 <TouchableOpacity style={styles.quizSkip} onPress={dismissQuiz}>
-                  <Text style={styles.quizSkipText}>Skip — browse all plans</Text>
+                  <Text style={styles.quizSkipText}>Skip and browse all plans</Text>
                 </TouchableOpacity>
               </>
             ) : quizResult ? (
@@ -585,7 +585,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
               // No result
               <>
                 <Text style={styles.quizResultTitle}>No exact match found</Text>
-                <Text style={styles.quizResultDesc}>Browse all plans below — something will fit.</Text>
+                <Text style={styles.quizResultDesc}>Browse all plans below. Something will fit.</Text>
                 <TouchableOpacity style={styles.quizStartBtn} onPress={handleQuizBrowse} activeOpacity={0.88}>
                   <Text style={styles.quizStartText}>Browse all plans</Text>
                 </TouchableOpacity>

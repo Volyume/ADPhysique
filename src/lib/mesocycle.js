@@ -179,7 +179,7 @@ export function evaluateAutoReg(feedbackWindow = []) {
     return {
       action: 'deload_now',
       setsAdjust: -50,
-      message: 'Joint discomfort is significant — drop to half volume this week and avoid any painful movements.',
+      message: 'Joint discomfort is significant. Drop to half volume this week and avoid any painful movements.',
     };
   }
 
@@ -189,7 +189,7 @@ export function evaluateAutoReg(feedbackWindow = []) {
     return {
       action: 'reduce_volume',
       setsAdjust: -20,
-      message: 'Persistent joint discomfort detected — reducing volume 20% this week. Swap painful exercises.',
+      message: 'Persistent joint discomfort detected. Reducing volume 20% this week. Swap painful exercises.',
     };
   }
 
@@ -198,7 +198,7 @@ export function evaluateAutoReg(feedbackWindow = []) {
     return {
       action: 'deload_now',
       setsAdjust: -50,
-      message: 'Multiple very hard sessions with high fatigue — your body is asking for a lighter week.',
+      message: 'Multiple very hard sessions with high fatigue. Your body is asking for a lighter week.',
     };
   }
 
@@ -207,7 +207,7 @@ export function evaluateAutoReg(feedbackWindow = []) {
     return {
       action: 'reduce_volume',
       setsAdjust: -15,
-      message: 'Coming into sessions sore with high fatigue — trim volume 15% this week to protect recovery.',
+      message: 'Coming into sessions sore with high fatigue. Trim volume 15% this week to protect recovery.',
     };
   }
 
@@ -216,7 +216,7 @@ export function evaluateAutoReg(feedbackWindow = []) {
     return {
       action: 'hold_volume',
       setsAdjust: 0,
-      message: 'Sessions feel hard but pump quality is low — hold your volume here until recovery improves.',
+      message: 'Sessions feel hard but pump quality is low. Hold your volume here until recovery improves.',
     };
   }
 
@@ -225,7 +225,7 @@ export function evaluateAutoReg(feedbackWindow = []) {
     return {
       action: 'continue',
       setsAdjust: 0,
-      message: 'Recovery is excellent — stay on track. You may add a set where sessions feel short.',
+      message: 'Recovery is excellent. Stay on track and add a set where sessions feel short.',
     };
   }
 
@@ -234,14 +234,14 @@ export function evaluateAutoReg(feedbackWindow = []) {
     return {
       action: 'hold_volume',
       setsAdjust: 0,
-      message: 'Training is challenging — keep volume steady this week and focus on sleep and nutrition.',
+      message: 'Training is challenging. Keep volume steady this week and focus on sleep and nutrition.',
     };
   }
 
   return {
     action: 'continue',
     setsAdjust: 0,
-    message: 'All signals normal — continue the plan as written.',
+    message: 'All signals normal. Continue the plan as written.',
   };
 }
 
@@ -267,7 +267,7 @@ export function predictDeloadWeek(feedbackWindow = [], mesoWeek = 1, experience 
   const weeksToScheduled = recoveryWeek - mesoWeek;
 
   if (weeksToScheduled <= 0) {
-    return { weeksUntilDeload: 0, reason: 'This is your rest week — lighter sessions this week.' };
+    return { weeksUntilDeload: 0, reason: 'This is your rest week. Keep sessions lighter this week.' };
   }
 
   if (!feedbackWindow.length) {
@@ -291,7 +291,7 @@ export function predictDeloadWeek(feedbackWindow = [], mesoWeek = 1, experience 
     const early = Math.max(1, weeksToScheduled - 1);
     return {
       weeksUntilDeload: early,
-      reason: `Fatigue is building — rest week likely in about ${early} ${early === 1 ? 'week' : 'weeks'}.`,
+      reason: `Fatigue is building. Rest week likely in about ${early} ${early === 1 ? 'week' : 'weeks'}.`,
     };
   }
 
@@ -395,7 +395,7 @@ export function checkDoubleProgressionReady(sessionHistory = []) {
   if (bothQualify) {
     return {
       ready: true,
-      message: 'You hit the top of the rep range with something left in the tank for 2 sessions — add weight next time.',
+      message: 'You hit the top of the rep range with something left in the tank for 2 sessions. Add weight next time.',
     };
   }
 
@@ -404,12 +404,12 @@ export function checkDoubleProgressionReady(sessionHistory = []) {
   if (sets?.every(s => (s.reps ?? 0) >= (targetRepsMax ?? 99))) {
     return {
       ready: false,
-      message: 'Good session — repeat the same weight next time. Hit it again to confirm before adding more.',
+      message: 'Good session. Repeat the same weight next time. Hit it again to confirm before adding more.',
     };
   }
 
   return {
     ready: false,
-    message: 'Keep working — match your best set next time before adding weight.',
+    message: 'Keep working. Match your best set next time before adding weight.',
   };
 }

@@ -470,7 +470,7 @@ function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, onPress,
       <TouchableOpacity style={[styles.card, styles.mesoEmpty]} onPress={onBuild} activeOpacity={0.8}>
         <Ionicons name="layers-outline" size={32} color={colors.primaryDim} />
         <Text style={styles.mesoEmptyTitle}>No active plan</Text>
-        <Text style={styles.mesoEmptySub}>Browse the plan library or build your own — your progress will appear right here once you start.</Text>
+        <Text style={styles.mesoEmptySub}>Browse the plan library or build your own. Your progress will appear right here once you start.</Text>
         <View style={styles.mesoEmptyBtn}>
           <Text style={styles.mesoEmptyBtnText}>Browse plans</Text>
         </View>

@@ -324,7 +324,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             <ChipRow
               options={[
                 { value: 1, label: 'Low' },
-                { value: 2, label: 'Below avg' },
+                { value: 2, label: 'Below normal' },
                 { value: 3, label: 'Normal' },
                 { value: 4, label: 'Good' },
                 { value: 5, label: 'High' },

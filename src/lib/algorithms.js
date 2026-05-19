@@ -887,7 +887,7 @@ export function evaluateDeloadTriggers(events = []) {
     return {
       shouldDeload: true,
       triggeredMuscles,
-      reason: `${triggeredMuscles.length} muscle groups exceeded their weekly limit — a lighter week is recommended.`,
+      reason: `${triggeredMuscles.length} muscle groups exceeded their weekly limit. A lighter week is recommended.`,
     };
   }
 
@@ -895,7 +895,7 @@ export function evaluateDeloadTriggers(events = []) {
     return {
       shouldDeload: false,
       triggeredMuscles,
-      reason: `${MUSCLE_DISPLAY_NAMES[triggeredMuscles[0]] || triggeredMuscles[0]} is close to its weekly limit — keep an eye on it next session.`,
+      reason: `${MUSCLE_DISPLAY_NAMES[triggeredMuscles[0]] || triggeredMuscles[0]} is close to its weekly limit. Keep an eye on it next session.`,
     };
   }
 

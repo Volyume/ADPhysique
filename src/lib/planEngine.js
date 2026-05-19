@@ -847,20 +847,20 @@ function buildMesocycleSchedule(experience) {
   const isAdvanced = experience === 'advanced' || experience === 'competitive';
   if (isAdvanced) {
     return [
-      { week: 1, label: 'Introduction week — build your groove',      setsMultiplier: 1.00 },
-      { week: 2, label: 'Build week — push a little harder',          setsMultiplier: 1.10 },
-      { week: 3, label: 'Build week — push a little harder',          setsMultiplier: 1.15 },
-      { week: 4, label: 'Build week — push a little harder',          setsMultiplier: 1.20 },
-      { week: 5, label: 'Peak push — best effort',                    setsMultiplier: 1.25 },
-      { week: 6, label: 'Rest week — let your body catch up',         setsMultiplier: 0.50 },
+      { week: 1, label: 'Introduction week: build your groove',       setsMultiplier: 1.00 },
+      { week: 2, label: 'Build week: push a little harder',           setsMultiplier: 1.10 },
+      { week: 3, label: 'Build week: push a little harder',           setsMultiplier: 1.15 },
+      { week: 4, label: 'Build week: push a little harder',           setsMultiplier: 1.20 },
+      { week: 5, label: 'Peak push: best effort',                     setsMultiplier: 1.25 },
+      { week: 6, label: 'Rest week: let your body catch up',          setsMultiplier: 0.50 },
     ];
   }
   return [
-    { week: 1, label: 'Introduction week — build your groove',      setsMultiplier: 1.00 },
-    { week: 2, label: 'Build week — push a little harder',          setsMultiplier: 1.10 },
-    { week: 3, label: 'Build week — push a little harder',          setsMultiplier: 1.20 },
-    { week: 4, label: 'Peak push — best effort',                    setsMultiplier: 1.25 },
-    { week: 5, label: 'Rest week — let your body catch up',         setsMultiplier: 0.50 },
+    { week: 1, label: 'Introduction week: build your groove',       setsMultiplier: 1.00 },
+    { week: 2, label: 'Build week: push a little harder',           setsMultiplier: 1.10 },
+    { week: 3, label: 'Build week: push a little harder',           setsMultiplier: 1.20 },
+    { week: 4, label: 'Peak push: best effort',                     setsMultiplier: 1.25 },
+    { week: 5, label: 'Rest week: let your body catch up',          setsMultiplier: 0.50 },
   ];
 }
 
@@ -950,7 +950,7 @@ function buildPersonalisationSummary(inputs, effectiveDays, splitType, weakPoint
     experience:     EXPERIENCE_LABELS[experience] ?? experience,
     trainingAge:    trainingAge ? `Training age: ${trainingAge}` : 'Training age: not specified',
     daysPerWeek:    effectiveDays !== daysPerWeek
-      ? `Requested ${daysPerWeek} days — adjusted to ${effectiveDays} days based on experience`
+      ? `Requested ${daysPerWeek} days, adjusted to ${effectiveDays} days based on experience`
       : `${effectiveDays} training days per week`,
     sessionLength:  `~${sessionLengthMinutes} min sessions`,
     equipment:      EQUIPMENT_LABELS[equipment] ?? equipment,
@@ -985,27 +985,27 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
   const splitName = SPLIT_LABELS[splitType] ?? splitType;
   const scheduleMap = {
     full_body:
-      `${splitName} was chosen for your ${effectiveDays} days at ${experience} level. Hitting every muscle group each session means you practise each movement pattern ${effectiveDays} times a week — frequent repetition is the primary driver of early and intermediate progress, and this structure uses your available days as efficiently as possible.`,
+      `${splitName} was chosen for your ${effectiveDays} days at ${experience} level. Hitting every muscle group each session means you practise each movement pattern ${effectiveDays} times a week. Frequent repetition is the primary driver of early and intermediate progress, and this structure uses your available days as efficiently as possible.`,
     upper_lower:
       `${splitName} was chosen for your ${effectiveDays} days at ${experience} level. Training each muscle group twice a week is the most well-supported frequency for sustained progress: enough repetition to reinforce adaptations, enough per-session volume to make sessions worth doing, and 48–72 hours between sessions for recovery.`,
     ppl:
-      `${splitName} was chosen for your ${effectiveDays} days at ${experience} level. Grouping muscles by movement pattern means each group has fully recovered before it trains again. Push muscles rest on Pull and Legs days — no residual chest fatigue when you're pressing shoulders.`,
+      `${splitName} was chosen for your ${effectiveDays} days at ${experience} level. Grouping muscles by movement pattern means each group has fully recovered before it trains again. Push muscles rest on Pull and Legs days, so there's no residual chest fatigue when you're pressing shoulders.`,
     ppl_ab:
-      `${splitName} was chosen for your ${effectiveDays} days at ${experience} level. Two complete Push / Pull / Legs rotations per week give each muscle group twice-weekly frequency — necessary to keep driving change at your stage. Rotating A and B exercise choices across the two cycles varies the stimulus enough to manage long-term fatigue while sustaining high weekly volume.`,
+      `${splitName} was chosen for your ${effectiveDays} days at ${experience} level. Two complete Push / Pull / Legs rotations per week give each muscle group twice-weekly frequency, which is necessary to keep driving change at your stage. Rotating A and B exercise choices across the two cycles varies the stimulus enough to manage long-term fatigue while sustaining high weekly volume.`,
     upper_lower_wp:
-      `Upper / Lower on 4 days trains every muscle group twice a week. The fifth session is reserved entirely for ${weakPointUILabels.length ? weakPointUILabels.join(' and ') : 'your selected weak points'} — targeted extra volume timed so it does not compromise recovery on your main training days.`,
+      `Upper / Lower on 4 days trains every muscle group twice a week. The fifth session is reserved entirely for ${weakPointUILabels.length ? weakPointUILabels.join(' and ') : 'your selected weak points'}. The targeted extra volume is timed so it does not compromise recovery on your main training days.`,
   };
   result.schedule = scheduleMap[splitType] ?? `${splitName} was selected to match your ${effectiveDays} days, ${experience} level, and goal.`;
 
   // goal
   const goalMap = {
     general_hypertrophy:   `Even, well-rounded muscle growth. Volume is spread across all major groups so nothing gets systematically undertrained, which is the most common cause of stalled progress.`,
-    balanced_bodybuilding: `Balanced Bodybuilding distributes volume so no single muscle dominates the plan. This prevents the common imbalances — overdeveloped chest, underdeveloped back, neglected rear delts — that accumulate over years of unstructured training.`,
-    aesthetic_v_taper:     `V-Taper prioritises the muscles that create shoulder-to-waist width: outer shoulders, back width, and rear delts. You will see more sets on these muscles than a general plan would assign. Abs use only anti-extension and rotation exercises — direct crunching work is de-emphasised.`,
+    balanced_bodybuilding: `Balanced Bodybuilding distributes volume so no single muscle dominates the plan. This prevents the common imbalances (overdeveloped chest, underdeveloped back, neglected rear delts) that accumulate over years of unstructured training.`,
+    aesthetic_v_taper:     `V-Taper prioritises the muscles that create shoulder-to-waist width: outer shoulders, back width, and rear delts. You will see more sets on these muscles than a general plan would assign. Abs use only anti-extension and rotation exercises. Direct crunching work is de-emphasised.`,
     weak_point_spec:        `Weak Point Specialisation pushes${weakPointUILabels.length ? ' ' + weakPointUILabels.join(' and ') : ' your flagged muscles'} close to their maximum weekly volume while keeping everything else at the minimum needed to hold current size. Targeted overload, held across the full training block, is how lagging muscles close the gap.`,
     strength_hypertrophy:  `Muscle growth is still the goal, but your main compound lifts are loaded heavier and in a lower rep range. Building strength lets you use more weight over time, and more weight applied correctly means more muscle.`,
     recomp:                `Fat Loss / Recomp Support sets volume at a level your body can recover from while eating at a slight deficit. The goal is preserving the muscle you already have while your nutrition gradually reduces body fat. Training stimulus stays consistent; recovery is the limiting factor, not your effort.`,
-    x_frame_physique:      `X-Frame Physique concentrates volume on the four visual anchor points — outer shoulders, back width, glutes and hamstrings — that create a dramatic X silhouette when viewed from front and rear. Side delts, lats, and posterior chain receive additional sets each week; direct waist-widening ab work is minimised to preserve the illusion of a narrow mid-section.`,
+    x_frame_physique:      `X-Frame Physique concentrates volume on the four visual anchor points (outer shoulders, back width, glutes and hamstrings) that create a dramatic X silhouette when viewed from front and rear. Side delts, lats, and posterior chain receive additional sets each week; direct waist-widening ab work is minimised to preserve the illusion of a narrow mid-section.`,
   };
   result.goal = goalMap[goal] ?? `Goal: ${GOAL_LABELS[goal] ?? goal}.`;
 
@@ -1013,23 +1013,23 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
   const expMap = {
     beginner:     `When you're starting out, your body responds well to almost any consistent training. Volume is kept lower here so you can build good technique and work capacity before adding more sets.`,
     intermediate: `At this stage, your muscles need more total weekly sets to keep improving than they did early on. This plan does enough to keep you progressing without piling up more fatigue than you can recover from between sessions.`,
-    advanced:     `Progress comes more slowly now and needs more specific programming. Set counts are higher here because your body has adapted to handle more work — lower volumes simply would not be enough to keep you moving forward.`,
+    advanced:     `Progress comes more slowly now and needs more specific programming. Set counts are higher here because your body has adapted to handle more work, and lower volumes simply would not be enough to keep you moving forward.`,
     competitive:  `Your muscles have adapted to high training volumes and need a lot of weekly work to keep changing. This plan uses the highest set counts, balanced carefully against recovery so you can sustain quality across the full block.`,
   };
   result.experience = expMap[experience] ?? `Experience level: ${experience}.`;
 
   // progression (always)
   const weeks = (experience === 'advanced' || experience === 'competitive') ? 6 : 5;
-  result.progression = `The plan spans ${weeks} weeks. You start at the sets shown here and add roughly one set per exercise per week across the first ${weeks - 1} weeks. The final week drops to about half the volume — this is not a lost week. Your muscles use the easier week to fully repair and come back stronger before the next block.`;
+  result.progression = `The plan spans ${weeks} weeks. You start at the sets shown here and add roughly one set per exercise per week across the first ${weeks - 1} weeks. The final week drops to about half the volume. This is not a lost week. Your muscles use the easier week to fully repair and come back stronger before the next block.`;
 
   // equipment
-  result.equipment = `Exercises were selected for ${eqLabel}. Every lift in the plan is available and safe to perform with the equipment you specified — no substitutions needed.`;
+  result.equipment = `Exercises were selected for ${eqLabel}. Every lift in the plan is available and safe to perform with the equipment you specified, with no substitutions needed.`;
 
   // recovery (conditional)
   if (recoveryRating === 'poor') {
-    result.recovery = `You flagged poor recovery — limited sleep or high life stress. The plan uses less volume than it would at average recovery, and sessions are kept to ${effectiveDays} days. Sleep and stress management will do more for your progress right now than adding sets.`;
+    result.recovery = `You flagged poor recovery (limited sleep or high life stress). The plan uses less volume than it would at average recovery, and sessions are kept to ${effectiveDays} days. Sleep and stress management will do more for your progress right now than adding sets.`;
   } else if (recoveryRating === 'good') {
-    result.recovery = `Good recovery allows slightly more volume than average, which is reflected in this plan. You are sleeping well and managing stress — take advantage of that by keeping nutrition consistent throughout the block.`;
+    result.recovery = `Good recovery allows slightly more volume than average, which is reflected in this plan. You are sleeping well and managing stress, so take advantage of that by keeping nutrition consistent throughout the block.`;
   }
 
   // nutrition (conditional)
@@ -1039,7 +1039,7 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
     const nutMap = {
       lean_gain:      `${phaseLabel}: you have extra calories to work with. Volume is slightly higher because extra food speeds up recovery and lets you get more out of your training. Keep the intensity up and you'll make the most of it.`,
       build:          `${phaseLabel}: eating more supports higher training volumes. This plan uses more weekly sets than it would at maintenance, because your body can recover from more. Keep protein high to direct those extra calories toward muscle rather than fat.`,
-      mild_cut:       `${phaseLabel}: eating less slows recovery slightly. Volume is modest and you should stop a rep or two further from failure than usual — this preserves muscle and keeps recovery manageable while in a deficit.`,
+      mild_cut:       `${phaseLabel}: eating less slows recovery slightly. Volume is modest and you should stop a rep or two further from failure than usual. This preserves muscle and keeps recovery manageable while in a deficit.`,
       aggressive_cut: `${phaseLabel}: a significant calorie cut reduces how much your body can recover from. Volume is reduced. Keep protein at or above 2 g per kg of bodyweight and focus on your main compound lifts to protect muscle.`,
       contest_prep:   `Contest prep: your recovery is severely limited. Volume is at the lower end and caution is warranted. Prioritise sleep, protein intake, and managing life stress outside the gym.`,
       recomp:         `Body Recomposition: training volume is kept at a level your body can handle while eating at a slight deficit. The goal is doing enough to hold on to your muscle while your nutrition gradually shifts your body composition.`,
@@ -1049,7 +1049,7 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
 
   // weakPoints (conditional)
   if (weakPointUILabels.length > 0) {
-    result.weakPoints = `${weakPointUILabels.join(' and ')} ${weakPointUILabels.length === 1 ? 'receives' : 'receive'} more weekly sets than the rest of the plan. Consistently directing extra volume at a lagging muscle across a full training block — while the rest of the programme stays balanced — is the most reliable way to close a development gap.`;
+    result.weakPoints = `${weakPointUILabels.join(' and ')} ${weakPointUILabels.length === 1 ? 'receives' : 'receive'} more weekly sets than the rest of the plan. Consistently directing extra volume at a lagging muscle across a full training block, while the rest of the programme stays balanced, is the most reliable way to close a development gap.`;
   }
 
   return result;
@@ -1085,7 +1085,7 @@ function buildWarnings(inputs, effectiveDays, weakPointUILabels) {
   }
   if (weakPointUILabels.length === 3) {
     warnings.push(
-      'Three weak points are targeted — the maximum supported. Any additional muscles beyond three will not receive specialisation volume.',
+      'Three weak points are targeted (the maximum supported). Any additional muscles beyond three will not receive specialisation volume.',
     );
   }
 
@@ -1207,7 +1207,7 @@ export function generatePlan(inputs) {
   }[splitType] ?? splitType;
 
   return {
-    name:                    `${goalShort} ${splitShort} — ${effectiveDays}×/week`,
+    name:                    `${goalShort} ${splitShort} ${effectiveDays}×/week`,
     goal,
     splitType,
     daysPerWeek:             effectiveDays,
