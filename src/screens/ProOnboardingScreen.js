@@ -33,12 +33,14 @@ function estimateLBM(weightKg, heightCm, sex) {
 }
 
 // Returns protein gram targets per level, calculated from lean mass.
+// The Boer LBM formula overestimates fat mass for heavier/athletic individuals,
+// so we take the higher of the LBM-based figure or a bodyweight floor.
 function getProteinTargets(weightKg, heightCm, sex) {
   const lbm = estimateLBM(weightKg, heightCm, sex);
   return {
-    standard: Math.round(lbm * 2.0), // 2.0g per kg LBM — minimum effective
-    high:     Math.round(lbm * 2.4), // 2.4g per kg LBM — solid for regular training
-    max:      Math.round(lbm * 2.7), // 2.7g per kg LBM — upper evidence-based limit
+    standard: Math.max(Math.round(lbm * 2.0), Math.round(weightKg * 1.8)), // min 1.8 g/kg BW
+    high:     Math.max(Math.round(lbm * 2.4), Math.round(weightKg * 2.0)), // min 2.0 g/kg BW
+    max:      Math.max(Math.round(lbm * 2.7), Math.round(weightKg * 2.2)), // min 2.2 g/kg BW
   };
 }
 
@@ -95,7 +97,7 @@ const PROTEIN_LEVELS = [
   {
     id: 'standard',
     label: 'Standard',
-    sub: 'A solid starting point. Good for maintaining where you are or lighter training periods.',
+    sub: 'The research-backed minimum for active people. A consistent, achievable daily target.',
   },
   {
     id: 'high',
