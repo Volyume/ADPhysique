@@ -516,7 +516,7 @@ export default function AthleteHubScreen({ navigation }) {
               <View style={styles.cardHeaderText}>
                 <Text style={styles.cardTitle}>Weight trend</Text>
                 <Text style={styles.cardSubtitle}>
-                  {weightTrend.length}-day trend · {bodyWeightUnits === 'st' ? 'Stone+lbs' : (bodyWeightUnits || 'kg')}
+                  Your true weight trend · smoothed across noise
                 </Text>
               </View>
               <InfoTooltip
@@ -609,7 +609,7 @@ export default function AthleteHubScreen({ navigation }) {
           />
           <NavRow
             icon="pause-circle-outline"
-            label="What we held"
+            label="Strategic journal"
             sub="Every coaching decision that was paused, and why"
             onPress={() => navigation.navigate('CoachHeldHistory')}
           />

@@ -2316,6 +2316,38 @@ export async function migrateLocalUserId(localUserId, supabaseUserId) {
   }
 }
 
+export async function getProgressionTeaser(userId, lastWorkoutId, prevWorkoutId) {
+  if (!lastWorkoutId || !prevWorkoutId) return null;
+  const d = await db();
+  const w1Rows = await d.getAllAsync(
+    `SELECT ws.exercise_id, e.name, MAX(ws.weight) as max_weight
+     FROM workout_sets ws
+     JOIN exercises e ON e.id = ws.exercise_id
+     WHERE ws.workout_id = ? AND ws.set_type != 'warmup' AND ws.weight > 0
+     GROUP BY ws.exercise_id`,
+    [lastWorkoutId],
+  );
+  if (w1Rows.length === 0) return null;
+  const w2Rows = await d.getAllAsync(
+    `SELECT ws.exercise_id, MAX(ws.weight) as max_weight
+     FROM workout_sets ws
+     WHERE ws.workout_id = ? AND ws.set_type != 'warmup' AND ws.weight > 0
+     GROUP BY ws.exercise_id`,
+    [prevWorkoutId],
+  );
+  const w2Map = Object.fromEntries(w2Rows.map(r => [r.exercise_id, r.max_weight]));
+  let progressed = null;
+  let stalled = null;
+  for (const row of w1Rows) {
+    const prev = w2Map[row.exercise_id];
+    if (prev == null) continue;
+    if (row.max_weight > prev && !progressed) progressed = row.name;
+    else if (row.max_weight <= prev && !stalled) stalled = row.name;
+    if (progressed && stalled) break;
+  }
+  return { progressed, stalled };
+}
+
 export async function insertWorkoutSetFromCloud(userId, s) {
   const d = await db();
   await d.runAsync(

@@ -10,6 +10,7 @@ import {
   addExerciseToRoutine, removeExerciseFromRoutine, createWorkout, updateRoutineExercise,
 } from '../lib/database';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
+import { getExerciseWhyThis } from '../lib/whyThisTemplates';
 import useAppStore from '../store/useAppStore';
 
 export default function RoutineDetailScreen({ navigation, route }) {
@@ -156,6 +157,10 @@ export default function RoutineDetailScreen({ navigation, route }) {
                   (exercise.primaryMuscle || '').charAt(0).toUpperCase() +
                   (exercise.primaryMuscle || '').slice(1).replace(/_/g, ' ')}
               </Text>
+              {(() => {
+                const why = getExerciseWhyThis(exercise.name, exercise.subregion);
+                return why ? <Text style={styles.exerciseWhy}>{why}</Text> : null;
+              })()}
             </View>
             <View style={styles.cardActions}>
               <TouchableOpacity
@@ -350,6 +355,7 @@ const styles = StyleSheet.create({
   exerciseName: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   exerciseMeta: { fontSize: fontSize.sm, color: colors.primary },
   exerciseMuscle: { fontSize: fontSize.xs, color: colors.textMuted },
+  exerciseWhy: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic', marginTop: 2, lineHeight: 16 },
   exerciseStartWeight: { fontSize: fontSize.xs, color: colors.primary },
   cardActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   editOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },

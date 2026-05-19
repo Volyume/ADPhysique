@@ -16,7 +16,7 @@ import {
   getAllRoutineExerciseCounts, createWorkout, getRoutineExercisesWithDetails,
   getWorkoutSetsForWorkout, getExerciseById,
   getCurrentMesocycleWeek, getPlannedMuscleVolume, getAllExercises,
-  getMorningWeightToday, logMorningWeight,
+  getMorningWeightToday, logMorningWeight, getProgressionTeaser,
 } from '../lib/database';
 import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
@@ -66,6 +66,7 @@ export default function HomeScreen({ navigation }) {
   const [showCoachingNudge, setShowCoachingNudge] = useState(false);
   const [totalSessions, setTotalSessions] = useState(0);
   const [showIntentPrompt, setShowIntentPrompt] = useState(false);
+  const [teaserInsight, setTeaserInsight] = useState(null);
   const pendingStartRef = React.useRef(null); // ({ routineId, initialExercises })
 
   const scrollRef = useRef(null);
@@ -177,6 +178,13 @@ export default function HomeScreen({ navigation }) {
         week -= 1;
       }
       setStreakWeeks(streak);
+
+      // Progression teaser — free tier only, needs 2+ sessions to compare
+      if (tier === 'free' && completed.length >= 2) {
+        getProgressionTeaser(user.id, completed[0].id, completed[1].id)
+          .then(t => setTeaserInsight(t))
+          .catch(() => {});
+      }
     } catch (_e) {}
   }
 
@@ -443,9 +451,13 @@ export default function HomeScreen({ navigation }) {
               <Ionicons name="sparkles" size={18} color={colors.primary} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.proTeaserTitle}>
-                  {totalSessions >= 10
-                    ? `${totalSessions} sessions logged. Pro coaching uses all of it.`
-                    : 'Add a coach that adjusts your plan each week.'}
+                  {teaserInsight?.progressed && teaserInsight?.stalled
+                    ? `${teaserInsight.progressed} went up. ${teaserInsight.stalled} held. Pro tells you what to do next.`
+                    : teaserInsight?.progressed
+                      ? `${teaserInsight.progressed} progressed this week. Pro builds on it.`
+                      : totalSessions >= 10
+                        ? `${totalSessions} sessions logged. Pro coaching uses all of it.`
+                        : 'Add a coach that adjusts your plan each week.'}
                 </Text>
                 <Text style={styles.proTeaserSub}>Free during beta</Text>
               </View>

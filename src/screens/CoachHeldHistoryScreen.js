@@ -17,6 +17,59 @@ function formatWeekStart(ms) {
   return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
 }
 
+function buildDecisionRows(week) {
+  const rows = [];
+
+  // Decisions that resulted in actual changes
+  const adj = week.adjustments ?? {};
+  if (adj.calories?.change && adj.calories.note) {
+    const dir = adj.calories.change > 0 ? 'up' : 'down';
+    rows.push({
+      type: 'changed',
+      icon: 'checkmark-circle-outline',
+      label: `Calories adjusted ${dir}`,
+      detail: adj.calories.note,
+    });
+  }
+  const trainingSignal = adj.training?.signal;
+  if (trainingSignal && trainingSignal !== 'hold' && adj.training?.note) {
+    rows.push({
+      type: 'changed',
+      icon: 'checkmark-circle-outline',
+      label: trainingSignal === 'push' ? 'Training volume increased' : 'Training volume reduced',
+      detail: adj.training.note,
+    });
+  }
+  if (adj.steps?.change && adj.steps.note) {
+    rows.push({
+      type: 'changed',
+      icon: 'checkmark-circle-outline',
+      label: 'Steps target adjusted',
+      detail: adj.steps.note,
+    });
+  }
+  if (week.deloadSuggested && week.deloadNote) {
+    rows.push({
+      type: 'changed',
+      icon: 'moon-outline',
+      label: 'Lighter week suggested',
+      detail: week.deloadNote,
+    });
+  }
+
+  // Decisions that were deliberately held
+  for (const d of (week.heldDecisions ?? [])) {
+    rows.push({
+      type: 'held',
+      icon: 'pause-circle-outline',
+      label: null,
+      detail: d.reason,
+    });
+  }
+
+  return rows;
+}
+
 export default function CoachHeldHistoryScreen({ navigation }) {
   const { user } = useAppStore();
   const [weeks, setWeeks] = useState([]);
@@ -25,16 +78,22 @@ export default function CoachHeldHistoryScreen({ navigation }) {
   useEffect(() => {
     async function load() {
       const history = await getCoachOutputHistory(user.id);
-      const withHeld = history.filter(
-        w => Array.isArray(w.heldDecisions) && w.heldDecisions.length > 0,
-      );
-      setWeeks(withHeld);
+      const withData = history.filter(w => {
+        const hasHeld = Array.isArray(w.heldDecisions) && w.heldDecisions.length > 0;
+        const hasChanged = w.adjustments?.calories?.change ||
+          (w.adjustments?.training?.signal && w.adjustments.training.signal !== 'hold') ||
+          w.adjustments?.steps?.change ||
+          w.deloadSuggested;
+        return hasHeld || hasChanged;
+      });
+      setWeeks(withData);
       setLoading(false);
     }
     load().catch(() => setLoading(false));
   }, []);
 
   const isEmpty = !loading && weeks.length === 0;
+  const totalDecisions = weeks.reduce((n, w) => n + buildDecisionRows(w).length, 0);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
@@ -46,13 +105,13 @@ export default function CoachHeldHistoryScreen({ navigation }) {
         >
           <Ionicons name="chevron-back" size={24} color={colors.textSecondary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>What we held</Text>
+        <Text style={styles.headerTitle}>Strategic journal</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.intro}>
-          Every time the coach paused a decision instead of acting on it, the reason is recorded here. This is the full history.
+          Every decision the coach made, and every time it held back instead of acting. Changed and held, both recorded here, with the reason for each.
         </Text>
 
         {loading && (
@@ -61,36 +120,49 @@ export default function CoachHeldHistoryScreen({ navigation }) {
 
         {isEmpty && (
           <View style={styles.emptyCard}>
-            <Ionicons name="checkmark-circle-outline" size={32} color={colors.textMuted} />
-            <Text style={styles.emptyTitle}>Nothing held yet</Text>
+            <Ionicons name="book-outline" size={32} color={colors.textMuted} />
+            <Text style={styles.emptyTitle}>No entries yet</Text>
             <Text style={styles.emptyBody}>
-              When the coach decides to wait rather than change something, the reason will appear here.
+              After your first weekly check-in, decisions and holds will appear here.
             </Text>
           </View>
         )}
 
-        {weeks.map((week, wi) => (
-          <View key={week.weekStart ?? wi} style={styles.weekBlock}>
-            <Text style={styles.weekLabel}>
-              Week of {formatWeekStart(week.weekStart)}
-            </Text>
-            {week.heldDecisions.map((d, di) => (
-              <View key={di} style={styles.heldRow}>
-                <Ionicons
-                  name="pause-circle-outline"
-                  size={16}
-                  color={colors.textMuted}
-                  style={styles.heldIcon}
-                />
-                <Text style={styles.heldText}>{d.reason}</Text>
-              </View>
-            ))}
-          </View>
-        ))}
+        {weeks.map((week, wi) => {
+          const rows = buildDecisionRows(week);
+          return (
+            <View key={week.weekStart ?? wi} style={styles.weekBlock}>
+              <Text style={styles.weekLabel}>
+                Week of {formatWeekStart(week.weekStart)}
+              </Text>
+              {rows.map((row, ri) => (
+                <View key={ri} style={styles.decisionRow}>
+                  <Ionicons
+                    name={row.icon}
+                    size={15}
+                    color={row.type === 'changed' ? colors.success : colors.textMuted}
+                    style={styles.decisionIcon}
+                  />
+                  <View style={{ flex: 1 }}>
+                    {row.label && (
+                      <Text style={[
+                        styles.decisionLabel,
+                        row.type === 'changed' && styles.decisionLabelChanged,
+                      ]}>
+                        {row.label}
+                      </Text>
+                    )}
+                    <Text style={styles.decisionDetail}>{row.detail}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          );
+        })}
 
-        {weeks.length > 0 && (
+        {totalDecisions > 0 && (
           <Text style={styles.footer}>
-            {weeks.reduce((n, w) => n + w.heldDecisions.length, 0)} held decisions across {weeks.length} week{weeks.length !== 1 ? 's' : ''}
+            {totalDecisions} decision{totalDecisions !== 1 ? 's' : ''} across {weeks.length} week{weeks.length !== 1 ? 's' : ''}
           </Text>
         )}
       </ScrollView>
@@ -166,7 +238,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.lg,
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   weekLabel: {
     fontSize: fontSize.xs,
@@ -176,14 +248,20 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
 
-  heldRow: {
+  decisionRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
   },
-  heldIcon: { marginTop: 2 },
-  heldText: {
-    flex: 1,
+  decisionIcon: { marginTop: 2 },
+  decisionLabel: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textMuted,
+    marginBottom: 2,
+  },
+  decisionLabelChanged: { color: colors.success },
+  decisionDetail: {
     fontSize: fontSize.sm,
     color: colors.textSecondary,
     lineHeight: 20,
