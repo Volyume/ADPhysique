@@ -34,6 +34,7 @@ import {
 } from '../lib/algorithms';
 import { rankSwaps } from '../lib/swapEngine';
 import { FORM_TIPS } from '../lib/formTips';
+import InfoTooltip from '../components/InfoTooltip';
 import { applyTimeCrunch } from '../lib/mesocycle';
 import { getTimeCrunchMessage } from '../lib/whyThisTemplates';
 import { estimateWorkoutMinutes } from '../lib/planEngine';
@@ -108,6 +109,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [timeCrunchActive, setTimeCrunchActive] = useState(false);
   const [timeCrunchMsg, setTimeCrunchMsg] = useState('');
+  const [preCrunchSnapshot, setPreCrunchSnapshot] = useState(null);
   const [weeklyPlan, setWeeklyPlan] = useState(null);  // { plannedSets, muscle } for this exercise
   const [weeklyActual, setWeeklyActual] = useState(0); // sets this week for this muscle
   const [isDeloadWeek, setIsDeloadWeek] = useState(false);
@@ -530,8 +532,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     }
   }
 
+  function handleRevertTimeCrunch() {
+    if (!preCrunchSnapshot) return;
+    store.setWorkoutExercises(preCrunchSnapshot);
+    setTimeCrunchActive(false);
+    setTimeCrunchMsg('');
+    setPreCrunchSnapshot(null);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }
+
   function handleTimeCrunch() {
     if (timeCrunchActive) return;
+    setPreCrunchSnapshot([...workoutExercises]);
     const remainingExercises = workoutExercises.slice(currentExerciseIndex);
     if (!remainingExercises.length) return;
 
@@ -1095,15 +1107,34 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
           {/* Phase 6: Time Crunch button */}
           {!timeCrunchActive && workoutExercises.length > currentExerciseIndex + 1 && (
-            <TouchableOpacity style={styles.timeCrunchBtn} onPress={handleTimeCrunch} activeOpacity={0.75}>
-              <Ionicons name="timer-outline" size={15} color={colors.warning} />
-              <Text style={styles.timeCrunchBtnText}>Time crunch today</Text>
-            </TouchableOpacity>
+            <View style={styles.timeCrunchRow}>
+              <TouchableOpacity style={styles.timeCrunchBtn} onPress={handleTimeCrunch} activeOpacity={0.75}>
+                <Ionicons name="timer-outline" size={15} color={colors.warning} />
+                <Text style={styles.timeCrunchBtnText}>Time crunch today</Text>
+              </TouchableOpacity>
+              <InfoTooltip
+                size={15}
+                text={
+                  'Trims your remaining session to fit a shorter window.\n\n' +
+                  'What it does:\n' +
+                  '• Reduces rest periods by ~30% across remaining exercises\n' +
+                  '• Removes lower-priority isolation exercises that haven\'t started yet\n' +
+                  '• Keeps all compound lifts and anything you\'ve already begun\n\n' +
+                  'You can revert immediately after if you change your mind.'
+                }
+              />
+            </View>
           )}
           {timeCrunchActive && !!timeCrunchMsg && (
             <View style={styles.timeCrunchActiveBar}>
-              <Ionicons name="timer" size={14} color={colors.warning} />
-              <Text style={styles.timeCrunchActiveText} numberOfLines={2}>{timeCrunchMsg}</Text>
+              <Ionicons name="timer" size={14} color={colors.warning} style={{ marginTop: 2 }} />
+              <View style={styles.timeCrunchActiveContent}>
+                <Text style={styles.timeCrunchActiveText}>{timeCrunchMsg}</Text>
+                <TouchableOpacity style={styles.timeCrunchRevertBtn} onPress={handleRevertTimeCrunch} activeOpacity={0.75}>
+                  <Ionicons name="refresh-outline" size={13} color={colors.textSecondary} />
+                  <Text style={styles.timeCrunchRevertText}>Revert</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           )}
 
@@ -1574,10 +1605,14 @@ const styles = StyleSheet.create({
   nextExerciseBtnText: { fontSize: fontSize.md, color: colors.primary, fontWeight: fontWeight.bold },
   finishWorkoutLargeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderWidth: 1.5, borderColor: colors.success, borderRadius: radius.lg, paddingVertical: spacing.lg },
   finishWorkoutLargeBtnText: { fontSize: fontSize.md, color: colors.success, fontWeight: fontWeight.bold },
-  timeCrunchBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, borderRadius: radius.md, borderWidth: 1, borderColor: colors.warning + '55', backgroundColor: colors.warningBg ?? colors.surface },
+  timeCrunchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  timeCrunchBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, borderRadius: radius.md, borderWidth: 1, borderColor: colors.warning + '55', backgroundColor: colors.warningBg ?? colors.surface },
   timeCrunchBtnText: { fontSize: fontSize.xs, color: colors.warning, fontWeight: fontWeight.medium },
   timeCrunchActiveBar: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, padding: spacing.sm, backgroundColor: colors.warningBg ?? colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.warning + '44' },
-  timeCrunchActiveText: { flex: 1, fontSize: fontSize.xs, color: colors.warning, lineHeight: 18 },
+  timeCrunchActiveContent: { flex: 1, gap: spacing.sm },
+  timeCrunchActiveText: { fontSize: fontSize.xs, color: colors.warning, lineHeight: 18 },
+  timeCrunchRevertBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingVertical: 4, paddingHorizontal: spacing.sm, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border },
+  timeCrunchRevertText: { fontSize: fontSize.xs, color: colors.textSecondary },
   loggedSection: { gap: spacing.sm },
   loggedTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textMuted, letterSpacing: 1 },
   loggedSetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border },
