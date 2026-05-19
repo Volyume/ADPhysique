@@ -34,5 +34,28 @@ export function getProLabel(userProfile) {
  */
 export function getBetaBannerText() {
   if (!PRO_BETA_ACTIVE) return null;
-  return 'Pro is free during beta — your feedback shapes this.';
+  return 'Pro is free during beta. Your feedback shapes this.';
+}
+
+/**
+ * Pro-only feature areas. Free tier is essentially a logger plus the
+ * plan library and the manual (custom) builder. Everything coaching-
+ * intelligent is Pro.
+ *
+ * Gating is based on the user's CHOSEN tier (store.tier === 'pro'),
+ * NOT isProUser() — during beta Pro is free but a free user must still
+ * sign up and go through the upgrade flow to switch.
+ */
+export const PRO_ROUTES = [
+  'CoachBuilder',
+  'WeeklyCheckIn',
+  'NutritionTargets',
+  'BodyMetrics',
+  'MesocycleBuilder',
+  'CoachOutput',
+  'ProGoalSetup',
+];
+
+export function isProRoute(routeName) {
+  return PRO_ROUTES.includes(routeName);
 }
