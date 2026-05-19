@@ -461,10 +461,10 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   filterGroupLabel: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.black,
-    color: colors.textMuted,
-    letterSpacing: 1.5,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textSecondary,
+    letterSpacing: 0.2,
     marginBottom: spacing.md,
   },
   filterGrid: {
@@ -522,8 +522,8 @@ const styles = StyleSheet.create({
   addModalTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
   addModalContent: { padding: spacing.lg, paddingBottom: spacing.xxxl },
   addFieldLabel: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.black, color: colors.textMuted,
-    letterSpacing: 1.5, marginBottom: spacing.sm,
+    fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary,
+    letterSpacing: 0.2, marginBottom: spacing.sm,
   },
   addFieldNote: { fontSize: fontSize.xs, color: colors.textMuted, marginBottom: spacing.sm, marginTop: -spacing.xs },
   addFieldInput: {

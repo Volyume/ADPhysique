@@ -789,8 +789,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
     color: colors.textMuted,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
+    letterSpacing: 0.2,
   },
   streakChip: {
     backgroundColor: colors.surface2,
@@ -966,8 +965,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
     color: colors.textMuted,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
+    letterSpacing: 0.2,
   },
   glanceRow: {
     flexDirection: 'row',
@@ -999,8 +997,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
     color: colors.textMuted,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
+    letterSpacing: 0.2,
     paddingBottom: spacing.xs,
   },
   builderCard: {
@@ -1041,7 +1038,7 @@ const styles = StyleSheet.create({
   },
   lastSessionLabel: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
-    color: colors.textMuted, letterSpacing: 1, textTransform: 'uppercase',
+    color: colors.textMuted, letterSpacing: 0.2,
   },
   lastSessionRelDate: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary,
