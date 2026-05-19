@@ -97,7 +97,7 @@ export default function PlansScreen({ navigation }) {
       exercise, routineExercise, sets: [],
     }));
     startWorkout(workout, initialExercises);
-    navigation.navigate('HomeTab', { screen: 'ActiveWorkout' });
+    navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
   }
 
   async function handleSetActive(plan) {
@@ -159,7 +159,7 @@ export default function PlansScreen({ navigation }) {
       exercise, routineExercise, sets: [],
     }));
     startWorkout(workout, initialExercises);
-    navigation.navigate('HomeTab', { screen: 'ActiveWorkout' });
+    navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
   }
 
   return (

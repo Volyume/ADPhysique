@@ -112,7 +112,7 @@ export default function PlanDetailScreen({ navigation, route }) {
       exercise, routineExercise, sets: [],
     }));
     startWorkout(workout, initialExercises);
-    navigation.navigate('HomeTab', { screen: 'ActiveWorkout' });
+    navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
   }
 
   async function handleArchive() {

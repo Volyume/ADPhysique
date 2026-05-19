@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
+import { StackActions } from '@react-navigation/native';
 import { View, Text, Image, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -87,7 +88,12 @@ function HomeStack() {
   );
 }
 
-function PlansStack() {
+function PlansStack({ navigation }) {
+  useEffect(() => {
+    return navigation.addListener('tabPress', () => {
+      navigation.dispatch(StackActions.popToTop());
+    });
+  }, [navigation]);
   return (
     <Stack.Navigator screenOptions={stackOptions}>
       <Stack.Screen name="Plans" component={PlansScreen} options={{ headerShown: false }} />
@@ -103,7 +109,12 @@ function PlansStack() {
   );
 }
 
-function ProgressStack() {
+function ProgressStack({ navigation }) {
+  useEffect(() => {
+    return navigation.addListener('tabPress', () => {
+      navigation.dispatch(StackActions.popToTop());
+    });
+  }, [navigation]);
   return (
     <Stack.Navigator screenOptions={stackOptions}>
       <Stack.Screen name="Analytics" component={AnalyticsScreen} options={{ headerShown: false }} />
@@ -120,7 +131,12 @@ function ProgressStack() {
   );
 }
 
-function ProfileStack() {
+function ProfileStack({ navigation }) {
+  useEffect(() => {
+    return navigation.addListener('tabPress', () => {
+      navigation.dispatch(StackActions.popToTop());
+    });
+  }, [navigation]);
   return (
     <Stack.Navigator screenOptions={stackOptions}>
       <Stack.Screen name="AthleteHub" component={AthleteHubScreen} options={{ headerShown: false }} />

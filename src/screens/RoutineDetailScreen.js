@@ -96,7 +96,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
           { text: 'Add Exercise', onPress: () => setShowAddExercise(true) },
           {
             text: 'Start Blank Workout',
-            onPress: () => navigation.navigate('HomeTab', { screen: 'BuildWorkout' }),
+            onPress: () => navigation.navigate('HomeTab', { screen: 'BuildWorkout', initial: false }),
           },
         ],
       );
@@ -109,7 +109,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
       sets: [],
     }));
     startWorkout(workout, initialExercises);
-    navigation.navigate('HomeTab', { screen: 'ActiveWorkout' });
+    navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
   }
 
   const filtered = searchQuery.trim()

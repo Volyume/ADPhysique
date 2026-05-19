@@ -78,13 +78,13 @@ export default function WorkoutHistoryScreen({ navigation }) {
   async function handleRepeatWorkout(workout) {
     const newWorkout = await createWorkout(user.id, workout.routineId || null);
     startWorkout(newWorkout);
-    navigation.navigate('HomeTab', { screen: 'ActiveWorkout' });
+    navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
   }
 
   async function handleStartNewWorkout() {
     const newWorkout = await createWorkout(user.id, null);
     startWorkout(newWorkout);
-    navigation.navigate('HomeTab', { screen: 'ActiveWorkout' });
+    navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
   }
 
   // ─── Filtering logic ────────────────────────────────────────────────────────

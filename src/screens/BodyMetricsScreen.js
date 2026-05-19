@@ -361,7 +361,7 @@ export default function BodyMetricsScreen({ navigation }) {
               <Text style={styles.nutritionCardTitle}>Nutrition Targets</Text>
             </View>
             <TouchableOpacity
-              onPress={() => navigation.navigate('ProfileTab', { screen: 'NutritionTargets' })}
+              onPress={() => navigation.navigate('ProfileTab', { screen: 'NutritionTargets', initial: false })}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Text style={styles.nutritionCardLink}>

@@ -284,8 +284,8 @@ export default function HomeScreen({ navigation }) {
         .map(exercise => ({ exercise, routineExercise: null, sets: [] }));
     }
 
+    setIsStartingWorkout(true);
     startWorkout(newWorkout, initialExercises);
-    setIsStartingWorkout(true); // suppresses "Session in Progress" flash during transition
     navigation.navigate('ActiveWorkout');
   }
 
@@ -501,19 +501,19 @@ export default function HomeScreen({ navigation }) {
               title="Coach Builder"
               desc="Answer 5 questions about your goals and time available. We'll build you a complete programme."
               badge="Recommended"
-              onPress={() => navigation.navigate('PlansTab', { screen: 'CoachBuilder' })}
+              onPress={() => navigation.navigate('PlansTab', { screen: 'CoachBuilder', initial: false })}
             />
             <PlanBuilderCard
               icon="library-outline"
               title="Plan Library"
               desc="Browse ready-made programmes for every level, schedule, and goal."
-              onPress={() => navigation.navigate('PlansTab', { screen: 'PlanLibrary' })}
+              onPress={() => navigation.navigate('PlansTab', { screen: 'PlanLibrary', initial: false })}
             />
             <PlanBuilderCard
               icon="create-outline"
               title="Build Your Own"
               desc="Already know exactly what you want to train? Build a custom programme from scratch."
-              onPress={() => navigation.navigate('PlansTab', { screen: 'ManualBuilder' })}
+              onPress={() => navigation.navigate('PlansTab', { screen: 'ManualBuilder', initial: false })}
             />
 
             <TouchableOpacity
@@ -532,7 +532,7 @@ export default function HomeScreen({ navigation }) {
         {lastSession && (
           <TouchableOpacity
             style={styles.lastSessionCard}
-            onPress={() => navigation.navigate('ProgressTab', { screen: 'WorkoutHistory' })}
+            onPress={() => navigation.navigate('ProgressTab', { screen: 'WorkoutHistory', initial: false })}
             activeOpacity={0.7}
           >
             <View style={styles.lastSessionTop}>
@@ -632,7 +632,7 @@ export default function HomeScreen({ navigation }) {
                 style={styles.coachingNudgeBtn}
                 onPress={() => {
                   dismissCoachingNudge();
-                  navigation.navigate('ProgressTab', { screen: 'WeeklyCheckIn' });
+                  navigation.navigate('ProfileTab', { screen: 'WeeklyCheckIn', initial: false });
                 }}
                 activeOpacity={0.8}
               >
@@ -655,17 +655,17 @@ export default function HomeScreen({ navigation }) {
           <QuickLink
             icon="time-outline"
             label="History"
-            onPress={() => navigation.navigate('ProgressTab', { screen: 'WorkoutHistory' })}
+            onPress={() => navigation.navigate('ProgressTab', { screen: 'WorkoutHistory', initial: false })}
           />
           <QuickLink
             icon="trophy-outline"
             label="Records"
-            onPress={() => navigation.navigate('ProgressTab', { screen: 'PRWall' })}
+            onPress={() => navigation.navigate('ProgressTab', { screen: 'PRWall', initial: false })}
           />
           <QuickLink
             icon="grid-outline"
             label="Volume"
-            onPress={() => navigation.navigate('ProgressTab', { screen: 'VolumeHeatmap' })}
+            onPress={() => navigation.navigate('ProgressTab', { screen: 'VolumeHeatmap', initial: false })}
           />
         </View>
       </ScrollView>
