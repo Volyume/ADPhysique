@@ -14,7 +14,7 @@ const SET_TYPE_LABELS = {
   amrap: 'Working',
 };
 
-export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypePicker }) {
+export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypePicker, isWarmup = false }) {
   const { weight, reps, setType } = value;
   const repsRef = useRef(null);
 
@@ -36,6 +36,11 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
 
   return (
     <View style={styles.container}>
+      {isWarmup && (
+        <Text style={styles.warmupHint}>
+          This is a warm-up set. Aim for about 50% of your working weight and 10–12 easy reps.
+        </Text>
+      )}
       {/* Weight Row */}
       <View style={styles.inputRow}>
         <Text style={styles.fieldLabel}>Weight ({units})</Text>
@@ -113,44 +118,46 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
         </View>
       </View>
 
-      {/* Effort Row */}
-      <View style={styles.inputRow}>
-        <View style={styles.fieldLabelRow}>
-          <Text style={styles.fieldLabel}>Effort</Text>
-          <InfoTooltip size={12} text={
-            'How hard did that set feel? Rate from 1 (easy) to 5 (all out).\n\n' +
-            '1: Easy, plenty left in the tank\n' +
-            '2: Moderate, could have done more\n' +
-            '3: Hard, a couple of reps left\n' +
-            '4: Very hard, barely one more\n' +
-            '5: All out, nothing left\n\n' +
-            'Aim for a 2 or 3 early in your training block. Push to 4–5 near the end. ' +
-            'Volyume uses this to track intensity and suggest your next session targets.'
-          } />
+      {/* Effort Row — hidden for warm-up sets */}
+      {!isWarmup && (
+        <View style={styles.inputRow}>
+          <View style={styles.fieldLabelRow}>
+            <Text style={styles.fieldLabel}>Effort</Text>
+            <InfoTooltip size={12} text={
+              'How hard did that set feel? Rate from 1 (easy) to 5 (all out).\n\n' +
+              '1: Easy, plenty left in the tank\n' +
+              '2: Moderate, could have done more\n' +
+              '3: Hard, a couple of reps left\n' +
+              '4: Very hard, barely one more\n' +
+              '5: All out, nothing left\n\n' +
+              'Aim for a 2 or 3 early in your training block. Push to 4–5 near the end. ' +
+              'Volyume uses this to track intensity and suggest your next session targets.'
+            } />
+          </View>
+          <View style={styles.rirRow}>
+            {[null, 1, 2, 3, 4, 5].map(v => {
+              const isActive = v === null ? value.rir === null : value.rir === (5 - v);
+              return (
+                <TouchableOpacity
+                  key={String(v)}
+                  style={[styles.rirBtn, isActive && styles.rirBtnActive]}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    onChange({ ...value, rir: v === null ? null : 5 - v });
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={v === null ? 'Effort not set' : v === 5 ? 'Maximum effort, all out' : `Effort level ${v} out of 5`}
+                  accessibilityState={{ selected: isActive }}
+                >
+                  <Text style={[styles.rirBtnText, isActive && styles.rirBtnTextActive]}>
+                    {v === null ? '—' : v}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
-        <View style={styles.rirRow}>
-          {[null, 1, 2, 3, 4, 5].map(v => {
-            const isActive = v === null ? value.rir === null : value.rir === (5 - v);
-            return (
-              <TouchableOpacity
-                key={String(v)}
-                style={[styles.rirBtn, isActive && styles.rirBtnActive]}
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  onChange({ ...value, rir: v === null ? null : 5 - v });
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={v === null ? 'Effort not set' : v === 5 ? 'Maximum effort, all out' : `Effort level ${v} out of 5`}
-                accessibilityState={{ selected: isActive }}
-              >
-                <Text style={[styles.rirBtnText, isActive && styles.rirBtnTextActive]}>
-                  {v === null ? '—' : v}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
+      )}
 
       {/* Set Type — compact inline row */}
       <TouchableOpacity
@@ -276,5 +283,11 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.primary,
     fontWeight: fontWeight.medium,
+  },
+  warmupHint: {
+    fontSize: fontSize.sm,
+    color: colors.warning,
+    lineHeight: 20,
+    paddingBottom: spacing.xs,
   },
 });

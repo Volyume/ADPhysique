@@ -925,40 +925,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <Text style={styles.warmupBannerText}>WARM UP · not counted in volume</Text>
               </View>
             )}
-            {currentSet.setType === 'warmup' && (() => {
-              const targetW = setTargets[0]?.weight || prevSets[0]?.weight || null;
-              const kg = targetW ? (Math.round(targetW * 0.50 * 2) / 2) : null;
-              return (
-                <View style={styles.warmupGuide}>
-                  <View style={styles.warmupGuideHeader}>
-                    <Text style={styles.warmupGuideTitle}>Feeler set</Text>
-                    <InfoTooltip
-                      size={13}
-                      text="One light set to warm up the movement. Use around 50% of your planned weight for 10–12 easy reps. Focus on feeling the right muscles fire, not tiring them."
-                    />
-                  </View>
-                  <View style={styles.warmupProtocolRow}>
-                    <View style={[styles.warmupStep, styles.warmupStepActive]}>
-                      <Text style={[styles.warmupStepPct, styles.warmupStepPctActive]}>50%</Text>
-                      {kg !== null && (
-                        <Text style={styles.warmupStepKg}>{kg}{units}</Text>
-                      )}
-                      <Text style={styles.warmupStepReps}>× 10–12</Text>
-                    </View>
-                    {targetW ? (
-                      <View style={[styles.warmupStep, styles.warmupStepWorking]}>
-                        <Text style={styles.warmupStepPct}>100%</Text>
-                        <Text style={styles.warmupStepKg}>{targetW}{units}</Text>
-                        <Text style={styles.warmupStepReps}>working</Text>
-                      </View>
-                    ) : null}
-                  </View>
-                  {!targetW && (
-                    <Text style={styles.warmupNoDataHint}>Weights shown after your first session on this lift.</Text>
-                  )}
-                </View>
-              );
-            })()}
             {currentSet.setType === 'dropset' && (
               <View style={styles.dropBanner}>
                 <Ionicons name="arrow-down-circle-outline" size={14} color={colors.gold} />
@@ -1014,6 +980,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               onChange={setCurrentSet}
               units={units}
               onOpenSetTypePicker={() => setShowSetTypePicker(true)}
+              isWarmup={currentSet.setType === 'warmup'}
             />
 
             {showNoteInput ? (
@@ -1675,20 +1642,6 @@ const styles = StyleSheet.create({
   setEntryCardDrop: { borderColor: colors.gold, backgroundColor: 'rgba(255,215,0,0.06)' },
   warmupBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   warmupBannerText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.warning, letterSpacing: 0.8 },
-  warmupGuide: { borderTopWidth: 1, borderTopColor: colors.warning + '28', paddingTop: spacing.sm, gap: spacing.sm },
-  warmupGuideHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  warmupGuideTitle: { fontSize: fontSize.xs, color: colors.textMuted, fontWeight: fontWeight.semibold, letterSpacing: 0.3 },
-  warmupProtocolRow: { flexDirection: 'row', gap: spacing.xs },
-  warmupStep: { flex: 1, alignItems: 'center', paddingVertical: spacing.xs, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, gap: 2 },
-  warmupStepActive: { borderColor: colors.warning + '99', backgroundColor: colors.warning + '12' },
-  warmupStepFaded: { opacity: 0.35 },
-  warmupStepPct: { fontSize: 10, color: colors.textMuted, fontWeight: fontWeight.bold },
-  warmupStepPctActive: { color: colors.warning },
-  warmupStepKg: { fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.bold },
-  warmupStepReps: { fontSize: 10, color: colors.textSecondary },
-  warmupStepWorking: { borderColor: colors.primary + '55', backgroundColor: colors.primary + '0a' },
-  warmupStepFadedText: { color: colors.textMuted },
-  warmupNoDataHint: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
   firstSetHint: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, backgroundColor: colors.primaryBg, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.sm },
   firstSetHintText: { flex: 1, fontSize: fontSize.xs, color: colors.primary, lineHeight: 18 },
   dropBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
