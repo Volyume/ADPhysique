@@ -909,7 +909,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     <Text style={styles.warmupGuideTitle}>Feeler set</Text>
                     <InfoTooltip
                       size={13}
-                      text="One light feeler set is all you need. Use around 50% of your working weight for 10–12 easy reps. Focus on feeling the target muscle, not tiring it."
+                      text="One light set to warm up the movement. Use around 50% of your planned weight for 10–12 easy reps. Focus on feeling the right muscles fire, not tiring them."
                     />
                   </View>
                   <View style={styles.warmupProtocolRow}>
@@ -1154,12 +1154,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               <InfoTooltip
                 size={15}
                 text={
-                  'Trims your remaining session to fit a shorter window.\n\n' +
-                  'What it does:\n' +
-                  '• Reduces rest periods by ~30% across remaining exercises\n' +
-                  '• Removes lower-priority isolation exercises that haven\'t started yet\n' +
-                  '• Keeps all compound lifts and anything you\'ve already begun\n\n' +
-                  'You can revert immediately after if you change your mind.'
+                  'Shortens your remaining session to fit the time you have left.\n\n' +
+                  'Cuts rest times by around 30%, drops any isolation exercises you haven\'t started yet, and keeps everything you\'ve already begun. Your main lifts stay in.\n\n' +
+                  'You can undo it straight away if you change your mind.'
                 }
               />
             </View>

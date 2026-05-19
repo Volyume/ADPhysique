@@ -534,12 +534,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
                 <Text style={styles.adaptiveTitle}>Adjustments for next week</Text>
                 <InfoTooltip size={11} text={
-                  'Volyume\'s training engine analysed your session feedback and adjusted next week\'s plan.\n\n' +
-                  '↑ Add set: you recovered well and can handle more volume\n' +
-                  '↓ Drop set: signs of fatigue, reducing load will help you recover\n' +
-                  '⚠ Recovery week: signals are low across the board, a lighter week is recommended\n' +
-                  '→ Hold: volume looks right, continue as planned\n\n' +
-                  'These suggestions are written into your next planned week automatically.'
+                  'Based on your session feedback, Volyume has tweaked next week\'s plan.\n\n' +
+                  '↑ Add set — you recovered well, you can handle a bit more\n' +
+                  '↓ Drop set — signs of fatigue, ease off to come back stronger\n' +
+                  '⚠ Recovery week — take a lighter week across the board\n' +
+                  '→ Hold — volume is right, keep going as planned'
                 } />
               </View>
               {Object.entries(adaptiveDecisions)
