@@ -131,7 +131,7 @@ export default function FirstRunScreen({ navigation }) {
         </Text>
         <Text style={styles.welcomeDesc}>
           {tier === 'pro'
-            ? 'You have the full experience unlocked. Set up your plan and we\'ll track your volume, coach your week, and keep your progress on course.'
+            ? 'You have the full experience unlocked. Set up your plan and we\'ll track your sets, coach your week, and keep your progress on course.'
             : 'Training is hard enough. Volyume handles the details: what you lifted, how you\'re progressing, what to do next. Show up, train, and let us take care of the rest.'}
         </Text>
 

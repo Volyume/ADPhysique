@@ -120,7 +120,7 @@ function buildHTML(model) {
         <td class="num muted">${v.min} / ${v.target} / ${v.max}</td>
         <td><span class="pill" style="background:${v.color}1f;color:${v.color}">${esc(v.status)}</span></td>
       </tr>`).join('')
-    : '<tr><td colspan="4" class="muted">Not enough volume logged.</td></tr>';
+    : '<tr><td colspan="4" class="muted">Not enough sets logged.</td></tr>';
 
   const nutritionBlock = nutrition
     ? `<div class="card">

@@ -241,7 +241,7 @@ const LIBRARY_PLANS = [
           { name: 'Incline Barbell Bench Press', sets: 4, repsMin: 6,  repsMax: 8,  rest: 120, notes: 'Second compound. Heavy.' },
           { name: 'Barbell Overhead Press',    sets: 3, repsMin: 6,  repsMax: 8,  rest: 90,  notes: 'Strict press. No leg drive.' },
           { name: 'Dumbbell Lateral Raise',   sets: 3, repsMin: 15, repsMax: 25, rest: 60,  notes: 'Controlled. Keep at shoulder height.' },
-          { name: 'Close-Grip Bench Press',   sets: 3, repsMin: 8,  repsMax: 12, rest: 90,  notes: 'Tricep volume work.' },
+          { name: 'Close-Grip Bench Press',   sets: 3, repsMin: 8,  repsMax: 12, rest: 90,  notes: 'Tricep accessory work.' },
         ],
       },
       {
@@ -366,7 +366,7 @@ const LIBRARY_PLANS = [
       {
         name: 'Session B',
         exercises: [
-          { name: 'Leg Press',               sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Quad volume.' },
+          { name: 'Leg Press',               sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Quad accessory work.' },
           { name: 'Incline Dumbbell Press',  sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Upper chest push.' },
           { name: 'Lat Pulldown (Wide Grip)', sets: 3, repsMin: 8,  repsMax: 12, rest: 90, notes: 'Back width.' },
           { name: 'Romanian Deadlift (Barbell)', sets: 3, repsMin: 8, repsMax: 12, rest: 90, notes: 'Posterior chain.' },
@@ -378,7 +378,7 @@ const LIBRARY_PLANS = [
           { name: 'Barbell Back Squat',       sets: 3, repsMin: 6,  repsMax: 10, rest: 90,  notes: 'Full depth. No rush.' },
           { name: 'Dumbbell Bench Press',    sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Chest squeeze.' },
           { name: 'Seated Cable Row',        sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Full stretch, elbows back.' },
-          { name: 'Dumbbell Shoulder Press', sets: 2, repsMin: 10, repsMax: 15, rest: 60,  notes: 'Overhead push volume.' },
+          { name: 'Dumbbell Shoulder Press', sets: 2, repsMin: 10, repsMax: 15, rest: 60,  notes: 'Overhead push accessory.' },
         ],
       },
     ],
@@ -421,7 +421,7 @@ const LIBRARY_PLANS = [
       {
         name: 'Lower B',
         exercises: [
-          { name: 'Leg Press',               sets: 3, repsMin: 12, repsMax: 20, rest: 90,  notes: 'Quad volume.' },
+          { name: 'Leg Press',               sets: 3, repsMin: 12, repsMax: 20, rest: 90,  notes: 'Quad accessory work.' },
           { name: 'Lying Leg Curl',          sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Hamstring focus.' },
           { name: 'Barbell Hip Thrust',      sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Glute power.' },
           { name: 'Standing Calf Raise (Machine)', sets: 3, repsMin: 12, repsMax: 20, rest: 45, notes: 'Calf finisher.' },
@@ -659,7 +659,7 @@ const LIBRARY_PLANS = [
           { name: 'Barbell Back Squat',       sets: 5, repsMin: 3,  repsMax: 5,  rest: 180, notes: 'Work to a heavy top set then 4 back-off sets.' },
           { name: 'Barbell Bench Press',      sets: 5, repsMin: 3,  repsMax: 5,  rest: 180, notes: 'Heavy pressing. Strong arch.' },
           { name: 'Leg Press',               sets: 3, repsMin: 12, repsMax: 20, rest: 90,  notes: 'Back-off sets for leg growth.' },
-          { name: 'Incline Dumbbell Press',  sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Chest volume after bench.' },
+          { name: 'Incline Dumbbell Press',  sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Extra chest work after bench.' },
           { name: 'Dumbbell Lateral Raise',  sets: 3, repsMin: 15, repsMax: 25, rest: 60,  notes: 'Side delts. Assistance work.' },
         ],
       },
@@ -669,7 +669,7 @@ const LIBRARY_PLANS = [
           { name: 'Conventional Deadlift',    sets: 5, repsMin: 3,  repsMax: 5,  rest: 180, notes: 'Work up to a heavy top set. Brace everything.' },
           { name: 'Weighted Pull-Up',         sets: 4, repsMin: 5,  repsMax: 8,  rest: 120, notes: 'Weighted vertical pull.' },
           { name: 'Romanian Deadlift (Barbell)', sets: 3, repsMin: 8, repsMax: 12, rest: 90, notes: 'Hamstring back-off work.' },
-          { name: 'Seated Cable Row',         sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Back volume.' },
+          { name: 'Seated Cable Row',         sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Back accessory work.' },
           { name: 'EZ Bar Curl',              sets: 3, repsMin: 8,  repsMax: 12, rest: 60,  notes: 'Bicep assistance.' },
         ],
       },
@@ -678,8 +678,8 @@ const LIBRARY_PLANS = [
         exercises: [
           { name: 'Barbell Overhead Press',   sets: 5, repsMin: 3,  repsMax: 5,  rest: 150, notes: 'Heavy overhead work.' },
           { name: 'Incline Barbell Bench Press', sets: 4, repsMin: 6, repsMax: 8, rest: 120, notes: 'Upper chest secondary.' },
-          { name: 'Dumbbell Shoulder Press',  sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Shoulder volume.' },
-          { name: 'EZ Bar Skull Crusher',     sets: 3, repsMin: 10, repsMax: 15, rest: 60,  notes: 'Tricep volume.' },
+          { name: 'Dumbbell Shoulder Press',  sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Shoulder accessory work.' },
+          { name: 'EZ Bar Skull Crusher',     sets: 3, repsMin: 10, repsMax: 15, rest: 60,  notes: 'Tricep accessory work.' },
           { name: 'Preacher Curl (EZ Bar)',   sets: 3, repsMin: 8,  repsMax: 12, rest: 60,  notes: 'Bicep peak.' },
         ],
       },
@@ -811,7 +811,7 @@ const LIBRARY_PLANS = [
   // ── 20. Women's Glute & Strength ──────────────────────────────────────────
   {
     name: 'Women\'s Glute & Strength',
-    description: 'A four-day programme built around glute and hamstring development, with upper-body strength work to balance proportions. Days one and three focus on the lower body with a different emphasis each session: one heavier and compound-led, the other detail-oriented. Days two and four train the upper body with enough volume to build visible strength in the shoulders, back, and arms. Progress by adding weight when all reps are completed with good technique.',
+    description: 'A four-day programme built around glute and hamstring development, with upper-body strength work to balance proportions. Days one and three focus on the lower body with a different emphasis each session: one heavier and compound-led, the other detail-oriented. Days two and four train the upper body with enough sets to build visible strength in the shoulders, back, and arms. Progress by adding weight when all reps are completed with good technique.',
     tags: 'intermediate upper_lower gender:women goal:build_muscle days:4 glutes featured',
     difficulty: 1,
     workouts: [
@@ -974,14 +974,14 @@ const LIBRARY_PLANS = [
           { name: 'Incline Dumbbell Press', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Greater range of motion than barbell. Slow 3 s descent.' },
           { name: 'Pec Deck (Machine Fly)', sets: 4, repsMin: 12, repsMax: 15, rest: 90, notes: 'Chest isolation. Full stretch. Squeeze hard at the contraction point.' },
           { name: 'Close-Grip Bench Press', sets: 4, repsMin: 8, repsMax: 12, rest: 90, notes: 'Tricep compound. Elbows at 45 degrees. Full extension at top.' },
-          { name: 'Rope Pushdown', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Finishing volume on triceps. Squeeze every rep.' },
+          { name: 'Rope Pushdown', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Tricep finishing sets. Squeeze every rep.' },
         ],
       },
       {
         name: 'Day 4: Legs (Maintenance)',
         exercises: [
           { name: 'Barbell Back Squat', sets: 3, repsMin: 8, repsMax: 12, rest: 120, notes: 'Legs are not displayed in board shorts but must be trained for balance and health. One moderate leg session per week is enough in a muscle-building phase.' },
-          { name: 'Leg Press', sets: 3, repsMin: 12, repsMax: 15, rest: 90, notes: 'Moderate volume. No need to push to the limit on this day.' },
+          { name: 'Leg Press', sets: 3, repsMin: 12, repsMax: 15, rest: 90, notes: 'Secondary sets only. No need to push to the limit on this day.' },
           { name: 'Romanian Deadlift (Barbell)', sets: 3, repsMin: 10, repsMax: 12, rest: 90, notes: 'Hamstring and glute work. Keep it solid, not extreme.' },
           { name: 'Leg Extension', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Quad detail. High reps, pump-focused.' },
           { name: 'Lying Leg Curl', sets: 3, repsMin: 12, repsMax: 15, rest: 60, notes: 'Hamstring curl. Full range. Squeeze at top.' },
@@ -1053,7 +1053,7 @@ const LIBRARY_PLANS = [
   // ── 25. Wellness — Off-Season ─────────────────────────────────────────────
   {
     name: 'Wellness',
-    description: "Four to five days per week built around the Wellness division, the most lower-body-forward division in women's physique sport. Wellness rewards a heavily developed lower body (glutes, quads, and hamstrings) relative to a smaller, more moderate upper body. This programme trains the lower body four times per week with two different emphasis days, and upper body twice with a maintenance volume approach. Progress on lower-body compounds is the priority.",
+    description: "Four to five days per week built around the Wellness division, the most lower-body-forward division in women's physique sport. Wellness rewards a heavily developed lower body (glutes, quads, and hamstrings) relative to a smaller, more moderate upper body. This programme trains the lower body four times per week with two different emphasis days, and upper body twice with a lower set count to keep it proportional. Progress on lower-body compounds is the priority.",
     tags: 'bodybuilding category:division division:wellness gender:women goal:stage_prep days:5 advanced intermediate',
     difficulty: 2,
     workouts: [
@@ -1074,13 +1074,13 @@ const LIBRARY_PLANS = [
           { name: 'Leg Press', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Lower foot placement for more quad. Push through heels. Full range.' },
           { name: 'Bulgarian Split Squat', sets: 4, repsMin: 8, repsMax: 12, rest: 90, notes: 'Rear foot elevated. Drive through front heel. Trains quads and glutes hard.' },
           { name: 'Leg Extension', sets: 4, repsMin: 15, repsMax: 20, rest: 60, notes: 'Quad isolation. Full contraction. Slow descent.' },
-          { name: 'Seated Leg Curl', sets: 3, repsMin: 12, repsMax: 15, rest: 60, notes: 'Balance the quad volume with hamstring work.' },
+          { name: 'Seated Leg Curl', sets: 3, repsMin: 12, repsMax: 15, rest: 60, notes: 'Balance the quad work with hamstring sets.' },
         ],
       },
       {
         name: 'Day 3: Upper Body (Maintenance)',
         exercises: [
-          { name: 'Lat Pulldown (Wide Grip)', sets: 3, repsMin: 10, repsMax: 15, rest: 90, notes: 'Wellness has a smaller upper body by design. Moderate volume keeps the back healthy and proportional.' },
+          { name: 'Lat Pulldown (Wide Grip)', sets: 3, repsMin: 10, repsMax: 15, rest: 90, notes: 'Wellness has a smaller upper body by design. Keeping sets moderate keeps the back healthy and proportional.' },
           { name: 'Seated Cable Row', sets: 3, repsMin: 10, repsMax: 15, rest: 90, notes: 'Mid-back. Maintenance, not maximum.' },
           { name: 'Dumbbell Shoulder Press', sets: 3, repsMin: 12, repsMax: 15, rest: 90, notes: 'Shoulder health and some cap development. Keep it moderate.' },
           { name: 'Dumbbell Lateral Raise', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Some shoulder width still helps the overall shape. Light and controlled.' },
@@ -1101,7 +1101,7 @@ const LIBRARY_PLANS = [
         name: 'Day 5: Upper Body & Glute Detail',
         exercises: [
           { name: 'Machine Row (Chest Supported)', sets: 3, repsMin: 12, repsMax: 15, rest: 90, notes: 'Upper back maintenance. Chest support removes lower-back stress.' },
-          { name: 'Incline Dumbbell Press', sets: 3, repsMin: 12, repsMax: 15, rest: 90, notes: 'Upper chest. Moderate volume only in this division.' },
+          { name: 'Incline Dumbbell Press', sets: 3, repsMin: 12, repsMax: 15, rest: 90, notes: 'Upper chest. Fewer sets in this division by design.' },
           { name: 'Reverse Pec Deck', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Rear-delt health and rounding.' },
           { name: 'Hip Thrust (Barbell)', sets: 4, repsMin: 12, repsMax: 15, rest: 90, notes: 'Second hip thrust session. Slightly lighter than Day 1. Focus on squeeze and contraction.' },
           { name: 'Seated Leg Curl', sets: 3, repsMin: 12, repsMax: 15, rest: 60, notes: 'Hamstring detail to finish the week.' },
@@ -1156,7 +1156,7 @@ const LIBRARY_PLANS = [
           { name: 'Hammer Curl', sets: 3, repsMin: 10, repsMax: 15, rest: 60, notes: 'Brachialis development. Elbows pinned.' },
           { name: 'Close-Grip Bench Press', sets: 4, repsMin: 8, repsMax: 12, rest: 90, notes: 'Tricep mass. Elbows at 45 degrees. Full extension.' },
           { name: 'Overhead Dumbbell Extension', sets: 3, repsMin: 10, repsMax: 15, rest: 60, notes: 'Long head development. Full overhead stretch.' },
-          { name: 'Rope Pushdown', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Tricep finishing volume. Squeeze every rep.' },
+          { name: 'Rope Pushdown', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Tricep finishing sets. Squeeze every rep.' },
         ],
       },
       {
@@ -1175,7 +1175,7 @@ const LIBRARY_PLANS = [
   // ── 27. Figure — Off-Season ───────────────────────────────────────────────
   {
     name: 'Figure',
-    description: "Five-day programme for the Figure division. Figure sits between Bikini and Women's Physique in muscularity: athletic and muscular with visible shoulders, a strong and wide back, and proportional leg development. Shoulders and back are the priority visual features judged in Figure. This programme dedicates significant volume to back width, rear-delt development, and shoulder capping while maintaining balanced lower-body strength.",
+    description: "Five-day programme for the Figure division. Figure sits between Bikini and Women's Physique in muscularity: athletic and muscular with visible shoulders, a strong and wide back, and proportional leg development. Shoulders and back are the priority visual features judged in Figure. This programme dedicates significant sets to back width, rear-delt development, and shoulder capping while maintaining balanced lower-body strength.",
     tags: 'bodybuilding category:division division:figure gender:women goal:stage_prep days:5 advanced',
     difficulty: 2,
     workouts: [
@@ -1216,7 +1216,7 @@ const LIBRARY_PLANS = [
           { name: 'Machine Row (Chest Supported)', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Mid and upper-back thickness. Chest on pad. Strict form.' },
           { name: 'Pec Deck (Machine Fly)', sets: 3, repsMin: 12, repsMax: 15, rest: 90, notes: 'Chest isolation. Full stretch. Squeeze at contraction.' },
           { name: 'Reverse Pec Deck', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Rear-delt. Arm out to the sides. Control both directions.' },
-          { name: 'Dumbbell Lateral Raise', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Extra lateral delt volume this session.' },
+          { name: 'Dumbbell Lateral Raise', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Extra lateral delt sets this session.' },
         ],
       },
       {
@@ -1297,7 +1297,7 @@ const LIBRARY_PLANS = [
   // ── 29. Women's Bodybuilding — Off-Season ────────────────────────────────────
   {
     name: "Women's Bodybuilding",
-    description: "A five-day programme for Women's Bodybuilding competitors, built around maximum muscular development across every group. This is the most comprehensive of the women's divisions and requires training every major muscle group with serious volume. Day 1 prioritises quads and calves; Day 2 builds back width and thickness; Day 3 develops chest, shoulders, and triceps; Day 4 targets hamstrings, glutes, and calves; Day 5 finishes the week with arms and shoulder detail. Eat in a moderate surplus throughout the muscle-building phase. Stop 1 to 2 reps before failure on most sets. Progress by adding reps first, then weight.",
+    description: "A five-day programme for Women's Bodybuilding competitors, built around maximum muscular development across every group. This is the most comprehensive of the women's divisions and requires serious, focused training across every major muscle group. Day 1 prioritises quads and calves; Day 2 builds back width and thickness; Day 3 develops chest, shoulders, and triceps; Day 4 targets hamstrings, glutes, and calves; Day 5 finishes the week with arms and shoulder detail. Eat in a moderate surplus throughout the muscle-building phase. Stop 1 to 2 reps before failure on most sets. Progress by adding reps first, then weight.",
     tags: 'bodybuilding gender:women goal:build_muscle days:5 advanced division:womens_bodybuilding',
     difficulty: 2,
     workouts: [
@@ -1363,7 +1363,7 @@ const LIBRARY_PLANS = [
   // ── 30. Men's Bodybuilding — Off-Season ──────────────────────────────────────
   {
     name: "Men's Bodybuilding",
-    description: "A five-day programme for Men's Bodybuilding competitors, built around maximum muscular size and complete development across every group. This is the highest-volume plan in the library and suits experienced lifters with at least three years of consistent training. Day 1 builds chest and triceps; Day 2 develops back width and thickness; Day 3 builds legs with quad emphasis; Day 4 targets shoulders and arms; Day 5 finishes the week with hamstrings, glutes, and posterior-chain detail. Eat in a moderate calorie surplus throughout the muscle-building phase. Stop 1 to 2 reps before failure on compound movements. On isolation exercises, push to 1 rep from failure on the final set of each exercise.",
+    description: "A five-day programme for Men's Bodybuilding competitors, built around maximum muscular size and complete development across every group. This is the plan with the most sets per week in the library and suits experienced lifters with at least three years of consistent training. Day 1 builds chest and triceps; Day 2 develops back width and thickness; Day 3 builds legs with quad emphasis; Day 4 targets shoulders and arms; Day 5 finishes the week with hamstrings, glutes, and posterior-chain detail. Eat in a moderate calorie surplus throughout the muscle-building phase. Stop 1 to 2 reps before failure on compound movements. On isolation exercises, push to 1 rep from failure on the final set of each exercise.",
     tags: 'bodybuilding gender:men goal:build_muscle days:5 advanced division:mens_bodybuilding featured',
     difficulty: 2,
     workouts: [
@@ -1407,7 +1407,7 @@ const LIBRARY_PLANS = [
         exercises: [
           { name: 'Barbell Overhead Press',  sets: 4, repsMin: 6,  repsMax: 10, rest: 90,  notes: 'Standing or seated. Brace core. Press straight overhead. The shoulder compound.' },
           { name: 'Dumbbell Lateral Raise',  sets: 5, repsMin: 15, repsMax: 20, rest: 60,  notes: 'Side delt width. Lead with elbow, slightly forward. Five sets for shoulder detail.' },
-          { name: 'Machine Lateral Raise',   sets: 4, repsMin: 15, repsMax: 20, rest: 60,  notes: 'Consistent tension through full range. Shoulders are built with volume and detail.' },
+          { name: 'Machine Lateral Raise',   sets: 4, repsMin: 15, repsMax: 20, rest: 60,  notes: 'Consistent tension through full range. Shoulders are built with consistent sets and detail work.' },
           { name: 'Face Pull',               sets: 4, repsMin: 20, repsMax: 25, rest: 60,  notes: 'Rope at eye height, elbows high. Rear-delt health and posterior shoulder balance.' },
           { name: 'EZ Bar Curl',             sets: 4, repsMin: 8,  repsMax: 12, rest: 60,  notes: 'Primary bicep movement. Full range. No swinging. Squeeze at the top.' },
           { name: 'Incline Dumbbell Curl',   sets: 3, repsMin: 10, repsMax: 15, rest: 60,  notes: 'Long-head stretch. Arms hang back behind body. Slow controlled curl.' },

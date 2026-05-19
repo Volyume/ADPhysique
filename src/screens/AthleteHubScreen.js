@@ -533,7 +533,7 @@ export default function AthleteHubScreen({ navigation }) {
           <NavRow
             icon="document-text-outline"
             label={exporting ? 'Preparing report…' : 'Send report to coach'}
-            sub="Last 4 weeks as a PDF: volume, PRs, bodyweight"
+            sub="Last 4 weeks as a PDF: training summary, PRs, bodyweight"
             onPress={handleCoachExport}
           />
           <NavRow icon="trophy" label="Personal Records" sub="All-time bests" onPress={() => navigation.navigate('PRWall')} />

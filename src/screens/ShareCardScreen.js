@@ -476,7 +476,7 @@ export default function ShareCardScreen({ navigation, route }) {
             {isSession && (
               <>
                 <ToggleRow label="Show plan name" value={showPlanName} onChange={setShowPlanName} />
-                <ToggleRow label="Show total volume" value={showVolume} onChange={setShowVolume} />
+                <ToggleRow label="Show total weight lifted" value={showVolume} onChange={setShowVolume} />
                 <ToggleRow label="Show exercise names" value={showExercises} onChange={setShowExercises} last />
               </>
             )}
