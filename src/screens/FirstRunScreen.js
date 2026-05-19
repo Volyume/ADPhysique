@@ -105,7 +105,7 @@ export default function FirstRunScreen({ navigation }) {
             ))}
           </View>
 
-          <Text style={styles.fieldLabel}>Body weight ({localUnits}) — optional</Text>
+          <Text style={styles.fieldLabel}>Body weight ({localUnits}), optional</Text>
           <TextInput
             style={styles.input}
             value={bodyWeight}
@@ -190,7 +190,7 @@ export default function FirstRunScreen({ navigation }) {
           <View style={{ flex: 1 }}>
             <Text style={styles.pathTitle}>Choose a ready-made plan</Text>
             <Text style={styles.pathText}>
-              Browse our library of tried-and-tested programmes — beginner to advanced.
+              Browse our library of tried-and-tested programmes, from beginner to advanced.
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={hasName ? colors.textMuted : colors.border} />

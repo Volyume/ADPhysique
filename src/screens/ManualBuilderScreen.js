@@ -316,7 +316,7 @@ function PlanBalanceCard({ days }) {
               <Text style={[balanceStyles.warningText, status === 'none' && { color: colors.warning }]}>
                 {status === 'none'
                   ? `No ${MUSCLE_DISPLAY_NAMES[muscle]} work in this plan`
-                  : `${MUSCLE_DISPLAY_NAMES[muscle]} work is low — consider adding a set or two`}
+                  : `${MUSCLE_DISPLAY_NAMES[muscle]} work is low. Consider adding a set or two.`}
               </Text>
             </View>
           ))}
@@ -329,7 +329,7 @@ function PlanBalanceCard({ days }) {
             <View key={muscle} style={balanceStyles.warningRow}>
               <Ionicons name="warning-outline" size={14} color={colors.error} />
               <Text style={[balanceStyles.warningText, { color: colors.error }]}>
-                {`${MUSCLE_DISPLAY_NAMES[muscle]} volume is very high — this may limit recovery`}
+                {`${MUSCLE_DISPLAY_NAMES[muscle]} volume is very high. This may affect recovery.`}
               </Text>
             </View>
           ))}

@@ -463,7 +463,7 @@ export default function HomeScreen({ navigation }) {
             <PlanBuilderCard
               icon="sparkles"
               title="Coach Builder"
-              desc="Answer a few questions — get a personalised plan built around your schedule and goal."
+              desc="Answer a few questions and get a personalised plan built around your schedule and goal."
               badge="Recommended"
               onPress={() => navigation.navigate('PlansTab', { screen: 'CoachBuilder' })}
             />

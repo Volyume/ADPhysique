@@ -285,7 +285,7 @@ export default function PeakWeekScreen({ navigation }) {
                       {d.weekday ? ` · ${d.weekday}` : ''}
                     </Text>
                     <Text style={styles.daySub}>
-                      {d.dateLabel ? `${d.dateLabel} — ` : ''}{d.phaseLabel}
+                      {d.dateLabel ? `${d.dateLabel} · ` : ''}{d.phaseLabel}
                     </Text>
                   </View>
                   {d.isShowDay && (

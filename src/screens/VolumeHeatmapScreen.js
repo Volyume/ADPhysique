@@ -211,7 +211,7 @@ export default function VolumeHeatmapScreen() {
         {editing ? (
           <View style={styles.editSection}>
             <Text style={styles.editTitle}>Edit Volume Targets</Text>
-            <Text style={styles.editSubtitle}>Weekly sets per muscle — Minimum / Target / Ceiling</Text>
+            <Text style={styles.editSubtitle}>Weekly sets per muscle · Minimum / Target / Ceiling</Text>
             {muscles.map(muscle => (
               <View key={muscle} style={styles.editRow}>
                 <Text style={styles.editMuscleName}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>

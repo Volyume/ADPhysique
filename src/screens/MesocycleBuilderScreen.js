@@ -236,7 +236,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
                 {meso.startDate && (
                   <Text style={styles.metaItem}>
                     {format(new Date(meso.startDate), 'MMM d')}
-                    {meso.endDate ? ` — ${format(new Date(meso.endDate), 'MMM d')}` : ''}
+                    {meso.endDate ? ` · ${format(new Date(meso.endDate), 'MMM d')}` : ''}
                   </Text>
                 )}
                 {meso.focus ? <Text style={styles.metaItem}>{meso.focus}</Text> : null}

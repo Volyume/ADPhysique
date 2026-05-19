@@ -573,7 +573,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   </View>
                 ))}
               {Object.values(adaptiveDecisions).every(d => d.decision === 'hold' && d.delta === 0) && (
-                <Text style={styles.adaptiveHold}>All muscles on track — continue as planned.</Text>
+                <Text style={styles.adaptiveHold}>All muscles on track. Continue as planned.</Text>
               )}
             </View>
           )}

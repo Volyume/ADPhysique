@@ -97,7 +97,7 @@ export default function LoginScreen({ navigation }) {
           {/* Crash log — shown only when a previous fatal error was stored */}
           {crashLog && (
             <View style={styles.crashBanner}>
-              <Text style={styles.crashTitle}>Previous crash detected — screenshot this:</Text>
+              <Text style={styles.crashTitle}>Previous crash detected. Screenshot this:</Text>
               <Text style={styles.crashMsg}>{crashLog.message}</Text>
               <Text style={styles.crashStack}>{crashLog.stack?.slice(0, 400)}</Text>
               <TouchableOpacity onPress={() => { AsyncStorage.removeItem(CRASH_LOG_KEY); setCrashLog(null); }}>
