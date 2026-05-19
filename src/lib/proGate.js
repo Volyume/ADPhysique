@@ -51,7 +51,6 @@ export const PRO_ROUTES = [
   'WeeklyCheckIn',
   'NutritionTargets',
   'BodyMetrics',
-  'MesocycleBuilder',
   'CoachOutput',
   'ProGoalSetup',
 ];
