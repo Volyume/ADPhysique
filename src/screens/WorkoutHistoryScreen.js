@@ -80,6 +80,12 @@ export default function WorkoutHistoryScreen({ navigation }) {
     navigation.navigate('HomeTab', { screen: 'ActiveWorkout' });
   }
 
+  async function handleStartNewWorkout() {
+    const newWorkout = await createWorkout(user.id, null);
+    startWorkout(newWorkout);
+    navigation.navigate('HomeTab', { screen: 'ActiveWorkout' });
+  }
+
   // ─── Filtering logic ────────────────────────────────────────────────────────
   const filteredWorkouts = useMemo(() => {
     let result = workouts;
@@ -368,8 +374,14 @@ export default function WorkoutHistoryScreen({ navigation }) {
           !loading ? (
             <View style={styles.empty}>
               <Ionicons name="barbell-outline" size={48} color={colors.surface3} />
-              <Text style={styles.emptyTitle}>No sessions yet</Text>
-              <Text style={styles.emptyText}>Completed workouts will appear here. Start a session from the Train tab.</Text>
+              <Text style={styles.emptyTitle}>No sessions logged yet</Text>
+              <Text style={styles.emptyText}>
+                Every workout you finish will appear here. Log your first session and start tracking your progress.
+              </Text>
+              <TouchableOpacity style={styles.startBtn} onPress={handleStartNewWorkout}>
+                <Ionicons name="add-circle-outline" size={18} color={colors.background} />
+                <Text style={styles.startBtnText}>Start a session</Text>
+              </TouchableOpacity>
             </View>
           ) : null
         }
@@ -600,5 +612,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
     paddingHorizontal: spacing.xl,
+  },
+  startBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primary,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    marginTop: spacing.sm,
+  },
+  startBtnText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.background,
   },
 });

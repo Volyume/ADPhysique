@@ -1120,7 +1120,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                       {isWarmup ? ' · Warm-up' : isDrop ? ' · Drop' : ''}
                     </Text>
                     {!isWarmup && !isDrop && est1RM > 0 && (
-                      <Text style={styles.loggedEst1RM}>≈{est1RM.toFixed(0)}{units} 1RM</Text>
+                      <Text style={styles.loggedEst1RM}>Est. max ≈{est1RM.toFixed(0)}{units}</Text>
                     )}
                     <Ionicons name="checkmark-circle" size={16} color={isWarmup ? colors.warning : isDrop ? colors.gold : colors.success} />
                   </View>

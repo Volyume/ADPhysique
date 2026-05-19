@@ -866,8 +866,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.black,
     color: colors.primary,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 0.3,
     minWidth: 44,
   },
   dayNameInput: {
@@ -1079,8 +1078,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.bold,
     color: colors.textMuted,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   chipRow: {
     flexDirection: 'row',
@@ -1214,8 +1212,7 @@ const balanceStyles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontWeight: fontWeight.bold,
     color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 0.3,
   },
   grid: {
     flexDirection: 'row',

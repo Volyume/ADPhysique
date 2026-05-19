@@ -120,7 +120,8 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           {best1RM > 0 && (
             <View style={styles.est1RM}>
               <Ionicons name="trophy-outline" size={16} color={colors.gold} />
-              <Text style={styles.est1RMText}>Est. 1RM: {best1RM.toFixed(1)} {units}</Text>
+              <Text style={styles.est1RMText}>Est. max lift: {best1RM.toFixed(1)} {units}</Text>
+              <InfoTooltip text="Your estimated one-rep max — the most weight you could lift for a single rep, calculated from the sets you've logged. It updates automatically as you get stronger." size={12} />
             </View>
           )}
 
@@ -194,11 +195,21 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                     ))}
                   </View>
                   {sessionEst1RM > 0 && (
-                    <Text style={styles.historyEst}>≈{sessionEst1RM.toFixed(0)}{units} 1RM</Text>
+                    <Text style={styles.historyEst}>Est. max: ≈{sessionEst1RM.toFixed(0)}{units}</Text>
                   )}
                 </View>
               );
             })}
+          </View>
+        )}
+
+        {/* History empty state */}
+        {history.length === 0 && exercise && (
+          <View style={styles.historyEmpty}>
+            <Ionicons name="time-outline" size={20} color={colors.textMuted} />
+            <Text style={styles.historyEmptyText}>
+              You haven't logged this exercise yet. Add it to a session to start tracking your progress.
+            </Text>
           </View>
         )}
 
@@ -214,8 +225,8 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                 </Text>
                 <View style={styles.prInfo}>
                   <Text style={styles.prLabel}>
-                    {pr.record_type === '1rm_estimate' ? 'Est. 1RM' :
-                     pr.record_type === 'heaviest_weight' ? 'Heaviest Weight' : 'Most Reps'}
+                    {pr.record_type === '1rm_estimate' ? 'Est. max lift' :
+                     pr.record_type === 'heaviest_weight' ? 'Heaviest weight' : 'Most reps'}
                   </Text>
                   <Text style={styles.prValue}>
                     {pr.record_type === '1rm_estimate' ? `${parseFloat(pr.value).toFixed(1)}${units}` :
@@ -321,6 +332,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
+  },
+  historyEmpty: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    backgroundColor: colors.surface, borderRadius: radius.md,
+    padding: spacing.lg, borderWidth: 1, borderColor: colors.border,
+  },
+  historyEmptyText: {
+    flex: 1, fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 19,
   },
   section: { gap: spacing.md },
   sectionTitle: {

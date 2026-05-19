@@ -192,7 +192,7 @@ export default function PRWallScreen({ navigation }) {
               {best1RM && (
                 <View style={styles.prRow}>
                   <Text style={styles.prIcon}>🥇</Text>
-                  <Text style={styles.prType}>Est. 1RM</Text>
+                  <Text style={styles.prType}>Est. max lift</Text>
                   <Text style={styles.prValue}>{parseFloat(best1RM.value).toFixed(1)}{units}</Text>
                   <Text style={styles.prDate}>{format(new Date(best1RM.achieved_date), 'MMM d yyyy')}</Text>
                 </View>
