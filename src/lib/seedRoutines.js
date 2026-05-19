@@ -590,7 +590,7 @@ const LIBRARY_PLANS = [
   // ── 14. V-Taper Aesthetic (Lats + Side Delts) ────────────────────────────
   {
     name: 'V-Taper Aesthetic',
-    description: 'Building a tapered physique: wide upper back and rounded side shoulders over a narrow waist. Back width and side shoulder work are both elevated above what a balanced programme provides; exercises that build waist width are excluded. Sessions are structured so the muscles that create visual width are trained first, when freshest. Run as a 6–8 week specialisation phase. Add reps each session, then add weight when you reach the top of the range. Stop 1 to 2 reps before failure on each set.',
+    description: 'Building a tapered physique: wide upper back and capped side delts over a narrow waist. Back width and side delt work are both elevated above what a balanced programme provides; exercises that build waist width are excluded. Sessions are structured so the muscles that create visual width are trained first, when freshest. Run as a 6–8 week specialisation phase. Add reps each session, then add weight when you reach the top of the range. Stop 1 to 2 reps before failure on each set.',
     tags: 'aesthetic v_taper bodybuilding back shoulders gender:men goal:build_muscle days:2',
     difficulty: 1,
     workouts: [
