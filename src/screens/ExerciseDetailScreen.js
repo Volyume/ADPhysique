@@ -41,8 +41,24 @@ export default function ExerciseDetailScreen({ navigation, route }) {
       const sessions = Object.values(byWorkout).slice(0, 8);
       setHistory(sessions);
 
-      // PRs: computed locally from history for Stage 1
-      setPRs([]);
+      // Compute local PRs from working sets
+      const workingSets = mySets.filter(
+        s => (s.setType ?? s.set_type) !== 'warmup' && (s.weight || 0) > 0 && (s.actualReps || 0) > 0,
+      );
+      if (workingSets.length > 0) {
+        const computedPRs = [];
+        let best1RMVal = 0, best1RMSet = null, heaviest = null, mostReps = null;
+        for (const s of workingSets) {
+          const est = calculate1RM(s.weight, s.actualReps);
+          if (est > best1RMVal) { best1RMVal = est; best1RMSet = s; }
+          if (!heaviest || s.weight > heaviest.weight) heaviest = s;
+          if (!mostReps || s.actualReps > mostReps.actualReps) mostReps = s;
+        }
+        if (best1RMSet) computedPRs.push({ id: 'pr_1rm', record_type: '1rm_estimate', value: best1RMVal, reps: best1RMSet.actualReps, achieved_date: best1RMSet.createdAt });
+        if (heaviest)   computedPRs.push({ id: 'pr_heavy', record_type: 'heaviest_weight', value: heaviest.weight, reps: heaviest.actualReps, achieved_date: heaviest.createdAt });
+        if (mostReps && mostReps !== heaviest) computedPRs.push({ id: 'pr_reps', record_type: 'most_reps', value: mostReps.weight, reps: mostReps.actualReps, achieved_date: mostReps.createdAt });
+        setPRs(computedPRs);
+      }
 
       // Substitutes
       const allExercises = await getAllExercises();

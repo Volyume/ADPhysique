@@ -19,6 +19,12 @@ export default function RoutineDetailScreen({ navigation, route }) {
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [allExercises, setAllExercises] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [editingExercise, setEditingExercise] = useState(null);
+  const [editSets, setEditSets] = useState('');
+  const [editRepsMin, setEditRepsMin] = useState('');
+  const [editRepsMax, setEditRepsMax] = useState('');
+  const [editRest, setEditRest] = useState('');
+  const [editStartWeight, setEditStartWeight] = useState('');
 
   useEffect(() => {
     if (routineId) loadRoutine();
@@ -51,6 +57,32 @@ export default function RoutineDetailScreen({ navigation, route }) {
       exercise.defaultRepMax || 12,
     );
     setShowAddExercise(false);
+    await loadRoutine();
+  }
+
+  function openEdit(routineExercise, exercise) {
+    setEditingExercise({ routineExercise, exercise });
+    setEditSets(String(routineExercise.recommendedSets ?? 3));
+    setEditRepsMin(String(routineExercise.recommendedRepsMin ?? 6));
+    setEditRepsMax(String(routineExercise.recommendedRepsMax ?? 12));
+    setEditRest(String(routineExercise.restSeconds ?? ''));
+    setEditStartWeight(String(routineExercise.startingWeight ?? ''));
+  }
+
+  async function saveEdit() {
+    if (!editingExercise) return;
+    const sets = parseInt(editSets, 10);
+    const repsMin = parseInt(editRepsMin, 10);
+    const repsMax = parseInt(editRepsMax, 10);
+    if (!sets || !repsMin || !repsMax) return;
+    await updateRoutineExercise(editingExercise.routineExercise.id, {
+      recommendedSets: sets,
+      recommendedRepsMin: repsMin,
+      recommendedRepsMax: repsMax,
+      restSeconds: editRest ? parseInt(editRest, 10) : null,
+      startingWeight: editStartWeight ? parseFloat(editStartWeight) : null,
+    });
+    setEditingExercise(null);
     await loadRoutine();
   }
 
@@ -98,7 +130,11 @@ export default function RoutineDetailScreen({ navigation, route }) {
           </TouchableOpacity>
         }
         renderItem={({ item: { routineExercise, exercise }, index }) => (
-          <View style={styles.exerciseCard}>
+          <TouchableOpacity
+            style={styles.exerciseCard}
+            onPress={() => openEdit(routineExercise, exercise)}
+            activeOpacity={0.8}
+          >
             <View style={styles.orderBadge}>
               <Text style={styles.orderNum}>{index + 1}</Text>
             </View>
@@ -119,20 +155,28 @@ export default function RoutineDetailScreen({ navigation, route }) {
                   (exercise.primaryMuscle || '').slice(1)}
               </Text>
             </View>
-            <TouchableOpacity
-              onPress={() => Alert.alert(
-                'Remove exercise?',
-                `Remove ${exercise.name} from this routine?`,
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Remove', style: 'destructive', onPress: () => removeExercise(routineExercise) },
-                ],
-              )}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            >
-              <Ionicons name="trash-outline" size={20} color={colors.error} />
-            </TouchableOpacity>
-          </View>
+            <View style={styles.cardActions}>
+              <TouchableOpacity
+                onPress={() => openEdit(routineExercise, exercise)}
+                hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+              >
+                <Ionicons name="create-outline" size={20} color={colors.textMuted} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => Alert.alert(
+                  'Remove exercise?',
+                  `Remove ${exercise.name} from this routine?`,
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Remove', style: 'destructive', onPress: () => removeExercise(routineExercise) },
+                  ],
+                )}
+                hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+              >
+                <Ionicons name="trash-outline" size={20} color={colors.error} />
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
         )}
         ListFooterComponent={
           <TouchableOpacity style={styles.addBtn} onPress={() => setShowAddExercise(true)}>
@@ -149,6 +193,84 @@ export default function RoutineDetailScreen({ navigation, route }) {
         }
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
       />
+
+      {/* Edit exercise modal */}
+      <Modal
+        visible={!!editingExercise}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setEditingExercise(null)}
+      >
+        <TouchableOpacity style={styles.editOverlay} activeOpacity={1} onPress={() => setEditingExercise(null)}>
+          <TouchableOpacity style={styles.editSheet} activeOpacity={1}>
+            <Text style={styles.editTitle}>{editingExercise?.exercise?.name}</Text>
+            <View style={styles.editRow}>
+              <View style={styles.editField}>
+                <Text style={styles.editLabel}>Sets</Text>
+                <TextInput
+                  style={styles.editInput}
+                  value={editSets}
+                  onChangeText={setEditSets}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                  placeholderTextColor={colors.textMuted}
+                />
+              </View>
+              <View style={styles.editField}>
+                <Text style={styles.editLabel}>Reps min</Text>
+                <TextInput
+                  style={styles.editInput}
+                  value={editRepsMin}
+                  onChangeText={setEditRepsMin}
+                  keyboardType="number-pad"
+                  maxLength={3}
+                  placeholderTextColor={colors.textMuted}
+                />
+              </View>
+              <View style={styles.editField}>
+                <Text style={styles.editLabel}>Reps max</Text>
+                <TextInput
+                  style={styles.editInput}
+                  value={editRepsMax}
+                  onChangeText={setEditRepsMax}
+                  keyboardType="number-pad"
+                  maxLength={3}
+                  placeholderTextColor={colors.textMuted}
+                />
+              </View>
+            </View>
+            <View style={styles.editRow}>
+              <View style={styles.editField}>
+                <Text style={styles.editLabel}>Rest (s)</Text>
+                <TextInput
+                  style={styles.editInput}
+                  value={editRest}
+                  onChangeText={setEditRest}
+                  keyboardType="number-pad"
+                  placeholder="90"
+                  maxLength={4}
+                  placeholderTextColor={colors.textMuted}
+                />
+              </View>
+              <View style={styles.editField}>
+                <Text style={styles.editLabel}>Start weight</Text>
+                <TextInput
+                  style={styles.editInput}
+                  value={editStartWeight}
+                  onChangeText={setEditStartWeight}
+                  keyboardType="decimal-pad"
+                  placeholder="kg"
+                  maxLength={6}
+                  placeholderTextColor={colors.textMuted}
+                />
+              </View>
+            </View>
+            <TouchableOpacity style={styles.editSaveBtn} onPress={saveEdit}>
+              <Text style={styles.editSaveBtnText}>Save</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
 
       <Modal visible={showAddExercise} animationType="slide" onRequestClose={() => setShowAddExercise(false)}>
         <SafeAreaView style={styles.pickerSafe}>
@@ -227,6 +349,41 @@ const styles = StyleSheet.create({
   exerciseMeta: { fontSize: fontSize.sm, color: colors.primary },
   exerciseMuscle: { fontSize: fontSize.xs, color: colors.textMuted },
   exerciseStartWeight: { fontSize: fontSize.xs, color: colors.primary },
+  cardActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  editOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  editSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    padding: spacing.xl,
+    gap: spacing.lg,
+    borderTopWidth: 1,
+    borderColor: colors.border,
+  },
+  editTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.xs },
+  editRow: { flexDirection: 'row', gap: spacing.md },
+  editField: { flex: 1, gap: spacing.xs },
+  editLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.5 },
+  editInput: {
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+    borderWidth: 1,
+    borderColor: colors.border,
+    textAlign: 'center',
+  },
+  editSaveBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+    marginTop: spacing.xs,
+  },
+  editSaveBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
   addBtn: {
     flexDirection: 'row',
     alignItems: 'center',
