@@ -10,7 +10,7 @@ import { format } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import InfoTooltip from '../components/InfoTooltip';
-import { calculateNutritionTargets } from '../lib/nutritionEngine';
+import { calculateNutritionTargets, PROTEIN_APPROACHES } from '../lib/nutritionEngine';
 import { saveNutritionTargets, getNutritionTargets, logBodyMetric } from '../lib/database';
 import useAppStore from '../store/useAppStore';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
@@ -131,17 +131,19 @@ export default function NutritionTargetsScreen() {
   const { user } = useAppStore();
 
   // ── Form state ────────────────────────────────────────────────────────────────
-  const [sex,          setSex]          = useState('male');
-  const [age,          setAge]          = useState('');
-  const [heightFt,     setHeightFt]     = useState('');
-  const [heightIn,     setHeightIn]     = useState('');
-  const [weight,       setWeight]       = useState('');
-  const [bodyFat,      setBodyFat]      = useState('');
-  const [bfSource,     setBfSource]     = useState('visual');
-  const [activity,     setActivity]     = useState('moderate');
-  const [trainingDays, setTrainingDays] = useState(4);
-  const [goal,         setGoal]         = useState('lean_gain');
-  const [consent,      setConsent]      = useState(false);
+  const [sex,            setSex]            = useState('male');
+  const [age,            setAge]            = useState('');
+  const [heightFt,       setHeightFt]       = useState('');
+  const [heightIn,       setHeightIn]       = useState('');
+  const [weight,         setWeight]         = useState('');
+  const [bodyFat,        setBodyFat]        = useState('');
+  const [bfSource,       setBfSource]       = useState('visual');
+  const [activity,       setActivity]       = useState('moderate');
+  const [trainingDays,   setTrainingDays]   = useState(4);
+  const [goal,           setGoal]           = useState('lean_gain');
+  const [proteinApproach, setProteinApproach] = useState('maximum');
+  const [customProteinGPerKg, setCustomProteinGPerKg] = useState('');
+  const [consent,        setConsent]        = useState(false);
 
   // ── Results / UI state ──────────────────────────────────────────────────────────
   const [results,      setResults]      = useState(null);
@@ -202,13 +204,17 @@ export default function NutritionTargetsScreen() {
     try {
       const targets = calculateNutritionTargets({
         sex,
-        ageYears:       ageNum,
-        heightCm:       heightNum,
-        weightKg:       weightNum,
-        bodyFatPercent: bfNum,
-        bodyFatSource:  bfNum != null ? bfSource : null,
-        activityLevel:  activity,
+        ageYears:           ageNum,
+        heightCm:           heightNum,
+        weightKg:           weightNum,
+        bodyFatPercent:     bfNum,
+        bodyFatSource:      bfNum != null ? bfSource : null,
+        activityLevel:      activity,
         goal,
+        proteinApproach,
+        customProteinGPerKg: proteinApproach === 'custom' && customProteinGPerKg.trim()
+          ? parseFloat(customProteinGPerKg)
+          : null,
       });
 
       setResults(targets);
@@ -445,6 +451,67 @@ export default function NutritionTargetsScreen() {
             })}
           </View>
 
+          {/* ── SECTION 4: PROTEIN APPROACH ───────────────────────────────────────────────── */}
+
+          <SectionHeading title="PROTEIN TARGET" />
+
+          <View style={styles.approachNote}>
+            <InfoTooltip size={12} text={
+              "Different apps and guidelines use different protein targets:\n\n" +
+              "• 1.2–1.5 g/kg — mainstream sports nutrition (ISSN, NHS). Adequate for general athletes; easy to hit day-to-day.\n\n" +
+              "• 1.6–2.2 g/kg — current hypertrophy research consensus (Morton et al. 2018 meta-analysis). Most evidence suggests gains plateau around 1.62 g/kg bodyweight; going to 2.0 g/kg gives a comfortable buffer above that ceiling without being excessive.\n\n" +
+              "• 2.2–3.3 g/kg — RP Hypertrophy / Helms et al. 2014 framework, used by competitive bodybuilders. Rates rise in deficits specifically to prevent muscle breakdown. Effective but harder to sustain.\n\n" +
+              "There is no single right answer. Pick the level you can consistently hit. Consistency over weeks matters more than hitting an aggressive target occasionally."
+            } />
+            <Text style={styles.approachNoteText}>Different guidelines use different targets. Pick the level you can consistently sustain.</Text>
+          </View>
+
+          {['standard', 'optimised', 'maximum', 'custom'].map(key => {
+            const ap = PROTEIN_APPROACHES[key];
+            const active = proteinApproach === key;
+            return (
+              <TouchableOpacity
+                key={key}
+                style={[styles.approachCard, active && styles.approachCardActive]}
+                onPress={() => setProteinApproach(key)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.approachCardHeader}>
+                  {active && <Ionicons name="checkmark-circle" size={14} color={colors.primary} style={{ marginRight: 4 }} />}
+                  <Text style={[styles.approachCardLabel, active && styles.approachCardLabelActive]}>
+                    {ap.label}
+                  </Text>
+                  <Text style={[styles.approachCardRange, active && styles.approachCardRangeActive]}>
+                    {key !== 'custom' ? ap.range : ''}
+                  </Text>
+                  {key === 'maximum' && (
+                    <View style={styles.recommendedBadge}>
+                      <Text style={styles.recommendedBadgeText}>Default</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={[styles.approachCardDesc, active && styles.approachCardDescActive]}>
+                  {ap.description}
+                </Text>
+                {active && key === 'custom' && (
+                  <View style={styles.customProteinRow}>
+                    <Text style={styles.customProteinLabel}>Protein target</Text>
+                    <TextInput
+                      style={styles.customProteinInput}
+                      value={customProteinGPerKg}
+                      onChangeText={setCustomProteinGPerKg}
+                      placeholder="e.g. 2.0"
+                      placeholderTextColor={colors.textMuted}
+                      keyboardType="decimal-pad"
+                      maxLength={4}
+                    />
+                    <Text style={styles.customProteinUnit}>g / kg</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+
           {/* ── GDPR Consent ───────────────────────────────────────────────────────────────────── */}
 
           <View style={styles.consentCard}>
@@ -573,15 +640,38 @@ export default function NutritionTargetsScreen() {
                   ? `Your maintenance is ${results.maintenanceKcal.toLocaleString()} kcal. A ${absPct}% deficit (−${Math.abs(surplusDelta)} kcal) puts you on track to ${rateDir} roughly ${rateAbs.toFixed(2)} kg/week. That rate is ${rateAbs <= 0.5 ? 'conservative — you\'ll lose mostly fat while retaining more muscle' : rateAbs <= 0.8 ? 'moderate — effective fat loss with manageable muscle risk' : 'aggressive — protein intake has been raised to protect lean mass'}. The key is consistency over weeks, not perfection each day.`
                   : `Your maintenance is ${results.maintenanceKcal.toLocaleString()} kcal. A slight ${Math.abs(absPct)}% deficit puts you in recomposition territory — just enough of a deficit to mobilise body fat as fuel, while high protein and training stimulus tell your body to hold (and even build) muscle. Progress is slower than a dedicated bulk or cut, but body composition improves simultaneously.`;
 
+                const approachInfo = PROTEIN_APPROACHES[results.proteinApproach ?? 'optimised'];
+                const approachRef =
+                  results.proteinApproach === 'standard'
+                    ? 'mainstream sports nutrition guidelines (ISSN)'
+                    : results.proteinApproach === 'maximum'
+                    ? 'the RP Hypertrophy / Helms et al. 2014 framework'
+                    : 'current hypertrophy meta-analysis consensus (Morton et al. 2018)';
+                const basisStr = results.proteinBasis === 'lbm'
+                  ? `${results.proteinGPerKgLbm} g/kg lean mass`
+                  : `${results.proteinGPerKg} g/kg bodyweight`;
+
                 const proteinWhy = results.proteinBasis === 'lbm'
-                  ? (isGain
-                    ? `You have roughly ${lbmKg} kg of lean mass. At ${results.proteinGPerKgLbm} g/kg lean mass, ${results.proteinG}g of protein sits at the research-backed optimum for maximising muscle protein synthesis during a gaining phase (Helms et al. 2014). We scale to lean mass — not total weight — because fat tissue doesn't need protein to maintain, so this gives you a more precise target regardless of body-fat level. Going below ~1.6 g/kg bodyweight caps your adaptation response; at ${results.proteinGPerKgLbm} g/kg LBM you have a meaningful buffer above that ceiling.`
-                    : isRecomp
-                    ? `With ${lbmKg} kg of lean mass, your ${results.proteinG}g target (${results.proteinGPerKgLbm} g/kg LBM) is intentionally elevated for a recomp. High protein does two jobs simultaneously: it provides the amino acids needed for muscle protein synthesis, and it signals your body to spare existing muscle even as the deficit encourages fat oxidation. This dual role is what makes recomposition possible — protein is the lever that separates "losing weight" from "changing body composition."`
-                    : `With ${lbmKg} kg of lean mass, ${results.proteinG}g (${results.proteinGPerKgLbm} g/kg LBM) sits near the top of the evidence-based range for muscle preservation in a deficit. When calories are restricted, the body can break down muscle for fuel — high protein intake is the primary tool to prevent this. The Helms et al. 2014 contest-prep review found 2.3–3.1 g/kg LBM optimal; at ${results.proteinGPerKgLbm} g/kg you're within that protective band.`)
-                  : (isGain
-                    ? `At ${results.proteinGPerKg} g/kg bodyweight, your ${results.proteinG}g target meets the practical upper threshold for gaining phases from the RP Hypertrophy framework. This is the "safety margin" level — enough to saturate muscle protein synthesis across all your training sessions without excess. Tip: if you add a measured body fat % (BIA, caliper, or DEXA), we can scale to your lean mass instead, which is more precise — especially if your body fat is high or low.`
-                    : `At ${results.proteinGPerKg} g/kg bodyweight, your ${results.proteinG}g target is deliberately elevated. In a calorie deficit, your body will break down muscle tissue for energy if protein is too low — this is the primary driver of "skinny fat" outcomes on poorly planned diets. High protein suppresses that breakdown (anti-catabolism) and keeps you feeling full, which helps adherence. Enter a measured body fat % to unlock lean-mass scaling, which is even more accurate.`);
+                  ? (() => {
+                      const lbmLine = `You have roughly ${lbmKg} kg of lean mass. At ${results.proteinGPerKgLbm} g/kg lean mass, ${results.proteinG}g comes from ${approachRef}. `;
+                      const scalingLine = `We scale to lean mass rather than total weight because fat tissue doesn't need protein to maintain — this gives a more precise target regardless of body-fat level. `;
+                      const purposeLine = isGain
+                        ? `Protein is the raw material your muscles rebuild with after every session. Research suggests gains plateau around 1.62 g/kg bodyweight (~2.0 g/kg LBM); at ${results.proteinGPerKgLbm} g/kg LBM you're above that threshold.`
+                        : isRecomp
+                        ? `High protein does two jobs in a recomp: amino acids for muscle protein synthesis, and a signal for your body to spare muscle even as the slight deficit encourages fat oxidation. This dual role is what separates "losing weight" from "changing body composition."`
+                        : `In a deficit, the body can break down muscle for fuel — high protein is the primary tool to prevent this (anti-catabolism). ${results.proteinApproach === 'maximum' ? `Helms et al. 2014 found 2.3–3.1 g/kg LBM optimal for contest prep; at ${results.proteinGPerKgLbm} g/kg you're within that protective band.` : 'Your target keeps you well above the minimum needed to preserve lean mass.'}`;
+                      return lbmLine + scalingLine + purposeLine;
+                    })()
+                  : (() => {
+                      const bwLine = `At ${results.proteinGPerKg} g/kg bodyweight (${results.proteinG}g), your target is based on ${approachRef}. `;
+                      const tipLine = `Tip: entering a measured body fat % (BIA, caliper, or DEXA) lets us scale to lean mass instead — more precise, especially if your body-fat % is high or low. `;
+                      const purposeLine = isGain
+                        ? `Protein is the raw material muscles rebuild with after every session. At ${results.proteinGPerKg} g/kg you're above the threshold where muscle protein synthesis is saturated, giving you a comfortable margin.`
+                        : isRecomp
+                        ? `High protein in a recomp provides amino acids for muscle protein synthesis while signalling your body to spare lean mass as fat is mobilised for energy.`
+                        : `In a calorie deficit, muscle tissue becomes a fuel source if protein is too low — the primary driver of "skinny fat" outcomes. At ${results.proteinGPerKg} g/kg you're in the anti-catabolic range, and the high satiety of protein also helps adherence.`;
+                      return bwLine + tipLine + purposeLine;
+                    })();
 
                 const fatWhy = `Fat has two non-negotiable roles: testosterone and sex hormone production depend on dietary fat, and vitamins A, D, E, and K are fat-soluble — meaning they can't be absorbed without it. We set yours to ${fatPct}% of your calories (${results.fatG}g), with a hard floor of ${fatFloorG}g. Dropping below that floor — even temporarily during a cut — can suppress testosterone and impair recovery. Think of fat as your hormonal infrastructure budget: it's the last macro to cut.`;
 
@@ -1160,6 +1250,95 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
     color: colors.primary,
+  },
+
+  // ── Protein approach ─────────────────────────────────────────────────────────
+
+  approachNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  approachNoteText: {
+    flex: 1,
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    lineHeight: 17,
+  },
+  approachCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.xs,
+  },
+  approachCardActive: {
+    backgroundColor: colors.primaryBg,
+    borderColor: colors.primary,
+  },
+  approachCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  approachCardLabel: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+    flex: 1,
+  },
+  approachCardLabelActive: { color: colors.primary },
+  approachCardRange: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    fontWeight: fontWeight.medium,
+  },
+  approachCardRangeActive: { color: colors.primaryDim },
+  approachCardDesc: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    lineHeight: 17,
+  },
+  approachCardDescActive: { color: colors.primaryDim },
+  recommendedBadge: {
+    backgroundColor: colors.primary + '20',
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  recommendedBadgeText: {
+    fontSize: 10,
+    fontWeight: fontWeight.bold,
+    color: colors.primary,
+  },
+  customProteinRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingTop: spacing.xs,
+  },
+  customProteinLabel: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+  },
+  customProteinInput: {
+    backgroundColor: colors.inputBg,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontSize: fontSize.md,
+    color: colors.textPrimary,
+    borderWidth: 1,
+    borderColor: colors.border,
+    width: 90,
+    textAlign: 'center',
+  },
+  customProteinUnit: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    fontWeight: fontWeight.medium,
   },
 
   // ── Why these numbers ────────────────────────────────────────────────────────

@@ -36,47 +36,55 @@ const PHASE_LABELS = {
   contest_prep: 'Contest Prep',
 };
 
-// PREFERRED METHOD — protein scaled to LEAN body mass (g per kg LBM).
-// Per Helms et al. 2014, Trexler, Schoenfeld and the RP framework,
-// scaling to fat-free mass is more accurate than total bodyweight: it
-// neither over-prescribes for a high-body-fat lifter nor under-prescribes
-// for an ultra-lean one. Rates rise as the deficit widens (the deficit
-// scaling principle) because protein needs increase to spare lean mass
-// when energy is low and body fat drops. Helms' contest-prep range is
-// 2.3–3.1 g/kg LBM; the deepest phases sit at the top of that band.
-const PROTEIN_G_PER_KG_LBM = {
-  lean_gain:      2.6,
-  build:          2.6,
-  maintain:       2.6,
-  recomp:         2.9,
-  mild_cut:       3.0,
-  aggressive_cut: 3.2,
-  contest_prep:   3.3,
-};
-
-// FALLBACK — used only when there is no credible body-composition data.
-// Scales to total bodyweight at the RP Diet app practical architecture:
-// 1.0 g/lb (2.2 g/kg) maintaining/gaining as Dr. Mike's "safety margin"
-// buffer, scaling to 1.2–1.5 g/lb (2.6–3.3 g/kg) across a cut for
-// satiety and anti-catabolism.
-const PROTEIN_G_PER_KG_BW = {
-  lean_gain:      2.2,
-  build:          2.2,
-  maintain:       2.2,
-  recomp:         2.4,
-  mild_cut:       2.6,
-  aggressive_cut: 3.0,
-  contest_prep:   3.3,
+// Three protein approaches — user selects which fits their preference.
+//
+// standard  — mainstream sports nutrition guidelines (ISSN, ACSM/AND/DC joint position).
+//             Adequate for muscle growth and easy to hit day-to-day.
+// optimised — midpoint of current hypertrophy meta-analyses (Morton et al. 2018 plateau
+//             ~1.62 g/kg BW; 2.0–2.3 g/kg LBM gives a practical buffer). DEFAULT.
+// maximum   — RP Hypertrophy / Helms et al. 2014 framework. Competitive bodybuilding
+//             protocol; rates rise aggressively in deficits to spare lean mass.
+//
+// Rates are g per kg of LEAN BODY MASS (preferred when body fat is measured):
+export const PROTEIN_APPROACHES = {
+  standard: {
+    label: 'Standard',
+    range: '1.2–1.6 g/kg',
+    description: 'Mainstream sports nutrition guidelines. Plenty for muscle growth; easy to hit consistently.',
+    lbm: { lean_gain: 2.0, build: 2.0, maintain: 1.9, recomp: 2.2, mild_cut: 2.3, aggressive_cut: 2.5, contest_prep: 2.8 },
+    bw:  { lean_gain: 1.4, build: 1.4, maintain: 1.3, recomp: 1.6, mild_cut: 1.8, aggressive_cut: 2.0, contest_prep: 2.2 },
+    floor: 1.2,
+  },
+  optimised: {
+    label: 'Optimised',
+    range: '1.6–2.2 g/kg',
+    description: 'Current hypertrophy meta-analysis consensus. Maximises gains without an extreme focus on protein.',
+    lbm: { lean_gain: 2.3, build: 2.3, maintain: 2.2, recomp: 2.5, mild_cut: 2.6, aggressive_cut: 2.8, contest_prep: 3.0 },
+    bw:  { lean_gain: 1.8, build: 1.8, maintain: 1.7, recomp: 2.0, mild_cut: 2.2, aggressive_cut: 2.5, contest_prep: 2.8 },
+    floor: 1.6,
+  },
+  maximum: {
+    label: 'RP Framework',
+    range: '2.2–3.3 g/kg',
+    description: 'RP Hypertrophy / Helms et al. 2014 protocol. Used by competitive bodybuilders who want every marginal advantage.',
+    lbm: { lean_gain: 2.6, build: 2.6, maintain: 2.6, recomp: 2.9, mild_cut: 3.0, aggressive_cut: 3.2, contest_prep: 3.3 },
+    bw:  { lean_gain: 2.2, build: 2.2, maintain: 2.2, recomp: 2.4, mild_cut: 2.6, aggressive_cut: 3.0, contest_prep: 3.3 },
+    floor: 1.8,
+  },
+  custom: {
+    label: 'Custom',
+    range: 'Your value',
+    description: 'Override with a specific g/kg rate. Use if your coach or dietitian has given you a personalised target.',
+    lbm: null,
+    bw:  null,
+    floor: 1.2,
+  },
 };
 
 const KCAL_PER_G_PROTEIN = 4;
 const KCAL_PER_G_CARB = 4;
 const KCAL_PER_G_FAT = 9;
 const FAT_FRACTION = 0.25;
-// Clinical sufficiency floor (~0.8 g/lb total bodyweight). LBM scaling
-// for a very high body-fat lifter can correctly fall below the RP
-// bodyweight baseline — but never below this absolute minimum.
-const PROTEIN_FLOOR_G_PER_KG = 1.8;
 const MAX_SAFE_LOSS_RATE = 0.008;   // 0.8 % BW/week
 const HARD_GATE_LOSS_RATE = 0.015;  // 1.5 % BW/week
 const KCAL_PER_KG_FAT = 7700;       // rough energy equivalent of 1 kg body fat
@@ -113,10 +121,16 @@ function calcConfidence(bodyFatSource) {
   return 'medium'; // no body fat provided
 }
 
-// Returns { proteinG, basis } where basis is 'lbm' (preferred — credible
-// body-composition data available) or 'bodyweight' (fallback).
-function calcProtein(goal, weightKg, lbm, bodyFatSource) {
-  const floorG = PROTEIN_FLOOR_G_PER_KG * weightKg;
+// Returns { proteinG, basis, proteinRateUsed } where basis is 'lbm' or 'bodyweight'.
+function calcProtein(goal, weightKg, lbm, bodyFatSource, proteinApproach = 'maximum', customGPerKg = null) {
+  const approach = PROTEIN_APPROACHES[proteinApproach] ?? PROTEIN_APPROACHES.maximum;
+  const floorG = approach.floor * weightKg;
+
+  // Custom override — apply rate directly to bodyweight (coaches typically specify g/kg BW).
+  if (proteinApproach === 'custom' && customGPerKg != null && customGPerKg > 0) {
+    const proteinG = Math.max(customGPerKg * weightKg, floorG);
+    return { proteinG, basis: 'bodyweight', proteinRateUsed: customGPerKg };
+  }
 
   const hasCredibleLbm =
     lbm !== null &&
@@ -128,19 +142,18 @@ function calcProtein(goal, weightKg, lbm, bodyFatSource) {
 
   let proteinG;
   let basis;
+  let proteinRateUsed;
   if (hasCredibleLbm) {
-    // Preferred: scale strictly to fat-free mass with deficit scaling.
-    const rate = PROTEIN_G_PER_KG_LBM[goal] ?? PROTEIN_G_PER_KG_LBM.maintain;
-    proteinG = rate * lbm;
+    proteinRateUsed = approach.lbm[goal] ?? approach.lbm.maintain;
+    proteinG = proteinRateUsed * lbm;
     basis = 'lbm';
   } else {
-    // Fallback: RP practical g/kg total bodyweight.
-    const rate = PROTEIN_G_PER_KG_BW[goal] ?? PROTEIN_G_PER_KG_BW.maintain;
-    proteinG = rate * weightKg;
+    proteinRateUsed = approach.bw[goal] ?? approach.bw.maintain;
+    proteinG = proteinRateUsed * weightKg;
     basis = 'bodyweight';
   }
 
-  return { proteinG: Math.max(proteinG, floorG), basis };
+  return { proteinG: Math.max(proteinG, floorG), basis, proteinRateUsed };
 }
 
 function estimateWeeklyRate(targetKcal, maintenanceKcal, weightKg) {
@@ -164,6 +177,8 @@ export function calculateNutritionTargets(inputs) {
     bodyFatSource = null,
     activityLevel,
     goal,
+    proteinApproach = 'maximum',
+    customProteinGPerKg = null,
     targetRateKgPerWeek = null,
   } = inputs;
 
@@ -228,8 +243,8 @@ export function calculateNutritionTargets(inputs) {
   }
 
   // --- Macros ---
-  const { proteinG: proteinRaw, basis: proteinBasis } =
-    calcProtein(goal, weightKg, lbm, bodyFatSource);
+  const { proteinG: proteinRaw, basis: proteinBasis, proteinRateUsed } =
+    calcProtein(goal, weightKg, lbm, bodyFatSource, proteinApproach, customProteinGPerKg);
   const proteinG = Math.round(proteinRaw);
   const proteinKcal = proteinG * KCAL_PER_G_PROTEIN;
 
@@ -261,12 +276,14 @@ export function calculateNutritionTargets(inputs) {
     carbsG,
     fatG,
     proteinGPerKg: parseFloat((proteinG / weightKg).toFixed(2)),
-    proteinBasis,   // 'lbm' (preferred) or 'bodyweight' (fallback)
+    proteinBasis,        // 'lbm' (preferred) or 'bodyweight' (fallback)
     proteinGPerKgLbm: lbm ? parseFloat((proteinG / lbm).toFixed(2)) : null,
+    proteinApproach,     // 'standard' | 'optimised' | 'maximum'
+    proteinRateUsed,     // exact g/kg rate applied
     targetRateKgPerWeek: parseFloat(finalEstimatedRate.toFixed(3)),
     confidence: calcConfidence(bodyFatSource),
     phase: PHASE_LABELS[goal] ?? goal,
-    goal,               // raw goal key, used by getPlanNutritionContext
+    goal,
     formulaUsed: formula,
     warnings,
     isConsentRequired: true,
