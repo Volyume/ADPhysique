@@ -320,7 +320,7 @@ export default function NutritionTargetsScreen() {
                 '• Target: your maintenance adjusted for your goal (e.g. +10% for slow muscle building, -13% for steady fat loss).\n\n' +
                 'How your targets are calculated:\n' +
                 '• Protein: varies by your chosen approach (1.2 to 3.3 g/kg). Rates rise in deeper deficits to protect muscle. Select your approach in the Protein Target section.\n' +
-                '• Fat: 25% of total calories, minimum 0.5 g/kg bodyweight to support hormonal health.\n' +
+                '• Fat: set by phase (0.7–1.0 g/kg bodyweight). Surplus phases use a lower fat target so carbs stay high for training performance. Deficit phases hold fat constant while carbs reduce first. Minimum 0.5 g/kg for hormonal health.\n' +
                 '• Carbs: all remaining calories after protein and fat are set.\n\n' +
                 'These are estimates. Adjust based on real-world progress over 2 to 4 weeks.'
               }
@@ -718,7 +718,7 @@ export default function NutritionTargetsScreen() {
                       return bwLine + tipLine + purposeLine;
                     })();
 
-                const fatWhy = `Fat has two roles you cannot skip: sex hormone production depends on dietary fat, and vitamins A, D, E, and K cannot be absorbed without it. We have set yours to ${fatPct}% of your calories (${results.fatG}g), with a hard floor of ${fatFloorG}g. Dropping below that floor, even briefly during a cut, can suppress testosterone and slow recovery. Fat is the last macro you want to cut.`;
+                const fatWhy = `Fat has two roles you cannot skip: sex hormone production depends on dietary fat, and vitamins A, D, E, and K cannot be absorbed without it. Your ${results.fatG}g target is set by your current phase rather than a fixed percentage of calories. In a building phase fat is kept lean so carbs stay high for training performance. In a cut, fat holds steady while carbs reduce first. The hard floor is ${fatFloorG}g. Dropping below that, even briefly, can suppress testosterone and slow recovery.`;
 
                 const carbWhy = isGain
                   ? `Carbs are your main training fuel. Glycogen (the carbohydrate stored in muscle) powers you through your sets. By the fourth or fifth set it is almost exclusively glycogen being used. Your ${results.carbsG}g gives you plenty to top up between sessions and arrive at every workout ready to push hard. Better-fuelled sessions mean better training, which means more muscle growth.`
@@ -837,7 +837,7 @@ export default function NutritionTargetsScreen() {
                   </View>
                   <View style={styles.calcRow}>
                     <Text style={styles.calcKey}>Fat</Text>
-                    <Text style={styles.calcValue}>25% of calories (min 0.5 g/kg BW)</Text>
+                    <Text style={styles.calcValue}>Per phase (0.7–1.0 g/kg BW) · min 0.5 g/kg</Text>
                   </View>
                   <View style={styles.calcRow}>
                     <Text style={styles.calcKey}>Carbs</Text>

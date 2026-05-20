@@ -183,7 +183,7 @@ function estimateWeeklyRate(targetKcal, maintenanceKcal, weightKg) {
 
 // Physique competitor and strength goals warrant the advanced protein approach
 // because coaches prescribe 2.4 g/kg BW for bulking phases in these categories.
-const ADVANCED_PROTEIN_GOALS = [
+export const ADVANCED_PROTEIN_GOALS = [
   'mens_physique', 'classic_physique', 'bodybuilding',
   'bikini', 'wellness', 'figure', 'womens_physique',
   'strength_hypertrophy',

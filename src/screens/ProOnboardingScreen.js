@@ -294,6 +294,7 @@ export default function ProOnboardingScreen({ navigation }) {
         activityLevel: daysToActivityLevel(daysPerWeek),
         goal: phaseToNutritionKey(trainingPhase),
         trainingGoal,
+        // proteinApproach auto-selected from trainingGoal; user can adjust later via Update your goals
       });
 
       const goalPhase = phaseToCoachingKey(trainingPhase);

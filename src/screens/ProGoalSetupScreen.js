@@ -12,8 +12,14 @@ import {
   TRAINING_PHASES,
   phaseToCoachingKey, phaseToNutritionKey, daysToActivityLevel,
 } from '../lib/coachingGoals';
-import { calculateNutritionTargets } from '../lib/nutritionEngine';
+import { calculateNutritionTargets, PROTEIN_APPROACHES, ADVANCED_PROTEIN_GOALS } from '../lib/nutritionEngine';
 import { saveNutritionTargets } from '../lib/database';
+
+const APPROACH_SHORT = {
+  standard:  'Enough for consistent training. Easy to sustain day to day.',
+  optimised: 'The proven target for serious training. Best for most people.',
+  advanced:  'Upper end for competitive athletes and harder cuts.',
+};
 
 const NUTRITION_KEY = '@volyume_nutrition_targets';
 
@@ -23,7 +29,12 @@ export default function ProGoalSetupScreen({ navigation }) {
   const [goalFilterGroup, setGoalFilterGroup] = useState('All');
   const [selectedGoal, setSelectedGoal] = useState(userProfile?.trainingGoal ?? null);
   const [selectedPhase, setSelectedPhase] = useState(userProfile?.trainingPhase ?? null);
+  const [proteinApproach, setProteinApproach] = useState(
+    userProfile?.proteinApproach
+    ?? (ADVANCED_PROTEIN_GOALS.includes(userProfile?.trainingGoal) ? 'advanced' : 'optimised')
+  );
 
+  const suggestedApproach = ADVANCED_PROTEIN_GOALS.includes(selectedGoal) ? 'advanced' : 'optimised';
   const canSave = selectedGoal !== null && selectedPhase !== null;
 
   const filteredGoals = goalFilterGroup === 'All'
@@ -39,6 +50,7 @@ export default function ProGoalSetupScreen({ navigation }) {
       trainingGoal: selectedGoal,
       trainingPhase: selectedPhase,
       goalPhase,
+      proteinApproach,
     };
 
     // Recalculate nutrition if the phase changed or we have the needed data
@@ -54,6 +66,7 @@ export default function ProGoalSetupScreen({ navigation }) {
           activityLevel: daysToActivityLevel(wp.daysPerWeek ?? 4),
           goal: phaseToNutritionKey(selectedPhase),
           trainingGoal: selectedGoal,
+          proteinApproach,
         });
         await AsyncStorage.setItem(NUTRITION_KEY, JSON.stringify(targets));
         if (user?.id) {
@@ -161,6 +174,47 @@ export default function ProGoalSetupScreen({ navigation }) {
           );
         })}
 
+        {/* ── Protein target ── */}
+        <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Protein target</Text>
+        <Text style={styles.sectionSub}>
+          How much protein your daily targets include. Optimised works for most people.
+        </Text>
+
+        {['standard', 'optimised', 'advanced'].map(key => {
+          const ap = PROTEIN_APPROACHES[key];
+          const active = proteinApproach === key;
+          const isSuggested = suggestedApproach === key;
+          return (
+            <TouchableOpacity
+              key={key}
+              style={[styles.phaseCard, active && styles.phaseCardActive]}
+              onPress={() => setProteinApproach(key)}
+              activeOpacity={0.75}
+            >
+              <View style={styles.phaseIconWrap}>
+                <Ionicons
+                  name="barbell-outline"
+                  size={18}
+                  color={active ? colors.primary : colors.textSecondary}
+                />
+              </View>
+              <View style={styles.phaseBody}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: 2 }}>
+                  <Text style={[styles.phaseLabel, active && styles.phaseLabelActive]}>{ap.label}</Text>
+                  <Text style={[styles.approachRange, active && styles.approachRangeActive]}>{ap.range}</Text>
+                  {isSuggested && (
+                    <View style={styles.suggestedBadge}>
+                      <Text style={styles.suggestedBadgeText}>Suggested</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.phaseDetail}>{APPROACH_SHORT[key]}</Text>
+              </View>
+              {active && <Ionicons name="checkmark-circle" size={20} color={colors.primary} />}
+            </TouchableOpacity>
+          );
+        })}
+
         <View style={styles.footerNote}>
           <Ionicons name="information-circle-outline" size={15} color={colors.textMuted} />
           <Text style={styles.footerNoteText}>
@@ -259,6 +313,16 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl, marginBottom: spacing.xl,
   },
   footerNoteText: { flex: 1, fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17 },
+
+  approachRange: {
+    fontSize: fontSize.xs, color: colors.textMuted, fontWeight: fontWeight.medium,
+  },
+  approachRangeActive: { color: colors.primaryDim },
+  suggestedBadge: {
+    backgroundColor: colors.primary + '20', borderRadius: radius.full,
+    paddingHorizontal: spacing.sm, paddingVertical: 1,
+  },
+  suggestedBadgeText: { fontSize: 10, fontWeight: fontWeight.bold, color: colors.primary },
 
   saveBtn: {
     backgroundColor: colors.primary, borderRadius: radius.lg,

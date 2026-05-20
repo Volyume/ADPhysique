@@ -883,7 +883,7 @@ export default function CoachBuilderScreen({ navigation, route }) {
               <Text style={styles.nutritionSummaryValue}>{nutritionSummary.fatG}g fat</Text>
             </View>
             <Text style={styles.nutritionSummaryNote}>
-              Based on your phase and body stats. Adjust in Settings.
+              Protein target: Optimised (2.5 g/kg). To change this, go to Update your goals in your profile.
             </Text>
           </View>
         )}
