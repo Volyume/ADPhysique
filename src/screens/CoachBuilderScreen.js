@@ -228,6 +228,7 @@ export default function CoachBuilderScreen({ navigation, route }) {
   const [saving, setSaving]         = useState(false);
   const [whyExpanded, setWhyExpanded] = useState(false);
   const [nutritionSummary, setNutritionSummary] = useState(null);
+  const [selectedWeek, setSelectedWeek] = useState(1);
 
   const scrollRef = useRef(null);
 
@@ -378,6 +379,7 @@ export default function CoachBuilderScreen({ navigation, route }) {
 
     setPlan(finalResult);
     setPlanName(finalResult.name);
+    setSelectedWeek(1);
     setGenerating(false);
   }
 
@@ -841,29 +843,121 @@ export default function CoachBuilderScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* Workout list */}
-        <Text style={styles.sectionHeading}>
-          {plan.workouts.length} Workout{plan.workouts.length !== 1 ? 's' : ''} · {SPLIT_LABELS[plan.splitType] ?? plan.splitType}
-        </Text>
-        {plan.workouts.map((workout, wi) => (
-          <View key={wi} style={styles.workoutCard}>
-            <Text style={styles.workoutCardName}>{workout.name}</Text>
-            {workout.exercises.map((ex, ei) => (
-              <View key={ei} style={styles.exerciseRow}>
-                <View style={styles.exerciseDot} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.exerciseName}>{ex.exerciseName}</Text>
-                  <Text style={styles.exerciseMeta}>
-                    {ex.sets} x {ex.repMin}-{ex.repMax} reps · {ex.restSec}s rest
-                  </Text>
-                  {ex.advancedSetType && (
-                    <Text style={styles.advancedSetBadge}>{ex.advancedSetNote}</Text>
-                  )}
+        {/* Progressive weekly plan */}
+        {plan.weeklyPlan ? (
+          <>
+            <Text style={styles.sectionHeading}>
+              {plan.workouts.length} Workout{plan.workouts.length !== 1 ? 's' : ''} · {SPLIT_LABELS[plan.splitType] ?? plan.splitType}
+            </Text>
+
+            {/* Week selector chips */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.weekSelectorScroll}
+              contentContainerStyle={styles.weekSelectorContent}
+            >
+              {plan.weeklyPlan.weeks.map(w => {
+                const isDeload = w.label === 'Deload';
+                const isSelected = selectedWeek === w.weekNum;
+                return (
+                  <TouchableOpacity
+                    key={w.weekNum}
+                    style={[
+                      styles.weekChip,
+                      isSelected && styles.weekChipSelected,
+                      isDeload && styles.weekChipDeload,
+                      isSelected && isDeload && styles.weekChipDeloadSelected,
+                    ]}
+                    onPress={() => setSelectedWeek(w.weekNum)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[
+                      styles.weekChipNum,
+                      isSelected && styles.weekChipNumSelected,
+                      isDeload && styles.weekChipNumDeload,
+                    ]}>
+                      {w.weekNum}
+                    </Text>
+                    <Text style={[
+                      styles.weekChipLabel,
+                      isSelected && styles.weekChipLabelSelected,
+                      isDeload && styles.weekChipLabelDeload,
+                    ]}>
+                      {w.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* Selected week detail */}
+            {(() => {
+              const weekData = plan.weeklyPlan.weeks.find(w => w.weekNum === selectedWeek);
+              if (!weekData) return null;
+              const isDeload = weekData.label === 'Deload';
+              return (
+                <View style={[styles.weekDetailCard, isDeload && styles.weekDetailCardDeload]}>
+                  <View style={styles.weekDetailHeader}>
+                    <Text style={[styles.weekDetailTitle, isDeload && styles.weekDetailTitleDeload]}>
+                      Week {weekData.weekNum} — {weekData.label}
+                    </Text>
+                    {isDeload && (
+                      <Text style={styles.weekDeloadNote}>
+                        Lighter recovery week — same exercises, reduced sets. Let your body absorb the work.
+                      </Text>
+                    )}
+                  </View>
+                  {weekData.sessions.map((workout, wi) => (
+                    <View key={wi} style={styles.workoutCard}>
+                      <Text style={styles.workoutCardName}>{workout.name}</Text>
+                      {workout.exercises.map((ex, ei) => (
+                        <View key={ei} style={styles.exerciseRow}>
+                          <View style={styles.exerciseDot} />
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.exerciseName}>{ex.exerciseName}</Text>
+                            <Text style={styles.exerciseMeta}>
+                              {ex.sets} x {ex.repMin}-{ex.repMax} reps · {ex.restSec}s rest
+                            </Text>
+                            {ex.advancedSetType && (
+                              <Text style={styles.advancedSetBadge}>{ex.advancedSetNote}</Text>
+                            )}
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  ))}
                 </View>
+              );
+            })()}
+          </>
+        ) : (
+          /* Backwards compatibility: show flat workout list if no weeklyPlan */
+          <>
+            <Text style={styles.sectionHeading}>
+              {plan.workouts.length} Workout{plan.workouts.length !== 1 ? 's' : ''} · {SPLIT_LABELS[plan.splitType] ?? plan.splitType}
+            </Text>
+            {plan.workouts.map((workout, wi) => (
+              <View key={wi} style={styles.workoutCard}>
+                <Text style={styles.workoutCardName}>{workout.name}</Text>
+                {workout.exercises.map((ex, ei) => (
+                  <View key={ei} style={styles.exerciseRow}>
+                    <View style={styles.exerciseDot} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.exerciseName}>{ex.exerciseName}</Text>
+                      <Text style={styles.exerciseMeta}>
+                        {ex.sets} x {ex.repMin}-{ex.repMax} reps · {ex.restSec}s rest
+                      </Text>
+                      {ex.advancedSetType && (
+                        <Text style={styles.advancedSetBadge}>{ex.advancedSetNote}</Text>
+                      )}
+                    </View>
+                  </View>
+                ))}
               </View>
             ))}
-          </View>
-        ))}
+          </>
+        )}
 
         {/* Nutrition summary (shown when phase is set and targets are calculated) */}
         {nutritionSummary && (
@@ -1227,4 +1321,51 @@ const styles = StyleSheet.create({
   overviewWeekNumRec: { color: colors.textMuted },
   overviewWeekLegend: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
   overviewStack: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17, fontStyle: 'italic' },
+
+  // Week selector
+  weekSelectorScroll: { flexGrow: 0, marginBottom: spacing.xs },
+  weekSelectorContent: { gap: spacing.sm, paddingRight: spacing.sm },
+  weekChip: {
+    alignItems: 'center', gap: 2,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface2, minWidth: 56,
+  },
+  weekChipSelected: {
+    borderColor: colors.primary, backgroundColor: colors.primaryBg,
+  },
+  weekChipDeload: {
+    borderColor: colors.warning + '60', backgroundColor: colors.surface2,
+  },
+  weekChipDeloadSelected: {
+    borderColor: colors.warning, backgroundColor: colors.warningBg,
+  },
+  weekChipNum: {
+    fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textSecondary,
+  },
+  weekChipNumSelected: { color: colors.primary },
+  weekChipNumDeload: { color: colors.warning },
+  weekChipLabel: {
+    fontSize: 9, fontWeight: fontWeight.medium, color: colors.textMuted, textAlign: 'center',
+  },
+  weekChipLabelSelected: { color: colors.primary },
+  weekChipLabelDeload: { color: colors.warning },
+
+  // Week detail card
+  weekDetailCard: {
+    gap: spacing.md,
+    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface, padding: spacing.lg,
+  },
+  weekDetailCardDeload: {
+    borderColor: colors.warning + '50', backgroundColor: colors.warningBg,
+  },
+  weekDetailHeader: { gap: spacing.xs },
+  weekDetailTitle: {
+    fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary,
+  },
+  weekDetailTitleDeload: { color: colors.warning },
+  weekDeloadNote: {
+    fontSize: fontSize.xs, color: colors.warning, lineHeight: 17, fontStyle: 'italic',
+  },
 });

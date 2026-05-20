@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns';
+import { Svg, Rect, Text as SvgText } from 'react-native-svg';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg } from '../lib/units';
@@ -17,6 +18,7 @@ import {
   getWorkoutSetsForWorkout, getExerciseById,
   getCurrentMesocycleWeek, getPlannedMuscleVolume, getAllExercises,
   getMorningWeightToday, logMorningWeight, getProgressionTeaser,
+  getRecentWorkoutFeedback,
 } from '../lib/database';
 import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload } from '../lib/algorithms';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
@@ -68,6 +70,14 @@ export default function HomeScreen({ navigation }) {
   const [teaserInsight, setTeaserInsight] = useState(null);
   const [deloadSuggestion, setDeloadSuggestion] = useState(null);
   const [deloadDismissed, setDeloadDismissed] = useState(false);
+
+  // Phase sync banner
+  const [phaseMismatch, setPhaseMismatch] = useState(null); // { currentPhase, targetPhase } | null
+  const [phaseBannerDismissed, setPhaseBannerDismissed] = useState(false);
+
+  // Fatigue trend mini-graph
+  const [fatigueSessions, setFatigueSessions] = useState([]); // array newest-first
+
   const pendingStartRef = React.useRef(null); // ({ routineId, initialExercises })
 
   const scrollRef = useRef(null);
@@ -100,7 +110,74 @@ export default function HomeScreen({ navigation }) {
   );
 
   async function loadData() {
-    await Promise.all([loadWeekStats(), loadNextWorkout(), loadExerciseCounts(), loadBlockProgress(), ...(tier === 'pro' ? [loadTodayWeight()] : [])]);
+    await Promise.all([
+      loadWeekStats(),
+      loadNextWorkout(),
+      loadExerciseCounts(),
+      loadBlockProgress(),
+      loadPhaseBanner(),
+      loadFatigueTrend(),
+      ...(tier === 'pro' ? [loadTodayWeight()] : []),
+    ]);
+  }
+
+  async function loadPhaseBanner() {
+    try {
+      if (!user?.id || !userProfile?.trainingPhase) return;
+      const currentPhase = userProfile.trainingPhase; // e.g. 'bulk', 'cut', 'maintain'
+
+      // Check whether the user has already dismissed the banner for this phase pair
+      const dismissedRaw = await AsyncStorage.getItem('@volyume_phase_banner_dismissed_v1');
+      const dismissedPhase = dismissedRaw ?? null;
+      if (dismissedPhase === currentPhase) {
+        setPhaseBannerDismissed(true);
+        setPhaseMismatch(null);
+        return;
+      }
+      // If the phase has changed, clear any stale dismissal
+      if (dismissedPhase && dismissedPhase !== currentPhase) {
+        await AsyncStorage.removeItem('@volyume_phase_banner_dismissed_v1');
+      }
+      setPhaseBannerDismissed(false);
+
+      // Load saved nutrition targets (global key used by ProGoalSetupScreen)
+      const raw = await AsyncStorage.getItem('@volyume_nutrition_targets');
+      if (!raw) { setPhaseMismatch(null); return; }
+      const targets = JSON.parse(raw);
+      // targets.goal is the nutrition key (e.g. 'build', 'mild_cut', 'maintain', 'recomp')
+      // We compare against the nutrition key for the current training phase
+      const { TRAINING_PHASES } = await import('../lib/coachingGoals');
+      const currentNutritionKey = TRAINING_PHASES.find(p => p.value === currentPhase)?.nutritionKey ?? null;
+      const savedNutritionKey = targets.goal ?? null;
+
+      if (currentNutritionKey && savedNutritionKey && currentNutritionKey !== savedNutritionKey) {
+        // Find the human-readable label for the saved phase
+        const savedPhaseEntry = TRAINING_PHASES.find(p => p.nutritionKey === savedNutritionKey);
+        const savedPhaseLabel = savedPhaseEntry?.label ?? savedNutritionKey;
+        setPhaseMismatch({ currentPhase, savedPhaseLabel });
+      } else {
+        setPhaseMismatch(null);
+      }
+    } catch (_) {
+      setPhaseMismatch(null);
+    }
+  }
+
+  async function dismissPhaseBanner() {
+    setPhaseBannerDismissed(true);
+    try {
+      await AsyncStorage.setItem('@volyume_phase_banner_dismissed_v1', userProfile?.trainingPhase ?? '');
+    } catch (_) {}
+  }
+
+  async function loadFatigueTrend() {
+    try {
+      if (!user?.id) return;
+      const rows = await getRecentWorkoutFeedback(user.id, 6);
+      setFatigueSessions(rows);
+    } catch (_) {
+      setFatigueSessions([]);
+    }
   }
 
   async function loadTodayWeight() {
@@ -367,6 +444,32 @@ export default function HomeScreen({ navigation }) {
           <VolyumeMark size={38} color={colors.textMuted} />
         </View>
 
+        {/* ── Nutrition phase sync banner ── */}
+        {phaseMismatch && !phaseBannerDismissed && (
+          <View style={styles.phaseBanner}>
+            <Ionicons name="information-circle-outline" size={18} color={colors.primary} style={{ marginTop: 1 }} />
+            <Text style={styles.phaseBannerText} numberOfLines={3}>
+              Your nutrition targets are set for {phaseMismatch.savedPhaseLabel} — update them in Athlete Hub to reflect your current plan.
+            </Text>
+            <TouchableOpacity
+              style={styles.phaseBannerArrow}
+              onPress={() => navigation.getParent()?.navigate('ProfileTab', { screen: 'AthleteHub' })}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Go to Athlete Hub to update nutrition targets"
+            >
+              <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={dismissPhaseBanner}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityLabel="Dismiss nutrition phase banner"
+            >
+              <Ionicons name="close" size={15} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* ── Recovery week banner ── */}
         {deloadSuggestion && !deloadDismissed && (
           <TouchableOpacity
@@ -480,6 +583,11 @@ export default function HomeScreen({ navigation }) {
             />
           </View>
         </View>
+
+        {/* ── Training trend mini-graph ── */}
+        {fatigueSessions.length >= 2 && (
+          <FatigueTrendCard sessions={fatigueSessions} />
+        )}
 
         {/* ── Pro teaser (free tier only, after 3+ sessions) ── */}
         {tier === 'free' && totalSessions >= 3 && (
@@ -982,6 +1090,80 @@ function QuickLink({ icon, label, onPress }) {
       <Ionicons name={icon} size={20} color={colors.primary} />
       <Text style={styles.quickLinkLabel}>{label}</Text>
     </TouchableOpacity>
+  );
+}
+
+// ── Fatigue Trend Card ────────────────────────────────────────────────────────
+
+const CHART_WIDTH = 200;
+const CHART_HEIGHT = 60;
+const BAR_WIDTH = 20;
+const BAR_GAP = 8;
+const DAY_ABBRS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function fatigueBarColor(level) {
+  if (level <= 2) return colors.success;
+  if (level === 3) return colors.warning;
+  return colors.error;
+}
+
+function coachingLine(sessions) {
+  // Use average of the last 2 sessions (most recent = sessions[0])
+  const recent = sessions.slice(0, 2);
+  const avg = recent.reduce((s, r) => s + (r.fatigueLevel ?? r.fatigue_level ?? 0), 0) / recent.length;
+  if (avg <= 2) return 'Feeling fresh — volume is manageable.';
+  if (avg <= 3) return 'Tiredness building — consider lighter sessions.';
+  return 'High fatigue — take a rest day this week.';
+}
+
+function FatigueTrendCard({ sessions }) {
+  // sessions is newest-first; reverse so chart goes oldest → newest (left → right)
+  const ordered = [...sessions].reverse();
+  const count = ordered.length;
+
+  // Right-align bars: total chart width minus the space taken by bars + gaps
+  const totalBarSpace = count * BAR_WIDTH + (count - 1) * BAR_GAP;
+  const startX = CHART_WIDTH - totalBarSpace;
+
+  return (
+    <View style={styles.trendCard}>
+      <Text style={styles.trendTitle}>Training trend</Text>
+      <Svg width={CHART_WIDTH} height={CHART_HEIGHT + 16} style={{ marginTop: spacing.sm }}>
+        {ordered.map((session, i) => {
+          const level = session.fatigueLevel ?? session.fatigue_level ?? 1;
+          const barHeight = Math.max(8, (level / 4) * CHART_HEIGHT);
+          const x = startX + i * (BAR_WIDTH + BAR_GAP);
+          const y = CHART_HEIGHT - barHeight;
+          const barColor = fatigueBarColor(level);
+          const dayAbbr = session.startedAt
+            ? DAY_ABBRS[new Date(session.startedAt).getDay()]
+            : '';
+          return (
+            <React.Fragment key={i}>
+              <Rect
+                x={x}
+                y={y}
+                width={BAR_WIDTH}
+                height={barHeight}
+                rx={4}
+                fill={barColor}
+                opacity={0.9}
+              />
+              <SvgText
+                x={x + BAR_WIDTH / 2}
+                y={CHART_HEIGHT + 13}
+                fontSize={9}
+                fill={colors.textMuted}
+                textAnchor="middle"
+              >
+                {dayAbbr}
+              </SvgText>
+            </React.Fragment>
+          );
+        })}
+      </Svg>
+      <Text style={styles.trendCoachLine}>{coachingLine(sessions)}</Text>
+    </View>
   );
 }
 
@@ -1562,6 +1744,49 @@ const styles = StyleSheet.create({
   deloadBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
   deloadBannerTitle: { fontSize: 13, fontWeight: '700', color: colors.warning, marginBottom: 2 },
   deloadBannerBody: { fontSize: 12, color: colors.textSecondary, lineHeight: 17 },
+
+  // Nutrition phase sync banner
+  phaseBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    backgroundColor: colors.primaryBg,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.primary + '40',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  phaseBannerText: {
+    flex: 1,
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    lineHeight: 16,
+  },
+  phaseBannerArrow: {
+    paddingLeft: spacing.xs,
+  },
+
+  // Training trend card
+  trendCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+  },
+  trendTitle: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.textMuted,
+    letterSpacing: 0.2,
+  },
+  trendCoachLine: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    marginTop: spacing.sm,
+    lineHeight: 16,
+  },
 
   // Quick-start card (empty state fast path)
   quickStartCard: {

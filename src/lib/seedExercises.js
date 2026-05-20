@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAllExercises, insertExercise } from './database';
 
-const SEEDED_KEY = '@volyume_exercises_seeded_v5';
+const SEEDED_KEY = '@volyume_exercises_seeded_v6';
 
 // Anatomical subregion tags — used by planEngine v2 to enforce balanced muscle coverage.
 // Muscles not listed here (e.g. biceps, forearms) do not have enforced subregion requirements.
@@ -45,6 +45,16 @@ const SUBREGION_MAP = {
   'Romanian Deadlift (Barbell)':     'lower_lat',
   'Hyperextension (Back Extension)': 'lower_lat',
   'Reverse Hyperextension':          'lower_lat',
+  'Romanian Deadlift (Single-Leg)':  'lower_lat',
+  'Stiff-Leg Deadlift (Dumbbell)':   'lower_lat',
+  'Back Extension (Weighted)':       'lower_lat',
+
+  // Back — additional rows
+  'Cable Row (Wide Grip)':           'horizontal_row',
+  'Single-Arm Dumbbell Row (Supported)': 'horizontal_row',
+  'Banded Row':                      'horizontal_row',
+  'Machine Row (Hammer Strength)':   'horizontal_row',
+  'TRX Row':                         'horizontal_row',
 
   // Chest — incline vs flat vs decline
   'Barbell Bench Press':             'flat',
@@ -77,6 +87,9 @@ const SUBREGION_MAP = {
   'Decline Dumbbell Fly':            'decline',
   'Decline Push-Up':                 'decline',
   'Decline Machine Press':           'decline',
+  'Reverse-Grip Bench Press':        'flat',
+  'Dumbbell Squeeze Press':          'flat',
+  'Cable Fly (Low to High) (Alt)':   'incline',
 
   // Delts — overhead press (front) vs lateral raise (side) vs face pull / fly (rear)
   'Barbell Overhead Press':          'overhead_press',
@@ -90,6 +103,8 @@ const SUBREGION_MAP = {
   'Dumbbell Lateral Raise':          'lateral_raise',
   'Cable Lateral Raise':             'lateral_raise',
   'Machine Lateral Raise':           'lateral_raise',
+  'Leaning Cable Lateral Raise':     'lateral_raise',
+  'Plate Lateral Raise':             'lateral_raise',
   'Leaning Lateral Raise':           'lateral_raise',
   'Landmine Lateral Raise':          'lateral_raise',
   'Band Lateral Raise':              'lateral_raise',
@@ -108,6 +123,11 @@ const SUBREGION_MAP = {
   'Face Pull (Rope)':                'face_pull',
   'Band Face Pull':                  'face_pull',
   'Lying Rear Delt Row':             'horiz_abduction',
+  'Prone Incline Y-Raise':           'horiz_abduction',
+  'Prone Incline T-Raise':           'horiz_abduction',
+  'Seated Rear Delt Machine':        'horiz_abduction',
+  'Bent-Over Cable Rear Delt Fly':   'horiz_abduction',
+  'Cable Face Pull (Rope)':          'face_pull',
 
   // Hamstrings — hip extension vs knee flexion
   'Romanian Deadlift':               'hip_extension',
@@ -116,7 +136,10 @@ const SUBREGION_MAP = {
   'Single-Leg Romanian Deadlift':    'hip_extension',
   'Single-Leg Romanian Deadlift (DB)': 'hip_extension',
   'B-Stance Romanian Deadlift':      'hip_extension',
+  'Dumbbell Single-Leg RDL':         'hip_extension',
+  'Cable Stiff-Leg Deadlift':        'hip_extension',
   'Nordic Hamstring Curl':           'knee_flexion',
+  'Prone Leg Curl':                  'knee_flexion',
   'Nordic Curl':                     'knee_flexion',
   'Lying Leg Curl':                  'knee_flexion',
   'Seated Leg Curl':                 'knee_flexion',
@@ -130,6 +153,8 @@ const SUBREGION_MAP = {
   'Dumbbell Skull Crusher':          'overhead',
   'Decline Skull Crusher':           'overhead',
   'Cable Overhead Tricep Extension': 'overhead',
+  'Close-Grip Floor Press':          'pushdown',
+  'Reverse Grip Cable Pushdown':     'pushdown',
   'Overhead Dumbbell Extension':     'overhead',
   'Dumbbell Overhead Tricep Extension': 'overhead',
   'Overhead Cable Tricep Extension': 'overhead',
@@ -162,10 +187,17 @@ const SUBREGION_MAP = {
   'Seated Machine Calf Raise':       'soleus',
   'Seated Dumbbell Calf Raise':      'soleus',
 
+  // Calves — additional gastro entries
+  'Single-Leg Calf Raise (Dumbbell)':  'gastro',
+  'Calf Raise on Leg Press Sled':      'gastro',
+  'Standing Calf Raise (Bodyweight)':  'gastro',
+  'Jump Rope':                         'gastro',
+
   // Abs — flexion vs anti-extension vs rotation
   'Cable Crunch':                    'flexion',
   'Decline Crunch':                  'flexion',
   'Machine Crunch':                  'flexion',
+  'Hanging Knee Raise':              'flexion',
   'Hanging Leg Raise':               'flexion',
   'Reverse Crunch':                  'flexion',
   'Crunch':                          'flexion',
@@ -226,6 +258,11 @@ const RAW = [
   ['Dumbbell Pullover',             'chest', ['back'],                     'dumbbell',     'isolation', false, 10, 15, 2, 4],
   ['Band Push-Up',                  'chest', ['triceps', 'front_delts'],   'bodyweight',   'push',      true,  10, 20, 2, 4],
   ['Hammer Strength Chest Press',   'chest', ['triceps', 'front_delts'],   'machine',      'push',      true,  8, 15,  3, 4],
+  ['Reverse-Grip Bench Press',      'chest', ['triceps', 'front_delts'],   'barbell',      'push',      true,  6, 12,  3, 4],
+  ['Dumbbell Squeeze Press',        'chest', ['triceps'],                  'dumbbell',     'push',      true,  8, 15,  2, 4],
+  ['Cable Fly (Low to High)',       'chest', [],                           'cable',        'isolation', false, 12, 20, 2, 5],
+  ['Cable Fly (High to Low)',       'chest', [],                           'cable',        'isolation', false, 12, 20, 2, 5],
+  ['Dumbbell Pullover (Chest)',     'chest', ['back'],                     'dumbbell',     'isolation', false, 10, 15, 2, 4],
 
   // ─── BACK ────────────────────────────────────────────────────────────────────
   ['Barbell Row (Bent Over)',       'back', ['biceps', 'rear_delts'],      'barbell',      'pull',      true,  5, 10,  4, 3],
@@ -267,6 +304,12 @@ const RAW = [
   ['Hyperextension (Back Extension)','back',['glutes', 'hamstrings'],      'machine',      'hinge',     true,  10, 20, 2, 4],
   ['Good Morning (Barbell)',        'back', ['hamstrings', 'glutes'],      'barbell',      'hinge',     true,  8, 15,  4, 3],
   ['Reverse Hyperextension',        'back', ['glutes', 'hamstrings'],      'machine',      'hinge',     true,  12, 20, 2, 5],
+  ['Chest-Supported Row',          'back', ['biceps'],                     'dumbbell',     'pull',      true,  8, 15,  3, 5],
+  ['Cable Row (Wide Grip)',         'back', ['biceps', 'rear_delts'],      'cable',        'pull',      true,  10, 15, 3, 4],
+  ['Machine Row (Hammer Strength)', 'back', ['biceps'],                    'machine',      'pull',      true,  10, 15, 3, 4],
+  ['TRX Row',                       'back', ['biceps'],                    'bodyweight',   'pull',      true,  10, 20, 2, 4],
+  ['Banded Row',                    'back', ['biceps'],                    'bodyweight',   'pull',      true,  12, 20, 1, 4],
+  ['Back Extension (Weighted)',     'back', ['glutes', 'hamstrings'],      'machine',      'hinge',     true,  12, 20, 2, 4],
 
   // ─── SHOULDERS (split by delt head) ─────────────────────────────────────────
   // Front delts

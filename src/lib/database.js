@@ -2441,3 +2441,26 @@ export async function deleteExerciseUserNote(userId, exerciseId) {
     [userId, exerciseId],
   );
 }
+
+// ─── Workout Feedback / Fatigue Trend ────────────────────────────────────────
+
+/**
+ * Returns the last `limit` completed workouts that have a fatigue_level value,
+ * ordered newest-first so the caller can reverse for chart display.
+ */
+export async function getRecentWorkoutFeedback(userId, limit = 6) {
+  try {
+    const d = await db();
+    const rows = await d.getAllAsync(
+      `SELECT fatigue_level, session_difficulty, overall_pump, started_at
+       FROM workouts
+       WHERE user_id = ? AND is_completed = 1 AND fatigue_level IS NOT NULL
+       ORDER BY started_at DESC
+       LIMIT ?`,
+      [userId, limit],
+    );
+    return rows.map(rowToCamel);
+  } catch (_e) {
+    return [];
+  }
+}

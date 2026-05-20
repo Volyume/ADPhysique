@@ -793,6 +793,79 @@ function deduplicateExercises(exercises) {
 }
 
 // ---------------------------------------------------------------------------
+// Progressive weekly overload
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the adjusted set count for a given week in a mesocycle.
+ *
+ * - Week 1 starts at baseSetCount (MEV).
+ * - Each subsequent non-deload week adds ~1 set, ramping up to baseSetCount + 2
+ *   by the penultimate week.
+ * - The final week is always the deload: ~60% of baseSetCount.
+ *
+ * @param {number} baseSetCount - Sets in week 1 (MEV baseline)
+ * @param {number} weekNum      - 1-indexed week number
+ * @param {number} totalWeeks   - Total weeks in the mesocycle (last = deload)
+ * @returns {number}
+ */
+export function getWeeklySetProgression(baseSetCount, weekNum, totalWeeks) {
+  const isDeloadWeek = weekNum === totalWeeks;
+  if (isDeloadWeek) return Math.max(1, Math.round(baseSetCount * 0.6));
+  const progressWeeks = totalWeeks - 1; // exclude deload
+  const step = weekNum - 1;            // 0-indexed progression step
+  const rampSets = Math.round(step * (2 / Math.max(progressWeeks - 1, 1)));
+  return baseSetCount + rampSets;
+}
+
+// Week labels by position (1-indexed). Last week is always 'Deload'.
+function getWeekLabel(weekNum, totalWeeks) {
+  if (weekNum === totalWeeks) return 'Deload';
+  if (totalWeeks <= 6) {
+    const labels = ['Foundation', 'Building', 'Building', 'Peak', 'Peak', 'Deload'];
+    return labels[weekNum - 1] ?? 'Building';
+  }
+  // 8-week mesocycle pattern
+  if (totalWeeks === 8) {
+    const labels8 = ['Foundation', 'Foundation', 'Building', 'Building', 'Building', 'Peak', 'Peak', 'Deload'];
+    return labels8[weekNum - 1] ?? 'Building';
+  }
+  // Generic: first week Foundation, last two weeks Peak (before deload), rest Building
+  if (weekNum === 1) return 'Foundation';
+  if (weekNum >= totalWeeks - 2 && weekNum < totalWeeks) return 'Peak';
+  return 'Building';
+}
+
+/**
+ * Generates a full weekly plan for a mesocycle by applying progressive overload
+ * to a base set of workouts (week 1 template).
+ *
+ * @param {Array}  baseWorkouts - Week-1 workout array from generatePlan
+ * @param {number} totalWeeks   - Total weeks (default 6)
+ * @param {string} [mesocycleName]
+ * @returns {{ weeks: Array, totalWeeks: number, mesocycleName: string }}
+ */
+export function buildWeeklyPlan(baseWorkouts, totalWeeks = 6, mesocycleName = 'Hypertrophy Block') {
+  const weeks = Array.from({ length: totalWeeks }, (_, i) => {
+    const weekNum = i + 1;
+    const label   = getWeekLabel(weekNum, totalWeeks);
+
+    // Deep-clone sessions, adjusting set counts for this week
+    const sessions = baseWorkouts.map(workout => ({
+      ...workout,
+      exercises: workout.exercises.map(ex => ({
+        ...ex,
+        sets: getWeeklySetProgression(ex.sets, weekNum, totalWeeks),
+      })),
+    }));
+
+    return { weekNum, label, sessions };
+  });
+
+  return { weeks, totalWeeks, mesocycleName };
+}
+
+// ---------------------------------------------------------------------------
 // Mesocycle schedule
 // ---------------------------------------------------------------------------
 
@@ -1166,8 +1239,14 @@ export function generatePlan(inputs) {
     upper_lower_wp: 'UL + WP',
   }[splitType] ?? splitType;
 
+  // Progressive multi-week plan (v2)
+  const isAdvancedExp = experience === 'advanced' || experience === 'competitive';
+  const totalMesoWeeks = isAdvancedExp ? 6 : 5;
+  const planName = `${goalShort} ${splitShort} ${effectiveDays}×/week`;
+  const weeklyPlan = buildWeeklyPlan(validWorkouts, totalMesoWeeks, planName);
+
   return {
-    name:                    `${goalShort} ${splitShort} ${effectiveDays}×/week`,
+    name:                    planName,
     goal,
     splitType,
     daysPerWeek:             effectiveDays,
@@ -1179,5 +1258,6 @@ export function generatePlan(inputs) {
     warnings,
     nutritionContext:        nutritionContext ?? null,
     mesocycleSchedule,
+    weeklyPlan,
   };
 }
