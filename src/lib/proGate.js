@@ -10,12 +10,21 @@
 export const PRO_BETA_ACTIVE = true;
 export const BETA_END_DATE = null; // set to a timestamp when beta closes
 
-// Pricing promises. Beta is free. Beta testers who sign up before the
-// transition lock in £1.99/mo for life; new users post-beta will pay more.
-// Single source of truth — every screen that shows pricing imports from here.
-export const BETA_PRICE_LABEL = 'Free during beta';
-export const POST_BETA_BETA_USER_PRICE_LABEL = '£1.99/mo after beta';
-export const POST_BETA_LIFETIME_PROMISE = 'Beta testers locked at £1.99/mo for life';
+// Pricing promises — single source of truth.
+//
+// During beta:        Pro is free for everyone, no card.
+// Beta testers locked at £1.99/mo for life once beta ends.
+// New users post-beta: 14-day no-card free trial, then £4.99/mo or £39.99/year.
+//
+// Beta runs ~1–2 months so testers get a proper chance to use Pro before
+// the standard rate kicks in.
+export const BETA_PRICE_LABEL                  = 'Free during beta';
+export const POST_BETA_BETA_USER_PRICE_LABEL   = '£1.99/mo after beta';
+export const POST_BETA_LIFETIME_PROMISE        = 'Beta testers locked at £1.99/mo for life';
+export const POST_BETA_STANDARD_MONTHLY_LABEL  = '£2.99/mo';
+export const POST_BETA_STANDARD_ANNUAL_LABEL   = '£24.99/year';
+export const TRIAL_LENGTH_DAYS                 = 14;
+export const TRIAL_LABEL                       = '14-day free trial · no card required';
 
 /**
  * Returns true if the user has Pro access.

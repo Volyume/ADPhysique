@@ -176,7 +176,7 @@ export default function ProUpgradeScreen({ navigation }) {
               <Text style={styles.offerBadgeText}>Beta tester offer</Text>
             </View>
             <Text style={styles.offerText}>
-              Free during beta. When billing starts, you keep £1.99/month for life. No card required now.
+              Free during beta. When billing starts, you keep £1.99/month for life — that's locked in for you specifically. Standard rate after beta is £2.99/month or £24.99/year, with a 14-day free trial for new users. No card required to sign up, no ads ever.
             </Text>
             <Text style={styles.cancelNote}>Cancel anytime, two taps. No questions.</Text>
           </View>

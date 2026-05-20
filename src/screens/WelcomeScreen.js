@@ -82,7 +82,7 @@ export default function WelcomeScreen({ navigation }) {
             </View>
 
             <Text style={styles.cancelNote}>
-              Free during beta · £1.99/mo after for beta testers, locked for life
+              Free during beta · £1.99/mo for beta testers, locked for life · £2.99/mo standard
             </Text>
 
             <View style={styles.proCtaRow}>
