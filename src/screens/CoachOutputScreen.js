@@ -21,6 +21,7 @@ import {
   getCoachOutputHistory,
 } from '../lib/database';
 import { computeEWMA, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
+import { logError } from '../lib/errorLog';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -522,8 +523,17 @@ export default function CoachOutputScreen({ navigation, route }) {
 
       setLoading(false);
     }
-    load().catch(e => { console.warn(e); setLoading(false); });
-  }, []);
+    // Re-run when user.id flips from null → real (post-auth bootstrap)
+    // so the screen doesn't get stuck in "no data" if the auth race lost.
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
+    load().catch(e => {
+      logError('CoachOutputScreen.load', e, { userId: user?.id });
+      setLoading(false);
+    });
+  }, [user?.id]);
 
   function handleClose() {
     navigation.goBack();

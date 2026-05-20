@@ -28,6 +28,7 @@ import {
 } from '../lib/database';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { requestNotificationPermissions, getNotificationPermissionStatus, scheduleNextCheckinReminder } from '../lib/notifications';
+import { logError } from '../lib/errorLog';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 const DAYS_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -315,7 +316,11 @@ export default function WeeklyCheckInScreen({ navigation }) {
         goCoach();
       }
     } catch (e) {
-      console.warn('[WeeklyCheckIn] submit failed', e);
+      logError('WeeklyCheckInScreen.submit', e, { userId: user?.id });
+      Alert.alert(
+        'Couldn\'t save check-in',
+        e?.message ?? 'Please try again. Your answers are still here.',
+      );
     } finally {
       setBusy(false);
     }

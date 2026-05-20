@@ -17,6 +17,7 @@ import {
 } from '../lib/database';
 import { getBlockAdvice } from '../lib/blockAdvisor';
 import useAppStore from '../store/useAppStore';
+import { logError } from '../lib/errorLog';
 
 const BLOCK_SNOOZE_KEY = '@volyume_block_snooze';
 
@@ -135,9 +136,14 @@ export default function PlansScreen({ navigation }) {
         {
           text: 'Start new block',
           onPress: async () => {
-            await activatePlanWithBlock(user.id, activePlan.id, activePlan.name);
-            await AsyncStorage.removeItem(BLOCK_SNOOZE_KEY).catch(() => {});
-            await loadData();
+            try {
+              await activatePlanWithBlock(user.id, activePlan.id, activePlan.name);
+              await AsyncStorage.removeItem(BLOCK_SNOOZE_KEY).catch(() => {});
+              await loadData();
+            } catch (e) {
+              logError('PlansScreen.handleRestartPlan', e, { userId: user?.id, planId: activePlan?.id });
+              Alert.alert('Couldn\'t restart plan', e?.message ?? 'Please try again.');
+            }
           },
         },
       ],
@@ -151,25 +157,35 @@ export default function PlansScreen({ navigation }) {
   }
 
   async function handleStartNextWorkout(plan) {
-    const routines = await getRoutinesForPlan(plan.id);
-    if (routines.length === 0) {
-      Alert.alert('No workouts', 'This plan has no workouts yet.');
-      return;
+    try {
+      const routines = await getRoutinesForPlan(plan.id);
+      if (routines.length === 0) {
+        Alert.alert('No workouts', 'This plan has no workouts yet.');
+        return;
+      }
+      const idx = (plan.nextWorkoutIndex || 0) % routines.length;
+      const routine = routines[idx];
+      const workout = await createWorkout(user.id, routine.id);
+      const withExercises = await getRoutineExercisesWithDetails(routine.id);
+      const initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
+        exercise, routineExercise, sets: [],
+      }));
+      startWorkout(workout, initialExercises);
+      navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
+    } catch (e) {
+      logError('PlansScreen.handleStartNextWorkout', e, { userId: user?.id, planId: plan?.id });
+      Alert.alert('Couldn\'t start workout', e?.message ?? 'Please try again.');
     }
-    const idx = (plan.nextWorkoutIndex || 0) % routines.length;
-    const routine = routines[idx];
-    const workout = await createWorkout(user.id, routine.id);
-    const withExercises = await getRoutineExercisesWithDetails(routine.id);
-    const initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
-      exercise, routineExercise, sets: [],
-    }));
-    startWorkout(workout, initialExercises);
-    navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
   }
 
   async function handleSetActive(plan) {
-    await activatePlanWithBlock(user.id, plan.id, plan.name);
-    await loadData();
+    try {
+      await activatePlanWithBlock(user.id, plan.id, plan.name);
+      await loadData();
+    } catch (e) {
+      logError('PlansScreen.handleSetActive', e, { userId: user?.id, planId: plan?.id });
+      Alert.alert('Couldn\'t set active plan', e?.message ?? 'Please try again.');
+    }
   }
 
   async function handlePlanOptions(plan) {
@@ -229,13 +245,18 @@ export default function PlansScreen({ navigation }) {
   }
 
   async function handleStartTemplate(routine) {
-    const workout = await createWorkout(user.id, routine.id);
-    const withExercises = await getRoutineExercisesWithDetails(routine.id);
-    const initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
-      exercise, routineExercise, sets: [],
-    }));
-    startWorkout(workout, initialExercises);
-    navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
+    try {
+      const workout = await createWorkout(user.id, routine.id);
+      const withExercises = await getRoutineExercisesWithDetails(routine.id);
+      const initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
+        exercise, routineExercise, sets: [],
+      }));
+      startWorkout(workout, initialExercises);
+      navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
+    } catch (e) {
+      logError('PlansScreen.handleStartTemplate', e, { userId: user?.id, routineId: routine?.id });
+      Alert.alert('Couldn\'t start workout', e?.message ?? 'Please try again.');
+    }
   }
 
   function blockIconColor(action) {

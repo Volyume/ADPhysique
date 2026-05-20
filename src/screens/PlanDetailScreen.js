@@ -13,6 +13,7 @@ import {
   createWorkout, getRoutineExercisesWithDetails, getActivePlan,
 } from '../lib/database';
 import useAppStore from '../store/useAppStore';
+import { logError } from '../lib/errorLog';
 
 export default function PlanDetailScreen({ navigation, route }) {
   const { planId, isLibrary = false } = route.params || {};
@@ -29,17 +30,21 @@ export default function PlanDetailScreen({ navigation, route }) {
 
   async function loadData() {
     if (!planId) return;
-    const [p, routines, counts, active] = await Promise.all([
-      getProgrammeById(planId),
-      getRoutinesForPlan(planId),
-      getAllRoutineExerciseCounts(),
-      getActivePlan(user.id),
-    ]);
-    setPlan(p);
-    setWorkouts(routines);
-    setExerciseCounts(counts);
-    setActivePlanData(active);
-    if (p) navigation.setOptions({ title: p.name || 'Plan' });
+    try {
+      const [p, routines, counts, active] = await Promise.all([
+        getProgrammeById(planId),
+        getRoutinesForPlan(planId),
+        getAllRoutineExerciseCounts(),
+        user?.id ? getActivePlan(user.id) : Promise.resolve(null),
+      ]);
+      setPlan(p);
+      setWorkouts(routines);
+      setExerciseCounts(counts);
+      setActivePlanData(active);
+      if (p) navigation.setOptions({ title: p.name || 'Plan' });
+    } catch (e) {
+      logError('PlanDetailScreen.loadData', e, { planId, userId: user?.id });
+    }
   }
 
   async function handleRefresh() {
@@ -83,19 +88,29 @@ export default function PlanDetailScreen({ navigation, route }) {
   }
 
   async function handleSetActive() {
-    await activatePlanWithBlock(user.id, planId, plan?.name ?? 'Training Plan');
-    await loadData();
-    Alert.alert('Plan Activated', `"${plan?.name}" is now your active plan. Train will show the next workout.`);
+    try {
+      await activatePlanWithBlock(user.id, planId, plan?.name ?? 'Training Plan');
+      await loadData();
+      Alert.alert('Plan Activated', `"${plan?.name}" is now your active plan. Train will show the next workout.`);
+    } catch (e) {
+      logError('PlanDetailScreen.handleSetActive', e, { userId: user?.id, planId });
+      Alert.alert('Couldn\'t activate plan', e?.message ?? 'Please try again.');
+    }
   }
 
   async function handleStartWorkout(routine) {
-    const workout = await createWorkout(user.id, routine.id);
-    const withExercises = await getRoutineExercisesWithDetails(routine.id);
-    const initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
-      exercise, routineExercise, sets: [],
-    }));
-    startWorkout(workout, initialExercises);
-    navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
+    try {
+      const workout = await createWorkout(user.id, routine.id);
+      const withExercises = await getRoutineExercisesWithDetails(routine.id);
+      const initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
+        exercise, routineExercise, sets: [],
+      }));
+      startWorkout(workout, initialExercises);
+      navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
+    } catch (e) {
+      logError('PlanDetailScreen.handleStartWorkout', e, { userId: user?.id, routineId: routine?.id });
+      Alert.alert('Couldn\'t start workout', e?.message ?? 'Please try again.');
+    }
   }
 
   async function handleArchive() {
@@ -108,8 +123,13 @@ export default function PlanDetailScreen({ navigation, route }) {
           text: 'Archive',
           style: 'destructive',
           onPress: async () => {
-            await archivePlan(planId);
-            navigation.goBack();
+            try {
+              await archivePlan(planId);
+              navigation.goBack();
+            } catch (e) {
+              logError('PlanDetailScreen.handleArchive', e, { planId });
+              Alert.alert('Couldn\'t archive plan', e?.message ?? 'Please try again.');
+            }
           },
         },
       ],
@@ -117,8 +137,13 @@ export default function PlanDetailScreen({ navigation, route }) {
   }
 
   async function handleDuplicate() {
-    const copy = await duplicatePlan(planId, user.id);
-    navigation.replace('PlanDetail', { planId: copy.id, isLibrary: false });
+    try {
+      const copy = await duplicatePlan(planId, user.id);
+      navigation.replace('PlanDetail', { planId: copy.id, isLibrary: false });
+    } catch (e) {
+      logError('PlanDetailScreen.handleDuplicate', e, { userId: user?.id, planId });
+      Alert.alert('Couldn\'t duplicate plan', e?.message ?? 'Please try again.');
+    }
   }
 
   const isActive = activePlan?.id === planId;

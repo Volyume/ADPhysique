@@ -13,6 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { clearWorkoutHistory, buildWorkoutCSV } from '../lib/database';
+import { logError } from '../lib/errorLog';
 import { exportBackup, importBackup } from '../lib/dataBackup';
 import { getWellbeingMode, setWellbeingMode } from '../lib/wellbeing';
 import Constants from 'expo-constants';
@@ -191,8 +192,13 @@ export default function SettingsScreen({ navigation }) {
           style: 'destructive',
           onPress: async () => {
             if (!user?.id) return;
-            await clearWorkoutHistory(user.id).catch(() => {});
-            Alert.alert('Done', 'Your workout history has been cleared.');
+            try {
+              await clearWorkoutHistory(user.id);
+              Alert.alert('Done', 'Your workout history has been cleared.');
+            } catch (e) {
+              logError('SettingsScreen.handleClearHistory', e, { userId: user.id });
+              Alert.alert('Couldn\'t clear history', e?.message ?? 'Please try again.');
+            }
           },
         },
       ],

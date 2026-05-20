@@ -13,6 +13,7 @@ import {
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getExerciseWhyThis } from '../lib/whyThisTemplates';
 import { rankSwaps } from '../lib/swapEngine';
+import { logError } from '../lib/errorLog';
 import useAppStore from '../store/useAppStore';
 
 // Compute muscle coverage: { [muscleKey]: count } sorted by count descending
@@ -252,14 +253,19 @@ export default function RoutineDetailScreen({ navigation, route }) {
       );
       return;
     }
-    const workout = await createWorkout(user.id, routineId);
-    const initialExercises = exercises.map(({ exercise, routineExercise }) => ({
-      exercise,
-      routineExercise,
-      sets: [],
-    }));
-    startWorkout(workout, initialExercises);
-    navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
+    try {
+      const workout = await createWorkout(user.id, routineId);
+      const initialExercises = exercises.map(({ exercise, routineExercise }) => ({
+        exercise,
+        routineExercise,
+        sets: [],
+      }));
+      startWorkout(workout, initialExercises);
+      navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
+    } catch (e) {
+      logError('RoutineDetailScreen.handleStartWorkout', e, { userId: user?.id, routineId });
+      Alert.alert('Couldn\'t start workout', e?.message ?? 'Please try again.');
+    }
   }
 
   const filtered = searchQuery.trim()
