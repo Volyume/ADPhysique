@@ -6,7 +6,7 @@ import { startOfWeek, endOfWeek, format, isWithinInterval } from 'date-fns';
 import { colors, spacing, fontSize } from '../styles/theme';
 import { getAllWorkouts, getCompletedWorkoutSets, getAllExercises, getRecentCheckins } from '../lib/database';
 import { calculateWeeklyVolume, getVolumeStatus, shouldDeload, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS, detectLaggingMuscles } from '../lib/algorithms';
-import { useAppStore } from '../store/useAppStore';
+import useAppStore from '../store/useAppStore';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

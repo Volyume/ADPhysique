@@ -19,6 +19,7 @@ import { evaluateAutoReg, predictDeloadWeek, getMesoSchedule } from '../lib/meso
 import { getDeloadPredictionMessage, getAutoRegMessage } from '../lib/whyThisTemplates';
 import useAppStore from '../store/useAppStore';
 import { syncWorkout } from '../lib/sync';
+import { incrementSessionCount, shouldPromptReview, requestReview } from '../lib/storeReview';
 
 const RATING_LABELS = {
   sessionDifficulty: ['', 'Very Easy', 'Easy', 'Moderate', 'Hard', 'Brutal'],
@@ -347,6 +348,13 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     if (supabaseUserId && workoutId) {
       syncWorkout(supabaseUserId, workoutId).catch(() => {});
     }
+
+    // Increment session count and request App Store / Play Store review after 5 sessions
+    incrementSessionCount().then(count => {
+      if (count >= 5) {
+        shouldPromptReview().then(should => { if (should) requestReview(); });
+      }
+    }).catch(() => {});
 
     setSaving(false);
     navigation.popToTop();
