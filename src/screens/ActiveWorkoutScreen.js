@@ -118,7 +118,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [isDeloadWeek, setIsDeloadWeek] = useState(false);
   const [deloadDismissed, setDeloadDismissed] = useState(false);
   const [exerciseNote, setExerciseNote] = useState('');       // persisted per-user per-exercise note
-  const [showExerciseNote, setShowExerciseNote] = useState(false); // expand/collapse the note area
   const [ghostSet, setGhostSet] = useState(null); // pre-fill from last session (same set index)
   const [showNotifPrompt, setShowNotifPrompt] = useState(false);
   const autoAdvanceRef = useRef(null);
@@ -857,39 +856,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </Text>
           </View>
 
-          {/* Exercise note / machine setup memory */}
-          <TouchableOpacity
-            style={styles.exerciseNoteRow}
-            onPress={() => setShowExerciseNote(v => !v)}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel={exerciseNote ? 'Show exercise note' : 'Add exercise note'}
-          >
-            <Ionicons name="document-text-outline" size={14} color={colors.textMuted} />
-            <Text style={styles.exerciseNotePreview} numberOfLines={1}>
-              {exerciseNote || 'Add note (machine settings, cues...)'}
-            </Text>
-            <Ionicons name={showExerciseNote ? 'chevron-up' : 'chevron-down'} size={14} color={colors.textMuted} />
-          </TouchableOpacity>
-          {showExerciseNote && (
-            <TextInput
-              style={styles.exerciseNoteInput}
-              value={exerciseNote}
-              onChangeText={async (text) => {
-                setExerciseNote(text);
-                if (user?.id && exercise?.id) {
-                  await saveExerciseUserNote(user.id, exercise.id, text);
-                }
-              }}
-              placeholder="Machine seat height, cable attachment, grip cues..."
-              placeholderTextColor={colors.textMuted}
-              multiline
-              maxLength={300}
-              returnKeyType="done"
-              blurOnSubmit
-            />
-          )}
-
           {/* Deload Week Banner */}
           {isDeloadWeek && !deloadDismissed && (
             <View style={styles.deloadBanner}>
@@ -1062,7 +1028,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               <View style={styles.firstSetHint}>
                 <Ionicons name="sparkles-outline" size={14} color={colors.primary} />
                 <Text style={styles.firstSetHintText}>
-                  Choose a weight and reps, then tap Complete Set when done.
+                  Choose a weight and reps, then tap Log set when done.
                   Tap Info below to see how to do this exercise correctly.
                 </Text>
               </View>
@@ -1161,7 +1127,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               <Text style={styles.actionBtnText}>Note</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.actionBtn}
+              style={[styles.actionBtn, styles.actionBtnGuide]}
               onPress={() => {
                 if (showInfoTipPulse) {
                   infoPulseLoop.current?.stop();
@@ -1172,16 +1138,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 setShowExecution(true);
               }}
               accessibilityRole="button"
-              accessibilityLabel="View exercise info"
+              accessibilityLabel="View exercise guide"
             >
               <Animated.View style={showInfoTipPulse ? { transform: [{ scale: infoPulseAnim }] } : null}>
-                <Ionicons
-                  name="information-circle-outline"
-                  size={18}
-                  color={showInfoTipPulse ? colors.primary : colors.textSecondary}
-                />
+                <Ionicons name="information-circle-outline" size={18} color={colors.primary} />
               </Animated.View>
-              <Text style={[styles.actionBtnText, showInfoTipPulse && { color: colors.primary }]}>Info</Text>
+              <Text style={[styles.actionBtnText, styles.actionBtnGuideText]}>Info</Text>
             </TouchableOpacity>
             <TouchableOpacity
               testID="volyume-btn-add-mid-workout"
@@ -1743,7 +1705,7 @@ const styles = StyleSheet.create({
   navTabBadge: { width: 16, height: 16, borderRadius: 8, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   navTabBadgeText: { fontSize: 9, fontWeight: fontWeight.black, color: colors.background },
   scroll: { flex: 1 },
-  scrollContent: { padding: spacing.lg, gap: spacing.md },
+  scrollContent: { padding: spacing.md, paddingTop: spacing.sm, gap: spacing.sm },
   exerciseHeader: { gap: spacing.xs },
   exerciseNameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   exerciseName: { flex: 1, fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary },
@@ -1758,21 +1720,7 @@ const styles = StyleSheet.create({
   swapItemName: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary, marginBottom: 2 },
   swapItemReason: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
   exerciseMuscle: { fontSize: fontSize.sm, color: colors.textSecondary },
-  exerciseNoteRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    paddingVertical: spacing.xs, paddingHorizontal: spacing.sm,
-    backgroundColor: colors.surface2, borderRadius: radius.sm,
-    borderWidth: 1, borderColor: colors.border,
-  },
-  exerciseNotePreview: { flex: 1, fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
-  exerciseNoteInput: {
-    backgroundColor: colors.surface2, borderRadius: radius.sm,
-    borderWidth: 1, borderColor: colors.borderLight,
-    padding: spacing.sm, color: colors.textPrimary,
-    fontSize: fontSize.sm, minHeight: 72,
-    textAlignVertical: 'top',
-  },
-  prevCard: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, gap: spacing.sm },
+  prevCard: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border, gap: spacing.xs },
   prevTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.2 },
   prevSetsSummary: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary, lineHeight: 22 },
   prevEmpty: { fontSize: fontSize.sm, color: colors.textMuted, fontStyle: 'italic' },
@@ -1807,7 +1755,9 @@ const styles = StyleSheet.create({
   secondaryActions: { flexDirection: 'row', gap: spacing.sm },
   actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, backgroundColor: colors.surface, borderRadius: radius.md, paddingVertical: spacing.md, borderWidth: 1, borderColor: colors.border },
   actionBtnDanger: { borderColor: colors.error + '40' },
+  actionBtnGuide: { borderColor: colors.primary + '60', backgroundColor: colors.primaryBg },
   actionBtnText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  actionBtnGuideText: { color: colors.primary },
   nextExerciseBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderWidth: 1.5, borderColor: colors.primary, borderRadius: radius.lg, paddingVertical: spacing.lg },
   nextExerciseBtnText: { fontSize: fontSize.md, color: colors.primary, fontWeight: fontWeight.bold },
   finishWorkoutLargeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderWidth: 1.5, borderColor: colors.success, borderRadius: radius.lg, paddingVertical: spacing.lg },
