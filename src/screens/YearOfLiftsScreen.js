@@ -6,9 +6,10 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { getYearOfLiftsData } from '../lib/database';
 
+const MONTH_SHORT = ['J','F','M','A','M','J','J','A','S','O','N','D'];
 const MONTH_NAMES = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  'January','February','March','April','May','June',
+  'July','August','September','October','November','December',
 ];
 
 function fmtDate(ms) {
@@ -27,26 +28,51 @@ function StatCard({ icon, value, label }) {
   );
 }
 
+function MonthlyChart({ monthlyBreakdown }) {
+  const maxSessions = Math.max(...monthlyBreakdown.map(m => m.sessions), 1);
+  const BAR_MAX_H = 40;
+  const currentMonth = new Date().getMonth();
+
+  return (
+    <View style={styles.chartCard}>
+      <Text style={styles.chartTitle}>Sessions by month</Text>
+      <View style={styles.chartBars}>
+        {monthlyBreakdown.map(({ month, sessions }) => {
+          const barH = sessions > 0 ? Math.max(4, Math.round((sessions / maxSessions) * BAR_MAX_H)) : 2;
+          const isCurrent = month === currentMonth;
+          return (
+            <View key={month} style={styles.chartBarCol}>
+              <View style={[
+                styles.chartBar,
+                { height: barH },
+                sessions === 0 && styles.chartBarEmpty,
+                isCurrent && sessions > 0 && styles.chartBarCurrent,
+              ]} />
+              <Text style={[styles.chartBarLabel, isCurrent && styles.chartBarLabelCurrent]}>
+                {MONTH_SHORT[month]}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 function buildHeadline(data) {
   const { totalSessions, tonnage, topMonth, avgSessionsPerWeek } = data;
   if (totalSessions === 0) return 'No sessions logged in this period yet.';
   const parts = [];
   parts.push(`${totalSessions} session${totalSessions !== 1 ? 's' : ''} logged.`);
-  if (tonnage > 0) {
-    parts.push(`${tonnage.toLocaleString('en-GB')} kg moved.`);
-  }
-  if (topMonth) {
-    parts.push(`${topMonth} was your busiest month.`);
-  }
-  if (avgSessionsPerWeek >= 3) {
-    parts.push("That's consistent work.");
-  }
+  if (tonnage > 0) parts.push(`${tonnage.toLocaleString('en-GB')} kg moved.`);
+  if (topMonth) parts.push(`${topMonth} was your busiest month.`);
+  if (avgSessionsPerWeek >= 3) parts.push("That's consistent work.");
   return parts.join(' ');
 }
 
 export default function YearOfLiftsScreen({ navigation, route }) {
   const { yearMs } = route.params ?? {};
-  const { user } = useAppStore();
+  const { user, units } = useAppStore();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -96,28 +122,33 @@ export default function YearOfLiftsScreen({ navigation, route }) {
                   <Text style={styles.headlineText}>{buildHeadline(data)}</Text>
                 </View>
 
+                {/* Monthly activity chart */}
+                {data.monthlyBreakdown && (
+                  <MonthlyChart monthlyBreakdown={data.monthlyBreakdown} />
+                )}
+
                 <View style={styles.statsGrid}>
-                  <StatCard
-                    icon="barbell-outline"
-                    value={String(data.totalSessions)}
-                    label="Sessions"
-                  />
-                  <StatCard
-                    icon="layers-outline"
-                    value={data.totalSets.toLocaleString('en-GB')}
-                    label="Sets"
-                  />
-                  <StatCard
-                    icon="trending-up-outline"
-                    value={`${data.tonnage.toLocaleString('en-GB')} kg`}
-                    label="Total volume"
-                  />
-                  <StatCard
-                    icon="calendar-outline"
-                    value={String(data.avgSessionsPerWeek)}
-                    label="Avg / week"
-                  />
+                  <StatCard icon="barbell-outline" value={String(data.totalSessions)} label="Sessions" />
+                  <StatCard icon="layers-outline" value={data.totalSets.toLocaleString('en-GB')} label="Sets" />
+                  <StatCard icon="trending-up-outline" value={`${data.tonnage.toLocaleString('en-GB')} kg`} label="Total volume" />
+                  <StatCard icon="calendar-outline" value={String(data.avgSessionsPerWeek)} label="Avg / week" />
+                  {data.uniqueExercises > 0 && (
+                    <StatCard icon="list-outline" value={String(data.uniqueExercises)} label="Exercises" />
+                  )}
                 </View>
+
+                {data.topPRs?.length > 0 && (
+                  <View style={styles.topCard}>
+                    <Text style={styles.topCardTitle}>Top records this year</Text>
+                    {data.topPRs.map((pr, i) => (
+                      <View key={i} style={styles.topRow}>
+                        <Text style={styles.topRank}>{i + 1}</Text>
+                        <Text style={styles.topName} numberOfLines={1}>{pr.exerciseName ?? pr.exercise_name}</Text>
+                        <Text style={styles.topSets}>{parseFloat(pr.value).toFixed(1)}{units} est. max</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
 
                 {data.topExercises.length > 0 && (
                   <View style={styles.topCard}>
@@ -182,15 +213,26 @@ const styles = StyleSheet.create({
     color: colors.background, lineHeight: 30,
   },
 
-  statsGrid: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm,
+  chartCard: {
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.border,
+    padding: spacing.lg, gap: spacing.md,
   },
+  chartTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textMuted },
+  chartBars: { flexDirection: 'row', alignItems: 'flex-end', gap: 4, height: 56 },
+  chartBarCol: { flex: 1, alignItems: 'center', gap: 4, justifyContent: 'flex-end' },
+  chartBar: { width: '80%', borderRadius: 2, backgroundColor: colors.primary + '70' },
+  chartBarEmpty: { backgroundColor: colors.surface2 },
+  chartBarCurrent: { backgroundColor: colors.primary },
+  chartBarLabel: { fontSize: 9, color: colors.textMuted },
+  chartBarLabelCurrent: { color: colors.primary, fontWeight: fontWeight.semibold },
+
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   statCard: {
     flex: 1, minWidth: '45%',
     backgroundColor: colors.surface, borderRadius: radius.lg,
     borderWidth: 1, borderColor: colors.border,
-    padding: spacing.lg, gap: spacing.xs,
-    alignItems: 'center',
+    padding: spacing.lg, gap: spacing.xs, alignItems: 'center',
   },
   statValue: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary },
   statLabel: { fontSize: fontSize.xs, color: colors.textMuted },
@@ -202,8 +244,7 @@ const styles = StyleSheet.create({
   },
   topCardTitle: {
     fontSize: fontSize.sm, fontWeight: fontWeight.semibold,
-    color: colors.textMuted, letterSpacing: 0.2,
-    marginBottom: spacing.xs,
+    color: colors.textMuted, letterSpacing: 0.2, marginBottom: spacing.xs,
   },
   topRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   topRank: {
