@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Dimensions,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Dimensions, FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -164,6 +164,72 @@ function WeightTrendChart({ entries, units, bodyWeightUnits }) {
   );
 }
 
+// ─── Measurement Trend Chart ──────────────────────────────────────────────────
+
+function MeasurementTrendChart({ entries, measureKey, label }) {
+  const withData = useMemo(() => {
+    return entries
+      .filter(e => e[measureKey] != null)
+      .sort((a, b) => a.metric_date.localeCompare(b.metric_date))
+      .slice(-12);
+  }, [entries, measureKey]);
+
+  if (withData.length < 2) {
+    return (
+      <View style={chartStyles.emptyHint}>
+        <Text style={chartStyles.emptyHintText}>
+          Log {label.toLowerCase()} at least twice to see the trend.
+        </Text>
+      </View>
+    );
+  }
+
+  const values = withData.map(e => e[measureKey]);
+  const minV = Math.floor(Math.min(...values) - 1);
+  const maxV = Math.ceil(Math.max(...values) + 1);
+  const axisRange = Math.max(maxV - minV, 1);
+
+  const data = withData.map((e, i) => ({
+    value: e[measureKey],
+    label: i === 0 || i === withData.length - 1
+      ? format(parseISO(e.metric_date), 'MMM d')
+      : '',
+  }));
+
+  const chartWidth = SCREEN_W - spacing.lg * 2 - 32;
+
+  return (
+    <View style={chartStyles.wrap}>
+      <LineChart
+        data={data}
+        width={chartWidth}
+        height={100}
+        color={colors.primary}
+        thickness={2}
+        startFillColor={colors.primary + '30'}
+        endFillColor={colors.primary + '05'}
+        areaChart
+        curved
+        hideDataPoints={withData.length > 6}
+        dataPointsColor={colors.primary}
+        dataPointsRadius={3}
+        yAxisLabelSuffix=" cm"
+        yAxisTextStyle={chartStyles.axisText}
+        xAxisLabelTextStyle={chartStyles.axisText}
+        noOfSections={3}
+        yAxisOffset={minV}
+        maxValue={axisRange}
+        backgroundColor={colors.surface}
+        xAxisColor={colors.border}
+        yAxisColor={colors.border}
+        rulesColor={colors.border}
+        rulesType="dashed"
+        showVerticalLines={false}
+      />
+    </View>
+  );
+}
+
 const chartStyles = StyleSheet.create({
   wrap: { marginTop: spacing.sm, marginHorizontal: -spacing.xs },
   emptyHint: { paddingTop: spacing.md },
@@ -209,6 +275,19 @@ export default function BodyMetricsScreen({ navigation }) {
     metric_date: format(new Date(), 'yyyy-MM-dd'), notes: '',
   });
   const [saving, setSaving] = useState(false);
+  const [selectedMeasurement, setSelectedMeasurement] = useState(null);
+
+  const measurementsWithData = useMemo(() =>
+    MEASUREMENTS.filter(m => history.some(e => e[m.key] != null)),
+    [history],
+  );
+
+  // Auto-select first measurement that has data
+  useEffect(() => {
+    if (selectedMeasurement == null && measurementsWithData.length > 0) {
+      setSelectedMeasurement(measurementsWithData[0].key);
+    }
+  }, [measurementsWithData]);
 
   const STORAGE_KEY = `@volyume_body_metrics_${user?.id}`;
   const MIGRATED_KEY = `@volyume_body_metrics_migrated_${user?.id}`;
@@ -576,21 +655,60 @@ export default function BodyMetricsScreen({ navigation }) {
           </View>
         )}
 
-        {/* Measurements snapshot */}
+        {/* Measurements snapshot + trend charts */}
         {latest && MEASUREMENTS.some(m => latest[m.key]) && (
           <View style={styles.snapshotCard}>
             <Text style={styles.sectionTitle}>Measurements</Text>
             <View style={styles.measureGrid}>
               {MEASUREMENTS.map(m => latest[m.key] ? (
-                <View key={m.key} style={styles.measureCell}>
-                  <Text style={styles.measureValue}>{latest[m.key]} cm</Text>
-                  <Text style={styles.measureLabel}>{m.label}</Text>
+                <TouchableOpacity
+                  key={m.key}
+                  style={[styles.measureCell, selectedMeasurement === m.key && styles.measureCellActive]}
+                  onPress={() => setSelectedMeasurement(m.key === selectedMeasurement ? null : m.key)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.measureValue, selectedMeasurement === m.key && styles.measureValueActive]}>
+                    {latest[m.key]} cm
+                  </Text>
+                  <Text style={[styles.measureLabel, selectedMeasurement === m.key && styles.measureLabelActive]}>
+                    {m.label}
+                  </Text>
                   {getDelta(m.key) && (
                     <DeltaBadge delta={parseFloat(getDelta(m.key))} units="cm" small />
                   )}
-                </View>
+                </TouchableOpacity>
               ) : null)}
             </View>
+
+            {/* Measurement trend chart */}
+            {measurementsWithData.length > 0 && (
+              <>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.measureTabRow}
+                >
+                  {measurementsWithData.map(m => (
+                    <TouchableOpacity
+                      key={m.key}
+                      style={[styles.measureTab, selectedMeasurement === m.key && styles.measureTabActive]}
+                      onPress={() => setSelectedMeasurement(m.key === selectedMeasurement ? null : m.key)}
+                    >
+                      <Text style={[styles.measureTabText, selectedMeasurement === m.key && styles.measureTabTextActive]}>
+                        {m.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+                {selectedMeasurement && (
+                  <MeasurementTrendChart
+                    entries={history}
+                    measureKey={selectedMeasurement}
+                    label={MEASUREMENTS.find(m => m.key === selectedMeasurement)?.label ?? ''}
+                  />
+                )}
+              </>
+            )}
           </View>
         )}
 
@@ -598,14 +716,24 @@ export default function BodyMetricsScreen({ navigation }) {
         {history.length > 1 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>History</Text>
-            {history.slice(0, 10).map(entry => (
-              <View key={entry.id} style={styles.historyRow}>
-                <Text style={styles.historyDate}>{format(new Date(entry.metric_date), 'MMM d, yyyy')}</Text>
-                {entry.body_weight && (
-                  <Text style={styles.historyWeight}>{formatBodyWeightShort(entry.body_weight, bwu)}</Text>
-                )}
-              </View>
-            ))}
+            {history.slice(0, 12).map(entry => {
+              const measuredKeys = MEASUREMENTS.filter(m => entry[m.key] != null);
+              return (
+                <View key={entry.id} style={styles.historyRow}>
+                  <Text style={styles.historyDate}>{format(new Date(entry.metric_date), 'MMM d, yyyy')}</Text>
+                  <View style={styles.historyValues}>
+                    {entry.body_weight ? (
+                      <Text style={styles.historyWeight}>{formatBodyWeightShort(entry.body_weight, bwu)}</Text>
+                    ) : null}
+                    {measuredKeys.slice(0, 2).map(m => (
+                      <Text key={m.key} style={styles.historyMeasure}>
+                        {m.label.split(' ')[0]} {entry[m.key]}cm
+                      </Text>
+                    ))}
+                  </View>
+                </View>
+              );
+            })}
           </View>
         )}
       </ScrollView>
@@ -701,10 +829,22 @@ const styles = StyleSheet.create({
   measureGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   measureCell: {
     minWidth: '30%', backgroundColor: colors.surface2, borderRadius: radius.md,
-    padding: spacing.md, gap: 2,
+    padding: spacing.md, gap: 2, borderWidth: 1, borderColor: 'transparent',
   },
+  measureCellActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
   measureValue: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  measureValueActive: { color: colors.primary },
   measureLabel: { fontSize: fontSize.xs, color: colors.textMuted },
+  measureLabelActive: { color: colors.primaryDim },
+  measureTabRow: { flexDirection: 'row', gap: spacing.xs, paddingVertical: spacing.sm },
+  measureTab: {
+    paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
+    borderRadius: radius.full, backgroundColor: colors.surface2,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  measureTabActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
+  measureTabText: { fontSize: fontSize.xs, fontWeight: fontWeight.medium, color: colors.textSecondary },
+  measureTabTextActive: { color: colors.primary, fontWeight: fontWeight.semibold },
 
   logBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
@@ -743,5 +883,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   historyDate: { fontSize: fontSize.sm, color: colors.textSecondary },
+  historyValues: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   historyWeight: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  historyMeasure: { fontSize: fontSize.xs, color: colors.textMuted },
 });
