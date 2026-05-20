@@ -9,6 +9,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { getCompletedWorkoutSets, getAllExercises, getLatestBodyWeight } from '../lib/database';
 import { calculate1RM, getStrengthStandard } from '../lib/algorithms';
+import { getStrengthLevel } from '../lib/strengthStandards';
 import useAppStore from '../store/useAppStore';
 import InfoTooltip from '../components/InfoTooltip';
 
@@ -186,6 +187,9 @@ export default function PRWallScreen({ navigation }) {
           const best1RM = types['1rm_estimate'];
           const heaviest = types['heaviest_weight'];
           const standard = strengthStandards[name];
+          const level = best1RM && bodyWeight
+            ? getStrengthLevel(name, best1RM.value, bodyWeight)
+            : null;
           return (
             <View style={styles.prCard}>
               <Text style={styles.exerciseName}>{name}</Text>
@@ -216,6 +220,18 @@ export default function PRWallScreen({ navigation }) {
                   </Text>
                 </View>
               )}
+              {level && (
+                <>
+                  <View style={styles.strengthLevelChip}>
+                    <Text style={styles.strengthLevelText}>{level.label}</Text>
+                  </View>
+                  {level.nextTarget && level.nextLabel && (
+                    <Text style={styles.strengthLevelNext}>
+                      Next milestone: {Math.round(level.nextTarget * 10) / 10}{units} for {level.nextLabel}
+                    </Text>
+                  )}
+                </>
+              )}
             </View>
           );
         }}
@@ -227,6 +243,13 @@ export default function PRWallScreen({ navigation }) {
               Personal records are detected automatically as you train. Complete a few sessions and they will appear here.
             </Text>
           </View>
+        }
+        ListFooterComponent={
+          filteredNames.length > 0 ? (
+            <Text style={styles.standardsFooter}>
+              Strength standards based on lifts per kilogram of bodyweight. Treat as a rough guide, not a verdict.
+            </Text>
+          ) : null
         }
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
       />
@@ -316,6 +339,34 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   standardInCardText: { fontSize: fontSize.xs, color: colors.textSecondary },
+  strengthLevelChip: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.sm,
+    alignSelf: 'flex-start',
+    backgroundColor: colors.primaryBg,
+    borderWidth: 1,
+    borderColor: colors.primary + '40',
+    marginTop: spacing.xs,
+  },
+  strengthLevelText: {
+    fontSize: fontSize.xs,
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
+  },
+  strengthLevelNext: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  standardsFooter: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    textAlign: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    lineHeight: 16,
+  },
   empty: {
     alignItems: 'center',
     paddingHorizontal: 32,
