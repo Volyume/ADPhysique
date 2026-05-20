@@ -414,11 +414,6 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.weekCard}>
           <View style={styles.weekCardHeader}>
             <Text style={styles.weekLabel}>This week</Text>
-            {streakWeeks >= 2 && (
-              <View style={styles.streakChip}>
-                <Text style={styles.streakChipText}>{streakWeeks} weeks consistent</Text>
-              </View>
-            )}
           </View>
           <View style={styles.weekStats}>
             <WeekBar
