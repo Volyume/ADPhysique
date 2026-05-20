@@ -782,14 +782,14 @@ export async function getAcuteChronicWorkload(userId) {
   // Fetch hard sets from last 5 weeks
   const fiveWeeksAgo = now - 35 * MS_DAY;
   const rows = await d.getAllAsync(`
-    SELECT s.weight, s.reps, w.started_at
+    SELECT s.weight, s.actual_reps AS reps, w.started_at
     FROM workout_sets s
     JOIN workouts w ON w.id = s.workout_id
     WHERE w.user_id = ?
       AND w.is_completed = 1
       AND s.set_type != 'warmup'
       AND s.weight > 0
-      AND s.reps > 0
+      AND s.actual_reps > 0
       AND w.started_at >= ?
     ORDER BY w.started_at ASC
   `, [userId, fiveWeeksAgo]);

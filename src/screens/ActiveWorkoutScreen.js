@@ -1061,7 +1061,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               <TouchableOpacity
                 key={i}
                 style={[styles.navTab, i === currentExerciseIndex && styles.navTabActive]}
-                onPress={() => setCurrentExerciseIndex(i)}
+                onPress={() => {
+                  const prevIdx = currentExerciseIndex;
+                  setCurrentExerciseIndex(i);
+                  if (i > prevIdx) maybeTriggerStimulusRating(prevIdx);
+                }}
                 accessibilityRole="button"
                 accessibilityLabel={entry.exercise?.name || `Exercise ${i + 1}`}
                 accessibilityState={{ selected: i === currentExerciseIndex }}
