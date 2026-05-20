@@ -193,7 +193,7 @@ function PhysiqueOptIn({ onEnable }) {
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function BodyMetricsScreen({ navigation }) {
-  const { user, units, bodyWeightUnits } = useAppStore();
+  const { user, units, bodyWeightUnits, tier } = useAppStore();
   const bwu = bodyWeightUnits || 'st';
   const [physiqueEnabled, setPhysiqueEnabled] = useState(null); // null = loading
   const [calm, setCalm] = useState(false);
@@ -215,7 +215,16 @@ export default function BodyMetricsScreen({ navigation }) {
 
   useFocusEffect(
     useCallback(() => {
-      AsyncStorage.getItem(PHYSIQUE_PREF_KEY).then(v => setPhysiqueEnabled(v === 'true'));
+      AsyncStorage.getItem(PHYSIQUE_PREF_KEY).then(v => {
+        if (v === 'true' || tier === 'pro') {
+          if (tier === 'pro' && v !== 'true') {
+            AsyncStorage.setItem(PHYSIQUE_PREF_KEY, 'true').catch(() => {});
+          }
+          setPhysiqueEnabled(true);
+        } else {
+          setPhysiqueEnabled(false);
+        }
+      });
       getWellbeingMode().then(m => setCalm(isCalm(m)));
     }, []),
   );

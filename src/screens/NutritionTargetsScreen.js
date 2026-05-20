@@ -169,10 +169,13 @@ export default function NutritionTargetsScreen() {
       try {
         if (user?.id) {
           const fromDb = await getNutritionTargets(user.id).catch(() => null);
-          if (fromDb) { setResults(fromDb); return; }
+          if (fromDb?.maintenanceKcal) { setResults(fromDb); return; }
         }
         const raw = await AsyncStorage.getItem(STORAGE_KEY);
-        if (raw) setResults(JSON.parse(raw));
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed?.maintenanceKcal) setResults(parsed);
+        }
       } catch (_) {}
     }
     loadSaved();
@@ -646,9 +649,10 @@ export default function NutritionTargetsScreen() {
                 const lbmKg = results.proteinBasis === 'lbm' && results.proteinGPerKgLbm > 0
                   ? Math.round(results.proteinG / results.proteinGPerKgLbm * 10) / 10
                   : null;
-                const surplusDelta = Math.round(results.targetKcal - results.maintenanceKcal);
+                const maintenanceKcal = results.maintenanceKcal ?? results.targetKcal ?? 0;
+                const surplusDelta = Math.round((results.targetKcal ?? 0) - maintenanceKcal);
                 const isUp = surplusDelta >= 0;
-                const absPct = Math.round(Math.abs(surplusDelta / results.maintenanceKcal) * 100);
+                const absPct = maintenanceKcal > 0 ? Math.round(Math.abs(surplusDelta / maintenanceKcal) * 100) : 0;
                 const rateAbs = Math.abs(results.targetRateKgPerWeek);
                 const rateDir = results.targetRateKgPerWeek >= 0 ? 'gain' : 'lose';
                 const fatFloorG = weightKg ? Math.round(Math.max(0.5 * weightKg, 30)) : 30;
@@ -662,10 +666,10 @@ export default function NutritionTargetsScreen() {
                 const isRecomp = results.goal === 'recomp';
 
                 const calorieWhy = isGain
-                  ? `Your maintenance is ${results.maintenanceKcal.toLocaleString()} kcal. That is what you need to stay the same weight. Adding a ${absPct}% surplus (+${surplusDelta} kcal) gives your muscles the extra energy and building blocks to grow. At ${rateAbs.toFixed(2)} kg/week projected gain, you're in a good spot: fast enough to build muscle, slow enough to keep fat gain minimal.`
+                  ? `Your maintenance is ${maintenanceKcal.toLocaleString()} kcal. That is what you need to stay the same weight. Adding a ${absPct}% surplus (+${surplusDelta} kcal) gives your muscles the extra energy and building blocks to grow. At ${rateAbs.toFixed(2)} kg/week projected gain, you're in a good spot: fast enough to build muscle, slow enough to keep fat gain minimal.`
                   : isCut
-                  ? `Your maintenance is ${results.maintenanceKcal.toLocaleString()} kcal. A ${absPct}% deficit (${Math.abs(surplusDelta)} kcal below maintenance) puts you on track to ${rateDir} roughly ${rateAbs.toFixed(2)} kg/week. That rate is ${rateAbs <= 0.5 ? 'conservative. You will lose mostly fat while holding onto more muscle' : rateAbs <= 0.8 ? 'moderate. Effective fat loss with manageable risk to muscle' : 'aggressive. Protein has been set higher to protect your muscle'}. Consistency over weeks matters far more than perfection each day.`
-                  : `Your maintenance is ${results.maintenanceKcal.toLocaleString()} kcal. A slight ${Math.abs(absPct)}% deficit gives you enough of a calorie gap to use body fat as fuel, while high protein and consistent training tell your body to hold on to muscle. Progress is slower than a dedicated muscle building or fat loss phase, but your body composition improves at the same time.`;
+                  ? `Your maintenance is ${maintenanceKcal.toLocaleString()} kcal. A ${absPct}% deficit (${Math.abs(surplusDelta)} kcal below maintenance) puts you on track to ${rateDir} roughly ${rateAbs.toFixed(2)} kg/week. That rate is ${rateAbs <= 0.5 ? 'conservative. You will lose mostly fat while holding onto more muscle' : rateAbs <= 0.8 ? 'moderate. Effective fat loss with manageable risk to muscle' : 'aggressive. Protein has been set higher to protect your muscle'}. Consistency over weeks matters far more than perfection each day.`
+                  : `Your maintenance is ${maintenanceKcal.toLocaleString()} kcal. A slight ${Math.abs(absPct)}% deficit gives you enough of a calorie gap to use body fat as fuel, while high protein and consistent training tell your body to hold on to muscle. Progress is slower than a dedicated muscle building or fat loss phase, but your body composition improves at the same time.`;
 
                 const approachLabel =
                   results.proteinApproach === 'standard'
@@ -785,7 +789,7 @@ export default function NutritionTargetsScreen() {
                   </View>
                   <View style={styles.calcRow}>
                     <Text style={styles.calcKey}>Maintenance calories</Text>
-                    <Text style={styles.calcValue}>{results.maintenanceKcal} kcal</Text>
+                    <Text style={styles.calcValue}>{maintenanceKcal} kcal</Text>
                   </View>
                   <View style={styles.calcRow}>
                     <Text style={styles.calcKey}>Phase adjustment</Text>
