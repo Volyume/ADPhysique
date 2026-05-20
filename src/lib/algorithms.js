@@ -409,7 +409,10 @@ export function detectPR(newSet, historicalSets, exercise, units = 'kg') {
 }
 
 // Algorithm 6: Auto-Regulation
-export function getAutoRegSuggestion(workoutFeedback, weeklyVolumeByMuscle, customLandmarks = null) {
+// perMuscleStimulusRatings: optional array of { primaryMuscle, pump, connection } from
+// post-exercise ratings. When present, per-muscle pump overrides the session-level overallPump
+// for muscle-specific volume suggestions, enabling targeted recommendations.
+export function getAutoRegSuggestion(workoutFeedback, weeklyVolumeByMuscle, customLandmarks = null, perMuscleStimulusRatings = null) {
   const suggestions = [];
   const {
     sessionDifficulty = 3,
@@ -418,6 +421,17 @@ export function getAutoRegSuggestion(workoutFeedback, weeklyVolumeByMuscle, cust
     fatigueLevel = 2,
     jointDiscomfort = 0,
   } = workoutFeedback || {};
+
+  // Build per-muscle pump map from exercise ratings when available.
+  // Falls back to session-level overallPump for muscles with no rating.
+  const musclePumpMap = {};
+  if (perMuscleStimulusRatings?.length) {
+    for (const r of perMuscleStimulusRatings) {
+      if (r.primaryMuscle) {
+        musclePumpMap[r.primaryMuscle] = r.pump ?? overallPump;
+      }
+    }
+  }
 
   if (sessionDifficulty >= 4 && soreness24hBefore >= 2) {
     suggestions.push({
@@ -438,7 +452,7 @@ export function getAutoRegSuggestion(workoutFeedback, weeklyVolumeByMuscle, cust
     });
   }
 
-  if (overallPump === 3 && sessionDifficulty <= 3) {
+  if (overallPump === 3 && sessionDifficulty <= 3 && !perMuscleStimulusRatings?.length) {
     suggestions.push({
       type: 'increase_load',
       message: 'Good session. You can push a little harder next time: try adding weight or an extra set.',
@@ -448,11 +462,31 @@ export function getAutoRegSuggestion(workoutFeedback, weeklyVolumeByMuscle, cust
   for (const [muscle, data] of Object.entries(weeklyVolumeByMuscle || {})) {
     const landmarks = customLandmarks?.[muscle] || VOLUME_LANDMARKS[muscle];
     if (!landmarks) continue;
+
     if (data.workingSets > landmarks.mrv) {
       suggestions.push({
         type: 'deload_muscle',
         muscle,
         message: `${MUSCLE_DISPLAY_NAMES[muscle] || muscle}: over target this week (${Math.round(data.workingSets)} sets). Consider doing a little less next session.`,
+      });
+      continue;
+    }
+
+    // Per-muscle pump signal: low pump (1-2) on a well-recovered muscle may indicate
+    // poor exercise selection or need for technique adjustment, not necessarily volume issue.
+    // High pump (4-5) with volume near MAV suggests the current exercise selection is working.
+    const musclePump = musclePumpMap[muscle] ?? overallPump;
+    if (musclePump <= 2 && data.workingSets >= (landmarks.mev || 2)) {
+      suggestions.push({
+        type: 'swap_exercise',
+        muscle,
+        message: `${MUSCLE_DISPLAY_NAMES[muscle] || muscle}: pump was low this session. Try a different exercise or check your technique before adding volume.`,
+      });
+    } else if (musclePump >= 4 && data.workingSets < (landmarks.mav || landmarks.mrv)) {
+      suggestions.push({
+        type: 'add_muscle_volume',
+        muscle,
+        message: `${MUSCLE_DISPLAY_NAMES[muscle] || muscle}: strong stimulus. You have room to add a set or increase intensity next week.`,
       });
     }
   }
