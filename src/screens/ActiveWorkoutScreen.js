@@ -49,8 +49,8 @@ const SET_TYPE_DISPLAY = {
   warmup: 'Warm-up',
   dropset: 'Drop Set',
   amrap: 'Working',
-  myo_reps: 'Working',
-  rest_pause: 'Working',
+  myo_reps: 'Myo-reps',
+  rest_pause: 'Rest-pause',
   superset: 'Working',
 };
 
@@ -58,6 +58,16 @@ const SET_TYPE_OPTIONS = [
   { value: 'straight', label: 'Working', description: 'Counts as a full working set. Use this for all your main sets.' },
   { value: 'warmup', label: 'Warm-up', description: 'Preparation set to get ready. Not counted in your weekly totals.' },
   { value: 'dropset', label: 'Drop Set', description: 'Reduce the weight and keep going. Counted in your weekly totals.' },
+  {
+    value: 'myo_reps',
+    label: 'Myo-reps',
+    description: 'One activation set to near failure, then 3-5 short clusters of 3-5 reps with 10-20s rest between each. High stimulus, time-efficient.',
+  },
+  {
+    value: 'rest_pause',
+    label: 'Rest-pause',
+    description: 'Take your set to near failure, rest 10-20s, then crank out a few more reps. Repeat 2-3 times. Use sparingly on isolation lifts.',
+  },
 ];
 
 // Returns the set to use as the rep-progression anchor.
@@ -123,6 +133,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [exerciseNote, setExerciseNote] = useState('');       // persisted per-user per-exercise note
   const [ghostSet, setGhostSet] = useState(null); // pre-fill from last session (same set index)
   const [showNotifPrompt, setShowNotifPrompt] = useState(false);
+  // Cluster counter for myo-reps / rest-pause: 0 = activation set, 1+ = mini-set N+1
+  const [clusterCount, setClusterCount] = useState(0);
   const autoAdvanceRef = useRef(null);
   const sessionSetsRef = useRef([]);   // tracks sets in this session — used for PR detection
   const warmupHintSeenRef = useRef(false); // show one-liner warmup note only on first warmup of this session
@@ -533,6 +545,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     loadHistory();
   }, [exercise?.id, currentExerciseIndex]);
 
+  // Reset the cluster counter whenever the user leaves a cluster set type.
+  // This keeps "activation set" / "mini-set N" labelling tied to the currently
+  // active myo-reps or rest-pause cluster only.
+  useEffect(() => {
+    if (currentSet.setType !== 'myo_reps' && currentSet.setType !== 'rest_pause') {
+      setClusterCount(0);
+    }
+  }, [currentSet.setType]);
+
   useEffect(() => {
     if (prevSets.length > 0 && currentSet.weight && currentSet.reps) {
       const suggestion = getProgressionSuggestion(
@@ -669,6 +690,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // After a drop set, revert to straight so the count stays clean
       if (currentSet.setType === 'dropset') {
         setCurrentSet(cs => ({ ...cs, setType: 'straight' }));
+      }
+      // For myo-reps / rest-pause clusters: keep the set type sticky and just
+      // bump the cluster counter so the next set is labelled as the next
+      // mini-set. The user exits the cluster manually via the "Cluster
+      // complete" button below the Log Set action.
+      if (currentSet.setType === 'myo_reps' || currentSet.setType === 'rest_pause') {
+        setClusterCount(c => c + 1);
       }
       // If warmup was just completed, mark hint seen and auto-switch to working set
       if (currentSet.setType === 'warmup') {
@@ -1064,6 +1092,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             currentSet.setType === 'warmup' && styles.setEntryCardWarmup,
             currentSet.setType === 'dropset' && styles.setEntryCardDrop,
           ]}>
+            {(currentSet.setType === 'myo_reps' || currentSet.setType === 'rest_pause') && (
+              <View style={styles.clusterBanner}>
+                <Ionicons
+                  name={currentSet.setType === 'myo_reps' ? 'pulse-outline' : 'flash-outline'}
+                  size={14}
+                  color={colors.primary}
+                />
+                <Text style={styles.clusterBannerText}>
+                  {currentSet.setType === 'myo_reps' ? 'Myo-reps' : 'Rest-pause'} cluster
+                  {clusterCount > 0 ? ` · mini-set ${clusterCount + 1} · take 10-20s rest` : ' · activation set'}
+                </Text>
+              </View>
+            )}
             {currentSet.setType === 'warmup' && (
               <View style={styles.warmupBanner}>
                 <Ionicons name="flame-outline" size={14} color={colors.warning} />
@@ -1086,11 +1127,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 ? 'Warm-up set'
                 : currentSet.setType === 'dropset'
                   ? `Drop set · after Set ${workingLogged}`
-                  : isDeloadWeek
-                    ? `Light set ${workingLogged + 1} · Easy`
-                    : routineExercise?.recommendedSets
-                      ? `Set ${workingLogged + 1} / ${routineExercise.recommendedSets} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working'}`
-                      : `Set ${workingLogged + 1} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working'}`}
+                  : (currentSet.setType === 'myo_reps' || currentSet.setType === 'rest_pause')
+                    ? (clusterCount === 0 ? 'Activation set' : `Mini-set ${clusterCount + 1}`)
+                    : isDeloadWeek
+                      ? `Light set ${workingLogged + 1} · Easy`
+                      : routineExercise?.recommendedSets
+                        ? `Set ${workingLogged + 1} / ${routineExercise.recommendedSets} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working'}`
+                        : `Set ${workingLogged + 1} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working'}`}
             </Text>
             {currentSet.setType !== 'warmup' && setTargets[workingLogged] && (
               <View style={styles.inlineTargetChip}>
@@ -1211,6 +1254,20 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               <Text style={[styles.completeBtnText, currentSet.setType === 'warmup' && styles.completeBtnTextWarmup]}>
                 {currentSet.setType === 'warmup' ? 'Done' : 'Log set'}
               </Text>
+            </TouchableOpacity>
+          )}
+
+          {(currentSet.setType === 'myo_reps' || currentSet.setType === 'rest_pause') && clusterCount > 0 && (
+            <TouchableOpacity
+              style={styles.clusterDoneBtn}
+              onPress={() => {
+                setCurrentSet({ ...currentSet, setType: 'straight' });
+                setClusterCount(0);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Cluster complete, return to working sets"
+            >
+              <Text style={styles.clusterDoneBtnText}>Cluster complete — back to working sets</Text>
             </TouchableOpacity>
           )}
 
@@ -1886,6 +1943,10 @@ const styles = StyleSheet.create({
   firstSetHintText: { flex: 1, fontSize: fontSize.xs, color: colors.primary, lineHeight: 18 },
   dropBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   dropBannerText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.gold, letterSpacing: 0.8 },
+  clusterBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, backgroundColor: colors.primaryBg, borderRadius: radius.sm, alignSelf: 'flex-start', marginBottom: spacing.xs },
+  clusterBannerText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary, letterSpacing: 0.3 },
+  clusterDoneBtn: { marginTop: spacing.sm, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radius.sm, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, alignSelf: 'center' },
+  clusterDoneBtnText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
   setEntryTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.2 },
   noteInput: { backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md, fontSize: fontSize.sm, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, minHeight: 60 },
   ghostChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, backgroundColor: colors.surface2, borderRadius: radius.sm, alignSelf: 'flex-start', marginBottom: spacing.xs },
