@@ -119,7 +119,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [warmupDoneIdx, setWarmupDoneIdx] = useState([]); // indices of logged warmups
   const [showExecution, setShowExecution] = useState(false);
   const [showStaleModal, setShowStaleModal] = useState(false);
-  const [addedMsg, setAddedMsg] = useState('');
   const [showSwapModal, setShowSwapModal] = useState(false);
   const [swapCandidates, setSwapCandidates] = useState([]);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
@@ -1130,14 +1129,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </View>
           )}
 
-          {/* Exercise added confirmation */}
-          {addedMsg ? (
-            <View style={styles.addedBanner}>
-              <Ionicons name="add-circle" size={14} color={colors.primary} />
-              <Text style={styles.addedBannerText}>{addedMsg} added</Text>
-            </View>
-          ) : null}
-
           {/* Set Entry */}
           <View style={[
             styles.setEntryCard,
@@ -1480,10 +1471,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           visible={showExercisePicker}
           onClose={() => setShowExercisePicker(false)}
           onSelect={ex => {
+            const newIndex = workoutExercises.length;
             addExerciseToWorkout(ex);
+            setCurrentExerciseIndex(newIndex);
             setShowExercisePicker(false);
-            setAddedMsg(ex.name);
-            setTimeout(() => setAddedMsg(''), 2500);
           }}
         />
 
@@ -2111,8 +2102,6 @@ const styles = StyleSheet.create({
   infoNotes: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 22 },
   targetBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.successBg, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderWidth: 1, borderColor: colors.success },
   targetBannerText: { fontSize: fontSize.sm, color: colors.success, fontWeight: fontWeight.semibold, flex: 1 },
-  addedBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.primaryBg, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
-  addedBannerText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.medium },
   staleOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
   staleSheet: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.xl, width: '100%', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.border },
   staleTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, textAlign: 'center' },
