@@ -261,7 +261,6 @@ const RAW = [
   ['Hammer Strength Chest Press',   'chest', ['triceps', 'front_delts'],   'machine',      'push',      true,  8, 15,  3, 4],
   ['Reverse-Grip Bench Press',      'chest', ['triceps', 'front_delts'],   'barbell',      'push',      true,  6, 12,  3, 4],
   ['Dumbbell Squeeze Press',        'chest', ['triceps'],                  'dumbbell',     'push',      true,  8, 15,  2, 4],
-  ['Cable Fly (Low to High)',       'chest', [],                           'cable',        'isolation', false, 12, 20, 2, 5],
   ['Cable Fly (High to Low)',       'chest', [],                           'cable',        'isolation', false, 12, 20, 2, 5],
   ['Dumbbell Pullover (Chest)',     'chest', ['back'],                     'dumbbell',     'isolation', false, 10, 15, 2, 4],
 
@@ -492,7 +491,7 @@ const RAW = [
   ['45-Degree Hip Extension',       'glutes', ['hamstrings', 'back'],     'machine',      'hinge',     true,  12, 20, 2, 4],
   ['Reverse Hyperextension (Glute)','glutes', ['hamstrings'],             'machine',      'hinge',     true,  12, 20, 2, 5],
   ['Sumo Deadlift (Glute Focus)',   'glutes', ['hamstrings', 'quads'],    'barbell',      'hinge',     true,  5, 10,  5, 3],
-  ['Sumo Deadlift',                 'glutes', ['hamstrings', 'quads'],    'barbell',      'hinge',     true,  4, 8,   5, 3],
+  ['Sumo Deadlift (Wide Stance)',   'glutes', ['hamstrings', 'quads'],    'barbell',      'hinge',     true,  4, 8,   5, 3],
   ['Cable Donkey Kickback',         'glutes', [],                         'cable',        'isolation', false, 15, 25, 2, 5],
   ['Donkey Kickback (Machine)',     'glutes', [],                         'machine',      'isolation', false, 15, 25, 2, 5],
   ['Walking Lunge (Glute Focus)',   'glutes', ['quads', 'hamstrings'],    'dumbbell',     'squat',     true,  10, 20, 3, 4],
