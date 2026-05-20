@@ -131,9 +131,20 @@ function buildRecommendations({ volumeByMuscle, deloadResult, checkins, laggingM
     );
   }
 
-  // 5. Joint flag from checkins
+  // 5. Low energy or sleep from post-session check-ins
+  if (recs.length < 3 && checkins.length >= 2) {
+    const avgEnergy = checkins.reduce((s, c) => s + (c.energyScore || 3), 0) / checkins.length;
+    const avgSleep = checkins.reduce((s, c) => s + (c.sleepQuality || 3), 0) / checkins.length;
+    if (avgEnergy < 2.5 || avgSleep < 2.5) {
+      recs.push(
+        'Your energy and sleep scores have been low this week. Consider keeping training intensity comfortable rather than pushing for new bests — recovery is where the adaptation happens.',
+      );
+    }
+  }
+
+  // 6. Joint flag from checkins (joint_pain column stored via saveWeeklyCheckin)
   if (recs.length < 3 && checkins.length > 0) {
-    const recentJoint = checkins.find(c => (c.jointDiscomfort || 0) >= 2);
+    const recentJoint = checkins.find(c => (c.jointPain || c.jointDiscomfort || 0) >= 1);
     if (recentJoint) {
       recs.push(
         'Recent sessions flagged some joint discomfort. Next week, use weights that feel comfortable rather than pushing for new bests — your joints will thank you.',
@@ -141,7 +152,7 @@ function buildRecommendations({ volumeByMuscle, deloadResult, checkins, laggingM
     }
   }
 
-  // 6. Generic positive nudge when everything looks fine
+  // 7. Generic positive nudge when everything looks fine
   if (recs.length === 0) {
     recs.push(
       'Your training looks balanced this week. Keep the same structure next week and look for small improvements — an extra rep or a slightly heavier weight on one exercise.',
