@@ -27,7 +27,7 @@ import {
   getNutritionTargets,
 } from '../lib/database';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { requestNotificationPermissions, getNotificationPermissionStatus } from '../lib/notifications';
+import { requestNotificationPermissions, getNotificationPermissionStatus, scheduleNextCheckinReminder } from '../lib/notifications';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 const DAYS_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -278,6 +278,20 @@ export default function WeeklyCheckInScreen({ navigation }) {
           soreMuscles.length > 0 ? `Sore: ${soreMuscles.join(', ')}.` : '',
         ].filter(Boolean).join(' ') || null,
       });
+
+      // Reschedule the check-in reminder so we don't bug them again this week.
+      try {
+        const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
+        const prefs = raw ? JSON.parse(raw) : null;
+        if (prefs?.checkin?.enabled) {
+          await scheduleNextCheckinReminder(
+            userId,
+            prefs.checkin.weekday ?? 0,
+            prefs.checkin.hour ?? 12,
+            prefs.checkin.minute ?? 0,
+          );
+        }
+      } catch (_) {}
 
       const goCoach = () => navigation.navigate('CoachOutput', { weekStart: weekStart.getTime() });
       const permStatus = await getNotificationPermissionStatus();

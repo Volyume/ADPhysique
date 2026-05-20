@@ -12,6 +12,7 @@
 
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import { getLatestCheckin } from './database';
 
 // Notification IDs — used to cancel/replace specific scheduled notifications
 const NOTIF_ID_MORNING = 'volyume_morning_weight';
@@ -138,14 +139,34 @@ const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
  * @param {number} hour     - 0–23, default 18 (6pm)
  * @param {number} minute   - 0–59, default 0
  */
-export async function scheduleCheckinReminder(weekday = 0, hour = 12, minute = 0) {
+/**
+ * Returns a Date for the next occurrence of (weekday at hour:minute) strictly
+ * after `after`. Used for one-off check-in reminders so we can skip the week
+ * when the user has already checked in.
+ */
+function getNextWeekdayDate(weekday, hour, minute, after = new Date()) {
+  const target = new Date(after);
+  const currentDow = target.getDay();
+  let daysUntil = (weekday - currentDow + 7) % 7;
+  target.setHours(hour, minute, 0, 0);
+  if (daysUntil === 0 && target.getTime() <= after.getTime()) {
+    daysUntil = 7;
+  }
+  target.setDate(target.getDate() + daysUntil);
+  return target;
+}
+
+export async function scheduleCheckinReminder(weekday = 0, hour = 12, minute = 0, options = {}) {
   if (Platform.OS === 'web') return;
   try {
     await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_CHECKIN).catch(() => {});
 
-    // expo-notifications uses 1=Sunday … 7=Saturday for weekly triggers
-    // We accept JS day index (0=Sun … 6=Sat) and convert
-    const expoWeekday = weekday + 1;
+    // If the caller already knows the user checked in for the current cycle,
+    // they pass skipThisWeek=true and we schedule for the cycle after next.
+    const baseAfter = options.skipThisWeek
+      ? new Date(Date.now() + 24 * 60 * 60 * 1000) // bump past today
+      : new Date();
+    const fireAt = getNextWeekdayDate(weekday, hour, minute, baseAfter);
 
     await Notifications.scheduleNotificationAsync({
       identifier: NOTIF_ID_CHECKIN,
@@ -156,15 +177,42 @@ export async function scheduleCheckinReminder(weekday = 0, hour = 12, minute = 0
         sound: false,
       },
       trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
-        weekday: expoWeekday,
-        hour,
-        minute,
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: fireAt,
       },
     });
   } catch (e) {
     console.warn('[notifications] scheduleCheckin failed:', e?.message);
   }
+}
+
+/**
+ * Returns the start (Monday 00:00 UTC) of the current ISO week, in epoch ms.
+ * Mirrors getCurrentWeekStart in WeeklyCheckInScreen so a row keyed at that
+ * timestamp tells us the user has checked in for this week.
+ */
+function getCurrentMondayWeekStartMs() {
+  const d = new Date();
+  const day = (d.getUTCDay() + 6) % 7;
+  d.setUTCHours(0, 0, 0, 0);
+  d.setUTCDate(d.getUTCDate() - day);
+  return d.getTime();
+}
+
+/**
+ * Schedule the next check-in reminder, but skip the upcoming check-in day
+ * if the user has already saved a check-in for this calendar week.
+ */
+export async function scheduleNextCheckinReminder(userId, weekday = 0, hour = 12, minute = 0) {
+  let alreadyDone = false;
+  try {
+    if (userId) {
+      const latest = await getLatestCheckin(userId);
+      const cycleStart = getCurrentMondayWeekStartMs();
+      if (latest && (latest.weekStart ?? 0) >= cycleStart) alreadyDone = true;
+    }
+  } catch {}
+  await scheduleCheckinReminder(weekday, hour, minute, { skipThisWeek: alreadyDone });
 }
 
 // ─── Cancel helpers ───────────────────────────────────────────────────────────
@@ -196,7 +244,7 @@ export async function cancelAllNotifications() {
  * @param {object} prefs - { morningEnabled, morningHour, morningMinute,
  *                           checkinEnabled, checkinDay, checkinHour, checkinMinute }
  */
-export async function restoreNotifications(prefs) {
+export async function restoreNotifications(prefs, userId = null) {
   if (!prefs) return;
   const status = await getNotificationPermissionStatus();
   if (status !== 'granted') return;
@@ -207,7 +255,8 @@ export async function restoreNotifications(prefs) {
     await scheduleMorningWeightNotification(prefs.morningHour ?? 7, prefs.morningMinute ?? 0);
   }
   if (prefs.checkinEnabled) {
-    await scheduleCheckinReminder(
+    await scheduleNextCheckinReminder(
+      userId,
       prefs.checkinDay ?? 0,
       prefs.checkinHour ?? 12,
       prefs.checkinMinute ?? 0,

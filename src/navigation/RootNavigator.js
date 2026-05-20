@@ -331,7 +331,10 @@ export default function RootNavigator() {
         await initLocalUser();
         try {
           const raw = await AsyncStorage.getItem('@volyume_notification_prefs');
-          if (raw) restoreNotifications(JSON.parse(raw)).catch(() => {});
+          if (raw) {
+            const restoredUserId = useAppStore.getState().user?.id ?? null;
+            restoreNotifications(JSON.parse(raw), restoredUserId).catch(() => {});
+          }
         } catch (_e) {}
       } catch (err) {
         console.error('bootstrap failed:', err);
