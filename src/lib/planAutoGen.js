@@ -31,8 +31,11 @@ const DEFAULT_DAYS_PER_WEEK = 4;
  * we can't pick a plan template at all. Other fields fall back to sensible
  * defaults so older profiles (or partially-populated ones) still get a
  * plan regenerated when the user changes goals from the Hub.
+ *
+ * Exported so tests can verify the default-back-fill rules without
+ * touching the database.
  */
-function buildPlanInputs(profile) {
+export function buildPlanInputs(profile) {
   if (!profile?.trainingGoal || !profile?.trainingPhase) {
     return null;
   }
