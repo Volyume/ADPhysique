@@ -45,18 +45,6 @@ const ACTION_CARDS_DEFAULT = [
   },
 ];
 
-const ACTION_CARDS_PRO = [
-  {
-    id: 'coach',
-    icon: 'sparkles',
-    title: 'Change your goals',
-    description: "Update your physique goal or training phase and your Precision Coaching will rebuild your plan.",
-    screen: 'CoachBuilder',
-    badge: null,
-    featured: true,
-  },
-];
-
 const BLOCK_ICON = {
   heads_up: 'alert-circle-outline',
   early_deload: 'battery-charging-outline',
@@ -183,12 +171,8 @@ export default function PlansScreen({ navigation }) {
   }
 
   async function handlePlanOptions(plan) {
-    const proOption = tier === 'pro'
-      ? [{ text: 'Change your goals', onPress: () => navigation.navigate('CoachBuilder') }]
-      : [];
     Alert.alert(plan.name, undefined, [
       { text: 'View Plan', onPress: () => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false }) },
-      ...proOption,
       { text: 'Set Active', onPress: () => handleSetActive(plan) },
       {
         text: 'Duplicate',
@@ -254,7 +238,7 @@ export default function PlansScreen({ navigation }) {
     (blockAdvice.action === 'heads_up' || !blockSnoozed);
 
   const isProWithPlan = tier === 'pro' && !!activePlan;
-  const actionCards = isProWithPlan ? ACTION_CARDS_PRO : ACTION_CARDS_DEFAULT;
+  const actionCards = ACTION_CARDS_DEFAULT;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -382,7 +366,7 @@ export default function PlansScreen({ navigation }) {
               )}
               {tier === 'pro' && (
                 <Text style={styles.proCoachNote}>
-                  Your Precision Coaching adjusts this plan as you progress and check in. Use the menu or scroll down to change your goals.
+                  Your Precision Coaching adjusts this plan as you progress and check in. To change your goals, head to You → Athlete Hub.
                 </Text>
               )}
               <View style={styles.activePlanActions}>
@@ -489,11 +473,26 @@ export default function PlansScreen({ navigation }) {
           <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
         </TouchableOpacity>
 
-        {/* Decision Hub */}
-        <View style={[styles.section, isProWithPlan && styles.sectionDeemphasised]}>
-          <Text style={styles.sectionTitle}>
-            {isProWithPlan ? 'Change your coaching goals' : 'Start or build a plan'}
-          </Text>
+        {/* Pointer to Athlete Hub for Pro users — replaces the "Change your goals" rebuild card */}
+        {isProWithPlan && (
+          <TouchableOpacity
+            style={styles.goalsPointer}
+            onPress={() => navigation.getParent()?.navigate('ProfileTab', { screen: 'AthleteHub' })}
+            activeOpacity={0.75}
+          >
+            <Ionicons name="information-circle-outline" size={16} color={colors.textSecondary} />
+            <Text style={styles.goalsPointerText}>
+              Want to change your goals? Head to{' '}
+              <Text style={styles.goalsPointerLink}>You → Athlete Hub</Text>.
+            </Text>
+            <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+          </TouchableOpacity>
+        )}
+
+        {/* Decision Hub — hidden for Pro users with an active plan; they manage goals from Athlete Hub */}
+        {!isProWithPlan && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Start or build a plan</Text>
           {actionCards.map(card => {
             const isCoach = card.id === 'coach';
             const proLocked = isCoach && tier !== 'pro';
@@ -536,6 +535,7 @@ export default function PlansScreen({ navigation }) {
             );
           })}
         </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -554,6 +554,15 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary, letterSpacing: 0.2 },
   sectionSubtitle: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: -spacing.sm },
   sectionDeemphasised: { opacity: 0.85 },
+
+  goalsPointer: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: colors.surface2, borderRadius: radius.md,
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  goalsPointerText: { flex: 1, fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 18 },
+  goalsPointerLink: { color: colors.primary, fontWeight: fontWeight.semibold },
 
   trainingBlocksRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
