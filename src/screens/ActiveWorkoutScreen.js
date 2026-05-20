@@ -1141,6 +1141,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 </Text>
               </View>
             )}
+            {currentSet.setType !== 'warmup' && targetReason && (
+              <View style={styles.coachReasonChip}>
+                <Ionicons name="sparkles-outline" size={11} color={colors.primary} />
+                <Text style={styles.coachReasonText}>{targetReason}</Text>
+              </View>
+            )}
             {currentSet.setType !== 'warmup' && prevSets[workingLogged] && (() => {
               const prev = prevSets[workingLogged];
               const cw = parseFloat(currentSet.weight) || 0;
@@ -2074,6 +2080,14 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start', marginBottom: spacing.xs,
   },
   inlineTargetText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
+  coachReasonChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: colors.surface2, borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm, paddingVertical: 4,
+    alignSelf: 'flex-start', marginBottom: spacing.xs,
+    borderWidth: 1, borderColor: colors.primary + '30',
+  },
+  coachReasonText: { fontSize: fontSize.xs, color: colors.textSecondary, flexShrink: 1 },
   beatChip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     marginBottom: spacing.xs,

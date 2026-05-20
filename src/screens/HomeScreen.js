@@ -17,7 +17,7 @@ import {
   getWorkoutSetsForWorkout, getExerciseById,
   getCurrentMesocycleWeek, getPlannedMuscleVolume, getAllExercises,
   getMorningWeightToday, logMorningWeight, getProgressionTeaser,
-  getRecentWorkoutFeedback,
+  getRecentWorkoutFeedback, getLatestCoachOutput,
 } from '../lib/database';
 import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload, VOLUME_LANDMARKS } from '../lib/algorithms';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
@@ -58,6 +58,8 @@ export default function HomeScreen({ navigation }) {
   const [lastSessionTonnage, setLastSessionTonnage] = useState(null);
   const [blockProgress, setBlockProgress] = useState([]);
   const [currentMesoWeek, setCurrentMesoWeek] = useState(null);
+  const [latestCoachOutput, setLatestCoachOutput] = useState(null);
+  const [coachBannerDismissed, setCoachBannerDismissed] = useState(false);
   const [todayWeight, setTodayWeight] = useState(null);       // logged weight for today
   const [weightInput, setWeightInput] = useState('');          // draft for kg/lbs mode
   const [weightInputSt, setWeightInputSt] = useState('');     // stone field (st mode)
@@ -124,8 +126,22 @@ export default function HomeScreen({ navigation }) {
       loadFatigueTrend(),
       loadScheduleContext(),
       loadBriefDismissal(),
-      ...(tier === 'pro' ? [loadTodayWeight()] : []),
+      ...(tier === 'pro' ? [loadTodayWeight(), loadLatestCoachOutput()] : []),
     ]);
+  }
+
+  async function loadLatestCoachOutput() {
+    try {
+      const out = await getLatestCoachOutput(user.id);
+      setLatestCoachOutput(out);
+      const dismissedKey = out ? `@volyume_coach_banner_dismissed_${out.weekStart}` : null;
+      if (dismissedKey) {
+        const v = await AsyncStorage.getItem(dismissedKey);
+        setCoachBannerDismissed(v === 'true');
+      } else {
+        setCoachBannerDismissed(false);
+      }
+    } catch (_) {}
   }
 
   async function loadBriefDismissal() {
@@ -552,6 +568,36 @@ export default function HomeScreen({ navigation }) {
               <Ionicons name="close" size={15} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
+        )}
+
+        {/* ── Fresh coach update banner ── */}
+        {tier === 'pro' && latestCoachOutput && !coachBannerDismissed && (Date.now() - (latestCoachOutput.weekStart ?? 0) < 7 * 86400000) && (
+          <TouchableOpacity
+            style={styles.coachBanner}
+            onPress={() => navigation.navigate('CoachOutput', { weekStart: latestCoachOutput.weekStart })}
+            activeOpacity={0.85}
+          >
+            <View style={styles.coachBannerLeft}>
+              <Ionicons name="sparkles" size={18} color={colors.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.coachBannerTitle}>Your coach updated this week</Text>
+                <Text style={styles.coachBannerBody}>
+                  {latestCoachOutput.adjustments?.calories?.applied
+                    ? `Calories adjusted to ${latestCoachOutput.adjustments.calories.newKcal} kcal. Tap to see why.`
+                    : 'Tap to see what changed and why.'}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              onPress={() => {
+                AsyncStorage.setItem(`@volyume_coach_banner_dismissed_${latestCoachOutput.weekStart}`, 'true').catch(() => {});
+                setCoachBannerDismissed(true);
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="close" size={16} color={colors.textMuted} />
+            </TouchableOpacity>
+          </TouchableOpacity>
         )}
 
         {/* ── Recovery week banner ── */}
@@ -1806,6 +1852,15 @@ const styles = StyleSheet.create({
   },
 
   // Recovery week banner
+  coachBanner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: colors.primaryBg, borderRadius: 14,
+    borderWidth: 1, borderColor: colors.primary + '50',
+    padding: 14, marginBottom: 12, gap: 12,
+  },
+  coachBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
+  coachBannerTitle: { fontSize: 13, fontWeight: '700', color: colors.primary, marginBottom: 2 },
+  coachBannerBody: { fontSize: 12, color: colors.textSecondary, lineHeight: 17 },
   deloadBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: 'rgba(245,158,11,0.12)', borderRadius: 10, padding: 14,

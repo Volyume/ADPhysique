@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import useAppStore from '../store/useAppStore';
 import { runWeeklyCoach } from '../lib/weeklyCoach';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getLatestCheckin,
   getRecentCheckins,
@@ -14,6 +15,7 @@ import {
   getWeeklySessionStats,
   getWeeklyPRCount,
   getNutritionTargets,
+  saveNutritionTargets,
   saveCoachOutput,
   getLatestCoachOutput,
   getCoachOutputHistory,
@@ -99,14 +101,22 @@ function WhatsWorkingCard({ bullets }) {
   );
 }
 
-function AdjustmentRow({ iconName, label, note }) {
+function AdjustmentRow({ iconName, label, note, applied }) {
   return (
     <View style={styles.adjustmentRow}>
       <View style={styles.adjustmentIconWrap}>
         <Ionicons name={iconName} size={18} color={colors.primary} />
       </View>
       <View style={styles.adjustmentContent}>
-        <Text style={styles.adjustmentLabel}>{label}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
+          <Text style={styles.adjustmentLabel}>{label}</Text>
+          {applied && (
+            <View style={styles.appliedChip}>
+              <Ionicons name="checkmark" size={10} color={colors.success} />
+              <Text style={styles.appliedChipText}>Applied</Text>
+            </View>
+          )}
+        </View>
         {note ? <Text style={styles.adjustmentNote}>{note}</Text> : null}
       </View>
     </View>
@@ -136,8 +146,9 @@ function NextWeekCard({ adjustments }) {
       {calories !== null && (
         <AdjustmentRow
           iconName="flame-outline"
-          label={calLabel}
+          label={calories.applied && calories.newKcal ? `${calLabel} → ${calories.newKcal} kcal/day` : calLabel}
           note={calories.note}
+          applied={!!calories.applied}
         />
       )}
       {steps !== null && (
@@ -369,6 +380,30 @@ export default function CoachOutputScreen({ navigation, route }) {
       });
 
       await saveCoachOutput(user.id, { weekStart, ...result });
+
+      // Auto-apply calorie adjustment. Protein stays the same (priority macro);
+      // fat and carbs scale with kcal change so the deficit/surplus math holds.
+      try {
+        const calChange = result.adjustments?.calories?.change ?? 0;
+        if (calChange && nutrition?.targetKcal) {
+          const newKcal = Math.max(1200, nutrition.targetKcal + calChange);
+          const ratio = newKcal / nutrition.targetKcal;
+          const newTargets = {
+            targetKcal: newKcal,
+            proteinG: nutrition.proteinG ?? null,
+            fatG: nutrition.fatG ? Math.round(nutrition.fatG * ratio) : nutrition.fatG ?? null,
+            carbsG: nutrition.carbsG ? Math.round(nutrition.carbsG * ratio) : nutrition.carbsG ?? null,
+            maintenanceKcal: nutrition.maintenanceKcal ?? null,
+          };
+          await saveNutritionTargets(user.id, newTargets);
+          await AsyncStorage.setItem('@volyume_nutrition_targets', JSON.stringify(newTargets)).catch(() => {});
+          result.adjustments.calories.applied = true;
+          result.adjustments.calories.newKcal = newKcal;
+        }
+      } catch (e) {
+        console.warn('Auto-apply calories failed:', e);
+      }
+
       setOutput(result);
 
       // Load the last 5 outputs; skip the first (current week) for the history shelf
@@ -790,6 +825,17 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
+  },
+  appliedChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: colors.successBg ?? colors.surface2,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm, paddingVertical: 2,
+    borderWidth: 1, borderColor: (colors.success ?? colors.primary) + '50',
+  },
+  appliedChipText: {
+    fontSize: 10, fontWeight: fontWeight.bold,
+    color: colors.success ?? colors.primary, letterSpacing: 0.4,
   },
   adjustmentNote: {
     fontSize: fontSize.sm,
