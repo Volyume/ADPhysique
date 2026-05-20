@@ -167,7 +167,7 @@ export default function PRWallScreen({ navigation }) {
           ) : !bodyWeight ? (
             <TouchableOpacity
               style={styles.bwPromptCard}
-              onPress={() => navigation.navigate('ProfileTab', { screen: 'BodyMetrics', initial: false })}
+              onPress={() => navigation.navigate('BodyMetrics')}
               activeOpacity={0.8}
             >
               <Ionicons name="body-outline" size={20} color={colors.primary} />

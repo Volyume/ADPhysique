@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../store/useAppStore';
 import { formatBodyWeightShort } from '../lib/units';
 import { computeEWMA } from '../lib/weeklyCoach';
@@ -27,6 +28,10 @@ import {
 } from '../lib/database';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { requestNotificationPermissions, getNotificationPermissionStatus } from '../lib/notifications';
+
+const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
+const DAYS_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const MIN_WEIGH_INS = 3;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -139,10 +144,13 @@ export default function WeeklyCheckInScreen({ navigation }) {
   const [nutritionTargets, setNutritionTargets] = useState(null);
   const [step, setStep] = useState(0); // 0–3
 
+  // ─── Gate state ──────────────────────────────────────────────────────────────
+  // 'loading' | 'wrong_day' | 'need_weights' | 'open'
+  const [gateState, setGateState] = useState('loading');
+  const [checkinDayNum, setCheckinDayNum] = useState(0); // 0=Sunday
+  const [weighInsThisWeek, setWeighInsThisWeek] = useState(0);
+
   useEffect(() => {
-    // Only redirect if neither goalPhase nor goal has been set.
-    // ProOnboarding sets goal (and now also maps it to goalPhase) so this
-    // guard prevents redirecting users who just completed setup.
     if (!userProfile?.goalPhase && !userProfile?.goal) {
       navigation.replace('ProGoalSetup', { fromCheckin: true });
     }
@@ -190,13 +198,40 @@ export default function WeeklyCheckInScreen({ navigation }) {
     async function load() {
       try {
         if (!user?.id) return;
+
+        // Load check-in day from notification prefs
+        let scheduledDay = 0; // default Sunday
+        try {
+          const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
+          if (raw) {
+            const prefs = JSON.parse(raw);
+            if (prefs.checkinDay !== undefined) scheduledDay = prefs.checkinDay;
+          }
+        } catch (_) {}
+        if (!cancelled) setCheckinDayNum(scheduledDay);
+
+        // Today's day of week (0=Sunday)
+        const todayDay = new Date().getDay();
+
         const weights = await getMorningWeightsLast14Days(user.id);
         if (cancelled) return;
         setAlreadyLoggedToday(hasLoggedToday(weights));
         const weekAgo = Date.now() - 7 * 86400000;
-        setWeekWeights(weights.filter(w => (w.loggedAt ?? 0) >= weekAgo));
+        const thisWeek = weights.filter(w => (w.loggedAt ?? 0) >= weekAgo);
+        setWeekWeights(thisWeek);
+        setWeighInsThisWeek(thisWeek.length);
+
+        // Gate evaluation
+        if (todayDay !== scheduledDay) {
+          setGateState('wrong_day');
+        } else if (thisWeek.length < MIN_WEIGH_INS) {
+          setGateState('need_weights');
+        } else {
+          setGateState('open');
+        }
       } catch (e) {
-        console.warn('[WeeklyCheckIn] failed to load morning weights', e);
+        console.warn('[WeeklyCheckIn] failed to load', e);
+        setGateState('open'); // fail open so users aren't permanently blocked
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -537,6 +572,79 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
   const stepTitles = ['How are you?', 'This week', 'Recovery', 'Training'];
 
+  // ─── Gate screens ──────────────────────────────────────────────────────────
+  if (loading || gateState === 'loading') {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <View style={styles.gateCenter}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (gateState === 'wrong_day') {
+    const dayName = DAYS_FULL[checkinDayNum];
+    return (
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <View style={styles.gateHeader}>
+          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.gateCenter}>
+          <View style={styles.gateIconWrap}>
+            <Ionicons name="calendar-outline" size={32} color={colors.textMuted} />
+          </View>
+          <Text style={styles.gateTitle}>Come back on {dayName}</Text>
+          <Text style={styles.gateBody}>
+            You set your check-in day to {dayName}. Your coaching runs on a weekly rhythm tied to that day, so the numbers compare like for like each time.
+            {'\n\n'}
+            In the meantime, log your weight each morning from the Train tab. Every reading makes the trend more accurate.
+          </Text>
+          <TouchableOpacity style={styles.gateBtn} onPress={() => navigation.goBack()} activeOpacity={0.85}>
+            <Text style={styles.gateBtnText}>Got it</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (gateState === 'need_weights') {
+    const dayName = DAYS_FULL[checkinDayNum];
+    const remaining = MIN_WEIGH_INS - weighInsThisWeek;
+    return (
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <View style={styles.gateHeader}>
+          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.gateCenter}>
+          <View style={styles.gateIconWrap}>
+            <Ionicons name="scale-outline" size={32} color={colors.warning} />
+          </View>
+          <Text style={styles.gateTitle}>A few more weight readings needed</Text>
+          <Text style={styles.gateBody}>
+            You've logged {weighInsThisWeek} {weighInsThisWeek === 1 ? 'reading' : 'readings'} this week. Your coach needs at least {MIN_WEIGH_INS} to calculate a reliable trend.
+            {'\n\n'}
+            Body weight shifts naturally each day due to fluid, food, and hormones. Logging every other day gives enough readings to smooth out that noise and see what's actually changing. With fewer readings, the coaching adjustments won't be as accurate.
+            {'\n\n'}
+            Log {remaining} more {remaining === 1 ? 'reading' : 'readings'} from the Train tab and come back on {dayName}.
+          </Text>
+          <TouchableOpacity style={styles.gateBtn} onPress={() => navigation.goBack()} activeOpacity={0.85}>
+            <Text style={styles.gateBtnText}>I'll log my weight first</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.gateDeferBtn} onPress={() => setGateState('open')} activeOpacity={0.75}>
+            <Text style={styles.gateDeferBtnText}>Check in anyway</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // ─── Main check-in screen ──────────────────────────────────────────────────
+
   const todayDayName = new Date().toLocaleDateString('en-GB', { weekday: 'long' });
   const checkinDayLabel = todayDayName === 'Sunday' ? 'Your Sunday check-in' : 'Your weekly check-in';
 
@@ -640,6 +748,44 @@ export default function WeeklyCheckInScreen({ navigation }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
+
+  // ── Gate screens ────────────────────────────────────────────────────────────
+  gateHeader: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  gateCenter: {
+    flex: 1, justifyContent: 'center', alignItems: 'center',
+    paddingHorizontal: spacing.xxl, gap: spacing.lg,
+  },
+  gateIconWrap: {
+    width: 72, height: 72, borderRadius: 36,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm,
+  },
+  gateTitle: {
+    fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary,
+    textAlign: 'center',
+  },
+  gateBody: {
+    fontSize: fontSize.md, color: colors.textSecondary, lineHeight: 22,
+    textAlign: 'center',
+  },
+  gateBtn: {
+    width: '100%', backgroundColor: colors.primary, borderRadius: radius.lg,
+    paddingVertical: spacing.lg, alignItems: 'center', marginTop: spacing.md,
+  },
+  gateBtnText: {
+    fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background,
+  },
+  gateDeferBtn: {
+    paddingVertical: spacing.md, alignItems: 'center',
+  },
+  gateDeferBtnText: {
+    fontSize: fontSize.sm, color: colors.textMuted,
+  },
 
   headerBar: {
     flexDirection: 'row',

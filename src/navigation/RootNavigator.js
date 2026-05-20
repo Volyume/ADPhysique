@@ -1,8 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { StackActions } from '@react-navigation/native';
+import * as Notifications from 'expo-notifications';
+
+const navigationRef = createNavigationContainerRef();
 import { View, Text, Image, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -257,6 +260,30 @@ export default function RootNavigator() {
   }, []);
 
   useEffect(() => {
+    function handleNotificationResponse(response) {
+      const type = response?.notification?.request?.content?.data?.type;
+      if (type === 'weekly_checkin') {
+        const tryNavigate = (attempts = 0) => {
+          if (navigationRef.isReady()) {
+            navigationRef.navigate('ProfileTab', { screen: 'WeeklyCheckIn' });
+          } else if (attempts < 20) {
+            setTimeout(() => tryNavigate(attempts + 1), 150);
+          }
+        };
+        tryNavigate();
+      }
+    }
+
+    const sub = Notifications.addNotificationResponseReceivedListener(handleNotificationResponse);
+    // Handle cold-start tap (app launched via notification)
+    Notifications.getLastNotificationResponseAsync()
+      .then(r => { if (r) handleNotificationResponse(r); })
+      .catch(() => {});
+
+    return () => sub.remove();
+  }, []);
+
+  useEffect(() => {
     async function bootstrap() {
       try {
         initDatabase()
@@ -330,6 +357,7 @@ export default function RootNavigator() {
 
   return (
     <NavigationContainer
+      ref={navigationRef}
       theme={{
         dark: true,
         colors: {

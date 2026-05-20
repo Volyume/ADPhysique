@@ -14,16 +14,10 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { clearWorkoutHistory, buildWorkoutCSV } from '../lib/database';
 import { exportBackup, importBackup } from '../lib/dataBackup';
-import { getWellbeingMode, setWellbeingMode, WELLBEING_HELPLINE } from '../lib/wellbeing';
+import { getWellbeingMode, setWellbeingMode } from '../lib/wellbeing';
 import Constants from 'expo-constants';
 
-const WELLBEING_LABELS = {
-  calm: 'Calmer experience',
-  normal: 'Standard',
-  unspecified: 'Not set',
-};
-
-function SettingRow({ icon, label, value, onPress, destructive, rightElement, showArrow = true }) {
+function SettingRow({ icon, label, sub, value, onPress, destructive, rightElement, showArrow = true }) {
   return (
     <TouchableOpacity
       style={styles.settingRow}
@@ -35,7 +29,10 @@ function SettingRow({ icon, label, value, onPress, destructive, rightElement, sh
       <View style={[styles.settingIcon, destructive && styles.settingIconDestructive]}>
         <Ionicons name={icon} size={18} color={destructive ? colors.error : colors.primary} />
       </View>
-      <Text style={[styles.settingLabel, destructive && styles.settingLabelDestructive]}>{label}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.settingLabel, destructive && styles.settingLabelDestructive]}>{label}</Text>
+        {sub ? <Text style={styles.settingSub}>{sub}</Text> : null}
+      </View>
       <View style={styles.settingRight}>
         {value ? <Text style={styles.settingValue}>{value}</Text> : null}
         {rightElement}
@@ -65,25 +62,11 @@ export default function SettingsScreen({ navigation }) {
     })));
   const [editName, setEditName] = useState(userProfile?.firstName ?? '');
   const [physiqueEnabled, setPhysiqueEnabled] = useState(false);
-  const [wellbeing, setWellbeing] = useState('unspecified');
-  function changeWellbeing() {
-    Alert.alert(
-      'Wellbeing',
-      'Have you experienced, or are you in recovery from, an eating disorder or a body-image condition?\n\n'
-        + WELLBEING_HELPLINE,
-      [
-        {
-          text: 'Yes, switch to calmer experience',
-          onPress: async () => { await setWellbeingMode('calm'); setWellbeing('calm'); },
-        },
-        {
-          text: 'No',
-          onPress: async () => { await setWellbeingMode('normal'); setWellbeing('normal'); },
-        },
-        { text: 'Prefer not to say', style: 'cancel',
-          onPress: async () => { await setWellbeingMode('unspecified'); setWellbeing('unspecified'); } },
-      ],
-    );
+  const [calmEnabled, setCalmEnabled] = useState(false);
+  async function toggleCalmMode(value) {
+    const mode = value ? 'calm' : 'normal';
+    await setWellbeingMode(mode);
+    setCalmEnabled(value);
   }
 
   // Re-read on focus so the toggle stays in sync if the user enabled
@@ -91,7 +74,7 @@ export default function SettingsScreen({ navigation }) {
   useFocusEffect(
     useCallback(() => {
       AsyncStorage.getItem(PHYSIQUE_PREF_KEY).then(v => setPhysiqueEnabled(v === 'true'));
-      getWellbeingMode().then(setWellbeing);
+      getWellbeingMode().then(m => setCalmEnabled(m === 'calm'));
     }, []),
   );
 
@@ -341,25 +324,23 @@ export default function SettingsScreen({ navigation }) {
           />
           <SettingRow
             icon="heart-outline"
-            label="Wellbeing"
-            value={WELLBEING_LABELS[wellbeing] || 'Not set'}
-            onPress={changeWellbeing}
+            label="Calmer experience"
+            sub="Hides streak counters, adds a check-in before body metrics, and removes aggressive calorie targets"
+            showArrow={false}
+            rightElement={
+              <Switch
+                value={calmEnabled}
+                onValueChange={toggleCalmMode}
+                trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                thumbColor={calmEnabled ? colors.primary : colors.textMuted}
+              />
+            }
           />
           <SettingRow
             icon="notifications-outline"
             label="Notifications"
             sub="Morning weight reminder and weekly check-in"
             onPress={() => navigation.navigate('NotificationSettings')}
-          />
-        </View>
-
-        {/* Exercise Library */}
-        <SectionHeader title="Exercise library" />
-        <View style={styles.section}>
-          <SettingRow
-            icon="barbell-outline"
-            label="Browse & manage exercises"
-            onPress={() => navigation.navigate('ExerciseLibrary')}
           />
         </View>
 
@@ -490,7 +471,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   settingIconDestructive: { backgroundColor: colors.errorBg },
-  settingLabel: { flex: 1, fontSize: fontSize.md, color: colors.textPrimary },
+  settingLabel: { fontSize: fontSize.md, color: colors.textPrimary },
+  settingSub: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2, lineHeight: 16 },
   settingLabelDestructive: { color: colors.error },
   settingRight: {
     flexDirection: 'row',

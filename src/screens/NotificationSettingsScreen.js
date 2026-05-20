@@ -298,7 +298,7 @@ export default function NotificationSettingsScreen({ navigation }) {
           {/* Helper text */}
           <View style={styles.helperRow}>
             <Text style={styles.helperText}>
-              A gentle reminder to step on the scale. Takes 3 seconds.
+              Body weight shifts naturally each day due to fluid, food, and hormones. Logging every other day (at minimum) gives your coaching enough readings to smooth out that noise and see what's actually changing. Three or more readings per week unlocks the weekly check-in.
             </Text>
           </View>
         </View>
