@@ -151,11 +151,38 @@ export default function MesocycleBuilderScreen({ navigation }) {
                   {activePlan.splitType ? `${activePlan.splitType} · ` : ''}
                   {activePlan.workoutCount} workout{activePlan.workoutCount !== 1 ? 's' : ''}
                 </Text>
-                <Text style={styles.planCardNote}>
-                  This is the training your coach built. A training block is an
-                  optional multi-week layer on top of it. Set a start date,
-                  duration and recovery week to track periodised progress.
-                </Text>
+                {activeStats?.active && (() => {
+                  const activeMeso = activeStats.active;
+                  const currentWeek = getCurrentWeek(activeMeso);
+                  const totalWeeks = activeMeso.durationWeeks || 4;
+                  const isDeload = activeMeso.deloadWeek != null && currentWeek === activeMeso.deloadWeek;
+                  return (
+                    <View style={styles.planWeekRow}>
+                      <Text style={[styles.planWeekLabel, isDeload && styles.planWeekLabelDeload]}>
+                        Week {currentWeek} of {totalWeeks}{isDeload ? ' — recovery week' : ''}
+                      </Text>
+                      <View style={styles.planWeekBar}>
+                        {Array.from({ length: totalWeeks }, (_, i) => (
+                          <View
+                            key={i}
+                            style={[
+                              styles.planWeekDot,
+                              i < currentWeek && styles.planWeekDotActive,
+                              i + 1 === activeMeso.deloadWeek && styles.planWeekDotDeload,
+                            ]}
+                          />
+                        ))}
+                      </View>
+                    </View>
+                  );
+                })()}
+                {!activeStats?.active && (
+                  <Text style={styles.planCardNote}>
+                    This is the training your coach built. A training block is an
+                    optional multi-week layer on top of it. Set a start date,
+                    duration and recovery week to track periodised progress.
+                  </Text>
+                )}
               </View>
             )}
 
@@ -491,4 +518,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
   },
   summaryBtnText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
+
+  // Plan card week indicator
+  planWeekRow:       { gap: spacing.xs, marginTop: spacing.sm },
+  planWeekLabel:     { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
+  planWeekLabelDeload: { color: colors.warning },
+  planWeekBar:       { flexDirection: 'row', gap: spacing.xs },
+  planWeekDot:       { flex: 1, height: 6, borderRadius: 3, backgroundColor: colors.surface2 },
+  planWeekDotActive: { backgroundColor: colors.primary },
+  planWeekDotDeload: { backgroundColor: colors.warning + '80' },
 });

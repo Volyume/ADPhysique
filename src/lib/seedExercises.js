@@ -32,6 +32,7 @@ const SUBREGION_MAP = {
   'Kroc Row':                        'horizontal_row',
   'Seal Row':                        'horizontal_row',
   'Chest-Supported Row (Dumbbell)':  'horizontal_row',
+  'Chest-Supported Row (Barbell)':   'horizontal_row',
   'Seated Machine Row (Wide)':       'horizontal_row',
   'Chest-Supported T-Bar Row':       'horizontal_row',
   'Helms Row':                       'horizontal_row',
@@ -304,7 +305,7 @@ const RAW = [
   ['Hyperextension (Back Extension)','back',['glutes', 'hamstrings'],      'machine',      'hinge',     true,  10, 20, 2, 4],
   ['Good Morning (Barbell)',        'back', ['hamstrings', 'glutes'],      'barbell',      'hinge',     true,  8, 15,  4, 3],
   ['Reverse Hyperextension',        'back', ['glutes', 'hamstrings'],      'machine',      'hinge',     true,  12, 20, 2, 5],
-  ['Chest-Supported Row',          'back', ['biceps'],                     'dumbbell',     'pull',      true,  8, 15,  3, 5],
+  ['Chest-Supported Row (Barbell)', 'back', ['biceps'],                    'barbell',      'pull',      true,  6, 12,  3, 5],
   ['Cable Row (Wide Grip)',         'back', ['biceps', 'rear_delts'],      'cable',        'pull',      true,  10, 15, 3, 4],
   ['Machine Row (Hammer Strength)', 'back', ['biceps'],                    'machine',      'pull',      true,  10, 15, 3, 4],
   ['TRX Row',                       'back', ['biceps'],                    'bodyweight',   'pull',      true,  10, 20, 2, 4],
@@ -333,6 +334,10 @@ const RAW = [
   ['Upright Row',                   'side_delts', ['biceps', 'traps'],    'barbell',      'pull',      false, 10, 15, 3, 3],
   ['Machine Shoulder Press',        'side_delts', ['triceps', 'front_delts'], 'machine',  'push',      true,  8, 15,  3, 4],
   ['Viking Press',                  'side_delts', ['triceps', 'front_delts'], 'machine',  'push',      true,  8, 15,  3, 4],
+  ['Leaning Cable Lateral Raise',   'side_delts', [],                     'cable',        'isolation', false, 15, 25, 2, 5],
+  ['Plate Lateral Raise',           'side_delts', [],                     'barbell',      'isolation', false, 15, 25, 2, 4],
+  ['Cable Upright Row',             'side_delts', ['biceps', 'traps'],    'cable',        'pull',      false, 10, 15, 2, 3],
+  ['Dumbbell Y-Raise',              'side_delts', ['rear_delts', 'traps'],'dumbbell',     'isolation', false, 12, 20, 1, 4],
 
   // Rear delts
   ['Dumbbell Rear Delt Fly',        'rear_delts', ['back'],               'dumbbell',     'isolation', false, 15, 25, 2, 5],
@@ -347,6 +352,11 @@ const RAW = [
   ['Lying Rear Delt Row',           'rear_delts', ['back'],               'dumbbell',     'pull',      false, 15, 25, 2, 5],
   ['Cable Face Pull',               'rear_delts', ['back', 'traps'],      'cable',        'pull',      false, 15, 25, 2, 5],
   ['Band Face Pull',                'rear_delts', ['back', 'traps'],      'bodyweight',   'pull',      false, 15, 25, 1, 4],
+  ['Cable Face Pull (Rope)',        'rear_delts', ['back', 'traps'],      'cable',        'pull',      false, 15, 25, 2, 5],
+  ['Bent-Over Cable Rear Delt Fly', 'rear_delts', ['back'],               'cable',        'isolation', false, 15, 25, 2, 5],
+  ['Prone Incline Y-Raise',         'rear_delts', ['back', 'traps'],      'dumbbell',     'isolation', false, 12, 20, 1, 5],
+  ['Prone Incline T-Raise',         'rear_delts', ['back', 'traps'],      'dumbbell',     'isolation', false, 12, 20, 1, 5],
+  ['Seated Rear Delt Machine',      'rear_delts', ['back'],               'machine',      'isolation', false, 15, 25, 2, 5],
 
   // ─── BICEPS ──────────────────────────────────────────────────────────────────
   ['Barbell Curl',                  'biceps', [],                         'barbell',      'isolation', false, 8, 12,  2, 4],
@@ -367,6 +377,12 @@ const RAW = [
   ['Prone Incline Curl',            'biceps', [],                         'dumbbell',     'isolation', false, 10, 15, 2, 5],
   ['Reverse Curl',                  'biceps', ['forearms'],               'barbell',      'isolation', false, 10, 15, 2, 3],
   ['Cable Reverse Curl',            'biceps', ['forearms'],               'cable',        'isolation', false, 12, 20, 2, 3],
+  ['EZ Bar Preacher Curl',          'biceps', [],                         'ez_bar',       'isolation', false, 8, 12,  2, 5],
+  ['Cable Rope Hammer Curl',        'biceps', ['forearms'],               'cable',        'isolation', false, 10, 15, 2, 4],
+  ['Band Curl',                     'biceps', [],                         'bodyweight',   'isolation', false, 12, 20, 1, 3],
+  ['Bayesian Curl',                 'biceps', [],                         'cable',        'isolation', false, 10, 15, 2, 5],
+  ['Waiter Curl',                   'biceps', [],                         'dumbbell',     'isolation', false, 10, 15, 2, 4],
+  ['TRX Curl',                      'biceps', [],                         'bodyweight',   'isolation', false, 10, 20, 2, 4],
 
   // ─── TRICEPS ─────────────────────────────────────────────────────────────────
   ['Close-Grip Bench Press',        'triceps', ['chest', 'front_delts'],  'barbell',      'push',      true,  6, 12,  3, 3],
@@ -390,6 +406,11 @@ const RAW = [
   ['Machine Tricep Extension',      'triceps', [],                         'machine',      'isolation', false, 12, 20, 2, 4],
   ['Single Arm Cable Extension',    'triceps', [],                         'cable',        'isolation', false, 12, 20, 2, 4],
   ['Board Press',                   'triceps', ['chest'],                 'barbell',      'push',      true,  5, 8,   3, 3],
+  ['Close-Grip Floor Press',        'triceps', ['chest'],                 'barbell',      'push',      true,  6, 12,  3, 4],
+  ['Reverse Grip Cable Pushdown',   'triceps', [],                        'cable',        'isolation', false, 12, 20, 2, 4],
+  ['Band Tricep Pushdown',          'triceps', [],                        'bodyweight',   'isolation', false, 15, 25, 1, 3],
+  ['Tricep Dip (Parallel Bars)',    'triceps', ['chest', 'front_delts'],  'bodyweight',   'push',      true,  8, 15,  3, 3],
+  ['Cable Overhead Tricep Extension','triceps',[],                        'cable',        'isolation', false, 12, 20, 2, 5],
 
   // ─── QUADS ───────────────────────────────────────────────────────────────────
   ['Barbell Back Squat',            'quads', ['glutes', 'hamstrings'],    'barbell',      'squat',     true,  5, 10,  5, 3],
@@ -416,6 +437,14 @@ const RAW = [
   ['Spanish Squat',                 'quads', [],                          'bodyweight',   'isolation', false, 10, 20, 3, 4],
   ['Leg Press (Narrow Stance)',     'quads', [],                          'machine',      'squat',     true,  8, 20,  4, 4],
   ['Sumo Squat',                    'quads', ['glutes', 'hamstrings'],    'barbell',      'squat',     true,  8, 15,  4, 3],
+  ['Safety Bar Squat',              'quads', ['glutes', 'hamstrings'],    'barbell',      'squat',     true,  5, 10,  4, 4],
+  ['Front Squat (Dumbbell)',        'quads', ['glutes'],                  'dumbbell',     'squat',     true,  8, 15,  3, 4],
+  ['Split Squat',                   'quads', ['glutes'],                  'barbell',      'squat',     true,  8, 15,  3, 4],
+  ['Reverse Lunge',                 'quads', ['glutes'],                  'dumbbell',     'squat',     true,  10, 20, 3, 4],
+  ['Curtsy Lunge',                  'quads', ['glutes'],                  'dumbbell',     'squat',     true,  10, 20, 3, 4],
+  ['Leg Press (High Foot)',         'quads', ['glutes', 'hamstrings'],    'machine',      'squat',     true,  8, 20,  4, 4],
+  ['Cycling (Stationary)',          'quads', ['calves', 'glutes'],        'machine',      'squat',     true,  60, 120, 2, 5],
+  ['Terminal Knee Extension',       'quads', [],                          'bodyweight',   'isolation', false, 15, 25, 1, 4],
 
   // ─── HAMSTRINGS ──────────────────────────────────────────────────────────────
   ['Romanian Deadlift',             'hamstrings', ['glutes', 'back'],     'barbell',      'hinge',     true,  6, 12,  4, 4],
@@ -439,6 +468,10 @@ const RAW = [
   ['Deadlift (Conventional)',       'hamstrings', ['back', 'glutes', 'quads'], 'barbell', 'hinge',    true,  3, 8,   5, 3],
   ['Deadlift (Sumo)',               'hamstrings', ['back', 'glutes', 'quads'], 'barbell', 'hinge',    true,  3, 8,   5, 3],
   ['Trap Bar Deadlift (Hamstring)', 'hamstrings', ['back', 'glutes'],     'barbell',      'hinge',     true,  4, 8,   5, 4],
+  ['Prone Leg Curl',                'hamstrings', [],                     'machine',      'isolation', false, 10, 15, 2, 5],
+  ['Dumbbell Single-Leg RDL',       'hamstrings', ['glutes'],             'dumbbell',     'hinge',     true,  8, 15,  3, 4],
+  ['Banded Leg Curl',               'hamstrings', [],                     'bodyweight',   'isolation', false, 12, 20, 1, 4],
+  ['Hip Hinge (Banded)',            'hamstrings', ['glutes'],             'bodyweight',   'hinge',     true,  12, 20, 1, 4],
 
   // ─── GLUTES ──────────────────────────────────────────────────────────────────
   ['Barbell Hip Thrust',            'glutes', ['hamstrings', 'quads'],    'barbell',      'hinge',     true,  8, 15,  3, 5],
@@ -459,6 +492,16 @@ const RAW = [
   ['45-Degree Hip Extension',       'glutes', ['hamstrings', 'back'],     'machine',      'hinge',     true,  12, 20, 2, 4],
   ['Reverse Hyperextension (Glute)','glutes', ['hamstrings'],             'machine',      'hinge',     true,  12, 20, 2, 5],
   ['Sumo Deadlift (Glute Focus)',   'glutes', ['hamstrings', 'quads'],    'barbell',      'hinge',     true,  5, 10,  5, 3],
+  ['Sumo Deadlift',                 'glutes', ['hamstrings', 'quads'],    'barbell',      'hinge',     true,  4, 8,   5, 3],
+  ['Cable Donkey Kickback',         'glutes', [],                         'cable',        'isolation', false, 15, 25, 2, 5],
+  ['Donkey Kickback (Machine)',     'glutes', [],                         'machine',      'isolation', false, 15, 25, 2, 5],
+  ['Walking Lunge (Glute Focus)',   'glutes', ['quads', 'hamstrings'],    'dumbbell',     'squat',     true,  10, 20, 3, 4],
+  ['Curtsy Lunge (Glute Focus)',    'glutes', ['quads'],                  'dumbbell',     'squat',     true,  10, 20, 3, 4],
+  ['Banded Glute Bridge',           'glutes', ['hamstrings'],             'bodyweight',   'hinge',     true,  15, 25, 1, 4],
+  ['Hip Thrust (Band)',             'glutes', ['hamstrings'],             'bodyweight',   'hinge',     true,  15, 25, 1, 4],
+  ['Kickstand Hip Thrust',          'glutes', ['hamstrings'],             'barbell',      'hinge',     true,  10, 20, 3, 5],
+  ['Cable Pull-Through (Glute)',    'glutes', ['hamstrings'],             'cable',        'hinge',     true,  12, 20, 2, 5],
+  ['Romanian Deadlift (Glute)',     'glutes', ['hamstrings', 'back'],     'barbell',      'hinge',     true,  6, 12,  4, 4],
 
   // ─── CALVES ──────────────────────────────────────────────────────────────────
   ['Standing Calf Raise (Machine)', 'calves', [],                         'machine',      'isolation', false, 10, 20, 2, 4],
