@@ -348,9 +348,7 @@ export default function AnalyticsScreen({ navigation }) {
           currentWeek={mesoCurrentWeek()}
           progress={mesoProgress()}
           tonnageBars={mesoTonnage}
-          onPress={() => activeMeso?._isPlan
-            ? navigation.getParent()?.navigate('PlansTab')
-            : navigation.getParent()?.navigate('ProfileTab', { screen: 'MesocycleBuilder', initial: false })}
+          onPress={() => navigation.getParent()?.navigate('PlansTab', { screen: 'MesocycleBuilder', initial: false })}
           onBuild={() => navigation.getParent()?.navigate('PlansTab', { screen: 'CoachBuilder', initial: false })}
         />
 
@@ -452,6 +450,7 @@ export default function AnalyticsScreen({ navigation }) {
             <NavTile icon="body" color={colors.primary} label="Body Metrics" onPress={() => navigation.navigate('BodyMetrics')} />
             <NavTile icon="barbell" color={colors.primary} label="Lift Progress" onPress={() => navigation.navigate('ExerciseLibrary')} />
             <NavTile icon="time" color={colors.textSecondary} label="Full History" onPress={() => navigation.navigate('WorkoutHistory')} />
+            <NavTile icon="calendar-outline" color={colors.textSecondary} label="Year of Lifts" onPress={() => navigation.navigate('YearOfLifts')} />
           </View>
         </View>
       </ScrollView>

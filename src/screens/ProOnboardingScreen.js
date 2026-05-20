@@ -203,8 +203,9 @@ export default function ProOnboardingScreen({ navigation }) {
   const [physiqueOrientation, setPhysiqueOrientation] = useState(null);
   const [recoveryConstraints, setRecoveryConstraints] = useState([]); // 'sleep'|'stress'|'physical_job'|'injury_history'
 
-  // Step 5 — wellbeing check (SCOFF screening)
+  // Step 5 — wellbeing check (SCOFF screening) — opt-in only
   const [scoffAnswers, setScoffAnswers] = useState([null, null, null, null, null]);
+  const [scoffOptedIn, setScoffOptedIn] = useState(false);
 
   // Step 6 — account
   const [email, setEmail] = useState('');
@@ -295,12 +296,23 @@ export default function ProOnboardingScreen({ navigation }) {
     try {
       if (setUnits) setUnits(localUnits);
       if (setBodyWeightUnits) setBodyWeightUnits(localBWUnits);
+      // Map broad nutrition goal → specific coaching phase so WeeklyCheckIn
+      // doesn't immediately redirect to ProGoalSetup after onboarding.
+      const GOAL_TO_PHASE = {
+        cut:       'mod_cut',
+        maintain:  'maint',
+        mild_bulk: 'mild_bulk',
+        mod_bulk:  'mod_bulk',
+      };
       const merged = {
         ...(userProfile || {}),
         firstName: firstName.trim(),
         units: localUnits,
         bodyWeightUnits: localBWUnits,
         goal,
+        goalPhase: GOAL_TO_PHASE[goal] ?? 'maint',
+        phaseStartedAt: Date.now(),
+        stepsTarget: (userProfile || {}).stepsTarget ?? 8000,
         trainingFreq,
         experience,
       };
@@ -327,8 +339,19 @@ export default function ProOnboardingScreen({ navigation }) {
       const protein = parseInt(proteinStr, 10);
       const fatG = nutrition?.fatG ?? Math.round((parseFloat(bodyWeight) || 80) * 1.0);
       const carbsG = Math.max(Math.round((kcal - protein * 4 - fatG * 9) / 4), 50);
-      if (user?.id && !isNaN(kcal) && !isNaN(protein)) {
-        await saveNutritionTargets(user.id, { targetKcal: kcal, proteinG: protein, fatG, carbsG });
+      if (!isNaN(kcal) && !isNaN(protein)) {
+        const nutritionData = {
+          targetKcal: kcal,
+          proteinG: protein,
+          fatG,
+          carbsG,
+          maintenanceKcal: nutrition?.maintenanceKcal ?? kcal,
+        };
+        // Write to AsyncStorage so NutritionTargetsScreen can read it immediately
+        await AsyncStorage.setItem('@volyume_nutrition_targets', JSON.stringify(nutritionData)).catch(() => {});
+        if (user?.id) {
+          await saveNutritionTargets(user.id, nutritionData);
+        }
       }
     } catch (e) {
       Alert.alert('Something went wrong', e?.message ?? 'Please try again.');
@@ -1112,82 +1135,89 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 6 (advanced) / Step 5 (basic) — Wellbeing check ───────────────────
+  // ── Step 6 (advanced) / Step 5 (basic) — Wellbeing check (opt-in) ─────────
 
   if (step === scoffStep) {
     const allAnswered = scoffAnswers.every(a => a !== null);
+    const skipAll = () => {
+      setScoffAnswers([false, false, false, false, false]);
+      advanceFrom5();
+    };
+
     return (
       <SafeAreaView style={styles.safe}>
         <ScrollView contentContainerStyle={styles.scroll}>
-          <TouchableOpacity style={styles.backBtn} onPress={goBack} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <TouchableOpacity style={styles.backBtn} onPress={scoffOptedIn ? () => setScoffOptedIn(false) : goBack} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
             <Text style={styles.backBtnText}>Back</Text>
           </TouchableOpacity>
 
-          <ProgressBar />
-          <Text style={styles.stepCount}>Step 5 of {TOTAL_STEPS}</Text>
-
           <Header
-            title="A quick health check."
-            sub="Five short questions. There are no wrong answers. This helps us set the coaching up in a way that suits you."
+            title={scoffOptedIn ? 'A quick health check.' : 'Almost there.'}
+            sub={scoffOptedIn
+              ? 'Five short questions. No wrong answers. Your answers are private and stored only on this device.'
+              : 'You can answer a short wellbeing check now, or skip it and get started.'}
           />
 
-          <View style={styles.scoffList}>
-            {SCOFF_QUESTIONS.map((q, i) => (
-              <View key={i} style={styles.scoffItem}>
-                <Text style={styles.scoffQ}>{q}</Text>
-                <View style={styles.scoffBtns}>
-                  <TouchableOpacity
-                    style={[styles.scoffBtn, scoffAnswers[i] === true && styles.scoffBtnSelected]}
-                    onPress={() => {
-                      const next = [...scoffAnswers];
-                      next[i] = true;
-                      setScoffAnswers(next);
-                    }}
-                  >
-                    <Text style={[styles.scoffBtnText, scoffAnswers[i] === true && styles.scoffBtnTextSelected]}>
-                      Yes
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.scoffBtn, scoffAnswers[i] === false && styles.scoffBtnSelected]}
-                    onPress={() => {
-                      const next = [...scoffAnswers];
-                      next[i] = false;
-                      setScoffAnswers(next);
-                    }}
-                  >
-                    <Text style={[styles.scoffBtnText, scoffAnswers[i] === false && styles.scoffBtnTextSelected]}>
-                      No
-                    </Text>
-                  </TouchableOpacity>
+          {!scoffOptedIn ? (
+            <>
+              <View style={styles.scoffOfferCard}>
+                <View style={styles.scoffOfferIcon}>
+                  <Ionicons name="heart-outline" size={24} color={colors.primary} />
                 </View>
+                <Text style={styles.scoffOfferTitle}>Optional wellbeing check</Text>
+                <Text style={styles.scoffOfferBody}>
+                  Five questions about your relationship with food and eating. Helps us tailor the coaching approach if needed. Takes about 30 seconds.
+                </Text>
+                <TouchableOpacity style={styles.scoffOfferBtn} onPress={() => setScoffOptedIn(true)} activeOpacity={0.85}>
+                  <Text style={styles.scoffOfferBtnText}>Take the check</Text>
+                  <Ionicons name="arrow-forward" size={16} color={colors.primary} />
+                </TouchableOpacity>
               </View>
-            ))}
-          </View>
 
-          <Text style={styles.scoffNote}>
-            Your answers are private and stored only on this device.
-          </Text>
+              <TouchableOpacity style={styles.primaryBtn} onPress={skipAll} activeOpacity={0.88}>
+                <Text style={styles.primaryBtnText}>Continue</Text>
+                <Ionicons name="arrow-forward" size={18} color={colors.background} />
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <View style={styles.scoffList}>
+                {SCOFF_QUESTIONS.map((q, i) => (
+                  <View key={i} style={styles.scoffItem}>
+                    <Text style={styles.scoffQ}>{q}</Text>
+                    <View style={styles.scoffBtns}>
+                      <TouchableOpacity
+                        style={[styles.scoffBtn, scoffAnswers[i] === true && styles.scoffBtnSelected]}
+                        onPress={() => { const next = [...scoffAnswers]; next[i] = true; setScoffAnswers(next); }}
+                      >
+                        <Text style={[styles.scoffBtnText, scoffAnswers[i] === true && styles.scoffBtnTextSelected]}>Yes</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.scoffBtn, scoffAnswers[i] === false && styles.scoffBtnSelected]}
+                        onPress={() => { const next = [...scoffAnswers]; next[i] = false; setScoffAnswers(next); }}
+                      >
+                        <Text style={[styles.scoffBtnText, scoffAnswers[i] === false && styles.scoffBtnTextSelected]}>No</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+              </View>
 
-          <TouchableOpacity
-            style={[styles.primaryBtn, !allAnswered && styles.primaryBtnDisabled]}
-            onPress={allAnswered ? advanceFrom5 : undefined}
-            activeOpacity={allAnswered ? 0.88 : 1}
-          >
-            <Text style={styles.primaryBtnText}>Continue</Text>
-            <Ionicons name="arrow-forward" size={18} color={colors.background} />
-          </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.primaryBtn, !allAnswered && styles.primaryBtnDisabled]}
+                onPress={allAnswered ? advanceFrom5 : undefined}
+                activeOpacity={allAnswered ? 0.88 : 1}
+              >
+                <Text style={styles.primaryBtnText}>Continue</Text>
+                <Ionicons name="arrow-forward" size={18} color={colors.background} />
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.skipBtn}
-            onPress={() => {
-              setScoffAnswers([false, false, false, false, false]);
-              advanceFrom5();
-            }}
-          >
-            <Text style={styles.skipBtnText}>Skip for now</Text>
-          </TouchableOpacity>
+              <TouchableOpacity style={styles.skipBtn} onPress={skipAll}>
+                <Text style={styles.skipBtnText}>Skip for now</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </ScrollView>
       </SafeAreaView>
     );
@@ -1619,6 +1649,33 @@ const styles = StyleSheet.create({
     textAlign: 'center', fontSize: fontSize.xs,
     color: colors.textDisabled, lineHeight: 18,
     marginTop: spacing.xs,
+  },
+
+  // SCOFF opt-in offer card
+  scoffOfferCard: {
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.primary + '30',
+    padding: spacing.xl, gap: spacing.md, marginBottom: spacing.xl, alignItems: 'center',
+  },
+  scoffOfferIcon: {
+    width: 52, height: 52, borderRadius: 26,
+    backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: colors.primary + '40',
+  },
+  scoffOfferTitle: {
+    fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary, textAlign: 'center',
+  },
+  scoffOfferBody: {
+    fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20, textAlign: 'center',
+  },
+  scoffOfferBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    paddingVertical: spacing.md, paddingHorizontal: spacing.xl,
+    borderRadius: radius.md, borderWidth: 1, borderColor: colors.primary + '50',
+    backgroundColor: colors.primaryBg,
+  },
+  scoffOfferBtnText: {
+    fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary,
   },
 
   // SCOFF wellbeing check (step 5)

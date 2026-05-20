@@ -66,7 +66,7 @@ export default function LoginScreen({ navigation, route }) {
         if (mode === 'signup') {
           // New account — push local history up
           bulkUploadLocalData(supabaseUserId, localUserId).catch(() => {});
-          navigation.replace('Onboarding');
+          navigation.replace('ProOnboarding');
         } else {
           // Existing account — pull cloud data down (new device scenario)
           pullFromCloud(supabaseUserId).catch(() => {});

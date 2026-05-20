@@ -122,28 +122,29 @@ function resolveEffectiveStep(goal, step) {
 
 function ProgressBar({ current, total }) {
   return (
-    <View style={pbStyles.row}>
-      {Array.from({ length: total }, (_, i) => (
-        <View
-          key={i}
-          style={[
-            pbStyles.dot,
-            i + 1 < current  && pbStyles.dotDone,
-            i + 1 === current && pbStyles.dotActive,
-          ]}
-        />
-      ))}
+    <View>
+      <View style={pbStyles.row}>
+        {Array.from({ length: total }, (_, i) => (
+          <View
+            key={i}
+            style={[
+              pbStyles.seg,
+              i + 1 <= current ? pbStyles.segDone : pbStyles.segPending,
+            ]}
+          />
+        ))}
+      </View>
       <Text style={pbStyles.label}>Step {current} of {total}</Text>
     </View>
   );
 }
 
 const pbStyles = StyleSheet.create({
-  row:       { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  dot:       { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.surface3 },
-  dotDone:   { backgroundColor: colors.primaryDim },
-  dotActive: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary },
-  label:     { marginLeft: spacing.sm, fontSize: fontSize.xs, color: colors.textMuted, fontWeight: fontWeight.medium },
+  row:        { flexDirection: 'row', gap: 4, marginBottom: spacing.xs },
+  seg:        { flex: 1, height: 3, borderRadius: 2 },
+  segDone:    { backgroundColor: colors.primary },
+  segPending: { backgroundColor: colors.border },
+  label:      { fontSize: fontSize.xs, color: colors.textMuted, fontWeight: fontWeight.medium },
 });
 
 function SelectionCard({ label, subtitle, icon, selected, onPress }) {

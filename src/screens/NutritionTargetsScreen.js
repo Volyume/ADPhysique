@@ -169,12 +169,12 @@ export default function NutritionTargetsScreen() {
       try {
         if (user?.id) {
           const fromDb = await getNutritionTargets(user.id).catch(() => null);
-          if (fromDb?.maintenanceKcal) { setResults(fromDb); return; }
+          if (fromDb?.targetKcal) { setResults(fromDb); return; }
         }
         const raw = await AsyncStorage.getItem(STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (parsed?.maintenanceKcal) setResults(parsed);
+          if (parsed?.targetKcal) setResults(parsed);
         }
       } catch (_) {}
     }

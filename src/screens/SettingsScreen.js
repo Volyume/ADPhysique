@@ -353,21 +353,6 @@ export default function SettingsScreen({ navigation }) {
           />
         </View>
 
-        {/* Pro coaching setup — Pro only */}
-        {tier === 'pro' && (
-          <>
-            <SectionHeader title="Weekly coaching" />
-            <View style={styles.section}>
-              <SettingRow
-                icon="pulse-outline"
-                label="Goal phase & step target"
-                sub="Update your current goal: fat loss, muscle building, or maintenance"
-                onPress={() => navigation.navigate('ProGoalSetup')}
-              />
-            </View>
-          </>
-        )}
-
         {/* Exercise Library */}
         <SectionHeader title="Exercise library" />
         <View style={styles.section}>

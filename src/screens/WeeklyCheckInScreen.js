@@ -140,10 +140,13 @@ export default function WeeklyCheckInScreen({ navigation }) {
   const [step, setStep] = useState(0); // 0–3
 
   useEffect(() => {
-    if (!userProfile?.goalPhase) {
+    // Only redirect if neither goalPhase nor goal has been set.
+    // ProOnboarding sets goal (and now also maps it to goalPhase) so this
+    // guard prevents redirecting users who just completed setup.
+    if (!userProfile?.goalPhase && !userProfile?.goal) {
       navigation.replace('ProGoalSetup', { fromCheckin: true });
     }
-  }, [userProfile?.goalPhase]);
+  }, [userProfile?.goalPhase, userProfile?.goal]);
 
   useEffect(() => {
     if (!user?.id) return;

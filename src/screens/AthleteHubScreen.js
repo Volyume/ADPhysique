@@ -591,16 +591,17 @@ export default function AthleteHubScreen({ navigation }) {
           )}
         </TouchableOpacity>
 
-        {/* ── Nav links ─────────────────────────────────── */}
+        {/* ── Coaching tools ────────────────────────────── */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Manage</Text>
-          <NavRow
-            icon="layers"
-            label="Training Blocks"
-            sub="Plan and track multi-week training blocks"
-            tooltip={"A Training Block is a structured 5 to 6 week period where the work increases each week, followed by a lighter recovery week. Running blocks back-to-back is how you build long-term progress. Each block starts slightly heavier than the last. Create one here to link your plan to a block and track your week-by-week progress."}
-            onPress={() => navigation.navigate('MesocycleBuilder')}
-          />
+          <Text style={styles.sectionLabel}>Coaching</Text>
+          {tier === 'pro' && (
+            <NavRow
+              icon="flag-outline"
+              label="Update your coaching goal"
+              sub="Change between fat loss, muscle building or maintenance"
+              onPress={() => navigation.navigate('ProGoalSetup')}
+            />
+          )}
           <NavRow
             icon="document-text-outline"
             label={exporting ? 'Preparing report…' : 'Send report to coach'}
@@ -610,18 +611,9 @@ export default function AthleteHubScreen({ navigation }) {
           <NavRow
             icon="pause-circle-outline"
             label="Strategic journal"
-            sub="Every coaching decision that was paused, and why"
+            sub="Every coaching decision, and why"
             onPress={() => navigation.navigate('CoachHeldHistory')}
           />
-          <NavRow icon="trophy" label="Personal Records" sub="All-time bests" onPress={() => navigation.navigate('PRWall')} />
-          {totalWorkouts >= 50 && (
-            <NavRow
-              icon="calendar-outline"
-              label="Your year of lifts"
-              sub="365-day summary of your training"
-              onPress={() => navigation.navigate('YearOfLifts')}
-            />
-          )}
 
           {/* Engine Log — collapsible */}
           {(adaptationHistory.length > 0 || repWarnings.length > 0) && (

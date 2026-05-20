@@ -485,6 +485,22 @@ export default function PlansScreen({ navigation }) {
           </View>
         )}
 
+        {/* Training Blocks */}
+        <TouchableOpacity
+          style={styles.trainingBlocksRow}
+          onPress={() => navigation.navigate('MesocycleBuilder')}
+          activeOpacity={0.75}
+        >
+          <View style={styles.trainingBlocksIcon}>
+            <Ionicons name="layers-outline" size={20} color={colors.textSecondary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.trainingBlocksLabel}>Training blocks</Text>
+            <Text style={styles.trainingBlocksSub}>View completed blocks and long-term progress</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+        </TouchableOpacity>
+
         {/* Decision Hub */}
         <View style={[styles.section, isProWithPlan && styles.sectionDeemphasised]}>
           <Text style={styles.sectionTitle}>
@@ -550,6 +566,19 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary, letterSpacing: 0.2 },
   sectionSubtitle: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: -spacing.sm },
   sectionDeemphasised: { opacity: 0.85 },
+
+  trainingBlocksRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  trainingBlocksIcon: {
+    width: 40, height: 40, borderRadius: radius.md,
+    backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: colors.border,
+  },
+  trainingBlocksLabel: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  trainingBlocksSub: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
   proCoachNote: {
     fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18,
     borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm,
