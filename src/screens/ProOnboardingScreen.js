@@ -22,7 +22,6 @@ import {
   PHYSIQUE_GOALS,
   PHYSIQUE_GOAL_GROUPS,
   TRAINING_PHASES,
-  GOALS_WITH_WEAK_POINTS,
   GOAL_LABELS,
   phaseToNutritionKey,
   phaseToCoachingKey,
@@ -32,16 +31,12 @@ import { calculateNutritionTargets } from '../lib/nutritionEngine';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 
-// Total steps in the unified onboarding flow.
-const TOTAL_STEPS = 10;
-
-const SCOFF_QUESTIONS = [
-  'Have you ever made yourself sick after eating because you felt uncomfortably full?',
-  'Do you worry that you have lost control over how much you eat?',
-  'Have you lost a significant amount of weight in the past three months?',
-  'Do you think of yourself as overweight even when others say you are not?',
-  'Would you say that thoughts about food take up a large part of your day?',
-];
+// Total steps in the unified Pro onboarding flow.
+// Weak points (formerly step 6) and the optional wellbeing screening
+// (formerly step 9) were removed from first-run to keep onboarding tight.
+// Weak points can be set later from Athlete Hub → Update your goals.
+// The wellbeing check remains available from Settings.
+const TOTAL_STEPS = 8;
 
 // Boer formula — estimates lean body mass (kg) from weight, height, sex.
 // More accurate for protein targeting than total bodyweight.
@@ -82,14 +77,6 @@ const EQUIPMENT_OPTIONS = [
   { value: 'barbell_plates',  label: 'Barbell & Plates',  icon: 'barbell-outline' },
   { value: 'home_gym',        label: 'Home Gym',          icon: 'home-outline' },
   { value: 'bodyweight',      label: 'Bodyweight',        icon: 'body-outline' },
-];
-
-const WEAK_POINT_MUSCLES = [
-  'Chest', 'Upper Chest', 'Lats / Back Width', 'Back Thickness',
-  'Side Delts', 'Rear Delts', 'Front Delts',
-  'Biceps', 'Triceps',
-  'Quads', 'Hamstrings', 'Glutes', 'Calves',
-  'Core / Abs', 'Traps',
 ];
 
 const RECOVERY_OPTIONS = [
@@ -149,23 +136,16 @@ export default function ProOnboardingScreen({ navigation }) {
   // Step 5 — training phase
   const [trainingPhase, setTrainingPhase] = useState(null);
 
-  // Step 6 — weak points (conditional)
-  const [planWeakPoints, setPlanWeakPoints] = useState([]);
-
-  // Step 7 — recovery
+  // Step 6 — recovery (was step 7 before weak points was removed from first-run)
   const [recoveryRating, setRecoveryRating] = useState(null);
 
-  // Step 8 — notifications
+  // Step 7 — notifications (was step 8)
   const [morningEnabled, setMorningEnabled] = useState(true);
   const [morningHour, setMorningHour] = useState(7);
   const [checkinEnabled, setCheckinEnabled] = useState(true);
   const [checkinDay, setCheckinDay] = useState(0); // Sunday
 
-  // Step 9 — wellbeing check (SCOFF screening) — opt-in only
-  const [scoffAnswers, setScoffAnswers] = useState([null, null, null, null, null]);
-  const [scoffOptedIn, setScoffOptedIn] = useState(false);
-
-  // Step 10 — account
+  // Step 8 — account (was step 10)
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -183,10 +163,10 @@ export default function ProOnboardingScreen({ navigation }) {
   }, [step]);
 
   // When the user confirms their email via deep link, the session arrives here.
-  // If we're on the account step (step 10), auto-advance to CoachBuilder so they
+  // If we're on the account step (step 8), auto-advance to CoachBuilder so they
   // don't have to press anything — the confirmation already proved ownership.
   useEffect(() => {
-    if (user?.id && step >= 10) {
+    if (user?.id && step >= 8) {
       syncProfile(user.id, userProfile, 'pro', { isBetaTester: true }).catch(() => {});
       navigation.navigate('CoachBuilder', {
         firstRun: true,
@@ -197,7 +177,7 @@ export default function ProOnboardingScreen({ navigation }) {
           equipment,
           goal: trainingGoal,
           phase: trainingPhase,
-          weakPoints: planWeakPoints,
+          weakPoints: [],          // set later from Athlete Hub → Update your goals
           recoveryRating,
           nutritionCalculated: true,
         },
@@ -209,11 +189,6 @@ export default function ProOnboardingScreen({ navigation }) {
 
   function goBack() {
     if (step === 1) return;
-    // When going back to step 6 (weak points), check if it should be skipped
-    if (step === 7 && !GOALS_WITH_WEAK_POINTS.includes(trainingGoal)) {
-      setStep(5);
-      return;
-    }
     setStep(s => s - 1);
   }
 
@@ -254,20 +229,10 @@ export default function ProOnboardingScreen({ navigation }) {
       Alert.alert('Training phase', 'Please select your current phase to continue.');
       return;
     }
-    // Skip weak points step if goal doesn't support them
-    if (!GOALS_WITH_WEAK_POINTS.includes(trainingGoal)) {
-      setPlanWeakPoints([]);
-      setStep(7);
-    } else {
-      setStep(6);
-    }
+    setStep(6);
   }
 
-  function advanceFrom6() {
-    setStep(7);
-  }
-
-  async function advanceFrom7() {
+  async function advanceFrom6() {
     // Save everything after recovery confirmed
     setBusy(true);
     try {
@@ -320,7 +285,6 @@ export default function ProOnboardingScreen({ navigation }) {
         experience,
         sessionLengthMinutes,
         equipment,
-        planWeakPoints,
         recoveryRating,
       };
 
@@ -357,10 +321,10 @@ export default function ProOnboardingScreen({ navigation }) {
       return;
     }
     setBusy(false);
-    setStep(8);
+    setStep(7);
   }
 
-  async function advanceFrom8() {
+  async function advanceFrom7() {
     // Set up notifications
     if (morningEnabled || checkinEnabled) {
       try {
@@ -379,24 +343,7 @@ export default function ProOnboardingScreen({ navigation }) {
         }
       } catch (_) {}
     }
-    setStep(9);
-  }
-
-  async function advanceFrom9() {
-    const score = scoffAnswers.filter(a => a === true).length;
-    if (user?.id) {
-      await saveLocalProfile(user.id, { ...(userProfile || {}), scoffScore: score });
-      await saveUserBodyProfile(user.id, { scoffScore: score }).catch(() => {});
-    }
-    if (score >= 2) {
-      Alert.alert(
-        'Before you continue',
-        "Some of your answers suggest it may be worth speaking to your GP or a registered dietitian alongside using this app. We've set things up to focus on supporting your training rather than calorie restriction.",
-        [{ text: 'Understood', onPress: () => setStep(10) }],
-      );
-    } else {
-      setStep(10);
-    }
+    setStep(8);
   }
 
   async function finishWithAccount() {
@@ -448,7 +395,7 @@ export default function ProOnboardingScreen({ navigation }) {
         equipment,
         goal: trainingGoal,
         phase: trainingPhase,
-        weakPoints: planWeakPoints,
+        weakPoints: [],          // set later from Athlete Hub → Update your goals
         recoveryRating,
         nutritionCalculated: true,
       },
@@ -461,17 +408,6 @@ export default function ProOnboardingScreen({ navigation }) {
     // 'free' re-renders RootNavigator into the Free first-run path.
     const { setTier } = useAppStore.getState();
     await setTier('free');
-  }
-
-  function togglePlanWeakPoint(muscle) {
-    setPlanWeakPoints(prev => {
-      if (prev.includes(muscle)) return prev.filter(m => m !== muscle);
-      if (prev.length >= 3) {
-        Alert.alert('Max 3 muscles', 'Deselect one before adding another.');
-        return prev;
-      }
-      return [...prev, muscle];
-    });
   }
 
   // ── Progress bar ─────────────────────────────────────────────────────────────
@@ -886,12 +822,7 @@ export default function ProOnboardingScreen({ navigation }) {
               <TouchableOpacity
                 key={g.value}
                 style={[styles.goalCard, trainingGoal === g.value && styles.goalCardActive]}
-                onPress={() => {
-                  setTrainingGoal(g.value);
-                  if (!GOALS_WITH_WEAK_POINTS.includes(g.value)) {
-                    setPlanWeakPoints([]);
-                  }
-                }}
+                onPress={() => setTrainingGoal(g.value)}
                 activeOpacity={0.85}
               >
                 <View style={[styles.goalIconWrap, trainingGoal === g.value && styles.goalIconWrapActive]}>
@@ -983,57 +914,9 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 6 — Weak points (conditional) ──────────────────────────────────────
+  // ── Step 6 — How's your recovery? ────────────────────────────────────────────
 
   if (step === 6) {
-    return (
-      <SafeAreaView style={styles.safe}>
-        <ScrollView contentContainerStyle={styles.scroll}>
-          <TouchableOpacity style={styles.backBtn} onPress={goBack} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
-            <Text style={styles.backBtnText}>Back</Text>
-          </TouchableOpacity>
-
-          <Header
-            title="Weak points."
-            sub="Pick up to 3 muscle groups you want to bring up. We'll bias your plan towards them."
-          />
-
-          <View style={styles.section}>
-            <Text style={styles.fieldLabel}>Priority muscles <Text style={styles.optionalTag}>(optional, max 3)</Text></Text>
-            <View style={styles.chipGrid}>
-              {WEAK_POINT_MUSCLES.map(muscle => {
-                const sel = planWeakPoints.includes(muscle);
-                return (
-                  <TouchableOpacity
-                    key={muscle}
-                    style={[styles.tagChip, sel && styles.tagChipSelected]}
-                    onPress={() => togglePlanWeakPoint(muscle)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.tagChipText, sel && styles.tagChipTextSelected]}>{muscle}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-
-          <TouchableOpacity style={styles.primaryBtn} onPress={advanceFrom6} activeOpacity={0.88}>
-            <Text style={styles.primaryBtnText}>Continue</Text>
-            <Ionicons name="arrow-forward" size={18} color={colors.background} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.skipBtn} onPress={advanceFrom6}>
-            <Text style={styles.skipBtnText}>Skip for now</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
-
-  // ── Step 7 — How's your recovery? ────────────────────────────────────────────
-
-  if (step === 7) {
     return (
       <SafeAreaView style={styles.safe}>
         <ScrollView contentContainerStyle={styles.scroll}>
@@ -1068,7 +951,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
           <TouchableOpacity
             style={[styles.primaryBtn, (!recoveryRating || busy) && styles.primaryBtnDisabled]}
-            onPress={recoveryRating && !busy ? advanceFrom7 : undefined}
+            onPress={recoveryRating && !busy ? advanceFrom6 : undefined}
             disabled={!recoveryRating || busy}
             activeOpacity={recoveryRating && !busy ? 0.88 : 1}
           >
@@ -1086,9 +969,9 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 8 — Stay on track (Notifications) ───────────────────────────────────
+  // ── Step 7 — Stay on track (Notifications) ───────────────────────────────────
 
-  if (step === 8) {
+  if (step === 7) {
     return (
       <SafeAreaView style={styles.safe}>
         <ScrollView contentContainerStyle={styles.scroll}>
@@ -1192,12 +1075,12 @@ export default function ProOnboardingScreen({ navigation }) {
             )}
           </View>
 
-          <TouchableOpacity style={styles.primaryBtn} onPress={advanceFrom8} activeOpacity={0.88}>
+          <TouchableOpacity style={styles.primaryBtn} onPress={advanceFrom7} activeOpacity={0.88}>
             <Text style={styles.primaryBtnText}>Continue</Text>
             <Ionicons name="arrow-forward" size={18} color={colors.background} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.skipBtn} onPress={() => setStep(9)}>
+          <TouchableOpacity style={styles.skipBtn} onPress={() => setStep(8)}>
             <Text style={styles.skipBtnText}>Skip reminders for now</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -1205,95 +1088,7 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 9 — A quick check (Wellbeing / SCOFF) ───────────────────────────────
-
-  if (step === 9) {
-    const allAnswered = scoffAnswers.every(a => a !== null);
-    const skipAll = () => {
-      setScoffAnswers([false, false, false, false, false]);
-      advanceFrom9();
-    };
-
-    return (
-      <SafeAreaView style={styles.safe}>
-        <ScrollView contentContainerStyle={styles.scroll}>
-          <TouchableOpacity style={styles.backBtn} onPress={scoffOptedIn ? () => setScoffOptedIn(false) : goBack} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
-            <Text style={styles.backBtnText}>Back</Text>
-          </TouchableOpacity>
-
-          <Header
-            title={scoffOptedIn ? 'A quick health check.' : 'A quick check.'}
-            sub={scoffOptedIn
-              ? 'Five short questions. No wrong answers. Your answers are private and stored only on this device.'
-              : 'You can answer a short wellbeing check now, or skip it and get started.'}
-          />
-
-          {!scoffOptedIn ? (
-            <>
-              <View style={styles.scoffOfferCard}>
-                <View style={styles.scoffOfferIcon}>
-                  <Ionicons name="heart-outline" size={24} color={colors.primary} />
-                </View>
-                <Text style={styles.scoffOfferTitle}>Optional wellbeing check</Text>
-                <Text style={styles.scoffOfferBody}>
-                  Five questions about your relationship with food and eating. Helps us tailor the coaching approach if needed. Takes about 30 seconds.
-                </Text>
-                <TouchableOpacity style={styles.scoffOfferBtn} onPress={() => setScoffOptedIn(true)} activeOpacity={0.85}>
-                  <Text style={styles.scoffOfferBtnText}>Take the check</Text>
-                  <Ionicons name="arrow-forward" size={16} color={colors.primary} />
-                </TouchableOpacity>
-              </View>
-
-              <TouchableOpacity style={styles.primaryBtn} onPress={skipAll} activeOpacity={0.88}>
-                <Text style={styles.primaryBtnText}>Continue</Text>
-                <Ionicons name="arrow-forward" size={18} color={colors.background} />
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              <View style={styles.scoffList}>
-                {SCOFF_QUESTIONS.map((q, i) => (
-                  <View key={i} style={styles.scoffItem}>
-                    <Text style={styles.scoffQ}>{q}</Text>
-                    <View style={styles.scoffBtns}>
-                      <TouchableOpacity
-                        style={[styles.scoffBtn, scoffAnswers[i] === true && styles.scoffBtnSelected]}
-                        onPress={() => { const next = [...scoffAnswers]; next[i] = true; setScoffAnswers(next); }}
-                      >
-                        <Text style={[styles.scoffBtnText, scoffAnswers[i] === true && styles.scoffBtnTextSelected]}>Yes</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.scoffBtn, scoffAnswers[i] === false && styles.scoffBtnSelected]}
-                        onPress={() => { const next = [...scoffAnswers]; next[i] = false; setScoffAnswers(next); }}
-                      >
-                        <Text style={[styles.scoffBtnText, scoffAnswers[i] === false && styles.scoffBtnTextSelected]}>No</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ))}
-              </View>
-
-              <TouchableOpacity
-                style={[styles.primaryBtn, !allAnswered && styles.primaryBtnDisabled]}
-                onPress={allAnswered ? advanceFrom9 : undefined}
-                activeOpacity={allAnswered ? 0.88 : 1}
-              >
-                <Text style={styles.primaryBtnText}>Continue</Text>
-                <Ionicons name="arrow-forward" size={18} color={colors.background} />
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.skipBtn} onPress={skipAll}>
-                <Text style={styles.skipBtnText}>Skip for now</Text>
-              </TouchableOpacity>
-            </>
-          )}
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
-
-  // ── Step 10 — Almost there (Account) ─────────────────────────────────────────
+  // ── Step 8 — Almost there (Account) ─────────────────────────────────────────
 
   return (
     <SafeAreaView style={styles.safe}>
