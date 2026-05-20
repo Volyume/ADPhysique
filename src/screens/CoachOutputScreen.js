@@ -124,7 +124,7 @@ function AdjustmentRow({ iconName, label, note, applied }) {
 }
 
 function NextWeekCard({ adjustments }) {
-  const { training, calories, steps, cardio } = adjustments;
+  const { calories, steps, cardio } = adjustments;
 
   const calLabel =
     calories === null
@@ -137,18 +137,19 @@ function NextWeekCard({ adjustments }) {
 
   return (
     <View style={styles.card}>
-      <SectionHeader title="Next week" />
-      <AdjustmentRow
-        iconName="barbell-outline"
-        label={TRAINING_SIGNAL_LABEL[training.signal] ?? training.signal}
-        note={training.note}
-      />
-      {calories !== null && (
+      <SectionHeader title="Nutrition next week" />
+      {calories !== null ? (
         <AdjustmentRow
           iconName="flame-outline"
           label={calories.applied && calories.newKcal ? `${calLabel} → ${calories.newKcal} kcal/day` : calLabel}
           note={calories.note}
           applied={!!calories.applied}
+        />
+      ) : (
+        <AdjustmentRow
+          iconName="flame-outline"
+          label="Calories held"
+          note="No change needed this week."
         />
       )}
       {steps !== null && (
@@ -165,6 +166,12 @@ function NextWeekCard({ adjustments }) {
           note={cardio.note}
         />
       )}
+      <View style={styles.planNote}>
+        <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />
+        <Text style={styles.planNoteText}>
+          Training volume and recovery weeks are adjusted automatically by your plan after each session — your coach focuses on nutrition.
+        </Text>
+      </View>
     </View>
   );
 }
@@ -574,14 +581,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         {/* 6. Why this week */}
         {whyThisWeek ? <WhyBlock text={whyThisWeek} /> : null}
 
-        {/* 7. Recovery week suggestion */}
-        {deloadSuggested && (
-          <AmberAlertCard
-            title="Recovery week flagged"
-            body={deloadNote ?? 'Your body is showing signs that a lighter week would help.'}
-            footnote="This is a suggestion. Your call."
-          />
-        )}
+        {/* Recovery weeks are handled by the plan engine, not the coach. */}
 
         {/* 8. Diet break suggestion */}
         {dietBreakSuggested && (
@@ -844,6 +844,14 @@ const styles = StyleSheet.create({
   },
 
   // Why this week
+  planNote: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs,
+    marginTop: spacing.md, paddingTop: spacing.md,
+    borderTopWidth: 1, borderTopColor: colors.border,
+  },
+  planNoteText: {
+    flex: 1, fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17,
+  },
   whyBlock: {
     flexDirection: 'column',
     gap: spacing.xs,
