@@ -1,5 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 import { generateInsights } from './insightsEngine';
+import { calculate1RM } from './algorithms';
+import { logError } from './errorLog';
 
 let _db = null;
 let _initPromise = null;
@@ -2359,7 +2361,7 @@ export async function getYearOfLiftsData(userId, yearMs = null) {
 
   const sets = await d.getAllAsync(
     `SELECT ws.weight, ws.actual_reps, ws.exercise_id, ex.name AS exercise_name,
-            ex.primary_muscle_group AS muscle
+            ex.primary_muscle AS muscle
      FROM workout_sets ws
      JOIN workouts w ON ws.workout_id = w.id
      LEFT JOIN exercises ex ON ex.id = ws.exercise_id
@@ -2403,16 +2405,27 @@ export async function getYearOfLiftsData(userId, yearMs = null) {
   // Unique exercise count
   const uniqueExercises = Object.keys(exerciseCounts).length;
 
-  // Top PRs during the year
-  const yearPRs = await d.getAllAsync(
-    `SELECT pr.record_type, pr.value, pr.reps, ex.name AS exercise_name, pr.achieved_date
-     FROM personal_records pr
-     LEFT JOIN exercises ex ON ex.id = pr.exercise_id
-     WHERE pr.user_id = ? AND pr.achieved_date >= ?
-       AND pr.record_type = '1rm_estimate'
-     ORDER BY pr.value DESC LIMIT 5`,
-    [userId, yearStart],
-  ).catch(() => []);
+  // Top PRs during the year — compute best estimated 1RM per exercise
+  // from logged sets (the historical personal_records table was never
+  // created locally; previous SQL silently caught and returned []).
+  const bestByExercise = new Map();
+  for (const s of sets) {
+    if (!s.exercise_name) continue;
+    const e1rm = calculate1RM(s.weight || 0, s.actual_reps || 0);
+    if (!e1rm) continue;
+    const prev = bestByExercise.get(s.exercise_name);
+    if (!prev || e1rm > prev.value) {
+      bestByExercise.set(s.exercise_name, {
+        record_type: '1rm_estimate',
+        value: parseFloat(e1rm.toFixed(1)),
+        reps: s.actual_reps,
+        exercise_name: s.exercise_name,
+      });
+    }
+  }
+  const yearPRs = Array.from(bestByExercise.values())
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 5);
 
   return {
     totalSessions,
@@ -2453,13 +2466,18 @@ export async function getBlockReflectionData(userId, mesocycleId) {
   const totalSets = sets.length;
   const tonnage = sets.reduce((t, s) => t + (s.weight ?? 0) * (s.actual_reps ?? 0), 0);
 
-  // First vs last week tonnage delta
-  const firstWeekCutoff = meso.start_date + 7 * 86400000;
+  // First vs last week tonnage delta.
+  // start_date / end_date are TEXT YYYY-MM-DD; convert to ms before arithmetic
+  // (previously this was string-concat producing a non-numeric cutoff and
+  // mis-bucketing every set lexicographically).
+  const startMs = meso.start_date ? new Date(meso.start_date).getTime() : 0;
+  const endMs = meso.end_date ? new Date(meso.end_date).getTime() : Date.now();
+  const firstWeekCutoff = startMs + 7 * 86400000;
   const firstWeekSets = sets.filter(s => {
     const w = workouts.find(w2 => w2.id === s.workout_id);
     return w && w.started_at < firstWeekCutoff;
   });
-  const lastWeekCutoff = meso.end_date ? meso.end_date - 7 * 86400000 : Date.now() - 7 * 86400000;
+  const lastWeekCutoff = endMs - 7 * 86400000;
   const lastWeekSets = sets.filter(s => {
     const w = workouts.find(w2 => w2.id === s.workout_id);
     return w && w.started_at >= lastWeekCutoff;
@@ -2487,16 +2505,26 @@ export async function getBlockReflectionData(userId, mesocycleId) {
     return v > (best?.volume ?? 0) ? { startedAt: w.started_at, volume: v, duration: w.duration_minutes } : best;
   }, null);
 
-  // PRs set during this block
-  const prs = await d.getAllAsync(
-    `SELECT pr.record_type, pr.value, pr.reps, ex.name AS exercise_name
-     FROM personal_records pr
-     JOIN workouts w ON pr.workout_id = w.id
-     LEFT JOIN exercises ex ON ex.id = pr.exercise_id
-     WHERE pr.user_id = ? AND w.mesocycle_id = ?
-     ORDER BY pr.value DESC LIMIT 5`,
-    [userId, mesocycleId],
-  ).catch(() => []);
+  // PRs during this block — compute best estimated 1RM per exercise from the
+  // block's logged sets (no local personal_records table — see comment above).
+  const blockBestByExercise = new Map();
+  for (const s of sets) {
+    if (!s.exercise_name) continue;
+    const e1rm = calculate1RM(s.weight || 0, s.actual_reps || 0);
+    if (!e1rm) continue;
+    const prev = blockBestByExercise.get(s.exercise_name);
+    if (!prev || e1rm > prev.value) {
+      blockBestByExercise.set(s.exercise_name, {
+        record_type: '1rm_estimate',
+        value: parseFloat(e1rm.toFixed(1)),
+        reps: s.actual_reps,
+        exercise_name: s.exercise_name,
+      });
+    }
+  }
+  const prs = Array.from(blockBestByExercise.values())
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 5);
 
   return {
     meso: rowToCamel(meso),

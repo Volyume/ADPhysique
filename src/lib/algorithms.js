@@ -91,8 +91,18 @@ export function calculateWeeklyVolume(sets, exerciseMap = {}) {
     // Legacy normalisation: old 'shoulders' data maps to side_delts (largest delt head)
     if (primaryMuscle === 'shoulders') primaryMuscle = 'side_delts';
 
-    const secondaryMuscles = exercise.secondaryMuscles ||
-      (exercise.secondary_muscles ? JSON.parse(exercise.secondary_muscles) : []);
+    let secondaryMuscles = Array.isArray(exercise.secondaryMuscles) ? exercise.secondaryMuscles : null;
+    if (!secondaryMuscles) {
+      if (typeof exercise.secondary_muscles === 'string') {
+        try { secondaryMuscles = JSON.parse(exercise.secondary_muscles); }
+        catch (_) { secondaryMuscles = []; }
+      } else if (Array.isArray(exercise.secondary_muscles)) {
+        secondaryMuscles = exercise.secondary_muscles;
+      } else {
+        secondaryMuscles = [];
+      }
+    }
+    if (!Array.isArray(secondaryMuscles)) secondaryMuscles = [];
 
     if (primaryMuscle) {
       if (!volumeByMuscle[primaryMuscle]) {
@@ -947,7 +957,12 @@ export function calculateEffectiveSets(sets, exerciseMap = {}) {
     let primaryMuscle = (exercise.primaryMuscle || exercise.primary_muscle || '').toLowerCase();
     if (primaryMuscle === 'shoulders') primaryMuscle = 'side_delts';
 
-    const weight = getSetEffectivenessWeight(set.rir ?? set.rpe != null ? 10 - set.rpe : null);
+    // Effective-volume weight: prefer logged RIR; fall back to RPE-derived RIR
+    // (RIR ≈ 10 − RPE); null when neither is present.
+    let rirForWeight = null;
+    if (set.rir != null) rirForWeight = set.rir;
+    else if (set.rpe != null) rirForWeight = 10 - set.rpe;
+    const weight = getSetEffectivenessWeight(rirForWeight);
 
     if (primaryMuscle) {
       if (!volumeByMuscle[primaryMuscle]) {

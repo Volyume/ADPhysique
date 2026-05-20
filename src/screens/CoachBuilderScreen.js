@@ -309,14 +309,17 @@ export default function CoachBuilderScreen({ navigation, route }) {
       nutritionPhaseKey = phaseToNutritionKey(inputs.phase);
     }
 
-    // Phase 7: apply competition phase modifiers before generating
-    const compDateMs = user?.profile?.competitionDate ?? null;
+    // Phase 7: apply competition phase modifiers before generating.
+    // The store exposes user and userProfile as separate top-level fields;
+    // user.profile doesn't exist, so the previous reads silently dropped
+    // the competition date and age out of the plan input every time.
+    const compDateMs = userProfile?.competitionDate ?? null;
     const { inputs: phaseInputs, phase, modifiers, weeksToComp } = applyPhaseToInputs(
       {
         ...inputs,
         nutritionPhase: nutritionPhaseKey ?? nutritionContext?.phaseType ?? null,
         nutritionContext,
-        age: user?.profile?.age ?? null,
+        age: userProfile?.age ?? null,
       },
       compDateMs
     );

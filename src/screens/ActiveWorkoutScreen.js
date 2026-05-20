@@ -447,7 +447,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       if (user?.id && exercise?.id) {
         const savedNote = await getExerciseUserNote(user.id, exercise.id);
         setExerciseNote(savedNote || '');
-        setShowExerciseNote(false);
       }
 
       // Layoff detection: last session was more than 7 days ago

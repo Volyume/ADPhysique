@@ -106,8 +106,8 @@ function computeLandmarks(experience, recoveryRating, nutritionPhase, age) {
 
     // Clash guard
     if (MEVadj >= MRVadj) MEVadj = Math.max(2, MRVadj - 2);
-    // Floor for non-zero-MEV muscles
-    if (MRVadj < 4 && base.MEV > 0) { MRVadj = 4; MEVadj = 2; }
+    // Floor for non-zero-MEV muscles (VOLUME_LANDMARKS uses lowercase keys)
+    if (MRVadj < 4 && base.mev > 0) { MRVadj = 4; MEVadj = 2; }
 
     const MAVlow  = MEVadj + 2;
     const MAVhigh = Math.max(MAVlow, MRVadj - 1);

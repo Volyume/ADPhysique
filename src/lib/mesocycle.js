@@ -87,7 +87,7 @@ export function getWeekSetsMultiplier(mesoWeek, experience = 'intermediate') {
 export function isRecoveryWeek(mesoWeek, experience = 'intermediate') {
   const schedule = getMesoSchedule(experience);
   const entry = schedule.find(s => s.week === mesoWeek);
-  return entry?.phase === 'recovery' ?? false;
+  return entry?.phase === 'recovery';
 }
 
 // ---------------------------------------------------------------------------

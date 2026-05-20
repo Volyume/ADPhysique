@@ -20,6 +20,7 @@ import {
   getRecentWorkoutFeedback, getLatestCoachOutput,
 } from '../lib/database';
 import { generateAndSavePlan } from '../lib/planAutoGen';
+import { logError } from '../lib/errorLog';
 import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload, VOLUME_LANDMARKS } from '../lib/algorithms';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import useAppStore from '../store/useAppStore';
@@ -278,7 +279,10 @@ export default function HomeScreen({ navigation }) {
       setWeightInput('');
       setWeightInputSt('');
       setWeightInputStLbs('');
-    } catch (_) {}
+    } catch (e) {
+      logError('HomeScreen.handleLogWeight', e, { userId: user?.id, weightKg });
+      Alert.alert('Couldn\'t save weight', e?.message ?? 'Please try again.');
+    }
     setSavingWeight(false);
   }
 

@@ -129,8 +129,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     // Mesocycle autoregulation (Phase 4 engine)
     const window = [...feedbackHistory, feedback];
     const autoReg = evaluateAutoReg(window);
-    const experience = user?.profile?.experience ?? 'intermediate';
-    const mesoWeek = user?.profile?.currentMesoWeek ?? 1;
+    // The store keeps user and userProfile as separate top-level fields;
+    // `user.profile` doesn't exist, so reading it always fell back to
+    // hard-coded defaults and autoreg ran against generic intermediate week-1.
+    const experience = userProfile?.experience ?? 'intermediate';
+    const mesoWeek = userProfile?.currentMesoWeek ?? 1;
     const schedule = getMesoSchedule(experience);
     const currentEntry = schedule.find(s => s.week === mesoWeek) ?? schedule[0];
 

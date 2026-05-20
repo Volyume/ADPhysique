@@ -141,11 +141,14 @@ export function computeEWMA(weightData, alpha = EWMA_ALPHA) {
 // Compute weekly weight change rate from EWMA-smoothed data.
 // ewmaData: output of computeEWMA, sorted oldest-first.
 // Returns kg/week (positive = gaining, negative = losing).
+//
+// Requires at least 8 points so the window between recent (index -1) and
+// older (index -8) spans a full 7 days. With only 7 points the gap is 6
+// days and the rate would read ~17% optimistic.
 export function computeWeeklyWeightChange(ewmaData) {
-  if (!ewmaData || ewmaData.length < 7) return null;
+  if (!ewmaData || ewmaData.length < 8) return null;
   const recent = ewmaData[ewmaData.length - 1].ewma;
-  // Use point 7 days back, or oldest available
-  const older = ewmaData[Math.max(0, ewmaData.length - 8)].ewma;
+  const older = ewmaData[ewmaData.length - 8].ewma;
   return parseFloat((recent - older).toFixed(3));
 }
 

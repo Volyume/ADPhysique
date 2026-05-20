@@ -465,10 +465,20 @@ export function runWeeklyCoach(inputs) {
   }
 
   // ── CARDIO PRESCRIPTION ───────────────────────────────────────────────────
+  // Cardio fires for cut + off-target high + steps already maxed.
+  // Poor recovery overrides the prescription with a "pause" message instead
+  // of letting cardio compound the recovery deficit.
   let cardioAdjustment = null;
   const stepsAtUpperBand = currentStepsTarget >= band.upper;
+  const cardioConditionsMet = phase.isCut && !onTarget && offTargetDirection > 0 && stepsAtUpperBand;
 
-  if (phase.isCut && !onTarget && offTargetDirection > 0 && stepsAtUpperBand && !poorRecovery) {
+  if (cardioConditionsMet && poorRecovery) {
+    cardioAdjustment = {
+      prescribed: false,
+      type: null,
+      note: 'Cardio paused this week. Recovery takes priority.',
+    };
+  } else if (cardioConditionsMet) {
     if (consecutiveOffTargetWeeks >= 4 && goalPhase === 'agg_cut') {
       cardioAdjustment = {
         prescribed: true,
@@ -482,12 +492,6 @@ export function runWeeklyCoach(inputs) {
         note: 'Add 3 sessions of 20 to 30 min at an easy pace. You should be able to hold a conversation throughout.',
       };
     }
-  } else if (poorRecovery && cardioAdjustment?.prescribed) {
-    cardioAdjustment = {
-      prescribed: false,
-      type: null,
-      note: 'Cardio paused this week. Recovery takes priority.',
-    };
   }
 
   // ── RAPID WEIGHT LOSS SAFETY FLAG ────────────────────────────────────────

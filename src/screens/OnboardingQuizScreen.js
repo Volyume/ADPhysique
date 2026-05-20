@@ -76,7 +76,10 @@ function TemplateCard({ template }) {
 }
 
 export default function OnboardingQuizScreen({ navigation }) {
-  const [step, setStep] = useState(0); // 0–3 = questions, 4 = results
+  // 0..QUESTIONS.length-1 = questions, step === QUESTIONS.length = results.
+  // QUESTIONS used to include a day-count question; when it was removed the
+  // results gate was left at the hard-coded `=== 4` value and crashed.
+  const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({
     goal: null,
     experience: null,
@@ -99,7 +102,7 @@ export default function OnboardingQuizScreen({ navigation }) {
     }
   }
 
-  if (step === 4) {
+  if (step >= QUESTIONS.length) {
     const templates = getTemplates(answers.days || '4 days');
     return (
       <SafeAreaView style={styles.safe}>

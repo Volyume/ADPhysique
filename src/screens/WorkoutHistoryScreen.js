@@ -130,8 +130,10 @@ export default function WorkoutHistoryScreen({ navigation }) {
       const grouped = order.map(id => {
         const g = groups[id];
         const workingSets = g.sets.filter(s => s.setType !== 'warmup');
-        // Build a concise set summary: weight × reps list for working sets
-        const repsStr = workingSets.map(s => s.reps).join(', ');
+        // Build a concise set summary: weight × reps list for working sets.
+        // Rows come back camelCased so the field is `actualReps`; the
+        // previous read of `s.reps` produced empty strings in every summary.
+        const repsStr = workingSets.map(s => s.actualReps ?? s.reps ?? '').filter(Boolean).join(', ');
         const weights = [...new Set(workingSets.map(s => s.weight).filter(Boolean))];
         const weightStr = weights.length === 1 ? `${weights[0]}kg` : weights.map(w => `${w}kg`).join('/');
         const summary = workingSets.length > 0
