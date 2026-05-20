@@ -3,6 +3,7 @@ import {
   MUSCLE_DISPLAY_NAMES,
   calculateWeeklyVolume,
   getVolumeStatus,
+  detectLaggingMuscles,
 } from '../algorithms';
 
 // ─── VOLUME_LANDMARKS shape ────────────────────────────────────────────────────
@@ -146,5 +147,37 @@ describe('calculateWeeklyVolume — legacy normalisation', () => {
     expect(result.side_delts.workingSets).toBeCloseTo(4.5);
     expect(result.front_delts.workingSets).toBe(3);
     expect(result.rear_delts.workingSets).toBe(3);
+  });
+});
+
+// ─── detectLaggingMuscles ──────────────────────────────────────────────────────
+
+describe('detectLaggingMuscles', () => {
+  test('returns empty array when fewer than minWeeks data points', () => {
+    const history = [{ chest: 2 }, { chest: 2 }]; // only 2 weeks, minWeeks=3
+    expect(detectLaggingMuscles(history, 3)).toHaveLength(0);
+  });
+
+  test('flags chest when consistently below MEV (6) for 3 weeks', () => {
+    const history = [{ chest: 3 }, { chest: 2 }, { chest: 4 }];
+    const result = detectLaggingMuscles(history, 3);
+    const chestFlag = result.find(r => r.muscle === 'chest');
+    expect(chestFlag).toBeDefined();
+    expect(chestFlag.weeksBelow).toBe(3);
+    expect(chestFlag.mev).toBe(6);
+  });
+
+  test('does not flag chest when it reaches MEV in one week', () => {
+    const history = [{ chest: 3 }, { chest: 8 }, { chest: 3 }]; // week 2 above MEV
+    const result = detectLaggingMuscles(history, 3);
+    const chestFlag = result.find(r => r.muscle === 'chest');
+    expect(chestFlag).toBeUndefined();
+  });
+
+  test('skips muscles with mev <= 0 (e.g. front_delts)', () => {
+    const history = [{ front_delts: 0 }, { front_delts: 0 }, { front_delts: 0 }];
+    const result = detectLaggingMuscles(history, 3);
+    const flag = result.find(r => r.muscle === 'front_delts');
+    expect(flag).toBeUndefined();
   });
 });
