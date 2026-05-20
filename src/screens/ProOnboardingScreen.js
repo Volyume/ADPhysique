@@ -1043,7 +1043,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
           <Header
             title="How's your recovery?"
-            sub="This affects how much volume your plan includes. Be honest — it adjusts to protect you."
+            sub="This affects how much volume your plan includes. Be honest; it adjusts to protect you."
           />
 
           <View style={styles.goalList}>

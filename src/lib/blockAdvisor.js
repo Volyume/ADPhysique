@@ -102,7 +102,7 @@ function detectSignals(checkins) {
   // ── Low sleep ─────────────────────────────────────────────────────────────
   const sleep = latest.sleepHours ?? 7;
   if (sleep < 5.5) {
-    signals.push({ type: 'sleep', severity: 'high', label: `Sleep averaging ${sleep.toFixed(1)}h — recovery is compromised`, data: sleep });
+    signals.push({ type: 'sleep', severity: 'high', label: `Sleep averaging ${sleep.toFixed(1)}h. Recovery is compromised.`, data: sleep });
   } else if (sleep < 6.5) {
     signals.push({ type: 'sleep', severity: 'medium', label: 'Sleep below recommended for training recovery', data: sleep });
   }
@@ -160,7 +160,7 @@ function buildNextBlockRecommendation(checkins, userProfile, signals) {
   if (highSignals.length === 0 && avgReadiness >= 60) {
     return {
       recommendation: 'repeat',
-      headline: 'Go again — same programme',
+      headline: 'Go again: same programme',
       body: "Your recovery week does its job, then you pick up where you left off. Same exercises, same structure. You'll come back a little stronger each block.",
       actionLabel: 'Continue this programme',
       secondaryLabel: 'Build a new programme',
@@ -234,7 +234,7 @@ export async function getBlockAdvice(userId, activeBlock, userProfile) {
     return {
       action: 'in_recovery',
       headline: 'Recovery week is active',
-      body: `Keep sessions lighter — roughly half the sets, same exercises, easy effort. This isn't stepping back, it's letting the adaptations from the last few weeks land. You'll come back to full training next week.`,
+      body: `Keep sessions lighter. Roughly half the sets, same exercises, easy effort. This isn't stepping back; it's letting the adaptations from the last few weeks land. You'll come back to full training next week.`,
       signals,
       nextBlock,
       blockStatus,
@@ -251,7 +251,7 @@ export async function getBlockAdvice(userId, activeBlock, userProfile) {
         ? `Recovery week passed ${overdueWeeks} week${overdueWeeks > 1 ? 's' : ''} ago`
         : 'Block complete',
       body: overdueWeeks > 0
-        ? `Your recovery week has come and gone. The sooner you start the next block, the better — your body is ready.`
+        ? `Your recovery week has come and gone. The sooner you start the next block, the better. Your body is ready.`
         : `You've finished this block. Take your recovery week, then pick up the plan again.`,
       signals,
       nextBlock,
@@ -298,7 +298,7 @@ export async function getBlockAdvice(userId, activeBlock, userProfile) {
       ? `Week ${blockStatus.currentWeek} of ${blockStatus.totalWeeks}`
       : 'On track',
     body: weeksLeft === 1
-      ? `One more week before your recovery week. Push hard this week — it's your peak.`
+      ? `One more week before your recovery week. Push hard this week. It's your peak.`
       : weeksLeft === 0
         ? `This is your recovery week. Back off and let everything settle.`
         : `Training is going well. Stay on plan.`,
@@ -331,7 +331,7 @@ function buildEarlyDeloadBody(signals, latestCheckin, blockStatus) {
 
   const weeksIn = blockStatus?.currentWeek ?? null;
   const timing = weeksIn
-    ? `You're in week ${weeksIn} — `
+    ? `You're in week ${weeksIn}. `
     : '';
 
   return `${signalText}${timing}dropping your sets roughly in half this week while keeping the same exercises lets fatigue clear without losing any of the progress you've built. Think of it as reloading the gun.`;
