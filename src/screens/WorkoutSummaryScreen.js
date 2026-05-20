@@ -504,8 +504,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             </View>
             {musclesWorked.map(muscle => {
               const data = weeklyVolume[muscle];
-              const { color, label } = getVolumeStatus(data.workingSets, muscle);
-              const insight = getVolumeInsight(muscle, data.workingSets, label);
+              const { color, label, status } = getVolumeStatus(data.workingSets, muscle);
+              const insight = getVolumeInsight(muscle, data.workingSets, status);
               return (
                 <View key={muscle} style={styles.volumeRow}>
                   <View style={styles.volumeRowMain}>
@@ -642,16 +642,17 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   );
 }
 
-function getVolumeInsight(muscle, sets, statusLabel) {
+function getVolumeInsight(muscle, sets, status) {
   const landmarks = VOLUME_LANDMARKS[muscle];
   if (!landmarks) return null;
   const { mev, mrv } = landmarks;
   const n = Math.round(sets);
   const range = `${mev}–${mrv} sets/week`;
-  if (statusLabel === 'On track') return `${n} sets — on track for hypertrophy (target: ${range})`;
-  if (statusLabel === 'Below target') return `${n} sets — below minimum effective volume (target: ${range})`;
-  if (statusLabel === 'Near limit') return `${n} sets — approaching upper limit (target: ${range})`;
-  if (statusLabel === 'Over limit') return `${n} sets — over your recovery limit (aim for ${range} next week)`;
+  if (status === 'optimal') return `${n} sets — on track for hypertrophy (target: ${range})`;
+  if (status === 'minimum') return `${n} sets — at minimum effective volume (target: ${range})`;
+  if (status === 'below') return `${n} sets — below minimum effective volume (target: ${range})`;
+  if (status === 'near_mrv') return `${n} sets — approaching upper limit (target: ${range})`;
+  if (status === 'over_mrv') return `${n} sets — over your recovery limit (aim for ${range} next week)`;
   return `${n} sets (target: ${range})`;
 }
 
