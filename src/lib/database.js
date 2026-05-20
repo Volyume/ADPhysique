@@ -2829,3 +2829,27 @@ export async function deleteExerciseGoal(userId, exerciseId) {
     [userId, exerciseId],
   );
 }
+
+// Returns the most recent completed workout timestamp per primary muscle,
+// limited to the last 90 days to avoid stale data.
+export async function getLastTrainedPerMuscle(userId) {
+  const d = await db();
+  const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
+  const rows = await d.getAllAsync(
+    `SELECT e.primary_muscle, MAX(w.started_at) AS last_trained_at
+     FROM workout_sets ws
+     JOIN workouts w ON ws.workout_id = w.id
+     JOIN exercises e ON ws.exercise_id = e.id
+     WHERE ws.user_id = ?
+       AND w.is_completed = 1
+       AND ws.set_type != 'warmup'
+       AND e.primary_muscle IS NOT NULL
+       AND w.started_at >= ?
+     GROUP BY e.primary_muscle`,
+    [userId, cutoff],
+  );
+  const result = {};
+  for (const row of rows) {
+    if (row.primary_muscle) result[row.primary_muscle] = row.last_trained_at;
+  }
+  return result;

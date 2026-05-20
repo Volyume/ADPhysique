@@ -163,8 +163,12 @@ export function rankSwaps(originalExercise, allExercises, options = {}) {
   const scored = allExercises
     // Mandatory exclusions
     .filter((ex) => !excludeSet.has(ex.id))
-    // Optional equipment filter
-    .filter((ex) => equipment === null || ex.equipment === equipment)
+    // Optional equipment filter — accepts a string or array of strings
+    .filter((ex) => {
+      if (equipment === null) return true;
+      if (Array.isArray(equipment)) return equipment.includes(ex.equipment);
+      return ex.equipment === equipment;
+    })
     // Score each candidate
     .map((ex) => ({
       exercise: ex,

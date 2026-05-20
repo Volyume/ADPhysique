@@ -18,6 +18,7 @@ import {
   getAllWorkouts, getCompletedWorkoutSets, getBodyMetricLog, getNutritionTargets,
   getRecentAdaptationEvents, getAllExercises,
   getLatestCheckin, getMorningWeightsLast14Days, getRecentCheckins,
+  getLastTrainedPerMuscle,
 } from '../lib/database';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
 import { getBetaBannerText } from '../lib/proGate';
@@ -169,6 +170,82 @@ function WeightSparkline({ data, units, bodyWeightUnits }) {
   );
 }
 
+function freshnessMeta(lastTrainedAt, now) {
+  if (!lastTrainedAt) return { label: 'Ready', color: colors.success, dot: colors.success };
+  const hoursAgo = (now - lastTrainedAt) / (1000 * 60 * 60);
+  if (hoursAgo < 24)  return { label: 'Just trained', color: colors.warning, dot: colors.warning };
+  if (hoursAgo < 48)  return { label: 'Recovering',   color: colors.warning, dot: colors.warning };
+  if (hoursAgo < 72)  return { label: 'Nearly ready',  color: colors.success, dot: colors.success + '99' };
+  return { label: 'Ready', color: colors.success, dot: colors.success };
+}
+
+function MuscleFreshnessCard({ muscleFreshness, now }) {
+  const entries = Object.entries(MUSCLE_DISPLAY_NAMES)
+    .filter(([key]) => muscleFreshness[key] !== undefined)
+    .map(([key, displayName]) => ({
+      key,
+      displayName,
+      ...freshnessMeta(muscleFreshness[key], now),
+    }))
+    .sort((a, b) => {
+      const order = { 'Just trained': 0, Recovering: 1, 'Nearly ready': 2, Ready: 3 };
+      return (order[a.label] ?? 4) - (order[b.label] ?? 4);
+    });
+
+  if (entries.length === 0) return null;
+
+  return (
+    <View style={mfStyles.card}>
+      <View style={mfStyles.headerRow}>
+        <View style={[mfStyles.iconWrap, { backgroundColor: colors.primaryBg }]}>
+          <Ionicons name="flash-outline" size={20} color={colors.primary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={mfStyles.title}>Muscle readiness</Text>
+          <Text style={mfStyles.sub}>How recovered your muscles are based on your recent training.</Text>
+        </View>
+      </View>
+      <View style={mfStyles.chipGrid}>
+        {entries.map(({ key, displayName, label, color, dot }) => (
+          <View key={key} style={[mfStyles.chip, { borderColor: color + '44', backgroundColor: color + '12' }]}>
+            <View style={[mfStyles.dot, { backgroundColor: dot }]} />
+            <Text style={[mfStyles.chipName, { color: colors.textPrimary }]}>{displayName}</Text>
+            <Text style={[mfStyles.chipLabel, { color }]}>{label}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+const mfStyles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  iconWrap: {
+    width: 40, height: 40, borderRadius: radius.md,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  title: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  sub: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16, marginTop: 2 },
+  chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  chip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
+    borderRadius: radius.full, borderWidth: 1,
+  },
+  dot: { width: 6, height: 6, borderRadius: 3, flexShrink: 0 },
+  chipName: { fontSize: fontSize.xs, fontWeight: fontWeight.medium },
+  chipLabel: { fontSize: 10, fontWeight: fontWeight.semibold },
+});
+
 export default function AthleteHubScreen({ navigation }) {
   const { user, userProfile, units, bodyWeightUnits, tier } = useAppStore();
   const [nutritionTargets, setNutritionTargets] = useState(null);
@@ -185,6 +262,7 @@ export default function AthleteHubScreen({ navigation }) {
   const [morningWeightCount, setMorningWeightCount] = useState(0);
   const [weightTrend, setWeightTrend] = useState([]);
   const [recoveryTrendInsight, setRecoveryTrendInsight] = useState(null);
+  const [muscleFreshness, setMuscleFreshness] = useState({});
 
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
@@ -224,7 +302,7 @@ export default function AthleteHubScreen({ navigation }) {
 
     await Promise.all([
       loadWorkoutStats(),
-      ...(tier === 'pro' ? [loadBodyMetrics(), loadNutrition(), loadAdaptationHistory(), loadRecoveryTrend()] : []),
+      ...(tier === 'pro' ? [loadBodyMetrics(), loadNutrition(), loadAdaptationHistory(), loadRecoveryTrend(), loadMuscleFreshness()] : []),
     ]);
   }
 
@@ -281,6 +359,14 @@ export default function AthleteHubScreen({ navigation }) {
     try {
       const events = await getRecentAdaptationEvents(user.id, 4); // last 4 weeks
       setAdaptationHistory(events.slice(0, 12)); // show max 12 most recent
+    } catch (_e) {}
+  }
+
+  async function loadMuscleFreshness() {
+    if (!user?.id) return;
+    try {
+      const data = await getLastTrainedPerMuscle(user.id);
+      setMuscleFreshness(data);
     } catch (_e) {}
   }
 
@@ -500,6 +586,11 @@ export default function AthleteHubScreen({ navigation }) {
             </View>
             <WeightSparkline data={weightTrend} units={units} bodyWeightUnits={bodyWeightUnits} />
           </View>
+        )}
+
+        {/* ── Muscle readiness ─────────────────────────── */}
+        {tier === 'pro' && Object.keys(muscleFreshness).length > 0 && (
+          <MuscleFreshnessCard muscleFreshness={muscleFreshness} now={Date.now()} />
         )}
 
         {/* ── Nutrition ─────────────────────────────────── */}
