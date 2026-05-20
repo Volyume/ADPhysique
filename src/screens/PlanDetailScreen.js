@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
   planName: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary },
   planDesc: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
   planStats: { flexDirection: 'row', gap: spacing.xl },
-  planStat: { gap: 2 },
+  planStat: { gap: spacing.xxs },
   planStatValue: { fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.textPrimary },
   planStatLabel: { fontSize: fontSize.xs, color: colors.textMuted },
   primaryBtn: {

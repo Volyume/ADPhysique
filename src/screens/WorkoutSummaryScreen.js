@@ -916,7 +916,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     backgroundColor: colors.surface2 ?? colors.background,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
+    paddingVertical: spacing.xxs,
     borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.border,

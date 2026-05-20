@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
   standardInCardText: { fontSize: fontSize.xs, color: colors.textSecondary },
   strengthLevelChip: {
     paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: spacing.xxs,
     borderRadius: radius.sm,
     alignSelf: 'flex-start',
     backgroundColor: colors.primaryBg,

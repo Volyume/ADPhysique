@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
   tonnageLabel: { fontSize: fontSize.xs, color: colors.textMuted },
   barAxisLabel: { fontSize: 9, color: colors.textMuted },
   recovRow:   { flexDirection: 'row', gap: spacing.lg },
-  recovItem:  { alignItems: 'center', gap: 2 },
+  recovItem:  { alignItems: 'center', gap: spacing.xxs },
   recovValue: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
   recovLabel: { fontSize: 10, color: colors.textMuted },
   deloadBanner: {

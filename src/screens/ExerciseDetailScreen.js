@@ -641,7 +641,7 @@ const styles = StyleSheet.create({
   tag: {
     backgroundColor: colors.primaryBg,
     paddingHorizontal: spacing.md,
-    paddingVertical: 4,
+    paddingVertical: spacing.xs,
     borderRadius: radius.full,
   },
   tagText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
@@ -798,7 +798,7 @@ const styles = StyleSheet.create({
   },
   prHighlightStat: {
     flex: 1,
-    gap: 2,
+    gap: spacing.xxs,
   },
   prHighlightStatBordered: {
     paddingLeft: spacing.md,
@@ -895,7 +895,7 @@ const styles = StyleSheet.create({
   },
   goalWeightItem: {
     flex: 1,
-    gap: 2,
+    gap: spacing.xxs,
   },
   goalWeightValue: {
     fontSize: fontSize.lg,

@@ -987,14 +987,14 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
-    gap: 2,
+    gap: spacing.xxs,
   },
   goalCardActive: {
     backgroundColor: colors.primaryBg,
     borderColor: colors.primary,
   },
   goalCheck: {
-    marginBottom: 2,
+    marginBottom: spacing.xxs,
   },
   goalLabel: {
     fontSize: fontSize.sm,
@@ -1129,7 +1129,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
-    gap: 2,
+    gap: spacing.xxs,
   },
   macroGrams: {
     fontSize: fontSize.xl,
@@ -1354,7 +1354,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary + '20',
     borderRadius: radius.full,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: spacing.xxs,
   },
   recommendedBadgeText: {
     fontSize: 10,

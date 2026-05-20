@@ -399,7 +399,7 @@ const trendStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: spacing.xxs,
   },
   muscleName: {
     width: 80,

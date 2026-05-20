@@ -626,7 +626,7 @@ const styles = StyleSheet.create({
   calendarCell: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 3,
+    paddingVertical: spacing.xxs,
   },
   dayHeader: {
     fontSize: fontSize.xs,
@@ -696,7 +696,7 @@ const styles = StyleSheet.create({
   },
   cardHeaderRight: {
     alignItems: 'flex-end',
-    gap: 2,
+    gap: spacing.xxs,
   },
   cardDate: {
     fontSize: fontSize.md,

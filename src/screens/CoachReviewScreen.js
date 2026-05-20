@@ -718,7 +718,7 @@ const styles = StyleSheet.create({
   },
   volumeBadge: {
     paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
+    paddingVertical: spacing.xxs,
     borderRadius: 6,
     minWidth: 80,
     alignItems: 'center',
@@ -742,7 +742,7 @@ const styles = StyleSheet.create({
   },
   insightTextWrap: {
     flex: 1,
-    gap: 3,
+    gap: spacing.xxs,
   },
   insightText: {
     fontSize: fontSize.sm,

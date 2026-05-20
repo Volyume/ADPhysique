@@ -784,7 +784,7 @@ const styles = StyleSheet.create({
   },
   adjustmentContent: {
     flex: 1,
-    gap: 3,
+    gap: spacing.xxs,
   },
   adjustmentLabel: {
     fontSize: fontSize.md,
@@ -928,7 +928,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: spacing.xxs,
   },
   heldText: {
     flex: 1,

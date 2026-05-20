@@ -1336,7 +1336,7 @@ const styles = StyleSheet.create({
   weekSelectorScroll: { flexGrow: 0, marginBottom: spacing.xs },
   weekSelectorContent: { gap: spacing.sm, paddingRight: spacing.sm },
   weekChip: {
-    alignItems: 'center', gap: 2,
+    alignItems: 'center', gap: spacing.xxs,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
     backgroundColor: colors.surface2, minWidth: 56,
