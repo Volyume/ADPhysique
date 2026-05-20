@@ -286,8 +286,8 @@ export default function RoutineDetailScreen({ navigation, route }) {
         renderItem={({ item: { routineExercise, exercise }, index }) => (
           <TouchableOpacity
             style={styles.exerciseCard}
-            onPress={() => openEdit(routineExercise, exercise)}
-            activeOpacity={0.8}
+            onPress={() => !isReordering && openEdit(routineExercise, exercise)}
+            activeOpacity={isReordering ? 1 : 0.8}
           >
             <View style={styles.orderBadge}>
               <Text style={styles.orderNum}>{index + 1}</Text>
@@ -314,34 +314,65 @@ export default function RoutineDetailScreen({ navigation, route }) {
                 return why ? <Text style={styles.exerciseWhy}>{why}</Text> : null;
               })()}
             </View>
-            <View style={styles.cardActions}>
-              <TouchableOpacity
-                onPress={() => openEdit(routineExercise, exercise)}
-                hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
-              >
-                <Ionicons name="create-outline" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => handleOpenSwap(routineExercise, exercise)}
-                hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
-                accessibilityLabel={`Swap ${exercise.name}`}
-              >
-                <Ionicons name="swap-horizontal" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => Alert.alert(
-                  'Remove exercise?',
-                  `Remove ${exercise.name} from this routine?`,
-                  [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Remove', style: 'destructive', onPress: () => removeExercise(routineExercise) },
-                  ],
-                )}
-                hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
-              >
-                <Ionicons name="trash-outline" size={20} color={colors.error} />
-              </TouchableOpacity>
-            </View>
+            {isReordering ? (
+              <View style={styles.reorderActions}>
+                <TouchableOpacity
+                  onPress={() => handleMoveExercise(routineExercise.id, 'up')}
+                  style={[styles.reorderBtn, index === 0 && styles.reorderBtnDisabled]}
+                  disabled={index === 0}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityLabel={`Move ${exercise.name} up`}
+                >
+                  <Ionicons
+                    name="chevron-up"
+                    size={16}
+                    color={index === 0 ? colors.border : colors.textMuted}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => handleMoveExercise(routineExercise.id, 'down')}
+                  style={[styles.reorderBtn, index === exercises.length - 1 && styles.reorderBtnDisabled]}
+                  disabled={index === exercises.length - 1}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityLabel={`Move ${exercise.name} down`}
+                >
+                  <Ionicons
+                    name="chevron-down"
+                    size={16}
+                    color={index === exercises.length - 1 ? colors.border : colors.textMuted}
+                  />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.cardActions}>
+                <TouchableOpacity
+                  onPress={() => openEdit(routineExercise, exercise)}
+                  hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+                >
+                  <Ionicons name="create-outline" size={20} color={colors.textMuted} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => handleOpenSwap(routineExercise, exercise)}
+                  hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+                  accessibilityLabel={`Swap ${exercise.name}`}
+                >
+                  <Ionicons name="swap-horizontal" size={20} color={colors.textMuted} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => Alert.alert(
+                    'Remove exercise?',
+                    `Remove ${exercise.name} from this routine?`,
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Remove', style: 'destructive', onPress: () => removeExercise(routineExercise) },
+                    ],
+                  )}
+                  hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+                >
+                  <Ionicons name="trash-outline" size={20} color={colors.error} />
+                </TouchableOpacity>
+              </View>
+            )}
           </TouchableOpacity>
         )}
         ListFooterComponent={
@@ -562,6 +593,16 @@ const styles = StyleSheet.create({
   exerciseWhy: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic', marginTop: 2, lineHeight: 16 },
   exerciseStartWeight: { fontSize: fontSize.xs, color: colors.primary },
   cardActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  reorderActions: { flexDirection: 'column', alignItems: 'center', gap: spacing.xs },
+  reorderBtn: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface2,
+  },
+  reorderBtnDisabled: { opacity: 0.3 },
   editOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   editSheet: {
     backgroundColor: colors.surface,
