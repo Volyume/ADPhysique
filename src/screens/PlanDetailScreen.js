@@ -9,7 +9,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import {
   getProgrammeById, getRoutinesForPlan, getAllRoutineExerciseCounts,
-  setActivePlan, activatePlanWithBlock, archivePlan, duplicatePlan, copyPlanFromLibrary,
+  activatePlanWithBlock, archivePlan, duplicatePlan, copyPlanFromLibrary,
   createWorkout, getRoutineExercisesWithDetails, getActivePlan,
 } from '../lib/database';
 import useAppStore from '../store/useAppStore';
@@ -86,23 +86,6 @@ export default function PlanDetailScreen({ navigation, route }) {
     await activatePlanWithBlock(user.id, planId, plan?.name ?? 'Training Plan');
     await loadData();
     Alert.alert('Plan Activated', `"${plan?.name}" is now your active plan. Train will show the next workout.`);
-  }
-
-  async function handleDeactivate() {
-    Alert.alert(
-      'Deactivate Plan?',
-      'Train will show no plan until another is set active.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Deactivate',
-          onPress: async () => {
-            await setActivePlan(user.id, null);
-            await loadData();
-          },
-        },
-      ],
-    );
   }
 
   async function handleStartWorkout(routine) {
@@ -204,16 +187,12 @@ export default function PlanDetailScreen({ navigation, route }) {
             <Ionicons name="copy-outline" size={20} color={colors.background} />
             <Text style={styles.primaryBtnText}>Add to my plans</Text>
           </TouchableOpacity>
-        ) : isActive ? (
-          <TouchableOpacity style={styles.deactivateBtn} onPress={handleDeactivate}>
-            <Text style={styles.deactivateBtnText}>Deactivate</Text>
-          </TouchableOpacity>
-        ) : (
+        ) : !isActive ? (
           <TouchableOpacity style={styles.primaryBtn} onPress={handleSetActive}>
             <Ionicons name="checkmark-circle" size={20} color={colors.background} />
             <Text style={styles.primaryBtnText}>Set active</Text>
           </TouchableOpacity>
-        )}
+        ) : null}
 
         {/* Workouts list */}
         <View style={styles.section}>

@@ -105,7 +105,7 @@ export default function ProUpgradeScreen({ navigation }) {
           </View>
           <Text style={styles.successTitle}>You're Pro.</Text>
           <Text style={styles.successBody}>
-            Everything's unlocked and your data is backed up. As a beta tester you keep extended Pro free when we launch fully.
+            Everything's unlocked and your data is backed up to your account.
           </Text>
           <TouchableOpacity
             style={styles.primaryBtn}
@@ -151,34 +151,6 @@ export default function ProUpgradeScreen({ navigation }) {
                 <Text style={styles.perkText}>{p.text}</Text>
               </View>
             ))}
-          </View>
-
-          <View style={styles.pricingRow}>
-            <View style={[styles.pricingTier, styles.pricingTierHighlight]}>
-              <View style={styles.pricingTierBadge}>
-                <Text style={styles.pricingTierBadgeText}>Now</Text>
-              </View>
-              <Text style={styles.pricingAmount}>£0</Text>
-              <Text style={styles.pricingPeriod}>during beta</Text>
-              <Text style={styles.pricingNote}>No card needed</Text>
-            </View>
-            <View style={styles.pricingTier}>
-              <Text style={styles.pricingTierLabel}>After beta (you)</Text>
-              <Text style={styles.pricingAmount}>£1.99</Text>
-              <Text style={styles.pricingPeriod}>/month</Text>
-              <Text style={styles.pricingNote}>Locked for life as a beta tester</Text>
-            </View>
-          </View>
-
-          <View style={styles.offerCard}>
-            <View style={styles.offerBadge}>
-              <Ionicons name="star" size={11} color={colors.background} />
-              <Text style={styles.offerBadgeText}>Beta tester offer</Text>
-            </View>
-            <Text style={styles.offerText}>
-              Free during beta. When billing starts, you keep £1.99/month for life — that's locked in for you specifically. Standard rate after beta is £2.99/month or £24.99/year, with a 14-day free trial for new users. No card required to sign up, no ads ever.
-            </Text>
-            <Text style={styles.cancelNote}>Cancel anytime, two taps. No questions.</Text>
           </View>
 
           {hasAccount ? (

@@ -47,27 +47,16 @@ const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '', rir: 
 const SET_TYPE_DISPLAY = {
   straight: 'Working',
   warmup: 'Warm-up',
-  dropset: 'Drop Set',
+  dropset: 'Working',
   amrap: 'Working',
-  myo_reps: 'Myo-reps',
-  rest_pause: 'Rest-pause',
+  myo_reps: 'Working',
+  rest_pause: 'Working',
   superset: 'Working',
 };
 
 const SET_TYPE_OPTIONS = [
-  { value: 'straight', label: 'Working', description: 'Counts as a full working set. Use this for all your main sets.' },
-  { value: 'warmup', label: 'Warm-up', description: 'Preparation set to get ready. Not counted in your weekly totals.' },
-  { value: 'dropset', label: 'Drop Set', description: 'Reduce the weight and keep going. Counted in your weekly totals.' },
-  {
-    value: 'myo_reps',
-    label: 'Myo-reps',
-    description: 'One activation set to near failure, then 3-5 short clusters of 3-5 reps with 10-20s rest between each. High stimulus, time-efficient.',
-  },
-  {
-    value: 'rest_pause',
-    label: 'Rest-pause',
-    description: 'Take your set to near failure, rest 10-20s, then crank out a few more reps. Repeat 2-3 times. Use sparingly on isolation lifts.',
-  },
+  { value: 'straight', label: 'Working', description: 'Counts toward your weekly totals and progress tracking.' },
+  { value: 'warmup', label: 'Warm-up', description: 'Lighter sets before your main work. Not counted in your weekly totals.' },
 ];
 
 // Returns the set to use as the rep-progression anchor.
@@ -133,7 +122,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [ghostSet, setGhostSet] = useState(null); // pre-fill from last session (same set index)
   const [nextTimeNotes, setNextTimeNotes] = useState([]);  // "next time" coaching notes for this routine
   // Cluster counter for myo-reps / rest-pause: 0 = activation set, 1+ = mini-set N+1
-  const [clusterCount, setClusterCount] = useState(0);
   const autoAdvanceRef = useRef(null);
   const sessionSetsRef = useRef([]);   // tracks sets in this session — used for PR detection
   const warmupHintSeenRef = useRef(false); // show one-liner warmup note only on first warmup of this session
@@ -163,10 +151,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
   function handleNextExercise() {
     if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
-    const prevIdx = currentExerciseIndex;
     setCurrentExerciseIndex(currentExerciseIndex + 1);
     setTimeout(() => scrollRef.current?.scrollTo({ y: 0, animated: true }), 50);
-    maybeTriggerStimulusRating(prevIdx);
   }
 
   function handleTogglePair() {
@@ -605,14 +591,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     loadHistory();
   }, [exercise?.id, currentExerciseIndex]);
 
-  // Reset the cluster counter whenever the user leaves a cluster set type.
-  // This keeps "activation set" / "mini-set N" labelling tied to the currently
-  // active myo-reps or rest-pause cluster only.
-  useEffect(() => {
-    if (currentSet.setType !== 'myo_reps' && currentSet.setType !== 'rest_pause') {
-      setClusterCount(0);
-    }
-  }, [currentSet.setType]);
 
   useEffect(() => {
     if (prevSets.length > 0 && currentSet.weight && currentSet.reps) {
@@ -638,7 +616,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // rather than silently saving a 0 kg set.
     const isBodyweight = /body\s*weight/i.test(exercise.equipment || '');
     const weightNum = parseFloat(currentSet.weight);
-    if (!isBodyweight && (currentSet.weight === '' || currentSet.weight == null || isNaN(weightNum))) {
+    if (!isBodyweight && (currentSet.weight === '' || currentSet.weight == null || isNaN(weightNum) || weightNum <= 0)) {
       Alert.alert('Enter weight', `Enter the weight used (in ${units}) before completing this set.`);
       return;
     }
@@ -761,17 +739,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // Prepare next set
       setNoteText('');
       setShowNoteInput(false);
-      // After a drop set, revert to straight so the count stays clean
-      if (currentSet.setType === 'dropset') {
-        setCurrentSet(cs => ({ ...cs, setType: 'straight' }));
-      }
-      // For myo-reps / rest-pause clusters: keep the set type sticky and just
-      // bump the cluster counter so the next set is labelled as the next
-      // mini-set. The user exits the cluster manually via the "Cluster
-      // complete" button below the Log Set action.
-      if (currentSet.setType === 'myo_reps' || currentSet.setType === 'rest_pause') {
-        setClusterCount(c => c + 1);
-      }
       // If warmup was just completed, mark hint seen and auto-switch to working set
       if (currentSet.setType === 'warmup') {
         warmupHintSeenRef.current = true;
@@ -920,15 +887,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               });
             }
 
-            // Check if the current exercise has working sets that need rating
-            const currentEntry = snapshotExercises[currentExerciseIndex];
-            const hasWorkingSets = (currentEntry?.sets || []).some(s => s.setType !== 'warmup');
-            if (hasWorkingSets) {
-              pendingFinishRef.current = doFinish;
-              maybeTriggerStimulusRating(currentExerciseIndex);
-            } else {
-              await doFinish();
-            }
+            await doFinish();
           },
         },
       ],
@@ -1013,9 +972,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 key={i}
                 style={[styles.navTab, i === currentExerciseIndex && styles.navTabActive]}
                 onPress={() => {
-                  const prevIdx = currentExerciseIndex;
                   setCurrentExerciseIndex(i);
-                  if (i > prevIdx) maybeTriggerStimulusRating(prevIdx);
                 }}
                 accessibilityRole="button"
                 accessibilityLabel={entry.exercise?.name || `Exercise ${i + 1}`}
@@ -1154,21 +1111,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           <View style={[
             styles.setEntryCard,
             currentSet.setType === 'warmup' && styles.setEntryCardWarmup,
-            currentSet.setType === 'dropset' && styles.setEntryCardDrop,
           ]}>
-            {(currentSet.setType === 'myo_reps' || currentSet.setType === 'rest_pause') && (
-              <View style={styles.clusterBanner}>
-                <Ionicons
-                  name={currentSet.setType === 'myo_reps' ? 'pulse-outline' : 'flash-outline'}
-                  size={14}
-                  color={colors.primary}
-                />
-                <Text style={styles.clusterBannerText}>
-                  {currentSet.setType === 'myo_reps' ? 'Myo-reps' : 'Rest-pause'} cluster
-                  {clusterCount > 0 ? ` · mini-set ${clusterCount + 1} · take 10-20s rest` : ' · activation set'}
-                </Text>
-              </View>
-            )}
             {currentSet.setType === 'warmup' && (
               <View style={styles.warmupBanner}>
                 <Ionicons name="flame-outline" size={14} color={colors.warning} />
@@ -1180,24 +1123,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 Get the muscles and joints ready. Light weight, easy reps. Tap Done when you're ready to work.
               </Text>
             )}
-            {currentSet.setType === 'dropset' && (
-              <View style={styles.dropBanner}>
-                <Ionicons name="arrow-down-circle-outline" size={14} color={colors.gold} />
-                <Text style={styles.dropBannerText}>Drop set ↓ · lower the weight, keep going</Text>
-              </View>
-            )}
             <Text style={styles.setEntryTitle}>
               {currentSet.setType === 'warmup'
                 ? 'Warm-up set'
-                : currentSet.setType === 'dropset'
-                  ? `Drop set · after Set ${workingLogged}`
-                  : (currentSet.setType === 'myo_reps' || currentSet.setType === 'rest_pause')
-                    ? (clusterCount === 0 ? 'Activation set' : `Mini-set ${clusterCount + 1}`)
-                    : isDeloadWeek
-                      ? `Light set ${workingLogged + 1} · Easy`
-                      : routineExercise?.recommendedSets
-                        ? `Set ${workingLogged + 1} / ${routineExercise.recommendedSets} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working'}`
-                        : `Set ${workingLogged + 1} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working'}`}
+                : isDeloadWeek
+                  ? `Light set ${workingLogged + 1} · Easy`
+                  : routineExercise?.recommendedSets
+                    ? `Set ${workingLogged + 1} / ${routineExercise.recommendedSets}`
+                    : `Set ${workingLogged + 1}`}
             </Text>
             {currentSet.setType !== 'warmup' && setTargets[workingLogged] && (
               <View style={styles.inlineTargetChip}>
@@ -1331,20 +1264,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               <Text style={[styles.completeBtnText, currentSet.setType === 'warmup' && styles.completeBtnTextWarmup]}>
                 {currentSet.setType === 'warmup' ? 'Done' : 'Log set'}
               </Text>
-            </TouchableOpacity>
-          )}
-
-          {(currentSet.setType === 'myo_reps' || currentSet.setType === 'rest_pause') && clusterCount > 0 && (
-            <TouchableOpacity
-              style={styles.clusterDoneBtn}
-              onPress={() => {
-                setCurrentSet({ ...currentSet, setType: 'straight' });
-                setClusterCount(0);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Cluster complete, return to working sets"
-            >
-              <Text style={styles.clusterDoneBtnText}>Cluster complete — back to working sets</Text>
             </TouchableOpacity>
           )}
 
@@ -1505,12 +1424,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           visible={showExercisePicker}
           onClose={() => setShowExercisePicker(false)}
           onSelect={ex => {
-            const prevIdx = currentExerciseIndex;
             const newIndex = workoutExercises.length;
             addExerciseToWorkout(ex);
             setCurrentExerciseIndex(newIndex);
             setShowExercisePicker(false);
-            maybeTriggerStimulusRating(prevIdx);
           }}
         />
 
@@ -1729,71 +1646,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           </View>
         </Modal>
 
-        {/* Per-exercise stimulus rating sheet */}
-        <Modal
-          visible={stimulusRating !== null}
-          transparent
-          animationType="slide"
-          onRequestClose={() => handleStimulusRatingSkip()}
-        >
-          <TouchableOpacity
-            style={styles.ratingBackdrop}
-            activeOpacity={1}
-            onPress={() => handleStimulusRatingSkip()}
-          />
-          <View style={styles.ratingSheet}>
-            <Text style={styles.ratingTitle}>
-              How did {stimulusRating?.exerciseName} feel?
-            </Text>
-
-            {/* Pump row */}
-            <View style={styles.ratingRow}>
-              <Text style={styles.ratingLabel}>Pump</Text>
-              <View style={styles.ratingDots}>
-                {[1,2,3,4,5].map(v => (
-                  <TouchableOpacity
-                    key={v}
-                    style={[styles.ratingDot, stimulusRating?.pump >= v && styles.ratingDotFilled]}
-                    onPress={() => setStimulusRating(r => ({ ...r, pump: v }))}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  />
-                ))}
-              </View>
-            </View>
-
-            {/* Mind-muscle connection row */}
-            <View style={styles.ratingRow}>
-              <Text style={styles.ratingLabel}>Connection</Text>
-              <View style={styles.ratingDots}>
-                {[1,2,3,4,5].map(v => (
-                  <TouchableOpacity
-                    key={v}
-                    style={[styles.ratingDot, stimulusRating?.connection >= v && styles.ratingDotFilled]}
-                    onPress={() => setStimulusRating(r => ({ ...r, connection: v }))}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  />
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.ratingActions}>
-              <TouchableOpacity
-                style={styles.ratingSaveBtn}
-                onPress={handleStimulusRatingSave}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.ratingSaveBtnText}>Save</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.ratingSkipBtn}
-                onPress={() => handleStimulusRatingSkip()}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Text style={styles.ratingSkipText}>Skip</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
 
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -2277,74 +2129,4 @@ const styles = StyleSheet.create({
   warmupRowTextDone: { textDecorationLine: 'line-through', color: colors.textMuted },
   warmupLogBtn: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, backgroundColor: colors.primaryBg, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.primary + '60' },
   warmupLogBtnText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.bold },
-  ratingBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  ratingSheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    padding: spacing.xl,
-    gap: spacing.lg,
-    paddingBottom: spacing.xxxl,
-  },
-  ratingTitle: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.textPrimary,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  ratingLabel: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    fontWeight: fontWeight.medium,
-    flex: 1,
-  },
-  ratingDots: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  ratingDot: {
-    width: 28,
-    height: 28,
-    borderRadius: radius.sm,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2,
-  },
-  ratingDotFilled: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  ratingActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.lg,
-    marginTop: spacing.xs,
-  },
-  ratingSaveBtn: {
-    flex: 1,
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
-  ratingSaveBtnText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.background,
-  },
-  ratingSkipBtn: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-  },
-  ratingSkipText: {
-    fontSize: fontSize.sm,
-    color: colors.textMuted,
-  },
 });

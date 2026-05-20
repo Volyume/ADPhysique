@@ -9,10 +9,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { VolyumeMark } from '../components/BrandMark';
 import useAppStore from '../store/useAppStore';
-import { logBodyMetric, saveNutritionTargets, saveUserBodyProfile, migrateLocalUserId } from '../lib/database';
+import { logBodyMetric, saveNutritionTargets, saveUserBodyProfile } from '../lib/database';
 import { stoneLbsToKg, ftInToCm, parseBodyWeightToKg } from '../lib/units';
-import { signUpWithEmail } from '../lib/supabase';
-import { bulkUploadLocalData, syncProfile } from '../lib/sync';
 import {
   requestNotificationPermissions,
   scheduleMorningWeightNotification,
@@ -29,7 +27,7 @@ import { calculateNutritionTargets } from '../lib/nutritionEngine';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 3;
 
 // Default days per week — used for nutrition calc without asking the user.
 const DEFAULT_DAYS_PER_WEEK = 4;
@@ -160,13 +158,6 @@ export default function ProOnboardingScreen({ navigation }) {
   const [checkinEnabled, setCheckinEnabled] = useState(true);
   const [checkinDay, setCheckinDay] = useState(0);
 
-  // Step 4 — account
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [emailFocused, setEmailFocused] = useState(false);
-  const [passwordFocused, setPasswordFocused] = useState(false);
-
   const [busy, setBusy] = useState(false);
 
   const nameRef = useRef(null);
@@ -177,26 +168,6 @@ export default function ProOnboardingScreen({ navigation }) {
     }
   }, [step]);
 
-  // When the user confirms their email via deep link and we're on the account step.
-  useEffect(() => {
-    if (user?.id && step >= 4) {
-      syncProfile(user.id, userProfile, 'pro', { isBetaTester: true }).catch(() => {});
-      navigation.navigate('CoachBuilder', {
-        firstRun: true,
-        prefilled: {
-          experience,
-          daysPerWeek: DEFAULT_DAYS_PER_WEEK,
-          sessionLengthMinutes,
-          equipment,
-          goal: trainingGoal,
-          phase: trainingPhase,
-          weakPoints: [],
-          recoveryRating,
-          nutritionCalculated: true,
-        },
-      });
-    }
-  }, [user?.id]);
 
   // ── Step transition helpers ──────────────────────────────────────────────────
 
@@ -327,62 +298,7 @@ export default function ProOnboardingScreen({ navigation }) {
       return;
     }
     setBusy(false);
-    setStep(4);
-  }
-
-  async function finishWithAccount() {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('Missing fields', 'Enter your email and a password to continue.');
-      return;
-    }
-    if (password.length < 8) {
-      Alert.alert('Password too short', 'Use at least 8 characters.');
-      return;
-    }
-    setBusy(true);
-    try {
-      const { data, error } = await signUpWithEmail(email.trim(), password);
-      if (error) {
-        Alert.alert('Signup error', error.message);
-        setBusy(false);
-        return;
-      }
-      if (data.user && !data.session) {
-        Alert.alert(
-          'Check your email',
-          'We sent a confirmation link. Confirm it then sign back in.',
-        );
-        setBusy(false);
-        return;
-      }
-      if (data.session) {
-        const supabaseUserId = data.session.user.id;
-        const localUserId = user?.id;
-        await migrateLocalUserId(localUserId, supabaseUserId).catch(() => {});
-        syncProfile(supabaseUserId, userProfile, 'pro', { isBetaTester: true }).catch(() => {});
-        bulkUploadLocalData(supabaseUserId, localUserId).catch(() => {});
-      }
-    } catch (_) {}
-    setBusy(false);
-    navigation.navigate('CoachBuilder', {
-      firstRun: true,
-      prefilled: {
-        experience,
-        daysPerWeek: DEFAULT_DAYS_PER_WEEK,
-        sessionLengthMinutes,
-        equipment,
-        goal: trainingGoal,
-        phase: trainingPhase,
-        weakPoints: [],
-        recoveryRating,
-        nutritionCalculated: true,
-      },
-    });
-  }
-
-  async function skipAccount() {
-    const { setTier } = useAppStore.getState();
-    await setTier('free');
+    navigation.navigate('ProSetupComplete');
   }
 
   // ── Progress bar ─────────────────────────────────────────────────────────────
@@ -424,7 +340,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
   if (step === 1) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView key="step-1" style={styles.safe}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <Header
@@ -627,7 +543,7 @@ export default function ProOnboardingScreen({ navigation }) {
     const canContinue = !!experience && !!sessionLengthMinutes && !!equipment && !!trainingGoal && !!trainingPhase;
 
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView key="step-2" style={styles.safe}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <TouchableOpacity style={styles.backBtn} onPress={goBack} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -715,7 +631,7 @@ export default function ProOnboardingScreen({ navigation }) {
     const canContinue = !!recoveryRating;
 
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView key="step-3" style={styles.safe}>
         <ScrollView contentContainerStyle={styles.scroll}>
           <TouchableOpacity style={styles.backBtn} onPress={goBack} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
@@ -849,126 +765,7 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 4 — Create your account ────────────────────────────────────────────
-
-  return (
-    <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          <TouchableOpacity style={styles.backBtn} onPress={goBack} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
-            <Text style={styles.backBtnText}>Back</Text>
-          </TouchableOpacity>
-
-          <Header
-            title="Almost there."
-            sub="Create your account to lock in your beta access and keep everything safe."
-          />
-
-          <View style={styles.offerCard}>
-            <View style={styles.offerBadgeRow}>
-              <View style={styles.offerBadge}>
-                <Ionicons name="star" size={11} color={colors.background} />
-                <Text style={styles.offerBadgeText}>Beta tester offer</Text>
-              </View>
-            </View>
-            <Text style={styles.offerHeadline}>Get extended Pro free at launch.</Text>
-            <Text style={styles.offerBody}>
-              Sign up now and you're locked in. When Volyume moves out of beta, everyone who tested with us gets extended Pro at no cost. No card, no catch.
-            </Text>
-            <View style={styles.offerPerks}>
-              <View style={styles.offerPerk}>
-                <Ionicons name="checkmark-circle" size={14} color={colors.primary} />
-                <Text style={styles.offerPerkText}>Your data backed up securely</Text>
-              </View>
-              <View style={styles.offerPerk}>
-                <Ionicons name="checkmark-circle" size={14} color={colors.primary} />
-                <Text style={styles.offerPerkText}>Switch phones, keep everything</Text>
-              </View>
-              <View style={styles.offerPerk}>
-                <Ionicons name="checkmark-circle" size={14} color={colors.primary} />
-                <Text style={styles.offerPerkText}>Pro access continues after beta</Text>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.fieldLabel}>Email</Text>
-            <View style={[styles.fieldWrap, emailFocused && styles.fieldWrapFocused]}>
-              <TextInput
-                style={styles.fieldInput}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="you@example.com"
-                placeholderTextColor={colors.textDisabled}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoComplete="email"
-                textContentType="emailAddress"
-                onFocus={() => setEmailFocused(true)}
-                onBlur={() => setEmailFocused(false)}
-              />
-            </View>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.fieldLabel}>Password</Text>
-            <View style={[styles.fieldWrap, passwordFocused && styles.fieldWrapFocused]}>
-              <TextInput
-                style={[styles.fieldInput, { paddingRight: 48 }]}
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Min 8 characters"
-                placeholderTextColor={colors.textDisabled}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoComplete="new-password"
-                textContentType="newPassword"
-                onFocus={() => setPasswordFocused(true)}
-                onBlur={() => setPasswordFocused(false)}
-              />
-              <TouchableOpacity
-                style={styles.eyeBtn}
-                onPress={() => setShowPassword(v => !v)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Ionicons
-                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                  size={19}
-                  color={colors.textMuted}
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <TouchableOpacity
-            style={[styles.primaryBtn, busy && styles.btnDisabled]}
-            onPress={finishWithAccount}
-            disabled={busy}
-            activeOpacity={0.88}
-          >
-            {busy ? (
-              <ActivityIndicator color={colors.background} />
-            ) : (
-              <>
-                <Text style={styles.primaryBtnText}>Create account and continue</Text>
-                <Ionicons name="arrow-forward" size={18} color={colors.background} />
-              </>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.skipBtn} onPress={skipAccount}>
-            <Text style={styles.skipBtnText}>Continue as Free instead</Text>
-          </TouchableOpacity>
-          <Text style={styles.skipNote}>
-            Without an account, Pro features are only active on this device and can't be verified after beta ends. You can sign up later from Settings.
-          </Text>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
-  );
+  return null;
 }
 
 const styles = StyleSheet.create({
