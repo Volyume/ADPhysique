@@ -4,6 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
+import { scheduleRestNotif, cancelRestNotif } from '../lib/restNotifications';
 
 const TIME_ADJUSTMENTS = [
   { delta: -30, label: '−30s' },
@@ -16,6 +17,7 @@ export default function RestTimer() {
   const { restTimerActive, restTimerRemaining, restTimerDuration, stopRestTimer, tickRestTimer, addRestTime } =
     useAppStore();
   const intervalRef = useRef(null);
+  const notifIdRef = useRef(null);
   const progressAnim = useRef(new Animated.Value(1)).current;
   const [showDone, setShowDone] = useState(false);
 
@@ -33,10 +35,17 @@ export default function RestTimer() {
         useNativeDriver: false,
       }).start();
       intervalRef.current = setInterval(() => { tickRestTimer(); }, 1000);
+      // Schedule a local notification so the alert fires when screen is locked
+      scheduleRestNotif(remaining).then(id => { notifIdRef.current = id; });
     } else {
       clearInterval(intervalRef.current);
       progressAnim.stopAnimation();
       progressAnim.setValue(1);
+      // Cancel any pending rest notification (timer was skipped or completed in foreground)
+      if (notifIdRef.current) {
+        cancelRestNotif(notifIdRef.current);
+        notifIdRef.current = null;
+      }
     }
     return () => clearInterval(intervalRef.current);
   }, [restTimerActive]);

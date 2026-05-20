@@ -40,6 +40,7 @@ import InfoTooltip from '../components/InfoTooltip';
 import { applyTimeCrunch } from '../lib/mesocycle';
 import { getTimeCrunchMessage } from '../lib/whyThisTemplates';
 import { estimateWorkoutMinutes } from '../lib/planEngine';
+import { hasSeenNotifPrompt, markNotifPromptSeen, requestNotifPermission } from '../lib/restNotifications';
 
 const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '', rir: 2 };
 
@@ -119,6 +120,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [exerciseNote, setExerciseNote] = useState('');       // persisted per-user per-exercise note
   const [showExerciseNote, setShowExerciseNote] = useState(false); // expand/collapse the note area
   const [ghostSet, setGhostSet] = useState(null); // pre-fill from last session (same set index)
+  const [showNotifPrompt, setShowNotifPrompt] = useState(false);
   const autoAdvanceRef = useRef(null);
   const sessionSetsRef = useRef([]);   // tracks sets in this session — used for PR detection
   const warmupHintSeenRef = useRef(false); // show one-liner warmup note only on first warmup of this session
@@ -551,6 +553,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
       // Start rest timer with per-exercise duration
       startRestTimer(routineExercise?.restSeconds || 90);
+
+      // Show notification soft-prompt on first timer start, once per install
+      hasSeenNotifPrompt().then(seen => {
+        if (!seen) setShowNotifPrompt(true);
+      });
 
       // Auto-advance to next exercise when target sets just completed
       const newWorkingCount = countProgressSets(newLoggedSets);
@@ -1445,6 +1452,34 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             />
           </SafeAreaView>
         </Modal>
+        {/* Notification soft-prompt — shown once, before requesting OS permission */}
+        <Modal visible={showNotifPrompt} transparent animationType="fade" onRequestClose={() => { markNotifPromptSeen(); setShowNotifPrompt(false); }}>
+          <View style={styles.discardOverlay}>
+            <View style={styles.discardSheet}>
+              <Text style={styles.discardTitle}>Stay on track between sets</Text>
+              <Text style={styles.discardBody}>
+                Volyume uses notifications only for the rest timer when your screen is locked. No streaks, no nudges.
+              </Text>
+              <TouchableOpacity
+                style={styles.keepTrainingBtn}
+                onPress={async () => {
+                  await markNotifPromptSeen();
+                  await requestNotifPermission();
+                  setShowNotifPrompt(false);
+                }}
+              >
+                <Text style={styles.keepTrainingBtnText}>Allow notifications</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.discardConfirmBtn}
+                onPress={async () => { await markNotifPromptSeen(); setShowNotifPrompt(false); }}
+              >
+                <Text style={styles.discardConfirmBtnText}>No thanks</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
         {/* Discard Workout Modal */}
         <Modal visible={showDiscardModal} transparent animationType="fade" onRequestClose={() => setShowDiscardModal(false)}>
           <View style={styles.discardOverlay}>
