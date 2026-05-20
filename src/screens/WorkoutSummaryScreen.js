@@ -12,6 +12,7 @@ import {
   getActivePlan, getRoutinesForPlan, advancePlanNextWorkout,
   createAdaptationEvent, getCurrentMesocycleWeek,
   getNextMesocycleWeek, upsertPlannedMuscleVolume, getRecentAdaptationEvents,
+  saveWeeklyCheckin,
 } from '../lib/database';
 import { calculateWeeklyVolume, getVolumeStatus, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine, computeAdaptiveDecision, VOLUME_LANDMARKS, evaluateDeloadTriggers } from '../lib/algorithms';
 import { evaluateAutoReg, predictDeloadWeek, getMesoSchedule } from '../lib/mesocycle';
@@ -25,7 +26,19 @@ const RATING_LABELS = {
   soreness24hBefore: ['', 'Fresh', 'Mild', 'Sore'],
   fatigueLevel: ['', 'Fresh', 'Mild', 'Moderate', 'High', 'Exhausted'],
   jointDiscomfort: ['None', 'Slight', 'Moderate', 'Significant'],
+  energyScore: ['', 'Low', 'Fair', 'Moderate', 'Good', 'High'],
+  sleepQuality: ['', 'Poor', 'Fair', 'OK', 'Good', 'Excellent'],
 };
+
+function getWeekStart() {
+  const now = new Date();
+  const day = now.getDay(); // 0=Sun, 1=Mon...
+  const diff = (day === 0 ? -6 : 1 - day); // Monday-first
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + diff);
+  monday.setHours(0, 0, 0, 0);
+  return monday.getTime();
+}
 
 function RatingRow({ label, field, value, max, onChange }) {
   const labels = RATING_LABELS[field];
@@ -67,6 +80,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     soreness24hBefore: 1,
     fatigueLevel: 2,
     jointDiscomfort: 0,
+    energyScore: 3,
+    sleepQuality: 3,
   });
   const [notes, setNotes] = useState('');
   const [weeklyVolume, setWeeklyVolume] = useState({});
@@ -265,6 +280,25 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         notes: notes || null,
       });
     } catch (_e) {}
+
+    // Save energy and sleep quality to weekly_checkins for recovery tracking
+    if (user?.id) {
+      try {
+        await saveWeeklyCheckin(user.id, {
+          weekStart: getWeekStart(),
+          energyScore: feedback.energyScore || null,
+          sorenessScore: feedback.soreness24hBefore || null,
+          sleepQuality: feedback.sleepQuality || null,
+          sleepHours: null,
+          calsAdherence: null,
+          stepsAdherence: null,
+          notes: null,
+          trainingPerformance: String(feedback.sessionDifficulty || ''),
+          jointPain: feedback.jointDiscomfort >= 2 ? 1 : 0,
+          soreMuscles: null,
+        });
+      } catch (_e) {}
+    }
 
     // Write adaptation events for engine decisions
     try {
@@ -520,6 +554,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 <RatingRow label="Soreness coming in" field="soreness24hBefore" value={feedback.soreness24hBefore} max={3} onChange={v => setFeedback(f => ({ ...f, soreness24hBefore: v }))} />
                 <RatingRow label="Fatigue" field="fatigueLevel" value={feedback.fatigueLevel} max={5} onChange={v => setFeedback(f => ({ ...f, fatigueLevel: v }))} />
                 <RatingRow label="Joint discomfort" field="jointDiscomfort" value={feedback.jointDiscomfort} max={3} onChange={v => setFeedback(f => ({ ...f, jointDiscomfort: v }))} />
+                <RatingRow label="Energy today" field="energyScore" value={feedback.energyScore} max={5} onChange={v => setFeedback(f => ({ ...f, energyScore: v }))} />
+                <RatingRow label="Sleep last night" field="sleepQuality" value={feedback.sleepQuality} max={5} onChange={v => setFeedback(f => ({ ...f, sleepQuality: v }))} />
                 <TextInput
                   style={styles.notesInput}
                   value={notes}
