@@ -91,6 +91,7 @@ export default function AnalyticsScreen({ navigation }) {
   const { user, units } = useAppStore(useShallow(s => ({ user: s.user, units: s.units })));
 
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Section data
   const [activeMeso, setActiveMeso]         = useState(null);
@@ -133,6 +134,8 @@ export default function AnalyticsScreen({ navigation }) {
       ]);
     } catch (e) {
       console.error('AnalyticsScreen load:', e);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -332,6 +335,17 @@ export default function AnalyticsScreen({ navigation }) {
           <Text style={styles.pageTitle}>Progress</Text>
           <VolyumeMark size={38} color={colors.textMuted} />
         </View>
+
+        {/* ── Empty state ───────────────────────────────────── */}
+        {!loading && allSets.length === 0 && (
+          <View style={styles.emptyState}>
+            <Ionicons name="analytics-outline" size={48} color={colors.textMuted} />
+            <Text style={styles.emptyStateHeading}>No data yet</Text>
+            <Text style={styles.emptyStateBody}>
+              Your progress charts will appear here after your first few sessions. Log a workout to get started.
+            </Text>
+          </View>
+        )}
 
         {/* ── 1 · Mesocycle Pulse Card ───────────────────────── */}
         <View style={[styles.rowBetween, { paddingHorizontal: spacing.lg, marginBottom: spacing.sm }]}>
@@ -854,4 +868,24 @@ const styles = StyleSheet.create({
     color: colors.warning, marginBottom: 2,
   },
   deloadSub: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+
+  // ── Analytics empty state ──
+  emptyState: {
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    paddingTop: 48,
+    gap: spacing.md,
+  },
+  emptyStateHeading: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+    textAlign: 'center',
+  },
+  emptyStateBody: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
 });

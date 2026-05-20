@@ -374,15 +374,11 @@ export default function WorkoutHistoryScreen({ navigation }) {
         ListEmptyComponent={
           !loading ? (
             <View style={styles.empty}>
-              <Ionicons name="barbell-outline" size={48} color={colors.surface3} />
+              <Ionicons name="calendar-outline" size={48} color={colors.textMuted} />
               <Text style={styles.emptyTitle}>No sessions logged yet</Text>
               <Text style={styles.emptyText}>
-                Every workout you finish will appear here. Log your first session and start tracking your progress.
+                Completed workouts appear here. Each session is saved automatically when you finish.
               </Text>
-              <TouchableOpacity style={styles.startBtn} onPress={handleStartNewWorkout}>
-                <Ionicons name="add-circle-outline" size={18} color={colors.background} />
-                <Text style={styles.startBtnText}>Start a session</Text>
-              </TouchableOpacity>
             </View>
           ) : null
         }
@@ -599,34 +595,20 @@ const styles = StyleSheet.create({
   },
   empty: {
     alignItems: 'center',
+    paddingHorizontal: 32,
+    paddingTop: 48,
     gap: spacing.md,
-    paddingTop: spacing.xxxl,
   },
   emptyTitle: {
-    fontSize: fontSize.xl,
+    fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
-    color: colors.textSecondary,
+    color: colors.textPrimary,
+    textAlign: 'center',
   },
   emptyText: {
-    fontSize: fontSize.md,
-    color: colors.textMuted,
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
-    paddingHorizontal: spacing.xl,
-  },
-  startBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    marginTop: spacing.sm,
-  },
-  startBtnText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.background,
   },
 });

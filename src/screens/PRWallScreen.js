@@ -221,9 +221,11 @@ export default function PRWallScreen({ navigation }) {
         }}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Ionicons name="trophy-outline" size={48} color={colors.surface3} />
-            <Text style={styles.emptyTitle}>No PRs yet</Text>
-            <Text style={styles.emptyText}>Log workouts and PRs will be detected automatically</Text>
+            <Ionicons name="trophy-outline" size={48} color={colors.textMuted} />
+            <Text style={styles.emptyTitle}>No personal records yet</Text>
+            <Text style={styles.emptyText}>
+              Personal records are detected automatically as you train. Complete a few sessions and they will appear here.
+            </Text>
           </View>
         }
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
@@ -314,7 +316,22 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   standardInCardText: { fontSize: fontSize.xs, color: colors.textSecondary },
-  empty: { alignItems: 'center', gap: spacing.md, paddingTop: spacing.xxxl },
-  emptyTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textSecondary },
-  emptyText: { fontSize: fontSize.md, color: colors.textMuted, textAlign: 'center', paddingHorizontal: spacing.xxl },
+  empty: {
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    paddingTop: 48,
+    gap: spacing.md,
+  },
+  emptyTitle: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+    textAlign: 'center',
+  },
+  emptyText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
 });
