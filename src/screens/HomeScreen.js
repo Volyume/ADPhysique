@@ -523,7 +523,7 @@ export default function HomeScreen({ navigation }) {
                 <>
                   <Text style={styles.noPlanTitle}>Welcome. Let's get you started.</Text>
                   <Text style={styles.noPlanSub}>
-                    Not sure where to begin? Use Coach Builder and we'll put together a plan around your goals and schedule in two minutes.
+                    We will learn your training over the first few weeks and build recommendations from there.
                   </Text>
                 </>
               ) : (
@@ -555,6 +555,21 @@ export default function HomeScreen({ navigation }) {
                 </View>
               </View>
             )}
+
+            <TouchableOpacity
+              style={styles.quickStartCard}
+              onPress={() => navigation.navigate('ActiveWorkout', { blank: true })}
+              activeOpacity={0.75}
+            >
+              <View style={styles.quickStartIcon}>
+                <Ionicons name="barbell-outline" size={28} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.quickStartTitle}>Start your first session</Text>
+                <Text style={styles.quickStartSub}>Log sets as you go. No plan needed to begin. We will build your profile as you train.</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+            </TouchableOpacity>
 
             <PlanBuilderCard
               icon="sparkles"
@@ -1466,5 +1481,37 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.primary,
     marginTop: 1,
+  },
+
+  // Quick-start card (empty state fast path)
+  quickStartCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: colors.primaryBg,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    padding: 16,
+    marginBottom: 16,
+  },
+  quickStartIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.surface2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickStartTitle: {
+    color: colors.textPrimary,
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 3,
+  },
+  quickStartSub: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
   },
 });

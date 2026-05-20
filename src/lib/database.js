@@ -419,6 +419,19 @@ const SCHEMA_MIGRATIONS = [
   [
     'ALTER TABLE weekly_checkins ADD COLUMN sore_muscles TEXT',
   ],
+  // v11 — exercise user notes: persistent per-user per-exercise notes for machine settings, cues, etc.
+  [
+    `CREATE TABLE IF NOT EXISTS exercise_user_notes (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    exercise_id TEXT NOT NULL,
+    note TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    UNIQUE(user_id, exercise_id)
+  )`,
+    `CREATE INDEX IF NOT EXISTS idx_exercise_notes_user ON exercise_user_notes(user_id, exercise_id)`,
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
@@ -2368,5 +2381,46 @@ export async function insertWorkoutSetFromCloud(userId, s) {
       s.is_amrap ? 1 : 0, s.amrap_reps ?? null,
       Date.now(), Date.now(),
     ],
+  );
+}
+
+// ─── Exercise User Notes ──────────────────────────────────────────────────────
+
+export async function saveExerciseUserNote(userId, exerciseId, note) {
+  const d = await db();
+  const now = Date.now();
+  const existing = await d.getFirstAsync(
+    'SELECT id FROM exercise_user_notes WHERE user_id = ? AND exercise_id = ?',
+    [userId, exerciseId],
+  );
+  if (existing?.id) {
+    await d.runAsync(
+      'UPDATE exercise_user_notes SET note = ?, updated_at = ? WHERE id = ?',
+      [note, now, existing.id],
+    );
+    return existing.id;
+  }
+  const id = uid();
+  await d.runAsync(
+    'INSERT INTO exercise_user_notes (id, user_id, exercise_id, note, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+    [id, userId, exerciseId, note, now, now],
+  );
+  return id;
+}
+
+export async function getExerciseUserNote(userId, exerciseId) {
+  const d = await db();
+  const row = await d.getFirstAsync(
+    'SELECT note FROM exercise_user_notes WHERE user_id = ? AND exercise_id = ?',
+    [userId, exerciseId],
+  );
+  return row?.note ?? null;
+}
+
+export async function deleteExerciseUserNote(userId, exerciseId) {
+  const d = await db();
+  await d.runAsync(
+    'DELETE FROM exercise_user_notes WHERE user_id = ? AND exercise_id = ?',
+    [userId, exerciseId],
   );
 }

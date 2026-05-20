@@ -58,6 +58,7 @@ import ProOnboardingScreen from '../screens/ProOnboardingScreen';
 import ProSetupCompleteScreen from '../screens/ProSetupCompleteScreen';
 import ProUpgradeScreen from '../screens/ProUpgradeScreen';
 import CoachHeldHistoryScreen from '../screens/CoachHeldHistoryScreen';
+import CoachReviewScreen from '../screens/CoachReviewScreen';
 import BlockReflectionScreen from '../screens/BlockReflectionScreen';
 import YearOfLiftsScreen from '../screens/YearOfLiftsScreen';
 import WellbeingCheckScreen from '../screens/WellbeingCheckScreen';
@@ -93,6 +94,7 @@ function HomeStack() {
       <Stack.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} options={{ title: 'Workout History' }} />
       <Stack.Screen name="VolumeHeatmap" component={VolumeHeatmapScreen} options={{ title: 'Volume' }} />
       <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ title: 'Share Card' }} />
+      <Stack.Screen name="CoachReview" component={CoachReviewScreen} options={{ title: 'Weekly Review' }} />
       <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
     </Stack.Navigator>
   );
@@ -133,6 +135,7 @@ function ProgressStack({ navigation }) {
       <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ title: 'Session Complete' }} />
       <Stack.Screen name="VolumeHeatmap" component={VolumeHeatmapScreen} options={{ title: 'Volume Heatmap' }} />
       <Stack.Screen name="PRWall" component={PRWallScreen} options={{ title: 'Personal Records' }} />
+      <Stack.Screen name="CoachReview" component={CoachReviewScreen} options={{ title: 'Weekly Review' }} />
       <Stack.Screen name="BodyMetrics" component={GatedBodyMetrics} options={{ title: 'Body Metrics' }} />
       <Stack.Screen name="ExerciseLibrary" component={ExerciseLibraryScreen} options={{ title: 'Lift Progress' }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise' }} />

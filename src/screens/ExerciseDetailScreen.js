@@ -6,7 +6,7 @@ import { format } from 'date-fns';
 import { CartesianChart, Line, Area } from 'victory-native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { getExerciseById, getWorkoutSetsForExercise, getAllExercises } from '../lib/database';
-import { calculate1RM, getExerciseSubstitutes, MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
+import { calculate1RM, getExerciseSubstitutes, MUSCLE_DISPLAY_NAMES, detectPlateau } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 import { FORM_TIPS } from '../lib/formTips';
 import InfoTooltip from '../components/InfoTooltip';
@@ -18,6 +18,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   const [history, setHistory] = useState([]);
   const [prs, setPRs] = useState([]);
   const [substitutes, setSubstitutes] = useState([]);
+  const [plateau, setPlateau] = useState(null);
 
   useEffect(() => {
     if (exerciseId) loadData();
@@ -40,6 +41,11 @@ export default function ExerciseDetailScreen({ navigation, route }) {
       }
       const sessions = Object.values(byWorkout).slice(0, 8);
       setHistory(sessions);
+
+      // Plateau detection
+      const sessionArrays = sessions.map(s => s.sets ?? s); // newest-first already
+      const plateauResult = detectPlateau(sessionArrays, ex?.defaultRepMin ?? 6, ex?.defaultRepMax ?? 12);
+      setPlateau(plateauResult.plateau ? plateauResult : null);
 
       // Compute local PRs from working sets
       const workingSets = mySets.filter(
@@ -151,6 +157,16 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             </View>
           </View>
         </View>
+
+        {plateau && (
+          <View style={styles.plateauBanner}>
+            <Ionicons name="analytics-outline" size={18} color={colors.warning} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.plateauTitle}>Progress has stalled</Text>
+              <Text style={styles.plateauBody}>{plateau.message}</Text>
+            </View>
+          </View>
+        )}
 
         {/* Strength trend chart */}
         {history.length >= 2 && (
@@ -398,4 +414,27 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   notesText: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  plateauBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    backgroundColor: colors.warningBg,
+    borderRadius: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.warning,
+    padding: 12,
+    marginHorizontal: 16,
+    marginBottom: 12,
+  },
+  plateauTitle: {
+    color: colors.warning,
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  plateauBody: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 18,
+  },
 });

@@ -24,7 +24,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import SetEntry from '../components/SetEntry';
 import RestTimer from '../components/RestTimer';
 import useAppStore from '../store/useAppStore';
-import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, getAllExercises, insertExercise, getCurrentMesocycleWeek, getPlannedMuscleVolume, getWeek1SetsForExercise, getLastNWorkoutSets } from '../lib/database';
+import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, getAllExercises, insertExercise, getCurrentMesocycleWeek, getPlannedMuscleVolume, getWeek1SetsForExercise, getLastNWorkoutSets, saveExerciseUserNote, getExerciseUserNote } from '../lib/database';
 import {
   detectPR,
   getProgressionSuggestion,
@@ -116,6 +116,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [weeklyActual, setWeeklyActual] = useState(0); // sets this week for this muscle
   const [isDeloadWeek, setIsDeloadWeek] = useState(false);
   const [deloadDismissed, setDeloadDismissed] = useState(false);
+  const [exerciseNote, setExerciseNote] = useState('');       // persisted per-user per-exercise note
+  const [showExerciseNote, setShowExerciseNote] = useState(false); // expand/collapse the note area
   const autoAdvanceRef = useRef(null);
   const sessionSetsRef = useRef([]);   // tracks sets in this session — used for PR detection
   const warmupHintSeenRef = useRef(false); // show one-liner warmup note only on first warmup of this session
@@ -274,6 +276,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       const prevPrev = lastN[1] || [];
       setPrevSets(prev);
       setAllTimeSets(allTime);
+
+      // Load persisted user note for this exercise
+      if (user?.id && exercise?.id) {
+        const savedNote = await getExerciseUserNote(user.id, exercise.id);
+        setExerciseNote(savedNote || '');
+        setShowExerciseNote(false);
+      }
 
       // Layoff detection: last session was more than 7 days ago
       const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
@@ -805,6 +814,39 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               {' · primary muscle'}
             </Text>
           </View>
+
+          {/* Exercise note / machine setup memory */}
+          <TouchableOpacity
+            style={styles.exerciseNoteRow}
+            onPress={() => setShowExerciseNote(v => !v)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={exerciseNote ? 'Show exercise note' : 'Add exercise note'}
+          >
+            <Ionicons name="document-text-outline" size={14} color={colors.textMuted} />
+            <Text style={styles.exerciseNotePreview} numberOfLines={1}>
+              {exerciseNote || 'Add note (machine settings, cues...)'}
+            </Text>
+            <Ionicons name={showExerciseNote ? 'chevron-up' : 'chevron-down'} size={14} color={colors.textMuted} />
+          </TouchableOpacity>
+          {showExerciseNote && (
+            <TextInput
+              style={styles.exerciseNoteInput}
+              value={exerciseNote}
+              onChangeText={async (text) => {
+                setExerciseNote(text);
+                if (user?.id && exercise?.id) {
+                  await saveExerciseUserNote(user.id, exercise.id, text);
+                }
+              }}
+              placeholder="Machine seat height, cable attachment, grip cues..."
+              placeholderTextColor={colors.textMuted}
+              multiline
+              maxLength={300}
+              returnKeyType="done"
+              blurOnSubmit
+            />
+          )}
 
           {/* Deload Week Banner */}
           {isDeloadWeek && !deloadDismissed && (
@@ -1637,6 +1679,20 @@ const styles = StyleSheet.create({
   swapItemName: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary, marginBottom: 2 },
   swapItemReason: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
   exerciseMuscle: { fontSize: fontSize.sm, color: colors.textSecondary },
+  exerciseNoteRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    paddingVertical: spacing.xs, paddingHorizontal: spacing.sm,
+    backgroundColor: colors.surface2, borderRadius: radius.sm,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  exerciseNotePreview: { flex: 1, fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
+  exerciseNoteInput: {
+    backgroundColor: colors.surface2, borderRadius: radius.sm,
+    borderWidth: 1, borderColor: colors.borderLight,
+    padding: spacing.sm, color: colors.textPrimary,
+    fontSize: fontSize.sm, minHeight: 72,
+    textAlignVertical: 'top',
+  },
   prevCard: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, gap: spacing.sm },
   prevTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.2 },
   prevSetsSummary: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary, lineHeight: 22 },
