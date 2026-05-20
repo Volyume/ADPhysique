@@ -455,6 +455,20 @@ const SCHEMA_MIGRATIONS = [
     )`,
     `CREATE INDEX IF NOT EXISTS idx_workout_notes_user ON workout_notes(user_id, routine_id)`,
   ],
+  // v15 — exercise milestone goals: target weight + optional target date per exercise
+  [
+    `CREATE TABLE IF NOT EXISTS exercise_goals (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      exercise_id TEXT NOT NULL,
+      target_weight REAL NOT NULL,
+      target_date INTEGER,
+      created_at INTEGER NOT NULL,
+      achieved_at INTEGER,
+      UNIQUE(user_id, exercise_id)
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_exercise_goals_user ON exercise_goals(user_id, exercise_id)`,
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
@@ -660,6 +674,69 @@ export async function getCompletedWorkoutSets(userId) {
     [userId],
   );
   return rows.map(rowToCamel);
+}
+
+// Returns an array of `weeksBack` entries, ordered oldest → newest.
+// Each entry: { weekLabel: 'W1'|...'W4', weekStart: ms, weekEnd: ms, volumeByMuscle: { chest: 8, ... } }
+// Only working sets (set_type != 'warmup') are counted. Uses the exercise's primary_muscle field.
+export async function getWeeklyVolumeByMuscle(userId, weeksBack = 4) {
+  const d = await db();
+  const now = Date.now();
+  const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+  // Build week boundaries going back `weeksBack` weeks from now.
+  // Index 0 = oldest week, index weeksBack-1 = most recent week.
+  const weekBoundaries = [];
+  for (let i = weeksBack - 1; i >= 0; i--) {
+    weekBoundaries.push({
+      weekStart: now - (i + 1) * WEEK_MS,
+      weekEnd: now - i * WEEK_MS,
+    });
+  }
+
+  // Fetch all completed working sets in the full window in one query.
+  const windowStart = now - weeksBack * WEEK_MS;
+  const rows = await d.getAllAsync(
+    `SELECT ws.created_at, ws.exercise_id
+     FROM workout_sets ws
+     JOIN workouts w ON ws.workout_id = w.id
+     WHERE ws.user_id = ? AND w.is_completed = 1
+       AND ws.created_at >= ?
+       AND (ws.set_type IS NULL OR ws.set_type != 'warmup')
+     ORDER BY ws.created_at ASC`,
+    [userId, windowStart],
+  );
+
+  // Build exercise_id → primary_muscle map from the exercises table.
+  const exerciseRows = await d.getAllAsync(
+    'SELECT id, primary_muscle FROM exercises',
+  );
+  const muscleByExercise = {};
+  for (const ex of exerciseRows) {
+    let m = (ex.primary_muscle || '').toLowerCase();
+    if (m === 'shoulders') m = 'side_delts'; // legacy normalisation
+    if (m) muscleByExercise[ex.id] = m;
+  }
+
+  // Bucket each set into the correct week and count by muscle.
+  const result = weekBoundaries.map(({ weekStart, weekEnd }, idx) => ({
+    weekLabel: `W${idx + 1}`,
+    weekStart,
+    weekEnd,
+    volumeByMuscle: {},
+  }));
+
+  for (const row of rows) {
+    const ts = row.created_at;
+    const weekIdx = result.findIndex(w => ts >= w.weekStart && ts < w.weekEnd);
+    if (weekIdx === -1) continue;
+    const muscle = muscleByExercise[row.exercise_id];
+    if (!muscle) continue;
+    const vbm = result[weekIdx].volumeByMuscle;
+    vbm[muscle] = (vbm[muscle] || 0) + 1;
+  }
+
+  return result;
 }
 
 export async function getWorkoutSetsForWorkout(workoutId) {
@@ -2200,13 +2277,36 @@ export async function getYearOfLiftsData(userId, yearMs = null) {
   const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const topMonth = topMonthEntry ? MONTH_NAMES[parseInt(topMonthEntry[0])] : null;
 
+  // 12-month session breakdown (index 0 = Jan)
+  const monthlyBreakdown = Array.from({ length: 12 }, (_, i) => ({
+    month: i,
+    sessions: monthCounts[i] ?? 0,
+  }));
+
+  // Unique exercise count
+  const uniqueExercises = Object.keys(exerciseCounts).length;
+
+  // Top PRs during the year
+  const yearPRs = await d.getAllAsync(
+    `SELECT pr.record_type, pr.value, pr.reps, ex.name AS exercise_name, pr.achieved_date
+     FROM personal_records pr
+     LEFT JOIN exercises ex ON ex.id = pr.exercise_id
+     WHERE pr.user_id = ? AND pr.achieved_date >= ?
+       AND pr.record_type = '1rm_estimate'
+     ORDER BY pr.value DESC LIMIT 5`,
+    [userId, yearStart],
+  ).catch(() => []);
+
   return {
     totalSessions,
     totalSets,
     tonnage,
     avgSessionsPerWeek,
+    uniqueExercises,
     topExercises,
     topMonth,
+    monthlyBreakdown,
+    topPRs: yearPRs.map(rowToCamel),
     yearStart,
     yearEnd: now,
   };
@@ -2560,5 +2660,55 @@ export async function markNoteShown(noteId) {
   await d.runAsync(
     'DELETE FROM workout_notes WHERE id = ? AND shown_count >= expires_after_uses',
     [noteId],
+  );
+}
+
+// ─── Exercise Goals ───────────────────────────────────────────────────────────
+
+export async function saveExerciseGoal(userId, exerciseId, { targetWeight, targetDate = null }) {
+  const d = await db();
+  const now = Date.now();
+  const existing = await d.getFirstAsync(
+    'SELECT id FROM exercise_goals WHERE user_id = ? AND exercise_id = ?',
+    [userId, exerciseId],
+  );
+  if (existing?.id) {
+    await d.runAsync(
+      'UPDATE exercise_goals SET target_weight = ?, target_date = ?, achieved_at = NULL WHERE id = ?',
+      [targetWeight, targetDate ?? null, existing.id],
+    );
+    return existing.id;
+  }
+  const id = uid();
+  await d.runAsync(
+    `INSERT INTO exercise_goals (id, user_id, exercise_id, target_weight, target_date, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [id, userId, exerciseId, targetWeight, targetDate ?? null, now],
+  );
+  return id;
+}
+
+export async function getExerciseGoal(userId, exerciseId) {
+  const d = await db();
+  const row = await d.getFirstAsync(
+    'SELECT * FROM exercise_goals WHERE user_id = ? AND exercise_id = ?',
+    [userId, exerciseId],
+  );
+  return rowToCamel(row);
+}
+
+export async function markGoalAchieved(goalId) {
+  const d = await db();
+  await d.runAsync(
+    'UPDATE exercise_goals SET achieved_at = ? WHERE id = ?',
+    [Date.now(), goalId],
+  );
+}
+
+export async function deleteExerciseGoal(userId, exerciseId) {
+  const d = await db();
+  await d.runAsync(
+    'DELETE FROM exercise_goals WHERE user_id = ? AND exercise_id = ?',
+    [userId, exerciseId],
   );
 }

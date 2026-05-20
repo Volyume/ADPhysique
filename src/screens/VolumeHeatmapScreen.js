@@ -8,7 +8,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import InfoTooltip from '../components/InfoTooltip';
 import BodyDiagramHeatmap from '../components/BodyDiagramHeatmap';
-import { getCompletedWorkoutSets, getAllExercises } from '../lib/database';
+import { getCompletedWorkoutSets, getAllExercises, getWeeklyVolumeByMuscle } from '../lib/database';
 import {
   calculateWeeklyVolume, VOLUME_LANDMARKS, MUSCLE_DISPLAY_NAMES, getVolumeStatus,
 } from '../lib/algorithms';
@@ -29,6 +29,7 @@ export default function VolumeHeatmapScreen() {
   const [customLandmarks, setCustomLandmarks] = useState(null);
   const [editing, setEditing] = useState(false);
   const [editValues, setEditValues] = useState({});
+  const [trendData, setTrendData] = useState([]);
 
   useFocusEffect(useCallback(() => { loadData(); }, [user?.id, windowWeeks]));
 
@@ -53,6 +54,9 @@ export default function VolumeHeatmapScreen() {
     const prevVolume = calculateWeeklyVolume(prevSets, exerciseMap);
     setWeeklyVolume(volume);
     setPreviousVolume(prevVolume);
+
+    const trend = await getWeeklyVolumeByMuscle(user.id, 4);
+    setTrendData(trend);
 
     // Load locally stored custom landmarks (Stage 1 — no Supabase yet)
     const stored = await AsyncStorage.getItem(`@volyume_landmarks_${user.id}`).catch(() => null);
@@ -126,6 +130,14 @@ export default function VolumeHeatmapScreen() {
     }
     return map;
   }, [weeklyVolume, effectiveLandmarks, muscles]);
+
+  // Muscles trained at least once in the 4-week trend window, in heatmap order.
+  const trainedMuscles = useMemo(() => {
+    if (!trendData.length) return [];
+    return muscles.filter(muscle =>
+      trendData.some(week => (week.volumeByMuscle[muscle] || 0) > 0),
+    );
+  }, [trendData, muscles]);
 
   const handleMuscleTap = useCallback((muscleKey) => {
     const offset = rowOffsets.current[muscleKey];
@@ -256,6 +268,21 @@ export default function VolumeHeatmapScreen() {
           })}
         </View>
 
+        {/* 4-week trend — hidden for new users with no data */}
+        {trainedMuscles.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>4-week trend</Text>
+            {trainedMuscles.map(muscle => (
+              <MuscleTrendRow
+                key={muscle}
+                muscle={muscle}
+                trendData={trendData}
+                customLandmarks={effectiveLandmarks}
+              />
+            ))}
+          </View>
+        )}
+
         {/* Edit Volume Targets */}
         {editing ? (
           <View style={styles.editSection}>
@@ -315,6 +342,86 @@ function LegendItem({ color, label }) {
     </View>
   );
 }
+
+const SPARK_BAR_WIDTH = 8;
+const SPARK_BAR_GAP = 2;
+const SPARK_MAX_HEIGHT = 24;
+const SPARK_EMPTY_HEIGHT = 3;
+
+function MuscleTrendRow({ muscle, trendData, customLandmarks }) {
+  // trendData is the 4-week array (oldest → newest), each entry has volumeByMuscle
+  const counts = trendData.map(w => w.volumeByMuscle[muscle] || 0);
+  const maxCount = Math.max(...counts, 1); // avoid divide-by-zero
+
+  return (
+    <View style={trendStyles.row}>
+      <Text style={trendStyles.muscleName} numberOfLines={1}>
+        {MUSCLE_DISPLAY_NAMES[muscle]}
+      </Text>
+      <View style={trendStyles.sparkContainer}>
+        {counts.map((count, idx) => {
+          const isEmpty = count === 0;
+          const barHeight = isEmpty
+            ? SPARK_EMPTY_HEIGHT
+            : Math.max(SPARK_EMPTY_HEIGHT, Math.round((count / maxCount) * SPARK_MAX_HEIGHT));
+          const { color } = getVolumeStatus(count, muscle, customLandmarks);
+          const barColor = isEmpty ? colors.surface3 : color;
+          return (
+            <View
+              key={idx}
+              style={[
+                trendStyles.sparkBar,
+                {
+                  width: SPARK_BAR_WIDTH,
+                  height: barHeight,
+                  backgroundColor: barColor,
+                  marginRight: idx < counts.length - 1 ? SPARK_BAR_GAP : 0,
+                },
+              ]}
+            />
+          );
+        })}
+      </View>
+      <Text
+        style={[
+          trendStyles.currentCount,
+          { color: getVolumeStatus(counts[counts.length - 1], muscle, customLandmarks).color },
+        ]}
+      >
+        {counts[counts.length - 1]}
+      </Text>
+    </View>
+  );
+}
+
+const trendStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: spacing.sm,
+    paddingVertical: 2,
+  },
+  muscleName: {
+    width: 80,
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+  },
+  sparkContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    height: SPARK_MAX_HEIGHT,
+  },
+  sparkBar: {
+    borderRadius: 2,
+  },
+  currentCount: {
+    width: 20,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    textAlign: 'right',
+  },
+});
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
@@ -405,6 +512,20 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.textMuted,
     width: 24,
+  },
+  section: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  sectionTitle: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
   },
   actionRow: {
     flexDirection: 'row',
