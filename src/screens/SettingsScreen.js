@@ -390,7 +390,7 @@ export default function SettingsScreen({ navigation }) {
         {/* About */}
         <View style={styles.about}>
           <Text style={styles.appName}>Volyume</Text>
-          <Text style={styles.appVersion}>v{Constants.expoConfig?.version ?? '1.1.0'} · Free during beta</Text>
+          <Text style={styles.appVersion}>v{Constants.expoConfig?.version ?? '1.1.0'}</Text>
           <Text style={styles.tagline}>Less thinking. More lifting.</Text>
         </View>
       </ScrollView>

@@ -25,6 +25,7 @@ const WEAK_POINT_MUSCLES = [
 ];
 import { calculateNutritionTargets, PROTEIN_APPROACHES, ADVANCED_PROTEIN_GOALS } from '../lib/nutritionEngine';
 import { saveNutritionTargets } from '../lib/database';
+import { generateAndSavePlan } from '../lib/planAutoGen';
 
 const APPROACH_SHORT = {
   standard:  'Enough for consistent training. Easy to sustain day to day.',
@@ -159,6 +160,21 @@ export default function ProGoalSetupScreen({ navigation }) {
     }
 
     await saveLocalProfile(user.id, updatedProfile);
+
+    // Pro users keep an always-active plan — a goal change resets the
+    // mesocycle to week 1 of a freshly-generated plan that reflects the
+    // new goal/phase. The previous plan is deactivated by
+    // activatePlanWithBlock; session history stays intact.
+    await generateAndSavePlan(user.id, {
+      experience: updatedProfile.experience,
+      daysPerWeek: updatedProfile.daysPerWeek ?? 4,
+      sessionLengthMinutes: updatedProfile.sessionLengthMinutes ?? 60,
+      equipment: updatedProfile.equipment,
+      trainingGoal: updatedProfile.trainingGoal,
+      trainingPhase: updatedProfile.trainingPhase,
+      planWeakPoints: updatedProfile.planWeakPoints ?? [],
+      recoveryRating: updatedProfile.recoveryRating ?? 'average',
+    }).catch(() => {}); // non-fatal; user can recover from Home
 
     // Navigate to the change-summary screen instead of just popping back so
     // the user can see exactly what shifted and why.

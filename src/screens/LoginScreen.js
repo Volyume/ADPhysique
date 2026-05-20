@@ -266,7 +266,7 @@ export default function LoginScreen({ navigation, route }) {
             Your data stays on this device. You can add an account later to sync across devices and back up your history.
           </Text>
 
-          <Text style={styles.betaNote}>Free during beta · No subscription required</Text>
+          <Text style={styles.betaNote}>No subscription required</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

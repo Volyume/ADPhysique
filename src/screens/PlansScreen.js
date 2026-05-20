@@ -200,7 +200,12 @@ export default function PlansScreen({ navigation }) {
   }
 
   async function handlePlanOptions(plan) {
-    Alert.alert(plan.name, undefined, [
+    const isActiveForUser = activePlan?.id === plan.id;
+    // Pro users keep an always-active plan as part of Precision Coaching.
+    // They can change it (via CoachBuilder / Hub wizard) but can't archive
+    // the active one or be left without a plan.
+    const canArchive = !(tier === 'pro' && isActiveForUser);
+    const buttons = [
       { text: 'View Plan', onPress: () => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false }) },
       { text: 'Set Active', onPress: () => handleSetActive(plan) },
       {
@@ -211,7 +216,9 @@ export default function PlansScreen({ navigation }) {
           navigation.navigate('PlanDetail', { planId: copy.id, isLibrary: false });
         },
       },
-      {
+    ];
+    if (canArchive) {
+      buttons.push({
         text: 'Archive',
         style: 'destructive',
         onPress: () => Alert.alert(
@@ -222,9 +229,10 @@ export default function PlansScreen({ navigation }) {
             { text: 'Archive', style: 'destructive', onPress: async () => { await archivePlan(plan.id); await loadData(); } },
           ],
         ),
-      },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+      });
+    }
+    buttons.push({ text: 'Cancel', style: 'cancel' });
+    Alert.alert(plan.name, undefined, buttons);
   }
 
   async function handleTemplateOptions(routine) {

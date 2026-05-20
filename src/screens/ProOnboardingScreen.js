@@ -11,12 +11,11 @@ import { VolyumeMark } from '../components/BrandMark';
 import useAppStore from '../store/useAppStore';
 import {
   logBodyMetric, saveNutritionTargets, saveUserBodyProfile, migrateLocalUserId,
-  createProgramme, createRoutine, addExerciseToRoutine, getAllExercises, activatePlanWithBlock,
 } from '../lib/database';
 import { stoneLbsToKg, ftInToCm, parseBodyWeightToKg } from '../lib/units';
 import { signUpWithEmail, signInWithEmail } from '../lib/supabase';
 import { bulkUploadLocalData, syncProfile } from '../lib/sync';
-import { generatePlan } from '../lib/planEngine';
+import { generateAndSavePlan } from '../lib/planAutoGen';
 import {
   requestNotificationPermissions,
   scheduleMorningWeightNotification,
@@ -359,42 +358,20 @@ export default function ProOnboardingScreen({ navigation }) {
       // Auto-generate the training plan so the user lands on a ready-to-train
       // home screen rather than a "build me a plan" empty state.
       if (user?.id) {
-        try {
-          const planInputs = {
-            experience,
-            daysPerWeek: DEFAULT_DAYS_PER_WEEK,
-            sessionLengthMinutes,
-            equipment,
-            goal: trainingGoal,
-            phase: trainingPhase,
-            weakPoints: [],
-            recoveryRating,
-            nutritionPhase: phaseToNutritionKey(trainingPhase),
-          };
-          const plan = generatePlan(planInputs);
-          if (plan?.workouts?.length > 0) {
-            const planNameFinal = plan.name ?? 'Your plan';
-            const prog = await createProgramme(user.id, planNameFinal, plan.description ?? '', 0);
-            const allExercises = await getAllExercises();
-            const exerciseMap = {};
-            for (const ex of allExercises) exerciseMap[ex.name.toLowerCase()] = ex;
-            for (const workout of plan.workouts) {
-              const routine = await createRoutine(
-                user.id, workout.name, null, plan.splitType, 0, null, prog.id,
-              );
-              for (let i = 0; i < workout.exercises.length; i++) {
-                const ex = workout.exercises[i];
-                const dbEx = exerciseMap[ex.exerciseName.toLowerCase()];
-                if (!dbEx) continue;
-                await addExerciseToRoutine(
-                  routine.id, dbEx.id, i, ex.repMin, ex.repMax, ex.notes ?? null, ex.sets,
-                );
-              }
-            }
-            await activatePlanWithBlock(user.id, prog.id, planNameFinal);
-          }
-        } catch (planErr) {
-          console.warn('Auto plan generation failed:', planErr?.message);
+        const planProfile = {
+          experience,
+          daysPerWeek: DEFAULT_DAYS_PER_WEEK,
+          sessionLengthMinutes,
+          equipment,
+          trainingGoal,
+          trainingPhase,
+          planWeakPoints: [],
+          recoveryRating,
+        };
+        const planResult = await generateAndSavePlan(user.id, planProfile);
+        if (!planResult.ok) {
+          console.warn('Auto plan generation failed:', planResult.error);
+          // Non-fatal — the user can recover from Home if the plan didn't write.
         }
       }
     } catch (e) {

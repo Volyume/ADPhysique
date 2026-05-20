@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal, TextInput,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal, TextInput, Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,6 +19,7 @@ import {
   getMorningWeightToday, logMorningWeight, getProgressionTeaser,
   getRecentWorkoutFeedback, getLatestCoachOutput,
 } from '../lib/database';
+import { generateAndSavePlan } from '../lib/planAutoGen';
 import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload, VOLUME_LANDMARKS } from '../lib/algorithms';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import useAppStore from '../store/useAppStore';
@@ -736,7 +737,6 @@ export default function HomeScreen({ navigation }) {
                         ? `${totalSessions} sessions logged. Pro coaching uses all of it.`
                         : 'Add a coach that adjusts your plan each week.'}
                 </Text>
-                <Text style={styles.proTeaserSub}>Free during beta</Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
@@ -822,7 +822,14 @@ export default function HomeScreen({ navigation }) {
               <View style={styles.noPlanIconWrap}>
                 <Ionicons name="barbell-outline" size={28} color={colors.primary} />
               </View>
-              {lastSession == null ? (
+              {tier === 'pro' ? (
+                <>
+                  <Text style={styles.noPlanTitle}>Your plan didn't save</Text>
+                  <Text style={styles.noPlanSub}>
+                    Something went wrong setting up your plan. Tap below to build it from your profile — takes a second.
+                  </Text>
+                </>
+              ) : lastSession == null ? (
                 <>
                   <Text style={styles.noPlanTitle}>Welcome. Let's get you started.</Text>
                   <Text style={styles.noPlanSub}>
@@ -838,6 +845,24 @@ export default function HomeScreen({ navigation }) {
                 </>
               )}
             </View>
+
+            {tier === 'pro' && (
+              <TouchableOpacity
+                style={styles.proRecoverBtn}
+                onPress={async () => {
+                  const result = await generateAndSavePlan(user.id, userProfile);
+                  if (result.ok) {
+                    await loadData();
+                  } else {
+                    Alert.alert('Could not build plan', `${result.error}. Open Settings → Your goals to update your profile, then try again.`);
+                  }
+                }}
+                activeOpacity={0.88}
+              >
+                <Ionicons name="sparkles" size={18} color={colors.background} />
+                <Text style={styles.proRecoverBtnText}>Build my plan</Text>
+              </TouchableOpacity>
+            )}
 
             {/* Progress at a glance — shown when there's history but no plan */}
             {lastSession != null && (
@@ -1510,6 +1535,13 @@ const styles = StyleSheet.create({
 
   // No plan — plan-first section
   noPlanSection: { gap: spacing.md },
+  proRecoverBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: colors.primary, borderRadius: 14, paddingVertical: 14, marginTop: 8,
+  },
+  proRecoverBtnText: {
+    fontSize: 15, fontWeight: '700', color: colors.background,
+  },
   noPlanHero: {
     alignItems: 'center',
     gap: spacing.sm,

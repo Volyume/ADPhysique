@@ -16,7 +16,7 @@ import useAppStore from '../store/useAppStore';
 
 export default function PlanDetailScreen({ navigation, route }) {
   const { planId, isLibrary = false } = route.params || {};
-  const { user, startWorkout } = useAppStore();
+  const { user, startWorkout, tier } = useAppStore();
   const [plan, setPlan] = useState(null);
   const [workouts, setWorkouts] = useState([]);
   const [exerciseCounts, setExerciseCounts] = useState({});
@@ -242,21 +242,24 @@ export default function PlanDetailScreen({ navigation, route }) {
           )}
         </View>
 
-        {/* Manage actions (user plans only) */}
+        {/* Manage actions (user plans only; Pro users never archive — the
+            active plan is part of their Precision Coaching loop) */}
         {!isLibrary && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Manage</Text>
             <View style={styles.manageCard}>
-              <TouchableOpacity style={styles.manageRow} onPress={handleDuplicate}>
+              <TouchableOpacity style={[styles.manageRow, tier === 'pro' && styles.manageRowLast]} onPress={handleDuplicate}>
                 <Ionicons name="copy-outline" size={18} color={colors.primary} />
                 <Text style={styles.manageRowText}>Duplicate Plan</Text>
                 <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
               </TouchableOpacity>
+              {tier !== 'pro' && !isActive && (
               <TouchableOpacity style={[styles.manageRow, styles.manageRowLast]} onPress={handleArchive}>
                 <Ionicons name="archive-outline" size={18} color={colors.error} />
                 <Text style={[styles.manageRowText, { color: colors.error }]}>Archive Plan</Text>
                 <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
               </TouchableOpacity>
+              )}
             </View>
           </View>
         )}
