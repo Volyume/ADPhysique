@@ -41,6 +41,11 @@ export default function FirstRunScreen({ navigation }) {
     navigation.navigate('PlanLibrary', { fromFirstRun: true });
   }
 
+  async function startPathQuiz() {
+    await saveName();
+    navigation.navigate('OnboardingQuiz');
+  }
+
   async function finishPathB() {
     if (!hasName) return;
     setBusy(true);
@@ -170,17 +175,17 @@ export default function FirstRunScreen({ navigation }) {
 
         <TouchableOpacity
           style={[styles.pathCard, !hasName && styles.pathCardDisabled]}
-          onPress={startPathLibrary}
+          onPress={startPathQuiz}
           disabled={!hasName}
           activeOpacity={0.85}
         >
           <View style={styles.pathIconWrap}>
-            <Ionicons name="library-outline" size={22} color={hasName ? colors.primary : colors.textMuted} />
+            <Ionicons name="help-circle-outline" size={22} color={hasName ? colors.primary : colors.textMuted} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.pathTitle}>Choose a ready-made plan</Text>
+            <Text style={styles.pathTitle}>Help me choose a programme</Text>
             <Text style={styles.pathText}>
-              Browse our library of tried-and-tested programmes, from beginner to advanced.
+              Answer 4 quick questions and we'll recommend the right starting template for you.
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={hasName ? colors.textMuted : colors.border} />

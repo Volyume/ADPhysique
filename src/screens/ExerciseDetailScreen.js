@@ -19,6 +19,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   const [prs, setPRs] = useState([]);
   const [substitutes, setSubstitutes] = useState([]);
   const [plateau, setPlateau] = useState(null);
+  const [chartMode, setChartMode] = useState('weight'); // 'weight' | 'e1rm'
 
   useEffect(() => {
     if (exerciseId) loadData();
@@ -88,10 +89,18 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   }, 0);
 
   // Build chart data: one point per session (oldest → newest)
-  const chartData = [...history].reverse().map((sessionSets, i) => {
-    const vals = sessionSets.map(s => calculate1RM(s.weight || 0, s.actualReps || 0));
-    return { x: i, est1rm: vals.length > 0 ? Math.max(...vals) : 0 };
+  const reversedHistory = [...history].reverse();
+  const chartData = reversedHistory.map((sessionSets, i) => {
+    const workingSets = sessionSets.filter(s => (s.weight || 0) > 0 && (s.actualReps || 0) > 0);
+    const topSet = workingSets.reduce((best, s) => {
+      if (!best || (s.weight || 0) > (best.weight || 0)) return s;
+      return best;
+    }, null);
+    const maxWeight = topSet ? (topSet.weight || 0) : 0;
+    const e1rmVal = topSet ? calculate1RM(topSet.weight || 0, topSet.actualReps || 0) : 0;
+    return { x: i, weight: maxWeight, est1rm: e1rmVal };
   });
+  const activeYKey = chartMode === 'e1rm' ? 'est1rm' : 'weight';
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
@@ -172,17 +181,35 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         {history.length >= 2 && (
           <View style={styles.chartSection}>
             <Text style={styles.chartLabel}>Strength trend</Text>
+            <View style={styles.chartToggle}>
+              <TouchableOpacity
+                style={[styles.chartToggleBtn, chartMode === 'weight' && styles.chartToggleBtnActive]}
+                onPress={() => setChartMode('weight')}
+              >
+                <Text style={[styles.chartToggleBtnText, chartMode === 'weight' && styles.chartToggleBtnTextActive]}>
+                  Max weight
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.chartToggleBtn, chartMode === 'e1rm' && styles.chartToggleBtnActive]}
+                onPress={() => setChartMode('e1rm')}
+              >
+                <Text style={[styles.chartToggleBtnText, chartMode === 'e1rm' && styles.chartToggleBtnTextActive]}>
+                  Est. 1RM
+                </Text>
+              </TouchableOpacity>
+            </View>
             <View style={styles.chartContainer}>
-              <CartesianChart data={chartData} xKey="x" yKeys={['est1rm']}>
+              <CartesianChart data={chartData} xKey="x" yKeys={[activeYKey]}>
                 {({ points, chartBounds }) => (
                   <>
                     <Area
-                      points={points.est1rm}
+                      points={points[activeYKey]}
                       y0={chartBounds.bottom}
                       color="rgba(245,158,11,0.08)"
                     />
                     <Line
-                      points={points.est1rm}
+                      points={points[activeYKey]}
                       color={colors.primary}
                       strokeWidth={2}
                     />
@@ -190,6 +217,11 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                 )}
               </CartesianChart>
             </View>
+            {chartMode === 'e1rm' && (
+              <Text style={styles.e1rmNote}>
+                Estimated from top set using the Epley formula. Best for rep ranges 2–10.
+              </Text>
+            )}
           </View>
         )}
 
@@ -343,6 +375,19 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     letterSpacing: 0.5,
   },
+  chartToggle: { flexDirection: 'row', gap: spacing.xs, alignSelf: 'flex-start' },
+  chartToggleBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  chartToggleBtnActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
+  chartToggleBtnText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  chartToggleBtnTextActive: { color: colors.primary },
+  e1rmNote: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xs, fontStyle: 'italic' },
   chartContainer: {
     height: 120,
     backgroundColor: colors.surface,

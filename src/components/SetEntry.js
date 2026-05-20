@@ -16,7 +16,7 @@ const SET_TYPE_LABELS = {
 };
 
 export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypePicker, isWarmup = false }) {
-  const { weight, reps, setType } = value;
+  const { weight, reps, setType, isGhost } = value;
   const repsRef = useRef(null);
 
   function adjust(field, delta) {
@@ -26,11 +26,11 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
     const fieldLimits = limits[field] || [0, 9999];
     const current = value[field] || 0;
     const next = Math.min(Math.max(current + delta * (steps[field] || 1), fieldLimits[0]), fieldLimits[1]);
-    onChange({ ...value, [field]: field === 'weight' ? Math.round(next * 100) / 100 : Math.round(next) });
+    onChange({ ...value, [field]: field === 'weight' ? Math.round(next * 100) / 100 : Math.round(next), isGhost: false });
   }
 
   function setField(field, val) {
-    onChange({ ...value, [field]: val });
+    onChange({ ...value, [field]: val, isGhost: false });
   }
 
   const setTypeLabel = SET_TYPE_LABELS[setType] || 'Working';
@@ -51,7 +51,7 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
           </TouchableOpacity>
           <TextInput
             testID="volyume-weight-input"
-            style={styles.valueInput}
+            style={[styles.valueInput, isGhost && styles.valueInputGhost]}
             value={String(weight || '')}
             onChangeText={v => {
               const n = parseFloat(v);
@@ -90,7 +90,7 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
           <TextInput
             testID="volyume-reps-input"
             ref={repsRef}
-            style={styles.valueInput}
+            style={[styles.valueInput, isGhost && styles.valueInputGhost]}
             value={String(reps || '')}
             onChangeText={v => {
               const n = parseInt(v, 10);
@@ -139,7 +139,7 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
                   style={[styles.rirBtn, isActive && styles.rirBtnActive]}
                   onPress={() => {
                     Haptics.selectionAsync();
-                    onChange({ ...value, rir: v === null ? null : 5 - v });
+                    onChange({ ...value, rir: v === null ? null : 5 - v, isGhost: false });
                   }}
                   accessibilityRole="button"
                   accessibilityLabel={v === null ? 'Effort not set' : v === 5 ? 'Maximum effort, all out' : `Effort level ${v} out of 5`}
@@ -225,6 +225,9 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     paddingVertical: spacing.sm,
     fontVariant: ['tabular-nums'],
+  },
+  valueInputGhost: {
+    color: colors.textMuted,
   },
   rirRow: {
     flex: 1,

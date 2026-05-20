@@ -461,36 +461,50 @@ export function getAutoRegSuggestion(workoutFeedback, weeklyVolumeByMuscle, cust
 }
 
 // Algorithm 7: Deload Detection
+// Signal weighting: performance 50%, wellness composite 30%, soreness 20%.
+// Rationale: Coleman et al. (2024, PeerJ) found soreness is an unreliable deload trigger
+// in trained populations (MPS–hypertrophy uncoupling reduces DOMS meaning after adaptation);
+// performance decline and joint/motivation signals precede physiological overreaching
+// (Kreher & Schwartz 2012; Meeusen et al. 2013). Autoregulated deloads preferred over
+// pre-planned (Bell Delphi 2023; Bell survey 2024): trigger fires when evidence warrants it.
 export function shouldDeload(last4WeeksData) {
   if (!last4WeeksData || last4WeeksData.length < 2) return { deload: false, reasons: [] };
 
   const reasons = [];
+  let score = 0; // 0–100; deload triggers at ≥ 50
 
+  // — Performance (50% weight) —
   const recentReps = last4WeeksData[last4WeeksData.length - 1]?.avgReps || 0;
   const earlierReps = last4WeeksData[0]?.avgReps || 0;
   if (earlierReps > 0 && recentReps < earlierReps - 2) {
-    reasons.push('Significant rep decline over past 4 weeks');
+    score += 50;
+    reasons.push('Rep performance has dropped significantly over the last 4 weeks');
   }
 
-  const highSorenessWeeks = last4WeeksData.filter(w => (w.avgSoreness || 0) >= 2.5).length;
+  // — Wellness composite (30% weight, split across joint + volume signals) —
   const weeksSinceDeload = last4WeeksData[last4WeeksData.length - 1]?.weeksSinceLastDeload || 99;
-  if (highSorenessWeeks >= 2 && weeksSinceDeload >= 4) {
-    reasons.push('Sustained high soreness for 2+ weeks');
-  }
-
-  const overMRVWeeks = last4WeeksData.filter(w => w.hasOverMRV).length;
-  if (overMRVWeeks >= 2) {
-    reasons.push('Exceeded your weekly training limit for 2 or more weeks in a row');
-  }
-
   const avgJointDiscomfort =
     last4WeeksData.reduce((sum, w) => sum + (w.avgJointDiscomfort || 0), 0) /
     last4WeeksData.length;
   if (avgJointDiscomfort >= 1.5 && weeksSinceDeload >= 3) {
-    reasons.push('Recurring joint discomfort detected');
+    score += 18;
+    reasons.push('Recurring joint discomfort across the block');
+  }
+  const overMRVWeeks = last4WeeksData.filter(w => w.hasOverMRV).length;
+  if (overMRVWeeks >= 2) {
+    score += 12;
+    reasons.push('Exceeded your productive volume range for 2 or more weeks');
   }
 
-  return { deload: reasons.length > 0, reasons };
+  // — Soreness (20% weight — down-weighted; unreliable in trained populations) —
+  // Require 3+ weeks at high soreness AND time since last deload ≥ 4 weeks
+  const highSorenessWeeks = last4WeeksData.filter(w => (w.avgSoreness || 0) >= 2.5).length;
+  if (highSorenessWeeks >= 3 && weeksSinceDeload >= 4) {
+    score += 20;
+    reasons.push('Sustained soreness across 3 or more weeks');
+  }
+
+  return { deload: score >= 50, reasons };
 }
 
 // Algorithm 8: Exercise Substitutes
@@ -847,16 +861,20 @@ export function computeAdaptiveLandmarks(history = [], baseDefaults = VOLUME_LAN
   return adapted;
 }
 
-// Effective set weighting by RIR proximity.
-// Sets close to failure recruit the most high-threshold motor units.
-// RIR 0-1: full credit. RIR 2: 90%. RIR 3: 60%. RIR 4+: 20% (stimulus mostly technique/warm-up).
-// Null RIR: treated as RIR 2 (conservative estimate — novices routinely over-estimate headroom).
+// Effective set weighting by RIR proximity — continuous curve per Robinson et al. (2024,
+// Sports Medicine 54:2209–2231). The dose-response is monotonic with no discontinuity at
+// RIR 2: "marginal slopes for estimated RIR were negative and their confidence intervals did
+// not contain a null point estimate." RIR 0–2 are functionally equivalent (full credit);
+// credit decreases continuously above RIR 2 down to zero at RIR 8+.
+// Null RIR: treated as RIR ~2 (conservative — novices routinely over-estimate headroom).
 export function getSetEffectivenessWeight(rir) {
   if (rir === null || rir === undefined) return 0.9;
-  if (rir <= 1) return 1.0;
-  if (rir === 2) return 0.9;
-  if (rir === 3) return 0.6;
-  return 0.2;
+  if (rir <= 2) return 1.0;
+  if (rir === 3) return 0.85;
+  if (rir === 4) return 0.70;
+  if (rir === 5) return 0.50;
+  if (rir <= 7) return 0.25;
+  return 0.0; // RIR 8+ — insufficient stimulus
 }
 
 // Weighted effective sets per muscle — accounts for proximity to failure.

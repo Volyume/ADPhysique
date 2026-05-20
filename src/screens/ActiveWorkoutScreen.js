@@ -118,6 +118,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [deloadDismissed, setDeloadDismissed] = useState(false);
   const [exerciseNote, setExerciseNote] = useState('');       // persisted per-user per-exercise note
   const [showExerciseNote, setShowExerciseNote] = useState(false); // expand/collapse the note area
+  const [ghostSet, setGhostSet] = useState(null); // pre-fill from last session (same set index)
   const autoAdvanceRef = useRef(null);
   const sessionSetsRef = useRef([]);   // tracks sets in this session — used for PR detection
   const warmupHintSeenRef = useRef(false); // show one-liner warmup note only on first warmup of this session
@@ -277,6 +278,20 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       setPrevSets(prev);
       setAllTimeSets(allTime);
 
+      // Ghost pre-fill: use the matching set index from last session
+      const allLoggedAtLoad = workoutExercises[currentExerciseIndex]?.sets || [];
+      const ghostIndex = allLoggedAtLoad.length; // 0-based index of next set to log
+      const ghostCandidate = prev[ghostIndex] ?? prev[prev.length - 1] ?? null;
+      if (ghostCandidate && ghostCandidate.weight > 0) {
+        setGhostSet({
+          weight: ghostCandidate.weight,
+          reps: ghostCandidate.actualReps ?? ghostCandidate.actual_reps ?? 0,
+          rir: ghostCandidate.rir ?? null,
+        });
+      } else {
+        setGhostSet(null);
+      }
+
       // Load persisted user note for this exercise
       if (user?.id && exercise?.id) {
         const savedNote = await getExerciseUserNote(user.id, exercise.id);
@@ -336,6 +351,23 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           ...DEFAULT_SET,
           weight: routineExercise?.startingWeight ?? '',
           reps: routineExercise?.recommendedRepsMax || DEFAULT_SET.reps,
+        });
+      }
+
+      // Ghost pre-fill: if the computed weight is 0 or empty, apply ghost values
+      if (ghostCandidate && ghostCandidate.weight > 0) {
+        setCurrentSet(cs => {
+          const w = parseFloat(cs.weight) || 0;
+          if (w === 0) {
+            return {
+              ...cs,
+              weight: ghostCandidate.weight,
+              reps: ghostCandidate.actualReps ?? ghostCandidate.actual_reps ?? cs.reps,
+              rir: ghostCandidate.rir ?? cs.rir,
+              isGhost: true,
+            };
+          }
+          return cs;
         });
       }
 
@@ -529,6 +561,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           handleNextExercise();
         }, 1800);
       }
+
+      // Clear ghost — will be re-computed for the next set index on the next render cycle
+      setGhostSet(null);
 
       // Prepare next set
       setNoteText('');
@@ -1025,9 +1060,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 </Text>
               </View>
             )}
+            {currentSet.isGhost && ghostSet && (
+              <View style={styles.ghostChip}>
+                <Ionicons name="time-outline" size={12} color={colors.textMuted} />
+                <Text style={styles.ghostChipText}>Pre-filled from last session — tap to confirm</Text>
+              </View>
+            )}
             <SetEntry
               value={currentSet}
-              onChange={setCurrentSet}
+              onChange={(next) => {
+                if (!next.isGhost && currentSet.isGhost) setGhostSet(null);
+                setCurrentSet(next);
+              }}
               units={units}
               onOpenSetTypePicker={() => setShowSetTypePicker(true)}
               isWarmup={currentSet.setType === 'warmup'}
@@ -1716,6 +1760,8 @@ const styles = StyleSheet.create({
   dropBannerText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.gold, letterSpacing: 0.8 },
   setEntryTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.2 },
   noteInput: { backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md, fontSize: fontSize.sm, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, minHeight: 60 },
+  ghostChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, backgroundColor: colors.surface2, borderRadius: radius.sm, alignSelf: 'flex-start', marginBottom: spacing.xs },
+  ghostChipText: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
   completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderWidth: 1.5, borderColor: colors.primary + '80', borderRadius: radius.lg, paddingVertical: spacing.lg, backgroundColor: colors.primaryBg },
   btnDisabled: { opacity: 0.5 },
   completeBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary, letterSpacing: 0.6 },
