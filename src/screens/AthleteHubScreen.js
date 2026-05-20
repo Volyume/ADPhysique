@@ -444,7 +444,7 @@ export default function AthleteHubScreen({ navigation }) {
                   {checkinDoneThisWeek
                     ? 'Done this week. Tap to review your plan.'
                     : morningWeightCount >= 4
-                      ? 'Ready. Four questions. Your coach reads them every week.'
+                      ? 'Ready. Four questions. Your Precision Coaching adjusts around your answers.'
                       : `${morningWeightCount}/4 morning weights logged`}
                 </Text>
               </View>
@@ -454,8 +454,8 @@ export default function AthleteHubScreen({ navigation }) {
               <View style={styles.checkinPrompt}>
                 <Text style={styles.checkinPromptText}>
                   {morningWeightCount < 4
-                    ? 'Log your morning weight each day to access weekly coaching.'
-                    : 'Check in now to get your training and calorie adjustments for next week.'}
+                    ? 'Log your morning weight each day to unlock your Precision Coaching.'
+                    : 'Check in now to get your training and nutrition adjustments for next week.'}
                 </Text>
               </View>
             )}
@@ -583,7 +583,7 @@ export default function AthleteHubScreen({ navigation }) {
                 </View>
                 <View style={styles.cardHeaderText}>
                   <Text style={styles.lockedCardTitle}>Weekly check-in</Text>
-                  <Text style={styles.lockedCardSub}>Four questions each week. Tailored coaching adjustments based on how you trained and recovered.</Text>
+                  <Text style={styles.lockedCardSub}>Four questions each week. Your Precision Coaching adjusts training and nutrition based on how your body responded.</Text>
                 </View>
                 <View style={styles.lockBadge}>
                   <Ionicons name="lock-closed" size={10} color={colors.textMuted} />

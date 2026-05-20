@@ -18,7 +18,7 @@ const FREE_BULLETS = [
 
 const PRO_BULLETS = [
   'A plan built around your schedule and goals',
-  'Weekly coaching that adjusts as your body responds',
+  'Precision Coaching that adjusts training and nutrition as your body responds',
   'Nutrition targets and body tracking',
   'We tell you what we changed — and what we held, and why',
 ];

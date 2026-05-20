@@ -225,7 +225,7 @@ function LoadingView() {
   return (
     <View style={styles.centred}>
       <ActivityIndicator size="large" color={colors.primary} />
-      <Text style={styles.loadingText}>Pulling together your weekly coaching…</Text>
+      <Text style={styles.loadingText}>Pulling together your Precision Coaching…</Text>
     </View>
   );
 }
@@ -335,7 +335,7 @@ export default function CoachOutputScreen({ navigation, route }) {
           <TouchableOpacity style={styles.headerBack} onPress={handleClose} activeOpacity={0.7}>
             <Ionicons name="close" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Weekly coaching</Text>
+          <Text style={styles.headerTitle}>Precision Coaching</Text>
           <View style={styles.headerSpacer} />
         </View>
         <LoadingView />
@@ -351,7 +351,7 @@ export default function CoachOutputScreen({ navigation, route }) {
           <TouchableOpacity style={styles.headerBack} onPress={handleClose} activeOpacity={0.7}>
             <Ionicons name="close" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Weekly coaching</Text>
+          <Text style={styles.headerTitle}>Precision Coaching</Text>
           <View style={styles.headerSpacer} />
         </View>
         <InsufficientDataView dataNote={output?.dataNote} onClose={handleClose} />

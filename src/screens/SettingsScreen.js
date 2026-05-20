@@ -205,7 +205,7 @@ export default function SettingsScreen({ navigation }) {
         {/* Go Pro — free users only */}
         {tier !== 'pro' && (
           <>
-            <SectionHeader title="Volyume Pro" />
+            <SectionHeader title="Precision Coaching" />
             <View style={styles.section}>
               <SettingRow
                 icon="sparkles"
@@ -299,7 +299,7 @@ export default function SettingsScreen({ navigation }) {
             <SettingRow
               icon="shield-checkmark-outline"
               label="Wellbeing check"
-              sub="Update your answers to the health screening questions"
+              sub="Update your health screening answers. Shapes how your Precision Coaching is applied."
               onPress={() => navigation.navigate('WellbeingCheck')}
             />
           )}

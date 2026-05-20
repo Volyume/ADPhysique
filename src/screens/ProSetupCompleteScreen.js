@@ -102,7 +102,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
 
           <Text style={styles.headline}>You're all set, {firstName}.</Text>
           <Text style={styles.sub}>
-            Your plan is ready. Your targets are in. Your reminders are on. Here's the routine that makes coaching work:
+            Your Precision Coaching is ready. Your plan and targets are set. Here's the routine that keeps it working:
           </Text>
 
           {/* Setup summary card */}

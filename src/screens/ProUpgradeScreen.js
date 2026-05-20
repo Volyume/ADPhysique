@@ -12,7 +12,7 @@ import { syncProfile, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
 
 const PRO_PERKS = [
   { icon: 'sparkles', text: 'A plan built around your schedule and goals' },
-  { icon: 'calendar-outline', text: 'Weekly coaching that adjusts as your body responds' },
+  { icon: 'calendar-outline', text: 'Precision Coaching that adjusts training and nutrition as your body responds' },
   { icon: 'nutrition-outline', text: 'Nutrition targets and body tracking' },
   { icon: 'eye-outline', text: 'We tell you what we changed, what we held, and why' },
 ];
