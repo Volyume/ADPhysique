@@ -7,17 +7,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns';
-import { BarChart } from 'react-native-gifted-charts';
 
 import { colors, fontSize, fontWeight, spacing, radius, volumeColors, motion } from '../styles/theme';
 import { VolyumeMark } from '../components/BrandMark';
 import InfoTooltip from '../components/InfoTooltip';
+import SvgBarSparkline from '../components/SvgBarSparkline';
+import FatigueTrendCard from '../components/FatigueTrendCard';
+import BlockProgressCard from '../components/BlockProgressCard';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import {
   getCompletedWorkoutSets, getAllWorkouts, getAllExercises, getAllMesocycles,
   getActiveInsights, dismissInsight, runInsightsEngine, getActivePlan,
   getAcuteChronicWorkload,
+  getRecentWorkoutFeedback, getCurrentMesocycleWeek, getPlannedMuscleVolume,
 } from '../lib/database';
 import {
   calculateWeeklyVolume, VOLUME_LANDMARKS, MUSCLE_DISPLAY_NAMES,
@@ -110,6 +113,9 @@ export default function AnalyticsScreen({ navigation }) {
   const [muscleFreq, setMuscleFreq]         = useState([]);   // [{muscle, thisWeek, lastWeek}]
   const [showAllMuscles, setShowAllMuscles] = useState(false);
   const [workloadData, setWorkloadData] = useState(null);
+  const [fatigueSessions, setFatigueSessions] = useState([]);   // last 6 sessions w/ feedback
+  const [blockProgress, setBlockProgress]     = useState([]);   // planned vs actual per muscle
+  const [currentMesoWeek, setCurrentMesoWeek] = useState(null); // {weekIndex, plannedWeeks, isDeload, rirTarget}
 
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
@@ -147,6 +153,8 @@ export default function AnalyticsScreen({ navigation }) {
         loadRecentSessions(workouts),
         loadSessionDurationTrend(workouts),
         loadMuscleFrequency(sets, exMap),
+        loadFatigueTrend(),
+        loadBlockState(),
       ]);
     } catch (e) {
       console.error('AnalyticsScreen load:', e);
@@ -165,7 +173,9 @@ export default function AnalyticsScreen({ navigation }) {
       }
       setActiveMeso(active);
 
-      // Build weekly tonnage sparkline: last 4 weeks
+      // Build weekly tonnage sparkline: last 4 weeks. Current week highlighted in
+      // primary amber, prior weeks dimmed. Shape matches SvgBarSparkline's
+      // {value, label, color} point format.
       const bars = [];
       const now = Date.now();
       for (let wk = 3; wk >= 0; wk--) {
@@ -179,11 +189,32 @@ export default function AnalyticsScreen({ navigation }) {
         bars.push({
           value: Math.round(tonnage),
           label: wk === 0 ? 'Now' : `-${wk}w`,
-          frontColor: wk === 0 ? colors.primary : colors.primaryDim,
+          color: wk === 0 ? colors.primary : colors.primaryDim,
         });
       }
       setMesoTonnage(bars);
     } catch (_) {}
+  }
+
+  async function loadFatigueTrend() {
+    try {
+      const rows = await getRecentWorkoutFeedback(user.id, 6);
+      setFatigueSessions(rows);
+    } catch (_) {
+      setFatigueSessions([]);
+    }
+  }
+
+  async function loadBlockState() {
+    try {
+      const week = await getCurrentMesocycleWeek(user.id).catch(() => null);
+      setCurrentMesoWeek(week);
+      const progress = await getPlannedMuscleVolume(user.id).catch(() => []);
+      setBlockProgress(progress || []);
+    } catch (_) {
+      setCurrentMesoWeek(null);
+      setBlockProgress([]);
+    }
   }
 
   async function loadInsights() {
@@ -468,6 +499,15 @@ export default function AnalyticsScreen({ navigation }) {
             onPress={() => navigation.getParent()?.navigate('PlansTab', { screen: 'MesocycleBuilder', initial: false })}
             onBuild={() => navigation.getParent()?.navigate('PlansTab', { screen: 'CoachBuilder', initial: false })}
           />
+
+          {/* Training trend (last 6 sessions' fatigue) — moved from Train tab */}
+          <FatigueTrendCard sessions={fatigueSessions} />
+
+          {/* This week's planned vs actual volume per muscle — moved from Train tab */}
+          <BlockProgressCard
+            blockProgress={blockProgress}
+            currentMesoWeek={currentMesoWeek}
+          />
         </View>
 
         {/* ── Lighter week banner ──────────────────────────────── */}
@@ -652,7 +692,7 @@ function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, onPress,
         </>
       )}
 
-      {/* Tonnage sparkline */}
+      {/* Tonnage sparkline — shared SvgBarSparkline style across the app */}
       {tonnageBars.some(b => b.value > 0) && (
         <View style={styles.sparkWrap}>
           <View style={styles.sparkLabelRow}>
@@ -661,21 +701,15 @@ function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, onPress,
               {(tonnageBars[tonnageBars.length - 1]?.value ?? 0).toLocaleString('en-GB')} kg
             </Text>
           </View>
-          <BarChart
-            data={tonnageBars}
-            barWidth={28}
-            spacing={10}
-            roundedTop
-            hideRules
-            noOfSections={3}
-            height={56}
-            barBorderRadius={3}
-            xAxisThickness={0}
-            yAxisThickness={0}
-            hideYAxisText
-            xAxisLabelTextStyle={styles.barAxisLabel}
-            isAnimated
-          />
+          <View style={styles.sparkChartCentered}>
+            <SvgBarSparkline
+              data={tonnageBars}
+              width={240}
+              height={56}
+              barWidth={36}
+              barGap={12}
+            />
+          </View>
         </View>
       )}
     </TouchableOpacity>
@@ -1046,11 +1080,11 @@ const styles = StyleSheet.create({
   },
   mesoProgressFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
   mesoProgressLabel: { fontSize: fontSize.xs, color: colors.textMuted },
-  sparkWrap:        { marginTop: spacing.xs },
-  sparkLabelRow:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: spacing.xs },
-  sparkLabel:       { fontSize: fontSize.xs, color: colors.textMuted },
-  sparkValue:       { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  barAxisLabel:     { fontSize: 9, color: colors.textMuted },
+  sparkWrap:           { marginTop: spacing.xs },
+  sparkLabelRow:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: spacing.xs },
+  sparkLabel:          { fontSize: fontSize.xs, color: colors.textMuted },
+  sparkValue:          { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  sparkChartCentered:  { alignItems: 'center', paddingTop: spacing.xs },
 
   // ── Insight rows ──
   insightRow: {

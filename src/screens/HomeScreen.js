@@ -7,7 +7,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns';
-import { Svg, Rect, Text as SvgText } from 'react-native-svg';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg } from '../lib/units';
@@ -675,9 +674,7 @@ export default function HomeScreen({ navigation }) {
         </View>
 
         {/* ── Training trend mini-graph ── */}
-        {fatigueSessions.length >= 2 && (
-          <FatigueTrendCard sessions={fatigueSessions} />
-        )}
+        {/* Training trend moved to Progress tab — sits with Mesocycle pulse there. */}
 
         {/* ── Pro teaser (free tier only, after 3+ sessions) ── */}
         {tier === 'free' && totalSessions >= 3 && (
@@ -944,35 +941,7 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         )}
 
-        {/* Block progress — planned vs actual this week */}
-          {blockProgress.length > 0 && (
-            <View style={styles.blockCard}>
-              <View style={styles.blockCardHeader}>
-                <Text style={styles.blockCardTitle}>This week's plan</Text>
-                {currentMesoWeek && (
-                  <Text style={styles.blockCardWeek}>
-                    Week {currentMesoWeek.weekIndex}/{currentMesoWeek.plannedWeeks}
-                    {currentMesoWeek.isDeload ? ' · Recovery week' : ` · Effort ${currentMesoWeek.rirTarget != null ? 5 - currentMesoWeek.rirTarget : '–'}`}
-                  </Text>
-                )}
-              </View>
-              {blockProgress.map(p => {
-                const pct = p.planned > 0 ? Math.min(1, p.actual / p.planned) : 0;
-                const barColor = pct >= 1 ? colors.primary : pct >= 0.7 ? colors.warning : 'rgba(245,158,11,0.25)';
-                return (
-                  <View key={p.muscle} style={styles.blockRow}>
-                    <Text style={styles.blockMuscle} numberOfLines={1}>{p.label}</Text>
-                    <View style={styles.blockBarBg}>
-                      <View style={[styles.blockBarFill, { width: `${Math.round(pct * 100)}%`, backgroundColor: barColor }]} />
-                    </View>
-                    <Text style={styles.blockSets}>
-                      {p.actual}/{p.planned}
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
-          )}
+        {/* "This week's plan" (block progress) moved to Progress tab. */}
 
         {/* ── Coaching discovery nudge (Pro, one-time) ── */}
         {showCoachingNudge && (
@@ -1292,80 +1261,6 @@ function CoachBriefCard({ brief, onDismiss }) {
       >
         <Ionicons name="close" size={14} color={colors.textMuted} />
       </TouchableOpacity>
-    </View>
-  );
-}
-
-// ── Fatigue Trend Card ────────────────────────────────────────────────────────
-
-const CHART_WIDTH = 200;
-const CHART_HEIGHT = 60;
-const BAR_WIDTH = 20;
-const BAR_GAP = 8;
-const DAY_ABBRS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-function fatigueBarColor(level) {
-  if (level <= 2) return colors.success;
-  if (level === 3) return colors.warning;
-  return colors.error;
-}
-
-function coachingLine(sessions) {
-  // Use average of the last 2 sessions (most recent = sessions[0])
-  const recent = sessions.slice(0, 2);
-  const avg = recent.reduce((s, r) => s + (r.fatigueLevel ?? r.fatigue_level ?? 0), 0) / recent.length;
-  if (avg <= 2) return 'Feeling fresh — volume is manageable.';
-  if (avg <= 3) return 'Tiredness building — consider lighter sessions.';
-  return 'High fatigue — take a rest day this week.';
-}
-
-function FatigueTrendCard({ sessions }) {
-  // sessions is newest-first; reverse so chart goes oldest → newest (left → right)
-  const ordered = [...sessions].reverse();
-  const count = ordered.length;
-
-  // Right-align bars: total chart width minus the space taken by bars + gaps
-  const totalBarSpace = count * BAR_WIDTH + (count - 1) * BAR_GAP;
-  const startX = CHART_WIDTH - totalBarSpace;
-
-  return (
-    <View style={styles.trendCard}>
-      <Text style={styles.trendTitle}>Training trend</Text>
-      <Svg width={CHART_WIDTH} height={CHART_HEIGHT + 16} style={{ marginTop: spacing.sm }}>
-        {ordered.map((session, i) => {
-          const level = session.fatigueLevel ?? session.fatigue_level ?? 1;
-          const barHeight = Math.max(8, (level / 4) * CHART_HEIGHT);
-          const x = startX + i * (BAR_WIDTH + BAR_GAP);
-          const y = CHART_HEIGHT - barHeight;
-          const barColor = fatigueBarColor(level);
-          const dayAbbr = session.startedAt
-            ? DAY_ABBRS[new Date(session.startedAt).getDay()]
-            : '';
-          return (
-            <React.Fragment key={i}>
-              <Rect
-                x={x}
-                y={y}
-                width={BAR_WIDTH}
-                height={barHeight}
-                rx={4}
-                fill={barColor}
-                opacity={0.9}
-              />
-              <SvgText
-                x={x + BAR_WIDTH / 2}
-                y={CHART_HEIGHT + 13}
-                fontSize={9}
-                fill={colors.textMuted}
-                textAnchor="middle"
-              >
-                {dayAbbr}
-              </SvgText>
-            </React.Fragment>
-          );
-        })}
-      </Svg>
-      <Text style={styles.trendCoachLine}>{coachingLine(sessions)}</Text>
     </View>
   );
 }
@@ -1797,24 +1692,6 @@ const styles = StyleSheet.create({
   sheetCancelText: { fontSize: fontSize.md, color: colors.textSecondary },
 
   // Block progress card
-  blockCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border,
-    padding: spacing.lg, marginBottom: spacing.lg, gap: spacing.md,
-  },
-  blockCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  blockCardTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.5 },
-  blockCardWeek: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.medium },
-  blockRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  blockMuscle: { width: 80, fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
-  blockBarBg: {
-    flex: 1, height: 6, backgroundColor: colors.border,
-    borderRadius: radius.full, overflow: 'hidden',
-  },
-  blockBarFill: { height: '100%', borderRadius: radius.full },
-  blockSets: { width: 36, fontSize: fontSize.xs, color: colors.textMuted, textAlign: 'right' },
-  blockNote: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic', marginTop: spacing.xs },
-
   // Pro coaching discovery nudge
   coachingNudge: {
     flexDirection: 'row',
@@ -1979,27 +1856,6 @@ const styles = StyleSheet.create({
   },
   phaseBannerArrow: {
     paddingLeft: spacing.xs,
-  },
-
-  // Training trend card
-  trendCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-  },
-  trendTitle: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-    color: colors.textMuted,
-    letterSpacing: 0.2,
-  },
-  trendCoachLine: {
-    fontSize: fontSize.xs,
-    color: colors.textSecondary,
-    marginTop: spacing.sm,
-    lineHeight: 16,
   },
 
   // Pre-workout coaching brief card
