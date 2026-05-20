@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    name: Build Debug APK
+    name: Build Release APK
     runs-on: ubuntu-latest
 
     steps:
@@ -71,6 +71,17 @@ jobs:
           FILE=node_modules/expo-modules-core/android/ExpoModulesCorePlugin.gradle
           sed -i '/from components\.release/d' "$FILE"
           grep -n 'components' "$FILE" || echo "✓ No components references remain"
+
+      # @react-native/gradle-plugin imports `serviceOf` from an internal
+      # Gradle package that was relocated in Gradle 8.7+. Without this
+      # patch the plugin's own build.gradle.kts fails to compile under
+      # the Gradle 8.9 we pin above with:
+      #   Unresolved reference: serviceOf
+      - name: Patch @react-native/gradle-plugin for Gradle 8.7+ compatibility
+        run: |
+          FILE=node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts
+          sed -i 's|org.gradle.configurationcache.extensions.serviceOf|org.gradle.kotlin.dsl.support.serviceOf|' "$FILE"
+          grep -n 'serviceOf' "$FILE" || echo "✗ Patch did not apply"
 
       # Release build embeds the JS bundle (index.android.bundle) into the APK,
       # so it runs standalone without a Metro dev server. Expo's prebuild
