@@ -10,6 +10,13 @@
 export const PRO_BETA_ACTIVE = true;
 export const BETA_END_DATE = null; // set to a timestamp when beta closes
 
+// Pricing promises. Beta is free. Beta testers who sign up before the
+// transition lock in £1.99/mo for life; new users post-beta will pay more.
+// Single source of truth — every screen that shows pricing imports from here.
+export const BETA_PRICE_LABEL = 'Free during beta';
+export const POST_BETA_BETA_USER_PRICE_LABEL = '£1.99/mo after beta';
+export const POST_BETA_LIFETIME_PROMISE = 'Beta testers locked at £1.99/mo for life';
+
 /**
  * Returns true if the user has Pro access.
  * During beta this is always true.
@@ -34,7 +41,7 @@ export function getProLabel(userProfile) {
  */
 export function getBetaBannerText() {
   if (!PRO_BETA_ACTIVE) return null;
-  return 'Pro is free during beta. Your feedback shapes this.';
+  return 'Pro is free during beta. £1.99/mo after — beta testers locked at £1.99 for life.';
 }
 
 /**

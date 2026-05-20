@@ -655,6 +655,12 @@ export default function AthleteHubScreen({ navigation }) {
                 sub="Every coaching decision, and why"
                 onPress={() => navigation.navigate('CoachHeldHistory')}
               />
+              <NavRow
+                icon="shield-checkmark-outline"
+                label="Wellbeing check"
+                sub="Update your health screening answers. Shapes how your Precision Coaching is applied."
+                onPress={() => navigation.navigate('WellbeingCheck')}
+              />
 
               {/* Engine Log — collapsible */}
               {(adaptationHistory.length > 0 || repWarnings.length > 0) && (

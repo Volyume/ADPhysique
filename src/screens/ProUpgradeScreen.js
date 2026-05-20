@@ -156,17 +156,17 @@ export default function ProUpgradeScreen({ navigation }) {
           <View style={styles.pricingRow}>
             <View style={[styles.pricingTier, styles.pricingTierHighlight]}>
               <View style={styles.pricingTierBadge}>
-                <Text style={styles.pricingTierBadgeText}>Beta rate</Text>
+                <Text style={styles.pricingTierBadgeText}>Now</Text>
               </View>
-              <Text style={styles.pricingAmount}>£1.99</Text>
-              <Text style={styles.pricingPeriod}>/month</Text>
-              <Text style={styles.pricingNote}>Locked in permanently</Text>
+              <Text style={styles.pricingAmount}>£0</Text>
+              <Text style={styles.pricingPeriod}>during beta</Text>
+              <Text style={styles.pricingNote}>No card needed</Text>
             </View>
             <View style={styles.pricingTier}>
-              <Text style={styles.pricingTierLabel}>After launch</Text>
-              <Text style={[styles.pricingAmount, styles.pricingAmountMuted]}>£2.99</Text>
+              <Text style={styles.pricingTierLabel}>After beta (you)</Text>
+              <Text style={styles.pricingAmount}>£1.99</Text>
               <Text style={styles.pricingPeriod}>/month</Text>
-              <Text style={styles.pricingNote}>or £19.99/year</Text>
+              <Text style={styles.pricingNote}>Locked for life as a beta tester</Text>
             </View>
           </View>
 
@@ -176,7 +176,7 @@ export default function ProUpgradeScreen({ navigation }) {
               <Text style={styles.offerBadgeText}>Beta tester offer</Text>
             </View>
             <Text style={styles.offerText}>
-              Free during beta. When billing starts, you keep £1.99/month permanently — the standard rate is £2.99. No card required now.
+              Free during beta. When billing starts, you keep £1.99/month for life. No card required now.
             </Text>
             <Text style={styles.cancelNote}>Cancel anytime, two taps. No questions.</Text>
           </View>

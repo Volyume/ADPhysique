@@ -209,8 +209,8 @@ export default function SettingsScreen({ navigation }) {
             <View style={styles.section}>
               <SettingRow
                 icon="sparkles"
-                label="Go Pro"
-                value="Free in beta"
+                label="Go Pro — free during beta"
+                value="£1.99/mo after"
                 onPress={() => navigation.navigate('ProUpgrade')}
               />
             </View>

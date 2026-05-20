@@ -81,10 +81,12 @@ export default function WelcomeScreen({ navigation }) {
               ))}
             </View>
 
-            <Text style={styles.cancelNote}>Cancel anytime, two taps. No questions.</Text>
+            <Text style={styles.cancelNote}>
+              Free during beta · £1.99/mo after for beta testers, locked for life
+            </Text>
 
             <View style={styles.proCtaRow}>
-              <Text style={styles.proCtaText}>Start your free Pro experience</Text>
+              <Text style={styles.proCtaText}>Go Pro — free during beta</Text>
               <Ionicons name="arrow-forward" size={16} color={colors.background} />
             </View>
           </TouchableOpacity>
