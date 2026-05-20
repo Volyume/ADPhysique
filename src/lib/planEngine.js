@@ -438,9 +438,10 @@ function makeEx(name, paramKey, sets, experience, nutritionPhase, goal = null, n
   const cutPhases = ['mild_cut', 'aggressive_cut', 'contest_prep'];
   if (cutPhases.includes(nutritionPhase)) rir = Math.min(rir + 1, 4);
 
+  const minSets = (paramKey === 'heavy_compound' || paramKey === 'mod_compound') ? 3 : 2;
   return {
     exerciseName: name,
-    sets: Math.max(2, sets),
+    sets: Math.max(minSets, sets),
     repMin: rr.repMin,
     repMax: rr.repMax,
     restSec: rest,
@@ -582,11 +583,12 @@ function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal, slot, 
     .map(x => x.e);
 
   // Determine how many exercises this session can hold for this muscle.
-  // (Computed BEFORE covering subregions so we can rotate requirements by slot.)
+  // Cap at 2 per session: each exercise needs at least 3 working sets for
+  // compounds (standard PT/coach minimum), so 6 sets minimum for two exercises.
+  // Three exercises per muscle per session fragments volume unnecessarily.
   let numEx;
-  if (sessionTarget <= 4)      numEx = 1;
-  else if (sessionTarget <= 7) numEx = 2;
-  else                          numEx = 3;
+  if (sessionTarget <= 5) numEx = 1;
+  else                     numEx = 2;
 
   const covered = new Set();
   const chosen = [];
@@ -634,19 +636,23 @@ function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal, slot, 
     chosen.push(sorted[slot % sorted.length]);
   }
 
-  // Distribute sessionTarget sets across all chosen exercises, reserving a
-  // minimum of 2 sets for every chosen exercise so a required-subregion
-  // exercise can never be silently starved of volume.
+  // Distribute sessionTarget sets across chosen exercises.
+  // Compounds get minimum 3 sets (PT/coach standard); isolations minimum 2.
+  // The reservation ensures the later exercise is never starved.
   const n = chosen.length;
   const result = [];
   let remaining = sessionTarget;
   for (let i = 0; i < n; i++) {
     const entry = chosen[i];
     const isCompound = entry.p === 'heavy_compound' || entry.p === 'mod_compound';
+    const minSets = isCompound ? 3 : 2;
     const slotsAfter = n - i - 1;
-    const maxForThis = remaining - 2 * slotsAfter; // keep 2 for each later exercise
+    const laterMin = slotsAfter > 0
+      ? (chosen[i + 1].p === 'heavy_compound' || chosen[i + 1].p === 'mod_compound' ? 3 : 2)
+      : 0;
+    const maxForThis = remaining - laterMin * slotsAfter;
     let s = Math.min(maxForThis, isCompound ? 4 : 3);
-    s = Math.max(2, s);
+    s = Math.max(minSets, s);
     remaining -= s;
     const exObj = makeEx(entry.n, entry.p, s, experience, nutritionPhase, goal, null);
     // Internal-only tags consumed by trimToTimeBudget, stripped before output.
