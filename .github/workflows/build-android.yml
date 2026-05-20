@@ -52,6 +52,17 @@ jobs:
       - name: Make Gradlew executable
         run: chmod +x android/gradlew
 
+      # Pin Gradle wrapper to 8.9. Several Expo SDK 51 packages (expo-notifications,
+      # react-native-reanimated, @shopify/react-native-skia, etc.) use deprecated
+      # Gradle APIs that are incompatible with Gradle 9.0. Pinning to 8.9 fixes
+      # all of them in one step rather than patching each package individually.
+      - name: Pin Gradle wrapper to 8.9
+        run: |
+          PROPS=android/gradle/wrapper/gradle-wrapper.properties
+          sed -i 's|distributionUrl=.*|distributionUrl=https\\://services.gradle.org/distributions/gradle-8.9-all.zip|' "$PROPS"
+          echo "Gradle wrapper pinned to:"
+          grep distributionUrl "$PROPS"
+
       # expo-modules-core 1.12.x uses `from components.release` inside
       # afterEvaluate which fails with AGP 8.4+. Run this patch as the
       # very last step before Gradle so nothing can undo it.
