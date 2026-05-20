@@ -9,7 +9,7 @@ import { calculate1RM } from '../lib/algorithms';
 const SET_TYPE_LABELS = {
   straight: 'Working',
   warmup: 'Warm-up',
-  dropset: 'Drop Set',
+  dropset: 'Working',
   superset: 'Working',
   myo_reps: 'Working',
   rest_pause: 'Working',

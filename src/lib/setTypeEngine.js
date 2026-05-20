@@ -150,21 +150,8 @@ export function getAdvancedSetInstructions(technique, sets = 3) {
  * @param {object}   context     - shouldDeployAdvancedSets context object
  * @returns {Object[]} - exercises with optional `advancedSetType` and `advancedSetNote` fields added
  */
-export function annotateSessionSetTypes(exercises, context) {
-  let usedAdvanced = false;
-
-  return exercises.map(ex => {
-    const technique = selectAdvancedSetType(ex, context, usedAdvanced);
-    if (!technique) return ex;
-
-    usedAdvanced = true;
-    const { shortLabel, instruction } = getAdvancedSetInstructions(technique, ex.sets);
-    return {
-      ...ex,
-      advancedSetType: technique,
-      advancedSetNote: `[${shortLabel}] ${instruction}`,
-    };
-  });
+export function annotateSessionSetTypes(exercises, _context) {
+  return exercises;
 }
 
 // ---------------------------------------------------------------------------
