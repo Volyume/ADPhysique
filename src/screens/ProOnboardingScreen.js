@@ -32,11 +32,10 @@ import { calculateNutritionTargets } from '../lib/nutritionEngine';
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 
 // Total steps in the unified Pro onboarding flow.
-// Weak points (formerly step 6) and the optional wellbeing screening
-// (formerly step 9) were removed from first-run to keep onboarding tight.
+// Weak points and wellbeing screening were removed from first-run.
 // Weak points can be set later from Athlete Hub → Update your goals.
 // The wellbeing check remains available from Settings.
-const TOTAL_STEPS = 8;
+const TOTAL_STEPS = 5;
 
 // Boer formula — estimates lean body mass (kg) from weight, height, sex.
 // More accurate for protein targeting than total bodyweight.
@@ -201,41 +200,46 @@ export default function ProOnboardingScreen({ navigation }) {
   }
 
   function advanceFrom2() {
-    if (!experience) {
-      Alert.alert('Training experience', 'Please select your experience level to continue.');
+    if (!experience || !daysPerWeek || !sessionLengthMinutes || !equipment) {
+      Alert.alert('Complete all fields', 'Please fill out your training profile to continue.');
       return;
     }
     setStep(3);
   }
 
   function advanceFrom3() {
-    if (!equipment) {
-      Alert.alert('Equipment', 'Please select your equipment to continue.');
+    if (!trainingGoal || !trainingPhase) {
+      Alert.alert('Complete all fields', 'Please select your training goal and phase to continue.');
       return;
     }
     setStep(4);
   }
 
-  function advanceFrom4() {
-    if (!trainingGoal) {
-      Alert.alert('Training goal', 'Please select a physique category to continue.');
+  async function advanceFrom4() {
+    if (!recoveryRating) {
+      Alert.alert('Recovery rating', 'Please select your recovery level to continue.');
       return;
     }
-    setStep(5);
-  }
 
-  function advanceFrom5() {
-    if (!trainingPhase) {
-      Alert.alert('Training phase', 'Please select your current phase to continue.');
-      return;
-    }
-    setStep(6);
-  }
-
-  async function advanceFrom6() {
-    // Save everything after recovery confirmed
     setBusy(true);
     try {
+      // Set up notifications
+      if (morningEnabled || checkinEnabled) {
+        const status = await requestNotificationPermissions();
+        if (status === 'granted') {
+          const prefs = {};
+          if (morningEnabled) {
+            await scheduleMorningWeightNotification(morningHour, 0);
+            prefs.morning = { hour: morningHour, minute: 0, enabled: true };
+          }
+          if (checkinEnabled) {
+            await scheduleCheckinReminder(checkinDay, 18, 0);
+            prefs.checkin = { weekday: checkinDay, hour: 18, minute: 0, enabled: true };
+          }
+          await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(prefs)).catch(() => {});
+        }
+      }
+
       if (setUnits) setUnits(localUnits);
       if (setBodyWeightUnits) setBodyWeightUnits(localBWUnits);
 
@@ -247,7 +251,6 @@ export default function ProOnboardingScreen({ navigation }) {
         : (parseFloat(heightCm) || null);
       const ageNum = parseInt(age, 10) || null;
 
-      // Compute nutrition using nutritionEngine
       const safeWeightKg = (!isNaN(bwKg) && bwKg > 0) ? bwKg : 80;
       const safeHeightCm = hcm || 175;
       const safeAge = ageNum || 28;
@@ -259,7 +262,6 @@ export default function ProOnboardingScreen({ navigation }) {
         activityLevel: daysToActivityLevel(daysPerWeek),
         goal: phaseToNutritionKey(trainingPhase),
         trainingGoal,
-        // proteinApproach auto-selected from trainingGoal; user can adjust later via Update your goals
       });
 
       const goalPhase = phaseToCoachingKey(trainingPhase);
@@ -303,7 +305,6 @@ export default function ProOnboardingScreen({ navigation }) {
         }).catch(() => {});
       }
 
-      // Save nutrition targets
       const nutritionData = {
         targetKcal: nutritionTargets.targetKcal,
         proteinG: nutritionTargets.proteinG,
@@ -321,29 +322,7 @@ export default function ProOnboardingScreen({ navigation }) {
       return;
     }
     setBusy(false);
-    setStep(7);
-  }
-
-  async function advanceFrom7() {
-    // Set up notifications
-    if (morningEnabled || checkinEnabled) {
-      try {
-        const status = await requestNotificationPermissions();
-        if (status === 'granted') {
-          const prefs = {};
-          if (morningEnabled) {
-            await scheduleMorningWeightNotification(morningHour, 0);
-            prefs.morning = { hour: morningHour, minute: 0, enabled: true };
-          }
-          if (checkinEnabled) {
-            await scheduleCheckinReminder(checkinDay, 18, 0);
-            prefs.checkin = { weekday: checkinDay, hour: 18, minute: 0, enabled: true };
-          }
-          await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(prefs)).catch(() => {});
-        }
-      } catch (_) {}
-    }
-    setStep(8);
+    setStep(5);
   }
 
   async function finishWithAccount() {
@@ -630,74 +609,10 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 2 — What brings you here? ──────────────────────────────────────────
+  // ── Step 2 — Your training profile (Experience, Schedule, Equipment) ────────
 
   if (step === 2) {
-    return (
-      <SafeAreaView style={styles.safe}>
-        <ScrollView contentContainerStyle={styles.scroll}>
-          <TouchableOpacity style={styles.backBtn} onPress={goBack} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
-            <Text style={styles.backBtnText}>Back</Text>
-          </TouchableOpacity>
-
-          <Header
-            title="What brings you here?"
-            sub="Your experience shapes the complexity of your programme. Days per week determines your schedule."
-          />
-
-          <View style={styles.section}>
-            <Text style={styles.fieldLabel}>Training experience</Text>
-            <Text style={styles.fieldHint}>Shapes the volume and exercise complexity of your plan.</Text>
-            {EXPERIENCE_OPTIONS.map(opt => (
-              <TouchableOpacity
-                key={opt.id}
-                style={[styles.goalCard, experience === opt.id && styles.goalCardActive]}
-                onPress={() => setExperience(opt.id)}
-                activeOpacity={0.85}
-              >
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.goalLabel, experience === opt.id && styles.goalLabelActive]}>{opt.label}</Text>
-                  <Text style={styles.goalSub}>{opt.sub}</Text>
-                </View>
-                {experience === opt.id && (
-                  <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.fieldLabel}>How many days a week do you train?</Text>
-            <Text style={styles.fieldHint}>Used to calculate your calorie needs accurately.</Text>
-            <View style={styles.segmentRow}>
-              {[3, 4, 5, 6].map(d => (
-                <TouchableOpacity
-                  key={d}
-                  style={[styles.segment, daysPerWeek === d && styles.segmentActive]}
-                  onPress={() => setDaysPerWeek(d)}
-                >
-                  <Text style={[styles.segmentText, daysPerWeek === d && styles.segmentTextActive]}>
-                    {d}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <TouchableOpacity style={styles.primaryBtn} onPress={advanceFrom2} activeOpacity={0.88}>
-            <Text style={styles.primaryBtnText}>Continue</Text>
-            <Ionicons name="arrow-forward" size={18} color={colors.background} />
-          </TouchableOpacity>
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
-
-  // ── Step 3 — Your training setup ─────────────────────────────────────────────
-
-  if (step === 3) {
-    const canContinue = !!equipment;
+    const canContinue = !!experience && !!daysPerWeek && !!sessionLengthMinutes && !!equipment;
 
     return (
       <SafeAreaView style={styles.safe}>
@@ -709,9 +624,48 @@ export default function ProOnboardingScreen({ navigation }) {
             </TouchableOpacity>
 
             <Header
-              title="Your training setup."
-              sub="These choices shape your programme directly. You can update them any time."
+              title="Your training profile."
+              sub="Experience, schedule, and equipment shape your personalised programme."
             />
+
+            <View style={styles.section}>
+              <Text style={styles.fieldLabel}>Training experience</Text>
+              <Text style={styles.fieldHint}>Shapes the volume and exercise complexity of your plan.</Text>
+              {EXPERIENCE_OPTIONS.map(opt => (
+                <TouchableOpacity
+                  key={opt.id}
+                  style={[styles.goalCard, experience === opt.id && styles.goalCardActive]}
+                  onPress={() => setExperience(opt.id)}
+                  activeOpacity={0.85}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.goalLabel, experience === opt.id && styles.goalLabelActive]}>{opt.label}</Text>
+                    <Text style={styles.goalSub}>{opt.sub}</Text>
+                  </View>
+                  {experience === opt.id && (
+                    <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.fieldLabel}>Days per week</Text>
+              <Text style={styles.fieldHint}>Used to calculate your calorie needs accurately.</Text>
+              <View style={styles.segmentRow}>
+                {[3, 4, 5, 6].map(d => (
+                  <TouchableOpacity
+                    key={d}
+                    style={[styles.segment, daysPerWeek === d && styles.segmentActive]}
+                    onPress={() => setDaysPerWeek(d)}
+                  >
+                    <Text style={[styles.segmentText, daysPerWeek === d && styles.segmentTextActive]}>
+                      {d}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
 
             <View style={styles.section}>
               <Text style={styles.fieldLabel}>Session length</Text>
@@ -733,7 +687,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
             <View style={styles.section}>
               <Text style={styles.fieldLabel}>Equipment</Text>
-              <Text style={styles.fieldHint}>What do you have access to at your gym or training space?</Text>
+              <Text style={styles.fieldHint}>What do you have access to?</Text>
               <View style={styles.goalList}>
                 {EQUIPMENT_OPTIONS.map(opt => (
                   <TouchableOpacity
@@ -762,7 +716,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
             <TouchableOpacity
               style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
-              onPress={canContinue ? advanceFrom3 : undefined}
+              onPress={canContinue ? advanceFrom2 : undefined}
               disabled={!canContinue}
               activeOpacity={canContinue ? 0.88 : 1}
             >
@@ -777,11 +731,12 @@ export default function ProOnboardingScreen({ navigation }) {
 
   // ── Step 4 — What are you training for? (Physique category) ─────────────────
 
-  if (step === 4) {
+  if (step === 3) {
     const allGroups = ['All', ...PHYSIQUE_GOAL_GROUPS];
     const filteredGoals = goalFilterGroup === 'All'
       ? PHYSIQUE_GOALS
       : PHYSIQUE_GOALS.filter(g => g.group === goalFilterGroup);
+    const canContinue = !!trainingGoal && !!trainingPhase;
 
     return (
       <SafeAreaView style={styles.safe}>
@@ -792,62 +747,98 @@ export default function ProOnboardingScreen({ navigation }) {
           </TouchableOpacity>
 
           <Header
-            title="What are you training for?"
-            sub="This shapes how your plan distributes volume across muscle groups."
+            title="Your goals and phase."
+            sub="These shape how volume is distributed and your calorie targets."
           />
 
-          {/* Category filter tabs */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.filterTabScroll}
-            contentContainerStyle={styles.filterTabScrollContent}
-          >
-            {allGroups.map(group => (
-              <TouchableOpacity
-                key={group}
-                style={[styles.filterTab, goalFilterGroup === group && styles.filterTabActive]}
-                onPress={() => setGoalFilterGroup(group)}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.filterTabText, goalFilterGroup === group && styles.filterTabTextActive]}>
-                  {group}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          <View style={styles.section}>
+            <Text style={styles.fieldLabel}>What are you training for?</Text>
+            <Text style={styles.fieldHint}>This shapes how your plan distributes volume across muscle groups.</Text>
 
-          <View style={styles.goalList}>
-            {filteredGoals.map(g => (
-              <TouchableOpacity
-                key={g.value}
-                style={[styles.goalCard, trainingGoal === g.value && styles.goalCardActive]}
-                onPress={() => setTrainingGoal(g.value)}
-                activeOpacity={0.85}
-              >
-                <View style={[styles.goalIconWrap, trainingGoal === g.value && styles.goalIconWrapActive]}>
-                  <Ionicons
-                    name={g.icon}
-                    size={20}
-                    color={trainingGoal === g.value ? colors.primary : colors.textSecondary}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.goalLabel, trainingGoal === g.value && styles.goalLabelActive]}>{g.label}</Text>
-                  <Text style={styles.goalSub}>{g.subtitle}</Text>
-                </View>
-                {trainingGoal === g.value && (
-                  <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-                )}
-              </TouchableOpacity>
-            ))}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.filterTabScroll}
+              contentContainerStyle={styles.filterTabScrollContent}
+            >
+              {allGroups.map(group => (
+                <TouchableOpacity
+                  key={group}
+                  style={[styles.filterTab, goalFilterGroup === group && styles.filterTabActive]}
+                  onPress={() => setGoalFilterGroup(group)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.filterTabText, goalFilterGroup === group && styles.filterTabTextActive]}>
+                    {group}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <View style={styles.goalList}>
+              {filteredGoals.map(g => (
+                <TouchableOpacity
+                  key={g.value}
+                  style={[styles.goalCard, trainingGoal === g.value && styles.goalCardActive]}
+                  onPress={() => setTrainingGoal(g.value)}
+                  activeOpacity={0.85}
+                >
+                  <View style={[styles.goalIconWrap, trainingGoal === g.value && styles.goalIconWrapActive]}>
+                    <Ionicons
+                      name={g.icon}
+                      size={20}
+                      color={trainingGoal === g.value ? colors.primary : colors.textSecondary}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.goalLabel, trainingGoal === g.value && styles.goalLabelActive]}>{g.label}</Text>
+                    <Text style={styles.goalSub}>{g.subtitle}</Text>
+                  </View>
+                  {trainingGoal === g.value && (
+                    <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.fieldLabel}>What phase are you in?</Text>
+            <Text style={styles.fieldHint}>Your phase sets your calorie target and plan structure.</Text>
+
+            <View style={styles.goalList}>
+              {TRAINING_PHASES.map(phase => (
+                <TouchableOpacity
+                  key={phase.value}
+                  style={[styles.goalCard, trainingPhase === phase.value && styles.goalCardActive]}
+                  onPress={() => setTrainingPhase(phase.value)}
+                  activeOpacity={0.85}
+                >
+                  <View style={[styles.goalIconWrap, trainingPhase === phase.value && styles.goalIconWrapActive]}>
+                    <Ionicons
+                      name={phase.icon}
+                      size={20}
+                      color={trainingPhase === phase.value ? colors.primary : colors.textSecondary}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.goalLabel, trainingPhase === phase.value && styles.goalLabelActive]}>{phase.label}</Text>
+                    <Text style={styles.goalSub}>{phase.subtitle}</Text>
+                    <Text style={styles.phaseDetail}>{phase.detail}</Text>
+                  </View>
+                  {trainingPhase === phase.value && (
+                    <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
 
           <TouchableOpacity
-            style={[styles.primaryBtn, !trainingGoal && styles.primaryBtnDisabled]}
-            onPress={trainingGoal ? advanceFrom4 : undefined}
-            disabled={!trainingGoal}
-            activeOpacity={trainingGoal ? 0.88 : 1}
+            style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
+            onPress={canContinue ? advanceFrom3 : undefined}
+            disabled={!canContinue}
+            activeOpacity={canContinue ? 0.88 : 1}
           >
             <Text style={styles.primaryBtnText}>Continue</Text>
             <Ionicons name="arrow-forward" size={18} color={colors.background} />
@@ -857,9 +848,11 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 5 — What phase are you in? ─────────────────────────────────────────
+  // ── Step 4 — Recovery & Habits ──────────────────────────────────────────────
 
-  if (step === 5) {
+  if (step === 4) {
+    const canContinue = !!recoveryRating;
+
     return (
       <SafeAreaView style={styles.safe}>
         <ScrollView contentContainerStyle={styles.scroll}>
@@ -869,121 +862,36 @@ export default function ProOnboardingScreen({ navigation }) {
           </TouchableOpacity>
 
           <Header
-            title="What phase are you in?"
-            sub="Your phase sets your calorie target and shapes how your plan is structured."
+            title="Recovery & reminders."
+            sub="Recovery affects your plan volume. Reminders keep coaching consistent."
           />
 
-          <View style={styles.goalList}>
-            {TRAINING_PHASES.map(phase => (
-              <TouchableOpacity
-                key={phase.value}
-                style={[styles.goalCard, trainingPhase === phase.value && styles.goalCardActive]}
-                onPress={() => setTrainingPhase(phase.value)}
-                activeOpacity={0.85}
-              >
-                <View style={[styles.goalIconWrap, trainingPhase === phase.value && styles.goalIconWrapActive]}>
-                  <Ionicons
-                    name={phase.icon}
-                    size={20}
-                    color={trainingPhase === phase.value ? colors.primary : colors.textSecondary}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.goalLabel, trainingPhase === phase.value && styles.goalLabelActive]}>{phase.label}</Text>
-                  <Text style={styles.goalSub}>{phase.subtitle}</Text>
-                  <Text style={styles.phaseDetail}>{phase.detail}</Text>
-                </View>
-                {trainingPhase === phase.value && (
-                  <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-                )}
-              </TouchableOpacity>
-            ))}
+          <View style={styles.section}>
+            <Text style={styles.fieldLabel}>How's your recovery?</Text>
+            <Text style={styles.fieldHint}>This affects how much volume your plan includes. Be honest; it adjusts to protect you.</Text>
+            <View style={styles.goalList}>
+              {RECOVERY_OPTIONS.map(opt => (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[styles.goalCard, recoveryRating === opt.value && styles.goalCardActive]}
+                  onPress={() => setRecoveryRating(opt.value)}
+                  activeOpacity={0.85}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.goalLabel, recoveryRating === opt.value && styles.goalLabelActive]}>{opt.label}</Text>
+                    <Text style={styles.goalSub}>{opt.sub}</Text>
+                  </View>
+                  {recoveryRating === opt.value && (
+                    <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
 
-          <TouchableOpacity
-            style={[styles.primaryBtn, !trainingPhase && styles.primaryBtnDisabled]}
-            onPress={trainingPhase ? advanceFrom5 : undefined}
-            disabled={!trainingPhase}
-            activeOpacity={trainingPhase ? 0.88 : 1}
-          >
-            <Text style={styles.primaryBtnText}>Continue</Text>
-            <Ionicons name="arrow-forward" size={18} color={colors.background} />
-          </TouchableOpacity>
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
-
-  // ── Step 6 — How's your recovery? ────────────────────────────────────────────
-
-  if (step === 6) {
-    return (
-      <SafeAreaView style={styles.safe}>
-        <ScrollView contentContainerStyle={styles.scroll}>
-          <TouchableOpacity style={styles.backBtn} onPress={goBack} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
-            <Text style={styles.backBtnText}>Back</Text>
-          </TouchableOpacity>
-
-          <Header
-            title="How's your recovery?"
-            sub="This affects how much volume your plan includes. Be honest; it adjusts to protect you."
-          />
-
-          <View style={styles.goalList}>
-            {RECOVERY_OPTIONS.map(opt => (
-              <TouchableOpacity
-                key={opt.value}
-                style={[styles.goalCard, recoveryRating === opt.value && styles.goalCardActive]}
-                onPress={() => setRecoveryRating(opt.value)}
-                activeOpacity={0.85}
-              >
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.goalLabel, recoveryRating === opt.value && styles.goalLabelActive]}>{opt.label}</Text>
-                  <Text style={styles.goalSub}>{opt.sub}</Text>
-                </View>
-                {recoveryRating === opt.value && (
-                  <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <TouchableOpacity
-            style={[styles.primaryBtn, (!recoveryRating || busy) && styles.primaryBtnDisabled]}
-            onPress={recoveryRating && !busy ? advanceFrom6 : undefined}
-            disabled={!recoveryRating || busy}
-            activeOpacity={recoveryRating && !busy ? 0.88 : 1}
-          >
-            {busy ? (
-              <ActivityIndicator color={colors.background} />
-            ) : (
-              <>
-                <Text style={styles.primaryBtnText}>Continue</Text>
-                <Ionicons name="arrow-forward" size={18} color={colors.background} />
-              </>
-            )}
-          </TouchableOpacity>
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
-
-  // ── Step 7 — Stay on track (Notifications) ───────────────────────────────────
-
-  if (step === 7) {
-    return (
-      <SafeAreaView style={styles.safe}>
-        <ScrollView contentContainerStyle={styles.scroll}>
-          <TouchableOpacity style={styles.backBtn} onPress={goBack} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
-            <Text style={styles.backBtnText}>Back</Text>
-          </TouchableOpacity>
-
-          <Header
-            title="Stay on track."
-            sub="Coaching only works when it's consistent. These reminders keep you accountable without being annoying."
-          />
+          <View style={styles.section}>
+            <Text style={styles.fieldLabel}>Coaching reminders</Text>
+            <Text style={styles.fieldHint}>Optional notifications to keep you on track. You can change these later in Settings.</Text>
 
           {/* Morning weight */}
           <View style={styles.notifSection}>
@@ -1075,20 +983,29 @@ export default function ProOnboardingScreen({ navigation }) {
             )}
           </View>
 
-          <TouchableOpacity style={styles.primaryBtn} onPress={advanceFrom7} activeOpacity={0.88}>
-            <Text style={styles.primaryBtnText}>Continue</Text>
-            <Ionicons name="arrow-forward" size={18} color={colors.background} />
-          </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity style={styles.skipBtn} onPress={() => setStep(8)}>
-            <Text style={styles.skipBtnText}>Skip reminders for now</Text>
+          <TouchableOpacity
+            style={[styles.primaryBtn, (!canContinue || busy) && styles.primaryBtnDisabled]}
+            onPress={canContinue && !busy ? advanceFrom4 : undefined}
+            disabled={!canContinue || busy}
+            activeOpacity={canContinue && !busy ? 0.88 : 1}
+          >
+            {busy ? (
+              <ActivityIndicator color={colors.background} />
+            ) : (
+              <>
+                <Text style={styles.primaryBtnText}>Continue</Text>
+                <Ionicons name="arrow-forward" size={18} color={colors.background} />
+              </>
+            )}
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
     );
   }
 
-  // ── Step 8 — Almost there (Account) ─────────────────────────────────────────
+  // ── Step 5 — Create your account ────────────────────────────────────────────
 
   return (
     <SafeAreaView style={styles.safe}>
