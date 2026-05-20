@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 
-export default function ExerciseCard({ exercise, onPress, onAdd, lastLogged, units = 'kg', showAddButton = true }) {
+export default function ExerciseCard({ exercise, onPress, onAdd, onLongPress, lastLogged, units = 'kg', showAddButton = true }) {
   const primaryMuscle = MUSCLE_DISPLAY_NAMES[(exercise.primaryMuscle || exercise.primary_muscle || '').toLowerCase()]
     || exercise.primaryMuscle || exercise.primary_muscle || '';
 
@@ -12,7 +12,7 @@ export default function ExerciseCard({ exercise, onPress, onAdd, lastLogged, uni
   const sfr = exercise.stimulusToFatigueRatio || exercise.stimulus_to_fatigue_ratio || 3;
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity style={styles.card} onPress={onPress} onLongPress={onLongPress} activeOpacity={0.7}>
       <View style={styles.content}>
         <View style={styles.info}>
           <Text style={styles.name} numberOfLines={1}>{exercise.name}</Text>

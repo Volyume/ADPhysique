@@ -6,13 +6,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import ExerciseCard from '../components/ExerciseCard';
-import { getAllExercises, getCompletedWorkoutSets, insertExercise } from '../lib/database';
+import { getAllExercises, getCompletedWorkoutSets, insertExercise, deleteExercise } from '../lib/database';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
 const MUSCLES = Object.keys(MUSCLE_DISPLAY_NAMES);
 const EQUIPMENT = ['Barbell', 'Dumbbell', 'Cable', 'Machine', 'Bodyweight', 'Smith Machine', 'Bands'];
+
+const DIFFICULTY_OPTIONS = [
+  { label: 'Beginner', value: 'beginner' },
+  { label: 'Intermediate', value: 'intermediate' },
+  { label: 'Advanced', value: 'advanced' },
+];
+
+const EQUIPMENT_CREATE = ['Barbell', 'Dumbbell', 'Cable', 'Machine', 'Bodyweight', 'Kettlebell', 'Band', 'Other'];
 
 export default function ExerciseLibraryScreen({ navigation, route }) {
   const { user, units } = useAppStore(useShallow(s => ({ user: s.user, units: s.units })));
@@ -23,13 +31,18 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
   const [showFilters, setShowFilters] = useState(false);
   const [recentSets, setRecentSets] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
+
+  // Create exercise form state
   const [newName, setNewName] = useState('');
   const [newMuscle, setNewMuscle] = useState('');
   const [newEquipment, setNewEquipment] = useState('');
+  const [newDifficulty, setNewDifficulty] = useState('intermediate');
   const [newSecondaryMuscles, setNewSecondaryMuscles] = useState([]);
   const [newExerciseCategory, setNewExerciseCategory] = useState('compound');
   const [newIncrementKg, setNewIncrementKg] = useState(2.5);
   const [savingNew, setSavingNew] = useState(false);
+  const [nameError, setNameError] = useState('');
+  const [muscleError, setMuscleError] = useState('');
 
   const addToWorkout = route.params?.onSelect;
 
@@ -61,35 +74,77 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
     );
   }
 
+  function resetForm() {
+    setNewName('');
+    setNewMuscle('');
+    setNewEquipment('');
+    setNewDifficulty('intermediate');
+    setNewSecondaryMuscles([]);
+    setNewExerciseCategory('compound');
+    setNewIncrementKg(2.5);
+    setNameError('');
+    setMuscleError('');
+  }
+
   async function handleSaveCustomExercise() {
-    if (!newName.trim()) {
-      Alert.alert('Name required', 'Please enter a name for the exercise.');
-      return;
+    let valid = true;
+    if (!newName.trim() || newName.trim().length < 2) {
+      setNameError(newName.trim().length === 0 ? 'Name is required.' : 'Name must be at least 2 characters.');
+      valid = false;
+    } else {
+      setNameError('');
     }
+    if (!newMuscle) {
+      setMuscleError('Please select a primary muscle group.');
+      valid = false;
+    } else {
+      setMuscleError('');
+    }
+    if (!valid) return;
+
     setSavingNew(true);
     try {
       await insertExercise({
         name: newName.trim(),
-        primaryMuscle: newMuscle || null,
+        primaryMuscle: newMuscle,
         secondaryMuscles: newSecondaryMuscles.length > 0 ? newSecondaryMuscles : null,
         equipment: newEquipment || null,
         isCustom: 1,
         exerciseCategory: newExerciseCategory,
         incrementKg: newIncrementKg,
+        notes: newDifficulty ? `difficulty:${newDifficulty}` : null,
       });
       await loadExercises();
       setShowAddModal(false);
-      setNewName('');
-      setNewMuscle('');
-      setNewEquipment('');
-      setNewSecondaryMuscles([]);
-      setNewExerciseCategory('compound');
-      setNewIncrementKg(2.5);
+      resetForm();
     } catch (_e) {
       Alert.alert('Error', 'Could not save exercise. Please try again.');
     } finally {
       setSavingNew(false);
     }
+  }
+
+  function handleLongPressExercise(item) {
+    if (!item.isCustom) return;
+    Alert.alert(
+      `Delete '${item.name}'?`,
+      'This will remove it from your library. Sets already logged will be kept.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteExercise(item.id);
+              await loadExercises();
+            } catch (_e) {
+              Alert.alert('Error', 'Could not delete exercise. Please try again.');
+            }
+          },
+        },
+      ],
+    );
   }
 
   const filtered = useMemo(() => {
@@ -108,7 +163,10 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
         (e.equipment || '').toLowerCase().includes(filterEquipment.toLowerCase()),
       );
     }
-    return result.slice(0, 100);
+    // Custom exercises always appear at the top
+    const custom = result.filter(e => e.isCustom);
+    const standard = result.filter(e => !e.isCustom);
+    return [...custom, ...standard].slice(0, 100);
   }, [exercises, debouncedQuery, filterMuscle, filterEquipment]);
 
   // Pre-compute a map of exerciseId → last logged set so FlatList items don't do O(n) searches
@@ -162,7 +220,7 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.addNewBtn}
-          onPress={() => setShowAddModal(true)}
+          onPress={() => { resetForm(); setShowAddModal(true); }}
         >
           <Ionicons name="add" size={20} color={colors.primary} />
         </TouchableOpacity>
@@ -197,6 +255,7 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
             onPress={() => navigation.navigate('ExerciseDetail', { exerciseId: item.id })}
             onAdd={addToWorkout ? () => addToWorkout(item) : undefined}
             showAddButton={!!addToWorkout}
+            onLongPress={() => handleLongPressExercise(item)}
           />
         )}
         contentContainerStyle={styles.list}
@@ -209,72 +268,96 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
         }
       />
 
-      {/* Add Custom Exercise Modal */}
-      <Modal visible={showAddModal} animationType="slide" onRequestClose={() => setShowAddModal(false)}>
-        <SafeAreaView style={styles.addModalSafe} edges={['top', 'bottom']}>
-          <View style={styles.addModalHeader}>
-            <Text style={styles.addModalTitle}>Add Exercise</Text>
-            <TouchableOpacity onPress={() => setShowAddModal(false)}>
-              <Ionicons name="close" size={24} color={colors.textPrimary} />
-            </TouchableOpacity>
-          </View>
-          <ScrollView contentContainerStyle={styles.addModalContent} keyboardShouldPersistTaps="handled">
-            <Text style={styles.addFieldLabel}>Exercise name *</Text>
-            <TextInput
-              style={styles.addFieldInput}
-              value={newName}
-              onChangeText={setNewName}
-              placeholder="e.g. Cable Rope Pushdown"
-              placeholderTextColor={colors.textMuted}
-              autoFocus
-              autoCapitalize="words"
-            />
+      {/* Create Exercise Sheet */}
+      <Modal
+        visible={showAddModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => { setShowAddModal(false); resetForm(); }}
+      >
+        <View style={styles.sheetOverlay}>
+          <SafeAreaView style={styles.sheetSafe} edges={['bottom']}>
+            <View style={styles.sheet}>
+              {/* Handle bar */}
+              <View style={styles.sheetHandle} />
 
-            <Text style={[styles.addFieldLabel, { marginTop: spacing.xl }]}>Primary muscle</Text>
-            <View style={styles.chipGrid}>
-              {Object.entries(MUSCLE_DISPLAY_NAMES).map(([key, label]) => (
+              {/* Header */}
+              <View style={styles.sheetHeader}>
+                <Text style={styles.sheetTitle}>Create Exercise</Text>
                 <TouchableOpacity
-                  key={key}
-                  style={[styles.chip, newMuscle === key && styles.chipActive]}
-                  onPress={() => setNewMuscle(newMuscle === key ? '' : key)}
+                  onPress={() => { setShowAddModal(false); resetForm(); }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Text style={[styles.chipText, newMuscle === key && styles.chipTextActive]}>{label}</Text>
+                  <Text style={styles.cancelLink}>Cancel</Text>
                 </TouchableOpacity>
-              ))}
-            </View>
+              </View>
 
-            <Text style={[styles.addFieldLabel, { marginTop: spacing.xl }]}>Secondary muscles (optional)</Text>
-            <View style={styles.chipGrid}>
-              {Object.entries(MUSCLE_DISPLAY_NAMES)
-                .filter(([key]) => key !== newMuscle)
-                .map(([key, label]) => (
-                  <TouchableOpacity
-                    key={key}
-                    style={[styles.chip, newSecondaryMuscles.includes(key) && styles.chipActive]}
-                    onPress={() => toggleSecondaryMuscle(key)}
-                  >
-                    <Text style={[styles.chipText, newSecondaryMuscles.includes(key) && styles.chipTextActive]}>
-                      {label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-            </View>
+              <ScrollView
+                contentContainerStyle={styles.sheetContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
+                {/* Name */}
+                <Text style={styles.sectionLabel}>Exercise name *</Text>
+                <TextInput
+                  style={[styles.nameInput, nameError ? styles.nameInputError : null]}
+                  value={newName}
+                  onChangeText={v => { setNewName(v); if (nameError) setNameError(''); }}
+                  placeholder="e.g. Reverse Nordic Curl"
+                  placeholderTextColor={colors.textMuted}
+                  autoFocus
+                  autoCapitalize="words"
+                  returnKeyType="done"
+                />
+                {nameError ? <Text style={styles.errorText}>{nameError}</Text> : null}
 
-            <Text style={[styles.addFieldLabel, { marginTop: spacing.xl }]}>Equipment</Text>
-            <View style={styles.chipGrid}>
-              {['Barbell', 'Dumbbell', 'Cable', 'Machine', 'Bodyweight', 'Smith Machine', 'Bands', 'EZ Bar', 'Kettlebell', 'Plate', 'Other'].map(eq => (
-                <TouchableOpacity
-                  key={eq}
-                  style={[styles.chip, newEquipment === eq && styles.chipActive]}
-                  onPress={() => setNewEquipment(newEquipment === eq ? '' : eq)}
-                >
-                  <Text style={[styles.chipText, newEquipment === eq && styles.chipTextActive]}>{eq}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+                {/* Primary muscle */}
+                <Text style={[styles.sectionLabel, { marginTop: spacing.xl }]}>Primary muscle *</Text>
+                {muscleError ? <Text style={styles.errorText}>{muscleError}</Text> : null}
+                <View style={styles.chipGrid}>
+                  {Object.entries(MUSCLE_DISPLAY_NAMES).map(([key, label]) => (
+                    <TouchableOpacity
+                      key={key}
+                      style={[styles.chip, newMuscle === key && styles.chipActive]}
+                      onPress={() => { setNewMuscle(newMuscle === key ? '' : key); if (muscleError) setMuscleError(''); }}
+                    >
+                      <Text style={[styles.chipText, newMuscle === key && styles.chipTextActive]}>{label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Equipment */}
+                <Text style={[styles.sectionLabel, { marginTop: spacing.xl }]}>Equipment (optional)</Text>
+                <View style={styles.chipGrid}>
+                  {EQUIPMENT_CREATE.map(eq => (
+                    <TouchableOpacity
+                      key={eq}
+                      style={[styles.chip, newEquipment === eq && styles.chipActive]}
+                      onPress={() => setNewEquipment(newEquipment === eq ? '' : eq)}
+                    >
+                      <Text style={[styles.chipText, newEquipment === eq && styles.chipTextActive]}>{eq}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Difficulty */}
+                <Text style={[styles.sectionLabel, { marginTop: spacing.xl }]}>Difficulty (optional)</Text>
+                <View style={styles.chipGrid}>
+                  {DIFFICULTY_OPTIONS.map(opt => (
+                    <TouchableOpacity
+                      key={opt.value}
+                      style={[styles.chip, newDifficulty === opt.value && styles.chipActive]}
+                      onPress={() => setNewDifficulty(newDifficulty === opt.value ? '' : opt.value)}
+                    >
+                      <Text style={[styles.chipText, newDifficulty === opt.value && styles.chipTextActive]}>
+                        {opt.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
 
                 {/* Exercise Category */}
-                <Text style={[styles.addFieldLabel, { marginTop: spacing.xl }]}>Exercise category</Text>
+                <Text style={[styles.sectionLabel, { marginTop: spacing.xl }]}>Exercise category</Text>
                 <View style={styles.chipGrid}>
                   {[
                     { label: 'Compound', value: 'compound' },
@@ -293,8 +376,8 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
                   ))}
                 </View>
 
-                {/* Increment */}
-                <Text style={[styles.addFieldLabel, { marginTop: spacing.xl }]}>Weight increment ({units})</Text>
+                {/* Weight increment */}
+                <Text style={[styles.sectionLabel, { marginTop: spacing.xl }]}>Weight increment ({units})</Text>
                 <View style={styles.chipGrid}>
                   {[0.5, 1, 1.25, 2.5, 5].map(inc => (
                     <TouchableOpacity
@@ -309,15 +392,18 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
                   ))}
                 </View>
 
-            <TouchableOpacity
-              style={[styles.saveCustomBtn, savingNew && { opacity: 0.6 }]}
-              onPress={handleSaveCustomExercise}
-              disabled={savingNew}
-            >
-              <Text style={styles.saveCustomBtnText}>{savingNew ? 'Saving...' : 'Save Exercise'}</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </SafeAreaView>
+                {/* Save button */}
+                <TouchableOpacity
+                  style={[styles.saveBtn, savingNew && { opacity: 0.6 }]}
+                  onPress={handleSaveCustomExercise}
+                  disabled={savingNew}
+                >
+                  <Text style={styles.saveBtnText}>{savingNew ? 'Saving...' : 'Save Exercise'}</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          </SafeAreaView>
+        </View>
       </Modal>
 
       {/* Filter Modal */}
@@ -445,6 +531,118 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     color: colors.textMuted,
   },
+
+  // Create Exercise sheet
+  sheetOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'flex-end',
+  },
+  sheetSafe: {
+    backgroundColor: 'transparent',
+  },
+  sheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    paddingTop: spacing.sm,
+    maxHeight: '92%',
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: radius.full,
+    backgroundColor: colors.border,
+    alignSelf: 'center',
+    marginBottom: spacing.md,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  sheetTitle: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+  },
+  cancelLink: {
+    fontSize: fontSize.md,
+    color: colors.textMuted,
+    fontWeight: fontWeight.medium,
+  },
+  sheetContent: {
+    padding: spacing.lg,
+    paddingBottom: spacing.xxxl,
+  },
+  sectionLabel: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textSecondary,
+    letterSpacing: 0.2,
+    marginBottom: spacing.sm,
+  },
+  nameInput: {
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    fontSize: fontSize.md,
+    color: colors.textPrimary,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  nameInputError: {
+    borderColor: colors.error,
+  },
+  errorText: {
+    fontSize: fontSize.xs,
+    color: colors.error,
+    marginTop: spacing.xs,
+  },
+  chipGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  chip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  chipActive: {
+    backgroundColor: colors.primaryBg,
+    borderColor: colors.primary,
+  },
+  chipText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    fontWeight: fontWeight.medium,
+  },
+  chipTextActive: {
+    color: colors.primary,
+  },
+  saveBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+    marginTop: spacing.xl,
+  },
+  saveBtnText: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.background,
+  },
+
+  // Filter sheet
   filterOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.7)',
@@ -527,38 +725,4 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.primary + '50',
   },
-  addModalSafe: { flex: 1, backgroundColor: colors.background },
-  addModalHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border,
-  },
-  addModalTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  addModalContent: { padding: spacing.lg, paddingBottom: spacing.xxxl },
-  addFieldLabel: {
-    fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary,
-    letterSpacing: 0.2, marginBottom: spacing.sm,
-  },
-  addFieldNote: { fontSize: fontSize.xs, color: colors.textMuted, marginBottom: spacing.sm, marginTop: -spacing.xs },
-  addFieldInput: {
-    backgroundColor: colors.surface, borderRadius: radius.md, paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md, fontSize: fontSize.md, color: colors.textPrimary,
-    borderWidth: 1, borderColor: colors.border,
-  },
-  chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chip: {
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.full,
-    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border,
-  },
-  chipActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
-  chipText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
-  chipTextActive: { color: colors.primary },
-  addCustomNote: {
-    fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18,
-    marginTop: spacing.xl, marginBottom: spacing.lg,
-  },
-  saveCustomBtn: {
-    backgroundColor: colors.primary, borderRadius: radius.lg,
-    paddingVertical: spacing.lg, alignItems: 'center',
-  },
-  saveCustomBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.background },
 });

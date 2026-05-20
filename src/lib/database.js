@@ -441,6 +441,20 @@ const SCHEMA_MIGRATIONS = [
   [
     'ALTER TABLE routines ADD COLUMN is_sample INTEGER NOT NULL DEFAULT 0',
   ],
+  // v14 — between-session "next time" coaching notes
+  [
+    `CREATE TABLE IF NOT EXISTS workout_notes (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      routine_id TEXT,
+      exercise_id TEXT,
+      note TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      expires_after_uses INTEGER NOT NULL DEFAULT 1,
+      shown_count INTEGER NOT NULL DEFAULT 0
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_workout_notes_user ON workout_notes(user_id, routine_id)`,
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
@@ -2474,4 +2488,44 @@ export async function getRecentWorkoutFeedback(userId, limit = 6) {
   } catch (_e) {
     return [];
   }
+}
+
+// ─── Next-time coaching notes ─────────────────────────────────────────────────
+
+export async function saveNextTimeNote(userId, { routineId = null, exerciseId = null, note, expiresAfterUses = 1 }) {
+  const d = await db();
+  const id = uid();
+  const now = Date.now();
+  await d.runAsync(
+    `INSERT INTO workout_notes (id, user_id, routine_id, exercise_id, note, created_at, expires_after_uses, shown_count)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 0)`,
+    [id, userId, routineId ?? null, exerciseId ?? null, note, now, expiresAfterUses],
+  );
+  return { id, userId, routineId, exerciseId, note, createdAt: now, expiresAfterUses, shownCount: 0 };
+}
+
+export async function getNextTimeNotes(userId, routineId) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT * FROM workout_notes
+     WHERE user_id = ?
+       AND (routine_id = ? OR routine_id IS NULL)
+       AND shown_count < expires_after_uses
+     ORDER BY created_at ASC`,
+    [userId, routineId ?? null],
+  );
+  return rows.map(rowToCamel);
+}
+
+export async function markNoteShown(noteId) {
+  const d = await db();
+  // Increment shown_count; then delete if it has reached expires_after_uses.
+  await d.runAsync(
+    'UPDATE workout_notes SET shown_count = shown_count + 1 WHERE id = ?',
+    [noteId],
+  );
+  await d.runAsync(
+    'DELETE FROM workout_notes WHERE id = ? AND shown_count >= expires_after_uses',
+    [noteId],
+  );
 }
