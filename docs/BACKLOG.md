@@ -24,21 +24,21 @@ These are product decisions, not technical deferrals. Do not add them even if re
 
 | Feature | Notes |
 |---|---|
-| **Lock-screen / Live Activity widget** | Requires `ActivityKit` (iOS 16.2+), custom `expo-dev-client` build, significant native code. Deferred until post-launch. |
+| ~~**Lock-screen / Live Activity widget**~~ | **DONE** (managed-workflow approximation). Sticky/ongoing notification with exercise name + rest end time. True iOS Live Activities (Dynamic Island countdown) still requires native code — deferred. |
 | **Plan-level exercise swap (permanent)** | Session-only swap is implemented. Plan-level swap (permanently replacing an exercise in a routine) deferred to avoid scope creep on RoutineDetail. |
-| **Auto-generated deload weeks** | `shouldDeload` algorithm exists in `algorithms.js`. UI surface (banner + deload plan adjustment) is deferred. |
-| **Myo-rep / rest-pause set tracking UI** | Set types exist in the data model. Dedicated input UI (activation set + cluster sets) is deferred. |
+| ~~**Auto-generated deload weeks**~~ | **DONE**. `shouldDeload` algorithm now surfaces an amber recovery-week banner on HomeScreen, dismissable, links to CoachReview. |
+| ~~**Myo-rep / rest-pause set tracking UI**~~ | **DONE**. Both set types exposed in the set type picker with descriptions, cluster banner shows activation set + mini-set counter, and a "Cluster complete" button returns the user to straight working sets. |
 | **Superset pairing** | Superset set type is in the data model. Paired-exercise display and alternating rest timer is deferred. |
 | **Video / GIF execution demos** | No video hosting infrastructure planned. Execution notes are text-only. |
 | **RPE / RIR auto-suggest from fatigue trend** | Algorithm foundations exist. Live per-set suggestions based on rolling fatigue require more training-data validation. |
-| **1RM-based percentage loading** | `calculate1RM` exists. Percentage-based target weight display (e.g. "85% 1RM = 102 kg") deferred. |
+| ~~**1RM-based percentage loading**~~ | **DONE**. Live estimated 1RM chip in SetEntry shows "Est. max ≈ Nkg" as the user enters weight × reps (limited to 1–15 reps where the estimate is reliable). |
 
 ### Analytics & Progress
 
 | Feature | Notes |
 |---|---|
 | **Muscle volume heatmap on body diagram** | Current VolumeHeatmapScreen uses bar charts. Anatomical body-map overlay requires custom SVG or licensed asset. |
-| **Strength standards comparison** | PRWallScreen shows lifetime bests. Comparison against population percentiles (e.g. Symmetric Strength) requires external data set and sync. |
+| ~~**Strength standards comparison**~~ | **DONE**. PRWall now shows Beginner/Novice/Intermediate/Advanced/Elite labels based on bodyweight ratios for the five core compound lifts. |
 | **Session-to-session fatigue trend graph** | Rolling 4-week fatigue and pump scores exist in the data model. Trend visualisation deferred. |
 | **Volume landmark auto-calibration** | MEV/MAV/MRV defaults from RP Hypertrophy are baked in. Per-user calibration from actual response data deferred. |
 
@@ -56,7 +56,7 @@ These are product decisions, not technical deferrals. Do not add them even if re
 | Feature | Notes |
 |---|---|
 | **Nutrition target sync with plan phase** | `getPlanNutritionContext` is implemented in `nutritionEngine.js`. Surfacing a dynamic banner on HomeScreen when plan phase ≠ nutrition phase is deferred. |
-| **Refeed / diet break scheduling** | Refeeds and structured diet breaks (e.g. every 10–14 days on a cut) are mentioned in the nutrition engine warnings. UI scheduling deferred. |
+| ~~**Diet break trigger (MATADOR)**~~ | **DONE**. `shouldSuggestDietBreak` fires at 8+ weeks in deficit (tracked via `goalStartDate` on the user profile), surfaces as a calm card in CoachOutput. Scheduled refeeds (weekly) deferred. |
 | **Macro timing recommendations** | Pre/intra/post-workout nutrition split is outside current scope. |
 
 ### Infrastructure
@@ -65,9 +65,9 @@ These are product decisions, not technical deferrals. Do not add them even if re
 |---|---|
 | **Supabase cloud sync** | Local SQLite is the single source of truth. Supabase client is wired but sync is not implemented. Cloud backup/restore deferred to post-launch. |
 | **Multi-device / web app** | Offline-first SQLite does not sync across devices without Supabase sync. Web app deferred. |
-| **Push notifications** | Rest timer and session reminders via push notification require `expo-notifications` + push credentials. Deferred. |
-| **Data export (CSV / JSON)** | Export of workout history and PRs to file deferred. Partial infrastructure (expo-file-system, expo-sharing) is already a dependency. |
-| **EAS Update (OTA)** | OTA update channel is configured in `eas.json`. Auto-update prompt UI deferred. |
+| ~~**Push notifications**~~ | **DONE** (local notifications). Rest timer fires a sticky/ongoing notification with the exercise name and end time, plus an end-of-rest alert with sound. Remote push (server-driven) still deferred. |
+| ~~**Data export (CSV / JSON)**~~ | **DONE**. Settings → Export → writes a CSV of workout history via `expo-file-system` + `expo-sharing`. Full JSON backup/restore also implemented. |
+| ~~**EAS Update (OTA)**~~ | **DONE**. App checks for updates on launch (production builds only) and prompts "Restart now" / "Later" via Alert when an update is downloaded. |
 
 ---
 
