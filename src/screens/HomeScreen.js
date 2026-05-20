@@ -359,37 +359,41 @@ export default function HomeScreen({ navigation }) {
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={styles.weightCard}>
-            <Ionicons name="scale-outline" size={16} color={colors.textMuted} />
+          <View style={[styles.weightCard, styles.weightCardEmpty]}>
+            <Ionicons name="scale-outline" size={18} color={colors.primary} />
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={styles.weightCardPrompt}>Log morning weight</Text>
+              <Text style={styles.weightCardHint}>Helps your coach track trends and suggest adjustments each week</Text>
+            </View>
             {bwu === 'st' ? (
-              <>
+              <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'center' }}>
                 <TextInput
-                  style={[styles.weightInput, { flex: 1 }]}
+                  style={styles.weightInputCompact}
                   value={weightInputSt}
                   onChangeText={setWeightInputSt}
-                  placeholder="12 st"
+                  placeholder="12st"
                   placeholderTextColor={colors.textMuted}
                   keyboardType="number-pad"
                   maxLength={3}
                 />
                 <TextInput
-                  style={[styles.weightInput, { flex: 1 }]}
+                  style={styles.weightInputCompact}
                   value={weightInputStLbs}
                   onChangeText={setWeightInputStLbs}
-                  placeholder="7 lbs"
+                  placeholder="7lb"
                   placeholderTextColor={colors.textMuted}
                   keyboardType="decimal-pad"
                   maxLength={4}
                   returnKeyType="done"
                   onSubmitEditing={handleLogWeight}
                 />
-              </>
+              </View>
             ) : (
               <TextInput
-                style={styles.weightInput}
+                style={styles.weightInputCompact}
                 value={weightInput}
                 onChangeText={setWeightInput}
-                placeholder={`Morning weight (${bwu})`}
+                placeholder={bwu}
                 placeholderTextColor={colors.textMuted}
                 keyboardType="decimal-pad"
                 returnKeyType="done"
@@ -943,9 +947,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     borderWidth: 1, borderColor: colors.border,
   },
+  weightCardEmpty: {
+    backgroundColor: colors.primaryBg,
+    borderColor: colors.primary + '35',
+    paddingVertical: spacing.md,
+  },
+  weightCardPrompt: {
+    fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary,
+  },
+  weightCardHint: {
+    fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 16,
+  },
   weightInput: {
     flex: 1, fontSize: fontSize.sm, color: colors.textPrimary,
     paddingVertical: spacing.xs,
+  },
+  weightInputCompact: {
+    fontSize: fontSize.sm, color: colors.textPrimary,
+    paddingVertical: spacing.xs, minWidth: 48, textAlign: 'right',
   },
   weightCardText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary },
   weightCardEdit: { fontSize: fontSize.xs, color: colors.primary },
