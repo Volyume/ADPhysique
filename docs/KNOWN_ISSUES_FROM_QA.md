@@ -1,6 +1,26 @@
 # Volyume — Known Issues from QA
 
-_Last updated: 2026-05-16. Covers build as of branch `claude/build-volyume-app-srY9C`._
+_Last updated: 2026-05-20. Original audit dated 2026-05-16; all P1 issues and most P2/P3 issues have been resolved in subsequent commits. Status flags below reflect the current state._
+
+## Resolution summary
+
+| Issue | Severity | Status | Resolved in |
+|---|---|---|---|
+| 001 — WorkoutHistory Repeat → ActiveWorkout | P1 | **Fixed** | Switched to `navigation.getParent()?.navigate('HomeTab', ...)` |
+| 002 — Settings "Manage Routines" route | P1 | **Fixed** | Manage Routines link removed from Settings; routines are now reached via Plans |
+| 003 — Settings "Volume Heatmap" via AnalyticsTab | P1 | **Fixed** | Link removed; Volume Heatmap is reached via Progress → Volume Heatmap |
+| 004 — VolumeHeatmap includes incomplete workouts | P2 | **Fixed** | `getCompletedWorkoutSets` already filters `is_completed = 1` at SQL level |
+| 005 — WorkoutHistory set count includes warm-ups | P3 | **Fixed** | Displays `workingSetCount` separately |
+| 006 — WorkoutSummary 4-session check is all-time | P3 | **Fixed** | Now filters last 28 days |
+| 007 — seedRoutines "RIR 2" jargon | P3 | **Fixed** | Jargon sweep removed all RIR/MEV/MAV/MRV from user-visible strings |
+| 011 — seedRoutines missing restSeconds | P3 | **Fixed** | `seedRoutinesIfNeeded` now passes `def.rest` to `addExerciseToRoutine` |
+| 014 — Analytics weekly volume same as 004 | P2 | **Fixed** | Uses `getCompletedWorkoutSets` |
+| 015 — OAuth buttons without credentials | P3 | **Fixed** | Apple/Google sign-in not shown; email auth only |
+| 016 — Streak counter on deload | P4 | **Fixed** | Streak redefined as weekly sessions, not calendar-day |
+
+The detailed issue records below are kept for historical reference. The "Status" field on each was set to "Open" at the time of the audit and is no longer maintained — refer to the table above for current status.
+
+---
 
 ---
 
