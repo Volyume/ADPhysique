@@ -240,6 +240,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setProgression(null);
   }
 
+  function handleRepeatLastSet() {
+    const last = loggedSets[loggedSets.length - 1];
+    if (!last) return;
+    Haptics.selectionAsync();
+    setCurrentSet(prev => ({
+      ...prev,
+      weight: last.weight,
+      reps: last.actualReps ?? last.reps ?? prev.reps,
+      isGhost: false,
+    }));
+  }
+
   function handleSuggestWarmups() {
     const w = parseFloat(currentSet.weight);
     if (!w || w < 20) return;
@@ -1259,6 +1271,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <Text style={styles.warmupSuggestText}>Suggest warm-up sets</Text>
               </TouchableOpacity>
             )}
+            {loggedSets.length > 0 && currentSet.setType !== 'warmup' && (() => {
+              const last = loggedSets[loggedSets.length - 1];
+              return (
+                <TouchableOpacity style={styles.repeatChip} onPress={handleRepeatLastSet} activeOpacity={0.7}>
+                  <Ionicons name="copy-outline" size={13} color={colors.textMuted} />
+                  <Text style={styles.repeatChipText}>
+                    Repeat last: {last.weight}{units} × {last.actualReps ?? last.reps}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })()}
             <SetEntry
               value={currentSet}
               onChange={(next) => {
@@ -2213,6 +2236,13 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.warning + '40',
   },
   warmupSuggestText: { fontSize: fontSize.xs, color: colors.warning, fontWeight: fontWeight.medium },
+  repeatChip: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
+    borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border,
+  },
+  repeatChipText: { fontSize: fontSize.xs, color: colors.textMuted },
   warmupSheetTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.xs },
   warmupSheetSub: { fontSize: fontSize.sm, color: colors.textSecondary, marginBottom: spacing.lg, lineHeight: 20 },
   warmupRow: {

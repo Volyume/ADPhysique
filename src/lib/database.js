@@ -975,6 +975,14 @@ export async function removeExerciseFromRoutine(id) {
   await d.runAsync('DELETE FROM routine_exercises WHERE id = ?', [id]);
 }
 
+export async function updateRoutineExerciseOrder(id, newOrderIndex) {
+  const d = await db();
+  await d.runAsync(
+    'UPDATE routine_exercises SET order_in_routine = ?, updated_at = ? WHERE id = ?',
+    [newOrderIndex, Date.now(), id],
+  );
+}
+
 // ─── Plans (active plan logic, workout templates) ────────────────────
 
 export async function getActivePlan(userId) {
