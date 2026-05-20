@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,8 +10,19 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import {
   PHYSIQUE_GOALS, PHYSIQUE_GOAL_GROUPS,
   TRAINING_PHASES,
+  GOALS_WITH_WEAK_POINTS,
   phaseToCoachingKey, phaseToNutritionKey, daysToActivityLevel,
 } from '../lib/coachingGoals';
+
+// Weak-point options. Matches the list used previously in Pro onboarding so
+// CoachBuilder receives names it recognises.
+const WEAK_POINT_MUSCLES = [
+  'Chest', 'Upper Chest', 'Lats / Back Width', 'Back Thickness',
+  'Side Delts', 'Rear Delts', 'Front Delts',
+  'Biceps', 'Triceps',
+  'Quads', 'Hamstrings', 'Glutes', 'Calves',
+  'Core / Abs', 'Traps',
+];
 import { calculateNutritionTargets, PROTEIN_APPROACHES, ADVANCED_PROTEIN_GOALS } from '../lib/nutritionEngine';
 import { saveNutritionTargets } from '../lib/database';
 
@@ -33,9 +44,24 @@ export default function ProGoalSetupScreen({ navigation }) {
     userProfile?.proteinApproach
     ?? (ADVANCED_PROTEIN_GOALS.includes(userProfile?.trainingGoal) ? 'advanced' : 'optimised')
   );
+  // Weak points — only meaningful for goals that bias volume toward priority
+  // muscles. Hidden in the UI otherwise but the value is preserved across edits.
+  const [planWeakPoints, setPlanWeakPoints] = useState(userProfile?.planWeakPoints ?? []);
 
   const suggestedApproach = ADVANCED_PROTEIN_GOALS.includes(selectedGoal) ? 'advanced' : 'optimised';
+  const weakPointsApplicable = GOALS_WITH_WEAK_POINTS.includes(selectedGoal);
   const canSave = selectedGoal !== null && selectedPhase !== null;
+
+  function toggleWeakPoint(muscle) {
+    setPlanWeakPoints(prev => {
+      if (prev.includes(muscle)) return prev.filter(m => m !== muscle);
+      if (prev.length >= 3) {
+        Alert.alert('Max 3 muscles', 'Deselect one before adding another.');
+        return prev;
+      }
+      return [...prev, muscle];
+    });
+  }
 
   const filteredGoals = goalFilterGroup === 'All'
     ? PHYSIQUE_GOALS
@@ -75,6 +101,13 @@ export default function ProGoalSetupScreen({ navigation }) {
     }
     // If staying in a deficit phase, preserve the existing start date.
 
+    // Only keep weak points if the new goal supports them — switching to a
+    // non-applicable goal clears them so the plan generator doesn't keep
+    // biasing toward muscles the user no longer wants prioritised.
+    const nextWeakPoints = GOALS_WITH_WEAK_POINTS.includes(selectedGoal)
+      ? planWeakPoints
+      : [];
+
     const updatedProfile = {
       ...(userProfile || {}),
       trainingGoal: selectedGoal,
@@ -82,6 +115,7 @@ export default function ProGoalSetupScreen({ navigation }) {
       goalPhase,
       proteinApproach,
       goalStartDate,
+      planWeakPoints: nextWeakPoints,
     };
 
     // Recalculate nutrition if we have the needed data
@@ -198,6 +232,35 @@ export default function ProGoalSetupScreen({ navigation }) {
             );
           })}
         </View>
+
+        {/* ── Weak points (only for goals that support them) ── */}
+        {weakPointsApplicable && (
+          <>
+            <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>
+              Weak points <Text style={styles.optionalTag}>(optional, max 3)</Text>
+            </Text>
+            <Text style={styles.sectionSub}>
+              Muscles you want to bring up. Your plan biases extra volume towards them.
+            </Text>
+            <View style={styles.weakPointGrid}>
+              {WEAK_POINT_MUSCLES.map(muscle => {
+                const sel = planWeakPoints.includes(muscle);
+                return (
+                  <TouchableOpacity
+                    key={muscle}
+                    style={[styles.weakPointChip, sel && styles.weakPointChipSelected]}
+                    onPress={() => toggleWeakPoint(muscle)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.weakPointChipText, sel && styles.weakPointChipTextSelected]}>
+                      {muscle}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </>
+        )}
 
         {/* ── Training phase ── */}
         <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Training phase</Text>
@@ -341,6 +404,39 @@ const styles = StyleSheet.create({
   goalLabel: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary, flexShrink: 1 },
   goalLabelActive: { color: colors.primary },
   goalCheck: { marginTop: 2 },
+
+  optionalTag: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    fontWeight: fontWeight.regular,
+  },
+  weakPointGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  weakPointChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  weakPointChipSelected: {
+    backgroundColor: colors.primaryBg,
+    borderColor: colors.primary,
+  },
+  weakPointChipText: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    fontWeight: fontWeight.medium,
+  },
+  weakPointChipTextSelected: {
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
+  },
 
   phaseCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,
