@@ -1,5 +1,7 @@
 import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as RestTimerLive from 'rest-timer-live';
 
 const NOTIF_PROMPT_KEY = 'volyume_notif_prompt_seen';
 const REST_TIMER_CHANNEL = 'rest-timer';
@@ -9,6 +11,11 @@ const TRAINING_REMINDERS_CHANNEL = 'training-reminders';
 // Track the IDs of both notifications so we can cancel them cleanly
 let ongoingNotifId = null;
 let doneNotifId = null;
+// True once the native live-chronometer module has successfully posted the
+// ongoing notification for the current rest period. While true, we skip the
+// static expo-notifications ongoing notification so the user sees ONE live
+// ticking notification, not two stacked notifications in the shade.
+let liveNotifActive = false;
 
 // ---------------------------------------------------------------------------
 // Android notification channels
@@ -105,7 +112,8 @@ export async function scheduleRestNotif(seconds, exerciseName = '') {
     // Cancel any leftover notifications from a previous rest period
     await cancelRestNotif();
 
-    const endTime = new Date(Date.now() + seconds * 1000);
+    const endTimeMs = Date.now() + seconds * 1000;
+    const endTime = new Date(endTimeMs);
     const timeStr = endTime.toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
@@ -114,25 +122,47 @@ export async function scheduleRestNotif(seconds, exerciseName = '') {
     const title = exerciseName || 'Rest timer';
     const ongoingBody = `Rest ends at ${timeStr} — tap to return`;
 
-    // 1. Immediate lock-screen / notification shade notification
-    ongoingNotifId = await Notifications.scheduleNotificationAsync({
-      content: {
-        title,
-        body: ongoingBody,
-        sound: false,
-        data: { url: 'volyume://workout' },
-        // Android-specific sticky/ongoing flags
-        android: {
+    // 1a. Try the native live-chronometer notification on Android. This shows
+    // a ticking countdown on the lock screen rather than a static end time.
+    liveNotifActive = false;
+    if (Platform.OS === 'android' && RestTimerLive.isAvailable()) {
+      try {
+        const posted = await RestTimerLive.start({
+          exerciseName: title,
+          endTimeMs,
           channelId: REST_TIMER_CHANNEL,
-          ongoing: true,
-          sticky: true,
-          priority: Notifications.AndroidNotificationPriority.LOW,
-          color: '#F59E0B',
-          smallIcon: 'notification_icon',
+          deepLink: 'volyume://workout',
+        });
+        if (posted) {
+          liveNotifActive = true;
+        }
+      } catch (_) {
+        liveNotifActive = false;
+      }
+    }
+
+    // 1b. Fallback: static expo-notifications ongoing notification (iOS, or
+    // Android when the native module is unavailable or rejected the post).
+    if (!liveNotifActive) {
+      ongoingNotifId = await Notifications.scheduleNotificationAsync({
+        content: {
+          title,
+          body: ongoingBody,
+          sound: false,
+          data: { url: 'volyume://workout' },
+          // Android-specific sticky/ongoing flags
+          android: {
+            channelId: REST_TIMER_CHANNEL,
+            ongoing: true,
+            sticky: true,
+            priority: Notifications.AndroidNotificationPriority.LOW,
+            color: '#F59E0B',
+            smallIcon: 'notification_icon',
+          },
         },
-      },
-      trigger: null, // show immediately
-    });
+        trigger: null, // show immediately
+      });
+    }
 
     // 2. Alert notification that fires when rest is over
     doneNotifId = await Notifications.scheduleNotificationAsync({
@@ -165,6 +195,11 @@ export async function scheduleRestNotif(seconds, exerciseName = '') {
 // ---------------------------------------------------------------------------
 export async function cancelRestNotif(notifId) {
   try {
+    // Cancel the live chronometer notification first (Android native module).
+    if (liveNotifActive) {
+      await RestTimerLive.cancel().catch(() => {});
+      liveNotifActive = false;
+    }
     // Cancel the ongoing notification (passed ID or module-level ref)
     const idToCancel = notifId || ongoingNotifId;
     if (idToCancel) {

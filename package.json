@@ -57,6 +57,7 @@
     "react-native-url-polyfill": "^2.0.0",
     "react-native-web": "~0.19.10",
     "react-native-webview": "13.8.6",
+    "rest-timer-live": "file:./modules/rest-timer-live",
     "victory-native": "^41.12.0",
     "zustand": "^4.5.2"
   },
