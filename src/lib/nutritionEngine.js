@@ -69,7 +69,7 @@ export const PROTEIN_APPROACHES = {
     range: '2.2–3.3 g/kg',
     description: 'The upper end, used by serious athletes and people cutting who want to hold onto as much muscle as possible.',
     lbm: { lean_gain: 2.6, build: 2.6, maintain: 2.6, recomp: 2.9, mild_cut: 3.0, aggressive_cut: 3.2, contest_prep: 3.3 },
-    bw:  { lean_gain: 2.2, build: 2.2, maintain: 2.2, recomp: 2.4, mild_cut: 2.6, aggressive_cut: 3.0, contest_prep: 3.3 },
+    bw:  { lean_gain: 2.4, build: 2.4, maintain: 2.2, recomp: 2.4, mild_cut: 2.6, aggressive_cut: 3.0, contest_prep: 3.3 },
     floor: 1.8,
   },
   custom: {
@@ -168,20 +168,37 @@ function estimateWeeklyRate(targetKcal, maintenanceKcal, weightKg) {
 // Main export: calculateNutritionTargets
 // ---------------------------------------------------------------------------
 
+// Physique competitor and strength goals warrant the advanced protein approach
+// because coaches prescribe 2.4 g/kg BW for bulking phases in these categories.
+const ADVANCED_PROTEIN_GOALS = [
+  'mens_physique', 'classic_physique', 'bodybuilding',
+  'bikini', 'wellness', 'figure', 'womens_physique',
+  'strength_hypertrophy',
+];
+
 export function calculateNutritionTargets(inputs) {
   const {
     sex,
     ageYears,
     heightCm,
     weightKg,
-    bodyFatPercent = null,
+    bodyFatPercent: _bfp = null,
+    bodyFatPct: _bfpAlias = null,  // accept both spellings
     bodyFatSource = null,
     activityLevel,
     goal,
-    proteinApproach = 'optimised',
+    trainingGoal = null,
+    proteinApproach: _proteinApproachInput = null,
     customProteinGPerKg = null,
     targetRateKgPerWeek = null,
   } = inputs;
+
+  const bodyFatPercent = _bfp ?? _bfpAlias;
+
+  // Auto-select advanced protein approach for physique competitor and strength goals
+  // unless the caller has explicitly specified a different approach.
+  const proteinApproach = _proteinApproachInput
+    ?? (ADVANCED_PROTEIN_GOALS.includes(trainingGoal) ? 'advanced' : 'optimised');
 
   const warnings = [];
 

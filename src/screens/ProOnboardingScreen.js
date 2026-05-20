@@ -293,7 +293,7 @@ export default function ProOnboardingScreen({ navigation }) {
         weightKg: safeWeightKg,
         activityLevel: daysToActivityLevel(daysPerWeek),
         goal: phaseToNutritionKey(trainingPhase),
-        proteinApproach: 'optimised',
+        trainingGoal,
       });
 
       const goalPhase = phaseToCoachingKey(trainingPhase);

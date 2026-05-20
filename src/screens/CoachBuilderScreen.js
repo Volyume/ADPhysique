@@ -365,7 +365,7 @@ export default function CoachBuilderScreen({ navigation, route }) {
             weightKg: profile.weightKg,
             activityLevel: daysToActivityLevel(inputs.daysPerWeek ?? 4),
             goal: phaseToNutritionKey(inputs.phase),
-            proteinApproach: 'optimised',
+            trainingGoal: inputs.goal ?? null,
           });
         }
       } catch (_e) {}

@@ -48,11 +48,12 @@ export default function ProGoalSetupScreen({ navigation }) {
         const targets = calculateNutritionTargets({
           weightKg: wp.weightKg,
           heightCm: wp.heightCm,
-          age: wp.age,
+          ageYears: wp.age,
           sex: wp.sex,
           bodyFatPct: wp.bodyFatPct ?? null,
           activityLevel: daysToActivityLevel(wp.daysPerWeek ?? 4),
           goal: phaseToNutritionKey(selectedPhase),
+          trainingGoal: selectedGoal,
         });
         await AsyncStorage.setItem(NUTRITION_KEY, JSON.stringify(targets));
         if (user?.id) {
