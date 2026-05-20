@@ -20,9 +20,7 @@ import {
 } from '../lib/notifications';
 import {
   PHYSIQUE_GOALS,
-  PHYSIQUE_GOAL_GROUPS,
   TRAINING_PHASES,
-  GOAL_LABELS,
   phaseToNutritionKey,
   phaseToCoachingKey,
   daysToActivityLevel,
@@ -31,23 +29,11 @@ import { calculateNutritionTargets } from '../lib/nutritionEngine';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 
-// Total steps in the unified Pro onboarding flow.
-// Weak points and wellbeing screening were removed from first-run.
-// Weak points can be set later from Athlete Hub → Update your goals.
-// The wellbeing check remains available from Settings.
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 4;
 
-// Boer formula — estimates lean body mass (kg) from weight, height, sex.
-// More accurate for protein targeting than total bodyweight.
-function estimateLBM(weightKg, heightCm, sex) {
-  const lbm = sex === 'female'
-    ? (0.252 * weightKg) + (0.473 * heightCm) - 48.3
-    : (0.407 * weightKg) + (0.267 * heightCm) - 19.2;
-  // Floor at 60% of total weight (guards against extreme inputs)
-  return Math.max(lbm, weightKg * 0.6);
-}
+// Default days per week — used for nutrition calc without asking the user.
+const DEFAULT_DAYS_PER_WEEK = 4;
 
-// Maps exact daysPerWeek integer to bucket string for nutrition calc.
 function daysToFreqBucket(daysPerWeek) {
   if (daysPerWeek <= 3) return '2-3';
   if (daysPerWeek <= 5) return '4-5';
@@ -55,13 +41,12 @@ function daysToFreqBucket(daysPerWeek) {
 }
 
 const EXPERIENCE_OPTIONS = [
-  { id: 'beginner',     label: 'Beginner',     sub: 'Less than 18 months of consistent training' },
-  { id: 'intermediate', label: 'Intermediate', sub: '18 months to 3 years of consistent training' },
-  { id: 'advanced',     label: 'Advanced',     sub: '3 to 5 years, consistently adding weight over time' },
-  { id: 'competitive',  label: 'Competitive',  sub: '5+ years, training for physique or performance' },
+  { value: 'beginner',     label: 'Beginner',     sub: 'Less than 18 months of consistent training' },
+  { value: 'intermediate', label: 'Intermediate', sub: '18 months to 3 years of consistent training' },
+  { value: 'advanced',     label: 'Advanced',     sub: '3 to 5 years, consistently adding weight over time' },
+  { value: 'competitive',  label: 'Competitive',  sub: '5+ years, training for physique or performance' },
 ];
 
-// Step 3 — Plan setup options
 const SESSION_LENGTH_OPTIONS = [
   { label: '45 min', value: 45 },
   { label: '60 min', value: 60 },
@@ -70,12 +55,12 @@ const SESSION_LENGTH_OPTIONS = [
 ];
 
 const EQUIPMENT_OPTIONS = [
-  { value: 'full_gym',        label: 'Full Gym',          icon: 'barbell-outline' },
-  { value: 'machines_cables', label: 'Machines & Cables', icon: 'cog-outline' },
-  { value: 'dumbbells_only',  label: 'Dumbbells Only',    icon: 'fitness-outline' },
-  { value: 'barbell_plates',  label: 'Barbell & Plates',  icon: 'barbell-outline' },
-  { value: 'home_gym',        label: 'Home Gym',          icon: 'home-outline' },
-  { value: 'bodyweight',      label: 'Bodyweight',        icon: 'body-outline' },
+  { value: 'full_gym',        label: 'Full Gym',          sub: 'Barbells, cables, machines, dumbbells' },
+  { value: 'machines_cables', label: 'Machines & Cables', sub: 'No free barbells' },
+  { value: 'dumbbells_only',  label: 'Dumbbells Only',    sub: 'Adjustable or fixed dumbbells' },
+  { value: 'barbell_plates',  label: 'Barbell & Plates',  sub: 'Power rack or squat stand setup' },
+  { value: 'home_gym',        label: 'Home Gym',          sub: 'Mixed equipment at home' },
+  { value: 'bodyweight',      label: 'Bodyweight',        sub: 'No equipment needed' },
 ];
 
 const RECOVERY_OPTIONS = [
@@ -85,7 +70,6 @@ const RECOVERY_OPTIONS = [
 ];
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 5); // 5am–6pm
 
 function fmt12(h) {
@@ -93,6 +77,52 @@ function fmt12(h) {
   if (h < 12) return `${h} am`;
   if (h === 12) return '12 pm';
   return `${h - 12} pm`;
+}
+
+// Inline dropdown component — expands in place, no modal needed.
+function Dropdown({ label, hint, value, options, onChange, placeholder = 'Select...' }) {
+  const [open, setOpen] = useState(false);
+  const selected = options.find(o => o.value === value);
+  return (
+    <View style={styles.dropdownWrap}>
+      {label ? <Text style={styles.fieldLabel}>{label}</Text> : null}
+      {hint ? <Text style={styles.fieldHint}>{hint}</Text> : null}
+      <TouchableOpacity
+        style={[styles.dropdownTrigger, value && styles.dropdownTriggerFilled, open && styles.dropdownTriggerOpen]}
+        onPress={() => setOpen(v => !v)}
+        activeOpacity={0.8}
+      >
+        <Text style={[styles.dropdownValue, !value && styles.dropdownPlaceholder]}>
+          {selected?.label ?? placeholder}
+        </Text>
+        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={value ? colors.primary : colors.textMuted} />
+      </TouchableOpacity>
+      {open && (
+        <View style={styles.dropdownList}>
+          {options.map((opt, i) => (
+            <TouchableOpacity
+              key={opt.value}
+              style={[
+                styles.dropdownItem,
+                value === opt.value && styles.dropdownItemActive,
+                i < options.length - 1 && styles.dropdownItemBorder,
+              ]}
+              onPress={() => { onChange(opt.value); setOpen(false); }}
+              activeOpacity={0.75}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.dropdownItemLabel, value === opt.value && styles.dropdownItemLabelActive]}>
+                  {opt.label}
+                </Text>
+                {opt.sub ? <Text style={styles.dropdownItemSub}>{opt.sub}</Text> : null}
+              </View>
+              {value === opt.value && <Ionicons name="checkmark" size={16} color={colors.primary} />}
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+    </View>
+  );
 }
 
 export default function ProOnboardingScreen({ navigation }) {
@@ -105,14 +135,10 @@ export default function ProOnboardingScreen({ navigation }) {
   // Step 1 — profile
   const [firstName, setFirstName] = useState(userProfile?.firstName || '');
   const localUnits = 'kg';
-  // Body weight units: 'st' (stone+lbs) | 'kg' | 'lbs'. Default 'st' for UK.
   const [localBWUnits, setLocalBWUnits] = useState(bodyWeightUnits || 'st');
-  // Stone+lbs entry (used when localBWUnits === 'st')
   const [bodyWeightSt, setBodyWeightSt] = useState('');
   const [bodyWeightStLbs, setBodyWeightStLbs] = useState('0');
-  // Single-field entry (kg or lbs)
   const [bodyWeight, setBodyWeight] = useState('');
-  // Height units independent of body weight units — UK default is imperial (ft+in)
   const [localHeightUnits, setLocalHeightUnits] = useState('imperial');
   const [sex, setSex] = useState('male');
   const [age, setAge] = useState('');
@@ -120,31 +146,21 @@ export default function ProOnboardingScreen({ navigation }) {
   const [heightFt, setHeightFt] = useState('5');
   const [heightIn, setHeightIn] = useState('9');
 
-  // Step 2 — training experience + days per week
-  const [daysPerWeek, setDaysPerWeek] = useState(4);
+  // Step 2 — training setup (all dropdowns / segments)
   const [experience, setExperience] = useState(null);
-
-  // Step 3 — session length + equipment
   const [sessionLengthMinutes, setSessionLengthMinutes] = useState(60);
   const [equipment, setEquipment] = useState(null);
-
-  // Step 4 — physique category (trainingGoal)
   const [trainingGoal, setTrainingGoal] = useState(null);
-  const [goalFilterGroup, setGoalFilterGroup] = useState('All');
-
-  // Step 5 — training phase
   const [trainingPhase, setTrainingPhase] = useState(null);
 
-  // Step 6 — recovery (was step 7 before weak points was removed from first-run)
+  // Step 3 — recovery + reminders
   const [recoveryRating, setRecoveryRating] = useState(null);
-
-  // Step 7 — notifications (was step 8)
   const [morningEnabled, setMorningEnabled] = useState(true);
   const [morningHour, setMorningHour] = useState(7);
   const [checkinEnabled, setCheckinEnabled] = useState(true);
-  const [checkinDay, setCheckinDay] = useState(0); // Sunday
+  const [checkinDay, setCheckinDay] = useState(0);
 
-  // Step 8 — account (was step 10)
+  // Step 4 — account
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -161,22 +177,20 @@ export default function ProOnboardingScreen({ navigation }) {
     }
   }, [step]);
 
-  // When the user confirms their email via deep link, the session arrives here.
-  // If we're on the account step (step 8), auto-advance to CoachBuilder so they
-  // don't have to press anything — the confirmation already proved ownership.
+  // When the user confirms their email via deep link and we're on the account step.
   useEffect(() => {
-    if (user?.id && step >= 8) {
+    if (user?.id && step >= 4) {
       syncProfile(user.id, userProfile, 'pro', { isBetaTester: true }).catch(() => {});
       navigation.navigate('CoachBuilder', {
         firstRun: true,
         prefilled: {
           experience,
-          daysPerWeek,
+          daysPerWeek: DEFAULT_DAYS_PER_WEEK,
           sessionLengthMinutes,
           equipment,
           goal: trainingGoal,
           phase: trainingPhase,
-          weakPoints: [],          // set later from Athlete Hub → Update your goals
+          weakPoints: [],
           recoveryRating,
           nutritionCalculated: true,
         },
@@ -200,22 +214,14 @@ export default function ProOnboardingScreen({ navigation }) {
   }
 
   function advanceFrom2() {
-    if (!experience || !daysPerWeek || !sessionLengthMinutes || !equipment) {
+    if (!experience || !sessionLengthMinutes || !equipment || !trainingGoal || !trainingPhase) {
       Alert.alert('Complete all fields', 'Please fill out your training profile to continue.');
       return;
     }
     setStep(3);
   }
 
-  function advanceFrom3() {
-    if (!trainingGoal || !trainingPhase) {
-      Alert.alert('Complete all fields', 'Please select your training goal and phase to continue.');
-      return;
-    }
-    setStep(4);
-  }
-
-  async function advanceFrom4() {
+  async function advanceFrom3() {
     if (!recoveryRating) {
       Alert.alert('Recovery rating', 'Please select your recovery level to continue.');
       return;
@@ -223,7 +229,6 @@ export default function ProOnboardingScreen({ navigation }) {
 
     setBusy(true);
     try {
-      // Set up notifications
       if (morningEnabled || checkinEnabled) {
         const status = await requestNotificationPermissions();
         if (status === 'granted') {
@@ -259,13 +264,13 @@ export default function ProOnboardingScreen({ navigation }) {
         ageYears: safeAge,
         heightCm: safeHeightCm,
         weightKg: safeWeightKg,
-        activityLevel: daysToActivityLevel(daysPerWeek),
+        activityLevel: daysToActivityLevel(DEFAULT_DAYS_PER_WEEK),
         goal: phaseToNutritionKey(trainingPhase),
         trainingGoal,
       });
 
       const goalPhase = phaseToCoachingKey(trainingPhase);
-      const trainingFreqBucket = daysToFreqBucket(daysPerWeek);
+      const trainingFreqBucket = daysToFreqBucket(DEFAULT_DAYS_PER_WEEK);
 
       const merged = {
         ...(userProfile || {}),
@@ -283,7 +288,7 @@ export default function ProOnboardingScreen({ navigation }) {
         stepsTarget: (userProfile || {}).stepsTarget ?? 8000,
         trainingFreq: trainingFreqBucket,
         trainingFreqBucket,
-        daysPerWeek,
+        daysPerWeek: DEFAULT_DAYS_PER_WEEK,
         experience,
         sessionLengthMinutes,
         equipment,
@@ -322,7 +327,7 @@ export default function ProOnboardingScreen({ navigation }) {
       return;
     }
     setBusy(false);
-    setStep(5);
+    setStep(4);
   }
 
   async function finishWithAccount() {
@@ -343,7 +348,6 @@ export default function ProOnboardingScreen({ navigation }) {
         return;
       }
       if (data.user && !data.session) {
-        // Confirmation email sent
         Alert.alert(
           'Check your email',
           'We sent a confirmation link. Confirm it then sign back in.',
@@ -354,27 +358,22 @@ export default function ProOnboardingScreen({ navigation }) {
       if (data.session) {
         const supabaseUserId = data.session.user.id;
         const localUserId = user?.id;
-        // Re-stamp local SQLite rows before uploading so the app reads them under the new ID
         await migrateLocalUserId(localUserId, supabaseUserId).catch(() => {});
         syncProfile(supabaseUserId, userProfile, 'pro', { isBetaTester: true }).catch(() => {});
         bulkUploadLocalData(supabaseUserId, localUserId).catch(() => {});
       }
     } catch (_) {}
     setBusy(false);
-    // completeFirstRun is NOT called here. It fires only at the very end
-    // (ProSetupComplete "Start training"). Calling it now would flip the
-    // RootNavigator gate and skip CoachBuilder plus the summary entirely.
-    // navigate (not replace) so Back from CoachBuilder returns here.
     navigation.navigate('CoachBuilder', {
       firstRun: true,
       prefilled: {
         experience,
-        daysPerWeek,
+        daysPerWeek: DEFAULT_DAYS_PER_WEEK,
         sessionLengthMinutes,
         equipment,
         goal: trainingGoal,
         phase: trainingPhase,
-        weakPoints: [],          // set later from Athlete Hub → Update your goals
+        weakPoints: [],
         recoveryRating,
         nutritionCalculated: true,
       },
@@ -382,9 +381,6 @@ export default function ProOnboardingScreen({ navigation }) {
   }
 
   async function skipAccount() {
-    // Declining the account during Pro onboarding downgrades to Free —
-    // Pro can't be verified without an account after beta. Setting tier to
-    // 'free' re-renders RootNavigator into the Free first-run path.
     const { setTier } = useAppStore.getState();
     await setTier('free');
   }
@@ -406,8 +402,6 @@ export default function ProOnboardingScreen({ navigation }) {
       </View>
     );
   }
-
-  // ── Shared header ────────────────────────────────────────────────────────────
 
   function Header({ title, sub }) {
     return (
@@ -449,6 +443,8 @@ export default function ProOnboardingScreen({ navigation }) {
                 placeholderTextColor={colors.textDisabled}
                 autoCapitalize="words"
                 autoCorrect={false}
+                autoComplete="off"
+                textContentType="none"
                 returnKeyType="next"
               />
             </View>
@@ -479,6 +475,8 @@ export default function ProOnboardingScreen({ navigation }) {
                 placeholderTextColor={colors.textDisabled}
                 keyboardType="number-pad"
                 maxLength={3}
+                autoComplete="off"
+                textContentType="none"
               />
             </View>
 
@@ -510,6 +508,8 @@ export default function ProOnboardingScreen({ navigation }) {
                       placeholderTextColor={colors.textDisabled}
                       keyboardType="number-pad"
                       maxLength={1}
+                      autoComplete="off"
+                      textContentType="none"
                     />
                   </View>
                   <View style={{ flex: 1 }}>
@@ -521,6 +521,8 @@ export default function ProOnboardingScreen({ navigation }) {
                       placeholderTextColor={colors.textDisabled}
                       keyboardType="number-pad"
                       maxLength={2}
+                      autoComplete="off"
+                      textContentType="none"
                     />
                   </View>
                 </View>
@@ -532,6 +534,8 @@ export default function ProOnboardingScreen({ navigation }) {
                   placeholder="e.g. 178 cm"
                   placeholderTextColor={colors.textDisabled}
                   keyboardType="decimal-pad"
+                  autoComplete="off"
+                  textContentType="none"
                 />
               )}
             </View>
@@ -573,6 +577,8 @@ export default function ProOnboardingScreen({ navigation }) {
                       placeholderTextColor={colors.textDisabled}
                       keyboardType="number-pad"
                       maxLength={3}
+                      autoComplete="off"
+                      textContentType="none"
                     />
                   </View>
                   <View style={{ flex: 3 }}>
@@ -584,6 +590,8 @@ export default function ProOnboardingScreen({ navigation }) {
                       placeholderTextColor={colors.textDisabled}
                       keyboardType="decimal-pad"
                       maxLength={4}
+                      autoComplete="off"
+                      textContentType="none"
                     />
                   </View>
                 </View>
@@ -595,6 +603,8 @@ export default function ProOnboardingScreen({ navigation }) {
                   placeholder={localBWUnits === 'kg' ? 'e.g. 80 kg' : 'e.g. 176 lbs'}
                   placeholderTextColor={colors.textDisabled}
                   keyboardType="decimal-pad"
+                  autoComplete="off"
+                  textContentType="none"
                 />
               )}
             </View>
@@ -609,10 +619,12 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 2 — Your training profile (Experience, Schedule, Equipment) ────────
+  // ── Step 2 — Training setup ──────────────────────────────────────────────────
 
   if (step === 2) {
-    const canContinue = !!experience && !!daysPerWeek && !!sessionLengthMinutes && !!equipment;
+    const goalOptions = PHYSIQUE_GOALS.map(g => ({ value: g.value, label: g.label, sub: g.subtitle }));
+    const phaseOptions = TRAINING_PHASES.map(p => ({ value: p.value, label: p.label, sub: p.subtitle }));
+    const canContinue = !!experience && !!sessionLengthMinutes && !!equipment && !!trainingGoal && !!trainingPhase;
 
     return (
       <SafeAreaView style={styles.safe}>
@@ -625,47 +637,17 @@ export default function ProOnboardingScreen({ navigation }) {
 
             <Header
               title="Your training profile."
-              sub="Experience, schedule, and equipment shape your personalised programme."
+              sub="Takes about 30 seconds. This shapes your entire programme."
             />
 
-            <View style={styles.section}>
-              <Text style={styles.fieldLabel}>Training experience</Text>
-              <Text style={styles.fieldHint}>Shapes the volume and exercise complexity of your plan.</Text>
-              {EXPERIENCE_OPTIONS.map(opt => (
-                <TouchableOpacity
-                  key={opt.id}
-                  style={[styles.goalCard, experience === opt.id && styles.goalCardActive]}
-                  onPress={() => setExperience(opt.id)}
-                  activeOpacity={0.85}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.goalLabel, experience === opt.id && styles.goalLabelActive]}>{opt.label}</Text>
-                    <Text style={styles.goalSub}>{opt.sub}</Text>
-                  </View>
-                  {experience === opt.id && (
-                    <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <View style={styles.section}>
-              <Text style={styles.fieldLabel}>Days per week</Text>
-              <Text style={styles.fieldHint}>Used to calculate your calorie needs accurately.</Text>
-              <View style={styles.segmentRow}>
-                {[3, 4, 5, 6].map(d => (
-                  <TouchableOpacity
-                    key={d}
-                    style={[styles.segment, daysPerWeek === d && styles.segmentActive]}
-                    onPress={() => setDaysPerWeek(d)}
-                  >
-                    <Text style={[styles.segmentText, daysPerWeek === d && styles.segmentTextActive]}>
-                      {d}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
+            <Dropdown
+              label="Training experience"
+              hint="Shapes volume and exercise complexity."
+              value={experience}
+              options={EXPERIENCE_OPTIONS}
+              onChange={setExperience}
+              placeholder="How long have you been training?"
+            />
 
             <View style={styles.section}>
               <Text style={styles.fieldLabel}>Session length</Text>
@@ -685,34 +667,32 @@ export default function ProOnboardingScreen({ navigation }) {
               </View>
             </View>
 
-            <View style={styles.section}>
-              <Text style={styles.fieldLabel}>Equipment</Text>
-              <Text style={styles.fieldHint}>What do you have access to?</Text>
-              <View style={styles.goalList}>
-                {EQUIPMENT_OPTIONS.map(opt => (
-                  <TouchableOpacity
-                    key={opt.value}
-                    style={[styles.goalCard, equipment === opt.value && styles.goalCardActive]}
-                    onPress={() => setEquipment(opt.value)}
-                    activeOpacity={0.85}
-                  >
-                    <View style={[styles.goalIconWrap, equipment === opt.value && styles.goalIconWrapActive]}>
-                      <Ionicons
-                        name={opt.icon}
-                        size={20}
-                        color={equipment === opt.value ? colors.primary : colors.textSecondary}
-                      />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.goalLabel, equipment === opt.value && styles.goalLabelActive]}>{opt.label}</Text>
-                    </View>
-                    {equipment === opt.value && (
-                      <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
+            <Dropdown
+              label="Equipment"
+              hint="What do you have access to?"
+              value={equipment}
+              options={EQUIPMENT_OPTIONS}
+              onChange={setEquipment}
+              placeholder="Select your equipment"
+            />
+
+            <Dropdown
+              label="What are you training for?"
+              hint="Shapes how volume is distributed across muscle groups."
+              value={trainingGoal}
+              options={goalOptions}
+              onChange={setTrainingGoal}
+              placeholder="Select your goal"
+            />
+
+            <Dropdown
+              label="Current phase"
+              hint="Sets your calorie target and plan structure."
+              value={trainingPhase}
+              options={phaseOptions}
+              onChange={setTrainingPhase}
+              placeholder="Select your current phase"
+            />
 
             <TouchableOpacity
               style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
@@ -729,128 +709,9 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 4 — What are you training for? (Physique category) ─────────────────
+  // ── Step 3 — Recovery & reminders ───────────────────────────────────────────
 
   if (step === 3) {
-    const allGroups = ['All', ...PHYSIQUE_GOAL_GROUPS];
-    const filteredGoals = goalFilterGroup === 'All'
-      ? PHYSIQUE_GOALS
-      : PHYSIQUE_GOALS.filter(g => g.group === goalFilterGroup);
-    const canContinue = !!trainingGoal && !!trainingPhase;
-
-    return (
-      <SafeAreaView style={styles.safe}>
-        <ScrollView contentContainerStyle={styles.scroll}>
-          <TouchableOpacity style={styles.backBtn} onPress={goBack} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
-            <Text style={styles.backBtnText}>Back</Text>
-          </TouchableOpacity>
-
-          <Header
-            title="Your goals and phase."
-            sub="These shape how volume is distributed and your calorie targets."
-          />
-
-          <View style={styles.section}>
-            <Text style={styles.fieldLabel}>What are you training for?</Text>
-            <Text style={styles.fieldHint}>This shapes how your plan distributes volume across muscle groups.</Text>
-
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.filterTabScroll}
-              contentContainerStyle={styles.filterTabScrollContent}
-            >
-              {allGroups.map(group => (
-                <TouchableOpacity
-                  key={group}
-                  style={[styles.filterTab, goalFilterGroup === group && styles.filterTabActive]}
-                  onPress={() => setGoalFilterGroup(group)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.filterTabText, goalFilterGroup === group && styles.filterTabTextActive]}>
-                    {group}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            <View style={styles.goalList}>
-              {filteredGoals.map(g => (
-                <TouchableOpacity
-                  key={g.value}
-                  style={[styles.goalCard, trainingGoal === g.value && styles.goalCardActive]}
-                  onPress={() => setTrainingGoal(g.value)}
-                  activeOpacity={0.85}
-                >
-                  <View style={[styles.goalIconWrap, trainingGoal === g.value && styles.goalIconWrapActive]}>
-                    <Ionicons
-                      name={g.icon}
-                      size={20}
-                      color={trainingGoal === g.value ? colors.primary : colors.textSecondary}
-                    />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.goalLabel, trainingGoal === g.value && styles.goalLabelActive]}>{g.label}</Text>
-                    <Text style={styles.goalSub}>{g.subtitle}</Text>
-                  </View>
-                  {trainingGoal === g.value && (
-                    <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.fieldLabel}>What phase are you in?</Text>
-            <Text style={styles.fieldHint}>Your phase sets your calorie target and plan structure.</Text>
-
-            <View style={styles.goalList}>
-              {TRAINING_PHASES.map(phase => (
-                <TouchableOpacity
-                  key={phase.value}
-                  style={[styles.goalCard, trainingPhase === phase.value && styles.goalCardActive]}
-                  onPress={() => setTrainingPhase(phase.value)}
-                  activeOpacity={0.85}
-                >
-                  <View style={[styles.goalIconWrap, trainingPhase === phase.value && styles.goalIconWrapActive]}>
-                    <Ionicons
-                      name={phase.icon}
-                      size={20}
-                      color={trainingPhase === phase.value ? colors.primary : colors.textSecondary}
-                    />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.goalLabel, trainingPhase === phase.value && styles.goalLabelActive]}>{phase.label}</Text>
-                    <Text style={styles.goalSub}>{phase.subtitle}</Text>
-                    <Text style={styles.phaseDetail}>{phase.detail}</Text>
-                  </View>
-                  {trainingPhase === phase.value && (
-                    <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <TouchableOpacity
-            style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
-            onPress={canContinue ? advanceFrom3 : undefined}
-            disabled={!canContinue}
-            activeOpacity={canContinue ? 0.88 : 1}
-          >
-            <Text style={styles.primaryBtnText}>Continue</Text>
-            <Ionicons name="arrow-forward" size={18} color={colors.background} />
-          </TouchableOpacity>
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
-
-  // ── Step 4 — Recovery & Habits ──────────────────────────────────────────────
-
-  if (step === 4) {
     const canContinue = !!recoveryRating;
 
     return (
@@ -866,128 +727,111 @@ export default function ProOnboardingScreen({ navigation }) {
             sub="Recovery affects your plan volume. Reminders keep coaching consistent."
           />
 
-          <View style={styles.section}>
-            <Text style={styles.fieldLabel}>How's your recovery?</Text>
-            <Text style={styles.fieldHint}>This affects how much volume your plan includes. Be honest; it adjusts to protect you.</Text>
-            <View style={styles.goalList}>
-              {RECOVERY_OPTIONS.map(opt => (
-                <TouchableOpacity
-                  key={opt.value}
-                  style={[styles.goalCard, recoveryRating === opt.value && styles.goalCardActive]}
-                  onPress={() => setRecoveryRating(opt.value)}
-                  activeOpacity={0.85}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.goalLabel, recoveryRating === opt.value && styles.goalLabelActive]}>{opt.label}</Text>
-                    <Text style={styles.goalSub}>{opt.sub}</Text>
-                  </View>
-                  {recoveryRating === opt.value && (
-                    <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
+          <Dropdown
+            label="How's your recovery?"
+            hint="This affects how much volume your plan includes. Be honest — it adjusts to protect you."
+            value={recoveryRating}
+            options={RECOVERY_OPTIONS}
+            onChange={setRecoveryRating}
+            placeholder="Select your recovery level"
+          />
 
           <View style={styles.section}>
             <Text style={styles.fieldLabel}>Coaching reminders</Text>
-            <Text style={styles.fieldHint}>Optional notifications to keep you on track. You can change these later in Settings.</Text>
+            <Text style={styles.fieldHint}>Optional notifications to keep you on track. Change them any time in Settings.</Text>
 
-          {/* Morning weight */}
-          <View style={styles.notifSection}>
-            <View style={styles.notifHeader}>
-              <View style={styles.notifIconWrap}>
-                <Ionicons name="scale-outline" size={18} color={colors.primary} />
+            <View style={styles.notifSection}>
+              <View style={styles.notifHeader}>
+                <View style={styles.notifIconWrap}>
+                  <Ionicons name="scale-outline" size={18} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.notifTitle}>Morning weight reminder</Text>
+                  <Text style={styles.notifSub}>
+                    Log your weight first thing. Consistent daily weigh-ins are the most accurate way to track progress.
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.toggle, morningEnabled && styles.toggleOn]}
+                  onPress={() => setMorningEnabled(v => !v)}
+                >
+                  <View style={[styles.toggleThumb, morningEnabled && styles.toggleThumbOn]} />
+                </TouchableOpacity>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.notifTitle}>Morning weight reminder</Text>
-                <Text style={styles.notifSub}>
-                  Log your weight first thing. Consistent daily weigh-ins are the most accurate way to track progress.
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={[styles.toggle, morningEnabled && styles.toggleOn]}
-                onPress={() => setMorningEnabled(v => !v)}
-              >
-                <View style={[styles.toggleThumb, morningEnabled && styles.toggleThumbOn]} />
-              </TouchableOpacity>
+
+              {morningEnabled && (
+                <View style={styles.timeRow}>
+                  <Text style={styles.timeLabel}>Remind me at</Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.hourScroll}
+                    contentContainerStyle={styles.hourScrollContent}
+                  >
+                    {HOURS.map(h => (
+                      <TouchableOpacity
+                        key={h}
+                        style={[styles.hourChip, morningHour === h && styles.hourChipActive]}
+                        onPress={() => setMorningHour(h)}
+                      >
+                        <Text style={[styles.hourChipText, morningHour === h && styles.hourChipTextActive]}>
+                          {fmt12(h)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
             </View>
 
-            {morningEnabled && (
-              <View style={styles.timeRow}>
-                <Text style={styles.timeLabel}>Remind me at</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  style={styles.hourScroll}
-                  contentContainerStyle={styles.hourScrollContent}
+            <View style={styles.notifSection}>
+              <View style={styles.notifHeader}>
+                <View style={styles.notifIconWrap}>
+                  <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.notifTitle}>Weekly check-in reminder</Text>
+                  <Text style={styles.notifSub}>
+                    Once a week you review how training went and set next week up. Pick the day that works for you.
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.toggle, checkinEnabled && styles.toggleOn]}
+                  onPress={() => setCheckinEnabled(v => !v)}
                 >
-                  {HOURS.map(h => (
-                    <TouchableOpacity
-                      key={h}
-                      style={[styles.hourChip, morningHour === h && styles.hourChipActive]}
-                      onPress={() => setMorningHour(h)}
-                    >
-                      <Text style={[styles.hourChipText, morningHour === h && styles.hourChipTextActive]}>
-                        {fmt12(h)}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
+                  <View style={[styles.toggleThumb, checkinEnabled && styles.toggleThumbOn]} />
+                </TouchableOpacity>
               </View>
-            )}
-          </View>
 
-          {/* Weekly check-in */}
-          <View style={styles.notifSection}>
-            <View style={styles.notifHeader}>
-              <View style={styles.notifIconWrap}>
-                <Ionicons name="calendar-outline" size={18} color={colors.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.notifTitle}>Weekly check-in reminder</Text>
-                <Text style={styles.notifSub}>
-                  Once a week you review how training went and set next week up. Pick the day that makes sense for your schedule.
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={[styles.toggle, checkinEnabled && styles.toggleOn]}
-                onPress={() => setCheckinEnabled(v => !v)}
-              >
-                <View style={[styles.toggleThumb, checkinEnabled && styles.toggleThumbOn]} />
-              </TouchableOpacity>
+              {checkinEnabled && (
+                <View style={styles.timeRow}>
+                  <Text style={styles.timeLabel}>Check in on</Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.hourScroll}
+                    contentContainerStyle={styles.hourScrollContent}
+                  >
+                    {DAYS.map((d, i) => (
+                      <TouchableOpacity
+                        key={d}
+                        style={[styles.hourChip, checkinDay === i && styles.hourChipActive]}
+                        onPress={() => setCheckinDay(i)}
+                      >
+                        <Text style={[styles.hourChipText, checkinDay === i && styles.hourChipTextActive]}>
+                          {d.slice(0, 3)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
             </View>
-
-            {checkinEnabled && (
-              <View style={styles.timeRow}>
-                <Text style={styles.timeLabel}>Check in on</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  style={styles.hourScroll}
-                  contentContainerStyle={styles.hourScrollContent}
-                >
-                  {DAYS.map((d, i) => (
-                    <TouchableOpacity
-                      key={d}
-                      style={[styles.hourChip, checkinDay === i && styles.hourChipActive]}
-                      onPress={() => setCheckinDay(i)}
-                    >
-                      <Text style={[styles.hourChipText, checkinDay === i && styles.hourChipTextActive]}>
-                        {d.slice(0, 3)}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-          </View>
-
           </View>
 
           <TouchableOpacity
             style={[styles.primaryBtn, (!canContinue || busy) && styles.primaryBtnDisabled]}
-            onPress={canContinue && !busy ? advanceFrom4 : undefined}
+            onPress={canContinue && !busy ? advanceFrom3 : undefined}
             disabled={!canContinue || busy}
             activeOpacity={canContinue && !busy ? 0.88 : 1}
           >
@@ -1005,7 +849,7 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 5 — Create your account ────────────────────────────────────────────
+  // ── Step 4 — Create your account ────────────────────────────────────────────
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -1021,7 +865,6 @@ export default function ProOnboardingScreen({ navigation }) {
             sub="Create your account to lock in your beta access and keep everything safe."
           />
 
-          {/* Beta offer card */}
           <View style={styles.offerCard}>
             <View style={styles.offerBadgeRow}>
               <View style={styles.offerBadge}>
@@ -1062,6 +905,7 @@ export default function ProOnboardingScreen({ navigation }) {
                 autoCapitalize="none"
                 autoCorrect={false}
                 autoComplete="email"
+                textContentType="emailAddress"
                 onFocus={() => setEmailFocused(true)}
                 onBlur={() => setEmailFocused(false)}
               />
@@ -1081,6 +925,7 @@ export default function ProOnboardingScreen({ navigation }) {
                 autoCapitalize="none"
                 autoCorrect={false}
                 autoComplete="new-password"
+                textContentType="newPassword"
                 onFocus={() => setPasswordFocused(true)}
                 onBlur={() => setPasswordFocused(false)}
               />
@@ -1145,35 +990,23 @@ const styles = StyleSheet.create({
     color: colors.background, letterSpacing: 0.8,
   },
 
-  progressRow: {
-    flexDirection: 'row', gap: 4, marginBottom: spacing.sm,
-  },
-  progressSegment: {
-    flex: 1, height: 3, borderRadius: 2,
-  },
+  progressRow: { flexDirection: 'row', gap: 4, marginBottom: spacing.sm },
+  progressSegment: { flex: 1, height: 3, borderRadius: 2 },
   progressDone: { backgroundColor: colors.primary },
   progressActive: { backgroundColor: colors.primary + 'CC' },
   progressPending: { backgroundColor: colors.border },
 
-  stepCount: {
-    fontSize: fontSize.xs, color: colors.textMuted,
-    marginBottom: spacing.xs,
-  },
+  stepCount: { fontSize: fontSize.xs, color: colors.textMuted, marginBottom: spacing.xs },
   stepTitle: {
     fontSize: fontSize.xxl, fontWeight: fontWeight.bold,
-    color: colors.textPrimary, marginBottom: spacing.sm,
-    lineHeight: 30,
+    color: colors.textPrimary, marginBottom: spacing.sm, lineHeight: 30,
   },
-  stepSub: {
-    fontSize: fontSize.sm, color: colors.textSecondary,
-    lineHeight: 20,
-  },
+  stepSub: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
 
   // Back button
   backBtn: {
     flexDirection: 'row', alignItems: 'center',
-    gap: 4, marginBottom: spacing.lg,
-    alignSelf: 'flex-start',
+    gap: 4, marginBottom: spacing.lg, alignSelf: 'flex-start',
   },
   backBtnText: { fontSize: fontSize.sm, color: colors.textSecondary },
 
@@ -1181,37 +1014,25 @@ const styles = StyleSheet.create({
   section: { marginBottom: spacing.xl },
   fieldLabel: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
-    color: colors.textMuted, letterSpacing: 0.3,
-    marginBottom: spacing.sm,
+    color: colors.textMuted, letterSpacing: 0.3, marginBottom: spacing.sm,
   },
-  fieldHint: {
-    fontSize: fontSize.xs, color: colors.textMuted,
-    lineHeight: 18, marginBottom: spacing.sm,
-  },
+  fieldHint: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18, marginBottom: spacing.sm },
   input: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md + 2,
-    fontSize: fontSize.md,
-    color: colors.textPrimary,
+    backgroundColor: colors.surface, borderRadius: radius.md,
+    borderWidth: 1.5, borderColor: colors.border,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md + 2,
+    fontSize: fontSize.md, color: colors.textPrimary,
   },
   fieldWrap: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderColor: colors.border,
+    backgroundColor: colors.surface, borderRadius: radius.md,
+    borderWidth: 1.5, borderColor: colors.border,
   },
   fieldWrapFocused: { borderColor: colors.primary + '80' },
   fieldInput: {
-    flex: 1,
-    paddingHorizontal: spacing.lg,
+    flex: 1, paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md + 2,
-    fontSize: fontSize.md,
-    color: colors.textPrimary,
+    fontSize: fontSize.md, color: colors.textPrimary,
   },
   eyeBtn: {
     position: 'absolute', right: spacing.md,
@@ -1220,15 +1041,13 @@ const styles = StyleSheet.create({
 
   heightImperialRow: { flexDirection: 'row', gap: spacing.md },
 
-  // Inline label + small toggle on same row
   fieldLabelRow: {
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between', marginBottom: spacing.sm,
   },
   segmentRowSmall: {
     flexDirection: 'row', backgroundColor: colors.surface,
-    borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border,
-    padding: 2,
+    borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, padding: 2,
   },
   segmentSmall: {
     paddingVertical: 4, paddingHorizontal: spacing.sm,
@@ -1236,11 +1055,9 @@ const styles = StyleSheet.create({
   },
   segmentTextSmall: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted },
 
-  // Segment control (units / days / session length)
   segmentRow: {
     flexDirection: 'row', backgroundColor: colors.surface,
-    borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.border,
-    padding: 3,
+    borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.border, padding: 3,
   },
   segment: {
     flex: 1, paddingVertical: spacing.sm + 2,
@@ -1250,81 +1067,33 @@ const styles = StyleSheet.create({
   segmentText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textMuted },
   segmentTextActive: { color: colors.background },
 
-  // Goal cards
-  goalList: { gap: spacing.sm, marginBottom: spacing.xl },
-  goalCard: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: colors.surface, borderRadius: radius.lg,
+  // Dropdown
+  dropdownWrap: { marginBottom: spacing.xl },
+  dropdownTrigger: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: colors.surface, borderRadius: radius.md,
     borderWidth: 1.5, borderColor: colors.border,
-    padding: spacing.md,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md + 2,
   },
-  goalCardActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primaryBg,
+  dropdownTriggerFilled: { borderColor: colors.primary + '60' },
+  dropdownTriggerOpen: { borderColor: colors.primary, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
+  dropdownValue: { fontSize: fontSize.md, color: colors.textPrimary, flex: 1, marginRight: spacing.sm },
+  dropdownPlaceholder: { color: colors.textDisabled },
+  dropdownList: {
+    backgroundColor: colors.surface, borderWidth: 1.5,
+    borderColor: colors.primary, borderTopWidth: 0,
+    borderBottomLeftRadius: radius.md, borderBottomRightRadius: radius.md,
+    overflow: 'hidden',
   },
-  goalIconWrap: {
-    width: 40, height: 40, borderRadius: radius.md,
-    backgroundColor: colors.surface2,
-    alignItems: 'center', justifyContent: 'center',
+  dropdownItem: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
-  goalIconWrapActive: { backgroundColor: colors.primaryBg },
-  goalLabel: {
-    fontSize: fontSize.md, fontWeight: fontWeight.semibold,
-    color: colors.textSecondary, marginBottom: 2,
-  },
-  goalLabelActive: { color: colors.textPrimary },
-  goalSub: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17 },
-
-  // Phase detail line (smaller, muted)
-  phaseDetail: {
-    fontSize: fontSize.xs, color: colors.textDisabled,
-    lineHeight: 16, marginTop: 3, fontStyle: 'italic',
-  },
-
-  // Filter tabs (step 4 physique category)
-  filterTabScroll: { flexGrow: 0, marginBottom: spacing.md },
-  filterTabScrollContent: { gap: spacing.xs, paddingRight: spacing.sm },
-  filterTab: {
-    paddingHorizontal: spacing.md, paddingVertical: 7,
-    borderRadius: radius.full, backgroundColor: colors.surface2,
-    borderWidth: 1, borderColor: colors.border,
-  },
-  filterTabActive: {
-    backgroundColor: colors.primaryBg,
-    borderColor: colors.primary,
-  },
-  filterTabText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
-  filterTabTextActive: { color: colors.primary, fontWeight: fontWeight.bold },
-
-  // Nutrition grid
-  infoCard: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
-    backgroundColor: colors.primaryBg, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.primary + '30',
-    padding: spacing.md, marginBottom: spacing.lg,
-  },
-  infoCardText: { fontSize: fontSize.sm, color: colors.textSecondary, flex: 1, lineHeight: 19 },
-
-  nutritionGrid: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md },
-  nutritionCard: {
-    flex: 1, backgroundColor: colors.surface,
-    borderRadius: radius.lg, borderWidth: 1.5, borderColor: colors.border,
-    padding: spacing.md, alignItems: 'center',
-  },
-  nutritionLabel: {
-    fontSize: fontSize.xs, color: colors.textMuted,
-    letterSpacing: 0.3, marginBottom: spacing.sm,
-  },
-  nutritionInput: {
-    fontSize: 28, fontWeight: fontWeight.bold, color: colors.textPrimary,
-    textAlign: 'center', width: '100%',
-    paddingVertical: spacing.xs,
-  },
-  nutritionUnit: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xs },
-  nutritionHint: {
-    fontSize: fontSize.xs, color: colors.textMuted,
-    lineHeight: 18, marginBottom: spacing.xl,
-  },
+  dropdownItemBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
+  dropdownItemActive: { backgroundColor: colors.primaryBg },
+  dropdownItemLabel: { fontSize: fontSize.md, color: colors.textSecondary, marginBottom: 1 },
+  dropdownItemLabelActive: { color: colors.textPrimary, fontWeight: fontWeight.semibold },
+  dropdownItemSub: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
 
   // Notifications
   notifSection: {
@@ -1332,42 +1101,25 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: colors.border,
     padding: spacing.md, marginBottom: spacing.md,
   },
-  notifHeader: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,
-  },
+  notifHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   notifIconWrap: {
     width: 36, height: 36, borderRadius: radius.md,
     backgroundColor: colors.primaryBg,
     alignItems: 'center', justifyContent: 'center',
   },
-  notifTitle: {
-    fontSize: fontSize.md, fontWeight: fontWeight.semibold,
-    color: colors.textPrimary, marginBottom: 2,
-  },
+  notifTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary, marginBottom: 2 },
   notifSub: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17 },
 
-  // Toggle switch
   toggle: {
     width: 44, height: 26, borderRadius: 13,
-    backgroundColor: colors.surface3, justifyContent: 'center',
-    paddingHorizontal: 3,
+    backgroundColor: colors.surface3, justifyContent: 'center', paddingHorizontal: 3,
   },
   toggleOn: { backgroundColor: colors.primary },
-  toggleThumb: {
-    width: 20, height: 20, borderRadius: 10,
-    backgroundColor: colors.textMuted,
-  },
-  toggleThumbOn: {
-    backgroundColor: colors.background,
-    alignSelf: 'flex-end',
-  },
+  toggleThumb: { width: 20, height: 20, borderRadius: 10, backgroundColor: colors.textMuted },
+  toggleThumbOn: { backgroundColor: colors.background, alignSelf: 'flex-end' },
 
-  // Time / day pickers
   timeRow: { marginTop: spacing.md },
-  timeLabel: {
-    fontSize: fontSize.xs, color: colors.textMuted,
-    marginBottom: spacing.sm, letterSpacing: 0.5,
-  },
+  timeLabel: { fontSize: fontSize.xs, color: colors.textMuted, marginBottom: spacing.sm, letterSpacing: 0.5 },
   hourScroll: { flexGrow: 0 },
   hourScrollContent: { gap: spacing.xs, paddingRight: spacing.sm },
   hourChip: {
@@ -1375,190 +1127,44 @@ const styles = StyleSheet.create({
     borderRadius: radius.full, backgroundColor: colors.surface2,
     borderWidth: 1, borderColor: colors.border,
   },
-  hourChipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
+  hourChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   hourChipText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
   hourChipTextActive: { color: colors.background, fontWeight: fontWeight.bold },
 
   // Beta offer card
   offerCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.xl,
-    borderWidth: 2,
-    borderColor: colors.primary,
-    padding: spacing.lg,
-    marginBottom: spacing.xl,
-    shadowColor: colors.primary,
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 8,
+    backgroundColor: colors.surface, borderRadius: radius.xl,
+    borderWidth: 2, borderColor: colors.primary,
+    padding: spacing.lg, marginBottom: spacing.xl,
+    shadowColor: colors.primary, shadowOpacity: 0.15,
+    shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 8,
   },
   offerBadgeRow: { marginBottom: spacing.sm },
   offerBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    alignSelf: 'flex-start',
-    backgroundColor: colors.primary, borderRadius: 4,
-    paddingHorizontal: 8, paddingVertical: 3,
+    alignSelf: 'flex-start', backgroundColor: colors.primary,
+    borderRadius: 4, paddingHorizontal: 8, paddingVertical: 3,
   },
-  offerBadgeText: {
-    fontSize: 9, fontWeight: fontWeight.black,
-    color: colors.background, letterSpacing: 0.8,
-  },
-  offerHeadline: {
-    fontSize: fontSize.xl, fontWeight: fontWeight.bold,
-    color: colors.textPrimary, marginBottom: spacing.sm,
-    lineHeight: 26,
-  },
-  offerBody: {
-    fontSize: fontSize.sm, color: colors.textSecondary,
-    lineHeight: 20, marginBottom: spacing.md,
-  },
+  offerBadgeText: { fontSize: 9, fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.8 },
+  offerHeadline: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.sm, lineHeight: 26 },
+  offerBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20, marginBottom: spacing.md },
   offerPerks: { gap: spacing.xs },
   offerPerk: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   offerPerkText: { fontSize: fontSize.sm, color: colors.textSecondary },
-
-  // Account step (legacy — keep for potential reuse)
-  shieldRow: {
-    flexDirection: 'row', justifyContent: 'space-around',
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border,
-    paddingVertical: spacing.lg, marginBottom: spacing.xl,
-  },
-  shieldItem: { alignItems: 'center', gap: spacing.xs },
-  shieldLabel: { fontSize: fontSize.xs, color: colors.textMuted, textAlign: 'center' },
 
   // Buttons
   primaryBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.sm, backgroundColor: colors.primary,
-    borderRadius: radius.lg, paddingVertical: spacing.lg + 2,
-    marginBottom: spacing.md,
+    borderRadius: radius.lg, paddingVertical: spacing.lg + 2, marginBottom: spacing.md,
   },
   btnDisabled: { opacity: 0.55 },
-  primaryBtnText: {
-    fontSize: fontSize.lg, fontWeight: fontWeight.bold,
-    color: colors.background,
-  },
-  primaryBtnDisabled: {
-    opacity: 0.4,
-  },
-  skipBtn: {
-    alignItems: 'center', paddingVertical: spacing.md,
-  },
-  skipBtnText: {
-    fontSize: fontSize.sm, color: colors.textMuted,
-  },
+  primaryBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.background },
+  primaryBtnDisabled: { opacity: 0.4 },
+  skipBtn: { alignItems: 'center', paddingVertical: spacing.md },
+  skipBtnText: { fontSize: fontSize.sm, color: colors.textMuted },
   skipNote: {
     textAlign: 'center', fontSize: fontSize.xs,
-    color: colors.textDisabled, lineHeight: 18,
-    marginTop: spacing.xs,
-  },
-
-  // SCOFF opt-in offer card
-  scoffOfferCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.primary + '30',
-    padding: spacing.xl, gap: spacing.md, marginBottom: spacing.xl, alignItems: 'center',
-  },
-  scoffOfferIcon: {
-    width: 52, height: 52, borderRadius: 26,
-    backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: colors.primary + '40',
-  },
-  scoffOfferTitle: {
-    fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary, textAlign: 'center',
-  },
-  scoffOfferBody: {
-    fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20, textAlign: 'center',
-  },
-  scoffOfferBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    paddingVertical: spacing.md, paddingHorizontal: spacing.xl,
-    borderRadius: radius.md, borderWidth: 1, borderColor: colors.primary + '50',
-    backgroundColor: colors.primaryBg,
-  },
-  scoffOfferBtnText: {
-    fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary,
-  },
-
-  // SCOFF wellbeing check (step 9)
-  scoffList: {
-    gap: spacing.lg,
-    marginBottom: spacing.lg,
-  },
-  scoffItem: {
-    gap: spacing.sm,
-  },
-  scoffQ: {
-    fontSize: fontSize.md,
-    color: colors.textPrimary,
-    lineHeight: 22,
-  },
-  scoffBtns: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  scoffBtn: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-  },
-  scoffBtnSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primaryBg,
-  },
-  scoffBtnText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.textSecondary,
-  },
-  scoffBtnTextSelected: {
-    color: colors.primary,
-  },
-  scoffNote: {
-    fontSize: fontSize.xs,
-    color: colors.textDisabled,
-    textAlign: 'center',
-    marginBottom: spacing.lg,
-    lineHeight: 18,
-  },
-
-  // Weak points chip grid
-  optionalTag: {
-    fontWeight: fontWeight.regular ?? '400',
-    color: colors.textMuted,
-    fontSize: fontSize.xs,
-  },
-  chipGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  tagChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.full ?? 99,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2 ?? colors.surface,
-  },
-  tagChipSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primaryBg,
-  },
-  tagChipText: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-  },
-  tagChipTextSelected: {
-    color: colors.primary,
-    fontWeight: fontWeight.semibold,
+    color: colors.textDisabled, lineHeight: 18, marginTop: spacing.xs,
   },
 });
