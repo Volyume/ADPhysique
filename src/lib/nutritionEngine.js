@@ -96,6 +96,14 @@ const MAX_SAFE_LOSS_RATE = 0.008;   // 0.8 % BW/week
 const HARD_GATE_LOSS_RATE = 0.015;  // 1.5 % BW/week
 const KCAL_PER_KG_FAT = 7700;       // rough energy equivalent of 1 kg body fat
 
+// MATADOR trial (2017, Int J Obesity): intermittent energy restriction with 2-week breaks
+// every 8–12 weeks preserves metabolic rate better than continuous restriction.
+export const DIET_BREAK_THRESHOLD_WEEKS = 8;
+
+// Morton et al. (2018) meta-analysis upper CI — no benefit beyond 2.2 g/kg BW when
+// body fat % is unknown (lean mass-based calculation already handles the known-BF% case).
+export const PROTEIN_MAX_GKGBW = 2.2;
+
 // Fat targets in g/kg BW by phase.
 // Carbs fill whatever remains after protein + fat are satisfied.
 // Surplus phases: fat is kept lean so carbs remain high for performance.
@@ -481,11 +489,57 @@ export function calculateNutritionTargets(inputs) {
 }
 
 // ---------------------------------------------------------------------------
+// Diet break trigger
+// ---------------------------------------------------------------------------
+
+// Returns a flag and message when a user has been in a calorie deficit for
+// >= DIET_BREAK_THRESHOLD_WEEKS weeks.
+// Based on MATADOR trial finding: intermittent energy restriction with 2-week
+// breaks every 8–12 weeks preserves metabolic rate better than continuous restriction.
+//
+// deficitStartDate — Date (or date-parseable value) when the deficit began
+// currentDate      — defaults to now; override in tests
+export function shouldSuggestDietBreak(deficitStartDate, currentDate = new Date()) {
+  const weeksInDeficit = Math.floor(
+    (currentDate - new Date(deficitStartDate)) / (7 * 24 * 60 * 60 * 1000),
+  );
+
+  if (weeksInDeficit >= DIET_BREAK_THRESHOLD_WEEKS) {
+    return {
+      suggest: true,
+      weeksInDeficit,
+      message:
+        `You have been in a calorie deficit for ${weeksInDeficit} weeks. ` +
+        `A 2-week diet break at maintenance calories may help maintain your metabolic rate ` +
+        `and training performance before continuing. (Based on MATADOR trial findings.)`,
+    };
+  }
+
+  return { suggest: false, weeksInDeficit };
+}
+
+// ---------------------------------------------------------------------------
 // Export: getPlanNutritionContext
 // ---------------------------------------------------------------------------
 
-export function getPlanNutritionContext(targets, { bodyMetricsData = [], adherenceFactor = 1.0 } = {}) {
+export function getPlanNutritionContext(targets, { bodyMetricsData = [], adherenceFactor = 1.0, bodyweightKg = null, bodyFatPercent = null } = {}) {
   const { targetKcal, maintenanceKcal, goal } = targets;
+
+  // Protein cap: when bodyweight is known but body fat % is NOT known, cap protein at
+  // 2.2 g/kg BW per day. When BF% is known, the lean-mass-based calculation already
+  // handles the upper bound correctly.
+  // Morton et al. (2018) meta-analysis upper CI — no benefit beyond 2.2 g/kg without BF% data
+  let { proteinG } = targets;
+  if (
+    bodyweightKg != null &&
+    bodyweightKg > 0 &&
+    (bodyFatPercent == null || bodyFatPercent === undefined)
+  ) {
+    const proteinCapG = PROTEIN_MAX_GKGBW * bodyweightKg;
+    if (proteinG > proteinCapG) {
+      proteinG = Math.round(proteinCapG);
+    }
+  }
 
   // Phase type
   let phaseType;
@@ -572,7 +626,7 @@ export function getPlanNutritionContext(targets, { bodyMetricsData = [], adheren
   // Source: PMC7739314 (2020); multiple RCTs on intermittent energy restriction.
   let refeedRecommendation = null;
   if (goal === 'aggressive_cut' || goal === 'contest_prep') {
-    const refeedProteinKcal = (targets.proteinG ?? 0) * 4;
+    const refeedProteinKcal = (proteinG ?? 0) * 4;
     const refeedFatKcal     = (targets.fatG ?? 0) * 9;
     const refeedCarbsKcal   = Math.max(0, maintenanceKcal - refeedProteinKcal - refeedFatKcal);
     refeedRecommendation = {
