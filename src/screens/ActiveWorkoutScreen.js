@@ -1267,6 +1267,27 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </TouchableOpacity>
           )}
 
+          {currentSet.setType !== 'warmup' && (
+            <TouchableOpacity
+              style={styles.addWarmupBtn}
+              onPress={() => {
+                const baseWeight = parseFloat(currentSet.weight) || 0;
+                const warmupWeight = baseWeight ? Math.round(baseWeight * 0.5 * 2) / 2 : '';
+                setCurrentSet(cs => ({
+                  ...cs,
+                  setType: 'warmup',
+                  weight: warmupWeight || cs.weight,
+                  reps: 10,
+                }));
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Add a warm-up set"
+            >
+              <Ionicons name="flame-outline" size={15} color={colors.warning} />
+              <Text style={styles.addWarmupBtnText}>Add warm-up set</Text>
+            </TouchableOpacity>
+          )}
+
           <View style={styles.secondaryActions}>
             <TouchableOpacity
               style={styles.actionBtn}
@@ -1929,6 +1950,13 @@ const styles = StyleSheet.create({
   completeBtnTextWarmup: { color: colors.warning },
   extraSetBtn: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, paddingVertical: spacing.md },
   extraSetBtnText: { fontSize: fontSize.md, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  addWarmupBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.xs, paddingVertical: spacing.sm + 2,
+    borderRadius: radius.md, borderWidth: 1, borderColor: colors.warning + '60',
+    backgroundColor: colors.warningBg || colors.surface, marginTop: spacing.sm,
+  },
+  addWarmupBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.warning },
   secondaryActions: { flexDirection: 'row', gap: spacing.sm },
   actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, backgroundColor: colors.surface, borderRadius: radius.md, paddingVertical: spacing.md, borderWidth: 1, borderColor: colors.border },
   actionBtnDanger: { borderColor: colors.error + '40' },

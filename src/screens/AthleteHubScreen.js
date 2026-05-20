@@ -18,7 +18,7 @@ import {
   getAllWorkouts, getCompletedWorkoutSets, getBodyMetricLog, getNutritionTargets,
   getRecentAdaptationEvents, getAllExercises,
   getLatestCheckin, getMorningWeightsLast14Days, getRecentCheckins,
-  getLastTrainedPerMuscle,
+  getLastTrainedPerMuscle, getLatestBodyWeight,
 } from '../lib/database';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
 import { computeEWMA } from '../lib/weeklyCoach';
@@ -374,10 +374,16 @@ export default function AthleteHubScreen({ navigation }) {
 
   async function loadBodyMetrics() {
     try {
+      // Prefer the full body_metric_log row (includes measurements / body fat).
       const rows = await getBodyMetricLog(user.id, 1);
       if (rows[0]) { setLatestMetric(rows[0]); return; }
-      // Fallback to weight saved in profile during onboarding (covers race window
-      // between account creation and migrateLocalUserId completing).
+      // Daily weigh-ins go to a separate morning_weights table — fall back to
+      // whichever weight is most recent across both tables.
+      const latest = await getLatestBodyWeight(user.id);
+      if (latest?.weightKg != null) {
+        setLatestMetric({ weightKg: latest.weightKg, loggedAt: latest.loggedAt });
+        return;
+      }
       if (userProfile?.weightKg) {
         setLatestMetric({ weightKg: userProfile.weightKg, loggedAt: null });
       }
