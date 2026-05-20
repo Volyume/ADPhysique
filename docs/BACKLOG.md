@@ -25,10 +25,10 @@ These are product decisions, not technical deferrals. Do not add them even if re
 | Feature | Notes |
 |---|---|
 | ~~**Lock-screen / Live Activity widget**~~ | **DONE** (managed-workflow approximation). Sticky/ongoing notification with exercise name + rest end time. True iOS Live Activities (Dynamic Island countdown) still requires native code — deferred. |
-| **Plan-level exercise swap (permanent)** | Session-only swap is implemented. Plan-level swap (permanently replacing an exercise in a routine) deferred to avoid scope creep on RoutineDetail. |
+| ~~**Plan-level exercise swap (permanent)**~~ | **DONE**. RoutineDetailScreen has a swap icon per exercise row; taps open a ranked substitute modal; confirmed via Alert; persists via `updateRoutineExerciseExercise` in database.js. |
 | ~~**Auto-generated deload weeks**~~ | **DONE**. `shouldDeload` algorithm now surfaces an amber recovery-week banner on HomeScreen, dismissable, links to CoachReview. |
 | ~~**Myo-rep / rest-pause set tracking UI**~~ | **DONE**. Both set types exposed in the set type picker with descriptions, cluster banner shows activation set + mini-set counter, and a "Cluster complete" button returns the user to straight working sets. |
-| **Superset pairing** | Superset set type is in the data model. Paired-exercise display and alternating rest timer is deferred. |
+| ~~**Superset pairing**~~ | **DONE**. "Pair/Paired" button in ActiveWorkoutScreen assigns a `supersetGroupId` to current + next exercise. Auto-jumps between paired exercises on set complete; rest timer only fires after the second exercise in the pair. |
 | **Video / GIF execution demos** | No video hosting infrastructure planned. Execution notes are text-only. |
 | **RPE / RIR auto-suggest from fatigue trend** | Algorithm foundations exist. Live per-set suggestions based on rolling fatigue require more training-data validation. |
 | ~~**1RM-based percentage loading**~~ | **DONE**. Live estimated 1RM chip in SetEntry shows "Est. max ≈ Nkg" as the user enters weight × reps (limited to 1–15 reps where the estimate is reliable). |
@@ -37,9 +37,9 @@ These are product decisions, not technical deferrals. Do not add them even if re
 
 | Feature | Notes |
 |---|---|
-| **Muscle volume heatmap on body diagram** | Current VolumeHeatmapScreen uses bar charts. Anatomical body-map overlay requires custom SVG or licensed asset. |
+| ~~**Muscle volume heatmap on body diagram**~~ | **DONE**. `BodyDiagramHeatmap` component renders stylised front+back anatomical SVG figures with muscle regions colour-coded by volume status. Tapping a region scrolls to that muscle's bar. |
 | ~~**Strength standards comparison**~~ | **DONE**. PRWall now shows Beginner/Novice/Intermediate/Advanced/Elite labels based on bodyweight ratios for the five core compound lifts. |
-| **Session-to-session fatigue trend graph** | Rolling 4-week fatigue and pump scores exist in the data model. Trend visualisation deferred. |
+| ~~**Session-to-session fatigue trend graph**~~ | **DONE**. `FatigueTrendCard` on HomeScreen renders an SVG bar chart of the last 6 sessions' fatigue levels (green/amber/red), with a coaching line based on the average of the last 2. Hidden until 2+ sessions have feedback. |
 | **Volume landmark auto-calibration** | MEV/MAV/MRV defaults from RP Hypertrophy are baked in. Per-user calibration from actual response data deferred. |
 
 ### Plans & Coach Builder
@@ -48,14 +48,14 @@ These are product decisions, not technical deferrals. Do not add them even if re
 |---|---|
 | **Contest prep gating (beyond basic)** | `contest_prep` phase is gated with a warning and volume reduction. Full contest-prep mode (peak week, water/sodium, carb-load scheduling) is deferred and requires specialist review. |
 | **Plan sharing / export** | Plans are stored locally (SQLite). Sharing a plan as a file or URL requires a serialisation format and backend. |
-| **Coach Builder v2 — periodisation** | v1 generates a single-week template. v2 would generate a full mesocycle with progressive overload week-on-week. |
+| ~~**Coach Builder v2 — periodisation**~~ | **DONE**. `buildWeeklyPlan` wraps the week-1 template into a full multi-week progressive plan (MEV → ramp → deload at 60%). CoachBuilderScreen shows a Foundation/Building/Peak/Deload week chip row; tapping a chip shows that week's sessions with adjusted set counts. |
 | **AI / LLM-assisted plan generation** | Coach Builder is deterministic by design (same inputs → same plan). LLM integration is explicitly excluded from the current product. If reconsidered, requires separate consent flow and clear labelling. |
 
 ### Nutrition
 
 | Feature | Notes |
 |---|---|
-| **Nutrition target sync with plan phase** | `getPlanNutritionContext` is implemented in `nutritionEngine.js`. Surfacing a dynamic banner on HomeScreen when plan phase ≠ nutrition phase is deferred. |
+| ~~**Nutrition target sync with plan phase**~~ | **DONE**. HomeScreen shows an amber banner when stored nutrition targets belong to a different phase than the current training plan. Dismissible; re-appears when phase changes. |
 | ~~**Diet break trigger (MATADOR)**~~ | **DONE**. `shouldSuggestDietBreak` fires at 8+ weeks in deficit (tracked via `goalStartDate` on the user profile), surfaces as a calm card in CoachOutput. Scheduled refeeds (weekly) deferred. |
 | **Macro timing recommendations** | Pre/intra/post-workout nutrition split is outside current scope. |
 
