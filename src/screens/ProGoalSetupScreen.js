@@ -165,16 +165,20 @@ export default function ProGoalSetupScreen({ navigation }) {
     // mesocycle to week 1 of a freshly-generated plan that reflects the
     // new goal/phase. The previous plan is deactivated by
     // activatePlanWithBlock; session history stays intact.
-    await generateAndSavePlan(user.id, {
-      experience: updatedProfile.experience,
-      daysPerWeek: updatedProfile.daysPerWeek ?? 4,
-      sessionLengthMinutes: updatedProfile.sessionLengthMinutes ?? 60,
-      equipment: updatedProfile.equipment,
-      trainingGoal: updatedProfile.trainingGoal,
-      trainingPhase: updatedProfile.trainingPhase,
-      planWeakPoints: updatedProfile.planWeakPoints ?? [],
-      recoveryRating: updatedProfile.recoveryRating ?? 'average',
-    }).catch(() => {}); // non-fatal; user can recover from Home
+    let planResult = { ok: false, error: 'not attempted' };
+    try {
+      planResult = await generateAndSavePlan(user.id, updatedProfile);
+    } catch (e) {
+      planResult = { ok: false, error: e?.message ?? 'unknown' };
+    }
+    if (!planResult.ok) {
+      // Don't block navigation — the goal is saved, nutrition updated. Just
+      // tell the user the plan side didn't reroll so they can retry from Home.
+      Alert.alert(
+        'Plan didn\'t update',
+        `Your goal and calorie targets are saved, but the training plan didn\'t reroll for the new goal (${planResult.error}). Open Home and tap "Build my plan" to retry.`,
+      );
+    }
 
     // Navigate to the change-summary screen instead of just popping back so
     // the user can see exactly what shifted and why.

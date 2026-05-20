@@ -27,17 +27,20 @@ const DEFAULT_DAYS_PER_WEEK = 4;
 
 /**
  * Build the inputs `generatePlan` expects from a user profile.
- * Returns null if the profile is missing the data the plan engine needs.
+ * Returns null only when the user's goal/phase aren't set — without those
+ * we can't pick a plan template at all. Other fields fall back to sensible
+ * defaults so older profiles (or partially-populated ones) still get a
+ * plan regenerated when the user changes goals from the Hub.
  */
 function buildPlanInputs(profile) {
-  if (!profile?.experience || !profile?.equipment || !profile?.trainingGoal || !profile?.trainingPhase) {
+  if (!profile?.trainingGoal || !profile?.trainingPhase) {
     return null;
   }
   return {
-    experience: profile.experience,
+    experience: profile.experience ?? 'intermediate',
     daysPerWeek: profile.daysPerWeek ?? DEFAULT_DAYS_PER_WEEK,
     sessionLengthMinutes: profile.sessionLengthMinutes ?? 60,
-    equipment: profile.equipment,
+    equipment: profile.equipment ?? 'full_gym',
     goal: profile.trainingGoal,
     phase: profile.trainingPhase,
     weakPoints: profile.planWeakPoints ?? [],
