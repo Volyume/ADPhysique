@@ -471,13 +471,22 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             {musclesWorked.map(muscle => {
               const data = weeklyVolume[muscle];
               const { color, label } = getVolumeStatus(data.workingSets, muscle);
+              const insight = getVolumeInsight(muscle, data.workingSets, label);
               return (
                 <View key={muscle} style={styles.volumeRow}>
-                  <Text style={styles.muscleName}>{MUSCLE_DISPLAY_NAMES[muscle] || muscle}</Text>
-                  <Text style={styles.muscleSetCount}>{Math.round(data.workingSets)} sets</Text>
-                  <View style={[styles.statusBadge, { backgroundColor: color + '22' }]}>
-                    <Text style={[styles.statusText, { color }]}>{label}</Text>
+                  <View style={styles.volumeRowMain}>
+                    <Text style={styles.muscleName}>{MUSCLE_DISPLAY_NAMES[muscle] || muscle}</Text>
+                    <View style={[styles.statusBadge, { backgroundColor: color + '22' }]}>
+                      <Text style={[styles.statusText, { color }]}>{label}</Text>
+                    </View>
                   </View>
+                  {insight ? (
+                    <Text style={styles.volumeInsightText}>{insight}</Text>
+                  ) : (
+                    <Text style={styles.volumeInsightText}>
+                      {Math.round(data.workingSets)} sets this week
+                    </Text>
+                  )}
                 </View>
               );
             })}
@@ -597,6 +606,19 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   );
 }
 
+function getVolumeInsight(muscle, sets, statusLabel) {
+  const landmarks = VOLUME_LANDMARKS[muscle];
+  if (!landmarks) return null;
+  const { mev, mrv } = landmarks;
+  const n = Math.round(sets);
+  const range = `${mev}–${mrv} sets/week`;
+  if (statusLabel === 'On track') return `${n} sets — on track for hypertrophy (target: ${range})`;
+  if (statusLabel === 'Below target') return `${n} sets — below minimum effective volume (target: ${range})`;
+  if (statusLabel === 'Near limit') return `${n} sets — approaching upper limit (target: ${range})`;
+  if (statusLabel === 'Over limit') return `${n} sets — over your recovery limit (aim for ${range} next week)`;
+  return `${n} sets (target: ${range})`;
+}
+
 function StatBox({ icon, value, label, tooltip }) {
   return (
     <View style={styles.statBox}>
@@ -638,12 +660,16 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary, letterSpacing: 0.2 },
   optionalLabel: { fontSize: fontSize.xs, color: colors.textMuted },
   volumeRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    flexDirection: 'column', gap: spacing.xs,
     backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md,
     borderWidth: 1, borderColor: colors.border,
   },
+  volumeRowMain: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+  },
   muscleName: { flex: 1, fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.textPrimary },
   muscleSetCount: { fontSize: fontSize.sm, color: colors.textSecondary },
+  volumeInsightText: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18 },
   statusBadge: { paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radius.sm },
   statusText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold },
   limitedCard: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.lg, borderWidth: 1, borderColor: colors.border },
