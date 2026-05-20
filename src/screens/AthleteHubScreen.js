@@ -404,14 +404,27 @@ export default function AthleteHubScreen({ navigation }) {
   async function loadBodyMetrics() {
     try {
       const rows = await getBodyMetricLog(user.id, 1);
-      setLatestMetric(rows[0] ?? null);
+      if (rows[0]) { setLatestMetric(rows[0]); return; }
+      // Fallback to weight saved in profile during onboarding (covers race window
+      // between account creation and migrateLocalUserId completing).
+      if (userProfile?.weightKg) {
+        setLatestMetric({ weightKg: userProfile.weightKg, loggedAt: null });
+      }
     } catch (_e) {}
   }
 
   async function loadNutrition() {
     try {
       const t = await getNutritionTargets(user.id);
-      setNutritionTargets(t ?? null);
+      if (t?.targetKcal) { setNutritionTargets(t); return; }
+      // SQLite can be empty during the window between account creation and
+      // migrateLocalUserId completing. Fall back to AsyncStorage.
+      const raw = await AsyncStorage.getItem('@volyume_nutrition_targets');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.targetKcal) { setNutritionTargets(parsed); return; }
+      }
+      setNutritionTargets(null);
     } catch (_e) {}
   }
 
