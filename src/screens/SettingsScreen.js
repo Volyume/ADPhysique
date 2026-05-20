@@ -48,8 +48,6 @@ function SectionHeader({ title }) {
   return <Text style={styles.sectionHeader}>{title}</Text>;
 }
 
-const PHYSIQUE_PREF_KEY = '@volyume_physique_tracking_enabled';
-
 export default function SettingsScreen({ navigation }) {
   const { user, setUser, setSession, units, setUnits, bodyWeightUnits, setBodyWeightUnits, barWeight, setBarWeight, userProfile, saveLocalProfile, tier, setTier } =
     useAppStore(useShallow(s => ({
@@ -61,7 +59,6 @@ export default function SettingsScreen({ navigation }) {
       tier: s.tier, setTier: s.setTier,
     })));
   const [editName, setEditName] = useState(userProfile?.firstName ?? '');
-  const [physiqueEnabled, setPhysiqueEnabled] = useState(false);
   const [calmEnabled, setCalmEnabled] = useState(false);
   async function toggleCalmMode(value) {
     const mode = value ? 'calm' : 'normal';
@@ -69,36 +66,11 @@ export default function SettingsScreen({ navigation }) {
     setCalmEnabled(value);
   }
 
-  // Re-read on focus so the toggle stays in sync if the user enabled
-  // tracking from the BodyMetrics opt-in screen.
   useFocusEffect(
     useCallback(() => {
-      AsyncStorage.getItem(PHYSIQUE_PREF_KEY).then(v => setPhysiqueEnabled(v === 'true'));
       getWellbeingMode().then(m => setCalmEnabled(m === 'calm'));
     }, []),
   );
-
-  async function togglePhysique(value) {
-    if (value) {
-      Alert.alert(
-        'Enable Physique Tracking',
-        'This feature stores your body weight and measurements on this device. Your data never leaves your phone.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Enable',
-            onPress: async () => {
-              await AsyncStorage.setItem(PHYSIQUE_PREF_KEY, 'true');
-              setPhysiqueEnabled(true);
-            },
-          },
-        ],
-      );
-    } else {
-      await AsyncStorage.setItem(PHYSIQUE_PREF_KEY, 'false');
-      setPhysiqueEnabled(false);
-    }
-  }
 
   async function handleSignOut() {
     Alert.alert('Sign out?', 'You will need to sign in again.', [
@@ -309,21 +281,6 @@ export default function SettingsScreen({ navigation }) {
               ])
             }
           />
-          {tier === 'pro' && (
-            <SettingRow
-              icon="body-outline"
-              label="Physique tracking"
-              showArrow={false}
-              rightElement={
-                <Switch
-                  value={physiqueEnabled}
-                  onValueChange={togglePhysique}
-                  trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
-                  thumbColor={physiqueEnabled ? colors.primary : colors.textMuted}
-                />
-              }
-            />
-          )}
           <SettingRow
             icon="heart-outline"
             label="Calmer experience"
@@ -338,6 +295,14 @@ export default function SettingsScreen({ navigation }) {
               />
             }
           />
+          {tier === 'pro' && (
+            <SettingRow
+              icon="shield-checkmark-outline"
+              label="Wellbeing check"
+              sub="Update your answers to the health screening questions"
+              onPress={() => navigation.navigate('WellbeingCheck')}
+            />
+          )}
           {tier === 'pro' && (
             <SettingRow
               icon="notifications-outline"

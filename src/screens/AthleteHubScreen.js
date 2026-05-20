@@ -24,12 +24,9 @@ import { getBetaBannerText } from '../lib/proGate';
 import { computeEWMA } from '../lib/weeklyCoach';
 import { LineChart } from 'react-native-gifted-charts';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
-import { exportCoachReport } from '../lib/coachExport';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 
 const { width: SCREEN_W } = Dimensions.get('window');
-
-const PHYSIQUE_PREF_KEY = '@volyume_physique_tracking_enabled';
 
 const MILESTONES = [
   { sessions: 1,    label: 'First session',      icon: 'star-outline' },
@@ -180,8 +177,6 @@ export default function AthleteHubScreen({ navigation }) {
   const [streak, setStreak]                     = useState(0);
   const [recovery, setRecovery]                 = useState({ soreness: null, fatigue: null, joint: null });
   const [weekVolume, setWeekVolume]             = useState(null);
-  const [physiqueEnabled, setPhysiqueEnabled]   = useState(false);
-  const [exporting, setExporting]               = useState(false);
   const [calm, setCalm]                         = useState(false);
   const [adaptationHistory, setAdaptationHistory] = useState([]);
   const [repWarnings, setRepWarnings] = useState([]);
@@ -194,26 +189,6 @@ export default function AthleteHubScreen({ navigation }) {
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
 
-  async function handleCoachExport() {
-    if (exporting) return;
-    setExporting(true);
-    try {
-      const res = await exportCoachReport(user?.id, {
-        units,
-        nutritionConsented: physiqueEnabled,
-      });
-      if (!res.ok && res.reason === 'unavailable') {
-        Alert.alert('Export unavailable', 'PDF export is not available on this device.');
-      } else if (!res.ok && res.reason !== 'no-share') {
-        Alert.alert('Nothing to export', 'Log a few sessions first, then share with your coach.');
-      }
-    } catch (e) {
-      Alert.alert('Export failed', e?.message ?? 'Please try again.');
-    } finally {
-      setExporting(false);
-    }
-  }
-
   // Covers the case where the screen is already focused when the local user
   // ID first becomes available (async bootstrap finishes after mount).
   useEffect(() => {
@@ -222,7 +197,6 @@ export default function AthleteHubScreen({ navigation }) {
 
   useFocusEffect(useCallback(() => {
     if (user?.id) load();
-    AsyncStorage.getItem(PHYSIQUE_PREF_KEY).then(v => setPhysiqueEnabled(v === 'true'));
     getWellbeingMode().then(m => setCalm(isCalm(m)));
   }, [user?.id]));
 
@@ -674,12 +648,6 @@ export default function AthleteHubScreen({ navigation }) {
                 label="Update your coaching goal"
                 sub="Change between fat loss, muscle building or maintenance"
                 onPress={() => navigation.navigate('ProGoalSetup')}
-              />
-              <NavRow
-                icon="document-text-outline"
-                label={exporting ? 'Preparing report…' : 'Send report to coach'}
-                sub="Last 4 weeks as a PDF: training summary, PRs, bodyweight"
-                onPress={handleCoachExport}
               />
               <NavRow
                 icon="pause-circle-outline"
