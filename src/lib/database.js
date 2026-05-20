@@ -538,6 +538,11 @@ export async function insertExercise(data) {
   return { id, ...data, createdAt: now, updatedAt: now };
 }
 
+export async function deleteExercise(id) {
+  const d = await db();
+  await d.runAsync('DELETE FROM exercises WHERE id = ? AND is_custom = 1', [id]);
+}
+
 // ─── Workouts ─────────────────────────────────────────────────────────────────────────────────────
 
 export async function getAllWorkouts(userId) {
