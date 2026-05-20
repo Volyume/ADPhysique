@@ -268,8 +268,8 @@ export default function ProOnboardingScreen({ navigation }) {
             prefs.morning = { hour: morningHour, minute: 0, enabled: true };
           }
           if (checkinEnabled) {
-            await scheduleCheckinReminder(checkinDay, 18, 0);
-            prefs.checkin = { weekday: checkinDay, hour: 18, minute: 0, enabled: true };
+            await scheduleCheckinReminder(checkinDay, 12, 0);
+            prefs.checkin = { weekday: checkinDay, hour: 12, minute: 0, enabled: true };
           }
           await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(prefs)).catch(() => {});
         }

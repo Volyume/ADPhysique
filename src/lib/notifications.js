@@ -123,8 +123,8 @@ export async function scheduleMorningWeightNotification(hour = 7, minute = 0) {
 // ─── Schedule weekly check-in reminder ────────────────────────────────────────
 
 const CHECKIN_COPY = {
-  title: 'Weekly coaching',
-  body: 'Your week\'s done. 2 minutes to set up next week.',
+  title: 'Your weekly check-in',
+  body: 'Take 2 minutes — your coach will adjust next week based on how this one went.',
 };
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -138,7 +138,7 @@ const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
  * @param {number} hour     - 0–23, default 18 (6pm)
  * @param {number} minute   - 0–59, default 0
  */
-export async function scheduleCheckinReminder(weekday = 0, hour = 18, minute = 0) {
+export async function scheduleCheckinReminder(weekday = 0, hour = 12, minute = 0) {
   if (Platform.OS === 'web') return;
   try {
     await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_CHECKIN).catch(() => {});
@@ -209,7 +209,7 @@ export async function restoreNotifications(prefs) {
   if (prefs.checkinEnabled) {
     await scheduleCheckinReminder(
       prefs.checkinDay ?? 0,
-      prefs.checkinHour ?? 18,
+      prefs.checkinHour ?? 12,
       prefs.checkinMinute ?? 0,
     );
   }
