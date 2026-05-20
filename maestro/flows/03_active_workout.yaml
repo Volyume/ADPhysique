@@ -41,7 +41,7 @@ tags:
     id: volyume-btn-start-training
 - extendedWaitUntil:
     visible:
-      text: "COMPLETE SET"
+      text: "Log set"
     timeout: 8000
 - assertVisible:
     text: "Barbell Bench Press"
@@ -104,4 +104,4 @@ tags:
 
 # COMPLETE SET is primary again for the new exercise
 - assertVisible:
-    text: "COMPLETE SET"
+    text: "Log set"

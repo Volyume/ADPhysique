@@ -84,7 +84,7 @@
         "expo-notifications",
         {
           "icon": "./assets/volyume-icon.png",
-          "color": "#00E5FF",
+          "color": "#F59E0B",
           "sounds": []
         }
       ],
@@ -92,7 +92,7 @@
     ],
     "notification": {
       "icon": "./assets/volyume-icon.png",
-      "color": "#00E5FF",
+      "color": "#F59E0B",
       "androidMode": "default"
     },
     "extra": {
