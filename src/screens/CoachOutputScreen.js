@@ -10,6 +10,7 @@ import {
   getLatestCheckin,
   getRecentCheckins,
   getMorningWeightsLast14Days,
+  getMorningWeights,
   getWeeklySessionStats,
   getWeeklyPRCount,
   getNutritionTargets,
@@ -17,6 +18,7 @@ import {
   getLatestCoachOutput,
   getCoachOutputHistory,
 } from '../lib/database';
+import { computeEWMA, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -289,6 +291,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   const [output, setOutput] = useState(null);
   const [loading, setLoading] = useState(true);
   const [coachHistory, setCoachHistory] = useState([]);
+  const [adaptiveTDEE, setAdaptiveTDEE] = useState(null);
 
   useEffect(() => {
     async function load() {
@@ -353,6 +356,29 @@ export default function CoachOutputScreen({ navigation, route }) {
       // Load the last 5 outputs; skip the first (current week) for the history shelf
       const history = await getCoachOutputHistory(user.id, 5);
       setCoachHistory(history.slice(1, 5));
+
+      // Compute adaptive TDEE insight from long-term morning weight history
+      try {
+        const morningWeights = await getMorningWeights(user.id, 90);
+        const weightPoints = morningWeights
+          .filter(m => m.weightKg)
+          .sort((a, b) => a.loggedAt - b.loggedAt)
+          .map(m => ({ date: m.loggedAt, weightKg: m.weightKg }));
+        if (weightPoints.length >= 14) {
+          const ewma = computeEWMA(weightPoints);
+          const prescribedKcal = userProfile?.targetCalories || userProfile?.targetKcal || 2500;
+          const currentTDEE = userProfile?.tdeeEstimate || prescribedKcal;
+          const tdeeResult = computeAdaptiveTDEEAdjustment({
+            ewmaData: ewma,
+            prescribedKcal,
+            currentTDEEEstimate: currentTDEE,
+            adherenceFactor: 1.0,
+          });
+          setAdaptiveTDEE(tdeeResult);
+        }
+      } catch (e) {
+        console.warn('Adaptive TDEE computation skipped:', e);
+      }
 
       setLoading(false);
     }
@@ -520,7 +546,23 @@ export default function CoachOutputScreen({ navigation, route }) {
           <HeldDecisionsCard decisions={heldDecisions} history={coachHistory} />
         )}
 
-        {/* 11. Done button */}
+        {/* 11. Adaptive TDEE insight — only when confidence is medium or high */}
+        {adaptiveTDEE && adaptiveTDEE.confidence !== 'low' && adaptiveTDEE.confidence !== 'insufficient_data' && (
+          <View style={styles.adaptiveTDEECard}>
+            <Text style={styles.adaptiveTDEETitle}>CALORIE ESTIMATE</Text>
+            <Text style={styles.adaptiveTDEEBody}>{adaptiveTDEE.insight}</Text>
+            {Math.abs(adaptiveTDEE.adjustmentKcal) >= 100 && (
+              <Text style={styles.adaptiveTDEEAdjust}>
+                Suggested adjustment: {adaptiveTDEE.adjustmentKcal > 0 ? '+' : ''}{Math.round(adaptiveTDEE.adjustmentKcal)} kcal/day
+              </Text>
+            )}
+            <Text style={styles.adaptiveTDEENote}>
+              Based on {adaptiveTDEE.weeks} weeks of weight data. This is an estimate, not a prescription.
+            </Text>
+          </View>
+        )}
+
+        {/* 12. Done button */}
         <TouchableOpacity style={styles.doneBtn} onPress={handleClose} activeOpacity={0.8}>
           <Text style={styles.doneBtnText}>Done</Text>
         </TouchableOpacity>
@@ -892,5 +934,37 @@ const styles = StyleSheet.create({
   confidencePillText: {
     fontSize: fontSize.xs,
     color: colors.textMuted,
+  },
+
+  // Adaptive TDEE insight card
+  adaptiveTDEECard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
+  adaptiveTDEETitle: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.textMuted,
+    letterSpacing: 0.5,
+  },
+  adaptiveTDEEBody: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 20,
+  },
+  adaptiveTDEEAdjust: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+  },
+  adaptiveTDEENote: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    lineHeight: 18,
+    fontStyle: 'italic',
   },
 });
