@@ -85,7 +85,12 @@ const stackOptions = {
   cardStyle: { backgroundColor: colors.background },
 };
 
-function HomeStack() {
+function HomeStack({ navigation }) {
+  useEffect(() => {
+    return navigation.addListener('tabPress', () => {
+      navigation.dispatch(StackActions.popToTop());
+    });
+  }, [navigation]);
   return (
     <Stack.Navigator screenOptions={stackOptions}>
       <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />

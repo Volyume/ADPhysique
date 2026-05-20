@@ -78,6 +78,12 @@ export default function PlansScreen({ navigation }) {
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
 
+  useEffect(() => {
+    return navigation.getParent()?.addListener('tabPress', () => {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+    });
+  }, [navigation]);
+
   useFocusEffect(
     useCallback(() => {
       loadData();

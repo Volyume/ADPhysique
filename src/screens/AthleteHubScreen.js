@@ -189,6 +189,12 @@ export default function AthleteHubScreen({ navigation }) {
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
 
+  useEffect(() => {
+    return navigation.getParent()?.addListener('tabPress', () => {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+    });
+  }, [navigation]);
+
   // Covers the case where the screen is already focused when the local user
   // ID first becomes available (async bootstrap finishes after mount).
   useEffect(() => {
