@@ -9,10 +9,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { VolyumeMark } from '../components/BrandMark';
 import useAppStore from '../store/useAppStore';
-import { logBodyMetric, saveNutritionTargets, saveUserBodyProfile, migrateLocalUserId } from '../lib/database';
+import {
+  logBodyMetric, saveNutritionTargets, saveUserBodyProfile, migrateLocalUserId,
+  createProgramme, createRoutine, addExerciseToRoutine, getAllExercises, activatePlanWithBlock,
+} from '../lib/database';
 import { stoneLbsToKg, ftInToCm, parseBodyWeightToKg } from '../lib/units';
 import { signUpWithEmail, signInWithEmail } from '../lib/supabase';
 import { bulkUploadLocalData, syncProfile } from '../lib/sync';
+import { generatePlan } from '../lib/planEngine';
 import {
   requestNotificationPermissions,
   scheduleMorningWeightNotification,
@@ -350,6 +354,48 @@ export default function ProOnboardingScreen({ navigation }) {
       await AsyncStorage.setItem('@volyume_nutrition_targets', JSON.stringify(nutritionData)).catch(() => {});
       if (user?.id) {
         await saveNutritionTargets(user.id, nutritionData).catch(() => {});
+      }
+
+      // Auto-generate the training plan so the user lands on a ready-to-train
+      // home screen rather than a "build me a plan" empty state.
+      if (user?.id) {
+        try {
+          const planInputs = {
+            experience,
+            daysPerWeek: DEFAULT_DAYS_PER_WEEK,
+            sessionLengthMinutes,
+            equipment,
+            goal: trainingGoal,
+            phase: trainingPhase,
+            weakPoints: [],
+            recoveryRating,
+            nutritionPhase: phaseToNutritionKey(trainingPhase),
+          };
+          const plan = generatePlan(planInputs);
+          if (plan?.workouts?.length > 0) {
+            const planNameFinal = plan.name ?? 'Your plan';
+            const prog = await createProgramme(user.id, planNameFinal, plan.description ?? '', 0);
+            const allExercises = await getAllExercises();
+            const exerciseMap = {};
+            for (const ex of allExercises) exerciseMap[ex.name.toLowerCase()] = ex;
+            for (const workout of plan.workouts) {
+              const routine = await createRoutine(
+                user.id, workout.name, null, plan.splitType, 0, null, prog.id,
+              );
+              for (let i = 0; i < workout.exercises.length; i++) {
+                const ex = workout.exercises[i];
+                const dbEx = exerciseMap[ex.exerciseName.toLowerCase()];
+                if (!dbEx) continue;
+                await addExerciseToRoutine(
+                  routine.id, dbEx.id, i, ex.repMin, ex.repMax, ex.notes ?? null, ex.sets,
+                );
+              }
+            }
+            await activatePlanWithBlock(user.id, prog.id, planNameFinal);
+          }
+        } catch (planErr) {
+          console.warn('Auto plan generation failed:', planErr?.message);
+        }
       }
     } catch (e) {
       Alert.alert('Something went wrong', e?.message ?? 'Please try again.');

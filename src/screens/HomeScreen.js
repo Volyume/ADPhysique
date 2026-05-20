@@ -874,35 +874,35 @@ export default function HomeScreen({ navigation }) {
               <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
             </TouchableOpacity>
 
-            <PlanBuilderCard
-              icon="sparkles"
-              title="Coach Builder"
-              desc="Answer 5 questions about your goals and time available. We'll build you a complete programme."
-              badge="Recommended"
-              onPress={() => navigation.navigate('PlansTab', { screen: 'CoachBuilder', initial: false })}
-            />
-            <PlanBuilderCard
-              icon="library-outline"
-              title="Plan Library"
-              desc="Browse ready-made programmes for every level, schedule, and goal."
-              onPress={() => navigation.navigate('PlansTab', { screen: 'PlanLibrary', initial: false })}
-            />
-            <PlanBuilderCard
-              icon="create-outline"
-              title="Build Your Own"
-              desc="Already know exactly what you want to train? Build a custom programme from scratch."
-              onPress={() => navigation.navigate('PlansTab', { screen: 'ManualBuilder', initial: false })}
-            />
+            {tier !== 'pro' && (
+              <>
+                <PlanBuilderCard
+                  icon="library-outline"
+                  title="Plan Library"
+                  desc="Browse ready-made programmes for every level, schedule, and goal."
+                  badge="Recommended"
+                  onPress={() => navigation.navigate('PlansTab', { screen: 'PlanLibrary', initial: false })}
+                />
+                <PlanBuilderCard
+                  icon="barbell-outline"
+                  title="Start a manual session"
+                  desc="Log sets as you go. No plan required — Volyume builds your profile as you train."
+                  onPress={() => navigation.navigate('ActiveWorkout', { blank: true })}
+                />
+              </>
+            )}
 
-            <TouchableOpacity
-              style={styles.blankSessionLink}
-              onPress={() => navigation.navigate('BuildWorkout')}
-              accessibilityRole="button"
-              accessibilityLabel="Start a blank session"
-            >
-              <Text style={styles.blankSessionLinkText}>Start a blank session instead</Text>
-              <Ionicons name="chevron-forward" size={13} color={colors.textMuted} />
-            </TouchableOpacity>
+            {tier !== 'pro' && (
+              <TouchableOpacity
+                style={styles.blankSessionLink}
+                onPress={() => navigation.navigate('BuildWorkout')}
+                accessibilityRole="button"
+                accessibilityLabel="Start a blank session"
+              >
+                <Text style={styles.blankSessionLinkText}>Start a blank session instead</Text>
+                <Ionicons name="chevron-forward" size={13} color={colors.textMuted} />
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
