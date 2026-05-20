@@ -13,15 +13,15 @@ describe('VOLUME_LANDMARKS — delt split', () => {
   });
 
   test('front_delts landmark exists and is conservative (gets indirect volume from pressing)', () => {
-    expect(VOLUME_LANDMARKS.front_delts).toEqual({ mev: 0, mav: 6, mrv: 12 });
+    expect(VOLUME_LANDMARKS.front_delts).toEqual({ mv: 0, mev: 0, mav: 6, mrv: 12 });
   });
 
-  test('side_delts landmark matches old shoulders values', () => {
-    expect(VOLUME_LANDMARKS.side_delts).toEqual({ mev: 8, mav: 16, mrv: 24 });
+  test('side_delts landmark includes mv field and correct MRV', () => {
+    expect(VOLUME_LANDMARKS.side_delts).toEqual({ mv: 0, mev: 8, mav: 16, mrv: 26 });
   });
 
-  test('rear_delts landmark exists', () => {
-    expect(VOLUME_LANDMARKS.rear_delts).toEqual({ mev: 4, mav: 14, mrv: 20 });
+  test('rear_delts landmark exists with unified values', () => {
+    expect(VOLUME_LANDMARKS.rear_delts).toEqual({ mv: 0, mev: 6, mav: 14, mrv: 22 });
   });
 });
 

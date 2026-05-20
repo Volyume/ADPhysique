@@ -39,6 +39,7 @@ CREATE TABLE exercises (
   fatigue_cost INTEGER DEFAULT 1,
   stimulus_to_fatigue_ratio INTEGER DEFAULT 3,
   injury_sensitivity TEXT,
+  tension_at_stretch TEXT DEFAULT 'medium' CHECK(tension_at_stretch IN ('high', 'medium', 'low')),
   substitute_exercise_ids UUID[],
   notes TEXT,
   is_custom BOOLEAN DEFAULT FALSE,
@@ -284,7 +285,30 @@ ALTER TABLE achievements ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can manage own achievements" ON achievements
   FOR ALL USING (auth.uid() = user_id);
 
--- 15. Auto-Regulation Suggestions
+-- 15. Weekly Check-ins (pre/post session readiness, adherence, refeed tracking)
+CREATE TABLE weekly_checkins (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id),
+  checkin_date DATE NOT NULL,
+  energy_score INTEGER CHECK(energy_score BETWEEN 1 AND 5),
+  sleep_hours NUMERIC(3,1),
+  sleep_quality INTEGER CHECK(sleep_quality BETWEEN 1 AND 5),
+  life_stress INTEGER CHECK(life_stress BETWEEN 1 AND 5),
+  training_motivation INTEGER CHECK(training_motivation BETWEEN 1 AND 5),
+  recovery_rating TEXT CHECK(recovery_rating IN ('poor', 'average', 'good')),
+  refeed_day BOOLEAN DEFAULT FALSE,
+  adherence_calories TEXT CHECK(adherence_calories IN ('yes', 'mostly', 'no')),
+  adherence_protein TEXT CHECK(adherence_protein IN ('yes', 'mostly', 'no')),
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(user_id, checkin_date)
+);
+
+ALTER TABLE weekly_checkins ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage own checkins" ON weekly_checkins
+  FOR ALL USING (auth.uid() = user_id);
+
+-- 16. Auto-Regulation Suggestions
 CREATE TABLE autoregulation_suggestions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id),
@@ -307,6 +331,7 @@ CREATE INDEX idx_workout_sets_exercise ON workout_sets(exercise_id, user_id);
 CREATE INDEX idx_exercises_muscle ON exercises(primary_muscle);
 CREATE INDEX idx_personal_records_user_exercise ON personal_records(user_id, exercise_id);
 CREATE INDEX idx_weekly_volumes_user_date ON weekly_volumes(user_id, week_ending_date DESC);
+CREATE INDEX idx_weekly_checkins_user_date ON weekly_checkins(user_id, checkin_date DESC);
 
 -- GDPR: delete_user_data RPC
 -- Deletes all rows owned by the calling user across every table.

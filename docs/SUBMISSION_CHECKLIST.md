@@ -19,6 +19,10 @@ _Complete every item before triggering the first internal test build._
   - Go to: Supabase Dashboard > SQL Editor
   - Paste contents of `supabase/migrate_003_delete_rpc.sql` and run
   - Verify function appears under Database > Functions
+- [ ] **Run migrate_004_schema_improvements.sql** in Supabase SQL Editor
+  - Creates `weekly_checkins` table (required for GDPR delete RPC to work)
+  - Adds `tension_at_stretch` column to exercises
+  - Updates canonical exercise metadata
 - [ ] **Rotate anon key** — the key in `.env` may have been seen in development
   - Go to: Project Settings > API > Anon key > Regenerate
   - Update `.env` with new key

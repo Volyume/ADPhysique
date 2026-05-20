@@ -1,37 +1,30 @@
 // All 10 hypertrophy algorithms — pure functions, no side effects
 
-// Weekly set landmarks per muscle group.
-// mev = minimum effective volume, mav = maximum adaptive volume, mrv = maximum recoverable volume.
-// Values reflect Volyume's internally developed training principles for hypertrophy.
+// Weekly set landmarks per muscle group. Single source of truth — imported by planEngine too.
+//
+// mv  = maintenance volume: minimum to prevent detraining between blocks
+// mev = minimum effective volume: minimum to make meaningful progress
+// mav = maximum adaptive volume: productive sweet spot before recovery cost rises
+// mrv = maximum recoverable volume: hard ceiling before accumulated fatigue impairs recovery
+//
+// These are population starting points, not precise prescriptions.
+// computeAdaptiveLandmarks() personalises them from session feedback after 3+ data points.
+// Label them as "starting range" in user-facing copy — not as objective fact.
 export const VOLUME_LANDMARKS = {
-  // chest: pressing compounds provide significant stimulus; isolation adds on top.
-  chest:       { mev: 6,  mav: 14, mrv: 20 },
-  // back: compound overlap from rows and pulldowns raises the minimum effective dose.
-  back:        { mev: 10, mav: 16, mrv: 24 },
-  // front_delts: heavily stimulated by pressing; minimal direct work needed.
-  front_delts: { mev: 0,  mav: 6,  mrv: 12 },
-  // side_delts: isolation-dominant with high frequency tolerance.
-  side_delts:  { mev: 8,  mav: 16, mrv: 24 },
-  // rear_delts: stimulated by row/pull patterns; direct work added on top.
-  rear_delts:  { mev: 4,  mav: 14, mrv: 20 },
-  // biceps: isolation muscle with a moderate weekly set ceiling.
-  biceps:      { mev: 6,  mav: 14, mrv: 22 },
-  // triceps: stimulated by pressing; direct volume ceiling is lower than biceps.
-  triceps:     { mev: 6,  mav: 12, mrv: 18 },
-  // forearms: high repetition tolerance; grip work accumulates from compounds.
-  forearms:    { mev: 6,  mav: 12, mrv: 18 },
-  // quads: large compound-dominant muscle; higher volume ceiling than isolation muscles.
-  quads:       { mev: 8,  mav: 14, mrv: 20 },
-  // hamstrings: stimulated by hinging and leg curls; fatigue accumulates quickly.
-  hamstrings:  { mev: 6,  mav: 12, mrv: 18 },
-  // glutes: compound overlap from squat/hinge; dedicated work adds on top.
-  glutes:      { mev: 4,  mav: 10, mrv: 16 },
-  // calves: very high repetition tolerance with low systemic fatigue.
-  calves:      { mev: 8,  mav: 14, mrv: 20 },
-  // abs: minimal fatigue cost; frequency and volume can be higher.
-  abs:         { mev: 0,  mav: 16, mrv: 24 },
-  // traps: stimulated by shrugs, rows, deadlifts; moderate direct volume.
-  traps:       { mev: 6,  mav: 12, mrv: 18 },
+  chest:       { mv: 4,  mev: 6,  mav: 14, mrv: 22 },
+  back:        { mv: 8,  mev: 10, mav: 16, mrv: 25 },
+  front_delts: { mv: 0,  mev: 0,  mav: 6,  mrv: 12 },
+  side_delts:  { mv: 0,  mev: 8,  mav: 16, mrv: 26 },
+  rear_delts:  { mv: 0,  mev: 6,  mav: 14, mrv: 22 },
+  biceps:      { mv: 5,  mev: 6,  mav: 14, mrv: 22 },
+  triceps:     { mv: 4,  mev: 6,  mav: 12, mrv: 18 },
+  forearms:    { mv: 2,  mev: 4,  mav: 12, mrv: 14 },
+  quads:       { mv: 6,  mev: 8,  mav: 14, mrv: 20 },
+  hamstrings:  { mv: 4,  mev: 6,  mav: 12, mrv: 20 },
+  glutes:      { mv: 0,  mev: 4,  mav: 10, mrv: 16 },
+  calves:      { mv: 6,  mev: 8,  mav: 14, mrv: 20 },
+  abs:         { mv: 0,  mev: 4,  mav: 16, mrv: 25 },
+  traps:       { mv: 0,  mev: 4,  mav: 12, mrv: 20 },
 };
 
 export const MUSCLE_DISPLAY_NAMES = {
@@ -233,9 +226,11 @@ export function computeSetTargets(prevSets, repMin, repMax, units = 'kg', option
     let action = 'maintain';
 
     if (prevReps >= max) {
-      // Hit top of band — only increase load if RIR was ≥ 1 (had gas left)
-      // If RIR null (not logged), increase anyway (optimistic default)
-      const hadHeadroom = prevRIR === null || prevRIR >= 1;
+      // Hit top of band — only increase load if RIR was logged AND ≥ 1.
+      // Null RIR → hold weight. Novice lifters systematically underestimate their
+      // RIR by 2-4 reps; optimistically increasing load when RIR is unlogged drives
+      // premature overload. Log RIR to unlock progression suggestions.
+      const hadHeadroom = prevRIR !== null && prevRIR >= 1;
       if (hadHeadroom) {
         const increment = getIncrement(prevWeight);
         // 5% session-over-session cap
@@ -300,7 +295,7 @@ export function computeSetTargets(prevSets, repMin, repMax, units = 'kg', option
         let newWeight = bw;
         let newAction = 'anchor';
         if (br >= max) {
-          const hadHeadroom = bRIR === null || bRIR >= 1;
+          const hadHeadroom = bRIR !== null && bRIR >= 1;
           if (hadHeadroom) {
             const inc = getIncrement(bw);
             const cap = bw * 0.05;
@@ -326,11 +321,15 @@ export function computeSetTargets(prevSets, repMin, repMax, units = 'kg', option
   const allMaintain = targets.every(t => t.action === 'maintain');
   const anyAnchored = targets.some(t => t.anchored);
   const isLayoff = layoffMultiplier < 1.0;
+  const noRIRLogged = targets.every(t => t.prevRIR === null);
+  const repsHitTopNoRIR = noRIRLogged && targets.every(t => t.prevReps >= max);
 
   let reason;
   if (isLayoff) {
     const pct = Math.round((1 - layoffMultiplier) * 100);
     reason = `Loads reduced by ${pct}% for your first session back after a break. Rebuild over the next 1 to 2 weeks.`;
+  } else if (repsHitTopNoRIR) {
+    reason = `You hit the top of the range - good work. Log your RIR next session and the app will suggest whether to add weight.`;
   } else if (anyAnchored) {
     const n = targets.filter(t => t.anchored).length;
     reason = `${n === targets.length ? 'All' : n} set target${n > 1 ? 's' : ''} raised to match your session best (${bestPrevW}${units}). That is your overall high-water mark, not just that set's history.`;
@@ -342,7 +341,7 @@ export function computeSetTargets(prevSets, repMin, repMax, units = 'kg', option
   } else if (anyIncrease) {
     reason = `Partial progression: add weight on the sets where you hit ${max} reps.`;
   } else if (allMaintain) {
-    reason = `Same load for now. You're already hitting ${max}+ reps at maximum effort. Let recovery catch up first.`;
+    reason = `Same load for now. Push for ${max} reps on each set before adding weight.`;
   } else {
     reason = `Keep the same load. Push for ${max} reps on each set before increasing weight.`;
   }
@@ -805,14 +804,15 @@ export function computeAdaptiveLandmarks(history = [], baseDefaults = VOLUME_LAN
     const avgPRFreq = recent.reduce((s, e) => s + (e.prFrequency || 0), 0) / recent.length;
     const avgMissed = recent.reduce((s, e) => s + (e.missedReps || 0), 0) / recent.length;
 
-    // Compute a net stimulus/recovery score: positive = can handle more, negative = need less
-    // Ranges from approximately -3 to +3
-    const stimulusScore = (avgPump - 3) * 0.5;          // pump above 3 = good
-    const recoveryScore = -(avgSoreness - 2) * 0.4;     // soreness above 2 = bad
-    const jointScore = -(avgJoint) * 0.8;               // any joint issues = bad
-    const perfScore = avgPerf * 0.5;                    // improving = good
+    // Compute a net stimulus/recovery score: positive = can handle more, negative = need less.
+    // Weight order (research-supported): performance trend > missed reps > joint > soreness > pump.
+    // Pump is exercise-selection-dependent and over-weighted in naive models.
+    const stimulusScore = (avgPump - 3) * 0.3;          // pump above 3 = mild positive signal
+    const recoveryScore = -(avgSoreness - 2) * 0.4;     // soreness above 2 = recovery cost
+    const jointScore = -(avgJoint) * 0.8;               // joint issues = hard stop signal
+    const perfScore = avgPerf * 0.8;                    // performance trend is the strongest signal
     const prScore = Math.min(avgPRFreq * 0.3, 0.6);     // PRs = adapting
-    const fatigueScore = -(avgMissed * 0.3);            // missing reps = fatigued
+    const fatigueScore = -(avgMissed * 0.6);            // missing reps = primary fatigue signal
 
     const netScore = stimulusScore + recoveryScore + jointScore + perfScore + prScore + fatigueScore;
 
@@ -845,6 +845,102 @@ export function computeAdaptiveLandmarks(history = [], baseDefaults = VOLUME_LAN
   }
 
   return adapted;
+}
+
+// Effective set weighting by RIR proximity.
+// Sets close to failure recruit the most high-threshold motor units.
+// RIR 0-1: full credit. RIR 2: 90%. RIR 3: 60%. RIR 4+: 20% (stimulus mostly technique/warm-up).
+// Null RIR: treated as RIR 2 (conservative estimate — novices routinely over-estimate headroom).
+export function getSetEffectivenessWeight(rir) {
+  if (rir === null || rir === undefined) return 0.9;
+  if (rir <= 1) return 1.0;
+  if (rir === 2) return 0.9;
+  if (rir === 3) return 0.6;
+  return 0.2;
+}
+
+// Weighted effective sets per muscle — accounts for proximity to failure.
+// Returns { [muscle]: { workingSets, effectiveSets, reps, tonnage } }
+export function calculateEffectiveSets(sets, exerciseMap = {}) {
+  const volumeByMuscle = {};
+
+  for (const set of sets) {
+    const setType = set.setType || set.set_type || 'straight';
+    if (setType === 'warmup') continue;
+
+    const exerciseId = set.exerciseId || set.exercise_id;
+    const exercise = exerciseMap[exerciseId];
+    if (!exercise) continue;
+
+    let primaryMuscle = (exercise.primaryMuscle || exercise.primary_muscle || '').toLowerCase();
+    if (primaryMuscle === 'shoulders') primaryMuscle = 'side_delts';
+
+    const weight = getSetEffectivenessWeight(set.rir ?? set.rpe != null ? 10 - set.rpe : null);
+
+    if (primaryMuscle) {
+      if (!volumeByMuscle[primaryMuscle]) {
+        volumeByMuscle[primaryMuscle] = { workingSets: 0, effectiveSets: 0, reps: 0, tonnage: 0 };
+      }
+      volumeByMuscle[primaryMuscle].workingSets += 1;
+      volumeByMuscle[primaryMuscle].effectiveSets += weight;
+      volumeByMuscle[primaryMuscle].reps += set.actualReps || set.actual_reps || 0;
+      volumeByMuscle[primaryMuscle].tonnage += (set.weight || 0) * (set.actualReps || set.actual_reps || 0);
+    }
+  }
+
+  return volumeByMuscle;
+}
+
+// Plateau detection for a specific exercise across sessions.
+// exerciseSessions: array of sessions newest-first, each an array of sets for that exercise.
+// Returns { plateau, consecutiveStalls, resolution }
+export function detectPlateau(exerciseSessions = [], repMin = 6, repMax = 12) {
+  if (!exerciseSessions || exerciseSessions.length < 3) {
+    return { plateau: false, consecutiveStalls: 0, resolution: null };
+  }
+
+  const recent = exerciseSessions.slice(0, 3);
+  let consecutiveStalls = 0;
+
+  for (let i = 0; i < recent.length - 1; i++) {
+    const currSets = recent[i];
+    const prevSets = recent[i + 1];
+    if (!currSets?.length || !prevSets?.length) continue;
+
+    const currAvgWeight = currSets.reduce((s, set) => s + (set.weight || 0), 0) / currSets.length;
+    const currAvgReps   = currSets.reduce((s, set) => s + (set.actualReps || set.actual_reps || 0), 0) / currSets.length;
+    const prevAvgWeight = prevSets.reduce((s, set) => s + (set.weight || 0), 0) / prevSets.length;
+    const prevAvgReps   = prevSets.reduce((s, set) => s + (set.actualReps || set.actual_reps || 0), 0) / prevSets.length;
+
+    const noLoadGain = currAvgWeight <= prevAvgWeight + 0.01;
+    const noRepGain  = currAvgReps  <= prevAvgReps  + 0.5;
+
+    if (noLoadGain && noRepGain) consecutiveStalls++;
+    else consecutiveStalls = 0;
+  }
+
+  if (consecutiveStalls < 2) {
+    return { plateau: false, consecutiveStalls, resolution: null };
+  }
+
+  return {
+    plateau: true,
+    consecutiveStalls,
+    resolution: consecutiveStalls >= 3
+      ? 'swap_exercise'      // 3+ stalls: substitute this exercise for 4-6 weeks
+      : 'change_rep_range',  // 2 stalls: try a different rep range (e.g. 15-20) for 3 weeks
+    message: consecutiveStalls >= 3
+      ? 'No progress for 3 sessions in a row. Try a different exercise for this muscle for the next 4-6 weeks, then revisit.'
+      : 'No progress for 2 sessions. Try shifting to a higher rep range (15-20) for 3 weeks, then return to this weight.',
+  };
+}
+
+// Volume confidence — how much to trust the adaptive landmark estimate for a muscle.
+// Based on number of feedback data points collected.
+export function getVolumeConfidence(dataPoints) {
+  if (dataPoints < 3)  return { level: 'low',    label: 'Estimated', description: 'Starting range — not yet personalised to you.' };
+  if (dataPoints < 6)  return { level: 'medium',  label: 'Learning',  description: 'Based on limited data. Adjust after each check-in.' };
+  return                      { level: 'high',    label: 'Personalised', description: 'Based on your logged response data.' };
 }
 
 // RP-classic deload prescription

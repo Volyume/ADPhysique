@@ -8,12 +8,18 @@
 // Constants
 // ---------------------------------------------------------------------------
 
+// Mifflin-St Jeor / Katch-McArdle activity multipliers corrected for gym-only training.
+// The traditional 1.725 ("active") and 1.9 ("very active") values were calibrated for
+// physically active occupations, not resistance training alone. Research on gym-going
+// populations (SportRxiv, 2024) supports reducing these by ~0.05–0.1 to avoid systematic
+// TDEE overestimation (~200–400 kcal/day). Users should compare their 4-week weight trend
+// against targets and adjust if needed.
 const ACTIVITY_MULTIPLIERS = {
   sedentary: 1.2,
   light: 1.375,
   moderate: 1.55,
-  active: 1.725,
-  very_active: 1.9,
+  active: 1.65,       // 5 gym sessions/week — was 1.725, reduced for gym-only population
+  very_active: 1.725, // 6+ gym sessions/week — was 1.9, reduced for gym-only population
 };
 
 const PHASE_ADJUSTMENTS = {
@@ -189,6 +195,25 @@ export const ADVANCED_PROTEIN_GOALS = [
   'strength_hypertrophy',
 ];
 
+// Experience-based surplus multipliers. Beginners utilise larger surpluses efficiently;
+// advanced lifters gain fat rapidly above a modest surplus (~200-350 kcal).
+// Source: PMC10620361 (2023 parallel-groups RCT); Barakat et al. (2020) narrative review.
+const SURPLUS_EXP_MULT = {
+  beginner:    { lean_gain: 1.30, build: 1.25 },
+  intermediate:{ lean_gain: 1.00, build: 1.00 },
+  advanced:    { lean_gain: 0.65, build: 0.80 },
+  competitive: { lean_gain: 0.50, build: 0.65 },
+};
+
+// Weekly body weight gain targets by experience level (kg/week).
+// Beginners can gain more tissue per week; advanced lifters hit the ceiling faster.
+export const GAIN_RATE_TARGETS = {
+  beginner:    { min: 0.25, max: 0.50 },
+  intermediate:{ min: 0.15, max: 0.30 },
+  advanced:    { min: 0.05, max: 0.20 },
+  competitive: { min: 0.03, max: 0.15 },
+};
+
 export function calculateNutritionTargets(inputs) {
   const {
     sex,
@@ -204,6 +229,7 @@ export function calculateNutritionTargets(inputs) {
     proteinApproach: _proteinApproachInput = null,
     customProteinGPerKg = null,
     targetRateKgPerWeek = null,
+    experienceLevel = 'intermediate', // 'beginner' | 'intermediate' | 'advanced' | 'competitive'
   } = inputs;
 
   // Clamp inputs to physiologically safe ranges — guards against typos and invalid onboarding data.
@@ -236,7 +262,14 @@ export function calculateNutritionTargets(inputs) {
   const maintenanceKcal = Math.round(bmr * multiplier);
 
   // --- Phase calorie adjustment ---
-  const phaseAdj = PHASE_ADJUSTMENTS[goal] ?? 0;
+  let phaseAdj = PHASE_ADJUSTMENTS[goal] ?? 0;
+  // Scale surplus phases by experience level: beginners can use larger surpluses;
+  // advanced lifters accumulate fat rapidly above a modest surplus.
+  if (phaseAdj > 0) {
+    const expMult = SURPLUS_EXP_MULT[experienceLevel] ?? SURPLUS_EXP_MULT.intermediate;
+    const mult = expMult[goal] ?? 1.0;
+    phaseAdj = phaseAdj * mult;
+  }
   let targetKcal = Math.round(maintenanceKcal * (1 + phaseAdj));
 
   // --- Safety floors ---
@@ -303,6 +336,16 @@ export function calculateNutritionTargets(inputs) {
   // --- Estimated weekly rate (recalculated with final targetKcal) ---
   const finalEstimatedRate = estimateWeeklyRate(actualTargetKcal, maintenanceKcal, safeWeight);
 
+  // --- Per-meal protein distribution ---
+  // Research: 3-5 protein meals per day, each crossing the ~25-40g leucine threshold,
+  // produces ~25% greater 24-hour MPS than the same total in 1-2 large meals.
+  // Source: Mamerow et al. (2014), J Nutrition; Frontiers Nutrition (2024).
+  const mealFrequency = (goal === 'aggressive_cut' || goal === 'contest_prep') ? 5 : 4;
+  const perMealProteinG = Math.round(proteinG / mealFrequency);
+
+  // --- Weekly gain/loss rate targets ---
+  const gainRateTarget = GAIN_RATE_TARGETS[experienceLevel] ?? GAIN_RATE_TARGETS.intermediate;
+
   return {
     bmrFormula: formula === 'mifflin' ? 'Standard calorie formula' : 'Lean mass-adjusted formula',
     bmrKcal,
@@ -318,10 +361,15 @@ export function calculateNutritionTargets(inputs) {
     proteinGPerKgLbm: lbm ? parseFloat((proteinG / lbm).toFixed(2)) : null,
     proteinApproach,     // 'standard' | 'optimised' | 'advanced'
     proteinRateUsed,     // exact g/kg rate applied
+    perMealProteinG,     // target protein per meal to saturate MPS
+    mealFrequency,       // recommended meals per day
     targetRateKgPerWeek: parseFloat(finalEstimatedRate.toFixed(3)),
+    gainRateTargetMin: gainRateTarget.min,  // expected weekly rate (kg/week) for this experience level
+    gainRateTargetMax: gainRateTarget.max,
     confidence: calcConfidence(bodyFatSource),
     phase: PHASE_LABELS[goal] ?? goal,
     goal,
+    experienceLevel,
     formulaUsed: formula,
     warnings,
     isConsentRequired: true,
@@ -413,6 +461,36 @@ export function getPlanNutritionContext(targets) {
   };
   const explanation = explanations[goal] ?? 'Nutrition context applied based on current phase.';
 
+  // --- Refeed and diet break recommendations ---
+  // Evidence: MATADOR study (2017, Int J Obesity) — 2-week diet breaks produced 50% more fat
+  // loss than continuous restriction at equal total deficit time. Refeeds (1-2 days at
+  // maintenance via carbs) partially restore leptin and preserve RMR.
+  // Source: PMC7739314 (2020); multiple RCTs on intermittent energy restriction.
+  let refeedRecommendation = null;
+  if (goal === 'aggressive_cut' || goal === 'contest_prep') {
+    const refeedProteinKcal = (targets.proteinG ?? 0) * 4;
+    const refeedFatKcal     = (targets.fatG ?? 0) * 9;
+    const refeedCarbsKcal   = Math.max(0, maintenanceKcal - refeedProteinKcal - refeedFatKcal);
+    refeedRecommendation = {
+      type: 'refeed',
+      frequencyWeeks: goal === 'contest_prep' ? 1 : 2,
+      durationDays: 2,
+      caloricTargetKcal: maintenanceKcal,
+      refeedCarbsG: Math.round(refeedCarbsKcal / 4),
+      notes: 'Return to maintenance calories for 1-2 days, primarily via carbohydrates. Keep protein constant. This helps maintain metabolic rate and hormonal balance during a long deficit.',
+    };
+  }
+
+  let dietBreakRecommendation = null;
+  if (goal === 'contest_prep') {
+    dietBreakRecommendation = {
+      frequencyWeeks: 8,
+      durationWeeks: 1,
+      caloricTargetKcal: maintenanceKcal,
+      notes: '1 week at maintenance every 8 weeks of prep. Best used when more than 10 weeks out from competition. Metabolic rate and hormonal environment partially restore during the break.',
+    };
+  }
+
   return {
     phaseType,
     recoveryModifier: parseFloat(recoveryModifier.toFixed(2)),
@@ -420,5 +498,7 @@ export function getPlanNutritionContext(targets) {
     failureExposureLevel,
     deloadFrequencyWeeks,
     explanation,
+    refeedRecommendation,
+    dietBreakRecommendation,
   };
 }

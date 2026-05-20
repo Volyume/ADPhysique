@@ -5,6 +5,7 @@
  */
 
 import { GOAL_LABELS as _GOAL_LABELS, GOAL_OVERLAYS, GOALS_WITH_WEAK_POINTS } from './coachingGoals';
+import { VOLUME_LANDMARKS } from './algorithms';
 
 // ---------------------------------------------------------------------------
 // Public label maps
@@ -52,26 +53,10 @@ function resolveWeakPointKeys(uiLabels) {
 }
 
 // ---------------------------------------------------------------------------
-// Volume landmarks (v2 — intermediate baseline)
+// Volume landmarks — imported from algorithms.js (single source of truth)
 // ---------------------------------------------------------------------------
-
-// muscle: { MV, MEV, MRV }
-const LANDMARKS = {
-  chest:       { MV: 4,  MEV: 8,  MRV: 22 },
-  back:        { MV: 8,  MEV: 10, MRV: 25 },
-  front_delts: { MV: 0,  MEV: 0,  MRV: 12 },
-  side_delts:  { MV: 0,  MEV: 8,  MRV: 26 },
-  rear_delts:  { MV: 0,  MEV: 6,  MRV: 22 },
-  biceps:      { MV: 5,  MEV: 8,  MRV: 22 },
-  triceps:     { MV: 4,  MEV: 6,  MRV: 18 },
-  forearms:    { MV: 2,  MEV: 4,  MRV: 14 },
-  quads:       { MV: 6,  MEV: 8,  MRV: 20 },
-  hamstrings:  { MV: 4,  MEV: 6,  MRV: 20 },
-  glutes:      { MV: 0,  MEV: 4,  MRV: 16 },
-  calves:      { MV: 6,  MEV: 8,  MRV: 20 },
-  abs:         { MV: 0,  MEV: 6,  MRV: 25 },
-  traps:       { MV: 0,  MEV: 4,  MRV: 20 },
-};
+// VOLUME_LANDMARKS uses lowercase keys: { mv, mev, mav, mrv }
+// computeLandmarks() below adapts these to uppercase for backward compatibility.
 
 // ---------------------------------------------------------------------------
 // Autoregulation multiplier tables
@@ -115,9 +100,9 @@ function computeLandmarks(experience, recoveryRating, nutritionPhase, age) {
   const mAge = ageMultipliers(age);
 
   const result = {};
-  for (const [muscle, base] of Object.entries(LANDMARKS)) {
-    let MEVadj = Math.round(base.MEV * mExp.MEV * mRec.MEV * mNut.MEV * mAge.MEV);
-    let MRVadj = Math.round(base.MRV * mExp.MRV * mRec.MRV * mNut.MRV * mAge.MRV);
+  for (const [muscle, base] of Object.entries(VOLUME_LANDMARKS)) {
+    let MEVadj = Math.round(base.mev * mExp.MEV * mRec.MEV * mNut.MEV * mAge.MEV);
+    let MRVadj = Math.round(base.mrv * mExp.MRV * mRec.MRV * mNut.MRV * mAge.MRV);
 
     // Clash guard
     if (MEVadj >= MRVadj) MEVadj = Math.max(2, MRVadj - 2);
@@ -126,7 +111,7 @@ function computeLandmarks(experience, recoveryRating, nutritionPhase, age) {
 
     const MAVlow  = MEVadj + 2;
     const MAVhigh = Math.max(MAVlow, MRVadj - 1);
-    result[muscle] = { MV: base.MV, MEV: MEVadj, MAVlow, MAVhigh, MRV: MRVadj };
+    result[muscle] = { MV: base.mv, MEV: MEVadj, MAVlow, MAVhigh, MRV: MRVadj };
   }
   return result;
 }

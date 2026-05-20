@@ -1,6 +1,8 @@
 export const colors = {
-  // Core backgrounds — neutral charcoal (no blue tint)
-  background: '#000000',
+  // Core backgrounds — dark charcoal, not pure black.
+  // Pure black (#000000) causes halation (blurring) for users with astigmatism.
+  // #0D0D0D passes WCAG 4.5:1 with all text tokens below while reducing eye strain.
+  background: '#0D0D0D',
   surface: '#1A1A1A',
   surface2: '#242424',
   surface3: '#2E2E2E',
