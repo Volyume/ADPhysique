@@ -19,10 +19,17 @@ import {
   cancelAllNotifications,
   requestNotificationPermissions,
 } from '../lib/notifications';
+import {
+  scheduleTrainingReminders,
+  cancelTrainingReminders,
+  REMINDER_PREF_KEY,
+  REMINDER_TIME_KEY,
+} from '../lib/trainingReminders';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 
 const HOURS = [5, 6, 7, 8, 9, 10, 11, 12];
+const TRAINING_PRESET_TIMES = ['06:00', '07:00', '08:00', '09:00', '10:00', '17:00', '18:00', '19:00', '20:00'];
 const EVENING_HOURS = [14, 15, 16, 17, 18, 19, 20, 21];
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -114,6 +121,9 @@ export default function NotificationSettingsScreen({ navigation }) {
   const [checkinDay, setCheckinDay] = useState(0);
   const [checkinHour, setCheckinHour] = useState(18);
   const [checkinMinute, setCheckinMinute] = useState(0);
+  const [trainingEnabled, setTrainingEnabled] = useState(false);
+  const [trainingHour, setTrainingHour] = useState(8);
+  const [trainingMinute, setTrainingMinute] = useState(0);
   const [permissionStatus, setPermissionStatus] = useState(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -135,6 +145,20 @@ export default function NotificationSettingsScreen({ navigation }) {
           if (prefs.checkinDay !== undefined) setCheckinDay(prefs.checkinDay);
           if (prefs.checkinHour !== undefined) setCheckinHour(prefs.checkinHour);
           if (prefs.checkinMinute !== undefined) setCheckinMinute(prefs.checkinMinute);
+        }
+      } catch (_) {}
+
+      try {
+        const trainingEnabledRaw = await AsyncStorage.getItem(REMINDER_PREF_KEY);
+        if (trainingEnabledRaw !== null) setTrainingEnabled(trainingEnabledRaw === 'true');
+      } catch (_) {}
+
+      try {
+        const trainingTimeRaw = await AsyncStorage.getItem(REMINDER_TIME_KEY);
+        if (trainingTimeRaw) {
+          const { hour, minute } = JSON.parse(trainingTimeRaw);
+          if (typeof hour === 'number') setTrainingHour(hour);
+          if (typeof minute === 'number') setTrainingMinute(minute);
         }
       } catch (_) {}
 
@@ -220,6 +244,47 @@ export default function NotificationSettingsScreen({ navigation }) {
   function handleCheckinHour(hour) {
     setCheckinHour(hour);
     scheduleApply(getPrefs({ ch: hour }));
+  }
+
+  async function handleTrainingToggle(value) {
+    if (value && permissionStatus !== 'granted') {
+      Alert.alert(
+        'Notifications disabled',
+        'You\'ll need to enable notifications in your device settings first.',
+      );
+      return;
+    }
+    setTrainingEnabled(value);
+    try {
+      await AsyncStorage.setItem(REMINDER_PREF_KEY, value ? 'true' : 'false');
+      if (value) {
+        await scheduleTrainingReminders();
+      } else {
+        await cancelTrainingReminders();
+      }
+    } catch (_) {}
+  }
+
+  function handleTrainingTimePick() {
+    const currentLabel = `${String(trainingHour).padStart(2, '0')}:${String(trainingMinute).padStart(2, '0')}`;
+    Alert.alert(
+      'Reminder time',
+      `Current: ${currentLabel}`,
+      TRAINING_PRESET_TIMES.map((label) => ({
+        text: label,
+        onPress: async () => {
+          const [h, m] = label.split(':').map(Number);
+          setTrainingHour(h);
+          setTrainingMinute(m);
+          try {
+            await AsyncStorage.setItem(REMINDER_TIME_KEY, JSON.stringify({ hour: h, minute: m }));
+            if (trainingEnabled) {
+              await scheduleTrainingReminders();
+            }
+          } catch (_) {}
+        },
+      })),
+    );
   }
 
   return (
@@ -353,6 +418,52 @@ export default function NotificationSettingsScreen({ navigation }) {
           <View style={styles.helperRow}>
             <Text style={styles.helperText}>
               Reminds you to complete your weekly coaching check-in.
+            </Text>
+          </View>
+        </View>
+
+        {/* Section 3 — Training reminders */}
+        <Text style={styles.sectionLabel}>Training reminders</Text>
+        <View style={styles.card}>
+          {/* Toggle row */}
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleIconWrap}>
+              <Ionicons name="barbell-outline" size={18} color={colors.primary} />
+            </View>
+            <Text style={styles.toggleLabel}>Remind me on training days</Text>
+            <Switch
+              value={trainingEnabled}
+              onValueChange={handleTrainingToggle}
+              trackColor={{ false: colors.surface2, true: colors.primaryDim }}
+              thumbColor={colors.primary}
+              ios_backgroundColor={colors.surface2}
+              accessibilityLabel="Training reminder toggle"
+            />
+          </View>
+
+          {/* Time picker row */}
+          {trainingEnabled && (
+            <View style={styles.expandedSection}>
+              <View style={styles.divider} />
+              <TouchableOpacity
+                style={styles.timePickerRow}
+                onPress={handleTrainingTimePick}
+                accessibilityRole="button"
+                accessibilityLabel="Set reminder time"
+              >
+                <Text style={styles.timePickerLabel}>Reminder time</Text>
+                <Text style={styles.timePickerValue}>
+                  {`${String(trainingHour).padStart(2, '0')}:${String(trainingMinute).padStart(2, '0')}`}
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Helper text */}
+          <View style={styles.helperRow}>
+            <Text style={styles.helperText}>
+              Reminders are based on the training days set in your active plan.
             </Text>
           </View>
         </View>
@@ -564,6 +675,26 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     lineHeight: 18,
     marginTop: spacing.md,
+  },
+
+  // Time picker row (training reminders)
+  timePickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    gap: spacing.md,
+  },
+  timePickerLabel: {
+    flex: 1,
+    fontSize: fontSize.md,
+    color: colors.textPrimary,
+    fontWeight: fontWeight.medium,
+  },
+  timePickerValue: {
+    fontSize: fontSize.md,
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
   },
 
   // Bottom note

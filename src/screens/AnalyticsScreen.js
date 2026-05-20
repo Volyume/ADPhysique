@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   RefreshControl, Animated, Dimensions,
@@ -105,6 +105,9 @@ export default function AnalyticsScreen({ navigation }) {
   const [allSets, setAllSets]               = useState([]);
   const [exerciseMap, setExerciseMap]       = useState({});
   const [deloadAlert, setDeloadAlert]       = useState(null);
+  const [durationBars, setDurationBars]     = useState([]);   // [{avgMin, weekLabel}] for session length trend
+  const [muscleFreq, setMuscleFreq]         = useState([]);   // [{muscle, thisWeek, lastWeek}]
+  const [showAllMuscles, setShowAllMuscles] = useState(false);
 
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
@@ -137,6 +140,8 @@ export default function AnalyticsScreen({ navigation }) {
         loadPRBars(sets, exMap, 30),
         loadCalendar(workouts),
         loadRecentSessions(workouts),
+        loadSessionDurationTrend(workouts),
+        loadMuscleFrequency(sets, exMap),
       ]);
     } catch (e) {
       console.error('AnalyticsScreen load:', e);
@@ -286,6 +291,92 @@ export default function AnalyticsScreen({ navigation }) {
     setRecentSessions(completed);
   }
 
+  function loadSessionDurationTrend(workouts) {
+    try {
+      const now = Date.now();
+      const SIX_WEEKS_MS = 6 * WEEK_MS;
+      const windowStart = now - SIX_WEEKS_MS;
+
+      // Bucket completed workouts with a duration into 6 weekly slots (0 = oldest, 5 = most recent)
+      const buckets = Array.from({ length: 6 }, () => []);
+      for (const w of workouts) {
+        if (!(w.isCompleted ?? w.is_completed)) continue;
+        const dur = w.durationMinutes ?? w.duration_minutes ?? 0;
+        if (!dur || dur <= 0) continue;
+        const at = w.startedAt ?? w.createdAt ?? w.created_at ?? 0;
+        if (at < windowStart) continue;
+        const weeksAgo = Math.floor((now - at) / WEEK_MS);
+        if (weeksAgo < 0 || weeksAgo >= 6) continue;
+        const idx = 5 - weeksAgo; // 0 = oldest, 5 = this week
+        buckets[idx].push(dur);
+      }
+
+      // Require at least 3 sessions across the window with a recorded duration
+      const totalSessions = buckets.reduce((sum, b) => sum + b.length, 0);
+      if (totalSessions < 3) {
+        setDurationBars([]);
+        return;
+      }
+
+      const bars = buckets.map((sessions, idx) => {
+        const avgMin = sessions.length > 0
+          ? Math.round(sessions.reduce((s, v) => s + v, 0) / sessions.length)
+          : 0;
+        // Week label: W1 (oldest) to W6 (this week)
+        const weekLabel = idx === 5 ? 'Now' : `W${idx + 1}`;
+        return { avgMin, weekLabel, sessionCount: sessions.length };
+      });
+
+      setDurationBars(bars);
+    } catch (_) {}
+  }
+
+  function loadMuscleFrequency(sets, exMap) {
+    try {
+      const now = Date.now();
+      const thisWeekStart = now - WEEK_MS;
+      const lastWeekStart = now - 2 * WEEK_MS;
+
+      // Count distinct workout_ids per muscle per week-window
+      // "session count" = number of unique workouts that included that muscle
+      const thisWeekWorkouts = {};  // muscle → Set of workoutIds
+      const lastWeekWorkouts = {};  // muscle → Set of workoutIds
+
+      for (const s of sets) {
+        const at = s.createdAt ?? s.created_at ?? 0;
+        const exId = s.exerciseId ?? s.exercise_id;
+        const ex = exMap[exId];
+        if (!ex) continue;
+        let muscle = (ex.primaryMuscle || ex.primary_muscle || '').toLowerCase();
+        if (muscle === 'shoulders') muscle = 'side_delts';
+        if (!muscle) continue;
+        const workoutId = s.workoutId ?? s.workout_id;
+
+        if (at >= thisWeekStart) {
+          (thisWeekWorkouts[muscle] ??= new Set()).add(workoutId);
+        } else if (at >= lastWeekStart) {
+          (lastWeekWorkouts[muscle] ??= new Set()).add(workoutId);
+        }
+      }
+
+      // Merge all muscles that appeared in either week
+      const allMuscles = new Set([
+        ...Object.keys(thisWeekWorkouts),
+        ...Object.keys(lastWeekWorkouts),
+      ]);
+
+      const rows = Array.from(allMuscles)
+        .map(muscle => ({
+          muscle,
+          thisWeek: thisWeekWorkouts[muscle]?.size ?? 0,
+          lastWeek: lastWeekWorkouts[muscle]?.size ?? 0,
+        }))
+        .sort((a, b) => b.thisWeek - a.thisWeek || b.lastWeek - a.lastWeek);
+
+      setMuscleFreq(rows);
+    } catch (_) {}
+  }
+
   async function handleDismiss(insightId) {
     await dismissInsight(insightId);
     setInsights(prev => prev.filter(i => i.id !== insightId));
@@ -422,6 +513,31 @@ export default function AnalyticsScreen({ navigation }) {
           </View>
           <VolumeSnapshotGrid volume={weeklyVolume} />
         </View>
+
+        {/* ── 3b · Session Length Trend ─────────────────────── */}
+        {durationBars.length > 0 && (
+          <View style={styles.section}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+              <Text style={styles.sectionLabel}>Session length trend</Text>
+            </View>
+            <SessionDurationChart bars={durationBars} />
+          </View>
+        )}
+
+        {/* ── 3c · Training Frequency ───────────────────────── */}
+        {muscleFreq.length > 0 && (
+          <View style={styles.section}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+              <Text style={styles.sectionLabel}>Training frequency</Text>
+              <InfoTooltip text="How many sessions included each muscle group this week vs last." />
+            </View>
+            <MuscleFrequencyTable
+              rows={muscleFreq}
+              showAll={showAllMuscles}
+              onToggle={() => setShowAllMuscles(v => !v)}
+            />
+          </View>
+        )}
 
         {/* ── 4 · PR Rate Sparkline ─────────────────────────── */}
         <View style={styles.section}>
@@ -718,6 +834,96 @@ function NavTile({ icon, color, label, onPress }) {
   );
 }
 
+function SessionDurationChart({ bars }) {
+  const BAR_MAX_H = 40;
+  const BAR_W = 20;
+  const durations = bars.map(b => b.avgMin).filter(v => v > 0);
+  const maxDur = durations.length > 0 ? Math.max(...durations) : 1;
+
+  // Coaching line: compare last 3 bars with a recorded avg
+  const recent = bars.filter(b => b.avgMin > 0);
+  let coachingLine = 'Consistent session lengths.';
+  if (recent.length >= 3) {
+    const last = recent.slice(-3).map(b => b.avgMin);
+    const isDown = last[2] < last[0] - 5;
+    if (isDown) coachingLine = 'Sessions getting shorter — might be fatigue.';
+  }
+
+  function barColor(avgMin) {
+    if (avgMin <= 0) return colors.surface2;
+    if (avgMin < 45) return colors.textMuted;
+    if (avgMin <= 75) return colors.success;
+    return colors.warning;
+  }
+
+  return (
+    <View style={styles.durationWrap}>
+      <View style={styles.durationBarsRow}>
+        {bars.map((bar, i) => {
+          const barH = bar.avgMin > 0
+            ? Math.max(4, Math.round((bar.avgMin / maxDur) * BAR_MAX_H))
+            : 4;
+          return (
+            <View key={i} style={styles.durationBarCol}>
+              <View style={[
+                styles.durationBar,
+                { height: barH, width: BAR_W, backgroundColor: barColor(bar.avgMin) },
+              ]} />
+              {bar.avgMin > 0 && (
+                <Text style={styles.durationBarValue}>{bar.avgMin}m</Text>
+              )}
+              <Text style={styles.durationBarLabel}>{bar.weekLabel}</Text>
+            </View>
+          );
+        })}
+      </View>
+      <Text style={styles.durationCoach}>{coachingLine}</Text>
+    </View>
+  );
+}
+
+const FREQ_MAX_DISPLAY = 8;
+
+function MuscleFrequencyTable({ rows, showAll, onToggle }) {
+  const visible = showAll ? rows : rows.slice(0, FREQ_MAX_DISPLAY);
+  const hasMore = rows.length > FREQ_MAX_DISPLAY;
+
+  return (
+    <View style={styles.freqWrap}>
+      {visible.map(({ muscle, thisWeek, lastWeek }) => (
+        <View key={muscle} style={styles.freqRow}>
+          <Text style={styles.freqMuscle} numberOfLines={1}>
+            {MUSCLE_DISPLAY_NAMES[muscle] ?? muscle}
+          </Text>
+          <Text style={styles.freqCounts}>
+            <Text style={[styles.freqCountBold, thisWeek > lastWeek && styles.freqCountUp]}>
+              {thisWeek}
+            </Text>
+            <Text style={styles.freqDivider}> this · </Text>
+            <Text style={styles.freqLastWeek}>{lastWeek} last</Text>
+          </Text>
+        </View>
+      ))}
+      {hasMore && (
+        <TouchableOpacity
+          style={styles.freqToggle}
+          onPress={onToggle}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Text style={styles.freqToggleText}>
+            {showAll ? 'Show less' : `Show all (${rows.length})`}
+          </Text>
+          <Ionicons
+            name={showAll ? 'chevron-up' : 'chevron-down'}
+            size={12}
+            color={colors.primary}
+          />
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function diffChipBg(d) {
@@ -876,6 +1082,72 @@ const styles = StyleSheet.create({
     color: colors.warning, marginBottom: 2,
   },
   deloadSub: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+
+  // ── Session Duration Trend ──
+  durationWrap: {
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    padding: spacing.md, borderWidth: 1, borderColor: colors.border,
+    gap: spacing.md,
+  },
+  durationBarsRow: {
+    flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm,
+    height: 72,
+  },
+  durationBarCol: {
+    alignItems: 'center', justifyContent: 'flex-end', gap: 3,
+  },
+  durationBar: {
+    borderRadius: 3,
+  },
+  durationBarValue: {
+    fontSize: 9, color: colors.textSecondary, fontWeight: fontWeight.semibold,
+  },
+  durationBarLabel: {
+    fontSize: 9, color: colors.textMuted,
+  },
+  durationCoach: {
+    fontSize: fontSize.xs, color: colors.textSecondary,
+    lineHeight: 17, fontStyle: 'italic',
+  },
+
+  // ── Muscle Frequency Table ──
+  freqWrap: {
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    padding: spacing.md, borderWidth: 1, borderColor: colors.border,
+    gap: 2,
+  },
+  freqRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: spacing.xs,
+    borderBottomWidth: 1, borderBottomColor: colors.border + '60',
+  },
+  freqMuscle: {
+    fontSize: fontSize.sm, color: colors.textPrimary,
+    fontWeight: fontWeight.medium, flex: 1,
+  },
+  freqCounts: {
+    fontSize: fontSize.xs, color: colors.textSecondary,
+  },
+  freqCountBold: {
+    fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textPrimary,
+  },
+  freqCountUp: {
+    color: colors.success,
+  },
+  freqDivider: {
+    color: colors.textMuted,
+  },
+  freqLastWeek: {
+    color: colors.textMuted,
+  },
+  freqToggle: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    alignSelf: 'flex-start', marginTop: spacing.xs,
+    paddingVertical: 3,
+  },
+  freqToggleText: {
+    fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.medium,
+  },
 
   // ── Analytics empty state ──
   emptyState: {

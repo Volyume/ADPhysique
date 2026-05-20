@@ -17,6 +17,7 @@ import {
 } from '../lib/database';
 import { getBlockAdvice } from '../lib/blockAdvisor';
 import useAppStore from '../store/useAppStore';
+import { scheduleTrainingReminders } from '../lib/trainingReminders';
 
 const BLOCK_SNOOZE_KEY = '@volyume_block_snooze';
 const SCHEDULE_KEY = '@volyume_schedule_v1';
@@ -267,7 +268,9 @@ export default function PlansScreen({ navigation }) {
       : [...scheduleDays, dayIndex].sort((a, b) => a - b);
     setScheduleDays(next);
     const payload = { activePlanId: activePlan?.id ?? null, days: next };
-    AsyncStorage.setItem(SCHEDULE_KEY, JSON.stringify(payload)).catch(() => {});
+    AsyncStorage.setItem(SCHEDULE_KEY, JSON.stringify(payload))
+      .then(() => scheduleTrainingReminders())
+      .catch(() => {});
   }
 
   const showBlockCard = blockAdvice && activePlan &&

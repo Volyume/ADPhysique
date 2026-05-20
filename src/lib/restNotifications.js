@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const NOTIF_PROMPT_KEY = 'volyume_notif_prompt_seen';
 const REST_TIMER_CHANNEL = 'rest-timer';
 const REST_DONE_CHANNEL = 'rest-done';
+const TRAINING_REMINDERS_CHANNEL = 'training-reminders';
 
 // Track the IDs of both notifications so we can cancel them cleanly
 let ongoingNotifId = null;
@@ -30,6 +31,14 @@ export async function ensureNotifChannels() {
       importance: Notifications.AndroidImportance.HIGH,
       sound: 'default',
       vibrationPattern: [0, 250, 150, 250],
+      enableVibrate: true,
+      showBadge: false,
+    });
+    await Notifications.setNotificationChannelAsync(TRAINING_REMINDERS_CHANNEL, {
+      name: 'Training reminders',
+      description: 'Reminders on your scheduled training days',
+      importance: Notifications.AndroidImportance.HIGH,
+      sound: 'default',
       enableVibrate: true,
       showBadge: false,
     });
