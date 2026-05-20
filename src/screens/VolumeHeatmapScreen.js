@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput,
 } from 'react-native';
@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import InfoTooltip from '../components/InfoTooltip';
+import BodyDiagramHeatmap from '../components/BodyDiagramHeatmap';
 import { getCompletedWorkoutSets, getAllExercises } from '../lib/database';
 import {
   calculateWeeklyVolume, VOLUME_LANDMARKS, MUSCLE_DISPLAY_NAMES, getVolumeStatus,
@@ -107,6 +108,32 @@ export default function VolumeHeatmapScreen() {
   const effectiveLandmarks = customLandmarks || null;
   const muscles = Object.keys(VOLUME_LANDMARKS);
 
+  // ScrollView + per-row refs so the body diagram can scroll the user to a
+  // muscle's bar when its region is tapped.
+  const scrollRef = useRef(null);
+  const heatmapCardRef = useRef(null);
+  const rowOffsets = useRef({});
+
+  // Build the diagram input: for each known muscle, attach workingSets +
+  // status + colour from getVolumeStatus. Muscles with no data fall through
+  // to the neutral fill inside BodyDiagramHeatmap.
+  const volumeByMuscle = useMemo(() => {
+    const map = {};
+    for (const muscle of muscles) {
+      const sets = Math.round(weeklyVolume[muscle]?.workingSets || 0);
+      const { status, color, label } = getVolumeStatus(sets, muscle, effectiveLandmarks);
+      map[muscle] = { workingSets: sets, status, color, label };
+    }
+    return map;
+  }, [weeklyVolume, effectiveLandmarks, muscles]);
+
+  const handleMuscleTap = useCallback((muscleKey) => {
+    const offset = rowOffsets.current[muscleKey];
+    if (offset == null || !scrollRef.current) return;
+    // Add a small headroom above the row so the label is visible below the diagram.
+    scrollRef.current.scrollTo({ y: Math.max(offset - spacing.lg, 0), animated: true });
+  }, []);
+
   const windowNoteText =
     windowWeeks === 1
       ? 'Showing sets from the last week'
@@ -116,7 +143,13 @@ export default function VolumeHeatmapScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
+        {/* Anatomical body heatmap — tap a muscle to jump to its bar below */}
+        <BodyDiagramHeatmap
+          volumeByMuscle={volumeByMuscle}
+          onMuscleTap={handleMuscleTap}
+        />
+
         {/* Rolling window selector */}
         <View style={styles.windowSelector}>
           {WINDOW_OPTIONS.map(opt => {
@@ -169,7 +202,14 @@ export default function VolumeHeatmapScreen() {
         </View>
 
         {/* Muscle Rows */}
-        <View style={styles.heatmapCard}>
+        <View
+          ref={heatmapCardRef}
+          style={styles.heatmapCard}
+          onLayout={(e) => {
+            // Remember the card's y so per-row offsets can be added to it.
+            rowOffsets.current.__cardY = e.nativeEvent.layout.y;
+          }}
+        >
           {muscles.map(muscle => {
             const data = weeklyVolume[muscle] || { workingSets: 0 };
             const prevData = previousVolume[muscle] || { workingSets: 0 };
@@ -182,7 +222,16 @@ export default function VolumeHeatmapScreen() {
             const ghostFillPct = Math.min(prevSets / mrv, 1);
 
             return (
-              <View key={muscle} style={styles.muscleRow}>
+              <View
+                key={muscle}
+                style={styles.muscleRow}
+                onLayout={(e) => {
+                  // Per-row y is relative to the heatmap card; combine with the
+                  // card's y to get a position inside the ScrollView.
+                  const rowY = e.nativeEvent.layout.y;
+                  rowOffsets.current[muscle] = (rowOffsets.current.__cardY || 0) + rowY;
+                }}
+              >
                 <Text style={styles.muscleName}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
                 <View style={styles.barTrack}>
                   <View
