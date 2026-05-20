@@ -9,6 +9,7 @@
  */
 
 import { getTrainingNote } from './coachingGoals';
+import { shouldSuggestDietBreak } from './nutritionEngine';
 
 // ─── EWMA ────────────────────────────────────────────────────────────────────
 
@@ -275,6 +276,7 @@ export function runWeeklyCoach(inputs) {
     goalPhase = 'maint',
     trainingGoal = null,
     weeksInPhase = 1,
+    goalStartDate = null,
     consecutiveOffTargetWeeks = 0,
     consecutivePoorRecoveryWeeks = 0,
     lastCalAdjustmentDirection = null,
@@ -530,14 +532,29 @@ export function runWeeklyCoach(inputs) {
   // ── DIET BREAK SUGGESTION ─────────────────────────────────────────────────
   let dietBreakSuggested = false;
   let dietBreakNote = null;
+  let dietBreakWeeksInDeficit = 0;
 
-  // After 8+ weeks in deficit, suggest a break regardless of recovery state.
-  // At 12+ weeks the signal is stronger and the suggestion is more direct.
-  if (phase.isCut && weeksInPhase >= 8) {
-    dietBreakSuggested = true;
-    dietBreakNote = weeksInPhase >= 12
-      ? `You've been eating below maintenance for ${weeksInPhase} weeks. A full week at maintenance will help your body reset before continuing.`
-      : 'Eight or more consecutive weeks eating below maintenance is a long time. One week at your full calorie need helps your body reset and makes the next stretch more effective.';
+  // Prefer the precise goalStartDate from the user profile (set when they
+  // select a cutting phase) so the trigger is anchored to the real start
+  // date rather than the approximate weeksInPhase counter.
+  if (phase.isCut) {
+    if (goalStartDate) {
+      const dietBreakResult = shouldSuggestDietBreak(goalStartDate);
+      if (dietBreakResult.suggest) {
+        dietBreakSuggested = true;
+        dietBreakWeeksInDeficit = dietBreakResult.weeksInDeficit;
+        dietBreakNote = dietBreakResult.weeksInDeficit >= 12
+          ? `You have been eating below maintenance for ${dietBreakResult.weeksInDeficit} weeks. A full week at maintenance will help your body reset before continuing.`
+          : 'Eight or more consecutive weeks eating below maintenance is a long time. One week at your full calorie need helps your body reset and makes the next stretch more effective.';
+      }
+    } else if (weeksInPhase >= 8) {
+      // Fallback when goalStartDate is not stored (older profiles).
+      dietBreakSuggested = true;
+      dietBreakWeeksInDeficit = weeksInPhase;
+      dietBreakNote = weeksInPhase >= 12
+        ? `You have been eating below maintenance for ${weeksInPhase} weeks. A full week at maintenance will help your body reset before continuing.`
+        : 'Eight or more consecutive weeks eating below maintenance is a long time. One week at your full calorie need helps your body reset and makes the next stretch more effective.';
+    }
   }
 
   // ── HELD DECISIONS ────────────────────────────────────────────────────────
@@ -639,6 +656,7 @@ export function runWeeklyCoach(inputs) {
     deloadNote,
     dietBreakSuggested,
     dietBreakNote,
+    dietBreakWeeksInDeficit,
     heldDecisions,
     rapidWeightLossFlag,
     adherenceNote: null,

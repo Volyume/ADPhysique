@@ -41,16 +41,35 @@ export default function ProGoalSetupScreen({ navigation }) {
     ? PHYSIQUE_GOALS
     : PHYSIQUE_GOALS.filter(g => g.group === goalFilterGroup);
 
+  // Phases that represent a calorie deficit — used to track when the deficit began.
+  const DEFICIT_PHASES = ['cut'];
+
   async function handleSave() {
     if (!canSave) return;
 
     const goalPhase = phaseToCoachingKey(selectedPhase);
+
+    // Determine whether we're entering, staying in, or leaving a deficit phase.
+    const wasInDeficit = DEFICIT_PHASES.includes(userProfile?.trainingPhase);
+    const isNowInDeficit = DEFICIT_PHASES.includes(selectedPhase);
+
+    let goalStartDate = userProfile?.goalStartDate ?? null;
+    if (isNowInDeficit && !wasInDeficit) {
+      // Entering a deficit phase — record the start date.
+      goalStartDate = new Date().toISOString();
+    } else if (!isNowInDeficit) {
+      // Leaving a deficit phase (bulk, maintain, recomp) — clear the date.
+      goalStartDate = null;
+    }
+    // If staying in a deficit phase, preserve the existing start date.
+
     const updatedProfile = {
       ...(userProfile || {}),
       trainingGoal: selectedGoal,
       trainingPhase: selectedPhase,
       goalPhase,
       proteinApproach,
+      goalStartDate,
     };
 
     // Recalculate nutrition if the phase changed or we have the needed data

@@ -181,6 +181,23 @@ function RapidLossAlert() {
   );
 }
 
+function DietBreakCard({ weeksInDeficit }) {
+  return (
+    <View style={styles.dietBreakCard}>
+      <Text style={styles.dietBreakTitle}>Diet break worth considering</Text>
+      <Text style={styles.dietBreakBody}>
+        {weeksInDeficit >= 8
+          ? `You have been in a calorie deficit for ${weeksInDeficit} weeks. `
+          : 'You have been in a calorie deficit for over eight weeks. '}
+        {'A short diet break — returning to maintenance calories for one to two weeks — can help restore metabolic rate and improve long-term fat loss. Consider taking a break before your next phase.'}
+      </Text>
+      <Text style={styles.dietBreakFootnote}>
+        Based on the MATADOR trial (2017). This is a suggestion, not a requirement.
+      </Text>
+    </View>
+  );
+}
+
 function ConfidencePill({ confidence }) {
   if (!confidence || confidence === 'high') return null;
   const label = confidence === 'data_hold'
@@ -339,6 +356,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         goalPhase: userProfile?.goalPhase ?? 'maint',
         trainingGoal: userProfile?.trainingGoal ?? null,
         weeksInPhase,
+        goalStartDate: userProfile?.goalStartDate ?? null,
         consecutiveOffTargetWeeks,
         consecutivePoorRecoveryWeeks,
         lastCalAdjustmentDirection,
@@ -432,6 +450,7 @@ export default function CoachOutputScreen({ navigation, route }) {
     deloadNote,
     dietBreakSuggested,
     dietBreakNote,
+    dietBreakWeeksInDeficit,
     heldDecisions,
     rapidWeightLossFlag,
     adherenceNote,
@@ -529,13 +548,9 @@ export default function CoachOutputScreen({ navigation, route }) {
           />
         )}
 
-        {/* 8. Maintenance break suggestion */}
+        {/* 8. Diet break suggestion */}
         {dietBreakSuggested && (
-          <AmberAlertCard
-            title="Maintenance break suggested"
-            body={dietBreakNote ?? 'A short period at maintenance calories can help reset hunger hormones and make it easier to stick to your plan.'}
-            footnote="This is a suggestion. Your call."
-          />
+          <DietBreakCard weeksInDeficit={dietBreakWeeksInDeficit} />
         )}
 
         {/* 9. Rapid weight loss safety flag */}
@@ -826,6 +841,32 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
   amberCardFootnote: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    lineHeight: 18,
+  },
+
+  // Diet break card
+  dietBreakCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
+  dietBreakTitle: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+    letterSpacing: 0.2,
+  },
+  dietBreakBody: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 21,
+  },
+  dietBreakFootnote: {
     fontSize: fontSize.xs,
     color: colors.textMuted,
     lineHeight: 18,

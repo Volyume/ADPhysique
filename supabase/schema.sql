@@ -12,6 +12,7 @@ CREATE TABLE users_profile (
   units TEXT DEFAULT 'kg',
   tier TEXT DEFAULT 'free',
   bar_weight NUMERIC DEFAULT 20,
+  goal_start_date TIMESTAMPTZ,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
