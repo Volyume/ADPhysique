@@ -294,7 +294,7 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
                 </View>
 
                 {/* Increment */}
-                <Text style={[styles.addFieldLabel, { marginTop: spacing.xl }]}>WEIGHT INCREMENT ({units})</Text>
+                <Text style={[styles.addFieldLabel, { marginTop: spacing.xl }]}>Weight increment ({units})</Text>
                 <View style={styles.chipGrid}>
                   {[0.5, 1, 1.25, 2.5, 5].map(inc => (
                     <TouchableOpacity

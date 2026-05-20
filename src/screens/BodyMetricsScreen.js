@@ -552,7 +552,7 @@ export default function BodyMetricsScreen({ navigation }) {
                   value={form[m.key]}
                   onChangeText={v => setForm(f => ({ ...f, [m.key]: v }))}
                   keyboardType="decimal-pad"
-                  placeholder="—"
+                  placeholder=""
                   placeholderTextColor={colors.textMuted}
                 />
               </View>

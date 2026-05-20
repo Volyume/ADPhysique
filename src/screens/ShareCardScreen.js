@@ -426,7 +426,7 @@ export default function ShareCardScreen({ navigation, route }) {
 
         {/* Format */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>FORMAT</Text>
+          <Text style={styles.sectionTitle}>Format</Text>
           <View style={styles.segmentRow}>
             <SegmentBtn
               label="Square 1:1"

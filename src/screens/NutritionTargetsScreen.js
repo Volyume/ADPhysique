@@ -210,11 +210,11 @@ export default function NutritionTargetsScreen() {
     prefill();
   }, [user?.id]);
 
-  // Map ProOnboarding goal keys → NutritionTargets goal keys
+  // Pre-fill goal from profile (userProfile.goal stores the nutritionKey directly)
   useEffect(() => {
-    const MAP = { cut: 'mild_cut', maintain: 'maintain', mild_bulk: 'lean_gain', mod_bulk: 'build' };
-    const mapped = MAP[userProfile?.goal];
-    if (mapped) setGoal(mapped);
+    const VALID_GOALS = ['lean_gain', 'build', 'maintain', 'recomp', 'mild_cut', 'aggressive_cut'];
+    const profileGoal = userProfile?.goal;
+    if (profileGoal && VALID_GOALS.includes(profileGoal)) setGoal(profileGoal);
   }, [userProfile?.goal]);
 
   // ── Derived ──────────────────────────────────────────────────────────────────

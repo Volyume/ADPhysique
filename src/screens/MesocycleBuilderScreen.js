@@ -180,7 +180,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
             <View style={[styles.mesoCard, isActive && styles.mesoCardActive]}>
               {isActive && (
                 <View style={styles.activeBadge}>
-                  <Text style={styles.activeBadgeText}>ACTIVE</Text>
+                  <Text style={styles.activeBadgeText}>Active</Text>
                 </View>
               )}
               <Text style={styles.mesoName}>{meso.name}</Text>
