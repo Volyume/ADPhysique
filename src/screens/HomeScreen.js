@@ -75,6 +75,9 @@ export default function HomeScreen({ navigation }) {
   const [phaseMismatch, setPhaseMismatch] = useState(null); // { currentPhase, targetPhase } | null
   const [phaseBannerDismissed, setPhaseBannerDismissed] = useState(false);
 
+  // Training schedule context
+  const [scheduleContext, setScheduleContext] = useState(null); // null | { daysUntil, dayName }
+
   // Fatigue trend mini-graph
   const [fatigueSessions, setFatigueSessions] = useState([]); // array newest-first
 
@@ -117,8 +120,39 @@ export default function HomeScreen({ navigation }) {
       loadBlockProgress(),
       loadPhaseBanner(),
       loadFatigueTrend(),
+      loadScheduleContext(),
       ...(tier === 'pro' ? [loadTodayWeight()] : []),
     ]);
+  }
+
+  async function loadScheduleContext() {
+    try {
+      const raw = await AsyncStorage.getItem('@volyume_schedule_v1');
+      if (!raw) { setScheduleContext(null); return; }
+      const parsed = JSON.parse(raw);
+      const days = Array.isArray(parsed.days) ? parsed.days : [];
+      if (days.length === 0) { setScheduleContext(null); return; }
+
+      const todayIndex = new Date().getDay();
+      // Search the next 7 days (including today) for a scheduled day
+      for (let offset = 0; offset < 7; offset++) {
+        const candidate = (todayIndex + offset) % 7;
+        if (days.includes(candidate)) {
+          if (offset === 0) {
+            setScheduleContext({ daysUntil: 0, dayName: null });
+          } else if (offset === 1) {
+            setScheduleContext({ daysUntil: 1, dayName: null });
+          } else {
+            const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            setScheduleContext({ daysUntil: offset, dayName: DAY_NAMES[candidate] });
+          }
+          return;
+        }
+      }
+      setScheduleContext(null);
+    } catch (_) {
+      setScheduleContext(null);
+    }
   }
 
   async function loadPhaseBanner() {
@@ -443,6 +477,20 @@ export default function HomeScreen({ navigation }) {
           </View>
           <VolyumeMark size={38} color={colors.textMuted} />
         </View>
+
+        {/* ── Training schedule context line ── */}
+        {scheduleContext && (
+          <Text style={[
+            styles.scheduleContextLine,
+            scheduleContext.daysUntil === 0 && styles.scheduleContextLineToday,
+          ]}>
+            {scheduleContext.daysUntil === 0
+              ? 'Today is a training day'
+              : scheduleContext.daysUntil === 1
+                ? 'Next session: tomorrow'
+                : `Next session: ${scheduleContext.dayName}`}
+          </Text>
+        )}
 
         {/* ── Nutrition phase sync banner ── */}
         {phaseMismatch && !phaseBannerDismissed && (
@@ -1232,6 +1280,17 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     marginTop: spacing.xs,
     letterSpacing: 0.2,
+  },
+
+  // Training schedule context line
+  scheduleContextLine: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    marginTop: -spacing.xs,
+  },
+  scheduleContextLineToday: {
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
   },
 
   // Week card with progress bars

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, RefreshControl,
 } from 'react-native';
@@ -19,6 +19,9 @@ import { getBlockAdvice } from '../lib/blockAdvisor';
 import useAppStore from '../store/useAppStore';
 
 const BLOCK_SNOOZE_KEY = '@volyume_block_snooze';
+const SCHEDULE_KEY = '@volyume_schedule_v1';
+
+const DAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
 const ACTION_CARDS_DEFAULT = [
   {
@@ -62,6 +65,7 @@ export default function PlansScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [blockAdvice, setBlockAdvice] = useState(null);
   const [blockSnoozed, setBlockSnoozed] = useState(false);
+  const [scheduleDays, setScheduleDays] = useState([]);
 
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
@@ -71,6 +75,30 @@ export default function PlansScreen({ navigation }) {
       scrollRef.current?.scrollTo({ y: 0, animated: true });
     });
   }, [navigation]);
+
+  // Load saved schedule on mount
+  useEffect(() => {
+    AsyncStorage.getItem(SCHEDULE_KEY)
+      .then(raw => {
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          setScheduleDays(Array.isArray(parsed.days) ? parsed.days : []);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Reset schedule days when the active plan changes
+  const activePlanIdRef = useRef(null);
+  useEffect(() => {
+    if (!activePlan) return;
+    if (activePlanIdRef.current !== null && activePlanIdRef.current !== activePlan.id) {
+      const reset = { activePlanId: activePlan.id, days: [] };
+      setScheduleDays([]);
+      AsyncStorage.setItem(SCHEDULE_KEY, JSON.stringify(reset)).catch(() => {});
+    }
+    activePlanIdRef.current = activePlan.id;
+  }, [activePlan?.id]);
 
   useFocusEffect(
     useCallback(() => {
@@ -233,6 +261,15 @@ export default function PlansScreen({ navigation }) {
     return colors.warning;
   }
 
+  function toggleScheduleDay(dayIndex) {
+    const next = scheduleDays.includes(dayIndex)
+      ? scheduleDays.filter(d => d !== dayIndex)
+      : [...scheduleDays, dayIndex].sort((a, b) => a - b);
+    setScheduleDays(next);
+    const payload = { activePlanId: activePlan?.id ?? null, days: next };
+    AsyncStorage.setItem(SCHEDULE_KEY, JSON.stringify(payload)).catch(() => {});
+  }
+
   const showBlockCard = blockAdvice && activePlan &&
     blockAdvice.action !== 'continue' &&
     (blockAdvice.action === 'heads_up' || !blockSnoozed);
@@ -368,6 +405,30 @@ export default function PlansScreen({ navigation }) {
                 <Text style={styles.proCoachNote}>
                   Your Precision Coaching adjusts this plan as you progress and check in. To change your goals, head to You → Athlete Hub.
                 </Text>
+              )}
+              {/* Training days picker */}
+              <View style={styles.trainingDaysRow}>
+                {DAY_LABELS.map((label, index) => {
+                  const isOn = scheduleDays.includes(index);
+                  return (
+                    <TouchableOpacity
+                      key={index}
+                      style={[styles.dayChip, isOn && styles.dayChipOn]}
+                      onPress={() => toggleScheduleDay(index)}
+                      activeOpacity={0.75}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: isOn }}
+                      accessibilityLabel={`${label} training day`}
+                    >
+                      <Text style={[styles.dayChipLabel, isOn && styles.dayChipLabelOn]}>
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              {scheduleDays.length === 0 && (
+                <Text style={styles.trainingDaysHint}>Tap to set your training days</Text>
               )}
               <View style={styles.activePlanActions}>
                 <TouchableOpacity style={styles.startNextBtn} onPress={() => handleStartNextWorkout(activePlan)}>
@@ -759,4 +820,39 @@ const styles = StyleSheet.create({
   blockNewBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textSecondary },
   blockSnooze: { alignItems: 'center', paddingTop: spacing.xs },
   blockSnoozeText: { fontSize: fontSize.xs, color: colors.textMuted },
+
+  // Training days picker
+  trainingDaysRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  dayChip: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  dayChipOn: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  dayChipLabel: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.textSecondary,
+  },
+  dayChipLabelOn: {
+    color: colors.background,
+  },
+  trainingDaysHint: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    marginTop: spacing.xs,
+  },
 });
