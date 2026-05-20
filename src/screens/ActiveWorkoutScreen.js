@@ -24,7 +24,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import SetEntry from '../components/SetEntry';
 import RestTimer from '../components/RestTimer';
 import useAppStore from '../store/useAppStore';
-import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, getAllExercises, insertExercise, getCurrentMesocycleWeek, getPlannedMuscleVolume, getWeek1SetsForExercise, getLastNWorkoutSets, saveExerciseUserNote, getExerciseUserNote } from '../lib/database';
+import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, getAllExercises, insertExercise, getCurrentMesocycleWeek, getPlannedMuscleVolume, getWeek1SetsForExercise, getLastNWorkoutSets, saveExerciseUserNote, getExerciseUserNote, getNextTimeNotes, markNoteShown } from '../lib/database';
 import {
   detectPR,
   getProgressionSuggestion,
@@ -132,11 +132,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [exerciseNote, setExerciseNote] = useState('');       // persisted per-user per-exercise note
   const [ghostSet, setGhostSet] = useState(null); // pre-fill from last session (same set index)
   const [showNotifPrompt, setShowNotifPrompt] = useState(false);
+  const [nextTimeNotes, setNextTimeNotes] = useState([]);  // "next time" coaching notes for this routine
   // Cluster counter for myo-reps / rest-pause: 0 = activation set, 1+ = mini-set N+1
   const [clusterCount, setClusterCount] = useState(0);
   const autoAdvanceRef = useRef(null);
   const sessionSetsRef = useRef([]);   // tracks sets in this session — used for PR detection
   const warmupHintSeenRef = useRef(false); // show one-liner warmup note only on first warmup of this session
+  const shownNoteIdsRef = useRef(new Set()); // note IDs already shown in this session
 
   const scrollRef = useRef(null);
   const insets = useSafeAreaInsets();
@@ -353,6 +355,21 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       setShowStaleModal(true);
     }
   }, []);
+
+  // Load "next time" coaching notes when the workout begins
+  useEffect(() => {
+    if (!activeWorkout || !user?.id) return;
+    const routineId = activeWorkout.routineId ?? null;
+    getNextTimeNotes(user.id, routineId).then(notes => {
+      // Only surface notes not already shown in this session
+      const unseen = notes.filter(n => !shownNoteIdsRef.current.has(n.id));
+      if (unseen.length > 0) {
+        unseen.forEach(n => shownNoteIdsRef.current.add(n.id));
+        setNextTimeNotes(unseen);
+      }
+    }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeWorkout?.id]);
 
   // First-use info tip: pulse the Info button until tapped
   useEffect(() => {
@@ -1026,6 +1043,25 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               </View>
             )}
           </View>
+
+          {/* Next-time coaching notes */}
+          {nextTimeNotes.map(note => (
+            <View key={note.id} style={styles.nextTimeBanner}>
+              <Ionicons name="bulb-outline" size={16} color={colors.primary} style={{ marginTop: 1 }} />
+              <Text style={styles.nextTimeBannerText} numberOfLines={4}>{note.note}</Text>
+              <TouchableOpacity
+                onPress={async () => {
+                  try { await markNoteShown(note.id); } catch (_e) {}
+                  setNextTimeNotes(prev => prev.filter(n => n.id !== note.id));
+                }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Dismiss note"
+              >
+                <Text style={styles.nextTimeBannerDismiss}>Got it</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
 
           {/* Deload Week Banner */}
           {isDeloadWeek && !deloadDismissed && (
@@ -2139,6 +2175,26 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   beatChipText: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
+  nextTimeBanner: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
+    backgroundColor: colors.primaryBg,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.primary + '40',
+  },
+  nextTimeBannerText: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    color: colors.textPrimary,
+    lineHeight: 20,
+  },
+  nextTimeBannerDismiss: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.primary,
+    paddingLeft: spacing.xs,
+  },
   deloadBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: colors.warningBg || '#2A2000',

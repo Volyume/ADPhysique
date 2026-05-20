@@ -12,7 +12,7 @@ import {
   getActivePlan, getRoutinesForPlan, advancePlanNextWorkout,
   createAdaptationEvent, getCurrentMesocycleWeek,
   getNextMesocycleWeek, upsertPlannedMuscleVolume, getRecentAdaptationEvents,
-  saveWeeklyCheckin,
+  saveWeeklyCheckin, saveNextTimeNote,
 } from '../lib/database';
 import { calculateWeeklyVolume, getVolumeStatus, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine, computeAdaptiveDecision, VOLUME_LANDMARKS, evaluateDeloadTriggers } from '../lib/algorithms';
 import { evaluateAutoReg, predictDeloadWeek, getMesoSchedule } from '../lib/mesocycle';
@@ -85,6 +85,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     sleepQuality: 3,
   });
   const [notes, setNotes] = useState('');
+  const [nextTimeNote, setNextTimeNote] = useState('');
   const [weeklyVolume, setWeeklyVolume] = useState({});
   const [autoRegSuggestions, setAutoRegSuggestions] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -343,6 +344,13 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       }
     } catch (_e) {}
 
+    // Save "next time" note if the user typed one
+    if (user?.id && nextTimeNote.trim()) {
+      try {
+        await saveNextTimeNote(user.id, { routineId: routineId ?? null, note: nextTimeNote.trim() });
+      } catch (_e) {}
+    }
+
     // Background sync to Supabase — fire and forget, never blocks navigation
     const supabaseUserId = session?.user?.id;
     if (supabaseUserId && workoutId) {
@@ -585,6 +593,24 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             </TouchableOpacity>
           </View>
         )}
+
+        {!readOnly && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>Notes for next time</Text>
+              <Text style={styles.optionalLabel}>optional</Text>
+            </View>
+            <TextInput
+              style={styles.nextTimeNoteInput}
+              value={nextTimeNote}
+              onChangeText={setNextTimeNote}
+              placeholder="Anything to remember for next session? e.g. try 85kg, wider grip, reduce volume…"
+              placeholderTextColor={colors.textMuted}
+              multiline
+              numberOfLines={3}
+            />
+          </View>
+        )}
       </ScrollView>
 
       <View style={[styles.stickyFooter, { paddingBottom: Math.max(spacing.lg, insets.bottom) }]}>
@@ -766,6 +792,11 @@ const styles = StyleSheet.create({
   notesInput: {
     backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.lg,
     fontSize: fontSize.md, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, minHeight: 80,
+  },
+  nextTimeNoteInput: {
+    backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.lg,
+    fontSize: fontSize.sm, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border,
+    minHeight: 72, textAlignVertical: 'top',
   },
   secondaryActions: { gap: spacing.sm },
   templateBtn: {
