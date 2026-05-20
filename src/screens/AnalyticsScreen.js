@@ -354,23 +354,25 @@ export default function AnalyticsScreen({ navigation }) {
         )}
 
         {/* ── 1 · Mesocycle Pulse Card ───────────────────────── */}
-        <View style={[styles.rowBetween, { paddingHorizontal: spacing.lg, marginBottom: spacing.sm }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-            <Text style={styles.sectionLabel}>Training block</Text>
-            <InfoTooltip text={
-              'Training gets harder each week across the block, then a lighter recovery week lets your body catch up.\n\n' +
-              'After the recovery week, a new block starts slightly heavier than the last. That is how you keep improving over months, not just weeks.'
-            } />
+        <View style={styles.section}>
+          <View style={styles.rowBetween}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+              <Text style={styles.sectionLabel}>Training block</Text>
+              <InfoTooltip text={
+                'Training gets harder each week across the block, then a lighter recovery week lets your body catch up.\n\n' +
+                'After the recovery week, a new block starts slightly heavier than the last. That is how you keep improving over months, not just weeks.'
+              } />
+            </View>
           </View>
+          <MesocyclePulseCard
+            meso={activeMeso}
+            currentWeek={mesoCurrentWeek()}
+            progress={mesoProgress()}
+            tonnageBars={mesoTonnage}
+            onPress={() => navigation.getParent()?.navigate('PlansTab', { screen: 'MesocycleBuilder', initial: false })}
+            onBuild={() => navigation.getParent()?.navigate('PlansTab', { screen: 'CoachBuilder', initial: false })}
+          />
         </View>
-        <MesocyclePulseCard
-          meso={activeMeso}
-          currentWeek={mesoCurrentWeek()}
-          progress={mesoProgress()}
-          tonnageBars={mesoTonnage}
-          onPress={() => navigation.getParent()?.navigate('PlansTab', { screen: 'MesocycleBuilder', initial: false })}
-          onBuild={() => navigation.getParent()?.navigate('PlansTab', { screen: 'CoachBuilder', initial: false })}
-        />
 
         {/* ── Lighter week banner ──────────────────────────────── */}
         {deloadAlert && (
