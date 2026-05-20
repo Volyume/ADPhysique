@@ -2853,3 +2853,4 @@ export async function getLastTrainedPerMuscle(userId) {
     if (row.primary_muscle) result[row.primary_muscle] = row.last_trained_at;
   }
   return result;
+}
