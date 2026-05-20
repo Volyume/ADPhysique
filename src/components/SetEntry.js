@@ -4,6 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import InfoTooltip from './InfoTooltip';
+import { calculate1RM } from '../lib/algorithms';
 
 const SET_TYPE_LABELS = {
   straight: 'Working',
@@ -34,6 +35,12 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
   }
 
   const setTypeLabel = SET_TYPE_LABELS[setType] || 'Working';
+
+  const liveWeight = parseFloat(value.weight);
+  const liveReps = parseInt(value.actualReps || value.reps, 10);
+  const live1RM = (liveWeight > 0 && liveReps > 0 && !isWarmup)
+    ? calculate1RM(liveWeight, liveReps)
+    : null;
 
   return (
     <View style={styles.container}>
@@ -113,6 +120,16 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Live estimated 1RM chip — shown when weight and reps are present, not a warm-up */}
+      {live1RM > 0 && liveReps >= 1 && liveReps <= 15 && !isWarmup && (
+        <View style={styles.oneRmChip}>
+          <Ionicons name="trending-up-outline" size={12} color={colors.textMuted} />
+          <Text style={styles.oneRmChipText}>
+            Est. max ≈ {Math.round(live1RM)}{units}
+          </Text>
+        </View>
+      )}
 
       {/* Effort Row — hidden for warm-up sets */}
       {!isWarmup && (
@@ -277,5 +294,21 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textPrimary,
     fontWeight: fontWeight.semibold,
+  },
+  oneRmChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    backgroundColor: colors.surface2,
+    borderRadius: radius.sm,
+    marginTop: spacing.xs,
+  },
+  oneRmChipText: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    fontWeight: fontWeight.medium,
   },
 });
