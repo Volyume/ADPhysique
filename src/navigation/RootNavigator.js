@@ -54,6 +54,7 @@ import OnboardingQuizScreen from '../screens/OnboardingQuizScreen';
 import WeeklyCheckInScreen from '../screens/WeeklyCheckInScreen';
 import CoachOutputScreen from '../screens/CoachOutputScreen';
 import ProGoalSetupScreen from '../screens/ProGoalSetupScreen';
+import GoalChangeSummaryScreen from '../screens/GoalChangeSummaryScreen';
 import NotificationSettingsScreen from '../screens/NotificationSettingsScreen';
 import ProOnboardingScreen from '../screens/ProOnboardingScreen';
 import ProSetupCompleteScreen from '../screens/ProSetupCompleteScreen';
@@ -169,6 +170,7 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="CoachHeldHistory" component={CoachHeldHistoryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="BlockReflection" component={BlockReflectionScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ProGoalSetup" component={GatedProGoalSetup} options={{ headerShown: false }} />
+      <Stack.Screen name="GoalChangeSummary" component={GoalChangeSummaryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ title: 'Notifications' }} />
       <Stack.Screen name="WellbeingCheck" component={WellbeingCheckScreen} options={{ title: 'Wellbeing check' }} />
       <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ headerShown: false }} />

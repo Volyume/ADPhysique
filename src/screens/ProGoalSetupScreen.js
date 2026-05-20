@@ -49,6 +49,18 @@ export default function ProGoalSetupScreen({ navigation }) {
 
     const goalPhase = phaseToCoachingKey(selectedPhase);
 
+    // Capture the previous state for the change-summary screen.
+    const previousProfile = {
+      goal: userProfile?.trainingGoal ?? null,
+      phase: userProfile?.trainingPhase ?? null,
+      approach: userProfile?.proteinApproach ?? null,
+    };
+    let previousTargets = null;
+    try {
+      const raw = await AsyncStorage.getItem(NUTRITION_KEY);
+      if (raw) previousTargets = JSON.parse(raw);
+    } catch (_) {}
+
     // Determine whether we're entering, staying in, or leaving a deficit phase.
     const wasInDeficit = DEFICIT_PHASES.includes(userProfile?.trainingPhase);
     const isNowInDeficit = DEFICIT_PHASES.includes(selectedPhase);
@@ -72,11 +84,12 @@ export default function ProGoalSetupScreen({ navigation }) {
       goalStartDate,
     };
 
-    // Recalculate nutrition if the phase changed or we have the needed data
+    // Recalculate nutrition if we have the needed data
+    let nextTargets = null;
     const wp = userProfile || {};
     if (wp.weightKg && wp.heightCm && wp.age && wp.sex) {
       try {
-        const targets = calculateNutritionTargets({
+        nextTargets = calculateNutritionTargets({
           weightKg: wp.weightKg,
           heightCm: wp.heightCm,
           ageYears: wp.age,
@@ -87,15 +100,37 @@ export default function ProGoalSetupScreen({ navigation }) {
           trainingGoal: selectedGoal,
           proteinApproach,
         });
-        await AsyncStorage.setItem(NUTRITION_KEY, JSON.stringify(targets));
+        await AsyncStorage.setItem(NUTRITION_KEY, JSON.stringify(nextTargets));
         if (user?.id) {
-          await saveNutritionTargets(user.id, targets);
+          await saveNutritionTargets(user.id, nextTargets);
         }
       } catch (_) {}
     }
 
     await saveLocalProfile(user.id, updatedProfile);
-    navigation.goBack();
+
+    // Navigate to the change-summary screen instead of just popping back so
+    // the user can see exactly what shifted and why.
+    navigation.replace('GoalChangeSummary', {
+      previous: {
+        goal: previousProfile.goal,
+        phase: previousProfile.phase,
+        approach: previousProfile.approach,
+        kcal: previousTargets?.targetKcal ?? null,
+        protein: previousTargets?.proteinG ?? null,
+        carbs: previousTargets?.carbsG ?? null,
+        fat: previousTargets?.fatG ?? null,
+      },
+      next: {
+        goal: selectedGoal,
+        phase: selectedPhase,
+        approach: proteinApproach,
+        kcal: nextTargets?.targetKcal ?? null,
+        protein: nextTargets?.proteinG ?? null,
+        carbs: nextTargets?.carbsG ?? null,
+        fat: nextTargets?.fatG ?? null,
+      },
+    });
   }
 
   return (
