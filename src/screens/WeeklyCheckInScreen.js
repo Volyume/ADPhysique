@@ -151,13 +151,6 @@ export default function WeeklyCheckInScreen({ navigation }) {
   const [weighInsThisWeek, setWeighInsThisWeek] = useState(0);
 
   useEffect(() => {
-    const hasGoals = userProfile?.trainingGoal || userProfile?.trainingPhase || userProfile?.goalPhase;
-    if (!hasGoals) {
-      navigation.replace('ProGoalSetup', { fromCheckin: true });
-    }
-  }, [userProfile?.trainingGoal, userProfile?.trainingPhase, userProfile?.goalPhase]);
-
-  useEffect(() => {
     if (!user?.id) return;
     getNutritionTargets(user.id).then(t => setNutritionTargets(t ?? null)).catch(() => {});
   }, [user?.id]);

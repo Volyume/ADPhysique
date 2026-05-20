@@ -510,11 +510,6 @@ export default function HomeScreen({ navigation }) {
           <View style={styles.headerText}>
             <Text style={styles.pageTitle}>Train</Text>
             <Text style={styles.greeting}>{getGreeting(userProfile?.firstName)}</Text>
-            {totalSessions >= 1 && (
-              <Text style={styles.trainingBrainHeaderText}>
-                {totalSessions.toLocaleString('en-GB')} {totalSessions === 1 ? 'session' : 'sessions'} recorded. This is your training brain.
-              </Text>
-            )}
           </View>
           <VolyumeMark size={38} color={colors.textMuted} />
         </View>
@@ -924,22 +919,6 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         )}
 
-        {/* ── Training brain line ── */}
-        {totalSessions >= 10 && (
-          <TouchableOpacity
-            style={styles.trainingBrainRow}
-            onPress={() => navigation.navigate('WorkoutHistory')}
-            activeOpacity={0.75}
-            accessibilityRole="button"
-            accessibilityLabel="View your training history"
-          >
-            <Ionicons name="library-outline" size={14} color={colors.textMuted} />
-            <Text style={styles.trainingBrainText}>
-              {totalSessions.toLocaleString('en-GB')} sessions logged. This is your training brain.
-            </Text>
-            <Ionicons name="chevron-forward" size={13} color={colors.textMuted} />
-          </TouchableOpacity>
-        )}
 
         {/* "This week's plan" (block progress) moved to Progress tab. */}
 

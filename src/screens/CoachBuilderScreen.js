@@ -105,7 +105,7 @@ function stepTitle(step) {
 
 function isStepComplete(step, inputs) {
   if (step === 1) return !!inputs.experience;
-  if (step === 2) return !!inputs.daysPerWeek && !!inputs.sessionLengthMinutes;
+  if (step === 2) return !!inputs.sessionLengthMinutes;
   if (step === 3) return !!inputs.equipment;
   if (step === 4) return !!inputs.goal;
   if (step === 5) return !!inputs.phase;
@@ -193,9 +193,6 @@ export default function CoachBuilderScreen({ navigation, route }) {
   const isFirstRun = route?.params?.firstRun === true;
   const prefilled = route?.params?.prefilled ?? null;
 
-  // Map the onboarding training frequency bucket to the nearest exact day count
-  const freqToDays = { '2-3': 3, '4-5': 4, '6+': 6 };
-  const daysFromProfile = prefilled?.daysPerWeek ?? freqToDays[userProfile?.trainingFreq] ?? null;
 
   // If all plan-critical fields come prefilled from ProOnboarding, skip straight to plan preview
   const isFullyPrefilled = isFirstRun && !!(prefilled?.equipment && prefilled?.goal && prefilled?.recoveryRating);
@@ -207,7 +204,7 @@ export default function CoachBuilderScreen({ navigation, route }) {
   const [inputs, setInputs] = useState({
     experience:            prefilled?.experience ?? userProfile?.experience ?? null,
     trainingAge:           null,
-    daysPerWeek:           prefilled?.daysPerWeek ?? daysFromProfile ?? 4,
+    daysPerWeek:           4,
     sessionLengthMinutes:  prefilled?.sessionLengthMinutes ?? 60,
     equipment:             prefilled?.equipment ?? null,
     goal:                  prefilled?.goal ?? null,
@@ -522,25 +519,7 @@ export default function CoachBuilderScreen({ navigation, route }) {
   function renderStep2() {
     return (
       <View style={styles.stepBody}>
-        <Text style={styles.stepQuestion}>How many days per week can you train?</Text>
-        {daysFromProfile && isFirstRun && (
-          <View style={styles.prefillBanner}>
-            <Ionicons name="checkmark-circle-outline" size={14} color={colors.primary} />
-            <Text style={styles.prefillBannerText}>Pre-filled from your profile. Change it if needed.</Text>
-          </View>
-        )}
-        <View style={styles.pillRow}>
-          {DAYS_OPTIONS.map(d => (
-            <PillButton
-              key={d}
-              label={String(d)}
-              selected={inputs.daysPerWeek === d}
-              onPress={() => update('daysPerWeek', d)}
-            />
-          ))}
-        </View>
-
-        <Text style={[styles.stepQuestion, { marginTop: spacing.xl }]}>How long is your typical session?</Text>
+        <Text style={styles.stepQuestion}>How long is your typical session?</Text>
         <View style={styles.pillRow}>
           {SESSION_OPTIONS.map(s => (
             <PillButton
@@ -817,7 +796,6 @@ export default function CoachBuilderScreen({ navigation, route }) {
           <Text style={styles.summaryCardTitle}>Built around you</Text>
           <View style={styles.summaryGrid}>
             <SummaryItem icon="person-outline"    label="Experience"  value={inputs.experience ?? 'not set'} />
-            <SummaryItem icon="calendar-outline"  label="Days / week" value={String(inputs.daysPerWeek)} />
             <SummaryItem icon="time-outline"      label="Session"     value={`${inputs.sessionLengthMinutes} min`} />
             <SummaryItem icon="barbell-outline"   label="Equipment"   value={(inputs.equipment ?? 'not set').replace(/_/g, ' ')} />
             <SummaryItem icon="trophy-outline"    label="Goal"        value={GOAL_LABELS[inputs.goal] ?? PLAN_GOAL_LABELS[inputs.goal] ?? 'not set'} />

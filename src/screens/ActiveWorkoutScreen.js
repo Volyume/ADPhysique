@@ -132,13 +132,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [exerciseNote, setExerciseNote] = useState('');       // persisted per-user per-exercise note
   const [ghostSet, setGhostSet] = useState(null); // pre-fill from last session (same set index)
   const [nextTimeNotes, setNextTimeNotes] = useState([]);  // "next time" coaching notes for this routine
-  // Stimulus rating sheet: shown after moving away from an exercise that had working sets
-  // { exerciseName, lastSetId, pump: 3, connection: 3 }
-  const [stimulusRating, setStimulusRating] = useState(null);
   // Cluster counter for myo-reps / rest-pause: 0 = activation set, 1+ = mini-set N+1
   const [clusterCount, setClusterCount] = useState(0);
   const autoAdvanceRef = useRef(null);
-  const pendingFinishRef = useRef(null); // callback to execute after stimulus rating is dismissed on finish
   const sessionSetsRef = useRef([]);   // tracks sets in this session — used for PR detection
   const warmupHintSeenRef = useRef(false); // show one-liner warmup note only on first warmup of this session
   const shownNoteIdsRef = useRef(new Set()); // note IDs already shown in this session
@@ -164,47 +160,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const pairedExerciseName = currentSGI != null
     ? (workoutExercises.find((e, i) => i !== currentExerciseIndex && e.supersetGroupId === currentSGI)?.exercise?.name ?? '')
     : '';
-
-  function maybeTriggerStimulusRating(prevIdx) {
-    const prevEntry = workoutExercises[prevIdx];
-    if (!prevEntry) return;
-    const workingSets = (prevEntry.sets || []).filter(s => s.setType !== 'warmup');
-    if (workingSets.length >= 1) {
-      const lastSet = workingSets[workingSets.length - 1];
-      setStimulusRating({
-        exerciseName: prevEntry.exercise?.name ?? 'Exercise',
-        lastSetId: lastSet.id,
-        pump: 3,
-        connection: 3,
-      });
-    }
-  }
-
-  async function handleStimulusRatingSave() {
-    if (!stimulusRating) return;
-    try {
-      await updateWorkoutSetPostRating(
-        stimulusRating.lastSetId,
-        stimulusRating.pump,
-        stimulusRating.connection
-      );
-    } catch (_e) {}
-    setStimulusRating(null);
-    const pending = pendingFinishRef.current;
-    if (pending) {
-      pendingFinishRef.current = null;
-      pending();
-    }
-  }
-
-  function handleStimulusRatingSkip() {
-    setStimulusRating(null);
-    const pending = pendingFinishRef.current;
-    if (pending) {
-      pendingFinishRef.current = null;
-      pending();
-    }
-  }
 
   function handleNextExercise() {
     if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
