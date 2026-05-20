@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Modal, TextInput,
+  View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Modal, TextInput, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +14,77 @@ import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getExerciseWhyThis } from '../lib/whyThisTemplates';
 import { rankSwaps } from '../lib/swapEngine';
 import useAppStore from '../store/useAppStore';
+
+// Compute muscle coverage: { [muscleKey]: count } sorted by count descending
+function computeMuscleCoverage(exercises) {
+  const counts = {};
+  for (const { exercise } of exercises) {
+    const muscle = exercise?.primaryMuscle;
+    if (!muscle) continue;
+    counts[muscle] = (counts[muscle] || 0) + 1;
+  }
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([muscle, count]) => ({ muscle, count }));
+}
+
+function MuscleTagRow({ exercises }) {
+  const coverage = computeMuscleCoverage(exercises);
+
+  // Warning logic: check whether back (pulling) and hamstrings are absent
+  const muscleKeys = new Set(coverage.map(c => c.muscle));
+  const noBack = !muscleKeys.has('back');
+  const noHamstrings = !muscleKeys.has('hamstrings');
+
+  let warning = null;
+  if (noBack && noHamstrings) {
+    warning = 'No pulling work — consider adding a row or pull variation.';
+  } else if (noHamstrings) {
+    warning = 'No hamstring work — consider adding an RDL or leg curl.';
+  }
+
+  if (coverage.length === 0) return null;
+
+  return (
+    <View style={tagStyles.section}>
+      <Text style={tagStyles.sectionTitle}>Muscle coverage</Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={tagStyles.chipRow}
+      >
+        {coverage.map(({ muscle, count }) => {
+          const displayName =
+            MUSCLE_DISPLAY_NAMES[muscle] ||
+            muscle.charAt(0).toUpperCase() + muscle.slice(1).replace(/_/g, ' ');
+          const chipStyle = count >= 3
+            ? tagStyles.chipHigh
+            : count === 2
+            ? tagStyles.chipMid
+            : tagStyles.chipLow;
+          const textStyle = count >= 3
+            ? tagStyles.chipTextHigh
+            : count === 2
+            ? tagStyles.chipTextMid
+            : tagStyles.chipTextLow;
+          return (
+            <View key={muscle} style={[tagStyles.chip, chipStyle]}>
+              <Text style={[tagStyles.chipText, textStyle]}>
+                {displayName} ×{count}
+              </Text>
+            </View>
+          );
+        })}
+      </ScrollView>
+      {warning ? (
+        <View style={tagStyles.warningRow}>
+          <Ionicons name="alert-circle-outline" size={13} color={colors.warning} style={tagStyles.warningIcon} />
+          <Text style={tagStyles.warningText}>{warning}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
 
 export default function RoutineDetailScreen({ navigation, route }) {
   const { routineId } = route.params || {};
@@ -164,10 +235,13 @@ export default function RoutineDetailScreen({ navigation, route }) {
         keyExtractor={item => item.routineExercise.id}
         contentContainerStyle={styles.list}
         ListHeaderComponent={
-          <TouchableOpacity style={styles.startBtn} onPress={handleStartWorkout}>
-            <Ionicons name="play-circle" size={22} color={colors.background} />
-            <Text style={styles.startBtnText}>Start This Workout</Text>
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity style={styles.startBtn} onPress={handleStartWorkout}>
+              <Ionicons name="play-circle" size={22} color={colors.background} />
+              <Text style={styles.startBtnText}>Start This Workout</Text>
+            </TouchableOpacity>
+            <MuscleTagRow exercises={exercises} />
+          </>
         }
         renderItem={({ item: { routineExercise, exercise }, index }) => (
           <TouchableOpacity
@@ -570,4 +644,71 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   swapItemReason: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
+});
+
+const tagStyles = StyleSheet.create({
+  section: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.sm,
+  },
+  sectionTitle: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.textMuted,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginBottom: spacing.xs,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingRight: spacing.xs,
+  },
+  chip: {
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  chipLow: {
+    backgroundColor: colors.surface2,
+  },
+  chipMid: {
+    backgroundColor: colors.success + '30',
+  },
+  chipHigh: {
+    backgroundColor: colors.primary + '30',
+  },
+  chipText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+  },
+  chipTextLow: {
+    color: colors.textMuted,
+  },
+  chipTextMid: {
+    color: colors.success,
+  },
+  chipTextHigh: {
+    color: colors.primary,
+  },
+  warningRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  warningIcon: {
+    marginTop: 1,
+  },
+  warningText: {
+    fontSize: fontSize.xs,
+    color: colors.warning,
+    flex: 1,
+    lineHeight: 16,
+  },
 });
