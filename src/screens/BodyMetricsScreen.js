@@ -10,6 +10,7 @@ import { LineChart } from 'react-native-gifted-charts';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logBodyMetric, getBodyMetricLog } from '../lib/database';
+import { computeEWMA, computeWeeklyWeightChange } from '../lib/nutritionEngine';
 import useAppStore from '../store/useAppStore';
 import { formatBodyWeight, formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg } from '../lib/units';
 import { getWellbeingMode, isCalm, WELLBEING_HELPLINE } from '../lib/wellbeing';
@@ -276,6 +277,7 @@ export default function BodyMetricsScreen({ navigation }) {
   });
   const [saving, setSaving] = useState(false);
   const [selectedMeasurement, setSelectedMeasurement] = useState(null);
+  const [ewmaData, setEwmaData] = useState([]);
 
   const measurementsWithData = useMemo(() =>
     MEASUREMENTS.filter(m => history.some(e => e[m.key] != null)),
@@ -343,8 +345,19 @@ export default function BodyMetricsScreen({ navigation }) {
     if (!user?.id) return;
     try {
       const rows = await getBodyMetricLog(user.id, 50);
-      setHistory(rows.map(rowToEntry));
-    } catch (_e) { setHistory([]); }
+      const entries = rows.map(rowToEntry);
+      setHistory(entries);
+      const sorted = [...entries].sort((a, b) => a.metric_date.localeCompare(b.metric_date));
+      const weightPoints = sorted
+        .filter(m => m.body_weight)
+        .map(m => ({ date: m.metric_date, weightKg: m.body_weight }));
+      if (weightPoints.length >= 3) {
+        const ewma = computeEWMA(weightPoints);
+        setEwmaData(ewma);
+      } else {
+        setEwmaData([]);
+      }
+    } catch (_e) { setHistory([]); setEwmaData([]); }
   }
 
   async function loadNutritionTargets() {
@@ -539,6 +552,35 @@ export default function BodyMetricsScreen({ navigation }) {
                 Log weight 3 or more times to reveal a clearer trend.
               </Text>
             )}
+
+            {/* EWMA smoothed weight trend card */}
+            <View style={styles.ewmaCard}>
+              {ewmaData.length >= 7 ? (
+                <>
+                  <Text style={styles.ewmaLabel}>Weight trend</Text>
+                  <Text style={styles.ewmaValue}>
+                    {ewmaData[ewmaData.length - 1]?.ewma?.toFixed(1)} kg
+                  </Text>
+                  {(() => {
+                    const weeklyChange = computeWeeklyWeightChange(ewmaData);
+                    if (weeklyChange == null) return null;
+                    const sign = weeklyChange >= 0 ? '+' : '';
+                    return (
+                      <Text style={styles.ewmaWeekly}>
+                        Weekly change: {sign}{weeklyChange.toFixed(1)} kg
+                      </Text>
+                    );
+                  })()}
+                  <Text style={styles.ewmaMuted}>
+                    Smoothed across daily fluctuations. More reliable than a single weigh-in.
+                  </Text>
+                </>
+              ) : (
+                <Text style={styles.ewmaMuted}>
+                  Log your weight for 7 days to see your smoothed trend.
+                </Text>
+              )}
+            </View>
           </View>
         ) : (
           <View style={styles.emptyCard}>
@@ -886,4 +928,13 @@ const styles = StyleSheet.create({
   historyValues: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   historyWeight: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
   historyMeasure: { fontSize: fontSize.xs, color: colors.textMuted },
+
+  ewmaCard: {
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    borderRadius: radius.md, padding: spacing.md, gap: spacing.xs,
+  },
+  ewmaLabel: { fontSize: fontSize.xs, color: colors.textSecondary },
+  ewmaValue: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  ewmaWeekly: { fontSize: fontSize.sm, color: colors.textSecondary },
+  ewmaMuted: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
 });
