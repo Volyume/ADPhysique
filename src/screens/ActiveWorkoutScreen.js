@@ -40,37 +40,9 @@ import InfoTooltip from '../components/InfoTooltip';
 import { applyTimeCrunch } from '../lib/mesocycle';
 import { getTimeCrunchMessage } from '../lib/whyThisTemplates';
 import { estimateWorkoutMinutes } from '../lib/planEngine';
-import { hasSeenNotifPrompt, markNotifPromptSeen, requestNotifPermission } from '../lib/restNotifications';
 
 const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '', rir: 2 };
 
-const TRAVEL_MODE_KEY = '@volyume_travel_mode';
-const TRAVEL_PRESETS = [
-  {
-    key: 'full',
-    label: 'Full gym',
-    icon: 'barbell-outline',
-    equipment: null, // no restriction
-  },
-  {
-    key: 'travel',
-    label: 'Hotel / travel',
-    icon: 'airplane-outline',
-    equipment: ['Dumbbell', 'Bodyweight', 'Bands'],
-  },
-  {
-    key: 'home',
-    label: 'Home gym',
-    icon: 'home-outline',
-    equipment: ['Barbell', 'Dumbbell', 'Bodyweight', 'Bands'],
-  },
-  {
-    key: 'bodyweight',
-    label: 'Bodyweight only',
-    icon: 'body-outline',
-    equipment: ['Bodyweight'],
-  },
-];
 
 const SET_TYPE_DISPLAY = {
   straight: 'Working',
@@ -159,7 +131,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [deloadDismissed, setDeloadDismissed] = useState(false);
   const [exerciseNote, setExerciseNote] = useState('');       // persisted per-user per-exercise note
   const [ghostSet, setGhostSet] = useState(null); // pre-fill from last session (same set index)
-  const [showNotifPrompt, setShowNotifPrompt] = useState(false);
   const [nextTimeNotes, setNextTimeNotes] = useState([]);  // "next time" coaching notes for this routine
   // Stimulus rating sheet: shown after moving away from an exercise that had working sets
   // { exerciseName, lastSetId, pump: 3, connection: 3 }
@@ -175,10 +146,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const scrollRef = useRef(null);
   const insets = useSafeAreaInsets();
   const timerRef = useRef(null);
-
-  // Travel mode
-  const [travelMode, setTravelMode] = useState(null); // null | { preset, equipment: string[] }
-  const [showTravelModal, setShowTravelModal] = useState(false);
 
   // First-use info tip highlight
   const [showInfoTipPulse, setShowInfoTipPulse] = useState(false);
@@ -296,26 +263,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   async function handleOpenSwap() {
     const allExercises = await getAllExercises();
     const alreadyInWorkout = workoutExercises.map(e => e.exercise?.id).filter(Boolean);
-    // When travel mode is active, prefer equipment-compatible alternatives
-    const equipmentFilter = travelMode?.equipment ?? null;
-    const ranked = rankSwaps(exercise, allExercises, {
-      excludeIds: alreadyInWorkout,
-      numResults: 8,
-      equipment: equipmentFilter,
-    });
-    // If travel-filtered results are fewer than 3, fall back to unfiltered
-    const finalCandidates = (equipmentFilter && ranked.length < 3)
-      ? rankSwaps(exercise, allExercises, { excludeIds: alreadyInWorkout, numResults: 8 })
-      : ranked;
-    setSwapCandidates(finalCandidates);
+    const ranked = rankSwaps(exercise, allExercises, { excludeIds: alreadyInWorkout, numResults: 8 });
+    setSwapCandidates(ranked);
     setShowSwapModal(true);
-  }
-
-  async function applyTravelPreset(preset) {
-    const mode = preset.key === 'full' ? null : { preset: preset.key, equipment: preset.equipment };
-    setTravelMode(mode);
-    await AsyncStorage.setItem(TRAVEL_MODE_KEY, JSON.stringify(mode));
-    setShowTravelModal(false);
   }
 
   function handleConfirmSwap(newExercise) {
@@ -479,15 +429,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeWorkout?.id]);
 
-// Load persisted travel mode on mount
-  useEffect(() => {
-    AsyncStorage.getItem('@volyume_travel_mode').then(val => {
-      if (val) {
-        try { setTravelMode(JSON.parse(val)); } catch (_) {}
-      }
-    });
-  }, []);
-
   // First-use info tip: pulse the Info button until tapped
   useEffect(() => {
     AsyncStorage.getItem('@volyume_seen_workout_info').then(val => {
@@ -530,6 +471,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   useEffect(() => {
     if (!exercise || !activeWorkout) return;
     sessionSetsRef.current = [];
+    // Clear immediately so the UI never shows a previous exercise's data
+    setLoggedSets([]);
+    setPrevSets([]);
+    setAllTimeSets([]);
+    setCurrentSet({ ...DEFAULT_SET });
+    setGhostSet(null);
 
     async function loadHistory() {
       const [lastN, allTime] = await Promise.all([
@@ -843,11 +790,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // Start rest timer with per-exercise duration
       startRestTimer(routineExercise?.restSeconds || 90);
 
-      // Show notification soft-prompt on first timer start, once per install
-      hasSeenNotifPrompt().then(seen => {
-        if (!seen) setShowNotifPrompt(true);
-      });
-
       // Auto-advance to next exercise when target sets just completed
       const newWorkingCount = countProgressSets(newLoggedSets);
       const justHitTarget = targetSets && newWorkingCount >= targetSets && workingLogged < targetSets;
@@ -1087,26 +1029,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             >
               <Ionicons name="close" size={22} color={colors.textSecondary} />
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setShowTravelModal(true)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityRole="button"
-              accessibilityLabel="Travel mode"
-              style={styles.travelBtn}
-            >
-              <Ionicons
-                name={travelMode ? 'airplane' : 'airplane-outline'}
-                size={18}
-                color={travelMode ? colors.primary : colors.textMuted}
-              />
-            </TouchableOpacity>
           </View>
           <View style={styles.headerCenter}>
             <Text style={styles.timerText}>{elapsedStr}</Text>
-            <Text style={styles.headerMuscle}>
-              {(exercise.primaryMuscle || exercise.primary_muscle || '').charAt(0).toUpperCase() +
-                (exercise.primaryMuscle || exercise.primary_muscle || '').slice(1)}
-            </Text>
           </View>
           <View style={styles.headerSideRight}>
             <TouchableOpacity
@@ -1214,24 +1139,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </View>
           ))}
 
-{/* Travel mode equipment mismatch banner */}
-          {travelMode?.equipment && exercise.equipment &&
-           !travelMode.equipment.includes(exercise.equipment) && (
-            <TouchableOpacity
-              style={styles.travelWarningBanner}
-              onPress={handleOpenSwap}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="airplane-outline" size={14} color={colors.warning} />
-              <Text style={styles.travelWarningText}>
-                {exercise.equipment} not available in {
-                  TRAVEL_PRESETS.find(p => p.key === travelMode.preset)?.label ?? 'travel mode'
-                }. Tap to swap.
-              </Text>
-              <Ionicons name="swap-horizontal" size={14} color={colors.warning} />
-            </TouchableOpacity>
-          )}
-
           {/* Deload Week Banner */}
           {isDeloadWeek && !deloadDismissed && (
             <View style={styles.deloadBanner}>
@@ -1251,52 +1158,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
           )}
-
-          {/* Previous Performance */}
-          <View style={styles.prevCard}>
-            <Text style={styles.prevTitle}>Previous session</Text>
-            {prevSets.length > 0 ? (
-              <>
-                <Text style={styles.prevSetsSummary}>
-                  {prevSets.map(s => `${s.weight}${units} × ${s.actualReps}`).join('   ')}
-                </Text>
-                {setTargets.length > 0 && (
-                  <View style={styles.setTargetsBlock}>
-                    <Text style={styles.setTargetsLabel}>Next session</Text>
-                    {setTargets.map((t, i) => (
-                      <View key={i} style={styles.setTargetRow}>
-                        <Text style={styles.setTargetNum}>Set {i + 1}</Text>
-                        <Text style={styles.setTargetVal}>
-                          {t.weight}{units} × {t.repsMin === t.repsMax ? t.repsMin : `${t.repsMin}–${t.repsMax}`}
-                        </Text>
-                        {t.action === 'increase' && (
-                          <Ionicons name="trending-up" size={12} color={colors.primary} />
-                        )}
-                        {t.action === 'decrease' && (
-                          <Ionicons name="trending-down" size={12} color={colors.error} />
-                        )}
-                      </View>
-                    ))}
-                    {targetReason && (
-                      <Text style={styles.setTargetReason}>{targetReason}</Text>
-                    )}
-                  </View>
-                )}
-                {!setTargets.length && progression && progression.action !== 'baseline' && (
-                  <View style={styles.progressionBadge}>
-                    <Ionicons
-                      name={progression.action === 'increase_weight' ? 'trending-up' : 'arrow-forward'}
-                      size={13}
-                      color={colors.primary}
-                    />
-                    <Text style={styles.progressionText}>{progression.message}</Text>
-                  </View>
-                )}
-              </>
-            ) : (
-              <Text style={styles.prevEmpty}>No previous logs.</Text>
-            )}
-          </View>
 
           {/* Target */}
           {routineExercise && (
@@ -1459,6 +1320,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 placeholderTextColor={colors.textMuted}
                 multiline
                 autoFocus
+                autoComplete="off"
+                textContentType="none"
               />
             ) : null}
           </View>
@@ -1855,45 +1718,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           </View>
         </Modal>
 
-        {/* Travel Mode Modal */}
-        <Modal visible={showTravelModal} animationType="slide" transparent onRequestClose={() => setShowTravelModal(false)}>
-          <TouchableOpacity style={styles.travelOverlay} activeOpacity={1} onPress={() => setShowTravelModal(false)}>
-            <TouchableOpacity activeOpacity={1} style={styles.travelSheet}>
-              <View style={styles.travelSheetHandle} />
-              <Text style={styles.travelSheetTitle}>Training location</Text>
-              <Text style={styles.travelSheetSub}>
-                Sets the equipment available. Exercises that need something you don't have will be flagged for swapping.
-              </Text>
-              {TRAVEL_PRESETS.map(preset => {
-                const isActive = preset.key === 'full'
-                  ? travelMode === null
-                  : travelMode?.preset === preset.key;
-                return (
-                  <TouchableOpacity
-                    key={preset.key}
-                    style={[styles.travelPresetRow, isActive && styles.travelPresetRowActive]}
-                    onPress={() => applyTravelPreset(preset)}
-                    activeOpacity={0.75}
-                  >
-                    <View style={[styles.travelPresetIcon, isActive && { backgroundColor: colors.primaryBg }]}>
-                      <Ionicons name={preset.icon} size={20} color={isActive ? colors.primary : colors.textSecondary} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.travelPresetLabel, isActive && { color: colors.primary }]}>
-                        {preset.label}
-                      </Text>
-                      {preset.equipment && (
-                        <Text style={styles.travelPresetSub}>{preset.equipment.join(', ')}</Text>
-                      )}
-                    </View>
-                    {isActive && <Ionicons name="checkmark-circle" size={20} color={colors.primary} />}
-                  </TouchableOpacity>
-                );
-              })}
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </Modal>
-
         {/* Exercise Swap Modal */}
         <Modal visible={showSwapModal} animationType="slide" onRequestClose={() => setShowSwapModal(false)}>
           <SafeAreaView style={styles.swapSafe} edges={['top', 'bottom']}>
@@ -1929,34 +1753,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             />
           </SafeAreaView>
         </Modal>
-        {/* Notification soft-prompt — shown once, before requesting OS permission */}
-        <Modal visible={showNotifPrompt} transparent animationType="fade" onRequestClose={() => { markNotifPromptSeen(); setShowNotifPrompt(false); }}>
-          <View style={styles.discardOverlay}>
-            <View style={styles.discardSheet}>
-              <Text style={styles.discardTitle}>Stay on track between sets</Text>
-              <Text style={styles.discardBody}>
-                Volyume uses notifications only for the rest timer when your screen is locked. No streaks, no nudges.
-              </Text>
-              <TouchableOpacity
-                style={styles.keepTrainingBtn}
-                onPress={async () => {
-                  await markNotifPromptSeen();
-                  await requestNotifPermission();
-                  setShowNotifPrompt(false);
-                }}
-              >
-                <Text style={styles.keepTrainingBtnText}>Allow notifications</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.discardConfirmBtn}
-                onPress={async () => { await markNotifPromptSeen(); setShowNotifPrompt(false); }}
-              >
-                <Text style={styles.discardConfirmBtnText}>No thanks</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-
         {/* Discard Workout Modal */}
         <Modal visible={showDiscardModal} transparent animationType="fade" onRequestClose={() => setShowDiscardModal(false)}>
           <View style={styles.discardOverlay}>
@@ -2596,50 +2392,4 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textMuted,
   },
-travelBtn: { marginLeft: spacing.sm },
-  travelWarningBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    backgroundColor: colors.warning + '18',
-    borderRadius: radius.sm, borderWidth: 1, borderColor: colors.warning + '44',
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    marginHorizontal: spacing.lg, marginBottom: spacing.sm,
-  },
-  travelWarningText: { flex: 1, fontSize: fontSize.xs, color: colors.warning, fontWeight: fontWeight.medium },
-
-  travelOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end',
-  },
-  travelSheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,
-    paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.xxxl,
-    gap: spacing.sm,
-  },
-  travelSheetHandle: {
-    width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border,
-    alignSelf: 'center', marginBottom: spacing.sm,
-  },
-  travelSheetTitle: {
-    fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary,
-    marginBottom: 2,
-  },
-  travelSheetSub: {
-    fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 18,
-    marginBottom: spacing.sm,
-  },
-  travelPresetRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: colors.surface2, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border,
-    padding: spacing.lg,
-  },
-  travelPresetRowActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
-  travelPresetIcon: {
-    width: 40, height: 40, borderRadius: radius.md,
-    backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center',
-  },
-  travelPresetLabel: {
-    fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary,
-  },
-  travelPresetSub: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
 });
