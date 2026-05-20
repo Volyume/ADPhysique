@@ -595,29 +595,73 @@ export default function AthleteHubScreen({ navigation }) {
           </TouchableOpacity>
         )}
 
-        {/* ── Pro upgrade card (free tier only) ─────────── */}
+        {/* ── Gated Pro feature previews (free tier only) ── */}
         {tier !== 'pro' && (
-          <TouchableOpacity
-            style={[styles.sectionCard, styles.upgradeCard]}
-            onPress={() => navigation.navigate('ProUpgrade')}
-            activeOpacity={0.85}
-          >
-            <View style={styles.cardHeader}>
-              <View style={[styles.cardIconWrap, { backgroundColor: colors.primaryBg }]}>
-                <Ionicons name="sparkles" size={20} color={colors.primary} />
+          <>
+            <TouchableOpacity
+              style={[styles.sectionCard, styles.lockedCard]}
+              onPress={() => navigation.navigate('ProUpgrade')}
+              activeOpacity={0.8}
+            >
+              <View style={styles.cardHeader}>
+                <View style={[styles.cardIconWrap, { backgroundColor: colors.surface2 }]}>
+                  <Ionicons name="pulse-outline" size={20} color={colors.textMuted} />
+                </View>
+                <View style={styles.cardHeaderText}>
+                  <Text style={styles.lockedCardTitle}>Weekly check-in</Text>
+                  <Text style={styles.lockedCardSub}>Four questions each week. Tailored coaching adjustments based on how you trained and recovered.</Text>
+                </View>
+                <View style={styles.lockBadge}>
+                  <Ionicons name="lock-closed" size={10} color={colors.textMuted} />
+                  <Text style={styles.lockBadgeText}>Pro</Text>
+                </View>
               </View>
-              <View style={styles.cardHeaderText}>
-                <Text style={styles.cardTitle}>Pro coaching</Text>
-                <Text style={styles.cardSubtitle}>
-                  Weekly check-in, nutrition targets, body metrics, weight trend and coaching adjustments
-                </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.sectionCard, styles.lockedCard]}
+              onPress={() => navigation.navigate('ProUpgrade')}
+              activeOpacity={0.8}
+            >
+              <View style={styles.cardHeader}>
+                <View style={[styles.cardIconWrap, { backgroundColor: colors.surface2 }]}>
+                  <Ionicons name="nutrition" size={20} color={colors.textMuted} />
+                </View>
+                <View style={styles.cardHeaderText}>
+                  <Text style={styles.lockedCardTitle}>Nutrition targets</Text>
+                  <Text style={styles.lockedCardSub}>Calorie and protein targets set to your goal, bodyweight, and training schedule.</Text>
+                </View>
+                <View style={styles.lockBadge}>
+                  <Ionicons name="lock-closed" size={10} color={colors.textMuted} />
+                  <Text style={styles.lockBadgeText}>Pro</Text>
+                </View>
               </View>
-              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-            </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.sectionCard, styles.lockedCard]}
+              onPress={() => navigation.navigate('ProUpgrade')}
+              activeOpacity={0.8}
+            >
+              <View style={styles.cardHeader}>
+                <View style={[styles.cardIconWrap, { backgroundColor: colors.surface2 }]}>
+                  <Ionicons name="body" size={20} color={colors.textMuted} />
+                </View>
+                <View style={styles.cardHeaderText}>
+                  <Text style={styles.lockedCardTitle}>Body metrics</Text>
+                  <Text style={styles.lockedCardSub}>Morning weight trend, body measurements, and progress tracking over time.</Text>
+                </View>
+                <View style={styles.lockBadge}>
+                  <Ionicons name="lock-closed" size={10} color={colors.textMuted} />
+                  <Text style={styles.lockBadgeText}>Pro</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+
             {getBetaBannerText() && (
-              <Text style={styles.betaBanner}>{getBetaBannerText()}</Text>
+              <Text style={styles.betaBannerStandalone}>{getBetaBannerText()}</Text>
             )}
-          </TouchableOpacity>
+          </>
         )}
 
         {/* ── Coaching tools ────────────────────────────── */}
@@ -892,7 +936,26 @@ const styles = StyleSheet.create({
     gap: spacing.md, borderWidth: 1, borderColor: colors.border,
   },
   checkinCard: { borderColor: colors.primaryDim },
-  upgradeCard: { borderColor: colors.primary + '40' },
+  lockedCard: { opacity: 0.6 },
+  lockedCardTitle: {
+    fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textSecondary,
+  },
+  lockedCardSub: {
+    fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2, lineHeight: 17,
+  },
+  lockBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: colors.surface2, borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm, paddingVertical: 3,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  lockBadgeText: {
+    fontSize: 10, fontWeight: fontWeight.semibold, color: colors.textMuted,
+  },
+  betaBannerStandalone: {
+    fontSize: fontSize.xs, color: colors.primaryDim, fontStyle: 'italic',
+    textAlign: 'center', paddingVertical: spacing.xs,
+  },
   checkinPrompt: { paddingTop: spacing.xs },
   checkinPromptText: { fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 18 },
   betaBanner: {
