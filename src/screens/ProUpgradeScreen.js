@@ -153,13 +153,30 @@ export default function ProUpgradeScreen({ navigation }) {
             ))}
           </View>
 
+          <View style={styles.pricingRow}>
+            <View style={[styles.pricingTier, styles.pricingTierHighlight]}>
+              <View style={styles.pricingTierBadge}>
+                <Text style={styles.pricingTierBadgeText}>Beta rate</Text>
+              </View>
+              <Text style={styles.pricingAmount}>£1.99</Text>
+              <Text style={styles.pricingPeriod}>/month</Text>
+              <Text style={styles.pricingNote}>Locked in permanently</Text>
+            </View>
+            <View style={styles.pricingTier}>
+              <Text style={styles.pricingTierLabel}>After launch</Text>
+              <Text style={[styles.pricingAmount, styles.pricingAmountMuted]}>£2.99</Text>
+              <Text style={styles.pricingPeriod}>/month</Text>
+              <Text style={styles.pricingNote}>or £19.99/year</Text>
+            </View>
+          </View>
+
           <View style={styles.offerCard}>
             <View style={styles.offerBadge}>
               <Ionicons name="star" size={11} color={colors.background} />
               <Text style={styles.offerBadgeText}>Beta tester offer</Text>
             </View>
             <Text style={styles.offerText}>
-              Pro is free during beta. Sign up now and you keep extended Pro free when we launch fully. No card, no catch.
+              Free during beta. When billing starts, you keep £1.99/month permanently — the standard rate is £2.99. No card required now.
             </Text>
             <Text style={styles.cancelNote}>Cancel anytime, two taps. No questions.</Text>
           </View>
@@ -313,6 +330,35 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   perkText: { fontSize: fontSize.sm, color: colors.textSecondary, flex: 1, lineHeight: 19 },
+
+  pricingRow: {
+    flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg,
+  },
+  pricingTier: {
+    flex: 1, backgroundColor: colors.surface, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.border,
+    padding: spacing.lg, alignItems: 'center', gap: 2,
+  },
+  pricingTierHighlight: {
+    borderColor: colors.primary, borderWidth: 2,
+  },
+  pricingTierBadge: {
+    backgroundColor: colors.primary, borderRadius: 4,
+    paddingHorizontal: 7, paddingVertical: 2, marginBottom: spacing.xs,
+  },
+  pricingTierBadgeText: {
+    fontSize: 9, fontWeight: fontWeight.black,
+    color: colors.background, letterSpacing: 0.6,
+  },
+  pricingTierLabel: {
+    fontSize: fontSize.xs, color: colors.textMuted, marginBottom: spacing.xs,
+  },
+  pricingAmount: {
+    fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.textPrimary,
+  },
+  pricingAmountMuted: { color: colors.textMuted },
+  pricingPeriod: { fontSize: fontSize.xs, color: colors.textMuted },
+  pricingNote: { fontSize: 10, color: colors.textMuted, marginTop: 2 },
 
   offerCard: {
     backgroundColor: colors.surface,
