@@ -172,6 +172,54 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           </View>
         </View>
 
+        {/* Personal Record highlight card */}
+        {prs.length > 0 && (() => {
+          const pr1rm   = prs.find(p => p.record_type === '1rm_estimate');
+          const prHeavy = prs.find(p => p.record_type === 'heaviest_weight');
+          const prReps  = prs.find(p => p.record_type === 'most_reps');
+          const displayPR = pr1rm || prHeavy;
+          if (!displayPR) return null;
+          return (
+            <View style={styles.prHighlightCard}>
+              <View style={styles.prHighlightHeader}>
+                <Ionicons name="trophy" size={18} color={colors.primary} />
+                <Text style={styles.prHighlightTitle}>Personal records</Text>
+              </View>
+              <View style={styles.prHighlightRow}>
+                {displayPR && (
+                  <View style={styles.prHighlightStat}>
+                    <Text style={styles.prHighlightStatValue}>
+                      {parseFloat(displayPR.value).toFixed(1)}{units}
+                    </Text>
+                    <Text style={styles.prHighlightStatLabel}>
+                      {displayPR.record_type === '1rm_estimate' ? 'Est. 1RM' : 'Heaviest set'}
+                    </Text>
+                  </View>
+                )}
+                {prHeavy && displayPR !== prHeavy && (
+                  <View style={[styles.prHighlightStat, styles.prHighlightStatBordered]}>
+                    <Text style={styles.prHighlightStatValue}>
+                      {prHeavy.value}{units} × {prHeavy.reps}
+                    </Text>
+                    <Text style={styles.prHighlightStatLabel}>Best set</Text>
+                  </View>
+                )}
+                {prReps && (
+                  <View style={[styles.prHighlightStat, styles.prHighlightStatBordered]}>
+                    <Text style={styles.prHighlightStatValue}>
+                      {prReps.value}{units} × {prReps.reps}
+                    </Text>
+                    <Text style={styles.prHighlightStatLabel}>Most reps</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.prHighlightDate}>
+                Achieved {format(new Date(displayPR.achieved_date), 'MMM d yyyy')}
+              </Text>
+            </View>
+          );
+        })()}
+
         {plateau && (
           <View style={styles.plateauBanner}>
             <Ionicons name="analytics-outline" size={18} color={colors.warning} />
@@ -295,23 +343,37 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* Substitutes */}
+        {/* Similar exercises — horizontal scroll of small cards */}
         {substitutes.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Substitutes</Text>
-            {substitutes.map(({ exercise: sub, reason }, i) => (
-              <TouchableOpacity
-                key={sub.id}
-                style={styles.subCard}
-                onPress={() => navigation.push('ExerciseDetail', { exerciseId: sub.id })}
-              >
-                <View style={styles.subInfo}>
-                  <Text style={styles.subName}>{sub.name}</Text>
-                  <Text style={styles.subReason}>{reason}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-              </TouchableOpacity>
-            ))}
+            <Text style={styles.sectionTitle}>Similar exercises</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.subScrollContent}
+            >
+              {substitutes.map(({ exercise: sub }) => {
+                const subPrimary = MUSCLE_DISPLAY_NAMES[(sub.primaryMuscle || '').toLowerCase()] || sub.primaryMuscle;
+                return (
+                  <TouchableOpacity
+                    key={sub.id}
+                    style={styles.subCard}
+                    onPress={() => navigation.push('ExerciseDetail', { exerciseId: sub.id, exerciseName: sub.name })}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={styles.subCardName} numberOfLines={2}>{sub.name}</Text>
+                    <View style={styles.subCardFooter}>
+                      {sub.equipment ? (
+                        <Ionicons name="barbell-outline" size={11} color={colors.textMuted} />
+                      ) : null}
+                      <Text style={styles.subCardEquipment} numberOfLines={1}>
+                        {sub.equipment || subPrimary || ''}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           </View>
         )}
 
@@ -444,18 +506,83 @@ const styles = StyleSheet.create({
   prLabel: { fontSize: fontSize.sm, color: colors.textMuted },
   prValue: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
   prDate: { fontSize: fontSize.xs, color: colors.textMuted },
+  // Similar exercises — horizontal scroll cards
+  subScrollContent: {
+    gap: spacing.sm,
+    paddingRight: spacing.lg,
+  },
   subCard: {
+    width: 140,
+    height: 72,
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    justifyContent: 'space-between',
+  },
+  subCardName: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+    lineHeight: 17,
+  },
+  subCardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.xs,
+  },
+  subCardEquipment: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    flex: 1,
+  },
+  // PR highlight card
+  prHighlightCard: {
     backgroundColor: colors.surface,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.primary + '40',
+    gap: spacing.sm,
   },
-  subInfo: { flex: 1 },
-  subName: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  subReason: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
+  prHighlightHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  prHighlightTitle: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.textMuted,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  prHighlightRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  prHighlightStat: {
+    flex: 1,
+    gap: 2,
+  },
+  prHighlightStatBordered: {
+    paddingLeft: spacing.md,
+    borderLeftWidth: 1,
+    borderLeftColor: colors.border,
+  },
+  prHighlightStatValue: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.primary,
+  },
+  prHighlightStatLabel: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+  },
+  prHighlightDate: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    fontStyle: 'italic',
+  },
   notesCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.md,
