@@ -8,9 +8,11 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import {
   getRoutineById, getRoutineExercisesWithDetails, getAllExercises,
   addExerciseToRoutine, removeExerciseFromRoutine, createWorkout, updateRoutineExercise,
+  updateRoutineExerciseExercise,
 } from '../lib/database';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getExerciseWhyThis } from '../lib/whyThisTemplates';
+import { rankSwaps } from '../lib/swapEngine';
 import useAppStore from '../store/useAppStore';
 
 export default function RoutineDetailScreen({ navigation, route }) {
@@ -27,6 +29,8 @@ export default function RoutineDetailScreen({ navigation, route }) {
   const [editRepsMax, setEditRepsMax] = useState('');
   const [editRest, setEditRest] = useState('');
   const [editStartWeight, setEditStartWeight] = useState('');
+  const [swapState, setSwapState] = useState(null);
+  const [swapCandidates, setSwapCandidates] = useState([]);
 
   useEffect(() => {
     if (routineId) loadRoutine();
@@ -86,6 +90,40 @@ export default function RoutineDetailScreen({ navigation, route }) {
     });
     setEditingExercise(null);
     await loadRoutine();
+  }
+
+  async function handleOpenSwap(routineExercise, exercise) {
+    const all = allExercises.length ? allExercises : await getAllExercises();
+    const otherIds = exercises
+      .map(({ exercise: ex }) => ex?.id)
+      .filter(id => id && id !== exercise?.id);
+    const ranked = rankSwaps(exercise, all, {
+      excludeIds: otherIds,
+      numResults: 12,
+    });
+    setSwapCandidates(ranked);
+    setSwapState({ routineExerciseId: routineExercise.id, exercise });
+  }
+
+  function handleConfirmSwap(newExercise) {
+    if (!swapState) return;
+    const originalName = swapState.exercise?.name || 'this exercise';
+    Alert.alert(
+      'Swap this exercise in the routine?',
+      `${originalName} will be replaced with ${newExercise.name}. This affects all future sessions of this routine. Your set, rep and rest targets stay the same.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Swap',
+          onPress: async () => {
+            await updateRoutineExerciseExercise(swapState.routineExerciseId, newExercise.id);
+            setSwapState(null);
+            setSwapCandidates([]);
+            await loadRoutine();
+          },
+        },
+      ],
+    );
   }
 
   async function handleStartWorkout() {
@@ -168,6 +206,13 @@ export default function RoutineDetailScreen({ navigation, route }) {
                 hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
               >
                 <Ionicons name="create-outline" size={20} color={colors.textMuted} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleOpenSwap(routineExercise, exercise)}
+                hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+                accessibilityLabel={`Swap ${exercise.name}`}
+              >
+                <Ionicons name="swap-horizontal" size={20} color={colors.textMuted} />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => Alert.alert(
@@ -277,6 +322,51 @@ export default function RoutineDetailScreen({ navigation, route }) {
             </TouchableOpacity>
           </TouchableOpacity>
         </TouchableOpacity>
+      </Modal>
+
+      {/* Plan-level swap modal */}
+      <Modal
+        visible={swapState != null}
+        animationType="slide"
+        onRequestClose={() => { setSwapState(null); setSwapCandidates([]); }}
+      >
+        <SafeAreaView style={styles.swapSafe} edges={['top', 'bottom']}>
+          <View style={styles.swapHeader}>
+            <Text style={styles.swapTitle}>Swap Exercise</Text>
+            <TouchableOpacity onPress={() => { setSwapState(null); setSwapCandidates([]); }}>
+              <Ionicons name="close" size={24} color={colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.swapSubtitle}>
+            Replacing: <Text style={{ color: colors.primary }}>{swapState?.exercise?.name}</Text>
+          </Text>
+          <Text style={styles.swapNote}>
+            Choose a substitute. Your routine will be updated — your set, rep and rest targets stay the same.
+          </Text>
+          <FlatList
+            data={swapCandidates}
+            keyExtractor={item => item.exercise.id}
+            contentContainerStyle={{ padding: spacing.lg }}
+            ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.swapItem}
+                onPress={() => handleConfirmSwap(item.exercise)}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.swapItemName}>{item.exercise.name}</Text>
+                  <Text style={styles.swapItemReason}>{item.reason}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+              </TouchableOpacity>
+            )}
+            ListEmptyComponent={
+              <Text style={{ color: colors.textMuted, textAlign: 'center', marginTop: spacing.xl }}>
+                No similar exercises found.
+              </Text>
+            }
+          />
+        </SafeAreaView>
       </Modal>
 
       <Modal visible={showAddExercise} animationType="slide" onRequestClose={() => setShowAddExercise(false)}>
@@ -441,4 +531,43 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   pickerItemMuscle: { fontSize: fontSize.sm, color: colors.textSecondary },
+  swapSafe: { flex: 1, backgroundColor: colors.background },
+  swapHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  swapTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  swapSubtitle: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+  },
+  swapNote: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  swapItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  swapItemName: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+    marginBottom: 2,
+  },
+  swapItemReason: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
 });

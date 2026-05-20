@@ -898,6 +898,19 @@ export async function updateRoutineExercise(id, data) {
   await d.runAsync(`UPDATE routine_exercises SET ${fields.join(', ')} WHERE id = ?`, values);
 }
 
+/**
+ * Plan-level exercise swap: replaces the exercise referenced by a routine_exercises row,
+ * leaving set/rep/rest/starting-weight targets unchanged.
+ */
+export async function updateRoutineExerciseExercise(routineExerciseId, newExerciseId) {
+  const d = await db();
+  const now = Date.now();
+  await d.runAsync(
+    'UPDATE routine_exercises SET exercise_id = ?, updated_at = ? WHERE id = ?',
+    [newExerciseId, now, routineExerciseId],
+  );
+}
+
 export async function getAllRoutineExerciseCounts() {
   const d = await db();
   const rows = await d.getAllAsync('SELECT routine_id, COUNT(*) as cnt FROM routine_exercises GROUP BY routine_id');
