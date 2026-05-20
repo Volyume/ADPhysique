@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { generatePlan, GOAL_LABELS as PLAN_GOAL_LABELS, SPLIT_LABELS } from '../lib/planEngine';
-import { getPlanNutritionContext, calculateNutritionTargets } from '../lib/nutritionEngine';
+import { getPlanNutritionContext, calculateNutritionTargets, ADVANCED_PROTEIN_GOALS } from '../lib/nutritionEngine';
 import { getMesoSchedule, getCurrentMesoWeek } from '../lib/mesocycle';
 import { applyPhaseToInputs, getPhaseLabel, getPhaseDescription, buildSessionAddons } from '../lib/phaseEngine';
 import { annotateSessionSetTypes } from '../lib/setTypeEngine';
@@ -358,6 +358,9 @@ export default function CoachBuilderScreen({ navigation, route }) {
       try {
         const profile = useAppStore.getState().userProfile ?? {};
         if (profile.weightKg && profile.heightCm && profile.age) {
+          // Use stored protein approach, or auto-select from goal if not yet set
+          const proteinApproach = profile.proteinApproach
+            ?? (ADVANCED_PROTEIN_GOALS.includes(inputs.goal) ? 'advanced' : 'optimised');
           calcNutritionSummary = calculateNutritionTargets({
             sex: profile.sex ?? 'male',
             ageYears: profile.age,
@@ -366,6 +369,7 @@ export default function CoachBuilderScreen({ navigation, route }) {
             activityLevel: daysToActivityLevel(inputs.daysPerWeek ?? 4),
             goal: phaseToNutritionKey(inputs.phase),
             trainingGoal: inputs.goal ?? null,
+            proteinApproach,
           });
         }
       } catch (_e) {}
@@ -425,6 +429,8 @@ export default function CoachBuilderScreen({ navigation, route }) {
       // Save plan profile fields and nutrition to userProfile
       if (userId) {
         const { saveLocalProfile, userProfile: currentProfile } = useAppStore.getState();
+        const resolvedProteinApproach = currentProfile?.proteinApproach
+          ?? (ADVANCED_PROTEIN_GOALS.includes(inputs.goal) ? 'advanced' : 'optimised');
         await saveLocalProfile(userId, {
           ...(currentProfile ?? {}),
           trainingGoal: inputs.goal,
@@ -437,6 +443,7 @@ export default function CoachBuilderScreen({ navigation, route }) {
           sessionLengthMinutes: inputs.sessionLengthMinutes,
           recoveryRating: inputs.recoveryRating,
           experience: inputs.experience,
+          proteinApproach: resolvedProteinApproach,
         });
       }
 
@@ -879,7 +886,7 @@ export default function CoachBuilderScreen({ navigation, route }) {
               <Text style={styles.nutritionSummaryValue}>{nutritionSummary.fatG}g fat</Text>
             </View>
             <Text style={styles.nutritionSummaryNote}>
-              Protein target: Optimised (2.5 g/kg). To change this, go to Update your goals in your profile.
+              {`Protein: ${nutritionSummary.proteinApproach ? nutritionSummary.proteinApproach.charAt(0).toUpperCase() + nutritionSummary.proteinApproach.slice(1) : 'Optimised'} (${nutritionSummary.proteinGPerKg ?? '2.5'} g/kg). To adjust this, go to Update your goals in your profile.`}
             </Text>
           </View>
         )}
