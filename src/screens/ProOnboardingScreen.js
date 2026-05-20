@@ -9,8 +9,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { VolyumeMark } from '../components/BrandMark';
 import useAppStore from '../store/useAppStore';
-import { logBodyMetric, saveNutritionTargets, saveUserBodyProfile } from '../lib/database';
+import { logBodyMetric, saveNutritionTargets, saveUserBodyProfile, migrateLocalUserId } from '../lib/database';
 import { stoneLbsToKg, ftInToCm, parseBodyWeightToKg } from '../lib/units';
+import { signUpWithEmail, signInWithEmail } from '../lib/supabase';
+import { bulkUploadLocalData, syncProfile } from '../lib/sync';
 import {
   requestNotificationPermissions,
   scheduleMorningWeightNotification,
@@ -27,7 +29,7 @@ import { calculateNutritionTargets } from '../lib/nutritionEngine';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 
-const TOTAL_STEPS = 3;
+const TOTAL_STEPS = 4;
 
 // Default days per week — used for nutrition calc without asking the user.
 const DEFAULT_DAYS_PER_WEEK = 4;
@@ -151,18 +153,27 @@ export default function ProOnboardingScreen({ navigation }) {
   const [trainingGoal, setTrainingGoal] = useState(null);
   const [trainingPhase, setTrainingPhase] = useState(null);
 
-  // Step 3 — recovery + reminders
+  // Step 4 — recovery + reminders
   const [recoveryRating, setRecoveryRating] = useState(null);
   const [morningEnabled, setMorningEnabled] = useState(true);
   const [morningHour, setMorningHour] = useState(7);
   const [checkinEnabled, setCheckinEnabled] = useState(true);
   const [checkinDay, setCheckinDay] = useState(0);
 
+  // Step 1 — account
+  const [authMode, setAuthMode] = useState('signup'); // 'signup' | 'signin'
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
+  const [accountCreated, setAccountCreated] = useState(false);
+
   const [busy, setBusy] = useState(false);
 
   const nameRef = useRef(null);
   useEffect(() => {
-    if (step === 1) {
+    if (step === 2) {
       const t = setTimeout(() => nameRef.current?.focus(), 350);
       return () => clearTimeout(t);
     }
@@ -173,26 +184,74 @@ export default function ProOnboardingScreen({ navigation }) {
 
   function goBack() {
     if (step === 1) return;
+    if (step === 2 && accountCreated) return; // can't go back past completed registration
     setStep(s => s - 1);
   }
 
-  function advanceFrom1() {
-    if (!firstName.trim()) {
-      Alert.alert('Your name', 'Please enter your first name to continue.');
+  async function advanceFrom1() {
+    if (accountCreated) { setStep(2); return; }
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Missing fields', 'Enter your email and a password to continue.');
       return;
     }
-    setStep(2);
+    if (authMode === 'signup' && password.length < 8) {
+      Alert.alert('Password too short', 'Use at least 8 characters.');
+      return;
+    }
+    setBusy(true);
+    try {
+      const fn = authMode === 'signup' ? signUpWithEmail : signInWithEmail;
+      const { data, error } = await fn(email.trim(), password);
+      if (error) {
+        Alert.alert(authMode === 'signup' ? 'Sign-up error' : 'Sign-in error', error.message);
+        setBusy(false);
+        return;
+      }
+      if (authMode === 'signup' && data.user && !data.session) {
+        Alert.alert(
+          'Check your email',
+          'We sent a confirmation link. Confirm it, sign in here, then continue.',
+        );
+        setAuthMode('signin');
+        setBusy(false);
+        return;
+      }
+      if (data.session) {
+        const supabaseUserId = data.session.user.id;
+        const localUserId = user?.id;
+        await migrateLocalUserId(localUserId, supabaseUserId).catch(() => {});
+        syncProfile(supabaseUserId, userProfile, 'pro', { isBetaTester: true }).catch(() => {});
+        if (authMode === 'signup') {
+          bulkUploadLocalData(supabaseUserId, localUserId).catch(() => {});
+        }
+        setAccountCreated(true);
+        setBusy(false);
+        setStep(2);
+        return;
+      }
+    } catch (_) {
+      Alert.alert('Something went wrong', 'Please try again.');
+    }
+    setBusy(false);
   }
 
   function advanceFrom2() {
-    if (!experience || !sessionLengthMinutes || !equipment || !trainingGoal || !trainingPhase) {
-      Alert.alert('Complete all fields', 'Please fill out your training profile to continue.');
+    if (!firstName.trim()) {
+      Alert.alert('Your name', 'Please enter your first name to continue.');
       return;
     }
     setStep(3);
   }
 
-  async function advanceFrom3() {
+  function advanceFrom3() {
+    if (!experience || !sessionLengthMinutes || !equipment || !trainingGoal || !trainingPhase) {
+      Alert.alert('Complete all fields', 'Please fill out your training profile to continue.');
+      return;
+    }
+    setStep(4);
+  }
+
+  async function advanceFrom4() {
     if (!recoveryRating) {
       Alert.alert('Recovery rating', 'Please select your recovery level to continue.');
       return;
@@ -336,11 +395,105 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 1 — Profile ─────────────────────────────────────────────────────────
+  // ── Step 1 — Create account ──────────────────────────────────────────────────
 
   if (step === 1) {
     return (
       <SafeAreaView key="step-1" style={styles.safe}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+            <Header
+              title={authMode === 'signup' ? 'Create your account.' : 'Sign in to continue.'}
+              sub="Pro needs an account so your plan, weight history, and coaching adjustments are backed up and sync across devices."
+            />
+
+            <View style={styles.section}>
+              <Text style={styles.fieldLabel}>Email</Text>
+              <View style={[styles.fieldWrap, emailFocused && styles.fieldWrapFocused]}>
+                <TextInput
+                  style={styles.fieldInput}
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="you@example.com"
+                  placeholderTextColor={colors.textDisabled}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="email"
+                  textContentType="emailAddress"
+                  onFocus={() => setEmailFocused(true)}
+                  onBlur={() => setEmailFocused(false)}
+                />
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.fieldLabel}>Password</Text>
+              <View style={[styles.fieldWrap, passwordFocused && styles.fieldWrapFocused]}>
+                <TextInput
+                  style={[styles.fieldInput, { paddingRight: 48 }]}
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder={authMode === 'signup' ? 'At least 8 characters' : 'Your password'}
+                  placeholderTextColor={colors.textDisabled}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete={authMode === 'signup' ? 'new-password' : 'password'}
+                  textContentType={authMode === 'signup' ? 'newPassword' : 'password'}
+                  onFocus={() => setPasswordFocused(true)}
+                  onBlur={() => setPasswordFocused(false)}
+                />
+                <TouchableOpacity
+                  style={styles.eyeBtn}
+                  onPress={() => setShowPassword(v => !v)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={19} color={colors.textMuted} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.primaryBtn, busy && styles.primaryBtnDisabled]}
+              onPress={busy ? undefined : advanceFrom1}
+              disabled={busy}
+              activeOpacity={busy ? 1 : 0.88}
+            >
+              {busy ? (
+                <ActivityIndicator color={colors.background} />
+              ) : (
+                <>
+                  <Text style={styles.primaryBtnText}>
+                    {authMode === 'signup' ? 'Create account and continue' : 'Sign in and continue'}
+                  </Text>
+                  <Ionicons name="arrow-forward" size={18} color={colors.background} />
+                </>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.switchAuthBtn}
+              onPress={() => setAuthMode(m => (m === 'signup' ? 'signin' : 'signup'))}
+            >
+              <Text style={styles.switchAuthText}>
+                {authMode === 'signup' ? 'Already have an account? ' : "Don't have an account? "}
+                <Text style={styles.switchAuthAction}>
+                  {authMode === 'signup' ? 'Sign in' : 'Create one'}
+                </Text>
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Step 2 — Profile ─────────────────────────────────────────────────────────
+
+  if (step === 2) {
+    return (
+      <SafeAreaView key="step-2" style={styles.safe}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <Header
@@ -525,7 +678,7 @@ export default function ProOnboardingScreen({ navigation }) {
               )}
             </View>
 
-            <TouchableOpacity style={styles.primaryBtn} onPress={advanceFrom1} activeOpacity={0.88}>
+            <TouchableOpacity style={styles.primaryBtn} onPress={advanceFrom2} activeOpacity={0.88}>
               <Text style={styles.primaryBtnText}>Continue</Text>
               <Ionicons name="arrow-forward" size={18} color={colors.background} />
             </TouchableOpacity>
@@ -537,13 +690,13 @@ export default function ProOnboardingScreen({ navigation }) {
 
   // ── Step 2 — Training setup ──────────────────────────────────────────────────
 
-  if (step === 2) {
+  if (step === 3) {
     const goalOptions = PHYSIQUE_GOALS.map(g => ({ value: g.value, label: g.label, sub: g.subtitle }));
     const phaseOptions = TRAINING_PHASES.map(p => ({ value: p.value, label: p.label, sub: p.subtitle }));
     const canContinue = !!experience && !!sessionLengthMinutes && !!equipment && !!trainingGoal && !!trainingPhase;
 
     return (
-      <SafeAreaView key="step-2" style={styles.safe}>
+      <SafeAreaView key="step-3" style={styles.safe}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <TouchableOpacity style={styles.backBtn} onPress={goBack} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -602,17 +755,17 @@ export default function ProOnboardingScreen({ navigation }) {
             />
 
             <Dropdown
-              label="Current phase"
+              label="What are you doing right now?"
               hint="Sets your calorie target and plan structure."
               value={trainingPhase}
               options={phaseOptions}
               onChange={setTrainingPhase}
-              placeholder="Select your current phase"
+              placeholder="Select what fits you best"
             />
 
             <TouchableOpacity
               style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
-              onPress={canContinue ? advanceFrom2 : undefined}
+              onPress={canContinue ? advanceFrom3 : undefined}
               disabled={!canContinue}
               activeOpacity={canContinue ? 0.88 : 1}
             >
@@ -627,11 +780,11 @@ export default function ProOnboardingScreen({ navigation }) {
 
   // ── Step 3 — Recovery & reminders ───────────────────────────────────────────
 
-  if (step === 3) {
+  if (step === 4) {
     const canContinue = !!recoveryRating;
 
     return (
-      <SafeAreaView key="step-3" style={styles.safe}>
+      <SafeAreaView key="step-4" style={styles.safe}>
         <ScrollView contentContainerStyle={styles.scroll}>
           <TouchableOpacity style={styles.backBtn} onPress={goBack} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
@@ -747,7 +900,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
           <TouchableOpacity
             style={[styles.primaryBtn, (!canContinue || busy) && styles.primaryBtnDisabled]}
-            onPress={canContinue && !busy ? advanceFrom3 : undefined}
+            onPress={canContinue && !busy ? advanceFrom4 : undefined}
             disabled={!canContinue || busy}
             activeOpacity={canContinue && !busy ? 0.88 : 1}
           >
@@ -958,6 +1111,9 @@ const styles = StyleSheet.create({
   btnDisabled: { opacity: 0.55 },
   primaryBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.background },
   primaryBtnDisabled: { opacity: 0.4 },
+  switchAuthBtn: { alignItems: 'center', paddingVertical: spacing.md, marginTop: spacing.sm },
+  switchAuthText: { fontSize: fontSize.sm, color: colors.textMuted },
+  switchAuthAction: { color: colors.primary, fontWeight: fontWeight.semibold },
   skipBtn: { alignItems: 'center', paddingVertical: spacing.md },
   skipBtnText: { fontSize: fontSize.sm, color: colors.textMuted },
   skipNote: {
