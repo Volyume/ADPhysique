@@ -25,6 +25,8 @@ export const VOLUME_LANDMARKS = {
   calves:      { mv: 6,  mev: 8,  mav: 14, mrv: 20 },
   abs:         { mv: 0,  mev: 4,  mav: 16, mrv: 25 },
   traps:       { mv: 0,  mev: 4,  mav: 12, mrv: 20 },
+  neck:        { mv: 0,  mev: 2,  mav: 8,  mrv: 12 },
+  tibialis:    { mv: 0,  mev: 2,  mav: 8,  mrv: 12 },
 };
 
 export const MUSCLE_DISPLAY_NAMES = {
@@ -42,6 +44,8 @@ export const MUSCLE_DISPLAY_NAMES = {
   calves: 'Calves',
   abs: 'Abs',
   traps: 'Traps',
+  neck: 'Neck',
+  tibialis: 'Tibialis',
 };
 
 // Algorithm 4: 1RM Ensemble Calculator
