@@ -755,7 +755,7 @@ export default function ProOnboardingScreen({ navigation }) {
             />
 
             <Dropdown
-              label="What are you doing right now?"
+              label="What is your goal?"
               hint="Sets your calorie target and plan structure."
               value={trainingPhase}
               options={phaseOptions}

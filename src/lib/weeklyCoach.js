@@ -68,7 +68,7 @@ export function assessDataConfidence({ weigh_ins, adherenceKnown, weeksInPhase, 
     return {
       level: 'data_hold',
       reasons: ['Fewer than 3 weigh-ins this week'],
-      holdMessage: "We need at least 3 morning weights to calculate a reliable trend. Your plan stays the same this week. Keep logging each morning and we'll have enough data to coach you properly next check-in.",
+      holdMessage: "Need at least 3 morning weights for a reliable trend. Calories held this week. Log daily and the next check-in has clean data to act on.",
     };
   }
 
@@ -76,7 +76,7 @@ export function assessDataConfidence({ weigh_ins, adherenceKnown, weeksInPhase, 
     return {
       level: 'data_hold',
       reasons: ['Unusual event flagged with limited weight data'],
-      holdMessage: "You flagged something unusual this week (illness, travel, stress) and weight data is limited. Scale readings aren't reliable enough to act on right now, so we're holding your plan. Log weight consistently next week for a clean read.",
+      holdMessage: "Unusual week flagged and weight data is thin. Scale isn't a reliable signal right now — calories held. Log consistently next week for a clean read.",
     };
   }
 
@@ -184,56 +184,40 @@ function stepsBand(goalPhase, bodyweightKg = null) {
 
 const WHY_LIBRARY = {
   on_target_holding: [
-    "Weight's trending exactly as planned. The algorithm doesn't change what's working (that's a feature, not a bug).",
-    "Everything's on track this week. Hold the course and keep the effort level consistent.",
-    "Your trend is right where it needs to be. No changes needed. This is what good progress feels like.",
-    "Solid week. Weight and performance are both trending the right way. Stay the course.",
+    "Weight is tracking the target rate. No change needed.",
   ],
   off_target_cal_up: [
-    "Weight's moving faster than your target rate, so bringing calories up slightly will protect what you've built.",
-    "You're gaining a little more than planned, so a small calorie bump will slow it down without disrupting momentum.",
+    "Trend is off target in the direction a small kcal increase corrects.",
   ],
   off_target_cal_down: [
-    "Weight isn't moving at the rate you're aiming for. A modest calorie reduction keeps the plan on track.",
-    "Progress has stalled slightly versus your goal. A small calorie adjustment gets things moving again.",
-    "The trend's behind schedule, so a controlled reduction moves things in the right direction without a dramatic cut.",
+    "Trend is off target in the direction a small kcal reduction corrects.",
   ],
   recovery_lagging: [
-    "Recovery's lagging: sleep dropped, soreness is up. A lighter week now pays back the next four.",
-    "Your body is asking for less right now. Backing off training slightly protects the quality of next week's sessions.",
-    "Energy and soreness signals are telling us to ease back. This isn't losing progress. It's protecting it.",
+    "Recovery markers are down. Holding calories until they're back.",
   ],
   performance_regressed: [
-    "Performance dropped on some key lifts. Before adding more work, we recover first. Then we push again.",
-    "Strength has dipped recently. The priority is stabilising performance before any further increases.",
+    "Strength is dipping. Holding calories until it stabilises.",
   ],
   building_baseline: [
-    "You're in the early weeks of logging. Volyume is building your baseline, and adjustments start once the data is more established.",
-    "Not enough data yet to make confident adjustments. Keep logging weight and sessions and we'll start coaching properly soon.",
+    "Not enough data yet to adjust. Keep logging weight and sessions.",
   ],
   stabilise_sessions: [
-    "Sessions were inconsistent this week. Stable training is the most important variable, and we don't adjust anything else until that's solid.",
-    "Less than half your planned sessions were completed. Getting back on schedule takes priority over any programming tweak.",
+    "Sessions were inconsistent this week. Adherence first, adjustments after.",
   ],
   steps_bump: [
-    "Weight trend is behind target and steps have room to increase. More daily movement is the most recovery-friendly way to close the gap.",
-    "Bumping the daily step target is the lowest-fatigue lever available and it won't affect training quality.",
+    "Trend is behind target. Raising the step target is the lowest-fatigue lever.",
   ],
   deload_suggested: [
-    "Several signals (soreness, energy, and performance) are all pointing the same way. A lighter week now sets you up for a stronger run after.",
-    "Your body is accumulating fatigue across multiple signals. One reduced week is the most efficient path to your next personal best.",
+    "Recovery flags across multiple signals. A lighter week sets up the next run.",
   ],
   diet_break_suggested: [
-    "Eight or more consecutive weeks eating below maintenance is a long time. One week at your full calorie need helps your body reset and makes the next stretch of dieting more effective.",
-    "A short break at normal calories after a long deficit pays dividends: more energy, better training, better results in the weeks that follow.",
+    "Long stretch in a deficit. A short break at maintenance helps the next stretch.",
   ],
   push_volume: [
-    "Recovery is solid, energy is high, and performance is climbing. This is the window to add a little more work.",
-    "All the signals are green this week. Adding a little more work while recovery supports it is how progress compounds.",
+    "Recovery and performance both clean. Room to add work.",
   ],
   low_data_weight: [
-    "Not enough weight data this week to make reliable trend calculations. Keep logging morning weight and the trend will stabilise.",
-    "Weight data is limited this week, so the algorithm is working with what it has. More daily logs will sharpen the picture.",
+    "Weight data is thin this week. Trend will sharpen with more daily logs.",
   ],
 };
 
@@ -426,19 +410,19 @@ export function runWeeklyCoach(inputs) {
     if (phase.isCut && offTargetDirection > 0) {
       // Losing too slowly
       change = calsAdherence === 'hit' ? -150 : -100;
-      calNote = "Your weight hasn't been coming down as quickly as the plan calls for. Trimming a little gives it the nudge it needs.";
+      calNote = "Weight is coming down slower than the target rate.";
     } else if (phase.isCut && offTargetDirection < 0) {
       // Losing too fast — protect muscle
       change = +125;
-      calNote = "You're losing weight faster than planned. Dropping too quickly risks losing muscle alongside fat, so a small increase keeps things at a safe pace.";
+      calNote = "Weight is dropping faster than the target rate. Slowing it down protects muscle.";
     } else if (phase.isBulk && offTargetDirection < 0) {
       // Gaining too slowly
       change = +150;
-      calNote = "Weight gain has been slower than expected. A small increase gives your muscles more fuel to build with.";
+      calNote = "Weight gain is below the target rate.";
     } else if (phase.isBulk && offTargetDirection > 0) {
       // Gaining too fast
       change = -125;
-      calNote = "Weight is coming on faster than the plan intends. A small reduction keeps fat gain in check without affecting your training.";
+      calNote = "Weight is going on faster than the target rate. Pulling back keeps fat gain in check.";
     }
 
     // Cap at ±5% of current target
@@ -562,18 +546,18 @@ export function runWeeklyCoach(inputs) {
 
   if ((phase.isCut || phase.isBulk) && currentCalTarget !== null && calorieAdjustment === null) {
     if (scoffPositive) {
-      heldDecisions.push({ type: 'calories', reason: "Calories left unchanged. Right now the focus is on eating enough to fuel training well, not on restricting." });
+      heldDecisions.push({ type: 'calories', reason: "Calories held. Wellbeing screen flagged restriction concerns." });
     } else if (cycleOverride) {
-      heldDecisions.push({ type: 'calories', reason: "Calories left unchanged. You flagged your cycle this week, so the weight reading is not a reliable signal to act on." });
+      heldDecisions.push({ type: 'calories', reason: "Calories held. Cycle was flagged this week — weight reading isn't a reliable signal." });
     } else if (onTarget) {
-      heldDecisions.push({ type: 'calories', reason: "Everything is on track. No reason to change what is working." });
+      heldDecisions.push({ type: 'calories', reason: "Calories held. Trend is on target." });
     } else if (lastCalAdjustmentWeeksAgo < 2) {
-      heldDecisions.push({ type: 'calories', reason: "Calories left unchanged. A change was made recently and needs more time to show up in the trend before looking again." });
+      heldDecisions.push({ type: 'calories', reason: "Calories held. Last adjustment needs more weeks to show in the trend." });
     } else if (consecutiveOffTargetWeeks < offTargetWeeksRequired) {
       const weeksLeft = offTargetWeeksRequired - consecutiveOffTargetWeeks;
-      heldDecisions.push({ type: 'calories', reason: `Calories left unchanged. ${weeksLeft} more week${weeksLeft !== 1 ? 's' : ''} of the same trend needed before acting. One week alone is not enough to call it.` });
+      heldDecisions.push({ type: 'calories', reason: `Calories held. ${weeksLeft} more week${weeksLeft !== 1 ? 's' : ''} of the same trend needed before adjusting.` });
     } else if (calsAdherence === 'untracked') {
-      heldDecisions.push({ type: 'calories', reason: "Calories left unchanged. Without knowing how close you got to your target this week, any adjustment would be guesswork." });
+      heldDecisions.push({ type: 'calories', reason: "Calories held. Adherence wasn't tracked — adjusting now would be a guess." });
     }
   }
 
@@ -581,38 +565,38 @@ export function runWeeklyCoach(inputs) {
   const whatWorking = [];
 
   if (sessionAdherence >= 1.0) {
-    whatWorking.push(`Sessions: ${sessionsCompleted}/${sessionsPlanned}. All done.`);
+    whatWorking.push(`Sessions ${sessionsCompleted}/${sessionsPlanned}.`);
   } else if (sessionAdherence >= 0.75) {
-    whatWorking.push(`Sessions: ${sessionsCompleted}/${sessionsPlanned}. Solid week.`);
+    whatWorking.push(`Sessions ${sessionsCompleted}/${sessionsPlanned}.`);
   }
 
   if (prsThisWeek > 0) {
-    whatWorking.push(`${prsThisWeek} personal best${prsThisWeek > 1 ? 's' : ''} this week.`);
+    whatWorking.push(`${prsThisWeek} PR${prsThisWeek > 1 ? 's' : ''} this week.`);
   }
 
   if (stepsAdherence === 'hit') {
-    whatWorking.push('Steps target hit.');
+    whatWorking.push('Step target hit.');
   } else if (stepsAdherence === 'mostly') {
-    whatWorking.push('Steps mostly on target.');
+    whatWorking.push('Step target mostly hit.');
   }
 
   if (calsAdherence === 'hit') {
-    whatWorking.push('Calorie target on point.');
+    whatWorking.push('Calorie target hit.');
   }
 
   if (excellentRec) {
-    whatWorking.push('Energy and recovery are excellent.');
+    whatWorking.push('Energy and recovery strong.');
   } else if (!poorRecovery && energyScore != null) {
-    whatWorking.push('Recovery is manageable. No red flags.');
+    whatWorking.push('Recovery in range.');
   }
 
   if (onTarget && weightDelta != null) {
-    whatWorking.push(`Weight trend is right on target (${rateLabel}).`);
+    whatWorking.push(`Weight trend on target (${rateLabel}).`);
   }
 
-  // Fallback — always show at least one bullet
+  // Fallback — only when literally nothing to say
   if (whatWorking.length === 0) {
-    whatWorking.push('Showing up and logging. That\'s the baseline everything else builds on.');
+    whatWorking.push('Data logged.');
   }
 
   // ── "WHY THIS WEEK" ───────────────────────────────────────────────────────
