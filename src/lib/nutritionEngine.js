@@ -50,27 +50,27 @@ const PHASE_LABELS = {
 export const PROTEIN_APPROACHES = {
   standard: {
     label: 'Standard',
-    range: '2.0–2.4 g/kg',
-    description: 'The minimum needed to properly support muscle growth with consistent training. A practical floor for anyone doing structured resistance work.',
-    lbm: { lean_gain: 2.4, build: 2.4, maintain: 2.2, recomp: 2.5, mild_cut: 2.7, aggressive_cut: 2.9, contest_prep: 3.0 },
-    bw:  { lean_gain: 2.0, build: 2.0, maintain: 1.8, recomp: 2.0, mild_cut: 2.2, aggressive_cut: 2.5, contest_prep: 2.8 },
-    floor: 1.8,
+    range: '2.2–2.6 g/kg',
+    description: 'A solid target for consistent gym training. Enough to support muscle growth and recovery without being excessive.',
+    lbm: { lean_gain: 2.5, build: 2.5, maintain: 2.3, recomp: 2.6, mild_cut: 2.8, aggressive_cut: 3.0, contest_prep: 3.1 },
+    bw:  { lean_gain: 2.2, build: 2.2, maintain: 2.0, recomp: 2.2, mild_cut: 2.5, aggressive_cut: 2.7, contest_prep: 2.9 },
+    floor: 2.0,
   },
   optimised: {
     label: 'Optimised',
-    range: '2.2–2.8 g/kg',
-    description: 'The practical target for serious training. Gives your muscles full support for growth and recovery, and raises higher during a cut to protect lean mass.',
-    lbm: { lean_gain: 2.6, build: 2.6, maintain: 2.4, recomp: 2.7, mild_cut: 2.9, aggressive_cut: 3.1, contest_prep: 3.2 },
-    bw:  { lean_gain: 2.2, build: 2.2, maintain: 2.0, recomp: 2.3, mild_cut: 2.6, aggressive_cut: 2.8, contest_prep: 3.0 },
-    floor: 2.0,
+    range: '2.5–3.0 g/kg',
+    description: 'The genuine target for serious hypertrophy training. Fully saturates muscle protein synthesis and gives clear headroom above the minimum.',
+    lbm: { lean_gain: 2.8, build: 2.8, maintain: 2.6, recomp: 2.9, mild_cut: 3.1, aggressive_cut: 3.2, contest_prep: 3.3 },
+    bw:  { lean_gain: 2.5, build: 2.5, maintain: 2.2, recomp: 2.6, mild_cut: 2.8, aggressive_cut: 3.0, contest_prep: 3.2 },
+    floor: 2.2,
   },
   advanced: {
     label: 'Advanced',
-    range: '2.5–3.3 g/kg',
-    description: 'Upper-end protocol for competitive athletes and aggressive cuts. Maximises muscle retention when calories are low.',
-    lbm: { lean_gain: 2.7, build: 2.7, maintain: 2.6, recomp: 2.9, mild_cut: 3.1, aggressive_cut: 3.2, contest_prep: 3.3 },
-    bw:  { lean_gain: 2.5, build: 2.5, maintain: 2.3, recomp: 2.6, mild_cut: 2.8, aggressive_cut: 3.1, contest_prep: 3.3 },
-    floor: 2.2,
+    range: '2.8–3.3 g/kg',
+    description: 'Upper-end protocol for competitive athletes and hard cuts. Pushes protein as high as practical to protect every gram of muscle.',
+    lbm: { lean_gain: 3.0, build: 3.0, maintain: 2.8, recomp: 3.1, mild_cut: 3.2, aggressive_cut: 3.3, contest_prep: 3.3 },
+    bw:  { lean_gain: 2.8, build: 2.8, maintain: 2.5, recomp: 2.8, mild_cut: 3.0, aggressive_cut: 3.2, contest_prep: 3.3 },
+    floor: 2.5,
   },
   custom: {
     label: 'Custom',
@@ -85,10 +85,23 @@ export const PROTEIN_APPROACHES = {
 const KCAL_PER_G_PROTEIN = 4;
 const KCAL_PER_G_CARB = 4;
 const KCAL_PER_G_FAT = 9;
-const FAT_FRACTION = 0.25;
 const MAX_SAFE_LOSS_RATE = 0.008;   // 0.8 % BW/week
 const HARD_GATE_LOSS_RATE = 0.015;  // 1.5 % BW/week
 const KCAL_PER_KG_FAT = 7700;       // rough energy equivalent of 1 kg body fat
+
+// Fat targets in g/kg BW by phase.
+// Carbs fill whatever remains after protein + fat are satisfied.
+// Surplus phases: fat is kept lean so carbs remain high for performance.
+// Deficit phases: fat stays constant; carbs are reduced first.
+const FAT_TARGETS_GKG = {
+  lean_gain:       1.0,
+  build:           0.9,
+  maintain:        1.0,
+  recomp:          0.85,
+  mild_cut:        0.8,
+  aggressive_cut:  0.75,
+  contest_prep:    0.7,
+};
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -266,8 +279,10 @@ export function calculateNutritionTargets(inputs) {
   const proteinG = Math.round(proteinRaw);
   const proteinKcal = proteinG * KCAL_PER_G_PROTEIN;
 
-  const fatFloor = Math.max(0.5 * weightKg, 30);
-  let fatG = Math.max(Math.round((targetKcal * FAT_FRACTION) / KCAL_PER_G_FAT), fatFloor);
+  // Fat: g/kg BW by phase keeps fat at hormonal minimum so carbs remain high.
+  const fatTargetGkg = FAT_TARGETS_GKG[goal] ?? 1.0;
+  const fatFloor = Math.max(0.5 * weightKg, 40);
+  let fatG = Math.max(Math.round(fatTargetGkg * weightKg), fatFloor);
   const fatKcal = fatG * KCAL_PER_G_FAT;
 
   const carbKcal = Math.max(targetKcal - proteinKcal - fatKcal, 0);
