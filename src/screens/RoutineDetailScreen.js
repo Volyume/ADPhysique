@@ -8,7 +8,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import {
   getRoutineById, getRoutineExercisesWithDetails, getAllExercises,
   addExerciseToRoutine, removeExerciseFromRoutine, createWorkout, updateRoutineExercise,
-  updateRoutineExerciseExercise,
+  updateRoutineExerciseExercise, updateRoutineExerciseOrder,
 } from '../lib/database';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getExerciseWhyThis } from '../lib/whyThisTemplates';
@@ -102,10 +102,27 @@ export default function RoutineDetailScreen({ navigation, route }) {
   const [editStartWeight, setEditStartWeight] = useState('');
   const [swapState, setSwapState] = useState(null);
   const [swapCandidates, setSwapCandidates] = useState([]);
+  const [isReordering, setIsReordering] = useState(false);
 
   useEffect(() => {
     if (routineId) loadRoutine();
   }, [routineId]);
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={() => setIsReordering(prev => !prev)}
+          style={{ marginRight: 16 }}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Text style={{ fontSize: 15, color: isReordering ? colors.primary : colors.textSecondary, fontWeight: isReordering ? '700' : '400' }}>
+            {isReordering ? 'Done' : 'Reorder'}
+          </Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [isReordering]);
 
   async function loadRoutine() {
     const r = await getRoutineById(routineId);
@@ -195,6 +212,29 @@ export default function RoutineDetailScreen({ navigation, route }) {
         },
       ],
     );
+  }
+
+  async function handleMoveExercise(routineExerciseId, direction) {
+    const index = exercises.findIndex(e => e.routineExercise.id === routineExerciseId);
+    if (index === -1) return;
+    const swapIndex = direction === 'up' ? index - 1 : index + 1;
+    if (swapIndex < 0 || swapIndex >= exercises.length) return;
+
+    // Optimistic update
+    const updated = [...exercises];
+    const temp = updated[index];
+    updated[index] = updated[swapIndex];
+    updated[swapIndex] = temp;
+    setExercises(updated);
+
+    // Persist both swapped items using their new positions
+    try {
+      await updateRoutineExerciseOrder(updated[index].routineExercise.id, index);
+      await updateRoutineExerciseOrder(updated[swapIndex].routineExercise.id, swapIndex);
+    } catch (_err) {
+      // Revert on failure
+      setExercises(exercises);
+    }
   }
 
   async function handleStartWorkout() {
