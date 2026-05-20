@@ -307,3 +307,34 @@ CREATE INDEX idx_workout_sets_exercise ON workout_sets(exercise_id, user_id);
 CREATE INDEX idx_exercises_muscle ON exercises(primary_muscle);
 CREATE INDEX idx_personal_records_user_exercise ON personal_records(user_id, exercise_id);
 CREATE INDEX idx_weekly_volumes_user_date ON weekly_volumes(user_id, week_ending_date DESC);
+
+-- GDPR: delete_user_data RPC
+-- Deletes all rows owned by the calling user across every table.
+-- auth.users deletion itself must be triggered via Supabase Auth Admin API from a trusted server.
+CREATE OR REPLACE FUNCTION delete_user_data()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  uid UUID := auth.uid();
+BEGIN
+  IF uid IS NULL THEN RAISE EXCEPTION 'Not authenticated'; END IF;
+
+  DELETE FROM autoregulation_suggestions  WHERE user_id = uid;
+  DELETE FROM achievements                WHERE user_id = uid;
+  DELETE FROM progress_photos             WHERE user_id = uid;
+  DELETE FROM body_metrics                WHERE user_id = uid;
+  DELETE FROM weekly_volumes              WHERE user_id = uid;
+  DELETE FROM personal_records            WHERE user_id = uid;
+  DELETE FROM weekly_checkins             WHERE user_id = uid;
+  DELETE FROM workouts                    WHERE user_id = uid; -- cascades workout_sets
+  DELETE FROM mesocycles                  WHERE user_id = uid; -- cascades mesocycle_weeks
+  DELETE FROM routines                    WHERE user_id = uid; -- cascades routine_exercises
+  DELETE FROM users_profile               WHERE id = uid;
+END;
+$$;
+
+-- Allow any authenticated user to call the function (RLS on each table still applies).
+GRANT EXECUTE ON FUNCTION delete_user_data() TO authenticated;

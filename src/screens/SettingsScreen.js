@@ -378,6 +378,16 @@ export default function SettingsScreen({ navigation }) {
           />
         </View>
 
+        {/* Legal */}
+        <SectionHeader title="Legal" />
+        <View style={styles.section}>
+          <SettingRow
+            icon="document-text-outline"
+            label="Privacy Policy"
+            onPress={() => navigation.navigate('PrivacyPolicy')}
+          />
+        </View>
+
         {/* About */}
         <View style={styles.about}>
           <Text style={styles.appName}>Volyume</Text>

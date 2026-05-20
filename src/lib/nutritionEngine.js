@@ -206,6 +206,11 @@ export function calculateNutritionTargets(inputs) {
     targetRateKgPerWeek = null,
   } = inputs;
 
+  // Clamp inputs to physiologically safe ranges — guards against typos and invalid onboarding data.
+  const safeAge    = Math.min(Math.max(Math.round(ageYears  ?? 28), 13), 100);
+  const safeHeight = Math.min(Math.max(heightCm ?? 170, 100), 250);
+  const safeWeight = Math.min(Math.max(weightKg ?? 75, 30), 350);
+
   const bodyFatPercent = _bfp ?? _bfpAlias;
 
   // Auto-select advanced protein approach for physique competitor and strength goals
@@ -218,9 +223,9 @@ export function calculateNutritionTargets(inputs) {
   // --- BMR ---
   const { bmr, formula, lbm } = calcBMR(
     sex,
-    ageYears,
-    heightCm,
-    weightKg,
+    safeAge,
+    safeHeight,
+    safeWeight,
     bodyFatPercent,
     bodyFatSource,
   );
@@ -244,11 +249,11 @@ export function calculateNutritionTargets(inputs) {
   }
 
   // --- Loss rate checks ---
-  const estimatedRate = estimateWeeklyRate(targetKcal, maintenanceKcal, weightKg);
+  const estimatedRate = estimateWeeklyRate(targetKcal, maintenanceKcal, safeWeight);
   const isDeficit = targetKcal < maintenanceKcal;
 
   if (isDeficit) {
-    const lossFraction = Math.abs(estimatedRate) / weightKg;
+    const lossFraction = Math.abs(estimatedRate) / safeWeight;
 
     if (lossFraction > HARD_GATE_LOSS_RATE) {
       warnings.push(
@@ -256,7 +261,7 @@ export function calculateNutritionTargets(inputs) {
           `Calories have been raised to limit loss to 1.5 % BW/week.`,
       );
       // Cap at 1.5 % loss: weekly deficit = 1.5% × BW × 7700 kcal/kg
-      const maxWeeklyDeficit = HARD_GATE_LOSS_RATE * weightKg * KCAL_PER_KG_FAT;
+      const maxWeeklyDeficit = HARD_GATE_LOSS_RATE * safeWeight * KCAL_PER_KG_FAT;
       const maxDailyDeficit = maxWeeklyDeficit / 7;
       targetKcal = Math.round(maintenanceKcal - maxDailyDeficit);
     } else if (lossFraction > MAX_SAFE_LOSS_RATE) {
@@ -275,14 +280,14 @@ export function calculateNutritionTargets(inputs) {
 
   // --- Macros ---
   const { proteinG: proteinRaw, basis: proteinBasis, proteinRateUsed } =
-    calcProtein(goal, weightKg, lbm, bodyFatSource, proteinApproach, customProteinGPerKg);
+    calcProtein(goal, safeWeight, lbm, bodyFatSource, proteinApproach, customProteinGPerKg);
   const proteinG = Math.round(proteinRaw);
   const proteinKcal = proteinG * KCAL_PER_G_PROTEIN;
 
   // Fat: g/kg BW by phase keeps fat at hormonal minimum so carbs remain high.
   const fatTargetGkg = FAT_TARGETS_GKG[goal] ?? 1.0;
-  const fatFloor = Math.max(0.5 * weightKg, 40);
-  let fatG = Math.max(Math.round(fatTargetGkg * weightKg), fatFloor);
+  const fatFloor = Math.max(0.5 * safeWeight, 40);
+  let fatG = Math.max(Math.round(fatTargetGkg * safeWeight), fatFloor);
   const fatKcal = fatG * KCAL_PER_G_FAT;
 
   const carbKcal = Math.max(targetKcal - proteinKcal - fatKcal, 0);
@@ -296,7 +301,7 @@ export function calculateNutritionTargets(inputs) {
   const kcalMax = Math.round(actualTargetKcal * 1.1);
 
   // --- Estimated weekly rate (recalculated with final targetKcal) ---
-  const finalEstimatedRate = estimateWeeklyRate(actualTargetKcal, maintenanceKcal, weightKg);
+  const finalEstimatedRate = estimateWeeklyRate(actualTargetKcal, maintenanceKcal, safeWeight);
 
   return {
     bmrFormula: formula === 'mifflin' ? 'Standard calorie formula' : 'Lean mass-adjusted formula',
@@ -308,7 +313,7 @@ export function calculateNutritionTargets(inputs) {
     proteinG,
     carbsG,
     fatG,
-    proteinGPerKg: parseFloat((proteinG / weightKg).toFixed(2)),
+    proteinGPerKg: parseFloat((proteinG / safeWeight).toFixed(2)),
     proteinBasis,        // 'lbm' (preferred) or 'bodyweight' (fallback)
     proteinGPerKgLbm: lbm ? parseFloat((proteinG / lbm).toFixed(2)) : null,
     proteinApproach,     // 'standard' | 'optimised' | 'advanced'

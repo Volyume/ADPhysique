@@ -55,7 +55,7 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
             value={String(weight || '')}
             onChangeText={v => {
               const n = parseFloat(v);
-              if (!isNaN(n)) setField('weight', n);
+              if (!isNaN(n)) setField('weight', Math.min(Math.max(n, 0), 500));
               else if (v === '' || v === '.') setField('weight', v);
             }}
             keyboardType="decimal-pad"
@@ -94,7 +94,7 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
             value={String(reps || '')}
             onChangeText={v => {
               const n = parseInt(v, 10);
-              if (!isNaN(n)) setField('reps', n);
+              if (!isNaN(n)) setField('reps', Math.min(Math.max(n, 1), 200));
               else if (v === '') setField('reps', '');
             }}
             keyboardType="number-pad"
