@@ -595,6 +595,30 @@ export function getPlanNutritionContext(targets, { bodyMetricsData = [], adheren
     };
   }
 
+  // --- Adaptive TDEE from body weight trend ---
+  // bodyMetricsData items are { weightKg, recorded_at }; sort oldest-first before processing.
+  let ewmaCurrentKg = null;
+  let weeklyWeightChange = null;
+  let adaptiveTDEEAdjustment = { adjustmentKcal: 0, confidence: 'insufficient_data', insight: null };
+
+  if (bodyMetricsData && bodyMetricsData.length >= 14) {
+    const sorted = [...bodyMetricsData]
+      .sort((a, b) => new Date(a.recorded_at) - new Date(b.recorded_at))
+      .map(entry => ({ weightKg: entry.weightKg, date: entry.recorded_at }));
+
+    const ewmaData = computeEWMA(sorted);
+    if (ewmaData.length > 0) {
+      ewmaCurrentKg = ewmaData[ewmaData.length - 1].ewma;
+    }
+    weeklyWeightChange = computeWeeklyWeightChange(ewmaData);
+    adaptiveTDEEAdjustment = computeAdaptiveTDEEAdjustment({
+      ewmaData,
+      prescribedKcal: targetKcal,
+      currentTDEEEstimate: maintenanceKcal,
+      adherenceFactor,
+    });
+  }
+
   return {
     phaseType,
     recoveryModifier: parseFloat(recoveryModifier.toFixed(2)),
@@ -604,5 +628,8 @@ export function getPlanNutritionContext(targets, { bodyMetricsData = [], adheren
     explanation,
     refeedRecommendation,
     dietBreakRecommendation,
+    ewmaCurrentKg,
+    weeklyWeightChange,
+    adaptiveTDEEAdjustment,
   };
 }

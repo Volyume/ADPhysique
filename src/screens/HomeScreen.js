@@ -321,6 +321,11 @@ export default function HomeScreen({ navigation }) {
           <View style={styles.headerText}>
             <Text style={styles.pageTitle}>Train</Text>
             <Text style={styles.greeting}>{getGreeting(userProfile?.firstName)}</Text>
+            {totalSessions >= 1 && (
+              <Text style={styles.trainingBrainHeaderText}>
+                {totalSessions.toLocaleString('en-GB')} {totalSessions === 1 ? 'session' : 'sessions'} recorded. This is your training brain.
+              </Text>
+            )}
           </View>
           <VolyumeMark size={38} color={colors.textMuted} />
         </View>
@@ -980,6 +985,12 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textMuted,
     fontWeight: fontWeight.regular,
+  },
+  trainingBrainHeaderText: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    marginTop: spacing.xs,
+    letterSpacing: 0.2,
   },
 
   // Week card with progress bars

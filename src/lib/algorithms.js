@@ -507,6 +507,11 @@ export function shouldDeload(last4WeeksData) {
   return { deload: score >= 50, reasons };
 }
 
+// Stretch position score — Maeo et al. (2023), Pedrosa et al. (2022), Wolf et al. (2023)
+// confirm that exercises training the target muscle at long length produce measurably
+// greater hypertrophy per set. Prefer high-stretch alternatives when substituting.
+const STRETCH_SCORE = { high: 2, medium: 1, low: 0 };
+
 // Algorithm 8: Exercise Substitutes
 export function getExerciseSubstitutes(targetExercise, allExercises, userEquipment = []) {
   const primaryMuscle = (
@@ -516,6 +521,7 @@ export function getExerciseSubstitutes(targetExercise, allExercises, userEquipme
   ).toLowerCase();
   const targetSFR = targetExercise.stimulusToFatigueRatio || targetExercise.stimulus_to_fatigue_ratio || 3;
   const targetFatigue = targetExercise.fatigueCost || targetExercise.fatigue_cost || 3;
+  const targetStretch = targetExercise.tension_at_stretch || targetExercise.tensionAtStretch || 'medium';
   const targetId = targetExercise.id;
 
   const candidates = allExercises.filter(ex => {
@@ -539,24 +545,34 @@ export function getExerciseSubstitutes(targetExercise, allExercises, userEquipme
     const sfrB = b.stimulusToFatigueRatio || b.stimulus_to_fatigue_ratio || 3;
     const fatigueA = a.fatigueCost || a.fatigue_cost || 3;
     const fatigueB = b.fatigueCost || b.fatigue_cost || 3;
-    return sfrB - sfrA || fatigueA - fatigueB;
+    const stretchA = STRETCH_SCORE[a.tension_at_stretch || a.tensionAtStretch || 'medium'] ?? 1;
+    const stretchB = STRETCH_SCORE[b.tension_at_stretch || b.tensionAtStretch || 'medium'] ?? 1;
+    // Composite: SFR primary, stretch bonus secondary (scaled to 0–0.6 so it doesn't override SFR),
+    // fatigue tiebreaker
+    const scoreA = sfrA + stretchA * 0.3;
+    const scoreB = sfrB + stretchB * 0.3;
+    return scoreB - scoreA || fatigueA - fatigueB;
   });
 
   return candidates.slice(0, 3).map(ex => ({
     exercise: ex,
-    reason: buildSubstituteReason(ex, targetExercise),
+    reason: buildSubstituteReason(ex, targetExercise, targetStretch),
   }));
 }
 
-function buildSubstituteReason(sub, target) {
+function buildSubstituteReason(sub, target, targetStretch = 'medium') {
   const subSFR = sub.stimulusToFatigueRatio || sub.stimulus_to_fatigue_ratio || 3;
   const targetSFR = target.stimulusToFatigueRatio || target.stimulus_to_fatigue_ratio || 3;
   const subFatigue = sub.fatigueCost || sub.fatigue_cost || 3;
   const targetFatigue = target.fatigueCost || target.fatigue_cost || 3;
+  const subStretch = sub.tension_at_stretch || sub.tensionAtStretch || 'medium';
 
-  if (subSFR > targetSFR) return 'Better match for this muscle with less overall fatigue';
-  if (subFatigue < targetFatigue) return 'Less demanding overall. Good for busy weeks.';
-  return 'Same muscles, different movement. Useful for variety.';
+  if (subStretch === 'high' && targetStretch !== 'high') {
+    return 'Trains this muscle at a longer length — evidence suggests this produces slightly more growth per set.';
+  }
+  if (subSFR > targetSFR) return 'Better match for this muscle with less overall fatigue.';
+  if (subFatigue < targetFatigue) return 'Less demanding overall. Good for busy or high-volume weeks.';
+  return 'Same muscles, different movement. Useful for variation across mesocycles.';
 }
 
 // Algorithm 10: Progression Path

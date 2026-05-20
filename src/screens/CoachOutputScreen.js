@@ -15,6 +15,7 @@ import {
   getNutritionTargets,
   saveCoachOutput,
   getLatestCoachOutput,
+  getCoachOutputHistory,
 } from '../lib/database';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 
@@ -191,8 +192,12 @@ function ConfidencePill({ confidence }) {
   );
 }
 
-function HeldDecisionsCard({ decisions }) {
+function HeldDecisionsCard({ decisions, history }) {
   if (!decisions || decisions.length === 0) return null;
+  // Filter history entries that have held decisions
+  const historyWithHeld = (history ?? []).filter(
+    h => h.heldDecisions && h.heldDecisions.length > 0
+  );
   return (
     <View style={styles.heldCard}>
       <SectionHeader title="What we held this week" />
@@ -202,6 +207,31 @@ function HeldDecisionsCard({ decisions }) {
           <Text style={styles.heldText}>{d.reason}</Text>
         </View>
       ))}
+      {historyWithHeld.length > 0 ? (
+        <View style={styles.heldHistoryShelf}>
+          <Text style={styles.heldHistoryTitle}>PREVIOUS WEEKS</Text>
+          {historyWithHeld.map((entry, i) => (
+            <View
+              key={i}
+              style={[
+                styles.heldHistoryEntry,
+                i === historyWithHeld.length - 1 && { borderBottomWidth: 0 },
+              ]}
+            >
+              <Text style={styles.heldHistoryDate}>{weekRangeLabel(entry.weekStart)}</Text>
+              {entry.heldDecisions.map((d, j) => (
+                <Text key={j} style={styles.heldHistoryText}>{d.reason}</Text>
+              ))}
+            </View>
+          ))}
+        </View>
+      ) : (
+        <View style={styles.heldHistoryShelf}>
+          <Text style={styles.heldHistoryEmptyText}>
+            Your held-decision history will appear here as weeks pass.
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -258,6 +288,7 @@ export default function CoachOutputScreen({ navigation, route }) {
 
   const [output, setOutput] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [coachHistory, setCoachHistory] = useState([]);
 
   useEffect(() => {
     async function load() {
@@ -318,6 +349,11 @@ export default function CoachOutputScreen({ navigation, route }) {
 
       await saveCoachOutput(user.id, { weekStart, ...result });
       setOutput(result);
+
+      // Load the last 5 outputs; skip the first (current week) for the history shelf
+      const history = await getCoachOutputHistory(user.id, 5);
+      setCoachHistory(history.slice(1, 5));
+
       setLoading(false);
     }
     load().catch(e => { console.warn(e); setLoading(false); });
@@ -481,7 +517,7 @@ export default function CoachOutputScreen({ navigation, route }) {
 
         {/* 10. Held decisions — transparency on what wasn't changed and why */}
         {heldDecisions && heldDecisions.length > 0 && (
-          <HeldDecisionsCard decisions={heldDecisions} />
+          <HeldDecisionsCard decisions={heldDecisions} history={coachHistory} />
         )}
 
         {/* 11. Done button */}
@@ -816,6 +852,28 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textSecondary,
     lineHeight: 20,
+  },
+  heldHistoryShelf: { marginTop: spacing.md },
+  heldHistoryTitle: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.textMuted,
+    letterSpacing: 0.3,
+    marginBottom: spacing.sm,
+  },
+  heldHistoryEntry: {
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: spacing.xs,
+  },
+  heldHistoryDate: { fontSize: fontSize.xs, color: colors.textMuted },
+  heldHistoryText: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  heldHistoryEmptyText: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    fontStyle: 'italic',
+    lineHeight: 18,
   },
 
   // Confidence pill (medium/low/data_hold only — hidden at high)
