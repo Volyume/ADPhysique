@@ -17,12 +17,9 @@ import {
 } from '../lib/database';
 import { getBlockAdvice } from '../lib/blockAdvisor';
 import useAppStore from '../store/useAppStore';
-import { scheduleTrainingReminders } from '../lib/trainingReminders';
 
 const BLOCK_SNOOZE_KEY = '@volyume_block_snooze';
-const SCHEDULE_KEY = '@volyume_schedule_v1';
 
-const DAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
 const ACTION_CARDS_DEFAULT = [
   {
@@ -66,7 +63,6 @@ export default function PlansScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [blockAdvice, setBlockAdvice] = useState(null);
   const [blockSnoozed, setBlockSnoozed] = useState(false);
-  const [scheduleDays, setScheduleDays] = useState([]);
 
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
@@ -77,29 +73,6 @@ export default function PlansScreen({ navigation }) {
     });
   }, [navigation]);
 
-  // Load saved schedule on mount
-  useEffect(() => {
-    AsyncStorage.getItem(SCHEDULE_KEY)
-      .then(raw => {
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          setScheduleDays(Array.isArray(parsed.days) ? parsed.days : []);
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  // Reset schedule days when the active plan changes
-  const activePlanIdRef = useRef(null);
-  useEffect(() => {
-    if (!activePlan) return;
-    if (activePlanIdRef.current !== null && activePlanIdRef.current !== activePlan.id) {
-      const reset = { activePlanId: activePlan.id, days: [] };
-      setScheduleDays([]);
-      AsyncStorage.setItem(SCHEDULE_KEY, JSON.stringify(reset)).catch(() => {});
-    }
-    activePlanIdRef.current = activePlan.id;
-  }, [activePlan?.id]);
 
   useFocusEffect(
     useCallback(() => {
@@ -201,35 +174,36 @@ export default function PlansScreen({ navigation }) {
 
   async function handlePlanOptions(plan) {
     const isActiveForUser = activePlan?.id === plan.id;
-    // Pro users keep an always-active plan as part of Precision Coaching.
-    // They can change it (via CoachBuilder / Hub wizard) but can't archive
-    // the active one or be left without a plan.
-    const canArchive = !(tier === 'pro' && isActiveForUser);
+    // Pro users keep an always-active plan as part of Precision Coaching —
+    // no duplicating, no archiving the active one. They manage their plan
+    // through the goal-change wizard in Athlete Hub.
     const buttons = [
       { text: 'View Plan', onPress: () => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false }) },
       { text: 'Set Active', onPress: () => handleSetActive(plan) },
-      {
+    ];
+    if (tier !== 'pro') {
+      buttons.push({
         text: 'Duplicate',
         onPress: async () => {
           const copy = await duplicatePlan(plan.id, user.id);
           await loadData();
           navigation.navigate('PlanDetail', { planId: copy.id, isLibrary: false });
         },
-      },
-    ];
-    if (canArchive) {
-      buttons.push({
-        text: 'Archive',
-        style: 'destructive',
-        onPress: () => Alert.alert(
-          'Archive Plan?',
-          'The plan will be hidden. Session history remains intact.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Archive', style: 'destructive', onPress: async () => { await archivePlan(plan.id); await loadData(); } },
-          ],
-        ),
       });
+      if (!isActiveForUser) {
+        buttons.push({
+          text: 'Archive',
+          style: 'destructive',
+          onPress: () => Alert.alert(
+            'Archive Plan?',
+            'The plan will be hidden. Session history remains intact.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Archive', style: 'destructive', onPress: async () => { await archivePlan(plan.id); await loadData(); } },
+            ],
+          ),
+        });
+      }
     }
     buttons.push({ text: 'Cancel', style: 'cancel' });
     Alert.alert(plan.name, undefined, buttons);
@@ -268,17 +242,6 @@ export default function PlansScreen({ navigation }) {
     if (action === 'in_recovery') return colors.primary;
     if (action === 'post_recovery') return colors.success;
     return colors.warning;
-  }
-
-  function toggleScheduleDay(dayIndex) {
-    const next = scheduleDays.includes(dayIndex)
-      ? scheduleDays.filter(d => d !== dayIndex)
-      : [...scheduleDays, dayIndex].sort((a, b) => a - b);
-    setScheduleDays(next);
-    const payload = { activePlanId: activePlan?.id ?? null, days: next };
-    AsyncStorage.setItem(SCHEDULE_KEY, JSON.stringify(payload))
-      .then(() => scheduleTrainingReminders())
-      .catch(() => {});
   }
 
   const showBlockCard = blockAdvice && activePlan &&
@@ -425,30 +388,6 @@ export default function PlansScreen({ navigation }) {
                 <Text style={styles.proCoachNote}>
                   Your Precision Coaching adjusts this plan as you progress and check in. To change your goals, head to You → Athlete Hub.
                 </Text>
-              )}
-              {/* Training days picker */}
-              <View style={styles.trainingDaysRow}>
-                {DAY_LABELS.map((label, index) => {
-                  const isOn = scheduleDays.includes(index);
-                  return (
-                    <TouchableOpacity
-                      key={index}
-                      style={[styles.dayChip, isOn && styles.dayChipOn]}
-                      onPress={() => toggleScheduleDay(index)}
-                      activeOpacity={0.75}
-                      accessibilityRole="checkbox"
-                      accessibilityState={{ checked: isOn }}
-                      accessibilityLabel={`${label} training day`}
-                    >
-                      <Text style={[styles.dayChipLabel, isOn && styles.dayChipLabelOn]}>
-                        {label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-              {scheduleDays.length === 0 && (
-                <Text style={styles.trainingDaysHint}>Tap to set your training days</Text>
               )}
               <View style={styles.activePlanActions}>
                 <TouchableOpacity style={styles.startNextBtn} onPress={() => handleStartNextWorkout(activePlan)}>
