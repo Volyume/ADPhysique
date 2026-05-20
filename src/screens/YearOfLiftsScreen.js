@@ -39,7 +39,7 @@ function buildHeadline(data) {
     parts.push(`${topMonth} was your busiest month.`);
   }
   if (avgSessionsPerWeek >= 3) {
-    parts.push('That's consistent work.');
+    parts.push("That's consistent work.");
   }
   return parts.join(' ');
 }

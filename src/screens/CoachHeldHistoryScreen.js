@@ -111,7 +111,7 @@ export default function CoachHeldHistoryScreen({ navigation }) {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.intro}>
-          Every decision the coach made, and every time it held back instead of acting. Changed and held, both recorded here, with the reason for each.
+          Every week the coach makes decisions. Some things change, some things stay the same. You can see all of it here, and why.
         </Text>
 
         {loading && (

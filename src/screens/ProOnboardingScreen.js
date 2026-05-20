@@ -164,7 +164,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
   // Step 1 — profile
   const [firstName, setFirstName] = useState(userProfile?.firstName || '');
-  const [localUnits, setLocalUnits] = useState(units || 'kg');
+  const localUnits = 'kg';
   // Body weight units: 'st' (stone+lbs) | 'kg' | 'lbs'. Default 'st' for UK.
   const [localBWUnits, setLocalBWUnits] = useState(bodyWeightUnits || 'st');
   // Stone+lbs entry (used when localBWUnits === 'st')
@@ -512,23 +512,6 @@ export default function ProOnboardingScreen({ navigation }) {
                 autoCorrect={false}
                 returnKeyType="next"
               />
-            </View>
-
-            <View style={styles.section}>
-              <Text style={styles.fieldLabel}>Weight units</Text>
-              <View style={styles.segmentRow}>
-                {['kg', 'lbs'].map(u => (
-                  <TouchableOpacity
-                    key={u}
-                    style={[styles.segment, localUnits === u && styles.segmentActive]}
-                    onPress={() => setLocalUnits(u)}
-                  >
-                    <Text style={[styles.segmentText, localUnits === u && styles.segmentTextActive]}>
-                      {u}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
             </View>
 
             <View style={styles.section}>
