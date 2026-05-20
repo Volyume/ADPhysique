@@ -37,7 +37,6 @@ import {
 import { rankSwaps } from '../lib/swapEngine';
 import { FORM_TIPS } from '../lib/formTips';
 import InfoTooltip from '../components/InfoTooltip';
-import PlateCalculator from '../components/PlateCalculator';
 import { applyTimeCrunch } from '../lib/mesocycle';
 import { getTimeCrunchMessage } from '../lib/whyThisTemplates';
 import { estimateWorkoutMinutes } from '../lib/planEngine';
@@ -121,7 +120,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [exerciseNote, setExerciseNote] = useState('');       // persisted per-user per-exercise note
   const [ghostSet, setGhostSet] = useState(null); // pre-fill from last session (same set index)
   const [showNotifPrompt, setShowNotifPrompt] = useState(false);
-  const [showPlateCalc, setShowPlateCalc] = useState(false);
   const autoAdvanceRef = useRef(null);
   const sessionSetsRef = useRef([]);   // tracks sets in this session — used for PR detection
   const warmupHintSeenRef = useRef(false); // show one-liner warmup note only on first warmup of this session
@@ -1160,15 +1158,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               <Text style={styles.actionBtnText}>Note</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.actionBtn}
-              onPress={() => setShowPlateCalc(true)}
-              accessibilityRole="button"
-              accessibilityLabel="Open plate calculator"
-            >
-              <Ionicons name="barbell-outline" size={18} color={colors.textSecondary} />
-              <Text style={styles.actionBtnText}>Plates</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
               style={[styles.actionBtn, styles.actionBtnGuide]}
               onPress={() => {
                 if (showInfoTipPulse) {
@@ -1343,26 +1332,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           </View>
         </Modal>
 
-        {/* Plate Calculator Bottom Sheet */}
-        <Modal
-          visible={showPlateCalc}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setShowPlateCalc(false)}
-        >
-          <TouchableOpacity
-            style={styles.sheetOverlay}
-            activeOpacity={1}
-            onPress={() => setShowPlateCalc(false)}
-          />
-          <View style={[styles.sheet, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}>
-            <View style={styles.sheetHandle} />
-            <PlateCalculator
-              targetWeight={parseFloat(currentSet.weight) || 0}
-              onClose={() => setShowPlateCalc(false)}
-            />
-          </View>
-        </Modal>
 
         {/* Set Type Picker Bottom Sheet */}
         <Modal
