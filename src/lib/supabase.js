@@ -1,6 +1,20 @@
 import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
+
+// SecureStore adapter for Supabase auth session — encrypted on both iOS and Android.
+// Falls back silently so the app still launches if SecureStore is unavailable (e.g. emulator).
+const secureAuthStorage = {
+  getItem: async (key) => {
+    try { return await SecureStore.getItemAsync(key); } catch (_) { return null; }
+  },
+  setItem: async (key, value) => {
+    try { await SecureStore.setItemAsync(key, value); } catch (_) {}
+  },
+  removeItem: async (key) => {
+    try { await SecureStore.deleteItemAsync(key); } catch (_) {}
+  },
+};
 
 // Lazy-init: createClient is never called at module load time.
 // Returns null when SUPABASE_URL / SUPABASE_ANON_KEY env vars are absent (Stage 1).
@@ -16,7 +30,7 @@ export function getSupabaseClient() {
   try {
     _client = createClient(url, key, {
       auth: {
-        storage: AsyncStorage,
+        storage: secureAuthStorage,
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: false,

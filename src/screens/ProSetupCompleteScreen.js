@@ -29,7 +29,7 @@ const WEEK_STEPS = [
 ];
 
 export default function ProSetupCompleteScreen({ navigation }) {
-  const { userProfile, completeFirstRun } = useAppStore();
+  const { userProfile, completeFirstRun, tier } = useAppStore();
   const firstName = userProfile?.firstName || 'there';
 
   const [nutritionSummary, setNutritionSummary] = useState(null);
@@ -95,14 +95,18 @@ export default function ProSetupCompleteScreen({ navigation }) {
         <Animated.View style={[styles.mainBlock, { opacity, transform: [{ translateY: slideY }] }]}>
           <View style={styles.brandRow}>
             <VolyumeMark size={20} color={colors.textPrimary} accent={colors.primary} />
-            <View style={styles.proBadge}>
-              <Text style={styles.proBadgeText}>PRO</Text>
-            </View>
+            {tier === 'pro' && (
+              <View style={styles.proBadge}>
+                <Text style={styles.proBadgeText}>PRO</Text>
+              </View>
+            )}
           </View>
 
           <Text style={styles.headline}>You're all set, {firstName}.</Text>
           <Text style={styles.sub}>
-            Your Precision Coaching is ready. Your plan and targets are set. Here's the routine that keeps it working:
+            {tier === 'pro'
+              ? 'Your Precision Coaching is ready. Your plan and targets are set. Here\'s the routine that keeps it working:'
+              : 'Your plan and targets are set. Here\'s the routine that keeps it working:'}
           </Text>
 
           {/* Setup summary card */}

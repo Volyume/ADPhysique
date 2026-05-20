@@ -622,6 +622,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   }
 
   async function handleFinishWorkout() {
+    if (!activeWorkout) { navigation.goBack(); return; }
     Alert.alert(
       'Finish Workout?',
       `You've logged ${workoutExercises.reduce((sum, e) => sum + e.sets.length, 0)} sets across ${workoutExercises.length} exercises.`,

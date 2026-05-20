@@ -456,13 +456,9 @@ export default function CoachBuilderScreen({ navigation, route }) {
       }
 
       if (isFirstRun) {
-        if (tier === 'pro') {
-          // Pro first-run ends at ProSetupComplete, not here. completeFirstRun
-          // is called from ProSetupCompleteScreen after the "Start training" tap.
-          navigation.navigate('ProSetupComplete');
-        } else {
-          await completeFirstRun();
-        }
+        // Both Pro and free-tier first-run end at ProSetupComplete, where the
+        // "Start training" tap calls completeFirstRun(). The badge is hidden for free tier.
+        navigation.navigate('ProSetupComplete');
         return;
       }
       navigation.navigate('PlansTab', { screen: 'Plans' });

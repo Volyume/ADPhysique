@@ -17,6 +17,7 @@ import { getSupabaseClient } from './src/lib/supabase';
 // Supports both PKCE (code=xxx) and implicit (access_token in fragment) flows.
 async function handleAuthDeepLink(url) {
   if (!url) return;
+  if (!url.startsWith('volyume://')) return;
   const supabase = getSupabaseClient();
   if (!supabase) return;
 
@@ -97,7 +98,11 @@ class ErrorBoundary extends React.Component {
             </Text>
           </View>
           <ScrollView style={eb.scroll}>
-            <Text selectable style={eb.stack}>{this.state.error?.stack}</Text>
+            <Text selectable style={eb.stack}>
+              {__DEV__
+                ? this.state.error?.stack
+                : this.state.error?.stack?.split('\n').slice(0, 5).join('\n')}
+            </Text>
           </ScrollView>
           <TouchableOpacity style={eb.btn} onPress={() => this.setState({ error: null })}>
             <Text style={eb.btnText}>Retry</Text>

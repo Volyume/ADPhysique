@@ -388,9 +388,9 @@ export default function AnalyticsScreen({ navigation }) {
               <Text style={styles.sectionLabel}>This week's volume</Text>
               <InfoTooltip text={
                 'Sets per muscle group this week.\n\n' +
-                '🟠 Not enough: add a set or two next week.\n' +
-                '🟢 Good range: keep it here.\n' +
-                '🔴 Too much: dial it back next week.\n\n' +
+                'Low: add a set or two next week.\n' +
+                'Good range: keep it here.\n' +
+                'High: dial it back next week.\n\n' +
                 'Targets adjust over time as Volyume learns how you recover.'
               } />
             </View>

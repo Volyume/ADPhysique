@@ -284,7 +284,7 @@ export default function SettingsScreen({ navigation }) {
           <SettingRow
             icon="heart-outline"
             label="Calmer experience"
-            sub="Hides streak counters and removes aggressive calorie targets"
+            sub="Removes aggressive calorie targets and quietens progress prompts"
             showArrow={false}
             rightElement={
               <Switch

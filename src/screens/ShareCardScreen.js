@@ -173,11 +173,11 @@ function drawSession(ctx, W, H, p) {
 
   // Stats grid
   var stats = [
-    { label: 'SETS', value: String(p.workingSets || 0) },
-    { label: 'DURATION', value: (p.duration || 0) + 'm' },
+    { label: 'Sets', value: String(p.workingSets || 0) },
+    { label: 'Duration', value: (p.duration || 0) + 'm' },
   ];
   if (p.showVolume && (p.tonnage || 0) > 0) {
-    stats.push({ label: 'TOTAL KG', value: Math.round(p.tonnage || 0).toLocaleString('en-GB') + ' kg' });
+    stats.push({ label: 'Total kg', value: Math.round(p.tonnage || 0).toLocaleString('en-GB') + ' kg' });
   }
   if (p.prCount > 0) stats.push({ label: 'PRs', value: String(p.prCount) });
 
@@ -272,8 +272,8 @@ function drawPR(ctx, W, H, p) {
   // Weight × reps — the hero number
   var wFont = p.isSquare ? 100 : 116;
   var wStr = p.showPRWeight
-    ? (p.weight || '—') + (p.units || 'kg') + ' × ' + (p.reps || '—')
-    : (p.reps || '—') + ' reps';
+    ? (p.weight || '-') + (p.units || 'kg') + ' \xD7 ' + (p.reps || '-')
+    : (p.reps || '-') + ' reps';
   ctx.fillStyle = B.accent;
   ctx.font = '900 ' + wFont + 'px Arial,sans-serif';
   var wMetrics = ctx.measureText(wStr);
