@@ -20,6 +20,7 @@ import {
   insertWorkoutFromCloud,
   insertWorkoutSetFromCloud,
 } from './database';
+import { logError, logWarn } from './errorLog';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -215,6 +216,7 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
     const completed = allWorkouts.filter(w => w.isCompleted);
 
     // Upload in batches of 10 to avoid hammering the API
+    let failures = 0;
     for (let i = 0; i < completed.length; i += 10) {
       const batch = completed.slice(i, i + 10);
       await Promise.all(
@@ -223,13 +225,22 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
             await _upsertWorkout(sb, supabaseUserId, w);
             const sets = await getWorkoutSetsForWorkout(w.id);
             await _upsertSets(sb, supabaseUserId, sets);
-          } catch (_e) {
-            // One failing workout doesn't abort the rest
+          } catch (e) {
+            failures++;
+            // Per-workout failure doesn't abort the batch but it is logged
+            // so the user can spot patterns in the Debug logs surface
+            // (e.g. "every workout from 2024-12 fails — schema mismatch").
+            logWarn('sync.bulkUploadLocalData', 'workout upload failed', {
+              workoutId: w?.id, supabaseUserId, error: e?.message,
+            });
           }
         })
       );
       // Brief yield to avoid blocking the JS thread
       await new Promise(r => setTimeout(r, 50));
+    }
+    if (failures > 0) {
+      logWarn('sync.bulkUploadLocalData', `${failures} of ${completed.length} workouts failed to upload`, { supabaseUserId });
     }
 
     // Body metrics
@@ -248,11 +259,13 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
           await sb.from('body_metrics').upsert(rows.slice(i, i + 200), { onConflict: 'id' });
         }
       }
-    } catch (_e) {}
+    } catch (e) {
+      logWarn('sync.bulkUploadLocalData', 'body metrics upload failed', { error: e?.message });
+    }
 
     console.log('[sync] bulk upload complete');
   } catch (e) {
-    console.warn('[sync] bulkUploadLocalData failed:', e?.message);
+    logError('sync.bulkUploadLocalData', e, { supabaseUserId, localUserId });
   }
 }
 
@@ -278,6 +291,7 @@ export async function pullFromCloud(supabaseUserId) {
     if (!cloudWorkouts?.length) return 0;
 
     let count = 0;
+    let setFailures = 0;
     for (const w of cloudWorkouts) {
       try {
         await insertWorkoutFromCloud(supabaseUserId, w);
@@ -287,15 +301,29 @@ export async function pullFromCloud(supabaseUserId) {
           .eq('workout_id', w.id);
         if (sets?.length) {
           for (const s of sets) {
-            await insertWorkoutSetFromCloud(supabaseUserId, s);
+            try {
+              await insertWorkoutSetFromCloud(supabaseUserId, s);
+            } catch (setErr) {
+              // A single set failure shouldn't break the workout import.
+              // Log it so the user can spot recurring schema mismatches.
+              setFailures++;
+              logWarn('sync.pullFromCloud', 'set insert failed', {
+                workoutId: w.id, setId: s.id, error: setErr?.message,
+              });
+            }
           }
         }
         count++;
-      } catch (_e) {}
+      } catch (e) {
+        logWarn('sync.pullFromCloud', 'workout insert failed', { workoutId: w?.id, error: e?.message });
+      }
+    }
+    if (setFailures > 0) {
+      logWarn('sync.pullFromCloud', `${setFailures} sets failed to insert`, { supabaseUserId });
     }
     return count;
   } catch (e) {
-    console.warn('[sync] pullFromCloud failed:', e?.message);
+    logError('sync.pullFromCloud', e, { supabaseUserId });
     return 0;
   }
 }

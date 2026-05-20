@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import InfoTooltip from '../components/InfoTooltip';
 import BodyDiagramHeatmap from '../components/BodyDiagramHeatmap';
 import { getCompletedWorkoutSets, getAllExercises, getWeeklyVolumeByMuscle, getLastTrainedByMuscle } from '../lib/database';
+import { logError } from '../lib/errorLog';
 import {
   calculateWeeklyVolume, VOLUME_LANDMARKS, MUSCLE_DISPLAY_NAMES, getVolumeStatus,
 } from '../lib/algorithms';
@@ -38,45 +39,48 @@ export default function VolumeHeatmapScreen() {
 
   async function loadData() {
     if (!user?.id) return;
+    try {
+      const windowMs = windowWeeks * 7 * 24 * 60 * 60 * 1000;
+      const now = Date.now();
+      const windowStart = now - windowMs;
+      const prevWindowStart = now - 2 * windowMs;
 
-    const windowMs = windowWeeks * 7 * 24 * 60 * 60 * 1000;
-    const now = Date.now();
-    const windowStart = now - windowMs;
-    const prevWindowStart = now - 2 * windowMs;
+      const allSets = await getCompletedWorkoutSets(user.id);
+      const recentSets = allSets.filter(s => s.createdAt >= windowStart);
+      const prevSets = allSets.filter(s => s.createdAt >= prevWindowStart && s.createdAt < windowStart);
 
-    const allSets = await getCompletedWorkoutSets(user.id);
-    const recentSets = allSets.filter(s => s.createdAt >= windowStart);
-    const prevSets = allSets.filter(s => s.createdAt >= prevWindowStart && s.createdAt < windowStart);
+      const allExercises = await getAllExercises();
+      const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
 
-    const allExercises = await getAllExercises();
-    const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
+      const volume = calculateWeeklyVolume(recentSets, exerciseMap);
+      const prevVolume = calculateWeeklyVolume(prevSets, exerciseMap);
+      setWeeklyVolume(volume);
+      setPreviousVolume(prevVolume);
 
-    const volume = calculateWeeklyVolume(recentSets, exerciseMap);
-    const prevVolume = calculateWeeklyVolume(prevSets, exerciseMap);
-    setWeeklyVolume(volume);
-    setPreviousVolume(prevVolume);
+      const trend = await getWeeklyVolumeByMuscle(user.id, 4);
+      setTrendData(trend);
 
-    const trend = await getWeeklyVolumeByMuscle(user.id, 4);
-    setTrendData(trend);
+      const lastTrained = await getLastTrainedByMuscle(user.id).catch(() => ({}));
+      setLastTrainedMap(lastTrained);
 
-    const lastTrained = await getLastTrainedByMuscle(user.id).catch(() => ({}));
-    setLastTrainedMap(lastTrained);
-
-    // Load locally stored custom landmarks (Stage 1 — no Supabase yet)
-    const stored = await AsyncStorage.getItem(`@volyume_landmarks_${user.id}`).catch(() => null);
-    let parsed = null;
-    if (stored) {
-      try { parsed = JSON.parse(stored); } catch (_) {}
-    }
-    if (parsed) {
-      setCustomLandmarks(parsed);
-      setEditValues(parsed);
-    } else {
-      const defaults = {};
-      for (const [m, v] of Object.entries(VOLUME_LANDMARKS)) {
-        defaults[m] = { mev: v.mev, mav: v.mav, mrv: v.mrv };
+      // Load locally stored custom landmarks (Stage 1 — no Supabase yet)
+      const stored = await AsyncStorage.getItem(`@volyume_landmarks_${user.id}`).catch(() => null);
+      let parsed = null;
+      if (stored) {
+        try { parsed = JSON.parse(stored); } catch (_) {}
       }
-      setEditValues(defaults);
+      if (parsed) {
+        setCustomLandmarks(parsed);
+        setEditValues(parsed);
+      } else {
+        const defaults = {};
+        for (const [m, v] of Object.entries(VOLUME_LANDMARKS)) {
+          defaults[m] = { mev: v.mev, mav: v.mav, mrv: v.mrv };
+        }
+        setEditValues(defaults);
+      }
+    } catch (e) {
+      logError('VolumeHeatmapScreen.loadData', e, { userId: user?.id, windowWeeks });
     }
   }
 
