@@ -309,23 +309,25 @@ export default function SettingsScreen({ navigation }) {
               ])
             }
           />
-          <SettingRow
-            icon="body-outline"
-            label="Physique tracking"
-            showArrow={false}
-            rightElement={
-              <Switch
-                value={physiqueEnabled}
-                onValueChange={togglePhysique}
-                trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
-                thumbColor={physiqueEnabled ? colors.primary : colors.textMuted}
-              />
-            }
-          />
+          {tier === 'pro' && (
+            <SettingRow
+              icon="body-outline"
+              label="Physique tracking"
+              showArrow={false}
+              rightElement={
+                <Switch
+                  value={physiqueEnabled}
+                  onValueChange={togglePhysique}
+                  trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                  thumbColor={physiqueEnabled ? colors.primary : colors.textMuted}
+                />
+              }
+            />
+          )}
           <SettingRow
             icon="heart-outline"
             label="Calmer experience"
-            sub="Hides streak counters, adds a check-in before body metrics, and removes aggressive calorie targets"
+            sub="Hides streak counters and removes aggressive calorie targets"
             showArrow={false}
             rightElement={
               <Switch
@@ -336,12 +338,14 @@ export default function SettingsScreen({ navigation }) {
               />
             }
           />
-          <SettingRow
-            icon="notifications-outline"
-            label="Notifications"
-            sub="Morning weight reminder and weekly check-in"
-            onPress={() => navigation.navigate('NotificationSettings')}
-          />
+          {tier === 'pro' && (
+            <SettingRow
+              icon="notifications-outline"
+              label="Notifications"
+              sub="Morning weight reminder and weekly check-in"
+              onPress={() => navigation.navigate('NotificationSettings')}
+            />
+          )}
         </View>
 
         {/* Data */}

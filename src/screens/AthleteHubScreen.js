@@ -227,26 +227,24 @@ export default function AthleteHubScreen({ navigation }) {
   }, [user?.id]));
 
   async function load() {
-    // Load Pro check-in state
-    try {
-      const d = new Date();
-      const daysFromMon = (d.getUTCDay() + 6) % 7;
-      const monMs = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - daysFromMon * 86400000;
-      const ci = await getLatestCheckin(user.id, monMs);
-      setCheckinDoneThisWeek(!!ci);
-      const weights = await getMorningWeightsLast14Days(user.id);
-      setMorningWeightCount(weights.length);
-      if (weights.length >= 3) {
-        setWeightTrend(computeEWMA(weights, 0.2));
-      }
-    } catch (_) {}
+    if (tier === 'pro') {
+      try {
+        const d = new Date();
+        const daysFromMon = (d.getUTCDay() + 6) % 7;
+        const monMs = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - daysFromMon * 86400000;
+        const ci = await getLatestCheckin(user.id, monMs);
+        setCheckinDoneThisWeek(!!ci);
+        const weights = await getMorningWeightsLast14Days(user.id);
+        setMorningWeightCount(weights.length);
+        if (weights.length >= 3) {
+          setWeightTrend(computeEWMA(weights, 0.2));
+        }
+      } catch (_) {}
+    }
 
     await Promise.all([
       loadWorkoutStats(),
-      loadBodyMetrics(),
-      loadNutrition(),
-      loadAdaptationHistory(),
-      loadRecoveryTrend(),
+      ...(tier === 'pro' ? [loadBodyMetrics(), loadNutrition(), loadAdaptationHistory(), loadRecoveryTrend()] : []),
     ]);
   }
 
@@ -452,47 +450,49 @@ export default function AthleteHubScreen({ navigation }) {
         )}
 
         {/* ── Weekly coaching card ──────────────────────── */}
-        <TouchableOpacity
-          style={[styles.sectionCard, styles.checkinCard]}
-          onPress={() => navigation.navigate('WeeklyCheckIn')}
-          activeOpacity={0.85}
-        >
-          <View style={styles.cardHeader}>
-            <View style={[styles.cardIconWrap, { backgroundColor: colors.primaryBg }]}>
-              <Ionicons name={checkinDoneThisWeek ? 'checkmark-circle' : 'pulse-outline'} size={20} color={colors.primary} />
+        {tier === 'pro' && (
+          <TouchableOpacity
+            style={[styles.sectionCard, styles.checkinCard]}
+            onPress={() => navigation.navigate('WeeklyCheckIn')}
+            activeOpacity={0.85}
+          >
+            <View style={styles.cardHeader}>
+              <View style={[styles.cardIconWrap, { backgroundColor: colors.primaryBg }]}>
+                <Ionicons name={checkinDoneThisWeek ? 'checkmark-circle' : 'pulse-outline'} size={20} color={colors.primary} />
+              </View>
+              <View style={styles.cardHeaderText}>
+                <Text style={styles.cardTitle}>
+                  {new Date().toLocaleDateString('en-GB', { weekday: 'long' }) === 'Sunday'
+                    ? 'Sunday check-in'
+                    : 'Weekly check-in'}
+                </Text>
+                <Text style={styles.cardSubtitle}>
+                  {checkinDoneThisWeek
+                    ? 'Done this week. Tap to review your plan.'
+                    : morningWeightCount >= 4
+                      ? 'Ready. Four questions. Your coach reads them every week.'
+                      : `${morningWeightCount}/4 morning weights logged`}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
             </View>
-            <View style={styles.cardHeaderText}>
-              <Text style={styles.cardTitle}>
-                {new Date().toLocaleDateString('en-GB', { weekday: 'long' }) === 'Sunday'
-                  ? 'Sunday check-in'
-                  : 'Weekly check-in'}
-              </Text>
-              <Text style={styles.cardSubtitle}>
-                {checkinDoneThisWeek
-                  ? 'Done this week. Tap to review your plan.'
-                  : morningWeightCount >= 4
-                    ? 'Ready. Four questions. Your coach reads them every week.'
-                    : `${morningWeightCount}/4 morning weights logged`}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-          </View>
-          {!checkinDoneThisWeek && (
-            <View style={styles.checkinPrompt}>
-              <Text style={styles.checkinPromptText}>
-                {morningWeightCount < 4
-                  ? 'Log your morning weight each day to access weekly coaching.'
-                  : 'Check in now to get your training and calorie adjustments for next week.'}
-              </Text>
-            </View>
-          )}
-          {getBetaBannerText() && (
-            <Text style={styles.betaBanner}>{getBetaBannerText()}</Text>
-          )}
-        </TouchableOpacity>
+            {!checkinDoneThisWeek && (
+              <View style={styles.checkinPrompt}>
+                <Text style={styles.checkinPromptText}>
+                  {morningWeightCount < 4
+                    ? 'Log your morning weight each day to access weekly coaching.'
+                    : 'Check in now to get your training and calorie adjustments for next week.'}
+                </Text>
+              </View>
+            )}
+            {getBetaBannerText() && (
+              <Text style={styles.betaBanner}>{getBetaBannerText()}</Text>
+            )}
+          </TouchableOpacity>
+        )}
 
         {/* ── Recovery capacity trend insight ──────────── */}
-        {recoveryTrendInsight && (
+        {tier === 'pro' && recoveryTrendInsight && (
           <View style={[
             styles.trendInsightCard,
             recoveryTrendInsight.type === 'good' ? styles.trendInsightGood : styles.trendInsightWarn,
@@ -507,7 +507,7 @@ export default function AthleteHubScreen({ navigation }) {
         )}
 
         {/* ── Weight trend ──────────────────────────────── */}
-        {weightTrend.length >= 3 && (
+        {tier === 'pro' && weightTrend.length >= 3 && (
           <View style={styles.sectionCard}>
             <View style={styles.cardHeader}>
               <View style={[styles.cardIconWrap, { backgroundColor: colors.primaryBg }]}>
@@ -529,164 +529,195 @@ export default function AthleteHubScreen({ navigation }) {
         )}
 
         {/* ── Nutrition ─────────────────────────────────── */}
-        <TouchableOpacity
-          style={styles.sectionCard}
-          onPress={() => navigation.navigate('NutritionTargets')}
-          activeOpacity={0.8}
-        >
-          <View style={styles.cardHeader}>
-            <View style={[styles.cardIconWrap, { backgroundColor: colors.primaryBg }]}>
-              <Ionicons name="nutrition" size={20} color={colors.primary} />
+        {tier === 'pro' && (
+          <TouchableOpacity
+            style={styles.sectionCard}
+            onPress={() => navigation.navigate('NutritionTargets')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.cardHeader}>
+              <View style={[styles.cardIconWrap, { backgroundColor: colors.primaryBg }]}>
+                <Ionicons name="nutrition" size={20} color={colors.primary} />
+              </View>
+              <View style={styles.cardHeaderText}>
+                <Text style={styles.cardTitle}>Nutrition targets</Text>
+                {nutritionTargets ? (
+                  <Text style={styles.cardSubtitle}>
+                    {nutritionTargets.targetKcal ? `${Math.round(nutritionTargets.targetKcal)} kcal daily` : 'Configured'}
+                  </Text>
+                ) : (
+                  <Text style={[styles.cardSubtitle, styles.alert]}>Not set. Tap to configure.</Text>
+                )}
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
             </View>
-            <View style={styles.cardHeaderText}>
-              <Text style={styles.cardTitle}>Nutrition Targets</Text>
-              {nutritionTargets ? (
-                <Text style={styles.cardSubtitle}>
-                  {nutritionTargets.targetKcal ? `${Math.round(nutritionTargets.targetKcal)} kcal daily` : 'Configured'}
-                </Text>
-              ) : (
-                <Text style={[styles.cardSubtitle, styles.alert]}>Not set. Tap to configure.</Text>
-              )}
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-          </View>
-          {nutritionTargets && (
-            <View style={styles.macroStrip}>
-              <MacroPill label="Protein" value={`${Math.round(nutritionTargets.proteinG ?? 0)}g`} color={colors.primary} />
-              <MacroPill label="Carbs" value={`${Math.round(nutritionTargets.carbsG ?? 0)}g`} color={colors.success} />
-              <MacroPill label="Fat" value={`${Math.round(nutritionTargets.fatG ?? 0)}g`} color={colors.warning} />
-            </View>
-          )}
-        </TouchableOpacity>
+            {nutritionTargets && (
+              <View style={styles.macroStrip}>
+                <MacroPill label="Protein" value={`${Math.round(nutritionTargets.proteinG ?? 0)}g`} color={colors.primary} />
+                <MacroPill label="Carbs" value={`${Math.round(nutritionTargets.carbsG ?? 0)}g`} color={colors.success} />
+                <MacroPill label="Fat" value={`${Math.round(nutritionTargets.fatG ?? 0)}g`} color={colors.warning} />
+              </View>
+            )}
+          </TouchableOpacity>
+        )}
 
         {/* ── Body Metrics ──────────────────────────────── */}
-        <TouchableOpacity
-          style={styles.sectionCard}
-          onPress={() => navigation.navigate('BodyMetrics')}
-          activeOpacity={0.8}
-        >
-          <View style={styles.cardHeader}>
-            <View style={[styles.cardIconWrap, { backgroundColor: colors.primaryBg }]}>
-              <Ionicons name="body" size={20} color={colors.primary} />
+        {tier === 'pro' && (
+          <TouchableOpacity
+            style={styles.sectionCard}
+            onPress={() => navigation.navigate('BodyMetrics')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.cardHeader}>
+              <View style={[styles.cardIconWrap, { backgroundColor: colors.primaryBg }]}>
+                <Ionicons name="body" size={20} color={colors.primary} />
+              </View>
+              <View style={styles.cardHeaderText}>
+                <Text style={styles.cardTitle}>Body metrics</Text>
+                {latestMetric ? (
+                  <Text style={styles.cardSubtitle}>
+                    {latestMetric.weightKg != null ? formatBodyWeightShort(latestMetric.weightKg, bodyWeightUnits || 'st') : 'Logged'}
+                    {latestMetric.loggedAt ? ` · ${format(new Date(latestMetric.loggedAt), 'MMM d')}` : ''}
+                  </Text>
+                ) : (
+                  <Text style={[styles.cardSubtitle, styles.alert]}>No entries yet</Text>
+                )}
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
             </View>
-            <View style={styles.cardHeaderText}>
-              <Text style={styles.cardTitle}>Body Metrics</Text>
-              {latestMetric ? (
+            {latestMetric && (
+              <View style={styles.metricRow}>
+                {latestMetric.weightKg != null && <MetricChip label="Weight" value={formatBodyWeightShort(latestMetric.weightKg, bodyWeightUnits || 'st')} />}
+                {latestMetric.bodyFatPercent != null && <MetricChip label="Body fat" value={`${latestMetric.bodyFatPercent}%`} />}
+                {latestMetric.waistCm != null && <MetricChip label="Waist" value={`${latestMetric.waistCm} cm`} />}
+              </View>
+            )}
+          </TouchableOpacity>
+        )}
+
+        {/* ── Pro upgrade card (free tier only) ─────────── */}
+        {tier !== 'pro' && (
+          <TouchableOpacity
+            style={[styles.sectionCard, styles.upgradeCard]}
+            onPress={() => navigation.navigate('ProUpgrade')}
+            activeOpacity={0.85}
+          >
+            <View style={styles.cardHeader}>
+              <View style={[styles.cardIconWrap, { backgroundColor: colors.primaryBg }]}>
+                <Ionicons name="sparkles" size={20} color={colors.primary} />
+              </View>
+              <View style={styles.cardHeaderText}>
+                <Text style={styles.cardTitle}>Pro coaching</Text>
                 <Text style={styles.cardSubtitle}>
-                  {latestMetric.weightKg != null ? formatBodyWeightShort(latestMetric.weightKg, bodyWeightUnits || 'st') : 'Logged'}
-                  {latestMetric.loggedAt ? ` · ${format(new Date(latestMetric.loggedAt), 'MMM d')}` : ''}
+                  Weekly check-in, nutrition targets, body metrics, weight trend and coaching adjustments
                 </Text>
-              ) : (
-                <Text style={[styles.cardSubtitle, styles.alert]}>No entries yet</Text>
-              )}
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
             </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-          </View>
-          {latestMetric && (
-            <View style={styles.metricRow}>
-              {latestMetric.weightKg != null && <MetricChip label="Weight" value={formatBodyWeightShort(latestMetric.weightKg, bodyWeightUnits || 'st')} />}
-              {latestMetric.bodyFatPercent != null && <MetricChip label="Body fat" value={`${latestMetric.bodyFatPercent}%`} />}
-              {latestMetric.waistCm != null && <MetricChip label="Waist" value={`${latestMetric.waistCm} cm`} />}
-            </View>
-          )}
-        </TouchableOpacity>
+            {getBetaBannerText() && (
+              <Text style={styles.betaBanner}>{getBetaBannerText()}</Text>
+            )}
+          </TouchableOpacity>
+        )}
 
         {/* ── Coaching tools ────────────────────────────── */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Coaching</Text>
           {tier === 'pro' && (
-            <NavRow
-              icon="flag-outline"
-              label="Update your coaching goal"
-              sub="Change between fat loss, muscle building or maintenance"
-              onPress={() => navigation.navigate('ProGoalSetup')}
-            />
-          )}
-          <NavRow
-            icon="document-text-outline"
-            label={exporting ? 'Preparing report…' : 'Send report to coach'}
-            sub="Last 4 weeks as a PDF: training summary, PRs, bodyweight"
-            onPress={handleCoachExport}
-          />
-          <NavRow
-            icon="pause-circle-outline"
-            label="Strategic journal"
-            sub="Every coaching decision, and why"
-            onPress={() => navigation.navigate('CoachHeldHistory')}
-          />
+            <>
+              <Text style={styles.sectionLabel}>Coaching</Text>
+              <NavRow
+                icon="flag-outline"
+                label="Update your coaching goal"
+                sub="Change between fat loss, muscle building or maintenance"
+                onPress={() => navigation.navigate('ProGoalSetup')}
+              />
+              <NavRow
+                icon="document-text-outline"
+                label={exporting ? 'Preparing report…' : 'Send report to coach'}
+                sub="Last 4 weeks as a PDF: training summary, PRs, bodyweight"
+                onPress={handleCoachExport}
+              />
+              <NavRow
+                icon="pause-circle-outline"
+                label="Strategic journal"
+                sub="Every coaching decision, and why"
+                onPress={() => navigation.navigate('CoachHeldHistory')}
+              />
 
-          {/* Engine Log — collapsible */}
-          {(adaptationHistory.length > 0 || repWarnings.length > 0) && (
-            <View style={styles.adaptHistCard}>
-              <TouchableOpacity
-                style={styles.adaptHistHeader}
-                onPress={() => setEngineLogOpen(v => !v)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.adaptHistHeaderLeft}>
-                  <View style={styles.adaptHistIconWrap}>
-                    <Ionicons name="pulse" size={18} color={colors.primary} />
-                  </View>
-                  <View>
-                    <Text style={styles.adaptHistHeaderLabel}>Engine Log</Text>
-                    <Text style={styles.adaptHistHeaderSub}>
-                      {repWarnings.length + adaptationHistory.length} recent coaching decisions
-                    </Text>
-                  </View>
-                </View>
-                <Ionicons name={engineLogOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
-              </TouchableOpacity>
-              {engineLogOpen && (
-                <View style={styles.adaptHistBody}>
-                  {repWarnings.map((w, i) => (
-                    <View key={w.id || `reg_${i}`} style={styles.adaptHistRow}>
-                      <Ionicons name="alert-circle-outline" size={14} color={colors.warning} />
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.adaptHistMuscle, { color: colors.warning }]}>
-                          {w.exerciseName}: Rep regression
+              {/* Engine Log — collapsible */}
+              {(adaptationHistory.length > 0 || repWarnings.length > 0) && (
+                <View style={styles.adaptHistCard}>
+                  <TouchableOpacity
+                    style={styles.adaptHistHeader}
+                    onPress={() => setEngineLogOpen(v => !v)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.adaptHistHeaderLeft}>
+                      <View style={styles.adaptHistIconWrap}>
+                        <Ionicons name="pulse" size={18} color={colors.primary} />
+                      </View>
+                      <View>
+                        <Text style={styles.adaptHistHeaderLabel}>Engine Log</Text>
+                        <Text style={styles.adaptHistHeaderSub}>
+                          {repWarnings.length + adaptationHistory.length} recent coaching decisions
                         </Text>
-                        {w.reason_text ? (
-                          <Text style={styles.adaptHistReason} numberOfLines={3}>{w.reason_text}</Text>
-                        ) : null}
                       </View>
                     </View>
-                  ))}
-                  {adaptationHistory.map((event, i) => {
-                    const icon =
-                      event.decision === 'add_set' ? 'trending-up' :
-                      event.decision === 'drop_set' ? 'trending-down' :
-                      event.decision === 'deload_trigger' ? 'warning-outline' :
-                      event.decision === 'rotate_exercise' ? 'swap-horizontal' :
-                      'remove-outline';
-                    const iconColor =
-                      event.decision === 'add_set' ? colors.primary :
-                      event.decision === 'drop_set' || event.decision === 'deload_trigger' ? colors.error :
-                      colors.textMuted;
-                    const muscleLabel = MUSCLE_DISPLAY_NAMES[event.muscle] || event.muscle || 'Unknown';
-                    const date = event.created_at
-                      ? new Date(event.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-                      : '';
-                    return (
-                      <View key={event.id || i} style={styles.adaptHistRow}>
-                        <Ionicons name={icon} size={14} color={iconColor} />
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.adaptHistMuscle}>
-                            {muscleLabel}
-                            {event.delta != null && event.delta !== 0
-                              ? ` ${event.delta > 0 ? '+' : ''}${event.delta} set`
-                              : ''}
-                          </Text>
-                          {event.reason_text ? (
-                            <Text style={styles.adaptHistReason} numberOfLines={2}>{event.reason_text}</Text>
-                          ) : null}
+                    <Ionicons name={engineLogOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
+                  </TouchableOpacity>
+                  {engineLogOpen && (
+                    <View style={styles.adaptHistBody}>
+                      {repWarnings.map((w, i) => (
+                        <View key={w.id || `reg_${i}`} style={styles.adaptHistRow}>
+                          <Ionicons name="alert-circle-outline" size={14} color={colors.warning} />
+                          <View style={{ flex: 1 }}>
+                            <Text style={[styles.adaptHistMuscle, { color: colors.warning }]}>
+                              {w.exerciseName}: Rep regression
+                            </Text>
+                            {w.reason_text ? (
+                              <Text style={styles.adaptHistReason} numberOfLines={3}>{w.reason_text}</Text>
+                            ) : null}
+                          </View>
                         </View>
-                        <Text style={styles.adaptHistDate}>{date}</Text>
-                      </View>
-                    );
-                  })}
+                      ))}
+                      {adaptationHistory.map((event, i) => {
+                        const icon =
+                          event.decision === 'add_set' ? 'trending-up' :
+                          event.decision === 'drop_set' ? 'trending-down' :
+                          event.decision === 'deload_trigger' ? 'warning-outline' :
+                          event.decision === 'rotate_exercise' ? 'swap-horizontal' :
+                          'remove-outline';
+                        const iconColor =
+                          event.decision === 'add_set' ? colors.primary :
+                          event.decision === 'drop_set' || event.decision === 'deload_trigger' ? colors.error :
+                          colors.textMuted;
+                        const muscleLabel = MUSCLE_DISPLAY_NAMES[event.muscle] || event.muscle || 'Unknown';
+                        const date = event.created_at
+                          ? new Date(event.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+                          : '';
+                        return (
+                          <View key={event.id || i} style={styles.adaptHistRow}>
+                            <Ionicons name={icon} size={14} color={iconColor} />
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.adaptHistMuscle}>
+                                {muscleLabel}
+                                {event.delta != null && event.delta !== 0
+                                  ? ` ${event.delta > 0 ? '+' : ''}${event.delta} set`
+                                  : ''}
+                              </Text>
+                              {event.reason_text ? (
+                                <Text style={styles.adaptHistReason} numberOfLines={2}>{event.reason_text}</Text>
+                              ) : null}
+                            </View>
+                            <Text style={styles.adaptHistDate}>{date}</Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  )}
                 </View>
               )}
-            </View>
+            </>
           )}
 
           <NavRow icon="settings-outline" label="Settings" sub="Units, data export, preferences" onPress={() => navigation.navigate('Settings')} />
@@ -861,6 +892,7 @@ const styles = StyleSheet.create({
     gap: spacing.md, borderWidth: 1, borderColor: colors.border,
   },
   checkinCard: { borderColor: colors.primaryDim },
+  upgradeCard: { borderColor: colors.primary + '40' },
   checkinPrompt: { paddingTop: spacing.xs },
   checkinPromptText: { fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 18 },
   betaBanner: {
