@@ -2,6 +2,7 @@
  * nutritionEngine.js
  * Pure-function nutrition target calculator for the Volyume app.
  * No side effects, no DB calls, no imports — just math.
+ * Adaptive TDEE: computeEWMA, computeWeeklyWeightChange, computeAdaptiveTDEEAdjustment
  */
 
 // ---------------------------------------------------------------------------
@@ -108,6 +109,109 @@ const FAT_TARGETS_GKG = {
   aggressive_cut:  0.75,
   contest_prep:    0.7,
 };
+
+// ---------------------------------------------------------------------------
+// Adaptive TDEE — EWMA weight trend and calorie correction
+// ---------------------------------------------------------------------------
+
+const EWMA_ALPHA = 0.28; // smoothing factor — MacroFactor uses ~0.3
+
+// Compute exponentially-weighted moving average of daily weights.
+// weightData: array of { weightKg, date } sorted oldest-first.
+// Returns smoothed weight for each point, same length as input.
+export function computeEWMA(weightData, alpha = EWMA_ALPHA) {
+  if (!weightData || weightData.length === 0) return [];
+  const result = [];
+  let ewma = weightData[0].weightKg;
+  for (const point of weightData) {
+    ewma = alpha * point.weightKg + (1 - alpha) * ewma;
+    result.push({ ...point, ewma: parseFloat(ewma.toFixed(3)) });
+  }
+  return result;
+}
+
+// Compute weekly weight change rate from EWMA-smoothed data.
+// ewmaData: output of computeEWMA, sorted oldest-first.
+// Returns kg/week (positive = gaining, negative = losing).
+export function computeWeeklyWeightChange(ewmaData) {
+  if (!ewmaData || ewmaData.length < 7) return null;
+  const recent = ewmaData[ewmaData.length - 1].ewma;
+  // Use point 7 days back, or oldest available
+  const older = ewmaData[Math.max(0, ewmaData.length - 8)].ewma;
+  return parseFloat((recent - older).toFixed(3));
+}
+
+const KCAL_PER_KG = 7700; // energy in 1 kg of body tissue (mixed lean + fat)
+
+// Compute TDEE adjustment from actual weight trend vs. expected.
+// Requires at least 3 weeks (21 data points) before producing a reliable correction.
+//
+// params:
+//   ewmaData        — output of computeEWMA, sorted oldest-first
+//   prescribedKcal  — the calorie target the app has been recommending
+//   adherenceFactor — 0.0–1.0 (from check-in: 1.0 = fully on target, 0.7 = mostly)
+//
+// Returns:
+//   { adjustmentKcal, adjustedTDEE, actualKgPerWeek, expectedKgPerWeek,
+//     confidence, insight, weeks }
+export function computeAdaptiveTDEEAdjustment({
+  ewmaData,
+  prescribedKcal,
+  currentTDEEEstimate,
+  adherenceFactor = 1.0,
+}) {
+  const MIN_POINTS = 14; // need at least 2 weeks
+
+  if (!ewmaData || ewmaData.length < MIN_POINTS || !prescribedKcal || !currentTDEEEstimate) {
+    return { adjustmentKcal: 0, confidence: 'insufficient_data', insight: null };
+  }
+
+  const weeks = Math.floor(ewmaData.length / 7);
+  const actualKgPerWeek = computeWeeklyWeightChange(ewmaData);
+  if (actualKgPerWeek === null) return { adjustmentKcal: 0, confidence: 'insufficient_data', insight: null };
+
+  // Estimated actual intake, discounted by adherence
+  const estimatedActualKcal = prescribedKcal * adherenceFactor;
+
+  // What weight change the prescribed intake SHOULD produce at the estimated TDEE
+  const surplusOrDeficit = estimatedActualKcal - currentTDEEEstimate; // kcal/day
+  const expectedKgPerWeek = parseFloat(((surplusOrDeficit * 7) / KCAL_PER_KG).toFixed(3));
+
+  // Discrepancy: actual - expected (in kg/week)
+  const discrepancy = actualKgPerWeek - expectedKgPerWeek;
+
+  // Convert discrepancy to daily kcal correction
+  // If gaining more than expected → TDEE is lower than estimated → reduce TDEE estimate
+  const rawAdjustmentKcal = Math.round(-discrepancy * KCAL_PER_KG / 7);
+
+  // Dampen adjustment: apply only 50% of the signal to avoid overcorrection
+  const adjustmentKcal = Math.round(rawAdjustmentKcal * 0.5);
+  const adjustedTDEE = Math.round(currentTDEEEstimate + adjustmentKcal);
+
+  // Confidence based on data length
+  const confidence = weeks >= 4 ? 'high' : weeks >= 3 ? 'medium' : 'low';
+
+  // Plain-English insight
+  let insight = null;
+  const absAdj = Math.abs(adjustmentKcal);
+  if (absAdj < 50) {
+    insight = `Your weight is tracking exactly as planned. No change needed.`;
+  } else if (adjustmentKcal < 0) {
+    insight = `Your weight has risen ${Math.abs(actualKgPerWeek).toFixed(2)} kg/week — slightly faster than planned. Trimming ${absAdj} kcal/day to keep pace on track.`;
+  } else {
+    insight = `Your weight has moved ${Math.abs(actualKgPerWeek).toFixed(2)} kg/week — slower than planned. Adding ${absAdj} kcal/day to match your true energy needs.`;
+  }
+
+  return {
+    adjustmentKcal,   // negative = cut kcal, positive = add kcal
+    adjustedTDEE,
+    actualKgPerWeek,
+    expectedKgPerWeek,
+    confidence,
+    insight,
+    weeks,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -380,7 +484,7 @@ export function calculateNutritionTargets(inputs) {
 // Export: getPlanNutritionContext
 // ---------------------------------------------------------------------------
 
-export function getPlanNutritionContext(targets) {
+export function getPlanNutritionContext(targets, { bodyMetricsData = [], adherenceFactor = 1.0 } = {}) {
   const { targetKcal, maintenanceKcal, goal } = targets;
 
   // Phase type
