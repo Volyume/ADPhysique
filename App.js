@@ -9,6 +9,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';
 import { ensureNotifChannels } from './src/lib/restNotifications';
+import { installGlobalHandlers, logError } from './src/lib/errorLog';
+
+// Install verbose error logging — ring buffer in AsyncStorage, viewable from
+// Settings → Debug logs. Catches uncaught exceptions and unhandled promise
+// rejections. Coexists with the legacy single-slot crash log used by the
+// LoginScreen banner.
+installGlobalHandlers();
 
 // ---------------------------------------------------------------------------
 // Background task — keeps the JS thread alive during rest periods on iOS so
@@ -85,23 +92,9 @@ async function handleAuthDeepLink(url) {
 
 const CRASH_LOG_KEY = '@volyume_crash_log';
 
-// Catch unhandled JS exceptions and write them to AsyncStorage so the next
-// launch can surface the error message on screen.
-if (global.ErrorUtils) {
-  const prev = global.ErrorUtils.getGlobalHandler();
-  global.ErrorUtils.setGlobalHandler(async (error, isFatal) => {
-    try {
-      const entry = JSON.stringify({
-        message: error?.message || String(error),
-        stack: error?.stack?.slice(0, 1200) || '',
-        isFatal,
-        ts: Date.now(),
-      });
-      await AsyncStorage.setItem(CRASH_LOG_KEY, entry);
-    } catch (_) {}
-    if (prev) prev(error, isFatal);
-  });
-}
+// Uncaught exceptions and unhandled rejections are now captured by
+// installGlobalHandlers() above. ErrorBoundary still writes the legacy
+// single-slot crash log so LoginScreen's banner keeps working.
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -113,7 +106,8 @@ class ErrorBoundary extends React.Component {
     return { error };
   }
 
-  componentDidCatch(error) {
+  componentDidCatch(error, errorInfo) {
+    logError('ErrorBoundary', error, { componentStack: errorInfo?.componentStack?.slice(0, 1200) });
     AsyncStorage.setItem(CRASH_LOG_KEY, JSON.stringify({
       message: error?.message || String(error),
       stack: error?.stack?.slice(0, 1200) || '',

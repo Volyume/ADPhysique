@@ -387,6 +387,16 @@ export default function SettingsScreen({ navigation }) {
           />
         </View>
 
+        {/* Diagnostics */}
+        <SectionHeader title="Diagnostics" />
+        <View style={styles.section}>
+          <SettingRow
+            icon="bug-outline"
+            label="Debug logs"
+            onPress={() => navigation.navigate('DebugLog')}
+          />
+        </View>
+
         {/* About */}
         <View style={styles.about}>
           <Text style={styles.appName}>Volyume</Text>
