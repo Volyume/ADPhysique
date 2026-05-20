@@ -24,7 +24,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import SetEntry from '../components/SetEntry';
 import RestTimer from '../components/RestTimer';
 import useAppStore from '../store/useAppStore';
-import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, getAllExercises, insertExercise, getCurrentMesocycleWeek, getPlannedMuscleVolume, getWeek1SetsForExercise, getLastNWorkoutSets, saveExerciseUserNote, getExerciseUserNote, getNextTimeNotes, markNoteShown } from '../lib/database';
+import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, getAllExercises, insertExercise, getCurrentMesocycleWeek, getPlannedMuscleVolume, getWeek1SetsForExercise, getLastNWorkoutSets, saveExerciseUserNote, getExerciseUserNote, getNextTimeNotes, markNoteShown, updateWorkoutSetPostRating } from '../lib/database';
 import {
   detectPR,
   getProgressionSuggestion,
@@ -133,9 +133,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [ghostSet, setGhostSet] = useState(null); // pre-fill from last session (same set index)
   const [showNotifPrompt, setShowNotifPrompt] = useState(false);
   const [nextTimeNotes, setNextTimeNotes] = useState([]);  // "next time" coaching notes for this routine
+  // Stimulus rating sheet: shown after moving away from an exercise that had working sets
+  // { exerciseName, lastSetId, pump: 3, connection: 3 }
+  const [stimulusRating, setStimulusRating] = useState(null);
   // Cluster counter for myo-reps / rest-pause: 0 = activation set, 1+ = mini-set N+1
   const [clusterCount, setClusterCount] = useState(0);
   const autoAdvanceRef = useRef(null);
+  const pendingFinishRef = useRef(null); // callback to execute after stimulus rating is dismissed on finish
   const sessionSetsRef = useRef([]);   // tracks sets in this session — used for PR detection
   const warmupHintSeenRef = useRef(false); // show one-liner warmup note only on first warmup of this session
   const shownNoteIdsRef = useRef(new Set()); // note IDs already shown in this session
@@ -162,10 +166,53 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     ? (workoutExercises.find((e, i) => i !== currentExerciseIndex && e.supersetGroupId === currentSGI)?.exercise?.name ?? '')
     : '';
 
+  function maybeTriggerStimulusRating(prevIdx) {
+    const prevEntry = workoutExercises[prevIdx];
+    if (!prevEntry) return;
+    const workingSets = (prevEntry.sets || []).filter(s => s.setType !== 'warmup');
+    if (workingSets.length >= 1) {
+      const lastSet = workingSets[workingSets.length - 1];
+      setStimulusRating({
+        exerciseName: prevEntry.exercise?.name ?? 'Exercise',
+        lastSetId: lastSet.id,
+        pump: 3,
+        connection: 3,
+      });
+    }
+  }
+
+  async function handleStimulusRatingSave() {
+    if (!stimulusRating) return;
+    try {
+      await updateWorkoutSetPostRating(
+        stimulusRating.lastSetId,
+        stimulusRating.pump,
+        stimulusRating.connection
+      );
+    } catch (_e) {}
+    setStimulusRating(null);
+    const pending = pendingFinishRef.current;
+    if (pending) {
+      pendingFinishRef.current = null;
+      pending();
+    }
+  }
+
+  function handleStimulusRatingSkip() {
+    setStimulusRating(null);
+    const pending = pendingFinishRef.current;
+    if (pending) {
+      pendingFinishRef.current = null;
+      pending();
+    }
+  }
+
   function handleNextExercise() {
     if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
+    const prevIdx = currentExerciseIndex;
     setCurrentExerciseIndex(currentExerciseIndex + 1);
     setTimeout(() => scrollRef.current?.scrollTo({ y: 0, animated: true }), 50);
+    maybeTriggerStimulusRating(prevIdx);
   }
 
   function handleTogglePair() {
@@ -873,43 +920,60 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         {
           text: 'Finish',
           onPress: async () => {
-            const allSets = workoutExercises.flatMap(e => e.sets);
-            const workingSetCount = allSets.filter(s => s.setType !== 'warmup').length;
-            const sessionName = workoutExercises.length > 0
-              ? workoutExercises.slice(0, 2).map(e => e.exercise?.name?.split(' ')[0]).filter(Boolean).join(' & ')
-              : null;
-            await updateWorkout(activeWorkout.id, {
-              endedAt: Date.now(),
-              durationMinutes: Math.round(elapsedSeconds / 60),
-              isCompleted: true,
-              name: sessionName,
-              setCount: workingSetCount,
-              totalVolume: calculateTonnage(allSets),
-            });
-            endWorkout();
-            navigation.replace('WorkoutSummary', {
-              workoutId: activeWorkout.id,
-              routineId: activeWorkout.routineId || null,
-              durationMinutes: Math.round(elapsedSeconds / 60),
-              exerciseCount: workoutExercises.length,
-              setCount: allSets.length,
-              workingSetCount,
-              tonnage: calculateTonnage(allSets),
-              exerciseNames: workoutExercises.map(e => e.exercise?.name).filter(Boolean),
-              detectedPRs,
-              exerciseData: workoutExercises.map(e => ({
-                exerciseId: e.exercise?.id,
-                name: e.exercise?.name,
-                recommendedSets: e.sets.filter(s => s.setType !== 'warmup').length || 3,
-                repsMin: e.routineExercise?.recommendedRepsMin || 8,
-                repsMax: e.routineExercise?.recommendedRepsMax || 12,
-                loggedSets: e.sets.map(s => ({
-                  weight: s.weight,
-                  reps: s.actualReps ?? s.reps,
-                  setType: s.setType,
-                })),
-              })).filter(e => e.exerciseId),
-            });
+            // Capture everything needed for the finish before the rating sheet might
+            // cause a re-render that loses closure values.
+            const snapshotExercises = workoutExercises;
+            const snapshotElapsed = elapsedSeconds;
+
+            async function doFinish() {
+              const allSets = snapshotExercises.flatMap(e => e.sets);
+              const workingSetCount = allSets.filter(s => s.setType !== 'warmup').length;
+              const sessionName = snapshotExercises.length > 0
+                ? snapshotExercises.slice(0, 2).map(e => e.exercise?.name?.split(' ')[0]).filter(Boolean).join(' & ')
+                : null;
+              await updateWorkout(activeWorkout.id, {
+                endedAt: Date.now(),
+                durationMinutes: Math.round(snapshotElapsed / 60),
+                isCompleted: true,
+                name: sessionName,
+                setCount: workingSetCount,
+                totalVolume: calculateTonnage(allSets),
+              });
+              endWorkout();
+              navigation.replace('WorkoutSummary', {
+                workoutId: activeWorkout.id,
+                routineId: activeWorkout.routineId || null,
+                durationMinutes: Math.round(snapshotElapsed / 60),
+                exerciseCount: snapshotExercises.length,
+                setCount: allSets.length,
+                workingSetCount,
+                tonnage: calculateTonnage(allSets),
+                exerciseNames: snapshotExercises.map(e => e.exercise?.name).filter(Boolean),
+                detectedPRs,
+                exerciseData: snapshotExercises.map(e => ({
+                  exerciseId: e.exercise?.id,
+                  name: e.exercise?.name,
+                  recommendedSets: e.sets.filter(s => s.setType !== 'warmup').length || 3,
+                  repsMin: e.routineExercise?.recommendedRepsMin || 8,
+                  repsMax: e.routineExercise?.recommendedRepsMax || 12,
+                  loggedSets: e.sets.map(s => ({
+                    weight: s.weight,
+                    reps: s.actualReps ?? s.reps,
+                    setType: s.setType,
+                  })),
+                })).filter(e => e.exerciseId),
+              });
+            }
+
+            // Check if the current exercise has working sets that need rating
+            const currentEntry = snapshotExercises[currentExerciseIndex];
+            const hasWorkingSets = (currentEntry?.sets || []).some(s => s.setType !== 'warmup');
+            if (hasWorkingSets) {
+              pendingFinishRef.current = doFinish;
+              maybeTriggerStimulusRating(currentExerciseIndex);
+            } else {
+              await doFinish();
+            }
           },
         },
       ],

@@ -17,6 +17,7 @@ import { useShallow } from 'zustand/react/shallow';
 import {
   getCompletedWorkoutSets, getAllWorkouts, getAllExercises, getAllMesocycles,
   getActiveInsights, dismissInsight, runInsightsEngine, getActivePlan,
+  getAcuteChronicWorkload,
 } from '../lib/database';
 import {
   calculateWeeklyVolume, VOLUME_LANDMARKS, MUSCLE_DISPLAY_NAMES,
@@ -108,6 +109,7 @@ export default function AnalyticsScreen({ navigation }) {
   const [durationBars, setDurationBars]     = useState([]);   // [{avgMin, weekLabel}] for session length trend
   const [muscleFreq, setMuscleFreq]         = useState([]);   // [{muscle, thisWeek, lastWeek}]
   const [showAllMuscles, setShowAllMuscles] = useState(false);
+  const [workloadData, setWorkloadData] = useState(null);
 
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
@@ -131,6 +133,9 @@ export default function AnalyticsScreen({ navigation }) {
       const exMap = Object.fromEntries(exercises.map(e => [e.id, e]));
       setAllSets(sets);
       setExerciseMap(exMap);
+
+      const wl = await getAcuteChronicWorkload(user.id).catch(() => null);
+      setWorkloadData(wl);
 
       await Promise.all([
         loadMesocycle(workouts, sets, exMap),
@@ -514,7 +519,14 @@ export default function AnalyticsScreen({ navigation }) {
           <VolumeSnapshotGrid volume={weeklyVolume} />
         </View>
 
-        {/* ── 3b · Session Length Trend ─────────────────────── */}
+        {/* ── 3b · Training Load (ACWR) ─────────────────────── */}
+        {workloadData && workloadData.ratio !== null && (
+          <View style={styles.section}>
+            <WorkloadCard data={workloadData} />
+          </View>
+        )}
+
+        {/* ── 3d · Session Length Trend ─────────────────────── */}
         {durationBars.length > 0 && (
           <View style={styles.section}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
@@ -524,7 +536,7 @@ export default function AnalyticsScreen({ navigation }) {
           </View>
         )}
 
-        {/* ── 3c · Training Frequency ───────────────────────── */}
+        {/* ── 3e · Training Frequency ───────────────────────── */}
         {muscleFreq.length > 0 && (
           <View style={styles.section}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
@@ -924,6 +936,59 @@ function MuscleFrequencyTable({ rows, showAll, onToggle }) {
   );
 }
 
+function WorkloadCard({ data }) {
+  if (!data || data.ratio === null) return null;
+
+  const { acute, chronic, ratio } = data;
+
+  let statusColor = colors.textMuted;
+  let statusText = 'Below training average — consider more volume.';
+  if (ratio >= 1.5) {
+    statusColor = colors.error;
+    statusText = 'High load this week. Consider an easier session.';
+  } else if (ratio >= 1.3) {
+    statusColor = colors.warning;
+    statusText = 'Load is elevated. Monitor how you feel.';
+  } else if (ratio >= 0.8) {
+    statusColor = colors.success;
+    statusText = 'Load is in the optimal training zone.';
+  }
+
+  // Simple visual bar: fill proportional to ratio, capped at 2.0
+  const fillPct = Math.min(ratio / 2.0, 1);
+
+  return (
+    <View style={styles.workloadCard}>
+      <View style={styles.rowBetween}>
+        <Text style={styles.workloadTitle}>Training load</Text>
+        <InfoTooltip text="Compares this week's tonnage to your recent average. 0.8–1.3 is the optimal range. Above 1.5 signals high fatigue risk." />
+      </View>
+
+      <View style={styles.workloadBarBg}>
+        <View style={[styles.workloadBarFill, { width: `${Math.round(fillPct * 100)}%`, backgroundColor: statusColor }]} />
+        {/* Optimal zone marker at 0.8 and 1.3 */}
+      </View>
+
+      <View style={styles.workloadStats}>
+        <View style={styles.workloadStat}>
+          <Text style={styles.workloadStatValue}>{(ratio).toFixed(2)}</Text>
+          <Text style={styles.workloadStatLabel}>Ratio</Text>
+        </View>
+        <View style={styles.workloadStat}>
+          <Text style={styles.workloadStatValue}>{acute.toLocaleString('en-GB')}</Text>
+          <Text style={styles.workloadStatLabel}>This week (kg)</Text>
+        </View>
+        <View style={styles.workloadStat}>
+          <Text style={styles.workloadStatValue}>{chronic.toLocaleString('en-GB')}</Text>
+          <Text style={styles.workloadStatLabel}>4-wk avg (kg)</Text>
+        </View>
+      </View>
+
+      <Text style={[styles.workloadStatus, { color: statusColor }]}>{statusText}</Text>
+    </View>
+  );
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function diffChipBg(d) {
@@ -1147,6 +1212,53 @@ const styles = StyleSheet.create({
   },
   freqToggleText: {
     fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.medium,
+  },
+
+  // ── Workload Card (ACWR) ──
+  workloadCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.md,
+  },
+  workloadTitle: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textMuted,
+    letterSpacing: 0.2,
+  },
+  workloadBarBg: {
+    height: 8,
+    backgroundColor: colors.surface2,
+    borderRadius: radius.sm,
+    overflow: 'hidden',
+  },
+  workloadBarFill: {
+    height: 8,
+    borderRadius: radius.sm,
+  },
+  workloadStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  workloadStat: {
+    alignItems: 'center',
+    gap: spacing.xxs,
+  },
+  workloadStatValue: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+  },
+  workloadStatLabel: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+  },
+  workloadStatus: {
+    fontSize: fontSize.xs,
+    lineHeight: 17,
   },
 
   // ── Analytics empty state ──
