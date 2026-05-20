@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { generatePlan, GOAL_LABELS as PLAN_GOAL_LABELS, SPLIT_LABELS } from '../lib/planEngine';
+import { generatePlan, GOAL_LABELS as PLAN_GOAL_LABELS, SPLIT_LABELS, buildWeeklyPlan } from '../lib/planEngine';
 import { getPlanNutritionContext, calculateNutritionTargets, ADVANCED_PROTEIN_GOALS } from '../lib/nutritionEngine';
 import { getMesoSchedule, getCurrentMesoWeek } from '../lib/mesocycle';
 import { applyPhaseToInputs, getPhaseLabel, getPhaseDescription, buildSessionAddons } from '../lib/phaseEngine';
@@ -343,9 +343,19 @@ export default function CoachBuilderScreen({ navigation, route }) {
     // Phase 7: attach competition phase metadata and session add-ons
     const sessionAddons = buildSessionAddons(phase, weeksToComp);
 
+    // Rebuild weeklyPlan from annotated workouts so set-type badges appear
+    const annotatedWeeklyPlan = result.weeklyPlan
+      ? buildWeeklyPlan(
+          annotatedWorkouts,
+          result.weeklyPlan.totalWeeks,
+          result.weeklyPlan.mesocycleName,
+        )
+      : null;
+
     const finalResult = {
       ...result,
       workouts: annotatedWorkouts,
+      weeklyPlan: annotatedWeeklyPlan ?? result.weeklyPlan,
       compPhase: phase,
       compPhaseLabel: getPhaseLabel(phase),
       compPhaseDescription: getPhaseDescription(phase, weeksToComp),

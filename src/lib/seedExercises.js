@@ -597,6 +597,144 @@ const RAW = [
   ['Neck Lateral Flexion',          'neck', [],                           'bodyweight',   'isolation', false, 15, 25, 1, 3],
   ['Neck Curl',                     'neck', [],                           'bodyweight',   'isolation', false, 15, 25, 1, 3],
   ['Neck Bridge',                   'neck', ['traps'],                   'bodyweight',   'isolation', false, 15, 30, 2, 3],
+  ['Plate Neck Curl',               'neck', [],                           'barbell',      'isolation', false, 15, 25, 1, 4],
+  ['Plate Neck Extension',          'neck', ['traps'],                    'barbell',      'isolation', false, 15, 25, 1, 4],
+  ['Neck Harness Flexion',          'neck', [],                           'machine',      'isolation', false, 15, 25, 1, 4],
+  ['Neck Harness Extension',        'neck', ['traps'],                    'machine',      'isolation', false, 15, 25, 1, 4],
+  ['Manual Resistance Neck Flexion','neck', [],                           'bodyweight',   'isolation', false, 10, 20, 1, 4],
+  ['Manual Resistance Neck Extension','neck', ['traps'],                  'bodyweight',   'isolation', false, 10, 20, 1, 4],
+  ['Neck Rotation (Resistance)',    'neck', [],                           'bodyweight',   'isolation', false, 10, 20, 1, 3],
+
+  // ─── CARDIO / CONDITIONING ───────────────────────────────────────────────────
+  ['Sled Push',                     'quads', ['glutes', 'calves'],        'machine',      'squat',     true,  20, 40, 4, 5],
+  ['Sled Pull',                     'hamstrings', ['glutes'],             'machine',      'hinge',     true,  20, 40, 3, 5],
+  ['Prowler Drag',                  'hamstrings', ['glutes', 'quads'],    'machine',      'hinge',     true,  20, 40, 4, 5],
+  ['Battle Ropes',                  'front_delts', ['side_delts', 'abs'], 'machine',      'carry',     true,  20, 40, 3, 4],
+  ['Assault Bike',                  'quads', ['calves', 'glutes'],        'machine',      'squat',     true,  10, 30, 3, 5],
+  ['Tyre Flip',                     'back', ['glutes', 'quads'],          'machine',      'hinge',     true,  5, 10,  5, 3],
+  ['Kettlebell Snatch',              'back', ['glutes', 'hamstrings'],     'kettlebell',   'hinge',     true,  5, 10,  4, 4],
+  ['Kettlebell Clean and Press',    'front_delts', ['glutes', 'traps'],   'kettlebell',   'push',      true,  5, 10,  4, 4],
+  ['Jump Squat',                    'quads', ['glutes', 'calves'],        'bodyweight',   'squat',     true,  5, 10,  3, 4],
+  ['Broad Jump',                    'quads', ['glutes', 'calves'],        'bodyweight',   'squat',     true,  5, 8,   3, 4],
+  ['Depth Jump',                    'quads', ['calves', 'glutes'],        'bodyweight',   'plyometric',true,  4, 8,   3, 4],
+  ['Stair Running',                 'quads', ['glutes', 'calves'],        'bodyweight',   'squat',     true,  30, 60, 3, 5],
+
+  // ─── ADDITIONAL COMPOUND MOVEMENTS ──────────────────────────────────────────
+  ['Clean Pull',                    'traps', ['back', 'glutes', 'quads'], 'barbell',      'hinge',     true,  3, 6,   4, 3],
+  ['Barbell Good Morning',          'hamstrings', ['back', 'glutes'],     'barbell',      'hinge',     true,  8, 15,  4, 3],
+  ['Zercher Squat',                 'quads', ['glutes', 'back'],          'barbell',      'squat',     true,  5, 10,  4, 3],
+  ['Anderson Squat',                'quads', ['glutes'],                  'barbell',      'squat',     true,  3, 8,   4, 3],
+  ['Pin Squat',                     'quads', ['glutes'],                  'barbell',      'squat',     true,  3, 8,   4, 3],
+  ['Hatfield Squat',                'quads', ['glutes', 'hamstrings'],    'barbell',      'squat',     true,  6, 12,  4, 4],
+  ['Cambered Bar Squat',            'quads', ['glutes', 'back'],          'barbell',      'squat',     true,  5, 10,  4, 3],
+  ['SSB Squat',                     'quads', ['glutes'],                  'barbell',      'squat',     true,  5, 10,  4, 4],
+  ['Jefferson Curl',                'hamstrings', ['back'],               'dumbbell',     'hinge',     false, 8, 15,  3, 4],
+  ['Stiff-Leg Deadlift (Dumbbell)', 'hamstrings', ['back', 'glutes'],     'dumbbell',     'hinge',     true,  8, 15,  3, 4],
+
+  // ─── EXTRA ISOLATION ─────────────────────────────────────────────────────────
+  ['Serratus Punch',                'abs', ['front_delts'],               'cable',        'isolation', false, 12, 20, 1, 4],
+  ['Kneeling Cable Crunch',         'abs', [],                            'cable',        'isolation', false, 15, 25, 2, 5],
+  ['Exercise Ball Crunch',          'abs', [],                            'bodyweight',   'isolation', false, 15, 25, 1, 3],
+  ['Mountain Climber',              'abs', ['quads', 'front_delts'],      'bodyweight',   'isolation', false, 20, 40, 2, 4],
+  ['Plank Row',                     'abs', ['back', 'biceps'],            'dumbbell',     'isolation', false, 8, 15,  2, 5],
+  ['Bear Crawl',                    'abs', ['front_delts', 'quads'],      'bodyweight',   'isolation', false, 10, 30, 2, 4],
+  ['Farmer Walk (Abs)',             'abs', ['traps', 'forearms'],         'dumbbell',     'carry',     true,  20, 40, 2, 4],
+  ['Kneeling Ab Rollout',           'abs', [],                            'bodyweight',   'isolation', false, 8, 15,  2, 5],
+  ['Dumbbell Side Bend',            'abs', [],                            'dumbbell',     'isolation', false, 15, 25, 1, 3],
+  ['Cable Side Bend',               'abs', [],                            'cable',        'isolation', false, 15, 25, 1, 3],
+  ['Windmill',                      'abs', ['glutes', 'side_delts'],      'dumbbell',     'isolation', false, 8, 12,  2, 4],
+  ['Turkish Get-Up',                'abs', ['glutes', 'front_delts'],     'kettlebell',   'isolation', false, 3, 6,   3, 5],
+
+  // ─── ADDITIONAL CHEST ────────────────────────────────────────────────────────
+  ['Close-Grip Push-Up',            'chest', ['triceps'],                 'bodyweight',   'push',      true,  10, 20, 2, 3],
+  ['Archer Push-Up',                'chest', ['triceps', 'front_delts'],  'bodyweight',   'push',      true,  8, 15,  2, 4],
+  ['Single-Arm Push-Up',            'chest', ['triceps'],                 'bodyweight',   'push',      true,  4, 10,  3, 5],
+  ['Cable Chest Press (Standing)',  'chest', ['triceps', 'front_delts'],  'cable',        'push',      true,  10, 15, 2, 4],
+  ['Smith Machine Incline Press',   'chest', ['triceps', 'front_delts'],  'smith_machine','push',      true,  8, 15,  3, 4],
+  ['Guillotine Press',              'chest', ['triceps', 'front_delts'],  'barbell',      'push',      true,  6, 10,  4, 3],
+
+  // ─── ADDITIONAL BACK ─────────────────────────────────────────────────────────
+  ['Barbell Upright Row (Wide)',    'back', ['traps', 'rear_delts'],      'barbell',      'pull',      false, 10, 15, 3, 3],
+  ['Cable Face Pull (Upper Back)',  'back', ['rear_delts', 'traps'],      'cable',        'pull',      false, 15, 25, 2, 5],
+  ['Resistance Band Pulldown',      'back', ['biceps'],                   'bodyweight',   'pull',      true,  12, 20, 1, 4],
+  ['Smith Machine Row',             'back', ['biceps'],                   'smith_machine','pull',      true,  8, 15,  3, 4],
+  ['Single-Arm Lat Pulldown (Band)','back', ['biceps'],                   'bodyweight',   'pull',      true,  12, 20, 1, 4],
+  ['Half-Kneeling Cable Row',       'back', ['biceps'],                   'cable',        'pull',      true,  10, 15, 2, 4],
+  ['V-Bar Pulldown',                'back', ['biceps'],                   'cable',        'pull',      true,  10, 15, 3, 4],
+  ['Wide-Grip Cable Row',           'back', ['rear_delts'],               'cable',        'pull',      true,  10, 15, 3, 4],
+
+  // ─── ADDITIONAL SHOULDERS ────────────────────────────────────────────────────
+  ['Barbell Front Raise',           'front_delts', [],                    'barbell',      'isolation', false, 10, 15, 2, 3],
+  ['Band Front Raise',              'front_delts', [],                    'bodyweight',   'isolation', false, 12, 20, 1, 3],
+  ['Plate Front Raise',             'front_delts', [],                    'barbell',      'isolation', false, 12, 20, 2, 3],
+  ['Kneeling Dumbbell Press',       'front_delts', ['triceps', 'side_delts'], 'dumbbell', 'push',     true,  8, 15,  3, 4],
+  ['Single-Arm Dumbbell Press',     'front_delts', ['triceps', 'side_delts'], 'dumbbell', 'push',     true,  8, 15,  3, 4],
+  ['Band Shoulder Press',           'front_delts', ['triceps'],           'bodyweight',   'push',      true,  10, 20, 2, 3],
+  ['Half-Kneeling Shoulder Press',  'front_delts', ['triceps', 'abs'],    'dumbbell',     'push',      true,  8, 15,  3, 4],
+
+  // ─── ADDITIONAL BICEPS ───────────────────────────────────────────────────────
+  ['Chin-Up (Supinated)',           'biceps', ['back'],                   'bodyweight',   'pull',      true,  5, 15,  3, 4],
+  ['Seated Dumbbell Curl',          'biceps', [],                         'dumbbell',     'isolation', false, 10, 15, 2, 4],
+  ['Lying Cable Curl',              'biceps', [],                         'cable',        'isolation', false, 10, 15, 2, 5],
+  ['High Cable Curl',               'biceps', [],                         'cable',        'isolation', false, 10, 15, 2, 5],
+  ['Barbell Drag Curl',             'biceps', [],                         'barbell',      'isolation', false, 8, 12,  2, 4],
+
+  // ─── ADDITIONAL TRICEPS ──────────────────────────────────────────────────────
+  ['Smith Machine Close-Grip Press','triceps', ['chest'],                 'smith_machine','push',      true,  8, 15,  3, 3],
+  ['Dip Machine',                   'triceps', ['chest', 'front_delts'],  'machine',      'push',      true,  10, 20, 2, 3],
+  ['Cable Kickback (Triceps)',       'triceps', [],                        'cable',        'isolation', false, 12, 20, 2, 4],
+  ['Overhead Tricep Extension (Band)','triceps',[],                       'bodyweight',   'isolation', false, 12, 25, 1, 3],
+  ['Barbell Skull Crusher',         'triceps', [],                        'barbell',      'isolation', false, 8, 15,  2, 4],
+
+  // ─── ADDITIONAL QUADS ────────────────────────────────────────────────────────
+  ['Jefferson Squat',               'quads', ['glutes', 'hamstrings'],    'barbell',      'squat',     true,  5, 10,  4, 3],
+  ['Kneeling Squat',                'quads', ['glutes'],                  'barbell',      'squat',     true,  8, 15,  3, 4],
+  ['Skater Squat',                  'quads', ['glutes'],                  'bodyweight',   'squat',     true,  6, 12,  3, 5],
+  ['Step-Up (Weighted)',            'quads', ['glutes'],                  'dumbbell',     'squat',     true,  10, 15, 3, 4],
+  ['Landmine Squat',                'quads', ['glutes'],                  'barbell',      'squat',     true,  8, 15,  3, 4],
+
+  // ─── ADDITIONAL HAMSTRINGS ───────────────────────────────────────────────────
+  ['Kneeling Hamstring Curl (Band)','hamstrings', [],                     'bodyweight',   'isolation', false, 10, 20, 2, 4],
+  ['Hip Extension (Cable)',         'hamstrings', ['glutes'],             'cable',        'hinge',     true,  12, 20, 2, 4],
+  ['Stiff-Leg Deadlift (Single-Leg)','hamstrings', ['glutes'],            'dumbbell',     'hinge',     true,  8, 15,  3, 4],
+
+  // ─── ADDITIONAL GLUTES ───────────────────────────────────────────────────────
+  ['Glute Squeeze Hold',            'glutes', [],                         'bodyweight',   'isolation', false, 5, 30,  1, 3],
+  ['Lateral Band Walk',             'glutes', [],                         'bodyweight',   'isolation', false, 15, 30, 1, 4],
+  ['Reverse Lunge (Glute Focus)',   'glutes', ['quads'],                  'dumbbell',     'squat',     true,  10, 20, 3, 4],
+  ['Single-Leg Hip Thrust (Banded)','glutes', ['hamstrings'],             'bodyweight',   'hinge',     true,  12, 20, 2, 5],
+  ['Lying Hip Abduction (Band)',    'glutes', [],                         'bodyweight',   'isolation', false, 15, 25, 1, 4],
+  ['Monster Walk',                  'glutes', [],                         'bodyweight',   'isolation', false, 15, 30, 1, 4],
+
+  // ─── ADDITIONAL CALVES ───────────────────────────────────────────────────────
+  ['Agility Ladder Drills',         'calves', ['quads'],                  'bodyweight',   'plyometric',true,  20, 40, 2, 4],
+  ['Rope Jump',                     'calves', ['quads', 'glutes'],        'bodyweight',   'plyometric',true,  30, 60, 2, 4],
+  ['Heel Walk',                     'tibialis', [],                       'bodyweight',   'isolation', false, 20, 40, 1, 4],
+  ['Seated Tibialis Raise',         'tibialis', [],                       'machine',      'isolation', false, 15, 25, 1, 5],
+
+  // ─── ADDITIONAL TRAPS ────────────────────────────────────────────────────────
+  ['Trap Bar Shrug',                'traps', [],                          'barbell',      'isolation', false, 12, 20, 3, 4],
+  ['Cable Upright Row (Traps)',     'traps', ['side_delts', 'biceps'],    'cable',        'pull',      false, 10, 15, 2, 3],
+  ['Band Shrug',                    'traps', [],                          'bodyweight',   'isolation', false, 15, 25, 1, 3],
+
+  // ─── ADDITIONAL FOREARMS ─────────────────────────────────────────────────────
+  ['Dumbbell Pronation/Supination', 'forearms', [],                       'dumbbell',     'isolation', false, 15, 25, 1, 3],
+  ['Finger Extension (Band)',       'forearms', [],                       'bodyweight',   'isolation', false, 15, 30, 1, 3],
+  ['Gripper Walks',                 'forearms', ['traps'],                'dumbbell',     'carry',     true,  20, 40, 2, 4],
+
+  // ─── ADDITIONAL NECK ─────────────────────────────────────────────────────────
+  ['Neck Flexion (Band)',           'neck', [],                           'bodyweight',   'isolation', false, 15, 25, 1, 4],
+  ['Neck Extension (Band)',         'neck', ['traps'],                    'bodyweight',   'isolation', false, 15, 25, 1, 4],
+
+  // ─── ADDITIONAL CORE ─────────────────────────────────────────────────────────
+  ['Landmine Press (Abs)',          'abs', ['front_delts'],               'barbell',      'core',      false, 10, 15, 2, 4],
+  ['Single-Arm Farmer Walk',        'abs', ['traps', 'forearms'],         'dumbbell',     'carry',     true,  20, 40, 2, 5],
+  ['Half-Kneeling Pallof Press',    'abs', [],                            'cable',        'isolation', false, 10, 15, 2, 5],
+  ['Tall-Kneeling Pallof Press',    'abs', [],                            'cable',        'isolation', false, 10, 15, 2, 5],
+  ['GHD Sit-Up',                    'abs', ['hamstrings', 'glutes'],      'machine',      'isolation', false, 10, 20, 3, 4],
+  ['Incline Board Sit-Up',          'abs', [],                            'bodyweight',   'isolation', false, 10, 20, 2, 3],
+  ['Hanging Oblique Raise',         'abs', [],                            'bodyweight',   'isolation', false, 8, 15,  2, 4],
+  ['Seated Twist (Plate)',          'abs', [],                            'barbell',      'isolation', false, 15, 25, 1, 3],
 ];
 
 export async function seedExercisesIfNeeded() {
