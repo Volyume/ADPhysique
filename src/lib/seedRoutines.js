@@ -5,7 +5,7 @@ import {
 } from './database';
 
 // Bump to v6: stores tags, splitType, difficulty in DB so filter chips work
-const SEED_KEY = '@volyume_routines_seeded_v10';
+const SEED_KEY = '@volyume_routines_seeded_v11';
 
 // Extra exercises the plan templates rely on that may not be in the base exercise seed
 const REQUIRED_EXERCISES = [
@@ -1478,9 +1478,10 @@ export async function seedRoutinesIfNeeded(userId) {
           workoutDef.name,
           workoutDef.description || null,
           null,
-          1,              // is_active
+          1,              // isLibrary
           null,
           programme.id,
+          true,           // isSample
         );
 
         for (let i = 0; i < workoutDef.exercises.length; i++) {
