@@ -21,7 +21,6 @@ import {
   getLastTrainedPerMuscle,
 } from '../lib/database';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
-import { getBetaBannerText } from '../lib/proGate';
 import { computeEWMA } from '../lib/weeklyCoach';
 import { LineChart } from 'react-native-gifted-charts';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
@@ -41,32 +40,6 @@ const MILESTONES = [
 
 function nextMilestone(total) {
   return MILESTONES.find(m => m.sessions > total) ?? null;
-}
-
-// Returns the Mon-aligned ISO calendar week index for a UTC timestamp.
-function mondayWeekIndex(ts) {
-  if (!ts) return -1;
-  const d = new Date(ts);
-  const daysFromMon = (d.getUTCDay() + 6) % 7; // Mon=0 … Sun=6
-  const mondayMidnight = ts - (ts % 86400000) - daysFromMon * 86400000;
-  return Math.floor(mondayMidnight / (7 * 86400000));
-}
-
-// Consecutive calendar weeks (Mon–Sun) with at least one completed session.
-function computeStreak(workouts) {
-  const trainedWeeks = new Set(
-    workouts
-      .filter(w => w.isCompleted ?? w.is_completed ?? false)
-      .map(w => mondayWeekIndex(w.startedAt ?? w.createdAt ?? 0)),
-  );
-  let streak = 0;
-  let week = mondayWeekIndex(Date.now());
-  if (!trainedWeeks.has(week)) week -= 1;
-  while (trainedWeeks.has(week)) {
-    streak++;
-    week--;
-  }
-  return streak;
 }
 
 // Detects exercises with 2+ consecutive weeks of declining average reps (≥2 rep drop each week).
@@ -251,7 +224,6 @@ export default function AthleteHubScreen({ navigation }) {
   const [nutritionTargets, setNutritionTargets] = useState(null);
   const [latestMetric, setLatestMetric]         = useState(null);
   const [totalWorkouts, setTotalWorkouts]       = useState(0);
-  const [streak, setStreak]                     = useState(0);
   const [recovery, setRecovery]                 = useState({ soreness: null, fatigue: null, joint: null });
   const [weekVolume, setWeekVolume]             = useState(null);
   const [calm, setCalm]                         = useState(false);
@@ -382,7 +354,6 @@ export default function AthleteHubScreen({ navigation }) {
         (w.setCount ?? w.set_count ?? 0) > 0,
       );
       setTotalWorkouts(completed.length);
-      setStreak(computeStreak(workouts));
 
       // Recovery EMAs
       const ema = computeRecoveryEMAs(completed);
@@ -557,9 +528,6 @@ export default function AthleteHubScreen({ navigation }) {
                     : 'Check in now to get your training and nutrition adjustments for next week.'}
                 </Text>
               </View>
-            )}
-            {getBetaBannerText() && (
-              <Text style={styles.betaBanner}>{getBetaBannerText()}</Text>
             )}
           </TouchableOpacity>
         )}
@@ -736,9 +704,6 @@ export default function AthleteHubScreen({ navigation }) {
               </View>
             </TouchableOpacity>
 
-            {getBetaBannerText() && (
-              <Text style={styles.betaBannerStandalone}>{getBetaBannerText()}</Text>
-            )}
           </>
         )}
 
@@ -1030,15 +995,8 @@ const styles = StyleSheet.create({
   lockBadgeText: {
     fontSize: 10, fontWeight: fontWeight.semibold, color: colors.textMuted,
   },
-  betaBannerStandalone: {
-    fontSize: fontSize.xs, color: colors.primaryDim, fontStyle: 'italic',
-    textAlign: 'center', paddingVertical: spacing.xs,
-  },
   checkinPrompt: { paddingTop: spacing.xs },
   checkinPromptText: { fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 18 },
-  betaBanner: {
-    fontSize: fontSize.xs, color: colors.primaryDim, fontStyle: 'italic', marginTop: spacing.xs,
-  },
   cardHeader:     { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   cardIconWrap:   {
     width: 40, height: 40, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center',

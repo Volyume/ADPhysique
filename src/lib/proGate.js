@@ -21,17 +21,9 @@ export function isProUser(userProfile) {
   return userProfile?.proEntitled === true;
 }
 
-/**
- * Returns a short label for display in UI ("Beta" / "Pro" / "Free")
- */
 export function getProLabel(userProfile) {
-  if (PRO_BETA_ACTIVE) return 'Beta';
   if (isProUser(userProfile)) return 'Pro';
   return 'Free';
-}
-
-export function getBetaBannerText() {
-  return null;
 }
 
 /**

@@ -81,12 +81,8 @@ export default function WelcomeScreen({ navigation }) {
               ))}
             </View>
 
-            <Text style={styles.cancelNote}>
-              Free during beta · £1.99/mo for beta testers, locked for life · £2.99/mo standard
-            </Text>
-
             <View style={styles.proCtaRow}>
-              <Text style={styles.proCtaText}>Go Pro — free during beta</Text>
+              <Text style={styles.proCtaText}>Go Pro</Text>
               <Ionicons name="arrow-forward" size={16} color={colors.background} />
             </View>
           </TouchableOpacity>
@@ -233,10 +229,6 @@ const styles = StyleSheet.create({
   signInText: { fontSize: fontSize.sm, color: colors.textMuted },
   signInAction: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
 
-  cancelNote: {
-    fontSize: 11, color: colors.textMuted, textAlign: 'center',
-    marginHorizontal: spacing.lg, marginBottom: spacing.xs,
-  },
 
   founderNote: {
     fontSize: 11, color: colors.textMuted, textAlign: 'center',

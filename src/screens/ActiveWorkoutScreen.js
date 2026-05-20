@@ -1339,32 +1339,28 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               <Text style={styles.loggedTitle}>This workout</Text>
               {loggedSets.map((s, i) => {
                 const isWarmup = s.setType === 'warmup';
-                const isDrop   = s.setType === 'dropset';
-                const est1RM = (isWarmup || isDrop) ? null : calculate1RM(s.weight, s.actualReps);
+                const est1RM = isWarmup ? null : calculate1RM(s.weight, s.actualReps);
                 const progressNum = loggedSets.slice(0, i + 1).filter(x => countProgressSets([x]) > 0).reduce((n, x) => n + 1, 0);
                 return (
                   <View key={i} style={[
                     styles.loggedSetRow,
                     isWarmup && styles.loggedSetRowWarmup,
-                    isDrop && styles.loggedSetRowDrop,
                   ]}>
                     {isWarmup ? (
                       <Ionicons name="flame" size={14} color={colors.warning} style={{ width: 22, textAlign: 'center' }} />
-                    ) : isDrop ? (
-                      <Ionicons name="arrow-down-circle" size={16} color={colors.gold} style={{ width: 22, textAlign: 'center' }} />
                     ) : (
                       <View style={styles.setNumBadge}>
                         <Text style={styles.setNumText}>{progressNum}</Text>
                       </View>
                     )}
-                    <Text style={[styles.loggedSetText, isWarmup && styles.loggedSetTextWarmup, isDrop && styles.loggedSetTextDrop]}>
+                    <Text style={[styles.loggedSetText, isWarmup && styles.loggedSetTextWarmup]}>
                       {s.weight}{units} × {s.actualReps}
-                      {isWarmup ? ' · Warm-up' : isDrop ? ' · Drop' : ''}
+                      {isWarmup ? ' · Warm-up' : ''}
                     </Text>
-                    {!isWarmup && !isDrop && est1RM > 0 && (
+                    {!isWarmup && est1RM > 0 && (
                       <Text style={styles.loggedEst1RM}>Est. max ≈{est1RM.toFixed(0)}{units}</Text>
                     )}
-                    <Ionicons name="checkmark-circle" size={16} color={isWarmup ? colors.warning : isDrop ? colors.gold : colors.success} />
+                    <Ionicons name="checkmark-circle" size={16} color={isWarmup ? colors.warning : colors.success} />
                   </View>
                 );
               })}
@@ -1914,7 +1910,6 @@ const styles = StyleSheet.create({
   targetText: { fontSize: fontSize.sm, color: colors.textMuted },
   setEntryCard: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, gap: spacing.md },
   setEntryCardWarmup: { borderColor: colors.warning, backgroundColor: colors.warningBg || colors.surface },
-  setEntryCardDrop: { borderColor: colors.gold, backgroundColor: 'rgba(255,215,0,0.06)' },
   warmupBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   warmupBannerText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.warning, letterSpacing: 0.3 },
   warmupOneTimeHint: {
@@ -1923,12 +1918,6 @@ const styles = StyleSheet.create({
   },
   firstSetHint: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, backgroundColor: colors.primaryBg, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.sm },
   firstSetHintText: { flex: 1, fontSize: fontSize.xs, color: colors.primary, lineHeight: 18 },
-  dropBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  dropBannerText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.gold, letterSpacing: 0.8 },
-  clusterBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, backgroundColor: colors.primaryBg, borderRadius: radius.sm, alignSelf: 'flex-start', marginBottom: spacing.xs },
-  clusterBannerText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary, letterSpacing: 0.3 },
-  clusterDoneBtn: { marginTop: spacing.sm, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radius.sm, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, alignSelf: 'center' },
-  clusterDoneBtnText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
   setEntryTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.2 },
   noteInput: { backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md, fontSize: fontSize.sm, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, minHeight: 60 },
   ghostChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, backgroundColor: colors.surface2, borderRadius: radius.sm, alignSelf: 'flex-start', marginBottom: spacing.xs },
@@ -1972,8 +1961,6 @@ const styles = StyleSheet.create({
   loggedSetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border },
   loggedSetRowWarmup: { borderColor: colors.warning + '60', backgroundColor: colors.warningBg || colors.surface },
   loggedSetTextWarmup: { color: colors.warning },
-  loggedSetRowDrop: { borderColor: colors.gold + '50', backgroundColor: 'rgba(255,215,0,0.05)' },
-  loggedSetTextDrop: { color: colors.gold },
   setNumBadge: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
   setNumText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textSecondary },
   loggedSetText: { flex: 1, fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },

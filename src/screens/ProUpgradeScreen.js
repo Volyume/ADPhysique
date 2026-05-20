@@ -303,53 +303,6 @@ const styles = StyleSheet.create({
   },
   perkText: { fontSize: fontSize.sm, color: colors.textSecondary, flex: 1, lineHeight: 19 },
 
-  pricingRow: {
-    flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg,
-  },
-  pricingTier: {
-    flex: 1, backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border,
-    padding: spacing.lg, alignItems: 'center', gap: 2,
-  },
-  pricingTierHighlight: {
-    borderColor: colors.primary, borderWidth: 2,
-  },
-  pricingTierBadge: {
-    backgroundColor: colors.primary, borderRadius: 4,
-    paddingHorizontal: 7, paddingVertical: 2, marginBottom: spacing.xs,
-  },
-  pricingTierBadgeText: {
-    fontSize: 9, fontWeight: fontWeight.black,
-    color: colors.background, letterSpacing: 0.6,
-  },
-  pricingTierLabel: {
-    fontSize: fontSize.xs, color: colors.textMuted, marginBottom: spacing.xs,
-  },
-  pricingAmount: {
-    fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.textPrimary,
-  },
-  pricingAmountMuted: { color: colors.textMuted },
-  pricingPeriod: { fontSize: fontSize.xs, color: colors.textMuted },
-  pricingNote: { fontSize: 10, color: colors.textMuted, marginTop: 2 },
-
-  offerCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg, borderWidth: 2, borderColor: colors.primary,
-    padding: spacing.lg, marginBottom: spacing.xl, gap: spacing.sm,
-  },
-  offerBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    alignSelf: 'flex-start',
-    backgroundColor: colors.primary, borderRadius: 4,
-    paddingHorizontal: 8, paddingVertical: 3,
-  },
-  offerBadgeText: {
-    fontSize: 9, fontWeight: fontWeight.black,
-    color: colors.background, letterSpacing: 0.8,
-  },
-  offerText: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
-  cancelNote: { fontSize: 11, color: colors.textMuted, marginTop: spacing.xs },
-
   accountNote: {
     fontSize: fontSize.sm, color: colors.textMuted,
     lineHeight: 19, marginBottom: spacing.lg,

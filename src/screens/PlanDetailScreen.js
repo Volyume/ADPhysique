@@ -297,11 +297,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm, backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: spacing.lg,
   },
   primaryBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
-  deactivateBtn: {
-    alignItems: 'center', borderRadius: radius.lg, paddingVertical: spacing.md,
-    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border,
-  },
-  deactivateBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.textSecondary },
   section: { gap: spacing.md },
   sectionTitle: {
     fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary, letterSpacing: 0.2,
