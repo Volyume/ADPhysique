@@ -153,6 +153,30 @@ export default function NutritionTargetsScreen() {
   const [calm,         setCalm]         = useState(false);
   const [formCollapsed, setFormCollapsed] = useState(false);
 
+  // ── Per-meal distribution — guidance only, daily totals unchanged ───────────────
+  // Per-meal MPS window: ~0.4 g/kg (floor) to ~0.55 g/kg (above this, diminishing
+  // returns). We pick the smallest meal count where per-meal protein stays at or
+  // below the ceiling, so bodybuilders on high daily targets automatically split
+  // across more feedings rather than overshooting the per-meal ceiling.
+  const [mealsPerDay,     setMealsPerDay]     = useState(null);  // null = use recommended
+  useEffect(() => {
+    AsyncStorage.getItem('@volyume_meals_per_day')
+      .then(v => { const n = parseInt(v, 10); if (n >= 3 && n <= 6) setMealsPerDay(n); })
+      .catch(() => {});
+  }, []);
+  function changeMealsPerDay(n) {
+    setMealsPerDay(n);
+    AsyncStorage.setItem('@volyume_meals_per_day', String(n)).catch(() => {});
+  }
+  // Recommended meal count: smallest count keeping per-meal protein ≤ 0.55 g/kg.
+  // Falls back to 4 when bodyweight isn't available.
+  function getRecommendedMeals(proteinG, weightKg) {
+    if (!proteinG || !weightKg) return 4;
+    const upperPerMeal = weightKg * 0.55;
+    const minCount = Math.ceil(proteinG / upperPerMeal);
+    return Math.max(3, Math.min(6, minCount));
+  }
+
   // ── Load saved targets on mount — SQLite primary, AsyncStorage fallback ────────────
   useEffect(() => {
     getWellbeingMode().then(m => {
@@ -646,6 +670,101 @@ export default function NutritionTargetsScreen() {
                 <MacroCard label="Carbs" grams={results.carbsG} />
                 <MacroCard label="Fat"   grams={results.fatG}   />
               </View>
+
+              {/* ── Per-meal protein distribution ───────────────────
+                  Guidance only — daily total unchanged. Splits the
+                  prescribed daily protein across 3–6 feedings, with
+                  the recommended count chosen to keep per-meal in the
+                  0.4–0.55 g/kg muscle protein synthesis window. */}
+              {results.proteinG > 0 && (() => {
+                // Derive bodyweight from form or back-calculate from results
+                const formWeightKg = parseFloat(weight) > 0 ? parseFloat(weight) : null;
+                const derivedWeightKg = (results.proteinGPerKg > 0)
+                  ? Math.round(results.proteinG / results.proteinGPerKg)
+                  : null;
+                const weightKg = formWeightKg ?? derivedWeightKg;
+                const recommended = getRecommendedMeals(results.proteinG, weightKg);
+                const effectiveMeals = mealsPerDay ?? recommended;
+                const perMeal = Math.round(results.proteinG / effectiveMeals);
+                const perMealPerKg = weightKg ? perMeal / weightKg : null;
+
+                // Window hint: only surface if user has manually picked a sub-optimal count
+                let windowHint = null;
+                if (mealsPerDay !== null && weightKg) {
+                  if (perMealPerKg > 0.55) {
+                    windowHint = `${perMeal}g is over the per-meal sweet spot. ${recommended} meals (${Math.round(results.proteinG / recommended)}g each) hits it better.`;
+                  } else if (perMealPerKg < 0.4 && results.proteinG / Math.max(3, effectiveMeals - 1) <= weightKg * 0.55) {
+                    windowHint = `${perMeal}g is below the per-meal threshold that maximises growth. Try fewer meals.`;
+                  }
+                }
+
+                return (
+                  <View style={styles.perMealCard}>
+                    <View style={styles.perMealHeader}>
+                      <Text style={styles.perMealHeading}>PER MEAL</Text>
+                      <InfoTooltip
+                        size={12}
+                        text={
+                          'How to split your daily protein across the day.\n\n' +
+                          'Each meal should land in a window of roughly 0.4 to 0.55 g of protein per kilogram of bodyweight. Below the floor, muscle protein synthesis is not fully triggered. Above the ceiling, the extra protein gives diminishing returns at that meal.\n\n' +
+                          'Volyume picks the smallest meal count that keeps every meal at or below the ceiling, so your daily target is hit without overshooting per-meal. Your daily total stays exactly the same — this is purely how to split it.'
+                        }
+                      />
+                    </View>
+
+                    <View style={styles.perMealCenter}>
+                      <Text style={styles.perMealValue}>{perMeal}g</Text>
+                      <Text style={styles.perMealUnit}>protein per meal</Text>
+                    </View>
+
+                    <View style={styles.mealDotsRow}>
+                      {Array.from({ length: effectiveMeals }).map((_, i) => (
+                        <View key={i} style={styles.mealDot} />
+                      ))}
+                    </View>
+
+                    <View style={styles.mealCountRow}>
+                      <Text style={styles.mealCountLabel}>Across</Text>
+                      <View style={styles.mealCountChips}>
+                        {[3, 4, 5, 6].map(n => {
+                          const active = effectiveMeals === n;
+                          const isRecommended = recommended === n;
+                          return (
+                            <TouchableOpacity
+                              key={n}
+                              style={[styles.mealCountChip, active && styles.mealCountChipActive]}
+                              onPress={() => changeMealsPerDay(n)}
+                              accessibilityRole="button"
+                              accessibilityLabel={`${n} meals per day${isRecommended ? ', recommended' : ''}`}
+                              accessibilityState={{ selected: active }}
+                            >
+                              <Text style={[styles.mealCountChipText, active && styles.mealCountChipTextActive]}>
+                                {n}
+                              </Text>
+                              {isRecommended && (
+                                <View style={styles.mealCountRecDot} />
+                              )}
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                      <Text style={styles.mealCountLabel}>feedings</Text>
+                    </View>
+
+                    <Text style={styles.mealCountRecCaption}>
+                      <Text style={styles.mealCountRecCaptionDot}>●</Text>
+                      {' '}Recommended for your protein target
+                    </Text>
+
+                    {windowHint && (
+                      <View style={styles.perMealHint}>
+                        <Ionicons name="information-circle-outline" size={13} color={colors.warning} />
+                        <Text style={styles.perMealHintText}>{windowHint}</Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              })()}
 
               {/* ── Why these numbers for you? ─────────────────────── */}
               {(() => {
@@ -1146,6 +1265,129 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.textMuted,
     marginTop: spacing.xxs,
+  },
+
+  // Per-meal protein card — distribution guidance, daily total unchanged
+  perMealCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.md,
+  },
+  perMealHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  perMealHeading: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.black,
+    color: colors.textMuted,
+    letterSpacing: 1.5,
+  },
+  perMealCenter: {
+    alignItems: 'center',
+    gap: 2,
+    paddingVertical: spacing.xs,
+  },
+  perMealValue: {
+    fontSize: fontSize.xxxl,
+    fontWeight: fontWeight.black,
+    color: colors.primary,
+    lineHeight: 38,
+  },
+  perMealUnit: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    letterSpacing: 0.2,
+  },
+  mealDotsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  mealDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+    opacity: 0.7,
+  },
+  mealCountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
+  },
+  mealCountLabel: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+  },
+  mealCountChips: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  mealCountChip: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  mealCountChipActive: {
+    backgroundColor: colors.primaryBg,
+    borderColor: colors.primary,
+  },
+  mealCountChipText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+    color: colors.textSecondary,
+  },
+  mealCountChipTextActive: {
+    color: colors.primary,
+  },
+  mealCountRecDot: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.primary,
+  },
+  mealCountRecCaption: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    textAlign: 'center',
+  },
+  mealCountRecCaptionDot: {
+    color: colors.primary,
+    fontSize: 8,
+  },
+  perMealHint: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+    backgroundColor: colors.warningBg,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.warning + '40',
+  },
+  perMealHintText: {
+    flex: 1,
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    lineHeight: 16,
   },
 
   phaseCard: {
