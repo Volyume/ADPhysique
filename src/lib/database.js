@@ -739,6 +739,87 @@ export async function getWeeklyVolumeByMuscle(userId, weeksBack = 4) {
   return result;
 }
 
+/**
+ * Returns the most recent session date for each muscle group trained by the user.
+ * Used to show recovery status (days since last trained) on the volume heatmap.
+ * Returns an object: { [muscle]: { daysAgo: number, lastDate: timestamp } }
+ */
+export async function getLastTrainedByMuscle(userId) {
+  const d = await db();
+  const rows = await d.getAllAsync(`
+    SELECT e.primary_muscle AS muscle,
+           MAX(w.started_at) AS last_session_ms
+    FROM workout_sets s
+    JOIN workouts w ON w.id = s.workout_id
+    JOIN exercises e ON e.id = s.exercise_id
+    WHERE w.user_id = ?
+      AND w.is_completed = 1
+      AND s.set_type != 'warmup'
+      AND e.primary_muscle IS NOT NULL
+    GROUP BY e.primary_muscle
+  `, [userId]);
+
+  const now = Date.now();
+  const MS_PER_DAY = 86400000;
+  const result = {};
+  for (const row of rows) {
+    const daysAgo = Math.floor((now - row.last_session_ms) / MS_PER_DAY);
+    result[row.muscle] = { daysAgo, lastDate: row.last_session_ms };
+  }
+  return result;
+}
+
+/**
+ * Returns acute (this week) and chronic (4-week average) training tonnage
+ * for calculating the Acute:Chronic Workload Ratio.
+ * Only counts hard sets from completed workouts (setType != 'warmup').
+ */
+export async function getAcuteChronicWorkload(userId) {
+  const d = await db();
+  const now = Date.now();
+  const MS_DAY = 86400000;
+
+  // Fetch hard sets from last 5 weeks
+  const fiveWeeksAgo = now - 35 * MS_DAY;
+  const rows = await d.getAllAsync(`
+    SELECT s.weight, s.reps, w.started_at
+    FROM workout_sets s
+    JOIN workouts w ON w.id = s.workout_id
+    WHERE w.user_id = ?
+      AND w.is_completed = 1
+      AND s.set_type != 'warmup'
+      AND s.weight > 0
+      AND s.reps > 0
+      AND w.started_at >= ?
+    ORDER BY w.started_at ASC
+  `, [userId, fiveWeeksAgo]);
+
+  // Bucket into weekly tonnage (week 0 = this week, week 1 = last week, etc.)
+  const weeklyTonnage = [0, 0, 0, 0, 0]; // index 0 = most recent
+  for (const row of rows) {
+    const daysAgo = Math.floor((now - row.started_at) / MS_DAY);
+    const weekIdx = Math.floor(daysAgo / 7);
+    if (weekIdx < 5) {
+      weeklyTonnage[weekIdx] += row.weight * row.reps;
+    }
+  }
+
+  const acute = weeklyTonnage[0];
+  // Chronic = average of weeks 1-4 (exclude current week)
+  const pastWeeks = weeklyTonnage.slice(1, 5).filter(t => t > 0);
+  if (pastWeeks.length < 2) return null; // not enough data
+
+  const chronic = pastWeeks.reduce((s, t) => s + t, 0) / pastWeeks.length;
+  const ratio = chronic > 0 ? acute / chronic : null;
+
+  return {
+    acute: Math.round(acute),
+    chronic: Math.round(chronic),
+    ratio: ratio ? Math.round(ratio * 100) / 100 : null,
+    weeksOfData: pastWeeks.length,
+  };
+}
+
 export async function getWorkoutSetsForWorkout(workoutId) {
   const d = await db();
   const rows = await d.getAllAsync(
@@ -840,6 +921,42 @@ export async function createWorkoutSet(data) {
     ],
   );
   return { id, ...data, createdAt: now, updatedAt: now };
+}
+
+// Update the post-set stimulus rating on the most recently logged set for an exercise.
+// pump: 1–5, muscleConnection: 1–5
+export async function updateWorkoutSetPostRating(setId, pump, muscleConnection) {
+  const d = await db();
+  await d.runAsync(
+    'UPDATE workout_sets SET post_set_pump = ?, post_set_muscle_connection = ? WHERE id = ?',
+    [pump, muscleConnection, setId]
+  );
+}
+
+// Returns the most recent post-set pump and connection scores grouped by primary muscle,
+// using only the last logged set per exercise in a given workout.
+export async function getExerciseStimulusRatings(workoutId) {
+  const d = await db();
+  const rows = await d.getAllAsync(`
+    SELECT s.exercise_id, e.name AS exercise_name, e.primary_muscle,
+           s.post_set_pump, s.post_set_muscle_connection
+    FROM workout_sets s
+    LEFT JOIN exercises e ON e.id = s.exercise_id
+    WHERE s.workout_id = ?
+      AND s.post_set_pump IS NOT NULL
+    ORDER BY s.created_at DESC
+  `, [workoutId]);
+
+  // Dedupe: keep first occurrence per exercise (most recent set with a rating)
+  const seen = new Set();
+  const result = [];
+  for (const row of rows) {
+    if (!seen.has(row.exercise_id)) {
+      seen.add(row.exercise_id);
+      result.push(rowToCamel(row));
+    }
+  }
+  return result;
 }
 
 // ─── Routines ───────────────────────────────────────────────────────────────────────────────────

@@ -8,7 +8,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import InfoTooltip from '../components/InfoTooltip';
 import BodyDiagramHeatmap from '../components/BodyDiagramHeatmap';
-import { getCompletedWorkoutSets, getAllExercises, getWeeklyVolumeByMuscle } from '../lib/database';
+import { getCompletedWorkoutSets, getAllExercises, getWeeklyVolumeByMuscle, getLastTrainedByMuscle } from '../lib/database';
 import {
   calculateWeeklyVolume, VOLUME_LANDMARKS, MUSCLE_DISPLAY_NAMES, getVolumeStatus,
 } from '../lib/algorithms';
@@ -30,6 +30,7 @@ export default function VolumeHeatmapScreen() {
   const [editing, setEditing] = useState(false);
   const [editValues, setEditValues] = useState({});
   const [trendData, setTrendData] = useState([]);
+  const [lastTrainedMap, setLastTrainedMap] = useState({});
 
   useFocusEffect(useCallback(() => { loadData(); }, [user?.id, windowWeeks]));
 
@@ -57,6 +58,9 @@ export default function VolumeHeatmapScreen() {
 
     const trend = await getWeeklyVolumeByMuscle(user.id, 4);
     setTrendData(trend);
+
+    const lastTrained = await getLastTrainedByMuscle(user.id).catch(() => ({}));
+    setLastTrainedMap(lastTrained);
 
     // Load locally stored custom landmarks (Stage 1 — no Supabase yet)
     const stored = await AsyncStorage.getItem(`@volyume_landmarks_${user.id}`).catch(() => null);
@@ -152,6 +156,12 @@ export default function VolumeHeatmapScreen() {
       : windowWeeks === 2
       ? 'Showing sets from the last 2 weeks'
       : 'Showing sets from the last 4 weeks';
+
+  function formatLastTrained(daysAgo) {
+    if (daysAgo === 0) return 'Today';
+    if (daysAgo === 1) return 'Yesterday';
+    return `${daysAgo}d ago`;
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
@@ -263,6 +273,14 @@ export default function VolumeHeatmapScreen() {
                 </View>
                 <Text style={[styles.setsCount, { color }]}>{sets}</Text>
                 <Text style={styles.mrvLabel}>/{mrv}</Text>
+                {lastTrainedMap[muscle] != null && (
+                  <Text style={[
+                    styles.lastTrainedChip,
+                    lastTrainedMap[muscle].daysAgo <= 1 && styles.lastTrainedRecent,
+                  ]}>
+                    {formatLastTrained(lastTrainedMap[muscle].daysAgo)}
+                  </Text>
+                )}
               </View>
             );
           })}
@@ -512,6 +530,14 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.textMuted,
     width: 24,
+  },
+  lastTrainedChip: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    fontWeight: fontWeight.medium,
+  },
+  lastTrainedRecent: {
+    color: colors.warning,
   },
   section: {
     backgroundColor: colors.surface,
