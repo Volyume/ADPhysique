@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, Alert,
 } from 'react-native';
@@ -10,7 +10,7 @@ import {
   addMonths, subMonths, isSameDay,
 } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { getAllWorkouts, getAllWorkoutSets, getAllExercises, createWorkout } from '../lib/database';
+import { getAllWorkouts, getAllWorkoutSets, getAllExercises, createWorkout, getWorkoutSetsForWorkout } from '../lib/database';
 import { calculateTonnage } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -29,6 +29,8 @@ export default function WorkoutHistoryScreen({ navigation }) {
   const { user, startWorkout } = useAppStore(useShallow(s => ({ user: s.user, startWorkout: s.startWorkout })));
   const [workouts, setWorkouts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState(null);
+  const [expandedSets, setExpandedSets] = useState({}); // workoutId -> grouped exercise data
 
   // Filter + view state
   const [filter, setFilter] = useState('all');
@@ -75,11 +77,74 @@ export default function WorkoutHistoryScreen({ navigation }) {
     }
   }
 
-  async function handleRepeatWorkout(workout) {
+  async function handleRepeatAsIs(workout) {
     const newWorkout = await createWorkout(user.id, workout.routineId || null);
     startWorkout(newWorkout);
     navigation.getParent()?.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
   }
+
+  function handleRepeatWorkout(workout) {
+    Alert.alert(
+      'Repeat session',
+      'How would you like to continue?',
+      [
+        {
+          text: 'Repeat as-is',
+          onPress: () => handleRepeatAsIs(workout),
+        },
+        {
+          text: 'View in Plans',
+          onPress: () => navigation.getParent()?.navigate('PlansTab'),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ],
+    );
+  }
+
+  const handleToggleExpand = useCallback(async (workoutId) => {
+    if (expandedId === workoutId) {
+      setExpandedId(null);
+      return;
+    }
+    setExpandedId(workoutId);
+    if (expandedSets[workoutId]) return; // already loaded
+
+    try {
+      const [sets, allExercises] = await Promise.all([
+        getWorkoutSetsForWorkout(workoutId),
+        getAllExercises(),
+      ]);
+      const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
+
+      // Group sets by exercise, preserving encounter order
+      const order = [];
+      const groups = {};
+      for (const s of sets) {
+        if (!groups[s.exerciseId]) {
+          groups[s.exerciseId] = { name: exerciseMap[s.exerciseId]?.name || 'Unknown', sets: [] };
+          order.push(s.exerciseId);
+        }
+        groups[s.exerciseId].sets.push(s);
+      }
+
+      const grouped = order.map(id => {
+        const g = groups[id];
+        const workingSets = g.sets.filter(s => s.setType !== 'warmup');
+        // Build a concise set summary: weight × reps list for working sets
+        const repsStr = workingSets.map(s => s.reps).join(', ');
+        const weights = [...new Set(workingSets.map(s => s.weight).filter(Boolean))];
+        const weightStr = weights.length === 1 ? `${weights[0]}kg` : weights.map(w => `${w}kg`).join('/');
+        const summary = workingSets.length > 0
+          ? `${workingSets.length} × ${weightStr} × ${repsStr}`
+          : `${g.sets.length} set${g.sets.length !== 1 ? 's' : ''} (warmup only)`;
+        return { name: g.name, summary, workingSetCount: workingSets.length };
+      });
+
+      setExpandedSets(prev => ({ ...prev, [workoutId]: grouped }));
+    } catch (_) {
+      // silently fail — expanded view just won't show exercise breakdown
+    }
+  }, [expandedId, expandedSets]);
 
   async function handleStartNewWorkout() {
     const newWorkout = await createWorkout(user.id, null);
@@ -160,45 +225,136 @@ export default function WorkoutHistoryScreen({ navigation }) {
   function renderItem({ item }) {
     const { workout, setCount, workingSetCount, exerciseCount, tonnage, exerciseNames } = item;
     const date = new Date(workout.startedAt);
+    const isExpanded = expandedId === workout.id;
+    const exerciseDetail = expandedSets[workout.id];
 
     return (
       <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <View>
-            <Text style={styles.cardDate}>{format(date, 'd MMM yyyy')}</Text>
-            <Text style={styles.cardTime}>{formatDistanceToNow(date, { addSuffix: true })}</Text>
+        {/* Tappable header row — toggles expansion */}
+        <TouchableOpacity
+          onPress={() => handleToggleExpand(workout.id)}
+          activeOpacity={0.7}
+          style={styles.cardHeaderTouchable}
+        >
+          <View style={styles.cardHeader}>
+            <View style={styles.cardHeaderLeft}>
+              <Text style={styles.cardDate}>{format(date, 'd MMM yyyy')}</Text>
+              <Text style={styles.cardTime}>{formatDistanceToNow(date, { addSuffix: true })}</Text>
+            </View>
+            <View style={styles.cardHeaderRight}>
+              <View style={styles.cardMeta}>
+                <Ionicons name="time-outline" size={14} color={colors.textMuted} />
+                <Text style={styles.cardMetaText}>{workout.durationMinutes || 0}m</Text>
+                <Text style={styles.cardMetaDivider}>·</Text>
+                <Ionicons name="layers-outline" size={14} color={colors.textMuted} />
+                <Text style={styles.cardMetaText}>{workingSetCount} sets</Text>
+              </View>
+              <Ionicons
+                name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                size={16}
+                color={colors.textMuted}
+                style={{ marginTop: spacing.xs }}
+              />
+            </View>
           </View>
-          <View style={styles.cardMeta}>
-            <Ionicons name="time-outline" size={14} color={colors.textMuted} />
-            <Text style={styles.cardMetaText}>{workout.durationMinutes || 0}m</Text>
-            <Text style={styles.cardMetaDivider}>·</Text>
-            <Ionicons name="layers-outline" size={14} color={colors.textMuted} />
-            <Text style={styles.cardMetaText}>{workingSetCount} sets</Text>
+          <Text style={styles.exerciseList} numberOfLines={isExpanded ? undefined : 2}>
+            {exerciseNames.join(', ') || 'No exercises logged'}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Expanded detail */}
+        {isExpanded && (
+          <View style={styles.expandedContent}>
+            {/* Stat chips */}
+            <View style={styles.statChipRow}>
+              {!!workout.durationMinutes && (
+                <View style={styles.statChip}>
+                  <Text style={styles.statChipText}>{workout.durationMinutes} min</Text>
+                </View>
+              )}
+              <View style={styles.statChip}>
+                <Text style={styles.statChipText}>{workingSetCount} working set{workingSetCount !== 1 ? 's' : ''}</Text>
+              </View>
+              {tonnage > 0 && (
+                <View style={styles.statChip}>
+                  <Text style={styles.statChipText}>{Math.round(tonnage).toLocaleString()}kg lifted</Text>
+                </View>
+              )}
+            </View>
+
+            {/* Exercise breakdown */}
+            {exerciseDetail ? (
+              <View style={styles.exerciseBreakdown}>
+                {exerciseDetail.map((ex, idx) => (
+                  <View key={idx} style={styles.exerciseBreakdownRow}>
+                    <Text style={styles.exerciseBreakdownName} numberOfLines={1}>
+                      {ex.name}
+                    </Text>
+                    <Text style={styles.exerciseBreakdownSummary} numberOfLines={1}>
+                      {ex.summary}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.exerciseBreakdown}>
+                <Text style={styles.loadingText}>Loading exercises...</Text>
+              </View>
+            )}
+
+            {/* Session notes */}
+            {!!workout.notes && (
+              <View style={styles.notesRow}>
+                <Ionicons name="document-text-outline" size={13} color={colors.textMuted} />
+                <Text style={styles.notesText}>{workout.notes}</Text>
+              </View>
+            )}
+
+            {/* View full summary */}
+            <TouchableOpacity
+              style={styles.fullSummaryBtn}
+              onPress={() =>
+                navigation.navigate('WorkoutSummary', {
+                  workoutId: workout.id,
+                  durationMinutes: workout.durationMinutes,
+                  exerciseCount,
+                  setCount,
+                  workingSetCount,
+                  tonnage,
+                  exerciseNames,
+                  readOnly: true,
+                })
+              }
+            >
+              <Text style={styles.fullSummaryBtnText}>View full summary</Text>
+              <Ionicons name="arrow-forward" size={14} color={colors.primary} />
+            </TouchableOpacity>
           </View>
-        </View>
-        <Text style={styles.exerciseList} numberOfLines={2}>
-          {exerciseNames.join(', ') || 'No exercises logged'}
-        </Text>
+        )}
+
+        {/* Card actions */}
         <View style={styles.cardActions}>
+          {!isExpanded && (
+            <TouchableOpacity
+              style={styles.viewBtn}
+              onPress={() =>
+                navigation.navigate('WorkoutSummary', {
+                  workoutId: workout.id,
+                  durationMinutes: workout.durationMinutes,
+                  exerciseCount,
+                  setCount,
+                  workingSetCount,
+                  tonnage,
+                  exerciseNames,
+                  readOnly: true,
+                })
+              }
+            >
+              <Text style={styles.viewBtnText}>View Details</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
-            style={styles.viewBtn}
-            onPress={() =>
-              navigation.navigate('WorkoutSummary', {
-                workoutId: workout.id,
-                durationMinutes: workout.durationMinutes,
-                exerciseCount,
-                setCount,
-                workingSetCount,
-                tonnage,
-                exerciseNames,
-                readOnly: true,
-              })
-            }
-          >
-            <Text style={styles.viewBtnText}>View Details</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.repeatBtn}
+            style={[styles.repeatBtn, isExpanded && styles.repeatBtnFull]}
             onPress={() => handleRepeatWorkout(workout)}
           >
             <Ionicons name="refresh-outline" size={16} color={colors.primary} />
@@ -527,10 +683,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  cardHeaderTouchable: {
+    gap: spacing.sm,
+  },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+  },
+  cardHeaderLeft: {
+    flex: 1,
+  },
+  cardHeaderRight: {
+    alignItems: 'flex-end',
+    gap: 2,
   },
   cardDate: {
     fontSize: fontSize.md,
@@ -559,6 +725,85 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     lineHeight: 20,
   },
+
+  // ── Expanded content ───────────────────────────────────────────────────────
+  expandedContent: {
+    gap: spacing.md,
+    paddingTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  statChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  statChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface2,
+  },
+  statChipText: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    fontWeight: fontWeight.medium,
+  },
+  exerciseBreakdown: {
+    gap: spacing.sm,
+  },
+  exerciseBreakdownRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: spacing.sm,
+  },
+  exerciseBreakdownName: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+    flex: 1,
+  },
+  exerciseBreakdownSummary: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    flex: 2,
+    textAlign: 'right',
+  },
+  loadingText: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    fontStyle: 'italic',
+  },
+  notesRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+  },
+  notesText: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    flex: 1,
+    lineHeight: 17,
+  },
+  fullSummaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  fullSummaryBtnText: {
+    fontSize: fontSize.sm,
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
+  },
+
   cardActions: {
     flexDirection: 'row',
     gap: spacing.md,
@@ -587,6 +832,10 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.primary,
+  },
+  repeatBtnFull: {
+    flex: 1,
+    justifyContent: 'center',
   },
   repeatBtnText: {
     fontSize: fontSize.sm,
