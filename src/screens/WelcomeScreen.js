@@ -17,10 +17,10 @@ const FREE_BULLETS = [
 ];
 
 const PRO_BULLETS = [
-  'A plan built around your schedule and goals',
-  'Precision Coaching that adjusts training and nutrition as your body responds',
-  'Nutrition targets and body tracking',
-  'We tell you what we changed — and what we held, and why',
+  'A plan built around your schedule, goals, and experience level',
+  'Precision Coaching that adjusts your training and nutrition as your body responds',
+  'Personalised calorie and protein targets, updated as your goals change',
+  'After every check-in, your coach explains every decision. What changed, what was left alone, and why.',
 ];
 
 export default function WelcomeScreen({ navigation }) {

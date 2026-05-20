@@ -11,10 +11,10 @@ import { signUpWithEmail, signInWithEmail, getSupabaseClient } from '../lib/supa
 import { syncProfile, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
 
 const PRO_PERKS = [
-  { icon: 'sparkles', text: 'A plan built around your schedule and goals' },
-  { icon: 'calendar-outline', text: 'Precision Coaching that adjusts training and nutrition as your body responds' },
-  { icon: 'nutrition-outline', text: 'Nutrition targets and body tracking' },
-  { icon: 'eye-outline', text: 'We tell you what we changed, what we held, and why' },
+  { icon: 'sparkles', text: 'A plan built around your schedule, goals, and experience level' },
+  { icon: 'calendar-outline', text: 'Precision Coaching that adjusts your training and nutrition as your body responds' },
+  { icon: 'nutrition-outline', text: 'Personalised calorie and protein targets, updated as your goals change' },
+  { icon: 'eye-outline', text: 'After every check-in, your coach explains every decision. What changed, what was left alone, and why.' },
 ];
 
 export default function ProUpgradeScreen({ navigation }) {
