@@ -278,7 +278,16 @@ export default function PlansScreen({ navigation }) {
     (blockAdvice.action === 'heads_up' || !blockSnoozed);
 
   const isProWithPlan = tier === 'pro' && !!activePlan;
-  const actionCards = ACTION_CARDS_DEFAULT;
+  // Pro users see Coach Builder first (recommended). Free users see Library
+  // and Manual Builder first because Coach Builder is Pro-gated for them —
+  // showing it at the top alongside a lock icon felt like teasing. The card
+  // is still present (greyed) at the bottom of the list as a Pro preview.
+  const actionCards = tier === 'pro'
+    ? ACTION_CARDS_DEFAULT
+    : [...ACTION_CARDS_DEFAULT].sort((a, b) => {
+        const order = { library: 0, manual: 1, coach: 2 };
+        return (order[a.id] ?? 99) - (order[b.id] ?? 99);
+      });
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>

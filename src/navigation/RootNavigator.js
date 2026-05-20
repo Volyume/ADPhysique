@@ -259,7 +259,7 @@ function ProOnboardingStack() {
   );
 }
 
-const SPLASH_MIN_MS = 3800;
+const SPLASH_MIN_MS = 2500;
 
 export default function RootNavigator() {
   const {
