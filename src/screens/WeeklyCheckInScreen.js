@@ -654,7 +654,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
   // ─── Main check-in screen ──────────────────────────────────────────────────
 
   const todayDayName = new Date().toLocaleDateString('en-GB', { weekday: 'long' });
-  const checkinDayLabel = todayDayName === 'Sunday' ? 'Your Sunday check-in' : 'Your weekly check-in';
+  const checkinDayLabel = 'Precision Coaching · check-in';
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>

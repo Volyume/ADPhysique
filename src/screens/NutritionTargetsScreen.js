@@ -27,7 +27,6 @@ const ACTIVITY_OPTIONS = [
   { key: 'very_active',  label: 'Very Active' },
 ];
 
-const TRAINING_DAYS_OPTIONS = [3, 4, 5, 6];
 
 const BF_SOURCES = [
   { key: 'visual',  label: 'Visual' },
@@ -139,7 +138,6 @@ export default function NutritionTargetsScreen() {
   const [bodyFat,        setBodyFat]        = useState('');
   const [bfSource,       setBfSource]       = useState('visual');
   const [activity,       setActivity]       = useState('moderate');
-  const [trainingDays,   setTrainingDays]   = useState(4);
   const [goal,           setGoal]           = useState('lean_gain');
   const [proteinApproach, setProteinApproach] = useState('optimised');
   const [customProteinGPerKg, setCustomProteinGPerKg] = useState('');
@@ -466,17 +464,6 @@ export default function NutritionTargetsScreen() {
               options={ACTIVITY_OPTIONS}
               selected={activity}
               onSelect={setActivity}
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.fieldLabel}>Training days / week</Text>
-            <PillGroup
-              options={TRAINING_DAYS_OPTIONS}
-              selected={trainingDays}
-              onSelect={setTrainingDays}
-              keyExtractor={d => d}
-              labelExtractor={d => String(d)}
             />
           </View>
 

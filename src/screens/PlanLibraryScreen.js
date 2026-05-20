@@ -89,15 +89,6 @@ const QUIZ_STEPS = [
     ],
   },
   {
-    key: 'days',
-    question: 'How many days per week can you train?',
-    options: [
-      { key: '2_3', label: '2 to 3 days', icon: 'calendar-outline' },
-      { key: '4',   label: '4 days',      icon: 'calendar-outline' },
-      { key: '5_6', label: '5 or 6 days', icon: 'calendar-outline' },
-    ],
-  },
-  {
     key: 'equipment',
     question: 'What equipment do you have access to?',
     options: [
@@ -127,7 +118,7 @@ function matchesCollection(plan, key) {
 }
 
 function getQuizRecommendation(answers, plans) {
-  const { goal, days, equipment } = answers;
+  const { goal, equipment } = answers;
   if (!plans.length) return null;
 
   const scored = plans.map(p => {
@@ -137,9 +128,6 @@ function getQuizRecommendation(answers, plans) {
     if (goal === 'get_stronger'  && hasTag(p, 'goal:get_stronger'))  score += 3;
     if (goal === 'conditioning'  && hasTag(p, 'goal:conditioning'))  score += 3;
     if (goal === 'stage_prep'    && hasTag(p, 'category:division'))  score += 5;
-    if (days === '2_3' && (hasTag(p, 'days:2') || hasTag(p, 'days:3'))) score += 2;
-    if (days === '4'   && hasTag(p, 'days:4')) score += 2;
-    if (days === '5_6' && (hasTag(p, 'days:5') || hasTag(p, 'days:6'))) score += 2;
     if (equipment === 'full_gym'   && !hasTag(p, 'equipment:dumbbell') && !hasTag(p, 'equipment:bodyweight')) score += 1;
     if (equipment === 'dumbbell'   && hasTag(p, 'equipment:dumbbell'))  score += 4;
     if (equipment === 'bodyweight' && hasTag(p, 'equipment:bodyweight')) score += 4;

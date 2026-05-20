@@ -213,7 +213,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
               <View style={{ flex: 1 }}>
                 <Text style={styles.routineTitle}>4 · Check in once a week</Text>
                 <Text style={styles.routineBody}>
-                  End of your training week, review how it went. Your plan and calories adjust based on how your body responded.
+                  End of your training week, two minutes to review how it went. Precision Coaching adjusts your calories from your check-in data — automatically, with a written rationale.
                 </Text>
               </View>
             </View>

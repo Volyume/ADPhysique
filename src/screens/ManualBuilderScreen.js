@@ -24,7 +24,6 @@ const GOALS = [
   { key: 'recomp',      label: 'Lose Fat, Keep Muscle' },
 ];
 
-const DAYS_OPTIONS = [3, 4, 5, 6];
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -348,7 +347,7 @@ export default function ManualBuilderScreen({ navigation }) {
   const [page, setPage]               = useState(1);
   const [planName, setPlanName]       = useState('');
   const [selectedGoal, setGoal]       = useState('hypertrophy');
-  const [daysPerWeek, setDays]        = useState(4);
+  const daysPerWeek                   = 4;
   const [creating, setCreating]       = useState(false);
 
   // Page 2 state
@@ -559,24 +558,6 @@ export default function ManualBuilderScreen({ navigation }) {
                   >
                     <Text style={[styles.pillText, selectedGoal === g.key && styles.pillTextActive]}>
                       {g.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Days per week */}
-            <View style={styles.section}>
-              <Text style={styles.label}>Days per week</Text>
-              <View style={styles.pillRow}>
-                {DAYS_OPTIONS.map(d => (
-                  <TouchableOpacity
-                    key={d}
-                    style={[styles.dayPill, daysPerWeek === d && styles.pillActive]}
-                    onPress={() => setDays(d)}
-                  >
-                    <Text style={[styles.pillText, daysPerWeek === d && styles.pillTextActive]}>
-                      {d}
                     </Text>
                   </TouchableOpacity>
                 ))}

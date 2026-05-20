@@ -124,8 +124,8 @@ export async function scheduleMorningWeightNotification(hour = 7, minute = 0) {
 // ─── Schedule weekly check-in reminder ────────────────────────────────────────
 
 const CHECKIN_COPY = {
-  title: 'Your weekly check-in',
-  body: 'Take 2 minutes — your coach will adjust next week based on how this one went.',
+  title: 'Precision Coaching · check-in',
+  body: 'Two minutes. Your nutrition adjusts automatically based on this week.',
 };
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];

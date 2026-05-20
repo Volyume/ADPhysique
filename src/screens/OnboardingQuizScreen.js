@@ -18,11 +18,6 @@ const QUESTIONS = [
     options: ['New to lifting (< 1 year)', 'Intermediate (1–3 years)', 'Advanced (3+ years)'],
   },
   {
-    key: 'days',
-    question: 'How many days per week can you train?',
-    options: ['2–3 days', '4 days', '5–6 days'],
-  },
-  {
     key: 'weakPoint',
     question: 'Any area you want to bring up? (optional)',
     options: ['Upper body', 'Lower body', 'Everywhere equally', 'Skip'],
