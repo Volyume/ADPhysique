@@ -21,12 +21,8 @@ import {
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 
-// Advanced users get an extra orientation step between step 2 and step 3.
-// The step bar expands accordingly.
-function getTotalSteps(experience) {
-  return ['advanced', 'competitive'].includes(experience) ? 7 : 6;
-}
-const TOTAL_STEPS = 6; // default; overridden per-render via getTotalSteps
+// Total steps is always 7 for all users.
+const TOTAL_STEPS = 7;
 
 const SCOFF_QUESTIONS = [
   'Have you ever made yourself sick after eating because you felt uncomfortably full?',
@@ -77,6 +73,13 @@ function recommendProteinLevel(weightKg, heightCm, sex, trainingFreq = '4-5') {
   if (bfPct > 28) return 'standard';
   if (bfPct > 18) return 'high';
   return 'max';
+}
+
+// Maps exact daysPerWeek integer to bucket string for nutrition calc.
+function daysToFreqBucket(daysPerWeek) {
+  if (daysPerWeek <= 3) return '2-3';
+  if (daysPerWeek <= 5) return '4-5';
+  return '6+';
 }
 
 function calcNutrition(weightKg, heightCm, ageYears, sex, goal, proteinG, trainingFreq = '4-5') {
@@ -144,6 +147,48 @@ const PROTEIN_LEVELS = [
   },
 ];
 
+// Step 3 — Plan setup options
+const SESSION_LENGTH_OPTIONS = [
+  { label: '45 min', value: 45 },
+  { label: '60 min', value: 60 },
+  { label: '75 min', value: 75 },
+  { label: '90 min', value: 90 },
+];
+
+const EQUIPMENT_OPTIONS = [
+  { value: 'full_gym',        label: 'Full Gym',          icon: 'barbell-outline' },
+  { value: 'machines_cables', label: 'Machines & Cables', icon: 'cog-outline' },
+  { value: 'dumbbells_only',  label: 'Dumbbells Only',    icon: 'fitness-outline' },
+  { value: 'barbell_plates',  label: 'Barbell & Plates',  icon: 'barbell-outline' },
+  { value: 'home_gym',        label: 'Home Gym',          icon: 'home-outline' },
+  { value: 'bodyweight',      label: 'Bodyweight',        icon: 'body-outline' },
+];
+
+const TRAINING_FOCUS_OPTIONS = [
+  { value: 'general_hypertrophy',   label: 'Build Muscle',              icon: 'trending-up-outline',  sub: 'Balanced muscle growth across the whole body' },
+  { value: 'balanced_bodybuilding', label: 'Balanced Bodybuilding',     icon: 'grid-outline',          sub: 'Even coverage across all muscle groups' },
+  { value: 'aesthetic_v_taper',     label: 'V-Taper',                   icon: 'triangle-outline',      sub: 'Prioritises upper-body width and shoulder-to-waist shape' },
+  { value: 'x_frame_physique',      label: 'X-Frame',                   icon: 'expand-outline',        sub: 'Prioritises shoulders, back width, glutes and hamstrings' },
+  { value: 'weak_point_spec',       label: 'Bring Up a Weak Spot',      icon: 'warning-outline',       sub: 'Extra sets on the muscles you want to bring up' },
+  { value: 'strength_hypertrophy',  label: 'Strength + Size',           icon: 'flash-outline',         sub: 'Heavier compounds with muscle growth as the goal' },
+];
+
+const GOALS_WITH_WEAK_POINTS = ['aesthetic_v_taper', 'weak_point_spec', 'general_hypertrophy', 'x_frame_physique'];
+
+const WEAK_POINT_MUSCLES = [
+  'Chest', 'Upper Chest', 'Lats / Back Width', 'Back Thickness',
+  'Side Delts', 'Rear Delts', 'Front Delts',
+  'Biceps', 'Triceps',
+  'Quads', 'Hamstrings', 'Glutes', 'Calves',
+  'Core / Abs', 'Traps',
+];
+
+const RECOVERY_OPTIONS = [
+  { value: 'poor',    label: 'Poor',    sub: 'Often sore, disrupted sleep, high life stress' },
+  { value: 'average', label: 'Average', sub: 'Typical recovery between sessions' },
+  { value: 'good',    label: 'Good',    sub: 'Sleeping well, low stress, nutrition on point' },
+];
+
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 5); // 5am–6pm
@@ -182,32 +227,34 @@ export default function ProOnboardingScreen({ navigation }) {
 
   // Step 2 — goal + training frequency + experience
   const [goal, setGoal] = useState('mild_bulk');
-  const [trainingFreq, setTrainingFreq] = useState('4-5');
+  const [daysPerWeek, setDaysPerWeek] = useState(4);
   const [experience, setExperience] = useState(null);
 
-  // Step 3 — nutrition (computed, editable)
+  // Step 3 — plan setup
+  const [sessionLengthMinutes, setSessionLengthMinutes] = useState(60);
+  const [equipment, setEquipment] = useState(null);
+  const [trainingGoal, setTrainingGoal] = useState(null);
+  const [planWeakPoints, setPlanWeakPoints] = useState([]);
+  const [recoveryRating, setRecoveryRating] = useState(null);
+
+  // Step 4 — nutrition (computed, editable)
   const [nutrition, setNutrition] = useState(null);
   const [kcalStr, setKcalStr] = useState('');
   const [proteinStr, setProteinStr] = useState('');
   const [proteinLevel, setProteinLevel] = useState('high');
   const [proteinTargets, setProteinTargets] = useState({ standard: 128, high: 154, max: 173 });
 
-  // Step 4 — notifications
+  // Step 5 — notifications
   const [morningEnabled, setMorningEnabled] = useState(true);
   const [morningHour, setMorningHour] = useState(7);
   const [checkinEnabled, setCheckinEnabled] = useState(true);
   const [checkinDay, setCheckinDay] = useState(0); // Sunday
 
-  // Step 2b — advanced orientation (only for advanced/competitive)
-  const [weakPoints, setWeakPoints] = useState([]); // muscle group keys
-  const [physiqueOrientation, setPhysiqueOrientation] = useState(null);
-  const [recoveryConstraints, setRecoveryConstraints] = useState([]); // 'sleep'|'stress'|'physical_job'|'injury_history'
-
-  // Step 5 — wellbeing check (SCOFF screening) — opt-in only
+  // Step 6 — wellbeing check (SCOFF screening) — opt-in only
   const [scoffAnswers, setScoffAnswers] = useState([null, null, null, null, null]);
   const [scoffOptedIn, setScoffOptedIn] = useState(false);
 
-  // Step 6 — account
+  // Step 7 — account
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -225,12 +272,23 @@ export default function ProOnboardingScreen({ navigation }) {
   }, [step]);
 
   // When the user confirms their email via deep link, the session arrives here.
-  // If we're on the account step (step 6), auto-advance to CoachBuilder so they
+  // If we're on the account step (step 7), auto-advance to CoachBuilder so they
   // don't have to press anything — the confirmation already proved ownership.
   useEffect(() => {
-    if (user?.id && step >= 6) {
+    if (user?.id && step >= 7) {
       syncProfile(user.id, userProfile, 'pro', { isBetaTester: true }).catch(() => {});
-      navigation.navigate('CoachBuilder', { firstRun: true });
+      navigation.navigate('CoachBuilder', {
+        firstRun: true,
+        prefilled: {
+          experience,
+          daysPerWeek,
+          sessionLengthMinutes,
+          equipment,
+          goal: trainingGoal,
+          weakPoints: planWeakPoints,
+          recoveryRating,
+        },
+      });
     }
   }, [user?.id]);
 
@@ -254,6 +312,12 @@ export default function ProOnboardingScreen({ navigation }) {
       Alert.alert('Training experience', 'Please select your experience level to continue.');
       return;
     }
+    setStep(3);
+  }
+
+  function advanceFromStep3() {
+    // Compute nutrition using daysPerWeek mapped to bucket
+    const trainingFreqBucket = daysToFreqBucket(daysPerWeek);
     const bwKg = localBWUnits === 'st'
       ? (stoneLbsToKg(bodyWeightSt || '12', bodyWeightStLbs || '0') || 80)
       : (parseBodyWeightToKg(bodyWeight || (localBWUnits === 'lbs' ? '176' : '80'), localBWUnits) || 80);
@@ -262,41 +326,25 @@ export default function ProOnboardingScreen({ navigation }) {
       : (parseFloat(heightCm) || 175);
     const ageNum = parseInt(age, 10) || 28;
 
-    // Build protein targets from lean mass + training frequency, then auto-recommend a level
-    const targets = getProteinTargets(bwKg, hcm, sex, trainingFreq);
-    const recommended = recommendProteinLevel(bwKg, hcm, sex, trainingFreq);
+    const targets = getProteinTargets(bwKg, hcm, sex, trainingFreqBucket);
+    const recommended = recommendProteinLevel(bwKg, hcm, sex, trainingFreqBucket);
     setProteinTargets(targets);
     setProteinLevel(recommended);
 
-    const n = calcNutrition(bwKg, hcm, ageNum, sex, goal, targets[recommended], trainingFreq);
+    const n = calcNutrition(bwKg, hcm, ageNum, sex, goal, targets[recommended], trainingFreqBucket);
     setNutrition(n);
     setKcalStr(String(n.targetKcal));
     setProteinStr(String(targets[recommended]));
-    // Advanced/competitive users see the orientation step first (step 3),
-    // everyone else goes straight to nutrition (also step 3 for non-advanced).
-    setStep(3);
+    setStep(4);
   }
 
-  function advanceFrom2b() {
-    // Persist advanced orientation answers to local profile
-    if (user?.id) {
-      saveLocalProfile(user.id, {
-        ...(userProfile || {}),
-        physiqueOrientation,
-        weakPoints,
-        recoveryConstraints,
-      }).catch(() => {});
-    }
-    setStep(nutritionStep);
-  }
-
-  async function advanceFrom3() {
-    // Save units + name + bodyweight + nutrition
+  async function advanceFromNutrition() {
+    // Save units + name + bodyweight + nutrition + plan setup fields
     setBusy(true);
     try {
       if (setUnits) setUnits(localUnits);
       if (setBodyWeightUnits) setBodyWeightUnits(localBWUnits);
-      // Map broad nutrition goal → specific coaching phase so WeeklyCheckIn
+      // Map broad nutrition goal to specific coaching phase so WeeklyCheckIn
       // doesn't immediately redirect to ProGoalSetup after onboarding.
       const GOAL_TO_PHASE = {
         cut:       'mod_cut',
@@ -304,6 +352,7 @@ export default function ProOnboardingScreen({ navigation }) {
         mild_bulk: 'mild_bulk',
         mod_bulk:  'mod_bulk',
       };
+      const trainingFreqBucket = daysToFreqBucket(daysPerWeek);
       const merged = {
         ...(userProfile || {}),
         firstName: firstName.trim(),
@@ -313,8 +362,15 @@ export default function ProOnboardingScreen({ navigation }) {
         goalPhase: GOAL_TO_PHASE[goal] ?? 'maint',
         phaseStartedAt: Date.now(),
         stepsTarget: (userProfile || {}).stepsTarget ?? 8000,
-        trainingFreq,
+        trainingFreq: trainingFreqBucket,
+        trainingFreqBucket,
+        daysPerWeek,
         experience,
+        sessionLengthMinutes,
+        equipment,
+        trainingGoal,
+        planWeakPoints,
+        recoveryRating,
       };
       if (user?.id) await saveLocalProfile(user.id, merged);
       const bwKg = localBWUnits === 'st'
@@ -359,10 +415,10 @@ export default function ProOnboardingScreen({ navigation }) {
       return;
     }
     setBusy(false);
-    setStep(notifStep);
+    setStep(5);
   }
 
-  async function advanceFrom4() {
+  async function advanceFrom5() {
     // Set up notifications
     if (morningEnabled || checkinEnabled) {
       try {
@@ -381,10 +437,10 @@ export default function ProOnboardingScreen({ navigation }) {
         }
       } catch (_) {}
     }
-    setStep(scoffStep);
+    setStep(6);
   }
 
-  async function advanceFrom5() {
+  async function advanceFrom6() {
     const score = scoffAnswers.filter(a => a === true).length;
     if (user?.id) {
       await saveLocalProfile(user.id, { ...(userProfile || {}), scoffScore: score });
@@ -394,10 +450,10 @@ export default function ProOnboardingScreen({ navigation }) {
       Alert.alert(
         'Before you continue',
         'Some of your answers suggest it may be worth speaking to your GP or a registered dietitian alongside using this app. We\'ve set things up to focus on supporting your training rather than calorie restriction.',
-        [{ text: 'Understood', onPress: () => setStep(accountStep) }],
+        [{ text: 'Understood', onPress: () => setStep(7) }],
       );
     } else {
-      setStep(accountStep);
+      setStep(7);
     }
   }
 
@@ -441,7 +497,18 @@ export default function ProOnboardingScreen({ navigation }) {
     // (ProSetupComplete "Start training"). Calling it now would flip the
     // RootNavigator gate and skip CoachBuilder plus the summary entirely.
     // navigate (not replace) so Back from CoachBuilder returns here.
-    navigation.navigate('CoachBuilder', { firstRun: true });
+    navigation.navigate('CoachBuilder', {
+      firstRun: true,
+      prefilled: {
+        experience,
+        daysPerWeek,
+        sessionLengthMinutes,
+        equipment,
+        goal: trainingGoal,
+        weakPoints: planWeakPoints,
+        recoveryRating,
+      },
+    });
   }
 
   async function skipAccount() {
@@ -466,19 +533,23 @@ export default function ProOnboardingScreen({ navigation }) {
     }
   }
 
-  // ── Progress bar ─────────────────────────────────────────────────────────────
+  function togglePlanWeakPoint(muscle) {
+    setPlanWeakPoints(prev => {
+      if (prev.includes(muscle)) return prev.filter(m => m !== muscle);
+      if (prev.length >= 3) {
+        Alert.alert('Max 3 muscles', 'Deselect one before adding another.');
+        return prev;
+      }
+      return [...prev, muscle];
+    });
+  }
 
-  const isAdvanced = ['advanced', 'competitive'].includes(experience);
-  const totalSteps = getTotalSteps(experience);
-  const nutritionStep = isAdvanced ? 4 : 3;
-  const notifStep     = isAdvanced ? 5 : 4;
-  const scoffStep     = isAdvanced ? 6 : 5;
-  const accountStep   = isAdvanced ? 7 : 6;
+  // ── Progress bar ─────────────────────────────────────────────────────────────
 
   function ProgressBar() {
     return (
       <View style={styles.progressRow}>
-        {Array.from({ length: totalSteps }).map((_, i) => (
+        {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
           <View
             key={i}
             style={[
@@ -739,18 +810,14 @@ export default function ProOnboardingScreen({ navigation }) {
             <Text style={styles.fieldLabel}>How many days a week do you train?</Text>
             <Text style={styles.fieldHint}>Used to calculate your calorie needs and protein targets accurately.</Text>
             <View style={styles.segmentRow}>
-              {[
-                { key: '2-3', label: '2–3 days' },
-                { key: '4-5', label: '4–5 days' },
-                { key: '6+',  label: '6+ days'  },
-              ].map(opt => (
+              {[3, 4, 5, 6].map(d => (
                 <TouchableOpacity
-                  key={opt.key}
-                  style={[styles.segment, trainingFreq === opt.key && styles.segmentActive]}
-                  onPress={() => setTrainingFreq(opt.key)}
+                  key={d}
+                  style={[styles.segment, daysPerWeek === d && styles.segmentActive]}
+                  onPress={() => setDaysPerWeek(d)}
                 >
-                  <Text style={[styles.segmentText, trainingFreq === opt.key && styles.segmentTextActive]}>
-                    {opt.label}
+                  <Text style={[styles.segmentText, daysPerWeek === d && styles.segmentTextActive]}>
+                    {d}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -787,116 +854,159 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 3 — Advanced orientation (advanced/competitive only) ───────────────
+  // ── Step 3 — Set up your plan ─────────────────────────────────────────────────
 
-  if (step === 3 && isAdvanced) {
-    const WEAK_POINT_OPTIONS = [
-      { key: 'chest', label: 'Chest' },
-      { key: 'back', label: 'Back' },
-      { key: 'shoulders', label: 'Shoulders' },
-      { key: 'arms', label: 'Arms' },
-      { key: 'legs', label: 'Legs' },
-      { key: 'glutes', label: 'Glutes' },
-      { key: 'calves', label: 'Calves' },
-      { key: 'core', label: 'Core' },
-    ];
-    const ORIENTATION_OPTIONS = [
-      { id: 'v_taper',    label: 'V-Taper',      sub: 'Broad shoulders and a tight waist' },
-      { id: 'x_frame',    label: 'X-Frame',       sub: 'Wide at shoulders and hips, narrow waist' },
-      { id: 'balanced',   label: 'Balanced',      sub: 'Even development across all muscle groups' },
-      { id: 'performance',label: 'Performance',   sub: 'Strength and function over aesthetics' },
-    ];
-    const CONSTRAINT_OPTIONS = [
-      { key: 'sleep',          label: 'Often poor sleep' },
-      { key: 'stress',         label: 'Chronically high stress' },
-      { key: 'physical_job',   label: 'Physical job or active lifestyle' },
-      { key: 'injury_history', label: 'Injury history to work around' },
-    ];
-    const toggleWeakPoint = (key) => setWeakPoints(prev =>
-      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key],
-    );
-    const toggleConstraint = (key) => setRecoveryConstraints(prev =>
-      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key],
-    );
+  if (step === 3) {
+    const showWeakPoints = GOALS_WITH_WEAK_POINTS.includes(trainingGoal);
+    const canContinue = !!(equipment && trainingGoal && recoveryRating);
+
     return (
       <SafeAreaView style={styles.safe}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <TouchableOpacity style={styles.backBtn} onPress={goBack} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Ionicons name="chevron-back" size={22} color={colors.textSecondary} />
+              <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
+              <Text style={styles.backBtnText}>Back</Text>
             </TouchableOpacity>
+
             <Header
-              title="Let's set you up properly"
-              sub="You've put in the years. Tell us where to focus."
+              title="Set up your plan."
+              sub="These choices shape your programme directly. You can update them any time."
             />
-            <ProgressBar />
 
             <View style={styles.section}>
-              <Text style={styles.fieldLabel}>Physique orientation</Text>
-              <Text style={styles.fieldHint}>What shape are you training towards?</Text>
-              {ORIENTATION_OPTIONS.map(opt => (
-                <TouchableOpacity
-                  key={opt.id}
-                  style={[styles.goalCard, physiqueOrientation === opt.id && styles.goalCardActive]}
-                  onPress={() => setPhysiqueOrientation(opt.id)}
-                  activeOpacity={0.8}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.goalLabel, physiqueOrientation === opt.id && styles.goalLabelActive]}>{opt.label}</Text>
-                    <Text style={styles.goalSub}>{opt.sub}</Text>
-                  </View>
-                  {physiqueOrientation === opt.id && (
-                    <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <View style={styles.section}>
-              <Text style={styles.fieldLabel}>Weak points <Text style={styles.optionalTag}>(optional)</Text></Text>
-              <Text style={styles.fieldHint}>Muscle groups you want to prioritise. We'll bias your plan.</Text>
-              <View style={styles.chipGrid}>
-                {WEAK_POINT_OPTIONS.map(opt => {
-                  const sel = weakPoints.includes(opt.key);
-                  return (
-                    <TouchableOpacity
-                      key={opt.key}
-                      style={[styles.tagChip, sel && styles.tagChipSelected]}
-                      onPress={() => toggleWeakPoint(opt.key)}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={[styles.tagChipText, sel && styles.tagChipTextSelected]}>{opt.label}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
+              <Text style={styles.fieldLabel}>SESSION LENGTH</Text>
+              <Text style={styles.fieldHint}>How long is your typical training session?</Text>
+              <View style={styles.segmentRow}>
+                {SESSION_LENGTH_OPTIONS.map(opt => (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[styles.segment, sessionLengthMinutes === opt.value && styles.segmentActive]}
+                    onPress={() => setSessionLengthMinutes(opt.value)}
+                  >
+                    <Text style={[styles.segmentText, sessionLengthMinutes === opt.value && styles.segmentTextActive]}>
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </View>
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.fieldLabel}>Recovery constraints <Text style={styles.optionalTag}>(optional)</Text></Text>
-              <Text style={styles.fieldHint}>Anything that limits how fast your body recovers between sessions?</Text>
-              <View style={styles.chipGrid}>
-                {CONSTRAINT_OPTIONS.map(opt => {
-                  const sel = recoveryConstraints.includes(opt.key);
-                  return (
-                    <TouchableOpacity
-                      key={opt.key}
-                      style={[styles.tagChip, sel && styles.tagChipSelected]}
-                      onPress={() => toggleConstraint(opt.key)}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={[styles.tagChipText, sel && styles.tagChipTextSelected]}>{opt.label}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
+              <Text style={styles.fieldLabel}>EQUIPMENT</Text>
+              <Text style={styles.fieldHint}>What do you have access to at your gym or training space?</Text>
+              <View style={styles.goalList}>
+                {EQUIPMENT_OPTIONS.map(opt => (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[styles.goalCard, equipment === opt.value && styles.goalCardActive]}
+                    onPress={() => setEquipment(opt.value)}
+                    activeOpacity={0.85}
+                  >
+                    <View style={[styles.goalIconWrap, equipment === opt.value && styles.goalIconWrapActive]}>
+                      <Ionicons
+                        name={opt.icon}
+                        size={20}
+                        color={equipment === opt.value ? colors.primary : colors.textSecondary}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.goalLabel, equipment === opt.value && styles.goalLabelActive]}>{opt.label}</Text>
+                    </View>
+                    {equipment === opt.value && (
+                      <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.fieldLabel}>TRAINING FOCUS</Text>
+              <Text style={styles.fieldHint}>What is the primary goal for your training programme?</Text>
+              <View style={styles.goalList}>
+                {TRAINING_FOCUS_OPTIONS.map(opt => (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[styles.goalCard, trainingGoal === opt.value && styles.goalCardActive]}
+                    onPress={() => {
+                      setTrainingGoal(opt.value);
+                      // Clear weak points if new goal doesn't support them
+                      if (!GOALS_WITH_WEAK_POINTS.includes(opt.value)) {
+                        setPlanWeakPoints([]);
+                      }
+                    }}
+                    activeOpacity={0.85}
+                  >
+                    <View style={[styles.goalIconWrap, trainingGoal === opt.value && styles.goalIconWrapActive]}>
+                      <Ionicons
+                        name={opt.icon}
+                        size={20}
+                        color={trainingGoal === opt.value ? colors.primary : colors.textSecondary}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.goalLabel, trainingGoal === opt.value && styles.goalLabelActive]}>{opt.label}</Text>
+                      <Text style={styles.goalSub}>{opt.sub}</Text>
+                    </View>
+                    {trainingGoal === opt.value && (
+                      <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {showWeakPoints && (
+              <View style={styles.section}>
+                <Text style={styles.fieldLabel}>WEAK POINTS <Text style={styles.optionalTag}>(optional, max 3)</Text></Text>
+                <Text style={styles.fieldHint}>Muscle groups you want to prioritise. We'll bias your plan towards them.</Text>
+                <View style={styles.chipGrid}>
+                  {WEAK_POINT_MUSCLES.map(muscle => {
+                    const sel = planWeakPoints.includes(muscle);
+                    return (
+                      <TouchableOpacity
+                        key={muscle}
+                        style={[styles.tagChip, sel && styles.tagChipSelected]}
+                        onPress={() => togglePlanWeakPoint(muscle)}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={[styles.tagChipText, sel && styles.tagChipTextSelected]}>{muscle}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+
+            <View style={styles.section}>
+              <Text style={styles.fieldLabel}>RECOVERY</Text>
+              <Text style={styles.fieldHint}>This affects how much volume your plan includes.</Text>
+              <View style={styles.goalList}>
+                {RECOVERY_OPTIONS.map(opt => (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[styles.goalCard, recoveryRating === opt.value && styles.goalCardActive]}
+                    onPress={() => setRecoveryRating(opt.value)}
+                    activeOpacity={0.85}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.goalLabel, recoveryRating === opt.value && styles.goalLabelActive]}>{opt.label}</Text>
+                      <Text style={styles.goalSub}>{opt.sub}</Text>
+                    </View>
+                    {recoveryRating === opt.value && (
+                      <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                ))}
               </View>
             </View>
 
             <TouchableOpacity
-              style={[styles.primaryBtn, !physiqueOrientation && styles.primaryBtnDisabled]}
-              onPress={advanceFrom2b}
-              disabled={!physiqueOrientation}
-              activeOpacity={0.88}
+              style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
+              onPress={canContinue ? advanceFromStep3 : undefined}
+              disabled={!canContinue}
+              activeOpacity={canContinue ? 0.88 : 1}
             >
               <Text style={styles.primaryBtnText}>Continue</Text>
               <Ionicons name="arrow-forward" size={18} color={colors.background} />
@@ -907,9 +1017,9 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 4 (advanced) / Step 3 (basic) — Nutrition ──────────────────────────
+  // ── Step 4 — Nutrition ───────────────────────────────────────────────────────
 
-  if (step === nutritionStep) {
+  if (step === 4) {
     const selectedGoal = GOALS.find(g => g.id === goal);
     return (
       <SafeAreaView style={styles.safe}>
@@ -997,7 +1107,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
             <TouchableOpacity
               style={[styles.primaryBtn, busy && styles.btnDisabled]}
-              onPress={advanceFrom3}
+              onPress={advanceFromNutrition}
               disabled={busy}
               activeOpacity={0.88}
             >
@@ -1016,9 +1126,9 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 5 (advanced) / Step 4 (basic) — Notifications ─────────────────────
+  // ── Step 5 — Notifications ───────────────────────────────────────────────────
 
-  if (step === notifStep) {
+  if (step === 5) {
     return (
       <SafeAreaView style={styles.safe}>
         <ScrollView contentContainerStyle={styles.scroll}>
@@ -1122,12 +1232,12 @@ export default function ProOnboardingScreen({ navigation }) {
             )}
           </View>
 
-          <TouchableOpacity style={styles.primaryBtn} onPress={advanceFrom4} activeOpacity={0.88}>
+          <TouchableOpacity style={styles.primaryBtn} onPress={advanceFrom5} activeOpacity={0.88}>
             <Text style={styles.primaryBtnText}>Continue</Text>
             <Ionicons name="arrow-forward" size={18} color={colors.background} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.skipBtn} onPress={() => setStep(scoffStep)}>
+          <TouchableOpacity style={styles.skipBtn} onPress={() => setStep(6)}>
             <Text style={styles.skipBtnText}>Skip reminders for now</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -1135,13 +1245,13 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 6 (advanced) / Step 5 (basic) — Wellbeing check (opt-in) ─────────
+  // ── Step 6 — Wellbeing check (opt-in) ────────────────────────────────────────
 
-  if (step === scoffStep) {
+  if (step === 6) {
     const allAnswered = scoffAnswers.every(a => a !== null);
     const skipAll = () => {
       setScoffAnswers([false, false, false, false, false]);
-      advanceFrom5();
+      advanceFrom6();
     };
 
     return (
@@ -1206,7 +1316,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
               <TouchableOpacity
                 style={[styles.primaryBtn, !allAnswered && styles.primaryBtnDisabled]}
-                onPress={allAnswered ? advanceFrom5 : undefined}
+                onPress={allAnswered ? advanceFrom6 : undefined}
                 activeOpacity={allAnswered ? 0.88 : 1}
               >
                 <Text style={styles.primaryBtnText}>Continue</Text>
@@ -1223,7 +1333,7 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 6 — Account ─────────────────────────────────────────────────────────
+  // ── Step 7 — Account ──────────────────────────────────────────────────────────
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -1454,7 +1564,7 @@ const styles = StyleSheet.create({
   },
   segmentTextSmall: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted },
 
-  // Segment control (units)
+  // Segment control (units / days / session length)
   segmentRow: {
     flexDirection: 'row', backgroundColor: colors.surface,
     borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.border,
@@ -1639,6 +1749,9 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg, fontWeight: fontWeight.bold,
     color: colors.background,
   },
+  primaryBtnDisabled: {
+    opacity: 0.4,
+  },
   skipBtn: {
     alignItems: 'center', paddingVertical: spacing.md,
   },
@@ -1678,7 +1791,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary,
   },
 
-  // SCOFF wellbeing check (step 5)
+  // SCOFF wellbeing check (step 6)
   scoffList: {
     gap: spacing.lg,
     marginBottom: spacing.lg,
@@ -1723,17 +1836,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     lineHeight: 18,
   },
-  primaryBtnDisabled: {
-    opacity: 0.4,
-  },
 
-  // Advanced orientation step
-  fieldHint: {
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
-    marginBottom: spacing.sm,
-    lineHeight: 17,
-  },
+  // Step 3 plan setup — chip grid for weak points
   optionalTag: {
     fontWeight: fontWeight.regular ?? '400',
     color: colors.textMuted,
