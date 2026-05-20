@@ -99,6 +99,7 @@ async function _doInit() {
       split_type TEXT,
       is_active INTEGER DEFAULT 1,
       is_library INTEGER DEFAULT 0,
+      is_sample INTEGER NOT NULL DEFAULT 0,
       source_routine_id TEXT,
       programme_id TEXT,
       created_at INTEGER,
@@ -436,6 +437,10 @@ const SCHEMA_MIGRATIONS = [
   [
     'ALTER TABLE weekly_checkins ADD COLUMN sleep_quality INTEGER',
   ],
+  // v13 — proper boolean flag to identify sample/library routines, replacing the fragile [SAMPLE] name prefix
+  [
+    'ALTER TABLE routines ADD COLUMN is_sample INTEGER NOT NULL DEFAULT 0',
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
@@ -758,16 +763,17 @@ export async function getRoutineById(id) {
   return rowToCamel(row);
 }
 
-export async function createRoutine(userId, name, description = null, splitType = null, isLibrary = 0, sourceRoutineId = null, programmeId = null) {
+export async function createRoutine(userId, name, description = null, splitType = null, isLibrary = 0, sourceRoutineId = null, programmeId = null, isSample = false) {
   const d = await db();
   const id = uid();
   const now = Date.now();
+  const isSampleInt = isSample ? 1 : 0;
   await d.runAsync(
-    `INSERT INTO routines (id, user_id, name, description, split_type, is_active, is_library, source_routine_id, programme_id, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)`,
-    [id, userId, name, description, splitType, isLibrary, sourceRoutineId, programmeId, now, now],
+    `INSERT INTO routines (id, user_id, name, description, split_type, is_active, is_library, is_sample, source_routine_id, programme_id, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)`,
+    [id, userId, name, description, splitType, isLibrary, isSampleInt, sourceRoutineId, programmeId, now, now],
   );
-  return { id, userId, name, description, splitType, isActive: 1, isLibrary, sourceRoutineId, programmeId, createdAt: now, updatedAt: now };
+  return { id, userId, name, description, splitType, isActive: 1, isLibrary, isSample: isSampleInt, sourceRoutineId, programmeId, createdAt: now, updatedAt: now };
 }
 
 export async function softDeleteRoutine(id) {

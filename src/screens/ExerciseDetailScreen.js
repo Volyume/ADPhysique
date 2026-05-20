@@ -6,7 +6,8 @@ import { format } from 'date-fns';
 import { CartesianChart, Line, Area } from 'victory-native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { getExerciseById, getWorkoutSetsForExercise, getAllExercises } from '../lib/database';
-import { calculate1RM, getExerciseSubstitutes, MUSCLE_DISPLAY_NAMES, detectPlateau } from '../lib/algorithms';
+import { calculate1RM, MUSCLE_DISPLAY_NAMES, detectPlateau } from '../lib/algorithms';
+import { rankSwaps } from '../lib/swapEngine';
 import useAppStore from '../store/useAppStore';
 import { FORM_TIPS } from '../lib/formTips';
 import InfoTooltip from '../components/InfoTooltip';
@@ -67,10 +68,14 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         setPRs(computedPRs);
       }
 
-      // Substitutes
+      // Substitutes — ranked by SFR score and similarity
       const allExercises = await getAllExercises();
-      const subs = getExerciseSubstitutes(ex, allExercises, []);
-      setSubstitutes(subs);
+      try {
+        const swaps = rankSwaps(ex, allExercises, { equipment: [] });
+        setSubstitutes(swaps.slice(0, 4));
+      } catch (_) {
+        // swapEngine unavailable — hide section silently
+      }
     } catch (e) {
       console.error('ExerciseDetail loadData:', e);
     }
