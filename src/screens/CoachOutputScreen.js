@@ -303,6 +303,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         sessionsPlanned: sessionStats.planned,
         prsThisWeek: prs,
         goalPhase: userProfile?.goalPhase ?? 'maint',
+        trainingGoal: userProfile?.trainingGoal ?? null,
         weeksInPhase,
         consecutiveOffTargetWeeks,
         consecutivePoorRecoveryWeeks,

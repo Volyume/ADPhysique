@@ -1,22 +1,16 @@
 /**
- * planEngine.js  v2
+ * planEngine.js  v3
  * Deterministic hypertrophy plan generation engine.
  * Pure functions only — no side effects, no DB calls, no Math.random().
  */
+
+import { GOAL_LABELS as _GOAL_LABELS, GOAL_OVERLAYS, GOALS_WITH_WEAK_POINTS } from './coachingGoals';
 
 // ---------------------------------------------------------------------------
 // Public label maps
 // ---------------------------------------------------------------------------
 
-export const GOAL_LABELS = {
-  general_hypertrophy:   'Build Muscle',
-  balanced_bodybuilding: 'Balanced Bodybuilding',
-  aesthetic_v_taper:     'V-Taper',
-  weak_point_spec:       'Bring Up a Weak Spot',
-  strength_hypertrophy:  'Strength + Size',
-  recomp:                'Hold Muscle, Lose Fat',
-  x_frame_physique:      'X-Frame',
-};
+export const GOAL_LABELS = _GOAL_LABELS;
 
 export const SPLIT_LABELS = {
   full_body:       'Full Body',
@@ -144,30 +138,7 @@ function computeLandmarks(experience, recoveryRating, nutritionPhase, age) {
 function applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys) {
   const t = { ...weeklyTargets };
 
-  if (goal === 'balanced_bodybuilding') {
-    const boosts = {
-      side_delts: 1.15, back: 1.15, biceps: 1.15, triceps: 1.10,
-      calves: 1.10, rear_delts: 1.10, hamstrings: 1.05,
-    };
-    for (const [m, mult] of Object.entries(boosts)) {
-      if (t[m] != null) t[m] = Math.round(t[m] * mult);
-    }
-  } else if (goal === 'aesthetic_v_taper') {
-    t.side_delts  = Math.min(Math.round(t.side_delts  * 1.30), Math.round(landmarks.side_delts.MRV  * 1.10));
-    t.rear_delts  = Math.round(t.rear_delts  * 1.20);
-    t.back        = Math.round(t.back        * 1.15);
-    t.biceps      = Math.round(t.biceps      * 1.10);
-    t.abs         = Math.min(8, Math.round(t.abs * 0.75));
-    t.traps       = Math.round(t.traps       * 0.80);
-  } else if (goal === 'x_frame_physique') {
-    t.side_delts  = Math.min(Math.round(t.side_delts  * 1.35), Math.round(landmarks.side_delts.MRV  * 1.10));
-    t.back        = Math.min(Math.round(t.back        * 1.25), Math.round(landmarks.back.MRV        * 1.10));
-    t.rear_delts  = Math.round(t.rear_delts  * 1.20);
-    t.glutes      = Math.min(Math.round(t.glutes      * 1.30), Math.round(landmarks.glutes.MRV      * 1.10));
-    t.hamstrings  = Math.round(t.hamstrings  * 1.20);
-    t.chest       = Math.round(t.chest       * 1.10);
-    t.abs         = Math.min(6, Math.round(t.abs * 0.60));
-  } else if (goal === 'weak_point_spec') {
+  if (goal === 'weak_point_spec') {
     for (const m of Object.keys(t)) {
       if (weakPointKeys.includes(m)) {
         t[m] = Math.max(landmarks[m].MEV, landmarks[m].MRV - 2);
@@ -175,12 +146,14 @@ function applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys) {
         t[m] = landmarks[m].MV;
       }
     }
-  } else if (goal === 'strength_hypertrophy') {
-    for (const m of Object.keys(t)) {
-      t[m] = Math.round(t[m] * 0.85);
+  } else {
+    const overlay = GOAL_OVERLAYS[goal] ?? {};
+    for (const [m, mult] of Object.entries(overlay)) {
+      if (t[m] != null) {
+        t[m] = Math.round(t[m] * mult);
+      }
     }
   }
-  // recomp / general_hypertrophy: no change
 
   // Clamp each muscle to 110% of its MRV
   for (const m of Object.keys(t)) {

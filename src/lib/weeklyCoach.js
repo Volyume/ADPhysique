@@ -8,6 +8,8 @@
  * and a plain-English rationale.
  */
 
+import { getTrainingNote } from './coachingGoals';
+
 // ─── EWMA ────────────────────────────────────────────────────────────────────
 
 /**
@@ -271,6 +273,7 @@ export function runWeeklyCoach(inputs) {
     sessionsPlanned = 3,
     prsThisWeek = 0,
     goalPhase = 'maint',
+    trainingGoal = null,
     weeksInPhase = 1,
     consecutiveOffTargetWeeks = 0,
     consecutivePoorRecoveryWeeks = 0,
@@ -397,18 +400,7 @@ export function runWeeklyCoach(inputs) {
   const recoveryFlag = matrixDeload ? 'deload_suggested' : (poorRecovery ? 'concerned' : 'normal');
   const loadSignal = trainingSignal === 'push' ? 'progress' : trainingSignal;
 
-  let trainingNote = '';
-  if (matrixDeload) {
-    trainingNote = 'Multiple signs are pointing to fatigue. Cut sets back roughly in half this week and focus on quality over quantity. Your body needs this.';
-  } else if (trainingSignal === 'hold') {
-    trainingNote = 'Performance and recovery need to stabilise first. Stay with what you have been doing before adding anything more.';
-  } else if (volumeSignal >= 2) {
-    trainingNote = 'Recovery looks excellent and performance is climbing. This is exactly the window to push harder and take advantage of it.';
-  } else if (volumeSignal === 1) {
-    trainingNote = 'Recovery is solid. Keep the effort consistent and push for small progress where you can.';
-  } else {
-    trainingNote = 'Hold your current plan. Performance and recovery look stable.';
-  }
+  const trainingNote = getTrainingNote(trainingGoal, volumeSignal, trainingSignal, matrixDeload);
 
   // ── CALORIE ADJUSTMENT ────────────────────────────────────────────────────
   let calorieAdjustment = null;
