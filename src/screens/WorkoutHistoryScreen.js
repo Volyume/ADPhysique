@@ -10,7 +10,8 @@ import {
   addMonths, subMonths, isSameDay,
 } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { getAllWorkouts, getAllWorkoutSets, getAllExercises, createWorkout, getWorkoutSetsForWorkout } from '../lib/database';
+import { getAllWorkouts, getAllWorkoutSets, getAllExercises, createWorkout, getWorkoutSetsForWorkout, getRoutineExercisesWithDetails } from '../lib/database';
+import { logError } from '../lib/errorLog';
 import { calculateTonnage } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -78,9 +79,27 @@ export default function WorkoutHistoryScreen({ navigation }) {
   }
 
   async function handleRepeatAsIs(workout) {
-    const newWorkout = await createWorkout(user.id, workout.routineId || null);
-    startWorkout(newWorkout);
-    navigation.getParent()?.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
+    try {
+      const newWorkout = await createWorkout(user.id, workout.routineId || null);
+      // Repeat-as-is should open with the same exercises as the original
+      // session, not a blank workout. Pull them from the routine if linked;
+      // otherwise pull from the session's logged sets so the user still
+      // sees the exercises they actually did.
+      let initialExercises = [];
+      if (workout.routineId) {
+        const withExercises = await getRoutineExercisesWithDetails(workout.routineId);
+        initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
+          exercise, routineExercise, sets: [],
+        }));
+      }
+      startWorkout(newWorkout, initialExercises);
+      navigation.getParent()?.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
+    } catch (e) {
+      logError('WorkoutHistoryScreen.handleRepeatAsIs', e, {
+        userId: user?.id, workoutId: workout?.id, routineId: workout?.routineId,
+      });
+      Alert.alert('Couldn\'t repeat session', e?.message ?? 'Please try again.');
+    }
   }
 
   function handleRepeatWorkout(workout) {

@@ -439,8 +439,10 @@ export default function HomeScreen({ navigation }) {
       }));
       pendingStartRef.current = { routineId: routine.id, initialExercises };
       setShowIntentPrompt(true);
-    } catch (_) {
+    } catch (e) {
       setIsStartingWorkout(false);
+      logError('HomeScreen.handleStartNextWorkout', e, { userId: user?.id, routineId: target?.routine?.id });
+      Alert.alert('Couldn\'t load workout', e?.message ?? 'Please try again.');
     }
   }
 
@@ -453,8 +455,10 @@ export default function HomeScreen({ navigation }) {
       const workout = await createWorkout(user.id, pending.routineId, { intent });
       startWorkout(workout, pending.initialExercises);
       navigation.navigate('ActiveWorkout');
-    } catch (_) {
+    } catch (e) {
       setIsStartingWorkout(false);
+      logError('HomeScreen.confirmStart', e, { userId: user?.id, routineId: pending?.routineId, intent });
+      Alert.alert('Couldn\'t start workout', e?.message ?? 'Please try again.');
     }
     pendingStartRef.current = null;
   }
@@ -463,33 +467,38 @@ export default function HomeScreen({ navigation }) {
     if (!lastSession) return;
     const routineId = lastSession.routineId || lastSession.routine_id || null;
 
-    let initialExercises;
-    if (routineId) {
-      // Load the FULL routine — not just what was done last time
-      const withExercises = await getRoutineExercisesWithDetails(routineId);
-      initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
-        exercise, routineExercise, sets: [],
-      }));
-    } else {
-      // No routine linked — fall back to exercises from the session's sets
-      const prevSets = await getWorkoutSetsForWorkout(lastSession.id);
-      const seenIds = [];
-      const orderedExerciseIds = [];
-      for (const s of prevSets) {
-        if (s.exerciseId && !seenIds.includes(s.exerciseId)) {
-          seenIds.push(s.exerciseId);
-          orderedExerciseIds.push(s.exerciseId);
+    try {
+      let initialExercises;
+      if (routineId) {
+        // Load the FULL routine — not just what was done last time
+        const withExercises = await getRoutineExercisesWithDetails(routineId);
+        initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
+          exercise, routineExercise, sets: [],
+        }));
+      } else {
+        // No routine linked — fall back to exercises from the session's sets
+        const prevSets = await getWorkoutSetsForWorkout(lastSession.id);
+        const seenIds = [];
+        const orderedExerciseIds = [];
+        for (const s of prevSets) {
+          if (s.exerciseId && !seenIds.includes(s.exerciseId)) {
+            seenIds.push(s.exerciseId);
+            orderedExerciseIds.push(s.exerciseId);
+          }
         }
+        initialExercises = (
+          await Promise.all(orderedExerciseIds.map(id => getExerciseById(id).catch(() => null)))
+        )
+          .filter(Boolean)
+          .map(exercise => ({ exercise, routineExercise: null, sets: [] }));
       }
-      initialExercises = (
-        await Promise.all(orderedExerciseIds.map(id => getExerciseById(id).catch(() => null)))
-      )
-        .filter(Boolean)
-        .map(exercise => ({ exercise, routineExercise: null, sets: [] }));
-    }
 
-    pendingStartRef.current = { routineId, initialExercises };
-    setShowIntentPrompt(true);
+      pendingStartRef.current = { routineId, initialExercises };
+      setShowIntentPrompt(true);
+    } catch (e) {
+      logError('HomeScreen.handleRepeatLastSession', e, { userId: user?.id, lastSessionId: lastSession?.id, routineId });
+      Alert.alert('Couldn\'t load last session', e?.message ?? 'Please try again.');
+    }
   }
 
   const hasActiveWorkout = !!activeWorkout && !isStartingWorkout;

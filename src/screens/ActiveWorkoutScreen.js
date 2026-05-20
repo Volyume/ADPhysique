@@ -25,6 +25,7 @@ import SetEntry from '../components/SetEntry';
 import RestTimer from '../components/RestTimer';
 import useAppStore from '../store/useAppStore';
 import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, getAllExercises, insertExercise, getCurrentMesocycleWeek, getPlannedMuscleVolume, getWeek1SetsForExercise, getLastNWorkoutSets, saveExerciseUserNote, getExerciseUserNote, getNextTimeNotes, markNoteShown, updateWorkoutSetPostRating } from '../lib/database';
+import { logError } from '../lib/errorLog';
 import {
   detectPR,
   getProgressionSuggestion,
@@ -762,6 +763,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           }));
         }
       }
+    } catch (e) {
+      logError('ActiveWorkoutScreen.handleCompleteSet', e, {
+        userId: user?.id,
+        workoutId: activeWorkout?.id,
+        exerciseId: exercise?.id,
+        setType: currentSet.setType,
+      });
+      Alert.alert(
+        'Couldn\'t save set',
+        'Your set wasn\'t saved. Tap Log set to retry. Tell me if this keeps happening: ' + (e?.message ?? 'unknown error'),
+      );
     } finally {
       setSaving(false);
     }
@@ -886,7 +898,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               });
             }
 
-            await doFinish();
+            try {
+              await doFinish();
+            } catch (e) {
+              logError('ActiveWorkoutScreen.handleFinishWorkout', e, {
+                userId: user?.id,
+                workoutId: activeWorkout?.id,
+                setCount: snapshotExercises.flatMap(ex => ex.sets).length,
+              });
+              Alert.alert(
+                'Couldn\'t finish workout',
+                'Your sets are still saved but the workout didn\'t close. Tap Finish to retry: ' + (e?.message ?? 'unknown error'),
+              );
+            }
           },
         },
       ],
