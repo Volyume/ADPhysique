@@ -399,13 +399,13 @@ export function runWeeklyCoach(inputs) {
 
   let trainingNote = '';
   if (matrixDeload) {
-    trainingNote = 'Recovery is flagged across multiple signals. Cut sets back roughly in half and focus on quality over quantity.';
+    trainingNote = 'Multiple signs are pointing to fatigue. Cut sets back roughly in half this week and focus on quality over quantity. Your body needs this.';
   } else if (trainingSignal === 'hold') {
-    trainingNote = 'Hold your current plan. Performance and recovery need stabilising before adding more work.';
+    trainingNote = 'Performance and recovery need to stabilise first. Stay with what you have been doing before adding anything more.';
   } else if (volumeSignal >= 2) {
-    trainingNote = 'Recovery is excellent and performance is climbing. This is the window to push harder.';
+    trainingNote = 'Recovery looks excellent and performance is climbing. This is exactly the window to push harder and take advantage of it.';
   } else if (volumeSignal === 1) {
-    trainingNote = 'Recovery is solid. Keep the effort level consistent and look to progress where you can.';
+    trainingNote = 'Recovery is solid. Keep the effort consistent and push for small progress where you can.';
   } else {
     trainingNote = 'Hold your current plan. Performance and recovery look stable.';
   }
@@ -432,19 +432,19 @@ export function runWeeklyCoach(inputs) {
     if (phase.isCut && offTargetDirection > 0) {
       // Losing too slowly
       change = calsAdherence === 'hit' ? -150 : -100;
-      calNote = `Reduce by ${Math.abs(change)} kcal/day. The deficit needs a small nudge.`;
+      calNote = "Your weight hasn't been coming down as quickly as the plan calls for. Trimming a little gives it the nudge it needs.";
     } else if (phase.isCut && offTargetDirection < 0) {
       // Losing too fast — protect muscle
       change = +125;
-      calNote = `Increase by ${change} kcal/day. You're losing faster than planned, so this protects muscle.`;
+      calNote = "You're losing weight faster than planned. Dropping too quickly risks losing muscle alongside fat, so a small increase keeps things at a safe pace.";
     } else if (phase.isBulk && offTargetDirection < 0) {
       // Gaining too slowly
       change = +150;
-      calNote = `Increase by ${change} kcal/day. You're gaining slower than planned.`;
+      calNote = "Weight gain has been slower than expected. A small increase gives your muscles more fuel to build with.";
     } else if (phase.isBulk && offTargetDirection > 0) {
       // Gaining too fast
       change = -125;
-      calNote = `Reduce by ${Math.abs(change)} kcal/day. You're gaining a little faster than planned.`;
+      calNote = "Weight is coming on faster than the plan intends. A small reduction keeps fat gain in check without affecting your training.";
     }
 
     // Cap at ±5% of current target
@@ -468,18 +468,21 @@ export function runWeeklyCoach(inputs) {
     if (newTarget > currentStepsTarget) {
       stepsAdjustment = {
         target: newTarget,
-        note: `${newTarget.toLocaleString()}/day target. More movement is the most recovery-friendly lever.`,
+        change: newTarget - currentStepsTarget,
+        note: "Adding a bit more daily movement is the gentlest way to widen the deficit without touching your food.",
       };
     } else {
       stepsAdjustment = {
         target: currentStepsTarget,
-        note: `${currentStepsTarget.toLocaleString()}/day. Steps are at the upper end, so consider light cardio next.`,
+        change: 0,
+        note: "Steps are already near the upper limit. If more deficit is needed, light cardio is the next lever.",
       };
     }
   } else if (phase.isCut || phase.goalRatePct === 0) {
     stepsAdjustment = {
       target: currentStepsTarget,
-      note: `${currentStepsTarget.toLocaleString()}/day. Hold the current target.`,
+      change: 0,
+      note: "Steps target stays the same this week.",
     };
   }
 
@@ -550,18 +553,18 @@ export function runWeeklyCoach(inputs) {
 
   if ((phase.isCut || phase.isBulk) && currentCalTarget !== null && calorieAdjustment === null) {
     if (scoffPositive) {
-      heldDecisions.push({ type: 'calories', reason: 'Calorie suggestions paused. Focus on fuelling training well rather than restriction.' });
+      heldDecisions.push({ type: 'calories', reason: "Calories left unchanged. Right now the focus is on eating enough to fuel training well, not on restricting." });
     } else if (cycleOverride) {
-      heldDecisions.push({ type: 'calories', reason: 'Calories held. Your cycle flag means weight fluctuations this week aren\'t a reliable signal to act on.' });
+      heldDecisions.push({ type: 'calories', reason: "Calories left unchanged. You flagged your cycle this week, so the weight reading is not a reliable signal to act on." });
     } else if (onTarget) {
-      heldDecisions.push({ type: 'calories', reason: 'Calories held. Weight trend is right on track, no change needed.' });
+      heldDecisions.push({ type: 'calories', reason: "Everything is on track. No reason to change what is working." });
     } else if (lastCalAdjustmentWeeksAgo < 2) {
-      heldDecisions.push({ type: 'calories', reason: 'Calories held. A change was made recently and needs more time to show in the trend before adjusting again.' });
+      heldDecisions.push({ type: 'calories', reason: "Calories left unchanged. A change was made recently and needs more time to show up in the trend before looking again." });
     } else if (consecutiveOffTargetWeeks < offTargetWeeksRequired) {
       const weeksLeft = offTargetWeeksRequired - consecutiveOffTargetWeeks;
-      heldDecisions.push({ type: 'calories', reason: `Calories held. ${weeksLeft} more week${weeksLeft !== 1 ? 's' : ''} trending the same direction needed before making a change. One week's data isn't enough.` });
+      heldDecisions.push({ type: 'calories', reason: `Calories left unchanged. ${weeksLeft} more week${weeksLeft !== 1 ? 's' : ''} of the same trend needed before acting. One week alone is not enough to call it.` });
     } else if (calsAdherence === 'untracked') {
-      heldDecisions.push({ type: 'calories', reason: 'Calories held. Without knowing how closely you hit your target, any adjustment would just be a guess.' });
+      heldDecisions.push({ type: 'calories', reason: "Calories left unchanged. Without knowing how close you got to your target this week, any adjustment would be guesswork." });
     }
   }
 

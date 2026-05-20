@@ -20,44 +20,46 @@ function formatWeekStart(ms) {
 function buildDecisionRows(week) {
   const rows = [];
 
-  // Decisions that resulted in actual changes
   const adj = week.adjustments ?? {};
+
   if (adj.calories?.change && adj.calories.note) {
-    const dir = adj.calories.change > 0 ? 'up' : 'down';
+    const amt = Math.abs(adj.calories.change);
     rows.push({
       type: 'changed',
       icon: 'checkmark-circle-outline',
-      label: `Calories adjusted ${dir}`,
+      label: adj.calories.change > 0 ? `Calories up +${amt} kcal/day` : `Calories down ${amt} kcal/day`,
       detail: adj.calories.note,
     });
   }
+
   const trainingSignal = adj.training?.signal;
   if (trainingSignal && trainingSignal !== 'hold' && adj.training?.note) {
     rows.push({
       type: 'changed',
       icon: 'checkmark-circle-outline',
-      label: trainingSignal === 'push' ? 'Training volume increased' : 'Training volume reduced',
+      label: trainingSignal === 'push' ? 'More work added this week' : 'Volume pulled back this week',
       detail: adj.training.note,
     });
   }
-  if (adj.steps?.change && adj.steps.note) {
+
+  if (adj.steps?.target && adj.steps.change && adj.steps.note) {
     rows.push({
       type: 'changed',
       icon: 'checkmark-circle-outline',
-      label: 'Steps target adjusted',
+      label: `Daily steps raised to ${adj.steps.target.toLocaleString()}`,
       detail: adj.steps.note,
     });
   }
+
   if (week.deloadSuggested && week.deloadNote) {
     rows.push({
       type: 'changed',
       icon: 'moon-outline',
-      label: 'Lighter week suggested',
+      label: 'A lighter week this week',
       detail: week.deloadNote,
     });
   }
 
-  // Decisions that were deliberately held
   for (const d of (week.heldDecisions ?? [])) {
     rows.push({
       type: 'held',
