@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getAllExercises, insertExercise, createRoutine, addExerciseToRoutine,
-  createProgramme,
+  createProgramme, getLibraryPlans,
 } from './database';
 
 // Bump to v6: stores tags, splitType, difficulty in DB so filter chips work
@@ -1444,7 +1444,20 @@ export async function seedRoutinesIfNeeded(userId) {
 
   try {
     const alreadySeeded = await AsyncStorage.getItem(SEED_KEY);
-    if (alreadySeeded) return;
+
+    // Self-healing check: if the marker is set but the database actually has
+    // no library plans (e.g. a prior seed crashed mid-way, or the DB was
+    // wiped via Clear data), clear the marker and proceed with a fresh seed.
+    // If the marker is set AND plans exist, we're done — skip seeding.
+    if (alreadySeeded) {
+      const existingLibrary = await getLibraryPlans().catch(() => []);
+      if (existingLibrary.length > 0) {
+        return; // healthy state, nothing to do
+      }
+      // Marker set but DB empty — clear marker so the seed below actually runs.
+      await AsyncStorage.removeItem(SEED_KEY).catch(() => {});
+      console.warn(`[Seed] Marker was set but no library plans found. Re-seeding.`);
+    }
 
     const existing = await getAllExercises();
     const byName = {};

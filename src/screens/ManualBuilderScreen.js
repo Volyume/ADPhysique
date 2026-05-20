@@ -366,10 +366,15 @@ export default function ManualBuilderScreen({ navigation }) {
       Alert.alert('Plan name required', 'Please enter a name for your plan.');
       return;
     }
+    if (!user?.id) {
+      Alert.alert('One moment', 'Setting up your profile. Please try again in a second.');
+      return;
+    }
     setCreating(true);
     try {
       const goalLabel = GOALS.find(g => g.key === selectedGoal)?.label ?? selectedGoal;
       const prog = await createProgramme(user.id, planName.trim(), goalLabel, 0);
+      if (!prog?.id) throw new Error('Could not create plan.');
       setProgrammeId(prog.id);
       setEditableName(planName.trim());
       setDayList(

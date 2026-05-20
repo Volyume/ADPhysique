@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput,
   Alert, RefreshControl, Modal, Pressable,
@@ -243,6 +243,13 @@ export default function PlanLibraryScreen({ navigation, route }) {
     useCallback(() => { loadData(); }, []),
   );
 
+  // Re-load when user.id becomes available — handles the case where the user
+  // reaches this screen (e.g. via "fromFirstRun") before initLocalUser has
+  // finished, so seedRoutinesIfNeeded was skipped on first mount.
+  useEffect(() => {
+    if (user?.id) loadData();
+  }, [user?.id]);
+
   async function loadData() {
     try {
       if (user?.id) await seedRoutinesIfNeeded(user.id);
@@ -259,6 +266,10 @@ export default function PlanLibraryScreen({ navigation, route }) {
   }
 
   async function handleAddToMyPlans(plan) {
+    if (!user?.id) {
+      Alert.alert('One moment', 'Setting up your profile. Please try again in a second.');
+      return;
+    }
     Alert.alert(
       'Add to my plans',
       `Copy "${plan.name}" into your plans?`,
@@ -269,6 +280,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
           onPress: async () => {
             try {
               const copy = await copyPlanFromLibrary(plan.id, user.id);
+              if (!copy?.id) throw new Error('Copy failed.');
               Alert.alert(
                 'Added to my plans',
                 fromFirstRun
