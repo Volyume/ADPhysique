@@ -13,7 +13,7 @@ _Last updated: 2026-05-20. Original audit dated 2026-05-16; all P1 issues and mo
 | 005 — WorkoutHistory set count includes warm-ups | P3 | **Fixed** | Displays `workingSetCount` separately |
 | 006 — WorkoutSummary 4-session check is all-time | P3 | **Fixed** | Now filters last 28 days |
 | 007 — seedRoutines "RIR 2" jargon | P3 | **Fixed** | Jargon sweep removed all RIR/MEV/MAV/MRV from user-visible strings |
-| 008 — Sample routine name prefix fragile | P4 | **Open** | `is_sample` column needs schema migration |
+| 008 — Sample routine name prefix fragile | P4 | **Fixed** | `is_sample` boolean column added (migration v13); `createRoutine` and `seedRoutines` use it; no screen references `[SAMPLE]` prefix |
 | 009 — MEV/MAV/MRV unexplained on heatmap | P4 | **Fixed** | InfoTooltip explains tick marks in plain English (no abbreviations shown) |
 | 010 — "Landmarks" jargon in UI | P4 | **Fixed** | UI already reads "Edit Volume Targets" throughout |
 | 011 — seedRoutines missing restSeconds | P3 | **Fixed** | `seedRoutinesIfNeeded` now passes `def.rest` to `addExerciseToRoutine` |
@@ -25,7 +25,7 @@ _Last updated: 2026-05-20. Original audit dated 2026-05-16; all P1 issues and mo
 | 017 — Progression suggestion uses silent RIR=2 | P3 | **Accepted** | Documented limitation; resolves if RIR input is added later |
 | 018 — WorkoutSummary no read-only mode | P3 | **Fixed** | `readOnly` route param already implemented; feedback section hidden in read-only mode |
 | 019 — Deload warning needs 4 weeks minimum | P4 | **Accepted** | Intentional for new users; low priority |
-| 020 — Mesocycles not connected to app logic | P3 | **In Progress** | Phase 2 scope; Coach Builder v2 wires mesocycle week numbers |
+| 020 — Mesocycles not connected to app logic | P3 | **Fixed** | HomeScreen uses `getCurrentMesocycleWeek` + `getPlannedMuscleVolume` for block progress; deload algorithm takes mesocycle week context; Coach Builder v2 generates multi-week progressive plans |
 
 The detailed issue records below are kept for historical reference. The "Status" field on each was set to "Open" at the time of the audit and is no longer maintained — refer to the table above for current status.
 
@@ -355,7 +355,7 @@ The detailed issue records below are kept for historical reference. The "Status"
 | 005 | P3 | WorkoutHistoryScreen | Set count includes warm-ups | **Fixed** |
 | 006 | P3 | WorkoutSummaryScreen | 4-session check counts all-time | **Fixed** |
 | 007 | P3 | RoutineDetailScreen | "RIR 2" jargon in seeded notes | **Fixed** |
-| 008 | P4 | RoutinesScreen | Sample routine identified by name prefix | Open |
+| 008 | P4 | RoutinesScreen | Sample routine identified by name prefix | **Fixed** |
 | 009 | P4 | VolumeHeatmapScreen | MEV/MAV/MRV unexplained | **Fixed** |
 | 010 | P4 | VolumeHeatmapScreen | "Landmarks" jargon in UI | **Fixed** |
 | 011 | P3 | ActiveWorkoutScreen | Seeded exercises missing rest/weight defaults | **Fixed** |
@@ -367,4 +367,4 @@ The detailed issue records below are kept for historical reference. The "Status"
 | 017 | P3 | ActiveWorkoutScreen | Progression suggestion uses silent RIR=2 | Accepted |
 | 018 | P3 | WorkoutSummaryScreen | No read-only mode for history view | **Fixed** |
 | 019 | P4 | AnalyticsScreen | Deload warning needs 4 weeks minimum | Accepted |
-| 020 | P3 | MesocycleBuilderScreen | Mesocycles not connected to app logic | In Progress |
+| 020 | P3 | MesocycleBuilderScreen | Mesocycles not connected to app logic | **Fixed** |

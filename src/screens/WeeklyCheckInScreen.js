@@ -806,7 +806,7 @@ const styles = StyleSheet.create({
   },
   headerSpacer: { width: 32 },
 
-  stepBar: { flexDirection: 'row', gap: 6 },
+  stepBar: { flexDirection: 'row', gap: spacing.xs },
   stepDot: {
     width: 20, height: 4, borderRadius: 2,
     backgroundColor: colors.surface3,

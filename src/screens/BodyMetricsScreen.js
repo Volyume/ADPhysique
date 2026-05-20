@@ -615,7 +615,7 @@ export default function BodyMetricsScreen({ navigation }) {
             {bwu === 'st' ? (
               <View style={styles.formRow}>
                 <Text style={styles.formLabel}>Body weight</Text>
-                <View style={{ flex: 1, flexDirection: 'row', gap: 8 }}>
+                <View style={{ flex: 1, flexDirection: 'row', gap: spacing.sm }}>
                   <TextInput
                     style={[styles.formInput, { flex: 1 }]}
                     value={form.body_weight_st}
