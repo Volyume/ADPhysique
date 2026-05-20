@@ -153,10 +153,35 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const routineExercise = currentEntry?.routineExercise;
   const isLastExercise = currentExerciseIndex === workoutExercises.length - 1;
 
+  // Superset pairing: two adjacent entries sharing a supersetGroupId are paired.
+  const currentSGI = workoutExercises[currentExerciseIndex]?.supersetGroupId ?? null;
+  const nextSGI = workoutExercises[currentExerciseIndex + 1]?.supersetGroupId ?? null;
+  const isPairedWithNext = currentSGI != null && currentSGI === nextSGI;
+  const pairedExerciseName = currentSGI != null
+    ? (workoutExercises.find((e, i) => i !== currentExerciseIndex && e.supersetGroupId === currentSGI)?.exercise?.name ?? '')
+    : '';
+
   function handleNextExercise() {
     if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
     setCurrentExerciseIndex(currentExerciseIndex + 1);
     setTimeout(() => scrollRef.current?.scrollTo({ y: 0, animated: true }), 50);
+  }
+
+  function handleTogglePair() {
+    const updated = [...workoutExercises];
+    if (isPairedWithNext) {
+      // Unpair: clear group ID from both
+      updated[currentExerciseIndex] = { ...updated[currentExerciseIndex], supersetGroupId: null };
+      updated[currentExerciseIndex + 1] = { ...updated[currentExerciseIndex + 1], supersetGroupId: null };
+    } else {
+      // Pair: assign a fresh group ID to both
+      const existingIds = updated.map(e => e.supersetGroupId).filter(Boolean);
+      const newId = (Math.max(0, ...existingIds) + 1);
+      updated[currentExerciseIndex] = { ...updated[currentExerciseIndex], supersetGroupId: newId };
+      updated[currentExerciseIndex + 1] = { ...updated[currentExerciseIndex + 1], supersetGroupId: newId };
+    }
+    useAppStore.getState().setWorkoutExercises(updated);
+    Haptics.selectionAsync();
   }
 
   function handleRemoveExercise() {
@@ -663,6 +688,25 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // Update last activity timestamp
       updateLastActivity();
 
+      // Superset auto-jump: if this exercise is paired with another, jump to the
+      // pair WITHOUT starting the rest timer. The rest happens after BOTH halves
+      // of the pair are logged. Warmups are per-exercise so they don't trigger
+      // the jump. `finally` below clears `saving`.
+      if (currentSet.setType !== 'warmup') {
+        const sgi = workoutExercises[currentExerciseIndex]?.supersetGroupId;
+        const pairIdx = sgi != null
+          ? workoutExercises.findIndex((e, i) => i !== currentExerciseIndex && e.supersetGroupId === sgi)
+          : -1;
+        if (pairIdx >= 0) {
+          setCurrentExerciseIndex(pairIdx);
+          setTimeout(() => scrollRef.current?.scrollTo({ y: 0, animated: true }), 50);
+          setNoteText('');
+          setShowNoteInput(false);
+          setGhostSet(null);
+          return;
+        }
+      }
+
       // Start rest timer with per-exercise duration
       startRestTimer(routineExercise?.restSeconds || 90);
 
@@ -974,6 +1018,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   (exercise.primaryMuscle || exercise.primary_muscle || '').slice(1).replace(/_/g, ' '))}
               {' · primary muscle'}
             </Text>
+            {currentSGI != null && !!pairedExerciseName && (
+              <View style={styles.supersetChip}>
+                <Ionicons name="link" size={11} color={colors.primary} />
+                <Text style={styles.supersetChipText}>
+                  Superset {currentSGI} · alternates with {pairedExerciseName}
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* Deload Week Banner */}
@@ -1310,6 +1362,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               <Ionicons name="add-circle-outline" size={18} color={colors.textSecondary} />
               <Text style={styles.actionBtnText}>Add</Text>
             </TouchableOpacity>
+            {!isLastExercise && (
+              <TouchableOpacity
+                style={[styles.actionBtn, isPairedWithNext && styles.actionBtnPaired]}
+                onPress={handleTogglePair}
+                accessibilityRole="button"
+                accessibilityLabel={isPairedWithNext ? 'Unpair from next exercise' : 'Pair as superset with next exercise'}
+              >
+                <Ionicons name={isPairedWithNext ? 'link' : 'link-outline'} size={18} color={isPairedWithNext ? colors.primary : colors.textSecondary} />
+                <Text style={[styles.actionBtnText, isPairedWithNext && { color: colors.primary }]}>
+                  {isPairedWithNext ? 'Paired' : 'Pair'}
+                </Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={[styles.actionBtn, styles.actionBtnDanger]}
               onPress={handleRemoveExercise}
@@ -1962,8 +2027,17 @@ const styles = StyleSheet.create({
   actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, backgroundColor: colors.surface, borderRadius: radius.md, paddingVertical: spacing.md, borderWidth: 1, borderColor: colors.border },
   actionBtnDanger: { borderColor: colors.error + '40' },
   actionBtnGuide: { borderColor: colors.primary + '60', backgroundColor: colors.primaryBg },
+  actionBtnPaired: { borderColor: colors.primary + '60', backgroundColor: colors.primaryBg },
   actionBtnText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
   actionBtnGuideText: { color: colors.primary },
+  supersetChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.sm, paddingVertical: 2,
+    backgroundColor: colors.primaryBg, borderRadius: radius.sm,
+    marginTop: spacing.xs,
+  },
+  supersetChipText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
   nextExerciseBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderWidth: 1.5, borderColor: colors.primary, borderRadius: radius.lg, paddingVertical: spacing.lg },
   nextExerciseBtnText: { fontSize: fontSize.md, color: colors.primary, fontWeight: fontWeight.bold },
   finishWorkoutLargeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderWidth: 1.5, borderColor: colors.success, borderRadius: radius.lg, paddingVertical: spacing.lg },
