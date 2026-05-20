@@ -516,6 +516,12 @@ const RAW = [
   ['Smith Machine Calf Raise',      'calves', [],                         'smith_machine','isolation', false, 10, 20, 2, 4],
   ['Calf Raise on Steps',           'calves', [],                         'bodyweight',   'isolation', false, 15, 25, 1, 4],
   ['Box Jump',                      'calves', ['quads', 'glutes'],        'bodyweight',   'plyometric',true,  5, 10,  3, 4],
+  ['Single-Leg Calf Raise (Dumbbell)','calves',[],                        'dumbbell',     'isolation', false, 15, 25, 2, 4],
+  ['Calf Raise on Leg Press Sled',  'calves', [],                         'machine',      'isolation', false, 15, 25, 2, 4],
+  ['Standing Calf Raise (Bodyweight)','calves',[],                        'bodyweight',   'isolation', false, 20, 30, 1, 3],
+  ['Tibialis Raise (Wall)',         'tibialis', [],                        'bodyweight',   'isolation', false, 15, 25, 1, 5],
+  ['Tibialis Raise (Slant Board)',  'tibialis', [],                        'bodyweight',   'isolation', false, 15, 25, 1, 5],
+  ['Toe Walk',                      'tibialis', ['calves'],                'bodyweight',   'isolation', false, 20, 40, 1, 4],
 
   // ─── ABS / CORE ──────────────────────────────────────────────────────────────
   ['Cable Crunch',                  'abs', [],                            'cable',        'isolation', false, 15, 25, 2, 5],
@@ -542,6 +548,16 @@ const RAW = [
   ['Dead Bug',                      'abs', [],                            'bodyweight',   'isolation', false, 8, 15,  2, 5],
   ['Hollow Body Hold',              'abs', [],                            'bodyweight',   'isolation', false, 10, 30, 2, 4],
   ['Stir the Pot',                  'abs', [],                            'bodyweight',   'isolation', false, 8, 15,  2, 5],
+  ['Hanging Knee Raise',            'abs', [],                            'bodyweight',   'isolation', false, 10, 20, 2, 4],
+  ['Cable Woodchop (High to Low)',  'abs', [],                            'cable',        'isolation', false, 10, 15, 2, 4],
+  ['Cable Woodchop (Low to High)',  'abs', [],                            'cable',        'isolation', false, 10, 15, 2, 4],
+  ['Ab Wheel (Kneeling)',           'abs', [],                            'bodyweight',   'isolation', false, 8, 15,  2, 5],
+  ['Weighted Sit-Up',               'abs', [],                            'barbell',      'isolation', false, 10, 20, 2, 3],
+  ['Toe-to-Bar',                    'abs', [],                            'bodyweight',   'isolation', false, 8, 15,  3, 5],
+  ['L-Sit Hold',                    'abs', ['triceps'],                   'bodyweight',   'isolation', false, 5, 20,  2, 5],
+  ['Suitcase Carry',                'abs', ['traps', 'forearms'],         'dumbbell',     'carry',     true,  20, 40, 2, 5],
+  ['Pallof Press (Kneeling)',       'abs', [],                            'cable',        'isolation', false, 10, 15, 2, 5],
+  ['Copenhagen Plank',              'abs', ['glutes'],                    'bodyweight',   'isolation', false, 10, 30, 2, 5],
 
   // ─── TRAPS ───────────────────────────────────────────────────────────────────
   ['Barbell Shrug',                 'traps', [],                          'barbell',      'isolation', false, 12, 20, 2, 4],
@@ -554,6 +570,9 @@ const RAW = [
   ['Power Clean',                   'traps', ['quads', 'glutes', 'back'], 'barbell',      'power',     true,  3, 5,   5, 3],
   ['Rack Pull (Traps)',             'traps', ['back'],                    'barbell',      'hinge',     true,  5, 10,  4, 3],
   ['Face Pull (Traps)',             'traps', ['rear_delts'],              'cable',        'pull',      false, 15, 25, 2, 4],
+  ['Incline Shrug',                 'traps', [],                          'dumbbell',     'isolation', false, 12, 20, 2, 4],
+  ['Snatch Grip Shrug',             'traps', [],                          'barbell',      'isolation', false, 10, 15, 3, 3],
+  ['Keg Carry',                     'traps', ['forearms', 'abs'],         'dumbbell',     'carry',     true,  20, 40, 3, 4],
 
   // ─── FOREARMS ────────────────────────────────────────────────────────────────
   ['Barbell Wrist Curl',            'forearms', [],                       'barbell',      'isolation', false, 15, 25, 2, 3],
@@ -564,6 +583,13 @@ const RAW = [
   ['Thick Bar Curl',                'forearms', ['biceps'],               'barbell',      'isolation', false, 8, 12,  2, 3],
   ['Cable Reverse Curl (Forearms)', 'forearms', ['biceps'],               'cable',        'isolation', false, 12, 20, 2, 3],
   ['Farmer Walk (Forearms)',        'forearms', ['traps'],                'dumbbell',     'carry',     true,  20, 40, 3, 4],
+  ['Towel Pull-Up',                 'forearms', ['back', 'biceps'],       'bodyweight',   'pull',      true,  5, 10,  3, 4],
+  ['Fat Grip Curl',                 'forearms', ['biceps'],               'barbell',      'isolation', false, 8, 12,  2, 4],
+  ['Hand Gripper',                  'forearms', [],                       'machine',      'isolation', false, 15, 30, 1, 3],
+  ['Rice Bucket',                   'forearms', [],                       'bodyweight',   'isolation', false, 60, 120, 1, 3],
+  ['Pinch Grip Carry',              'forearms', ['traps'],                'barbell',      'carry',     true,  20, 40, 2, 4],
+  ['Cable Wrist Curl',              'forearms', [],                       'cable',        'isolation', false, 15, 25, 1, 3],
+  ['Cable Reverse Wrist Curl',      'forearms', [],                       'cable',        'isolation', false, 15, 25, 1, 3],
 
   // ─── NECK ────────────────────────────────────────────────────────────────────
   ['Neck Flexion (Machine)',        'neck', [],                           'machine',      'isolation', false, 15, 25, 1, 4],
