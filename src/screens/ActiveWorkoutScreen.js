@@ -37,6 +37,7 @@ import {
 import { rankSwaps } from '../lib/swapEngine';
 import { FORM_TIPS } from '../lib/formTips';
 import InfoTooltip from '../components/InfoTooltip';
+import PlateCalculator from '../components/PlateCalculator';
 import { applyTimeCrunch } from '../lib/mesocycle';
 import { getTimeCrunchMessage } from '../lib/whyThisTemplates';
 import { estimateWorkoutMinutes } from '../lib/planEngine';
@@ -120,6 +121,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [exerciseNote, setExerciseNote] = useState('');       // persisted per-user per-exercise note
   const [ghostSet, setGhostSet] = useState(null); // pre-fill from last session (same set index)
   const [showNotifPrompt, setShowNotifPrompt] = useState(false);
+  const [showPlateCalc, setShowPlateCalc] = useState(false);
   const autoAdvanceRef = useRef(null);
   const sessionSetsRef = useRef([]);   // tracks sets in this session — used for PR detection
   const warmupHintSeenRef = useRef(false); // show one-liner warmup note only on first warmup of this session
@@ -197,6 +199,31 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setLoggedSets([]);
     sessionSetsRef.current = [];
     setProgression(null);
+  }
+
+  function handleSuggestWarmups() {
+    const w = parseFloat(currentSet.weight);
+    if (!w || w < 20) return;
+    const round = units === 'lbs' ? 5 : 2.5;
+    const snap = (x) => Math.max(round, Math.round(x / round) * round);
+    const warmups = [
+      { pct: 0.4, reps: 8 },
+      { pct: 0.6, reps: 5 },
+      { pct: 0.8, reps: 3 },
+    ].map(({ pct, reps }) => ({ weight: String(snap(w * pct)), reps, setType: 'warmup', notes: '', rir: null }));
+    Alert.alert(
+      'Suggested warm-ups',
+      warmups.map((s, i) => `Set ${i + 1}: ${s.weight}${units} × ${s.reps}`).join('\n'),
+      [
+        { text: 'Not now', style: 'cancel' },
+        {
+          text: 'Add warm-ups',
+          onPress: () => {
+            setCurrentSet({ ...DEFAULT_SET, ...warmups[0], isGhost: false });
+          },
+        },
+      ]
+    );
   }
 
   function handleCancelWorkout() {
@@ -1039,6 +1066,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <Text style={styles.ghostChipText}>Pre-filled from last session — tap to confirm</Text>
               </View>
             )}
+            {loggedSets.length === 0 && parseFloat(currentSet.weight) >= 20 && currentSet.setType !== 'warmup' && (
+              <TouchableOpacity style={styles.warmupSuggestChip} onPress={handleSuggestWarmups}>
+                <Ionicons name="flame-outline" size={13} color={colors.warning} />
+                <Text style={styles.warmupSuggestText}>Suggest warm-up sets</Text>
+              </TouchableOpacity>
+            )}
             <SetEntry
               value={currentSet}
               onChange={(next) => {
@@ -1125,6 +1158,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             >
               <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
               <Text style={styles.actionBtnText}>Note</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => setShowPlateCalc(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Open plate calculator"
+            >
+              <Ionicons name="barbell-outline" size={18} color={colors.textSecondary} />
+              <Text style={styles.actionBtnText}>Plates</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionBtn, styles.actionBtnGuide]}
@@ -1298,6 +1340,27 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <Text style={styles.staleDiscardText}>Discard</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </Modal>
+
+        {/* Plate Calculator Bottom Sheet */}
+        <Modal
+          visible={showPlateCalc}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowPlateCalc(false)}
+        >
+          <TouchableOpacity
+            style={styles.sheetOverlay}
+            activeOpacity={1}
+            onPress={() => setShowPlateCalc(false)}
+          />
+          <View style={[styles.sheet, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}>
+            <View style={styles.sheetHandle} />
+            <PlateCalculator
+              targetWeight={parseFloat(currentSet.weight) || 0}
+              onClose={() => setShowPlateCalc(false)}
+            />
           </View>
         </Modal>
 
@@ -1880,4 +1943,12 @@ const styles = StyleSheet.create({
   deloadBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.warning },
   deloadBannerSub: { fontSize: fontSize.xs, color: colors.textMuted },
   deloadSkip: { fontSize: fontSize.sm, color: colors.textMuted, fontWeight: fontWeight.medium },
+  warmupSuggestChip: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    paddingVertical: spacing.xs, paddingHorizontal: spacing.sm,
+    backgroundColor: colors.warningBg || 'rgba(245,158,11,0.10)',
+    borderRadius: radius.sm, alignSelf: 'flex-start',
+    borderWidth: 1, borderColor: colors.warning + '40',
+  },
+  warmupSuggestText: { fontSize: fontSize.xs, color: colors.warning, fontWeight: fontWeight.medium },
 });
