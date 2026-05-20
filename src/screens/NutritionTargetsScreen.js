@@ -169,12 +169,19 @@ export default function NutritionTargetsScreen() {
       try {
         if (user?.id) {
           const fromDb = await getNutritionTargets(user.id).catch(() => null);
-          if (fromDb?.targetKcal) { setResults(fromDb); return; }
+          if (fromDb?.targetKcal) {
+            setResults(fromDb);
+            setFormCollapsed(true);
+            return;
+          }
         }
         const raw = await AsyncStorage.getItem(STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (parsed?.targetKcal) setResults(parsed);
+          if (parsed?.targetKcal) {
+            setResults(parsed);
+            setFormCollapsed(true);
+          }
         }
       } catch (_) {}
     }
@@ -570,36 +577,38 @@ export default function NutritionTargetsScreen() {
           {formCollapsed ? (
             <View style={styles.collapsedSummary}>
               <View style={styles.collapsedRow}>
-                <Ionicons name="person-outline" size={14} color={colors.textMuted} />
+                <Ionicons name="nutrition" size={14} color={colors.textMuted} />
                 <Text style={styles.collapsedText} numberOfLines={1}>
-                  {sex === 'male' ? 'Male' : 'Female'} · {age}yrs
-                  {heightFt ? ` · ${heightFt}ft ${heightIn}in` : ''}
-                  {weight ? ` · ${weight}kg` : ''} · {GOALS.find(g => g.key === goal)?.label ?? goal}
+                  {age && weight && heightFt
+                    ? `${sex === 'male' ? 'Male' : 'Female'} · ${age}yrs · ${heightFt}ft${heightIn ? ` ${heightIn}in` : ''} · ${weight}kg · ${GOALS.find(g => g.key === goal)?.label ?? goal}`
+                    : `${GOALS.find(g => g.key === goal)?.label ?? 'Targets set during coaching setup'}`}
                 </Text>
               </View>
               <TouchableOpacity onPress={() => setFormCollapsed(false)} style={styles.reconfigureBtn}>
                 <Ionicons name="settings-outline" size={13} color={colors.primary} />
-                <Text style={styles.reconfigureBtnText}>Reconfigure</Text>
+                <Text style={styles.reconfigureBtnText}>Adjust</Text>
               </TouchableOpacity>
             </View>
           ) : null}
 
-          {/* ── Calculate button ──────────────────────────────────────────────────────────────── */}
+          {/* ── Calculate button — only shown when form is open ───────────────────────────── */}
 
-          <TouchableOpacity
-            style={[styles.calcBtn, (!formComplete || calculating) && styles.calcBtnDisabled]}
-            onPress={handleCalculate}
-            disabled={!formComplete || calculating}
-          >
-            <Ionicons
-              name={calculating ? 'hourglass-outline' : formCollapsed ? 'refresh-outline' : 'calculator-outline'}
-              size={20}
-              color={formComplete ? colors.background : colors.textDisabled}
-            />
-            <Text style={[styles.calcBtnText, !formComplete && styles.calcBtnTextDisabled]}>
-              {calculating ? 'Calculating…' : formCollapsed ? 'Recalculate' : 'Calculate Targets'}
-            </Text>
-          </TouchableOpacity>
+          {!formCollapsed && (
+            <TouchableOpacity
+              style={[styles.calcBtn, (!formComplete || calculating) && styles.calcBtnDisabled]}
+              onPress={handleCalculate}
+              disabled={!formComplete || calculating}
+            >
+              <Ionicons
+                name={calculating ? 'hourglass-outline' : 'calculator-outline'}
+                size={20}
+                color={formComplete ? colors.background : colors.textDisabled}
+              />
+              <Text style={[styles.calcBtnText, !formComplete && styles.calcBtnTextDisabled]}>
+                {calculating ? 'Calculating…' : 'Calculate targets'}
+              </Text>
+            </TouchableOpacity>
+          )}
 
           {/* ── RESULTS ─────────────────────────────────────────────────────────────────────── */}
 
