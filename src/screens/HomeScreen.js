@@ -20,7 +20,7 @@ import {
   getMorningWeightToday, logMorningWeight, getProgressionTeaser,
   getRecentWorkoutFeedback,
 } from '../lib/database';
-import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload } from '../lib/algorithms';
+import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload, VOLUME_LANDMARKS } from '../lib/algorithms';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -70,6 +70,9 @@ export default function HomeScreen({ navigation }) {
   const [teaserInsight, setTeaserInsight] = useState(null);
   const [deloadSuggestion, setDeloadSuggestion] = useState(null);
   const [deloadDismissed, setDeloadDismissed] = useState(false);
+
+  // Pre-workout coaching brief
+  const [briefDismissed, setBriefDismissed] = useState(false);
 
   // Phase sync banner
   const [phaseMismatch, setPhaseMismatch] = useState(null); // { currentPhase, targetPhase } | null
@@ -121,8 +124,30 @@ export default function HomeScreen({ navigation }) {
       loadPhaseBanner(),
       loadFatigueTrend(),
       loadScheduleContext(),
+      loadBriefDismissal(),
       ...(tier === 'pro' ? [loadTodayWeight()] : []),
     ]);
+  }
+
+  async function loadBriefDismissal() {
+    try {
+      const stored = await AsyncStorage.getItem('@volyume_brief_dismissed_date');
+      if (!stored) { setBriefDismissed(false); return; }
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+      setBriefDismissed(stored === todayStr);
+    } catch (_) {
+      setBriefDismissed(false);
+    }
+  }
+
+  async function dismissBrief() {
+    setBriefDismissed(true);
+    try {
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+      await AsyncStorage.setItem('@volyume_brief_dismissed_date', todayStr);
+    } catch (_) {}
   }
 
   async function loadScheduleContext() {
@@ -453,6 +478,23 @@ export default function HomeScreen({ navigation }) {
     ? `Day ${(displayWorkout?.idx ?? 0) + 1} of ${nextWorkout?.total ?? 1}`
     : null;
 
+  // Derive how many days since last completed workout (null = no history)
+  const lastWorkoutDaysAgo = lastSession
+    ? Math.floor((Date.now() - lastSession.startedAt) / (24 * 60 * 60 * 1000))
+    : null;
+
+  // Compute pre-workout coaching brief (shown only when plan active + not trained today + not dismissed)
+  const showCoachBrief = !!activePlan && !hasActiveWorkout && lastWorkoutDaysAgo !== 0 && !briefDismissed;
+  const coachBrief = showCoachBrief
+    ? buildCoachBrief({
+        fatigueHistory: fatigueSessions,
+        weeklyVolume: weekStats,
+        deloadSuggestion,
+        lastWorkoutDaysAgo,
+        blockProgress,
+      })
+    : null;
+
   const today = format(new Date(), 'EEE d MMM');
 
   return (
@@ -699,6 +741,9 @@ export default function HomeScreen({ navigation }) {
                 {exerciseCounts[displayWorkout.routine.id]} exercises
               </Text>
             ) : null}
+            {coachBrief && (
+              <CoachBriefCard brief={coachBrief} onDismiss={dismissBrief} />
+            )}
             <View style={styles.heroActions}>
               <TouchableOpacity
                 style={[styles.primaryBtn, isStartingWorkout && { opacity: 0.6 }]}
@@ -1087,6 +1132,79 @@ export default function HomeScreen({ navigation }) {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+/**
+ * Derive a 1-3 sentence coaching brief from available training data.
+ * Returns { headline, body, type } where type is 'go' | 'caution' | 'recover'.
+ */
+function buildCoachBrief({ fatigueHistory, weeklyVolume, deloadSuggestion, lastWorkoutDaysAgo, blockProgress }) {
+  // Rule 1 — deload suggested
+  if (deloadSuggestion) {
+    return {
+      headline: 'Recovery week',
+      body: 'Your body is signalling it needs a lighter week. Keep the movement, drop the weight — this is how you come back stronger.',
+      type: 'recover',
+    };
+  }
+
+  // Rule 2 — high fatigue (avg of last 2 sessions ≥ 3.5)
+  if (fatigueHistory.length >= 2) {
+    const recent = fatigueHistory.slice(0, 2);
+    const avg = recent.reduce((s, r) => s + (r.fatigueLevel ?? r.fatigue_level ?? 0), 0) / recent.length;
+    if (avg >= 3.5) {
+      return {
+        headline: 'Fatigue building',
+        body: 'Fatigue is building. Consider reducing weight by 10% today and focusing on quality reps.',
+        type: 'caution',
+      };
+    }
+  }
+
+  // Rule 3 — long gap since last session
+  if (lastWorkoutDaysAgo != null && lastWorkoutDaysAgo >= 5) {
+    return {
+      headline: 'Good to see you back',
+      body: "It's been a while since your last session. Ease in — don't try to catch up in one workout.",
+      type: 'go',
+    };
+  }
+
+  // Rule 4 — 2+ muscles below MEV this week
+  if (blockProgress && blockProgress.length > 0) {
+    const belowMev = blockProgress.filter(p => {
+      const landmarks = VOLUME_LANDMARKS[p.muscle];
+      return landmarks && landmarks.mev > 0 && p.actual < landmarks.mev;
+    });
+    if (belowMev.length >= 2) {
+      const muscleName = belowMev[0].label;
+      return {
+        headline: 'Muscle groups need attention',
+        body: `Several muscle groups are below their weekly minimum. Today's a good day to prioritise ${muscleName}.`,
+        type: 'go',
+      };
+    }
+  }
+
+  // Rule 5 — volume on track, low fatigue
+  if (fatigueHistory.length >= 1) {
+    const recent = fatigueHistory.slice(0, 2);
+    const avg = recent.reduce((s, r) => s + (r.fatigueLevel ?? r.fatigue_level ?? 0), 0) / recent.length;
+    if (avg <= 2) {
+      return {
+        headline: 'Looking good',
+        body: 'Training is on track. Push the quality today.',
+        type: 'go',
+      };
+    }
+  }
+
+  // Rule 6 — default
+  return {
+    headline: 'Ready when you are',
+    body: 'Ready when you are.',
+    type: 'go',
+  };
+}
+
 function getRelativeDay(ts) {
   const days = Math.floor((Date.now() - ts) / (24 * 60 * 60 * 1000));
   if (days === 0) return 'Today';
@@ -1138,6 +1256,43 @@ function QuickLink({ icon, label, onPress }) {
       <Ionicons name={icon} size={20} color={colors.primary} />
       <Text style={styles.quickLinkLabel}>{label}</Text>
     </TouchableOpacity>
+  );
+}
+
+// ── Coach Brief Card ──────────────────────────────────────────────────────────
+
+const BRIEF_ICON = { go: 'fitness-outline', caution: 'warning-outline', recover: 'leaf-outline' };
+const BRIEF_BORDER = {
+  go:      colors.primary  + '30',
+  caution: colors.warning  + '30',
+  recover: colors.success  + '30',
+};
+const BRIEF_ICON_COLOR = {
+  go:      colors.primary,
+  caution: colors.warning,
+  recover: colors.success,
+};
+
+function CoachBriefCard({ brief, onDismiss }) {
+  const borderColor = BRIEF_BORDER[brief.type] ?? BRIEF_BORDER.go;
+  const iconColor   = BRIEF_ICON_COLOR[brief.type] ?? BRIEF_ICON_COLOR.go;
+  const iconName    = BRIEF_ICON[brief.type] ?? BRIEF_ICON.go;
+
+  return (
+    <View style={[styles.coachBriefCard, { borderColor }]}>
+      <Ionicons name={iconName} size={18} color={iconColor} style={{ marginTop: 2 }} />
+      <View style={{ flex: 1, gap: 3 }}>
+        <Text style={styles.coachBriefHeadline}>{brief.headline}</Text>
+        <Text style={styles.coachBriefBody}>{brief.body}</Text>
+      </View>
+      <TouchableOpacity
+        onPress={onDismiss}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        accessibilityLabel="Dismiss coaching brief"
+      >
+        <Ionicons name="close" size={14} color={colors.textMuted} />
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -1844,6 +1999,28 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.textSecondary,
     marginTop: spacing.sm,
+    lineHeight: 16,
+  },
+
+  // Pre-workout coaching brief card
+  coachBriefCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    padding: spacing.md,
+  },
+  coachBriefHeadline: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+    lineHeight: 18,
+  },
+  coachBriefBody: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
     lineHeight: 16,
   },
 
