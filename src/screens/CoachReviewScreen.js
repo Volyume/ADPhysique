@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { startOfWeek, endOfWeek, format, isWithinInterval } from 'date-fns';
 import { colors, spacing, fontSize } from '../styles/theme';
 import { getAllWorkouts, getCompletedWorkoutSets, getAllExercises, getRecentCheckins } from '../lib/database';
-import { calculateWeeklyVolume, getVolumeStatus, shouldDeload, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS } from '../lib/algorithms';
+import { calculateWeeklyVolume, getVolumeStatus, shouldDeload, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS, detectLaggingMuscles } from '../lib/algorithms';
 import { useAppStore } from '../store/useAppStore';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -83,7 +83,7 @@ function detectProgressionWins(thisWeekSets, allSets, exerciseMap) {
 }
 
 // Build up to 3 plain-English recommendations for next week
-function buildRecommendations({ volumeByMuscle, deloadResult, checkins }) {
+function buildRecommendations({ volumeByMuscle, deloadResult, checkins, laggingMuscles = [] }) {
   const recs = [];
 
   // 1. Recovery week signal
@@ -123,7 +123,15 @@ function buildRecommendations({ volumeByMuscle, deloadResult, checkins }) {
     );
   }
 
-  // 4. Joint flag from checkins
+  // 4. Persistently lagging muscle groups (below MEV for 3+ consecutive weeks)
+  if (recs.length < 3 && laggingMuscles.length > 0) {
+    const top = laggingMuscles[0];
+    recs.push(
+      `Your ${top.displayName} has been below effective training volume for ${top.weeksBelow} weeks. Consider adding one extra working set there each session next week to start making progress.`,
+    );
+  }
+
+  // 5. Joint flag from checkins
   if (recs.length < 3 && checkins.length > 0) {
     const recentJoint = checkins.find(c => (c.jointDiscomfort || 0) >= 2);
     if (recentJoint) {
@@ -133,7 +141,7 @@ function buildRecommendations({ volumeByMuscle, deloadResult, checkins }) {
     }
   }
 
-  // 5. Generic positive nudge when everything looks fine
+  // 6. Generic positive nudge when everything looks fine
   if (recs.length === 0) {
     recs.push(
       'Your training looks balanced this week. Keep the same structure next week and look for small improvements — an extra rep or a slightly heavier weight on one exercise.',
@@ -215,6 +223,7 @@ export default function CoachReviewScreen() {
   const [deloadResult, setDeloadResult] = useState(null);
   const [checkins, setCheckins] = useState([]);
   const [weekRange, setWeekRange] = useState({ start: null, end: null });
+  const [laggingMuscles, setLaggingMuscles] = useState([]);
 
   useEffect(() => {
     loadData();
@@ -271,7 +280,8 @@ export default function CoachReviewScreen() {
         .filter(w => w.isCompleted && (w.startedAt || 0) >= Date.now() - fourWeeksMs)
         .sort((a, b) => (a.startedAt || 0) - (b.startedAt || 0));
 
-      // Group into 4 weekly buckets for shouldDeload
+      // Group into 4 weekly buckets for shouldDeload + lagging muscle detection
+      const weeklyVolumeHistory = [];
       const weeklyBuckets = [0, 1, 2, 3].map(offset => {
         const bucketStart = weekStartMs - (3 - offset) * 7 * 24 * 60 * 60 * 1000;
         const bucketEnd = bucketStart + 7 * 24 * 60 * 60 * 1000;
@@ -283,6 +293,12 @@ export default function CoachReviewScreen() {
           s => (s.createdAt || 0) >= bucketStart && (s.createdAt || 0) < bucketEnd,
         );
         const weekVolume = calculateWeeklyVolume(setsInWeek, exerciseMap);
+        // Capture per-muscle working sets for lagging muscle detection
+        const muscleSets = {};
+        for (const [muscle, data] of Object.entries(weekVolume)) {
+          muscleSets[muscle] = data.workingSets || 0;
+        }
+        weeklyVolumeHistory.push(muscleSets);
         const hasOverMRV = Object.entries(weekVolume).some(([muscle, data]) => {
           const landmarks = VOLUME_LANDMARKS[muscle];
           return landmarks && data.workingSets > landmarks.mrv;
@@ -309,6 +325,10 @@ export default function CoachReviewScreen() {
 
       const deload = shouldDeload(weeklyBuckets);
       setDeloadResult(deload);
+
+      // Detect persistently under-trained muscle groups (3+ weeks below MEV)
+      const lagging = detectLaggingMuscles(weeklyVolumeHistory, 3);
+      setLaggingMuscles(lagging);
 
       setCheckins(recentCheckins);
     } catch (_e) {
@@ -343,6 +363,7 @@ export default function CoachReviewScreen() {
     volumeByMuscle,
     deloadResult,
     checkins,
+    laggingMuscles,
   });
 
   // Joint discomfort flag from recent workouts

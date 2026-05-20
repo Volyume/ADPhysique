@@ -1006,6 +1006,42 @@ export function generateDeloadPrescription(prevSets, isFirstHalf = true) {
   });
 }
 
+// Identify muscle groups that have been consistently below MEV across recent weeks.
+// weeklyVolumeHistory: array of {muscle -> workingSets} objects, oldest first
+// minWeeks: how many consecutive below-MEV weeks to flag (default 3)
+// Returns array of { muscle, displayName, avgSets, mev, weeksBelow } sorted by priority
+export function detectLaggingMuscles(weeklyVolumeHistory = [], minWeeks = 3) {
+  if (weeklyVolumeHistory.length < minWeeks) return [];
+  const recentWeeks = weeklyVolumeHistory.slice(-minWeeks);
+  const results = [];
+  for (const muscle of Object.keys(VOLUME_LANDMARKS)) {
+    const { mev } = VOLUME_LANDMARKS[muscle];
+    if (mev <= 0) continue; // skip muscles with no effective minimum (e.g. front delts)
+    let weeksBelow = 0;
+    let totalSets = 0;
+    for (const week of recentWeeks) {
+      const sets = week[muscle] ?? 0;
+      totalSets += sets;
+      if (sets < mev) weeksBelow++;
+    }
+    if (weeksBelow >= minWeeks) {
+      results.push({
+        muscle,
+        displayName: MUSCLE_DISPLAY_NAMES[muscle] || muscle,
+        avgSets: Math.round((totalSets / recentWeeks.length) * 10) / 10,
+        mev,
+        weeksBelow,
+      });
+    }
+  }
+  // Sort: muscles with the most weeks below MEV first, then by largest deficit
+  results.sort((a, b) =>
+    b.weeksBelow - a.weeksBelow ||
+    (b.mev - b.avgSets) - (a.mev - a.avgSets),
+  );
+  return results;
+}
+
 // Check if a deload is recommended based on adaptation events from the current week
 // events: array of adaptation_event objects
 // Returns { shouldDeload, triggeredMuscles, reason }
