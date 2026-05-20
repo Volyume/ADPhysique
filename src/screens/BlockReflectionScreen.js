@@ -28,7 +28,7 @@ function StatBlock({ icon, value, label }) {
 }
 
 function buildNarrative(data) {
-  const { meso, totalSessions, totalSets, tonnage, tonnageDelta, topExercise } = data;
+  const { meso, totalSessions, totalSets, tonnage, tonnageDelta, topExercise, avgDuration } = data;
   const name = meso?.name ?? 'this block';
   const weeks = meso?.plannedWeeks ?? meso?.planned_weeks ?? '';
   const lines = [];
@@ -41,9 +41,13 @@ function buildNarrative(data) {
     lines.push(`That's ${totalSets.toLocaleString('en-GB')} working sets and ${tonnage.toLocaleString('en-GB')} kg of total volume.`);
   }
 
+  if (avgDuration > 0) {
+    lines.push(`Your average session lasted ${avgDuration} minutes.`);
+  }
+
   if (tonnageDelta !== null) {
     if (tonnageDelta > 5) {
-      lines.push(`Your weekly volume climbed ${tonnageDelta}% from the first to the last week. That's progression doing its job.`);
+      lines.push(`Weekly volume climbed ${tonnageDelta}% from the first to the last week — progression doing its job.`);
     } else if (tonnageDelta < -5) {
       lines.push(`Volume was lower in the final week than the first. If that was a planned lighter week, that's exactly right.`);
     } else {
@@ -62,9 +66,15 @@ function buildNarrative(data) {
   return lines;
 }
 
+const PR_TYPE_LABELS = {
+  '1rm_estimate': 'Est. 1RM',
+  heaviest_weight: 'Heaviest set',
+  most_reps: 'Most reps',
+};
+
 export default function BlockReflectionScreen({ navigation, route }) {
   const { mesocycleId } = route.params ?? {};
-  const { user } = useAppStore();
+  const { user, units } = useAppStore();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -104,41 +114,90 @@ export default function BlockReflectionScreen({ navigation, route }) {
 
         {data && (
           <>
+            {/* Block title and dates */}
             <View style={styles.blockTitle}>
               <Text style={styles.blockName}>{data.meso?.name ?? 'Training Block'}</Text>
               {data.startDate ? (
                 <Text style={styles.blockDates}>
                   {fmtDate(data.startDate)}
                   {data.endDate ? ` – ${fmtDate(data.endDate)}` : ''}
+                  {data.meso?.plannedWeeks ? ` · ${data.meso.plannedWeeks} weeks` : ''}
                 </Text>
               ) : null}
             </View>
 
+            {/* 4-stat row */}
             <View style={styles.statsRow}>
               <StatBlock icon="barbell-outline" value={String(data.totalSessions)} label="Sessions" />
               <StatBlock icon="layers-outline" value={data.totalSets.toLocaleString('en-GB')} label="Sets" />
               <StatBlock
                 icon="trending-up-outline"
                 value={`${data.tonnage.toLocaleString('en-GB')} kg`}
-                label="Total volume"
+                label="Volume"
               />
+              {data.avgDuration > 0 && (
+                <StatBlock icon="time-outline" value={`${data.avgDuration}m`} label="Avg session" />
+              )}
             </View>
 
+            {/* Narrative */}
             <View style={styles.narrativeCard}>
               {narrative.map((line, i) => (
                 <Text key={i} style={styles.narrativeLine}>{line}</Text>
               ))}
             </View>
 
-            {data.meso?.plannedWeeks ? (
-              <View style={styles.infoRow}>
-                <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />
-                <Text style={styles.infoText}>
-                  {data.meso.plannedWeeks}-week block
-                  {data.meso.blockType ? ` · ${data.meso.blockType}` : ''}
+            {/* PRs set during this block */}
+            {data.prs?.length > 0 && (
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Ionicons name="trophy-outline" size={16} color={colors.primary} />
+                  <Text style={styles.sectionTitle}>Records set this block</Text>
+                </View>
+                {data.prs.map((pr, i) => (
+                  <View key={i} style={styles.prRow}>
+                    <View style={styles.prInfo}>
+                      <Text style={styles.prExercise}>{pr.exerciseName ?? pr.exercise_name}</Text>
+                      <Text style={styles.prType}>{PR_TYPE_LABELS[pr.recordType ?? pr.record_type] ?? pr.recordType}</Text>
+                    </View>
+                    <Text style={styles.prValue}>{parseFloat(pr.value).toFixed(1)}{units}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Best session */}
+            {data.bestSession?.volume > 0 && (
+              <View style={styles.bestSessionCard}>
+                <Ionicons name="flash-outline" size={16} color={colors.primary} />
+                <View style={styles.bestSessionInfo}>
+                  <Text style={styles.bestSessionLabel}>Best session</Text>
+                  <Text style={styles.bestSessionDate}>{fmtDate(data.bestSession.startedAt)}</Text>
+                </View>
+                <Text style={styles.bestSessionVolume}>
+                  {Math.round(data.bestSession.volume).toLocaleString('en-GB')} kg
                 </Text>
               </View>
-            ) : null}
+            )}
+
+            {/* What's next */}
+            <View style={styles.nextSection}>
+              <Text style={styles.nextTitle}>What's next</Text>
+              <Text style={styles.nextBody}>
+                Take a few days of lighter activity to recover, then start your next block. The gains from this block consolidate during that transition.
+              </Text>
+              <TouchableOpacity
+                style={styles.newBlockBtn}
+                onPress={() => {
+                  navigation.goBack();
+                  setTimeout(() => navigation.navigate('MesocycleBuilder'), 300);
+                }}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="add-circle-outline" size={16} color={colors.primary} />
+                <Text style={styles.newBlockBtnText}>Start a new block</Text>
+              </TouchableOpacity>
+            </View>
           </>
         )}
 
@@ -195,7 +254,7 @@ const styles = StyleSheet.create({
     flex: 1, alignItems: 'center', paddingVertical: spacing.lg, gap: spacing.xs,
   },
   statIcon: { marginBottom: 2 },
-  statValue: { fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.textPrimary },
+  statValue: { fontSize: fontSize.lg, fontWeight: fontWeight.black, color: colors.textPrimary },
   statLabel: { fontSize: fontSize.xs, color: colors.textMuted },
 
   narrativeCard: {
@@ -205,10 +264,53 @@ const styles = StyleSheet.create({
   },
   narrativeLine: { fontSize: fontSize.md, color: colors.textSecondary, lineHeight: 23 },
 
-  infoRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.xs,
+  section: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
+    padding: spacing.lg, gap: spacing.sm,
   },
-  infoText: { fontSize: fontSize.xs, color: colors.textMuted },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
+  sectionTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+
+  prRow: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: spacing.xs,
+    borderTopWidth: 1, borderTopColor: colors.border,
+  },
+  prInfo: { flex: 1, gap: 2 },
+  prExercise: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textPrimary },
+  prType: { fontSize: fontSize.xs, color: colors.textMuted },
+  prValue: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.primary },
+
+  bestSessionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.primaryBg,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.primary + '30',
+    padding: spacing.lg,
+  },
+  bestSessionInfo: { flex: 1, gap: 2 },
+  bestSessionLabel: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  bestSessionDate: { fontSize: fontSize.xs, color: colors.textMuted },
+  bestSessionVolume: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.primary },
+
+  nextSection: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
+    padding: spacing.lg, gap: spacing.md,
+  },
+  nextTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  nextBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 21 },
+  newBlockBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  newBlockBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
 
   doneBtn: {
     backgroundColor: colors.surface,

@@ -2251,6 +2251,28 @@ export async function getBlockReflectionData(userId, mesocycleId) {
   }
   const topExercise = Object.entries(muscleCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
 
+  // Average session duration
+  const avgDuration = workouts.length > 0
+    ? Math.round(workouts.reduce((s, w) => s + (w.duration_minutes ?? 0), 0) / workouts.length)
+    : 0;
+
+  // Best session by total volume
+  const bestSession = workouts.reduce((best, w) => {
+    const v = w.total_volume ?? 0;
+    return v > (best?.volume ?? 0) ? { startedAt: w.started_at, volume: v, duration: w.duration_minutes } : best;
+  }, null);
+
+  // PRs set during this block
+  const prs = await d.getAllAsync(
+    `SELECT pr.record_type, pr.value, pr.reps, ex.name AS exercise_name
+     FROM personal_records pr
+     JOIN workouts w ON pr.workout_id = w.id
+     LEFT JOIN exercises ex ON ex.id = pr.exercise_id
+     WHERE pr.user_id = ? AND w.mesocycle_id = ?
+     ORDER BY pr.value DESC LIMIT 5`,
+    [userId, mesocycleId],
+  ).catch(() => []);
+
   return {
     meso: rowToCamel(meso),
     totalSessions,
@@ -2258,6 +2280,9 @@ export async function getBlockReflectionData(userId, mesocycleId) {
     tonnage: Math.round(tonnage),
     tonnageDelta,
     topExercise,
+    avgDuration,
+    bestSession,
+    prs: prs.map(rowToCamel),
     startDate: meso.start_date,
     endDate: meso.end_date,
   };
