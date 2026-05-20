@@ -151,10 +151,11 @@ export default function WeeklyCheckInScreen({ navigation }) {
   const [weighInsThisWeek, setWeighInsThisWeek] = useState(0);
 
   useEffect(() => {
-    if (!userProfile?.goalPhase && !userProfile?.goal) {
+    const hasGoals = userProfile?.trainingGoal || userProfile?.trainingPhase || userProfile?.goalPhase;
+    if (!hasGoals) {
       navigation.replace('ProGoalSetup', { fromCheckin: true });
     }
-  }, [userProfile?.goalPhase, userProfile?.goal]);
+  }, [userProfile?.trainingGoal, userProfile?.trainingPhase, userProfile?.goalPhase]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -290,7 +291,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
       if (permStatus === 'undetermined') {
         Alert.alert(
           'Daily weight reminders',
-          'Logging your weight each morning makes your coaching more accurate — a 7-day trend is much more reliable than a single reading. Enable a daily nudge?',
+          'Logging your weight each morning makes your coaching more accurate. A 7-day trend is much more reliable than a single reading. Enable a daily nudge?',
           [
             { text: 'Not now', style: 'cancel', onPress: goCoach },
             {
@@ -340,7 +341,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         </View>
 
         <View style={styles.section}>
-          <SectionLabel hint="Work, life, family — anything outside the gym">Stress level this week</SectionLabel>
+          <SectionLabel hint="Work, life, family, anything outside the gym">Stress level this week</SectionLabel>
           <ChipRow
             options={[
               { value: 1, label: 'Low' },
@@ -381,7 +382,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         {!loading && (
           <View style={styles.section}>
             <SectionLabel
-              hint="Your 7-day smoothed trend — more reliable than a single reading"
+              hint="Your 7-day smoothed trend. More reliable than a single reading."
             >
               Morning weight trend
             </SectionLabel>
@@ -398,7 +399,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
               </View>
             ) : (
               <Text style={styles.skipNote}>
-                No morning weights logged this week. Log each morning from the Train tab — one reading per day makes the trend far more accurate.
+                No morning weights logged this week. Log each morning from the Train tab. One reading per day makes the trend far more accurate.
               </Text>
             )}
           </View>
@@ -407,7 +408,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         {/* Nutrition adherence */}
         {hasNutritionTarget ? (
           <View style={styles.section}>
-            <SectionLabel>Calorie target — how did you get on?</SectionLabel>
+            <SectionLabel>Calorie target: how did you get on?</SectionLabel>
             <OptionRow
               options={[
                 { value: 'yes', label: 'Hit it' },
@@ -471,7 +472,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
         {sorenessScore !== null && sorenessScore >= 2 && (
           <View style={styles.section}>
-            <SectionLabel hint="Tap any that feel sore or fatigued — optional">Which muscles?</SectionLabel>
+            <SectionLabel hint="Tap any that feel sore or fatigued (optional)">Which muscles?</SectionLabel>
             <View style={styles.muscleChipGrid}>
               {[
                 'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps',
@@ -500,7 +501,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         )}
 
         <View style={styles.section}>
-          <SectionLabel hint="Joints, tendons — not normal muscle soreness">Any joint or tendon pain?</SectionLabel>
+          <SectionLabel hint="Joints and tendons, not normal muscle soreness">Any joint or tendon pain?</SectionLabel>
           <OptionRow
             options={[
               { value: 'no', label: 'No' },
@@ -512,7 +513,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         </View>
 
         <View style={styles.section}>
-          <SectionLabel hint="Illness, travel, big life stress, anything unusual — optional">Anything else to flag?</SectionLabel>
+          <SectionLabel hint="Illness, travel, big life stress, anything unusual (optional)">Anything else to flag?</SectionLabel>
           <TextInput
             style={styles.notesInput}
             value={notes}

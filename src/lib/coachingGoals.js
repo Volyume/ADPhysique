@@ -121,7 +121,7 @@ export const TRAINING_PHASES = [
   {
     value: 'lean_gain',
     nutritionKey: 'lean_gain',
-    coachingPhaseKey: 'lean_bulk',
+    coachingPhaseKey: 'mild_bulk',
     label: 'Lean Gain',
     icon: 'arrow-up-circle-outline',
     subtitle: 'Building muscle slowly with minimal fat gain.',

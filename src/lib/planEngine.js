@@ -512,13 +512,7 @@ function trimToTimeBudget(exercises, sessionLengthMinutes, equipment) {
 
 function filterPool(muscle, equipment, goal) {
   const pool = POOL[muscle] ?? [];
-  let filtered = pool.filter(e => e.eq.includes(equipment));
-
-  // aesthetic_v_taper + abs: only anti_extension / anti_rotation
-  if (goal === 'aesthetic_v_taper' && muscle === 'abs') {
-    filtered = filtered.filter(e => e.sub === 'anti_extension' || e.sub === 'anti_rotation');
-  }
-  return filtered;
+  return pool.filter(e => e.eq.includes(equipment));
 }
 
 // Deterministic index-based pick (no randomness)
@@ -526,9 +520,6 @@ function pickAt(arr, index) {
   if (!arr || arr.length === 0) return null;
   return arr[index % arr.length];
 }
-
-// Preferred subregions for back lat-width emphasis (v-taper)
-const VTAPER_BACK_PREFERRED = ['vertical_pull', 'lower_lat'];
 
 function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal, slot, usedNames, weeklyTotalSets, landmarks, experience, nutritionPhase) {
   if (sessionTarget < 2) return [];
@@ -539,15 +530,13 @@ function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal, slot, 
   // Determine subregion priority
   const req = SUBREGION_REQUIREMENTS[muscle];
   const requiredSubs = req && weeklyTotalSets >= req.minSets ? req.required : [];
-  const vtaperBackPref = (goal === 'aesthetic_v_taper' && muscle === 'back') ? VTAPER_BACK_PREFERRED : [];
 
-  // Sort: required subregion first → goal-preferred subregion → compound before isolation → pool index
+  // Sort: required subregion first → compound before isolation → pool index
   function sortScore(e, idx) {
-    const reqBonus    = requiredSubs.includes(e.sub) ? 0 : 100;
-    const prefBonus   = vtaperBackPref.includes(e.sub) ? 0 : 50;
-    const paramOrder  = { heavy_compound: 0, mod_compound: 1, machine: 2, isolation: 3 };
-    const paramBonus  = (paramOrder[e.p] ?? 3) * 10;
-    return reqBonus + prefBonus + paramBonus + idx;
+    const reqBonus   = requiredSubs.includes(e.sub) ? 0 : 100;
+    const paramOrder = { heavy_compound: 0, mod_compound: 1, machine: 2, isolation: 3 };
+    const paramBonus = (paramOrder[e.p] ?? 3) * 10;
+    return reqBonus + paramBonus + idx;
   }
 
   const sorted = available
@@ -979,12 +968,15 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
   // goal
   const goalMap = {
     general_hypertrophy:   `Even, well-rounded muscle growth. Sets are spread across all major muscle groups so nothing gets systematically undertrained, which is the most common cause of stalled progress.`,
-    balanced_bodybuilding: `This plan spreads sets evenly so no single muscle dominates the programme. It prevents the common imbalances — overdeveloped chest, underdeveloped back, neglected rear delts — that build up over years of unstructured training.`,
-    aesthetic_v_taper:     `V-Taper prioritises the muscles that create upper-body width: outer shoulders, back width, and rear delts. You will see more sets on these muscles than a general plan would assign. Ab work focuses on rotation and stability rather than crunches.`,
     weak_point_spec:        `This goal gives${weakPointUILabels.length ? ' ' + weakPointUILabels.join(' and ') : ' your selected muscles'} more sets than a balanced plan would assign, while keeping everything else at enough to hold current size. Consistent targeted work over several weeks is how muscles behind the rest close the gap.`,
     strength_hypertrophy:  `Muscle growth is still the goal, but your main compound lifts are loaded heavier and in a lower rep range. Building strength lets you use more weight over time, and more weight applied correctly means more muscle.`,
-    recomp:                `Hold Muscle, Lose Fat keeps your training load at a level your body can recover from while eating at a slight calorie deficit. The goal is holding the muscle you already have while your nutrition gradually reduces body fat. Training stays consistent; recovery is the limiting factor, not your effort.`,
-    x_frame_physique:      `X-Frame concentrates work on the four main anchor points: outer shoulders, back width, glutes, and hamstrings. These create a balanced, proportional build from every angle. Side delts, lats, and hamstrings each get extra sets each week. Direct ab work that widens the waist is kept minimal.`,
+    mens_physique:         `Upper-body width and a sharp V-shape. Shoulder and lat development drive the look. More sets are placed on side delts, back width, and rear delts than a general plan would assign.`,
+    classic_physique:      `Proportional symmetry and balanced mass. Calves, shoulders, and waist definition are all judged. Sets are spread to build a complete physique with particular attention to the landmark muscles of the division.`,
+    bodybuilding:          `Maximum development across every muscle group. Sets are pushed toward the upper range of what your body can recover from, aiming for full, complete development with nothing left undertrained.`,
+    bikini:                `Glutes and hamstrings are the primary judging criterion for this division. Lower-body sets are elevated well above a general plan, while upper-body volume stays proportional and lean.`,
+    wellness:              `Like bikini but with heavier lower-body emphasis overall. Quads as well as glutes and hamstrings are prioritised. Upper body is maintained with moderate volume to stay proportional.`,
+    figure:                `Balanced upper and lower development with particular attention to shoulder width and back detail. A full, muscular look with symmetry across the entire physique.`,
+    womens_physique:       `Greater overall muscle development than figure, with conditioning a key criterion. Sets are pushed higher across the board, with attention to the detail muscles that show best on stage.`,
   };
   result.goal = goalMap[goal] ?? `Goal: ${GOAL_LABELS[goal] ?? goal}.`;
 
@@ -1169,12 +1161,16 @@ export function generatePlan(inputs) {
   const mesocycleSchedule     = buildMesocycleSchedule(experience);
 
   const goalShort = {
-    general_hypertrophy:   'Build Muscle',
-    balanced_bodybuilding: 'Bodybuilding',
-    aesthetic_v_taper:     'V-Taper',
-    weak_point_spec:       'Specialisation',
-    strength_hypertrophy:  'Strength + Size',
-    recomp:                'Lean',
+    general_hypertrophy:  'Build Muscle',
+    weak_point_spec:      'Specialisation',
+    strength_hypertrophy: 'Strength + Size',
+    mens_physique:        "Men's Physique",
+    classic_physique:     'Classic Physique',
+    bodybuilding:         'Bodybuilding',
+    bikini:               'Bikini',
+    wellness:             'Wellness',
+    figure:               'Figure',
+    womens_physique:      "Women's Physique",
   }[goal] ?? 'Training';
 
   const splitShort = {

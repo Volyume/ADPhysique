@@ -436,6 +436,7 @@ export default function CoachBuilderScreen({ navigation, route }) {
           daysPerWeek: inputs.daysPerWeek,
           sessionLengthMinutes: inputs.sessionLengthMinutes,
           recoveryRating: inputs.recoveryRating,
+          experience: inputs.experience,
         });
       }
 
@@ -621,19 +622,9 @@ export default function CoachBuilderScreen({ navigation, route }) {
   }
 
   function renderStep6() {
-    const isVTaper = inputs.goal === 'aesthetic_v_taper';
-    const V_TAPER_SUGGESTIONS = ['Side Delts', 'Lats / Back Width', 'Upper Chest', 'Rear Delts'];
     return (
       <View style={styles.stepBody}>
         <Text style={styles.stepQuestion}>Select up to 3 muscles you want to bring up</Text>
-        {isVTaper && inputs.weakPoints.length === 0 && (
-          <View style={styles.suggestionBanner}>
-            <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
-            <Text style={styles.suggestionText}>
-              Suggested for V-Taper: {V_TAPER_SUGGESTIONS.join(', ')}
-            </Text>
-          </View>
-        )}
         <View style={styles.muscleGrid}>
           {WEAK_POINT_MUSCLES.map(muscle => {
             const selected = inputs.weakPoints.includes(muscle);

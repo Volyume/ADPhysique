@@ -50,28 +50,10 @@ const ACTION_CARDS_PRO = [
     id: 'coach',
     icon: 'sparkles',
     title: 'Change your goals',
-    description: "Run through the wizard again and we'll build a new plan around your updated goals.",
+    description: "Update your physique goal or training phase and your Precision Coaching will rebuild your plan.",
     screen: 'CoachBuilder',
     badge: null,
     featured: true,
-  },
-  {
-    id: 'library',
-    icon: 'library-outline',
-    title: 'Plan Library',
-    description: 'Browse ready-made plans. Picking one here runs it as a standard plan without your coach.',
-    screen: 'PlanLibrary',
-    badge: null,
-    featured: false,
-  },
-  {
-    id: 'manual',
-    icon: 'create-outline',
-    title: 'Manual Builder',
-    description: 'Create a custom plan from scratch. You choose every exercise.',
-    screen: 'ManualBuilder',
-    badge: null,
-    featured: false,
   },
 ];
 
@@ -394,7 +376,7 @@ export default function PlansScreen({ navigation }) {
               )}
               {tier === 'pro' && (
                 <Text style={styles.proCoachNote}>
-                  Your coach adjusts this plan as you progress and check in. Tap the menu to change your goals anytime.
+                  Your Precision Coaching adjusts this plan as you progress and check in. Use the menu or scroll down to change your goals.
                 </Text>
               )}
               <View style={styles.activePlanActions}>
@@ -504,7 +486,7 @@ export default function PlansScreen({ navigation }) {
         {/* Decision Hub */}
         <View style={[styles.section, isProWithPlan && styles.sectionDeemphasised]}>
           <Text style={styles.sectionTitle}>
-            {isProWithPlan ? 'Want something different?' : 'Start or build a plan'}
+            {isProWithPlan ? 'Change your coaching goals' : 'Start or build a plan'}
           </Text>
           {actionCards.map(card => {
             const isCoach = card.id === 'coach';

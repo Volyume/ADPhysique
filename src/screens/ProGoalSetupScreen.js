@@ -1,399 +1,269 @@
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../store/useAppStore';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import {
+  PHYSIQUE_GOALS, PHYSIQUE_GOAL_GROUPS,
+  TRAINING_PHASES,
+  phaseToCoachingKey, phaseToNutritionKey, daysToActivityLevel,
+} from '../lib/coachingGoals';
+import { calculateNutritionTargets } from '../lib/nutritionEngine';
+import { saveNutritionTargets } from '../lib/database';
 
-// ─── Data ─────────────────────────────────────────────────────────────────────
+const NUTRITION_KEY = '@volyume_nutrition_targets';
 
-const PHASES = [
-  {
-    value: 'agg_cut',
-    title: 'Losing weight, faster pace',
-    description: 'Dropping weight quickly before an event or deadline. Accepts more hunger.',
-    icon: 'trending-down-outline',
-    iconColor: colors.warning,
-  },
-  {
-    value: 'mod_cut',
-    title: 'Losing weight, steady pace',
-    description: 'Consistent, sustainable fat loss while keeping strength. The default approach.',
-    icon: 'trending-down-outline',
-    iconColor: colors.warning,
-  },
-  {
-    value: 'mild_cut',
-    title: 'Losing a little weight',
-    description: 'Slow, comfortable deficit. Prioritises muscle retention over speed.',
-    icon: 'trending-down-outline',
-    iconColor: colors.warning,
-  },
-  {
-    value: 'maint',
-    title: 'Maintaining weight',
-    description: 'Not trying to lose or gain. Keeping performance and body composition stable.',
-    icon: 'remove-outline',
-    iconColor: colors.textSecondary,
-  },
-  {
-    value: 'mild_bulk',
-    title: 'Building muscle, controlled pace',
-    description: 'Adding muscle slowly with minimal fat gain. 0.5–1% bodyweight per month.',
-    icon: 'trending-up-outline',
-    iconColor: colors.success,
-  },
-  {
-    value: 'mod_bulk',
-    title: 'Building muscle, standard pace',
-    description: 'Faster muscle growth, some fat gain expected. Good for people who have been training consistently for a year or more.',
-    icon: 'trending-up-outline',
-    iconColor: colors.success,
-  },
-];
-
-const STEP_OPTIONS = [6000, 8000, 10000, 12000, 14000];
-
-function formatSteps(n) {
-  return n.toLocaleString();
-}
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function SectionLabel({ children }) {
-  return <Text style={styles.sectionLabel}>{children}</Text>;
-}
-
-function SectionSubtitle({ children }) {
-  return <Text style={styles.sectionSubtitle}>{children}</Text>;
-}
-
-function PhaseCard({ phase, selected, onPress }) {
-  return (
-    <TouchableOpacity
-      style={[styles.phaseCard, selected && styles.phaseCardSelected]}
-      onPress={onPress}
-      activeOpacity={0.7}
-      accessibilityRole="radio"
-      accessibilityState={{ checked: selected }}
-      accessibilityLabel={phase.title}
-    >
-      <View style={[styles.phaseIconWrap, { borderColor: phase.iconColor + '33' }]}>
-        <Ionicons name={phase.icon} size={22} color={phase.iconColor} />
-      </View>
-      <View style={styles.phaseText}>
-        <Text style={[styles.phaseTitle, selected && styles.phaseTitleSelected]}>
-          {phase.title}
-        </Text>
-        <Text style={styles.phaseDescription}>{phase.description}</Text>
-      </View>
-      {selected && (
-        <Ionicons
-          name="checkmark-circle"
-          size={20}
-          color={colors.primary}
-          style={styles.phaseCheck}
-        />
-      )}
-    </TouchableOpacity>
-  );
-}
-
-function StepChip({ steps, selected, onPress }) {
-  return (
-    <TouchableOpacity
-      style={[styles.stepChip, selected && styles.stepChipSelected]}
-      onPress={onPress}
-      activeOpacity={0.7}
-      accessibilityRole="radio"
-      accessibilityState={{ checked: selected }}
-      accessibilityLabel={`${formatSteps(steps)} steps`}
-    >
-      <Text style={[styles.stepChipText, selected && styles.stepChipTextSelected]}>
-        {formatSteps(steps)}
-      </Text>
-    </TouchableOpacity>
-  );
-}
-
-// ─── Screen ───────────────────────────────────────────────────────────────────
-
-export default function ProGoalSetupScreen({ navigation, route }) {
+export default function ProGoalSetupScreen({ navigation }) {
   const { user, userProfile, saveLocalProfile } = useAppStore();
 
-  const fromCheckin = route.params?.fromCheckin ?? false;
+  const [goalFilterGroup, setGoalFilterGroup] = useState('All');
+  const [selectedGoal, setSelectedGoal] = useState(userProfile?.trainingGoal ?? null);
+  const [selectedPhase, setSelectedPhase] = useState(userProfile?.trainingPhase ?? null);
 
-  const [selectedPhase, setSelectedPhase] = useState(
-    userProfile?.goalPhase ?? null,
-  );
-  const [selectedSteps, setSelectedSteps] = useState(
-    userProfile?.stepsTarget ?? 8000,
-  );
-  const canSave = selectedPhase !== null;
+  const canSave = selectedGoal !== null && selectedPhase !== null;
 
-  const handleSave = async () => {
+  const filteredGoals = goalFilterGroup === 'All'
+    ? PHYSIQUE_GOALS
+    : PHYSIQUE_GOALS.filter(g => g.group === goalFilterGroup);
+
+  async function handleSave() {
     if (!canSave) return;
-    const now = Date.now();
-    await saveLocalProfile(user.id, {
+
+    const goalPhase = phaseToCoachingKey(selectedPhase);
+    const updatedProfile = {
       ...(userProfile || {}),
-      goalPhase: selectedPhase,
-      phaseStartedAt: now,
-      stepsTarget: selectedSteps,
-    });
+      trainingGoal: selectedGoal,
+      trainingPhase: selectedPhase,
+      goalPhase,
+    };
+
+    // Recalculate nutrition if the phase changed or we have the needed data
+    const wp = userProfile || {};
+    if (wp.weightKg && wp.heightCm && wp.age && wp.sex) {
+      try {
+        const targets = calculateNutritionTargets({
+          weightKg: wp.weightKg,
+          heightCm: wp.heightCm,
+          age: wp.age,
+          sex: wp.sex,
+          bodyFatPct: wp.bodyFatPct ?? null,
+          activityLevel: daysToActivityLevel(wp.daysPerWeek ?? 4),
+          goal: phaseToNutritionKey(selectedPhase),
+        });
+        await AsyncStorage.setItem(NUTRITION_KEY, JSON.stringify(targets));
+        if (user?.id) {
+          await saveNutritionTargets(user.id, targets);
+        }
+      } catch (_) {}
+    }
+
+    await saveLocalProfile(user.id, updatedProfile);
     navigation.goBack();
-  };
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
         >
           <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Pro Goal Setup</Text>
-        <View style={styles.headerSpacer} />
+        <Text style={styles.headerTitle}>Update your goals</Text>
+        <View style={{ width: 24 }} />
       </View>
 
       <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* ── Section 1: Current phase ── */}
-        <SectionLabel>What's your current goal?</SectionLabel>
+        {/* ── Physique goal ── */}
+        <Text style={styles.sectionLabel}>What are you training for?</Text>
+        <Text style={styles.sectionSub}>
+          Shapes how your plan allocates volume across muscle groups.
+        </Text>
 
-        {PHASES.map((phase) => (
-          <PhaseCard
-            key={phase.value}
-            phase={phase}
-            selected={selectedPhase === phase.value}
-            onPress={() => setSelectedPhase(phase.value)}
-          />
-        ))}
-
-        {/* ── Section 2: Daily step target ── */}
-        <SectionLabel style={styles.sectionLabelSpaced}>Daily step target</SectionLabel>
-        <SectionSubtitle>
-          Helps Volyume work out how active you are each day. Pick the range you're currently hitting.
-        </SectionSubtitle>
-
-        <View style={styles.stepsRow}>
-          {STEP_OPTIONS.map((steps) => (
-            <StepChip
-              key={steps}
-              steps={steps}
-              selected={selectedSteps === steps}
-              onPress={() => setSelectedSteps(steps)}
-            />
+        {/* Filter tabs */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterRow}
+        >
+          {['All', ...PHYSIQUE_GOAL_GROUPS].map(group => (
+            <TouchableOpacity
+              key={group}
+              style={[styles.filterChip, goalFilterGroup === group && styles.filterChipActive]}
+              onPress={() => setGoalFilterGroup(group)}
+              activeOpacity={0.75}
+            >
+              <Text style={[styles.filterChipText, goalFilterGroup === group && styles.filterChipTextActive]}>
+                {group}
+              </Text>
+            </TouchableOpacity>
           ))}
+        </ScrollView>
+
+        <View style={styles.goalGrid}>
+          {filteredGoals.map(g => {
+            const active = selectedGoal === g.value;
+            return (
+              <TouchableOpacity
+                key={g.value}
+                style={[styles.goalCard, active && styles.goalCardActive]}
+                onPress={() => setSelectedGoal(g.value)}
+                activeOpacity={0.75}
+              >
+                <View style={[styles.goalIconWrap, active && styles.goalIconWrapActive]}>
+                  <Ionicons name={g.icon} size={20} color={active ? colors.primary : colors.textSecondary} />
+                </View>
+                <Text style={[styles.goalLabel, active && styles.goalLabelActive]}>{g.label}</Text>
+                {active && (
+                  <Ionicons name="checkmark-circle" size={14} color={colors.primary} style={styles.goalCheck} />
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
-        {/* ── Footer note ── */}
+        {/* ── Training phase ── */}
+        <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Training phase</Text>
+        <Text style={styles.sectionSub}>
+          Shapes your calorie and nutrition targets, and how hard the plan pushes you.
+        </Text>
+
+        {TRAINING_PHASES.map(phase => {
+          const active = selectedPhase === phase.value;
+          return (
+            <TouchableOpacity
+              key={phase.value}
+              style={[styles.phaseCard, active && styles.phaseCardActive]}
+              onPress={() => setSelectedPhase(phase.value)}
+              activeOpacity={0.75}
+            >
+              <View style={styles.phaseIconWrap}>
+                <Ionicons name={phase.icon} size={20} color={active ? colors.primary : colors.textSecondary} />
+              </View>
+              <View style={styles.phaseBody}>
+                <Text style={[styles.phaseLabel, active && styles.phaseLabelActive]}>{phase.label}</Text>
+                <Text style={styles.phaseDetail}>{phase.detail}</Text>
+              </View>
+              {active && (
+                <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+              )}
+            </TouchableOpacity>
+          );
+        })}
+
         <View style={styles.footerNote}>
           <Ionicons name="information-circle-outline" size={15} color={colors.textMuted} />
           <Text style={styles.footerNoteText}>
-            You can change this anytime in Settings → Pro Setup. Volyume doesn't lock you into a phase.
+            Changing your goals updates your plan targets immediately. Your Precision Coaching adjusts at the next check-in.
           </Text>
         </View>
 
-        {/* ── Save button ── */}
         <TouchableOpacity
-          style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
+          style={[styles.saveBtn, !canSave && styles.saveBtnDisabled]}
           onPress={handleSave}
           disabled={!canSave}
-          activeOpacity={0.8}
-          accessibilityRole="button"
-          accessibilityLabel={fromCheckin ? 'Save and start check-in' : 'Save'}
-          accessibilityState={{ disabled: !canSave }}
+          activeOpacity={0.85}
         >
-          <Text style={[styles.saveButtonText, !canSave && styles.saveButtonTextDisabled]}>
-            {fromCheckin ? 'Save and start check-in' : 'Save'}
-          </Text>
+          <Text style={[styles.saveBtnText, !canSave && styles.saveBtnTextDisabled]}>Save</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-
-  // Header
+  safe: { flex: 1, backgroundColor: colors.background },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
   },
   headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-    color: colors.textPrimary,
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
+    flex: 1, textAlign: 'center',
+    color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold,
   },
-  headerSpacer: {
-    width: 24,
-  },
+  scroll: { paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.xxxl },
 
-  // Scroll
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.xxxl,
-  },
-
-  // Section labels
   sectionLabel: {
-    color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-    letterSpacing: 0.2,
+    fontSize: fontSize.sm, fontWeight: fontWeight.semibold,
+    color: colors.textSecondary, letterSpacing: 0.2, marginBottom: spacing.xs,
+  },
+  sectionLabelSpaced: { marginTop: spacing.xxl },
+  sectionSub: {
+    fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17,
     marginBottom: spacing.md,
   },
-  sectionLabelSpaced: {
-    marginTop: spacing.xxl,
-    marginBottom: spacing.sm,
-  },
-  sectionSubtitle: {
-    color: colors.textMuted,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.regular,
-    lineHeight: 19,
-    marginBottom: spacing.lg,
-  },
 
-  // Phase cards
+  filterRow: { gap: spacing.sm, paddingBottom: spacing.md },
+  filterChip: {
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    backgroundColor: colors.surface2, borderRadius: radius.full,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  filterChipActive: {
+    backgroundColor: colors.primaryBg, borderColor: colors.primary,
+  },
+  filterChipText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  filterChipTextActive: { color: colors.primary, fontWeight: fontWeight.semibold },
+
+  goalGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md,
+  },
+  goalCard: {
+    width: '47%', backgroundColor: colors.surface, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.border,
+    padding: spacing.md, alignItems: 'flex-start', gap: spacing.xs,
+  },
+  goalCardActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
+  goalIconWrap: {
+    width: 36, height: 36, borderRadius: radius.md,
+    backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
+  },
+  goalIconWrapActive: { backgroundColor: colors.surface },
+  goalLabel: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary, flexShrink: 1 },
+  goalLabelActive: { color: colors.primary },
+  goalCheck: { marginTop: 2 },
+
   phaseCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.sm,
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.border,
+    padding: spacing.lg, marginBottom: spacing.sm,
   },
-  phaseCardSelected: {
-    backgroundColor: colors.primaryBg,
-    borderColor: colors.primary,
-  },
+  phaseCardActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
   phaseIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.md,
-    flexShrink: 0,
-    backgroundColor: colors.surface2,
-  },
-  phaseText: {
-    flex: 1,
-  },
-  phaseTitle: {
-    color: colors.textPrimary,
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    marginBottom: spacing.xs,
-  },
-  phaseTitleSelected: {
-    color: colors.primary,
-  },
-  phaseDescription: {
-    color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.regular,
-    lineHeight: 18,
-  },
-  phaseCheck: {
-    marginLeft: spacing.sm,
+    width: 40, height: 40, borderRadius: radius.md,
+    backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
     flexShrink: 0,
   },
+  phaseBody: { flex: 1 },
+  phaseLabel: {
+    fontSize: fontSize.md, fontWeight: fontWeight.semibold,
+    color: colors.textPrimary, marginBottom: spacing.xs,
+  },
+  phaseLabelActive: { color: colors.primary },
+  phaseDetail: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
 
-  // Step chips
-  stepsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  stepChip: {
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.full,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-  },
-  stepChipSelected: {
-    backgroundColor: colors.primaryBg,
-    borderColor: colors.primary,
-  },
-  stepChipText: {
-    color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
-  },
-  stepChipTextSelected: {
-    color: colors.primary,
-    fontWeight: fontWeight.semibold,
-  },
-
-  // Footer note
   footerNote: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginTop: spacing.xxl,
-    marginBottom: spacing.xl,
-    gap: spacing.xs,
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs,
+    marginTop: spacing.xl, marginBottom: spacing.xl,
   },
-  footerNoteText: {
-    flex: 1,
-    color: colors.textMuted,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.regular,
-    lineHeight: 18,
-  },
+  footerNoteText: { flex: 1, fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17 },
 
-  // Save button
-  saveButton: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
+  saveBtn: {
+    backgroundColor: colors.primary, borderRadius: radius.lg,
+    paddingVertical: spacing.lg, alignItems: 'center',
   },
-  saveButtonDisabled: {
-    backgroundColor: colors.surface2,
-  },
-  saveButtonText: {
-    color: colors.background,
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
-  },
-  saveButtonTextDisabled: {
-    color: colors.textMuted,
-  },
+  saveBtnDisabled: { backgroundColor: colors.surface2 },
+  saveBtnText: { color: colors.background, fontSize: fontSize.md, fontWeight: fontWeight.bold },
+  saveBtnTextDisabled: { color: colors.textMuted },
 });

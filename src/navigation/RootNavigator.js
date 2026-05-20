@@ -158,7 +158,7 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="CoachOutput" component={GatedCoachOutput} options={{ title: 'Your Week' }} />
       <Stack.Screen name="CoachHeldHistory" component={CoachHeldHistoryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="BlockReflection" component={BlockReflectionScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="ProGoalSetup" component={GatedProGoalSetup} options={{ title: 'Goal Phase' }} />
+      <Stack.Screen name="ProGoalSetup" component={GatedProGoalSetup} options={{ headerShown: false }} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ title: 'Notifications' }} />
       <Stack.Screen name="WellbeingCheck" component={WellbeingCheckScreen} options={{ title: 'Wellbeing check' }} />
       <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />

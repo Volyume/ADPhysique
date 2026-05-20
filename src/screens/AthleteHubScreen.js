@@ -362,12 +362,6 @@ export default function AthleteHubScreen({ navigation }) {
             {trainingAge && <Text style={styles.profileMeta}>{trainingAge}</Text>}
             <View style={styles.profileStats}>
               <Text style={styles.profileStat}>{totalWorkouts} sessions</Text>
-              {!calm && streak >= 2 && (
-                <>
-                  <Text style={styles.profileDot}>·</Text>
-                  <Text style={[styles.profileStat, { color: colors.warning }]}>{streak} week streak</Text>
-                </>
-              )}
             </View>
           </View>
         </View>
@@ -645,8 +639,8 @@ export default function AthleteHubScreen({ navigation }) {
               <Text style={styles.sectionLabel}>Coaching</Text>
               <NavRow
                 icon="flag-outline"
-                label="Update your coaching goal"
-                sub="Change between fat loss, muscle building or maintenance"
+                label="Update your goals"
+                sub="Change your physique goal or training phase. Your Precision Coaching updates at the next check-in."
                 onPress={() => navigation.navigate('ProGoalSetup')}
               />
               <NavRow

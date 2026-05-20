@@ -311,7 +311,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         lastCalAdjustmentWeeksAgo,
         currentCalTarget: nutrition?.targetKcal ?? null,
         currentStepsTarget: userProfile?.stepsTarget ?? 8000,
-        bodyweightKg: userProfile?.bodyweightKg ?? null,
+        bodyweightKg: userProfile?.weightKg ?? null,
         units,
         scoffPositive: (userProfile?.scoffScore ?? 0) >= 2,
       });
@@ -402,7 +402,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         <TouchableOpacity style={styles.headerBack} onPress={handleClose} activeOpacity={0.7}>
           <Ionicons name="close" size={24} color={colors.textSecondary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Weekly coaching</Text>
+        <Text style={styles.headerTitle}>Precision Coaching</Text>
         <View style={styles.headerSpacer} />
       </View>
 
