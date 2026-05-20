@@ -222,7 +222,7 @@ function HeldDecisionsCard({ decisions, history }) {
       <SectionHeader title="What we held this week" />
       {decisions.map((d, i) => (
         <View key={i} style={styles.heldRow}>
-          <Ionicons name="pause-circle-outline" size={16} color={colors.textMuted} style={{ marginTop: 2 }} />
+          <Ionicons name="pause-circle-outline" size={16} color={colors.textMuted} style={{ marginTop: spacing.xxs }} />
           <Text style={styles.heldText}>{d.reason}</Text>
         </View>
       ))}
@@ -757,7 +757,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   bulletIcon: {
-    marginTop: 2,
+    marginTop: spacing.xxs,
   },
   bulletText: {
     flex: 1,

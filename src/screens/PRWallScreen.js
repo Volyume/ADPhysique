@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   bwPromptTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  bwPromptText: { fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 17, marginTop: 2 },
+  bwPromptText: { fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 17, marginTop: spacing.xxs },
   standardsTitle: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
   standardRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   standardExercise: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary },
   standardRatio: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  standardBadge: { paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radius.sm },
+  standardBadge: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, borderRadius: radius.sm },
   standardLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold },
   prCard: {
     backgroundColor: colors.surface,
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
   strengthLevelNext: {
     fontSize: 11,
     color: colors.textMuted,
-    marginTop: 2,
+    marginTop: spacing.xxs,
   },
   standardsFooter: {
     fontSize: fontSize.xs,

@@ -336,7 +336,7 @@ export default function VolumeHeatmapScreen() {
 
 function LegendItem({ color, label }) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
       <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: color }} />
       <Text style={{ fontSize: 10, color: colors.textMuted }}>{label}</Text>
     </View>
@@ -569,7 +569,7 @@ const styles = StyleSheet.create({
   },
   editMuscleName: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary },
   editInputs: { flexDirection: 'row', gap: spacing.sm },
-  editInputGroup: { flex: 1, gap: 4 },
+  editInputGroup: { flex: 1, gap: spacing.xs },
   editInputLabel: { fontSize: fontSize.xs, color: colors.textMuted, textAlign: 'center' },
   editInput: {
     backgroundColor: colors.surface2,

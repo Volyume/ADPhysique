@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
   mesoCardActive: { borderColor: colors.primary },
   activeBadge: {
     alignSelf: 'flex-start', backgroundColor: colors.primaryBg,
-    borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: 3,
+    borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
   },
   activeBadgeText: {
     fontSize: fontSize.xs, fontWeight: fontWeight.black, color: colors.primary, letterSpacing: 1,

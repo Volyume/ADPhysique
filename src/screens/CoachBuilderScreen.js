@@ -142,7 +142,7 @@ function ProgressBar({ current, total }) {
 }
 
 const pbStyles = StyleSheet.create({
-  row:        { flexDirection: 'row', gap: 4, marginBottom: spacing.xs },
+  row:        { flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.xs },
   seg:        { flex: 1, height: 3, borderRadius: 2 },
   segDone:    { backgroundColor: colors.primary },
   segPending: { backgroundColor: colors.border },
@@ -1162,7 +1162,7 @@ const styles = StyleSheet.create({
   selCardLabel: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   selCardLabelActive: { color: colors.primary },
   selCardSubtitle: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
-  selCardDetail: { fontSize: fontSize.xs, color: colors.textDisabled, lineHeight: 16, fontStyle: 'italic', marginTop: 2 },
+  selCardDetail: { fontSize: fontSize.xs, color: colors.textDisabled, lineHeight: 16, fontStyle: 'italic', marginTop: spacing.xxs },
   selCardCheck: { marginLeft: 'auto', alignSelf: 'center' },
 
   pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
@@ -1251,22 +1251,22 @@ const styles = StyleSheet.create({
   exerciseRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   exerciseDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primaryDim, marginTop: 6 },
   exerciseName: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textPrimary },
-  exerciseMeta: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2 },
-  advancedSetBadge: { fontSize: fontSize.xs, color: colors.primary, marginTop: 3, lineHeight: 16, fontStyle: 'italic' },
+  exerciseMeta: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: spacing.xxs },
+  advancedSetBadge: { fontSize: fontSize.xs, color: colors.primary, marginTop: spacing.xxs, lineHeight: 16, fontStyle: 'italic' },
   phaseBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, backgroundColor: colors.warningBg ?? colors.surface, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.warning + '55', marginBottom: spacing.sm },
   phaseBannerTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.warning, letterSpacing: 0.5 },
-  phaseBannerDesc: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2, lineHeight: 18 },
+  phaseBannerDesc: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: spacing.xxs, lineHeight: 18 },
   addonsCard: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.lg, gap: spacing.md, marginBottom: spacing.sm },
   addonsTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textMuted, letterSpacing: 1 },
   addonRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   addonLabel: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textPrimary },
-  addonInstructions: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2, lineHeight: 18 },
+  addonInstructions: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: spacing.xxs, lineHeight: 18 },
 
   // Filter tabs (step 4 goal categories)
   filterTabScroll: { flexGrow: 0, marginBottom: spacing.sm },
   filterTabScrollContent: { gap: spacing.xs, paddingRight: spacing.sm },
   filterTab: {
-    paddingHorizontal: spacing.md, paddingVertical: 7,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     borderRadius: radius.full, backgroundColor: colors.surface2 ?? colors.surface,
     borderWidth: 1, borderColor: colors.border,
   },

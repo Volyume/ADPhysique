@@ -309,7 +309,7 @@ export default function NutritionTargetsScreen() {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
         >
-          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6, flexWrap: 'wrap' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, flexWrap: 'wrap' }}>
             <Text style={styles.pageTitle}>Nutrition Targets</Text>
             <InfoTooltip
               size={14}
@@ -552,7 +552,7 @@ export default function NutritionTargetsScreen() {
           {/* ── GDPR Consent ───────────────────────────────────────────────────────────────────── */}
 
           <View style={styles.consentCard}>
-            <Ionicons name="lock-closed-outline" size={18} color={colors.textSecondary} style={{ marginTop: 2 }} />
+            <Ionicons name="lock-closed-outline" size={18} color={colors.textSecondary} style={{ marginTop: spacing.xxs }} />
             <View style={styles.consentBody}>
               <Text style={styles.consentText}>
                 Your body data is stored only on this device. It is never shared and you can delete it at any time.
@@ -824,7 +824,7 @@ export default function NutritionTargetsScreen() {
                       {results.targetRateKgPerWeek} kg/week
                     </Text>
                   </View>
-                  <View style={[styles.calcRow, { marginTop: 4, paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.border }]}>
+                  <View style={[styles.calcRow, { marginTop: spacing.xs, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border }]}>
                     <Text style={[styles.calcKey, { fontWeight: fontWeight.bold }]}>Macro method</Text>
                   </View>
                   <View style={styles.calcRow}>
@@ -1145,7 +1145,7 @@ const styles = StyleSheet.create({
   macroPerKg: {
     fontSize: fontSize.xs,
     color: colors.textMuted,
-    marginTop: 2,
+    marginTop: spacing.xxs,
   },
 
   phaseCard: {

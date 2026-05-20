@@ -666,10 +666,10 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  sfrItem: { flex: 1, alignItems: 'center', gap: 2 },
+  sfrItem: { flex: 1, alignItems: 'center', gap: spacing.xxs },
   sfrValue: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
   sfrLabel: { fontSize: fontSize.xs, color: colors.textMuted },
-  sfrLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  sfrLabelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   sfrDivider: { width: 1, height: 36, backgroundColor: colors.border },
   chartSection: { gap: spacing.sm },
   chartLabel: {
@@ -843,7 +843,7 @@ const styles = StyleSheet.create({
     color: colors.warning,
     fontSize: 13,
     fontWeight: '600',
-    marginBottom: 2,
+    marginBottom: spacing.xxs,
   },
   plateauBody: {
     color: colors.textSecondary,

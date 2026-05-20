@@ -695,7 +695,7 @@ function StatBox({ icon, value, label, tooltip }) {
     <View style={styles.statBox}>
       <Ionicons name={icon} size={20} color={colors.primary} />
       <Text style={styles.statValue}>{value}</Text>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xxs }}>
         <Text style={styles.statLabel}>{label}</Text>
         {tooltip ? <InfoTooltip size={10} text={tooltip} /> : null}
       </View>
@@ -741,7 +741,7 @@ const styles = StyleSheet.create({
   muscleName: { flex: 1, fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.textPrimary },
   muscleSetCount: { fontSize: fontSize.sm, color: colors.textSecondary },
   volumeInsightText: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18 },
-  statusBadge: { paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radius.sm },
+  statusBadge: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, borderRadius: radius.sm },
   statusText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold },
   limitedCard: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.lg, borderWidth: 1, borderColor: colors.border },
   limitedText: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
@@ -873,7 +873,7 @@ const styles = StyleSheet.create({
   adaptiveReason: {
     fontSize: fontSize.xs,
     color: colors.textSecondary,
-    marginTop: 2,
+    marginTop: spacing.xxs,
     lineHeight: 16,
   },
   adaptiveHold: {

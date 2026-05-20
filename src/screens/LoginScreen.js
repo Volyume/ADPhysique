@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.errorBg, borderWidth: 1, borderColor: colors.error,
     borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.lg,
   },
-  crashTitle: { color: colors.error, fontWeight: fontWeight.bold, marginBottom: 4, fontSize: fontSize.sm },
+  crashTitle: { color: colors.error, fontWeight: fontWeight.bold, marginBottom: spacing.xs, fontSize: fontSize.sm },
   crashMsg: { color: colors.error, fontSize: fontSize.xs },
   crashStack: { color: colors.textMuted, fontSize: 10, marginTop: spacing.xs },
   crashDismiss: { color: colors.error, fontSize: fontSize.xs, marginTop: spacing.sm },
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
     right: spacing.md,
     top: 0, bottom: 0,
     justifyContent: 'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: spacing.xs,
   },
   forgotBtn: {
     alignSelf: 'flex-end',

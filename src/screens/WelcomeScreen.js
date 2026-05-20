@@ -180,15 +180,15 @@ const styles = StyleSheet.create({
   proTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.black, color: colors.textPrimary },
   betaBadge: {
     backgroundColor: colors.primary, borderRadius: 4,
-    paddingHorizontal: 6, paddingVertical: 2,
+    paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
   },
   betaBadgeText: { fontSize: 9, fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.5 },
-  proSubtitle: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2 },
+  proSubtitle: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: spacing.xxs },
 
   divider: { height: 1, backgroundColor: colors.border, marginHorizontal: spacing.lg },
 
   bullets: { padding: spacing.lg, gap: spacing.sm },
-  bulletHeader: { fontSize: fontSize.xs, color: colors.textMuted, marginBottom: 2 },
+  bulletHeader: { fontSize: fontSize.xs, color: colors.textMuted, marginBottom: spacing.xxs },
   bulletRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   bulletText: { fontSize: fontSize.sm, color: colors.textSecondary, flex: 1 },
 

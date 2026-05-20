@@ -738,7 +738,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   insightIcon: {
-    marginTop: 2,
+    marginTop: spacing.xxs,
   },
   insightTextWrap: {
     flex: 1,
