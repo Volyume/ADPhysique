@@ -14,26 +14,39 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { generatePlan, GOAL_LABELS, SPLIT_LABELS } from '../lib/planEngine';
-import { getPlanNutritionContext } from '../lib/nutritionEngine';
+import { generatePlan, GOAL_LABELS as PLAN_GOAL_LABELS, SPLIT_LABELS } from '../lib/planEngine';
+import { getPlanNutritionContext, calculateNutritionTargets } from '../lib/nutritionEngine';
 import { getMesoSchedule, getCurrentMesoWeek } from '../lib/mesocycle';
 import { applyPhaseToInputs, getPhaseLabel, getPhaseDescription, buildSessionAddons } from '../lib/phaseEngine';
 import { annotateSessionSetTypes } from '../lib/setTypeEngine';
 import InfoTooltip from '../components/InfoTooltip';
+import {
+  PHYSIQUE_GOALS,
+  PHYSIQUE_GOAL_GROUPS,
+  TRAINING_PHASES,
+  GOALS_WITH_WEAK_POINTS,
+  GOAL_LABELS,
+  PHASE_LABELS,
+  phaseToNutritionKey,
+  phaseToCoachingKey,
+  daysToActivityLevel,
+} from '../lib/coachingGoals';
 
-const NUTRITION_STORAGE_KEY = '@volyume_nutrition_targets';
 import {
   createProgramme,
   createRoutine,
   addExerciseToRoutine,
   getAllExercises,
   activatePlanWithBlock,
+  saveNutritionTargets,
 } from '../lib/database';
 import useAppStore from '../store/useAppStore';
 
+const NUTRITION_STORAGE_KEY = '@volyume_nutrition_targets';
+
 // ─── Static data ────────────────────────────────────────────────────────────────
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 8;
 
 const EXPERIENCE_OPTIONS = [
   { value: 'beginner',     label: 'Beginner',     subtitle: 'Less than 18 months of consistent training' },
@@ -61,16 +74,6 @@ const EQUIPMENT_OPTIONS = [
   { value: 'bodyweight',      label: 'Bodyweight',         icon: 'body-outline' },
 ];
 
-const GOAL_OPTIONS = [
-  { value: 'general_hypertrophy',         icon: 'trending-up-outline',   subtitle: 'Balanced muscle growth across the whole body' },
-  { value: 'balanced_bodybuilding',       icon: 'grid-outline',           subtitle: 'Structured programme with even coverage across all muscle groups' },
-  { value: 'aesthetic_v_taper',           icon: 'triangle-outline',       subtitle: 'Prioritises upper-body width and shoulder-to-waist shape' },
-  { value: 'x_frame_physique', icon: 'expand-outline', subtitle: 'Prioritises shoulders, back width, glutes and hamstrings for a balanced four-point look' },
-  { value: 'weak_point_spec',             icon: 'warning-outline',        subtitle: 'Extra sets on the muscles you want to bring up' },
-  { value: 'strength_hypertrophy', icon: 'flash-outline',          subtitle: 'Heavier compounds with muscle growth as the goal' },
-  { value: 'recomp',               icon: 'swap-horizontal-outline', subtitle: 'Hold onto your muscle while losing fat. Eating around maintenance.' },
-];
-
 const WEAK_POINT_MUSCLES = [
   'Chest', 'Upper Chest', 'Lats / Back Width', 'Back Thickness',
   'Side Delts', 'Rear Delts', 'Front Delts',
@@ -79,15 +82,11 @@ const WEAK_POINT_MUSCLES = [
   'Core / Abs', 'Traps',
 ];
 
-const V_TAPER_SUGGESTIONS = ['Side Delts', 'Lats / Back Width', 'Upper Chest', 'Rear Delts'];
-
 const RECOVERY_OPTIONS = [
   { value: 'poor',    label: 'Poor',    subtitle: 'Often sore, disrupted sleep, high life stress' },
   { value: 'average', label: 'Average', subtitle: 'Typical recovery between sessions' },
   { value: 'good',    label: 'Good',    subtitle: 'Sleeping well, low stress, nutrition on point' },
 ];
-
-const GOALS_WITH_WEAK_POINTS = ['aesthetic_v_taper', 'weak_point_spec', 'general_hypertrophy', 'x_frame_physique'];
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -97,6 +96,7 @@ function stepTitle(step) {
     'Schedule',
     'Equipment',
     'Training Goal',
+    'Phase',
     'Weak Points',
     'Recovery',
     'Your Plan',
@@ -108,13 +108,15 @@ function isStepComplete(step, inputs) {
   if (step === 2) return !!inputs.daysPerWeek && !!inputs.sessionLengthMinutes;
   if (step === 3) return !!inputs.equipment;
   if (step === 4) return !!inputs.goal;
-  if (step === 5) return true;
-  if (step === 6) return !!inputs.recoveryRating;
+  if (step === 5) return !!inputs.phase;
+  if (step === 6) return true; // weak points optional
+  if (step === 7) return !!inputs.recoveryRating;
   return true;
 }
 
 function resolveEffectiveStep(goal, step) {
-  if (step === 5 && !GOALS_WITH_WEAK_POINTS.includes(goal)) return 6;
+  // Skip weak points (step 6) if goal doesn't support them
+  if (step === 6 && !GOALS_WITH_WEAK_POINTS.includes(goal)) return 7;
   return step;
 }
 
@@ -147,7 +149,7 @@ const pbStyles = StyleSheet.create({
   label:      { fontSize: fontSize.xs, color: colors.textMuted, fontWeight: fontWeight.medium },
 });
 
-function SelectionCard({ label, subtitle, icon, selected, onPress }) {
+function SelectionCard({ label, subtitle, detail, icon, selected, onPress }) {
   return (
     <TouchableOpacity
       style={[styles.selCard, selected && styles.selCardActive]}
@@ -160,6 +162,7 @@ function SelectionCard({ label, subtitle, icon, selected, onPress }) {
       <View style={styles.selCardTextWrap}>
         <Text style={[styles.selCardLabel, selected && styles.selCardLabelActive]}>{label}</Text>
         {subtitle ? <Text style={styles.selCardSubtitle}>{subtitle}</Text> : null}
+        {detail ? <Text style={styles.selCardDetail}>{detail}</Text> : null}
       </View>
       {selected ? (
         <Ionicons name="checkmark-circle" size={20} color={colors.primary} style={styles.selCardCheck} />
@@ -198,7 +201,7 @@ export default function CoachBuilderScreen({ navigation, route }) {
   const isFullyPrefilled = isFirstRun && !!(prefilled?.equipment && prefilled?.goal && prefilled?.recoveryRating);
 
   // During first run, skip step 1 (experience) if already captured in onboarding
-  const initialStep = isFullyPrefilled ? 7 : (isFirstRun && userProfile?.experience ? 2 : 1);
+  const initialStep = isFullyPrefilled ? 8 : (isFirstRun && userProfile?.experience ? 2 : 1);
 
   const [step, setStep]   = useState(initialStep);
   const [inputs, setInputs] = useState({
@@ -208,10 +211,14 @@ export default function CoachBuilderScreen({ navigation, route }) {
     sessionLengthMinutes:  prefilled?.sessionLengthMinutes ?? 60,
     equipment:             prefilled?.equipment ?? null,
     goal:                  prefilled?.goal ?? null,
+    phase:                 prefilled?.phase ?? null,
     weakPoints:            prefilled?.weakPoints ?? [],
     recoveryRating:        prefilled?.recoveryRating ?? null,
     nutritionPhase:        nutritionPhaseFromRoute,
+    nutritionCalculated:   prefilled?.nutritionCalculated ?? false,
   });
+
+  const [goalFilterGroup, setGoalFilterGroup] = useState('All');
 
   const hasAutoGeneratedRef = useRef(false);
 
@@ -220,6 +227,7 @@ export default function CoachBuilderScreen({ navigation, route }) {
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving]         = useState(false);
   const [whyExpanded, setWhyExpanded] = useState(false);
+  const [nutritionSummary, setNutritionSummary] = useState(null);
 
   const scrollRef = useRef(null);
 
@@ -235,7 +243,7 @@ export default function CoachBuilderScreen({ navigation, route }) {
   // ── Navigation helpers ──
 
   function goNext() {
-    if (step === 6) {
+    if (step === 7) {
       handleGenerate();
       return;
     }
@@ -251,8 +259,13 @@ export default function CoachBuilderScreen({ navigation, route }) {
       return;
     }
     let prev = step - 1;
-    if (step === 6 && !GOALS_WITH_WEAK_POINTS.includes(inputs.goal)) {
-      prev = 4;
+    // When going back from recovery (7), skip weak points (6) if goal doesn't support them
+    if (step === 7 && !GOALS_WITH_WEAK_POINTS.includes(inputs.goal)) {
+      prev = 5;
+    }
+    // When going back from weak points (6), go to phase (5)
+    if (step === 6) {
+      prev = 5;
     }
     setStep(prev);
     scrollRef.current?.scrollTo({ y: 0, animated: false });
@@ -280,7 +293,7 @@ export default function CoachBuilderScreen({ navigation, route }) {
 
   async function handleGenerate() {
     setGenerating(true);
-    setStep(7);
+    setStep(8);
     scrollRef.current?.scrollTo({ y: 0, animated: false });
 
     await new Promise(resolve => setTimeout(resolve, 300));
@@ -294,12 +307,18 @@ export default function CoachBuilderScreen({ navigation, route }) {
       }
     } catch (_e) {}
 
+    // Determine nutrition phase — use phase from inputs if available
+    let nutritionPhaseKey = inputs.nutritionPhase ?? nutritionPhaseFromRoute ?? null;
+    if (inputs.phase) {
+      nutritionPhaseKey = phaseToNutritionKey(inputs.phase);
+    }
+
     // Phase 7: apply competition phase modifiers before generating
     const compDateMs = user?.profile?.competitionDate ?? null;
     const { inputs: phaseInputs, phase, modifiers, weeksToComp } = applyPhaseToInputs(
       {
         ...inputs,
-        nutritionPhase: inputs.nutritionPhase ?? nutritionPhaseFromRoute ?? nutritionContext?.phaseType ?? null,
+        nutritionPhase: nutritionPhaseKey ?? nutritionContext?.phaseType ?? null,
         nutritionContext,
         age: user?.profile?.age ?? null,
       },
@@ -332,6 +351,26 @@ export default function CoachBuilderScreen({ navigation, route }) {
       weeksToComp,
       sessionAddons: sessionAddons.length > 0 ? sessionAddons : undefined,
     };
+
+    // Calculate nutrition summary if phase is set and we have body stats
+    let calcNutritionSummary = null;
+    if (inputs.phase) {
+      try {
+        const profile = useAppStore.getState().userProfile ?? {};
+        if (profile.weightKg && profile.heightCm && profile.age) {
+          calcNutritionSummary = calculateNutritionTargets({
+            sex: profile.sex ?? 'male',
+            ageYears: profile.age,
+            heightCm: profile.heightCm,
+            weightKg: profile.weightKg,
+            activityLevel: daysToActivityLevel(inputs.daysPerWeek ?? 4),
+            goal: phaseToNutritionKey(inputs.phase),
+            proteinApproach: 'optimised',
+          });
+        }
+      } catch (_e) {}
+    }
+    setNutritionSummary(calcNutritionSummary);
 
     setPlan(finalResult);
     setPlanName(finalResult.name);
@@ -381,6 +420,38 @@ export default function CoachBuilderScreen({ navigation, route }) {
 
       if (activate) {
         await activatePlanWithBlock(userId, prog.id, planName.trim() || plan.name);
+      }
+
+      // Save plan profile fields and nutrition to userProfile
+      if (userId) {
+        const { saveLocalProfile, userProfile: currentProfile } = useAppStore.getState();
+        await saveLocalProfile(userId, {
+          ...(currentProfile ?? {}),
+          trainingGoal: inputs.goal,
+          trainingPhase: inputs.phase,
+          goalPhase: phaseToCoachingKey(inputs.phase ?? 'maintain'),
+          phaseStartedAt: Date.now(),
+          planWeakPoints: inputs.weakPoints ?? [],
+          equipment: inputs.equipment,
+          daysPerWeek: inputs.daysPerWeek,
+          sessionLengthMinutes: inputs.sessionLengthMinutes,
+          recoveryRating: inputs.recoveryRating,
+        });
+      }
+
+      // Save nutrition summary if available
+      if (nutritionSummary) {
+        const nutritionData = {
+          targetKcal: nutritionSummary.targetKcal,
+          proteinG: nutritionSummary.proteinG,
+          carbsG: nutritionSummary.carbsG,
+          fatG: nutritionSummary.fatG,
+          maintenanceKcal: nutritionSummary.maintenanceKcal,
+        };
+        await AsyncStorage.setItem(NUTRITION_STORAGE_KEY, JSON.stringify(nutritionData)).catch(() => {});
+        if (userId) {
+          await saveNutritionTargets(userId, nutritionData).catch(() => {});
+        }
       }
 
       if (isFirstRun) {
@@ -486,13 +557,40 @@ export default function CoachBuilderScreen({ navigation, route }) {
   }
 
   function renderStep4() {
+    const allGroups = ['All', ...PHYSIQUE_GOAL_GROUPS];
+    const filteredGoals = goalFilterGroup === 'All'
+      ? PHYSIQUE_GOALS
+      : PHYSIQUE_GOALS.filter(g => g.group === goalFilterGroup);
+
     return (
       <View style={styles.stepBody}>
         <Text style={styles.stepQuestion}>What's your primary training goal?</Text>
-        {GOAL_OPTIONS.map(opt => (
+
+        {/* Category filter tabs */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterTabScroll}
+          contentContainerStyle={styles.filterTabScrollContent}
+        >
+          {allGroups.map(group => (
+            <TouchableOpacity
+              key={group}
+              style={[styles.filterTab, goalFilterGroup === group && styles.filterTabActive]}
+              onPress={() => setGoalFilterGroup(group)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.filterTabText, goalFilterGroup === group && styles.filterTabTextActive]}>
+                {group}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {filteredGoals.map(opt => (
           <SelectionCard
             key={opt.value}
-            label={GOAL_LABELS[opt.value]}
+            label={GOAL_LABELS[opt.value] ?? opt.label}
             subtitle={opt.subtitle}
             icon={opt.icon}
             selected={inputs.goal === opt.value}
@@ -504,7 +602,27 @@ export default function CoachBuilderScreen({ navigation, route }) {
   }
 
   function renderStep5() {
+    return (
+      <View style={styles.stepBody}>
+        <Text style={styles.stepQuestion}>What phase are you in?</Text>
+        {TRAINING_PHASES.map(phase => (
+          <SelectionCard
+            key={phase.value}
+            label={phase.label}
+            subtitle={phase.subtitle}
+            detail={phase.detail}
+            icon={phase.icon}
+            selected={inputs.phase === phase.value}
+            onPress={() => update('phase', phase.value)}
+          />
+        ))}
+      </View>
+    );
+  }
+
+  function renderStep6() {
     const isVTaper = inputs.goal === 'aesthetic_v_taper';
+    const V_TAPER_SUGGESTIONS = ['Side Delts', 'Lats / Back Width', 'Upper Chest', 'Rear Delts'];
     return (
       <View style={styles.stepBody}>
         <Text style={styles.stepQuestion}>Select up to 3 muscles you want to bring up</Text>
@@ -542,17 +660,19 @@ export default function CoachBuilderScreen({ navigation, route }) {
     );
   }
 
-  function renderStep6() {
-    const hasNutrition = !!inputs.nutritionPhase;
+  function renderStep7() {
+    const hasNutrition = !!inputs.nutritionPhase || !!inputs.phase;
     return (
       <View style={styles.stepBody}>
         {hasNutrition && (
           <View style={styles.nutritionBanner}>
             <Ionicons name="nutrition-outline" size={18} color={colors.success} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.nutritionBannerTitle}>Nutrition Phase Detected</Text>
+              <Text style={styles.nutritionBannerTitle}>Nutrition set up</Text>
               <Text style={styles.nutritionBannerText}>
-                Phase "{inputs.nutritionPhase}" will be used to shape your training plan.
+                {inputs.phase
+                  ? `Phase "${PHASE_LABELS[inputs.phase] ?? inputs.phase}" will be used to shape your training plan.`
+                  : `Phase "${inputs.nutritionPhase}" will be used to shape your training plan.`}
               </Text>
             </View>
           </View>
@@ -575,12 +695,12 @@ export default function CoachBuilderScreen({ navigation, route }) {
     );
   }
 
-  function renderStep7() {
+  function renderStep8() {
     if (generating) {
       return (
         <View style={styles.generatingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.generatingText}>Building your plan…</Text>
+          <Text style={styles.generatingText}>Building your plan...</Text>
         </View>
       );
     }
@@ -616,11 +736,11 @@ export default function CoachBuilderScreen({ navigation, route }) {
                 </Text>
                 <InfoTooltip
                   size={13}
-                  text={`A Training Block is a structured period (typically 4–6 weeks) where volume and effort increase week by week, followed by a lighter recovery week. After completing one block, you can start another (or a different plan) in Training Blocks to keep progressing long-term.`}
+                  text={`A Training Block is a structured period (typically 4-6 weeks) where volume and effort increase week by week, followed by a lighter recovery week. After completing one block, you can start another (or a different plan) in Training Blocks to keep progressing long-term.`}
                 />
               </View>
               <Text style={styles.overviewSub}>
-                Weeks 1–{peakWeek}: volume and effort build progressively each week.
+                Weeks 1-{peakWeek}: volume and effort build progressively each week.
                 Week {recoveryWeek} is a lighter recovery week (fewer sets, lower effort) so you recharge and come back stronger.
               </Text>
               <View style={styles.overviewWeekRow}>
@@ -634,7 +754,7 @@ export default function CoachBuilderScreen({ navigation, route }) {
                     </View>
                   );
                 })}
-                <Text style={styles.overviewWeekLegend}> ← recovery</Text>
+                <Text style={styles.overviewWeekLegend}> recovery</Text>
               </View>
               <Text style={styles.overviewStack}>
                 Tip: once complete, start another block in Training Blocks to keep the momentum going.
@@ -690,12 +810,13 @@ export default function CoachBuilderScreen({ navigation, route }) {
         <View style={styles.summaryCard}>
           <Text style={styles.summaryCardTitle}>Built around you</Text>
           <View style={styles.summaryGrid}>
-            <SummaryItem icon="person-outline"    label="Experience"  value={inputs.experience ?? '—'} />
+            <SummaryItem icon="person-outline"    label="Experience"  value={inputs.experience ?? 'not set'} />
             <SummaryItem icon="calendar-outline"  label="Days / week" value={String(inputs.daysPerWeek)} />
             <SummaryItem icon="time-outline"      label="Session"     value={`${inputs.sessionLengthMinutes} min`} />
-            <SummaryItem icon="barbell-outline"   label="Equipment"   value={(inputs.equipment ?? '—').replace(/_/g, ' ')} />
-            <SummaryItem icon="trophy-outline"    label="Goal"        value={GOAL_LABELS[inputs.goal] ?? '—'} />
-            <SummaryItem icon="heart-outline"     label="Recovery"    value={inputs.recoveryRating ?? '—'} />
+            <SummaryItem icon="barbell-outline"   label="Equipment"   value={(inputs.equipment ?? 'not set').replace(/_/g, ' ')} />
+            <SummaryItem icon="trophy-outline"    label="Goal"        value={GOAL_LABELS[inputs.goal] ?? PLAN_GOAL_LABELS[inputs.goal] ?? 'not set'} />
+            <SummaryItem icon="layers-outline"    label="Phase"       value={PHASE_LABELS[inputs.phase] ?? 'not set'} />
+            <SummaryItem icon="heart-outline"     label="Recovery"    value={inputs.recoveryRating ?? 'not set'} />
             {inputs.weakPoints?.length > 0 && (
               <SummaryItem icon="star-outline" label="Weak points" value={inputs.weakPoints.join(', ')} wide />
             )}
@@ -739,7 +860,7 @@ export default function CoachBuilderScreen({ navigation, route }) {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.exerciseName}>{ex.exerciseName}</Text>
                   <Text style={styles.exerciseMeta}>
-                    {ex.sets} × {ex.repMin}–{ex.repMax} reps · {ex.restSec}s rest
+                    {ex.sets} x {ex.repMin}-{ex.repMax} reps · {ex.restSec}s rest
                   </Text>
                   {ex.advancedSetType && (
                     <Text style={styles.advancedSetBadge}>{ex.advancedSetNote}</Text>
@@ -749,6 +870,32 @@ export default function CoachBuilderScreen({ navigation, route }) {
             ))}
           </View>
         ))}
+
+        {/* Nutrition summary (shown when phase is set and targets are calculated) */}
+        {nutritionSummary && (
+          <View style={styles.nutritionSummaryCard}>
+            <Text style={styles.nutritionSummaryTitle}>Your daily targets</Text>
+            <View style={styles.nutritionSummaryRow}>
+              <Ionicons name="flame-outline" size={16} color={colors.primary} />
+              <Text style={styles.nutritionSummaryValue}>{nutritionSummary.targetKcal} kcal / day</Text>
+            </View>
+            <View style={styles.nutritionSummaryRow}>
+              <Ionicons name="fish-outline" size={16} color={colors.primary} />
+              <Text style={styles.nutritionSummaryValue}>{nutritionSummary.proteinG}g protein</Text>
+            </View>
+            <View style={styles.nutritionSummaryRow}>
+              <Ionicons name="leaf-outline" size={16} color={colors.primary} />
+              <Text style={styles.nutritionSummaryValue}>{nutritionSummary.carbsG}g carbs</Text>
+            </View>
+            <View style={styles.nutritionSummaryRow}>
+              <Ionicons name="water-outline" size={16} color={colors.primary} />
+              <Text style={styles.nutritionSummaryValue}>{nutritionSummary.fatG}g fat</Text>
+            </View>
+            <Text style={styles.nutritionSummaryNote}>
+              Based on your phase and body stats. Adjust in Settings.
+            </Text>
+          </View>
+        )}
       </View>
     );
   }
@@ -770,7 +917,7 @@ export default function CoachBuilderScreen({ navigation, route }) {
   function renderFooter() {
     const canNext = isStepComplete(step, inputs);
 
-    if (step === 7) {
+    if (step === 8) {
       return (
         <View style={styles.footer}>
           <TouchableOpacity style={styles.backBtn} onPress={goBack}>
@@ -791,13 +938,13 @@ export default function CoachBuilderScreen({ navigation, route }) {
             onPress={() => handleSave(true)}
             disabled={saving || generating}
           >
-            <Text style={styles.activateBtnText}>Save & Activate</Text>
+            <Text style={styles.activateBtnText}>Save &amp; Activate</Text>
           </TouchableOpacity>
         </View>
       );
     }
 
-    const nextLabel = step === 6 ? 'Generate Plan' : 'Next';
+    const nextLabel = step === 7 ? 'Generate Plan' : 'Next';
 
     return (
       <View style={styles.footer}>
@@ -813,14 +960,14 @@ export default function CoachBuilderScreen({ navigation, route }) {
           <Text style={[styles.nextBtnText, !canNext && styles.nextBtnTextDisabled]}>
             {nextLabel}
           </Text>
-          {step < 6 && (
+          {step < 7 && (
             <Ionicons
               name="chevron-forward"
               size={18}
               color={canNext ? colors.background : colors.textDisabled}
             />
           )}
-          {step === 6 && (
+          {step === 7 && (
             <Ionicons
               name="flash-outline"
               size={18}
@@ -842,6 +989,7 @@ export default function CoachBuilderScreen({ navigation, route }) {
     5: renderStep5,
     6: renderStep6,
     7: renderStep7,
+    8: renderStep8,
   };
 
   return (
@@ -916,6 +1064,7 @@ const styles = StyleSheet.create({
   selCardLabel: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   selCardLabelActive: { color: colors.primary },
   selCardSubtitle: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+  selCardDetail: { fontSize: fontSize.xs, color: colors.textDisabled, lineHeight: 16, fontStyle: 'italic', marginTop: 2 },
   selCardCheck: { marginLeft: 'auto', alignSelf: 'center' },
 
   pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
@@ -1014,6 +1163,42 @@ const styles = StyleSheet.create({
   addonRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   addonLabel: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textPrimary },
   addonInstructions: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2, lineHeight: 18 },
+
+  // Filter tabs (step 4 goal categories)
+  filterTabScroll: { flexGrow: 0, marginBottom: spacing.sm },
+  filterTabScrollContent: { gap: spacing.xs, paddingRight: spacing.sm },
+  filterTab: {
+    paddingHorizontal: spacing.md, paddingVertical: 7,
+    borderRadius: radius.full, backgroundColor: colors.surface2 ?? colors.surface,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  filterTabActive: {
+    backgroundColor: colors.primaryBg,
+    borderColor: colors.primary,
+  },
+  filterTabText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  filterTabTextActive: { color: colors.primary, fontWeight: fontWeight.bold },
+
+  // Nutrition summary card (step 8)
+  nutritionSummaryCard: {
+    backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1,
+    borderColor: colors.primary + '30', padding: spacing.lg, gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  nutritionSummaryTitle: {
+    fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted,
+    letterSpacing: 0.2, marginBottom: spacing.xs,
+  },
+  nutritionSummaryRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+  },
+  nutritionSummaryValue: {
+    fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary,
+  },
+  nutritionSummaryNote: {
+    fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17,
+    marginTop: spacing.xs, fontStyle: 'italic',
+  },
 
   footerWrapper: { borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.background, paddingHorizontal: spacing.lg, paddingTop: spacing.md },
   footer: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },

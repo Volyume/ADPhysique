@@ -1,12 +1,14 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Animated, Easing, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { VolyumeMark } from '../components/BrandMark';
 import useAppStore from '../store/useAppStore';
+import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
 
 const WEEK_STEPS = [
   {
@@ -29,6 +31,8 @@ const WEEK_STEPS = [
 export default function ProSetupCompleteScreen({ navigation }) {
   const { userProfile, completeFirstRun } = useAppStore();
   const firstName = userProfile?.firstName || 'there';
+
+  const [nutritionSummary, setNutritionSummary] = useState(null);
 
   const opacity = useRef(new Animated.Value(0)).current;
   const slideY  = useRef(new Animated.Value(20)).current;
@@ -57,10 +61,25 @@ export default function ProSetupCompleteScreen({ navigation }) {
     ]).start();
   }, []);
 
+  useEffect(() => {
+    AsyncStorage.getItem('@volyume_nutrition_targets')
+      .then(raw => {
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          setNutritionSummary(parsed);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   async function handleStart() {
     await completeFirstRun();
     // Navigation resolves automatically — RootNavigator re-renders on firstRunComplete
   }
+
+  const goalLabel = GOAL_LABELS[userProfile?.trainingGoal] ?? 'Build Muscle';
+  const phaseLabel = PHASE_LABELS[userProfile?.trainingPhase] ?? null;
+  const daysPerWeek = userProfile?.daysPerWeek ?? null;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -85,6 +104,56 @@ export default function ProSetupCompleteScreen({ navigation }) {
           <Text style={styles.sub}>
             Your plan is ready. Your targets are in. Your reminders are on. Here's the routine that makes coaching work:
           </Text>
+
+          {/* Setup summary card */}
+          <View style={styles.setupSummaryCard}>
+            <Text style={styles.setupSummaryTitle}>Your setup</Text>
+            <View style={styles.summaryGrid}>
+              {daysPerWeek && (
+                <View style={styles.summaryItem}>
+                  <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.summaryItemLabel}>Training days</Text>
+                    <Text style={styles.summaryItemValue}>{daysPerWeek} days / week</Text>
+                  </View>
+                </View>
+              )}
+              <View style={styles.summaryItem}>
+                <Ionicons name="trophy-outline" size={14} color={colors.textMuted} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.summaryItemLabel}>Goal</Text>
+                  <Text style={styles.summaryItemValue}>{goalLabel}</Text>
+                </View>
+              </View>
+              {phaseLabel && (
+                <View style={styles.summaryItem}>
+                  <Ionicons name="layers-outline" size={14} color={colors.textMuted} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.summaryItemLabel}>Phase</Text>
+                    <Text style={styles.summaryItemValue}>{phaseLabel}</Text>
+                  </View>
+                </View>
+              )}
+              {nutritionSummary?.targetKcal && (
+                <View style={styles.summaryItem}>
+                  <Ionicons name="flame-outline" size={14} color={colors.textMuted} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.summaryItemLabel}>Daily calories</Text>
+                    <Text style={styles.summaryItemValue}>{nutritionSummary.targetKcal} kcal</Text>
+                  </View>
+                </View>
+              )}
+              {nutritionSummary?.proteinG && (
+                <View style={styles.summaryItem}>
+                  <Ionicons name="fish-outline" size={14} color={colors.textMuted} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.summaryItemLabel}>Protein target</Text>
+                    <Text style={styles.summaryItemValue}>{nutritionSummary.proteinG}g / day</Text>
+                  </View>
+                </View>
+              )}
+            </View>
+          </View>
 
           <View style={styles.weekCard}>
             <Text style={styles.weekCardTitle}>Your weekly rhythm</Text>
@@ -163,6 +232,28 @@ const styles = StyleSheet.create({
   sub: {
     fontSize: fontSize.md, color: colors.textSecondary,
     lineHeight: 23, marginBottom: spacing.xl,
+  },
+
+  // Setup summary card
+  setupSummaryCard: {
+    backgroundColor: colors.surface, borderRadius: radius.xl,
+    borderWidth: 1.5, borderColor: colors.primary + '40',
+    padding: spacing.lg, marginBottom: spacing.md,
+    gap: spacing.md,
+  },
+  setupSummaryTitle: {
+    fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
+    color: colors.textMuted, letterSpacing: 0.3,
+  },
+  summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  summaryItem: {
+    flexDirection: 'row', alignItems: 'flex-start',
+    gap: spacing.xs, width: '47%',
+  },
+  summaryItemLabel: { fontSize: fontSize.xs, color: colors.textMuted },
+  summaryItemValue: {
+    fontSize: fontSize.sm, fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
   },
 
   weekCard: {
