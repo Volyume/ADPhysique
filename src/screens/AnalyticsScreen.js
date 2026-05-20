@@ -1094,7 +1094,7 @@ const styles = StyleSheet.create({
     height: 72,
   },
   durationBarCol: {
-    alignItems: 'center', justifyContent: 'flex-end', gap: 3,
+    alignItems: 'center', justifyContent: 'flex-end', gap: spacing.xxs,
   },
   durationBar: {
     borderRadius: 3,
@@ -1114,7 +1114,7 @@ const styles = StyleSheet.create({
   freqWrap: {
     backgroundColor: colors.surface, borderRadius: radius.lg,
     padding: spacing.md, borderWidth: 1, borderColor: colors.border,
-    gap: 2,
+    gap: spacing.xxs,
   },
   freqRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -1141,9 +1141,9 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   freqToggle: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
     alignSelf: 'flex-start', marginTop: spacing.xs,
-    paddingVertical: 3,
+    paddingVertical: spacing.xxs,
   },
   freqToggleText: {
     fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.medium,
