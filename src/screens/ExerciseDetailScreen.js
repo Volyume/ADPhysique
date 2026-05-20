@@ -1,16 +1,53 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  Modal, TextInput, KeyboardAvoidingView, Platform, Animated,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { CartesianChart, Line, Area } from 'victory-native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { getExerciseById, getWorkoutSetsForExercise, getAllExercises } from '../lib/database';
+import {
+  getExerciseById, getWorkoutSetsForExercise, getAllExercises,
+  getExerciseGoal, saveExerciseGoal, markGoalAchieved, deleteExerciseGoal,
+} from '../lib/database';
 import { calculate1RM, MUSCLE_DISPLAY_NAMES, detectPlateau } from '../lib/algorithms';
 import { rankSwaps } from '../lib/swapEngine';
 import useAppStore from '../store/useAppStore';
 import { FORM_TIPS } from '../lib/formTips';
 import InfoTooltip from '../components/InfoTooltip';
+
+// Loose date parser — accepts "Dec 2025", "December 2025", "2025-12", "12/2025" etc.
+// Returns unix timestamp (ms) for the 1st of the parsed month, or null.
+function parseLooseDate(str) {
+  if (!str || !str.trim()) return null;
+  const s = str.trim();
+
+  // ISO yyyy-mm
+  const isoMatch = s.match(/^(\d{4})-(\d{1,2})$/);
+  if (isoMatch) {
+    const d = new Date(parseInt(isoMatch[1], 10), parseInt(isoMatch[2], 10) - 1, 1);
+    if (!isNaN(d)) return d.getTime();
+  }
+
+  // mm/yyyy or mm-yyyy
+  const slashMatch = s.match(/^(\d{1,2})[\/\-](\d{4})$/);
+  if (slashMatch) {
+    const d = new Date(parseInt(slashMatch[2], 10), parseInt(slashMatch[1], 10) - 1, 1);
+    if (!isNaN(d)) return d.getTime();
+  }
+
+  // "Dec 2025" / "December 2025"
+  const d = new Date(`1 ${s}`);
+  if (!isNaN(d)) return d.getTime();
+
+  // Full date string fallback
+  const d2 = new Date(s);
+  if (!isNaN(d2)) return d2.getTime();
+
+  return null;
+}
 
 export default function ExerciseDetailScreen({ navigation, route }) {
   const { exerciseId } = route.params || {};
@@ -21,6 +58,15 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   const [substitutes, setSubstitutes] = useState([]);
   const [plateau, setPlateau] = useState(null);
   const [chartMode, setChartMode] = useState('weight'); // 'weight' | 'e1rm'
+
+  // Goal state
+  const [goal, setGoal] = useState(null);
+  const [goalModalVisible, setGoalModalVisible] = useState(false);
+  const [goalWeightInput, setGoalWeightInput] = useState('');
+  const [goalDateInput, setGoalDateInput] = useState('');
+  const [goalSaving, setGoalSaving] = useState(false);
+  const [congratsBanner, setCongratusBanner] = useState(false);
+  const congratsOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (exerciseId) loadData();
@@ -53,6 +99,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
       const workingSets = mySets.filter(
         s => (s.setType ?? s.set_type) !== 'warmup' && (s.weight || 0) > 0 && (s.actualReps || 0) > 0,
       );
+      let computedBest1RM = 0;
       if (workingSets.length > 0) {
         const computedPRs = [];
         let best1RMVal = 0, best1RMSet = null, heaviest = null, mostReps = null;
@@ -62,10 +109,22 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           if (!heaviest || s.weight > heaviest.weight) heaviest = s;
           if (!mostReps || s.actualReps > mostReps.actualReps) mostReps = s;
         }
+        computedBest1RM = best1RMVal;
         if (best1RMSet) computedPRs.push({ id: 'pr_1rm', record_type: '1rm_estimate', value: best1RMVal, reps: best1RMSet.actualReps, achieved_date: best1RMSet.createdAt });
         if (heaviest)   computedPRs.push({ id: 'pr_heavy', record_type: 'heaviest_weight', value: heaviest.weight, reps: heaviest.actualReps, achieved_date: heaviest.createdAt });
         if (mostReps && mostReps !== heaviest) computedPRs.push({ id: 'pr_reps', record_type: 'most_reps', value: mostReps.weight, reps: mostReps.actualReps, achieved_date: mostReps.createdAt });
         setPRs(computedPRs);
+      }
+
+      // Load goal and auto-detect achievement
+      const loadedGoal = await getExerciseGoal(user.id, exerciseId);
+      if (loadedGoal && !loadedGoal.achievedAt && computedBest1RM >= loadedGoal.targetWeight) {
+        await markGoalAchieved(loadedGoal.id);
+        const updatedGoal = { ...loadedGoal, achievedAt: Date.now() };
+        setGoal(updatedGoal);
+        showCongratsBanner();
+      } else {
+        setGoal(loadedGoal);
       }
 
       // Substitutes — ranked by SFR score and similarity
@@ -81,6 +140,51 @@ export default function ExerciseDetailScreen({ navigation, route }) {
     }
   }
 
+  function showCongratsBanner() {
+    setCongratusBanner(true);
+    Animated.sequence([
+      Animated.timing(congratsOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.delay(3500),
+      Animated.timing(congratsOpacity, { toValue: 0, duration: 400, useNativeDriver: true }),
+    ]).start(() => setCongratusBanner(false));
+  }
+
+  function openGoalSheet() {
+    if (goal) {
+      setGoalWeightInput(String(goal.targetWeight));
+      setGoalDateInput(
+        goal.targetDate
+          ? format(new Date(goal.targetDate), 'MMM yyyy')
+          : '',
+      );
+    } else {
+      setGoalWeightInput('');
+      setGoalDateInput('');
+    }
+    setGoalModalVisible(true);
+  }
+
+  async function handleSaveGoal() {
+    const w = parseFloat(goalWeightInput);
+    if (!w || w <= 0) return;
+    const targetDate = parseLooseDate(goalDateInput);
+    setGoalSaving(true);
+    try {
+      await saveExerciseGoal(user.id, exerciseId, { targetWeight: w, targetDate });
+      const updated = await getExerciseGoal(user.id, exerciseId);
+      setGoal(updated);
+      setGoalModalVisible(false);
+    } finally {
+      setGoalSaving(false);
+    }
+  }
+
+  async function handleRemoveGoal() {
+    await deleteExerciseGoal(user.id, exerciseId);
+    setGoal(null);
+    setGoalModalVisible(false);
+  }
+
   if (!exercise) return null;
 
   const formTip = FORM_TIPS[exercise.name] ?? null;
@@ -92,6 +196,16 @@ export default function ExerciseDetailScreen({ navigation, route }) {
     const est = calculate1RM(s.weight || 0, s.actualReps || 0);
     return est > best ? est : best;
   }, 0);
+
+  // Goal progress derived values
+  const goalProgress = goal && !goal.achievedAt
+    ? Math.min(1, best1RM / goal.targetWeight)
+    : goal && goal.achievedAt
+      ? 1
+      : 0;
+  const goalKgToGo = goal && !goal.achievedAt
+    ? Math.max(0, goal.targetWeight - best1RM)
+    : 0;
 
   // Build chart data: one point per session (oldest → newest)
   const reversedHistory = [...history].reverse();
@@ -219,6 +333,65 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             </View>
           );
         })()}
+
+        {/* Congratulatory banner — shown briefly when goal is auto-detected as achieved */}
+        {congratsBanner && (
+          <Animated.View style={[styles.congratsBanner, { opacity: congratsOpacity }]}>
+            <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
+            <Text style={styles.congratsText}>You've hit your target! Set a new one.</Text>
+          </Animated.View>
+        )}
+
+        {/* Goal section */}
+        {!goal && (
+          <TouchableOpacity style={styles.goalSetLink} onPress={openGoalSheet} activeOpacity={0.7}>
+            <Ionicons name="flag-outline" size={14} color={colors.textMuted} />
+            <Text style={styles.goalSetLinkText}>Set a target weight</Text>
+          </TouchableOpacity>
+        )}
+
+        {goal && (
+          <View style={styles.goalCard}>
+            <View style={styles.goalCardHeader}>
+              <View style={styles.goalCardLeft}>
+                <Ionicons name="flag" size={14} color={colors.primary} />
+                <Text style={styles.goalCardTitle}>Target</Text>
+              </View>
+              <TouchableOpacity onPress={openGoalSheet} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name="pencil-outline" size={14} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.goalWeightRow}>
+              <View style={styles.goalWeightItem}>
+                <Text style={styles.goalWeightValue}>{best1RM > 0 ? best1RM.toFixed(1) : '—'}{best1RM > 0 ? units : ''}</Text>
+                <Text style={styles.goalWeightLabel}>Current est. 1RM</Text>
+              </View>
+              <Ionicons name="arrow-forward" size={14} color={colors.textMuted} />
+              <View style={styles.goalWeightItem}>
+                <Text style={[styles.goalWeightValue, { color: colors.primary }]}>
+                  {goal.targetWeight}{units}
+                </Text>
+                <Text style={styles.goalWeightLabel}>
+                  Target{goal.targetDate ? ` · by ${format(new Date(goal.targetDate), 'MMM yyyy')}` : ''}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.goalBarTrack}>
+              <View style={[styles.goalBarFill, { width: `${Math.round(goalProgress * 100)}%` }]} />
+            </View>
+
+            <Text style={[
+              styles.goalBarCaption,
+              goalProgress >= 1 && { color: colors.primary },
+            ]}>
+              {goalProgress >= 1
+                ? 'Goal reached!'
+                : `${goalKgToGo.toFixed(1)}${units} to go`}
+            </Text>
+          </View>
+        )}
 
         {plateau && (
           <View style={styles.plateauBanner}>
@@ -386,6 +559,69 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           </View>
         )}
       </ScrollView>
+
+      {/* Goal-setting bottom sheet */}
+      <Modal
+        visible={goalModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setGoalModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={() => setGoalModalVisible(false)}
+          />
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>{goal ? 'Edit target' : 'Set a target weight'}</Text>
+            <Text style={styles.modalSubtitle}>
+              Based on your estimated 1RM. Progress will be shown each time you open this exercise.
+            </Text>
+
+            <Text style={styles.inputLabel}>Target weight ({units})</Text>
+            <TextInput
+              style={styles.weightInput}
+              value={goalWeightInput}
+              onChangeText={setGoalWeightInput}
+              keyboardType="decimal-pad"
+              placeholder={`e.g. 100`}
+              placeholderTextColor={colors.textMuted}
+              returnKeyType="done"
+            />
+
+            <Text style={styles.inputLabel}>Target date (optional)</Text>
+            <TextInput
+              style={styles.dateInput}
+              value={goalDateInput}
+              onChangeText={setGoalDateInput}
+              placeholder="e.g. Dec 2025"
+              placeholderTextColor={colors.textMuted}
+              returnKeyType="done"
+              autoCapitalize="words"
+            />
+
+            <TouchableOpacity
+              style={[styles.saveGoalBtn, goalSaving && { opacity: 0.6 }]}
+              onPress={handleSaveGoal}
+              disabled={goalSaving || !goalWeightInput}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.saveGoalBtnText}>Save goal</Text>
+            </TouchableOpacity>
+
+            {goal && (
+              <TouchableOpacity style={styles.removeGoalLink} onPress={handleRemoveGoal} activeOpacity={0.7}>
+                <Text style={styles.removeGoalLinkText}>Remove goal</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -613,5 +849,178 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 12,
     lineHeight: 18,
+  },
+  // Goal section
+  goalSetLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.xs,
+  },
+  goalSetLinkText: {
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+    textDecorationLine: 'underline',
+  },
+  goalCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.sm,
+  },
+  goalCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  goalCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  goalCardTitle: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.textMuted,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  goalWeightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  goalWeightItem: {
+    flex: 1,
+    gap: 2,
+  },
+  goalWeightValue: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+  },
+  goalWeightLabel: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+  },
+  goalBarTrack: {
+    height: 6,
+    backgroundColor: colors.surface2,
+    borderRadius: radius.sm,
+    overflow: 'hidden',
+  },
+  goalBarFill: {
+    height: 6,
+    backgroundColor: colors.primary,
+    borderRadius: radius.sm,
+  },
+  goalBarCaption: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    fontWeight: fontWeight.medium,
+  },
+  // Congrats banner
+  congratsBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primaryBg,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.primary + '40',
+  },
+  congratsText: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    color: colors.primary,
+    fontWeight: fontWeight.medium,
+  },
+  // Goal modal
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  modalSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    padding: spacing.xl,
+    paddingBottom: spacing.xxxl,
+    gap: spacing.md,
+  },
+  modalHandle: {
+    width: 36,
+    height: 4,
+    backgroundColor: colors.border,
+    borderRadius: radius.full,
+    alignSelf: 'center',
+    marginBottom: spacing.sm,
+  },
+  modalTitle: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+  },
+  modalSubtitle: {
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+    lineHeight: 19,
+  },
+  inputLabel: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+  },
+  weightInput: {
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    fontSize: fontSize.xxl,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+    textAlign: 'center',
+  },
+  dateInput: {
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    fontSize: fontSize.md,
+    color: colors.textPrimary,
+  },
+  saveGoalBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    marginTop: spacing.sm,
+  },
+  saveGoalBtnText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+    color: '#000000',
+  },
+  removeGoalLink: {
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+  },
+  removeGoalLinkText: {
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+    textDecorationLine: 'underline',
   },
 });
