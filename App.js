@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';
@@ -46,6 +46,7 @@ import PRCelebration from './src/components/PRCelebration';
 import useAppStore from './src/store/useAppStore';
 import { getWellbeingMode, isCalm } from './src/lib/wellbeing';
 import { getSupabaseClient } from './src/lib/supabase';
+import * as Updates from 'expo-updates';
 
 // Handles volyume:// and https://volyume.app deep links from Supabase auth emails.
 // Supports both PKCE (code=xxx) and implicit (access_token in fragment) flows.
@@ -176,6 +177,32 @@ export default function App() {
     Linking.getInitialURL().then(url => { if (url) handleAuthDeepLink(url); }).catch(() => {});
     const sub = Linking.addEventListener('url', ({ url }) => handleAuthDeepLink(url));
     return () => sub.remove();
+  }, []);
+
+  // OTA update check — runs once on mount, production builds only.
+  // Silently downloads the update and prompts the user to restart.
+  useEffect(() => {
+    async function checkForUpdate() {
+      if (__DEV__) return; // only in production builds
+      try {
+        const update = await Updates.checkForUpdateAsync();
+        if (update.isAvailable) {
+          await Updates.fetchUpdateAsync();
+          Alert.alert(
+            'Update available',
+            'A new version of Volyume has been downloaded. Restart to apply it.',
+            [
+              { text: 'Later' },
+              { text: 'Restart now', onPress: () => Updates.reloadAsync() },
+            ],
+            { cancelable: true }
+          );
+        }
+      } catch (_) {
+        // Silently ignore — update check is non-critical
+      }
+    }
+    checkForUpdate();
   }, []);
 
   // Set up Android notification channels and wire notification-tap deep links.

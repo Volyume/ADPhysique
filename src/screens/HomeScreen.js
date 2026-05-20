@@ -18,7 +18,7 @@ import {
   getCurrentMesocycleWeek, getPlannedMuscleVolume, getAllExercises,
   getMorningWeightToday, logMorningWeight, getProgressionTeaser,
 } from '../lib/database';
-import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
+import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload } from '../lib/algorithms';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -66,6 +66,8 @@ export default function HomeScreen({ navigation }) {
   const [totalSessions, setTotalSessions] = useState(0);
   const [showIntentPrompt, setShowIntentPrompt] = useState(false);
   const [teaserInsight, setTeaserInsight] = useState(null);
+  const [deloadSuggestion, setDeloadSuggestion] = useState(null);
+  const [deloadDismissed, setDeloadDismissed] = useState(false);
   const pendingStartRef = React.useRef(null); // ({ routineId, initialExercises })
 
   const scrollRef = useRef(null);
@@ -162,6 +164,36 @@ export default function HomeScreen({ navigation }) {
         getProgressionTeaser(user.id, completed[0].id, completed[1].id)
           .then(t => setTeaserInsight(t))
           .catch(() => {});
+      }
+
+      // Deload suggestion — build last-4-weeks summary and run shouldDeload
+      // Reset dismissed state each time data reloads so a new week's signal shows again
+      setDeloadDismissed(false);
+      try {
+        const weekMs = 7 * 24 * 60 * 60 * 1000;
+        const now = Date.now();
+        const last4Weeks = Array.from({ length: 4 }, (_, i) => {
+          const weekStart = now - (i + 1) * weekMs;
+          const weekEnd   = now - i * weekMs;
+          const weekWorkouts = allWorkouts.filter(
+            w => w.isCompleted && w.startedAt >= weekStart && w.startedAt < weekEnd,
+          );
+          const wIds = new Set(weekWorkouts.map(w => w.id));
+          const wSets = allSets.filter(s => wIds.has(s.workoutId) && s.setType !== 'warmup');
+          const totalReps = wSets.reduce((t, s) => t + (s.actualReps || 0), 0);
+          const avgReps = wSets.length > 0 ? totalReps / wSets.length : 0;
+          return {
+            avgReps,
+            weeksSinceLastDeload: 99, // not tracked in local DB; use conservative value
+            avgJointDiscomfort: 0,    // not tracked in local DB
+            hasOverMRV: false,        // not computed here — would need calculateWeeklyVolume + VOLUME_LANDMARKS
+            avgSoreness: 0,           // not tracked in local DB
+          };
+        }).reverse(); // oldest first, as shouldDeload expects
+        const result = shouldDeload(last4Weeks);
+        setDeloadSuggestion(result.deload ? result : null);
+      } catch (_) {
+        setDeloadSuggestion(null);
       }
     } catch (_e) {}
   }
@@ -329,6 +361,28 @@ export default function HomeScreen({ navigation }) {
           </View>
           <VolyumeMark size={38} color={colors.textMuted} />
         </View>
+
+        {/* ── Recovery week banner ── */}
+        {deloadSuggestion && !deloadDismissed && (
+          <TouchableOpacity
+            style={styles.deloadBanner}
+            onPress={() => navigation.navigate('CoachReview')}
+            activeOpacity={0.85}
+          >
+            <View style={styles.deloadBannerLeft}>
+              <Ionicons name="battery-charging-outline" size={20} color={colors.warning} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.deloadBannerTitle}>Recovery week suggested</Text>
+                <Text style={styles.deloadBannerBody}>
+                  {deloadSuggestion.reasons?.[0] ?? 'Your recent training signals it is time for a lighter week.'}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity onPress={() => setDeloadDismissed(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="close" size={16} color={colors.textMuted} />
+            </TouchableOpacity>
+          </TouchableOpacity>
+        )}
 
         {/* ── Morning weight card ── */}
         {tier === 'pro' && (todayWeight != null ? (
@@ -1493,6 +1547,16 @@ const styles = StyleSheet.create({
     color: colors.primary,
     marginTop: 1,
   },
+
+  // Recovery week banner
+  deloadBanner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: 'rgba(245,158,11,0.12)', borderRadius: 10, padding: 14,
+    borderWidth: 1, borderColor: 'rgba(245,158,11,0.35)', marginBottom: 12,
+  },
+  deloadBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
+  deloadBannerTitle: { fontSize: 13, fontWeight: '700', color: colors.warning, marginBottom: 2 },
+  deloadBannerBody: { fontSize: 12, color: colors.textSecondary, lineHeight: 17 },
 
   // Quick-start card (empty state fast path)
   quickStartCard: {
