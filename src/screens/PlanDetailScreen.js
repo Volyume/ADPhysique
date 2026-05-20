@@ -245,12 +245,14 @@ export default function PlanDetailScreen({ navigation, route }) {
                     <TouchableOpacity
                       style={styles.editWorkoutBtn}
                       onPress={() => navigation.navigate('RoutineDetail', { routineId: routine.id })}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                     >
                       <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.startWorkoutBtn}
                       onPress={() => handleStartWorkout(routine)}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                     >
                       <Ionicons name="play" size={13} color={colors.background} />
                     </TouchableOpacity>

@@ -412,7 +412,7 @@ export default function CoachOutputScreen({ navigation, route }) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.headerBack} onPress={handleClose} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.headerBack} onPress={handleClose} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Ionicons name="close" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Precision Coaching</Text>
@@ -428,7 +428,7 @@ export default function CoachOutputScreen({ navigation, route }) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.headerBack} onPress={handleClose} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.headerBack} onPress={handleClose} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Ionicons name="close" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Precision Coaching</Text>
@@ -480,7 +480,7 @@ export default function CoachOutputScreen({ navigation, route }) {
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.headerBack} onPress={handleClose} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.headerBack} onPress={handleClose} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Ionicons name="close" size={24} color={colors.textSecondary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Precision Coaching</Text>

@@ -832,8 +832,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   dayChip: {
-    width: 32,
-    height: 32,
+    width: 44,
+    height: 44,
     borderRadius: radius.full,
     backgroundColor: colors.surface2,
     alignItems: 'center',
