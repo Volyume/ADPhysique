@@ -385,7 +385,7 @@ function InsufficientDataView({ dataNote, onClose }) {
         <Text style={styles.insufficientTitle}>Building your baseline.</Text>
         <Text style={styles.insufficientBody}>
           {dataNote ??
-            'Volyume needs a couple more weeks of data before it can start coaching. Keep logging sessions and your morning weight and we\'ll be ready soon.'}
+            'A few more weeks of data needed before adjustments kick in. Keep logging sessions and your morning weight.'}
         </Text>
       </View>
       <TouchableOpacity style={styles.doneBtn} onPress={onClose} activeOpacity={0.8}>
