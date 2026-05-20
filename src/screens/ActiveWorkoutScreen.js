@@ -1598,10 +1598,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           visible={showExercisePicker}
           onClose={() => setShowExercisePicker(false)}
           onSelect={ex => {
+            const prevIdx = currentExerciseIndex;
             const newIndex = workoutExercises.length;
             addExerciseToWorkout(ex);
             setCurrentExerciseIndex(newIndex);
             setShowExercisePicker(false);
+            maybeTriggerStimulusRating(prevIdx);
           }}
         />
 
@@ -1843,6 +1845,72 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 onPress={() => { endWorkout(); navigation.goBack(); }}
               >
                 <Text style={styles.discardConfirmBtnText}>Discard Workout</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Per-exercise stimulus rating sheet */}
+        <Modal
+          visible={stimulusRating !== null}
+          transparent
+          animationType="slide"
+          onRequestClose={() => handleStimulusRatingSkip()}
+        >
+          <TouchableOpacity
+            style={styles.ratingBackdrop}
+            activeOpacity={1}
+            onPress={() => handleStimulusRatingSkip()}
+          />
+          <View style={styles.ratingSheet}>
+            <Text style={styles.ratingTitle}>
+              How did {stimulusRating?.exerciseName} feel?
+            </Text>
+
+            {/* Pump row */}
+            <View style={styles.ratingRow}>
+              <Text style={styles.ratingLabel}>Pump</Text>
+              <View style={styles.ratingDots}>
+                {[1,2,3,4,5].map(v => (
+                  <TouchableOpacity
+                    key={v}
+                    style={[styles.ratingDot, stimulusRating?.pump >= v && styles.ratingDotFilled]}
+                    onPress={() => setStimulusRating(r => ({ ...r, pump: v }))}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  />
+                ))}
+              </View>
+            </View>
+
+            {/* Mind-muscle connection row */}
+            <View style={styles.ratingRow}>
+              <Text style={styles.ratingLabel}>Connection</Text>
+              <View style={styles.ratingDots}>
+                {[1,2,3,4,5].map(v => (
+                  <TouchableOpacity
+                    key={v}
+                    style={[styles.ratingDot, stimulusRating?.connection >= v && styles.ratingDotFilled]}
+                    onPress={() => setStimulusRating(r => ({ ...r, connection: v }))}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  />
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.ratingActions}>
+              <TouchableOpacity
+                style={styles.ratingSaveBtn}
+                onPress={handleStimulusRatingSave}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.ratingSaveBtnText}>Save</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.ratingSkipBtn}
+                onPress={() => handleStimulusRatingSkip()}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={styles.ratingSkipText}>Skip</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -2330,4 +2398,74 @@ const styles = StyleSheet.create({
   warmupRowTextDone: { textDecorationLine: 'line-through', color: colors.textMuted },
   warmupLogBtn: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, backgroundColor: colors.primaryBg, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.primary + '60' },
   warmupLogBtnText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.bold },
+  ratingBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  ratingSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    padding: spacing.xl,
+    gap: spacing.lg,
+    paddingBottom: spacing.xxxl,
+  },
+  ratingTitle: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  ratingLabel: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    fontWeight: fontWeight.medium,
+    flex: 1,
+  },
+  ratingDots: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  ratingDot: {
+    width: 28,
+    height: 28,
+    borderRadius: radius.sm,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+  },
+  ratingDotFilled: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  ratingActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
+    marginTop: spacing.xs,
+  },
+  ratingSaveBtn: {
+    flex: 1,
+    backgroundColor: colors.primary,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+  },
+  ratingSaveBtnText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.background,
+  },
+  ratingSkipBtn: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+  ratingSkipText: {
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+  },
 });
