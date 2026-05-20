@@ -279,7 +279,7 @@ function ActiveMesoDashboard({ stats, currentWeek }) {
       {/* Header */}
       <View style={styles.dashHeader}>
         <View style={styles.activeBadge}>
-          <Text style={styles.activeBadgeText}>ACTIVE</Text>
+          <Text style={styles.activeBadgeText}>Active</Text>
         </View>
         <Ionicons name="layers" size={16} color={colors.primary} />
       </View>

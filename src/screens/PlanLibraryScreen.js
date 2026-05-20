@@ -222,7 +222,7 @@ function DivisionGrid({ selectedDivision, onSelectDivision }) {
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function PlanLibraryScreen({ navigation, route }) {
-  const { user, completeFirstRun } = useAppStore();
+  const { user } = useAppStore();
   const fromFirstRun = route?.params?.fromFirstRun ?? false;
 
   const [plans, setPlans] = useState([]);
@@ -278,13 +278,13 @@ export default function PlanLibraryScreen({ navigation, route }) {
                   {
                     text: 'Not now',
                     style: 'cancel',
-                    onPress: fromFirstRun ? () => completeFirstRun() : () => navigation.goBack(),
+                    onPress: fromFirstRun ? () => navigation.navigate('ProSetupComplete') : () => navigation.goBack(),
                   },
                   {
                     text: fromFirstRun ? 'Start training' : 'Set active',
                     onPress: async () => {
                       await activatePlanWithBlock(user.id, copy.id, plan.name);
-                      if (fromFirstRun) await completeFirstRun();
+                      if (fromFirstRun) navigation.navigate('ProSetupComplete');
                       else navigation.goBack();
                     },
                   },

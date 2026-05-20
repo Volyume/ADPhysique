@@ -343,7 +343,7 @@ export default function PlansScreen({ navigation }) {
                 <Text style={styles.blockSnoozeText}>
                   {blockAdvice.action === 'in_recovery'
                     ? 'Remind me after recovery week'
-                    : 'Not quite ready — remind me later'}
+                    : 'Not quite ready. Remind me later.'}
                 </Text>
               </TouchableOpacity>
             )}

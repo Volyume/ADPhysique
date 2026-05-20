@@ -146,7 +146,7 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
                   accessibilityState={{ selected: isActive }}
                 >
                   <Text style={[styles.rirBtnText, isActive && styles.rirBtnTextActive]}>
-                    {v === null ? '—' : v}
+                    {v === null ? '-' : v}
                   </Text>
                 </TouchableOpacity>
               );

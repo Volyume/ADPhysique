@@ -818,8 +818,8 @@ export default function NutritionTargetsScreen() {
                     <Text style={styles.calcKey}>Protein basis</Text>
                     <Text style={styles.calcValue}>
                       {results.proteinBasis === 'lbm'
-                        ? `${results.proteinGPerKgLbm ?? '—'} g/kg muscle mass`
-                        : `${results.proteinGPerKg ?? '—'} g/kg bodyweight`}
+                        ? `${results.proteinGPerKgLbm ?? 'n/a'} g/kg muscle mass`
+                        : `${results.proteinGPerKg ?? 'n/a'} g/kg bodyweight`}
                     </Text>
                   </View>
                   <View style={styles.calcRow}>

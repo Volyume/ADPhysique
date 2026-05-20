@@ -561,7 +561,7 @@ function VolumeSnapshotGrid({ volume }) {
           <View key={m} style={styles.volCell}>
             <View style={[styles.volDot, { backgroundColor: dot }]} />
             <Text style={styles.volMuscle}>{MUSCLE_DISPLAY_NAMES[m]}</Text>
-            <Text style={styles.volSets}>{ws > 0 ? `${ws} sets` : '—'}</Text>
+            <Text style={styles.volSets}>{ws > 0 ? `${ws} sets` : '0'}</Text>
           </View>
         );
       })}
