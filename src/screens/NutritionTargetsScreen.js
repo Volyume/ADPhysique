@@ -649,12 +649,17 @@ export default function NutritionTargetsScreen() {
 
               {/* ── Why these numbers for you? ─────────────────────── */}
               {(() => {
-                // Derive weight from form state; fall back to back-calculation from protein ratio
-                const weightKg = parseFloat(weight) > 0
-                  ? parseFloat(weight)
-                  : results.proteinGPerKg > 0
-                    ? Math.round(results.proteinG / results.proteinGPerKg)
+                // Derive weight — form state is preferred; fall back to back-calculation
+                const formWeightKg = parseFloat(weight) > 0 ? parseFloat(weight) : null;
+                // proteinGPerKg may be absent when results come from the DB (DB stores
+                // only core numbers). Derive it from proteinG / weightKg as a fallback.
+                const safeProteinGPerKg = results.proteinGPerKg != null
+                  ? results.proteinGPerKg
+                  : (formWeightKg && results.proteinG)
+                    ? parseFloat((results.proteinG / formWeightKg).toFixed(2))
                     : null;
+                const weightKg = formWeightKg
+                  ?? (safeProteinGPerKg > 0 ? Math.round(results.proteinG / safeProteinGPerKg) : null);
                 const lbmKg = results.proteinBasis === 'lbm' && results.proteinGPerKgLbm > 0
                   ? Math.round(results.proteinG / results.proteinGPerKgLbm * 10) / 10
                   : null;
@@ -701,13 +706,15 @@ export default function NutritionTargetsScreen() {
                       return lbmLine + scalingLine + purposeLine;
                     })()
                   : (() => {
-                      const bwLine = `At ${results.proteinGPerKg} g/kg bodyweight (${results.proteinG}g), your target is based on ${approachLabel}. `;
+                      const bwLine = safeProteinGPerKg != null
+                        ? `At ${safeProteinGPerKg} g/kg bodyweight (${results.proteinG}g), your target is based on ${approachLabel}. `
+                        : `Your target of ${results.proteinG}g is based on ${approachLabel}. `;
                       const tipLine = `Tip: entering a measured body fat % (from a scan or body fat caliper) lets us scale to your muscle mass instead of total weight. That gives a more precise target, especially if your body-fat % is high or low. `;
                       const purposeLine = isGain
-                        ? `Protein is the raw material muscles rebuild with after every session. At ${results.proteinGPerKg} g/kg you're above the threshold where muscle repair and growth is fully activated, which gives you a solid margin.`
+                        ? `Protein is the raw material muscles rebuild with after every session. At this target you're above the threshold where muscle repair and growth is fully supported.`
                         : isRecomp
                         ? `When you are trying to hold muscle while losing fat, high protein provides the amino acids needed for muscle repair while telling your body to use fat as fuel instead.`
-                        : `In a calorie deficit, muscle tissue can become a fuel source if protein is too low. At ${results.proteinGPerKg} g/kg you're well above that threshold, and the high satiety of protein makes it easier to stick to your calories.`;
+                        : `In a calorie deficit, muscle tissue can become a fuel source if protein is too low. This target keeps you well above that threshold, and the high satiety of protein makes it easier to stick to your calories.`;
                       return bwLine + tipLine + purposeLine;
                     })();
 
@@ -744,25 +751,31 @@ export default function NutritionTargetsScreen() {
                 );
               })()}
 
-              {/* Phase card */}
-              <View style={styles.phaseCard}>
-                <Text style={styles.phaseTitle}>{results.phase}</Text>
-                <Text style={styles.phaseDesc}>
-                  {PHASE_DESCRIPTIONS[results.goal] ?? results.phase}
-                </Text>
-              </View>
+              {/* Phase card — phase/goal may be absent when loaded from DB */}
+              {(results.goal || results.phase) ? (
+                <View style={styles.phaseCard}>
+                  <Text style={styles.phaseTitle}>
+                    {results.phase || GOALS.find(g => g.key === results.goal)?.label || ''}
+                  </Text>
+                  <Text style={styles.phaseDesc}>
+                    {PHASE_DESCRIPTIONS[results.goal] ?? ''}
+                  </Text>
+                </View>
+              ) : null}
 
-              {/* Confidence card */}
-              <View style={[styles.confidenceCard, { borderColor: CONFIDENCE_COLORS[results.confidence] + '40' }]}>
-                <Ionicons
-                  name={CONFIDENCE_ICONS[results.confidence]}
-                  size={20}
-                  color={CONFIDENCE_COLORS[results.confidence]}
-                />
-                <Text style={styles.confidenceText}>
-                  {CONFIDENCE_LABELS[results.confidence]}
-                </Text>
-              </View>
+              {/* Confidence card — only shown when confidence is available */}
+              {results.confidence ? (
+                <View style={[styles.confidenceCard, { borderColor: (CONFIDENCE_COLORS[results.confidence] ?? colors.border) + '40' }]}>
+                  <Ionicons
+                    name={CONFIDENCE_ICONS[results.confidence] ?? 'information-circle'}
+                    size={20}
+                    color={CONFIDENCE_COLORS[results.confidence] ?? colors.textMuted}
+                  />
+                  <Text style={styles.confidenceText}>
+                    {CONFIDENCE_LABELS[results.confidence]}
+                  </Text>
+                </View>
+              ) : null}
 
               {/* Warnings */}
               {results.warnings && results.warnings.length > 0 && results.warnings.map((w, i) => (
@@ -798,7 +811,7 @@ export default function NutritionTargetsScreen() {
                   </View>
                   <View style={styles.calcRow}>
                     <Text style={styles.calcKey}>Maintenance calories</Text>
-                    <Text style={styles.calcValue}>{maintenanceKcal} kcal</Text>
+                    <Text style={styles.calcValue}>{results.maintenanceKcal ?? results.targetKcal ?? 0} kcal</Text>
                   </View>
                   <View style={styles.calcRow}>
                     <Text style={styles.calcKey}>Phase adjustment</Text>

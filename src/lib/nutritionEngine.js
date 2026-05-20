@@ -58,11 +58,11 @@ export const PROTEIN_APPROACHES = {
   },
   optimised: {
     label: 'Optimised',
-    range: '1.6–2.2 g/kg',
-    description: 'Current approach that works best for building muscle. Maximises muscle gains without an extreme focus on protein.',
-    lbm: { lean_gain: 2.3, build: 2.3, maintain: 2.2, recomp: 2.5, mild_cut: 2.6, aggressive_cut: 2.8, contest_prep: 3.0 },
-    bw:  { lean_gain: 1.8, build: 1.8, maintain: 1.7, recomp: 2.0, mild_cut: 2.2, aggressive_cut: 2.5, contest_prep: 2.8 },
-    floor: 1.6,
+    range: '2.0–2.6 g/kg',
+    description: 'The practical sweet spot for regular gym training. High enough to fully support muscle growth and recovery without being extreme.',
+    lbm: { lean_gain: 2.5, build: 2.5, maintain: 2.3, recomp: 2.6, mild_cut: 2.8, aggressive_cut: 3.0, contest_prep: 3.1 },
+    bw:  { lean_gain: 2.0, build: 2.0, maintain: 1.9, recomp: 2.2, mild_cut: 2.4, aggressive_cut: 2.7, contest_prep: 2.9 },
+    floor: 1.8,
   },
   advanced: {
     label: 'Advanced',
