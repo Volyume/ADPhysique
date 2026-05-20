@@ -118,27 +118,44 @@ export default function ProGoalSetupScreen({ navigation }) {
       planWeakPoints: nextWeakPoints,
     };
 
-    // Recalculate nutrition if we have the needed data
+    // Recalculate nutrition. Pulls userProfile from the store to make sure we
+    // pick up any changes (e.g. weight logged from BodyMetrics) since this
+    // screen mounted. Uses sensible fallbacks for any missing field so a
+    // partially-set profile still gets its kcal / protein targets refreshed
+    // on goal change — the previous behaviour silently skipped recalc when
+    // any of weightKg/heightCm/age/sex was missing, which left the
+    // Nutrition widget on Athlete Hub showing stale values.
+    const { userProfile: latestProfile } = useAppStore.getState();
+    const wp = latestProfile || userProfile || {};
+    const safeWeightKg = (typeof wp.weightKg === 'number' && wp.weightKg > 0) ? wp.weightKg : 80;
+    const safeHeightCm = (typeof wp.heightCm === 'number' && wp.heightCm > 0) ? wp.heightCm : 175;
+    const safeAge      = (typeof wp.age === 'number' && wp.age > 0) ? wp.age : 28;
+    const safeSex      = wp.sex === 'female' ? 'female' : 'male';
+
     let nextTargets = null;
-    const wp = userProfile || {};
-    if (wp.weightKg && wp.heightCm && wp.age && wp.sex) {
-      try {
-        nextTargets = calculateNutritionTargets({
-          weightKg: wp.weightKg,
-          heightCm: wp.heightCm,
-          ageYears: wp.age,
-          sex: wp.sex,
-          bodyFatPct: wp.bodyFatPct ?? null,
-          activityLevel: daysToActivityLevel(wp.daysPerWeek ?? 4),
-          goal: phaseToNutritionKey(selectedPhase),
-          trainingGoal: selectedGoal,
-          proteinApproach,
-        });
-        await AsyncStorage.setItem(NUTRITION_KEY, JSON.stringify(nextTargets));
-        if (user?.id) {
-          await saveNutritionTargets(user.id, nextTargets);
-        }
-      } catch (_) {}
+    try {
+      nextTargets = calculateNutritionTargets({
+        weightKg: safeWeightKg,
+        heightCm: safeHeightCm,
+        ageYears: safeAge,
+        sex: safeSex,
+        bodyFatPct: wp.bodyFatPct ?? null,
+        activityLevel: daysToActivityLevel(wp.daysPerWeek ?? 4),
+        goal: phaseToNutritionKey(selectedPhase),
+        trainingGoal: selectedGoal,
+        proteinApproach,
+      });
+      await AsyncStorage.setItem(NUTRITION_KEY, JSON.stringify(nextTargets));
+      if (user?.id) {
+        await saveNutritionTargets(user.id, nextTargets);
+      }
+    } catch (e) {
+      // Don't block the goal save if the recalc fails. Surface to the user
+      // so they know targets weren't updated this time.
+      Alert.alert(
+        'Nutrition targets not updated',
+        'Your goal was saved but we couldn\'t recalculate the targets. Try opening Nutrition Targets to refresh them.',
+      );
     }
 
     await saveLocalProfile(user.id, updatedProfile);
