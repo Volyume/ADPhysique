@@ -23,11 +23,11 @@ import useAppStore from './src/store/useAppStore';
 import { getWellbeingMode, isCalm } from './src/lib/wellbeing';
 import { getSupabaseClient } from './src/lib/supabase';
 
-// Handles volyume:// deep links from Supabase auth emails.
+// Handles volyume:// and https://volyume.app deep links from Supabase auth emails.
 // Supports both PKCE (code=xxx) and implicit (access_token in fragment) flows.
 async function handleAuthDeepLink(url) {
   if (!url) return;
-  if (!url.startsWith('volyume://')) return;
+  if (!url.startsWith('volyume://') && !url.startsWith('https://volyume.app')) return;
   const supabase = getSupabaseClient();
   if (!supabase) return;
 

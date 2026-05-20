@@ -22,6 +22,9 @@
       "bundleIdentifier": "app.volyume",
       "buildNumber": "2",
       "requireFullScreen": true,
+      "associatedDomains": [
+        "applinks:volyume.app"
+      ],
       "infoPlist": {
         "NSCameraUsageDescription": "Used to take progress photos",
         "NSPhotoLibraryUsageDescription": "Used to select and save progress photos",
@@ -51,6 +54,17 @@
           "data": [
             {
               "scheme": "volyume"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        },
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "volyume.app"
             }
           ],
           "category": ["BROWSABLE", "DEFAULT"]
