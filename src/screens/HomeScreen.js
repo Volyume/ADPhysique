@@ -615,7 +615,7 @@ export default function HomeScreen({ navigation }) {
         {lastSession && (
           <TouchableOpacity
             style={styles.lastSessionCard}
-            onPress={() => navigation.navigate('ProgressTab', { screen: 'WorkoutHistory', initial: false })}
+            onPress={() => navigation.navigate('WorkoutHistory')}
             activeOpacity={0.7}
           >
             <View style={styles.lastSessionTop}>
@@ -674,7 +674,7 @@ export default function HomeScreen({ navigation }) {
         {totalSessions >= 10 && (
           <TouchableOpacity
             style={styles.trainingBrainRow}
-            onPress={() => navigation.navigate('ProgressTab', { screen: 'WorkoutHistory', initial: false })}
+            onPress={() => navigation.navigate('WorkoutHistory')}
             activeOpacity={0.75}
             accessibilityRole="button"
             accessibilityLabel="View your training history"
@@ -755,7 +755,7 @@ export default function HomeScreen({ navigation }) {
           <QuickLink
             icon="time-outline"
             label="History"
-            onPress={() => navigation.navigate('ProgressTab', { screen: 'WorkoutHistory', initial: false })}
+            onPress={() => navigation.navigate('WorkoutHistory')}
           />
           <QuickLink
             icon="trophy-outline"
@@ -765,7 +765,7 @@ export default function HomeScreen({ navigation }) {
           <QuickLink
             icon="grid-outline"
             label="Volume"
-            onPress={() => navigation.navigate('ProgressTab', { screen: 'VolumeHeatmap', initial: false })}
+            onPress={() => navigation.navigate('VolumeHeatmap')}
           />
         </View>
       </ScrollView>

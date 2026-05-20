@@ -20,12 +20,12 @@ import useAppStore from '../store/useAppStore';
 
 const BLOCK_SNOOZE_KEY = '@volyume_block_snooze';
 
-const ACTION_CARDS = [
+const ACTION_CARDS_DEFAULT = [
   {
     id: 'coach',
     icon: 'sparkles',
     title: 'Coach Builder',
-    description: 'Answer a few questions and we\'ll build a plan that fits your schedule and goals.',
+    description: "Answer a few questions and we'll build a plan that fits your schedule and goals.",
     screen: 'CoachBuilder',
     badge: 'Recommended',
   },
@@ -42,6 +42,36 @@ const ACTION_CARDS = [
     title: 'Manual Builder',
     description: 'Create a custom multi-day plan from scratch. You choose every exercise.',
     screen: 'ManualBuilder',
+  },
+];
+
+const ACTION_CARDS_PRO = [
+  {
+    id: 'coach',
+    icon: 'sparkles',
+    title: 'Change your goals',
+    description: "Run through the wizard again and we'll build a new plan around your updated goals.",
+    screen: 'CoachBuilder',
+    badge: null,
+    featured: true,
+  },
+  {
+    id: 'library',
+    icon: 'library-outline',
+    title: 'Plan Library',
+    description: 'Browse ready-made plans. Picking one here runs it as a standard plan without your coach.',
+    screen: 'PlanLibrary',
+    badge: null,
+    featured: false,
+  },
+  {
+    id: 'manual',
+    icon: 'create-outline',
+    title: 'Manual Builder',
+    description: 'Create a custom plan from scratch. You choose every exercise.',
+    screen: 'ManualBuilder',
+    badge: null,
+    featured: false,
   },
 ];
 
@@ -165,8 +195,12 @@ export default function PlansScreen({ navigation }) {
   }
 
   async function handlePlanOptions(plan) {
+    const proOption = tier === 'pro'
+      ? [{ text: 'Change your goals', onPress: () => navigation.navigate('CoachBuilder') }]
+      : [];
     Alert.alert(plan.name, undefined, [
       { text: 'View Plan', onPress: () => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false }) },
+      ...proOption,
       { text: 'Set Active', onPress: () => handleSetActive(plan) },
       {
         text: 'Duplicate',
@@ -230,6 +264,9 @@ export default function PlansScreen({ navigation }) {
   const showBlockCard = blockAdvice && activePlan &&
     blockAdvice.action !== 'continue' &&
     (blockAdvice.action === 'heads_up' || !blockSnoozed);
+
+  const isProWithPlan = tier === 'pro' && !!activePlan;
+  const actionCards = isProWithPlan ? ACTION_CARDS_PRO : ACTION_CARDS_DEFAULT;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -355,6 +392,11 @@ export default function PlansScreen({ navigation }) {
                   Week {blockAdvice.blockStatus.currentWeek} of {blockAdvice.blockStatus.totalWeeks}
                 </Text>
               )}
+              {tier === 'pro' && (
+                <Text style={styles.proCoachNote}>
+                  Your coach adjusts this plan as you progress and check in. Tap the menu to change your goals anytime.
+                </Text>
+              )}
               <View style={styles.activePlanActions}>
                 <TouchableOpacity style={styles.startNextBtn} onPress={() => handleStartNextWorkout(activePlan)}>
                   <Ionicons name="play" size={15} color={colors.background} />
@@ -444,12 +486,14 @@ export default function PlansScreen({ navigation }) {
         )}
 
         {/* Decision Hub */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Start or build a plan</Text>
-          {ACTION_CARDS.map(card => {
+        <View style={[styles.section, isProWithPlan && styles.sectionDeemphasised]}>
+          <Text style={styles.sectionTitle}>
+            {isProWithPlan ? 'Want something different?' : 'Start or build a plan'}
+          </Text>
+          {actionCards.map(card => {
             const isCoach = card.id === 'coach';
             const proLocked = isCoach && tier !== 'pro';
-            const featured = Boolean(card.badge) || proLocked;
+            const featured = card.featured !== undefined ? card.featured : (Boolean(card.badge) || proLocked);
             return (
               <TouchableOpacity
                 key={card.id}
@@ -505,6 +549,11 @@ const styles = StyleSheet.create({
   section: { gap: spacing.md },
   sectionTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary, letterSpacing: 0.2 },
   sectionSubtitle: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: -spacing.sm },
+  sectionDeemphasised: { opacity: 0.85 },
+  proCoachNote: {
+    fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18,
+    borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm,
+  },
 
   noActivePlanRow: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,

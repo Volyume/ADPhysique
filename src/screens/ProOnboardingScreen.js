@@ -1178,6 +1178,16 @@ export default function ProOnboardingScreen({ navigation }) {
             <Text style={styles.primaryBtnText}>Continue</Text>
             <Ionicons name="arrow-forward" size={18} color={colors.background} />
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.skipBtn}
+            onPress={() => {
+              setScoffAnswers([false, false, false, false, false]);
+              advanceFrom5();
+            }}
+          >
+            <Text style={styles.skipBtnText}>Skip for now</Text>
+          </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
     );
