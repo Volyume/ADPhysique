@@ -104,6 +104,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [setTargets, setSetTargets] = useState([]);
   const [targetReason, setTargetReason] = useState(null);
   const [showSetTypePicker, setShowSetTypePicker] = useState(false);
+  const [showWarmupSheet, setShowWarmupSheet] = useState(false);
+  const [suggestedWarmups, setSuggestedWarmups] = useState([]);
+  const [warmupDoneIdx, setWarmupDoneIdx] = useState([]); // indices of logged warmups
   const [showExecution, setShowExecution] = useState(false);
   const [showStaleModal, setShowStaleModal] = useState(false);
   const [addedMsg, setAddedMsg] = useState('');
@@ -209,19 +212,83 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       { pct: 0.6, reps: 5 },
       { pct: 0.8, reps: 3 },
     ].map(({ pct, reps }) => ({ weight: String(snap(w * pct)), reps, setType: 'warmup', notes: '', rir: null }));
-    Alert.alert(
-      'Suggested warm-ups',
-      warmups.map((s, i) => `Set ${i + 1}: ${s.weight}${units} × ${s.reps}`).join('\n'),
-      [
-        { text: 'Not now', style: 'cancel' },
-        {
-          text: 'Add warm-ups',
-          onPress: () => {
-            setCurrentSet({ ...DEFAULT_SET, ...warmups[0], isGhost: false });
-          },
-        },
-      ]
-    );
+    setSuggestedWarmups(warmups);
+    setWarmupDoneIdx([]);
+    setShowWarmupSheet(true);
+  }
+
+  function closeWarmupSheet() {
+    setShowWarmupSheet(false);
+    // Reset transient sheet state so the next invocation starts fresh.
+    setSuggestedWarmups([]);
+    setWarmupDoneIdx([]);
+  }
+
+  async function handleLogWarmupFromSheet(idx) {
+    if (!exercise || !activeWorkout) return;
+    const w = suggestedWarmups[idx];
+    if (!w) return;
+    if (warmupDoneIdx.includes(idx)) return;
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    try {
+      const setNumber = loggedSets.length + 1;
+      const repsNum = parseInt(w.reps, 10);
+      const weightNum = parseFloat(w.weight) || 0;
+
+      const savedSet = await createWorkoutSet({
+        userId: user.id,
+        workoutId: activeWorkout.id,
+        exerciseId: exercise.id,
+        setNumber,
+        setType: 'warmup',
+        targetRepsMin: null,
+        targetRepsMax: null,
+        actualReps: repsNum,
+        weight: weightNum,
+        rir: null,
+        rpe: null,
+        failed: false,
+        notes: null,
+        isAmrap: false,
+      });
+
+      const setData = {
+        id: savedSet.id,
+        exerciseId: exercise.id,
+        workoutId: activeWorkout.id,
+        setNumber,
+        setType: 'warmup',
+        actualReps: repsNum,
+        weight: weightNum,
+        rir: null,
+        rpe: null,
+      };
+
+      const newLoggedSets = [...loggedSets, setData];
+      setLoggedSets(newLoggedSets);
+      addSetToCurrentExercise(setData);
+      // Track in the session ref so future PR detection has the full picture,
+      // even though warm-ups themselves cannot register as PRs.
+      sessionSetsRef.current = [...sessionSetsRef.current, setData];
+      warmupHintSeenRef.current = true;
+
+      updateLastActivity();
+
+      const nextDone = [...warmupDoneIdx, idx];
+      setWarmupDoneIdx(nextDone);
+
+      // Auto-close the sheet once all suggested warmups have been logged.
+      if (nextDone.length >= suggestedWarmups.length) {
+        setTimeout(() => {
+          closeWarmupSheet();
+        }, 600);
+      }
+    } catch (_e) {
+      // Surface the failure but keep the sheet open so the user can retry.
+      Alert.alert('Could not log warm-up', 'Something went wrong saving that set. Please try again.');
+    }
   }
 
   function handleCancelWorkout() {
@@ -1333,6 +1400,52 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         </Modal>
 
 
+        {/* Warm-up Suggestion Bottom Sheet */}
+        <Modal
+          visible={showWarmupSheet}
+          transparent
+          animationType="slide"
+          onRequestClose={closeWarmupSheet}
+        >
+          <TouchableOpacity
+            style={styles.sheetOverlay}
+            activeOpacity={1}
+            onPress={closeWarmupSheet}
+          />
+          <View style={[styles.sheet, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.warmupSheetTitle}>Suggested warm-ups</Text>
+            <Text style={styles.warmupSheetSub}>
+              Based on your working weight of {currentSet.weight}{units}. Tap Log on each row when you finish that set.
+            </Text>
+            {suggestedWarmups.map((w, i) => {
+              const isDone = warmupDoneIdx.includes(i);
+              return (
+                <View key={i} style={[styles.warmupRow, isDone && styles.warmupRowDone]}>
+                  <View style={[styles.warmupBadge, isDone && styles.warmupBadgeDone]}>
+                    {isDone ? (
+                      <Ionicons name="checkmark" size={14} color={colors.success} />
+                    ) : (
+                      <Text style={styles.warmupBadgeText}>{i + 1}</Text>
+                    )}
+                  </View>
+                  <Text style={[styles.warmupRowText, isDone && styles.warmupRowTextDone]}>
+                    {w.weight}{units} × {w.reps}
+                  </Text>
+                  {!isDone && (
+                    <TouchableOpacity
+                      style={styles.warmupLogBtn}
+                      onPress={() => handleLogWarmupFromSheet(i)}
+                    >
+                      <Text style={styles.warmupLogBtnText}>Log</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        </Modal>
+
         {/* Set Type Picker Bottom Sheet */}
         <Modal
           visible={showSetTypePicker}
@@ -1920,4 +2033,23 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.warning + '40',
   },
   warmupSuggestText: { fontSize: fontSize.xs, color: colors.warning, fontWeight: fontWeight.medium },
+  warmupSheetTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.xs },
+  warmupSheetSub: { fontSize: fontSize.sm, color: colors.textSecondary, marginBottom: spacing.lg, lineHeight: 20 },
+  warmupRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    backgroundColor: colors.surface2, borderRadius: radius.md,
+    padding: spacing.md, marginBottom: spacing.sm,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  warmupRowDone: { opacity: 0.5, borderColor: colors.success + '60' },
+  warmupBadge: {
+    width: 26, height: 26, borderRadius: 13,
+    backgroundColor: colors.warning + '30', alignItems: 'center', justifyContent: 'center',
+  },
+  warmupBadgeDone: { backgroundColor: colors.success + '20' },
+  warmupBadgeText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.warning },
+  warmupRowText: { flex: 1, fontSize: fontSize.md, color: colors.textPrimary, fontWeight: fontWeight.semibold },
+  warmupRowTextDone: { textDecorationLine: 'line-through', color: colors.textMuted },
+  warmupLogBtn: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, backgroundColor: colors.primaryBg, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.primary + '60' },
+  warmupLogBtnText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.bold },
 });
