@@ -44,7 +44,6 @@ export default function HomeScreen({ navigation }) {
   const bwu = bodyWeightUnits || 'st';
 
   const [weekStats, setWeekStats] = useState({ sessions: 0, sets: 0, volume: 0 });
-  const [streakWeeks, setStreakWeeks] = useState(0);
   const [activePlan, setActivePlanData] = useState(null);
   const [nextWorkout, setNextWorkout] = useState(null);
   const [exerciseCounts, setExerciseCounts] = useState({});
@@ -157,27 +156,6 @@ export default function HomeScreen({ navigation }) {
       } else {
         setLastSessionTonnage(null);
       }
-
-      // Weekly streak: consecutive calendar weeks (Mon–Sun) with at least one session.
-      // Uses UTC Monday as the week boundary so the bucket aligns to the calendar.
-      function mondayWeekIndex(ts) {
-        if (!ts) return -1;
-        const d = new Date(ts);
-        const daysFromMon = (d.getUTCDay() + 6) % 7; // Mon=0 … Sun=6
-        const mondayMidnight = ts - (ts % 86400000) - daysFromMon * 86400000;
-        return Math.floor(mondayMidnight / (7 * 86400000));
-      }
-      const trainedWeeks = new Set(
-        completed.map(w => mondayWeekIndex(w.startedAt ?? w.createdAt ?? 0)),
-      );
-      let streak = 0;
-      let week = mondayWeekIndex(Date.now());
-      if (!trainedWeeks.has(week)) week -= 1;
-      while (trainedWeeks.has(week)) {
-        streak += 1;
-        week -= 1;
-      }
-      setStreakWeeks(streak);
 
       // Progression teaser — free tier only, needs 2+ sessions to compare
       if (tier === 'free' && completed.length >= 2) {
@@ -1008,19 +986,6 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
     color: colors.textMuted,
     letterSpacing: 0.2,
-  },
-  streakChip: {
-    backgroundColor: colors.surface2,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  streakChipText: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-    color: colors.textSecondary,
   },
   weekStats: {
     flexDirection: 'row',

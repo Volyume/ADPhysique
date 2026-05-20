@@ -17,3 +17,5 @@ ios/
 android/
 *.log
 .claude/
+google-play-service-account.json
+AuthKey_*.p8
