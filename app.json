@@ -11,7 +11,7 @@
     "icon": "./assets/volyume-icon.png",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0D0D0D",
-    "primaryColor": "#00E5FF",
+    "primaryColor": "#F59E0B",
     "splash": {
       "image": "./assets/volyume-splash-hero.png",
       "backgroundColor": "#000000",
@@ -28,7 +28,8 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Used to take progress photos",
         "NSPhotoLibraryUsageDescription": "Used to select and save progress photos",
-        "NSPhotoLibraryAddUsageDescription": "Used to save shared workout cards to your photo library"
+        "NSPhotoLibraryAddUsageDescription": "Used to save shared workout cards to your photo library",
+        "UIBackgroundModes": ["fetch", "remote-notification"]
       }
     },
     "android": {
@@ -45,7 +46,9 @@
         "android.permission.CAMERA",
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.VIBRATE",
-        "android.permission.RECEIVE_BOOT_COMPLETED"
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.WAKE_LOCK"
       ],
       "intentFilters": [
         {
@@ -84,7 +87,8 @@
           "color": "#00E5FF",
           "sounds": []
         }
-      ]
+      ],
+      "expo-task-manager"
     ],
     "notification": {
       "icon": "./assets/volyume-icon.png",

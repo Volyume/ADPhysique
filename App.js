@@ -7,14 +7,38 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
+import * as TaskManager from 'expo-task-manager';
+import { ensureNotifChannels } from './src/lib/restNotifications';
 
-// Suppress foreground notification banners — the rest timer handles in-app alerts with haptics
+// ---------------------------------------------------------------------------
+// Background task — keeps the JS thread alive during rest periods on iOS so
+// the timer does not freeze when the screen is locked.
+// Must be defined at module scope (before any React components render).
+// ---------------------------------------------------------------------------
+const VOLYUME_REST_TIMER_KEEPALIVE = 'VOLYUME_REST_TIMER_KEEPALIVE';
+
+TaskManager.defineTask(VOLYUME_REST_TIMER_KEEPALIVE, () => {
+  // No-op: the act of waking the JS thread is what matters.
+  // Return NEW_DATA so iOS schedules the next fetch promptly.
+  return TaskManager.TaskManagerTaskBody
+    ? TaskManager.TaskManagerTaskBody.NEW_DATA
+    : 'newData';
+});
+
+// Suppress foreground notification banners — the rest timer handles in-app alerts with haptics.
+// The rest-done channel fires when the app is backgrounded, so sound is handled by the channel.
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: false,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-  }),
+  handleNotification: async (notification) => {
+    // Allow the rest-done alert to sound if it arrives while the app is foregrounded
+    // (e.g. user returned to app just as rest ended and the scheduled notif still fired).
+    const channelId = notification?.request?.content?.data?.channelId;
+    const isRestDone = channelId === 'rest-done';
+    return {
+      shouldShowAlert: isRestDone,
+      shouldPlaySound: isRestDone,
+      shouldSetBadge: false,
+    };
+  },
 });
 
 import RootNavigator from './src/navigation/RootNavigator';
@@ -152,6 +176,22 @@ export default function App() {
     Linking.getInitialURL().then(url => { if (url) handleAuthDeepLink(url); }).catch(() => {});
     const sub = Linking.addEventListener('url', ({ url }) => handleAuthDeepLink(url));
     return () => sub.remove();
+  }, []);
+
+  // Set up Android notification channels and wire notification-tap deep links.
+  // When the user taps the lock-screen rest timer notification, open the app
+  // directly to the active workout via the volyume:// scheme.
+  useEffect(() => {
+    ensureNotifChannels();
+
+    const responseSub = Notifications.addNotificationResponseReceivedListener(response => {
+      const url = response?.notification?.request?.content?.data?.url;
+      if (url && url.startsWith('volyume://')) {
+        Linking.openURL(url).catch(() => {});
+      }
+    });
+
+    return () => responseSub.remove();
   }, []);
 
   return (

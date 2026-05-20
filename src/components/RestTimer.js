@@ -14,8 +14,15 @@ const TIME_ADJUSTMENTS = [
 ];
 
 export default function RestTimer() {
-  const { restTimerActive, restTimerRemaining, restTimerDuration, stopRestTimer, tickRestTimer, addRestTime } =
-    useAppStore();
+  const {
+    restTimerActive, restTimerRemaining, restTimerDuration,
+    stopRestTimer, tickRestTimer, addRestTime,
+    workoutExercises, currentExerciseIndex,
+  } = useAppStore();
+
+  // Derive the current exercise name so the lock-screen notification is specific
+  const currentExerciseName =
+    workoutExercises[currentExerciseIndex]?.exercise?.name || '';
   const intervalRef = useRef(null);
   const notifIdRef = useRef(null);
   const progressAnim = useRef(new Animated.Value(1)).current;
@@ -35,17 +42,17 @@ export default function RestTimer() {
         useNativeDriver: false,
       }).start();
       intervalRef.current = setInterval(() => { tickRestTimer(); }, 1000);
-      // Schedule a local notification so the alert fires when screen is locked
-      scheduleRestNotif(remaining).then(id => { notifIdRef.current = id; });
+      // Post lock-screen notification and schedule the done alert
+      scheduleRestNotif(remaining, currentExerciseName).then(id => {
+        notifIdRef.current = id;
+      });
     } else {
       clearInterval(intervalRef.current);
       progressAnim.stopAnimation();
       progressAnim.setValue(1);
-      // Cancel any pending rest notification (timer was skipped or completed in foreground)
-      if (notifIdRef.current) {
-        cancelRestNotif(notifIdRef.current);
-        notifIdRef.current = null;
-      }
+      // Cancel the ongoing lock-screen notification and any pending done alert
+      cancelRestNotif(notifIdRef.current);
+      notifIdRef.current = null;
     }
     return () => clearInterval(intervalRef.current);
   }, [restTimerActive]);
