@@ -15,9 +15,11 @@ import InfoTooltip from '../components/InfoTooltip';
 
 // Maps a logged exercise name to a strength-standard lift key.
 const STRENGTH_LIFT_MAP = [
-  { match: /bench press/i,  lift: 'bench' },
-  { match: /squat/i,        lift: 'squat' },
-  { match: /deadlift/i,     lift: 'deadlift' },
+  { match: /bench press/i,                                     lift: 'bench' },
+  { match: /\b(back|front|safety bar)?\s*squat\b/i,           lift: 'squat' },
+  { match: /deadlift/i,                                        lift: 'deadlift' },
+  { match: /overhead press|ohp|shoulder press|military press/i, lift: 'ohp' },
+  { match: /barbell row|pendlay|bent.?over row|yates row/i,    lift: 'row' },
 ];
 
 function liftKeyFor(name) {
