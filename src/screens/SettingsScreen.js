@@ -197,6 +197,7 @@ export default function SettingsScreen({ navigation }) {
         if (sb) {
           let invokeErr = null;
           let fnBody = null;
+          let fnErrorBody = null;
           try {
             const result = await sb.functions.invoke('delete-account');
             if (result.error) invokeErr = result.error;
@@ -205,13 +206,19 @@ export default function SettingsScreen({ navigation }) {
             invokeErr = e;
           }
           if (invokeErr) {
-            // Surface the real Edge Function body in logs so we can diagnose
-            // (was just "non-2xx" before — useless). The function returns
-            // { error: "..." } JSON on every non-200 path, which is what
-            // we want to capture.
+            // FunctionsHttpError stores the Response on `.context`. Read its
+            // body so we can see which branch of the Edge Function actually
+            // failed (missing env var, RPC error, admin deleteUser error).
+            try {
+              const ctx = invokeErr?.context;
+              if (ctx && typeof ctx.text === 'function') {
+                fnErrorBody = await ctx.text();
+              }
+            } catch (_) { /* body already consumed or unreadable */ }
             logError('SettingsScreen.deleteAccount.fnInvoke', invokeErr, {
               userId,
               fnBody: fnBody ? JSON.stringify(fnBody).slice(0, 500) : null,
+              fnErrorBody: fnErrorBody ? String(fnErrorBody).slice(0, 500) : null,
               status: invokeErr?.context?.status ?? null,
             });
             // Fall back to the RPC so a missing or un-deployed Edge Function
