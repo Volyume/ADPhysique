@@ -8,6 +8,7 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, Alert, A
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';
+import * as BackgroundFetch from 'expo-background-fetch';
 import { ensureNotifChannels } from './src/lib/restNotifications';
 import { installGlobalHandlers, logError } from './src/lib/errorLog';
 
@@ -30,6 +31,36 @@ TaskManager.defineTask(VOLYUME_REST_TIMER_KEEPALIVE, () => {
   return TaskManager.TaskManagerTaskBody
     ? TaskManager.TaskManagerTaskBody.NEW_DATA
     : 'newData';
+});
+
+// ---------------------------------------------------------------------------
+// Daily background cloud sync — runs whenever the OS gives us a quiet
+// moment (Android typically batches background fetches to coincide with
+// existing wake-ups; iOS schedules opportunistically). Target frequency
+// is ~12h so we get roughly one nightly catch-up plus a midday backup.
+// If the user is offline at fetch time the task returns NoData and the
+// next foreground sync (App.js useEffect below) picks things up.
+// ---------------------------------------------------------------------------
+const VOLYUME_DAILY_SYNC = 'VOLYUME_DAILY_SYNC';
+
+TaskManager.defineTask(VOLYUME_DAILY_SYNC, async () => {
+  try {
+    // eslint-disable-next-line global-require
+    const { getSupabaseClient: getSb } = require('./src/lib/supabase');
+    // eslint-disable-next-line global-require
+    const { bulkUploadLocalData } = require('./src/lib/sync');
+    const sb = getSb();
+    if (!sb) return 'noData';
+    const { data: { session } } = await sb.auth.getSession();
+    const supabaseUserId = session?.user?.id;
+    if (!supabaseUserId) return 'noData';
+    // Local user id is whatever Supabase gave us once they signed in.
+    await bulkUploadLocalData(supabaseUserId, supabaseUserId);
+    return 'newData';
+  } catch (e) {
+    try { logError('VOLYUME_DAILY_SYNC', e); } catch (_) {}
+    return 'failed';
+  }
 });
 
 // Suppress foreground notification banners — the rest timer handles in-app alerts with haptics.
@@ -213,6 +244,26 @@ export default function App() {
     });
 
     return () => responseSub.remove();
+  }, []);
+
+  // Register the daily background sync task once on mount. The OS decides
+  // when it actually fires (Android batches fetches with other apps; iOS
+  // schedules opportunistically) — we just ask for "at most once every
+  // ~12 hours". If registration fails (older Android skipping background
+  // tasks, simulator, etc.) the foreground sync is still there as a
+  // fallback every time the app comes to active.
+  useEffect(() => {
+    (async () => {
+      try {
+        const status = await BackgroundFetch.getStatusAsync();
+        if (status !== BackgroundFetch.BackgroundFetchStatus.Available) return;
+        await BackgroundFetch.registerTaskAsync(VOLYUME_DAILY_SYNC, {
+          minimumInterval: 12 * 60 * 60, // seconds — target ~twice a day
+          stopOnTerminate: false,
+          startOnBoot: true,
+        });
+      } catch (_) { /* unsupported on this device — fine, foreground sync covers it */ }
+    })();
   }, []);
 
   // Foreground sync — drains the local→cloud sync whenever the app returns

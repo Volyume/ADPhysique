@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { VolyumeMark } from '../components/BrandMark';
-import { signInWithEmail, signUpWithEmail, resetPassword, getSupabaseClient } from '../lib/supabase';
+import { signInWithEmail, signUpWithEmail, resetPassword, getSupabaseClient, signInWithGoogle, signInWithApple } from '../lib/supabase';
 import { syncProfile, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
 import { wipeAllUserData, migrateLocalUserId } from '../lib/database';
 import { logError } from '../lib/errorLog';
@@ -119,6 +119,23 @@ export default function LoginScreen({ navigation, route }) {
     }
   }
 
+  async function handleOAuth(provider) {
+    // Disable both buttons while the OAuth dialog is up. The actual sign-in
+    // completion is handled by RootNavigator's onAuthStateChange listener
+    // once the deep-link redirect comes back into App.js.
+    setLoading(true);
+    try {
+      const fn = provider === 'google' ? signInWithGoogle : signInWithApple;
+      const result = await fn();
+      if (result?.error) {
+        Alert.alert('Sign-in failed', result.error.message);
+      }
+      // cancelled / ok: nothing to do here — auth state listener routes
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleForgotPassword() {
     if (!email.trim()) {
       Alert.alert('Enter email', 'Enter your email address above first.');
@@ -175,6 +192,44 @@ export default function LoginScreen({ navigation, route }) {
 
           {/* Thin divider below brand */}
           <View style={styles.brandDivider} />
+
+          {/* ── OAuth quick-sign-in ── */}
+          {/* Platform-aware: Apple on iOS (App Store requires Sign in with
+              Apple when any other social provider is offered), Google on
+              both. Surfaced ABOVE the email form because most users prefer
+              continuing with an existing account over creating yet another
+              email/password. Falls back gracefully if the user's Supabase
+              project doesn't have the provider configured — the Supabase
+              error is surfaced via Alert. */}
+          <View style={styles.oauthBlock}>
+            {Platform.OS === 'ios' && (
+              <TouchableOpacity
+                style={[styles.oauthBtnApple, loading && styles.btnDisabled]}
+                onPress={() => handleOAuth('apple')}
+                disabled={loading}
+                accessibilityRole="button"
+                accessibilityLabel="Continue with Apple"
+              >
+                <Ionicons name="logo-apple" size={18} color="#FFFFFF" />
+                <Text style={styles.oauthBtnAppleText}>Continue with Apple</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={[styles.oauthBtn, loading && styles.btnDisabled]}
+              onPress={() => handleOAuth('google')}
+              disabled={loading}
+              accessibilityRole="button"
+              accessibilityLabel="Continue with Google"
+            >
+              <Ionicons name="logo-google" size={18} color={colors.textPrimary} />
+              <Text style={styles.oauthBtnText}>Continue with Google</Text>
+            </TouchableOpacity>
+            <View style={styles.oauthDivider}>
+              <View style={styles.oauthDividerLine} />
+              <Text style={styles.oauthDividerText}>or with email</Text>
+              <View style={styles.oauthDividerLine} />
+            </View>
+          </View>
 
           {/* ── Form block ── */}
           <View style={styles.formBlock}>
@@ -368,6 +423,15 @@ const styles = StyleSheet.create({
 
   // Form
   formBlock: { gap: spacing.lg, marginBottom: spacing.xl },
+  oauthBlock: { gap: spacing.sm, marginBottom: spacing.lg },
+  oauthBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  oauthBtnText: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  // Apple branding requires black background + white text (HIG)
+  oauthBtnApple: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.md, borderRadius: radius.md, backgroundColor: '#000000' },
+  oauthBtnAppleText: { color: '#FFFFFF', fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  oauthDivider: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
+  oauthDividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
+  oauthDividerText: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
   formTitle: {
     fontSize: fontSize.lg,
     fontWeight: fontWeight.semibold,
