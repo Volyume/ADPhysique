@@ -79,12 +79,32 @@ Notifications.setNotificationHandler({
   },
 });
 
-import RootNavigator from './src/navigation/RootNavigator';
-import PRCelebration from './src/components/PRCelebration';
+// RootNavigator and PRCelebration are deliberately lazy-required from inside
+// the gated render below. They (transitively) trigger every screen's
+// StyleSheet.create, and we need accessibility prefs applied to the theme
+// tokens BEFORE that happens — otherwise Larger Text / Higher Contrast /
+// Colour-Blind Safe never take effect because the styles are frozen with
+// the default palette at module-evaluation time.
 import useAppStore from './src/store/useAppStore';
 import { getWellbeingMode, isCalm } from './src/lib/wellbeing';
 import { getSupabaseClient } from './src/lib/supabase';
+import { applyAccessibility } from './src/styles/theme';
 import * as Updates from 'expo-updates';
+
+const A11Y_PREFS_KEY = '@volyume_a11y_prefs';
+
+// Read accessibility prefs synchronously-as-possible at app boot and mutate
+// the exported theme tokens before any screen module is loaded. Idempotent
+// — safe to call more than once, but only the first call matters for
+// already-built StyleSheets.
+async function bootstrapAccessibility() {
+  try {
+    const raw = await AsyncStorage.getItem(A11Y_PREFS_KEY);
+    if (raw) applyAccessibility(JSON.parse(raw));
+  } catch (_) {
+    // Corrupt prefs or storage failure — fall back to defaults silently.
+  }
+}
 
 // Handles volyume:// and https://volyume.app deep links from Supabase auth emails.
 // Supports both PKCE (code=xxx) and implicit (access_token in fragment) flows.
@@ -193,9 +213,19 @@ export default function App() {
   const accessibilityLoaded = useAppStore(s => s.accessibilityLoaded);
   const loadAccessibility = useAppStore(s => s.loadAccessibility);
   const [calm, setCalm] = useState(false);
+  const [themeReady, setThemeReady] = useState(false);
 
-  // Hydrate accessibility prefs once on mount so the toggles take effect
-  // before any animation-heavy component renders.
+  // Mutate the theme exports from saved a11y prefs BEFORE the navigator (and
+  // therefore every screen's StyleSheet.create) is required. Without this
+  // gate, the user toggles Higher Contrast in Settings, restarts, and sees
+  // no change because the StyleSheets were baked with the default palette.
+  useEffect(() => {
+    bootstrapAccessibility().then(() => setThemeReady(true));
+  }, []);
+
+  // Hydrate accessibility prefs into the store too so SettingsScreen's
+  // switches reflect saved state. Independent of the theme bake above —
+  // the store drives Reduce Motion (reactive) and the Settings UI.
   useEffect(() => {
     if (!accessibilityLoaded) loadAccessibility();
   }, [accessibilityLoaded, loadAccessibility]);
@@ -324,6 +354,21 @@ export default function App() {
     maybeSync();
     return () => sub.remove();
   }, []);
+
+  if (!themeReady) {
+    // Minimal pre-theme placeholder. No theme tokens here on purpose — uses
+    // hard-coded background that matches the splash so the transition is
+    // invisible to the user.
+    return <View style={{ flex: 1, backgroundColor: '#0D0D0D' }} />;
+  }
+
+  // Lazy-require after applyAccessibility has mutated the theme. These
+  // requires synchronously evaluate the whole screen graph; doing them
+  // here guarantees every StyleSheet.create sees the post-a11y tokens.
+  // eslint-disable-next-line global-require
+  const RootNavigator = require('./src/navigation/RootNavigator').default;
+  // eslint-disable-next-line global-require
+  const PRCelebration = require('./src/components/PRCelebration').default;
 
   return (
     <ErrorBoundary>

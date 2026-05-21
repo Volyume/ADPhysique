@@ -17,6 +17,34 @@ import { logError } from '../lib/errorLog';
 import { exportBackup, importBackup } from '../lib/dataBackup';
 import { getWellbeingMode, setWellbeingMode } from '../lib/wellbeing';
 import Constants from 'expo-constants';
+import * as Updates from 'expo-updates';
+
+// Larger Text / Higher Contrast / Colour-Blind Safe mutate theme tokens
+// that StyleSheet.create has already baked at module-evaluation time, so
+// they only take effect after the app is re-launched and bootstrapAccessibility
+// in App.js re-applies them before screens load. Prompt the user to reload now
+// rather than leaving them confused that the toggle "did nothing".
+async function promptRestartForA11y(label) {
+  Alert.alert(
+    `${label} saved`,
+    `Volyume needs to reopen to apply this. Your data and current screen are safe.`,
+    [
+      { text: 'Later', style: 'cancel' },
+      {
+        text: 'Reload now',
+        onPress: async () => {
+          try { await Updates.reloadAsync(); }
+          catch (_) {
+            // Dev clients / Expo Go without OTA support — fall back to a
+            // soft message. The toggle is saved; next manual restart picks
+            // it up.
+            Alert.alert('Reload failed', 'Close and reopen Volyume to apply the change.');
+          }
+        },
+      },
+    ],
+  );
+}
 
 function SettingRow({ icon, label, sub, value, onPress, destructive, rightElement, showArrow = true }) {
   return (
@@ -410,7 +438,10 @@ export default function SettingsScreen({ navigation }) {
             rightElement={
               <Switch
                 value={!!accessibility.largerText}
-                onValueChange={v => setAccessibilityPref('largerText', v)}
+                onValueChange={v => {
+                  setAccessibilityPref('largerText', v);
+                  promptRestartForA11y('Larger text');
+                }}
                 trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
                 thumbColor={accessibility.largerText ? colors.primary : colors.textMuted}
               />
@@ -424,7 +455,10 @@ export default function SettingsScreen({ navigation }) {
             rightElement={
               <Switch
                 value={!!accessibility.higherContrast}
-                onValueChange={v => setAccessibilityPref('higherContrast', v)}
+                onValueChange={v => {
+                  setAccessibilityPref('higherContrast', v);
+                  promptRestartForA11y('Higher contrast');
+                }}
                 trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
                 thumbColor={accessibility.higherContrast ? colors.primary : colors.textMuted}
               />
@@ -433,12 +467,15 @@ export default function SettingsScreen({ navigation }) {
           <SettingRow
             icon="eye-outline"
             label="Colour-blind safe palette"
-            sub="Replaces success-green and error-red with blue and orange — distinguishable in red-green colour blindness."
+            sub="Replaces success-green and error-red with sky blue and reddish purple — distinguishable in red-green colour blindness."
             showArrow={false}
             rightElement={
               <Switch
                 value={!!accessibility.colorBlindSafe}
-                onValueChange={v => setAccessibilityPref('colorBlindSafe', v)}
+                onValueChange={v => {
+                  setAccessibilityPref('colorBlindSafe', v);
+                  promptRestartForA11y('Colour-blind safe palette');
+                }}
                 trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
                 thumbColor={accessibility.colorBlindSafe ? colors.primary : colors.textMuted}
               />
@@ -459,7 +496,7 @@ export default function SettingsScreen({ navigation }) {
             }
           />
           <Text style={styles.a11yNote}>
-            Reduce motion takes effect immediately. The colour and contrast options take effect the next time you reopen the app.
+            Reduce motion takes effect immediately. Larger text, higher contrast, and the colour-blind safe palette need Volyume to reopen — you'll be prompted to reload after toggling.
           </Text>
         </View>
 
