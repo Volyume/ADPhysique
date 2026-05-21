@@ -6,7 +6,8 @@ import { StackActions } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 
 const navigationRef = createNavigationContainerRef();
-import { View, Text, Image, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
+import { View, Text, Image, StyleSheet, Animated, Easing, Dimensions, ActivityIndicator } from 'react-native';
+import { VolyumeMark } from '../components/BrandMark';
 import { Ionicons } from '@expo/vector-icons';
 
 const SPLASH_HERO = require('../../assets/volyume-splash-hero.png');
@@ -492,7 +493,11 @@ export default function RootNavigator() {
   // confirms firstRunComplete=true. That gap was the "I started the
   // wizard and got booted out" bug.
   if (restoringSession) {
-    return <SplashScreen />;
+    // Don't use the generic SplashScreen here — it has no message and
+    // looks frozen during a 5-10s cloud read. SigningInSplash shows
+    // explicit text ("Signing you in" → "Account found, syncing your
+    // data") so the user knows progress is happening, not stuck.
+    return <SigningInSplash />;
   }
 
   // Navigation priority:
@@ -624,6 +629,64 @@ function SplashScreen() {
     </View>
   );
 }
+
+// SigningInSplash — shown during restoreSessionFromCloud's slow path
+// (returning user on a new device, no per-uid local cache yet). Reads
+// restoreSplashStage from the store and shows a stage-appropriate
+// message so the user knows the app isn't frozen during the cloud read.
+function SigningInSplash() {
+  const stage = useAppStore(s => s.restoreSplashStage);
+  const headline =
+    stage === 'found' ? 'Account found' :
+    'Signing you in';
+  const subline =
+    stage === 'found' ? 'Syncing your data, one moment...' :
+    'Just a moment while we check your account...';
+
+  return (
+    <View style={signingInStyles.wrap}>
+      <View style={signingInStyles.heroWrap}>
+        <VolyumeMark size={56} />
+      </View>
+      <ActivityIndicator size="small" color={colors.primary} style={signingInStyles.spinner} />
+      <Text style={signingInStyles.headline}>{headline}</Text>
+      <Text style={signingInStyles.subline}>{subline}</Text>
+    </View>
+  );
+}
+
+const signingInStyles = StyleSheet.create({
+  wrap: {
+    flex: 1,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    gap: 16,
+  },
+  heroWrap: {
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  spinner: {
+    marginVertical: 4,
+  },
+  headline: {
+    color: colors.textPrimary,
+    fontSize: 20,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  subline: {
+    color: colors.textMuted,
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+});
 
 const splashStyles = StyleSheet.create({
   container: {

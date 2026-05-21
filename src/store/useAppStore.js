@@ -164,6 +164,14 @@ const useAppStore = create((set, get) => ({
   // wizard-flash bug). Defaults to false so cold-launch isn't gated
   // on it — the gate only matters during an active auth transition.
   restoringSession: false,
+  // Message shown on the syncing splash during restoringSession=true.
+  // Two phases:
+  //   'reading'  — cloud read in flight, "Signing you in"
+  //   'found'    — profile returned, "Account found, syncing your data"
+  //                Held for ~600ms so the user actually sees it before
+  //                the navigator switches to MainTabs.
+  // null when not restoring.
+  restoreSplashStage: null,
 
   checkTier: async () => {
     try {
@@ -273,7 +281,7 @@ const useAppStore = create((set, get) => ({
     // ── Slow path: no per-uid cache, must hit the cloud ──────────────
     // Only fires the FIRST time a uid sees this device. Subsequent
     // sign-ins for the same uid take the fast path above.
-    set({ restoringSession: true });
+    set({ restoringSession: true, restoreSplashStage: 'reading' });
 
     let cloudData = null;
     let timedOut = false;
@@ -281,7 +289,7 @@ const useAppStore = create((set, get) => ({
       // eslint-disable-next-line global-require
       const { getSupabaseClient } = require('../lib/supabase');
       const sb = getSupabaseClient();
-      if (!sb) { set({ restoringSession: false }); return; }
+      if (!sb) { set({ restoringSession: false, restoreSplashStage: null }); return; }
       // Wrap the cloud read in Promise.race with a 10s ceiling so a
       // dead connection / cellular dead zone can't park the splash
       // forever. supabase-js doesn't set a fetch timeout itself, so
@@ -322,7 +330,9 @@ const useAppStore = create((set, get) => ({
     //       clearAuthStateForSignOut already cleared firstRunComplete.
     if (!cloudData) {
       log.logInfo('restoreSessionFromCloud.noProfile', 'cloud profile missing — leaving firstRun local-side');
-      set({ restoringSession: false });
+      // No splash hold here — new user or timeout. Drop straight to
+      // whatever the navigator routes to (wizard, in practice).
+      set({ restoringSession: false, restoreSplashStage: null });
       return;
     }
 
@@ -380,9 +390,21 @@ const useAppStore = create((set, get) => ({
       );
     } catch (_) {}
 
+    // Cloud read succeeded and a profile came back — this is a
+    // returning user on a new device (or after their per-uid cache
+    // was lost). Flip the splash message to "Account found, syncing
+    // your data" and hold ~600ms so the user actually sees the
+    // acknowledgement before the navigator switches them to
+    // MainTabs. Without the hold, the "found" message appears and
+    // disappears in microseconds.
+    if (cloudData) {
+      set({ restoreSplashStage: 'found' });
+      await new Promise(r => setTimeout(r, 600));
+    }
+
     // Cloud state resolved — release the routing gate. Navigator now
     // routes based on the freshly-restored firstRunComplete + tier.
-    set({ restoringSession: false });
+    set({ restoringSession: false, restoreSplashStage: null });
   },
 
   // Called after cloud sign-in: reads tier from Supabase and uses it as the
