@@ -112,6 +112,26 @@ export default function LoginScreen({ navigation, route }) {
           pullFromCloud(supabaseUserId).catch(() => {});
           // Server-authoritative tier — enforcement point after beta
           refreshTierFromCloud(getSupabaseClient(), supabaseUserId).catch(() => {});
+
+          // Pull first_run_complete from the cloud profile. Without this,
+          // a user who signs in on a new device gets routed through
+          // onboarding again even though they already completed it
+          // years ago. Read inline so the navigator can re-route to the
+          // main tabs immediately.
+          (async () => {
+            try {
+              const sb = getSupabaseClient();
+              if (!sb) return;
+              const { data: prof } = await sb
+                .from('users_profile').select('first_run_complete, tier')
+                .eq('id', supabaseUserId).single();
+              if (prof?.first_run_complete) {
+                // eslint-disable-next-line global-require
+                const { default: store } = require('../store/useAppStore');
+                await store.getState().completeFirstRun();
+              }
+            } catch (_) { /* row missing or offline — fall through */ }
+          })();
         }
       }
     } finally {

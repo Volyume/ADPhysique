@@ -209,6 +209,24 @@ const useAppStore = create((set, get) => ({
       await AsyncStorage.setItem(FIRST_RUN_KEY, 'true');
     } catch (_e) {}
     set({ firstRunComplete: true });
+    // Mirror to cloud so a user who signs in on a new device doesn't
+    // have to redo onboarding. Fire-and-forget; if offline the next
+    // bulk sync catches it.
+    try {
+      const sess = get().session;
+      if (sess?.user?.id) {
+        // eslint-disable-next-line global-require
+        const { getSupabaseClient } = require('../lib/supabase');
+        const sb = getSupabaseClient();
+        if (sb) {
+          sb.from('users_profile')
+            .update({ first_run_complete: true, updated_at: new Date().toISOString() })
+            .eq('id', sess.user.id)
+            .then(() => {})
+            .catch(() => {});
+        }
+      }
+    } catch (_) {}
   },
 
   // Active workout

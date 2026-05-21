@@ -42,7 +42,10 @@ ALTER TABLE users_profile
   ADD COLUMN IF NOT EXISTS tier TEXT DEFAULT 'free',
   ADD COLUMN IF NOT EXISTS bar_weight NUMERIC DEFAULT 20,
   ADD COLUMN IF NOT EXISTS is_beta_tester BOOLEAN DEFAULT FALSE,
-  ADD COLUMN IF NOT EXISTS goal_start_date TIMESTAMPTZ;
+  ADD COLUMN IF NOT EXISTS goal_start_date TIMESTAMPTZ,
+  -- first_run_complete persists the onboarding-done state to the cloud so a
+  -- user who signs in on a new device doesn't have to redo the wizard.
+  ADD COLUMN IF NOT EXISTS first_run_complete BOOLEAN DEFAULT FALSE;
 
 -- Widen training_age to NUMERIC if it was originally INTEGER
 DO $$

@@ -95,8 +95,9 @@ export default function NutritionEducationScreen({ navigation }) {
           <PhaseLine name="Lean gain" rate="gain 0.25–0.5% per week" gist="small surplus, slow tissue gain, minimal fat" />
           <PhaseLine name="Bulk" rate="gain 0.5–1% per week" gist="larger surplus, faster growth, some fat comes with it" />
           <KeyPoint>
-            Start with our numbers. Adjust after 2–3 weeks based on what the
-            scale and the mirror actually do.
+            You don't have to do the maths. Log your morning weight and weekly
+            check-in — your coach watches the trend and nudges these numbers
+            up or down for you when a real signal is there.
           </KeyPoint>
         </Section>
 
@@ -150,18 +151,26 @@ export default function NutritionEducationScreen({ navigation }) {
         <Section
           icon="trending-up-outline"
           tint={colors.primary}
-          title="6. When to adjust"
+          title="6. The coach does the adjustments"
         >
           <Body>
-            If you're using Volyume Pro, the weekly check-in handles this — the
-            coach watches your morning weight trend, compares it to your
-            target rate, and tells you to nudge calories up or down once a
-            real signal is there (and ignores noisy single-week swings).
+            You don't need to second-guess the numbers each week. Volyume's
+            weekly check-in watches your morning weight trend, compares it
+            to the target rate for your phase, and shifts your calories up
+            or down when a real signal appears — and ignores noisy single-
+            week swings (water, sodium, sleep, time of month).
           </Body>
           <Body>
-            Tracking on your own? Same idea: judge by the 2–3 week trend,
-            not week-to-week. Bodies fluctuate by 1–2kg from water alone.
+            Two safety nets are built in: a 5% cap on any single change so
+            it never swings too hard, and a 2-week cooldown after each
+            change so the trend has time to react before the next one.
+            The result you'll see is small, infrequent nudges — not weekly
+            churn.
           </Body>
+          <KeyPoint>
+            Your job: log your morning weight most days and fill in the
+            weekly check-in. The coach does the rest.
+          </KeyPoint>
         </Section>
 
         {/* Diet builder teaser */}
@@ -180,8 +189,8 @@ export default function NutritionEducationScreen({ navigation }) {
         </View>
 
         <Text style={styles.footer}>
-          Volyume's numbers are estimates. Real-world progress over 2–4 weeks
-          is the truth — adjust from that, not from theory.
+          Volyume's starting numbers are estimates. The 2–4 week trend is what
+          counts — that's exactly what the coach watches for you.
         </Text>
       </ScrollView>
     </SafeAreaView>
