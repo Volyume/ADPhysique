@@ -47,56 +47,6 @@ export default function DebugLogScreen({ navigation }) {
     catch (_) {}
   }
 
-  // Pull this user's recent rows from debug_log_uploads via the
-  // SECURITY DEFINER RPC (auth.uid()-scoped, so no cross-user leak)
-  // and hand the formatted text to the OS share sheet. Lets remote
-  // beta testers ship logs to support without us needing to give them
-  // dashboard access.
-  async function handleShareCloud() {
-    const sb = getSupabaseClient();
-    if (!sb) {
-      Alert.alert('Not available', 'Cloud is not configured on this build.');
-      return;
-    }
-    const session = useAppStore.getState().session;
-    if (!session?.user?.id) {
-      Alert.alert(
-        'Sign in to share cloud logs',
-        'The cloud copy is keyed to your account. Local-only sessions can use the Share button instead.',
-      );
-      return;
-    }
-    try {
-      const { data, error } = await sb.rpc('get_my_recent_logs', { limit_n: 500 });
-      if (error) {
-        Alert.alert('Could not fetch logs', error.message);
-        return;
-      }
-      if (!data || data.length === 0) {
-        Alert.alert(
-          'No cloud logs',
-          'The cloud copy is empty for your account. Foreground the app once to trigger an upload, then try again.',
-        );
-        return;
-      }
-      // Newest-first from the RPC. Format identically to exportErrorsAsText
-      // so support gets a consistent shape across local + cloud exports.
-      const lines = data.map(e => {
-        const when = new Date(e.uploaded_at).toISOString();
-        const out = [`[${when}] ${String(e.level).toUpperCase()} ${e.scope || ''}`];
-        if (e.message) out.push(`  ${e.message}`);
-        if (e.context) out.push(`  ctx: ${e.context}`);
-        if (e.stack) out.push(`  ${e.stack.split('\n').slice(0, 6).join('\n  ')}`);
-        return out.join('\n');
-      });
-      const header = `Volyume cloud logs · user ${session.user.id.slice(0, 8)} · ${data.length} entries\n\n`;
-      const text = header + lines.join('\n\n');
-      await Share.share({ message: text, title: 'Volyume cloud logs' });
-    } catch (e) {
-      Alert.alert('Could not fetch logs', e?.message ?? 'unknown error');
-    }
-  }
-
   async function handleSendToSupport() {
     const sb = getSupabaseClient();
     if (!sb) {
@@ -166,13 +116,9 @@ export default function DebugLogScreen({ navigation }) {
           <Ionicons name="cloud-upload-outline" size={16} color={colors.primary} />
           <Text style={[styles.actionLabel, { color: colors.primary }]}>Send to support</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn} onPress={handleShareCloud}>
-          <Ionicons name="cloud-download-outline" size={16} color={colors.primary} />
-          <Text style={[styles.actionLabel, { color: colors.primary }]}>Share cloud logs</Text>
-        </TouchableOpacity>
         <TouchableOpacity style={styles.actionBtn} onPress={handleShare}>
           <Ionicons name="share-outline" size={16} color={colors.textPrimary} />
-          <Text style={styles.actionLabel}>Share local</Text>
+          <Text style={styles.actionLabel}>Share</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.actionBtn, styles.actionBtnDanger]} onPress={handleClear}>
           <Ionicons name="trash-outline" size={16} color={colors.error} />
