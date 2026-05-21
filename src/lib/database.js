@@ -1149,20 +1149,25 @@ export async function duplicateRoutine(routineId, userId, newName) {
   if (!original) throw new Error('Routine not found');
   const newRoutine = await createRoutine(userId, newName, original.description, original.splitType);
   const exercises = await getRoutineExercisesWithDetails(routineId);
-  for (let i = 0; i < exercises.length; i++) {
-    const { routineExercise: re } = exercises[i];
-    await addExerciseToRoutine(
-      newRoutine.id,
-      re.exerciseId,
-      i,
-      re.recommendedRepsMin,
-      re.recommendedRepsMax,
-      re.notes,
-      re.recommendedSets,
-      re.startingWeight,
-      re.restSeconds,
-    );
-  }
+  // Atomic — was N+1 individual inserts; an interruption used to leave a
+  // routine row pointing at no exercises (or partial), which the UI
+  // couldn't recover and the user couldn't see.
+  await d.withTransactionAsync(async () => {
+    for (let i = 0; i < exercises.length; i++) {
+      const { routineExercise: re } = exercises[i];
+      await addExerciseToRoutine(
+        newRoutine.id,
+        re.exerciseId,
+        i,
+        re.recommendedRepsMin,
+        re.recommendedRepsMax,
+        re.notes,
+        re.recommendedSets,
+        re.startingWeight,
+        re.restSeconds,
+      );
+    }
+  });
   return newRoutine;
 }
 
@@ -1412,20 +1417,25 @@ export async function generateMesocycleWeeks(mesocycleId) {
   const now = Date.now();
   const weeks = [];
 
-  for (let i = 0; i < plannedWeeks; i++) {
-    const weekIndex = i + 1;
-    const isDeload = weekIndex === plannedWeeks ? 1 : 0;
-    const rirTarget = rirLadder[i] ?? (isDeload ? 4 : Math.max(0, 3 - i));
-    const id = `mw_${mesocycleId}_${weekIndex}`;
+  // Wrap in a single transaction so a crash mid-loop doesn't leave a meso
+  // with a partial week list (and so the writes commit atomically — much
+  // faster than N round trips even on success).
+  await d.withTransactionAsync(async () => {
+    for (let i = 0; i < plannedWeeks; i++) {
+      const weekIndex = i + 1;
+      const isDeload = weekIndex === plannedWeeks ? 1 : 0;
+      const rirTarget = rirLadder[i] ?? (isDeload ? 4 : Math.max(0, 3 - i));
+      const id = `mw_${mesocycleId}_${weekIndex}`;
 
-    await d.runAsync(
-      `INSERT OR IGNORE INTO mesocycle_weeks (id, mesocycle_id, week_index, is_deload, rir_target, created_at)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [id, mesocycleId, weekIndex, isDeload, rirTarget, now],
-    );
+      await d.runAsync(
+        `INSERT OR IGNORE INTO mesocycle_weeks (id, mesocycle_id, week_index, is_deload, rir_target, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [id, mesocycleId, weekIndex, isDeload, rirTarget, now],
+      );
 
-    weeks.push({ id, mesocycleId, weekIndex, isDeload, rirTarget });
-  }
+      weeks.push({ id, mesocycleId, weekIndex, isDeload, rirTarget });
+    }
+  });
 
   return weeks;
 }
@@ -1495,8 +1505,11 @@ export async function getNextMesocycleWeek(currentWeekId) {
   }
 }
 
-// Seed planned_muscle_volume for all weeks of a mesocycle with a MEV→MAV ramp
-// Called once when a mesocycle is created (or can be called again to re-seed)
+// Seed planned_muscle_volume for all weeks of a mesocycle with a MEV→MAV ramp.
+// Called once when a mesocycle is created (or can be called again to re-seed).
+// Wrapped in a transaction so the ~70 INSERTs commit atomically (was a
+// multi-second blocking write on slow Android devices; an interrupted call
+// used to leave a half-seeded mesocycle that the UI couldn't recover).
 export async function generateInitialPlannedVolume(mesocycleId, volumeLandmarks) {
   try {
     const d = await db();
@@ -1509,36 +1522,37 @@ export async function generateInitialPlannedVolume(mesocycleId, volumeLandmarks)
     const accWeeks = weeks.filter(w => !w.is_deload);
     const deloadWeek = weeks.find(w => w.is_deload);
     const totalAcc = accWeeks.length;
+    const now = Date.now();
 
-    for (const [muscle, landmarks] of Object.entries(volumeLandmarks)) {
-      const { mev, mav, mrv } = landmarks;
-      // Ramp from MEV to MAV over accumulation weeks
-      for (let i = 0; i < accWeeks.length; i++) {
-        const week = accWeeks[i];
-        const progress = totalAcc <= 1 ? 1 : i / (totalAcc - 1);
-        const planned = Math.round(mev + (mav - mev) * progress);
-        const id = `pmv_${week.id}_${muscle}`;
-        const now = Date.now();
-        await d.runAsync(
-          `INSERT OR IGNORE INTO planned_muscle_volume
-             (id, mesocycle_week_id, muscle, planned_sets, mev, mav, mrv, source, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, 'template', ?, ?)`,
-          [id, week.id, muscle, planned, mev, mav, mrv, now, now],
-        );
+    await d.withTransactionAsync(async () => {
+      for (const [muscle, landmarks] of Object.entries(volumeLandmarks)) {
+        const { mev, mav, mrv } = landmarks;
+        for (let i = 0; i < accWeeks.length; i++) {
+          const week = accWeeks[i];
+          const progress = totalAcc <= 1 ? 1 : i / (totalAcc - 1);
+          const planned = Math.round(mev + (mav - mev) * progress);
+          const id = `pmv_${week.id}_${muscle}`;
+          await d.runAsync(
+            `INSERT OR IGNORE INTO planned_muscle_volume
+               (id, mesocycle_week_id, muscle, planned_sets, mev, mav, mrv, source, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 'template', ?, ?)`,
+            [id, week.id, muscle, planned, mev, mav, mrv, now, now],
+          );
+        }
+        if (deloadWeek) {
+          const id = `pmv_${deloadWeek.id}_${muscle}`;
+          await d.runAsync(
+            `INSERT OR IGNORE INTO planned_muscle_volume
+               (id, mesocycle_week_id, muscle, planned_sets, mev, mav, mrv, source, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 'template', ?, ?)`,
+            [id, deloadWeek.id, muscle, mev, mev, mav, mrv, now, now],
+          );
+        }
       }
-      // Deload week = MEV
-      if (deloadWeek) {
-        const id = `pmv_${deloadWeek.id}_${muscle}`;
-        const now = Date.now();
-        await d.runAsync(
-          `INSERT OR IGNORE INTO planned_muscle_volume
-             (id, mesocycle_week_id, muscle, planned_sets, mev, mav, mrv, source, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, 'template', ?, ?)`,
-          [id, deloadWeek.id, muscle, mev, mev, mav, mrv, now, now],
-        );
-      }
-    }
-  } catch (_e) {}
+    });
+  } catch (e) {
+    logError('database.generateInitialPlannedVolume', e, { mesocycleId });
+  }
 }
 
 // Get all weeks for a mesocycle
@@ -2025,8 +2039,12 @@ export async function getUserBodyProfile(userId) {
 
 export async function clearWorkoutHistory(userId) {
   const d = await db();
-  await d.runAsync('DELETE FROM workout_sets WHERE user_id = ?', [userId]);
-  await d.runAsync('DELETE FROM workouts WHERE user_id = ?', [userId]);
+  // Atomic — was two separate runAsync calls; an interruption between
+  // them would orphan workout rows whose sets had already been deleted.
+  await d.withTransactionAsync(async () => {
+    await d.runAsync('DELETE FROM workout_sets WHERE user_id = ?', [userId]);
+    await d.runAsync('DELETE FROM workouts WHERE user_id = ?', [userId]);
+  });
 }
 
 // ─── Full local backup / restore ────────────────────────────────────────────

@@ -43,10 +43,14 @@ function getClient() {
 /**
  * Upsert user profile to Supabase after sign-in or profile update.
  */
-export async function syncProfile(supabaseUserId, userProfile, tier, { isBetaTester = false } = {}) {
+export async function syncProfile(supabaseUserId, userProfile, _tier, { isBetaTester = false } = {}) {
   const sb = getClient();
   if (!sb || !supabaseUserId) return;
   try {
+    // `tier` is deliberately NOT sent from the client. Server has DEFAULT
+    // 'free' on new rows, and migrate_005's trigger rolls back any client
+    // UPDATE to it. Tier upgrades happen via the Stripe webhook only.
+    // _tier kept in the signature for callsite compatibility but ignored.
     const payload = {
       id: supabaseUserId,
       first_name: userProfile?.firstName ?? null,
@@ -54,16 +58,17 @@ export async function syncProfile(supabaseUserId, userProfile, tier, { isBetaTes
       training_focus: userProfile?.trainingFocus ?? 'bodybuilding',
       training_age: userProfile?.trainingAgeYears ?? null,
       primary_equipment: userProfile?.primaryEquipment ?? null,
-      tier: tier ?? 'free',
       bar_weight: userProfile?.barWeight ?? 20,
       updated_at: new Date().toISOString(),
     };
-    // Mark beta testers on first sign-up so they can receive extended Pro at launch.
-    // Only set on creation (INSERT wins), never overwrite an existing false → true.
+    // Beta-tester flag is still client-writable during the beta window
+    // (set on first sign-up only — the migrate_005 trigger does NOT
+    // protect this column, only `tier`). Server enforces tier strictly,
+    // beta-tester is a soft tag for the future Pro extension.
     if (isBetaTester) payload.is_beta_tester = true;
     await sb.from('users_profile').upsert(payload, { onConflict: 'id' });
   } catch (e) {
-    console.warn('[sync] syncProfile failed:', e?.message);
+    logError('sync.syncProfile', e, { supabaseUserId });
   }
 }
 
