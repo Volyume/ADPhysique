@@ -230,10 +230,30 @@ export default function ProSetupCompleteScreen({ navigation }) {
               <View style={{ flex: 1 }}>
                 <Text style={styles.routineTitle}>4 · Check in once a week</Text>
                 <Text style={styles.routineBody}>
-                  End of your training week, two minutes to review how it went. Precision Coaching adjusts your calories from your check-in data — automatically, with a written rationale.
+                  End of your training week, two minutes to review how it went. Precision Coaching adjusts your calories from your check-in data, automatically, with a written rationale.
                 </Text>
               </View>
             </View>
+          </View>
+
+          {/* Founder note — appears once at the end of Pro setup. Per the
+              competitive-landscape research, visible founder attention is
+              one of the cheapest credibility signals in this category
+              (Gravitus, RepCount both get praised for it). Sits above the
+              Start button so it's the last thing the user reads before
+              entering the app. */}
+          <View style={styles.founderCard}>
+            <Text style={styles.founderLabel}>A NOTE FROM ALLAN</Text>
+            <Text style={styles.founderBody}>
+              I used a paper log book for years. It worked but it was slow, and it was hard to see real progress without flipping through pages.
+            </Text>
+            <Text style={styles.founderBody}>
+              I tried other apps too. None of them quite fit how I wanted to train. And a good coach can be brilliant, but it's not always an option for everyone. It can be expensive, hard to find, or just not the right fit at the time.
+            </Text>
+            <Text style={styles.founderBody}>
+              I wanted something simple that helps you know what to do, see your progress, and keep getting better. So I built it for me. I hope it works for you too.
+            </Text>
+            <Text style={styles.founderSig}>Allan</Text>
           </View>
         </Animated.View>
 
@@ -328,6 +348,30 @@ const styles = StyleSheet.create({
   },
   splitBadgeText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textSecondary },
   splitName: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary, flex: 1 },
+
+  // Founder note card — sits at the bottom of Pro setup. Distinct visual
+  // language from the routine cards above so it reads as personal rather
+  // than UI: no icon header, subdued background, accent-coloured signature.
+  founderCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg, padding: spacing.lg,
+    borderWidth: 1, borderColor: colors.border,
+    marginTop: spacing.md,
+    gap: spacing.sm,
+  },
+  founderLabel: {
+    fontSize: 10, fontWeight: fontWeight.black,
+    color: colors.textMuted, letterSpacing: 1.5,
+    marginBottom: spacing.xs,
+  },
+  founderBody: {
+    fontSize: fontSize.sm, color: colors.textSecondary,
+    lineHeight: 21,
+  },
+  founderSig: {
+    fontSize: fontSize.md, fontWeight: fontWeight.bold,
+    color: colors.primary, marginTop: spacing.xs,
+  },
 
   startBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',

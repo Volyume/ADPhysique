@@ -839,6 +839,46 @@ export async function getWorkoutSetsForWorkout(workoutId) {
   return rows.map(rowToCamel);
 }
 
+/**
+ * Return per-workout tonnage totals for the last N days, filtered by routine.
+ * Used by the Workout Summary screen to compare the current session to the
+ * recent moving average (and rank it within the window).
+ *
+ * Aggregates in SQL so we don't pay an N+1 trip per workout. Excludes
+ * warm-up sets — they don't count toward "working tonnage" and including
+ * them would inflate the average vs the headline tonnage shown on the
+ * summary screen.
+ */
+export async function getRoutineWorkoutTonnages(userId, routineId, sinceMs, excludeWorkoutId = null) {
+  if (!userId || !routineId) return [];
+  const d = await db();
+  const params = [userId, routineId, sinceMs];
+  let sql = `
+    SELECT
+      w.id AS workout_id,
+      w.started_at AS started_at,
+      COALESCE(SUM(
+        CASE
+          WHEN ws.set_type = 'warmup' THEN 0
+          ELSE COALESCE(ws.weight, 0) * COALESCE(ws.actual_reps, 0)
+        END
+      ), 0) AS tonnage
+    FROM workouts w
+    LEFT JOIN workout_sets ws ON ws.workout_id = w.id
+    WHERE w.user_id = ?
+      AND w.routine_id = ?
+      AND w.started_at >= ?
+      AND w.is_completed = 1
+  `;
+  if (excludeWorkoutId) {
+    sql += ' AND w.id != ?';
+    params.push(excludeWorkoutId);
+  }
+  sql += ' GROUP BY w.id ORDER BY w.started_at DESC';
+  const rows = await d.getAllAsync(sql, params);
+  return rows.map(rowToCamel);
+}
+
 export async function getWorkoutSetsForExercise(exerciseId, userId, limit = 100) {
   const d = await db();
   const rows = await d.getAllAsync(

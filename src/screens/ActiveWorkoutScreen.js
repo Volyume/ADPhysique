@@ -95,6 +95,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [prevSets, setPrevSets] = useState([]);
   const [allTimeSets, setAllTimeSets] = useState([]);
   const [loggedSets, setLoggedSets] = useState([]);
+  // Inline "Why?" chip — peek at the coaching cue (routine_exercise.notes
+  // or the exercise's default notes) without opening the full Info modal.
+  // Closes automatically when the exercise changes so a stale expansion
+  // from the previous exercise doesn't bleed into the next one.
+  const [showWhy, setShowWhy] = useState(false);
   // Flashes the SetEntry card border amber for ~700ms after a successful
   // Log set, so the tap is acknowledged visibly. Resets via a tracked
   // timeout so cycling exercises mid-flash doesn't leave it stuck on.
@@ -621,6 +626,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         }
       } catch (_e) {}
     }
+
+    // Reset the inline "Why?" panel so the previous exercise's expansion
+    // doesn't bleed into the next one.
+    setShowWhy(false);
 
     loadHistory();
   }, [exercise?.id, currentExerciseIndex]);
@@ -1206,6 +1215,36 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 </Text>
               </View>
             )}
+            {/* "Why?" chip — quick inline peek at the coaching cue for this
+                exercise. Pulls from routine_exercise.notes (the plan author's
+                cue) and falls back to FORM_TIPS / the exercise's default
+                notes. The full Info modal still exists for the deep dive;
+                this is the in-glance version that doesn't take you off the
+                logging screen. */}
+            {(() => {
+              const cue = routineExercise?.notes || FORM_TIPS[exercise?.name] || exercise?.notes;
+              if (!cue) return null;
+              return (
+                <>
+                  <TouchableOpacity
+                    style={[styles.whyChip, showWhy && styles.whyChipActive]}
+                    onPress={() => { Haptics.selectionAsync().catch(() => {}); setShowWhy(v => !v); }}
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={showWhy ? 'Hide coaching cue' : 'Show coaching cue'}
+                  >
+                    <Ionicons name="sparkles-outline" size={12} color={colors.primary} />
+                    <Text style={styles.whyChipText}>{showWhy ? 'Hide cue' : 'Why this exercise?'}</Text>
+                    <Ionicons name={showWhy ? 'chevron-up' : 'chevron-down'} size={12} color={colors.primary} />
+                  </TouchableOpacity>
+                  {showWhy && (
+                    <View style={styles.whyPanel}>
+                      <Text style={styles.whyPanelText}>{cue}</Text>
+                    </View>
+                  )}
+                </>
+              );
+            })()}
             {currentSet.setType !== 'warmup' && targetReason && (
               <View style={styles.coachReasonChip}>
                 <Ionicons name="sparkles-outline" size={11} color={colors.primary} />
@@ -2257,6 +2296,22 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start', marginBottom: spacing.xs,
   },
   inlineTargetText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
+  whyChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.sm, paddingVertical: 4,
+    borderRadius: radius.sm,
+    borderWidth: 1, borderColor: colors.primary + '40',
+    backgroundColor: colors.primaryBg,
+  },
+  whyChipActive: { borderColor: colors.primary + '70' },
+  whyChipText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
+  whyPanel: {
+    backgroundColor: colors.surface2, borderRadius: radius.sm,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  whyPanelText: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
   coachReasonChip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: colors.surface2, borderRadius: radius.sm,

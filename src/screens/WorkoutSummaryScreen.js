@@ -12,7 +12,7 @@ import {
   getActivePlan, getRoutinesForPlan, advancePlanNextWorkout,
   createAdaptationEvent, getCurrentMesocycleWeek,
   getNextMesocycleWeek, upsertPlannedMuscleVolume, getRecentAdaptationEvents,
-  saveWeeklyCheckin, saveNextTimeNote,
+  saveWeeklyCheckin, saveNextTimeNote, getRoutineWorkoutTonnages,
 } from '../lib/database';
 import { calculateWeeklyVolume, getVolumeStatus, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine, computeAdaptiveDecision, VOLUME_LANDMARKS, evaluateDeloadTriggers } from '../lib/algorithms';
 import { evaluateAutoReg, predictDeloadWeek, getMesoSchedule } from '../lib/mesocycle';
@@ -100,6 +100,12 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const [templateModalVisible, setTemplateModalVisible] = useState(false);
   const [templateName, setTemplateName] = useState('');
 
+  // 4-week comparison: how does this session stack up against the same
+  // routine over the last 4 weeks? null while loading or when there's no
+  // routine / no prior history to compare to (a one-off session is also
+  // an "n/a" case).
+  const [comparison, setComparison] = useState(null);
+
   const feedbackDebounceRef = useRef(null);
 
   useEffect(() => {
@@ -121,6 +127,42 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   useEffect(() => {
     loadVolumeAndHistory();
   }, []);
+
+  // 4-week comparison against prior sessions of the SAME routine. Skipped
+  // for one-off sessions (no routineId) and for read-only history views
+  // where the "current" workout already lives in the dataset and the
+  // ranking would double-count.
+  useEffect(() => {
+    if (readOnly || !routineId || !user?.id) return;
+    const since = Date.now() - 28 * 24 * 60 * 60 * 1000; // 4 weeks
+    getRoutineWorkoutTonnages(user.id, routineId, since, workoutId)
+      .then(prior => {
+        if (!prior.length) {
+          setComparison({ verdict: 'first', priorCount: 0 });
+          return;
+        }
+        const tonnages = prior.map(p => p.tonnage || 0).filter(t => t > 0);
+        if (!tonnages.length) {
+          setComparison({ verdict: 'first', priorCount: 0 });
+          return;
+        }
+        const avg = tonnages.reduce((a, b) => a + b, 0) / tonnages.length;
+        const current = tonnage || 0;
+        const pct = avg > 0 ? Math.round(((current - avg) / avg) * 100) : 0;
+        // Rank: position of `current` if inserted into sorted list (desc).
+        // 1 = top of the window. of = total sessions inc. current.
+        const allSorted = [...tonnages, current].sort((a, b) => b - a);
+        const position = allSorted.indexOf(current) + 1;
+        const total = allSorted.length;
+        let verdict;
+        if (position === 1) verdict = 'best';
+        else if (pct >= 10) verdict = 'up';
+        else if (pct <= -10) verdict = 'down';
+        else verdict = 'on_pace';
+        setComparison({ verdict, pct, position, total, priorCount: tonnages.length, avgTonnage: Math.round(avg) });
+      })
+      .catch(() => setComparison(null));
+  }, [readOnly, routineId, user?.id, workoutId, tonnage]);
 
   useEffect(() => {
     const suggestions = getAutoRegSuggestion(feedback, weeklyVolume);
@@ -486,6 +528,46 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             tooltip={'Total weight moved this session: sets × reps × weight added together. A rough measure of how much work you did. More is not always better; quality of effort matters more than raw numbers.'}
           />
         </View>
+
+        {/* 4-week comparison — only when we have at least one prior session
+            of this routine. Lives right under the stat row so the user
+            reads "your numbers" and then "how those numbers compare". */}
+        {comparison && comparison.priorCount > 0 && (() => {
+          const { verdict, pct, position, total, priorCount } = comparison;
+          let headline, sub, accent;
+          if (verdict === 'best') {
+            headline = `Strongest session in 4 weeks`;
+            sub = `Top of ${total} sessions logged for this routine.`;
+            accent = colors.gold;
+          } else if (verdict === 'up') {
+            headline = `${pct >= 0 ? '+' : ''}${pct}% vs your 4-week average`;
+            sub = `Position ${position} of ${total} sessions in the window.`;
+            accent = colors.success;
+          } else if (verdict === 'down') {
+            headline = `${pct}% vs your 4-week average`;
+            sub = `Recovery or stress matter. Don't chase yesterday's volume; trust the trend.`;
+            accent = colors.textSecondary;
+          } else {
+            headline = `On pace with your last ${priorCount} session${priorCount !== 1 ? 's' : ''}`;
+            sub = `Within ±10% of your 4-week average. Consistency is the goal.`;
+            accent = colors.primary;
+          }
+          return (
+            <View style={[styles.compareCard, { borderColor: accent + '40' }]}>
+              <View style={styles.compareIconWrap}>
+                <Ionicons
+                  name={verdict === 'best' ? 'trophy-outline' : verdict === 'up' ? 'trending-up-outline' : verdict === 'down' ? 'trending-down-outline' : 'analytics-outline'}
+                  size={18}
+                  color={accent}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.compareHeadline, { color: accent }]}>{headline}</Text>
+                <Text style={styles.compareSub}>{sub}</Text>
+              </View>
+            </View>
+          );
+        })()}
 
         {(() => {
           const display = readOnly
@@ -987,4 +1069,21 @@ const styles = StyleSheet.create({
     borderRadius: radius.md, backgroundColor: colors.primary,
   },
   templateModalSaveText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.background },
+
+  // 4-week comparison card — same surface treatment as other summary
+  // cards but borderColor is set inline per-verdict (gold for best, green
+  // for up, neutral for on-pace, muted for down).
+  compareCard: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
+    borderWidth: 1,
+    marginTop: spacing.md,
+  },
+  compareIconWrap: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: colors.surface2,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  compareHeadline: { fontSize: fontSize.md, fontWeight: fontWeight.bold },
+  compareSub: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 3, lineHeight: 16 },
 });
