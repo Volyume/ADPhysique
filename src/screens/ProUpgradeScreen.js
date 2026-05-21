@@ -74,15 +74,16 @@ export default function ProUpgradeScreen({ navigation }) {
         setBusy(false);
         return;
       }
-      // Poll for a session for up to 8 seconds. The deep-link handler in
-      // App.js calls exchangeCodeForSession asynchronously, and we want
-      // to flip the tier as soon as it lands.
+      // Poll for the session for up to 3 s — usually it's there on the
+      // first check because exchangeCodeForSession has already fired by
+      // the time openAuthSessionAsync returns. 8 s was overkill and was
+      // the source of the long spinner users complained about.
       const sb = getSupabaseClient();
       let signedInId = null;
-      for (let i = 0; i < 16; i++) {
-        await new Promise(r => setTimeout(r, 500));
+      for (let i = 0; i < 6; i++) {
         const { data: { session: s } } = await sb.auth.getSession();
         if (s?.user?.id) { signedInId = s.user.id; break; }
+        await new Promise(r => setTimeout(r, 500));
       }
       if (signedInId) {
         await activatePro(signedInId, { isNew: false });

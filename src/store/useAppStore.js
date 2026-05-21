@@ -199,6 +199,20 @@ const useAppStore = create((set, get) => ({
   // round-trip the just-read value back to Supabase.
   restoreSessionFromCloud: async (supabaseUserId) => {
     if (!supabaseUserId) return;
+
+    // Beta tier policy — set tier='pro' UP FRONT before any cloud reads.
+    // This must happen regardless of whether the cloud profile row exists
+    // (fresh signups don't have one yet; deleted-but-unpurged accounts
+    // never get one back). Doing it conditionally on cloudData.tier was
+    // the bug — it left tier='free' or null in the very cases where Pro
+    // needed to persist most.
+    // eslint-disable-next-line global-require
+    const { PRO_BETA_ACTIVE } = require('../lib/proGate');
+    if (PRO_BETA_ACTIVE) {
+      try { await AsyncStorage.setItem(TIER_KEY, 'pro'); } catch (_) {}
+      set({ tier: 'pro', tierChecked: true });
+    }
+
     let cloudData = null;
     try {
       // eslint-disable-next-line global-require
@@ -212,37 +226,23 @@ const useAppStore = create((set, get) => ({
         .maybeSingle();
       cloudData = data;
     } catch (_) {
-      // Offline / RLS denied — fall through with cloudData=null and treat as
-      // missing row. Safer than leaving the navigator stuck.
+      // Offline / RLS denied — fall through with cloudData=null. Tier is
+      // already set above; just skip the profile restore.
     }
 
-    // Missing cloud row OR row with null tier. Happens when:
-    //   - account was previously deleted (RPC wipes public.users_profile but
-    //     auth.users persists, so a fresh sign-in resurrects the same
-    //     user_id with no profile to restore), OR
-    //   - first-ever cloud sign-up whose row hasn't been created yet (the
-    //     auth listener fires before any syncProfile call lands).
+    // Missing cloud row. Two paths:
+    //   (a) Fresh signup — auth.users row exists, profile row hasn't been
+    //       created yet by syncProfile. firstRunComplete=false locally;
+    //       leave it false so they complete onboarding.
+    //   (b) Deleted account whose auth.users row wasn't purged (no Edge
+    //       Function deploy yet). firstRunComplete was true locally
+    //       before delete; clearAuthStateForSignOut already cleared it.
     //
-    // Two sub-cases — distinguished by whether the user already picked a
-    // tier locally:
-    //   (a) Mid sign-up flow: user already picked Pro/Free on Welcome and
-    //       is signing in from ProOnboardingScreen / FirstRunScreen. Leave
-    //       local tier alone — the onboarding flow will create the cloud
-    //       row when it completes.
-    //   (b) Returning user with a deleted account (or fresh sign-in from
-    //       the "Already have an account?" link): no local tier. Treat
-    //       this as a brand-new enrollment — force firstRunComplete=false
-    //       and leave tier null so the navigator falls back to
-    //       WelcomeStack and the user picks their tier fresh.
-    //
-    // RootNavigator detects sub-case (b) (signed-in user with no tier) and
-    // resets navigation to Welcome so the user doesn't get stuck on the
-    // Login screen they came from.
+    // In both cases, leaving firstRunComplete as the current local value
+    // is the right call. Don't actively clear it here — that was nuking
+    // legitimately-onboarded Free-upgrading-to-Pro users back through
+    // ProOnboardingStack mid-upgrade.
     if (!cloudData || !cloudData.tier) {
-      // Clear any stale firstRunComplete so we don't shortcut onboarding.
-      // Both sub-cases want a clean run through the wizard.
-      try { await AsyncStorage.removeItem(FIRST_RUN_KEY); } catch (_) {}
-      set({ firstRunComplete: false, firstRunChecked: true });
       return;
     }
 
