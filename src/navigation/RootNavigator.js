@@ -9,9 +9,9 @@ const navigationRef = createNavigationContainerRef();
 import { View, Text, Image, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-const SPLASH_HERO = require('../../assets/volyume-splash-hero.png');
-const HERO_ASPECT = 941 / 1672;
-const SPLASH_W = Math.round(Dimensions.get('window').width * 0.55);
+const SPLASH_HERO = require('../../assets/volyume-wordmark.png');
+const HERO_ASPECT = 1448 / 1086;
+const SPLASH_W = Math.round(Dimensions.get('window').width * 0.72);
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { colors, fontWeight, spacing } from '../styles/theme';
@@ -382,8 +382,34 @@ export default function RootNavigator() {
           }
         } catch (_e) {}
 
-        // No cloud session — auto-restore or create a local user (no login screen)
-        await initLocalUser();
+        // No cloud session. Validate local state before deciding what to
+        // render: if a tier was previously saved but the user never
+        // completed first-run setup, treat the local state as an
+        // abandoned setup. Clear the stale tier so the navigator falls
+        // back to WelcomeStack for a clean restart. Without this guard,
+        // closing the app on WelcomeScreen and reopening would silently
+        // re-route past Welcome based on stale AsyncStorage values.
+        try {
+          const savedTier = await AsyncStorage.getItem('@volyume_tier');
+          const firstRunDone = await AsyncStorage.getItem('@volyume_first_run_complete');
+          if (savedTier && firstRunDone !== 'true') {
+            await AsyncStorage.removeItem('@volyume_tier').catch(() => {});
+            useAppStore.setState({ tier: null });
+          }
+        } catch (_e) {}
+
+        // Only RESTORE a previously-established local user. Never
+        // auto-create one in the bootstrap path. A fresh install (no
+        // LOCAL_USER_KEY in AsyncStorage) must route through Welcome
+        // first, where tapping Free explicitly calls initLocalUser.
+        // This prevents a phantom local user appearing on every cold
+        // launch and silently logging the user in as Free.
+        const existingLocalId = await AsyncStorage.getItem('@volyume_local_user_id');
+        if (existingLocalId) {
+          await initLocalUser();
+        } else {
+          setAuthLoading(false);
+        }
         try {
           const raw = await AsyncStorage.getItem('@volyume_notification_prefs');
           if (raw) {
@@ -393,8 +419,10 @@ export default function RootNavigator() {
         } catch (_e) {}
       } catch (err) {
         console.error('bootstrap failed:', err);
-        // Failsafe: ensure auth loading clears even if initLocalUser throws
-        await initLocalUser().catch(() => setAuthLoading(false));
+        // Failsafe: release auth loading so the splash doesn't hang.
+        // Don't fall back to initLocalUser — fresh installs should land
+        // on Welcome, not be auto-created into a Free user.
+        setAuthLoading(false);
       }
     }
 
@@ -596,15 +624,6 @@ function SplashScreen() {
           resizeMode="contain"
         />
       </Animated.View>
-
-      <Animated.Text
-        style={[
-          splashStyles.wordmark,
-          { opacity: wordOpacity, transform: [{ translateY: wordY }] },
-        ]}
-      >
-        Volyume
-      </Animated.Text>
 
       <Animated.View style={[splashStyles.accent, { transform: [{ scaleX: accentScaleX }] }]} />
 
