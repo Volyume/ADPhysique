@@ -14,6 +14,7 @@ import { getAllWorkouts, getAllWorkoutSets, getAllExercises, createWorkout, getW
 import { logError } from '../lib/errorLog';
 import { calculateTonnage } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
+import { SkeletonRow } from '../components/Skeleton';
 import { useShallow } from 'zustand/react/shallow';
 
 const FILTERS = [
@@ -550,7 +551,17 @@ export default function WorkoutHistoryScreen({ navigation }) {
         contentContainerStyle={styles.list}
         ListHeaderComponent={listHeader}
         ListEmptyComponent={
-          !loading ? (
+          loading ? (
+            // Skeleton rows instead of a blank screen while SQLite reads.
+            // Local reads are fast but the placeholder makes the load
+            // window feel instant even on a fresh database.
+            <View style={{ gap: spacing.md }}>
+              <SkeletonRow />
+              <SkeletonRow />
+              <SkeletonRow />
+              <SkeletonRow />
+            </View>
+          ) : (
             <View style={styles.empty}>
               <Ionicons name="calendar-outline" size={48} color={colors.textMuted} />
               <Text style={styles.emptyTitle}>No sessions logged yet</Text>
@@ -558,7 +569,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
                 Completed workouts appear here. Each session is saved automatically when you finish.
               </Text>
             </View>
-          ) : null
+          )
         }
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
       />
