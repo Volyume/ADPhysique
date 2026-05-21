@@ -89,6 +89,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     startRestTimer, showPRCelebration, endWorkout, workoutStartTime,
     lastActivityAt, updateLastActivity,
   } = store;
+  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
 
   const [currentSet, setCurrentSet] = useState({ ...DEFAULT_SET });
   const [prevSets, setPrevSets] = useState([]);
@@ -398,11 +399,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     Haptics.selectionAsync().catch(() => {});
   }, [currentSGI, pairedExerciseName, exercise?.name]);
 
-  // First-use info tip: pulse the Info button until tapped
+  // First-use info tip: pulse the Info button until tapped. The pulse itself
+  // is suppressed under Reduce Motion (the static badge still shows so the
+  // user can find the button), only the looping animation is killed.
   useEffect(() => {
     AsyncStorage.getItem('@volyume_seen_workout_info').then(val => {
       if (val === 'true') return;
       setShowInfoTipPulse(true);
+      if (reduceMotion) return;
       infoPulseLoop.current = Animated.loop(
         Animated.sequence([
           Animated.timing(infoPulseAnim, { toValue: 1.35, duration: 700, useNativeDriver: true }),
@@ -412,7 +416,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       infoPulseLoop.current.start();
     });
     return () => { infoPulseLoop.current?.stop(); };
-  }, []);
+  }, [reduceMotion]);
 
   // Workout timer — always derived from workoutStartTime so backgrounding never
   // causes drift. Re-syncs on every tick and on app-foreground events.

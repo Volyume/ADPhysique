@@ -89,6 +89,14 @@ const stackOptions = {
   cardStyle: { backgroundColor: colors.background },
 };
 
+// Pulled from the store at render time so toggling Reduce Motion takes
+// effect on the next navigation push without an app restart. Returns an
+// override merged into the per-stack screenOptions in each navigator.
+function useStackMotionOverride() {
+  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  return reduceMotion ? { animationEnabled: false } : null;
+}
+
 function HomeStack({ navigation }) {
   useEffect(() => {
     return navigation.addListener('tabPress', () => {
@@ -96,7 +104,7 @@ function HomeStack({ navigation }) {
     });
   }, [navigation]);
   return (
-    <Stack.Navigator screenOptions={stackOptions}>
+    <Stack.Navigator screenOptions={{ ...stackOptions, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
       <Stack.Screen name="BuildWorkout" component={BuildWorkoutScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} options={{ headerShown: false }} />
@@ -117,7 +125,7 @@ function PlansStack({ navigation }) {
     });
   }, [navigation]);
   return (
-    <Stack.Navigator screenOptions={stackOptions}>
+    <Stack.Navigator screenOptions={{ ...stackOptions, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="Plans" component={PlansScreen} options={{ headerShown: false }} />
       <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ title: 'Plan' }} />
       <Stack.Screen name="RoutineDetail" component={RoutineDetailScreen} options={{ title: 'Edit Workout' }} />
@@ -139,7 +147,7 @@ function ProgressStack({ navigation }) {
     });
   }, [navigation]);
   return (
-    <Stack.Navigator screenOptions={stackOptions}>
+    <Stack.Navigator screenOptions={{ ...stackOptions, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="Analytics" component={AnalyticsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} options={{ title: 'Workout History' }} />
       <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ title: 'Session Complete' }} />
@@ -163,7 +171,7 @@ function ProfileStack({ navigation }) {
     });
   }, [navigation]);
   return (
-    <Stack.Navigator screenOptions={stackOptions}>
+    <Stack.Navigator screenOptions={{ ...stackOptions, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="AthleteHub" component={AthleteHubScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
       <Stack.Screen name="NutritionTargets" component={GatedNutritionTargets} options={{ title: 'Nutrition Targets' }} />
@@ -221,7 +229,7 @@ function MainTabs() {
 
 function WelcomeStack() {
   return (
-    <Stack.Navigator screenOptions={{ ...stackOptions, headerShown: false }}>
+    <Stack.Navigator screenOptions={{ ...stackOptions, headerShown: false, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Onboarding" component={OnboardingScreen} />
@@ -231,7 +239,7 @@ function WelcomeStack() {
 
 function FirstRunStack() {
   return (
-    <Stack.Navigator screenOptions={{ ...stackOptions, headerShown: false }}>
+    <Stack.Navigator screenOptions={{ ...stackOptions, headerShown: false, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="FirstRunBranch" component={FirstRunScreen} />
       <Stack.Screen name="OnboardingQuiz" component={OnboardingQuizScreen} />
       <Stack.Screen name="CoachBuilder" component={CoachBuilderScreen} />
@@ -244,7 +252,7 @@ function FirstRunStack() {
 
 function ProOnboardingStack() {
   return (
-    <Stack.Navigator screenOptions={{ ...stackOptions, headerShown: false }}>
+    <Stack.Navigator screenOptions={{ ...stackOptions, headerShown: false, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="ProOnboarding" component={ProOnboardingScreen} />
       <Stack.Screen name="OnboardingQuiz" component={OnboardingQuizScreen} />
       <Stack.Screen name="CoachBuilder" component={CoachBuilderScreen} />
@@ -436,15 +444,19 @@ export default function RootNavigator() {
 }
 
 function SplashScreen() {
-  const heroOpacity  = useRef(new Animated.Value(0)).current;
-  const heroScale    = useRef(new Animated.Value(0.86)).current;
-  const heroY        = useRef(new Animated.Value(16)).current;
-  const wordOpacity  = useRef(new Animated.Value(0)).current;
-  const wordY        = useRef(new Animated.Value(12)).current;
-  const accentScaleX = useRef(new Animated.Value(0)).current;
-  const tagOpacity   = useRef(new Animated.Value(0)).current;
+  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  // Reduce Motion: start every animated value at its end state so the splash
+  // appears instantly without the hero scale / fade / accent-bar sweep.
+  const heroOpacity  = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+  const heroScale    = useRef(new Animated.Value(reduceMotion ? 1 : 0.86)).current;
+  const heroY        = useRef(new Animated.Value(reduceMotion ? 0 : 16)).current;
+  const wordOpacity  = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+  const wordY        = useRef(new Animated.Value(reduceMotion ? 0 : 12)).current;
+  const accentScaleX = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+  const tagOpacity   = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
 
   useEffect(() => {
+    if (reduceMotion) return;
     Animated.sequence([
       Animated.parallel([
         Animated.timing(heroOpacity, {

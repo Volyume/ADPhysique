@@ -13,6 +13,7 @@ import { getActivePlan, getRoutinesForPlan } from '../lib/database';
 
 export default function ProSetupCompleteScreen({ navigation }) {
   const { user, userProfile, completeFirstRun } = useAppStore();
+  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   const firstName = userProfile?.firstName || 'there';
 
   const [nutritionSummary, setNutritionSummary] = useState(null);
@@ -20,11 +21,12 @@ export default function ProSetupCompleteScreen({ navigation }) {
   const [planName, setPlanName] = useState(null);
   const [planOpen, setPlanOpen] = useState(false);
 
-  const opacity = useRef(new Animated.Value(0)).current;
-  const slideY  = useRef(new Animated.Value(20)).current;
-  const checkScale = useRef(new Animated.Value(0)).current;
+  const opacity    = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+  const slideY     = useRef(new Animated.Value(reduceMotion ? 0 : 20)).current;
+  const checkScale = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
 
   useEffect(() => {
+    if (reduceMotion) return;
     Animated.sequence([
       Animated.spring(checkScale, {
         toValue: 1, tension: 60, friction: 6, useNativeDriver: true,

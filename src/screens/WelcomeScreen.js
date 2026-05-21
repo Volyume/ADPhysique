@@ -25,11 +25,13 @@ const PRO_BULLETS = [
 
 export default function WelcomeScreen({ navigation }) {
   const { setTier, initLocalUser, user } = useAppStore();
+  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
 
-  const fadeIn   = useRef(new Animated.Value(0)).current;
-  const slideUp  = useRef(new Animated.Value(24)).current;
+  const fadeIn   = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+  const slideUp  = useRef(new Animated.Value(reduceMotion ? 0 : 24)).current;
 
   useEffect(() => {
+    if (reduceMotion) return;
     Animated.parallel([
       Animated.timing(fadeIn, { toValue: 1, duration: 480, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
       Animated.timing(slideUp, { toValue: 0, duration: 480, easing: Easing.out(Easing.cubic), useNativeDriver: true }),

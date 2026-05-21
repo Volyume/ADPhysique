@@ -498,7 +498,7 @@ export default function AnalyticsScreen({ navigation }) {
             progress={mesoProgress()}
             tonnageBars={mesoTonnage}
             onPress={() => navigation.getParent()?.navigate('PlansTab', { screen: 'MesocycleBuilder', initial: false })}
-            onBuild={() => navigation.getParent()?.navigate('PlansTab', { screen: 'CoachBuilder', initial: false })}
+            onBuild={() => navigation.getParent()?.navigate('PlansTab', { screen: 'PlanLibrary', initial: false })}
           />
 
           {/* Training trend (last 6 sessions' fatigue) — moved from Train tab */}
