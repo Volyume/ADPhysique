@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';
+import PressableCard from '../components/PressableCard';
 import {
   getActivePlan, getAllPlansForUser,
   getWorkoutTemplates, getPlanWorkoutCounts, getAllRoutineExerciseCounts,
@@ -567,11 +568,11 @@ export default function PlansScreen({ navigation }) {
           {actionCards.map(card => {
             const featured = card.featured !== undefined ? card.featured : Boolean(card.badge);
             return (
-              <TouchableOpacity
+              <PressableCard
                 key={card.id}
                 style={[styles.actionCard, featured && styles.actionCardFeatured]}
                 onPress={() => navigation.navigate(card.screen)}
-                activeOpacity={0.75}
+                accessibilityLabel={card.title}
               >
                 <View style={[styles.actionCardIcon, featured && styles.actionCardIconFeatured]}>
                   <Ionicons name={card.icon} size={24} color={colors.primary} />
@@ -588,7 +589,7 @@ export default function PlansScreen({ navigation }) {
                   <Text style={styles.actionCardDesc}>{card.description}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={featured ? colors.primary : colors.textMuted} />
-              </TouchableOpacity>
+              </PressableCard>
             );
           })}
         </View>

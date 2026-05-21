@@ -1153,10 +1153,10 @@ export default function HomeScreen({ navigation }) {
               </View>
             )}
 
-            <TouchableOpacity
+            <PressableCard
               style={styles.quickStartCard}
               onPress={() => startBlankSession()}
-              activeOpacity={0.75}
+              accessibilityLabel="Start your first session"
             >
               <View style={styles.quickStartIcon}>
                 <Ionicons name="barbell-outline" size={28} color={colors.primary} />
@@ -1166,7 +1166,7 @@ export default function HomeScreen({ navigation }) {
                 <Text style={styles.quickStartSub}>Log sets as you go. No plan needed to begin. We will build your profile as you train.</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-            </TouchableOpacity>
+            </PressableCard>
 
             {tier !== 'pro' && (
               <>
@@ -1524,7 +1524,7 @@ function WeekBar({ value, target, label, display }) {
 
 function PlanBuilderCard({ icon, title, desc, badge, onPress }) {
   return (
-    <TouchableOpacity style={styles.builderCard} onPress={onPress} activeOpacity={0.75}>
+    <PressableCard style={styles.builderCard} onPress={onPress} accessibilityLabel={title}>
       <View style={styles.builderIconWrap}>
         <Ionicons name={icon} size={20} color={colors.primary} />
       </View>
@@ -1540,7 +1540,7 @@ function PlanBuilderCard({ icon, title, desc, badge, onPress }) {
         <Text style={styles.builderDesc}>{desc}</Text>
       </View>
       <Ionicons name="chevron-forward" size={15} color={colors.textMuted} />
-    </TouchableOpacity>
+    </PressableCard>
   );
 }
 
