@@ -7,7 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 
-const HERO = require('../../assets/volyume-icon.png');
+const HERO = require('../../assets/volyume-wordmark.png');
+const HERO_ASPECT = 1448 / 1086;
 
 const FREE_BULLETS = [
   'Unlimited workout logging, fully offline',
@@ -69,7 +70,6 @@ export default function WelcomeScreen({ navigation }) {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Animated.View style={[styles.hero, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
           <Image source={HERO} style={styles.logoImg} resizeMode="contain" />
-          <Text style={styles.wordmark}>VOLYUME</Text>
           <Text style={styles.tagline}>Less thinking. More lifting.</Text>
         </Animated.View>
 
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1, padding: spacing.xl, gap: spacing.xl, paddingBottom: spacing.xxl },
 
   hero: { alignItems: 'center', gap: spacing.sm, paddingTop: spacing.xl },
-  logoImg: { width: 88, height: 88, borderRadius: 20 },
+  logoImg: { width: Math.round(180 * HERO_ASPECT), height: 180 },
   wordmark: {
     fontSize: 28, fontWeight: fontWeight.black, color: colors.textPrimary,
     letterSpacing: 5, marginTop: spacing.xs,
