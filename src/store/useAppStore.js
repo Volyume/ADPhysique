@@ -341,6 +341,36 @@ const useAppStore = create((set, get) => ({
       set({ userProfile: updated });
     }
   },
+
+  // ── Accessibility preferences ─────────────────────────────────────────
+  // Loaded from AsyncStorage on first read via initAccessibility(). Each
+  // field is OS-style: changes take effect immediately for components that
+  // subscribe via useAppStore selectors. Components that import theme
+  // tokens statically (most existing screens today) will reflect the
+  // changes after the app is restarted — that's noted in the Settings UI.
+  accessibility: {
+    largerText: false,    // applies a 1.2× multiplier via the useAccessibleFontSize hook
+    higherContrast: false, // brightens muted text + thickens borders via theme tokens
+    colorBlindSafe: false, // swaps red/green success/error to blue/orange
+    reduceMotion: false,   // skips PRCelebration particles, RestTimer pulse, big spring anims
+  },
+  accessibilityLoaded: false,
+  loadAccessibility: async () => {
+    try {
+      const raw = await AsyncStorage.getItem('@volyume_a11y_prefs');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        set({ accessibility: { ...get().accessibility, ...parsed }, accessibilityLoaded: true });
+      } else {
+        set({ accessibilityLoaded: true });
+      }
+    } catch (_) { set({ accessibilityLoaded: true }); }
+  },
+  setAccessibilityPref: async (key, value) => {
+    const next = { ...get().accessibility, [key]: value };
+    set({ accessibility: next });
+    try { await AsyncStorage.setItem('@volyume_a11y_prefs', JSON.stringify(next)); } catch (_) {}
+  },
 }));
 
 export default useAppStore;

@@ -19,6 +19,7 @@ export default function RestTimer() {
   // `useAppStore()` without a selector re-renders this on every store
   // mutation (PR celebrations, set saves, profile updates, etc.) which
   // ran through every second of every workout.
+  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   const {
     restTimerActive, restTimerRemaining, restTimerDuration,
     stopRestTimer, tickRestTimer, addRestTime,
@@ -53,11 +54,16 @@ export default function RestTimer() {
       const remaining = restTimerRemaining > 0 ? restTimerRemaining : restTimerDuration;
       const startValue = restTimerDuration > 0 ? remaining / restTimerDuration : 1;
       progressAnim.setValue(startValue);
-      Animated.timing(progressAnim, {
-        toValue: 0,
-        duration: remaining * 1000,
-        useNativeDriver: false,
-      }).start();
+      // Reduce-motion bypasses the continuous progress animation; the bar
+      // just jumps each second as the numeric timer ticks. Less visual
+      // movement for vestibular-sensitive users.
+      if (!reduceMotion) {
+        Animated.timing(progressAnim, {
+          toValue: 0,
+          duration: remaining * 1000,
+          useNativeDriver: false,
+        }).start();
+      }
       intervalRef.current = setInterval(() => { tickRestTimer(); }, 1000);
       // Post lock-screen notification and schedule the done alert
       scheduleRestNotif(remaining, currentExerciseName).then(id => {
@@ -81,11 +87,13 @@ export default function RestTimer() {
     if (!restTimerActive || restTimerDuration <= 0 || restTimerRemaining <= 0) return;
     progressAnim.stopAnimation();
     progressAnim.setValue(restTimerRemaining / restTimerDuration);
-    Animated.timing(progressAnim, {
-      toValue: 0,
-      duration: restTimerRemaining * 1000,
-      useNativeDriver: false,
-    }).start();
+    if (!reduceMotion) {
+      Animated.timing(progressAnim, {
+        toValue: 0,
+        duration: restTimerRemaining * 1000,
+        useNativeDriver: false,
+      }).start();
+    }
     // We rebind on every restTimerRemaining change which is once per
     // second; the stopAnimation + setValue + start is cheap. The previous
     // useEffect on [restTimerActive] only fired once when the timer

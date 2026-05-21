@@ -189,7 +189,16 @@ const eb = StyleSheet.create({
 export default function App() {
   const prCelebration = useAppStore(s => s.prCelebration);
   const hidePRCelebration = useAppStore(s => s.hidePRCelebration);
+  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  const accessibilityLoaded = useAppStore(s => s.accessibilityLoaded);
+  const loadAccessibility = useAppStore(s => s.loadAccessibility);
   const [calm, setCalm] = useState(false);
+
+  // Hydrate accessibility prefs once on mount so the toggles take effect
+  // before any animation-heavy component renders.
+  useEffect(() => {
+    if (!accessibilityLoaded) loadAccessibility();
+  }, [accessibilityLoaded, loadAccessibility]);
 
   useEffect(() => {
     if (prCelebration) getWellbeingMode().then(m => setCalm(isCalm(m)));
@@ -309,7 +318,10 @@ export default function App() {
             <PRCelebration
               pr={prCelebration}
               onDismiss={hidePRCelebration}
-              subdued={calm}
+              // Honour either calm-mode (wellbeing preference) OR the
+              // accessibility "reduce motion" pref. Both should suppress
+              // particles + heavy spring animations.
+              subdued={calm || reduceMotion}
             />
           )}
         </SafeAreaProvider>

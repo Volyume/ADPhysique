@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, TextInput,
 } from 'react-native';
@@ -50,7 +50,7 @@ function SectionHeader({ title }) {
 }
 
 export default function SettingsScreen({ navigation }) {
-  const { user, setUser, setSession, clearAuthStateForSignOut, units, setUnits, bodyWeightUnits, setBodyWeightUnits, barWeight, setBarWeight, userProfile, saveLocalProfile, tier, setTier } =
+  const { user, setUser, setSession, clearAuthStateForSignOut, units, setUnits, bodyWeightUnits, setBodyWeightUnits, barWeight, setBarWeight, userProfile, saveLocalProfile, tier, setTier, accessibility, setAccessibilityPref, loadAccessibility, accessibilityLoaded } =
     useAppStore(useShallow(s => ({
       user: s.user, setUser: s.setUser, setSession: s.setSession,
       clearAuthStateForSignOut: s.clearAuthStateForSignOut,
@@ -59,7 +59,18 @@ export default function SettingsScreen({ navigation }) {
       barWeight: s.barWeight, setBarWeight: s.setBarWeight,
       userProfile: s.userProfile, saveLocalProfile: s.saveLocalProfile,
       tier: s.tier, setTier: s.setTier,
+      accessibility: s.accessibility,
+      setAccessibilityPref: s.setAccessibilityPref,
+      loadAccessibility: s.loadAccessibility,
+      accessibilityLoaded: s.accessibilityLoaded,
     })));
+
+  // Hydrate accessibility prefs once on mount so the toggles reflect the
+  // user's saved state (otherwise they all read as 'off' until the user
+  // touches one).
+  useEffect(() => {
+    if (!accessibilityLoaded) loadAccessibility();
+  }, [accessibilityLoaded, loadAccessibility]);
   const [signingOut, setSigningOut] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [editName, setEditName] = useState(userProfile?.firstName ?? '');
@@ -388,6 +399,70 @@ export default function SettingsScreen({ navigation }) {
           )}
         </View>
 
+        {/* Accessibility */}
+        <SectionHeader title="Accessibility" />
+        <View style={styles.section}>
+          <SettingRow
+            icon="text-outline"
+            label="Larger text"
+            sub="Increases font size across the app. For more granular control, use your phone's system text size — Volyume respects it too."
+            showArrow={false}
+            rightElement={
+              <Switch
+                value={!!accessibility.largerText}
+                onValueChange={v => setAccessibilityPref('largerText', v)}
+                trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                thumbColor={accessibility.largerText ? colors.primary : colors.textMuted}
+              />
+            }
+          />
+          <SettingRow
+            icon="contrast-outline"
+            label="Higher contrast"
+            sub="Brightens secondary text and strengthens dividers. Easier to read in bright light or with low vision."
+            showArrow={false}
+            rightElement={
+              <Switch
+                value={!!accessibility.higherContrast}
+                onValueChange={v => setAccessibilityPref('higherContrast', v)}
+                trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                thumbColor={accessibility.higherContrast ? colors.primary : colors.textMuted}
+              />
+            }
+          />
+          <SettingRow
+            icon="eye-outline"
+            label="Colour-blind safe palette"
+            sub="Replaces success-green and error-red with blue and orange — distinguishable in red-green colour blindness."
+            showArrow={false}
+            rightElement={
+              <Switch
+                value={!!accessibility.colorBlindSafe}
+                onValueChange={v => setAccessibilityPref('colorBlindSafe', v)}
+                trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                thumbColor={accessibility.colorBlindSafe ? colors.primary : colors.textMuted}
+              />
+            }
+          />
+          <SettingRow
+            icon="pause-circle-outline"
+            label="Reduce motion"
+            sub="Disables PR celebration particles, rest timer animations, and other large transitions. Helps with vestibular sensitivity."
+            showArrow={false}
+            rightElement={
+              <Switch
+                value={!!accessibility.reduceMotion}
+                onValueChange={v => setAccessibilityPref('reduceMotion', v)}
+                trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                thumbColor={accessibility.reduceMotion ? colors.primary : colors.textMuted}
+              />
+            }
+          />
+          <Text style={styles.a11yNote}>
+            Reduce motion takes effect immediately. The colour and contrast options take effect the next time you reopen the app.
+          </Text>
+        </View>
+
         {/* Data */}
         <SectionHeader title="Data & privacy" />
         <View style={styles.section}>
@@ -553,6 +628,7 @@ const styles = StyleSheet.create({
   },
   appName: { fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.textPrimary, letterSpacing: 2 },
   appVersion: { fontSize: fontSize.sm, color: colors.textMuted },
+  a11yNote: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic', paddingHorizontal: spacing.md, paddingTop: spacing.xs, lineHeight: 16 },
   tagline: { fontSize: fontSize.xs, color: colors.textMuted },
   dataPrivacyNote: {
     fontSize: 11,
