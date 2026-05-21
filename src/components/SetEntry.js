@@ -69,9 +69,17 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
             // a legitimate zero-weight bodyweight set).
             value={weight == null || weight === '' ? '' : String(weight)}
             onChangeText={v => {
-              const n = parseFloat(v);
-              if (!isNaN(n)) setField('weight', Math.min(Math.max(n, 0), 500));
-              else if (v === '' || v === '.') setField('weight', v);
+              // Preserve in-progress decimal entry. The previous code did
+              //   const n = parseFloat(v); setField('weight', n)
+              // which stripped the trailing dot — typing "21." stored 21,
+              // re-rendered "21", and the decimal separator was lost so
+              // values like 21.25 kg (fractional plates) couldn't be typed.
+              // Accept up to 3 integer digits and up to 2 decimals, max 500.
+              if (v === '' || /^\d{0,3}\.?\d{0,2}$/.test(v)) {
+                const n = parseFloat(v);
+                if (!isNaN(n) && n > 500) return; // refuse over-cap
+                setField('weight', v); // keep raw string; parseFloat on read
+              }
             }}
             keyboardType="decimal-pad"
             returnKeyType="next"
