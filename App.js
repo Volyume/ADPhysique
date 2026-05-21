@@ -396,23 +396,23 @@ export default function App() {
 
   // Items surfaced ONCE on this release. Each item is a small icon +
   // headline + one-line body. Keep this list short so the sheet
-  // doesn't read as a marketing dump. The Health Connect item is only
-  // included when the native binding is actually present in this
-  // build; otherwise we'd point users at a Settings row that's hidden.
-  // eslint-disable-next-line global-require
-  const { isHealthAvailable } = require('./src/lib/health');
+  // doesn't read as a marketing dump. Health Connect is intentionally
+  // NOT listed here — the native module isn't bundled in this build
+  // (pending an Android Gradle Plugin upgrade), so promising it would
+  // send the user to a Settings row that doesn't exist. The item
+  // returns the moment the module is back.
   const whatsNewItems = [
-    ...(isHealthAvailable() ? [{
-      icon: 'fitness-outline',
-      tint: '#34C759',
-      headline: 'Health Connect, when you want it',
-      body: 'Pull morning weights from your scale and send completed sessions to your health log. Off by default. Settings · Health Connect.',
-    }] : []),
     {
       icon: 'sparkles-outline',
       tint: '#F59E0B',
       headline: 'Coach explanations on every session',
       body: 'Tap "Why this status?" on any muscle row in your session summary for a coach paragraph and next-week guidance.',
+    },
+    {
+      icon: 'trophy-outline',
+      tint: '#FFD700',
+      headline: 'Your Year of Lifts, restyled',
+      body: 'Tap into it from Progress to swipe through the highlights of your training year, one stat at a time.',
     },
     {
       icon: 'notifications-outline',

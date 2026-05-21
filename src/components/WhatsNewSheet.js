@@ -33,7 +33,7 @@ import useAppStore from '../store/useAppStore';
  * The previous mark is never read again, so the user sees the new batch
  * exactly once.
  */
-const SEEN_KEY = '@volyume_seen_whats_new_2026_05';
+const SEEN_KEY = '@volyume_seen_whats_new_2026_05_v2';
 
 export default function WhatsNewSheet({ items = [], onOpenSettings }) {
   const [visible, setVisible] = useState(false);
