@@ -292,11 +292,28 @@ export default function App() {
         const { data: { session: s } } = await sb.auth.getSession();
         const supabaseUserId = s?.user?.id;
         const localUserId = useAppStore.getState().user?.id;
-        if (!supabaseUserId || !localUserId) return;
         lastSyncAt = now;
+        if (supabaseUserId && localUserId) {
+          // eslint-disable-next-line global-require
+          const { bulkUploadLocalData } = require('./src/lib/sync');
+          bulkUploadLocalData(supabaseUserId, localUserId).catch(() => {});
+        }
+        // Ship debug logs even if not signed in — anon insert is allowed
+        // on the debug_log_uploads table so local-only beta testers also
+        // surface their errors. user_id is null for those rows; device_id
+        // (the local user id) identifies them in the dashboard.
         // eslint-disable-next-line global-require
-        const { bulkUploadLocalData } = require('./src/lib/sync');
-        bulkUploadLocalData(supabaseUserId, localUserId).catch(() => {});
+        const { flushDebugLogs } = require('./src/lib/errorLog');
+        // eslint-disable-next-line global-require
+        const Constants = require('expo-constants').default;
+        // eslint-disable-next-line global-require
+        const { Platform } = require('react-native');
+        flushDebugLogs(sb, {
+          userId: supabaseUserId,
+          deviceId: localUserId,
+          appVersion: Constants?.expoConfig?.version ?? null,
+          platform: Platform.OS,
+        }).catch(() => {});
       } catch (_) { /* offline / no session — try again next foreground */ }
     }
     const sub = AppState.addEventListener('change', state => {

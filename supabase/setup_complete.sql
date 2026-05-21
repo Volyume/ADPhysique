@@ -387,9 +387,41 @@ CREATE TABLE IF NOT EXISTS weekly_checkins_v2 (
   UNIQUE(user_id, week_start)
 );
 
+-- ─── Debug logs (beta diagnostics) ────────────────────────────────────────
+-- Auto-shipped from the on-device error-log ring buffer so beta testers'
+-- failures land in your Supabase dashboard for analysis. user_id is
+-- nullable so anon / local users can also ship logs. Service role reads
+-- in the dashboard; users only insert their own rows.
+CREATE TABLE IF NOT EXISTS debug_log_uploads (
+  id TEXT PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id),
+  device_id TEXT,                  -- @volyume_local_user_id when no auth
+  ts BIGINT NOT NULL,              -- ms since epoch from the device clock
+  level TEXT NOT NULL,             -- 'error' | 'warn' | 'info'
+  scope TEXT,
+  message TEXT,
+  stack TEXT,
+  context TEXT,
+  app_version TEXT,
+  platform TEXT,                   -- 'android' | 'ios' | 'web'
+  uploaded_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_debug_log_uploads_uploaded ON debug_log_uploads(uploaded_at DESC);
+CREATE INDEX IF NOT EXISTS idx_debug_log_uploads_user_ts  ON debug_log_uploads(user_id, ts DESC);
+CREATE INDEX IF NOT EXISTS idx_debug_log_uploads_level    ON debug_log_uploads(level, uploaded_at DESC);
+
 
 -- ═══ 2. ROW LEVEL SECURITY (always-on) ════════════════════════════════════
 -- ENABLE is idempotent; safe to re-run.
+
+ALTER TABLE debug_log_uploads ENABLE ROW LEVEL SECURITY;
+-- Anyone (anon + authenticated) can INSERT. Reads are service-role only,
+-- so the dashboard query works but clients can't peek at other users'
+-- logs. SELECT not permitted at all from the client side.
+DROP POLICY IF EXISTS "Anyone can insert debug logs" ON debug_log_uploads;
+CREATE POLICY "Anyone can insert debug logs" ON debug_log_uploads
+  FOR INSERT WITH CHECK (true);
 
 ALTER TABLE users_profile ENABLE ROW LEVEL SECURITY;
 ALTER TABLE exercises ENABLE ROW LEVEL SECURITY;

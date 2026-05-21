@@ -119,6 +119,87 @@ export async function clearErrors() {
   try { await AsyncStorage.removeItem(LOG_KEY); } catch (_) {}
 }
 
+// ─── Cloud shipping (beta diagnostics) ────────────────────────────────────
+//
+// Drains the on-device ring buffer to the Supabase `debug_log_uploads`
+// table so beta failures show up in your dashboard for analysis. Tracks
+// an upload watermark so we never re-ship the same entry twice.
+//
+// Called from:
+//   - App.js AppState 'active' handler (after foreground sync)
+//   - Settings → Diagnostics → "Send logs to support" (manual)
+//
+// Honours an opt-out preference: if `@volyume_a11y_prefs` has
+// shipDebugLogs=false, this is a no-op. Defaulted to on for beta.
+
+const UPLOAD_WATERMARK_KEY = '@volyume_log_upload_watermark';
+const SHIP_PREF_KEY = '@volyume_ship_debug_logs';
+const MAX_BATCH = 50;
+
+export async function shouldShipDebugLogs() {
+  try {
+    const pref = await AsyncStorage.getItem(SHIP_PREF_KEY);
+    if (pref == null) return true;          // default on for beta
+    return pref !== 'false';
+  } catch (_) { return true; }
+}
+
+export async function setShipDebugLogs(enabled) {
+  try { await AsyncStorage.setItem(SHIP_PREF_KEY, enabled ? 'true' : 'false'); }
+  catch (_) {}
+}
+
+export async function flushDebugLogs(supabaseClient, { force = false, userId = null, deviceId = null, appVersion = null, platform = null } = {}) {
+  if (!supabaseClient) return { sent: 0, skipped: 'no-client' };
+  if (!force && !(await shouldShipDebugLogs())) return { sent: 0, skipped: 'opted-out' };
+
+  const buf = await loadBuffer();
+  if (!buf.length) return { sent: 0, skipped: 'empty' };
+
+  let watermark = 0;
+  try {
+    const raw = await AsyncStorage.getItem(UPLOAD_WATERMARK_KEY);
+    if (raw) watermark = parseInt(raw, 10) || 0;
+  } catch (_) {}
+
+  // Buffer is newest-first; pick entries with ts > watermark.
+  const newEntries = buf.filter(e => (e.ts ?? 0) > watermark).slice(0, MAX_BATCH);
+  if (!newEntries.length) return { sent: 0, skipped: 'caught-up' };
+
+  // Generate a UUID id per row so Supabase accepts the TEXT PK.
+  function uid() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = (Math.random() * 16) | 0;
+      return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+    });
+  }
+
+  const rows = newEntries.map(e => ({
+    id: uid(),
+    user_id: userId || null,
+    device_id: deviceId || null,
+    ts: e.ts,
+    level: e.level,
+    scope: e.scope,
+    message: e.message,
+    stack: e.stack || null,
+    context: e.context || null,
+    app_version: appVersion || null,
+    platform: platform || null,
+  }));
+
+  try {
+    const { error } = await supabaseClient.from('debug_log_uploads').insert(rows);
+    if (error) return { sent: 0, error: error.message };
+    // Advance the watermark to the newest entry we just shipped.
+    const newest = Math.max(...newEntries.map(e => e.ts ?? 0));
+    try { await AsyncStorage.setItem(UPLOAD_WATERMARK_KEY, String(newest)); } catch (_) {}
+    return { sent: rows.length };
+  } catch (e) {
+    return { sent: 0, error: e?.message ?? 'upload failed' };
+  }
+}
+
 export async function exportErrorsAsText() {
   const buf = await loadBuffer();
   if (!buf.length) return 'No errors logged.';
