@@ -1,6 +1,30 @@
 # Volyume — Known Issues from QA
 
-_Last updated: 2026-05-20. Original audit dated 2026-05-16; all P1 issues and most P2/P3 issues have been resolved in subsequent commits. Status flags below reflect the current state._
+_Last updated: 2026-05-21. Original audit dated 2026-05-16; subsequent
+multi-agent audits 2026-05-20 and 2026-05-21 added more findings.
+Status flags below reflect the current state._
+
+## 2026-05-21 multi-agent audit — security + correctness pass
+
+| Issue | Severity | Status | Resolved in / next step |
+|---|---|---|---|
+| RLS missing on 6 Pro sync tables (programmes, morning_weights, coach_outputs, user_body_profile, exercise_user_notes, weekly_checkins_v2) — any auth user could read/write others' data | **Critical** | **Fixed** | `supabase/migrate_007_pro_rls_hardening.sql` — apply via Dashboard |
+| Tier trigger UPDATE-only, defense-in-depth gap on INSERT | **Critical** | **Fixed** | migrate_007 — trigger now BEFORE INSERT OR UPDATE |
+| delete_user_data RPC missing 9 user-keyed tables, blocking `auth.admin.deleteUser` | **Critical** | **Fixed** | `supabase/migrate_006_delete_rpc_v2.sql` |
+| Edge Function delete-account had no error logging — 500s invisible in dashboard | High | **Fixed** | commit 5fcdf17 — console.log/error at every phase |
+| Legacy profiles (only trainingGoal, no trainingPhase) couldn't regenerate plans | High | **Fixed** | planAutoGen now runs migrateProfileGoals + falls back to phase='maintain' |
+| `resetFirstRun` could yank user out mid-workout, losing live set log | High | **Fixed** | Guard added — returns `{ok:false, error:'workout_in_progress'}` |
+| `phaseToCoachingKey` silently mapped unknown phases to 'maint' | Medium | **Fixed** | Now logs warn with offending value before fallback |
+| `useAppStore()` called without selectors across 25+ screens, causing excessive re-renders | Medium | Open | Migrate to `useAppStore(s => s.field)` or `useShallow` — perf-only |
+| OAuth flow instrumentation gaps (no log on cancel / timeout / poll-exhausted) | Medium | Open | Add logInfo at OAuth decision points |
+| `generatePlan` determinism not asserted in tests | Medium | Open | Add determinism test (call twice, assert JSON.stringify match) |
+| Hermes-mangled stack traces in `setTier` warn logs | Low | Open | Would need explicit caller-tag refactor (e.g. setTier(value, callerScope)) |
+| AsyncStorage write order not atomic with store mutations | Low | Open | Wrap in try/finally; defer set() until persisted |
+
+False positives flagged by the audit that didn't reproduce:
+- "ProUpgrade modal has no close button" — actually has TWO (closeBtn at line 196 + laterBtn at line 378)
+- "OAuth auto-advance creates infinite loop" — effect dependency on `step` correctly stops re-firing once step ≥ 2
+- "peak_week_plans missing from wipeAllUserData" — already present at line 2141 of database.js
 
 ## Resolution summary
 

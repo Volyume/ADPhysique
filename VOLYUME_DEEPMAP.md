@@ -3,6 +3,15 @@
 > Last updated: 2026-05-19  
 > Purpose: Deep-research reference. Everything that exists, how it connects, and what is planned next.
 
+> **⚠ Partially stale as of 2026-05-21.** This file references screens
+> and flows that have since been removed or restructured. See
+> `INFRASTRUCTURE.md` at the repo root for the current state of:
+> auth flows, Pro upgrade enrollment, tier handling, migrations,
+> Edge Functions, and the removed surfaces (CoachBuilderScreen,
+> OnboardingQuizScreen). Treat any reference to "CoachBuilder",
+> "OnboardingQuiz", or "FirstRunScreen branch mode" in this doc as
+> historical, not current.
+
 ---
 
 ## Table of Contents
