@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import Constants from 'expo-constants';
-import { getRecentErrors, clearErrors, exportErrorsAsText, getCrashLog, clearCrashLog, flushDebugLogs, shouldShipDebugLogs, setShipDebugLogs } from '../lib/errorLog';
+import { getRecentErrors, clearErrors, exportErrorsAsText, getCrashLog, clearCrashLog, flushDebugLogs, shouldShipDebugLogs, setShipDebugLogs, getLastFlushOutcome } from '../lib/errorLog';
 import { getSupabaseClient } from '../lib/supabase';
 import useAppStore from '../store/useAppStore';
 
@@ -13,12 +13,14 @@ export default function DebugLogScreen({ navigation }) {
   const [crash, setCrash] = useState(null);
   const [filter, setFilter] = useState('all'); // 'all' | 'error' | 'warn' | 'info'
   const [loading, setLoading] = useState(true);
+  const [flushOutcome, setFlushOutcome] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     const [list, c] = await Promise.all([getRecentErrors(), getCrashLog()]);
     setEntries(list);
     setCrash(c);
+    setFlushOutcome(getLastFlushOutcome());
     setLoading(false);
   }, []);
 
@@ -133,6 +135,33 @@ export default function DebugLogScreen({ navigation }) {
         />
       </View>
 
+      {/* Backup status — surfaces whether auto-flush is actually reaching
+          Supabase. The auto-flush runs silently on AppState foreground
+          (App.js), so without this row a failed insert (RLS rejection,
+          missing table, network) would be invisible. */}
+      {flushOutcome && (
+        <View style={[styles.flushStatus, flushOutcome.error && styles.flushStatusError]}>
+          <Ionicons
+            name={flushOutcome.error ? 'alert-circle' : 'checkmark-circle'}
+            size={14}
+            color={flushOutcome.error ? colors.error : colors.success}
+          />
+          <Text style={styles.flushStatusText}>
+            {flushOutcome.error
+              ? `Cloud backup failed: ${flushOutcome.error}`
+              : `Cloud backup OK — ${flushOutcome.sent} ${flushOutcome.sent === 1 ? 'entry' : 'entries'} shipped`}
+          </Text>
+        </View>
+      )}
+      {!flushOutcome && (
+        <View style={styles.flushStatus}>
+          <Ionicons name="time-outline" size={14} color={colors.textMuted} />
+          <Text style={styles.flushStatusText}>
+            Cloud backup not attempted yet this session. Background ship runs on app foreground.
+          </Text>
+        </View>
+      )}
+
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {crash && (
           <View style={styles.crashCard}>
@@ -225,4 +254,13 @@ const styles = StyleSheet.create({
   entryMessage: { color: colors.textPrimary, fontSize: fontSize.sm },
   entryContext: { color: colors.textMuted, fontSize: fontSize.xs, fontFamily: 'monospace' },
   entryStack: { color: colors.textMuted, fontSize: fontSize.xs, fontFamily: 'monospace' },
+  flushStatus: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
+    backgroundColor: colors.surface, borderRadius: radius.sm,
+    marginHorizontal: spacing.lg, marginBottom: spacing.md,
+    borderLeftWidth: 3, borderLeftColor: colors.success,
+  },
+  flushStatusError: { borderLeftColor: colors.error },
+  flushStatusText: { flex: 1, fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 16 },
 });

@@ -159,6 +159,12 @@ export async function setShipDebugLogs(enabled) {
   catch (_) {}
 }
 
+// Per-session memo so we don't spam the buffer with the same upload
+// failure on every AppState foreground — table-doesn't-exist or RLS
+// rejection won't fix itself between foregrounds, no point logging it
+// 50 times. Records the first failure, then stays quiet until success.
+let lastFlushOutcome = null;
+
 export async function flushDebugLogs(supabaseClient, { force = false, userId = null, deviceId = null, appVersion = null, platform = null } = {}) {
   if (!supabaseClient) return { sent: 0, skipped: 'no-client' };
   if (!force && !(await shouldShipDebugLogs())) return { sent: 0, skipped: 'opted-out' };
@@ -209,14 +215,42 @@ export async function flushDebugLogs(supabaseClient, { force = false, userId = n
 
   try {
     const { error } = await supabaseClient.from('debug_log_uploads').insert(rows);
-    if (error) return { sent: 0, error: error.message };
+    if (error) {
+      // Log the first failure of the session so the on-device buffer has
+      // evidence that uploads aren't reaching Supabase. We deliberately
+      // write directly to console (not pushEntry) so the buffer doesn't
+      // get a recursive flush failure entry that itself tries to upload.
+      if (lastFlushOutcome?.error !== error.message) {
+        lastFlushOutcome = { ts: Date.now(), error: error.message, rows: rows.length };
+        if (typeof console !== 'undefined' && console.warn) {
+          console.warn('[errorLog.flushDebugLogs] insert failed:', error.message, '— would have shipped', rows.length, 'rows');
+        }
+      }
+      return { sent: 0, error: error.message };
+    }
     // Advance the watermark to the newest entry we just shipped.
     const newest = Math.max(...newEntries.map(e => e.ts ?? 0));
     try { await AsyncStorage.setItem(UPLOAD_WATERMARK_KEY, String(newest)); } catch (_) {}
+    lastFlushOutcome = { ts: Date.now(), sent: rows.length };
+    if (typeof console !== 'undefined' && console.log) {
+      console.log('[errorLog.flushDebugLogs] shipped', rows.length, 'rows up to ts', newest);
+    }
     return { sent: rows.length };
   } catch (e) {
+    if (lastFlushOutcome?.error !== e?.message) {
+      lastFlushOutcome = { ts: Date.now(), error: e?.message ?? 'upload failed', rows: rows.length };
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('[errorLog.flushDebugLogs] threw:', e?.message);
+      }
+    }
     return { sent: 0, error: e?.message ?? 'upload failed' };
   }
+}
+
+// Exposes the most recent flush outcome so DebugLogScreen can show it.
+// Returns null until the first flush attempt of the session.
+export function getLastFlushOutcome() {
+  return lastFlushOutcome;
 }
 
 export async function exportErrorsAsText() {
