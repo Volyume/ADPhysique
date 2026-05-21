@@ -264,20 +264,42 @@ const useAppStore = create((set, get) => ({
     }
 
     let cloudData = null;
+    let timedOut = false;
     try {
       // eslint-disable-next-line global-require
       const { getSupabaseClient } = require('../lib/supabase');
       const sb = getSupabaseClient();
       if (!sb) { set({ restoringSession: false }); return; }
-      const { data } = await sb
+      // Wrap the cloud read in Promise.race with a 10s ceiling so a
+      // dead connection / cellular dead zone can't park the splash
+      // forever. supabase-js doesn't set a fetch timeout itself, so
+      // without this an offline phone hangs on this await until the
+      // OS-level TCP timeout (~30s on Android, longer on iOS).
+      //
+      // Good connections complete this in 200-500ms; the timeout only
+      // bites when the network is genuinely broken.
+      const READ_TIMEOUT_MS = 10_000;
+      const readPromise = sb
         .from('users_profile')
         .select('first_name, training_focus, training_age, primary_equipment, units, bar_weight, tier, first_run_complete')
         .eq('id', supabaseUserId)
         .maybeSingle();
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('cloud-read-timeout')), READ_TIMEOUT_MS)
+      );
+      const { data } = await Promise.race([readPromise, timeoutPromise]);
       cloudData = data;
-    } catch (_) {
-      // Offline / RLS denied — fall through with cloudData=null. Tier is
-      // already set above; just skip the profile restore.
+    } catch (e) {
+      // Offline / RLS denied / timeout — fall through with cloudData=null.
+      // Tier is already set above; just skip the profile restore.
+      timedOut = e?.message === 'cloud-read-timeout';
+      if (timedOut) {
+        log.logWarn(
+          'restoreSessionFromCloud.timeout',
+          `cloud read exceeded 10s — proceeding without cloud profile`,
+          { uid: supabaseUserId },
+        );
+      }
     }
 
     // Missing cloud row entirely.
