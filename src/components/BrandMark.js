@@ -1,6 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image as RNImage } from 'react-native';
-import { colors, fontWeight } from '../styles/theme';
+import { Image as RNImage } from 'react-native';
 
 // Try expo-image first for disk cache + faster decode. Falls back to
 // the RN Image if @expo-image isn't installed yet (e.g. before the
@@ -13,25 +12,28 @@ try {
   if (ExpoImage) ImageComp = ExpoImage;
 } catch (_) { /* expo-image not installed yet, use RN Image */ }
 
-const ICON = require('../../assets/volyume-icon.png');
+const WORDMARK = require('../../assets/volyume-wordmark.png');
+// Source asset is 1448 x 1086 (4:3-ish). size prop drives the HEIGHT;
+// width derives from the aspect so the wordmark stays readable at any
+// scale.
+const WORDMARK_ASPECT = 1448 / 1086;
 
 /**
- * VolyumeMark — the V logo mark as a static PNG asset.
- * size controls both width and height (the asset is square).
- * color/accent props are accepted for legacy compat but are unused.
+ * VolyumeMark renders the chrome Volyume wordmark as a static PNG.
+ * size controls the height; width is computed from the asset's aspect
+ * ratio so letterforms stay correctly proportioned.
  *
- * Uses expo-image when available (disk cache, faster decode, blurhash
- * support for any future cloud-loaded images), falls back to RN
- * Image so the app keeps working pre-install.
+ * Uses expo-image when available (disk cache, faster decode), falls
+ * back to RN Image otherwise so the app keeps working pre-install.
  */
 export function VolyumeMark({ size = 28, color, accent, style }) {
+  const height = size;
+  const width = Math.round(height * WORDMARK_ASPECT);
   return (
     <ImageComp
-      source={ICON}
-      style={[{ width: size, height: size, borderRadius: size * 0.1 }, style]}
+      source={WORDMARK}
+      style={[{ width, height }, style]}
       contentFit="contain"
-      // RN Image uses resizeMode; expo-image uses contentFit. Pass both
-      // so whichever component is mounted reads the right prop.
       resizeMode="contain"
       accessibilityLabel="Volyume"
     />
@@ -39,53 +41,21 @@ export function VolyumeMark({ size = 28, color, accent, style }) {
 }
 
 /**
- * VolyumeWordmark — V mark + VOLYUME text side by side.
+ * VolyumeWordmark kept for backwards compatibility with any callers
+ * that pass it as a header brand. The new asset already contains the
+ * full wordmark, so this is now an alias for VolyumeMark.
  */
 export function VolyumeWordmark({ size = 28, color, accent, style }) {
-  const textColor = color || colors.textPrimary;
-  const textSize = size * 0.72;
-  return (
-    <View style={[styles.wordmark, style]}>
-      <VolyumeMark size={size} />
-      <Text style={[styles.wordmarkText, { fontSize: textSize, color: textColor }]}>
-        VOLYUME
-      </Text>
-    </View>
-  );
+  return <VolyumeMark size={size} color={color} accent={accent} style={style} />;
 }
 
 /**
- * BrandTag — V mark + 'olyume' flush together as one logotype.
+ * BrandTag kept for backwards compatibility. Routes through the new
+ * wordmark asset at a slightly smaller scale to match prior inline
+ * usage.
  */
 export function BrandTag({ size = 15, color, accent, style }) {
-  const textColor = color || colors.textPrimary;
-  const markSize = size * 1.6;
-  return (
-    <View style={[{ flexDirection: 'row', alignItems: 'center' }, style]}>
-      <VolyumeMark size={markSize} />
-      <Text
-        style={{
-          fontSize: size,
-          fontWeight: fontWeight.bold,
-          color: textColor,
-          letterSpacing: 0.2,
-          marginLeft: 4,
-          includeFontPadding: false,
-        }}
-      >
-        olyume
-      </Text>
-    </View>
-  );
+  return <VolyumeMark size={Math.round(size * 1.6)} color={color} accent={accent} style={style} />;
 }
 
 export default VolyumeMark;
-
-const styles = StyleSheet.create({
-  wordmark: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  wordmarkText: {
-    fontWeight: fontWeight.black,
-    letterSpacing: 2,
-    includeFontPadding: false,
-  },
-});
