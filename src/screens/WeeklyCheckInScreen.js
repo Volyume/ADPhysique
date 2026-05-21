@@ -600,25 +600,31 @@ export default function WeeklyCheckInScreen({ navigation }) {
     const dayName = DAYS_FULL[checkinDayNum];
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        {/* Header bar matches the rest of the app: single chevron back,
+            screen title in line. Empty card style below mirrors the
+            BodyMetrics empty state for visual consistency. */}
         <View style={styles.gateHeader}>
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
             <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
+          <Text style={styles.gateHeaderTitle}>Weekly Check-In</Text>
+          <View style={{ width: 24 }} />
         </View>
-        <View style={styles.gateCenter}>
-          <View style={styles.gateIconWrap}>
-            <Ionicons name="calendar-outline" size={32} color={colors.textMuted} />
+        <ScrollView contentContainerStyle={styles.gateScroll}>
+          <View style={styles.gateCard}>
+            <Ionicons name="calendar-outline" size={40} color={colors.surface3} />
+            <Text style={styles.gateTitle}>Come back on {dayName}</Text>
+            <Text style={styles.gateBody}>
+              Your check-in day is {dayName}. Coaching runs on a weekly rhythm tied to that day, so the numbers compare like for like each time.
+            </Text>
+            <Text style={styles.gateBody}>
+              You can change the day in Settings, then Notifications. In the meantime, log your weight each morning from the Train tab. Every reading makes the trend more accurate.
+            </Text>
           </View>
-          <Text style={styles.gateTitle}>Come back on {dayName}</Text>
-          <Text style={styles.gateBody}>
-            Your check-in day is {dayName}. Coaching runs on a weekly rhythm tied to that day, so the numbers compare like for like each time. You can change the day in Settings → Notifications.
-            {'\n\n'}
-            In the meantime, log your weight each morning from the Train tab. Every reading makes the trend more accurate.
-          </Text>
           <TouchableOpacity style={styles.gateBtn} onPress={() => navigation.goBack()} activeOpacity={0.85}>
             <Text style={styles.gateBtnText}>Got it</Text>
           </TouchableOpacity>
-        </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -764,11 +770,14 @@ const styles = StyleSheet.create({
 
   // ── Gate screens ────────────────────────────────────────────────────────────
   gateHeader: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
+  gateHeaderTitle: {
+    fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary,
+  },
+  // Centred wrapper kept for the other gate states (loading / etc.) that
+  // still use it elsewhere on this screen.
   gateCenter: {
     flex: 1, justifyContent: 'center', alignItems: 'center',
     paddingHorizontal: spacing.xxl, gap: spacing.lg,
@@ -778,17 +787,26 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
     alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm,
   },
+  // Empty-state card matches BodyMetricsScreen.emptyCard so the visual
+  // language is consistent across info screens.
+  gateScroll: {
+    padding: spacing.lg, gap: spacing.lg,
+  },
+  gateCard: {
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.xxl,
+    borderWidth: 1, borderColor: colors.border, alignItems: 'center', gap: spacing.md,
+  },
   gateTitle: {
-    fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary,
+    fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textSecondary,
     textAlign: 'center',
   },
   gateBody: {
-    fontSize: fontSize.md, color: colors.textSecondary, lineHeight: 22,
+    fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 20,
     textAlign: 'center',
   },
   gateBtn: {
-    width: '100%', backgroundColor: colors.primary, borderRadius: radius.lg,
-    paddingVertical: spacing.lg, alignItems: 'center', marginTop: spacing.md,
+    backgroundColor: colors.primary, borderRadius: radius.lg,
+    paddingVertical: spacing.lg, alignItems: 'center',
   },
   gateBtnText: {
     fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background,

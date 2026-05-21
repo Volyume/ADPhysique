@@ -372,7 +372,30 @@ export default function BodyMetricsScreen({ navigation }) {
   async function loadHistory() {
     if (!user?.id) return;
     try {
-      const rows = await getBodyMetricLog(user.id, 50);
+      let rows = await getBodyMetricLog(user.id, 50);
+
+      // Auto-seed the first entry from the onboarding bodyweight so the
+      // screen isn't a blank slate on first visit. We only do this once
+      // (gated by a per-user AsyncStorage flag) so manually deleting all
+      // entries doesn't re-create them on next visit.
+      const SEED_KEY = `@volyume_body_metric_seeded_${user.id}`;
+      const onboardingKg = userProfile?.weightKg ?? userProfile?.bodyWeightKg ?? null;
+      if (rows.length === 0 && onboardingKg && onboardingKg > 0) {
+        const alreadySeeded = await AsyncStorage.getItem(SEED_KEY).catch(() => null);
+        if (!alreadySeeded) {
+          try {
+            await logBodyMetric(user.id, { weightKg: onboardingKg, notes: 'Starting weight (from onboarding)' });
+            await AsyncStorage.setItem(SEED_KEY, 'true').catch(() => {});
+            rows = await getBodyMetricLog(user.id, 50);
+            // eslint-disable-next-line global-require
+            try { require('../lib/errorLog').logInfo('BodyMetricsScreen.autoSeed', `seeded onboarding weight ${onboardingKg}kg`); } catch (_) {}
+          } catch (e) {
+            // eslint-disable-next-line global-require
+            try { require('../lib/errorLog').logWarn('BodyMetricsScreen.autoSeed', 'seed failed', { error: e?.message }); } catch (_) {}
+          }
+        }
+      }
+
       const entries = rows.map(rowToEntry);
       setHistory(entries);
       const sorted = [...entries].sort((a, b) => a.metric_date.localeCompare(b.metric_date));
