@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { VolyumeMark } from '../components/BrandMark';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import {
   logBodyMetric, saveNutritionTargets, saveUserBodyProfile, migrateLocalUserId,
 } from '../lib/database';
@@ -131,7 +132,15 @@ function Dropdown({ label, hint, value, options, onChange, placeholder = 'Select
 export default function ProOnboardingScreen({ navigation }) {
   const {
     user, units, setUnits, bodyWeightUnits, setBodyWeightUnits, userProfile, saveLocalProfile,
-  } = useAppStore();
+  } = useAppStore(useShallow(s => ({
+    user: s.user,
+    units: s.units,
+    setUnits: s.setUnits,
+    bodyWeightUnits: s.bodyWeightUnits,
+    setBodyWeightUnits: s.setBodyWeightUnits,
+    userProfile: s.userProfile,
+    saveLocalProfile: s.saveLocalProfile,
+  })));
 
   const [step, setStep] = useState(1);
 
@@ -212,20 +221,29 @@ export default function ProOnboardingScreen({ navigation }) {
     // OAuth happens inside the in-app browser sheet — the Supabase session
     // callback is handled by App.js's deep-link handler. We just need to
     // wait for the result, then advance onboarding if successful.
+    const { logInfo, logError } = require('../lib/errorLog');
+    logInfo('ProOnboarding.oauth.begin', `provider=${provider}`);
     setBusy(true);
     try {
       const fn = provider === 'google' ? signInWithGoogle : signInWithApple;
       const result = await fn();
       if (result?.error) {
+        logError('ProOnboarding.oauth.providerError', result.error, { provider });
         Alert.alert('Sign-in failed', result.error.message);
         return;
       }
-      if (result?.cancelled) return;
+      if (result?.cancelled) {
+        logInfo('ProOnboarding.oauth.cancelled', `provider=${provider}`);
+        return;
+      }
       // OAuth doesn't pre-fill a userProfile from the provider's metadata
       // here — the onboarding wizard collects the training fields in the
       // next steps. Mark the auth step complete and advance.
+      logInfo('ProOnboarding.oauth.success', `provider=${provider} — advancing to step 2`);
       setAccountCreated(true);
       setStep(2);
+    } catch (e) {
+      logError('ProOnboarding.oauth.threw', e, { provider });
     } finally {
       setBusy(false);
     }
@@ -345,6 +363,11 @@ export default function ProOnboardingScreen({ navigation }) {
       const goalPhase = phaseToCoachingKey(trainingPhase);
       const trainingFreqBucket = daysToFreqBucket(DEFAULT_DAYS_PER_WEEK);
 
+      // weeklyCoach.js reads `goalStartDate` to time diet-break suggestions
+      // when the user is in a cut. Set it here if onboarding lands them in
+      // a deficit; otherwise leave it null so the bulk/maintain path isn't
+      // misinterpreted as a long-running cut.
+      const isDeficit = trainingPhase === 'cut';
       const merged = {
         ...(userProfile || {}),
         firstName: firstName.trim(),
@@ -358,6 +381,7 @@ export default function ProOnboardingScreen({ navigation }) {
         trainingPhase,
         goalPhase,
         phaseStartedAt: Date.now(),
+        goalStartDate: isDeficit ? new Date().toISOString() : null,
         stepsTarget: (userProfile || {}).stepsTarget ?? 8000,
         trainingFreq: trainingFreqBucket,
         trainingFreqBucket,

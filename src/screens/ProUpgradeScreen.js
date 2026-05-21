@@ -40,7 +40,7 @@ export default function ProUpgradeScreen({ navigation }) {
     } else {
       pullFromCloud(supabaseUserId).catch(() => {});
     }
-    await setTier('pro');
+    await setTier('pro', 'ProUpgradeScreen.activatePro');
     refreshTierFromCloud(getSupabaseClient(), supabaseUserId).catch(() => {});
   }
 
@@ -65,11 +65,14 @@ export default function ProUpgradeScreen({ navigation }) {
   // we listen briefly for the session and then activate. This mirrors
   // LoginScreen.handleOAuth + ProOnboardingScreen.handleOAuthOnboarding.
   async function handleOAuth(provider) {
+    const { logInfo, logError } = require('../lib/errorLog');
+    logInfo('ProUpgrade.oauth.begin', `provider=${provider}`);
     setBusy(true);
     try {
       const fn = provider === 'google' ? signInWithGoogle : signInWithApple;
       const result = await fn();
       if (result?.error) {
+        logError('ProUpgrade.oauth.providerError', result.error, { provider });
         Alert.alert('Sign-in failed', result.error.message);
         setBusy(false);
         return;
@@ -86,13 +89,16 @@ export default function ProUpgradeScreen({ navigation }) {
         await new Promise(r => setTimeout(r, 500));
       }
       if (signedInId) {
+        logInfo('ProUpgrade.oauth.success', `provider=${provider} uid=${signedInId}`);
         await activatePro(signedInId, { isNew: false });
         setDone(true);
+      } else {
+        // Distinguishing cancel vs timeout reliably needs platform hooks
+        // we don't have; both end up here. Log so we can spot patterns.
+        logInfo('ProUpgrade.oauth.pollExhausted', `provider=${provider} — user cancelled or session never appeared`);
       }
-      // If no session after 8s, the OAuth was cancelled or failed silently.
-      // Leave the screen open so the user can retry or use email.
-    } catch (_) {
-      // Cancellation throws here on some platforms — silent.
+    } catch (e) {
+      logError('ProUpgrade.oauth.threw', e, { provider });
     } finally {
       setBusy(false);
     }

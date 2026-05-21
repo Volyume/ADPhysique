@@ -13,6 +13,7 @@ import { logBodyMetric, getBodyMetricLog } from '../lib/database';
 import { syncBodyMetric } from '../lib/sync';
 import { computeEWMA, computeWeeklyWeightChange } from '../lib/nutritionEngine';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { formatBodyWeight, formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg } from '../lib/units';
 import { getWellbeingMode, isCalm, WELLBEING_HELPLINE } from '../lib/wellbeing';
 
@@ -261,7 +262,14 @@ function PhysiqueOptIn({ onEnable }) {
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function BodyMetricsScreen({ navigation }) {
-  const { user, session, units, bodyWeightUnits, tier, userProfile } = useAppStore();
+  const { user, session, units, bodyWeightUnits, tier, userProfile } = useAppStore(useShallow(s => ({
+    user: s.user,
+    session: s.session,
+    units: s.units,
+    bodyWeightUnits: s.bodyWeightUnits,
+    tier: s.tier,
+    userProfile: s.userProfile,
+  })));
   // Onboarding weight — surfaced in the empty state so a user who just
   // completed Pro onboarding doesn't see a misleading "No entries yet"
   // when they did, in fact, give us a starting bodyweight.

@@ -46,7 +46,7 @@ export default function WelcomeScreen({ navigation }) {
     if (!user?.id) {
       await initLocalUser();
     }
-    await setTier(tier);
+    await setTier(tier, 'WelcomeScreen.continueWithTier');
     // Navigation resolves automatically — RootNavigator re-renders on tier change
   }
 

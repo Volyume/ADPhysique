@@ -141,9 +141,16 @@ export default function RestTimer() {
 
   // Component-wide cleanup — drains any pending timeouts so they don't fire
   // on an unmounted component (workout ended, user signed out, etc.).
+  // Also clears the active interval and the rest notification so a
+  // sign-out mid-rest doesn't leave a phantom notification ticking down.
   useEffect(() => () => {
     timeoutsRef.current.forEach(clearTimeout);
     timeoutsRef.current = [];
+    clearInterval(intervalRef.current);
+    if (notifIdRef.current) {
+      try { cancelRestNotif(notifIdRef.current); } catch (_) {}
+      notifIdRef.current = null;
+    }
   }, []);
 
   function handleAdjust(delta) {
@@ -187,8 +194,18 @@ export default function RestTimer() {
         />
       </View>
 
-      {/* Timer row */}
-      <View style={styles.row}>
+      {/* Timer row. accessibilityLiveRegion announces each tick to screen
+          readers without forcing focus — useful so a non-sighted user
+          knows when their rest is nearly up. We use 'polite' to avoid
+          interrupting other VoiceOver / TalkBack output. */}
+      <View
+        style={styles.row}
+        accessible
+        accessibilityLiveRegion="polite"
+        accessibilityLabel={isCountdown
+          ? `Rest, ${restTimerRemaining} second${restTimerRemaining === 1 ? '' : 's'} remaining`
+          : `Rest timer, ${mins} minute${mins === 1 ? '' : 's'} ${secs} second${secs === 1 ? '' : 's'} remaining`}
+      >
         <Ionicons name="timer-outline" size={18} color={isAlmostDone ? colors.warning : colors.primary} />
         {isCountdown ? (
           <Text style={styles.countdownNum}>{restTimerRemaining}</Text>
@@ -200,6 +217,8 @@ export default function RestTimer() {
           onPress={stopRestTimer}
           style={styles.skipBtn}
           hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+          accessibilityLabel="Skip rest timer"
+          accessibilityRole="button"
         >
           <Text style={styles.skipText}>Skip</Text>
         </TouchableOpacity>

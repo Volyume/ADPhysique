@@ -639,6 +639,18 @@ function selectSplit(experience, effectiveDays, goal) {
   if (effectiveDays === 5) {
     return goal === 'weak_point_spec' ? 'upper_lower_wp' : 'ppl';
   }
+  if (effectiveDays === 6) return 'ppl_ab';
+  // Days outside the supported 3-6 range fall through here — log so we
+  // can spot the bad-input pattern. effectiveDays is normally clamped by
+  // the caller; if we land here something upstream let an invalid value
+  // slip through.
+  try {
+    require('./errorLog').logWarn(
+      'planEngine.selectSplit',
+      `unexpected effectiveDays=${effectiveDays} — falling back to ppl_ab`,
+      { effectiveDays, experience, goal },
+    );
+  } catch (_) {}
   return 'ppl_ab';
 }
 

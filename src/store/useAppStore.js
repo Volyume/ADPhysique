@@ -187,23 +187,36 @@ const useAppStore = create((set, get) => ({
     }
   },
 
-  setTier: async (tier) => {
+  // Optional `callerScope` arg (string like 'ProUpgradeScreen.activatePro')
+  // is logged with each transition. Hermes mangles async stack frames so
+  // the auto-captured stack is useless in production; an explicit tag is
+  // the only reliable way to know who triggered a tier change. Falls back
+  // to the auto-captured stack for un-tagged callers (early returns
+  // when off-thread for now).
+  setTier: async (tier, callerScope) => {
     const prev = get().tier;
     if (prev !== tier) {
-      // Log every tier transition with a call-site stack so we can
-      // identify exactly which screen / handler triggered each change.
-      // Demotions (pro → free) have been the bug pattern — without the
-      // stack, the debug log only tells us SOMETHING changed it.
       try {
-        const stack = (new Error('setTier-trace').stack || '')
-          .split('\n')
-          .slice(2, 6) // top 4 frames after this fn + Error
-          .join(' | ');
+        let trace = callerScope;
+        if (!trace) {
+          trace = (new Error('setTier-trace').stack || '')
+            .split('\n')
+            .slice(2, 6)
+            .join(' | ');
+        }
         // eslint-disable-next-line global-require
-        require('../lib/errorLog').logWarn('useAppStore.setTier', `tier ${prev} → ${tier}`, { prev, next: tier, caller: stack });
+        require('../lib/errorLog').logWarn('useAppStore.setTier', `tier ${prev} → ${tier}`, { prev, next: tier, caller: trace });
       } catch (_) {}
     }
-    try { await AsyncStorage.setItem(TIER_KEY, tier); } catch (_) {}
+    // Persist BEFORE setting in-memory state so a crash between the two
+    // doesn't leave AsyncStorage out of sync with the store. If the
+    // AsyncStorage write fails, log it but still update the store —
+    // the user-visible state matters most; next reload will reconcile.
+    try {
+      await AsyncStorage.setItem(TIER_KEY, tier);
+    } catch (e) {
+      require('../lib/errorLog').logError('useAppStore.setTier.persist', e, { tier });
+    }
     set({ tier });
   },
 
@@ -309,14 +322,22 @@ const useAppStore = create((set, get) => ({
   // Called after cloud sign-in: reads tier from Supabase and uses it as the
   // authoritative value. During beta this is a no-op (Supabase tier = 'pro').
   // After beta, this becomes the enforcement point — server wins.
+  //
+  // Wrapped in a 5s timeout so a stalled Supabase doesn't leave the
+  // navigator splash gate spinning forever — the bootstrap path reads
+  // tierChecked / firstRunChecked and only proceeds once both are set.
   refreshTierFromCloud: async (supabaseClient, supabaseUserId) => {
     if (!supabaseClient || !supabaseUserId) return;
     try {
-      const { data } = await supabaseClient
+      const queryPromise = supabaseClient
         .from('users_profile')
         .select('tier')
         .eq('id', supabaseUserId)
         .maybeSingle();
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('refreshTierFromCloud timeout')), 5000)
+      );
+      const { data } = await Promise.race([queryPromise, timeoutPromise]);
       if (data?.tier) {
         // Same beta tier policy as restoreSessionFromCloud — see comment
         // there. Any cloud-signed-in user is Pro during beta because the
@@ -325,10 +346,18 @@ const useAppStore = create((set, get) => ({
         // eslint-disable-next-line global-require
         const { PRO_BETA_ACTIVE } = require('../lib/proGate');
         const effectiveTier = PRO_BETA_ACTIVE ? 'pro' : data.tier;
+        // Persist BEFORE setting in-memory state so a crash between the
+        // two doesn't leave AsyncStorage out of sync with the store.
         await AsyncStorage.setItem(TIER_KEY, effectiveTier);
         set({ tier: effectiveTier });
       }
-    } catch (_) {}
+    } catch (e) {
+      require('../lib/errorLog').logWarn(
+        'useAppStore.refreshTierFromCloud',
+        e?.message ?? 'cloud read failed',
+        { uid: supabaseUserId },
+      );
+    }
   },
 
   // First-run / onboarding gate

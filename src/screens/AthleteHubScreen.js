@@ -13,6 +13,7 @@ import { VolyumeMark } from '../components/BrandMark';
 import InfoTooltip from '../components/InfoTooltip';
 import { ProBadge } from '../components/ProGate';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { formatBodyWeightShort } from '../lib/units';
 import {
   getAllWorkouts, getCompletedWorkoutSets, getBodyMetricLog, getNutritionTargets,
@@ -220,7 +221,13 @@ const mfStyles = StyleSheet.create({
 });
 
 export default function AthleteHubScreen({ navigation }) {
-  const { user, userProfile, units, bodyWeightUnits, tier } = useAppStore();
+  const { user, userProfile, units, bodyWeightUnits, tier } = useAppStore(useShallow(s => ({
+    user: s.user,
+    userProfile: s.userProfile,
+    units: s.units,
+    bodyWeightUnits: s.bodyWeightUnits,
+    tier: s.tier,
+  })));
   const [nutritionTargets, setNutritionTargets] = useState(null);
   const [latestMetric, setLatestMetric]         = useState(null);
   const [totalWorkouts, setTotalWorkouts]       = useState(0);

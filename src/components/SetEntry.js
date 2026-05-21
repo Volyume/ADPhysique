@@ -139,7 +139,11 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
 
       {/* Live estimated 1RM chip — shown when weight and reps are present, not a warm-up */}
       {live1RM > 0 && liveReps >= 1 && liveReps <= 15 && !isWarmup && (
-        <View style={styles.oneRmChip}>
+        <View
+          style={styles.oneRmChip}
+          accessible
+          accessibilityLabel={`Estimated one rep max ${Math.round(live1RM)} ${units}`}
+        >
           <Ionicons name="trending-up-outline" size={12} color={colors.textMuted} />
           <Text style={styles.oneRmChipText}>
             Est. max ≈ {Math.round(live1RM)}{units}

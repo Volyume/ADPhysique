@@ -83,6 +83,14 @@ export default function FirstRunScreen({ navigation: _navigation }) {
           <Text style={styles.primaryBtnText}>Start logging</Text>
           <Ionicons name="arrow-forward" size={18} color={colors.background} />
         </TouchableOpacity>
+
+        <View style={styles.hintCard}>
+          <Ionicons name="information-circle-outline" size={16} color={colors.textMuted} />
+          <Text style={styles.hintText}>
+            When you're in, head to <Text style={styles.hintBold}>Plans</Text>{' '}
+            to pick a programme from the library, or build your own from scratch.
+          </Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -115,4 +123,12 @@ const styles = StyleSheet.create({
   },
   primaryBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
   btnDisabled: { opacity: 0.6 },
+  hintCard: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
+    backgroundColor: colors.surface, borderRadius: radius.md,
+    padding: spacing.md, marginTop: spacing.lg,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  hintText: { flex: 1, fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 17 },
+  hintBold: { color: colors.textPrimary, fontWeight: fontWeight.semibold },
 });

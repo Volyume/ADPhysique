@@ -18,6 +18,7 @@ import {
 import { getBlockAdvice } from '../lib/blockAdvisor';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { logError } from '../lib/errorLog';
 
 const BLOCK_SNOOZE_KEY = '@volyume_block_snooze';
@@ -76,7 +77,17 @@ const BLOCK_ICON = {
 };
 
 export default function PlansScreen({ navigation }) {
-  const { user, startWorkout, tier, userProfile } = useAppStore();
+  // Selector-scoped subscription: only re-render when these specific
+  // fields change. Without useShallow, the previous `useAppStore()` call
+  // subscribed to every store mutation (rest timer ticks, PR queue
+  // updates, set saves) which forced a full PlansScreen re-render every
+  // second during a workout.
+  const { user, startWorkout, tier, userProfile } = useAppStore(useShallow(s => ({
+    user: s.user,
+    startWorkout: s.startWorkout,
+    tier: s.tier,
+    userProfile: s.userProfile,
+  })));
   const [activePlan, setActivePlanData] = useState(null);
   const [myPlans, setMyPlans] = useState([]);
   const [templates, setTemplates] = useState([]);

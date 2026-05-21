@@ -435,7 +435,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
     return () => {
       clearInterval(timerRef.current);
-      appStateSub.remove();
+      // Subscription remove() can throw on corrupt subscription objects (rare
+      // but possible after RN reload). Swallow so the rest of the cleanup
+      // continues; the worst case is one orphan listener until next reload.
+      try { appStateSub?.remove(); } catch (_) {}
       // Drop any pending log-flash reset so it doesn't run on an unmounted
       // component (cancel + finish workout mid-flash would otherwise throw a
       // React warning).

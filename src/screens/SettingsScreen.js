@@ -543,7 +543,7 @@ export default function SettingsScreen({ navigation }) {
                     { text: 'Keep Pro', style: 'cancel' },
                     {
                       text: 'Switch to Free',
-                      onPress: async () => { await setTier('free'); },
+                      onPress: async () => { await setTier('free', 'SettingsScreen.switchToFree'); },
                     },
                   ],
                 )

@@ -21,11 +21,18 @@ import { wipeAllUserData, migrateLocalUserId } from '../lib/database';
 import { logError } from '../lib/errorLog';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 
 const CRASH_LOG_KEY = '@volyume_crash_log';
 
 export default function LoginScreen({ navigation, route }) {
-  const { initLocalUser, user: localUser, userProfile, tier, setTier } = useAppStore();
+  const { initLocalUser, user: localUser, userProfile, tier, setTier } = useAppStore(useShallow(s => ({
+    initLocalUser: s.initLocalUser,
+    user: s.user,
+    userProfile: s.userProfile,
+    tier: s.tier,
+    setTier: s.setTier,
+  })));
   const promptSignup = route?.params?.promptSignup === true;
   const [mode, setMode] = useState(promptSignup ? 'signup' : 'signin');
   const [email, setEmail] = useState('');
@@ -135,7 +142,7 @@ export default function LoginScreen({ navigation, route }) {
           // when LoginScreen was reached from WelcomeStack — that stack
           // doesn't register ProOnboarding. Tier change is the routing
           // signal RootNavigator watches.
-          if (!tier) await setTier('pro');
+          if (!tier) await setTier('pro', 'LoginScreen.newAccountSetup');
         } else {
           // Existing account — push any local-only edits made while signed
           // out, then pull cloud data down (new device scenario).
@@ -154,14 +161,22 @@ export default function LoginScreen({ navigation, route }) {
     // Disable both buttons while the OAuth dialog is up. The actual sign-in
     // completion is handled by RootNavigator's onAuthStateChange listener
     // once the deep-link redirect comes back into App.js.
+    const { logInfo, logError } = require('../lib/errorLog');
+    logInfo('LoginScreen.oauth.begin', `provider=${provider}`);
     setLoading(true);
     try {
       const fn = provider === 'google' ? signInWithGoogle : signInWithApple;
       const result = await fn();
       if (result?.error) {
+        logError('LoginScreen.oauth.providerError', result.error, { provider });
         Alert.alert('Sign-in failed', result.error.message);
+      } else {
+        // Success is fully driven by onAuthStateChange — log so the
+        // upstream SIGNED_IN event can be correlated to this initiation.
+        logInfo('LoginScreen.oauth.dialogReturned', `provider=${provider} — awaiting SIGNED_IN`);
       }
-      // cancelled / ok: nothing to do here — auth state listener routes
+    } catch (e) {
+      logError('LoginScreen.oauth.threw', e, { provider });
     } finally {
       setLoading(false);
     }
