@@ -148,13 +148,18 @@ export default function ProOnboardingScreen({ navigation }) {
   const [firstName, setFirstName] = useState(userProfile?.firstName || '');
   const localUnits = 'kg';
   const [localBWUnits, setLocalBWUnits] = useState(bodyWeightUnits || 'st');
-  const [bodyWeightSt, setBodyWeightSt] = useState('');
+  // Sensible defaults so the field is never blank — leaving it empty
+  // previously let a user advance with no weight set, and the downstream
+  // safeWeightKg fallback (80kg) silently masked the omission. Other
+  // fields (heightFt=5, heightIn=9, sessionLengthMinutes=60, sex=male,
+  // trainingGoal=general) already prefill the same way.
+  const [bodyWeightSt, setBodyWeightSt] = useState('12');
   const [bodyWeightStLbs, setBodyWeightStLbs] = useState('0');
-  const [bodyWeight, setBodyWeight] = useState('');
+  const [bodyWeight, setBodyWeight] = useState('80');
   const [localHeightUnits, setLocalHeightUnits] = useState('imperial');
   const [sex, setSex] = useState('male');
-  const [age, setAge] = useState('');
-  const [heightCm, setHeightCm] = useState('');
+  const [age, setAge] = useState('30');
+  const [heightCm, setHeightCm] = useState('175');
   const [heightFt, setHeightFt] = useState('5');
   const [heightIn, setHeightIn] = useState('9');
 
@@ -304,6 +309,23 @@ export default function ProOnboardingScreen({ navigation }) {
   function advanceFrom2() {
     if (!firstName.trim()) {
       Alert.alert('Your name', 'Please enter your first name to continue.');
+      return;
+    }
+    // Validate body weight — used downstream to compute calorie / protein
+    // targets and to seed the body-metrics log. A silent 80kg fallback
+    // would produce wrong macros, so refuse to advance until it's filled.
+    const bwKg = localBWUnits === 'st'
+      ? stoneLbsToKg(bodyWeightSt, bodyWeightStLbs || '0')
+      : parseBodyWeightToKg(bodyWeight, localBWUnits);
+    if (!bwKg || isNaN(bwKg) || bwKg < 30 || bwKg > 300) {
+      Alert.alert(
+        'Body weight',
+        'Enter your body weight so we can calculate your calorie and protein targets.',
+      );
+      return;
+    }
+    if (!age || isNaN(parseInt(age, 10)) || parseInt(age, 10) < 13 || parseInt(age, 10) > 100) {
+      Alert.alert('Age', 'Enter your age (13 to 100).');
       return;
     }
     setStep(3);

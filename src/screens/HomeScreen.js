@@ -9,14 +9,14 @@ import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg } from '../lib/units';
+import { formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg, kgToStoneLbsStrings, kgToLbs } from '../lib/units';
 import { VolyumeMark } from '../components/BrandMark';
 import {
   getAllWorkouts, getCompletedWorkoutSets, getActivePlan, getRoutinesForPlan,
   getAllRoutineExerciseCounts, createWorkout, getRoutineExercisesWithDetails,
   getWorkoutSetsForWorkout, getExerciseById,
   getCurrentMesocycleWeek, getPlannedMuscleVolume, getAllExercises,
-  getMorningWeightToday, logMorningWeight, getProgressionTeaser,
+  getMorningWeightToday, getMorningWeights, logMorningWeight, getProgressionTeaser,
   getRecentWorkoutFeedback, getLatestCoachOutput,
 } from '../lib/database';
 import { generateAndSavePlan } from '../lib/planAutoGen';
@@ -260,6 +260,31 @@ export default function HomeScreen({ navigation }) {
     try {
       const entry = await getMorningWeightToday(user.id);
       setTodayWeight(entry?.weightKg ?? null);
+      // Prefill the log-weight inputs with the previously logged weight
+      // (most recent morning weight, falling back to onboarding weight).
+      // Blank inputs every day forced the user to retype the same number
+      // — annoying, and easy to typo.
+      if (!entry?.weightKg) {
+        let prefillKg = null;
+        try {
+          const recent = await getMorningWeights(user.id, 1);
+          if (recent.length > 0) prefillKg = recent[recent.length - 1]?.weightKg;
+        } catch (_) {}
+        if (!prefillKg && userProfile?.weightKg && userProfile.weightKg > 0) {
+          prefillKg = userProfile.weightKg;
+        }
+        if (prefillKg && prefillKg > 0) {
+          if (bwu === 'st') {
+            const { stoneStr, lbsStr } = kgToStoneLbsStrings(prefillKg);
+            setWeightInputSt(stoneStr);
+            setWeightInputStLbs(lbsStr);
+          } else if (bwu === 'lbs') {
+            setWeightInput(String(Math.round(kgToLbs(prefillKg))));
+          } else {
+            setWeightInput(String(Math.round(prefillKg * 10) / 10));
+          }
+        }
+      }
     } catch (_) {}
   }
 
@@ -647,7 +672,25 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.weightCardText}>
               {formatBodyWeightShort(todayWeight, bwu)} logged today
             </Text>
-            <TouchableOpacity onPress={() => setTodayWeight(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <TouchableOpacity
+              onPress={() => {
+                // Prefill inputs with the value being edited so a typo
+                // correction doesn't require retyping the whole weight.
+                if (todayWeight && todayWeight > 0) {
+                  if (bwu === 'st') {
+                    const { stoneStr, lbsStr } = kgToStoneLbsStrings(todayWeight);
+                    setWeightInputSt(stoneStr);
+                    setWeightInputStLbs(lbsStr);
+                  } else if (bwu === 'lbs') {
+                    setWeightInput(String(Math.round(kgToLbs(todayWeight))));
+                  } else {
+                    setWeightInput(String(Math.round(todayWeight * 10) / 10));
+                  }
+                }
+                setTodayWeight(null);
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
               <Text style={styles.weightCardEdit}>Edit</Text>
             </TouchableOpacity>
           </View>
