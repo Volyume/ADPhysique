@@ -28,7 +28,7 @@ const REQUIRED_EXERCISES = [
   { name: 'Bodyweight Squat',        primaryMuscle: 'quads',    equipment: 'bodyweight', movementPattern: 'squat',     compoundIsolation: 'compound',  defaultRepMin: 15, defaultRepMax: 30, fatigueCost: 1, stimulusToFatigueRatio: 3 },
 ];
 
-// ─── 18 Library Plans ────────────────────────────────────────────────────────
+// ─── Library Plans ───────────────────────────────────────────────────────────
 
 const LIBRARY_PLANS = [
 
@@ -1435,7 +1435,7 @@ const LIBRARY_PLANS = [
     ],
   },
 
-  // ── 21. Mens Physique Width Enhancement ───────────────────────────────────
+  // ── 31. Mens Physique Width Enhancement ───────────────────────────────────
   {
     name: 'Mens Physique Width Enhancement',
     description: 'Two-day upper rotation built for masters physique competitors chasing the wide-shouldered, V-tapered look. Day 1 prioritises lat width, upper-back detail, rear delts and serratus. Day 2 attacks upper chest, side delts and shoulder refinement. All work is cable and machine based for joint-friendly, constant-tension stimulus — well suited to lifters in their 40s and beyond. Pair with any lower-body plan. Add reps each session; once you hit the top of the rep range, add a little weight and start again. Stop 1 to 2 reps before failure on each set.',
