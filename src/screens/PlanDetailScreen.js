@@ -14,11 +14,13 @@ import {
 } from '../lib/database';
 import useAppStore from '../store/useAppStore';
 import { logError } from '../lib/errorLog';
+import { useToast } from '../components/Toast';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 
 export default function PlanDetailScreen({ navigation, route }) {
   const { planId, isLibrary = false } = route.params || {};
   const { user, startWorkout, tier } = useAppStore();
+  const toast = useToast();
   const [plan, setPlan] = useState(null);
   const [workouts, setWorkouts] = useState([]);
   const [exerciseCounts, setExerciseCounts] = useState({});
@@ -82,7 +84,7 @@ export default function PlanDetailScreen({ navigation, route }) {
                 ],
               );
             } catch (e) {
-              Alert.alert('Error', 'Could not copy plan. Please try again.');
+              toast.show('Could not copy plan. Try again.', { variant: 'error' });
             }
           },
         },
@@ -96,7 +98,7 @@ export default function PlanDetailScreen({ navigation, route }) {
       if (!ok) return;
       await activatePlanWithBlock(user.id, planId, plan?.name ?? 'Training Plan');
       await loadData();
-      Alert.alert('Plan Activated', `"${plan?.name}" is now your active plan. Train will show the next workout.`);
+      toast.show(`"${plan?.name}" is now your active plan`, { variant: 'success' });
     } catch (e) {
       logError('PlanDetailScreen.handleSetActive', e, { userId: user?.id, planId });
       Alert.alert('Couldn\'t activate plan', e?.message ?? 'Please try again.');

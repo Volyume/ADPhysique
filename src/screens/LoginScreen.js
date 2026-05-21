@@ -22,6 +22,7 @@ import { logError } from '../lib/errorLog';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
+import { useToast } from '../components/Toast';
 
 const CRASH_LOG_KEY = '@volyume_crash_log';
 
@@ -33,6 +34,7 @@ export default function LoginScreen({ navigation, route }) {
     tier: s.tier,
     setTier: s.setTier,
   })));
+  const toast = useToast();
   // Either explicit promptSignup OR Welcome's "Go Pro" intent lands us
   // in signup tab. Returning users will switch to "Sign in" themselves.
   const promptSignup = route?.params?.promptSignup === true
@@ -193,8 +195,8 @@ export default function LoginScreen({ navigation, route }) {
     setLoading(true);
     const { error } = await resetPassword(email.trim());
     setLoading(false);
-    if (error) { Alert.alert('Error', error.message); }
-    else { Alert.alert('Email sent', 'Check your inbox for a password reset link.'); }
+    if (error) { toast.show(error.message, { variant: 'error' }); }
+    else { toast.show('Check your inbox for the reset link', { variant: 'success' }); }
   }
 
   async function handleContinueLocally() {
