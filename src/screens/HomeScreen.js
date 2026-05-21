@@ -1200,13 +1200,19 @@ function buildCoachBrief({ fatigueHistory, weeklyVolume, deloadSuggestion, lastW
     };
   }
 
-  // Rule 4 — 2+ muscles below MEV this week
+  // Rule 4 — 2+ muscles below MEV this week (only meaningful if the user has
+  // actually been training). For brand-new users with zero workouts every
+  // muscle reads as below-MEV at 0 sets, so this rule used to fire on the
+  // very first launch with "Several muscle groups are below their weekly
+  // minimum" — which is technically true but useless advice. Require the
+  // user to have logged something so we're commenting on real adherence.
   if (blockProgress && blockProgress.length > 0) {
+    const totalSetsThisWeek = blockProgress.reduce((s, p) => s + (p.actual ?? 0), 0);
     const belowMev = blockProgress.filter(p => {
       const landmarks = VOLUME_LANDMARKS[p.muscle];
       return landmarks && landmarks.mev > 0 && p.actual < landmarks.mev;
     });
-    if (belowMev.length >= 2) {
+    if (totalSetsThisWeek > 0 && belowMev.length >= 2) {
       const muscleName = belowMev[0].label;
       return {
         headline: 'Muscle groups need attention',
