@@ -389,6 +389,7 @@ export function detectPR(newSet, historicalSets, exercise, units = 'kg') {
     prs.push({
       type: '1rm_estimate',
       value: new1RM,
+      previousValue: best1RM,            // for "+X% vs previous" copy
       reps,
       weight,
       label: `New estimated 1RM: ${new1RM.toFixed(1)}${units}`,
@@ -404,6 +405,7 @@ export function detectPR(newSet, historicalSets, exercise, units = 'kg') {
       type: 'heaviest_weight',
       weight,
       value: weight,
+      previousValue: heaviestEver > 0 ? heaviestEver : null,
       reps,
       label: `New heaviest weight: ${weight}${units} × ${reps} reps`,
     });
@@ -416,7 +418,8 @@ export function detectPR(newSet, historicalSets, exercise, units = 'kg') {
     prs.push({
       type: 'most_reps_at_weight',
       weight,
-      value: weight,
+      value: reps,                       // the metric here is reps, not weight
+      previousValue: maxRepsAtWeight,
       reps,
       label: `Most reps at ${weight}${units}: ${reps} reps`,
     });

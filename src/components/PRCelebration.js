@@ -166,6 +166,18 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
         <Text style={styles.prBadge}>PERSONAL RECORD</Text>
         <Text style={styles.prType}>{prLabel}</Text>
         <Text style={styles.prValue}>{pr.label}</Text>
+        {pr.previousValue > 0 && pr.value > 0 && (() => {
+          // Show "+X% over previous PR" so the user feels the magnitude.
+          // Only show for meaningful improvements (>=1%); below that
+          // it's float noise from the 1RM estimator.
+          const pct = ((pr.value - pr.previousValue) / pr.previousValue) * 100;
+          if (pct < 1) return null;
+          return (
+            <Text style={styles.prDelta}>
+              +{pct.toFixed(pct >= 10 ? 0 : 1)}% over your previous best
+            </Text>
+          );
+        })()}
         <Text style={styles.dismiss}>Tap to continue</Text>
       </Animated.View>
     </TouchableOpacity>
@@ -222,7 +234,14 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: fontWeight.semibold,
     textAlign: 'center',
-    marginBottom: spacing.xl,
+    marginBottom: spacing.sm,
+  },
+  prDelta: {
+    fontSize: fontSize.sm,
+    color: colors.gold,
+    fontWeight: fontWeight.semibold,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
   },
   dismiss: {
     fontSize: fontSize.sm,
