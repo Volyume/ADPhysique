@@ -49,7 +49,6 @@ import ManualBuilderScreen from '../screens/ManualBuilderScreen';
 import NutritionTargetsScreen from '../screens/NutritionTargetsScreen';
 import PlanLibraryScreen from '../screens/PlanLibraryScreen';
 import FirstRunScreen from '../screens/FirstRunScreen';
-import OnboardingQuizScreen from '../screens/OnboardingQuizScreen';
 import WeeklyCheckInScreen from '../screens/WeeklyCheckInScreen';
 import CoachOutputScreen from '../screens/CoachOutputScreen';
 import ProGoalSetupScreen from '../screens/ProGoalSetupScreen';
@@ -238,7 +237,6 @@ function FirstRunStack() {
   return (
     <Stack.Navigator screenOptions={{ ...stackOptions, headerShown: false, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="FirstRunBranch" component={FirstRunScreen} />
-      <Stack.Screen name="OnboardingQuiz" component={OnboardingQuizScreen} />
       <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ headerShown: true, title: 'Plan Library' }} />
       <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ headerShown: true, title: 'Plan' }} />
       <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} />
@@ -250,7 +248,6 @@ function ProOnboardingStack() {
   return (
     <Stack.Navigator screenOptions={{ ...stackOptions, headerShown: false, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="ProOnboarding" component={ProOnboardingScreen} />
-      <Stack.Screen name="OnboardingQuiz" component={OnboardingQuizScreen} />
       <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ headerShown: true, title: 'Plan Library' }} />
       <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ headerShown: true, title: 'Plan' }} />
       <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} />
