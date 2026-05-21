@@ -190,13 +190,17 @@ const useAppStore = create((set, get) => ({
   setTier: async (tier) => {
     const prev = get().tier;
     if (prev !== tier) {
-      // Log every tier transition so production issues are diagnosable
-      // from the in-app debug log. Demotions (pro → free) are the bug
-      // pattern we've been chasing; without this, a user reporting "I
-      // lost Pro" gives us no trail to follow.
+      // Log every tier transition with a call-site stack so we can
+      // identify exactly which screen / handler triggered each change.
+      // Demotions (pro → free) have been the bug pattern — without the
+      // stack, the debug log only tells us SOMETHING changed it.
       try {
+        const stack = (new Error('setTier-trace').stack || '')
+          .split('\n')
+          .slice(2, 6) // top 4 frames after this fn + Error
+          .join(' | ');
         // eslint-disable-next-line global-require
-        require('../lib/errorLog').logWarn('useAppStore.setTier', `tier ${prev} → ${tier}`, { prev, next: tier });
+        require('../lib/errorLog').logWarn('useAppStore.setTier', `tier ${prev} → ${tier}`, { prev, next: tier, caller: stack });
       } catch (_) {}
     }
     try { await AsyncStorage.setItem(TIER_KEY, tier); } catch (_) {}
@@ -247,40 +251,28 @@ const useAppStore = create((set, get) => ({
       // already set above; just skip the profile restore.
     }
 
-    // Missing cloud row. Two paths:
+    // Missing cloud row entirely.
     //   (a) Fresh signup — auth.users row exists, profile row hasn't been
     //       created yet by syncProfile. firstRunComplete=false locally;
     //       leave it false so they complete onboarding.
-    //   (b) Deleted account whose auth.users row wasn't purged (no Edge
-    //       Function deploy yet). firstRunComplete was true locally
-    //       before delete; clearAuthStateForSignOut already cleared it.
-    //
-    // In both cases, leaving firstRunComplete as the current local value
-    // is the right call. Don't actively clear it here — that was nuking
-    // legitimately-onboarded Free-upgrading-to-Pro users back through
-    // ProOnboardingStack mid-upgrade.
-    if (!cloudData || !cloudData.tier) {
+    //   (b) Deleted account whose auth.users row wasn't purged.
+    //       clearAuthStateForSignOut already cleared firstRunComplete.
+    if (!cloudData) {
+      log.logInfo('restoreSessionFromCloud.noProfile', 'cloud profile missing — leaving firstRun local-side');
       return;
     }
 
+    // We have a cloud profile. Restore firstRunComplete + userProfile
+    // even if cloudData.tier is empty — previously the guard was
+    //   if (!cloudData || !cloudData.tier) return
+    // which silently dropped firstRunComplete for users whose tier
+    // column was null (legacy rows, or rows created before tier was
+    // tracked). Sign-out → sign-in then routed them through
+    // ProOnboardingStack again because firstRunComplete=false.
+    //
+    // Tier handling below is a no-op during beta (already forced 'pro'
+    // up top) — kept for post-beta correctness.
     if (cloudData.tier) {
-      // Beta tier policy: any cloud-signed-in user is Pro during beta.
-      //
-      // The cloud users_profile.tier column is unusable as the source of
-      // truth right now:
-      //   - DB default is 'free' on row creation.
-      //   - migrate_005 trigger blocks client writes to the column.
-      //   - No Stripe webhook exists yet to flip it to 'pro'.
-      //
-      // So reading it literally always gives us 'free', which silently
-      // demoted every Pro user on every sign-in, restart, and OAuth
-      // attempt. The earlier "guard against demotion if currentTier
-      // already pro" fix didn't cover sign-out → sign-in because tier
-      // is cleared to null on sign-out, so the guard never fired.
-      //
-      // During beta, the promise is "Pro is free for testers". Treat
-      // a cloud account as the Pro signal directly. Post-beta this
-      // branch flips to honouring cloudData.tier.
       // eslint-disable-next-line global-require
       const { PRO_BETA_ACTIVE } = require('../lib/proGate');
       const effectiveTier = PRO_BETA_ACTIVE ? 'pro' : cloudData.tier;
@@ -310,6 +302,7 @@ const useAppStore = create((set, get) => ({
     if (cloudData.first_run_complete) {
       try { await AsyncStorage.setItem(FIRST_RUN_KEY, 'true'); } catch (_) {}
       set({ firstRunComplete: true, firstRunChecked: true });
+      log.logInfo('restoreSessionFromCloud.firstRunRestored', 'true (from cloud)');
     }
   },
 

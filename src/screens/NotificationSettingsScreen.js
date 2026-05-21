@@ -358,23 +358,13 @@ export default function NotificationSettingsScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation?.goBack()}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <View style={styles.headerText}>
-          <Text style={styles.title}>Notifications</Text>
-          <Text style={styles.subtitle}>
-            Volyume uses local notifications only. No marketing, ever.
-          </Text>
-        </View>
+      {/* Subtitle only — the stack header (set in RootNavigator with
+          options={{ title: 'Notifications' }}) already shows the back
+          arrow + title at the top of the screen. */}
+      <View style={styles.subtitleWrap}>
+        <Text style={styles.subtitle}>
+          Volyume uses local notifications only. No marketing, ever.
+        </Text>
       </View>
 
       <ScrollView
@@ -521,7 +511,7 @@ export default function NotificationSettingsScreen({ navigation }) {
             <View style={styles.toggleIconWrap}>
               <Ionicons name="barbell-outline" size={18} color={colors.primary} />
             </View>
-            <Text style={styles.toggleLabel}>Remind me on training days</Text>
+            <Text style={styles.toggleLabel}>Remind me to train</Text>
             <Switch
               value={trainingEnabled}
               onValueChange={handleTrainingToggle}
@@ -554,7 +544,7 @@ export default function NotificationSettingsScreen({ navigation }) {
           {/* Helper text */}
           <View style={styles.helperRow}>
             <Text style={styles.helperText}>
-              Reminders are based on the training days set in your active plan.
+              Pick a time and the days you want the nudge. Plans don't have fixed weekdays in Volyume, so reminders fire on the days you choose.
             </Text>
           </View>
         </View>
@@ -604,6 +594,11 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.bold,
     color: colors.textPrimary,
     letterSpacing: -0.3,
+  },
+  subtitleWrap: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
   },
   subtitle: {
     fontSize: fontSize.sm,
