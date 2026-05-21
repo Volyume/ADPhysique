@@ -52,11 +52,11 @@ export default function SubscriptionPolicyScreen({ navigation }) {
           <Bullet>Build your own routines from scratch.</Bullet>
           <Bullet>Workout history kept on your phone.</Bullet>
           <Bullet>Personal records and the PR Wall.</Bullet>
-          <Bullet>Body weight log.</Bullet>
           <Bullet>Weekly muscle-group volume targets.</Bullet>
+          <Bullet>Year of Lifts: your training year in one card.</Bullet>
           <Bullet>Plate calculator.</Bullet>
           <Bullet>Training reminders.</Bullet>
-          <Bullet>Backup and export your data any time.</Bullet>
+          <Bullet>Export your training history to CSV anytime.</Bullet>
         </Section>
 
         <Section
@@ -72,7 +72,7 @@ export default function SubscriptionPolicyScreen({ navigation }) {
           <Bullet>Weekly check-ins with a written reason for every change, including what we held the same.</Bullet>
           <Bullet>Nutrition guidance tied to what you're working on right now.</Bullet>
           <Bullet>Body measurements: waist, chest, arms, legs and the rest.</Bullet>
-          <Bullet>Year of Lifts: your training year in one card.</Bullet>
+          <Bullet>Morning weight log and the trend that drives your weekly check-in.</Bullet>
           <Bullet>An account so your data is backed up and follows you across phones.</Bullet>
         </Section>
 
