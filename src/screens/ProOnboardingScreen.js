@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { VolyumeMark } from '../components/BrandMark';
+import { VolyumeIcon } from '../components/BrandMark';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import {
@@ -496,7 +496,7 @@ export default function ProOnboardingScreen({ navigation }) {
     return (
       <View style={styles.headerBlock}>
         <View style={styles.brandRow}>
-          <VolyumeMark size={22} color={colors.textPrimary} accent={colors.primary} />
+          <VolyumeIcon size={22} />
           <View style={styles.proBadge}>
             <Text style={styles.proBadgeText}>PRO</Text>
           </View>

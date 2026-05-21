@@ -13,15 +13,19 @@ try {
 } catch (_) { /* expo-image not installed yet, use RN Image */ }
 
 const WORDMARK = require('../../assets/volyume-wordmark.png');
-// Source asset is 1032 x 277 with a transparent background, so it
-// blends with any surface colour. size prop drives the HEIGHT; width
-// derives from the aspect so the wordmark stays readable at any scale.
-const WORDMARK_ASPECT = 1032 / 277;
+const V_ICON = require('../../assets/volyume-v.png');
+// Both assets ship with a transparent background so they blend with
+// any surface colour. size prop drives the HEIGHT in each component;
+// width derives from the asset's aspect so letterforms stay correctly
+// proportioned at any scale.
+const WORDMARK_ASPECT = 1004 / 265;
+const V_ICON_ASPECT = 685 / 741;
 
 /**
- * VolyumeMark renders the chrome Volyume wordmark as a static PNG.
- * size controls the height; width is computed from the asset's aspect
- * ratio so letterforms stay correctly proportioned.
+ * VolyumeMark renders the chrome Volyume wordmark (V + lettering) as a
+ * static PNG. Use this in HERO placements (login, welcome, splash)
+ * where the lettering is the headline. Anywhere it's used, remove any
+ * separate "Volyume" text heading nearby. The asset already says it.
  *
  * Uses expo-image when available (disk cache, faster decode), falls
  * back to RN Image otherwise so the app keeps working pre-install.
@@ -41,21 +45,41 @@ export function VolyumeMark({ size = 28, color, accent, style }) {
 }
 
 /**
- * VolyumeWordmark kept for backwards compatibility with any callers
- * that pass it as a header brand. The new asset already contains the
- * full wordmark, so this is now an alias for VolyumeMark.
+ * VolyumeIcon renders only the V (no lettering). Use this for compact
+ * inline placements: header chips, screen-corner brand tags, anywhere
+ * a screen title already names the section so the wordmark would be
+ * redundant. size drives the height; width follows the asset aspect.
+ */
+export function VolyumeIcon({ size = 28, color, accent, style }) {
+  const height = size;
+  const width = Math.round(height * V_ICON_ASPECT);
+  return (
+    <ImageComp
+      source={V_ICON}
+      style={[{ width, height }, style]}
+      contentFit="contain"
+      resizeMode="contain"
+      accessibilityLabel="Volyume"
+    />
+  );
+}
+
+/**
+ * VolyumeWordmark kept as a thin alias for VolyumeMark so legacy
+ * imports keep building. New code should pick VolyumeMark (full
+ * wordmark) or VolyumeIcon (V only) based on context.
  */
 export function VolyumeWordmark({ size = 28, color, accent, style }) {
   return <VolyumeMark size={size} color={color} accent={accent} style={style} />;
 }
 
 /**
- * BrandTag kept for backwards compatibility. Routes through the new
- * wordmark asset at a slightly smaller scale to match prior inline
- * usage.
+ * BrandTag kept for backwards compatibility. Routes through the icon
+ * since the inline placements that used to pair it with text now have
+ * the V alone next to the existing heading.
  */
 export function BrandTag({ size = 15, color, accent, style }) {
-  return <VolyumeMark size={Math.round(size * 1.6)} color={color} accent={accent} style={style} />;
+  return <VolyumeIcon size={Math.round(size * 1.6)} color={color} accent={accent} style={style} />;
 }
 
 export default VolyumeMark;

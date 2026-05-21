@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { VolyumeMark } from '../components/BrandMark';
+import { VolyumeIcon } from '../components/BrandMark';
 import useAppStore from '../store/useAppStore';
 import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
 import { getActivePlan, getRoutinesForPlan } from '../lib/database';
@@ -88,7 +88,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
 
         <Animated.View style={[styles.mainBlock, { opacity, transform: [{ translateY: slideY }] }]}>
           <View style={styles.brandRow}>
-            <VolyumeMark size={20} color={colors.textPrimary} accent={colors.primary} />
+            <VolyumeIcon size={20} />
             <View style={styles.proBadge}>
               <Text style={styles.proBadgeText}>PRO</Text>
             </View>

@@ -10,7 +10,7 @@ import { format } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg, kgToStoneLbsStrings, kgToLbs } from '../lib/units';
-import { VolyumeMark } from '../components/BrandMark';
+import { VolyumeIcon } from '../components/BrandMark';
 import { SkeletonCard } from '../components/Skeleton';
 import Sparkline from '../components/Sparkline';
 import {
@@ -622,7 +622,7 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.pageTitle}>Train</Text>
             <Text style={styles.greeting}>{getGreeting(userProfile?.firstName)}</Text>
           </View>
-          <VolyumeMark size={38} color={colors.textMuted} />
+          <VolyumeIcon size={38} />
         </View>
 
         {/* ── Training schedule context line ── */}

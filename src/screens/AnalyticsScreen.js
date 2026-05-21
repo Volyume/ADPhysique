@@ -9,7 +9,7 @@ import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius, volumeColors, motion } from '../styles/theme';
-import { VolyumeMark } from '../components/BrandMark';
+import { VolyumeIcon } from '../components/BrandMark';
 import InfoTooltip from '../components/InfoTooltip';
 import SvgBarSparkline from '../components/SvgBarSparkline';
 import FatigueTrendCard from '../components/FatigueTrendCard';
@@ -467,7 +467,7 @@ export default function AnalyticsScreen({ navigation }) {
         {/* ── Header ────────────────────────────────────────── */}
         <View style={styles.header}>
           <Text style={styles.pageTitle}>Progress</Text>
-          <VolyumeMark size={38} color={colors.textMuted} />
+          <VolyumeIcon size={38} />
         </View>
 
         {/* ── Empty state ───────────────────────────────────── */}
