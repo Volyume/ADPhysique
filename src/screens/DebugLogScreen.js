@@ -1,26 +1,26 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Share, Switch, Platform } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import Constants from 'expo-constants';
-import { getRecentErrors, clearErrors, exportErrorsAsText, getCrashLog, clearCrashLog, flushDebugLogs, shouldShipDebugLogs, setShipDebugLogs, getLastFlushOutcome } from '../lib/errorLog';
-import { getSupabaseClient } from '../lib/supabase';
-import useAppStore from '../store/useAppStore';
+import { getRecentErrors, clearErrors, exportErrorsAsText, getCrashLog, clearCrashLog } from '../lib/errorLog';
+
+// Errors auto-ship to Sentry (configured in App.js). This screen is the
+// on-device viewer for the last 200 buffered events — useful when a
+// tester wants to see what just happened locally or copy a session
+// snippet to share. Cloud upload of the buffer is removed.
 
 export default function DebugLogScreen({ navigation }) {
   const [entries, setEntries] = useState([]);
   const [crash, setCrash] = useState(null);
   const [filter, setFilter] = useState('all'); // 'all' | 'error' | 'warn' | 'info'
   const [loading, setLoading] = useState(true);
-  const [flushOutcome, setFlushOutcome] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     const [list, c] = await Promise.all([getRecentErrors(), getCrashLog()]);
     setEntries(list);
     setCrash(c);
-    setFlushOutcome(getLastFlushOutcome());
     setLoading(false);
   }, []);
 
@@ -45,37 +45,6 @@ export default function DebugLogScreen({ navigation }) {
     const text = await exportErrorsAsText();
     try { await Share.share({ message: text, title: 'Volyume error log' }); }
     catch (_) {}
-  }
-
-  async function handleSendToSupport() {
-    const sb = getSupabaseClient();
-    if (!sb) {
-      Alert.alert('Not available', 'Cloud is not configured — logs can only be shared from this device.');
-      return;
-    }
-    const store = useAppStore.getState();
-    const session = store.session;
-    const result = await flushDebugLogs(sb, {
-      force: true, // explicit user action overrides the opt-out
-      userId: session?.user?.id ?? null,
-      deviceId: store.user?.id ?? null,
-      appVersion: Constants?.expoConfig?.version ?? null,
-      platform: Platform.OS,
-    });
-    if (result.error) {
-      Alert.alert('Send failed', result.error);
-    } else if (result.sent === 0) {
-      Alert.alert('Already up to date', 'All logs have been sent to support already.');
-    } else {
-      Alert.alert('Sent', `${result.sent} log ${result.sent === 1 ? 'entry' : 'entries'} sent to support.`);
-    }
-  }
-
-  const [autoShip, setAutoShip] = useState(true);
-  useEffect(() => { shouldShipDebugLogs().then(setAutoShip); }, []);
-  async function handleAutoShipToggle(value) {
-    setAutoShip(value);
-    await setShipDebugLogs(value);
   }
 
   const filtered = filter === 'all' ? entries : entries.filter(e => e.level === filter);
@@ -112,55 +81,15 @@ export default function DebugLogScreen({ navigation }) {
       </View>
 
       <View style={styles.actionsRow}>
-        <TouchableOpacity style={styles.actionBtn} onPress={handleSendToSupport}>
-          <Ionicons name="cloud-upload-outline" size={16} color={colors.primary} />
-          <Text style={[styles.actionLabel, { color: colors.primary }]}>Send to support</Text>
-        </TouchableOpacity>
         <TouchableOpacity style={styles.actionBtn} onPress={handleShare}>
-          <Ionicons name="share-outline" size={16} color={colors.textPrimary} />
-          <Text style={styles.actionLabel}>Share</Text>
+          <Ionicons name="share-outline" size={16} color={colors.primary} />
+          <Text style={[styles.actionLabel, { color: colors.primary }]}>Share</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.actionBtn, styles.actionBtnDanger]} onPress={handleClear}>
           <Ionicons name="trash-outline" size={16} color={colors.error} />
           <Text style={[styles.actionLabel, { color: colors.error }]}>Clear</Text>
         </TouchableOpacity>
       </View>
-      <View style={styles.autoShipRow}>
-        <Text style={styles.autoShipLabel}>Auto-send new errors during beta</Text>
-        <Switch
-          value={autoShip}
-          onValueChange={handleAutoShipToggle}
-          trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
-          thumbColor={autoShip ? colors.primary : colors.textMuted}
-        />
-      </View>
-
-      {/* Backup status — surfaces whether auto-flush is actually reaching
-          Supabase. The auto-flush runs silently on AppState foreground
-          (App.js), so without this row a failed insert (RLS rejection,
-          missing table, network) would be invisible. */}
-      {flushOutcome && (
-        <View style={[styles.flushStatus, flushOutcome.error && styles.flushStatusError]}>
-          <Ionicons
-            name={flushOutcome.error ? 'alert-circle' : 'checkmark-circle'}
-            size={14}
-            color={flushOutcome.error ? colors.error : colors.success}
-          />
-          <Text style={styles.flushStatusText}>
-            {flushOutcome.error
-              ? `Cloud backup failed: ${flushOutcome.error}`
-              : `Cloud backup OK — ${flushOutcome.sent} ${flushOutcome.sent === 1 ? 'entry' : 'entries'} shipped`}
-          </Text>
-        </View>
-      )}
-      {!flushOutcome && (
-        <View style={styles.flushStatus}>
-          <Ionicons name="time-outline" size={14} color={colors.textMuted} />
-          <Text style={styles.flushStatusText}>
-            Cloud backup not attempted yet this session. Background ship runs on app foreground.
-          </Text>
-        </View>
-      )}
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {crash && (
@@ -231,8 +160,6 @@ const styles = StyleSheet.create({
   chipLabel: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
   chipLabelOn: { color: colors.primary },
   actionsRow: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
-  autoShipRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
-  autoShipLabel: { color: colors.textSecondary, fontSize: fontSize.sm, flex: 1, marginRight: spacing.md },
   actionBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   actionBtnDanger: { borderColor: colors.error },
   actionLabel: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
@@ -254,13 +181,4 @@ const styles = StyleSheet.create({
   entryMessage: { color: colors.textPrimary, fontSize: fontSize.sm },
   entryContext: { color: colors.textMuted, fontSize: fontSize.xs, fontFamily: 'monospace' },
   entryStack: { color: colors.textMuted, fontSize: fontSize.xs, fontFamily: 'monospace' },
-  flushStatus: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
-    backgroundColor: colors.surface, borderRadius: radius.sm,
-    marginHorizontal: spacing.lg, marginBottom: spacing.md,
-    borderLeftWidth: 3, borderLeftColor: colors.success,
-  },
-  flushStatusError: { borderLeftColor: colors.error },
-  flushStatusText: { flex: 1, fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 16 },
 });

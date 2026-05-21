@@ -88,6 +88,13 @@ async function pushEntry(entry) {
   persistDebounced();
 }
 
+// Lazy require so we don't pull sentry.js into modules that import
+// errorLog purely for its types (jest setup, etc.). The wrapper is
+// safe even if @sentry/react-native isn't installed.
+function _sentry() {
+  try { return require('./sentry'); } catch (_) { return null; }
+}
+
 export function logError(scope, error, context) {
   const entry = buildEntry('error', scope, error, context);
   // eslint-disable-next-line no-console
@@ -95,6 +102,10 @@ export function logError(scope, error, context) {
     console.error(`[${entry.scope}]`, entry.message, context || '');
   }
   pushEntry(entry).catch(() => {});
+  // Forward to Sentry — handles its own dedup, source-map symbolication,
+  // alerting. Wrap in try/catch so a Sentry SDK problem can never break
+  // an error log call.
+  try { _sentry()?.captureError(error ?? new Error(entry.message), { scope, extra: { context } }); } catch (_) {}
   return entry;
 }
 
@@ -104,19 +115,27 @@ export function logWarn(scope, message, context) {
     console.warn(`[${entry.scope}]`, entry.message, context || '');
   }
   pushEntry(entry).catch(() => {});
+  try { _sentry()?.captureWarning(entry.message, { scope, extra: { context } }); } catch (_) {}
   return entry;
 }
 
 export function logInfo(scope, message, context) {
-  // Gated by VERBOSE_LOGGING so we can quiet the buffer for public
-  // release in one place. During beta this fires and ships.
-  if (!VERBOSE_LOGGING) return;
-  const entry = buildEntry('info', scope, message, context);
-  if (typeof console !== 'undefined' && console.log) {
-    console.log(`[${entry.scope}]`, entry.message, context || '');
+  // Gated by VERBOSE_LOGGING for the on-device buffer. Even when off,
+  // we forward to Sentry as a breadcrumb so the run-up to an error is
+  // visible in the issue detail view — breadcrumbs are cheap (no event
+  // created on their own, only attached to subsequent errors).
+  if (VERBOSE_LOGGING) {
+    const entry = buildEntry('info', scope, message, context);
+    if (typeof console !== 'undefined' && console.log) {
+      console.log(`[${entry.scope}]`, entry.message, context || '');
+    }
+    pushEntry(entry).catch(() => {});
+    try { _sentry()?.addBreadcrumb(entry.message, { scope, extra: { context } }); } catch (_) {}
+    return entry;
   }
-  pushEntry(entry).catch(() => {});
-  return entry;
+  // Quiet mode (post-beta) still feeds Sentry breadcrumbs — almost free.
+  try { _sentry()?.addBreadcrumb(message, { scope, extra: { context } }); } catch (_) {}
+  return null;
 }
 
 export async function getRecentErrors(limit = MAX_ENTRIES) {
@@ -129,129 +148,12 @@ export async function clearErrors() {
   try { await AsyncStorage.removeItem(LOG_KEY); } catch (_) {}
 }
 
-// ─── Cloud shipping (beta diagnostics) ────────────────────────────────────
-//
-// Drains the on-device ring buffer to the Supabase `debug_log_uploads`
-// table so beta failures show up in your dashboard for analysis. Tracks
-// an upload watermark so we never re-ship the same entry twice.
-//
-// Called from:
-//   - App.js AppState 'active' handler (after foreground sync)
-//   - Settings → Diagnostics → "Send logs to support" (manual)
-//
-// Honours an opt-out preference: if `@volyume_a11y_prefs` has
-// shipDebugLogs=false, this is a no-op. Defaulted to on for beta.
-
-const UPLOAD_WATERMARK_KEY = '@volyume_log_upload_watermark';
-const SHIP_PREF_KEY = '@volyume_ship_debug_logs';
-const MAX_BATCH = 50;
-
-export async function shouldShipDebugLogs() {
-  try {
-    const pref = await AsyncStorage.getItem(SHIP_PREF_KEY);
-    if (pref == null) return true;          // default on for beta
-    return pref !== 'false';
-  } catch (_) { return true; }
-}
-
-export async function setShipDebugLogs(enabled) {
-  try { await AsyncStorage.setItem(SHIP_PREF_KEY, enabled ? 'true' : 'false'); }
-  catch (_) {}
-}
-
-// Per-session memo so we don't spam the buffer with the same upload
-// failure on every AppState foreground — table-doesn't-exist or RLS
-// rejection won't fix itself between foregrounds, no point logging it
-// 50 times. Records the first failure, then stays quiet until success.
-let lastFlushOutcome = null;
-
-export async function flushDebugLogs(supabaseClient, { force = false, userId = null, deviceId = null, appVersion = null, platform = null } = {}) {
-  if (!supabaseClient) return { sent: 0, skipped: 'no-client' };
-  if (!force && !(await shouldShipDebugLogs())) return { sent: 0, skipped: 'opted-out' };
-
-  const buf = await loadBuffer();
-  if (!buf.length) return { sent: 0, skipped: 'empty' };
-
-  let watermark = 0;
-  try {
-    const raw = await AsyncStorage.getItem(UPLOAD_WATERMARK_KEY);
-    if (raw) watermark = parseInt(raw, 10) || 0;
-  } catch (_) {}
-
-  // Buffer is newest-first; pick entries with ts > watermark.
-  const newEntries = buf.filter(e => (e.ts ?? 0) > watermark).slice(0, MAX_BATCH);
-  if (!newEntries.length) return { sent: 0, skipped: 'caught-up' };
-
-  // Generate a UUID id per row so Supabase accepts the TEXT PK.
-  function uid() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-      const r = (Math.random() * 16) | 0;
-      return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
-    });
-  }
-
-  // The cloud `context` column is TEXT. Stringify objects so PostgREST
-  // accepts them — previously we shipped the raw object which Supabase
-  // either rejected or silently dropped depending on version, killing
-  // the whole batch insert.
-  function safeStringify(value) {
-    if (value == null) return null;
-    if (typeof value === 'string') return value;
-    try { return JSON.stringify(value); } catch (_) { return String(value); }
-  }
-  const rows = newEntries.map(e => ({
-    id: uid(),
-    user_id: userId || null,
-    device_id: deviceId || null,
-    ts: e.ts,
-    level: e.level,
-    scope: e.scope,
-    message: e.message,
-    stack: e.stack || null,
-    context: safeStringify(e.context),
-    app_version: appVersion || null,
-    platform: platform || null,
-  }));
-
-  try {
-    const { error } = await supabaseClient.from('debug_log_uploads').insert(rows);
-    if (error) {
-      // Log the first failure of the session so the on-device buffer has
-      // evidence that uploads aren't reaching Supabase. We deliberately
-      // write directly to console (not pushEntry) so the buffer doesn't
-      // get a recursive flush failure entry that itself tries to upload.
-      if (lastFlushOutcome?.error !== error.message) {
-        lastFlushOutcome = { ts: Date.now(), error: error.message, rows: rows.length };
-        if (typeof console !== 'undefined' && console.warn) {
-          console.warn('[errorLog.flushDebugLogs] insert failed:', error.message, '— would have shipped', rows.length, 'rows');
-        }
-      }
-      return { sent: 0, error: error.message };
-    }
-    // Advance the watermark to the newest entry we just shipped.
-    const newest = Math.max(...newEntries.map(e => e.ts ?? 0));
-    try { await AsyncStorage.setItem(UPLOAD_WATERMARK_KEY, String(newest)); } catch (_) {}
-    lastFlushOutcome = { ts: Date.now(), sent: rows.length };
-    if (typeof console !== 'undefined' && console.log) {
-      console.log('[errorLog.flushDebugLogs] shipped', rows.length, 'rows up to ts', newest);
-    }
-    return { sent: rows.length };
-  } catch (e) {
-    if (lastFlushOutcome?.error !== e?.message) {
-      lastFlushOutcome = { ts: Date.now(), error: e?.message ?? 'upload failed', rows: rows.length };
-      if (typeof console !== 'undefined' && console.warn) {
-        console.warn('[errorLog.flushDebugLogs] threw:', e?.message);
-      }
-    }
-    return { sent: 0, error: e?.message ?? 'upload failed' };
-  }
-}
-
-// Exposes the most recent flush outcome so DebugLogScreen can show it.
-// Returns null until the first flush attempt of the session.
-export function getLastFlushOutcome() {
-  return lastFlushOutcome;
-}
+// Cloud shipping is now handled by Sentry (see src/lib/sentry.js) —
+// the local ring buffer above is retained for on-device viewing in
+// Settings → Debug logs. Removed: flushDebugLogs, shouldShipDebugLogs,
+// setShipDebugLogs, getLastFlushOutcome, the watermark + ship-pref
+// AsyncStorage keys, and the per-session memo for upload failures.
+// The debug_log_uploads Supabase table is no longer touched.
 
 export async function exportErrorsAsText() {
   const buf = await loadBuffer();

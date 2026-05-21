@@ -55,7 +55,6 @@ import ProGoalSetupScreen from '../screens/ProGoalSetupScreen';
 import GoalChangeSummaryScreen from '../screens/GoalChangeSummaryScreen';
 import NotificationSettingsScreen from '../screens/NotificationSettingsScreen';
 import CoachingRemindersScreen from '../screens/CoachingRemindersScreen';
-import AdminLogsScreen from '../screens/AdminLogsScreen';
 import ProOnboardingScreen from '../screens/ProOnboardingScreen';
 import ProSetupCompleteScreen from '../screens/ProSetupCompleteScreen';
 import ProUpgradeScreen from '../screens/ProUpgradeScreen';
@@ -184,10 +183,6 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="GoalChangeSummary" component={GoalChangeSummaryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ title: 'Notifications' }} />
       <Stack.Screen name="CoachingReminders" component={GatedCoachingReminders} options={{ title: 'Coaching reminders' }} />
-      {/* Admin-only — RPC enforces is_admin_email() server-side so a
-          non-admin reaching this route gets zero rows. The Settings
-          row is hidden for non-admins, this is just a defence-in-depth. */}
-      <Stack.Screen name="AdminLogs" component={AdminLogsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="WellbeingCheck" component={WellbeingCheckScreen} options={{ title: 'Wellbeing check' }} />
       <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ headerShown: false }} />
       <Stack.Screen name="DebugLog" component={DebugLogScreen} options={{ headerShown: false }} />
@@ -410,6 +405,15 @@ export default function RootNavigator() {
         const { data } = client.auth.onAuthStateChange(async (event, session) => {
           // eslint-disable-next-line global-require
           try { require('../lib/errorLog').logInfo('auth.event', event, { uid: session?.user?.id ?? null }); } catch (_) {}
+          // Bind / unbind the Sentry user so errors are searchable by
+          // who hit them. Safe no-op if Sentry isn't installed yet.
+          try {
+            // eslint-disable-next-line global-require
+            const { setSentryUser } = require('../lib/sentry');
+            setSentryUser(session?.user
+              ? { id: session.user.id, email: session.user.email }
+              : null);
+          } catch (_) {}
           setSession(session);
           setUser(session?.user ?? null);
           // On a fresh sign-in (email OR OAuth), pull the cloud profile

@@ -18,6 +18,22 @@ import { installGlobalHandlers, logError } from './src/lib/errorLog';
 // LoginScreen banner.
 installGlobalHandlers();
 
+// Initialise Sentry as early as possible so any startup error is
+// captured. No-op if @sentry/react-native isn't installed yet or the
+// EXPO_PUBLIC_SENTRY_DSN env var isn't set — safe to ship before
+// you've added the SDK.
+{
+  // eslint-disable-next-line global-require
+  const { initSentry } = require('./src/lib/sentry');
+  // eslint-disable-next-line global-require
+  const Constants = require('expo-constants').default;
+  initSentry({
+    release: Constants?.expoConfig?.version
+      ? `volyume@${Constants.expoConfig.version}`
+      : undefined,
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Background task — keeps the JS thread alive during rest periods on iOS so
 // the timer does not freeze when the screen is locked.
@@ -323,22 +339,9 @@ export default function App() {
           const { bulkUploadLocalData } = require('./src/lib/sync');
           bulkUploadLocalData(supabaseUserId, localUserId).catch(() => {});
         }
-        // Ship debug logs even if not signed in — anon insert is allowed
-        // on the debug_log_uploads table so local-only beta testers also
-        // surface their errors. user_id is null for those rows; device_id
-        // (the local user id) identifies them in the dashboard.
-        // eslint-disable-next-line global-require
-        const { flushDebugLogs } = require('./src/lib/errorLog');
-        // eslint-disable-next-line global-require
-        const Constants = require('expo-constants').default;
-        // eslint-disable-next-line global-require
-        const { Platform } = require('react-native');
-        flushDebugLogs(sb, {
-          userId: supabaseUserId,
-          deviceId: localUserId,
-          appVersion: Constants?.expoConfig?.version ?? null,
-          platform: Platform.OS,
-        }).catch(() => {});
+        // Error log shipping is now Sentry's job (initialised below).
+        // The SDK has its own offline buffer + transport — we don't need
+        // to push from here.
       } catch (_) { /* offline / no session — try again next foreground */ }
     }
     const sub = AppState.addEventListener('change', state => {
