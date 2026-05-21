@@ -339,6 +339,17 @@ export default function App() {
           const { bulkUploadLocalData } = require('./src/lib/sync');
           bulkUploadLocalData(supabaseUserId, localUserId).catch(() => {});
         }
+        // Drain the sync queue — retries any cloud writes that failed
+        // since the last foreground (offline at the gym, flaky 5G, 5xx
+        // on Supabase, etc.). Backoff schedule means we don't hammer
+        // the API; each op has its own next_attempt_at gate. Safe to
+        // run alongside bulkUploadLocalData — they operate on
+        // different tables (queue is per-op retry, bulk is catch-up).
+        if (supabaseUserId) {
+          // eslint-disable-next-line global-require
+          const { drainSyncQueue } = require('./src/lib/syncQueue');
+          drainSyncQueue(sb, supabaseUserId).catch(() => {});
+        }
         // Error log shipping is now Sentry's job (initialised below).
         // The SDK has its own offline buffer + transport — we don't need
         // to push from here.

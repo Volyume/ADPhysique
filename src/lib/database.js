@@ -479,6 +479,27 @@ const SCHEMA_MIGRATIONS = [
     )`,
     `CREATE INDEX IF NOT EXISTS idx_exercise_goals_user ON exercise_goals(user_id, exercise_id)`,
   ],
+
+  // v16 — pending sync ops queue. Mutations that fail to ship to the
+  // cloud (offline, flaky connection, server hiccup) are enqueued here
+  // and retried on app foreground / next sign-in. Without this, a
+  // dropped sync was silent data loss until the user's next sign-in
+  // cycle triggered a full bulkUploadLocalData catch-up.
+  [
+    `CREATE TABLE IF NOT EXISTS pending_sync_ops (
+      id          TEXT PRIMARY KEY,
+      op_type     TEXT NOT NULL,        -- 'workout' | 'body_metric' | 'morning_weight' | 'check_in'
+      entity_id   TEXT NOT NULL,        -- the row id we're trying to sync
+      user_id     TEXT NOT NULL,        -- supabase user.id
+      payload     TEXT,                 -- JSON-serialised payload, optional (sync code can re-read from local SQLite by entity_id)
+      created_at  INTEGER NOT NULL,
+      retries     INTEGER NOT NULL DEFAULT 0,
+      next_attempt_at INTEGER NOT NULL, -- ms epoch; queue drainer skips rows where now() < next_attempt_at
+      last_error  TEXT
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_pending_sync_user_ready
+      ON pending_sync_ops(user_id, next_attempt_at)`,
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
@@ -2141,6 +2162,8 @@ export async function wipeAllUserData(userId) {
     'nutrition_targets', 'peak_week_plans',
     'body_metric_log', 'user_insights', 'user_body_profile',
     'exercise_user_notes', 'exercise_goals', 'workout_notes',
+    'pending_sync_ops', // queue table from v16 — wipe so deleted user
+                         // doesn't have orphan ops still trying to ship
   ];
 
   // Tables that DON'T have user_id and must be wiped through a parent FK.

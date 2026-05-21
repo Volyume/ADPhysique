@@ -140,6 +140,14 @@ export async function syncWorkout(supabaseUserId, workoutId) {
     await _upsertSets(sb, supabaseUserId, sets);
   } catch (e) {
     logWarn('sync.syncWorkout', e?.message, { workoutId });
+    // Enqueue for retry on next foreground / connection return.
+    // Without this, a dropped sync was silent data loss until the
+    // user's next sign-in cycle triggered bulkUploadLocalData.
+    try {
+      // eslint-disable-next-line global-require
+      const { enqueueSyncOp } = require('./syncQueue');
+      await enqueueSyncOp('workout', workoutId, supabaseUserId);
+    } catch (_) { /* enqueue itself failed — nothing more we can do */ }
   }
 }
 
@@ -228,6 +236,11 @@ export async function syncBodyMetric(supabaseUserId, metric) {
     }, { onConflict: 'id' });
   } catch (e) {
     logWarn('sync.syncBodyMetric', e?.message, { metricId: metric?.id });
+    try {
+      // eslint-disable-next-line global-require
+      const { enqueueSyncOp } = require('./syncQueue');
+      await enqueueSyncOp('body_metric', metric?.id ?? `bm-${Date.now()}`, supabaseUserId, metric);
+    } catch (_) {}
   }
 }
 
