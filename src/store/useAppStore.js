@@ -114,6 +114,8 @@ const useAppStore = create((set, get) => ({
   // waiting for pullFromCloud). The actual SQLite wipe happens only on
   // delete-account or when a DIFFERENT user signs in on this device.
   clearAuthStateForSignOut: async () => {
+    // eslint-disable-next-line global-require
+    try { require('../lib/errorLog').logInfo('clearAuthStateForSignOut', 'start', { prevTier: get().tier, prevUid: get().user?.id ?? null }); } catch (_) {}
     const keysToRemove = [
       LOCAL_USER_KEY,
       FIRST_RUN_KEY,
@@ -414,22 +416,34 @@ const useAppStore = create((set, get) => ({
     });
   },
 
-  startWorkout: (workout, initialExercises = []) => set({
-    activeWorkout: workout,
-    workoutExercises: initialExercises,
-    currentExerciseIndex: 0,
-    workoutStartTime: Date.now(),
-    lastActivityAt: Date.now(),
-  }),
+  startWorkout: (workout, initialExercises = []) => {
+    // eslint-disable-next-line global-require
+    try { require('../lib/errorLog').logInfo('workout.start', `id=${workout?.id} exercises=${initialExercises.length}`); } catch (_) {}
+    set({
+      activeWorkout: workout,
+      workoutExercises: initialExercises,
+      currentExerciseIndex: 0,
+      workoutStartTime: Date.now(),
+      lastActivityAt: Date.now(),
+    });
+  },
 
-  endWorkout: () => set({
-    activeWorkout: null,
-    workoutExercises: [],
-    currentExerciseIndex: 0,
-    workoutStartTime: null,
-    restTimerActive: false,
-    lastActivityAt: null,
-  }),
+  endWorkout: () => {
+    // eslint-disable-next-line global-require
+    try {
+      const start = get().workoutStartTime;
+      const mins = start ? Math.round((Date.now() - start) / 60000) : null;
+      require('../lib/errorLog').logInfo('workout.end', `id=${get().activeWorkout?.id} mins=${mins}`);
+    } catch (_) {}
+    set({
+      activeWorkout: null,
+      workoutExercises: [],
+      currentExerciseIndex: 0,
+      workoutStartTime: null,
+      restTimerActive: false,
+      lastActivityAt: null,
+    });
+  },
 
   // Rest timer
   restTimerActive: false,

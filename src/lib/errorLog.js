@@ -5,7 +5,10 @@
  * Use cases:
  *   - logError(scope, error, ctx) — catch handlers replace `.catch(() => {})`
  *   - logWarn(scope, msg, ctx)    — recoverable issues worth knowing about
- *   - logInfo(scope, msg, ctx)    — DEV only; production no-ops to save space
+ *   - logInfo(scope, msg, ctx)    — verbose milestone events (auth, plan
+ *     gen, set saves, etc.). Persists during beta so testers' traces
+ *     are recoverable; gated by VERBOSE_LOGGING. Flip the constant to
+ *     false to quiet things down before public release.
  *
  * Buffer keeps last MAX_ENTRIES entries (most recent first).
  * Viewable on-device via DebugLogScreen (Settings → Debug logs).
@@ -13,6 +16,11 @@
  * Coexists with the existing single-slot @volyume_crash_log so the
  * LoginScreen banner continues to work.
  */
+
+// Master verbose toggle. True during beta so info-level events ship to
+// the on-device buffer and via flushDebugLogs to the cloud. Set to false
+// before public release to drop the info noise; warnings + errors stay on.
+export const VERBOSE_LOGGING = true;
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LOG_KEY = '@volyume_error_log_v1';
@@ -100,10 +108,9 @@ export function logWarn(scope, message, context) {
 }
 
 export function logInfo(scope, message, context) {
-  // Previously gated on __DEV__ — but beta testers can't share what they
-  // can't capture. Verbose mode is on during beta so info-level events
-  // (auth transitions, plan generation, tier flips) land in the
-  // debug_log_uploads pipeline alongside warnings and errors.
+  // Gated by VERBOSE_LOGGING so we can quiet the buffer for public
+  // release in one place. During beta this fires and ships.
+  if (!VERBOSE_LOGGING) return;
   const entry = buildEntry('info', scope, message, context);
   if (typeof console !== 'undefined' && console.log) {
     console.log(`[${entry.scope}]`, entry.message, context || '');

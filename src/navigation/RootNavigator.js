@@ -408,6 +408,8 @@ export default function RootNavigator() {
       const client = getSupabaseClient();
       if (client) {
         const { data } = client.auth.onAuthStateChange(async (event, session) => {
+          // eslint-disable-next-line global-require
+          try { require('../lib/errorLog').logInfo('auth.event', event, { uid: session?.user?.id ?? null }); } catch (_) {}
           setSession(session);
           setUser(session?.user ?? null);
           // On a fresh sign-in (email OR OAuth), pull the cloud profile

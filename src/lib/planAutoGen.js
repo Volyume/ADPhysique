@@ -95,10 +95,15 @@ export async function generateAndSavePlan(userId, profile) {
   const inputs = buildPlanInputs(profile);
   if (!inputs) return { ok: false, error: 'Profile incomplete' };
 
+  // eslint-disable-next-line global-require
+  try { require('./errorLog').logInfo('plan.generateAndSave.start', `goal=${inputs.goal} phase=${inputs.phase} days=${inputs.daysPerWeek}`); } catch (_) {}
+
   let plan;
   try {
     plan = generatePlan(inputs);
   } catch (e) {
+    // eslint-disable-next-line global-require
+    try { require('./errorLog').logError('plan.generateAndSave.engineFailed', e, { inputs }); } catch (_) {}
     return { ok: false, error: `Plan engine failed: ${e?.message ?? 'unknown'}` };
   }
   if (!plan?.workouts?.length) return { ok: false, error: 'Plan engine returned no workouts' };
