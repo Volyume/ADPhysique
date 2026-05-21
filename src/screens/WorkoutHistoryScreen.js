@@ -10,6 +10,7 @@ import {
   addMonths, subMonths, isSameDay,
 } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import PressableCard from '../components/PressableCard';
 import { getAllWorkouts, getAllWorkoutSets, getAllExercises, createWorkout, getWorkoutSetsForWorkout, getRoutineExercisesWithDetails } from '../lib/database';
 import { logError } from '../lib/errorLog';
 import { calculateTonnage } from '../lib/algorithms';
@@ -255,10 +256,10 @@ export default function WorkoutHistoryScreen({ navigation }) {
     return (
       <View style={styles.card}>
         {/* Tappable header row — toggles expansion */}
-        <TouchableOpacity
+        <PressableCard
           onPress={() => handleToggleExpand(workout.id)}
-          activeOpacity={0.7}
           style={styles.cardHeaderTouchable}
+          accessibilityLabel={`Workout on ${format(date, 'd MMM yyyy')}`}
         >
           <View style={styles.cardHeader}>
             <View style={styles.cardHeaderLeft}>
@@ -284,7 +285,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
           <Text style={styles.exerciseList} numberOfLines={isExpanded ? undefined : 2}>
             {exerciseNames.join(', ') || 'No exercises logged'}
           </Text>
-        </TouchableOpacity>
+        </PressableCard>
 
         {/* Expanded detail */}
         {isExpanded && (

@@ -342,6 +342,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     const totalSets = store.workoutExercises.reduce((sum, e) => sum + e.sets.length, 0);
     if (totalSets === 0) {
       store.endWorkout();
+      // eslint-disable-next-line global-require
+      try { require('../lib/activeWorkoutNotification').dismissActiveWorkoutNotification(); } catch (_) {}
       navigation.goBack();
     } else {
       setShowDiscardModal(true);
@@ -446,6 +448,41 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       if (logFlashTimeoutRef.current) clearTimeout(logFlashTimeoutRef.current);
     };
   }, [workoutStartTime]);
+
+  // Persistent lock-screen / shade notification. Mirrors current
+  // exercise + set + elapsed time so the user sees their workout
+  // state without unlocking. Updates throttled to every 15s OR on
+  // set / exercise change so we're not re-presenting the notif every
+  // tick. Dismissed on unmount + endWorkout (handled below).
+  const lastNotifUpdateRef = useRef(0);
+  useEffect(() => {
+    if (!workoutStartTime || !activeWorkout) return;
+    const now = Date.now();
+    const sinceLast = now - lastNotifUpdateRef.current;
+    // Re-present at most once per 15 seconds. The body shows
+    // "Set N · Bench Press · 12:34" which doesn't need a second-by-
+    // second update; the activity feedback is the in-app timer.
+    if (sinceLast < 15_000 && elapsedSeconds > 0) return;
+    lastNotifUpdateRef.current = now;
+    // eslint-disable-next-line global-require
+    const { showActiveWorkoutNotification } = require('../lib/activeWorkoutNotification');
+    showActiveWorkoutNotification({
+      workoutName: activeWorkout?.name,
+      elapsedSeconds,
+      currentSetIndex: (loggedSets?.length ?? 0) + 1,
+      totalSetsForExercise: routineExercise?.recommendedSets,
+      exerciseName: exercise?.name,
+    }).catch(() => {});
+  }, [elapsedSeconds, activeWorkout, loggedSets?.length, exercise?.name, routineExercise?.recommendedSets, workoutStartTime]);
+
+  // Dismiss the persistent notification on screen unmount. Belt-and-
+  // braces because endWorkout() / handleFinishWorkout also clear it,
+  // but the unmount cleanup catches navigation-away cases.
+  useEffect(() => () => {
+    // eslint-disable-next-line global-require
+    const { dismissActiveWorkoutNotification } = require('../lib/activeWorkoutNotification');
+    dismissActiveWorkoutNotification().catch(() => {});
+  }, []);
 
   // Load previous performance and set defaults when exercise changes
   useEffect(() => {
@@ -918,6 +955,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 totalVolume: calculateTonnage(allSets),
               });
               endWorkout();
+              // eslint-disable-next-line global-require
+              try { require('../lib/activeWorkoutNotification').dismissActiveWorkoutNotification(); } catch (_) {}
               navigation.replace('WorkoutSummary', {
                 workoutId: activeWorkout.id,
                 routineId: activeWorkout.routineId || null,

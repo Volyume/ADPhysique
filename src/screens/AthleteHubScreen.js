@@ -11,6 +11,7 @@ import { format, differenceInDays } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius, shadow } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';
 import GradientCard from '../components/GradientCard';
+import PressableCard from '../components/PressableCard';
 import InfoTooltip from '../components/InfoTooltip';
 import { ProBadge } from '../components/ProGate';
 import { SkeletonCard } from '../components/Skeleton';
@@ -962,7 +963,7 @@ function MetricChip({ label, value }) {
 
 function NavRow({ icon, label, sub, onPress, tooltip }) {
   return (
-    <TouchableOpacity style={styles.navRow} onPress={onPress} activeOpacity={0.8}>
+    <PressableCard style={styles.navRow} onPress={onPress} accessibilityLabel={label}>
       <View style={styles.navRowIcon}>
         <Ionicons name={icon} size={18} color={colors.primary} />
       </View>
@@ -974,7 +975,7 @@ function NavRow({ icon, label, sub, onPress, tooltip }) {
         {sub && <Text style={styles.navRowSub}>{sub}</Text>}
       </View>
       <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-    </TouchableOpacity>
+    </PressableCard>
   );
 }
 
