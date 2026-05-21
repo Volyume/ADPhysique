@@ -391,6 +391,33 @@ export default function App() {
 
   // eslint-disable-next-line global-require
   const { ToastProvider } = require('./src/components/Toast');
+  // eslint-disable-next-line global-require
+  const WhatsNewSheet = require('./src/components/WhatsNewSheet').default;
+
+  // Items surfaced ONCE on this release. Each item is a small icon +
+  // headline + one-line body. Keep this list short so the sheet
+  // doesn't read as a marketing dump.
+  const whatsNewItems = [
+    {
+      icon: 'fitness-outline',
+      tint: '#34C759',
+      headline: 'Health Connect, when you want it',
+      body: 'Pull morning weights from your scale and send completed sessions to your health log. Off by default. Settings · Health Connect.',
+    },
+    {
+      icon: 'sparkles-outline',
+      tint: '#F59E0B',
+      headline: 'Coach explanations on every session',
+      body: 'Tap "Why this status?" on any muscle row in your session summary for a coach paragraph and next-week guidance.',
+    },
+    {
+      icon: 'notifications-outline',
+      tint: '#9C27B0',
+      headline: 'Smarter reminders',
+      body: 'Notifications check what you already did today and stay quiet when there\'s nothing to nudge.',
+    },
+  ];
+
   return (
     <ErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>
@@ -408,6 +435,18 @@ export default function App() {
                 subdued={calm || reduceMotion}
               />
             )}
+            <WhatsNewSheet
+              items={whatsNewItems}
+              onOpenSettings={() => {
+                try {
+                  // eslint-disable-next-line global-require
+                  const { navigationRef } = require('./src/navigation/RootNavigator');
+                  if (navigationRef?.isReady?.()) {
+                    navigationRef.navigate('ProfileTab', { screen: 'Settings' });
+                  }
+                } catch (_) {}
+              }}
+            />
           </ToastProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>

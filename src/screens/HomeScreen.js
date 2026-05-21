@@ -80,6 +80,10 @@ export default function HomeScreen({ navigation }) {
   const [weightInputSt, setWeightInputSt] = useState('');     // stone field (st mode)
   const [weightInputStLbs, setWeightInputStLbs] = useState(''); // lbs field (st mode)
   const [savingWeight, setSavingWeight] = useState(false);
+  // One-time inline nudge that points users to Health Connect for
+  // weight import. Shown only when the platform supports it, weight
+  // read isn't already granted, and the user hasn't dismissed it.
+  const [showHealthNudge, setShowHealthNudge] = useState(false);
   const [showCoachingNudge, setShowCoachingNudge] = useState(false);
   const [totalSessions, setTotalSessions] = useState(0);
   const [showIntentPrompt, setShowIntentPrompt] = useState(false);
@@ -369,6 +373,25 @@ export default function HomeScreen({ navigation }) {
         AsyncStorage.getItem('@volyume_seen_coaching_nudge').then(val => {
           if (val !== 'true') setShowCoachingNudge(true);
         });
+      }
+
+      // Health Connect nudge: surface ONCE on Home for Pro users on a
+      // device that supports Health Connect, only when weight read
+      // isn't already granted and the user hasn't dismissed it. The
+      // What's New sheet covers the first impression; this is the
+      // gentle reminder for anyone who skipped it.
+      if (tier === 'pro') {
+        try {
+          // eslint-disable-next-line global-require
+          const { isHealthAvailable, getHealthPermissionStatus } = require('../lib/health');
+          if (isHealthAvailable()) {
+            const dismissed = await AsyncStorage.getItem('@volyume_seen_health_nudge');
+            if (dismissed !== 'true') {
+              const status = await getHealthPermissionStatus(['weight']);
+              if (status !== 'granted') setShowHealthNudge(true);
+            }
+          }
+        } catch (_) { /* ignore: nudge is purely additive */ }
       }
 
       // Compute tonnage for last session
@@ -841,6 +864,36 @@ export default function HomeScreen({ navigation }) {
             </TouchableOpacity>
           </View>
         ))}
+
+        {/* Health Connect / Apple Health one-time nudge. Sits just under
+            the morning weight card so the value prop reads in context.
+            Dismisses permanently on either action. */}
+        {tier === 'pro' && showHealthNudge && (
+          <TouchableOpacity
+            style={styles.healthNudge}
+            activeOpacity={0.8}
+            onPress={() => {
+              AsyncStorage.setItem('@volyume_seen_health_nudge', 'true').catch(() => {});
+              setShowHealthNudge(false);
+              navigation.getParent()?.navigate('ProfileTab', { screen: 'Settings' });
+            }}
+          >
+            <Ionicons name="link-outline" size={14} color={colors.primary} />
+            <Text style={styles.healthNudgeText} numberOfLines={2}>
+              Got a smart scale? Pull your weights from Health Connect automatically.
+            </Text>
+            <TouchableOpacity
+              onPress={() => {
+                AsyncStorage.setItem('@volyume_seen_health_nudge', 'true').catch(() => {});
+                setShowHealthNudge(false);
+              }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityLabel="Dismiss"
+            >
+              <Ionicons name="close" size={14} color={colors.textMuted} />
+            </TouchableOpacity>
+          </TouchableOpacity>
+        )}
 
         {/* ── This week — progress bars ── */}
         <View style={styles.weekCard}>
@@ -1512,6 +1565,23 @@ const styles = StyleSheet.create({
   },
   weightCardText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary },
   weightCardEdit: { fontSize: fontSize.xs, color: colors.primary },
+  healthNudge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  healthNudgeText: {
+    flex: 1,
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    lineHeight: 16,
+  },
   weightLogBtn: {
     backgroundColor: colors.primary, borderRadius: radius.sm,
     paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
