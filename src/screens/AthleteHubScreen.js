@@ -742,8 +742,8 @@ export default function AthleteHubScreen({ navigation }) {
               <Text style={styles.sectionLabel}>Coaching</Text>
               <NavRow
                 icon="flag-outline"
-                label="Update your goals"
-                sub="Change your physique goal or training phase. Your Precision Coaching updates at the next check-in."
+                label="Update your plan"
+                sub="Change your goal, phase, schedule, equipment or experience. We rebuild the plan and your nutrition targets around the new answers."
                 onPress={() => navigation.navigate('ProGoalSetup')}
               />
               <NavRow

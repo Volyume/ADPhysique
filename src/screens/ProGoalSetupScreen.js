@@ -33,6 +33,40 @@ const APPROACH_SHORT = {
   advanced:  'Upper end for competitive athletes and harder cuts.',
 };
 
+// Training setup options — mirror the lists in ProOnboardingScreen so
+// re-running this screen produces the same plan structure as a fresh
+// wizard run with identical answers.
+const EXPERIENCE_OPTIONS = [
+  { value: 'beginner',     label: 'Beginner',     sub: 'Less than 18 months of consistent training' },
+  { value: 'intermediate', label: 'Intermediate', sub: '18 months to 3 years of consistent training' },
+  { value: 'advanced',     label: 'Advanced',     sub: '3 to 5 years, consistently adding weight over time' },
+  { value: 'competitive',  label: 'Competitive',  sub: '5+ years, training for physique or performance' },
+];
+
+const DAYS_OPTIONS = [3, 4, 5, 6];
+
+const SESSION_LENGTH_OPTIONS = [
+  { label: '45 min', value: 45 },
+  { label: '60 min', value: 60 },
+  { label: '75 min', value: 75 },
+  { label: '90 min', value: 90 },
+];
+
+const EQUIPMENT_OPTIONS = [
+  { value: 'full_gym',        label: 'Full Gym',          sub: 'Barbells, cables, machines, dumbbells' },
+  { value: 'machines_cables', label: 'Machines & Cables', sub: 'No free barbells' },
+  { value: 'dumbbells_only',  label: 'Dumbbells Only',    sub: 'Adjustable or fixed dumbbells' },
+  { value: 'barbell_plates',  label: 'Barbell & Plates',  sub: 'Power rack or squat stand setup' },
+  { value: 'home_gym',        label: 'Home Gym',          sub: 'Mixed equipment at home' },
+  { value: 'bodyweight',      label: 'Bodyweight',        sub: 'No equipment needed' },
+];
+
+const RECOVERY_OPTIONS = [
+  { value: 'poor',    label: 'Poor',    sub: 'Often sore, disrupted sleep, high life stress' },
+  { value: 'average', label: 'Average', sub: 'Typical recovery between sessions' },
+  { value: 'good',    label: 'Good',    sub: 'Sleeping well, low stress, nutrition on point' },
+];
+
 const NUTRITION_KEY = '@volyume_nutrition_targets';
 
 export default function ProGoalSetupScreen({ navigation }) {
@@ -48,6 +82,15 @@ export default function ProGoalSetupScreen({ navigation }) {
   // Weak points — only meaningful for goals that bias volume toward priority
   // muscles. Hidden in the UI otherwise but the value is preserved across edits.
   const [planWeakPoints, setPlanWeakPoints] = useState(userProfile?.planWeakPoints ?? []);
+  // Training setup — prefilled from the user's existing profile so they
+  // can review and tweak. Changing any of these rerolls the plan around
+  // the new values (different days, equipment, experience all affect
+  // exercise selection + volume).
+  const [experience, setExperience] = useState(userProfile?.experience ?? 'intermediate');
+  const [daysPerWeek, setDaysPerWeek] = useState(userProfile?.daysPerWeek ?? 4);
+  const [sessionLengthMinutes, setSessionLengthMinutes] = useState(userProfile?.sessionLengthMinutes ?? 60);
+  const [equipment, setEquipment] = useState(userProfile?.equipment ?? 'full_gym');
+  const [recoveryRating, setRecoveryRating] = useState(userProfile?.recoveryRating ?? 'average');
 
   const suggestedApproach = ADVANCED_PROTEIN_GOALS.includes(selectedGoal) ? 'advanced' : 'optimised';
   const weakPointsApplicable = GOALS_WITH_WEAK_POINTS.includes(selectedGoal);
@@ -117,6 +160,14 @@ export default function ProGoalSetupScreen({ navigation }) {
       proteinApproach,
       goalStartDate,
       planWeakPoints: nextWeakPoints,
+      // Training setup fields — picking up changes the user made to
+      // experience / schedule / equipment / recovery. generateAndSavePlan
+      // reads these from the profile to drive plan generation.
+      experience,
+      daysPerWeek,
+      sessionLengthMinutes,
+      equipment,
+      recoveryRating,
     };
 
     // Recalculate nutrition. Pulls userProfile from the store to make sure we
@@ -141,7 +192,7 @@ export default function ProGoalSetupScreen({ navigation }) {
         ageYears: safeAge,
         sex: safeSex,
         bodyFatPct: wp.bodyFatPct ?? null,
-        activityLevel: daysToActivityLevel(wp.daysPerWeek ?? 4),
+        activityLevel: daysToActivityLevel(daysPerWeek),
         goal: phaseToNutritionKey(selectedPhase),
         trainingGoal: selectedGoal,
         proteinApproach,
@@ -213,7 +264,7 @@ export default function ProGoalSetupScreen({ navigation }) {
         >
           <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Update your goals</Text>
+        <Text style={styles.headerTitle}>Update your plan</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -333,6 +384,122 @@ export default function ProGoalSetupScreen({ navigation }) {
           );
         })}
 
+        {/* ── Training experience ── */}
+        <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Experience</Text>
+        <Text style={styles.sectionSub}>
+          Sets starting volume and exercise selection. You can change this when your training maturity moves.
+        </Text>
+        {EXPERIENCE_OPTIONS.map(opt => {
+          const active = experience === opt.value;
+          return (
+            <TouchableOpacity
+              key={opt.value}
+              style={[styles.phaseCard, active && styles.phaseCardActive]}
+              onPress={() => setExperience(opt.value)}
+              activeOpacity={0.75}
+            >
+              <View style={styles.phaseIconWrap}>
+                <Ionicons name="trophy-outline" size={18} color={active ? colors.primary : colors.textSecondary} />
+              </View>
+              <View style={styles.phaseBody}>
+                <Text style={[styles.phaseLabel, active && styles.phaseLabelActive]}>{opt.label}</Text>
+                <Text style={styles.phaseDetail}>{opt.sub}</Text>
+              </View>
+              {active && <Ionicons name="checkmark-circle" size={20} color={colors.primary} />}
+            </TouchableOpacity>
+          );
+        })}
+
+        {/* ── Training schedule ── */}
+        <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Training days per week</Text>
+        <Text style={styles.sectionSub}>
+          Changing the split affects exercise spread. Plan rebuilds around the new frequency.
+        </Text>
+        <View style={styles.chipRow}>
+          {DAYS_OPTIONS.map(d => {
+            const active = daysPerWeek === d;
+            return (
+              <TouchableOpacity
+                key={d}
+                style={[styles.scheduleChip, active && styles.scheduleChipActive]}
+                onPress={() => setDaysPerWeek(d)}
+                activeOpacity={0.75}
+              >
+                <Text style={[styles.scheduleChipText, active && styles.scheduleChipTextActive]}>{d}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Session length</Text>
+        <View style={styles.chipRow}>
+          {SESSION_LENGTH_OPTIONS.map(opt => {
+            const active = sessionLengthMinutes === opt.value;
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                style={[styles.scheduleChip, active && styles.scheduleChipActive]}
+                onPress={() => setSessionLengthMinutes(opt.value)}
+                activeOpacity={0.75}
+              >
+                <Text style={[styles.scheduleChipText, active && styles.scheduleChipTextActive]}>{opt.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* ── Equipment ── */}
+        <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Equipment</Text>
+        <Text style={styles.sectionSub}>
+          What you have access to. Exercise selection adapts to the kit available.
+        </Text>
+        {EQUIPMENT_OPTIONS.map(opt => {
+          const active = equipment === opt.value;
+          return (
+            <TouchableOpacity
+              key={opt.value}
+              style={[styles.phaseCard, active && styles.phaseCardActive]}
+              onPress={() => setEquipment(opt.value)}
+              activeOpacity={0.75}
+            >
+              <View style={styles.phaseIconWrap}>
+                <Ionicons name="barbell-outline" size={18} color={active ? colors.primary : colors.textSecondary} />
+              </View>
+              <View style={styles.phaseBody}>
+                <Text style={[styles.phaseLabel, active && styles.phaseLabelActive]}>{opt.label}</Text>
+                <Text style={styles.phaseDetail}>{opt.sub}</Text>
+              </View>
+              {active && <Ionicons name="checkmark-circle" size={20} color={colors.primary} />}
+            </TouchableOpacity>
+          );
+        })}
+
+        {/* ── Recovery ── */}
+        <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Recovery</Text>
+        <Text style={styles.sectionSub}>
+          How well you're recovering between sessions. Influences how aggressively the coach progresses you.
+        </Text>
+        {RECOVERY_OPTIONS.map(opt => {
+          const active = recoveryRating === opt.value;
+          return (
+            <TouchableOpacity
+              key={opt.value}
+              style={[styles.phaseCard, active && styles.phaseCardActive]}
+              onPress={() => setRecoveryRating(opt.value)}
+              activeOpacity={0.75}
+            >
+              <View style={styles.phaseIconWrap}>
+                <Ionicons name="bed-outline" size={18} color={active ? colors.primary : colors.textSecondary} />
+              </View>
+              <View style={styles.phaseBody}>
+                <Text style={[styles.phaseLabel, active && styles.phaseLabelActive]}>{opt.label}</Text>
+                <Text style={styles.phaseDetail}>{opt.sub}</Text>
+              </View>
+              {active && <Ionicons name="checkmark-circle" size={20} color={colors.primary} />}
+            </TouchableOpacity>
+          );
+        })}
+
         {/* ── Protein target ── */}
         <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Protein target</Text>
         <Text style={styles.sectionSub}>
@@ -387,7 +554,7 @@ export default function ProGoalSetupScreen({ navigation }) {
           disabled={!canSave}
           activeOpacity={0.85}
         >
-          <Text style={[styles.saveBtnText, !canSave && styles.saveBtnTextDisabled]}>Save</Text>
+          <Text style={[styles.saveBtnText, !canSave && styles.saveBtnTextDisabled]}>Rebuild my plan</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -523,4 +690,31 @@ const styles = StyleSheet.create({
   saveBtnDisabled: { backgroundColor: colors.surface2 },
   saveBtnText: { color: colors.background, fontSize: fontSize.md, fontWeight: fontWeight.bold },
   saveBtnTextDisabled: { color: colors.textMuted },
+
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  scheduleChip: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+    minWidth: 64,
+    alignItems: 'center',
+  },
+  scheduleChipActive: {
+    backgroundColor: colors.primaryBg,
+    borderColor: colors.primary,
+  },
+  scheduleChipText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textSecondary,
+  },
+  scheduleChipTextActive: { color: colors.primary },
 });

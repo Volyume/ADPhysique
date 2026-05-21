@@ -49,8 +49,8 @@ const ACTION_CARDS_PRO_SWITCH = [
   {
     id: 'goals',
     icon: 'flag-outline',
-    title: 'Update goals and regenerate plan',
-    description: 'Pick a different physique goal or training phase. We rebuild your plan and nutrition targets around the new direction. History and PRs are kept.',
+    title: 'Update plan and rebuild',
+    description: 'Change anything from your goal and training phase to your weekly schedule, equipment, and experience. We rebuild your plan and nutrition targets around the new answers. History and PRs are kept.',
     screen: 'ProGoalSetup',
   },
   {
