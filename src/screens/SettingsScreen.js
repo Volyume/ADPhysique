@@ -78,13 +78,10 @@ function SectionHeader({ title }) {
 }
 
 export default function SettingsScreen({ navigation }) {
-  const { user, setUser, setSession, clearAuthStateForSignOut, units, setUnits, bodyWeightUnits, setBodyWeightUnits, barWeight, setBarWeight, userProfile, saveLocalProfile, tier, setTier, accessibility, setAccessibilityPref, loadAccessibility, accessibilityLoaded } =
+  const { user, setUser, setSession, clearAuthStateForSignOut, userProfile, saveLocalProfile, tier, setTier, accessibility, setAccessibilityPref, loadAccessibility, accessibilityLoaded } =
     useAppStore(useShallow(s => ({
       user: s.user, setUser: s.setUser, setSession: s.setSession,
       clearAuthStateForSignOut: s.clearAuthStateForSignOut,
-      units: s.units, setUnits: s.setUnits,
-      bodyWeightUnits: s.bodyWeightUnits, setBodyWeightUnits: s.setBodyWeightUnits,
-      barWeight: s.barWeight, setBarWeight: s.setBarWeight,
       userProfile: s.userProfile, saveLocalProfile: s.saveLocalProfile,
       tier: s.tier, setTier: s.setTier,
       accessibility: s.accessibility,
@@ -375,43 +372,11 @@ export default function SettingsScreen({ navigation }) {
         {/* Preferences */}
         <SectionHeader title="Preferences" />
         <View style={styles.section}>
-          <SettingRow
-            icon="scale-outline"
-            label="Gym weight units"
-            value={units}
-            onPress={() =>
-              Alert.alert('Gym weight units', 'Used for barbells, dumbbells and machines', [
-                { text: 'kg', onPress: () => setUnits('kg') },
-                { text: 'lbs', onPress: () => setUnits('lbs') },
-                { text: 'Cancel', style: 'cancel' },
-              ])
-            }
-          />
-          <SettingRow
-            icon="body-outline"
-            label="Body weight units"
-            value={bodyWeightUnits === 'st' ? 'Stone+lbs' : bodyWeightUnits}
-            onPress={() =>
-              Alert.alert('Body weight units', 'Used for your morning weight and body tracking', [
-                { text: 'Stone + lbs', onPress: () => setBodyWeightUnits('st') },
-                { text: 'kg', onPress: () => setBodyWeightUnits('kg') },
-                { text: 'lbs', onPress: () => setBodyWeightUnits('lbs') },
-                { text: 'Cancel', style: 'cancel' },
-              ])
-            }
-          />
-          <SettingRow
-            icon="barbell"
-            label="Bar weight"
-            value={`${barWeight}kg`}
-            onPress={() =>
-              Alert.alert('Bar weight', 'Standard (20kg) or other?', [
-                { text: '15 kg', onPress: () => setBarWeight(15) },
-                { text: '20 kg', onPress: () => setBarWeight(20) },
-                { text: 'Cancel', style: 'cancel' },
-              ])
-            }
-          />
+          {/* Gym weight units, body weight units, and bar weight rows
+              removed at user request. UK defaults: gym + bar = kg;
+              body weight units come from onboarding (the morning-weight
+              setup screen). The store still holds these values; they
+              just aren't user-editable from Settings any more. */}
           <SettingRow
             icon="heart-outline"
             label="Calmer experience"
