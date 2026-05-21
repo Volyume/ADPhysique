@@ -27,6 +27,7 @@ import {
   requestNotificationPermissions,
 } from '../lib/notifications';
 import useAppStore from '../store/useAppStore';
+import { useToast } from '../components/Toast';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 
@@ -111,6 +112,7 @@ function ChipRow({ items, selected, onSelect, formatter = (v) => String(v), acce
 }
 
 export default function CoachingRemindersScreen({ navigation }) {
+  const toast = useToast();
   const [morningHour, setMorningHour] = useState(7);
   const [morningMinute, setMorningMinute] = useState(0);
   const [checkinDay, setCheckinDay] = useState(1); // Mon
@@ -172,10 +174,16 @@ export default function CoachingRemindersScreen({ navigation }) {
           checkinMinute: next.checkinMinute ?? checkinMinute,
           lastCheckinMs,
         }, permissionStatus);
+        // Existing inline "Saved" indicator stays for users who prefer
+        // explicit on-screen confirmation; toast is the modern overlay
+        // for users scrolling away from the section.
         setSaved(true);
         if (savedTimer.current) clearTimeout(savedTimer.current);
         savedTimer.current = setTimeout(() => setSaved(false), 2000);
-      } catch (_) {}
+        toast.show('Reminder schedule saved', { variant: 'success' });
+      } catch (e) {
+        toast.show('Could not save reminder', { variant: 'error' });
+      }
     }, 400);
   }
 
