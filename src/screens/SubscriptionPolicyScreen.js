@@ -7,7 +7,7 @@
  * Modelled on Hevy's downgrade-friendly approach (Help Center article
  * 38279350428695): anything created on Pro stays accessible read-only
  * on Free. Volyume extends this to anything created during the free
- * beta period — yours forever, even after we move Pro to paid.
+ * beta period: yours forever, even after we move Pro to paid.
  *
  * Linked from Settings → Account and ProUpgradeScreen.
  */
@@ -34,8 +34,8 @@ export default function SubscriptionPolicyScreen({ navigation }) {
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.intro}>
-          Plain English: here's what you get on Free, what Pro adds, and
-          exactly what happens to your data if you ever switch back to Free.
+          Here's what you get on Free, what Pro adds, and what happens to
+          your data if you ever switch back.
         </Text>
 
         <Section
@@ -44,16 +44,19 @@ export default function SubscriptionPolicyScreen({ navigation }) {
           title="What's always free"
         >
           <Body>
-            The core logbook is yours forever, no account needed.
+            The core logbook is yours, no account needed. Everything stays on your phone.
           </Body>
-          <Bullet>Full workout logger with rest timer.</Bullet>
-          <Bullet>300+ exercise library and starter templates.</Bullet>
-          <Bullet>Workout history kept on your device.</Bullet>
+          <Bullet>Full workout logger with rest timer, beeps and haptics.</Bullet>
+          <Bullet>400+ exercise library with form notes.</Bullet>
+          <Bullet>31 ready-made plans you can pick from.</Bullet>
+          <Bullet>Build your own routines from scratch.</Bullet>
+          <Bullet>Workout history kept on your phone.</Bullet>
           <Bullet>Personal records and the PR Wall.</Bullet>
-          <Bullet>Body weight tracking.</Bullet>
+          <Bullet>Body weight log.</Bullet>
           <Bullet>Weekly muscle-group volume targets.</Bullet>
-          <Bullet>Local backup and CSV export, any time.</Bullet>
-          <Bullet>Optional cloud sync with a free account — your data, backed up.</Bullet>
+          <Bullet>Plate calculator.</Bullet>
+          <Bullet>Training reminders.</Bullet>
+          <Bullet>Backup and export your data any time.</Bullet>
         </Section>
 
         <Section
@@ -62,14 +65,15 @@ export default function SubscriptionPolicyScreen({ navigation }) {
           title="What Pro adds"
         >
           <Body>
-            Pro is the coach who writes back. Everything in Free stays;
-            Pro layers an adaptive coaching loop on top.
+            Pro is the coach who writes back. Everything in Free stays; Pro adds a layer on top that adjusts your training each week based on how you're going.
           </Body>
-          <Bullet>Precision Coaching that adjusts your training as your body responds.</Bullet>
+          <Bullet>Precision Coaching that nudges your training as your body responds.</Bullet>
           <Bullet>Personalised calorie and protein targets, updated as your goals change.</Bullet>
-          <Bullet>Weekly check-ins with a written explanation of every coach decision.</Bullet>
-          <Bullet>Mesocycles and the programme builder.</Bullet>
-          <Bullet>Body metrics tracking beyond weight.</Bullet>
+          <Bullet>Weekly check-ins with a written reason for every change, including what we held the same.</Bullet>
+          <Bullet>Nutrition guidance tied to what you're working on right now.</Bullet>
+          <Bullet>Body measurements: waist, chest, arms, legs and the rest.</Bullet>
+          <Bullet>Year of Lifts: your training year in one card.</Bullet>
+          <Bullet>An account so your data is backed up and follows you across phones.</Bullet>
         </Section>
 
         <Section
@@ -78,22 +82,19 @@ export default function SubscriptionPolicyScreen({ navigation }) {
           title="If you switch from Pro back to Free"
         >
           <Body>
-            <Strong>Nothing you created disappears.</Strong> Every workout, every
-            PR, every check-in stays on your device and in your cloud backup
-            exactly as you left it.
+            <Strong>Nothing you've logged disappears.</Strong> Every workout, every PR, every check-in stays on your phone exactly as you left it.
           </Body>
           <KeyPoint>
-            You keep read access to all of your Pro-created data forever — even
-            after switching to Free.
+            You keep read access to everything you built on Pro, forever.
           </KeyPoint>
           <Body>
             What changes on Free:
           </Body>
-          <Bullet>Past coach outputs stay readable in your history.</Bullet>
+          <Bullet>Past coaching write-ups stay readable in your history.</Bullet>
           <Bullet>Past check-ins stay viewable; you just can't run new ones.</Bullet>
-          <Bullet>Mesocycles and programmes you built on Pro stay viewable; you can re-use templates but won't get new coaching adjustments.</Bullet>
-          <Bullet>Nutrition targets last set on Pro stay visible, but won't auto-update without Pro.</Bullet>
-          <Bullet>Body metrics you've logged stay there; only the tracking entry is Pro-only going forward.</Bullet>
+          <Bullet>Plans you built on Pro stay viewable; you can re-use them, but you won't get new coaching changes week to week.</Bullet>
+          <Bullet>Nutrition targets last set on Pro stay visible; they just won't auto-update.</Bullet>
+          <Bullet>Body measurements you've logged stay there; only new entries pause.</Bullet>
         </Section>
 
         <Section
@@ -102,16 +103,15 @@ export default function SubscriptionPolicyScreen({ navigation }) {
           title="The free-beta period"
         >
           <Body>
-            Volyume is fully free during the beta — including Pro features —
-            while we test, iterate, and listen to feedback.
+            Volyume is fully free during the beta, including Pro features, while we test, listen, and improve.
           </Body>
           <Body>
             When Pro becomes a paid feature, beta users get:
           </Body>
           <Bullet>At least <Strong>90 days' notice</Strong> in the app and by email before any charge.</Bullet>
-          <Bullet>Anything you created during the free beta stays yours, readable forever, even if you choose to stay on Free.</Bullet>
+          <Bullet>Anything you built during the free beta stays yours, readable forever, even if you stay on Free.</Bullet>
           <Bullet>A clear list of what's moving behind Pro, and what stays free, well before the change.</Bullet>
-          <Bullet>An honest reason for the change — supporting continued development of the app.</Bullet>
+          <Bullet>An honest reason for the change, which will be about supporting continued work on the app.</Bullet>
         </Section>
 
         <Section
@@ -120,21 +120,15 @@ export default function SubscriptionPolicyScreen({ navigation }) {
           title="Deleting your account"
         >
           <Body>
-            <Strong>Account deletion is different.</Strong> It's the destructive
-            action — it erases everything: your local data, your cloud backup,
-            your account.
+            <Strong>Deleting is different to switching back to Free.</Strong> It erases everything: your data on this phone, your backup, the account itself.
           </Body>
           <Body>
-            Use it if you're leaving the app entirely. If you only want to
-            stop paying for Pro, use Switch to Free instead — that keeps your
-            history intact.
+            Use it if you're leaving the app for good. If you only want to stop paying for Pro, use Switch to Free instead. That keeps your history.
           </Body>
         </Section>
 
         <Text style={styles.footer}>
-          We'll never quietly raise prices, change what's free, or strand your
-          data behind a paywall. If something changes, you'll hear about it
-          first.
+          We won't quietly raise prices, change what's free, or hold your data behind a paywall. If something changes, you'll hear about it first.
         </Text>
       </ScrollView>
     </SafeAreaView>
