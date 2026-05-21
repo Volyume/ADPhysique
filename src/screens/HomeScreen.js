@@ -46,6 +46,11 @@ export default function HomeScreen({ navigation }) {
   const { user, userProfile, startWorkout, activeWorkout, tier, bodyWeightUnits } = useAppStore(
     useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, tier: s.tier, bodyWeightUnits: s.bodyWeightUnits }))
   );
+  // Cloud-sync surface so the screen can refresh once data lands and
+  // show a "Restoring your data" banner during the window.
+  const cloudSyncStatus = useAppStore(s => s.cloudSyncStatus);
+  const cloudSyncVersion = useAppStore(s => s.cloudSyncVersion);
+  const dismissCloudSyncStatus = useAppStore(s => s.dismissCloudSyncStatus);
   const bwu = bodyWeightUnits || 'st';
 
   const [weekStats, setWeekStats] = useState({ sessions: 0, sets: 0, volume: 0 });
@@ -125,6 +130,16 @@ export default function HomeScreen({ navigation }) {
       }
     }, [user?.id]),
   );
+
+  // Re-fetch when a cloud pull lands so the empty state replaces itself
+  // with the restored plan / history without the user needing to
+  // navigate away and back.
+  useEffect(() => {
+    if (cloudSyncVersion > 0 && user?.id) {
+      loadData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cloudSyncVersion]);
 
   async function loadData() {
     await Promise.all([
@@ -606,6 +621,34 @@ export default function HomeScreen({ navigation }) {
                 ? 'Next session: tomorrow'
                 : `Next session: ${scheduleContext.dayName}`}
           </Text>
+        )}
+
+        {/* ── Cloud restore banner ─────────────────────────────────
+            Visible while pullFromCloud is in flight (fresh device,
+            fresh sign-in). Stays until the pull completes so the
+            user doesn't think their data is missing. */}
+        {cloudSyncStatus === 'syncing' && (
+          <View style={styles.cloudSyncBanner}>
+            <Ionicons name="cloud-download-outline" size={18} color={colors.primary} />
+            <Text style={styles.cloudSyncBannerText} numberOfLines={2}>
+              Restoring your data from the cloud. This usually takes a few seconds.
+            </Text>
+          </View>
+        )}
+        {cloudSyncStatus === 'error' && (
+          <View style={styles.cloudSyncBanner}>
+            <Ionicons name="alert-circle-outline" size={18} color={colors.warning} />
+            <Text style={styles.cloudSyncBannerText} numberOfLines={2}>
+              We couldn't reach your cloud backup. Check your connection and pull down to retry.
+            </Text>
+            <TouchableOpacity
+              onPress={dismissCloudSyncStatus}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityLabel="Dismiss cloud restore warning"
+            >
+              <Ionicons name="close" size={15} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
         )}
 
         {/* ── Nutrition phase sync banner ── */}
@@ -2025,6 +2068,25 @@ const styles = StyleSheet.create({
   },
   phaseBannerArrow: {
     paddingLeft: spacing.xs,
+  },
+
+  // Cloud restore banner
+  cloudSyncBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primaryBg,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.primary + '40',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  cloudSyncBannerText: {
+    flex: 1,
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    lineHeight: 16,
   },
 
   // Pre-workout coaching brief card

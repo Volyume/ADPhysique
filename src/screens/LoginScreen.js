@@ -209,9 +209,9 @@ export default function LoginScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      {/* Decorative background V mark — faint, centred */}
+      {/* Decorative background wordmark, faint and centred */}
       <View style={styles.bgDecor} pointerEvents="none">
-        <VolyumeMark size={340} color={colors.primary} accent={colors.primary} style={{ opacity: 0.028 }} />
+        <VolyumeMark size={120} style={{ opacity: 0.04 }} />
       </View>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
@@ -237,7 +237,7 @@ export default function LoginScreen({ navigation, route }) {
               so we render the mark bigger and skip the duplicate text
               underneath. Tagline stays. */}
           <View style={styles.brand}>
-            <VolyumeMark size={140} style={styles.brandMark} />
+            <VolyumeMark size={80} style={styles.brandMark} />
             <Text style={styles.brandTagline}>Less thinking. More lifting.</Text>
           </View>
 

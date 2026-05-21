@@ -10,8 +10,8 @@ import { View, Text, Image, StyleSheet, Animated, Easing, Dimensions } from 'rea
 import { Ionicons } from '@expo/vector-icons';
 
 const SPLASH_HERO = require('../../assets/volyume-wordmark.png');
-const HERO_ASPECT = 1448 / 1086;
-const SPLASH_W = Math.round(Dimensions.get('window').width * 0.72);
+const HERO_ASPECT = 1032 / 277;
+const SPLASH_W = Math.round(Dimensions.get('window').width * 0.7);
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { colors, fontWeight, spacing } from '../styles/theme';
@@ -463,10 +463,15 @@ export default function RootNavigator() {
             // Pull workouts / plans / routines / check-ins from cloud
             // into local SQLite. Returning users on a new device see
             // their data populate empty states as inserts complete.
-            // Same fire-and-forget pattern as the cloud restore.
+            // Status is surfaced via the store so screens can show a
+            // "Restoring your data" banner and re-fetch when it lands.
             // eslint-disable-next-line global-require
             const { pullFromCloud } = require('../lib/sync');
-            pullFromCloud(session.user.id).catch(() => {});
+            const store = useAppStore.getState();
+            store.markCloudSyncing();
+            pullFromCloud(session.user.id)
+              .then(() => useAppStore.getState().markCloudSyncComplete())
+              .catch((err) => useAppStore.getState().markCloudSyncError(err?.message));
           }
         });
         subscription = data.subscription;

@@ -13,10 +13,10 @@ try {
 } catch (_) { /* expo-image not installed yet, use RN Image */ }
 
 const WORDMARK = require('../../assets/volyume-wordmark.png');
-// Source asset is 1448 x 1086 (4:3-ish). size prop drives the HEIGHT;
-// width derives from the aspect so the wordmark stays readable at any
-// scale.
-const WORDMARK_ASPECT = 1448 / 1086;
+// Source asset is 1032 x 277 with a transparent background, so it
+// blends with any surface colour. size prop drives the HEIGHT; width
+// derives from the aspect so the wordmark stays readable at any scale.
+const WORDMARK_ASPECT = 1032 / 277;
 
 /**
  * VolyumeMark renders the chrome Volyume wordmark as a static PNG.

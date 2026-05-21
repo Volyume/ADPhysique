@@ -158,6 +158,27 @@ const useAppStore = create((set, get) => ({
   tier: null,
   tierChecked: false,
 
+  // Cloud sync status surface. Set from RootNavigator when a fresh
+  // SIGNED_IN triggers pullFromCloud. Screens subscribe to
+  // cloudSyncVersion so they re-fetch from SQLite once data finishes
+  // landing (otherwise a fresh device sees the empty state for the
+  // whole sync window). cloudSyncStatus drives a "restoring" banner.
+  cloudSyncStatus: 'idle',
+  cloudSyncVersion: 0,
+  cloudSyncError: null,
+  markCloudSyncing: () => set({ cloudSyncStatus: 'syncing', cloudSyncError: null }),
+  markCloudSyncComplete: () => set(s => ({
+    cloudSyncStatus: 'complete',
+    cloudSyncVersion: s.cloudSyncVersion + 1,
+    cloudSyncError: null,
+  })),
+  markCloudSyncError: (msg) => set(s => ({
+    cloudSyncStatus: 'error',
+    cloudSyncVersion: s.cloudSyncVersion + 1,
+    cloudSyncError: msg ?? 'Unknown error',
+  })),
+  dismissCloudSyncStatus: () => set({ cloudSyncStatus: 'idle', cloudSyncError: null }),
+
   // True while restoreSessionFromCloud is in flight. The navigator
   // gates routing decisions on this so the wizard doesn't briefly
   // mount during the ~8s cloud read for returning users (the

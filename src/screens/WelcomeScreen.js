@@ -8,7 +8,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 
 const HERO = require('../../assets/volyume-wordmark.png');
-const HERO_ASPECT = 1448 / 1086;
+const HERO_ASPECT = 1032 / 277;
 
 const FREE_BULLETS = [
   'Unlimited workout logging, fully offline',
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1, padding: spacing.xl, gap: spacing.xl, paddingBottom: spacing.xxl },
 
   hero: { alignItems: 'center', gap: spacing.sm, paddingTop: spacing.xl },
-  logoImg: { width: Math.round(180 * HERO_ASPECT), height: 180 },
+  logoImg: { width: 320, height: Math.round(320 / HERO_ASPECT) },
   wordmark: {
     fontSize: 28, fontWeight: fontWeight.black, color: colors.textPrimary,
     letterSpacing: 5, marginTop: spacing.xs,
