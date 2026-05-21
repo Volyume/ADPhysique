@@ -130,26 +130,44 @@ async function _scheduleRetry(d, row, errorMsg) {
 async function _runOp(supabaseClient, row) {
   // eslint-disable-next-line global-require
   const sync = require('./sync');
+  // Defensive: if the named sync function isn't exported (because an
+  // older op_type made it into the queue before its sync impl existed)
+  // drop the row rather than crash drain for everything else. Without
+  // this guard, one rogue queue row halts ALL pending syncs.
+  function safeCall(fn, ...args) {
+    if (typeof fn !== 'function') {
+      logWarn('syncQueue.missingFn', `no sync fn for ${row.op_type}`, { id: row.id });
+      return null;
+    }
+    return fn(...args);
+  }
   switch (row.op_type) {
     case 'workout':
-      await sync.syncWorkout(row.user_id, row.entity_id);
+      await safeCall(sync.syncWorkout, row.user_id, row.entity_id);
       return true;
     case 'body_metric': {
       const payload = row.payload ? JSON.parse(row.payload) : null;
       if (!payload) return true; // payload missing — treat as drained
-      await sync.syncBodyMetric(row.user_id, payload);
+      await safeCall(sync.syncBodyMetric, row.user_id, payload);
       return true;
     }
     case 'morning_weight': {
       const payload = row.payload ? JSON.parse(row.payload) : null;
       if (!payload) return true;
-      await sync.syncMorningWeight(row.user_id, payload);
+      // bulkUploadLocalData is the canonical path for morning weights;
+      // a queued row falls back to that so a missing dedicated sync
+      // function doesn't strand the row forever.
+      const r = safeCall(sync.syncMorningWeight, row.user_id, payload);
+      if (r === null) await safeCall(sync.bulkUploadLocalData, row.user_id, row.user_id);
+      else await r;
       return true;
     }
     case 'check_in': {
       const payload = row.payload ? JSON.parse(row.payload) : null;
       if (!payload) return true;
-      await sync.syncCheckin(row.user_id, payload);
+      const r = safeCall(sync.syncCheckin, row.user_id, payload);
+      if (r === null) await safeCall(sync.bulkUploadLocalData, row.user_id, row.user_id);
+      else await r;
       return true;
     }
     default:

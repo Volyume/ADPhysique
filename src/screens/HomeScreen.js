@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg, kgToStoneLbsStrings, kgToLbs } from '../lib/units';
 import { VolyumeIcon } from '../components/BrandMark';
+import ScreenHeader from '../components/ScreenHeader';
 import GradientCard from '../components/GradientCard';
 import { buildDailyNarrative } from '../lib/dailyNarrative';
 import { SkeletonCard } from '../components/Skeleton';
@@ -655,13 +656,7 @@ export default function HomeScreen({ navigation }) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
       >
         {/* ── Branded header ── */}
-        <View style={styles.header}>
-          <View style={styles.headerText}>
-            <Text style={styles.pageTitle}>Train</Text>
-            <Text style={styles.greeting}>{getGreeting(userProfile?.firstName)}</Text>
-          </View>
-          <VolyumeIcon size={38} />
-        </View>
+        <ScreenHeader title="Train" subtitle={getGreeting(userProfile?.firstName)} />
 
         {/* ── Training schedule context line ── */}
         {scheduleContext && (

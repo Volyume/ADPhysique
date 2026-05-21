@@ -9,7 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { format, differenceInDays } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius, shadow } from '../styles/theme';
-import { VolyumeIcon } from '../components/BrandMark';
+import ScreenHeader from '../components/ScreenHeader';
 import InfoTooltip from '../components/InfoTooltip';
 import { ProBadge } from '../components/ProGate';
 import { SkeletonCard } from '../components/Skeleton';
@@ -455,9 +455,8 @@ export default function AthleteHubScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Athlete Hub</Text>
-        <VolyumeIcon size={38} />
+      <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md }}>
+        <ScreenHeader title="Athlete Hub" />
       </View>
 
       <ScrollView

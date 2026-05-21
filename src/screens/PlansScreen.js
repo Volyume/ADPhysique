@@ -8,7 +8,7 @@ import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { VolyumeIcon } from '../components/BrandMark';
+import ScreenHeader from '../components/ScreenHeader';
 import {
   getActivePlan, getAllPlansForUser,
   getWorkoutTemplates, getPlanWorkoutCounts, getAllRoutineExerciseCounts,
@@ -330,10 +330,7 @@ export default function PlansScreen({ navigation }) {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
       >
-        <View style={styles.screenHeader}>
-          <Text style={styles.pageTitle}>Plans</Text>
-          <VolyumeIcon size={38} />
-        </View>
+        <ScreenHeader title="Plans" />
 
         {/* Block advisor card */}
         {showBlockCard && (

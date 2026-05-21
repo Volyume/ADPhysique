@@ -460,6 +460,33 @@ export default function RootNavigator() {
             useAppStore.getState().restoreSessionFromCloud(session.user.id, session.user).catch(() => {});
             refreshTierFromCloud(client, session.user.id).catch(() => {});
 
+            // Bring local-only state up to the cloud and re-key any
+            // rows that were owned by the pre-sign-in local UUID. Two
+            // legs:
+            //   1) migrateLocalUserId rewrites every "WHERE user_id ="
+            //      table from the local UUID to the supabase user.id
+            //      so future pushes match RLS on the right key.
+            //   2) bulkUploadLocalData pushes the now-correctly-keyed
+            //      rows up. Without this, an OAuth sign-up never
+            //      uploaded the user's local history, so a sign-in on
+            //      a new device pulled an empty cloud and the screens
+            //      showed the "No active plan" empty state.
+            // Both run fire-and-forget; failures fall through to the
+            // sync queue's retry pass on next foreground.
+            (async () => {
+              try {
+                const localUserId = useAppStore.getState().user?.id;
+                if (localUserId && localUserId !== session.user.id) {
+                  // eslint-disable-next-line global-require
+                  const { migrateLocalUserId } = require('../lib/database');
+                  await migrateLocalUserId(localUserId, session.user.id).catch(() => {});
+                }
+                // eslint-disable-next-line global-require
+                const { bulkUploadLocalData } = require('../lib/sync');
+                await bulkUploadLocalData(session.user.id, session.user.id).catch(() => {});
+              } catch (_) {}
+            })();
+
             // Pull workouts / plans / routines / check-ins from cloud
             // into local SQLite. Returning users on a new device see
             // their data populate empty states as inserts complete.
