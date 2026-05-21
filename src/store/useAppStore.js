@@ -188,6 +188,7 @@ const useAppStore = create((set, get) => ({
   // round-trip the just-read value back to Supabase.
   restoreSessionFromCloud: async (supabaseUserId) => {
     if (!supabaseUserId) return;
+    let cloudData = null;
     try {
       // eslint-disable-next-line global-require
       const { getSupabaseClient } = require('../lib/supabase');
@@ -198,39 +199,69 @@ const useAppStore = create((set, get) => ({
         .select('first_name, training_focus, training_age, primary_equipment, units, bar_weight, tier, first_run_complete')
         .eq('id', supabaseUserId)
         .maybeSingle();
-      if (!data) return;
-
-      if (data.tier) {
-        try { await AsyncStorage.setItem(TIER_KEY, data.tier); } catch (_) {}
-        set({ tier: data.tier, tierChecked: true });
-      }
-
-      // Only restore userProfile if local is empty — don't overwrite a
-      // richer local profile with the thinner column-flattened cloud copy.
-      if (!get().userProfile) {
-        const profile = {
-          firstName: data.first_name ?? null,
-          trainingFocus: data.training_focus ?? 'bodybuilding',
-          trainingAgeYears: data.training_age ?? null,
-          primaryEquipment: data.primary_equipment ?? null,
-          units: data.units ?? 'kg',
-          barWeight: data.bar_weight ?? 20,
-        };
-        try { await AsyncStorage.setItem(PROFILE_KEY_PFX + supabaseUserId, JSON.stringify(profile)); } catch (_) {}
-        set({
-          userProfile: profile,
-          units: profile.units,
-          barWeight: profile.barWeight,
-        });
-      }
-
-      if (data.first_run_complete) {
-        try { await AsyncStorage.setItem(FIRST_RUN_KEY, 'true'); } catch (_) {}
-        set({ firstRunComplete: true, firstRunChecked: true });
-      }
+      cloudData = data;
     } catch (_) {
-      // Offline / row missing / RLS denied — fall through. The user lands
-      // on onboarding, which is the safe default.
+      // Offline / RLS denied — fall through with cloudData=null and treat as
+      // missing row. Safer than leaving the navigator stuck.
+    }
+
+    // Missing cloud row OR row with null tier. Happens when:
+    //   - account was previously deleted (RPC wipes public.users_profile but
+    //     auth.users persists, so a fresh OAuth sign-in resurrects the same
+    //     user_id with no profile to restore), OR
+    //   - first-ever cloud sign-up whose row hasn't been created yet (the
+    //     auth listener fires before any syncProfile call lands).
+    // Without this branch, `tier` stays null after a successful sign-in and
+    // the navigator keeps rendering WelcomeStack — the user appears to be
+    // bounced back to the Login screen they came from.
+    if (!cloudData || !cloudData.tier) {
+      const currentTier = get().tier;
+      if (!currentTier) {
+        // Default to 'free' so the navigator can move forward. The user can
+        // upgrade via the Pro card in Settings. Without this default, sign-in
+        // appears broken — the router has no tier to route on.
+        try { await AsyncStorage.setItem(TIER_KEY, 'free'); } catch (_) {}
+        set({ tier: 'free', tierChecked: true });
+      }
+      // Best-effort: create the missing users_profile row so subsequent
+      // sign-ins restore properly. Fire-and-forget — don't block the
+      // navigator on it. The DB trigger sets tier='free' by default.
+      try {
+        // eslint-disable-next-line global-require
+        const { syncProfile } = require('../lib/sync');
+        const localProfile = get().userProfile;
+        syncProfile(supabaseUserId, localProfile, get().tier).catch(() => {});
+      } catch (_) {}
+      return;
+    }
+
+    if (cloudData.tier) {
+      try { await AsyncStorage.setItem(TIER_KEY, cloudData.tier); } catch (_) {}
+      set({ tier: cloudData.tier, tierChecked: true });
+    }
+
+    // Only restore userProfile if local is empty — don't overwrite a
+    // richer local profile with the thinner column-flattened cloud copy.
+    if (!get().userProfile) {
+      const profile = {
+        firstName: cloudData.first_name ?? null,
+        trainingFocus: cloudData.training_focus ?? 'bodybuilding',
+        trainingAgeYears: cloudData.training_age ?? null,
+        primaryEquipment: cloudData.primary_equipment ?? null,
+        units: cloudData.units ?? 'kg',
+        barWeight: cloudData.bar_weight ?? 20,
+      };
+      try { await AsyncStorage.setItem(PROFILE_KEY_PFX + supabaseUserId, JSON.stringify(profile)); } catch (_) {}
+      set({
+        userProfile: profile,
+        units: profile.units,
+        barWeight: profile.barWeight,
+      });
+    }
+
+    if (cloudData.first_run_complete) {
+      try { await AsyncStorage.setItem(FIRST_RUN_KEY, 'true'); } catch (_) {}
+      set({ firstRunComplete: true, firstRunChecked: true });
     }
   },
 
