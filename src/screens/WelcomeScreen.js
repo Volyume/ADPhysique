@@ -24,7 +24,7 @@ const PRO_BULLETS = [
 ];
 
 export default function WelcomeScreen({ navigation }) {
-  const { setTier } = useAppStore();
+  const { setTier, initLocalUser, user } = useAppStore();
 
   const fadeIn   = useRef(new Animated.Value(0)).current;
   const slideUp  = useRef(new Animated.Value(24)).current;
@@ -37,6 +37,13 @@ export default function WelcomeScreen({ navigation }) {
   }, []);
 
   async function chooseTier(tier) {
+    // After sign-out, the store is cleared but bootstrap doesn't re-run, so
+    // there's no local user. Without one, downstream screens (Plan Library
+    // seed, Build a Plan) silently no-op because they gate on user.id.
+    // initLocalUser is idempotent — safe to call if a user already exists.
+    if (!user?.id) {
+      await initLocalUser();
+    }
     await setTier(tier);
     // Navigation resolves automatically — RootNavigator re-renders on tier change
   }

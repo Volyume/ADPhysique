@@ -178,6 +178,61 @@ const useAppStore = create((set, get) => ({
     set({ tier });
   },
 
+  // Called once after every cloud sign-in (email OR OAuth). Reads the
+  // users_profile row and restores firstRunComplete + tier + userProfile
+  // to local state. Without this, a returning user whose AsyncStorage was
+  // cleared by sign-out gets pushed back through onboarding even though
+  // they completed it months ago — the cloud row is the source of truth.
+  // Writes to AsyncStorage directly (not via completeFirstRun) so we don't
+  // round-trip the just-read value back to Supabase.
+  restoreSessionFromCloud: async (supabaseUserId) => {
+    if (!supabaseUserId) return;
+    try {
+      // eslint-disable-next-line global-require
+      const { getSupabaseClient } = require('../lib/supabase');
+      const sb = getSupabaseClient();
+      if (!sb) return;
+      const { data } = await sb
+        .from('users_profile')
+        .select('first_name, training_focus, training_age, primary_equipment, units, bar_weight, tier, first_run_complete')
+        .eq('id', supabaseUserId)
+        .maybeSingle();
+      if (!data) return;
+
+      if (data.tier) {
+        try { await AsyncStorage.setItem(TIER_KEY, data.tier); } catch (_) {}
+        set({ tier: data.tier, tierChecked: true });
+      }
+
+      // Only restore userProfile if local is empty — don't overwrite a
+      // richer local profile with the thinner column-flattened cloud copy.
+      if (!get().userProfile) {
+        const profile = {
+          firstName: data.first_name ?? null,
+          trainingFocus: data.training_focus ?? 'bodybuilding',
+          trainingAgeYears: data.training_age ?? null,
+          primaryEquipment: data.primary_equipment ?? null,
+          units: data.units ?? 'kg',
+          barWeight: data.bar_weight ?? 20,
+        };
+        try { await AsyncStorage.setItem(PROFILE_KEY_PFX + supabaseUserId, JSON.stringify(profile)); } catch (_) {}
+        set({
+          userProfile: profile,
+          units: profile.units,
+          barWeight: profile.barWeight,
+        });
+      }
+
+      if (data.first_run_complete) {
+        try { await AsyncStorage.setItem(FIRST_RUN_KEY, 'true'); } catch (_) {}
+        set({ firstRunComplete: true, firstRunChecked: true });
+      }
+    } catch (_) {
+      // Offline / row missing / RLS denied — fall through. The user lands
+      // on onboarding, which is the safe default.
+    }
+  },
+
   // Called after cloud sign-in: reads tier from Supabase and uses it as the
   // authoritative value. During beta this is a no-op (Supabase tier = 'pro').
   // After beta, this becomes the enforcement point — server wins.

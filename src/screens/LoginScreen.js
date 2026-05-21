@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { VolyumeMark } from '../components/BrandMark';
-import { signInWithEmail, signUpWithEmail, resetPassword, getSupabaseClient, signInWithGoogle, signInWithApple } from '../lib/supabase';
+import { signInWithEmail, signUpWithEmail, resetPassword, signInWithGoogle, signInWithApple } from '../lib/supabase';
 import { syncProfile, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
 import { wipeAllUserData, migrateLocalUserId } from '../lib/database';
 import { logError } from '../lib/errorLog';
@@ -25,7 +25,7 @@ import useAppStore from '../store/useAppStore';
 const CRASH_LOG_KEY = '@volyume_crash_log';
 
 export default function LoginScreen({ navigation, route }) {
-  const { initLocalUser, user: localUser, userProfile, tier, setTier, refreshTierFromCloud } = useAppStore();
+  const { initLocalUser, user: localUser, userProfile, tier, setTier } = useAppStore();
   const promptSignup = route?.params?.promptSignup === true;
   const [mode, setMode] = useState(promptSignup ? 'signup' : 'signin');
   const [email, setEmail] = useState('');
@@ -108,30 +108,10 @@ export default function LoginScreen({ navigation, route }) {
         } else {
           // Existing account — push any local-only edits made while signed
           // out, then pull cloud data down (new device scenario).
+          // firstRunComplete + tier + userProfile are restored centrally
+          // by RootNavigator's onAuthStateChange SIGNED_IN handler.
           bulkUploadLocalData(supabaseUserId, supabaseUserId).catch(() => {});
           pullFromCloud(supabaseUserId).catch(() => {});
-          // Server-authoritative tier — enforcement point after beta
-          refreshTierFromCloud(getSupabaseClient(), supabaseUserId).catch(() => {});
-
-          // Pull first_run_complete from the cloud profile. Without this,
-          // a user who signs in on a new device gets routed through
-          // onboarding again even though they already completed it
-          // years ago. Read inline so the navigator can re-route to the
-          // main tabs immediately.
-          (async () => {
-            try {
-              const sb = getSupabaseClient();
-              if (!sb) return;
-              const { data: prof } = await sb
-                .from('users_profile').select('first_run_complete, tier')
-                .eq('id', supabaseUserId).single();
-              if (prof?.first_run_complete) {
-                // eslint-disable-next-line global-require
-                const { default: store } = require('../store/useAppStore');
-                await store.getState().completeFirstRun();
-              }
-            } catch (_) { /* row missing or offline — fall through */ }
-          })();
         }
       }
     } finally {

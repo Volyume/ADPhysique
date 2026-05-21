@@ -363,9 +363,22 @@ export default function RootNavigator() {
     try {
       const client = getSupabaseClient();
       if (client) {
-        const { data } = client.auth.onAuthStateChange((_event, session) => {
+        const { data } = client.auth.onAuthStateChange(async (event, session) => {
           setSession(session);
           setUser(session?.user ?? null);
+          // On a fresh sign-in (email OR OAuth), pull the cloud profile
+          // before the navigator routes. Otherwise a returning user whose
+          // local AsyncStorage was wiped on sign-out gets routed back
+          // through onboarding because firstRunComplete is still false.
+          if (event === 'SIGNED_IN' && session?.user?.id) {
+            setAuthLoading(true);
+            try {
+              await useAppStore.getState().restoreSessionFromCloud(session.user.id);
+              refreshTierFromCloud(client, session.user.id).catch(() => {});
+            } finally {
+              setAuthLoading(false);
+            }
+          }
         });
         subscription = data.subscription;
       }
