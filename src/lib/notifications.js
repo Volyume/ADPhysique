@@ -64,12 +64,79 @@ export async function getNotificationPermissionStatus() {
  */
 export function configureNotificationHandler() {
   Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: false,
-      shouldSetBadge: false,
-    }),
+    // Smart suppression: before showing a scheduled notification, check
+    // if the relevant action was ALREADY DONE today/this week. Don't
+    // pester users with "log your weight" 30 minutes after they logged
+    // it. The data tag (set via the schedule call) identifies which
+    // kind of relevance check to run.
+    handleNotification: async (notification) => {
+      const dataType = notification?.request?.content?.data?.type;
+      try {
+        if (dataType === 'morning_weight' && await _alreadyLoggedWeightToday()) {
+          return { shouldShowAlert: false, shouldPlaySound: false, shouldSetBadge: false };
+        }
+        if (dataType === 'weekly_checkin' && await _alreadyCheckedInThisWeek()) {
+          return { shouldShowAlert: false, shouldPlaySound: false, shouldSetBadge: false };
+        }
+        if (dataType === 'training_reminder' && await _alreadyTrainedToday()) {
+          return { shouldShowAlert: false, shouldPlaySound: false, shouldSetBadge: false };
+        }
+      } catch (_) { /* fall through to showing the notification */ }
+      return {
+        shouldShowAlert: true,
+        shouldPlaySound: false,
+        shouldSetBadge: false,
+      };
+    },
   });
+}
+
+// Relevance helpers — each returns true if the action was done within
+// the relevant window so the matching notification should be suppressed.
+// Wrapped in try/catch so a database read failure falls through to
+// "show the notification" rather than silently swallowing it.
+async function _alreadyLoggedWeightToday() {
+  try {
+    // eslint-disable-next-line global-require
+    const { getMorningWeightToday } = require('./database');
+    // eslint-disable-next-line global-require
+    const useAppStore = require('../store/useAppStore').default;
+    const uid = useAppStore.getState().user?.id;
+    if (!uid) return false;
+    const entry = await getMorningWeightToday(uid);
+    return !!entry?.weightKg;
+  } catch (_) { return false; }
+}
+
+async function _alreadyCheckedInThisWeek() {
+  try {
+    // eslint-disable-next-line global-require
+    const { getLatestCheckin } = require('./database');
+    // eslint-disable-next-line global-require
+    const useAppStore = require('../store/useAppStore').default;
+    const uid = useAppStore.getState().user?.id;
+    if (!uid) return false;
+    const d = new Date();
+    const daysFromMon = (d.getUTCDay() + 6) % 7;
+    const monMs = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - daysFromMon * 86400000;
+    const ci = await getLatestCheckin(uid, monMs);
+    return !!ci;
+  } catch (_) { return false; }
+}
+
+async function _alreadyTrainedToday() {
+  try {
+    // eslint-disable-next-line global-require
+    const { getAllWorkouts } = require('./database');
+    // eslint-disable-next-line global-require
+    const useAppStore = require('../store/useAppStore').default;
+    const uid = useAppStore.getState().user?.id;
+    if (!uid) return false;
+    const all = await getAllWorkouts(uid);
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    return all.some(w => w.isCompleted && w.startedAt >= todayStart.getTime());
+  } catch (_) { return false; }
 }
 
 // ─── Morning weight copy ──────────────────────────────────────────────────────
