@@ -185,15 +185,6 @@ export default function RestTimer() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.progressBar}>
-        <Animated.View
-          style={[
-            styles.progressFill,
-            { width: barWidth, backgroundColor: isAlmostDone ? colors.warning : colors.primary },
-          ]}
-        />
-      </View>
-
       {/* Timer row. accessibilityLiveRegion announces each tick to screen
           readers without forcing focus — useful so a non-sighted user
           knows when their rest is nearly up. We use 'polite' to avoid
@@ -250,11 +241,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
-    overflow: 'hidden',
     marginVertical: spacing.sm,
   },
-  progressBar: { height: 2, backgroundColor: 'transparent' },
-  progressFill: { height: '100%' },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

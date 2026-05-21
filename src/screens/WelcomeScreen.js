@@ -46,6 +46,20 @@ export default function WelcomeScreen({ navigation }) {
     if (!user?.id) {
       await initLocalUser();
     }
+    if (tier === 'pro') {
+      // CRITICAL: don't setTier('pro') here. firstRunComplete is false
+      // post-signout, so flipping tier=pro would mount ProOnboardingStack
+      // immediately and the wizard would flash before the user has
+      // authenticated. For a returning Pro user, the wizard then briefly
+      // shows steps 1 and 2 before cloud restore catches up and the
+      // navigator unmounts it. Instead, route to LoginScreen — tier
+      // flips post-auth via LoginScreen.newAccountSetup (signup branch)
+      // or via restoreSessionFromCloud (signin branch). Returning users
+      // never see the wizard; new users see it after their account is
+      // actually created.
+      navigation.navigate('Login', { intent: 'pro_signup' });
+      return;
+    }
     await setTier(tier, 'WelcomeScreen.continueWithTier');
     // Navigation resolves automatically — RootNavigator re-renders on tier change
   }

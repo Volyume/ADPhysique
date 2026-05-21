@@ -33,7 +33,10 @@ export default function LoginScreen({ navigation, route }) {
     tier: s.tier,
     setTier: s.setTier,
   })));
-  const promptSignup = route?.params?.promptSignup === true;
+  // Either explicit promptSignup OR Welcome's "Go Pro" intent lands us
+  // in signup tab. Returning users will switch to "Sign in" themselves.
+  const promptSignup = route?.params?.promptSignup === true
+    || route?.params?.intent === 'pro_signup';
   const [mode, setMode] = useState(promptSignup ? 'signup' : 'signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

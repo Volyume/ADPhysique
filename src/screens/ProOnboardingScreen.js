@@ -203,10 +203,15 @@ export default function ProOnboardingScreen({ navigation }) {
   // created a cloud account yet.
   useEffect(() => {
     if (step === 1 && user && !user.isLocal) {
+      // Don't auto-advance if userProfile is already set — that means
+      // restoreSessionFromCloud hydrated an existing account and the
+      // navigator is about to unmount us. Auto-advancing here would
+      // briefly flash Step 2 before the navigator catches up.
+      if (userProfile) return;
       setAccountCreated(true);
       setStep(2);
     }
-  }, [step, user]);
+  }, [step, user, userProfile]);
 
 
   // ── Step transition helpers ──────────────────────────────────────────────────
