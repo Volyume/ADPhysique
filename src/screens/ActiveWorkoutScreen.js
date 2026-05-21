@@ -18,6 +18,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import * as hapticsVocab from '../lib/haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
@@ -269,7 +270,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (!w) return;
     if (warmupDoneIdx.includes(idx)) return;
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    hapticsVocab.warmupLogged();
 
     try {
       const setNumber = loggedSets.length + 1;
@@ -659,7 +660,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     }
 
     setSaving(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    hapticsVocab.setLogged();
 
     try {
       const setNumber = loggedSets.length + 1;
@@ -829,7 +830,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setTimeCrunchActive(false);
     setTimeCrunchMsg('');
     setPreCrunchSnapshot(null);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    hapticsVocab.commit();
   }
 
   function handleTimeCrunch() {
@@ -884,7 +885,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
     setTimeCrunchActive(true);
     setTimeCrunchMsg(msg);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    hapticsVocab.error();
   }
 
   async function handleFinishWorkout() {
