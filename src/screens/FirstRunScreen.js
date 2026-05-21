@@ -31,11 +31,6 @@ export default function FirstRunScreen({ navigation }) {
     await saveLocalProfile(user.id, { ...(userProfile || {}), firstName: name });
   }
 
-  async function startPathA() {
-    await saveName();
-    navigation.navigate('CoachBuilder', { firstRun: true });
-  }
-
   async function startPathLibrary() {
     await saveName();
     navigation.navigate('PlanLibrary', { fromFirstRun: true });
@@ -154,24 +149,6 @@ export default function FirstRunScreen({ navigation }) {
             returnKeyType="done"
           />
         </View>
-
-        <TouchableOpacity
-          style={[styles.pathCard, !hasName && styles.pathCardDisabled]}
-          onPress={startPathA}
-          disabled={!hasName}
-          activeOpacity={0.85}
-        >
-          <View style={styles.pathIconWrap}>
-            <Ionicons name="sparkles" size={22} color={hasName ? colors.primary : colors.textMuted} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.pathTitle}>Build my plan with Coach</Text>
-            <Text style={styles.pathText}>
-              Answer a few questions and we'll put together a plan that fits your schedule and goals.
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={hasName ? colors.textMuted : colors.border} />
-        </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.pathCard, !hasName && styles.pathCardDisabled]}

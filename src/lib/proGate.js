@@ -36,7 +36,6 @@ export function getProLabel(userProfile) {
  * sign up and go through the upgrade flow to switch.
  */
 export const PRO_ROUTES = [
-  'CoachBuilder',
   'WeeklyCheckIn',
   'NutritionTargets',
   'BodyMetrics',

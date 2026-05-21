@@ -14,8 +14,8 @@ import {
   phaseToCoachingKey, phaseToNutritionKey, daysToActivityLevel,
 } from '../lib/coachingGoals';
 
-// Weak-point options. Matches the list used previously in Pro onboarding so
-// CoachBuilder receives names it recognises.
+// Weak-point options. Matches the list used elsewhere so plan generation
+// receives names it recognises.
 const WEAK_POINT_MUSCLES = [
   'Chest', 'Upper Chest', 'Lats / Back Width', 'Back Thickness',
   'Side Delts', 'Rear Delts', 'Front Delts',

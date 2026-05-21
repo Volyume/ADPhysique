@@ -344,6 +344,18 @@ const useAppStore = create((set, get) => ({
     }
   },
 
+  // Force the navigator back into the first-run / onboarding stack so a
+  // Free → Pro upgrade re-runs the Pro setup (profile → training → plan +
+  // nutrition generation). Without this, an existing user who upgrades is
+  // dumped back on the main app with no plan and no nutrition targets.
+  resetFirstRun: async () => {
+    try {
+      await AsyncStorage.setItem(FIRST_RUN_KEY, 'false');
+    } catch (_e) {}
+    set({ firstRunComplete: false, firstRunChecked: true });
+    require('../lib/errorLog').logInfo('useAppStore.resetFirstRun', 'firstRunComplete → false');
+  },
+
   completeFirstRun: async () => {
     try {
       await AsyncStorage.setItem(FIRST_RUN_KEY, 'true');

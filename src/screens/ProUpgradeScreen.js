@@ -19,7 +19,7 @@ const PRO_PERKS = [
 
 export default function ProUpgradeScreen({ navigation }) {
   const {
-    user, session, userProfile, tier, setTier, refreshTierFromCloud,
+    user, session, userProfile, tier, setTier, refreshTierFromCloud, resetFirstRun,
   } = useAppStore();
 
   const hasAccount = Boolean(session?.user?.id) && !user?.isLocal;
@@ -148,6 +148,14 @@ export default function ProUpgradeScreen({ navigation }) {
 
   const trulyPro = tier === 'pro' && Boolean(session?.user?.id) && !user?.isLocal;
   if (done || trulyPro) {
+    // Trigger the Pro onboarding flow: capture profile, training setup,
+    // recovery, then generate a fresh plan and nutrition targets. Without
+    // this the user lands back on the main app with no plan and no diet.
+    // resetFirstRun flips firstRunComplete=false, which makes RootNavigator
+    // mount ProOnboardingStack on next render.
+    async function startSetup() {
+      try { await resetFirstRun(); } catch (_) {}
+    }
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.successWrap}>
@@ -156,15 +164,22 @@ export default function ProUpgradeScreen({ navigation }) {
           </View>
           <Text style={styles.successTitle}>You're Pro.</Text>
           <Text style={styles.successBody}>
-            Everything's unlocked and your data is backed up to your account.
+            Everything's unlocked and your data is backed up. Now let's set up your training plan and nutrition targets so your coach can get to work.
           </Text>
           <TouchableOpacity
             style={styles.primaryBtn}
-            onPress={() => navigation.goBack()}
+            onPress={startSetup}
             activeOpacity={0.88}
           >
-            <Text style={styles.primaryBtnText}>Continue</Text>
-            <Ionicons name="arrow-forward" size={18} color={colors.background} />
+            <Ionicons name="sparkles" size={16} color={colors.background} />
+            <Text style={styles.primaryBtnText}>Set up your training</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.secondaryLink}
+            onPress={() => navigation.goBack()}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={styles.secondaryLinkText}>Skip for now</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -484,5 +499,11 @@ const styles = StyleSheet.create({
   successBody: {
     fontSize: fontSize.md, color: colors.textSecondary,
     textAlign: 'center', lineHeight: 22,
+  },
+  secondaryLink: {
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
+  },
+  secondaryLinkText: {
+    fontSize: fontSize.sm, color: colors.textMuted, textAlign: 'center',
   },
 });

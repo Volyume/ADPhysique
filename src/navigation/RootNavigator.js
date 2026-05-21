@@ -46,7 +46,6 @@ import RoutineDetailScreen from '../screens/RoutineDetailScreen';
 import MesocycleBuilderScreen from '../screens/MesocycleBuilderScreen';
 import ShareCardScreen from '../screens/ShareCardScreen';
 import ManualBuilderScreen from '../screens/ManualBuilderScreen';
-import CoachBuilderScreen from '../screens/CoachBuilderScreen';
 import NutritionTargetsScreen from '../screens/NutritionTargetsScreen';
 import PlanLibraryScreen from '../screens/PlanLibraryScreen';
 import FirstRunScreen from '../screens/FirstRunScreen';
@@ -75,7 +74,6 @@ const Stack = createStackNavigator();
 
 // Pro-only screens. The guard renders an upgrade prompt for free users,
 // enforcing Pro access no matter how the route is reached.
-const GatedCoachBuilder     = withProGuard(CoachBuilderScreen, 'Coach Builder');
 const GatedWeeklyCheckIn    = withProGuard(WeeklyCheckInScreen, 'Weekly check-in');
 const GatedNutritionTargets = withProGuard(NutritionTargetsScreen, 'Nutrition targets');
 const GatedBodyMetrics      = withProGuard(BodyMetricsScreen, 'Body metrics');
@@ -132,7 +130,6 @@ function PlansStack({ navigation }) {
       <Stack.Screen name="ExerciseLibrary" component={ExerciseLibraryScreen} options={{ title: 'Exercise Library' }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise' }} />
       <Stack.Screen name="ManualBuilder" component={ManualBuilderScreen} options={{ title: 'Build a Plan' }} />
-      <Stack.Screen name="CoachBuilder" component={GatedCoachBuilder} options={{ headerShown: false }} />
       <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ title: 'Plan Library' }} />
       <Stack.Screen name="MesocycleBuilder" component={MesocycleBuilderScreen} options={{ title: 'Training Blocks' }} />
       <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
@@ -242,7 +239,6 @@ function FirstRunStack() {
     <Stack.Navigator screenOptions={{ ...stackOptions, headerShown: false, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="FirstRunBranch" component={FirstRunScreen} />
       <Stack.Screen name="OnboardingQuiz" component={OnboardingQuizScreen} />
-      <Stack.Screen name="CoachBuilder" component={CoachBuilderScreen} />
       <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ headerShown: true, title: 'Plan Library' }} />
       <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ headerShown: true, title: 'Plan' }} />
       <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} />
@@ -255,7 +251,6 @@ function ProOnboardingStack() {
     <Stack.Navigator screenOptions={{ ...stackOptions, headerShown: false, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="ProOnboarding" component={ProOnboardingScreen} />
       <Stack.Screen name="OnboardingQuiz" component={OnboardingQuizScreen} />
-      <Stack.Screen name="CoachBuilder" component={CoachBuilderScreen} />
       <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ headerShown: true, title: 'Plan Library' }} />
       <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ headerShown: true, title: 'Plan' }} />
       <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} />

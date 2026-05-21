@@ -25,19 +25,12 @@ const BLOCK_SNOOZE_KEY = '@volyume_block_snooze';
 
 const ACTION_CARDS_DEFAULT = [
   {
-    id: 'coach',
-    icon: 'sparkles',
-    title: 'Coach Builder',
-    description: "Answer a few questions and we'll build a plan that fits your schedule and goals.",
-    screen: 'CoachBuilder',
-    badge: 'Recommended',
-  },
-  {
     id: 'library',
     icon: 'library-outline',
     title: 'Plan Library',
     description: 'Browse ready-made plans for different splits, experience levels and goals.',
     screen: 'PlanLibrary',
+    badge: 'Recommended',
   },
   {
     id: 'manual',
@@ -48,16 +41,16 @@ const ACTION_CARDS_DEFAULT = [
   },
 ];
 
-// Pro users with an active plan see the same three options but framed as
-// "switch your active plan", not "build your first plan". Coach Builder is
-// re-pitched as "re-run the wizard" since they've already done it once.
+// Pro users with an active plan see "switch your active plan" framings.
+// "Update goals" sits at the top: it regenerates the plan via the modern
+// single-screen ProGoalSetup flow (the old 8-step Coach Builder is gone).
 const ACTION_CARDS_PRO_SWITCH = [
   {
-    id: 'coach',
-    icon: 'sparkles',
-    title: 'Re-run the wizard',
-    description: 'Update your plan if your goals, schedule, or equipment have changed. Activating a new plan starts a fresh training block — history and PRs are kept.',
-    screen: 'CoachBuilder',
+    id: 'goals',
+    icon: 'flag-outline',
+    title: 'Update goals and regenerate plan',
+    description: 'Pick a different physique goal or training phase. We rebuild your plan and nutrition targets around the new direction. History and PRs are kept.',
+    screen: 'ProGoalSetup',
   },
   {
     id: 'library',
@@ -304,16 +297,10 @@ export default function PlansScreen({ navigation }) {
   const isProWithPlan = tier === 'pro' && !!activePlan;
   // Three audiences share this list:
   //   * Pro with an active plan → "switch / re-run wizard" framing
-  //   * Pro without a plan (rare — just after first sign-up) → default order, Coach Builder first
-  //   * Free → Library + Manual first; Coach Builder shown last as a Pro preview
-  const actionCards = isProWithPlan
-    ? ACTION_CARDS_PRO_SWITCH
-    : tier === 'pro'
-      ? ACTION_CARDS_DEFAULT
-      : [...ACTION_CARDS_DEFAULT].sort((a, b) => {
-          const order = { library: 0, manual: 1, coach: 2 };
-          return (order[a.id] ?? 99) - (order[b.id] ?? 99);
-        });
+  //   * Pro with active plan → switch framings (update goals / library / manual)
+  //   * Pro without a plan (rare — just after first sign-up) → default order
+  //   * Free → default order (library first, manual second)
+  const actionCards = isProWithPlan ? ACTION_CARDS_PRO_SWITCH : ACTION_CARDS_DEFAULT;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -380,7 +367,7 @@ export default function PlansScreen({ navigation }) {
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.blockNewBtn}
-                      onPress={() => navigation.navigate(tier === 'pro' ? 'CoachBuilder' : 'ProUpgrade')}
+                      onPress={() => navigation.navigate(tier === 'pro' ? 'ProGoalSetup' : 'ProUpgrade')}
                       activeOpacity={0.85}
                     >
                       <Text style={styles.blockNewBtnText}>{blockAdvice.nextBlock.secondaryLabel}</Text>
@@ -576,52 +563,27 @@ export default function PlansScreen({ navigation }) {
             </Text>
           )}
           {actionCards.map(card => {
-            const isCoach = card.id === 'coach';
-            const proLocked = isCoach && tier !== 'pro';
-            // Featured = highlighted (primary border + bg). Locked = muted
-            // (lower opacity, neutral icon). These are mutually exclusive —
-            // mirrors AthleteHub's locked-card look so Pro gating reads the
-            // same across screens.
-            const featured = !proLocked && (card.featured !== undefined ? card.featured : Boolean(card.badge));
+            const featured = card.featured !== undefined ? card.featured : Boolean(card.badge);
             return (
               <TouchableOpacity
                 key={card.id}
-                style={[
-                  styles.actionCard,
-                  featured && styles.actionCardFeatured,
-                  proLocked && styles.actionCardLocked,
-                ]}
-                onPress={() => navigation.navigate(proLocked ? 'ProUpgrade' : card.screen)}
+                style={[styles.actionCard, featured && styles.actionCardFeatured]}
+                onPress={() => navigation.navigate(card.screen)}
                 activeOpacity={0.75}
               >
                 <View style={[styles.actionCardIcon, featured && styles.actionCardIconFeatured]}>
-                  <Ionicons
-                    name={proLocked ? 'lock-closed' : card.icon}
-                    size={24}
-                    color={proLocked ? colors.textMuted : colors.primary}
-                  />
+                  <Ionicons name={card.icon} size={24} color={colors.primary} />
                 </View>
                 <View style={styles.actionCardBody}>
                   <View style={styles.actionCardTitleRow}>
-                    <Text style={[styles.actionCardTitle, proLocked && styles.actionCardTitleLocked]}>
-                      {card.title}
-                    </Text>
-                    {proLocked ? (
-                      <View style={styles.lockBadge}>
-                        <Ionicons name="lock-closed" size={10} color={colors.textMuted} />
-                        <Text style={styles.lockBadgeText}>Pro</Text>
-                      </View>
-                    ) : card.badge ? (
+                    <Text style={styles.actionCardTitle}>{card.title}</Text>
+                    {card.badge ? (
                       <View style={styles.actionCardBadge}>
                         <Text style={styles.actionCardBadgeText}>{card.badge}</Text>
                       </View>
                     ) : null}
                   </View>
-                  <Text style={styles.actionCardDesc}>
-                    {proLocked
-                      ? 'An intelligent plan built around you. Part of Pro, free during beta.'
-                      : card.description}
-                  </Text>
+                  <Text style={styles.actionCardDesc}>{card.description}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={featured ? colors.primary : colors.textMuted} />
               </TouchableOpacity>
