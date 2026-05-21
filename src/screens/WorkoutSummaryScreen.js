@@ -18,6 +18,7 @@ import { calculateWeeklyVolume, getVolumeStatus, getAutoRegSuggestion, MUSCLE_DI
 import { evaluateAutoReg, predictDeloadWeek, getMesoSchedule } from '../lib/mesocycle';
 import { getDeloadPredictionMessage, getAutoRegMessage } from '../lib/whyThisTemplates';
 import useAppStore from '../store/useAppStore';
+import { useToast } from '../components/Toast';
 import { syncWorkout } from '../lib/sync';
 import { incrementSessionCount, shouldPromptReview, requestReview } from '../lib/storeReview';
 
@@ -73,6 +74,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     routineId = null, detectedPRs = [], exerciseData = [],
   } = route.params || {};
   const { user, units, userProfile, session } = useAppStore();
+  const toast = useToast();
   const insets = useSafeAreaInsets();
 
   const [feedback, setFeedback] = useState({
@@ -470,9 +472,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     try {
       const { createWorkoutTemplateFromWorkout } = require('../lib/database');
       await createWorkoutTemplateFromWorkout(user.id, name, exerciseData);
-      Alert.alert('Template Saved', `"${name}" added to Workout Templates in Plans.`);
+      toast.show(`"${name}" saved to Workout Templates`, { variant: 'success' });
     } catch (_) {
-      Alert.alert('Error', 'Could not save template. Please try again.');
+      toast.show('Could not save template. Try again.', { variant: 'error' });
     }
   }
 

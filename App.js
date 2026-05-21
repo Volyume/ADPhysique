@@ -368,22 +368,26 @@ export default function App() {
   // eslint-disable-next-line global-require
   const PRCelebration = require('./src/components/PRCelebration').default;
 
+  // eslint-disable-next-line global-require
+  const { ToastProvider } = require('./src/components/Toast');
   return (
     <ErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
           <StatusBar style="light" backgroundColor="#0D0D0D" />
-          <RootNavigator />
-          {prCelebration && (
-            <PRCelebration
-              pr={prCelebration}
-              onDismiss={hidePRCelebration}
-              // Honour either calm-mode (wellbeing preference) OR the
-              // accessibility "reduce motion" pref. Both should suppress
-              // particles + heavy spring animations.
-              subdued={calm || reduceMotion}
-            />
-          )}
+          <ToastProvider>
+            <RootNavigator />
+            {prCelebration && (
+              <PRCelebration
+                pr={prCelebration}
+                onDismiss={hidePRCelebration}
+                // Honour either calm-mode (wellbeing preference) OR the
+                // accessibility "reduce motion" pref. Both should suppress
+                // particles + heavy spring animations.
+                subdued={calm || reduceMotion}
+              />
+            )}
+          </ToastProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>
     </ErrorBoundary>

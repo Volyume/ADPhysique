@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { getSupabaseClient, signOut } from '../lib/supabase';
 import useAppStore from '../store/useAppStore';
+import { useToast } from '../components/Toast';
 import { useShallow } from 'zustand/react/shallow';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
@@ -78,6 +79,7 @@ function SectionHeader({ title }) {
 }
 
 export default function SettingsScreen({ navigation }) {
+  const toast = useToast();
   const { user, setUser, setSession, clearAuthStateForSignOut, userProfile, saveLocalProfile, tier, setTier, accessibility, setAccessibilityPref, loadAccessibility, accessibilityLoaded } =
     useAppStore(useShallow(s => ({
       user: s.user, setUser: s.setUser, setSession: s.setSession,
@@ -284,10 +286,10 @@ export default function SettingsScreen({ navigation }) {
           UTI: 'public.comma-separated-values-text',
         });
       } else {
-        Alert.alert('Export saved', `${rowCount} sets written to ${fileUri}`);
+        toast.show(`Exported ${rowCount} sets`, { variant: 'success' });
       }
     } catch (e) {
-      Alert.alert('Export failed', e?.message ?? 'Could not export your data. Please try again.');
+      toast.show(e?.message ?? 'Could not export your data', { variant: 'error' });
     }
   }
 
@@ -343,7 +345,7 @@ export default function SettingsScreen({ navigation }) {
             if (!user?.id) return;
             try {
               await clearWorkoutHistory(user.id);
-              Alert.alert('Done', 'Your workout history has been cleared.');
+              toast.show('Workout history cleared', { variant: 'success' });
             } catch (e) {
               logError('SettingsScreen.handleClearHistory', e, { userId: user.id });
               Alert.alert('Couldn\'t clear history', e?.message ?? 'Please try again.');

@@ -8,6 +8,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import InfoTooltip from '../components/InfoTooltip';
 import BodyDiagramHeatmap from '../components/BodyDiagramHeatmap';
+import { useToast } from '../components/Toast';
 import { getCompletedWorkoutSets, getAllExercises, getWeeklyVolumeByMuscle, getLastTrainedByMuscle } from '../lib/database';
 import { logError } from '../lib/errorLog';
 import {
@@ -24,6 +25,7 @@ const WINDOW_OPTIONS = [
 
 export default function VolumeHeatmapScreen() {
   const { user, units } = useAppStore();
+  const toast = useToast();
   const [weeklyVolume, setWeeklyVolume] = useState({});
   const [previousVolume, setPreviousVolume] = useState({});
   const [windowWeeks, setWindowWeeks] = useState(1);
@@ -97,7 +99,7 @@ export default function VolumeHeatmapScreen() {
     await AsyncStorage.setItem(`@volyume_landmarks_${user.id}`, JSON.stringify(map));
     setCustomLandmarks(map);
     setEditing(false);
-    Alert.alert('Saved', 'Volume targets updated.');
+    toast.show('Volume targets saved', { variant: 'success' });
   }
 
   async function resetToDefaults() {
