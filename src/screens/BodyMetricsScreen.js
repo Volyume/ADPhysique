@@ -458,13 +458,16 @@ export default function BodyMetricsScreen({ navigation }) {
           if (!isNaN(n)) data[dbField] = n;
         }
       }
-      const saved = await logBodyMetric(user.id, data);
-      // Fire-and-forget cloud sync. If offline, the next bulkUploadLocalData
-      // (on app foreground or next sign-in) will catch it.
-      if (session?.user?.id) {
-        syncBodyMetric(session.user.id, { id: saved?.id ?? saved, ...data })
-          .catch(() => {});
-      }
+      // Optimistic UI: insert the new entry at the top of the history
+      // list immediately so the user sees it land in real time, rather
+      // than waiting for the SQLite write + a full reload. Same pattern
+      // as set logging in ActiveWorkoutScreen.
+      const optimisticEntry = {
+        id: `tmp-${Date.now()}`, // replaced when SQLite returns
+        loggedAt: Date.now(),
+        ...data,
+      };
+      setHistory(prev => [optimisticEntry, ...prev]);
       setShowForm(false);
       setForm({
         body_weight: '', body_weight_st: '', body_weight_st_lbs: '0',
@@ -472,7 +475,28 @@ export default function BodyMetricsScreen({ navigation }) {
         waist: '', hips: '', quads: '', hamstrings: '', calves: '',
         metric_date: format(new Date(), 'yyyy-MM-dd'), notes: '',
       });
-      await loadHistory();
+      // Background: persist to SQLite + cloud. On success, replace the
+      // optimistic entry with the real saved row. On failure, remove
+      // the optimistic entry and show a toast.
+      try {
+        const saved = await logBodyMetric(user.id, data);
+        if (session?.user?.id) {
+          syncBodyMetric(session.user.id, { id: saved?.id ?? saved, ...data }).catch(() => {});
+        }
+        // Reload to pick up the real id + any DB-computed fields (the
+        // optimistic entry was missing things like a properly formatted
+        // loggedAt). Cheap — same SQLite query as before.
+        await loadHistory();
+      } catch (e) {
+        setHistory(prev => prev.filter(h => h.id !== optimisticEntry.id));
+        try {
+          // eslint-disable-next-line global-require
+          require('../components/Toast'); // ensure module loaded
+        } catch (_) {}
+        // Surface the failure — body weight is important; user needs to
+        // know it didn't save so they can retry.
+        Alert.alert('Could not save', e?.message ?? 'Try again in a moment.');
+      }
     } finally {
       setSaving(false);
     }

@@ -297,14 +297,19 @@ export default function HomeScreen({ navigation }) {
       weightKg = parseBodyWeightToKg(weightInput, bwu);
     }
     if (!weightKg || isNaN(weightKg) || weightKg <= 0 || weightKg > 300) return;
+    // Optimistic: show the logged weight + clear inputs immediately.
+    // SQLite write happens in the background. On failure, revert.
+    const previousTodayWeight = todayWeight;
+    setTodayWeight(weightKg);
+    setWeightInput('');
+    setWeightInputSt('');
+    setWeightInputStLbs('');
     setSavingWeight(true);
     try {
       await logMorningWeight(user.id, { weightKg, loggedAt: Date.now() });
-      setTodayWeight(weightKg);
-      setWeightInput('');
-      setWeightInputSt('');
-      setWeightInputStLbs('');
     } catch (e) {
+      // Revert the optimistic update and surface the failure.
+      setTodayWeight(previousTodayWeight);
       logError('HomeScreen.handleLogWeight', e, { userId: user?.id, weightKg });
       Alert.alert('Couldn\'t save weight', e?.message ?? 'Please try again.');
     }
