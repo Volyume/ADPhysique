@@ -372,16 +372,41 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   }
 
   function handleShareCard() {
+    // Top set across the whole session — heaviest non-warmup set drives the
+    // "best lift" highlight on the share card.
+    let topSet = null;
+    let topWeight = 0;
+    for (const ex of exerciseData || []) {
+      for (const s of ex.loggedSets || []) {
+        if (s.setType === 'warmup') continue;
+        const w = parseFloat(s.weight) || 0;
+        if (w > topWeight) {
+          topWeight = w;
+          topSet = { weight: w, reps: s.reps || 0, exerciseName: ex.name };
+        }
+      }
+    }
+
+    // Intensity tier — drives the badge on the share card. Heuristic, but
+    // gives a "great workout" flavour without needing a full grading system.
+    const sets = workingSetCount ?? setCount ?? 0;
+    const ton = tonnage || 0;
+    let intensityTier = 'solid';
+    if (detectedPRs.length >= 2 || ton > 8000 || sets >= 25) intensityTier = 'epic';
+    else if (detectedPRs.length >= 1 || ton > 4000 || sets >= 18) intensityTier = 'tough';
+
     const sessionData = {
       sessionName: exerciseNames.length > 0
         ? exerciseNames.slice(0, 2).join(' & ') + (exerciseNames.length > 2 ? ' +more' : '')
         : 'Session Complete',
       duration: durationMinutes || 0,
-      workingSets: workingSetCount ?? setCount ?? 0,
+      workingSets: sets,
       exerciseCount: exerciseCount || 0,
-      tonnage: tonnage || 0,
+      tonnage: ton,
       exercises: exerciseNames,
       prCount: detectedPRs.length,
+      topSet,
+      intensityTier,
     };
     const prData = detectedPRs.length > 0 ? detectedPRs[0] : null;
     navigation.navigate('ShareCard', { sessionData, prData });
