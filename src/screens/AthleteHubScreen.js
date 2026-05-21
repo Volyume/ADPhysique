@@ -277,6 +277,17 @@ export default function AthleteHubScreen({ navigation }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastSetLoggedAt]);
 
+  // Same idea for cross-device cloud restore: when pullFromCloud lands
+  // a fresh batch of data (workouts, programmes, nutrition targets),
+  // re-run load() so the nutrition card and freshness numbers update
+  // without the user having to leave + return.
+  const cloudSyncVersion = useAppStore(s => s.cloudSyncVersion);
+  useEffect(() => {
+    if (!user?.id || cloudSyncVersion === 0) return;
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cloudSyncVersion]);
+
   async function load() {
     if (tier === 'pro') {
       try {

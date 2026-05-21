@@ -37,6 +37,8 @@ import {
   insertMorningWeightFromCloud,
   insertWeeklyCheckinFromCloud,
   insertCoachOutputFromCloud,
+  insertNutritionTargetsFromCloud,
+  getNutritionTargets,
 } from './database';
 import { logError, logWarn } from './errorLog';
 
@@ -333,6 +335,7 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
     await _pushMorningWeights(sb, supabaseUserId, localUserId);
     await _pushWeeklyCheckins(sb, supabaseUserId, localUserId);
     await _pushCoachOutputs(sb, supabaseUserId, localUserId);
+    await _pushNutritionTargets(sb, supabaseUserId, localUserId);
 
     console.log('[sync] bulk upload complete');
   } catch (e) {
@@ -539,6 +542,7 @@ export async function pullFromCloud(supabaseUserId) {
     await _pullMorningWeights(sb, supabaseUserId);
     await _pullWeeklyCheckins(sb, supabaseUserId);
     await _pullCoachOutputs(sb, supabaseUserId);
+    await _pullNutritionTargets(sb, supabaseUserId);
 
     return count;
   } catch (e) {
@@ -612,4 +616,51 @@ async function _pullCoachOutputs(sb, supabaseUserId) {
       catch (e) { logWarn('sync._pullCoachOutputs', 'insert failed', { id: co.id, error: e?.message }); }
     }
   } catch (e) { logWarn('sync._pullCoachOutputs', e?.message); }
+}
+
+// Public-facing push for nutrition targets. Call this any time
+// saveNutritionTargets is invoked so the cloud copy stays in step with
+// the local one. Safe no-op when there's no cloud session.
+export async function syncNutritionTargets(supabaseUserId, localUserId) {
+  const sb = getClient();
+  if (!sb || !supabaseUserId) return;
+  await _pushNutritionTargets(sb, supabaseUserId, localUserId ?? supabaseUserId);
+}
+
+async function _pushNutritionTargets(sb, supabaseUserId, localUserId) {
+  try {
+    const targets = await getNutritionTargets(localUserId);
+    if (!targets) return;
+    const row = {
+      user_id: supabaseUserId,
+      bmr: targets.bmr ?? null,
+      tdee: targets.tdee ?? null,
+      target_kcal: targets.targetKcal ?? null,
+      protein_g: targets.proteinG ?? null,
+      carbs_g: targets.carbsG ?? null,
+      fat_g: targets.fatG ?? null,
+      phase: targets.phase ?? null,
+      bmr_method: targets.bmrMethod ?? null,
+      activity_level: targets.activityLevel ?? null,
+      confidence: targets.confidence ?? null,
+      warnings: targets.warnings ?? null,
+      gdpr_consented: !!targets.gdprConsented,
+      updated_at: new Date().toISOString(),
+    };
+    // Unique index on user_id makes onConflict: 'user_id' the right
+    // upsert key. If the migration hasn't been applied yet, the table
+    // doesn't exist and we'll log + carry on.
+    await sb.from('nutrition_targets').upsert(row, { onConflict: 'user_id' });
+  } catch (e) { logWarn('sync._pushNutritionTargets', e?.message, { error: e?.message }); }
+}
+
+async function _pullNutritionTargets(sb, supabaseUserId) {
+  try {
+    const { data, error } = await sb
+      .from('nutrition_targets').select('*').eq('user_id', supabaseUserId).maybeSingle();
+    if (error) { logWarn('sync._pullNutritionTargets', error.message); return; }
+    if (!data) return;
+    try { await insertNutritionTargetsFromCloud(supabaseUserId, data); }
+    catch (e) { logWarn('sync._pullNutritionTargets', 'insert failed', { error: e?.message }); }
+  } catch (e) { logWarn('sync._pullNutritionTargets', e?.message); }
 }

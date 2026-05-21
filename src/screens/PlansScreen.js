@@ -113,6 +113,16 @@ export default function PlansScreen({ navigation }) {
     }, [user?.id]),
   );
 
+  // Cloud restore: re-run loadData once pullFromCloud lands so a fresh
+  // device sees the plan / template list populate without navigating
+  // away and back.
+  const cloudSyncVersion = useAppStore(s => s.cloudSyncVersion);
+  useEffect(() => {
+    if (!user?.id || cloudSyncVersion === 0) return;
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cloudSyncVersion]);
+
   async function loadData() {
     if (!user?.id) return;
     try {

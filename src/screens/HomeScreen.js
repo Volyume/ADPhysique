@@ -485,6 +485,22 @@ export default function HomeScreen({ navigation }) {
 
   async function handleRefresh() {
     setRefreshing(true);
+    // If there's an active cloud session, fire pullFromCloud first so a
+    // returning user on a fresh device can manually retry the restore
+    // by pulling down. Status surfaces via the banner; local re-load
+    // happens regardless so any new data already in SQLite shows.
+    try {
+      const sessionUser = useAppStore.getState().session?.user;
+      if (sessionUser?.id) {
+        const store = useAppStore.getState();
+        store.markCloudSyncing();
+        // eslint-disable-next-line global-require
+        const { pullFromCloud } = require('../lib/sync');
+        pullFromCloud(sessionUser.id)
+          .then(() => useAppStore.getState().markCloudSyncComplete())
+          .catch((err) => useAppStore.getState().markCloudSyncError(err?.message));
+      }
+    } catch (_) {}
     await loadData();
     setRefreshing(false);
   }

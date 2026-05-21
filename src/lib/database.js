@@ -1772,6 +1772,21 @@ export async function createMesocycle(data) {
 export async function saveNutritionTargets(userId, targets) {
   const d = await db();
   const now = Date.now();
+  // Push to cloud after the local write completes so a fresh device
+  // sign-in restores the same target row. Fire-and-forget; if the
+  // user isn't signed in this is a no-op.
+  const pushToCloud = () => {
+    try {
+      // eslint-disable-next-line global-require
+      const { syncNutritionTargets } = require('./sync');
+      // eslint-disable-next-line global-require
+      const useAppStore = require('../store/useAppStore').default;
+      const sessionUserId = useAppStore.getState().session?.user?.id;
+      if (sessionUserId) {
+        syncNutritionTargets(sessionUserId, userId).catch(() => {});
+      }
+    } catch (_) { /* offline / module load fail: best-effort only */ }
+  };
   const existing = await d.getFirstAsync(
     'SELECT id FROM nutrition_targets WHERE user_id = ? LIMIT 1',
     [userId],
@@ -1793,6 +1808,7 @@ export async function saveNutritionTargets(userId, targets) {
         now, userId,
       ],
     );
+    pushToCloud();
     return existing.id;
   }
   const id = uid();
@@ -1811,6 +1827,7 @@ export async function saveNutritionTargets(userId, targets) {
       targets.gdprConsented ? 1 : 0, now, now,
     ],
   );
+  pushToCloud();
   return id;
 }
 
@@ -3008,6 +3025,63 @@ export async function insertCoachOutputFromCloud(userId, co) {
       co.id, userId, co.week_start, co.output_json,
       co.applied ? 1 : 0,
       typeof co.created_at === 'string' ? new Date(co.created_at).getTime() : (co.created_at ?? Date.now()),
+    ],
+  );
+}
+
+// Upserts nutrition_targets from a cloud row. Local table has one row
+// per user (enforced by saveNutritionTargets), so an UPDATE wins if the
+// user already has a local row and the cloud copy is newer.
+export async function insertNutritionTargetsFromCloud(userId, t) {
+  const d = await db();
+  const updatedAt = typeof t.updated_at === 'string'
+    ? new Date(t.updated_at).getTime()
+    : (t.updated_at ?? Date.now());
+  const createdAt = typeof t.created_at === 'string'
+    ? new Date(t.created_at).getTime()
+    : (t.created_at ?? updatedAt);
+  const warningsStr = t.warnings == null
+    ? null
+    : (typeof t.warnings === 'string' ? t.warnings : JSON.stringify(t.warnings));
+
+  const existing = await d.getFirstAsync(
+    'SELECT id, updated_at FROM nutrition_targets WHERE user_id = ? LIMIT 1',
+    [userId],
+  );
+  if (existing) {
+    if ((existing.updated_at ?? 0) >= updatedAt) return;
+    await d.runAsync(
+      `UPDATE nutrition_targets SET
+        bmr=?, tdee=?, target_kcal=?, protein_g=?, carbs_g=?, fat_g=?,
+        phase=?, bmr_method=?, activity_level=?, confidence=?, warnings=?,
+        gdpr_consented=?, updated_at=?
+       WHERE user_id=?`,
+      [
+        t.bmr ?? null, t.tdee ?? null, t.target_kcal ?? null,
+        t.protein_g ?? null, t.carbs_g ?? null, t.fat_g ?? null,
+        t.phase ?? null, t.bmr_method ?? null, t.activity_level ?? null,
+        t.confidence ?? null, warningsStr,
+        t.gdpr_consented ? 1 : 0,
+        updatedAt, userId,
+      ],
+    );
+    return;
+  }
+  const id = t.id || uid();
+  await d.runAsync(
+    `INSERT OR IGNORE INTO nutrition_targets
+      (id, user_id, bmr, tdee, target_kcal, protein_g, carbs_g, fat_g,
+       phase, bmr_method, activity_level, confidence, warnings,
+       gdpr_consented, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id, userId,
+      t.bmr ?? null, t.tdee ?? null, t.target_kcal ?? null,
+      t.protein_g ?? null, t.carbs_g ?? null, t.fat_g ?? null,
+      t.phase ?? null, t.bmr_method ?? null, t.activity_level ?? null,
+      t.confidence ?? null, warningsStr,
+      t.gdpr_consented ? 1 : 0,
+      createdAt, updatedAt,
     ],
   );
 }
