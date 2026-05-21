@@ -1802,7 +1802,7 @@ export async function getBodyMetricLog(userId, limitRows = 90) {
 
 export async function getLatestBodyWeight(userId) {
   const d = await db();
-  const [bodyRow, morningRow] = await Promise.all([
+  const [bodyRow, morningRow, profileRow] = await Promise.all([
     d.getFirstAsync(
       `SELECT weight_kg, logged_at FROM body_metric_log
        WHERE user_id = ? AND weight_kg IS NOT NULL
@@ -1815,12 +1815,29 @@ export async function getLatestBodyWeight(userId) {
        ORDER BY logged_at DESC LIMIT 1`,
       [userId],
     ),
+    // Fall back to the body weight the user entered during onboarding
+    // (saved to user_body_profile). Without this, a user who's done
+    // onboarding but hasn't logged a separate weigh-in shows up as
+    // "no body weight" everywhere — Relative Strength, share cards etc.
+    d.getFirstAsync(
+      `SELECT weight_kg FROM user_body_profile
+       WHERE user_id = ? AND weight_kg IS NOT NULL LIMIT 1`,
+      [userId],
+    ).catch(() => null),
   ]);
   const bodyTs   = bodyRow?.logged_at ?? 0;
   const morningTs = morningRow?.logged_at ?? 0;
   const winner = bodyTs >= morningTs ? bodyRow : morningRow;
-  if (!winner || winner.weight_kg == null) return null;
-  return { weightKg: winner.weight_kg, loggedAt: winner.logged_at };
+  if (winner && winner.weight_kg != null) {
+    return { weightKg: winner.weight_kg, loggedAt: winner.logged_at };
+  }
+  // No weigh-in logged — use the onboarding bodyweight as the baseline so
+  // features that need a number still work. Marked with loggedAt=0 so
+  // callers can tell it's a stale fallback if they care.
+  if (profileRow?.weight_kg != null) {
+    return { weightKg: profileRow.weight_kg, loggedAt: 0 };
+  }
+  return null;
 }
 
 // ─── CSV / JSON export ────────────────────────────────────────────

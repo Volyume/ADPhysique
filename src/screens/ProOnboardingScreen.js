@@ -13,7 +13,7 @@ import {
   logBodyMetric, saveNutritionTargets, saveUserBodyProfile, migrateLocalUserId,
 } from '../lib/database';
 import { stoneLbsToKg, ftInToCm, parseBodyWeightToKg } from '../lib/units';
-import { signUpWithEmail, signInWithEmail } from '../lib/supabase';
+import { signUpWithEmail, signInWithEmail, signInWithGoogle, signInWithApple } from '../lib/supabase';
 import { bulkUploadLocalData, syncProfile } from '../lib/sync';
 import { generateAndSavePlan } from '../lib/planAutoGen';
 import {
@@ -189,6 +189,29 @@ export default function ProOnboardingScreen({ navigation }) {
     if (step === 1) return;
     if (step === 2 && accountCreated) return; // can't go back past completed registration
     setStep(s => s - 1);
+  }
+
+  async function handleOAuthOnboarding(provider) {
+    // OAuth happens inside the in-app browser sheet — the Supabase session
+    // callback is handled by App.js's deep-link handler. We just need to
+    // wait for the result, then advance onboarding if successful.
+    setBusy(true);
+    try {
+      const fn = provider === 'google' ? signInWithGoogle : signInWithApple;
+      const result = await fn();
+      if (result?.error) {
+        Alert.alert('Sign-in failed', result.error.message);
+        return;
+      }
+      if (result?.cancelled) return;
+      // OAuth doesn't pre-fill a userProfile from the provider's metadata
+      // here — the onboarding wizard collects the training fields in the
+      // next steps. Mark the auth step complete and advance.
+      setAccountCreated(true);
+      setStep(2);
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function advanceFrom1() {
@@ -429,6 +452,41 @@ export default function ProOnboardingScreen({ navigation }) {
               title={authMode === 'signup' ? 'Create your account.' : 'Sign in to continue.'}
               sub="Pro needs an account so your plan, weight history, and coaching adjustments are backed up and sync across devices."
             />
+
+            {/* Quick sign-in with Google (Apple too on iOS). Surfaced above
+                the email form because most users prefer continuing with an
+                existing account over creating yet another email/password.
+                Disabled when the email/password flow is loading so the user
+                can't fire both in parallel. */}
+            <View style={styles.oauthBlock}>
+              {Platform.OS === 'ios' && (
+                <TouchableOpacity
+                  style={[styles.oauthBtnApple, busy && styles.btnDisabled]}
+                  onPress={() => handleOAuthOnboarding('apple')}
+                  disabled={busy}
+                  accessibilityRole="button"
+                  accessibilityLabel="Continue with Apple"
+                >
+                  <Ionicons name="logo-apple" size={18} color="#FFFFFF" />
+                  <Text style={styles.oauthBtnAppleText}>Continue with Apple</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={[styles.oauthBtn, busy && styles.btnDisabled]}
+                onPress={() => handleOAuthOnboarding('google')}
+                disabled={busy}
+                accessibilityRole="button"
+                accessibilityLabel="Continue with Google"
+              >
+                <Ionicons name="logo-google" size={18} color={colors.textPrimary} />
+                <Text style={styles.oauthBtnText}>Continue with Google</Text>
+              </TouchableOpacity>
+              <View style={styles.oauthDivider}>
+                <View style={styles.oauthDividerLine} />
+                <Text style={styles.oauthDividerText}>or with email</Text>
+                <View style={styles.oauthDividerLine} />
+              </View>
+            </View>
 
             <View style={styles.section}>
               <Text style={styles.fieldLabel}>Email</Text>
@@ -1132,6 +1190,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg, paddingVertical: spacing.lg + 2, marginBottom: spacing.md,
   },
   btnDisabled: { opacity: 0.55 },
+  oauthBlock: { gap: spacing.sm, marginBottom: spacing.lg },
+  oauthBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  oauthBtnText: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  oauthBtnApple: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.md, borderRadius: radius.md, backgroundColor: '#000000' },
+  oauthBtnAppleText: { color: '#FFFFFF', fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  oauthDivider: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
+  oauthDividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
+  oauthDividerText: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
   primaryBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.background },
   primaryBtnDisabled: { opacity: 0.4 },
   switchAuthBtn: { alignItems: 'center', paddingVertical: spacing.md, marginTop: spacing.sm },

@@ -44,13 +44,47 @@ function formatDayHour(dayIndex, hour) {
   return `${DAYS[dayIndex]} at ${formatHour(hour)}`;
 }
 
+// Compute the actual next-fire Date for the check-in reminder honouring the
+// minimum-gap rule from the last check-in. Mirrors the runtime logic in
+// notifications.js so the preview text matches what the reminder will do.
+function computeNextCheckinFireDate(weekday, hour, minute, lastCheckinMs, minGapDays = 7) {
+  const after = new Date();
+  const target = new Date(after);
+  const currentDow = target.getDay();
+  let daysUntil = (weekday - currentDow + 7) % 7;
+  target.setHours(hour, minute, 0, 0);
+  if (daysUntil === 0 && target.getTime() <= after.getTime()) daysUntil = 7;
+  target.setDate(target.getDate() + daysUntil);
+  if (lastCheckinMs > 0 && minGapDays > 0) {
+    const earliest = lastCheckinMs + minGapDays * 24 * 60 * 60 * 1000;
+    while (target.getTime() < earliest) target.setDate(target.getDate() + 7);
+  }
+  return target;
+}
+
+// "Sunday 25 May at 12:00"
+function formatNextFire(date) {
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const h = date.getHours();
+  const m = date.getMinutes().toString().padStart(2, '0');
+  return `${dayNames[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]} at ${formatHour(h)}${m === '00' ? '' : ':' + m}`;
+}
+
 async function applyNotifications(prefs, permissionStatus) {
   await cancelAllNotifications();
   if (prefs.morningEnabled && permissionStatus === 'granted') {
     await scheduleMorningWeightNotification(prefs.morningHour, prefs.morningMinute);
   }
   if (prefs.checkinEnabled && permissionStatus === 'granted') {
-    await scheduleCheckinReminder(prefs.checkinDay, prefs.checkinHour, prefs.checkinMinute);
+    // Pass the last-check-in timestamp + a 7-day minimum gap so that
+    // switching check-in day mid-cycle doesn't reschedule the reminder
+    // to fire only 2-3 days after the last check-in (the coach needs a
+    // full week of data for a meaningful trend read).
+    await scheduleCheckinReminder(
+      prefs.checkinDay, prefs.checkinHour, prefs.checkinMinute,
+      { lastCheckinMs: prefs.lastCheckinMs ?? 0, minGapDays: 7 },
+    );
   }
   await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(prefs));
 }
@@ -121,6 +155,10 @@ export default function NotificationSettingsScreen({ navigation }) {
   const [checkinDay, setCheckinDay] = useState(0);
   const [checkinHour, setCheckinHour] = useState(18);
   const [checkinMinute, setCheckinMinute] = useState(0);
+  // Last check-in timestamp in ms — used to enforce the 7-day minimum gap
+  // when the user switches their check-in day, so the next reminder
+  // doesn't fire only 2-3 days after the previous check-in.
+  const [lastCheckinMs, setLastCheckinMs] = useState(0);
   const [trainingEnabled, setTrainingEnabled] = useState(false);
   const [trainingHour, setTrainingHour] = useState(8);
   const [trainingMinute, setTrainingMinute] = useState(0);
@@ -151,6 +189,21 @@ export default function NotificationSettingsScreen({ navigation }) {
       try {
         const trainingEnabledRaw = await AsyncStorage.getItem(REMINDER_PREF_KEY);
         if (trainingEnabledRaw !== null) setTrainingEnabled(trainingEnabledRaw === 'true');
+      } catch (_) {}
+
+      // Load the user's last check-in so we can enforce the 7-day minimum
+      // gap when they change their check-in day, and so the UI can show
+      // an honest "next reminder fires on …" preview.
+      try {
+        // eslint-disable-next-line global-require
+        const { getLatestCheckin } = require('../lib/database');
+        // eslint-disable-next-line global-require
+        const { default: store } = require('../store/useAppStore');
+        const userId = store.getState().user?.id;
+        if (userId) {
+          const latest = await getLatestCheckin(userId);
+          if (latest?.weekStart) setLastCheckinMs(latest.weekStart);
+        }
       } catch (_) {}
 
       try {
@@ -212,6 +265,7 @@ export default function NotificationSettingsScreen({ navigation }) {
       checkinDay: cd,
       checkinHour: ch,
       checkinMinute: cmin,
+      lastCheckinMs,
     };
   }
 
@@ -419,13 +473,30 @@ export default function NotificationSettingsScreen({ navigation }) {
               <Text style={styles.scheduleText}>
                 Reminder every {formatDayHour(checkinDay, checkinHour)}
               </Text>
+              {/* Next-fire preview honouring the 7-day minimum gap from
+                  the last check-in. Helps the user understand why
+                  switching days doesn't always mean "this week" — the
+                  coach needs a full week of fresh data to act on. */}
+              {lastCheckinMs > 0 && (() => {
+                const nextFire = computeNextCheckinFireDate(
+                  checkinDay, checkinHour, checkinMinute, lastCheckinMs, 7,
+                );
+                const lastFire = new Date(lastCheckinMs);
+                const gapDays = Math.round((nextFire.getTime() - lastFire.getTime()) / (24 * 60 * 60 * 1000));
+                const bumped = gapDays > 7;
+                return (
+                  <Text style={styles.scheduleSubText}>
+                    Your next check-in will be {formatNextFire(nextFire)}{bumped ? ', so the coach has a full week of fresh data to act on' : ''}.
+                  </Text>
+                );
+              })()}
             </View>
           )}
 
           {/* Helper text */}
           <View style={styles.helperRow}>
             <Text style={styles.helperText}>
-              Reminds you to complete your weekly coaching check-in.
+              Reminds you to complete your weekly coaching check-in. You can change the day any time — the next reminder will be at least 7 days after your last check-in so the trend math has enough data to mean something.
             </Text>
           </View>
         </View>
@@ -667,6 +738,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     marginTop: spacing.xs,
     marginBottom: spacing.sm,
+  },
+  scheduleSubText: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm,
+    lineHeight: 17,
   },
 
   // Helper text

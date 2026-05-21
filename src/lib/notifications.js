@@ -166,7 +166,24 @@ export async function scheduleCheckinReminder(weekday = 0, hour = 12, minute = 0
     const baseAfter = options.skipThisWeek
       ? new Date(Date.now() + 24 * 60 * 60 * 1000) // bump past today
       : new Date();
-    const fireAt = getNextWeekdayDate(weekday, hour, minute, baseAfter);
+    let fireAt = getNextWeekdayDate(weekday, hour, minute, baseAfter);
+
+    // Minimum-gap enforcement: when the user changes their check-in day
+    // mid-cycle, the next reminder must still land at least
+    // `minGapDays` (default 7) after their LAST check-in so the coach
+    // gets a full weekly trend window. Without this they could change
+    // from Sunday → Wednesday on a Monday and be reminded just 2 days
+    // after their previous check-in — the trend math would be noisy.
+    const minGapMs = (options.minGapDays ?? 0) * 24 * 60 * 60 * 1000;
+    const lastCheckinMs = options.lastCheckinMs ?? 0;
+    if (minGapMs > 0 && lastCheckinMs > 0) {
+      const earliest = lastCheckinMs + minGapMs;
+      while (fireAt.getTime() < earliest) {
+        // Advance one full week at a time so we always land on the
+        // chosen weekday at the chosen time.
+        fireAt.setDate(fireAt.getDate() + 7);
+      }
+    }
 
     await Notifications.scheduleNotificationAsync({
       identifier: NOTIF_ID_CHECKIN,
