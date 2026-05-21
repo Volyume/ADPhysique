@@ -135,8 +135,18 @@ export default function ProUpgradeScreen({ navigation }) {
   }
 
   // ── Success state ────────────────────────────────────────────────────────────
+  //
+  // Show the "You're Pro" confirmation only when EITHER (a) this screen
+  // just successfully activated them in this session (`done`), OR (b) they
+  // are genuinely Pro — meaning tier='pro' AND they have a cloud account.
+  //
+  // Without the cloud-account part of (b), a local-only Free user with a
+  // stale tier='pro' value in storage (from a prior install, a bug, or
+  // testing) would land here and see "You're Pro" instantly without ever
+  // creating an account. Pro requires cloud sync; tier alone isn't enough.
 
-  if (done || tier === 'pro') {
+  const trulyPro = tier === 'pro' && Boolean(session?.user?.id) && !user?.isLocal;
+  if (done || trulyPro) {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.successWrap}>
