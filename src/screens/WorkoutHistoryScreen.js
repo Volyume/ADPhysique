@@ -11,6 +11,7 @@ import {
 } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import PressableCard from '../components/PressableCard';
+import { EmptyWorkoutsIllustration } from '../components/Illustrations';
 import { getAllWorkouts, getAllWorkoutSets, getAllExercises, createWorkout, getWorkoutSetsForWorkout, getRoutineExercisesWithDetails } from '../lib/database';
 import { logError } from '../lib/errorLog';
 import { calculateTonnage } from '../lib/algorithms';
@@ -576,7 +577,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
             </View>
           ) : (
             <View style={styles.empty}>
-              <Ionicons name="calendar-outline" size={48} color={colors.textMuted} />
+              <EmptyWorkoutsIllustration size={140} />
               <Text style={styles.emptyTitle}>No sessions logged yet</Text>
               <Text style={styles.emptyText}>
                 Completed workouts appear here. Each session is saved automatically when you finish.

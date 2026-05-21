@@ -1031,7 +1031,7 @@ export default function HomeScreen({ navigation }) {
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.background + 'CC'} />
             </View>
-          </TouchableOpacity>
+          </PressableCard>
         ) : activePlan && nextWorkout ? (
           <GradientCard tone="primary" intensity={0.22} style={styles.heroCard}>
             <View style={styles.heroTopRow}>

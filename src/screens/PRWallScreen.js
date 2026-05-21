@@ -10,6 +10,7 @@ import { LineChart } from 'react-native-gifted-charts';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { getCompletedWorkoutSets, getAllExercises, getLatestBodyWeight } from '../lib/database';
 import { calculate1RM, getStrengthStandard } from '../lib/algorithms';
+import { EmptyPRsIllustration } from '../components/Illustrations';
 import { getStrengthLevel } from '../lib/strengthStandards';
 import useAppStore from '../store/useAppStore';
 import InfoTooltip from '../components/InfoTooltip';
@@ -349,7 +350,7 @@ export default function PRWallScreen({ navigation }) {
         }}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Ionicons name="trophy-outline" size={48} color={colors.textMuted} />
+            <EmptyPRsIllustration size={140} />
             <Text style={styles.emptyTitle}>No personal records yet</Text>
             <Text style={styles.emptyText}>
               Personal records are detected automatically as you train. Complete a few sessions and they will appear here.

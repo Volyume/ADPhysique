@@ -10,6 +10,7 @@ import { format } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius, volumeColors, motion } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';
+import { EmptyChartIllustration } from '../components/Illustrations';
 import InfoTooltip from '../components/InfoTooltip';
 import SvgBarSparkline from '../components/SvgBarSparkline';
 import FatigueTrendCard from '../components/FatigueTrendCard';
@@ -470,7 +471,7 @@ export default function AnalyticsScreen({ navigation }) {
         {/* ── Empty state ───────────────────────────────────── */}
         {!loading && allSets.length === 0 && (
           <View style={styles.emptyState}>
-            <Ionicons name="analytics-outline" size={48} color={colors.textMuted} />
+            <EmptyChartIllustration size={140} />
             <Text style={styles.emptyStateHeading}>No data yet</Text>
             <Text style={styles.emptyStateBody}>
               Your progress charts will appear here after your first few sessions. Log a workout to get started.
