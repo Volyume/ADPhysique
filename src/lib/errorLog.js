@@ -100,7 +100,10 @@ export function logWarn(scope, message, context) {
 }
 
 export function logInfo(scope, message, context) {
-  if (!__DEV__) return;
+  // Previously gated on __DEV__ — but beta testers can't share what they
+  // can't capture. Verbose mode is on during beta so info-level events
+  // (auth transitions, plan generation, tier flips) land in the
+  // debug_log_uploads pipeline alongside warnings and errors.
   const entry = buildEntry('info', scope, message, context);
   if (typeof console !== 'undefined' && console.log) {
     console.log(`[${entry.scope}]`, entry.message, context || '');
@@ -174,6 +177,15 @@ export async function flushDebugLogs(supabaseClient, { force = false, userId = n
     });
   }
 
+  // The cloud `context` column is TEXT. Stringify objects so PostgREST
+  // accepts them — previously we shipped the raw object which Supabase
+  // either rejected or silently dropped depending on version, killing
+  // the whole batch insert.
+  function safeStringify(value) {
+    if (value == null) return null;
+    if (typeof value === 'string') return value;
+    try { return JSON.stringify(value); } catch (_) { return String(value); }
+  }
   const rows = newEntries.map(e => ({
     id: uid(),
     user_id: userId || null,
@@ -183,7 +195,7 @@ export async function flushDebugLogs(supabaseClient, { force = false, userId = n
     scope: e.scope,
     message: e.message,
     stack: e.stack || null,
-    context: e.context || null,
+    context: safeStringify(e.context),
     app_version: appVersion || null,
     platform: platform || null,
   }));

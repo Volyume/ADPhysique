@@ -196,18 +196,27 @@ export default function SettingsScreen({ navigation }) {
         const sb = getSupabaseClient();
         if (sb) {
           let invokeErr = null;
+          let fnBody = null;
           try {
-            const { error } = await sb.functions.invoke('delete-account');
-            if (error) invokeErr = error;
+            const result = await sb.functions.invoke('delete-account');
+            if (result.error) invokeErr = result.error;
+            fnBody = result.data;
           } catch (e) {
             invokeErr = e;
           }
           if (invokeErr) {
-            // Fall back to the RPC so a missing/un-deployed Edge Function
+            // Surface the real Edge Function body in logs so we can diagnose
+            // (was just "non-2xx" before — useless). The function returns
+            // { error: "..." } JSON on every non-200 path, which is what
+            // we want to capture.
+            logError('SettingsScreen.deleteAccount.fnInvoke', invokeErr, {
+              userId,
+              fnBody: fnBody ? JSON.stringify(fnBody).slice(0, 500) : null,
+              status: invokeErr?.context?.status ?? null,
+            });
+            // Fall back to the RPC so a missing or un-deployed Edge Function
             // doesn't block the user. Cloud auth.users row will remain
-            // until the function is deployed, but the rest of the wipe
-            // still runs. Logged for visibility.
-            logError('SettingsScreen.deleteAccount.fnInvoke', invokeErr, { userId });
+            // until the function is deployed.
             const { error: rpcErr } = await sb.rpc('delete_user_data');
             if (rpcErr) {
               cloudOk = false;

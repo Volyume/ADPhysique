@@ -2131,20 +2131,28 @@ export async function clearWorkoutHistory(userId) {
 export async function wipeAllUserData(userId) {
   if (!userId) return;
   const d = await db();
-  // Child tables that key off mesocycle_week_id rather than user_id —
-  // delete them via a sub-select so they're cleaned up too.
-  const tables = [
+
+  // Tables that have a user_id column on them directly — straight DELETE.
+  const directTables = [
     'workout_sets', 'workouts',
-    'routine_exercises', 'routines', 'programmes',
-    'planned_muscle_volume', 'mesocycle_weeks', 'mesocycles',
+    'routines', 'programmes',
+    'mesocycles',
     'morning_weights', 'weekly_checkins', 'coach_outputs',
     'nutrition_targets', 'peak_week_plans',
     'body_metric_log', 'user_insights', 'user_body_profile',
     'exercise_user_notes', 'exercise_goals', 'workout_notes',
   ];
+
+  // Tables that DON'T have user_id and must be wiped through a parent FK.
+  // routine_exercises   → keys off routine_id     → routines.user_id
+  // mesocycle_weeks     → keys off mesocycle_id   → mesocycles.user_id
+  // planned_muscle_volume → keys off mesocycle_week_id → mesocycle_weeks → mesocycles.user_id
+  // adaptation_events   → keys off mesocycle_week_id → same chain
+  //
+  // Order matters: deepest child first so each step's FK target still
+  // exists when we delete it.
   await d.withTransactionAsync(async () => {
-    // adaptation_events keys off mesocycle_week_id, so wipe those whose
-    // mesocycle_week belongs to a mesocycle this user owns.
+    // 1. adaptation_events (deepest child)
     try {
       await d.runAsync(
         `DELETE FROM adaptation_events WHERE mesocycle_week_id IN (
@@ -2157,19 +2165,59 @@ export async function wipeAllUserData(userId) {
     } catch (e) {
       logError('database.wipeAllUserData.adaptation_events', e, { userId });
     }
-    for (const table of tables) {
+
+    // 2. planned_muscle_volume (via mesocycle_week → mesocycle.user_id)
+    try {
+      await d.runAsync(
+        `DELETE FROM planned_muscle_volume WHERE mesocycle_week_id IN (
+          SELECT mw.id FROM mesocycle_weeks mw
+          JOIN mesocycles m ON m.id = mw.mesocycle_id
+          WHERE m.user_id = ?
+        )`,
+        [userId],
+      );
+    } catch (e) {
+      logError('database.wipeAllUserData.planned_muscle_volume', e, { userId });
+    }
+
+    // 3. mesocycle_weeks (via mesocycle.user_id)
+    try {
+      await d.runAsync(
+        `DELETE FROM mesocycle_weeks WHERE mesocycle_id IN (
+          SELECT id FROM mesocycles WHERE user_id = ?
+        )`,
+        [userId],
+      );
+    } catch (e) {
+      logError('database.wipeAllUserData.mesocycle_weeks', e, { userId });
+    }
+
+    // 4. routine_exercises (via routine.user_id)
+    try {
+      await d.runAsync(
+        `DELETE FROM routine_exercises WHERE routine_id IN (
+          SELECT id FROM routines WHERE user_id = ?
+        )`,
+        [userId],
+      );
+    } catch (e) {
+      logError('database.wipeAllUserData.routine_exercises', e, { userId });
+    }
+
+    // 5. Everything else (direct user_id column)
+    for (const table of directTables) {
       try {
         await d.runAsync(`DELETE FROM ${table} WHERE user_id = ?`, [userId]);
       } catch (e) {
-        // Continue with other tables — a missing table on an older schema
+        // Continue with other tables. A missing table on an older schema
         // shouldn't abort the whole wipe.
         logError(`database.wipeAllUserData.${table}`, e, { userId });
       }
     }
-    // Custom exercises — the local exercises table has no user_id column
-    // (canonical seed exercises are shared library data and aren't keyed
-    // per user). Custom user-added exercises are tagged is_custom = 1, so
-    // wipe those instead. Canonical exercises stay intact.
+
+    // 6. Custom exercises. Canonical seed exercises are shared library data
+    // and aren't keyed per user, so leave them. is_custom = 1 means
+    // user-added — wipe those.
     try {
       await d.runAsync('DELETE FROM exercises WHERE is_custom = 1');
     } catch (e) {

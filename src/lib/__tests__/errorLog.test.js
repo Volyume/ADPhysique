@@ -149,14 +149,19 @@ describe('errorLog robustness', () => {
     }
   });
 
-  test('logInfo is a no-op when __DEV__ is false', async () => {
+  test('logInfo persists in production too (verbose mode for beta)', async () => {
+    // Previously logInfo was DEV-only. During beta we ship info-level
+    // events to the on-device buffer (and via flushDebugLogs to the
+    // cloud) so beta testers' auth transitions, plan generation, etc.
+    // are diagnosable. This test pins the new behaviour.
     const wasDev = global.__DEV__;
     global.__DEV__ = false;
     try {
-      logInfo('Prod', 'should not persist');
+      logInfo('Prod', 'should persist now');
       await flushWrites();
       const list = await getRecentErrors();
-      expect(list.length).toBe(0);
+      expect(list.length).toBeGreaterThan(0);
+      expect(list[0].level).toBe('info');
     } finally {
       global.__DEV__ = wasDev;
     }

@@ -210,6 +210,9 @@ const useAppStore = create((set, get) => ({
   // round-trip the just-read value back to Supabase.
   restoreSessionFromCloud: async (supabaseUserId) => {
     if (!supabaseUserId) return;
+    // eslint-disable-next-line global-require
+    const log = require('../lib/errorLog');
+    log.logInfo('restoreSessionFromCloud.start', `uid=${supabaseUserId}`, { uid: supabaseUserId });
 
     // Beta tier policy — set tier='pro' UP FRONT before any cloud reads.
     // This must happen regardless of whether the cloud profile row exists
@@ -222,6 +225,7 @@ const useAppStore = create((set, get) => ({
     if (PRO_BETA_ACTIVE) {
       try { await AsyncStorage.setItem(TIER_KEY, 'pro'); } catch (_) {}
       set({ tier: 'pro', tierChecked: true });
+      log.logInfo('restoreSessionFromCloud.betaPro', 'forced tier=pro');
     }
 
     let cloudData = null;
