@@ -49,15 +49,20 @@ serve(async (req) => {
   }
 
   try {
+    console.log('[delete-account] invoke start')
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     if (!supabaseUrl || !anonKey || !serviceRoleKey) {
+      console.error('[delete-account] missing env vars', {
+        hasUrl: !!supabaseUrl, hasAnon: !!anonKey, hasService: !!serviceRoleKey,
+      })
       return jsonResponse({ error: 'Server misconfigured: missing Supabase env vars' }, 500)
     }
 
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
+      console.error('[delete-account] missing Authorization header')
       return jsonResponse({ error: 'Missing Authorization header' }, 401)
     }
 
@@ -68,15 +73,19 @@ serve(async (req) => {
     })
     const { data: { user }, error: userErr } = await userClient.auth.getUser()
     if (userErr || !user) {
+      console.error('[delete-account] auth.getUser failed', userErr)
       return jsonResponse({ error: 'Not authenticated' }, 401)
     }
+    console.log('[delete-account] verified user', { uid: user.id })
 
     // 2. Wipe public.* rows via the existing RPC. Runs with the user's
     //    JWT so RLS enforcement remains in place.
     const { error: rpcErr } = await userClient.rpc('delete_user_data')
     if (rpcErr) {
+      console.error('[delete-account] delete_user_data RPC failed', rpcErr)
       return jsonResponse({ error: `Data wipe failed: ${rpcErr.message}` }, 500)
     }
+    console.log('[delete-account] public data wiped')
 
     // 3. Delete the auth.users row with a service-role admin client.
     const adminClient = createClient(supabaseUrl, serviceRoleKey, {
@@ -84,12 +93,15 @@ serve(async (req) => {
     })
     const { error: adminErr } = await adminClient.auth.admin.deleteUser(user.id)
     if (adminErr) {
+      console.error('[delete-account] auth.admin.deleteUser failed', adminErr)
       return jsonResponse({ error: `Auth deletion failed: ${adminErr.message}` }, 500)
     }
+    console.log('[delete-account] auth user deleted')
 
     return jsonResponse({ ok: true }, 200)
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Unknown error'
+    console.error('[delete-account] uncaught', e)
     return jsonResponse({ error: msg }, 500)
   }
 })
