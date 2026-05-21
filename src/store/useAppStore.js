@@ -169,6 +169,13 @@ const useAppStore = create((set, get) => ({
   tier: null,
   tierChecked: false,
 
+  // True while restoreSessionFromCloud is in flight. The navigator
+  // gates routing decisions on this so the wizard doesn't briefly
+  // mount during the ~8s cloud read for returning users (the
+  // wizard-flash bug). Defaults to false so cold-launch isn't gated
+  // on it — the gate only matters during an active auth transition.
+  restoringSession: false,
+
   checkTier: async () => {
     try {
       const saved = await AsyncStorage.getItem(TIER_KEY);
@@ -233,6 +240,15 @@ const useAppStore = create((set, get) => ({
     const log = require('../lib/errorLog');
     log.logInfo('restoreSessionFromCloud.start', `uid=${supabaseUserId}`, { uid: supabaseUserId });
 
+    // Mark the cloud restore as in-flight so the navigator doesn't route
+    // on stale local state (the wizard-flash bug). Without this, the
+    // ~8s cloud read window let the navigator see tier='pro' AND
+    // firstRunComplete=false → mount ProOnboardingStack briefly. The
+    // user starts filling the wizard, then cloud returns
+    // firstRunComplete=true and the stack unmounts mid-fill. Splash
+    // stays up until we know the resolved cloud state.
+    set({ restoringSession: true });
+
     // Beta tier policy — set tier='pro' UP FRONT before any cloud reads.
     // This must happen regardless of whether the cloud profile row exists
     // (fresh signups don't have one yet; deleted-but-unpurged accounts
@@ -252,7 +268,7 @@ const useAppStore = create((set, get) => ({
       // eslint-disable-next-line global-require
       const { getSupabaseClient } = require('../lib/supabase');
       const sb = getSupabaseClient();
-      if (!sb) return;
+      if (!sb) { set({ restoringSession: false }); return; }
       const { data } = await sb
         .from('users_profile')
         .select('first_name, training_focus, training_age, primary_equipment, units, bar_weight, tier, first_run_complete')
@@ -272,6 +288,7 @@ const useAppStore = create((set, get) => ({
     //       clearAuthStateForSignOut already cleared firstRunComplete.
     if (!cloudData) {
       log.logInfo('restoreSessionFromCloud.noProfile', 'cloud profile missing — leaving firstRun local-side');
+      set({ restoringSession: false });
       return;
     }
 
@@ -317,6 +334,10 @@ const useAppStore = create((set, get) => ({
       set({ firstRunComplete: true, firstRunChecked: true });
       log.logInfo('restoreSessionFromCloud.firstRunRestored', 'true (from cloud)');
     }
+
+    // Cloud state resolved — release the routing gate. Navigator now
+    // routes based on the freshly-restored firstRunComplete + tier.
+    set({ restoringSession: false });
   },
 
   // Called after cloud sign-in: reads tier from Supabase and uses it as the

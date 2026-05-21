@@ -275,6 +275,10 @@ export default function RootNavigator() {
   const firstRunChecked = useAppStore(s => s.firstRunChecked);
   const tier = useAppStore(s => s.tier);
   const tierChecked = useAppStore(s => s.tierChecked);
+  // True while restoreSessionFromCloud is in flight. Holds the splash
+  // up so the wizard doesn't mount on stale local state during the
+  // cloud-read window for returning users.
+  const restoringSession = useAppStore(s => s.restoringSession);
   // Actions are stable references in zustand so destructuring them once
   // outside the render is safe and doesn't cause re-renders.
   const setUser = useAppStore(s => s.setUser);
@@ -476,6 +480,18 @@ export default function RootNavigator() {
   // The store updates (tier, firstRunComplete, user) re-trigger this
   // render naturally, so seamless transitions happen without a splash.
   if (!splashReady || !firstRunChecked || !tierChecked) {
+    return <SplashScreen />;
+  }
+
+  // While a cloud restore is in flight (right after SIGNED_IN, before
+  // we know whether the user has a profile in the cloud), park on
+  // the splash. Without this, the navigator routes on stale local
+  // state — tier='pro' is set instantly by the beta override but
+  // firstRunComplete is still false from clearAuthStateForSignOut,
+  // which mounts ProOnboardingStack briefly until the cloud read
+  // confirms firstRunComplete=true. That gap was the "I started the
+  // wizard and got booted out" bug.
+  if (restoringSession) {
     return <SplashScreen />;
   }
 
