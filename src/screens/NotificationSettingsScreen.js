@@ -172,6 +172,14 @@ export default function NotificationSettingsScreen({ navigation }) {
     init();
   }, []);
 
+  // Clear any pending debounce / saved-flag timers on unmount so they
+  // don't fire setSaved/setSaving on an unmounted component (React warning
+  // and potential leak if the user backed out mid-save).
+  useEffect(() => () => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    if (savedTimer.current) clearTimeout(savedTimer.current);
+  }, []);
+
   function scheduleApply(nextPrefs) {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(async () => {
