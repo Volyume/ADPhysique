@@ -582,6 +582,26 @@ export default function HomeScreen({ navigation }) {
     pendingStartRef.current = null;
   }
 
+  // Blank session: no plan, no routine, no preloaded exercises. The
+  // previous flow just did navigation.navigate('ActiveWorkout', {
+  // blank: true }), but ActiveWorkoutScreen never read that param, so
+  // the screen rendered with workoutStartTime=null and the timer was
+  // frozen at 0:00 with non-responsive buttons. This helper does the
+  // same prep the planned-session flow does: create the workout row,
+  // mark it active in the store, then navigate. Used by both quick-
+  // start surfaces below.
+  async function startBlankSession() {
+    if (!user?.id) return;
+    try {
+      const workout = await createWorkout(user.id, null, { intent: null });
+      startWorkout(workout, []);
+      navigation.navigate('ActiveWorkout');
+    } catch (e) {
+      logError('HomeScreen.startBlankSession', e, { userId: user?.id });
+      Alert.alert("Couldn't start session", e?.message ?? 'Please try again.');
+    }
+  }
+
   async function handleRepeatLastSession() {
     if (!lastSession) return;
     const routineId = lastSession.routineId || lastSession.routine_id || null;
@@ -1136,7 +1156,7 @@ export default function HomeScreen({ navigation }) {
 
             <TouchableOpacity
               style={styles.quickStartCard}
-              onPress={() => navigation.navigate('ActiveWorkout', { blank: true })}
+              onPress={() => startBlankSession()}
               activeOpacity={0.75}
             >
               <View style={styles.quickStartIcon}>
@@ -1162,7 +1182,7 @@ export default function HomeScreen({ navigation }) {
                   icon="barbell-outline"
                   title="Start a manual session"
                   desc="Log sets as you go. No plan required. Volyume builds your profile as you train."
-                  onPress={() => navigation.navigate('ActiveWorkout', { blank: true })}
+                  onPress={() => startBlankSession()}
                 />
               </>
             )}
