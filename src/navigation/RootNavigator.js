@@ -379,14 +379,12 @@ export default function RootNavigator() {
           // local AsyncStorage was wiped on sign-out gets routed back
           // through onboarding because firstRunComplete is still false.
           if (event === 'SIGNED_IN' && session?.user?.id) {
-            setAuthLoading(true);
+            // Cloud restore runs asynchronously without flipping
+            // isAuthLoading. The splash gate no longer reads that flag, so
+            // there's nothing to gate on — the currently-rendered screen
+            // stays mounted while the cloud restore runs in the background.
+            // 8s race timeout still applies to keep the await bounded.
             try {
-              // Race the cloud restore against an 8s timeout. The Supabase JS
-              // client has no built-in query timeout, so a flaky connection
-              // can leave the request hanging indefinitely — and because
-              // restoreSessionFromCloud catches its own errors internally,
-              // a hung request never rejects the await. Without this race,
-              // the splash sits forever after a successful sign-in.
               await Promise.race([
                 useAppStore.getState().restoreSessionFromCloud(session.user.id),
                 new Promise(resolve => setTimeout(resolve, 8000)),
@@ -394,19 +392,18 @@ export default function RootNavigator() {
               refreshTierFromCloud(client, session.user.id).catch(() => {});
 
               // If cloud profile was missing AND the user had no local tier
-              // picked, restoreSessionFromCloud leaves tier=null. The router
-              // re-renders WelcomeStack but the navigator's internal screen
-              // history keeps the user on whatever screen they came from
-              // (typically Login). Reset to Welcome so they re-enter the
-              // enrollment flow like a brand-new user.
+              // picked, restoreSessionFromCloud leaves tier=null. Reset
+              // navigation to Welcome so they re-enter enrollment like a
+              // brand-new user instead of staying on Login.
               const tierAfter = useAppStore.getState().tier;
               if (!tierAfter && navigationRef.isReady()) {
                 try {
                   navigationRef.reset({ index: 0, routes: [{ name: 'Welcome' }] });
                 } catch (_) {}
               }
-            } finally {
-              setAuthLoading(false);
+            } catch (_) {
+              // restoreSessionFromCloud already catches its own errors;
+              // this is just belt-and-braces for the race timeout path.
             }
           }
         });

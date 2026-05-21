@@ -19,7 +19,10 @@ const useAppStore = create((set, get) => ({
   user: null,
   session: null,
   userProfile: null,
-  isAuthLoading: true,
+  // Kept for backwards compat with crash-recovery code paths that still
+  // null-guard on it. Splash gate no longer reads this — splash only fires
+  // during initial bootstrap (splashReady / firstRunChecked / tierChecked).
+  isAuthLoading: false,
 
   setUser: (user) => set({ user }),
   setSession: (session) => set({ session }),
