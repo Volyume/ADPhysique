@@ -12,6 +12,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg, kgToStoneLbsStrings, kgToLbs } from '../lib/units';
 import { VolyumeMark } from '../components/BrandMark';
 import { SkeletonCard } from '../components/Skeleton';
+import Sparkline from '../components/Sparkline';
 import {
   getAllWorkouts, getCompletedWorkoutSets, getActivePlan, getRoutinesForPlan,
   getAllRoutineExerciseCounts, createWorkout, getRoutineExercisesWithDetails,
@@ -69,6 +70,7 @@ export default function HomeScreen({ navigation }) {
   const [initialLoading, setInitialLoading] = useState(true);
   const [coachBannerDismissed, setCoachBannerDismissed] = useState(false);
   const [todayWeight, setTodayWeight] = useState(null);       // logged weight for today
+  const [recentWeights, setRecentWeights] = useState([]);     // last 14 entries for sparkline
   const [weightInput, setWeightInput] = useState('');          // draft for kg/lbs mode
   const [weightInputSt, setWeightInputSt] = useState('');     // stone field (st mode)
   const [weightInputStLbs, setWeightInputStLbs] = useState(''); // lbs field (st mode)
@@ -267,6 +269,13 @@ export default function HomeScreen({ navigation }) {
     try {
       const entry = await getMorningWeightToday(user.id);
       setTodayWeight(entry?.weightKg ?? null);
+      // Recent weights for the inline sparkline above the card. Last 14
+      // entries gives a meaningful 2-week trend without making the
+      // sparkline too dense to read at thumbnail size.
+      try {
+        const recent14 = await getMorningWeights(user.id, 14);
+        setRecentWeights(recent14.map(w => w.weightKg).filter(Number.isFinite));
+      } catch (_) {}
       // Prefill the log-weight inputs with the previously logged weight
       // (most recent morning weight, falling back to onboarding weight).
       // Blank inputs every day forced the user to retype the same number
@@ -697,6 +706,9 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.weightCardText}>
               {formatBodyWeightShort(todayWeight, bwu)} logged today
             </Text>
+            {recentWeights.length >= 3 && (
+              <Sparkline data={recentWeights} width={64} height={20} color={colors.primary} />
+            )}
             <TouchableOpacity
               onPress={() => {
                 // Prefill inputs with the value being edited so a typo
