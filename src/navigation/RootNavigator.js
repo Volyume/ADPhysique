@@ -428,7 +428,15 @@ export default function RootNavigator() {
     if (!user && isAuthLoading) setAuthLoading(false);
   }, [user, tierChecked, firstRunChecked, isAuthLoading, checkTier, checkFirstRun, setAuthLoading]);
 
-  if (isAuthLoading || !splashReady || !firstRunChecked || !tierChecked) {
+  // Splash gate fires ONLY during initial bootstrap — before splashReady,
+  // firstRunChecked, and tierChecked have completed their first pass.
+  // Deliberately not gated on isAuthLoading: that flag flips true during
+  // every SIGNED_IN event, and showing the splash mid-flow unmounts the
+  // currently-rendered stack (ProOnboardingStack in particular), wiping
+  // the screen's step state. The result was an OAuth loop on Step 1.
+  // The store updates (tier, firstRunComplete, user) re-trigger this
+  // render naturally, so seamless transitions happen without a splash.
+  if (!splashReady || !firstRunChecked || !tierChecked) {
     return <SplashScreen />;
   }
 
