@@ -438,8 +438,11 @@ export default function SettingsScreen({ navigation }) {
             rightElement={
               <Switch
                 value={!!accessibility.largerText}
-                onValueChange={v => {
-                  setAccessibilityPref('largerText', v);
+                onValueChange={async v => {
+                  // Await the AsyncStorage write before prompting reload — otherwise
+                  // a fast "Reload now" tap can tear down the JS VM before the pref
+                  // persists, and the user sees no change on restart.
+                  await setAccessibilityPref('largerText', v);
                   promptRestartForA11y('Larger text');
                 }}
                 trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
@@ -455,8 +458,8 @@ export default function SettingsScreen({ navigation }) {
             rightElement={
               <Switch
                 value={!!accessibility.higherContrast}
-                onValueChange={v => {
-                  setAccessibilityPref('higherContrast', v);
+                onValueChange={async v => {
+                  await setAccessibilityPref('higherContrast', v);
                   promptRestartForA11y('Higher contrast');
                 }}
                 trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
@@ -472,8 +475,8 @@ export default function SettingsScreen({ navigation }) {
             rightElement={
               <Switch
                 value={!!accessibility.colorBlindSafe}
-                onValueChange={v => {
-                  setAccessibilityPref('colorBlindSafe', v);
+                onValueChange={async v => {
+                  await setAccessibilityPref('colorBlindSafe', v);
                   promptRestartForA11y('Colour-blind safe palette');
                 }}
                 trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
