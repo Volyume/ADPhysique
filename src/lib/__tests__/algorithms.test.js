@@ -81,11 +81,13 @@ describe('getVolumeStatus — delt heads', () => {
     expect(result.status).toBe('over_mrv');
   });
 
-  test('0 sets front_delts → below (mev is 0, status is below with 0 sets)', () => {
-    // mev=0, so mev > 0 check fails → falls to optimal check: 0 <= mav(6) → optimal
-    // Actually: workingSets < mev (0 < 0) is false; mev > 0 check fails; 0 <= 6 → optimal
+  test('0 sets front_delts → below (zero-work short-circuit overrides mev=0)', () => {
+    // front_delts.mev is 0 because pressing movements provide plenty of
+    // indirect volume — but zero LOGGED sets shouldn't render green on
+    // the heatmap. The zero-work short-circuit in getVolumeStatus catches
+    // this case before the mev comparison.
     const result = getVolumeStatus(0, 'front_delts');
-    expect(result.status).toBe('optimal');
+    expect(result.status).toBe('below');
   });
 });
 
