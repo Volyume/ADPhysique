@@ -261,7 +261,11 @@ function PhysiqueOptIn({ onEnable }) {
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function BodyMetricsScreen({ navigation }) {
-  const { user, session, units, bodyWeightUnits, tier } = useAppStore();
+  const { user, session, units, bodyWeightUnits, tier, userProfile } = useAppStore();
+  // Onboarding weight — surfaced in the empty state so a user who just
+  // completed Pro onboarding doesn't see a misleading "No entries yet"
+  // when they did, in fact, give us a starting bodyweight.
+  const onboardingWeightKg = userProfile?.weightKg ?? userProfile?.bodyWeightKg ?? null;
   const bwu = bodyWeightUnits || 'st';
   const [physiqueEnabled, setPhysiqueEnabled] = useState(null); // null = loading
   const [calm, setCalm] = useState(false);
@@ -499,55 +503,9 @@ export default function BodyMetricsScreen({ navigation }) {
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
 
-        {/* Nutrition Targets Card */}
-        <View style={styles.nutritionCard}>
-          <View style={styles.nutritionCardHeader}>
-            <View style={styles.nutritionCardLeft}>
-              <Ionicons name="nutrition-outline" size={18} color={colors.primary} />
-              <Text style={styles.nutritionCardTitle}>Nutrition Targets</Text>
-            </View>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('ProfileTab', { screen: 'NutritionTargets', initial: false })}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Text style={styles.nutritionCardLink}>
-                {nutritionTargets ? 'Edit' : 'Calculate'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-          {nutritionTargets ? (
-            <View style={styles.nutritionGrid}>
-              {nutritionTargets.targetKcal ? (
-                <View style={styles.nutritionCell}>
-                  <Text style={styles.nutritionValue}>{Math.round(nutritionTargets.targetKcal)}</Text>
-                  <Text style={styles.nutritionLabel}>kcal</Text>
-                </View>
-              ) : null}
-              {nutritionTargets.proteinG ? (
-                <View style={styles.nutritionCell}>
-                  <Text style={styles.nutritionValue}>{Math.round(nutritionTargets.proteinG)}g</Text>
-                  <Text style={styles.nutritionLabel}>Protein</Text>
-                </View>
-              ) : null}
-              {nutritionTargets.carbsG ? (
-                <View style={styles.nutritionCell}>
-                  <Text style={styles.nutritionValue}>{Math.round(nutritionTargets.carbsG)}g</Text>
-                  <Text style={styles.nutritionLabel}>Carbs</Text>
-                </View>
-              ) : null}
-              {nutritionTargets.fatG ? (
-                <View style={styles.nutritionCell}>
-                  <Text style={styles.nutritionValue}>{Math.round(nutritionTargets.fatG)}g</Text>
-                  <Text style={styles.nutritionLabel}>Fat</Text>
-                </View>
-              ) : null}
-            </View>
-          ) : (
-            <Text style={styles.nutritionEmpty}>
-              No targets set yet. Head to Profile to calculate your daily calorie and protein targets.
-            </Text>
-          )}
-        </View>
+        {/* Body Metrics is for body weight + measurements only. Nutrition
+            Targets have their own dedicated screen reachable from
+            Athlete Hub → Nutrition targets and Settings → Nutrition. */}
 
         {/* Weight trend + snapshot */}
         {history.length > 0 ? (
@@ -615,10 +573,18 @@ export default function BodyMetricsScreen({ navigation }) {
         ) : (
           <View style={styles.emptyCard}>
             <Ionicons name="body-outline" size={40} color={colors.surface3} />
-            <Text style={styles.emptyTitle}>No entries yet</Text>
-            <Text style={styles.emptyText}>
-              Log your body weight and measurements to track your physique over time.
-            </Text>
+            <Text style={styles.emptyTitle}>No entries logged yet</Text>
+            {onboardingWeightKg ? (
+              <>
+                <Text style={styles.emptyText}>
+                  We have your onboarding bodyweight saved as a starting point ({formatBodyWeightShort(onboardingWeightKg, bodyWeightUnits)}). Tap Log Weight to record a fresh entry — that's when the trend starts tracking.
+                </Text>
+              </>
+            ) : (
+              <Text style={styles.emptyText}>
+                Log your body weight and measurements to track your physique over time.
+              </Text>
+            )}
           </View>
         )}
 
