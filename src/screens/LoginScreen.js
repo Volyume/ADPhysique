@@ -25,7 +25,7 @@ import useAppStore from '../store/useAppStore';
 const CRASH_LOG_KEY = '@volyume_crash_log';
 
 export default function LoginScreen({ navigation, route }) {
-  const { initLocalUser, user: localUser, userProfile, tier, refreshTierFromCloud } = useAppStore();
+  const { initLocalUser, user: localUser, userProfile, tier, setTier, refreshTierFromCloud } = useAppStore();
   const promptSignup = route?.params?.promptSignup === true;
   const [mode, setMode] = useState(promptSignup ? 'signup' : 'signin');
   const [email, setEmail] = useState('');
@@ -99,7 +99,12 @@ export default function LoginScreen({ navigation, route }) {
         if (mode === 'signup') {
           // New account — push local history up
           bulkUploadLocalData(supabaseUserId, localUserId).catch(() => {});
-          navigation.replace('ProOnboarding');
+          // Switch the navigator into ProOnboardingStack by setting the tier.
+          // The previous navigation.replace('ProOnboarding') was a no-op
+          // when LoginScreen was reached from WelcomeStack — that stack
+          // doesn't register ProOnboarding. Tier change is the routing
+          // signal RootNavigator watches.
+          if (!tier) await setTier('pro');
         } else {
           // Existing account — push any local-only edits made while signed
           // out, then pull cloud data down (new device scenario).

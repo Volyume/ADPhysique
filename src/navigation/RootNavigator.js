@@ -227,15 +227,6 @@ function WelcomeStack() {
   );
 }
 
-function AuthStack() {
-  return (
-    <Stack.Navigator screenOptions={{ ...stackOptions, headerShown: false }}>
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-    </Stack.Navigator>
-  );
-}
-
 function FirstRunStack() {
   return (
     <Stack.Navigator screenOptions={{ ...stackOptions, headerShown: false }}>
