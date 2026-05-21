@@ -97,7 +97,14 @@ async function _ensureIosInited(perms) {
 /**
  * Request the given scopes. Returns 'granted' | 'denied' | 'unavailable'.
  * On iOS, HealthKit doesn't expose explicit "granted" state to the app
- * (privacy by design), so a successful init is treated as granted.
+ * (privacy by design), so a successful init is treated as granted for
+ * the requested scopes. Subsequent reads / writes will silently no-op
+ * if the user actually denied them in the system sheet.
+ *
+ * Supported scopes:
+ *   'weight'        read bodyweight samples
+ *   'workout'       write completed workouts (plus active energy)
+ *   'steps'         read daily step counts
  */
 export async function requestHealthPermissions(scopes = ['weight']) {
   if (!isHealthAvailable()) return 'unavailable';
@@ -106,8 +113,14 @@ export async function requestHealthPermissions(scopes = ['weight']) {
     const HK = getIosModule();
     const Constants = HK.Constants;
     const reads = [];
+    const writes = [];
     if (scopes.includes('weight')) reads.push(Constants.Permissions.Weight);
-    const perms = { permissions: { read: reads, write: [] } };
+    if (scopes.includes('steps')) reads.push(Constants.Permissions.StepCount);
+    if (scopes.includes('workout')) {
+      writes.push(Constants.Permissions.Workout);
+      writes.push(Constants.Permissions.ActiveEnergyBurned);
+    }
+    const perms = { permissions: { read: reads, write: writes } };
     const ok = await _ensureIosInited(perms);
     return ok ? 'granted' : 'denied';
   }
@@ -119,6 +132,11 @@ export async function requestHealthPermissions(scopes = ['weight']) {
       if (!initialised) return 'unavailable';
       const recordTypes = [];
       if (scopes.includes('weight')) recordTypes.push({ accessType: 'read', recordType: 'Weight' });
+      if (scopes.includes('steps')) recordTypes.push({ accessType: 'read', recordType: 'Steps' });
+      if (scopes.includes('workout')) {
+        recordTypes.push({ accessType: 'write', recordType: 'ExerciseSession' });
+        recordTypes.push({ accessType: 'write', recordType: 'ActiveCaloriesBurned' });
+      }
       const granted = await HC.requestPermission(recordTypes);
       const allGranted = Array.isArray(granted) && granted.length >= recordTypes.length;
       return allGranted ? 'granted' : 'denied';
@@ -130,14 +148,16 @@ export async function requestHealthPermissions(scopes = ['weight']) {
 
 /**
  * Check status without prompting. Returns 'granted' | 'denied' |
- * 'unavailable'. Useful for rendering the Settings toggle state.
+ * 'unavailable'. Useful for rendering Settings toggle state. Pass the
+ * exact scopes you want to verify, e.g. ['weight'] or ['workout'].
  */
 export async function getHealthPermissionStatus(scopes = ['weight']) {
   if (!isHealthAvailable()) return 'unavailable';
 
   if (Platform.OS === 'ios') {
-    // HealthKit doesn't expose read auth status (intentional privacy
-    // design from Apple). Treat a successful prior init as granted.
+    // HealthKit deliberately doesn't expose read auth status to the
+    // app, so we treat a successful prior init as granted. Writes do
+    // expose status, but for a uniform API we settle for "init worked".
     return _iosInited ? 'granted' : 'denied';
   }
 
@@ -146,13 +166,46 @@ export async function getHealthPermissionStatus(scopes = ['weight']) {
     try {
       await HC.initialize();
       const granted = await HC.getGrantedPermissions();
-      const want = scopes.includes('weight');
-      const hasWeight = granted?.some?.(p => p?.recordType === 'Weight' && p?.accessType === 'read');
-      return want && hasWeight ? 'granted' : 'denied';
+      const want = (recordType, accessType) =>
+        granted?.some?.(p => p?.recordType === recordType && p?.accessType === accessType);
+      let ok = true;
+      if (scopes.includes('weight')) ok = ok && want('Weight', 'read');
+      if (scopes.includes('steps')) ok = ok && want('Steps', 'read');
+      if (scopes.includes('workout')) {
+        ok = ok && want('ExerciseSession', 'write') && want('ActiveCaloriesBurned', 'write');
+      }
+      return ok ? 'granted' : 'denied';
     } catch (_) { return 'denied'; }
   }
 
   return 'unavailable';
+}
+
+/**
+ * Opens the OS-level Health settings so the user can revoke
+ * permissions or change what Volyume can see. HealthKit and Health
+ * Connect both intentionally don't let the app revoke its own access
+ * (you'd be able to lock yourself out otherwise), so a Settings deep
+ * link is the only correct disconnect path.
+ */
+export async function openSystemHealthSettings() {
+  // eslint-disable-next-line global-require
+  const { Linking } = require('react-native');
+  try {
+    if (Platform.OS === 'ios') {
+      // Sources tab inside iOS Settings -> Health. iOS deep-link
+      // surface is limited; this is the closest stable entry.
+      await Linking.openURL('x-apple-health://');
+      return true;
+    }
+    if (Platform.OS === 'android') {
+      await Linking.openURL('package:com.google.android.apps.healthdata');
+      return true;
+    }
+  } catch (_) {
+    try { await Linking.openSettings(); return true; } catch (__) {}
+  }
+  return false;
 }
 
 // ─── Weight read ──────────────────────────────────────────────────────
@@ -212,6 +265,137 @@ export async function readWeightsSince(sinceMs = 0) {
   }
 
   return [];
+}
+
+// ─── Steps read ───────────────────────────────────────────────────────
+
+/**
+ * Total steps for today, summed from Health. Returns 0 when permission
+ * isn't granted or the platform doesn't expose it. Used by the Home
+ * screen "steps today" pill and by the nutrition NEAT estimator.
+ */
+export async function readStepsToday() {
+  if (!isHealthAvailable()) return 0;
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const startISO = start.toISOString();
+  const endISO = new Date().toISOString();
+
+  if (Platform.OS === 'ios') {
+    const HK = getIosModule();
+    if (!HK) return 0;
+    return new Promise(resolve => {
+      HK.getStepCount({ startDate: startISO, endDate: endISO }, (err, result) => {
+        if (err || typeof result?.value !== 'number') { resolve(0); return; }
+        resolve(Math.round(result.value));
+      });
+    });
+  }
+
+  if (Platform.OS === 'android') {
+    const HC = getAndroidModule();
+    if (!HC) return 0;
+    try {
+      const { records } = await HC.readRecords('Steps', {
+        timeRangeFilter: { operator: 'between', startTime: startISO, endTime: endISO },
+      });
+      const total = (records ?? []).reduce((sum, r) => sum + (r?.count ?? 0), 0);
+      return Math.round(total);
+    } catch (_) { return 0; }
+  }
+
+  return 0;
+}
+
+// ─── Workout write ────────────────────────────────────────────────────
+
+/**
+ * Conservative kcal estimate for a strength session. Tonnage-driven so
+ * it reflects how much actual work the user moved, not just duration.
+ *
+ * Method: ACSM resistance-training rate (~5 kcal/min for moderate
+ * intensity at a 75 kg lifter) scaled by bodyweight and clamped so a
+ * 4-set warm-up doesn't return zero and a marathon arm day doesn't
+ * read as 1500 kcal.
+ */
+function estimateWorkoutKcal({ durationMin, tonnageKg, bodyWeightKg }) {
+  const bw = bodyWeightKg && bodyWeightKg > 30 ? bodyWeightKg : 75;
+  const minutes = Math.max(5, Math.min(durationMin || 30, 180));
+  const baseRate = 5 * (bw / 75);          // kcal per minute, bw-scaled
+  const tonnageBoost = tonnageKg ? Math.min(tonnageKg / 4000, 1.4) : 0; // up to +40%
+  const kcal = baseRate * minutes * (1 + tonnageBoost);
+  return Math.max(40, Math.min(Math.round(kcal), 1200));
+}
+
+/**
+ * Writes a single completed workout into Health.
+ *
+ *   workout: {
+ *     startedAt:    epoch ms
+ *     endedAt:      epoch ms
+ *     tonnageKg?:   total lifted volume (optional, sharpens kcal estimate)
+ *     bodyWeightKg?: lifter's bodyweight (optional, sharpens kcal estimate)
+ *     notes?:       short string
+ *   }
+ *
+ * Returns true if the platform accepted the write. Silently no-ops if
+ * the workout permission wasn't granted or the native module isn't
+ * loaded.
+ */
+export async function writeWorkoutToHealth(workout) {
+  if (!isHealthAvailable()) return false;
+  if (!workout?.startedAt || !workout?.endedAt || workout.endedAt <= workout.startedAt) return false;
+  const status = await getHealthPermissionStatus(['workout']);
+  if (status !== 'granted') return false;
+
+  const startISO = new Date(workout.startedAt).toISOString();
+  const endISO = new Date(workout.endedAt).toISOString();
+  const durationMin = (workout.endedAt - workout.startedAt) / 60000;
+  const kcal = estimateWorkoutKcal({
+    durationMin,
+    tonnageKg: workout.tonnageKg,
+    bodyWeightKg: workout.bodyWeightKg,
+  });
+
+  if (Platform.OS === 'ios') {
+    const HK = getIosModule();
+    if (!HK) return false;
+    return new Promise(resolve => {
+      HK.saveWorkout({
+        type: HK.Constants.Activities.TraditionalStrengthTraining,
+        startDate: startISO,
+        endDate: endISO,
+        energyBurned: kcal,
+        energyBurnedUnit: 'kilocalorie',
+      }, (err) => resolve(!err));
+    });
+  }
+
+  if (Platform.OS === 'android') {
+    const HC = getAndroidModule();
+    if (!HC) return false;
+    try {
+      await HC.insertRecords([
+        {
+          recordType: 'ExerciseSession',
+          startTime: startISO,
+          endTime: endISO,
+          exerciseType: 49, // strength_training in Health Connect's enum
+          title: 'Volyume session',
+          notes: workout.notes ?? null,
+        },
+        {
+          recordType: 'ActiveCaloriesBurned',
+          startTime: startISO,
+          endTime: endISO,
+          energy: { unit: 'kilocalories', value: kcal },
+        },
+      ]);
+      return true;
+    } catch (_) { return false; }
+  }
+
+  return false;
 }
 
 // ─── Per-user last-import window ──────────────────────────────────────

@@ -20,6 +20,7 @@ import { getWellbeingMode, setWellbeingMode } from '../lib/wellbeing';
 import {
   isHealthAvailable, getHealthProviderLabel,
   getHealthPermissionStatus, requestHealthPermissions, importNewWeights,
+  openSystemHealthSettings,
 } from '../lib/health';
 import Constants from 'expo-constants';
 import * as Updates from 'expo-updates';
@@ -106,12 +107,11 @@ export default function SettingsScreen({ navigation }) {
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [editName, setEditName] = useState(userProfile?.firstName ?? '');
   const [calmEnabled, setCalmEnabled] = useState(false);
-  // Health integration (Apple Health on iOS, Health Connect on Android).
-  // 'unavailable' when the native module isn't bundled in this build,
-  // 'denied' when the user hasn't granted weight read yet, 'granted'
-  // when imports will succeed. healthSyncing tracks the manual
-  // "Sync now" tap so we can show feedback.
-  const [healthStatus, setHealthStatus] = useState('unavailable');
+  // Health integration. Per-scope status: weight read separately from
+  // workout write so the user can enable one without the other.
+  // healthSyncing tracks the manual "Sync now" tap.
+  const [healthWeightStatus, setHealthWeightStatus] = useState('unavailable');
+  const [healthWorkoutStatus, setHealthWorkoutStatus] = useState('unavailable');
   const [healthSyncing, setHealthSyncing] = useState(false);
 
   async function toggleCalmMode(value) {
@@ -124,28 +124,61 @@ export default function SettingsScreen({ navigation }) {
     useCallback(() => {
       getWellbeingMode().then(m => setCalmEnabled(m === 'calm'));
       if (isHealthAvailable()) {
-        getHealthPermissionStatus(['weight']).then(setHealthStatus).catch(() => {});
+        getHealthPermissionStatus(['weight']).then(setHealthWeightStatus).catch(() => {});
+        getHealthPermissionStatus(['workout']).then(setHealthWorkoutStatus).catch(() => {});
       }
     }, []),
   );
 
-  async function handleConnectHealth() {
+  async function handleToggleWeight(next) {
+    if (!next) {
+      // Health Connect / HealthKit deliberately don't expose a "revoke"
+      // API to the app. Send the user to the system Settings where they
+      // can flip it themselves; reflect the intent in our toast.
+      toast.show(`Open Health settings to turn weight read off`, { variant: 'info' });
+      await openSystemHealthSettings();
+      return;
+    }
     setHealthSyncing(true);
     try {
       const status = await requestHealthPermissions(['weight']);
-      setHealthStatus(status);
+      setHealthWeightStatus(status);
       if (status === 'granted') {
         const { imported } = await importNewWeights(user?.id);
-        if (imported > 0) {
-          toast.show(`${imported} weight ${imported === 1 ? 'reading' : 'readings'} imported`, { variant: 'success' });
-        } else {
-          toast.show(`Connected. No new readings yet.`, { variant: 'success' });
-        }
+        toast.show(
+          imported > 0
+            ? `${imported} weight ${imported === 1 ? 'reading' : 'readings'} imported`
+            : 'Connected. No new readings yet.',
+          { variant: 'success' },
+        );
       } else if (status === 'denied') {
         toast.show(`Permission needed to read weight from ${getHealthProviderLabel()}`, { variant: 'warning' });
       }
     } catch (e) {
-      logError('SettingsScreen.connectHealth', e);
+      logError('SettingsScreen.toggleWeight', e);
+      toast.show('Could not connect. Try again in a moment.', { variant: 'error' });
+    } finally {
+      setHealthSyncing(false);
+    }
+  }
+
+  async function handleToggleWorkout(next) {
+    if (!next) {
+      toast.show(`Open Health settings to turn workout write off`, { variant: 'info' });
+      await openSystemHealthSettings();
+      return;
+    }
+    setHealthSyncing(true);
+    try {
+      const status = await requestHealthPermissions(['workout']);
+      setHealthWorkoutStatus(status);
+      if (status === 'granted') {
+        toast.show('Workouts will appear in your Health log from now on', { variant: 'success' });
+      } else if (status === 'denied') {
+        toast.show(`Permission needed to write workouts to ${getHealthProviderLabel()}`, { variant: 'warning' });
+      }
+    } catch (e) {
+      logError('SettingsScreen.toggleWorkout', e);
       toast.show('Could not connect. Try again in a moment.', { variant: 'error' });
     } finally {
       setHealthSyncing(false);
@@ -153,8 +186,8 @@ export default function SettingsScreen({ navigation }) {
   }
 
   async function handleSyncHealthNow() {
-    if (healthStatus !== 'granted') {
-      await handleConnectHealth();
+    if (healthWeightStatus !== 'granted') {
+      await handleToggleWeight(true);
       return;
     }
     setHealthSyncing(true);
@@ -574,34 +607,66 @@ export default function SettingsScreen({ navigation }) {
         {/* Health connections */}
         {isHealthAvailable() && (
           <>
-            <SectionHeader title="Health connections" />
+            <SectionHeader title={getHealthProviderLabel()} />
             <View style={styles.section}>
               <SettingRow
-                icon="fitness-outline"
-                label={getHealthProviderLabel()}
+                icon="scale-outline"
+                label="Read morning weight"
                 sub={
-                  healthStatus === 'granted'
-                    ? 'Connected. Your weight readings flow in automatically.'
-                    : healthStatus === 'denied'
-                    ? `Tap to connect. Volyume will read your weight from ${getHealthProviderLabel()}.`
-                    : 'Not available on this device.'
+                  healthWeightStatus === 'granted'
+                    ? 'Connected. Volyume picks up new readings from your scale or wearable in the background.'
+                    : `Pull bodyweight readings from ${getHealthProviderLabel()} into your morning weight log.`
                 }
-                value={healthStatus === 'granted' ? 'Connected' : healthStatus === 'denied' ? 'Off' : ''}
-                onPress={healthStatus === 'unavailable' ? null : handleConnectHealth}
-                showArrow={healthStatus !== 'granted'}
+                showArrow={false}
+                rightElement={
+                  <Switch
+                    value={healthWeightStatus === 'granted'}
+                    onValueChange={handleToggleWeight}
+                    disabled={healthSyncing}
+                    trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                    thumbColor={healthWeightStatus === 'granted' ? colors.primary : colors.textMuted}
+                  />
+                }
               />
-              {healthStatus === 'granted' && (
+              <SettingRow
+                icon="barbell-outline"
+                label="Write workouts"
+                sub={
+                  healthWorkoutStatus === 'granted'
+                    ? 'On. Completed sessions are written to your health log so your weekly activity stays accurate.'
+                    : `Send each completed Volyume session to ${getHealthProviderLabel()}.`
+                }
+                showArrow={false}
+                rightElement={
+                  <Switch
+                    value={healthWorkoutStatus === 'granted'}
+                    onValueChange={handleToggleWorkout}
+                    disabled={healthSyncing}
+                    trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                    thumbColor={healthWorkoutStatus === 'granted' ? colors.primary : colors.textMuted}
+                  />
+                }
+              />
+              {healthWeightStatus === 'granted' && (
                 <SettingRow
                   icon="refresh-outline"
-                  label={healthSyncing ? 'Syncing…' : 'Sync now'}
-                  sub="Pull any new weight readings from your scale or wearable."
+                  label={healthSyncing ? 'Syncing…' : 'Sync weight now'}
+                  sub="Pull any new readings since the last check."
                   onPress={healthSyncing ? null : handleSyncHealthNow}
                   showArrow={!healthSyncing}
                 />
               )}
+              {(healthWeightStatus === 'granted' || healthWorkoutStatus === 'granted') && (
+                <SettingRow
+                  icon="open-outline"
+                  label="Open Health settings"
+                  sub={`To turn anything off, change it from inside ${getHealthProviderLabel()}.`}
+                  onPress={openSystemHealthSettings}
+                />
+              )}
             </View>
             <Text style={styles.dataPrivacyNote}>
-              Volyume only reads your weight. Workouts, nutrition and personal data stay on this device unless you back them up.
+              Volyume only touches what you switch on. Everything else stays on this device.
             </Text>
           </>
         )}

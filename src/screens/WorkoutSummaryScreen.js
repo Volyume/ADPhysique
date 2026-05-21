@@ -405,6 +405,23 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       syncWorkout(supabaseUserId, workoutId).catch(() => {});
     }
 
+    // Write the session to Apple Health / Health Connect so the user's
+    // weekly activity stays accurate across their health stack. Silent
+    // no-op if the user hasn't granted the workout write scope.
+    try {
+      const endedAt = Date.now();
+      const startedAt = endedAt - Math.max(1, durationMinutes || 1) * 60_000;
+      // eslint-disable-next-line global-require
+      const { writeWorkoutToHealth } = require('../lib/health');
+      writeWorkoutToHealth({
+        startedAt,
+        endedAt,
+        tonnageKg: tonnage || 0,
+        bodyWeightKg: userProfile?.bodyWeightKg ?? userProfile?.bodyweightKg ?? null,
+        notes: exerciseNames?.length ? exerciseNames.slice(0, 4).join(', ') : null,
+      }).catch(() => {});
+    } catch (_) {}
+
     // Increment session count and request App Store / Play Store review after 5 sessions
     incrementSessionCount().then(count => {
       if (count >= 5) {
