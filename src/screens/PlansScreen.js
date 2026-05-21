@@ -578,11 +578,19 @@ export default function PlansScreen({ navigation }) {
           {actionCards.map(card => {
             const isCoach = card.id === 'coach';
             const proLocked = isCoach && tier !== 'pro';
-            const featured = card.featured !== undefined ? card.featured : (Boolean(card.badge) || proLocked);
+            // Featured = highlighted (primary border + bg). Locked = muted
+            // (lower opacity, neutral icon). These are mutually exclusive —
+            // mirrors AthleteHub's locked-card look so Pro gating reads the
+            // same across screens.
+            const featured = !proLocked && (card.featured !== undefined ? card.featured : Boolean(card.badge));
             return (
               <TouchableOpacity
                 key={card.id}
-                style={[styles.actionCard, featured && styles.actionCardFeatured]}
+                style={[
+                  styles.actionCard,
+                  featured && styles.actionCardFeatured,
+                  proLocked && styles.actionCardLocked,
+                ]}
                 onPress={() => navigation.navigate(proLocked ? 'ProUpgrade' : card.screen)}
                 activeOpacity={0.75}
               >
@@ -590,15 +598,18 @@ export default function PlansScreen({ navigation }) {
                   <Ionicons
                     name={proLocked ? 'lock-closed' : card.icon}
                     size={24}
-                    color={colors.primary}
+                    color={proLocked ? colors.textMuted : colors.primary}
                   />
                 </View>
                 <View style={styles.actionCardBody}>
                   <View style={styles.actionCardTitleRow}>
-                    <Text style={styles.actionCardTitle}>{card.title}</Text>
+                    <Text style={[styles.actionCardTitle, proLocked && styles.actionCardTitleLocked]}>
+                      {card.title}
+                    </Text>
                     {proLocked ? (
-                      <View style={styles.actionCardBadge}>
-                        <Text style={styles.actionCardBadgeText}>Pro</Text>
+                      <View style={styles.lockBadge}>
+                        <Ionicons name="lock-closed" size={10} color={colors.textMuted} />
+                        <Text style={styles.lockBadgeText}>Pro</Text>
                       </View>
                     ) : card.badge ? (
                       <View style={styles.actionCardBadge}>
@@ -751,6 +762,19 @@ const styles = StyleSheet.create({
   actionCardIconFeatured: {
     backgroundColor: colors.surface,
     borderColor: colors.primary + '40',
+  },
+  // Pro-locked variant — matches AthleteHub's lockedCard so gating
+  // reads the same across the app.
+  actionCardLocked: { opacity: 0.6 },
+  actionCardTitleLocked: { color: colors.textSecondary },
+  lockBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: colors.surface2, borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm, paddingVertical: 3,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  lockBadgeText: {
+    fontSize: 10, fontWeight: fontWeight.semibold, color: colors.textMuted,
   },
 
   // Block advisor card
