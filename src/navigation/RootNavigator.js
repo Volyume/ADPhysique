@@ -66,6 +66,7 @@ import YearOfLiftsScreen from '../screens/YearOfLiftsScreen';
 import WellbeingCheckScreen from '../screens/WellbeingCheckScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import DebugLogScreen from '../screens/DebugLogScreen';
+import NutritionEducationScreen from '../screens/NutritionEducationScreen';
 import { withProGuard } from '../components/ProGate';
 
 const Tab = createBottomTabNavigator();
@@ -165,6 +166,7 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="AthleteHub" component={AthleteHubScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
       <Stack.Screen name="NutritionTargets" component={GatedNutritionTargets} options={{ title: 'Nutrition Targets' }} />
+      <Stack.Screen name="NutritionEducation" component={NutritionEducationScreen} options={{ headerShown: false }} />
       <Stack.Screen name="BodyMetrics" component={GatedBodyMetrics} options={{ title: 'Body Metrics' }} />
       <Stack.Screen name="WeeklyCheckIn" component={GatedWeeklyCheckIn} options={{ title: 'Weekly Check-In' }} />
       <Stack.Screen name="CoachOutput" component={GatedCoachOutput} options={{ title: 'Your Week' }} />
@@ -257,6 +259,9 @@ function ProOnboardingStack() {
       <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ headerShown: true, title: 'Plan' }} />
       <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} />
       <Stack.Screen name="ProSetupComplete" component={ProSetupCompleteScreen} />
+      {/* Registered here too so the onboarding hand-off screen can link
+          straight into the nutrition guide without leaving the flow. */}
+      <Stack.Screen name="NutritionEducation" component={NutritionEducationScreen} />
     </Stack.Navigator>
   );
 }

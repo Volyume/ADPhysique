@@ -157,6 +157,21 @@ export default function ProSetupCompleteScreen({ navigation }) {
                   </View>
                 ) : null}
               </View>
+              {/* First-time nutrition primer pointer. Most users seeing
+                  these numbers for the first time have never tracked
+                  macros — this gives them a 5-min ramp before they need
+                  to actually use them. */}
+              <TouchableOpacity
+                style={styles.eduLearnRow}
+                onPress={() => navigation.navigate('NutritionEducation')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="book-outline" size={14} color={colors.primary} />
+                <Text style={styles.eduLearnText}>
+                  New to calories and macros? 5-minute guide
+                </Text>
+                <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+              </TouchableOpacity>
             </View>
           ) : null}
 
@@ -298,6 +313,8 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.primary + '30',
   },
   goalChipText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
+  eduLearnRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
+  eduLearnText: { color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.medium, flex: 1 },
 
   splitList: { marginTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm },
   splitRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },

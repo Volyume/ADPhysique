@@ -352,6 +352,23 @@ export default function NutritionTargetsScreen() {
             Calculate your personalised daily calorie and protein targets.
           </Text>
 
+          {/* Education entry point — surfaces a 5-min nutrition primer for
+              users new to tracking. Doesn't change targets, just teaches. */}
+          <TouchableOpacity
+            style={styles.eduCard}
+            onPress={() => navigation.navigate('NutritionEducation')}
+            activeOpacity={0.85}
+          >
+            <View style={styles.eduIconWrap}>
+              <Ionicons name="book-outline" size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.eduTitle}>New to calories and macros?</Text>
+              <Text style={styles.eduBody}>5-minute guide to what these numbers mean and how to actually use them.</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </TouchableOpacity>
+
           {!formCollapsed ? (
           <>
 
@@ -992,6 +1009,10 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginTop: spacing.sm,
   },
+  eduCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, borderLeftWidth: 3, borderLeftColor: colors.primary, padding: spacing.md, marginTop: spacing.sm },
+  eduIconWrap: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center' },
+  eduTitle: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
+  eduBody: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2, lineHeight: 17 },
   pageSubtitle: {
     fontSize: fontSize.sm,
     color: colors.textMuted,

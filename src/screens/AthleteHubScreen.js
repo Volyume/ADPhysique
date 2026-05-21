@@ -613,6 +613,21 @@ export default function AthleteHubScreen({ navigation }) {
           </TouchableOpacity>
         )}
 
+        {/* Nutrition primer — link to the 5-min educational guide. Shown
+            below the targets card so users who want a refresher (or who
+            never read it during onboarding) can find it easily. */}
+        {tier === 'pro' && (
+          <TouchableOpacity
+            style={styles.eduLinkRow}
+            onPress={() => navigation.navigate('NutritionEducation')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="book-outline" size={14} color={colors.primary} />
+            <Text style={styles.eduLinkText}>How to read your calorie and macro targets</Text>
+            <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+          </TouchableOpacity>
+        )}
+
         {/* ── Body Metrics ──────────────────────────────── */}
         {tier === 'pro' && (
           <TouchableOpacity
@@ -1012,6 +1027,8 @@ const styles = StyleSheet.create({
   cardSubtitle:   { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2 },
   alert:          { color: colors.warning },
   macroStrip:     { flexDirection: 'row', gap: spacing.sm },
+  eduLinkRow:     { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, marginTop: -spacing.sm, marginBottom: spacing.sm },
+  eduLinkText:    { color: colors.primary, fontSize: fontSize.xs, fontWeight: fontWeight.medium, flex: 1 },
   macroPill:      {
     flex: 1, alignItems: 'center', backgroundColor: colors.surface2,
     borderRadius: radius.md, paddingVertical: spacing.sm, gap: 2,
