@@ -1506,8 +1506,16 @@ export async function seedRoutinesIfNeeded(userId) {
       }
     }
 
-    // Create all library plans
+    // Look up which library plans already exist by name so a SEED_KEY bump
+    // only adds new plans rather than duplicating the entire library. Names
+    // are the natural dedupe key: plan IDs are random UUIDs that change on
+    // every seed, and there's no upsert path through createProgramme.
+    const existingLibrary = await getLibraryPlans().catch(() => []);
+    const existingNames = new Set(existingLibrary.map(p => p.name));
+
+    // Create library plans we haven't seeded yet
     for (const plan of LIBRARY_PLANS) {
+      if (existingNames.has(plan.name)) continue;
       const programme = await createProgramme(
         userId,
         plan.name,
