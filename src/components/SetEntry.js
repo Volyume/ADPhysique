@@ -21,11 +21,17 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
   const repsRef = useRef(null);
 
   function adjust(field, delta) {
-    Haptics.selectionAsync();
+    Haptics.selectionAsync().catch(() => {});
     const steps = { weight: 2.5, reps: 1 };
-    const limits = { weight: [0, 500], reps: [1, 100] };
+    // Reps cap matches the TextInput's [1, 200] so a typed 150 doesn't
+    // snap back to 100 when the user taps −.
+    const limits = { weight: [0, 500], reps: [1, 200] };
     const fieldLimits = limits[field] || [0, 9999];
-    const current = value[field] || 0;
+    // Coerce in case a previous code path wrote a string like '' or '.' —
+    // arithmetic on those produces NaN and the next clamp wedges at the
+    // lower bound forever.
+    const raw = value[field];
+    const current = typeof raw === 'number' ? raw : (parseFloat(raw) || 0);
     const next = Math.min(Math.max(current + delta * (steps[field] || 1), fieldLimits[0]), fieldLimits[1]);
     onChange({ ...value, [field]: field === 'weight' ? Math.round(next * 100) / 100 : Math.round(next), isGhost: false });
   }
@@ -59,7 +65,9 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
           <TextInput
             testID="volyume-weight-input"
             style={[styles.valueInput, isGhost && styles.valueInputGhost]}
-            value={String(weight || '')}
+            // Render 0 as "0" not "" (was `String(weight || '')`, which hid
+            // a legitimate zero-weight bodyweight set).
+            value={weight == null || weight === '' ? '' : String(weight)}
             onChangeText={v => {
               const n = parseFloat(v);
               if (!isNaN(n)) setField('weight', Math.min(Math.max(n, 0), 500));
@@ -98,7 +106,7 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
             testID="volyume-reps-input"
             ref={repsRef}
             style={[styles.valueInput, isGhost && styles.valueInputGhost]}
-            value={String(reps || '')}
+            value={reps == null || reps === '' ? '' : String(reps)}
             onChangeText={v => {
               const n = parseInt(v, 10);
               if (!isNaN(n)) setField('reps', Math.min(Math.max(n, 1), 200));

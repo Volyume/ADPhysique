@@ -264,11 +264,25 @@ function ProOnboardingStack() {
 const SPLASH_MIN_MS = 2500;
 
 export default function RootNavigator() {
-  const {
-    user, isAuthLoading, setUser, setSession, setAuthLoading, initLocalUser,
-    firstRunComplete, firstRunChecked, checkFirstRun,
-    tier, tierChecked, checkTier, refreshTierFromCloud,
-  } = useAppStore();
+  // Subscribe only to the fields whose change should reroute. Without a
+  // selector this re-rendered the entire navigator on every store
+  // mutation (rest timer ticks, PR celebrations, set saves, profile
+  // tweaks, etc.) — a slow leak that compounded throughout a workout.
+  const user = useAppStore(s => s.user);
+  const isAuthLoading = useAppStore(s => s.isAuthLoading);
+  const firstRunComplete = useAppStore(s => s.firstRunComplete);
+  const firstRunChecked = useAppStore(s => s.firstRunChecked);
+  const tier = useAppStore(s => s.tier);
+  const tierChecked = useAppStore(s => s.tierChecked);
+  // Actions are stable references in zustand so destructuring them once
+  // outside the render is safe and doesn't cause re-renders.
+  const setUser = useAppStore(s => s.setUser);
+  const setSession = useAppStore(s => s.setSession);
+  const setAuthLoading = useAppStore(s => s.setAuthLoading);
+  const initLocalUser = useAppStore(s => s.initLocalUser);
+  const checkFirstRun = useAppStore(s => s.checkFirstRun);
+  const checkTier = useAppStore(s => s.checkTier);
+  const refreshTierFromCloud = useAppStore(s => s.refreshTierFromCloud);
   const [splashReady, setSplashReady] = useState(false);
 
   useEffect(() => {

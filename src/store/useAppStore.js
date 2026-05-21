@@ -25,30 +25,46 @@ const useAppStore = create((set, get) => ({
   setUserProfile: (userProfile) => set({ userProfile }),
   setAuthLoading: (isAuthLoading) => set({ isAuthLoading }),
 
-  // Creates or restores a local (offline) user from AsyncStorage, then loads their saved profile
+  // Creates or restores a local (offline) user from AsyncStorage, then loads
+  // their saved profile. CRITICAL: must always release isAuthLoading even on
+  // failure — otherwise the splash screen hangs forever for any user whose
+  // stored profile JSON is corrupt.
   initLocalUser: async () => {
+    let userId = null;
+    let profile = null;
     try {
-      let userId = await AsyncStorage.getItem(LOCAL_USER_KEY);
+      userId = await AsyncStorage.getItem(LOCAL_USER_KEY);
       if (!userId) {
         userId = generateUUID();
         await AsyncStorage.setItem(LOCAL_USER_KEY, userId);
       }
-      const localUser = { id: userId, email: 'local@device', isLocal: true };
-      // Restore onboarding selections (trainingFocus, trainingAgeYears, primaryEquipment, units)
       const raw = await AsyncStorage.getItem(PROFILE_KEY_PFX + userId).catch(() => null);
-      const profile = raw ? JSON.parse(raw) : null;
-      set({
-        user: localUser,
-        userProfile: profile,
-        units: profile?.units || 'kg',
-        bodyWeightUnits: profile?.bodyWeightUnits || 'st',
-        barWeight: profile?.barWeight || 20,
-        isAuthLoading: false,
-      });
-      return localUser;
+      if (raw) {
+        try { profile = JSON.parse(raw); }
+        catch (e) {
+          // Corrupt profile — keep going with null profile; the user can
+          // re-onboard. Don't swallow this entirely — surface to debug log.
+          // eslint-disable-next-line global-require
+          try { require('../lib/errorLog').logWarn('useAppStore.initLocalUser', 'corrupt profile JSON', { userId, raw: raw.slice(0, 200) }); } catch (_) {}
+          profile = null;
+        }
+      }
     } catch (e) {
-      console.error('initLocalUser failed:', e);
+      // eslint-disable-next-line global-require
+      try { require('../lib/errorLog').logError('useAppStore.initLocalUser', e); } catch (_) {}
+      // userId may have been resolved partially. Fall through to set
+      // isAuthLoading=false so the app doesn't hang on the splash.
     }
+    const localUser = userId ? { id: userId, email: 'local@device', isLocal: true } : null;
+    set({
+      user: localUser,
+      userProfile: profile,
+      units: profile?.units || 'kg',
+      bodyWeightUnits: profile?.bodyWeightUnits || 'st',
+      barWeight: profile?.barWeight || 20,
+      isAuthLoading: false,
+    });
+    return localUser;
   },
 
   // Persists userProfile to AsyncStorage so it survives app restarts for local users
@@ -145,26 +161,29 @@ const useAppStore = create((set, get) => ({
   setCurrentExerciseIndex: (i) => set({ currentExerciseIndex: i }),
   updateLastActivity: () => set({ lastActivityAt: Date.now() }),
 
+  // Use the functional set() form so two near-simultaneous calls (rapid
+  // double-tap on Add set / Add exercise) both land — the previous
+  // get()+set() pair could read the same snapshot twice and drop one update.
   addExerciseToWorkout: (exercise, routineExercise = null) => {
-    const { workoutExercises } = get();
-    set({
+    set((state) => ({
       workoutExercises: [
-        ...workoutExercises,
+        ...state.workoutExercises,
         { exercise, routineExercise, sets: [] },
       ],
-    });
+    }));
   },
 
   addSetToCurrentExercise: (setData) => {
-    const { workoutExercises, currentExerciseIndex } = get();
-    const entry = workoutExercises[currentExerciseIndex];
-    if (!entry) return;
-    const updated = [...workoutExercises];
-    updated[currentExerciseIndex] = {
-      ...entry,
-      sets: [...(entry.sets || []), setData],
-    };
-    set({ workoutExercises: updated });
+    set((state) => {
+      const entry = state.workoutExercises[state.currentExerciseIndex];
+      if (!entry) return {};
+      const updated = state.workoutExercises.slice();
+      updated[state.currentExerciseIndex] = {
+        ...entry,
+        sets: [...(entry.sets || []), setData],
+      };
+      return { workoutExercises: updated };
+    });
   },
 
   startWorkout: (workout, initialExercises = []) => set({
@@ -196,22 +215,31 @@ const useAppStore = create((set, get) => ({
   }),
   stopRestTimer: () => set({ restTimerActive: false, restTimerRemaining: 0 }),
   addRestTime: (seconds = 30) => {
-    const { restTimerActive, restTimerRemaining } = get();
-    if (restTimerActive) set({ restTimerRemaining: restTimerRemaining + seconds });
+    set((state) => state.restTimerActive
+      ? { restTimerRemaining: Math.max(0, state.restTimerRemaining + seconds) }
+      : {});
   },
   tickRestTimer: () => {
-    const { restTimerRemaining } = get();
-    if (restTimerRemaining <= 1) {
-      set({ restTimerActive: false, restTimerRemaining: 0 });
-    } else {
-      set({ restTimerRemaining: restTimerRemaining - 1 });
-    }
+    set((state) => state.restTimerRemaining <= 1
+      ? { restTimerActive: false, restTimerRemaining: 0 }
+      : { restTimerRemaining: state.restTimerRemaining - 1 });
   },
 
-  // PR Celebration (kept for future; Stage 1 shows simple alert)
+  // PR celebration queue. The user might hit two PRs on the same set
+  // (heaviest weight + new 1RM) — the previous single-slot field lost the
+  // second. Now we queue, the top of the queue renders, dismiss pops.
   prCelebration: null,
-  showPRCelebration: (pr) => set({ prCelebration: pr }),
-  hidePRCelebration: () => set({ prCelebration: null }),
+  prCelebrationQueue: [],
+  showPRCelebration: (pr) => set((state) => state.prCelebration
+    ? { prCelebrationQueue: [...state.prCelebrationQueue, pr] }
+    : { prCelebration: pr }),
+  hidePRCelebration: () => set((state) => {
+    if (state.prCelebrationQueue.length === 0) {
+      return { prCelebration: null };
+    }
+    const [next, ...rest] = state.prCelebrationQueue;
+    return { prCelebration: next, prCelebrationQueue: rest };
+  }),
 
   // Gym weight units (barbells, dumbbells) — 'kg' | 'lbs'
   units: 'kg',

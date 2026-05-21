@@ -30,28 +30,36 @@ function createParticle(index) {
 }
 
 export default function PRCelebration({ pr, onDismiss, subdued = false }) {
-  const particles = useRef(Array.from({ length: NUM_PARTICLES }, (_, i) => createParticle(i))).current;
+  // Allocate particles only when we'll render them — subdued mode skips
+  // particles entirely. Each particle's pre-translated offsets are baked
+  // into translate constants instead of allocating new Animated.Values
+  // every render (was a slow memory leak on long PR streaks).
+  const particles = useRef(
+    subdued ? [] : Array.from({ length: NUM_PARTICLES }, (_, i) => createParticle(i)),
+  ).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const cardScale = useRef(new Animated.Value(0.5)).current;
   const cardOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    const timers = [];
     if (subdued) {
-      Haptics.selectionAsync();
+      Haptics.selectionAsync().catch(() => {});
       Animated.timing(cardOpacity, { toValue: 1, duration: 220, useNativeDriver: true }).start();
-      const t = setTimeout(onDismiss, 2200);
-      return () => clearTimeout(t);
+      timers.push(setTimeout(onDismiss, 2200));
+      return () => timers.forEach(clearTimeout);
     }
 
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 150);
-    setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 300);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    timers.push(setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}), 150));
+    timers.push(setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}), 300));
 
-    Animated.parallel([
+    const overlay = Animated.parallel([
       Animated.timing(overlayOpacity, { toValue: 0.85, duration: 200, useNativeDriver: true }),
       Animated.spring(cardScale, { toValue: 1, tension: 100, friction: 8, useNativeDriver: true }),
       Animated.timing(cardOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
-    ]).start();
+    ]);
+    overlay.start();
 
     const particleAnims = particles.map((p, i) => {
       const targetX = SCREEN_WIDTH / 2 + Math.cos(p.angle) * p.distance;
@@ -71,11 +79,22 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
       ]);
     });
 
-    Animated.stagger(8, particleAnims).start();
+    const staggered = Animated.stagger(8, particleAnims);
+    staggered.start();
 
-    const timer = setTimeout(onDismiss, 3000);
-    return () => clearTimeout(timer);
+    timers.push(setTimeout(onDismiss, 3000));
+    return () => {
+      timers.forEach(clearTimeout);
+      try { staggered.stop(); overlay.stop(); } catch (_) {}
+    };
+    // We do not depend on `pr` here because the parent (App.js) keys the
+    // celebration off prCelebration; a new PR remounts the component.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Defensive null guard — App.js gates this but a transient null during
+  // the queue-pop tick would otherwise crash on `pr.type`.
+  if (!pr) return null;
 
   const prIcon = pr.type === '1rm_estimate' ? 'trophy' :
     pr.type === 'heaviest_weight' ? 'barbell' : 'flash';
@@ -119,9 +138,14 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
               width: p.size,
               height: p.size,
               borderRadius: p.size / 2,
+              // Translate by a fixed -size/2 offset using a plain number;
+              // Animated.add(value, new Animated.Value(...)) used to allocate
+              // a new Animated.Value every render that was never released.
               transform: [
-                { translateX: Animated.add(p.x, new Animated.Value(-p.size / 2)) },
-                { translateY: Animated.add(p.y, new Animated.Value(-p.size / 2)) },
+                { translateX: p.x },
+                { translateY: p.y },
+                { translateX: -p.size / 2 },
+                { translateY: -p.size / 2 },
                 { scale: p.scale },
               ],
               opacity: p.opacity,

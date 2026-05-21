@@ -19,7 +19,10 @@ import { PRO_BETA_ACTIVE } from '../lib/proGate';
  *   </ProGate>
  */
 export default function ProGate({ children, feature = 'This feature', style }) {
-  const { tier } = useAppStore();
+  // Only subscribe to tier — the unselected destructure re-rendered every
+  // ProGated subtree on every store mutation (including each rest-timer
+  // tick).
+  const tier = useAppStore(s => s.tier);
   const navigation = useNavigation();
   const [modalVisible, setModalVisible] = useState(false);
 

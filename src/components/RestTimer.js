@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
+import { useShallow } from 'zustand/react/shallow';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { scheduleRestNotif, cancelRestNotif } from '../lib/restNotifications';
@@ -14,11 +15,24 @@ const TIME_ADJUSTMENTS = [
 ];
 
 export default function RestTimer() {
+  // Subscribe to only the fields this component needs; using
+  // `useAppStore()` without a selector re-renders this on every store
+  // mutation (PR celebrations, set saves, profile updates, etc.) which
+  // ran through every second of every workout.
   const {
     restTimerActive, restTimerRemaining, restTimerDuration,
     stopRestTimer, tickRestTimer, addRestTime,
     workoutExercises, currentExerciseIndex,
-  } = useAppStore();
+  } = useAppStore(useShallow(s => ({
+    restTimerActive: s.restTimerActive,
+    restTimerRemaining: s.restTimerRemaining,
+    restTimerDuration: s.restTimerDuration,
+    stopRestTimer: s.stopRestTimer,
+    tickRestTimer: s.tickRestTimer,
+    addRestTime: s.addRestTime,
+    workoutExercises: s.workoutExercises,
+    currentExerciseIndex: s.currentExerciseIndex,
+  })));
 
   // Derive the current exercise name so the lock-screen notification is specific
   const currentExerciseName =
@@ -27,6 +41,9 @@ export default function RestTimer() {
   const notifIdRef = useRef(null);
   const progressAnim = useRef(new Animated.Value(1)).current;
   const [showDone, setShowDone] = useState(false);
+  // Track all queued timeouts so we can cancel them on unmount (was
+  // leaking three uncancelled setTimeouts per cycle — haptics + done-flag).
+  const timeoutsRef = useRef([]);
 
   useEffect(() => {
     if (restTimerActive) {
@@ -45,7 +62,7 @@ export default function RestTimer() {
       // Post lock-screen notification and schedule the done alert
       scheduleRestNotif(remaining, currentExerciseName).then(id => {
         notifIdRef.current = id;
-      });
+      }).catch(() => {});
     } else {
       clearInterval(intervalRef.current);
       progressAnim.stopAnimation();
@@ -57,19 +74,46 @@ export default function RestTimer() {
     return () => clearInterval(intervalRef.current);
   }, [restTimerActive]);
 
+  // Reanimate the progress bar when the user adjusts the timer with ±15s /
+  // ±30s. Previously the bar finished early or hit 0 with the numeric timer
+  // still counting because this branch never re-ran the Animated.timing.
+  useEffect(() => {
+    if (!restTimerActive || restTimerDuration <= 0 || restTimerRemaining <= 0) return;
+    progressAnim.stopAnimation();
+    progressAnim.setValue(restTimerRemaining / restTimerDuration);
+    Animated.timing(progressAnim, {
+      toValue: 0,
+      duration: restTimerRemaining * 1000,
+      useNativeDriver: false,
+    }).start();
+    // We rebind on every restTimerRemaining change which is once per
+    // second; the stopAnimation + setValue + start is cheap. The previous
+    // useEffect on [restTimerActive] only fired once when the timer
+    // started, leaving the animation disconnected from the live remaining.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restTimerRemaining, restTimerDuration]);
+
   useEffect(() => {
     if (!restTimerActive) return;
     if (restTimerRemaining <= 3 && restTimerRemaining > 0) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
     }
     if (restTimerRemaining === 0) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 200);
-      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 400);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+      const t1 = setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}), 200);
+      const t2 = setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}), 400);
       setShowDone(true);
-      setTimeout(() => setShowDone(false), 3000);
+      const t3 = setTimeout(() => setShowDone(false), 3000);
+      timeoutsRef.current.push(t1, t2, t3);
     }
   }, [restTimerRemaining]);
+
+  // Component-wide cleanup — drains any pending timeouts so they don't fire
+  // on an unmounted component (workout ended, user signed out, etc.).
+  useEffect(() => () => {
+    timeoutsRef.current.forEach(clearTimeout);
+    timeoutsRef.current = [];
+  }, []);
 
   function handleAdjust(delta) {
     Haptics.selectionAsync();
