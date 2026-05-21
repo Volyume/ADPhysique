@@ -247,19 +247,28 @@ const useAppStore = create((set, get) => ({
     }
 
     if (cloudData.tier) {
-      // Beta-tier guard: the DB default for users_profile.tier is 'free',
-      // the client can't write to it (migrate_005 trigger blocks updates),
-      // and there's no Stripe webhook yet to flip it to 'pro'. So reading
-      // it literally would demote everyone who picked Pro locally back to
-      // 'free' on every sign-in / restart. Until billing is live, accept
-      // only ELEVATIONS — never demote pro → free from the cloud.
+      // Beta tier policy: any cloud-signed-in user is Pro during beta.
+      //
+      // The cloud users_profile.tier column is unusable as the source of
+      // truth right now:
+      //   - DB default is 'free' on row creation.
+      //   - migrate_005 trigger blocks client writes to the column.
+      //   - No Stripe webhook exists yet to flip it to 'pro'.
+      //
+      // So reading it literally always gives us 'free', which silently
+      // demoted every Pro user on every sign-in, restart, and OAuth
+      // attempt. The earlier "guard against demotion if currentTier
+      // already pro" fix didn't cover sign-out → sign-in because tier
+      // is cleared to null on sign-out, so the guard never fired.
+      //
+      // During beta, the promise is "Pro is free for testers". Treat
+      // a cloud account as the Pro signal directly. Post-beta this
+      // branch flips to honouring cloudData.tier.
       // eslint-disable-next-line global-require
       const { PRO_BETA_ACTIVE } = require('../lib/proGate');
-      const currentTier = get().tier;
-      if (!(PRO_BETA_ACTIVE && currentTier === 'pro' && cloudData.tier === 'free')) {
-        try { await AsyncStorage.setItem(TIER_KEY, cloudData.tier); } catch (_) {}
-        set({ tier: cloudData.tier, tierChecked: true });
-      }
+      const effectiveTier = PRO_BETA_ACTIVE ? 'pro' : cloudData.tier;
+      try { await AsyncStorage.setItem(TIER_KEY, effectiveTier); } catch (_) {}
+      set({ tier: effectiveTier, tierChecked: true });
     }
 
     // Only restore userProfile if local is empty — don't overwrite a
@@ -299,17 +308,15 @@ const useAppStore = create((set, get) => ({
         .eq('id', supabaseUserId)
         .maybeSingle();
       if (data?.tier) {
-        // Same beta-tier guard as restoreSessionFromCloud — see comment
-        // there. Without this, every app restart silently downgrades
-        // every Pro user to Free because cloud tier defaults to 'free'.
+        // Same beta tier policy as restoreSessionFromCloud — see comment
+        // there. Any cloud-signed-in user is Pro during beta because the
+        // cloud column is unusable as truth (DB default 'free', trigger
+        // blocks writes, no webhook yet).
         // eslint-disable-next-line global-require
         const { PRO_BETA_ACTIVE } = require('../lib/proGate');
-        const currentTier = get().tier;
-        if (PRO_BETA_ACTIVE && currentTier === 'pro' && data.tier === 'free') {
-          return; // refuse the spurious demotion
-        }
-        await AsyncStorage.setItem(TIER_KEY, data.tier);
-        set({ tier: data.tier });
+        const effectiveTier = PRO_BETA_ACTIVE ? 'pro' : data.tier;
+        await AsyncStorage.setItem(TIER_KEY, effectiveTier);
+        set({ tier: effectiveTier });
       }
     } catch (_) {}
   },
