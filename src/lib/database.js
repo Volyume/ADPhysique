@@ -965,8 +965,11 @@ export async function getExerciseStimulusRatings(workoutId) {
 
 export async function getAllRoutines(userId) {
   const d = await db();
+  // Filter out soft-deleted rows (is_active = 0). Other consumers
+  // (getRoutinesForPlan, getWorkoutTemplates) already do this; getAllRoutines
+  // used to return them, so deleted routines kept appearing in the list.
   const rows = await d.getAllAsync(
-    'SELECT * FROM routines WHERE user_id = ? ORDER BY updated_at DESC',
+    'SELECT * FROM routines WHERE user_id = ? AND COALESCE(is_active, 1) = 1 ORDER BY updated_at DESC',
     [userId],
   );
   return rows.map(rowToCamel);
