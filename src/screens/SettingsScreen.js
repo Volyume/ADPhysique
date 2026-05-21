@@ -407,14 +407,6 @@ export default function SettingsScreen({ navigation }) {
               />
             }
           />
-          {tier === 'pro' && (
-            <SettingRow
-              icon="shield-checkmark-outline"
-              label="Wellbeing check"
-              sub="Update your health screening answers. Shapes how your Precision Coaching is applied."
-              onPress={() => navigation.navigate('WellbeingCheck')}
-            />
-          )}
           <SettingRow
             icon="notifications-outline"
             label="Notifications"
