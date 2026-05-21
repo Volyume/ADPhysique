@@ -37,7 +37,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/volyume-icon.png",
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0D0D0D"
       },
       "package": "app.volyume",
@@ -89,7 +89,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/volyume-icon.png",
+          "icon": "./assets/notification-icon.png",
           "color": "#F59E0B",
           "sounds": []
         }
@@ -106,7 +106,7 @@
       ]
     ],
     "notification": {
-      "icon": "./assets/volyume-icon.png",
+      "icon": "./assets/notification-icon.png",
       "color": "#F59E0B",
       "androidMode": "default"
     },
