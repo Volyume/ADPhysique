@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Modal, TextInput, KeyboardAvoidingView, Platform, Animated,
+  Modal, TextInput, KeyboardAvoidingView, Platform, Animated, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -185,7 +185,17 @@ export default function ExerciseDetailScreen({ navigation, route }) {
     setGoalModalVisible(false);
   }
 
-  if (!exercise) return null;
+  if (!exercise) {
+    // Returning null produced a blank screen during the initial DB load —
+    // looked like a crashed screen. Show a spinner so the user has feedback.
+    return (
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const formTip = FORM_TIPS[exercise.name] ?? null;
   const primaryMuscle = MUSCLE_DISPLAY_NAMES[(exercise.primaryMuscle || '').toLowerCase()] || exercise.primaryMuscle;

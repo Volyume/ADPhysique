@@ -14,6 +14,7 @@ import {
   getAllMesocycles, getAllWorkouts, getCompletedWorkoutSets,
   getActivePlan, getRoutinesForPlan,
 } from '../lib/database';
+import { logError } from '../lib/errorLog';
 import { calculateTonnage } from '../lib/algorithms';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
 import { predictDeloadWeek, evaluateAutoReg } from '../lib/mesocycle';
@@ -37,8 +38,12 @@ export default function MesocycleBuilderScreen({ navigation }) {
 
   async function loadMesocycles() {
     if (!user?.id) return;
-    const mine = await getAllMesocycles(user.id);
-    setMesocycles(mine);
+    try {
+      const mine = await getAllMesocycles(user.id);
+      setMesocycles(mine);
+    } catch (e) {
+      logError('MesocycleBuilderScreen.loadMesocycles', e, { userId: user.id });
+    }
   }
 
   async function loadActivePlan() {

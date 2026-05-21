@@ -326,19 +326,42 @@ export default function BodyMetricsScreen({ navigation }) {
       if (done === 'true') return;
       const raw = await AsyncStorage.getItem(STORAGE_KEY);
       const legacy = raw ? JSON.parse(raw) : [];
+      // Track per-row failures rather than letting one bad row abort
+      // the whole migration. Previously, a thrown logBodyMetric (e.g.
+      // a NaN value getting through) tripped the outer catch, MIGRATED_KEY
+      // was never written, and the loop reran the partial migration on
+      // every launch — potentially duplicating rows that did succeed.
+      let migrated = 0;
+      let failed = 0;
       for (const entry of legacy) {
-        const data = { notes: entry.notes || null };
-        const d = entry.metric_date ? new Date(entry.metric_date) : new Date();
-        data.loggedAt = isNaN(d.getTime()) ? Date.now() : d.getTime();
-        for (const [formKey, dbField] of Object.entries(FIELD_MAP)) {
-          if (entry[formKey] != null && entry[formKey] !== '') {
-            data[dbField] = parseFloat(entry[formKey]);
+        try {
+          const data = { notes: entry.notes || null };
+          const d = entry.metric_date ? new Date(entry.metric_date) : new Date();
+          data.loggedAt = isNaN(d.getTime()) ? Date.now() : d.getTime();
+          for (const [formKey, dbField] of Object.entries(FIELD_MAP)) {
+            if (entry[formKey] != null && entry[formKey] !== '') {
+              const num = parseFloat(entry[formKey]);
+              if (Number.isFinite(num)) data[dbField] = num;
+            }
           }
+          await logBodyMetric(user.id, data);
+          migrated++;
+        } catch (rowErr) {
+          failed++;
+          // eslint-disable-next-line global-require
+          try { require('../lib/errorLog').logWarn('BodyMetricsScreen.migrate', 'row failed', { error: rowErr?.message }); } catch (_) {}
         }
-        await logBodyMetric(user.id, data);
       }
-      await AsyncStorage.setItem(MIGRATED_KEY, 'true');
-    } catch (_e) {}
+      // Mark migrated only if we made some forward progress. If every
+      // single row failed we leave the flag unset so the user (or a
+      // future fix) can retry.
+      if (migrated > 0 || failed === 0) {
+        await AsyncStorage.setItem(MIGRATED_KEY, 'true');
+      }
+    } catch (e) {
+      // eslint-disable-next-line global-require
+      try { require('../lib/errorLog').logError('BodyMetricsScreen.migrateFromAsyncStorage', e, { userId: user?.id }); } catch (_) {}
+    }
   }
 
   async function loadHistory() {

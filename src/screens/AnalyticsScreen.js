@@ -26,6 +26,7 @@ import {
   calculateWeeklyVolume, VOLUME_LANDMARKS, MUSCLE_DISPLAY_NAMES,
   calculate1RM, calculateTonnage, shouldDeload,
 } from '../lib/algorithms';
+import { logError } from '../lib/errorLog';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -157,7 +158,7 @@ export default function AnalyticsScreen({ navigation }) {
         loadBlockState(),
       ]);
     } catch (e) {
-      console.error('AnalyticsScreen load:', e);
+      logError('AnalyticsScreen.load', e, { userId: user?.id });
     } finally {
       setLoading(false);
     }

@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import ExerciseCard from '../components/ExerciseCard';
 import { getAllExercises, getCompletedWorkoutSets, insertExercise, deleteExercise } from '../lib/database';
+import { logError } from '../lib/errorLog';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -60,11 +61,15 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
   }, []);
 
   async function loadExercises() {
-    const all = await getAllExercises();
-    setExercises(all);
-    if (user?.id) {
-      const sets = await getCompletedWorkoutSets(user.id);
-      setRecentSets(sets);
+    try {
+      const all = await getAllExercises();
+      setExercises(all);
+      if (user?.id) {
+        const sets = await getCompletedWorkoutSets(user.id);
+        setRecentSets(sets);
+      }
+    } catch (e) {
+      logError('ExerciseLibraryScreen.loadExercises', e, { userId: user?.id });
     }
   }
 
