@@ -39,7 +39,7 @@ export default function NutritionEducationScreen({ navigation }) {
         <Section
           icon="flame-outline"
           tint={colors.warning}
-          title="1. Calories — your energy budget"
+          title="1. Calories. Your energy budget"
         >
           <Body>
             Your body burns energy every day just existing, plus more on top for
@@ -48,7 +48,7 @@ export default function NutritionEducationScreen({ navigation }) {
           <Body>
             Eat below maintenance over time and you lose weight. Eat above and
             you gain. The body composition change follows the weekly average,
-            not any single day — one big meal won't undo a week of progress.
+            not any single day. One big meal won't undo a week of progress.
           </Body>
           <KeyPoint>Trend over weeks &gt; perfection on any day.</KeyPoint>
         </Section>
@@ -71,7 +71,7 @@ export default function NutritionEducationScreen({ navigation }) {
             color={colors.warning}
             name="Fat"
             kcalPerG="9 kcal/g"
-            role="Hormones, vitamins, joint health. Keep above a minimum — don't go ultra-low."
+            role="Hormones, vitamins, joint health. Keep above a minimum. Don't go ultra-low."
           />
           <MacroLine
             color={colors.success}
@@ -96,7 +96,7 @@ export default function NutritionEducationScreen({ navigation }) {
           <PhaseLine name="Bulk" rate="gain 0.5–1% per week" gist="larger surplus, faster growth, some fat comes with it" />
           <KeyPoint>
             You don't have to do the maths. Log your morning weight and weekly
-            check-in — your coach watches the trend and nudges these numbers
+            check-in. Your coach watches the trend and nudges these numbers
             up or down for you when a real signal is there.
           </KeyPoint>
         </Section>
@@ -144,7 +144,7 @@ export default function NutritionEducationScreen({ navigation }) {
           </Body>
           <KeyPoint>
             Miss a day? Don't double up the next day. Pick up where you left
-            off — the weekly average is what counts.
+            off. The weekly average is what counts.
           </KeyPoint>
         </Section>
 
@@ -157,14 +157,14 @@ export default function NutritionEducationScreen({ navigation }) {
             You don't need to second-guess the numbers each week. Volyume's
             weekly check-in watches your morning weight trend, compares it
             to the target rate for your phase, and shifts your calories up
-            or down when a real signal appears — and ignores noisy single-
+            or down when a real signal appears, and ignores noisy single-
             week swings (water, sodium, sleep, time of month).
           </Body>
           <Body>
             Two safety nets are built in: a 5% cap on any single change so
             it never swings too hard, and a 2-week cooldown after each
             change so the trend has time to react before the next one.
-            The result you'll see is small, infrequent nudges — not weekly
+            The result you'll see is small, infrequent nudges, not weekly
             churn.
           </Body>
           <KeyPoint>
@@ -190,7 +190,7 @@ export default function NutritionEducationScreen({ navigation }) {
 
         <Text style={styles.footer}>
           Volyume's starting numbers are estimates. The 2–4 week trend is what
-          counts — that's exactly what the coach watches for you.
+          counts. That's exactly what the coach watches for you.
         </Text>
       </ScrollView>
     </SafeAreaView>

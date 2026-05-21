@@ -76,7 +76,7 @@ export function assessDataConfidence({ weigh_ins, adherenceKnown, weeksInPhase, 
     return {
       level: 'data_hold',
       reasons: ['Unusual event flagged with limited weight data'],
-      holdMessage: "Unusual week flagged and weight data is thin. Scale isn't a reliable signal right now — calories held. Log consistently next week for a clean read.",
+      holdMessage: "Unusual week flagged and weight data is thin. Scale isn't a reliable signal right now. Calories held. Log consistently next week for a clean read.",
     };
   }
 
@@ -564,7 +564,7 @@ export function runWeeklyCoach(inputs) {
     if (scoffPositive) {
       heldDecisions.push({ type: 'calories', reason: "Calories held. Wellbeing screen flagged restriction concerns." });
     } else if (cycleOverride) {
-      heldDecisions.push({ type: 'calories', reason: "Calories held. Cycle was flagged this week — weight reading isn't a reliable signal." });
+      heldDecisions.push({ type: 'calories', reason: "Calories held. Cycle was flagged this week so the weight reading isn't a reliable signal." });
     } else if (onTarget) {
       heldDecisions.push({ type: 'calories', reason: "Calories held. Trend is on target." });
     } else if (lastCalAdjustmentWeeksAgo < 2) {
@@ -573,7 +573,7 @@ export function runWeeklyCoach(inputs) {
       const weeksLeft = offTargetWeeksRequired - consecutiveOffTargetWeeks;
       heldDecisions.push({ type: 'calories', reason: `Calories held. ${weeksLeft} more week${weeksLeft !== 1 ? 's' : ''} of the same trend needed before adjusting.` });
     } else if (calsAdherence === 'untracked') {
-      heldDecisions.push({ type: 'calories', reason: "Calories held. Adherence wasn't tracked — adjusting now would be a guess." });
+      heldDecisions.push({ type: 'calories', reason: "Calories held. Adherence wasn't tracked, so adjusting now would be a guess." });
     }
   }
 

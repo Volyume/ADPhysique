@@ -613,7 +613,7 @@ export default function HomeScreen({ navigation }) {
           <View style={styles.phaseBanner}>
             <Ionicons name="information-circle-outline" size={18} color={colors.primary} style={{ marginTop: 1 }} />
             <Text style={styles.phaseBannerText} numberOfLines={3}>
-              Your nutrition targets are set for {phaseMismatch.savedPhaseLabel} — update them in Athlete Hub to reflect your current plan.
+              Your nutrition targets are set for {phaseMismatch.savedPhaseLabel}. Update them in Athlete Hub to reflect your current plan.
             </Text>
             <TouchableOpacity
               style={styles.phaseBannerArrow}
@@ -1008,7 +1008,7 @@ export default function HomeScreen({ navigation }) {
                 <PlanBuilderCard
                   icon="barbell-outline"
                   title="Start a manual session"
-                  desc="Log sets as you go. No plan required — Volyume builds your profile as you train."
+                  desc="Log sets as you go. No plan required. Volyume builds your profile as you train."
                   onPress={() => navigation.navigate('ActiveWorkout', { blank: true })}
                 />
               </>
@@ -1257,7 +1257,7 @@ function buildCoachBrief({ fatigueHistory, weeklyVolume, deloadSuggestion, lastW
   if (deloadSuggestion) {
     return {
       headline: 'Recovery week',
-      body: 'Your body is signalling it needs a lighter week. Keep the movement, drop the weight — this is how you come back stronger.',
+      body: 'Your body is signalling it needs a lighter week. Keep the movement, drop the weight. This is how you come back stronger.',
       type: 'recover',
     };
   }
@@ -1279,7 +1279,7 @@ function buildCoachBrief({ fatigueHistory, weeklyVolume, deloadSuggestion, lastW
   if (lastWorkoutDaysAgo != null && lastWorkoutDaysAgo >= 5) {
     return {
       headline: 'Good to see you back',
-      body: "It's been a while since your last session. Ease in — don't try to catch up in one workout.",
+      body: "It's been a while since your last session. Ease in. Don't try to catch up in one workout.",
       type: 'go',
     };
   }

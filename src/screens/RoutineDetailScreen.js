@@ -39,9 +39,9 @@ function MuscleTagRow({ exercises }) {
 
   let warning = null;
   if (noBack && noHamstrings) {
-    warning = 'No pulling work — consider adding a row or pull variation.';
+    warning = 'No pulling work. Consider adding a row or pull variation.';
   } else if (noHamstrings) {
-    warning = 'No hamstring work — consider adding an RDL or leg curl.';
+    warning = 'No hamstring work. Consider adding an RDL or leg curl.';
   }
 
   if (coverage.length === 0) return null;
@@ -493,7 +493,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
             Replacing: <Text style={{ color: colors.primary }}>{swapState?.exercise?.name}</Text>
           </Text>
           <Text style={styles.swapNote}>
-            Choose a substitute. Your routine will be updated — your set, rep and rest targets stay the same.
+            Choose a substitute. Your routine will be updated. Your set, rep and rest targets stay the same.
           </Text>
           <FlatList
             data={swapCandidates}

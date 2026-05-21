@@ -1233,7 +1233,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             {currentSet.isGhost && ghostSet && (
               <View style={styles.ghostChip}>
                 <Ionicons name="time-outline" size={12} color={colors.textMuted} />
-                <Text style={styles.ghostChipText}>Pre-filled from last session — tap to confirm</Text>
+                <Text style={styles.ghostChipText}>Pre-filled from last session. Tap to confirm.</Text>
               </View>
             )}
             {loggedSets.length === 0 && parseFloat(currentSet.weight) >= 20 && currentSet.setType !== 'warmup' && (
@@ -1546,7 +1546,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 </View>
                 <View style={styles.supStep}>
                   <Text style={styles.supStepNum}>3</Text>
-                  <Text style={styles.supStepText}>Move straight to the second — no rest between.</Text>
+                  <Text style={styles.supStepText}>Move straight to the second. No rest between.</Text>
                 </View>
                 <View style={styles.supStep}>
                   <Text style={styles.supStepNum}>4</Text>
@@ -1562,7 +1562,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 style={styles.supPrimaryBtn}
                 onPress={() => setSupersetHeadsUp(null)}
               >
-                <Text style={styles.supPrimaryBtnText}>Got it — start</Text>
+                <Text style={styles.supPrimaryBtnText}>Got it, start</Text>
               </TouchableOpacity>
 
               <View style={styles.supSecondaryRow}>

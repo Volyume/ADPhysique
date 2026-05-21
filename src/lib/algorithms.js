@@ -626,7 +626,7 @@ function buildSubstituteReason(sub, target, targetStretch = 'medium') {
   const subStretch = sub.tension_at_stretch || sub.tensionAtStretch || 'medium';
 
   if (subStretch === 'high' && targetStretch !== 'high') {
-    return 'Trains this muscle at a longer length — evidence suggests this produces slightly more growth per set.';
+    return 'Trains this muscle at a longer length. Evidence suggests this produces slightly more growth per set.';
   }
   if (subSFR > targetSFR) return 'Better match for this muscle with less overall fatigue.';
   if (subFatigue < targetFatigue) return 'Less demanding overall. Good for busy or high-volume weeks.';
@@ -1035,7 +1035,7 @@ export function detectPlateau(exerciseSessions = [], repMin = 6, repMax = 12) {
 // Volume confidence — how much to trust the adaptive landmark estimate for a muscle.
 // Based on number of feedback data points collected.
 export function getVolumeConfidence(dataPoints) {
-  if (dataPoints < 3)  return { level: 'low',    label: 'Estimated', description: 'Starting range — not yet personalised to you.' };
+  if (dataPoints < 3)  return { level: 'low',    label: 'Estimated', description: 'Starting range. Not yet personalised to you.' };
   if (dataPoints < 6)  return { level: 'medium',  label: 'Learning',  description: 'Based on limited data. Adjust after each check-in.' };
   return                      { level: 'high',    label: 'Personalised', description: 'Based on your logged response data.' };
 }

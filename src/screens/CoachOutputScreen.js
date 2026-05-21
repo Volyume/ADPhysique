@@ -71,7 +71,7 @@ function buildHeadline(output, checkin) {
   }
   // Trend off target but holding
   if (trend?.delta != null && !trend.onTarget) {
-    return `${weekLabel}. Trend off target — holding for another read.`;
+    return `${weekLabel}. Trend off target. Holding for another read.`;
   }
   // Default
   return `${weekLabel}.`;
@@ -113,7 +113,7 @@ function buildFocus(output, checkin) {
   }
   // Sleep is the biggest single lever
   if (checkin?.sleepHours != null && checkin.sleepHours < 6.5) {
-    return 'Sleep. Aim for 7h+ this week — nothing else moves until this does.';
+    return 'Sleep. Aim for 7h+ this week. Nothing else moves until this does.';
   }
   // Sessions
   if (sessionsPlanned > 0 && sessionsCompleted < sessionsPlanned) {
@@ -248,7 +248,7 @@ function NextWeekCard({ adjustments }) {
       <View style={styles.planNote}>
         <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />
         <Text style={styles.planNoteText}>
-          Training volume and recovery weeks are adjusted automatically by your plan after each session — your coach focuses on nutrition.
+          Training volume and recovery weeks are adjusted automatically by your plan after each session. Your coach focuses on nutrition.
         </Text>
       </View>
     </View>
@@ -286,7 +286,7 @@ function DietBreakCard({ weeksInDeficit }) {
         {weeksInDeficit >= 8
           ? `You have been in a calorie deficit for ${weeksInDeficit} weeks. `
           : 'You have been in a calorie deficit for over eight weeks. '}
-        {'A short diet break — returning to maintenance calories for one to two weeks — can help restore metabolic rate and improve long-term fat loss. Consider taking a break before your next phase.'}
+        {'A short diet break, returning to maintenance calories for one to two weeks, can help restore metabolic rate and improve long-term fat loss. Consider taking a break before your next phase.'}
       </Text>
       <Text style={styles.dietBreakFootnote}>
         Based on the MATADOR trial (2017). This is a suggestion, not a requirement.

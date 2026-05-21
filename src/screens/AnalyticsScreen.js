@@ -893,7 +893,7 @@ function SessionDurationChart({ bars }) {
   if (recent.length >= 3) {
     const last = recent.slice(-3).map(b => b.avgMin);
     const isDown = last[2] < last[0] - 5;
-    if (isDown) coachingLine = 'Sessions getting shorter — might be fatigue.';
+    if (isDown) coachingLine = 'Sessions getting shorter. Might be fatigue.';
   }
 
   function barColor(avgMin) {
@@ -977,7 +977,7 @@ function WorkloadCard({ data }) {
   const { acute, chronic, ratio } = data;
 
   let statusColor = colors.textMuted;
-  let statusText = 'Below training average — consider more volume.';
+  let statusText = 'Below training average. Consider more volume.';
   if (ratio >= 1.5) {
     statusColor = colors.error;
     statusText = 'High load this week. Consider an easier session.';

@@ -915,7 +915,7 @@ export default function ProOnboardingScreen({ navigation }) {
               value={trainingGoal}
               options={goalOptions}
               onChange={setTrainingGoal}
-              placeholder="Not competing — General"
+              placeholder="Not competing, General"
             />
 
             <TouchableOpacity
@@ -953,7 +953,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
           <Dropdown
             label="How's your recovery?"
-            hint="This affects how much volume your plan includes. Be honest — it adjusts to protect you."
+            hint="This affects how much volume your plan includes. Be honest. It adjusts to protect you."
             value={recoveryRating}
             options={RECOVERY_OPTIONS}
             onChange={setRecoveryRating}

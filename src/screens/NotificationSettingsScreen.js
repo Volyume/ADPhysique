@@ -383,7 +383,7 @@ export default function NotificationSettingsScreen({ navigation }) {
 
         {/* Morning weight + weekly check-in reminders moved to a dedicated
             Pro screen (Settings → Coaching reminders). The toggles here
-            were misleading — those reminders are non-optional inputs to
+            were misleading. Those reminders are non-optional inputs to
             Precision Coaching, so flipping them off broke the coaching
             loop. CoachingRemindersScreen exposes the day + hour pickers
             without toggles; both reminders are always scheduled for Pro

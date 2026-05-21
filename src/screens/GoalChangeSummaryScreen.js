@@ -21,7 +21,7 @@ function buildPhaseReason(prevPhase, nextPhase) {
     return `You're moving to maintenance. Calories settle and the focus shifts to consistency and performance rather than weight change.`;
   }
   if (prevPhase === 'lean_gain' && nextPhase === 'bulk') {
-    return `Bigger surplus for faster gains. Expect some fat to come with the muscle — that's the trade-off.`;
+    return `Bigger surplus for faster gains. Expect some fat to come with the muscle. That's the trade-off.`;
   }
   if (prevPhase === 'bulk' && nextPhase === 'lean_gain') {
     return `Pulling the surplus back so gains come on cleaner. Slower, but you stay in shape throughout.`;
@@ -178,7 +178,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
             <Text style={styles.heroBody}>
               {anyChanged
                 ? `Your plan and nutrition targets have been updated to match. Here's a breakdown of what shifted and why.`
-                : `Nothing meaningful changed — your plan and nutrition stay as they were.`}
+                : `Nothing meaningful changed. Your plan and nutrition stay as they were.`}
             </Text>
           </View>
         </View>
@@ -231,7 +231,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
                 <MacroRow label="Carbs"   prev={prevC} next={nextC} />
                 <MacroRow label="Fat"     prev={prevF} next={nextF} />
                 {!macrosChanged && (
-                  <Text style={styles.cardReason}>Your macros stay where they are — the change you made does not shift them meaningfully.</Text>
+                  <Text style={styles.cardReason}>Your macros stay where they are. The change you made does not shift them meaningfully.</Text>
                 )}
               </View>
             )}

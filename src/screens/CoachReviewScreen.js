@@ -89,7 +89,7 @@ function buildRecommendations({ volumeByMuscle, deloadResult, checkins, laggingM
   // 1. Recovery week signal
   if (deloadResult?.deload && deloadResult.reasons.length > 0) {
     recs.push(
-      'Consider making next week a lighter recovery week — reduce your sets by around a third and keep the weights comfortable. Your body will come back stronger afterwards.',
+      'Consider making next week a lighter recovery week. Reduce your sets by around a third and keep the weights comfortable. Your body will come back stronger afterwards.',
     );
   }
 
@@ -137,7 +137,7 @@ function buildRecommendations({ volumeByMuscle, deloadResult, checkins, laggingM
     const avgSleep = checkins.reduce((s, c) => s + (c.sleepQuality || 3), 0) / checkins.length;
     if (avgEnergy < 2.5 || avgSleep < 2.5) {
       recs.push(
-        'Your energy and sleep scores have been low this week. Consider keeping training intensity comfortable rather than pushing for new bests — recovery is where the adaptation happens.',
+        'Your energy and sleep scores have been low this week. Consider keeping training intensity comfortable rather than pushing for new bests. Recovery is where the adaptation happens.',
       );
     }
   }
@@ -147,7 +147,7 @@ function buildRecommendations({ volumeByMuscle, deloadResult, checkins, laggingM
     const recentJoint = checkins.find(c => (c.jointPain || c.jointDiscomfort || 0) >= 1);
     if (recentJoint) {
       recs.push(
-        'Recent sessions flagged some joint discomfort. Next week, use weights that feel comfortable rather than pushing for new bests — your joints will thank you.',
+        'Recent sessions flagged some joint discomfort. Next week, use weights that feel comfortable rather than pushing for new bests. Your joints will thank you.',
       );
     }
   }
@@ -155,7 +155,7 @@ function buildRecommendations({ volumeByMuscle, deloadResult, checkins, laggingM
   // 7. Generic positive nudge when everything looks fine
   if (recs.length === 0) {
     recs.push(
-      'Your training looks balanced this week. Keep the same structure next week and look for small improvements — an extra rep or a slightly heavier weight on one exercise.',
+      'Your training looks balanced this week. Keep the same structure next week and look for small improvements: an extra rep or a slightly heavier weight on one exercise.',
     );
   }
 
@@ -493,7 +493,7 @@ export default function CoachReviewScreen() {
                       key={`win-${i}`}
                       icon="trending-up-outline"
                       iconColor={colors.primary}
-                      text={`${win.exerciseName} — ${win.detail}`}
+                      text={`${win.exerciseName} · ${win.detail}`}
                       subtext="Consistent small improvements are the foundation of long-term progress."
                     />
                   ))}
@@ -528,10 +528,10 @@ export default function CoachReviewScreen() {
                       ? colors.warning
                       : colors.textMuted;
                     const text = isOver
-                      ? `${MUSCLE_DISPLAY_NAMES[muscle] || muscle} — more sets than you can comfortably recover from`
+                      ? `${MUSCLE_DISPLAY_NAMES[muscle] || muscle} · more sets than you can comfortably recover from`
                       : isNear
-                      ? `${MUSCLE_DISPLAY_NAMES[muscle] || muscle} — approaching the upper limit`
-                      : `${MUSCLE_DISPLAY_NAMES[muscle] || muscle} — below the minimum for meaningful progress`;
+                      ? `${MUSCLE_DISPLAY_NAMES[muscle] || muscle} · approaching the upper limit`
+                      : `${MUSCLE_DISPLAY_NAMES[muscle] || muscle} · below the minimum for meaningful progress`;
                     const subtext = isOver
                       ? 'Reducing volume slightly next week will let your body recover and come back stronger.'
                       : isNear

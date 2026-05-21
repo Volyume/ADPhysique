@@ -632,7 +632,7 @@ export default function BodyMetricsScreen({ navigation }) {
             {onboardingWeightKg ? (
               <>
                 <Text style={styles.emptyText}>
-                  We have your onboarding bodyweight saved as a starting point ({formatBodyWeightShort(onboardingWeightKg, bodyWeightUnits)}). Tap Log Weight to record a fresh entry — that's when the trend starts tracking.
+                  We have your onboarding bodyweight saved as a starting point ({formatBodyWeightShort(onboardingWeightKg, bodyWeightUnits)}). Tap Log Weight to record a fresh entry. That's when the trend starts tracking.
                 </Text>
               </>
             ) : (

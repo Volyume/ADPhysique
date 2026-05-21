@@ -274,7 +274,7 @@ export default function ProGoalSetupScreen({ navigation }) {
         keyboardShouldPersistTaps="handled"
       >
         {/* ── Physique category (optional) ──
-            Most users leave this on "Not competing — General". Competitive
+            Most users leave this on "Not competing, General". Competitive
             lifters pick their division so volume gets biased toward the
             muscles their category is judged on. */}
         <Text style={styles.sectionLabel}>Competing in a category? (optional)</Text>

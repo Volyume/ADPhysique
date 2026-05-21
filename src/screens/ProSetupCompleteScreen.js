@@ -161,7 +161,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
               </View>
               {/* First-time nutrition primer pointer. Most users seeing
                   these numbers for the first time have never tracked
-                  macros — this gives them a 5-min ramp before they need
+                  macros, so this gives them a 5-min ramp before they need
                   to actually use them. */}
               <TouchableOpacity
                 style={styles.eduLearnRow}

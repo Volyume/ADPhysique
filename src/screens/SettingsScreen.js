@@ -118,7 +118,7 @@ export default function SettingsScreen({ navigation }) {
     Alert.alert(
       'Sign out?',
       user?.isLocal
-        ? "You're signed in locally on this device. Your data stays on this phone — sign back in any time."
+        ? "You're signed in locally on this device. Your data stays on this phone. Sign back in any time."
         : 'Your data is safe in the cloud. Sign in again on any device to pick up where you left off.',
       [
         { text: 'Cancel', style: 'cancel' },
@@ -441,7 +441,7 @@ export default function SettingsScreen({ navigation }) {
           <SettingRow
             icon="text-outline"
             label="Larger text"
-            sub="Increases font size across the app. For more granular control, use your phone's system text size — Volyume respects it too."
+            sub="Increases font size across the app. For more granular control, use your phone's system text size. Volyume respects it too."
             showArrow={false}
             rightElement={
               <Switch
@@ -478,7 +478,7 @@ export default function SettingsScreen({ navigation }) {
           <SettingRow
             icon="eye-outline"
             label="Colour-blind safe palette"
-            sub="Replaces success-green and error-red with sky blue and reddish purple — distinguishable in red-green colour blindness."
+            sub="Replaces success-green and error-red with sky blue and reddish purple. Distinguishable in red-green colour blindness."
             showArrow={false}
             rightElement={
               <Switch
@@ -507,7 +507,7 @@ export default function SettingsScreen({ navigation }) {
             }
           />
           <Text style={styles.a11yNote}>
-            Reduce motion takes effect immediately. Larger text, higher contrast, and the colour-blind safe palette need Volyume to reopen — you'll be prompted to reload after toggling.
+            Reduce motion takes effect immediately. Larger text, higher contrast, and the colour-blind safe palette need Volyume to reopen. You'll be prompted to reload after toggling.
           </Text>
         </View>
 

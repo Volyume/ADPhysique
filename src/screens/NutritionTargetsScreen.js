@@ -677,7 +677,7 @@ export default function NutritionTargetsScreen() {
               </View>
 
               {/* ── Per-meal protein distribution ───────────────────
-                  Guidance only — daily total unchanged. Splits the
+                  Guidance only, daily total unchanged. Splits the
                   prescribed daily protein across 3–6 feedings, with
                   the recommended count chosen to keep per-meal in the
                   0.4–0.55 g/kg muscle protein synthesis window. */}
@@ -712,7 +712,7 @@ export default function NutritionTargetsScreen() {
                         text={
                           'How to split your daily protein across the day.\n\n' +
                           'Each meal should land in a window of roughly 0.4 to 0.55 g of protein per kilogram of bodyweight. Below the floor, muscle protein synthesis is not fully triggered. Above the ceiling, the extra protein gives diminishing returns at that meal.\n\n' +
-                          'Volyume picks the smallest meal count that keeps every meal at or below the ceiling, so your daily target is hit without overshooting per-meal. Your daily total stays exactly the same — this is purely how to split it.'
+                          'Volyume picks the smallest meal count that keeps every meal at or below the ceiling, so your daily target is hit without overshooting per-meal. Your daily total stays exactly the same. This is purely how to split it.'
                         }
                       />
                     </View>

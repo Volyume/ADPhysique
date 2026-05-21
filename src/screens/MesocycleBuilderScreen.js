@@ -164,7 +164,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
                   return (
                     <View style={styles.planWeekRow}>
                       <Text style={[styles.planWeekLabel, isDeload && styles.planWeekLabelDeload]}>
-                        Week {currentWeek} of {totalWeeks}{isDeload ? ' — recovery week' : ''}
+                        Week {currentWeek} of {totalWeeks}{isDeload ? ' · recovery week' : ''}
                       </Text>
                       <View style={styles.planWeekBar}>
                         {Array.from({ length: totalWeeks }, (_, i) => (
