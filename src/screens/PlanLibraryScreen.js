@@ -9,6 +9,7 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { getLibraryPlans, getPlanWorkoutCounts, copyPlanFromLibrary, activatePlanWithBlock } from '../lib/database';
+import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import useAppStore from '../store/useAppStore';
 
@@ -283,6 +284,12 @@ export default function PlanLibraryScreen({ navigation, route }) {
                   {
                     text: fromFirstRun ? 'Start training' : 'Set active',
                     onPress: async () => {
+                      // Skip the mid-block confirm during first-run — there's
+                      // no prior block to disrupt (this IS their first plan).
+                      if (!fromFirstRun) {
+                        const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: plan.name });
+                        if (!ok) { navigation.goBack(); return; }
+                      }
                       await activatePlanWithBlock(user.id, copy.id, plan.name);
                       if (fromFirstRun) navigation.navigate('ProSetupComplete');
                       else navigation.goBack();

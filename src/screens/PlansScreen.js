@@ -16,6 +16,7 @@ import {
   archivePlan, duplicatePlan, softDeleteRoutine, getActiveBlock,
 } from '../lib/database';
 import { getBlockAdvice } from '../lib/blockAdvisor';
+import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import useAppStore from '../store/useAppStore';
 import { logError } from '../lib/errorLog';
 
@@ -55,7 +56,7 @@ const ACTION_CARDS_PRO_SWITCH = [
     id: 'coach',
     icon: 'sparkles',
     title: 'Re-run the wizard',
-    description: 'Update your plan if your goals, schedule, or equipment have changed. Your training history carries over.',
+    description: 'Update your plan if your goals, schedule, or equipment have changed. Activating a new plan starts a fresh training block — history and PRs are kept.',
     screen: 'CoachBuilder',
   },
   {
@@ -208,6 +209,8 @@ export default function PlansScreen({ navigation }) {
 
   async function handleSetActive(plan) {
     try {
+      const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: plan.name });
+      if (!ok) return;
       await activatePlanWithBlock(user.id, plan.id, plan.name);
       await loadData();
     } catch (e) {

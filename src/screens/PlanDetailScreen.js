@@ -14,6 +14,7 @@ import {
 } from '../lib/database';
 import useAppStore from '../store/useAppStore';
 import { logError } from '../lib/errorLog';
+import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 
 export default function PlanDetailScreen({ navigation, route }) {
   const { planId, isLibrary = false } = route.params || {};
@@ -72,6 +73,8 @@ export default function PlanDetailScreen({ navigation, route }) {
                   {
                     text: 'Set Active',
                     onPress: async () => {
+                      const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: plan?.name });
+                      if (!ok) { navigation.goBack(); return; }
                       await activatePlanWithBlock(user.id, copy.id, plan?.name ?? 'Training Plan');
                       navigation.goBack();
                     },
@@ -89,6 +92,8 @@ export default function PlanDetailScreen({ navigation, route }) {
 
   async function handleSetActive() {
     try {
+      const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: plan?.name });
+      if (!ok) return;
       await activatePlanWithBlock(user.id, planId, plan?.name ?? 'Training Plan');
       await loadData();
       Alert.alert('Plan Activated', `"${plan?.name}" is now your active plan. Train will show the next workout.`);
