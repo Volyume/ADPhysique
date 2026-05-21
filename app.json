@@ -50,8 +50,7 @@
         "android.permission.VIBRATE",
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.FOREGROUND_SERVICE",
-        "android.permission.WAKE_LOCK",
-        "android.permission.health.READ_WEIGHT"
+        "android.permission.WAKE_LOCK"
       ],
       "intentFilters": [
         {
@@ -103,19 +102,10 @@
           "android": {
             "compileSdkVersion": 34,
             "targetSdkVersion": 34,
-            "minSdkVersion": 26
+            "minSdkVersion": 24
           }
         }
-      ],
-      [
-        "react-native-health",
-        {
-          "isClinicalDataEnabled": false,
-          "healthSharePermission": "Volyume reads your weight from Apple Health so your morning weight log stays in sync with your smart scale or wearable.",
-          "healthUpdatePermission": "Volyume writes completed workouts to Apple Health so your weekly activity stays accurate across your other apps."
-        }
-      ],
-      "react-native-health-connect"
+      ]
     ],
     "notification": {
       "icon": "./assets/notification-icon.png",

@@ -1019,7 +1019,7 @@ export default function HomeScreen({ navigation }) {
             </View>
           </TouchableOpacity>
         ) : activePlan && nextWorkout ? (
-          <View style={styles.heroCard}>
+          <GradientCard tone="primary" intensity={0.22} style={styles.heroCard}>
             <View style={styles.heroTopRow}>
               <View style={styles.planBadge}>
                 <Text style={styles.planBadgeText} numberOfLines={1}>{activePlan.name}</Text>
@@ -1070,7 +1070,7 @@ export default function HomeScreen({ navigation }) {
               <Ionicons name="add-circle-outline" size={14} color={colors.textMuted} />
               <Text style={styles.blankLinkText}>Start Blank Workout instead</Text>
             </TouchableOpacity>
-          </View>
+          </GradientCard>
         ) : (
           <View style={styles.noPlanSection}>
             <View style={styles.noPlanHero}>
