@@ -417,14 +417,14 @@ export default function SettingsScreen({ navigation }) {
               onPress={() => navigation.navigate('WellbeingCheck')}
             />
           )}
-          {tier === 'pro' && (
-            <SettingRow
-              icon="notifications-outline"
-              label="Notifications"
-              sub="Morning weight reminder and weekly check-in"
-              onPress={() => navigation.navigate('NotificationSettings')}
-            />
-          )}
+          <SettingRow
+            icon="notifications-outline"
+            label="Notifications"
+            sub={tier === 'pro'
+              ? 'Morning weight, weekly check-in, and training reminders'
+              : 'Training day reminders'}
+            onPress={() => navigation.navigate('NotificationSettings')}
+          />
         </View>
 
         {/* Accessibility */}

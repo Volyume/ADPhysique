@@ -25,6 +25,7 @@ import {
   REMINDER_PREF_KEY,
   REMINDER_TIME_KEY,
 } from '../lib/trainingReminders';
+import useAppStore from '../store/useAppStore';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 
@@ -148,6 +149,12 @@ function DayChips({ selected, onSelect, disabled }) {
 }
 
 export default function NotificationSettingsScreen({ navigation }) {
+  // Morning weight + weekly check-in reminders are Pro coaching inputs;
+  // they drive the weekly Precision Coaching loop. Training reminders are
+  // a general utility (any user benefits from "remember to train") so they
+  // stay visible to Free users too.
+  const tier = useAppStore(s => s.tier);
+  const isPro = tier === 'pro';
   const [morningEnabled, setMorningEnabled] = useState(false);
   const [morningHour, setMorningHour] = useState(7);
   const [morningMinute, setMorningMinute] = useState(0);
@@ -384,6 +391,9 @@ export default function NotificationSettingsScreen({ navigation }) {
           </View>
         )}
 
+        {/* Sections 1 & 2 (morning weight + weekly check-in) are Pro-only:
+            they feed Precision Coaching. Free users skip to training reminders. */}
+        {isPro && (<>
         {/* Section 1 — Morning weight reminder */}
         <Text style={styles.sectionLabel}>Morning weight reminder</Text>
         <View style={styles.card}>
@@ -501,7 +511,9 @@ export default function NotificationSettingsScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Section 3 — Training reminders */}
+        </>)}
+
+        {/* Section 3 — Training reminders (available to all tiers) */}
         <Text style={styles.sectionLabel}>Training reminders</Text>
         <View style={styles.card}>
           {/* Toggle row */}
