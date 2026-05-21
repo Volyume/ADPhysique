@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { A11Y_PREFS_KEY, loadA11yPrefs } from '../lib/accessibilityPrefs';
 
 const LOCAL_USER_KEY   = '@volyume_local_user_id';
 const FIRST_RUN_KEY    = '@volyume_first_run_complete';
@@ -434,20 +435,17 @@ const useAppStore = create((set, get) => ({
   },
   accessibilityLoaded: false,
   loadAccessibility: async () => {
-    try {
-      const raw = await AsyncStorage.getItem('@volyume_a11y_prefs');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        set({ accessibility: { ...get().accessibility, ...parsed }, accessibilityLoaded: true });
-      } else {
-        set({ accessibilityLoaded: true });
-      }
-    } catch (_) { set({ accessibilityLoaded: true }); }
+    const parsed = await loadA11yPrefs();
+    if (parsed) {
+      set({ accessibility: { ...get().accessibility, ...parsed }, accessibilityLoaded: true });
+    } else {
+      set({ accessibilityLoaded: true });
+    }
   },
   setAccessibilityPref: async (key, value) => {
     const next = { ...get().accessibility, [key]: value };
     set({ accessibility: next });
-    try { await AsyncStorage.setItem('@volyume_a11y_prefs', JSON.stringify(next)); } catch (_) {}
+    try { await AsyncStorage.setItem(A11Y_PREFS_KEY, JSON.stringify(next)); } catch (_) {}
   },
 }));
 

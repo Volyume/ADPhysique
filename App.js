@@ -89,21 +89,16 @@ import useAppStore from './src/store/useAppStore';
 import { getWellbeingMode, isCalm } from './src/lib/wellbeing';
 import { getSupabaseClient } from './src/lib/supabase';
 import { applyAccessibility } from './src/styles/theme';
+import { loadA11yPrefs } from './src/lib/accessibilityPrefs';
 import * as Updates from 'expo-updates';
 
-const A11Y_PREFS_KEY = '@volyume_a11y_prefs';
-
-// Read accessibility prefs synchronously-as-possible at app boot and mutate
-// the exported theme tokens before any screen module is loaded. Idempotent
-// — safe to call more than once, but only the first call matters for
-// already-built StyleSheets.
+// Read accessibility prefs at app boot and mutate the exported theme
+// tokens before any screen module is loaded. Idempotent — safe to call
+// more than once, but only the first call matters for already-built
+// StyleSheets.
 async function bootstrapAccessibility() {
-  try {
-    const raw = await AsyncStorage.getItem(A11Y_PREFS_KEY);
-    if (raw) applyAccessibility(JSON.parse(raw));
-  } catch (_) {
-    // Corrupt prefs or storage failure — fall back to defaults silently.
-  }
+  const prefs = await loadA11yPrefs();
+  if (prefs) applyAccessibility(prefs);
 }
 
 // Handles volyume:// and https://volyume.app deep links from Supabase auth emails.
