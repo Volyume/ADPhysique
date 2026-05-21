@@ -132,9 +132,14 @@ const useAppStore = create((set, get) => ({
       session: null,
       userProfile: null,
       tier: null,
-      tierChecked: false,
+      // KEY POINT: tierChecked / firstRunChecked stay TRUE because we just
+      // checked them by clearing them. The RootNavigator splash gate is
+      //   if (!tierChecked || !firstRunChecked) return <Splash />
+      // — setting them to false here used to hang the splash screen forever
+      // after sign-out / delete-account because nothing re-runs the checks.
+      tierChecked: true,
       firstRunComplete: false,
-      firstRunChecked: false,
+      firstRunChecked: true,
       // Reset workout state too — a stale active workout from the prior
       // session would otherwise re-appear on next sign-in.
       activeWorkout: null,

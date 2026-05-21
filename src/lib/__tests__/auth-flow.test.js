@@ -72,9 +72,14 @@ describe('clearAuthStateForSignOut', () => {
     expect(s.session).toBeNull();
     expect(s.userProfile).toBeNull();
     expect(s.tier).toBeNull();
-    expect(s.tierChecked).toBe(false);
+    // tierChecked / firstRunChecked MUST stay true after sign-out so the
+    // splash screen doesn't hang waiting for a re-check that never runs.
+    // The "checked" flag means we've verified the value — clearing it
+    // would be incorrect (we just SET it to null, that IS the verified
+    // result). See bug fix in wave 25.
+    expect(s.tierChecked).toBe(true);
     expect(s.firstRunComplete).toBe(false);
-    expect(s.firstRunChecked).toBe(false);
+    expect(s.firstRunChecked).toBe(true);
     expect(s.activeWorkout).toBeNull();
     expect(s.workoutExercises).toEqual([]);
     expect(s.currentExerciseIndex).toBe(0);

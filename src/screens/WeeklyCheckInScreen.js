@@ -611,7 +611,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
           </View>
           <Text style={styles.gateTitle}>Come back on {dayName}</Text>
           <Text style={styles.gateBody}>
-            You set your check-in day to {dayName}. Your coaching runs on a weekly rhythm tied to that day, so the numbers compare like for like each time.
+            Your check-in day is {dayName}. Coaching runs on a weekly rhythm tied to that day, so the numbers compare like for like each time. You can change the day in Settings → Notifications.
             {'\n\n'}
             In the meantime, log your weight each morning from the Train tab. Every reading makes the trend more accurate.
           </Text>
