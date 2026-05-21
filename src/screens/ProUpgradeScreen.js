@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
-import { signUpWithEmail, signInWithEmail, getSupabaseClient } from '../lib/supabase';
+import { signUpWithEmail, signInWithEmail, signInWithGoogle, signInWithApple, getSupabaseClient } from '../lib/supabase';
 import { syncProfile, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
 
 const PRO_PERKS = [
@@ -55,6 +55,46 @@ export default function ProUpgradeScreen({ navigation }) {
       Alert.alert('Something went wrong', 'Please try again.');
     }
     setBusy(false);
+  }
+
+  // OAuth path (Google / Apple). Sign-in completes via the deep-link
+  // handler in App.js → onAuthStateChange in RootNavigator. We don't need
+  // to call activatePro from here — the SIGNED_IN handler runs
+  // restoreSessionFromCloud which sets tier from the cloud row. New users
+  // (no users_profile row yet) need the tier set explicitly though, so
+  // we listen briefly for the session and then activate. This mirrors
+  // LoginScreen.handleOAuth + ProOnboardingScreen.handleOAuthOnboarding.
+  async function handleOAuth(provider) {
+    setBusy(true);
+    try {
+      const fn = provider === 'google' ? signInWithGoogle : signInWithApple;
+      const result = await fn();
+      if (result?.error) {
+        Alert.alert('Sign-in failed', result.error.message);
+        setBusy(false);
+        return;
+      }
+      // Poll for a session for up to 8 seconds. The deep-link handler in
+      // App.js calls exchangeCodeForSession asynchronously, and we want
+      // to flip the tier as soon as it lands.
+      const sb = getSupabaseClient();
+      let signedInId = null;
+      for (let i = 0; i < 16; i++) {
+        await new Promise(r => setTimeout(r, 500));
+        const { data: { session: s } } = await sb.auth.getSession();
+        if (s?.user?.id) { signedInId = s.user.id; break; }
+      }
+      if (signedInId) {
+        await activatePro(signedInId, { isNew: false });
+        setDone(true);
+      }
+      // If no session after 8s, the OAuth was cancelled or failed silently.
+      // Leave the screen open so the user can retry or use email.
+    } catch (_) {
+      // Cancellation throws here on some platforms — silent.
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function handleAuth() {
@@ -190,6 +230,41 @@ export default function ProUpgradeScreen({ navigation }) {
               <Text style={styles.accountNote}>
                 Pro needs a free account so your plan and progress are backed up and your access carries over after beta.
               </Text>
+
+              {/* OAuth buttons — Google on both platforms, Apple on iOS only
+                  (App Store policy: if any other social provider is offered,
+                  Sign in with Apple must be too). Mirrors the LoginScreen and
+                  ProOnboardingScreen patterns so the upgrade flow doesn't
+                  feel like a downgrade. */}
+              <View style={styles.oauthBlock}>
+                {Platform.OS === 'ios' && (
+                  <TouchableOpacity
+                    style={[styles.oauthBtnApple, busy && styles.btnDisabled]}
+                    onPress={() => handleOAuth('apple')}
+                    disabled={busy}
+                    accessibilityRole="button"
+                    accessibilityLabel="Continue with Apple"
+                  >
+                    <Ionicons name="logo-apple" size={18} color="#FFFFFF" />
+                    <Text style={styles.oauthBtnAppleText}>Continue with Apple</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={[styles.oauthBtn, busy && styles.btnDisabled]}
+                  onPress={() => handleOAuth('google')}
+                  disabled={busy}
+                  accessibilityRole="button"
+                  accessibilityLabel="Continue with Google"
+                >
+                  <Ionicons name="logo-google" size={18} color={colors.textPrimary} />
+                  <Text style={styles.oauthBtnText}>Continue with Google</Text>
+                </TouchableOpacity>
+                <View style={styles.oauthDivider}>
+                  <View style={styles.oauthDividerLine} />
+                  <Text style={styles.oauthDividerText}>or with email</Text>
+                  <View style={styles.oauthDividerLine} />
+                </View>
+              </View>
 
               <View style={styles.section}>
                 <Text style={styles.fieldLabel}>Email</Text>
@@ -350,6 +425,23 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   btnDisabled: { opacity: 0.55 },
+
+  oauthBlock: { gap: spacing.sm, marginBottom: spacing.lg },
+  oauthBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.sm, paddingVertical: spacing.md, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface,
+  },
+  oauthBtnText: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  oauthBtnApple: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.sm, paddingVertical: spacing.md, borderRadius: radius.md,
+    backgroundColor: '#000000',
+  },
+  oauthBtnAppleText: { color: '#FFFFFF', fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  oauthDivider: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
+  oauthDividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
+  oauthDividerText: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
   primaryBtnText: {
     fontSize: fontSize.lg, fontWeight: fontWeight.bold,
     color: colors.background,
