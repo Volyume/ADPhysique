@@ -332,7 +332,13 @@ export default function RootNavigator() {
           .catch(console.warn);
 
         checkFirstRun().catch(console.warn);
-        checkTier().catch(console.warn);
+        // AWAIT checkTier so the local 'pro' value is in the store before
+        // refreshTierFromCloud (below) reads it for the beta-demotion
+        // guard. Without this they raced: the cloud refresh would see
+        // tier=null, fail the "currentTier === 'pro'" check, and accept
+        // the cloud's spurious 'free' value. Result was Pro users being
+        // silently demoted to Free on every app launch.
+        await checkTier().catch(console.warn);
 
         try {
           const client = getSupabaseClient();
@@ -341,7 +347,37 @@ export default function RootNavigator() {
             if (session?.user) {
               setSession(session);
               setUser(session.user);
-              // Server-authoritative tier — enforcement point after beta
+
+              // Hydrate userProfile + units + barWeight from local
+              // AsyncStorage so name, units, plate weight all survive an
+              // app restart for cloud-signed-in users. Previously the
+              // bootstrap path skipped this entirely if a cloud session
+              // existed — the result was firstName disappearing and the
+              // user seeing their email everywhere instead. The
+              // restoreSessionFromCloud handler only fires on the
+              // SIGNED_IN event (fresh sign-in), not on session-restore.
+              try {
+                const PROFILE_KEY_PFX = '@volyume_user_profile_';
+                const raw = await AsyncStorage.getItem(PROFILE_KEY_PFX + session.user.id);
+                if (raw) {
+                  // eslint-disable-next-line global-require
+                  const { migrateProfileGoals } = require('../lib/coachingGoals');
+                  const profile = migrateProfileGoals(JSON.parse(raw));
+                  useAppStore.setState({
+                    userProfile: profile,
+                    units: profile?.units || useAppStore.getState().units,
+                    barWeight: profile?.barWeight || useAppStore.getState().barWeight,
+                    bodyWeightUnits: profile?.bodyWeightUnits || useAppStore.getState().bodyWeightUnits,
+                  });
+                }
+              } catch (_) {
+                // Corrupt or missing — fall through; user can re-onboard
+                // or the cloud restore will fill it in on next SIGNED_IN.
+              }
+
+              // Server-authoritative tier — enforcement point after beta.
+              // During beta this guards against spurious pro → free
+              // demotion (see useAppStore.refreshTierFromCloud).
               refreshTierFromCloud(client, session.user.id).catch(() => {});
               setAuthLoading(false);
               return;

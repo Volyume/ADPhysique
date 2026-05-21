@@ -247,8 +247,19 @@ const useAppStore = create((set, get) => ({
     }
 
     if (cloudData.tier) {
-      try { await AsyncStorage.setItem(TIER_KEY, cloudData.tier); } catch (_) {}
-      set({ tier: cloudData.tier, tierChecked: true });
+      // Beta-tier guard: the DB default for users_profile.tier is 'free',
+      // the client can't write to it (migrate_005 trigger blocks updates),
+      // and there's no Stripe webhook yet to flip it to 'pro'. So reading
+      // it literally would demote everyone who picked Pro locally back to
+      // 'free' on every sign-in / restart. Until billing is live, accept
+      // only ELEVATIONS — never demote pro → free from the cloud.
+      // eslint-disable-next-line global-require
+      const { PRO_BETA_ACTIVE } = require('../lib/proGate');
+      const currentTier = get().tier;
+      if (!(PRO_BETA_ACTIVE && currentTier === 'pro' && cloudData.tier === 'free')) {
+        try { await AsyncStorage.setItem(TIER_KEY, cloudData.tier); } catch (_) {}
+        set({ tier: cloudData.tier, tierChecked: true });
+      }
     }
 
     // Only restore userProfile if local is empty — don't overwrite a
@@ -288,6 +299,15 @@ const useAppStore = create((set, get) => ({
         .eq('id', supabaseUserId)
         .maybeSingle();
       if (data?.tier) {
+        // Same beta-tier guard as restoreSessionFromCloud — see comment
+        // there. Without this, every app restart silently downgrades
+        // every Pro user to Free because cloud tier defaults to 'free'.
+        // eslint-disable-next-line global-require
+        const { PRO_BETA_ACTIVE } = require('../lib/proGate');
+        const currentTier = get().tier;
+        if (PRO_BETA_ACTIVE && currentTier === 'pro' && data.tier === 'free') {
+          return; // refuse the spurious demotion
+        }
         await AsyncStorage.setItem(TIER_KEY, data.tier);
         set({ tier: data.tier });
       }

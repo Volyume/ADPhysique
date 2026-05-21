@@ -53,7 +53,38 @@ export default function LoginScreen({ navigation, route }) {
       const fn = mode === 'signup' ? signUpWithEmail : signInWithEmail;
       const { data, error } = await fn(email.trim(), password);
       if (error) {
-        Alert.alert('Error', error.message);
+        // If a sign-in failed because the credentials don't match any
+        // existing account, offer to switch to sign-up rather than just
+        // bouncing the user back to the same screen. Supabase returns
+        // "Invalid login credentials" for both wrong-password AND
+        // unknown-email — we can't disambiguate, so the prompt is
+        // permissive: the user knows which they meant.
+        const msg = (error.message || '').toLowerCase();
+        const looksUnregistered = mode === 'signin' && (
+          msg.includes('invalid login') ||
+          msg.includes('invalid credentials') ||
+          msg.includes('user not found') ||
+          msg.includes('email not confirmed') === false && msg.includes('invalid')
+        );
+        if (looksUnregistered) {
+          Alert.alert(
+            'No account found',
+            `We couldn't sign in with that email. Want to create a new account instead?`,
+            [
+              { text: 'Try again', style: 'cancel' },
+              {
+                text: 'Create account',
+                onPress: () => {
+                  setMode('signup');
+                  // Password stays — they only need to confirm it meets
+                  // the 8-char minimum.
+                },
+              },
+            ],
+          );
+        } else {
+          Alert.alert('Error', error.message);
+        }
       } else if (mode === 'signup' && data.user && !data.session) {
         Alert.alert(
           'Check your email',
