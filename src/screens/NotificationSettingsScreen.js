@@ -381,127 +381,32 @@ export default function NotificationSettingsScreen({ navigation }) {
           </View>
         )}
 
-        {/* Sections 1 & 2 (morning weight + weekly check-in) are Pro-only:
-            they feed Precision Coaching. Free users skip to training reminders. */}
-        {isPro && (<>
-        {/* Section 1 — Morning weight reminder */}
-        <Text style={styles.sectionLabel}>Morning weight reminder</Text>
-        <View style={styles.card}>
-          {/* Toggle row */}
-          <View style={styles.toggleRow}>
-            <View style={styles.toggleIconWrap}>
-              <Ionicons name="scale-outline" size={18} color={colors.primary} />
-            </View>
-            <Text style={styles.toggleLabel}>Morning weight reminder</Text>
-            <Switch
-              value={morningEnabled}
-              onValueChange={handleMorningToggle}
-              trackColor={{ false: colors.surface2, true: colors.primaryDim }}
-              thumbColor={colors.primary}
-              ios_backgroundColor={colors.surface2}
-              accessibilityLabel="Morning weight reminder toggle"
-            />
-          </View>
-
-          {/* Expanded controls */}
-          {morningEnabled && (
-            <View style={styles.expandedSection}>
-              <View style={styles.divider} />
-              <Text style={styles.pickerLabel}>Hour</Text>
-              <View style={[styles.chipContainer, !morningEnabled && styles.chipContainerDisabled]}>
-                <HourChips
-                  hours={HOURS}
-                  selected={morningHour}
-                  onSelect={handleMorningHour}
-                  disabled={!morningEnabled}
-                />
-              </View>
-              <Text style={styles.scheduleText}>
-                Notification at {formatHour(morningHour)}
-              </Text>
-            </View>
-          )}
-
-          {/* Helper text */}
-          <View style={styles.helperRow}>
-            <Text style={styles.helperText}>
-              Body weight shifts naturally each day due to fluid, food, and hormones. Logging every other day (at minimum) gives your coaching enough readings to smooth out that noise and see what's actually changing. Three or more readings per week unlocks the weekly check-in.
-            </Text>
-          </View>
-        </View>
-
-        {/* Section 2 — Weekly check-in reminder */}
-        <Text style={styles.sectionLabel}>Weekly check-in reminder</Text>
-        <View style={styles.card}>
-          {/* Toggle row */}
-          <View style={styles.toggleRow}>
+        {/* Morning weight + weekly check-in reminders moved to a dedicated
+            Pro screen (Settings → Coaching reminders). The toggles here
+            were misleading — those reminders are non-optional inputs to
+            Precision Coaching, so flipping them off broke the coaching
+            loop. CoachingRemindersScreen exposes the day + hour pickers
+            without toggles; both reminders are always scheduled for Pro
+            users. This screen now only handles training reminders. */}
+        {isPro && (
+          <TouchableOpacity
+            style={styles.crossLink}
+            onPress={() => navigation.navigate('CoachingReminders')}
+            activeOpacity={0.85}
+          >
             <View style={styles.toggleIconWrap}>
               <Ionicons name="pulse-outline" size={18} color={colors.primary} />
             </View>
-            <Text style={styles.toggleLabel}>Weekly check-in reminder</Text>
-            <Switch
-              value={checkinEnabled}
-              onValueChange={handleCheckinToggle}
-              trackColor={{ false: colors.surface2, true: colors.primaryDim }}
-              thumbColor={colors.primary}
-              ios_backgroundColor={colors.surface2}
-              accessibilityLabel="Weekly check-in reminder toggle"
-            />
-          </View>
-
-          {/* Expanded controls */}
-          {checkinEnabled && (
-            <View style={styles.expandedSection}>
-              <View style={styles.divider} />
-              <Text style={styles.pickerLabel}>Day</Text>
-              <View style={[styles.chipContainer, !checkinEnabled && styles.chipContainerDisabled]}>
-                <DayChips
-                  selected={checkinDay}
-                  onSelect={handleCheckinDay}
-                  disabled={!checkinEnabled}
-                />
-              </View>
-              <Text style={styles.pickerLabel}>Hour</Text>
-              <View style={[styles.chipContainer, !checkinEnabled && styles.chipContainerDisabled]}>
-                <HourChips
-                  hours={EVENING_HOURS}
-                  selected={checkinHour}
-                  onSelect={handleCheckinHour}
-                  disabled={!checkinEnabled}
-                />
-              </View>
-              <Text style={styles.scheduleText}>
-                Reminder every {formatDayHour(checkinDay, checkinHour)}
+            <View style={{ flex: 1 }}>
+              <Text style={styles.crossLinkTitle}>Coaching reminders</Text>
+              <Text style={styles.crossLinkSub}>
+                Morning weight + weekly check-in schedule. Always on for Pro.
               </Text>
-              {/* Next-fire preview honouring the 7-day minimum gap from
-                  the last check-in. Helps the user understand why
-                  switching days doesn't always mean "this week" — the
-                  coach needs a full week of fresh data to act on. */}
-              {lastCheckinMs > 0 && (() => {
-                const nextFire = computeNextCheckinFireDate(
-                  checkinDay, checkinHour, checkinMinute, lastCheckinMs, 7,
-                );
-                const lastFire = new Date(lastCheckinMs);
-                const gapDays = Math.round((nextFire.getTime() - lastFire.getTime()) / (24 * 60 * 60 * 1000));
-                const bumped = gapDays > 7;
-                return (
-                  <Text style={styles.scheduleSubText}>
-                    Your next check-in will be {formatNextFire(nextFire)}{bumped ? ', so the coach has a full week of fresh data to act on' : ''}.
-                  </Text>
-                );
-              })()}
             </View>
-          )}
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </TouchableOpacity>
+        )}
 
-          {/* Helper text */}
-          <View style={styles.helperRow}>
-            <Text style={styles.helperText}>
-              Reminds you to complete your weekly coaching check-in. You can change the day any time — the next reminder will be at least 7 days after your last check-in so the trend math has enough data to mean something.
-            </Text>
-          </View>
-        </View>
-
-        </>)}
 
         {/* Section 3 — Training reminders (available to all tiers) */}
         <Text style={styles.sectionLabel}>Training reminders</Text>
@@ -808,6 +713,28 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textAlign: 'center',
     marginTop: spacing.sm,
+  },
+  crossLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  crossLinkTitle: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+  },
+  crossLinkSub: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    marginTop: 2,
+    lineHeight: 16,
   },
   savedText: {
     fontSize: fontSize.xs,

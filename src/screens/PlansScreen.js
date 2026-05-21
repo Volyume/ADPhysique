@@ -439,7 +439,7 @@ export default function PlansScreen({ navigation }) {
               )}
               {tier === 'pro' && (
                 <Text style={styles.proCoachNote}>
-                  Your Precision Coaching adjusts this plan as you progress and check in. Change goals from You → Athlete Hub; switch to a different plan from the options below.
+                  Your Precision Coaching adjusts this plan as you progress and check in. Change your goals or switch to a different plan from the options below.
                 </Text>
               )}
               <View style={styles.activePlanActions}>
@@ -545,22 +545,6 @@ export default function PlansScreen({ navigation }) {
           </View>
           <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
         </TouchableOpacity>
-
-        {/* Pointer to Athlete Hub for Pro users — replaces the "Change your goals" rebuild card */}
-        {isProWithPlan && (
-          <TouchableOpacity
-            style={styles.goalsPointer}
-            onPress={() => navigation.getParent()?.navigate('ProfileTab', { screen: 'AthleteHub' })}
-            activeOpacity={0.75}
-          >
-            <Ionicons name="information-circle-outline" size={16} color={colors.textSecondary} />
-            <Text style={styles.goalsPointerText}>
-              Want to change your goals? Head to{' '}
-              <Text style={styles.goalsPointerLink}>You → Athlete Hub</Text>.
-            </Text>
-            <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
-          </TouchableOpacity>
-        )}
 
         {/* Decision Hub — visible to everyone. Section title and copy adapt:
             Pro with active plan → "Switch your plan", Free / no plan → "Start or build a plan". */}

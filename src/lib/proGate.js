@@ -41,6 +41,7 @@ export const PRO_ROUTES = [
   'BodyMetrics',
   'CoachOutput',
   'ProGoalSetup',
+  'CoachingReminders',
 ];
 
 export function isProRoute(routeName) {

@@ -54,6 +54,7 @@ import CoachOutputScreen from '../screens/CoachOutputScreen';
 import ProGoalSetupScreen from '../screens/ProGoalSetupScreen';
 import GoalChangeSummaryScreen from '../screens/GoalChangeSummaryScreen';
 import NotificationSettingsScreen from '../screens/NotificationSettingsScreen';
+import CoachingRemindersScreen from '../screens/CoachingRemindersScreen';
 import ProOnboardingScreen from '../screens/ProOnboardingScreen';
 import ProSetupCompleteScreen from '../screens/ProSetupCompleteScreen';
 import ProUpgradeScreen from '../screens/ProUpgradeScreen';
@@ -78,6 +79,7 @@ const GatedNutritionTargets = withProGuard(NutritionTargetsScreen, 'Nutrition ta
 const GatedBodyMetrics      = withProGuard(BodyMetricsScreen, 'Body metrics');
 const GatedCoachOutput      = withProGuard(CoachOutputScreen, 'Your week');
 const GatedProGoalSetup     = withProGuard(ProGoalSetupScreen, 'Pro goal setup');
+const GatedCoachingReminders = withProGuard(CoachingRemindersScreen, 'Coaching reminders');
 
 const stackOptions = {
   headerStyle: { backgroundColor: colors.surface, borderBottomColor: colors.border },
@@ -180,6 +182,7 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="ProGoalSetup" component={GatedProGoalSetup} options={{ headerShown: false }} />
       <Stack.Screen name="GoalChangeSummary" component={GoalChangeSummaryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ title: 'Notifications' }} />
+      <Stack.Screen name="CoachingReminders" component={GatedCoachingReminders} options={{ title: 'Coaching reminders' }} />
       <Stack.Screen name="WellbeingCheck" component={WellbeingCheckScreen} options={{ title: 'Wellbeing check' }} />
       <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ headerShown: false }} />
       <Stack.Screen name="DebugLog" component={DebugLogScreen} options={{ headerShown: false }} />
