@@ -16,12 +16,18 @@ import { runWeeklyCoach } from '../weeklyCoach';
 const DAY = 86_400_000;
 const NOW = Date.UTC(2026, 4, 20, 0, 0, 0); // 2026-05-20 — matches the test phone clock
 
-/** 14 days of weights trending at kgPerWeek. EWMA (alpha=0.1) needs ~2 weeks to converge. */
+/**
+ * 14 days of weights linearly interpolated from startKg to startKg+kgPerWeek*2,
+ * timestamps ending today (i=count-1). Matches the previous-session sim's
+ * fixture math so behaviour assertions about onTarget/EWMA-convergence stay
+ * stable across runs.
+ */
 function trend(startKg, kgPerWeek, count = 14) {
   const out = [];
+  const endKg = startKg + kgPerWeek * 2;
   for (let i = 0; i < count; i++) {
-    const t = NOW - (count - i) * DAY;
-    const w = startKg + (kgPerWeek * i) / 7;
+    const t = NOW - (count - 1 - i) * DAY;
+    const w = startKg + (endKg - startKg) * (i / Math.max(1, count - 1));
     out.push({ loggedAt: t, weightKg: Math.round(w * 100) / 100 });
   }
   return out;

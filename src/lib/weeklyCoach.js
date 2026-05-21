@@ -305,8 +305,20 @@ export function runWeeklyCoach(inputs) {
   const cycleOverride  = !!(checkin?.cycleOverride);
   const sleepHours     = checkin?.sleepHours     ?? null;
 
-  // Seed for rotating copy variants (week-based so same week always gives same copy)
-  const weekSeed = checkin?.weekStart ? Math.floor(checkin.weekStart / (7 * 86400000)) : 0;
+  // Seed for rotating copy variants. Anchor to Monday-UTC week buckets so the
+  // same calendar week always yields the same seed regardless of whether the
+  // caller stored weekStart as a Sunday-anchored or Monday-anchored timestamp.
+  // (The notifications module uses Monday; some older check-in rows stored
+  // Sunday — without this normalisation the same week could produce different
+  // copy variants depending on the write path.)
+  const weekSeed = (() => {
+    if (!checkin?.weekStart) return 0;
+    const d = new Date(checkin.weekStart);
+    const day = (d.getUTCDay() + 6) % 7; // 0 = Monday
+    d.setUTCHours(0, 0, 0, 0);
+    d.setUTCDate(d.getUTCDate() - day);
+    return Math.floor(d.getTime() / (7 * 86400000));
+  })();
 
   // ── EWMA weight calculations ──────────────────────────────────────────────
   const ewma7Today   = morningWeights.length >= 3 ? getLatestEwma(morningWeights) : null;

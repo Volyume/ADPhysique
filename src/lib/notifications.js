@@ -209,7 +209,15 @@ export async function scheduleNextCheckinReminder(userId, weekday = 0, hour = 12
     if (userId) {
       const latest = await getLatestCheckin(userId);
       const cycleStart = getCurrentMondayWeekStartMs();
-      if (latest && (latest.weekStart ?? 0) >= cycleStart) alreadyDone = true;
+      // Only count check-ins from THIS week's Monday up to "now". A row
+      // dated in the future (clock skew, manual edit, etc.) used to
+      // suppress the reminder forever; bound it to <= now so future-dated
+      // rows are ignored.
+      const now = Date.now();
+      const weekStartMs = latest?.weekStart ?? 0;
+      if (latest && weekStartMs >= cycleStart && weekStartMs <= now) {
+        alreadyDone = true;
+      }
     }
   } catch {}
   await scheduleCheckinReminder(weekday, hour, minute, { skipThisWeek: alreadyDone });

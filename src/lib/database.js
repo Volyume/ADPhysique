@@ -2043,11 +2043,21 @@ export const BACKUP_TABLES = [
   'routine_exercises',
   'programmes',
   'mesocycles',
+  // Mesocycle child tables — restoring without these leaves orphan week-rows
+  // pointing at deleted mesocycle ids and planned-volume drift.
+  'mesocycle_weeks',
+  'planned_muscle_volume',
+  'adaptation_events',
   'nutrition_targets',
   'peak_week_plans',
   'body_metric_log',
   'user_insights',
   'user_body_profile',
+  // Coaching tables — added so Pro users don't lose their check-in / coach
+  // output / morning-weight history on restore.
+  'morning_weights',
+  'weekly_checkins',
+  'coach_outputs',
 ];
 
 // Returns { schemaVersion, tables: { tableName: [rawRows...] } }.
@@ -2631,13 +2641,17 @@ export async function insertWorkoutFromCloud(userId, w) {
 
 // Re-stamps all local data from localUserId → supabaseUserId so the app
 // reads it correctly after account creation during onboarding.
+// Tables listed here MUST have a user_id column — adaptation_events keys off
+// mesocycle_week_id so it doesn't need re-stamping, and personal_records
+// doesn't exist locally at all (PRs are computed on the fly from sets).
 export async function migrateLocalUserId(localUserId, supabaseUserId) {
   if (!localUserId || !supabaseUserId || localUserId === supabaseUserId) return;
   const d = await db();
   const tables = [
     'workouts', 'workout_sets', 'routines', 'programmes',
     'nutrition_targets', 'body_metric_log', 'morning_weights',
-    'personal_records', 'adaptation_events',
+    'weekly_checkins', 'coach_outputs', 'mesocycles', 'user_body_profile',
+    'user_insights', 'peak_week_plans', 'exercise_user_notes',
   ];
   for (const table of tables) {
     try {
@@ -2645,7 +2659,9 @@ export async function migrateLocalUserId(localUserId, supabaseUserId) {
         `UPDATE ${table} SET user_id = ? WHERE user_id = ?`,
         [supabaseUserId, localUserId],
       );
-    } catch (_) {}
+    } catch (e) {
+      logError('database.migrateLocalUserId', e, { table });
+    }
   }
 }
 

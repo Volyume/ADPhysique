@@ -174,8 +174,10 @@ export function rankSwaps(originalExercise, allExercises, options = {}) {
       exercise: ex,
       score: scoreCandidate(originalExercise, ex),
     }))
-    // Sort descending by score; stable tie-break by name for determinism
-    .sort((a, b) => b.score - a.score || a.exercise.name.localeCompare(b.exercise.name))
+    // Sort descending by score; stable tie-break by name for determinism.
+    // Names default to '' so a custom user-added exercise with no name
+    // doesn't crash localeCompare on undefined.
+    .sort((a, b) => b.score - a.score || (a.exercise.name ?? '').localeCompare(b.exercise.name ?? ''))
     // Take top N
     .slice(0, numResults)
     // Attach reason
