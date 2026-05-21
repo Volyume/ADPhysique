@@ -35,6 +35,7 @@
     "expo-document-picker": "~12.0.2",
     "expo-file-system": "~17.0.1",
     "expo-font": "~12.0.10",
+    "expo-image": "~1.13.0",
     "expo-haptics": "~13.0.1",
     "expo-linear-gradient": "~13.0.2",
     "expo-notifications": "~0.28.19",
