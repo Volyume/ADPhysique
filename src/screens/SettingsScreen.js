@@ -12,7 +12,7 @@ import { useShallow } from 'zustand/react/shallow';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-import { clearWorkoutHistory, buildWorkoutCSV } from '../lib/database';
+import { clearWorkoutHistory, buildWorkoutCSV, wipeAllUserData } from '../lib/database';
 import { logError } from '../lib/errorLog';
 import { exportBackup, importBackup } from '../lib/dataBackup';
 import { getWellbeingMode, setWellbeingMode } from '../lib/wellbeing';
@@ -50,15 +50,18 @@ function SectionHeader({ title }) {
 }
 
 export default function SettingsScreen({ navigation }) {
-  const { user, setUser, setSession, units, setUnits, bodyWeightUnits, setBodyWeightUnits, barWeight, setBarWeight, userProfile, saveLocalProfile, tier, setTier } =
+  const { user, setUser, setSession, clearAuthStateForSignOut, units, setUnits, bodyWeightUnits, setBodyWeightUnits, barWeight, setBarWeight, userProfile, saveLocalProfile, tier, setTier } =
     useAppStore(useShallow(s => ({
       user: s.user, setUser: s.setUser, setSession: s.setSession,
+      clearAuthStateForSignOut: s.clearAuthStateForSignOut,
       units: s.units, setUnits: s.setUnits,
       bodyWeightUnits: s.bodyWeightUnits, setBodyWeightUnits: s.setBodyWeightUnits,
       barWeight: s.barWeight, setBarWeight: s.setBarWeight,
       userProfile: s.userProfile, saveLocalProfile: s.saveLocalProfile,
       tier: s.tier, setTier: s.setTier,
     })));
+  const [signingOut, setSigningOut] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [editName, setEditName] = useState(userProfile?.firstName ?? '');
   const [calmEnabled, setCalmEnabled] = useState(false);
   async function toggleCalmMode(value) {
@@ -74,44 +77,111 @@ export default function SettingsScreen({ navigation }) {
   );
 
   async function handleSignOut() {
-    Alert.alert('Sign out?', 'You will need to sign in again.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: async () => {
-          if (!user?.isLocal) {
-            await signOut().catch(() => {});
-          }
-          await AsyncStorage.removeItem('@volyume_local_user_id');
-          setUser(null);
-          setSession(null);
-        },
-      },
-    ]);
-  }
-
-  async function handleDeleteAccount() {
     Alert.alert(
-      'Delete account?',
-      'This will permanently delete all your data. This cannot be undone.',
+      'Sign out?',
+      user?.isLocal
+        ? "You're signed in locally on this device. Your data stays on this phone — sign back in any time."
+        : 'Your data is safe in the cloud. Sign in again on any device to pick up where you left off.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Delete Everything',
+          text: 'Sign Out',
           style: 'destructive',
           onPress: async () => {
-            if (!user?.isLocal) {
-              await getSupabaseClient()?.rpc('delete_user_data').catch(() => {});
-              await signOut().catch(() => {});
+            setSigningOut(true);
+            try {
+              if (!user?.isLocal) {
+                // Best-effort cloud sign-out; we still clear local state
+                // even if the auth call fails (so the user isn't stuck
+                // signed in locally with a dead session).
+                try { await signOut(); }
+                catch (e) {
+                  logError('SettingsScreen.handleSignOut.cloudSignOut', e);
+                }
+              }
+              await clearAuthStateForSignOut();
+            } finally {
+              setSigningOut(false);
             }
-            await AsyncStorage.removeItem('@volyume_local_user_id');
-            setUser(null);
-            setSession(null);
           },
         },
       ],
     );
+  }
+
+  async function handleDeleteAccount() {
+    // Two-step confirmation so a thumb-tap can't nuke an account.
+    Alert.alert(
+      'Delete account?',
+      user?.isLocal
+        ? 'This permanently deletes your local data on this device. Local accounts have no cloud backup. This cannot be undone.'
+        : 'This permanently deletes your account and all your training data across every device. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Continue',
+          style: 'destructive',
+          onPress: () => {
+            // Second confirmation
+            Alert.alert(
+              'Are you sure?',
+              user?.isLocal
+                ? "There's no undo. All your workouts, plans, and progress are wiped from this device."
+                : "There's no undo. All your workouts, plans, check-ins, and progress are wiped from every device.",
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Delete forever',
+                  style: 'destructive',
+                  onPress: () => performDeleteAccount(),
+                },
+              ],
+            );
+          },
+        },
+      ],
+    );
+  }
+
+  async function performDeleteAccount() {
+    if (!user?.id) return;
+    setDeletingAccount(true);
+    const userId = user.id;
+    let cloudOk = true;
+    let cloudErr = null;
+    try {
+      if (!user?.isLocal) {
+        // Server-side wipe via the RPC. RPC checks auth.uid() so we don't
+        // need to pass it. If this fails, surface the error to the user
+        // — don't silently pretend their cloud data is gone.
+        const sb = getSupabaseClient();
+        if (sb) {
+          const { error } = await sb.rpc('delete_user_data');
+          if (error) {
+            cloudOk = false;
+            cloudErr = error.message ?? 'Unknown error';
+            logError('SettingsScreen.deleteAccount.rpc', error, { userId });
+          }
+        }
+        try { await signOut(); }
+        catch (e) { logError('SettingsScreen.deleteAccount.signOut', e); }
+      }
+      // Wipe local SQLite regardless of cloud outcome — if cloud failed
+      // the local data still goes (it's the user's intent).
+      try { await wipeAllUserData(userId); }
+      catch (e) { logError('SettingsScreen.deleteAccount.wipeLocal', e); }
+      // Clear auth state + AsyncStorage prefs
+      await clearAuthStateForSignOut();
+
+      if (!cloudOk) {
+        Alert.alert(
+          'Local data deleted',
+          'Your local data has been removed from this device, but the cloud delete failed: ' + cloudErr + '. Sign in again to retry, or contact support.',
+        );
+      }
+    } finally {
+      setDeletingAccount(false);
+    }
   }
 
   async function exportData() {
@@ -371,15 +441,15 @@ export default function SettingsScreen({ navigation }) {
           )}
           <SettingRow
             icon="log-out-outline"
-            label="Sign out"
+            label={signingOut ? 'Signing out…' : 'Sign out'}
             destructive
-            onPress={handleSignOut}
+            onPress={signingOut ? undefined : handleSignOut}
           />
           <SettingRow
             icon="trash-outline"
-            label="Delete account"
+            label={deletingAccount ? 'Deleting account…' : 'Delete account'}
             destructive
-            onPress={handleDeleteAccount}
+            onPress={deletingAccount ? undefined : handleDeleteAccount}
           />
         </View>
 

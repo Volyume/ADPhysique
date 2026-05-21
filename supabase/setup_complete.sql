@@ -297,6 +297,94 @@ CREATE TABLE IF NOT EXISTS autoregulation_suggestions (
 );
 
 
+-- ─── Tables added for full Pro sync coverage ──────────────────────────────
+-- These are sync targets for the Pro user's local-first state. Schemas are
+-- intentionally permissive (TEXT for ids that are uid()-generated locally,
+-- TIMESTAMPTZ for time fields) so the sync layer doesn't have to coerce.
+
+CREATE TABLE IF NOT EXISTS programmes (
+  id TEXT PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id),
+  name TEXT NOT NULL,
+  description TEXT,
+  is_library BOOLEAN DEFAULT FALSE,
+  is_active BOOLEAN DEFAULT FALSE,
+  source_programme_id TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS morning_weights (
+  id TEXT PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id),
+  weight_kg NUMERIC(5, 2) NOT NULL,
+  logged_at TIMESTAMPTZ NOT NULL,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, logged_at)
+);
+
+-- coach_outputs stores the JSON output of weeklyCoach for each week so it
+-- can be replayed / referenced on a new device.
+CREATE TABLE IF NOT EXISTS coach_outputs (
+  id TEXT PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id),
+  week_start BIGINT NOT NULL,                  -- ms epoch, Monday-anchored
+  output_json TEXT NOT NULL,                   -- full runWeeklyCoach output
+  applied BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, week_start)
+);
+
+CREATE TABLE IF NOT EXISTS user_body_profile (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id),
+  height_cm NUMERIC(5, 1),
+  birth_date DATE,
+  biological_sex TEXT CHECK(biological_sex IN ('male', 'female', 'other')),
+  activity_level TEXT,
+  goal TEXT,
+  target_weight_kg NUMERIC(5, 2),
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS exercise_user_notes (
+  id TEXT PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id),
+  exercise_id TEXT NOT NULL,
+  note TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, exercise_id)
+);
+
+-- Volyume's local weekly_checkins schema captures everything the coach
+-- engine reads. The pre-existing weekly_checkins from schema.sql had a
+-- different shape (sleep_quality, life_stress, refeed_day etc.) intended
+-- for an earlier check-in design. To avoid breaking either consumer, the
+-- sync layer writes to a new `weekly_checkins_v2` table whose columns
+-- match runWeeklyCoach's expected input exactly.
+CREATE TABLE IF NOT EXISTS weekly_checkins_v2 (
+  id TEXT PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id),
+  week_start BIGINT NOT NULL,                  -- Monday-anchored ms epoch
+  energy_score INTEGER CHECK(energy_score BETWEEN 1 AND 5),
+  soreness_score INTEGER CHECK(soreness_score BETWEEN 1 AND 5),
+  stress_score INTEGER CHECK(stress_score BETWEEN 1 AND 5),
+  sleep_hours NUMERIC(3, 1),
+  cals_adherence TEXT,                          -- hit / under / over / untracked
+  steps_adherence TEXT,
+  training_performance TEXT,
+  joint_pain BOOLEAN DEFAULT FALSE,
+  sore_muscles TEXT,
+  cycle_override BOOLEAN DEFAULT FALSE,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, week_start)
+);
+
+
 -- ═══ 2. ROW LEVEL SECURITY (always-on) ════════════════════════════════════
 -- ENABLE is idempotent; safe to re-run.
 

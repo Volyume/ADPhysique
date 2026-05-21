@@ -17,6 +17,8 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { VolyumeMark } from '../components/BrandMark';
 import { signInWithEmail, signUpWithEmail, resetPassword, getSupabaseClient } from '../lib/supabase';
 import { syncProfile, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
+import { wipeAllUserData } from '../lib/database';
+import { logError } from '../lib/errorLog';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../store/useAppStore';
 
@@ -61,6 +63,28 @@ export default function LoginScreen({ navigation, route }) {
       } else if (data.session) {
         const supabaseUserId = data.session.user.id;
         const localUserId = localUser?.id;
+        const lastSignedInUserId = await AsyncStorage.getItem('@volyume_last_supabase_user_id').catch(() => null);
+
+        // Cross-user safety: if a DIFFERENT user previously used this phone,
+        // wipe their data from local SQLite before pulling the new user's
+        // data down. Without this, two people sharing a device (or the
+        // same person using multiple accounts) would see each other's
+        // workouts, plans, and check-ins because SQLite persists across
+        // sign-out.
+        if (lastSignedInUserId && lastSignedInUserId !== supabaseUserId) {
+          try {
+            await wipeAllUserData(lastSignedInUserId);
+            // Also remove the migrate-from-AsyncStorage flag for the
+            // previous user so the next-launch migration doesn't re-run.
+            await AsyncStorage.removeItem(`@volyume_body_metrics_migrated_${lastSignedInUserId}`).catch(() => {});
+          } catch (e) {
+            logError('LoginScreen.handleEmailAuth.crossUserWipe', e, {
+              previous: lastSignedInUserId, incoming: supabaseUserId,
+            });
+          }
+        }
+        await AsyncStorage.setItem('@volyume_last_supabase_user_id', supabaseUserId).catch(() => {});
+
         // Fire-and-forget: sync profile then upload local data in background
         syncProfile(supabaseUserId, userProfile, tier).catch(() => {});
         if (mode === 'signup') {

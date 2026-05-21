@@ -2052,6 +2052,66 @@ export async function clearWorkoutHistory(userId) {
   });
 }
 
+// ─── Full local wipe (sign out + sign in as different user, or delete account) ─
+//
+// Removes every row owned by `userId` across every table that has a user_id
+// column. Used when:
+//   - A user deletes their account (combined with the cloud delete_user_data RPC)
+//   - A different user signs in on the same device (to prevent cross-user data
+//     visibility on a shared phone)
+//
+// Custom exercises owned by the user are also removed. Canonical seed
+// exercises (user_id IS NULL) are preserved because they're shared data.
+// Wrapped in a single transaction so a kill mid-wipe doesn't leave a
+// half-wiped DB the user can't recover from.
+export async function wipeAllUserData(userId) {
+  if (!userId) return;
+  const d = await db();
+  // Child tables that key off mesocycle_week_id rather than user_id —
+  // delete them via a sub-select so they're cleaned up too.
+  const tables = [
+    'workout_sets', 'workouts',
+    'routine_exercises', 'routines', 'programmes',
+    'planned_muscle_volume', 'mesocycle_weeks', 'mesocycles',
+    'morning_weights', 'weekly_checkins', 'coach_outputs',
+    'nutrition_targets', 'peak_week_plans',
+    'body_metric_log', 'user_insights', 'user_body_profile',
+    'exercise_user_notes', 'exercise_goals', 'workout_notes',
+  ];
+  await d.withTransactionAsync(async () => {
+    // adaptation_events keys off mesocycle_week_id, so wipe those whose
+    // mesocycle_week belongs to a mesocycle this user owns.
+    try {
+      await d.runAsync(
+        `DELETE FROM adaptation_events WHERE mesocycle_week_id IN (
+          SELECT mw.id FROM mesocycle_weeks mw
+          JOIN mesocycles m ON m.id = mw.mesocycle_id
+          WHERE m.user_id = ?
+        )`,
+        [userId],
+      );
+    } catch (e) {
+      logError('database.wipeAllUserData.adaptation_events', e, { userId });
+    }
+    for (const table of tables) {
+      try {
+        await d.runAsync(`DELETE FROM ${table} WHERE user_id = ?`, [userId]);
+      } catch (e) {
+        // Continue with other tables — a missing table on an older schema
+        // shouldn't abort the whole wipe.
+        logError(`database.wipeAllUserData.${table}`, e, { userId });
+      }
+    }
+    // User-owned (custom) exercises — canonical exercises with user_id IS NULL
+    // are intentionally preserved.
+    try {
+      await d.runAsync('DELETE FROM exercises WHERE user_id = ?', [userId]);
+    } catch (e) {
+      logError('database.wipeAllUserData.exercises', e, { userId });
+    }
+  });
+}
+
 // ─── Full local backup / restore ────────────────────────────────────────────
 //
 // Every user-owned table. exercises is intentionally excluded: it is seed

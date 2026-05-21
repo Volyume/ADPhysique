@@ -81,6 +81,57 @@ const useAppStore = create((set, get) => ({
     set({ user: null, session: null });
   },
 
+  // Sign-out cleanup. Removes the AsyncStorage state tied to a session so
+  // the next sign-in starts from a clean slate, but DOES NOT touch SQLite
+  // (the user's training history stays local — if they sign back in to
+  // the same account on this device, it's instantly available without
+  // waiting for pullFromCloud). The actual SQLite wipe happens only on
+  // delete-account or when a DIFFERENT user signs in on this device.
+  clearAuthStateForSignOut: async () => {
+    const keysToRemove = [
+      LOCAL_USER_KEY,
+      FIRST_RUN_KEY,
+      TIER_KEY,
+      // Block snooze and schedule prefs — tied to the signed-out account
+      '@volyume_block_snooze',
+      '@volyume_schedule_v1',
+      '@volyume_seen_workout_info',
+      '@volyume_body_metrics_migrated_*', // pattern below
+    ];
+    try {
+      const allKeys = await AsyncStorage.getAllKeys();
+      const toRemove = allKeys.filter(k =>
+        k.startsWith('@volyume_user_profile_') ||
+        k.startsWith('@volyume_body_metrics_migrated_') ||
+        k.startsWith('@volyume_nutrition_targets') ||
+        k === '@volyume_crash_log' ||
+        keysToRemove.includes(k)
+      );
+      if (toRemove.length) await AsyncStorage.multiRemove(toRemove);
+    } catch (_) {
+      // Best-effort — fall back to removing just the most critical keys
+      try { await AsyncStorage.removeItem(LOCAL_USER_KEY); } catch (__) {}
+      try { await AsyncStorage.removeItem(TIER_KEY); } catch (__) {}
+    }
+    set({
+      user: null,
+      session: null,
+      userProfile: null,
+      tier: null,
+      tierChecked: false,
+      firstRunComplete: false,
+      firstRunChecked: false,
+      // Reset workout state too — a stale active workout from the prior
+      // session would otherwise re-appear on next sign-in.
+      activeWorkout: null,
+      workoutExercises: [],
+      currentExerciseIndex: 0,
+      restTimerActive: false,
+      prCelebration: null,
+      prCelebrationQueue: [],
+    });
+  },
+
   // Tier — 'free' | 'pro' | null (null = not yet chosen → show WelcomeScreen)
   tier: null,
   tierChecked: false,
