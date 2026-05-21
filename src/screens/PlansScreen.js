@@ -47,6 +47,33 @@ const ACTION_CARDS_DEFAULT = [
   },
 ];
 
+// Pro users with an active plan see the same three options but framed as
+// "switch your active plan", not "build your first plan". Coach Builder is
+// re-pitched as "re-run the wizard" since they've already done it once.
+const ACTION_CARDS_PRO_SWITCH = [
+  {
+    id: 'coach',
+    icon: 'sparkles',
+    title: 'Re-run the wizard',
+    description: 'Update your plan if your goals, schedule, or equipment have changed. Your training history carries over.',
+    screen: 'CoachBuilder',
+  },
+  {
+    id: 'library',
+    icon: 'library-outline',
+    title: 'Pick from the Plan Library',
+    description: "Ready-made plans by other coaches. Your Precision Coaching keeps adjusting whichever plan you're on.",
+    screen: 'PlanLibrary',
+  },
+  {
+    id: 'manual',
+    icon: 'create-outline',
+    title: 'Build your own',
+    description: 'Hand-pick every exercise and day. Coach output keeps reading your data the same way.',
+    screen: 'ManualBuilder',
+  },
+];
+
 const BLOCK_ICON = {
   heads_up: 'alert-circle-outline',
   early_deload: 'battery-charging-outline',
@@ -272,16 +299,18 @@ export default function PlansScreen({ navigation }) {
     (blockAdvice.action === 'heads_up' || !blockSnoozed);
 
   const isProWithPlan = tier === 'pro' && !!activePlan;
-  // Pro users see Coach Builder first (recommended). Free users see Library
-  // and Manual Builder first because Coach Builder is Pro-gated for them —
-  // showing it at the top alongside a lock icon felt like teasing. The card
-  // is still present (greyed) at the bottom of the list as a Pro preview.
-  const actionCards = tier === 'pro'
-    ? ACTION_CARDS_DEFAULT
-    : [...ACTION_CARDS_DEFAULT].sort((a, b) => {
-        const order = { library: 0, manual: 1, coach: 2 };
-        return (order[a.id] ?? 99) - (order[b.id] ?? 99);
-      });
+  // Three audiences share this list:
+  //   * Pro with an active plan → "switch / re-run wizard" framing
+  //   * Pro without a plan (rare — just after first sign-up) → default order, Coach Builder first
+  //   * Free → Library + Manual first; Coach Builder shown last as a Pro preview
+  const actionCards = isProWithPlan
+    ? ACTION_CARDS_PRO_SWITCH
+    : tier === 'pro'
+      ? ACTION_CARDS_DEFAULT
+      : [...ACTION_CARDS_DEFAULT].sort((a, b) => {
+          const order = { library: 0, manual: 1, coach: 2 };
+          return (order[a.id] ?? 99) - (order[b.id] ?? 99);
+        });
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -409,7 +438,7 @@ export default function PlansScreen({ navigation }) {
               )}
               {tier === 'pro' && (
                 <Text style={styles.proCoachNote}>
-                  Your Precision Coaching adjusts this plan as you progress and check in. To change your goals, head to You → Athlete Hub.
+                  Your Precision Coaching adjusts this plan as you progress and check in. Change goals from You → Athlete Hub; switch to a different plan from the options below.
                 </Text>
               )}
               <View style={styles.activePlanActions}>
@@ -532,10 +561,17 @@ export default function PlansScreen({ navigation }) {
           </TouchableOpacity>
         )}
 
-        {/* Decision Hub — hidden for Pro users with an active plan; they manage goals from Athlete Hub */}
-        {!isProWithPlan && (
+        {/* Decision Hub — visible to everyone. Section title and copy adapt:
+            Pro with active plan → "Switch your plan", Free / no plan → "Start or build a plan". */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Start or build a plan</Text>
+          <Text style={styles.sectionTitle}>
+            {isProWithPlan ? 'Switch your plan' : 'Start or build a plan'}
+          </Text>
+          {isProWithPlan && (
+            <Text style={styles.sectionSubtitle}>
+              Your check-ins, PRs, and coach output keep working whichever plan you choose. Activating a new plan starts a fresh training block.
+            </Text>
+          )}
           {actionCards.map(card => {
             const isCoach = card.id === 'coach';
             const proLocked = isCoach && tier !== 'pro';
@@ -578,7 +614,6 @@ export default function PlansScreen({ navigation }) {
             );
           })}
         </View>
-        )}
       </ScrollView>
     </SafeAreaView>
   );
