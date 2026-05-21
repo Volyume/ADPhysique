@@ -17,7 +17,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { VolyumeMark } from '../components/BrandMark';
 import { signInWithEmail, signUpWithEmail, resetPassword, getSupabaseClient } from '../lib/supabase';
 import { syncProfile, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
-import { wipeAllUserData } from '../lib/database';
+import { wipeAllUserData, migrateLocalUserId } from '../lib/database';
 import { logError } from '../lib/errorLog';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../store/useAppStore';
@@ -85,6 +85,15 @@ export default function LoginScreen({ navigation, route }) {
         }
         await AsyncStorage.setItem('@volyume_last_supabase_user_id', supabaseUserId).catch(() => {});
 
+        // Re-stamp any local rows that were keyed to the prior local user id
+        // so existing local data is owned by the freshly-signed-in supabase
+        // user. Without this, a user who built a plan as a local user before
+        // signing up would have their plans orphaned.
+        if (localUserId && localUserId !== supabaseUserId) {
+          try { await migrateLocalUserId(localUserId, supabaseUserId); }
+          catch (e) { logError('LoginScreen.handleEmailAuth.migrateLocalUserId', e); }
+        }
+
         // Fire-and-forget: sync profile then upload local data in background
         syncProfile(supabaseUserId, userProfile, tier).catch(() => {});
         if (mode === 'signup') {
@@ -92,7 +101,9 @@ export default function LoginScreen({ navigation, route }) {
           bulkUploadLocalData(supabaseUserId, localUserId).catch(() => {});
           navigation.replace('ProOnboarding');
         } else {
-          // Existing account — pull cloud data down (new device scenario)
+          // Existing account — push any local-only edits made while signed
+          // out, then pull cloud data down (new device scenario).
+          bulkUploadLocalData(supabaseUserId, supabaseUserId).catch(() => {});
           pullFromCloud(supabaseUserId).catch(() => {});
           // Server-authoritative tier — enforcement point after beta
           refreshTierFromCloud(getSupabaseClient(), supabaseUserId).catch(() => {});

@@ -19,6 +19,24 @@ import {
   getBodyMetricLog,
   insertWorkoutFromCloud,
   insertWorkoutSetFromCloud,
+  // Bulk read helpers
+  getAllProgrammes,
+  getAllRoutinesForUser,
+  getAllRoutineExercisesForUser,
+  getAllMesocyclesForUser,
+  getAllMesocycleWeeksForUser,
+  getAllMorningWeightsForUser,
+  getAllWeeklyCheckinsForUser,
+  getAllCoachOutputsForUser,
+  getAllBodyMetricsForUser,
+  getAllExerciseUserNotesForUser,
+  // Cloud restore helpers
+  insertRoutineFromCloud,
+  insertProgrammeFromCloud,
+  insertRoutineExerciseFromCloud,
+  insertMorningWeightFromCloud,
+  insertWeeklyCheckinFromCloud,
+  insertCoachOutputFromCloud,
 } from './database';
 import { logError, logWarn } from './errorLog';
 
@@ -101,7 +119,7 @@ export async function syncCustomExercises(supabaseUserId) {
     }));
     await sb.from('exercises').upsert(rows, { onConflict: 'id', ignoreDuplicates: false });
   } catch (e) {
-    console.warn('[sync] syncCustomExercises failed:', e?.message);
+    logWarn('sync.syncCustomExercises', e?.message);
   }
 }
 
@@ -121,7 +139,7 @@ export async function syncWorkout(supabaseUserId, workoutId) {
     const sets = await getWorkoutSetsForWorkout(workoutId);
     await _upsertSets(sb, supabaseUserId, sets);
   } catch (e) {
-    console.warn('[sync] syncWorkout failed:', e?.message);
+    logWarn('sync.syncWorkout', e?.message, { workoutId });
   }
 }
 
@@ -175,7 +193,7 @@ async function _upsertSets(sb, supabaseUserId, sets) {
     try {
       await sb.from('workout_sets').upsert(chunk, { onConflict: 'id' });
     } catch (e) {
-      console.warn('[sync] _upsertSets chunk failed:', e?.message);
+      logWarn('sync._upsertSets', 'chunk failed', { error: e?.message });
     }
   }
 }
@@ -195,10 +213,21 @@ export async function syncBodyMetric(supabaseUserId, metric) {
       metric_date: msToDate(metric.loggedAt),
       body_weight: metric.weightKg ?? null,
       waist: metric.waistCm ?? null,
+      // Extended measurement fields — match the local body_metric_log shape
+      chest: metric.chestCm ?? null,
+      hips: metric.hipsCm ?? null,
+      thigh: metric.thighCm ?? null,
+      arms: metric.armCm ?? null,
+      shoulders: metric.shouldersCm ?? null,
+      forearms: metric.forearmCm ?? null,
+      ham: metric.hamCm ?? null,
+      calves: metric.calfCm ?? null,
+      body_fat_percent: metric.bodyFatPercent ?? null,
+      body_fat_source: metric.bodyFatSource ?? null,
       notes: metric.notes ?? null,
     }, { onConflict: 'id' });
   } catch (e) {
-    console.warn('[sync] syncBodyMetric failed:', e?.message);
+    logWarn('sync.syncBodyMetric', e?.message, { metricId: metric?.id });
   }
 }
 
@@ -258,6 +287,18 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
           metric_date: msToDate(m.loggedAt),
           body_weight: m.weightKg ?? null,
           waist: m.waistCm ?? null,
+          // Extended columns added in setup_complete.sql so the Pro user
+          // doesn't lose chest/hips/quads/etc. measurements on device loss.
+          chest: m.chestCm ?? null,
+          hips: m.hipsCm ?? null,
+          thigh: m.thighCm ?? null,
+          arms: m.armCm ?? null,
+          shoulders: m.shouldersCm ?? null,
+          forearms: m.forearmCm ?? null,
+          ham: m.hamCm ?? null,
+          calves: m.calfCm ?? null,
+          body_fat_percent: m.bodyFatPercent ?? null,
+          body_fat_source: m.bodyFatSource ?? null,
           notes: m.notes ?? null,
         })).filter(r => r.metric_date);
         for (let i = 0; i < rows.length; i += 200) {
@@ -268,10 +309,160 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
       logWarn('sync.bulkUploadLocalData', 'body metrics upload failed', { error: e?.message });
     }
 
+    // ─── New Pro-state tables ─────────────────────────────────────────────
+    // Each block is independently fault-tolerant: failures on one table
+    // log + carry on. None of these are needed for free-tier UX so they
+    // can degrade gracefully on a partial cloud schema.
+
+    await _pushProgrammes(sb, supabaseUserId, localUserId);
+    await _pushRoutinesAndExercises(sb, supabaseUserId, localUserId);
+    await _pushMesocycles(sb, supabaseUserId, localUserId);
+    await _pushMorningWeights(sb, supabaseUserId, localUserId);
+    await _pushWeeklyCheckins(sb, supabaseUserId, localUserId);
+    await _pushCoachOutputs(sb, supabaseUserId, localUserId);
+
     console.log('[sync] bulk upload complete');
   } catch (e) {
     logError('sync.bulkUploadLocalData', e, { supabaseUserId, localUserId });
   }
+}
+
+// ─── Per-table push helpers ───────────────────────────────────────────────
+
+async function _pushProgrammes(sb, supabaseUserId, localUserId) {
+  try {
+    const programmes = await getAllProgrammes(localUserId);
+    if (!programmes?.length) return;
+    const rows = programmes.map(p => ({
+      id: p.id, user_id: supabaseUserId,
+      name: p.name, description: p.description ?? null,
+      is_library: !!p.isLibrary, is_active: !!p.isActive,
+      source_programme_id: p.sourceProgrammeId ?? null,
+      updated_at: new Date().toISOString(),
+    }));
+    await sb.from('programmes').upsert(rows, { onConflict: 'id' });
+  } catch (e) { logWarn('sync._pushProgrammes', e?.message, { error: e?.message }); }
+}
+
+async function _pushRoutinesAndExercises(sb, supabaseUserId, localUserId) {
+  try {
+    const routines = await getAllRoutinesForUser(localUserId);
+    if (routines?.length) {
+      const rows = routines.map(r => ({
+        id: r.id, user_id: supabaseUserId,
+        name: r.name, description: r.description ?? null,
+        split_type: r.splitType ?? null,
+        is_active: r.isActive == null ? true : !!r.isActive,
+        updated_at: new Date().toISOString(),
+      }));
+      await sb.from('routines').upsert(rows, { onConflict: 'id' });
+    }
+    const routineExs = await getAllRoutineExercisesForUser(localUserId);
+    if (routineExs?.length) {
+      const rows = routineExs.map(re => ({
+        id: re.id, routine_id: re.routineId, exercise_id: re.exerciseId,
+        order_in_routine: re.orderInRoutine ?? 0,
+        recommended_sets: re.recommendedSets ?? 3,
+        recommended_reps_min: re.recommendedRepsMin ?? 6,
+        recommended_reps_max: re.recommendedRepsMax ?? 12,
+        notes: re.notes ?? null,
+      }));
+      for (let i = 0; i < rows.length; i += 200) {
+        await sb.from('routine_exercises').upsert(rows.slice(i, i + 200), { onConflict: 'id' });
+      }
+    }
+  } catch (e) { logWarn('sync._pushRoutinesAndExercises', e?.message, { error: e?.message }); }
+}
+
+async function _pushMesocycles(sb, supabaseUserId, localUserId) {
+  try {
+    const mesos = await getAllMesocyclesForUser(localUserId);
+    if (mesos?.length) {
+      const rows = mesos.map(m => ({
+        id: m.id, user_id: supabaseUserId,
+        name: m.name,
+        start_date: m.startDate ?? null,
+        end_date: m.endDate ?? null,
+        duration_weeks: m.durationWeeks ?? null,
+        focus: m.focus ?? null,
+        is_active: !!m.isActive,
+        updated_at: new Date().toISOString(),
+      }));
+      await sb.from('mesocycles').upsert(rows, { onConflict: 'id' });
+    }
+    const weeks = await getAllMesocycleWeeksForUser(localUserId);
+    if (weeks?.length) {
+      const rows = weeks.map(w => ({
+        id: w.id, mesocycle_id: w.mesocycleId,
+        week_number: w.weekIndex ?? w.weekNumber ?? 1,
+        is_deload: !!w.isDeload,
+        notes: w.notes ?? null,
+      }));
+      for (let i = 0; i < rows.length; i += 200) {
+        await sb.from('mesocycle_weeks').upsert(rows.slice(i, i + 200), { onConflict: 'id' });
+      }
+    }
+  } catch (e) { logWarn('sync._pushMesocycles', e?.message, { error: e?.message }); }
+}
+
+async function _pushMorningWeights(sb, supabaseUserId, localUserId) {
+  try {
+    const weights = await getAllMorningWeightsForUser(localUserId);
+    if (!weights?.length) return;
+    const rows = weights.map(w => ({
+      id: w.id, user_id: supabaseUserId,
+      weight_kg: w.weightKg,
+      logged_at: msToISO(w.loggedAt),
+      notes: w.notes ?? null,
+    })).filter(r => r.logged_at);
+    for (let i = 0; i < rows.length; i += 200) {
+      await sb.from('morning_weights').upsert(rows.slice(i, i + 200), { onConflict: 'id' });
+    }
+  } catch (e) { logWarn('sync._pushMorningWeights', e?.message, { error: e?.message }); }
+}
+
+async function _pushWeeklyCheckins(sb, supabaseUserId, localUserId) {
+  try {
+    const checkins = await getAllWeeklyCheckinsForUser(localUserId);
+    if (!checkins?.length) return;
+    // Writes to weekly_checkins_v2 (created in setup_complete.sql) so the
+    // shape matches what runWeeklyCoach reads. The original v1 weekly_checkins
+    // table has a different schema for a separate UX that's not in scope.
+    const rows = checkins.map(c => ({
+      id: c.id, user_id: supabaseUserId,
+      week_start: c.weekStart,
+      energy_score: c.energyScore ?? null,
+      soreness_score: c.sorenessScore ?? null,
+      stress_score: c.stressScore ?? null,
+      sleep_hours: c.sleepHours ?? null,
+      cals_adherence: c.calsAdherence ?? null,
+      steps_adherence: c.stepsAdherence ?? null,
+      training_performance: c.trainingPerformance ?? null,
+      joint_pain: !!c.jointPain,
+      sore_muscles: c.soreMuscles ?? null,
+      cycle_override: !!c.cycleOverride,
+      notes: c.notes ?? null,
+    }));
+    for (let i = 0; i < rows.length; i += 200) {
+      await sb.from('weekly_checkins_v2').upsert(rows.slice(i, i + 200), { onConflict: 'id' });
+    }
+  } catch (e) { logWarn('sync._pushWeeklyCheckins', e?.message, { error: e?.message }); }
+}
+
+async function _pushCoachOutputs(sb, supabaseUserId, localUserId) {
+  try {
+    const outputs = await getAllCoachOutputsForUser(localUserId);
+    if (!outputs?.length) return;
+    const rows = outputs.map(o => ({
+      id: o.id, user_id: supabaseUserId,
+      week_start: o.weekStart,
+      output_json: o.outputJson,
+      applied: !!o.applied,
+    }));
+    for (let i = 0; i < rows.length; i += 200) {
+      await sb.from('coach_outputs').upsert(rows.slice(i, i + 200), { onConflict: 'id' });
+    }
+  } catch (e) { logWarn('sync._pushCoachOutputs', e?.message, { error: e?.message }); }
 }
 
 // ─── Pull (new device) ────────────────────────────────────────────────────────
@@ -326,9 +517,86 @@ export async function pullFromCloud(supabaseUserId) {
     if (setFailures > 0) {
       logWarn('sync.pullFromCloud', `${setFailures} sets failed to insert`, { supabaseUserId });
     }
+
+    // Pull the Pro-state tables. Each is independent — if the cloud schema
+    // doesn't have the table yet, the .from() select returns an error which
+    // is caught and logged without breaking the rest of the restore.
+    await _pullProgrammes(sb, supabaseUserId);
+    await _pullRoutinesAndExercises(sb, supabaseUserId);
+    await _pullMorningWeights(sb, supabaseUserId);
+    await _pullWeeklyCheckins(sb, supabaseUserId);
+    await _pullCoachOutputs(sb, supabaseUserId);
+
     return count;
   } catch (e) {
     logError('sync.pullFromCloud', e, { supabaseUserId });
     return 0;
   }
+}
+
+// ─── Per-table pull helpers ───────────────────────────────────────────────
+
+async function _pullProgrammes(sb, supabaseUserId) {
+  try {
+    const { data, error } = await sb.from('programmes').select('*').eq('user_id', supabaseUserId);
+    if (error) { logWarn('sync._pullProgrammes', error.message); return; }
+    for (const p of data ?? []) {
+      try { await insertProgrammeFromCloud(supabaseUserId, p); }
+      catch (e) { logWarn('sync._pullProgrammes', 'insert failed', { id: p.id, error: e?.message }); }
+    }
+  } catch (e) { logWarn('sync._pullProgrammes', e?.message); }
+}
+
+async function _pullRoutinesAndExercises(sb, supabaseUserId) {
+  try {
+    const { data: routines, error: rErr } = await sb.from('routines').select('*').eq('user_id', supabaseUserId);
+    if (rErr) { logWarn('sync._pullRoutines', rErr.message); return; }
+    for (const r of routines ?? []) {
+      try { await insertRoutineFromCloud(supabaseUserId, r); }
+      catch (e) { logWarn('sync._pullRoutines', 'insert failed', { id: r.id, error: e?.message }); }
+    }
+    // Pull every routine_exercise for these routines.
+    const routineIds = (routines ?? []).map(r => r.id);
+    if (routineIds.length === 0) return;
+    const { data: reRows, error: reErr } = await sb
+      .from('routine_exercises').select('*').in('routine_id', routineIds);
+    if (reErr) { logWarn('sync._pullRoutineExercises', reErr.message); return; }
+    for (const re of reRows ?? []) {
+      try { await insertRoutineExerciseFromCloud(re); }
+      catch (e) { logWarn('sync._pullRoutineExercises', 'insert failed', { id: re.id, error: e?.message }); }
+    }
+  } catch (e) { logWarn('sync._pullRoutinesAndExercises', e?.message); }
+}
+
+async function _pullMorningWeights(sb, supabaseUserId) {
+  try {
+    const { data, error } = await sb.from('morning_weights').select('*').eq('user_id', supabaseUserId);
+    if (error) { logWarn('sync._pullMorningWeights', error.message); return; }
+    for (const w of data ?? []) {
+      try { await insertMorningWeightFromCloud(supabaseUserId, w); }
+      catch (e) { logWarn('sync._pullMorningWeights', 'insert failed', { id: w.id, error: e?.message }); }
+    }
+  } catch (e) { logWarn('sync._pullMorningWeights', e?.message); }
+}
+
+async function _pullWeeklyCheckins(sb, supabaseUserId) {
+  try {
+    const { data, error } = await sb.from('weekly_checkins_v2').select('*').eq('user_id', supabaseUserId);
+    if (error) { logWarn('sync._pullWeeklyCheckins', error.message); return; }
+    for (const c of data ?? []) {
+      try { await insertWeeklyCheckinFromCloud(supabaseUserId, c); }
+      catch (e) { logWarn('sync._pullWeeklyCheckins', 'insert failed', { id: c.id, error: e?.message }); }
+    }
+  } catch (e) { logWarn('sync._pullWeeklyCheckins', e?.message); }
+}
+
+async function _pullCoachOutputs(sb, supabaseUserId) {
+  try {
+    const { data, error } = await sb.from('coach_outputs').select('*').eq('user_id', supabaseUserId);
+    if (error) { logWarn('sync._pullCoachOutputs', error.message); return; }
+    for (const co of data ?? []) {
+      try { await insertCoachOutputFromCloud(supabaseUserId, co); }
+      catch (e) { logWarn('sync._pullCoachOutputs', 'insert failed', { id: co.id, error: e?.message }); }
+    }
+  } catch (e) { logWarn('sync._pullCoachOutputs', e?.message); }
 }

@@ -67,12 +67,26 @@ const useAppStore = create((set, get) => ({
     return localUser;
   },
 
-  // Persists userProfile to AsyncStorage so it survives app restarts for local users
+  // Persists userProfile to AsyncStorage so it survives app restarts for local
+  // users AND pushes the change to Supabase if there's an authenticated
+  // session, so profile edits (name, units, training fields) survive a
+  // device swap.
   saveLocalProfile: async (userId, profile) => {
     try {
       await AsyncStorage.setItem(PROFILE_KEY_PFX + userId, JSON.stringify(profile));
     } catch (_) {}
     set({ userProfile: profile });
+    // Mirror to cloud if signed in. Fire-and-forget; failures land in the
+    // Debug logs via syncProfile's own logError. We deliberately import
+    // lazily to avoid a circular dep (sync.js → database.js → … → store).
+    try {
+      const sess = get().session;
+      if (sess?.user?.id) {
+        // eslint-disable-next-line global-require
+        const { syncProfile } = require('../lib/sync');
+        syncProfile(sess.user.id, profile, get().tier).catch(() => {});
+      }
+    } catch (_) {}
   },
 
   // Clears local user from AsyncStorage and store

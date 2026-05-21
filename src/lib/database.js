@@ -7,7 +7,14 @@ let _db = null;
 let _initPromise = null;
 
 function uid() {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+  // UUID v4 — required so rows sync cleanly to Supabase, whose primary-key
+  // columns are typed UUID. The previous compact format (timestamp + random
+  // suffix) silently FK-failed on every Supabase upsert.
+  // Math.random is fine here; ids are not security-sensitive.
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
 }
 
 function rowToCamel(row) {
@@ -2102,10 +2109,12 @@ export async function wipeAllUserData(userId) {
         logError(`database.wipeAllUserData.${table}`, e, { userId });
       }
     }
-    // User-owned (custom) exercises — canonical exercises with user_id IS NULL
-    // are intentionally preserved.
+    // Custom exercises — the local exercises table has no user_id column
+    // (canonical seed exercises are shared library data and aren't keyed
+    // per user). Custom user-added exercises are tagged is_custom = 1, so
+    // wipe those instead. Canonical exercises stay intact.
     try {
-      await d.runAsync('DELETE FROM exercises WHERE user_id = ?', [userId]);
+      await d.runAsync('DELETE FROM exercises WHERE is_custom = 1');
     } catch (e) {
       logError('database.wipeAllUserData.exercises', e, { userId });
     }
@@ -2686,6 +2695,193 @@ export async function getLatestCoachOutput(userId) {
   );
   if (!row) return null;
   try { return JSON.parse(row.output_json); } catch { return rowToCamel(row); }
+}
+
+// ─── Bulk-sync read helpers ───────────────────────────────────────────────
+// Return every row owned by `userId` for a given table — used by sync.js to
+// upload the user's complete state to the cloud (idempotent upserts so
+// re-running is safe). Kept separate from the paginated/recency-filtered
+// reads the UI uses.
+
+export async function getAllRoutineExercisesForUser(userId) {
+  const d = await db();
+  // Join via routines so we only pull this user's routine exercises.
+  const rows = await d.getAllAsync(
+    `SELECT re.* FROM routine_exercises re
+     JOIN routines r ON r.id = re.routine_id
+     WHERE r.user_id = ?`,
+    [userId],
+  );
+  return rows.map(rowToCamel);
+}
+
+export async function getAllRoutinesForUser(userId) {
+  const d = await db();
+  const rows = await d.getAllAsync('SELECT * FROM routines WHERE user_id = ?', [userId]);
+  return rows.map(rowToCamel);
+}
+
+export async function getAllMesocyclesForUser(userId) {
+  const d = await db();
+  const rows = await d.getAllAsync('SELECT * FROM mesocycles WHERE user_id = ?', [userId]);
+  return rows.map(rowToCamel);
+}
+
+export async function getAllMesocycleWeeksForUser(userId) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT mw.* FROM mesocycle_weeks mw
+     JOIN mesocycles m ON m.id = mw.mesocycle_id
+     WHERE m.user_id = ?`,
+    [userId],
+  );
+  return rows.map(rowToCamel);
+}
+
+export async function getAllMorningWeightsForUser(userId) {
+  const d = await db();
+  const rows = await d.getAllAsync('SELECT * FROM morning_weights WHERE user_id = ?', [userId]);
+  return rows.map(rowToCamel);
+}
+
+export async function getAllWeeklyCheckinsForUser(userId) {
+  const d = await db();
+  const rows = await d.getAllAsync('SELECT * FROM weekly_checkins WHERE user_id = ?', [userId]);
+  return rows.map(rowToCamel);
+}
+
+export async function getAllCoachOutputsForUser(userId) {
+  const d = await db();
+  const rows = await d.getAllAsync('SELECT * FROM coach_outputs WHERE user_id = ?', [userId]);
+  return rows.map(rowToCamel);
+}
+
+export async function getAllBodyMetricsForUser(userId) {
+  const d = await db();
+  const rows = await d.getAllAsync('SELECT * FROM body_metric_log WHERE user_id = ?', [userId]);
+  return rows.map(rowToCamel);
+}
+
+export async function getAllExerciseUserNotesForUser(userId) {
+  const d = await db();
+  const rows = await d.getAllAsync('SELECT * FROM exercise_user_notes WHERE user_id = ?', [userId]);
+  return rows.map(rowToCamel);
+}
+
+// ─── Bulk-sync write helpers (used by pullFromCloud) ──────────────────────
+// Insert OR IGNORE so a cloud restore doesn't overwrite a row that's already
+// locally updated. Each function takes a row in camelCase as it comes back
+// from Supabase via Volyume's existing snake_case→camel mapper.
+
+export async function insertRoutineFromCloud(userId, r) {
+  const d = await db();
+  await d.runAsync(
+    `INSERT OR IGNORE INTO routines
+      (id, user_id, name, description, split_type, day_of_week, is_active,
+       is_library, is_sample, source_routine_id, programme_id, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      r.id, userId, r.name, r.description ?? null, r.split_type ?? r.splitType ?? null,
+      r.day_of_week ?? r.dayOfWeek ?? null,
+      r.is_active ?? r.isActive ?? 1,
+      r.is_library ?? r.isLibrary ?? 0,
+      r.is_sample ?? r.isSample ?? 0,
+      r.source_routine_id ?? r.sourceRoutineId ?? null,
+      r.programme_id ?? r.programmeId ?? null,
+      typeof (r.created_at ?? r.createdAt) === 'string' ? new Date(r.created_at ?? r.createdAt).getTime() : (r.created_at ?? r.createdAt ?? Date.now()),
+      Date.now(),
+    ],
+  );
+}
+
+export async function insertProgrammeFromCloud(userId, p) {
+  const d = await db();
+  await d.runAsync(
+    `INSERT OR IGNORE INTO programmes
+      (id, user_id, name, description, is_library, is_active, source_programme_id, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      p.id, userId, p.name, p.description ?? null,
+      p.is_library ? 1 : 0,
+      p.is_active ? 1 : 0,
+      p.source_programme_id ?? null,
+      typeof p.created_at === 'string' ? new Date(p.created_at).getTime() : (p.created_at ?? Date.now()),
+      Date.now(),
+    ],
+  );
+}
+
+export async function insertRoutineExerciseFromCloud(re) {
+  const d = await db();
+  await d.runAsync(
+    `INSERT OR IGNORE INTO routine_exercises
+      (id, routine_id, exercise_id, order_in_routine, recommended_sets,
+       recommended_reps_min, recommended_reps_max, notes, starting_weight,
+       rest_seconds, superset_group_id, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      re.id, re.routine_id, re.exercise_id,
+      re.order_in_routine ?? 0,
+      re.recommended_sets ?? 3,
+      re.recommended_reps_min ?? 6,
+      re.recommended_reps_max ?? 12,
+      re.notes ?? null,
+      re.starting_weight ?? null,
+      re.rest_seconds ?? null,
+      re.superset_group_id ?? null,
+      typeof re.created_at === 'string' ? new Date(re.created_at).getTime() : (re.created_at ?? Date.now()),
+      Date.now(),
+    ],
+  );
+}
+
+export async function insertMorningWeightFromCloud(userId, w) {
+  const d = await db();
+  await d.runAsync(
+    `INSERT OR IGNORE INTO morning_weights (id, user_id, weight_kg, logged_at, notes, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [
+      w.id, userId, w.weight_kg,
+      typeof w.logged_at === 'string' ? new Date(w.logged_at).getTime() : w.logged_at,
+      w.notes ?? null,
+      typeof w.created_at === 'string' ? new Date(w.created_at).getTime() : (w.created_at ?? Date.now()),
+    ],
+  );
+}
+
+export async function insertWeeklyCheckinFromCloud(userId, c) {
+  const d = await db();
+  await d.runAsync(
+    `INSERT OR IGNORE INTO weekly_checkins
+      (id, user_id, week_start, energy_score, soreness_score, stress_score, sleep_hours,
+       cals_adherence, steps_adherence, cycle_override, notes,
+       training_performance, joint_pain, sore_muscles, sleep_quality, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      c.id, userId, c.week_start,
+      c.energy_score ?? null, c.soreness_score ?? null, c.stress_score ?? null,
+      c.sleep_hours ?? null, c.cals_adherence ?? null, c.steps_adherence ?? null,
+      c.cycle_override ? 1 : 0, c.notes ?? null,
+      c.training_performance ?? null,
+      c.joint_pain ? 1 : 0,
+      c.sore_muscles ?? null,
+      c.sleep_quality ?? null,
+      Date.now(), Date.now(),
+    ],
+  );
+}
+
+export async function insertCoachOutputFromCloud(userId, co) {
+  const d = await db();
+  await d.runAsync(
+    `INSERT OR IGNORE INTO coach_outputs (id, user_id, week_start, output_json, applied, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [
+      co.id, userId, co.week_start, co.output_json,
+      co.applied ? 1 : 0,
+      typeof co.created_at === 'string' ? new Date(co.created_at).getTime() : (co.created_at ?? Date.now()),
+    ],
+  );
 }
 
 export async function getCoachOutputHistory(userId, limit = 52) {

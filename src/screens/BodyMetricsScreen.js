@@ -10,6 +10,7 @@ import { LineChart } from 'react-native-gifted-charts';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logBodyMetric, getBodyMetricLog } from '../lib/database';
+import { syncBodyMetric } from '../lib/sync';
 import { computeEWMA, computeWeeklyWeightChange } from '../lib/nutritionEngine';
 import useAppStore from '../store/useAppStore';
 import { formatBodyWeight, formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg } from '../lib/units';
@@ -260,7 +261,7 @@ function PhysiqueOptIn({ onEnable }) {
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function BodyMetricsScreen({ navigation }) {
-  const { user, units, bodyWeightUnits, tier } = useAppStore();
+  const { user, session, units, bodyWeightUnits, tier } = useAppStore();
   const bwu = bodyWeightUnits || 'st';
   const [physiqueEnabled, setPhysiqueEnabled] = useState(null); // null = loading
   const [calm, setCalm] = useState(false);
@@ -422,7 +423,13 @@ export default function BodyMetricsScreen({ navigation }) {
           if (!isNaN(n)) data[dbField] = n;
         }
       }
-      await logBodyMetric(user.id, data);
+      const saved = await logBodyMetric(user.id, data);
+      // Fire-and-forget cloud sync. If offline, the next bulkUploadLocalData
+      // (on app foreground or next sign-in) will catch it.
+      if (session?.user?.id) {
+        syncBodyMetric(session.user.id, { id: saved?.id ?? saved, ...data })
+          .catch(() => {});
+      }
       setShowForm(false);
       setForm({
         body_weight: '', body_weight_st: '', body_weight_st_lbs: '0',

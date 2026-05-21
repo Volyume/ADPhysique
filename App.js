@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, Alert, AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';
@@ -213,6 +213,39 @@ export default function App() {
     });
 
     return () => responseSub.remove();
+  }, []);
+
+  // Foreground sync — drains the local→cloud sync whenever the app returns
+  // to active state. Offline writes (workouts logged with no connection, a
+  // body metric entered while underground, etc.) catch up the next time the
+  // user opens the app on a connected network. Throttled so a quick
+  // foreground/background toggle doesn't hammer the API.
+  useEffect(() => {
+    let lastSyncAt = 0;
+    const MIN_SYNC_INTERVAL_MS = 60_000; // at most once a minute
+    async function maybeSync() {
+      const now = Date.now();
+      if (now - lastSyncAt < MIN_SYNC_INTERVAL_MS) return;
+      try {
+        const sb = getSupabaseClient();
+        if (!sb) return;
+        const { data: { session: s } } = await sb.auth.getSession();
+        const supabaseUserId = s?.user?.id;
+        const localUserId = useAppStore.getState().user?.id;
+        if (!supabaseUserId || !localUserId) return;
+        lastSyncAt = now;
+        // eslint-disable-next-line global-require
+        const { bulkUploadLocalData } = require('./src/lib/sync');
+        bulkUploadLocalData(supabaseUserId, localUserId).catch(() => {});
+      } catch (_) { /* offline / no session — try again next foreground */ }
+    }
+    const sub = AppState.addEventListener('change', state => {
+      if (state === 'active') maybeSync();
+    });
+    // Also run once on mount so an app launched after a long offline period
+    // catches up immediately.
+    maybeSync();
+    return () => sub.remove();
   }, []);
 
   return (
