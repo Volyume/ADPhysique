@@ -372,6 +372,17 @@ export default function RootNavigator() {
     return () => subscription?.unsubscribe();
   }, []);
 
+  // Splash self-heal: if we ever land in a state where the user is gone
+  // but a "checked" flag has been flipped back to false, re-run the
+  // checks so we don't sit on the splash forever. Belt-and-braces guard
+  // against any future refactor that might reset checked-flags mid-session.
+  // Also: if isAuthLoading got stuck true with no user, release it.
+  useEffect(() => {
+    if (!user && !tierChecked) checkTier().catch(() => {});
+    if (!user && !firstRunChecked) checkFirstRun().catch(() => {});
+    if (!user && isAuthLoading) setAuthLoading(false);
+  }, [user, tierChecked, firstRunChecked, isAuthLoading, checkTier, checkFirstRun, setAuthLoading]);
+
   if (isAuthLoading || !splashReady || !firstRunChecked || !tierChecked) {
     return <SplashScreen />;
   }
