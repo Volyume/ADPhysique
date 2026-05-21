@@ -207,31 +207,31 @@ const useAppStore = create((set, get) => ({
 
     // Missing cloud row OR row with null tier. Happens when:
     //   - account was previously deleted (RPC wipes public.users_profile but
-    //     auth.users persists, so a fresh OAuth sign-in resurrects the same
+    //     auth.users persists, so a fresh sign-in resurrects the same
     //     user_id with no profile to restore), OR
     //   - first-ever cloud sign-up whose row hasn't been created yet (the
     //     auth listener fires before any syncProfile call lands).
-    // Without this branch, `tier` stays null after a successful sign-in and
-    // the navigator keeps rendering WelcomeStack — the user appears to be
-    // bounced back to the Login screen they came from.
+    //
+    // Two sub-cases — distinguished by whether the user already picked a
+    // tier locally:
+    //   (a) Mid sign-up flow: user already picked Pro/Free on Welcome and
+    //       is signing in from ProOnboardingScreen / FirstRunScreen. Leave
+    //       local tier alone — the onboarding flow will create the cloud
+    //       row when it completes.
+    //   (b) Returning user with a deleted account (or fresh sign-in from
+    //       the "Already have an account?" link): no local tier. Treat
+    //       this as a brand-new enrollment — force firstRunComplete=false
+    //       and leave tier null so the navigator falls back to
+    //       WelcomeStack and the user picks their tier fresh.
+    //
+    // RootNavigator detects sub-case (b) (signed-in user with no tier) and
+    // resets navigation to Welcome so the user doesn't get stuck on the
+    // Login screen they came from.
     if (!cloudData || !cloudData.tier) {
-      const currentTier = get().tier;
-      if (!currentTier) {
-        // Default to 'free' so the navigator can move forward. The user can
-        // upgrade via the Pro card in Settings. Without this default, sign-in
-        // appears broken — the router has no tier to route on.
-        try { await AsyncStorage.setItem(TIER_KEY, 'free'); } catch (_) {}
-        set({ tier: 'free', tierChecked: true });
-      }
-      // Best-effort: create the missing users_profile row so subsequent
-      // sign-ins restore properly. Fire-and-forget — don't block the
-      // navigator on it. The DB trigger sets tier='free' by default.
-      try {
-        // eslint-disable-next-line global-require
-        const { syncProfile } = require('../lib/sync');
-        const localProfile = get().userProfile;
-        syncProfile(supabaseUserId, localProfile, get().tier).catch(() => {});
-      } catch (_) {}
+      // Clear any stale firstRunComplete so we don't shortcut onboarding.
+      // Both sub-cases want a clean run through the wizard.
+      try { await AsyncStorage.removeItem(FIRST_RUN_KEY); } catch (_) {}
+      set({ firstRunComplete: false, firstRunChecked: true });
       return;
     }
 

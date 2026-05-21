@@ -392,6 +392,19 @@ export default function RootNavigator() {
                 new Promise(resolve => setTimeout(resolve, 8000)),
               ]);
               refreshTierFromCloud(client, session.user.id).catch(() => {});
+
+              // If cloud profile was missing AND the user had no local tier
+              // picked, restoreSessionFromCloud leaves tier=null. The router
+              // re-renders WelcomeStack but the navigator's internal screen
+              // history keeps the user on whatever screen they came from
+              // (typically Login). Reset to Welcome so they re-enter the
+              // enrollment flow like a brand-new user.
+              const tierAfter = useAppStore.getState().tier;
+              if (!tierAfter && navigationRef.isReady()) {
+                try {
+                  navigationRef.reset({ index: 0, routes: [{ name: 'Welcome' }] });
+                } catch (_) {}
+              }
             } finally {
               setAuthLoading(false);
             }
