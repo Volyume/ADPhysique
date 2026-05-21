@@ -504,16 +504,22 @@ const useAppStore = create((set, get) => ({
     }));
   },
 
+  // Subscribers (Athlete Hub volume chart, etc.) read this to know
+  // when to re-fetch their aggregates. Bump it on every set logged so
+  // visible charts can refresh live during a workout instead of waiting
+  // for the next screen focus.
+  lastSetLoggedAt: 0,
+
   addSetToCurrentExercise: (setData) => {
     set((state) => {
       const entry = state.workoutExercises[state.currentExerciseIndex];
-      if (!entry) return {};
+      if (!entry) return { lastSetLoggedAt: Date.now() };
       const updated = state.workoutExercises.slice();
       updated[state.currentExerciseIndex] = {
         ...entry,
         sets: [...(entry.sets || []), setData],
       };
-      return { workoutExercises: updated };
+      return { workoutExercises: updated, lastSetLoggedAt: Date.now() };
     });
   },
 

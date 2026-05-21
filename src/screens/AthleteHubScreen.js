@@ -266,6 +266,17 @@ export default function AthleteHubScreen({ navigation }) {
     getWellbeingMode().then(m => setCalm(isCalm(m)));
   }, [user?.id]));
 
+  // Live refresh when sets are logged in the current workout. Subscribes
+  // to lastSetLoggedAt in the store; when it bumps (every logged set),
+  // re-run load() so the volume / freshness / recovery cards reflect
+  // the freshest data without waiting for the user to leave + return.
+  const lastSetLoggedAt = useAppStore(s => s.lastSetLoggedAt);
+  useEffect(() => {
+    if (!user?.id || !lastSetLoggedAt) return;
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastSetLoggedAt]);
+
   async function load() {
     if (tier === 'pro') {
       try {
