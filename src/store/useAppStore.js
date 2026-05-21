@@ -186,6 +186,17 @@ const useAppStore = create((set, get) => ({
   },
 
   setTier: async (tier) => {
+    const prev = get().tier;
+    if (prev !== tier) {
+      // Log every tier transition so production issues are diagnosable
+      // from the in-app debug log. Demotions (pro → free) are the bug
+      // pattern we've been chasing; without this, a user reporting "I
+      // lost Pro" gives us no trail to follow.
+      try {
+        // eslint-disable-next-line global-require
+        require('../lib/errorLog').logWarn('useAppStore.setTier', `tier ${prev} → ${tier}`, { prev, next: tier });
+      } catch (_) {}
+    }
     try { await AsyncStorage.setItem(TIER_KEY, tier); } catch (_) {}
     set({ tier });
   },

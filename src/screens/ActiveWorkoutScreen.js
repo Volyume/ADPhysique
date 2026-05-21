@@ -95,11 +95,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [prevSets, setPrevSets] = useState([]);
   const [allTimeSets, setAllTimeSets] = useState([]);
   const [loggedSets, setLoggedSets] = useState([]);
-  // Inline "Why?" chip — peek at the coaching cue (routine_exercise.notes
-  // or the exercise's default notes) without opening the full Info modal.
-  // Closes automatically when the exercise changes so a stale expansion
-  // from the previous exercise doesn't bleed into the next one.
-  const [showWhy, setShowWhy] = useState(false);
   // Flashes the SetEntry card border amber for ~700ms after a successful
   // Log set, so the tap is acknowledged visibly. Resets via a tracked
   // timeout so cycling exercises mid-flash doesn't leave it stuck on.
@@ -627,10 +622,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       } catch (_e) {}
     }
 
-    // Reset the inline "Why?" panel so the previous exercise's expansion
-    // doesn't bleed into the next one.
-    setShowWhy(false);
-
     loadHistory();
   }, [exercise?.id, currentExerciseIndex]);
 
@@ -1154,21 +1145,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </View>
           )}
 
-          {/* Weekly plan progress */}
-          {weeklyPlan && (
-            <View style={styles.weeklyPlanRow}>
-              <Ionicons name="calendar-outline" size={13} color={colors.textMuted} />
-              <Text style={styles.weeklyPlanText}>
-                {weeklyActual}/{weeklyPlan.plannedSets} sets this week
-              </Text>
-              <View style={[
-                styles.weeklyPlanDot,
-                weeklyActual >= weeklyPlan.plannedSets ? styles.dotGreen :
-                weeklyActual >= weeklyPlan.plannedSets - 2 ? styles.dotAmber :
-                styles.dotMuted,
-              ]} />
-            </View>
-          )}
+          {/* Rest timer — sits ABOVE the SetEntry card, in the slot vacated
+              by the old weekly-sets calendar row. Stays in the user's
+              eye-line with the inputs but doesn't clutter the card border.
+              The timer only renders when active so this space is normally
+              empty. */}
+          <RestTimer />
 
           {/* Target complete banner */}
           {targetComplete && (
@@ -1215,36 +1197,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 </Text>
               </View>
             )}
-            {/* "Why?" chip — quick inline peek at the coaching cue for this
-                exercise. Pulls from routine_exercise.notes (the plan author's
-                cue) and falls back to FORM_TIPS / the exercise's default
-                notes. The full Info modal still exists for the deep dive;
-                this is the in-glance version that doesn't take you off the
-                logging screen. */}
-            {(() => {
-              const cue = routineExercise?.notes || FORM_TIPS[exercise?.name] || exercise?.notes;
-              if (!cue) return null;
-              return (
-                <>
-                  <TouchableOpacity
-                    style={[styles.whyChip, showWhy && styles.whyChipActive]}
-                    onPress={() => { Haptics.selectionAsync().catch(() => {}); setShowWhy(v => !v); }}
-                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                    accessibilityRole="button"
-                    accessibilityLabel={showWhy ? 'Hide coaching cue' : 'Show coaching cue'}
-                  >
-                    <Ionicons name="sparkles-outline" size={12} color={colors.primary} />
-                    <Text style={styles.whyChipText}>{showWhy ? 'Hide cue' : 'Why this exercise?'}</Text>
-                    <Ionicons name={showWhy ? 'chevron-up' : 'chevron-down'} size={12} color={colors.primary} />
-                  </TouchableOpacity>
-                  {showWhy && (
-                    <View style={styles.whyPanel}>
-                      <Text style={styles.whyPanelText}>{cue}</Text>
-                    </View>
-                  )}
-                </>
-              );
-            })()}
             {currentSet.setType !== 'warmup' && targetReason && (
               <View style={styles.coachReasonChip}>
                 <Ionicons name="sparkles-outline" size={11} color={colors.primary} />
@@ -1287,13 +1239,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <Text style={styles.warmupSuggestText}>Suggest warm-up sets</Text>
               </TouchableOpacity>
             )}
-            {/* Rest timer lives directly above the inputs so the countdown
-                sits in the user's eye-line while they're setting up the
-                next weight/reps. Margin pulled tight so the two read as a
-                single block — timer at top, log inputs immediately below. */}
-            <View style={styles.timerSlot}>
-              <RestTimer />
-            </View>
             <SetEntry
               value={currentSet}
               onChange={(next) => {
@@ -2296,22 +2241,6 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start', marginBottom: spacing.xs,
   },
   inlineTargetText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
-  whyChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    alignSelf: 'flex-start',
-    paddingHorizontal: spacing.sm, paddingVertical: 4,
-    borderRadius: radius.sm,
-    borderWidth: 1, borderColor: colors.primary + '40',
-    backgroundColor: colors.primaryBg,
-  },
-  whyChipActive: { borderColor: colors.primary + '70' },
-  whyChipText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
-  whyPanel: {
-    backgroundColor: colors.surface2, borderRadius: radius.sm,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    borderWidth: 1, borderColor: colors.border,
-  },
-  whyPanelText: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
   coachReasonChip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: colors.surface2, borderRadius: radius.sm,
@@ -2364,9 +2293,6 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.warning + '40',
   },
   warmupSuggestText: { fontSize: fontSize.xs, color: colors.warning, fontWeight: fontWeight.medium },
-  // Tight margin between the rest timer and the weight/reps inputs — they
-  // read as one block visually so the user's gaze doesn't have to bounce.
-  timerSlot: { marginTop: spacing.xs, marginBottom: -spacing.xs },
   warmupSheetTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.xs },
   warmupSheetSub: { fontSize: fontSize.sm, color: colors.textSecondary, marginBottom: spacing.lg, lineHeight: 20 },
   warmupRow: {
