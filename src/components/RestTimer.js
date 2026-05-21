@@ -6,6 +6,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { scheduleRestNotif, cancelRestNotif } from '../lib/restNotifications';
+import { playRestBeep, preloadRestBeeps } from '../lib/restSound';
 
 const TIME_ADJUSTMENTS = [
   { delta: -30, label: '−30s' },
@@ -101,13 +102,35 @@ export default function RestTimer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restTimerRemaining, restTimerDuration]);
 
+  // Preload beeps once when the timer first becomes active in this mount —
+  // pays the WAV synth + disk-write cost up front so the first countdown
+  // tick doesn't drop audio. preloadRestBeeps is a no-op if expo-av isn't
+  // installed yet (graceful fallback to haptics only).
+  useEffect(() => {
+    if (restTimerActive) preloadRestBeeps();
+  }, [restTimerActive]);
+
+  // Countdown alerts. 3-2-1 escalates both haptic and audio pitch so the
+  // user can feel/hear which tick they're on without looking at the screen.
+  //   3s → 660 Hz beep + Medium haptic
+  //   2s → 770 Hz beep + Heavy haptic
+  //   1s → 880 Hz beep + Heavy haptic + Warning notification
+  //   0s → 1100 Hz "GO" tone + Success notification + extra haptic pulses
   useEffect(() => {
     if (!restTimerActive) return;
-    if (restTimerRemaining <= 3 && restTimerRemaining > 0) {
+    if (restTimerRemaining === 3) {
+      playRestBeep('three');
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    } else if (restTimerRemaining === 2) {
+      playRestBeep('two');
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
-    }
-    if (restTimerRemaining === 0) {
+    } else if (restTimerRemaining === 1) {
+      playRestBeep('one');
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+    } else if (restTimerRemaining === 0) {
+      playRestBeep('go');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       const t1 = setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}), 200);
       const t2 = setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}), 400);
       setShowDone(true);
