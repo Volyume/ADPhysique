@@ -93,6 +93,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const [saving, setSaving] = useState(false);
   const [completedWorkoutCount, setCompletedWorkoutCount] = useState(null);
   const [feedbackExpanded, setFeedbackExpanded] = useState(false);
+  const [expandedVolumeWhy, setExpandedVolumeWhy] = useState(null);
   const [mesoAdvice, setMesoAdvice] = useState(null);
   const [deloadPrediction, setDeloadPrediction] = useState(null);
   const [feedbackHistory, setFeedbackHistory] = useState([]);
@@ -634,6 +635,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               const data = weeklyVolume[muscle];
               const { color, label, status } = getVolumeStatus(data.workingSets, muscle);
               const insight = getVolumeInsight(muscle, data.workingSets, status);
+              const why = getVolumeWhy(muscle, data.workingSets, status);
+              const isExpanded = expandedVolumeWhy === muscle;
               return (
                 <View key={muscle} style={styles.volumeRow}>
                   <View style={styles.volumeRowMain}>
@@ -648,6 +651,29 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                     <Text style={styles.volumeInsightText}>
                       {Math.round(data.workingSets)} sets this week
                     </Text>
+                  )}
+                  {why && (
+                    <>
+                      <TouchableOpacity
+                        onPress={() => setExpandedVolumeWhy(isExpanded ? null : muscle)}
+                        accessibilityRole="button"
+                        accessibilityLabel={isExpanded ? `Hide why ${MUSCLE_DISPLAY_NAMES[muscle] || muscle} sits here` : `Why ${MUSCLE_DISPLAY_NAMES[muscle] || muscle} sits here`}
+                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                        style={styles.volumeWhyToggle}
+                      >
+                        <Text style={styles.volumeWhyToggleText}>
+                          {isExpanded ? 'Hide explanation' : 'Why this status?'}
+                        </Text>
+                        <Ionicons
+                          name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                          size={14}
+                          color={colors.primary}
+                        />
+                      </TouchableOpacity>
+                      {isExpanded && (
+                        <Text style={styles.volumeWhyBody}>{why}</Text>
+                      )}
+                    </>
                   )}
                 </View>
               );
@@ -802,6 +828,34 @@ function getVolumeInsight(muscle, sets, status) {
   return `${n} sets (target: ${range})`;
 }
 
+// Longer-form "why this status" explanation surfaced behind a tap on each
+// muscle row. The insight line above is at-a-glance; this body answers
+// the "but why?" question with concrete next-week guidance and the
+// landmark numbers for THIS muscle specifically.
+function getVolumeWhy(muscle, sets, status) {
+  const landmarks = VOLUME_LANDMARKS[muscle];
+  if (!landmarks) return null;
+  const { mev, mrv } = landmarks;
+  const name = MUSCLE_DISPLAY_NAMES[muscle] || muscle;
+  const closing = ' Targets adjust over time as your body responds to training.';
+  if (status === 'optimal') {
+    return `${name}'s productive range sits between ${mev} and ${mrv} sets per week, and you landed inside it. Next week, look for an extra rep on at least one exercise rather than piling on more sets.${closing}`;
+  }
+  if (status === 'minimum') {
+    return `You're right at the floor for ${name}. ${mev} sets is enough to grow, but only just. One or two more sets across the week, or a slower eccentric on one exercise, moves you into a stronger range.${closing}`;
+  }
+  if (status === 'below') {
+    return `Below the ${mev}-set floor where reliable growth signals start to appear in research. Two routes next week: add a couple of sets to an existing exercise, or sneak in one extra movement that hits ${name}.${closing}`;
+  }
+  if (status === 'near_mrv') {
+    return `Close to the recovery ceiling for ${name} (${mrv} sets per week). One more session and recovery costs start to outweigh the gains. Hold here next week. If your reps are still climbing session to session, you're managing the load well.${closing}`;
+  }
+  if (status === 'over_mrv') {
+    return `Past the recovery ceiling for ${name} (${mrv} sets per week). Soreness, performance drops and joint chatter usually follow. Drop a few sets next week to land back in the green band. Backing off here is how you come back stronger.${closing}`;
+  }
+  return null;
+}
+
 function StatBox({ icon, value, label, tooltip }) {
   return (
     <View style={styles.statBox}>
@@ -853,6 +907,18 @@ const styles = StyleSheet.create({
   muscleName: { flex: 1, fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.textPrimary },
   muscleSetCount: { fontSize: fontSize.sm, color: colors.textSecondary },
   volumeInsightText: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18 },
+  volumeWhyToggle: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    alignSelf: 'flex-start', paddingVertical: 2,
+  },
+  volumeWhyToggleText: {
+    fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold,
+  },
+  volumeWhyBody: {
+    fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 19,
+    backgroundColor: colors.surface2, borderRadius: radius.sm,
+    padding: spacing.sm, marginTop: 2,
+  },
   statusBadge: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, borderRadius: radius.sm },
   statusText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold },
   limitedCard: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.lg, borderWidth: 1, borderColor: colors.border },
