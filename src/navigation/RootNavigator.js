@@ -55,6 +55,7 @@ import ProGoalSetupScreen from '../screens/ProGoalSetupScreen';
 import GoalChangeSummaryScreen from '../screens/GoalChangeSummaryScreen';
 import NotificationSettingsScreen from '../screens/NotificationSettingsScreen';
 import CoachingRemindersScreen from '../screens/CoachingRemindersScreen';
+import AdminLogsScreen from '../screens/AdminLogsScreen';
 import ProOnboardingScreen from '../screens/ProOnboardingScreen';
 import ProSetupCompleteScreen from '../screens/ProSetupCompleteScreen';
 import ProUpgradeScreen from '../screens/ProUpgradeScreen';
@@ -183,6 +184,10 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="GoalChangeSummary" component={GoalChangeSummaryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ title: 'Notifications' }} />
       <Stack.Screen name="CoachingReminders" component={GatedCoachingReminders} options={{ title: 'Coaching reminders' }} />
+      {/* Admin-only — RPC enforces is_admin_email() server-side so a
+          non-admin reaching this route gets zero rows. The Settings
+          row is hidden for non-admins, this is just a defence-in-depth. */}
+      <Stack.Screen name="AdminLogs" component={AdminLogsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="WellbeingCheck" component={WellbeingCheckScreen} options={{ title: 'Wellbeing check' }} />
       <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ headerShown: false }} />
       <Stack.Screen name="DebugLog" component={DebugLogScreen} options={{ headerShown: false }} />

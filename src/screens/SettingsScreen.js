@@ -78,9 +78,9 @@ function SectionHeader({ title }) {
 }
 
 export default function SettingsScreen({ navigation }) {
-  const { user, setUser, setSession, clearAuthStateForSignOut, userProfile, saveLocalProfile, tier, setTier, accessibility, setAccessibilityPref, loadAccessibility, accessibilityLoaded } =
+  const { user, session, setUser, setSession, clearAuthStateForSignOut, userProfile, saveLocalProfile, tier, setTier, accessibility, setAccessibilityPref, loadAccessibility, accessibilityLoaded } =
     useAppStore(useShallow(s => ({
-      user: s.user, setUser: s.setUser, setSession: s.setSession,
+      user: s.user, session: s.session, setUser: s.setUser, setSession: s.setSession,
       clearAuthStateForSignOut: s.clearAuthStateForSignOut,
       userProfile: s.userProfile, saveLocalProfile: s.saveLocalProfile,
       tier: s.tier, setTier: s.setTier,
@@ -89,6 +89,14 @@ export default function SettingsScreen({ navigation }) {
       loadAccessibility: s.loadAccessibility,
       accessibilityLoaded: s.accessibilityLoaded,
     })));
+
+  // Admin gate — match same email pattern enforced server-side by
+  // is_admin_email() so the UI hint matches what the RPC will allow.
+  // Hides "Cloud diagnostics" row for everyone else. Server-side check
+  // is authoritative; this is just for the UI not showing a dead row.
+  const adminEmail = session?.user?.email || '';
+  const isAdmin = /^allansdouglas1983.*@gmail\.com$/i.test(adminEmail)
+                  || adminEmail.toLowerCase() === 'support@volyume.app';
 
   // Hydrate accessibility prefs once on mount so the toggles reflect the
   // user's saved state (otherwise they all read as 'off' until the user
@@ -598,6 +606,14 @@ export default function SettingsScreen({ navigation }) {
             label="Debug logs"
             onPress={() => navigation.navigate('DebugLog')}
           />
+          {isAdmin && (
+            <SettingRow
+              icon="bar-chart-outline"
+              label="Cloud diagnostics"
+              sub="Deduped bug list across all testers"
+              onPress={() => navigation.navigate('AdminLogs')}
+            />
+          )}
         </View>
 
         {/* About */}
