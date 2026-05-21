@@ -6,8 +6,7 @@ import { StackActions } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 
 const navigationRef = createNavigationContainerRef();
-import { View, Text, Image, StyleSheet, Animated, Easing, Dimensions, ActivityIndicator } from 'react-native';
-import { VolyumeMark } from '../components/BrandMark';
+import { View, Text, Image, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 const SPLASH_HERO = require('../../assets/volyume-splash-hero.png');
@@ -276,10 +275,8 @@ export default function RootNavigator() {
   const firstRunChecked = useAppStore(s => s.firstRunChecked);
   const tier = useAppStore(s => s.tier);
   const tierChecked = useAppStore(s => s.tierChecked);
-  // True while restoreSessionFromCloud is in flight. Holds the splash
-  // up so the wizard doesn't mount on stale local state during the
-  // cloud-read window for returning users.
-  const restoringSession = useAppStore(s => s.restoringSession);
+  // restoringSession removed — restoreSessionFromCloud is now
+  // optimistic (routes on local cues, syncs cloud in background).
   // Actions are stable references in zustand so destructuring them once
   // outside the render is safe and doesn't cause re-renders.
   const setUser = useAppStore(s => s.setUser);
@@ -426,32 +423,22 @@ export default function RootNavigator() {
           // local AsyncStorage was wiped on sign-out gets routed back
           // through onboarding because firstRunComplete is still false.
           if (event === 'SIGNED_IN' && session?.user?.id) {
-            // Cloud restore runs asynchronously without flipping
-            // isAuthLoading. The splash gate no longer reads that flag, so
-            // there's nothing to gate on — the currently-rendered screen
-            // stays mounted while the cloud restore runs in the background.
-            // 8s race timeout still applies to keep the await bounded.
-            try {
-              await Promise.race([
-                useAppStore.getState().restoreSessionFromCloud(session.user.id, session.user),
-                new Promise(resolve => setTimeout(resolve, 8000)),
-              ]);
-              refreshTierFromCloud(client, session.user.id).catch(() => {});
+            // Optimistic sign-in: kick off the cloud restore but DON'T
+            // await it. restoreSessionFromCloud makes its routing
+            // decision synchronously at the top (per-uid cache OR
+            // created_at heuristic) so firstRunComplete + tier are
+            // already set by the time the navigator next renders.
+            // The cloud read itself runs to completion on its own.
+            useAppStore.getState().restoreSessionFromCloud(session.user.id, session.user).catch(() => {});
+            refreshTierFromCloud(client, session.user.id).catch(() => {});
 
-              // If cloud profile was missing AND the user had no local tier
-              // picked, restoreSessionFromCloud leaves tier=null. Reset
-              // navigation to Welcome so they re-enter enrollment like a
-              // brand-new user instead of staying on Login.
-              const tierAfter = useAppStore.getState().tier;
-              if (!tierAfter && navigationRef.isReady()) {
-                try {
-                  navigationRef.reset({ index: 0, routes: [{ name: 'Welcome' }] });
-                } catch (_) {}
-              }
-            } catch (_) {
-              // restoreSessionFromCloud already catches its own errors;
-              // this is just belt-and-braces for the race timeout path.
-            }
+            // Pull workouts / plans / routines / check-ins from cloud
+            // into local SQLite. Returning users on a new device see
+            // their data populate empty states as inserts complete.
+            // Same fire-and-forget pattern as the cloud restore.
+            // eslint-disable-next-line global-require
+            const { pullFromCloud } = require('../lib/sync');
+            pullFromCloud(session.user.id).catch(() => {});
           }
         });
         subscription = data.subscription;
@@ -492,13 +479,11 @@ export default function RootNavigator() {
   // which mounts ProOnboardingStack briefly until the cloud read
   // confirms firstRunComplete=true. That gap was the "I started the
   // wizard and got booted out" bug.
-  if (restoringSession) {
-    // Don't use the generic SplashScreen here — it has no message and
-    // looks frozen during a 5-10s cloud read. SigningInSplash shows
-    // explicit text ("Signing you in" → "Account found, syncing your
-    // data") so the user knows progress is happening, not stuck.
-    return <SigningInSplash />;
-  }
+  // No blocking splash for sign-in any more — optimistic routing
+  // means the navigator already has firstRunComplete + tier set
+  // correctly by the time control reaches here. Cloud sync runs in
+  // the background, populating empty states on each screen as data
+  // arrives.
 
   // Navigation priority:
   // 1. No tier chosen yet → WelcomeScreen (tier selection)
@@ -630,63 +615,11 @@ function SplashScreen() {
   );
 }
 
-// SigningInSplash — shown during restoreSessionFromCloud's slow path
-// (returning user on a new device, no per-uid local cache yet). Reads
-// restoreSplashStage from the store and shows a stage-appropriate
-// message so the user knows the app isn't frozen during the cloud read.
-function SigningInSplash() {
-  const stage = useAppStore(s => s.restoreSplashStage);
-  const headline =
-    stage === 'found' ? 'Account found' :
-    'Signing you in';
-  const subline =
-    stage === 'found' ? 'Syncing your data, one moment...' :
-    'Just a moment while we check your account...';
-
-  return (
-    <View style={signingInStyles.wrap}>
-      <View style={signingInStyles.heroWrap}>
-        <VolyumeMark size={56} />
-      </View>
-      <ActivityIndicator size="small" color={colors.primary} style={signingInStyles.spinner} />
-      <Text style={signingInStyles.headline}>{headline}</Text>
-      <Text style={signingInStyles.subline}>{subline}</Text>
-    </View>
-  );
-}
-
-const signingInStyles = StyleSheet.create({
-  wrap: {
-    flex: 1,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-    gap: 16,
-  },
-  heroWrap: {
-    width: 56,
-    height: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  spinner: {
-    marginVertical: 4,
-  },
-  headline: {
-    color: colors.textPrimary,
-    fontSize: 20,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  subline: {
-    color: colors.textMuted,
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-});
+// SigningInSplash removed — restoreSessionFromCloud is now optimistic
+// (routes immediately based on local cues, syncs cloud in background)
+// so no sign-in splash is needed. The brand splash (SplashScreen) is
+// still used for cold-launch bootstrap before tierChecked /
+// firstRunChecked are set.
 
 const splashStyles = StyleSheet.create({
   container: {

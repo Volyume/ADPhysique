@@ -163,15 +163,12 @@ const useAppStore = create((set, get) => ({
   // mount during the ~8s cloud read for returning users (the
   // wizard-flash bug). Defaults to false so cold-launch isn't gated
   // on it — the gate only matters during an active auth transition.
-  restoringSession: false,
-  // Message shown on the syncing splash during restoringSession=true.
-  // Two phases:
-  //   'reading'  — cloud read in flight, "Signing you in"
-  //   'found'    — profile returned, "Account found, syncing your data"
-  //                Held for ~600ms so the user actually sees it before
-  //                the navigator switches to MainTabs.
-  // null when not restoring.
-  restoreSplashStage: null,
+  // restoringSession + restoreSplashStage removed — the new
+  // restoreSessionFromCloud uses optimistic routing and a background
+  // cloud sync, so no UI gate is needed. Existing screens with empty
+  // states (HomeScreen "no active plan", Plans tab) fill in as
+  // pullFromCloud writes to local SQLite. Same pattern as Linear /
+  // Notion / Slack.
 
   checkTier: async () => {
     try {
@@ -224,80 +221,89 @@ const useAppStore = create((set, get) => ({
     set({ tier });
   },
 
-  // Called once after every cloud sign-in (email OR OAuth). Reads the
-  // users_profile row and restores firstRunComplete + tier + userProfile
-  // to local state. Without this, a returning user whose AsyncStorage was
-  // cleared by sign-out gets pushed back through onboarding even though
-  // they completed it months ago — the cloud row is the source of truth.
-  // Writes to AsyncStorage directly (not via completeFirstRun) so we don't
-  // round-trip the just-read value back to Supabase.
-  restoreSessionFromCloud: async (supabaseUserId, _sessionUser = null) => {
+  // Optimistic-UI sign-in: route INSTANTLY based on local cues, then
+  // sync from the cloud in the background. No splash, no blocking
+  // cloud reads on the routing path. Same pattern as Linear / Notion /
+  // Slack — the app shell appears immediately, data streams in to fill
+  // empty states as it arrives.
+  //
+  // Three cues, in priority order:
+  //   1. Per-uid local cache (FIRST_RUN_KEY_PFX + uid). If set, use it —
+  //      this device has seen this user before.
+  //   2. session.user.created_at age. If > 60s, this auth.users row is
+  //      old enough that the user definitely isn't brand new in this
+  //      session — assume returning, route to MainTabs.
+  //   3. Default: < 60s old, must be a fresh signup — route to wizard.
+  //
+  // Cloud read fires AFTER the routing decision, asynchronously. It
+  // populates the per-uid cache for future sign-ins, refreshes the
+  // userProfile if it was empty, and the cross-device data sync
+  // (pullFromCloud) runs alongside it from RootNavigator.
+  restoreSessionFromCloud: async (supabaseUserId, sessionUser = null) => {
     if (!supabaseUserId) return;
     // eslint-disable-next-line global-require
     const log = require('../lib/errorLog');
     log.logInfo('restoreSessionFromCloud.start', `uid=${supabaseUserId}`, { uid: supabaseUserId });
 
-    // Beta tier policy — set tier='pro' UP FRONT before any cloud reads.
-    // This must happen regardless of whether the cloud profile row exists
-    // (fresh signups don't have one yet; deleted-but-unpurged accounts
-    // never get one back).
+    // Beta tier policy — every cloud-authenticated user is Pro during beta.
     // eslint-disable-next-line global-require
     const { PRO_BETA_ACTIVE } = require('../lib/proGate');
     if (PRO_BETA_ACTIVE) {
       try { await AsyncStorage.setItem(TIER_KEY, 'pro'); } catch (_) {}
       set({ tier: 'pro', tierChecked: true });
-      log.logInfo('restoreSessionFromCloud.betaPro', 'forced tier=pro');
     }
 
-    // ── Fast path: per-user local cache ──────────────────────────────
-    // If this device has previously seen this uid (either by completing
-    // onboarding here, or by a prior successful cloud restore writing
-    // the cache), trust the cached firstRunComplete value and route
-    // immediately. NO splash. NO cloud read on the foreground path.
-    //
-    // A background sync still fires below so cross-device changes are
-    // picked up — but the navigator never waits for it.
-    //
-    // This makes sign-out → sign-back-in on the same device instant,
-    // which is the common case Allan testers hit constantly. The slow
-    // path (splash + cloud read) only triggers for genuinely new uids
-    // on this device: first signup, OAuth on a new device, etc.
+    // ── Step 1: instant routing decision based on local cues ─────────
+    // Cue A: per-uid cache (best, exact answer from prior session)
+    // Cue B: created_at age heuristic (good, used when cache is missing)
+    let routedOptimistically = false;
+    let cachedComplete = null;
     try {
-      const cached = await AsyncStorage.getItem(FIRST_RUN_KEY_PFX + supabaseUserId);
-      if (cached === 'true' || cached === 'false') {
-        const isComplete = cached === 'true';
-        set({ firstRunComplete: isComplete, firstRunChecked: true });
-        try { await AsyncStorage.setItem(FIRST_RUN_KEY, cached); } catch (_) {}
-        log.logInfo('restoreSessionFromCloud.cacheHit', `firstRunComplete=${cached}`);
-        // Cross-device profile sync (e.g. user edited their goal on
-        // another device) is picked up by other paths: refreshTierFromCloud
-        // runs after this, bulkUploadLocalData reconciles on AppState
-        // foreground, and a cold launch re-runs this with no cache.
-        // No background cloud read here — sign-in stays purely local.
-        return;
+      cachedComplete = await AsyncStorage.getItem(FIRST_RUN_KEY_PFX + supabaseUserId);
+    } catch (_) {}
+
+    if (cachedComplete === 'true' || cachedComplete === 'false') {
+      const isComplete = cachedComplete === 'true';
+      set({ firstRunComplete: isComplete, firstRunChecked: true });
+      try { await AsyncStorage.setItem(FIRST_RUN_KEY, cachedComplete); } catch (_) {}
+      log.logInfo('restoreSessionFromCloud.cacheHit', `firstRunComplete=${cachedComplete}`);
+      routedOptimistically = true;
+    } else if (sessionUser?.created_at) {
+      const ageMs = Date.now() - new Date(sessionUser.created_at).getTime();
+      if (Number.isFinite(ageMs) && ageMs >= 60_000) {
+        // Old auth row — returning user. Optimistically route to MainTabs.
+        set({ firstRunComplete: true, firstRunChecked: true });
+        try { await AsyncStorage.setItem(FIRST_RUN_KEY, 'true'); } catch (_) {}
+        log.logInfo('restoreSessionFromCloud.optimisticReturning', `ageMs=${ageMs}`);
+        routedOptimistically = true;
+      } else {
+        // Fresh auth row — new signup. Route to wizard.
+        set({ firstRunComplete: false, firstRunChecked: true });
+        try { await AsyncStorage.setItem(FIRST_RUN_KEY, 'false'); } catch (_) {}
+        log.logInfo('restoreSessionFromCloud.freshSignup', `ageMs=${ageMs}`);
+        routedOptimistically = true;
       }
-    } catch (_) { /* cache read failed — fall through to cloud read */ }
+    }
 
-    // ── Slow path: no per-uid cache, must hit the cloud ──────────────
-    // Only fires the FIRST time a uid sees this device. Subsequent
-    // sign-ins for the same uid take the fast path above.
-    set({ restoringSession: true, restoreSplashStage: 'reading' });
-
+    // ── Step 2: cloud read (background from the UI's perspective) ───
+    // The routing decision was made synchronously above, so any state
+    // mutation in this step is purely background hydration — populates
+    // the per-uid cache for next time, fills userProfile if empty, and
+    // (rarely) corrects the optimistic firstRunComplete if cloud
+    // disagrees with it. UI is already responsive; this awaits but
+    // doesn't gate routing.
+    //
+    // The function's returned promise resolves when ALL of this is
+    // done (useful for tests + cold-launch bootstrap which want
+    // assured cloud sync). Callers in the sign-in path (RootNavigator
+    // onAuthStateChange) intentionally don't await — they kicked off
+    // the function and let it finish on its own.
     let cloudData = null;
-    let timedOut = false;
     try {
       // eslint-disable-next-line global-require
       const { getSupabaseClient } = require('../lib/supabase');
       const sb = getSupabaseClient();
-      if (!sb) { set({ restoringSession: false, restoreSplashStage: null }); return; }
-      // Wrap the cloud read in Promise.race with a 10s ceiling so a
-      // dead connection / cellular dead zone can't park the splash
-      // forever. supabase-js doesn't set a fetch timeout itself, so
-      // without this an offline phone hangs on this await until the
-      // OS-level TCP timeout (~30s on Android, longer on iOS).
-      //
-      // Good connections complete this in 200-500ms; the timeout only
-      // bites when the network is genuinely broken.
+      if (!sb) return;
       const READ_TIMEOUT_MS = 10_000;
       const readPromise = sb
         .from('users_profile')
@@ -310,52 +316,26 @@ const useAppStore = create((set, get) => ({
       const { data } = await Promise.race([readPromise, timeoutPromise]);
       cloudData = data;
     } catch (e) {
-      // Offline / RLS denied / timeout — fall through with cloudData=null.
-      // Tier is already set above; just skip the profile restore.
-      timedOut = e?.message === 'cloud-read-timeout';
-      if (timedOut) {
-        log.logWarn(
-          'restoreSessionFromCloud.timeout',
-          `cloud read exceeded 10s — proceeding without cloud profile`,
-          { uid: supabaseUserId },
-        );
+      if (e?.message === 'cloud-read-timeout') {
+        log.logWarn('restoreSessionFromCloud.timeout', 'cloud read exceeded 10s', { uid: supabaseUserId });
       }
+      return; // optimistic decision sticks
     }
 
-    // Missing cloud row entirely.
-    //   (a) Fresh signup — auth.users row exists, profile row hasn't been
-    //       created yet by syncProfile. firstRunComplete=false locally;
-    //       leave it false so they complete onboarding.
-    //   (b) Deleted account whose auth.users row wasn't purged.
-    //       clearAuthStateForSignOut already cleared firstRunComplete.
     if (!cloudData) {
-      log.logInfo('restoreSessionFromCloud.noProfile', 'cloud profile missing — leaving firstRun local-side');
-      // No splash hold here — new user or timeout. Drop straight to
-      // whatever the navigator routes to (wizard, in practice).
-      set({ restoringSession: false, restoreSplashStage: null });
+      log.logInfo('restoreSessionFromCloud.noProfile', 'cloud profile missing — optimistic decision stands');
       return;
     }
 
-    // We have a cloud profile. Restore firstRunComplete + userProfile
-    // even if cloudData.tier is empty — previously the guard was
-    //   if (!cloudData || !cloudData.tier) return
-    // which silently dropped firstRunComplete for users whose tier
-    // column was null (legacy rows, or rows created before tier was
-    // tracked). Sign-out → sign-in then routed them through
-    // ProOnboardingStack again because firstRunComplete=false.
-    //
-    // Tier handling below is a no-op during beta (already forced 'pro'
-    // up top) — kept for post-beta correctness.
-    if (cloudData.tier) {
-      // eslint-disable-next-line global-require
-      const { PRO_BETA_ACTIVE } = require('../lib/proGate');
-      const effectiveTier = PRO_BETA_ACTIVE ? 'pro' : cloudData.tier;
-      try { await AsyncStorage.setItem(TIER_KEY, effectiveTier); } catch (_) {}
-      set({ tier: effectiveTier, tierChecked: true });
-    }
+    // Populate per-uid cache for next sign-in's fast path.
+    try {
+      await AsyncStorage.setItem(
+        FIRST_RUN_KEY_PFX + supabaseUserId,
+        cloudData.first_run_complete ? 'true' : 'false',
+      );
+    } catch (_) {}
 
-    // Only restore userProfile if local is empty — don't overwrite a
-    // richer local profile with the thinner column-flattened cloud copy.
+    // Hydrate userProfile if we don't already have one locally.
     if (!get().userProfile) {
       const profile = {
         firstName: cloudData.first_name ?? null,
@@ -373,38 +353,18 @@ const useAppStore = create((set, get) => ({
       });
     }
 
-    if (cloudData.first_run_complete) {
+    // Reconcile optimistic decision with cloud truth. Only correct if
+    // cloud explicitly says first_run_complete=true and we hadn't
+    // already set it (e.g. no sessionUser was passed in step 1 so
+    // the optimistic path didn't fire). We do NOT flip back to false
+    // if cloud disagrees with an optimistic true — that would be the
+    // wizard-flash bug. An old account that was never finished is an
+    // edge case; they can complete from Settings → Update your plan.
+    if (cloudData.first_run_complete && !get().firstRunComplete) {
       try { await AsyncStorage.setItem(FIRST_RUN_KEY, 'true'); } catch (_) {}
       set({ firstRunComplete: true, firstRunChecked: true });
       log.logInfo('restoreSessionFromCloud.firstRunRestored', 'true (from cloud)');
     }
-
-    // Populate the per-uid cache so the next sign-in for this uid on
-    // this device takes the fast path — no cloud read, no splash. The
-    // cache is only invalidated on explicit account deletion (where
-    // wipeAllUserData runs). Sign-out preserves it.
-    try {
-      await AsyncStorage.setItem(
-        FIRST_RUN_KEY_PFX + supabaseUserId,
-        cloudData.first_run_complete ? 'true' : 'false',
-      );
-    } catch (_) {}
-
-    // Cloud read succeeded and a profile came back — this is a
-    // returning user on a new device (or after their per-uid cache
-    // was lost). Flip the splash message to "Account found, syncing
-    // your data" and hold ~600ms so the user actually sees the
-    // acknowledgement before the navigator switches them to
-    // MainTabs. Without the hold, the "found" message appears and
-    // disappears in microseconds.
-    if (cloudData) {
-      set({ restoreSplashStage: 'found' });
-      await new Promise(r => setTimeout(r, 600));
-    }
-
-    // Cloud state resolved — release the routing gate. Navigator now
-    // routes based on the freshly-restored firstRunComplete + tier.
-    set({ restoringSession: false, restoreSplashStage: null });
   },
 
   // Called after cloud sign-in: reads tier from Supabase and uses it as the

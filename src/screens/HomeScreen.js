@@ -884,9 +884,9 @@ export default function HomeScreen({ navigation }) {
               </View>
               {tier === 'pro' ? (
                 <>
-                  <Text style={styles.noPlanTitle}>Your plan didn't save</Text>
+                  <Text style={styles.noPlanTitle}>No active plan on this device</Text>
                   <Text style={styles.noPlanSub}>
-                    Something went wrong setting up your plan. Tap below to build it from your profile — takes a second.
+                    If you just signed in we may still be pulling your data from the cloud, give it a moment. If nothing arrives, tap below to rebuild your plan from your profile.
                   </Text>
                 </>
               ) : lastSession == null ? (
