@@ -95,6 +95,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [prevSets, setPrevSets] = useState([]);
   const [allTimeSets, setAllTimeSets] = useState([]);
   const [loggedSets, setLoggedSets] = useState([]);
+  // Flashes the SetEntry card border amber for ~700ms after a successful
+  // Log set, so the tap is acknowledged visibly. Resets via a tracked
+  // timeout so cycling exercises mid-flash doesn't leave it stuck on.
+  const [logFlash, setLogFlash] = useState(false);
+  const logFlashTimeoutRef = useRef(null);
   const [detectedPRs, setDetectedPRs] = useState([]);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showExercisePicker, setShowExercisePicker] = useState(false);
@@ -303,6 +308,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       const newLoggedSets = [...loggedSets, setData];
       setLoggedSets(newLoggedSets);
       addSetToCurrentExercise(setData);
+
+      // Visual ack — flash card border amber after "Done" on a warm-up too.
+      if (logFlashTimeoutRef.current) clearTimeout(logFlashTimeoutRef.current);
+      setLogFlash(true);
+      logFlashTimeoutRef.current = setTimeout(() => setLogFlash(false), 700);
+
       // Track in the session ref so future PR detection has the full picture,
       // even though warm-ups themselves cannot register as PRs.
       sessionSetsRef.current = [...sessionSetsRef.current, setData];
@@ -425,6 +436,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     return () => {
       clearInterval(timerRef.current);
       appStateSub.remove();
+      // Drop any pending log-flash reset so it doesn't run on an unmounted
+      // component (cancel + finish workout mid-flash would otherwise throw a
+      // React warning).
+      if (logFlashTimeoutRef.current) clearTimeout(logFlashTimeoutRef.current);
     };
   }, [workoutStartTime]);
 
@@ -678,6 +693,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       const newLoggedSets = [...loggedSets, setData];
       setLoggedSets(newLoggedSets);
       addSetToCurrentExercise(setData);
+
+      // Visual ack — flash the SetEntry card border amber for ~700 ms so the
+      // user sees their tap landed. Tracked timeout so back-to-back logs
+      // don't truncate the previous flash mid-frame.
+      if (logFlashTimeoutRef.current) clearTimeout(logFlashTimeoutRef.current);
+      setLogFlash(true);
+      logFlashTimeoutRef.current = setTimeout(() => setLogFlash(false), 700);
 
       // PR Detection — check BEFORE adding current set to the session ref so it
       // can never match itself.  sessionSetsRef is a plain ref so it's never stale
@@ -1153,6 +1175,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           <View style={[
             styles.setEntryCard,
             currentSet.setType === 'warmup' && styles.setEntryCardWarmup,
+            logFlash && styles.setEntryCardFlash,
           ]}>
             {currentSet.setType === 'warmup' && (
               <View style={styles.warmupBanner}>
@@ -2064,6 +2087,10 @@ const styles = StyleSheet.create({
   targetText: { fontSize: fontSize.sm, color: colors.textMuted },
   setEntryCard: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, gap: spacing.md },
   setEntryCardWarmup: { borderColor: colors.warning, backgroundColor: colors.warningBg || colors.surface },
+  // Short amber flash on the card border to ack a successful Log set tap.
+  // Border width stays at 1 so the card doesn't shift its 2px layout for the
+  // 700 ms flash — just the colour swaps.
+  setEntryCardFlash: { borderColor: colors.primary },
   warmupBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   warmupBannerText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.warning, letterSpacing: 0.3 },
   warmupOneTimeHint: {
