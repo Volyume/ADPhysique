@@ -194,8 +194,22 @@ export function phaseToNutritionKey(phase) {
 }
 
 // Map user-facing phase value → coaching system phase key (for weeklyCoach / planEngine)
+// Falls back to 'maint' for unknown phases but logs a warning first — silent
+// maintenance was masking data corruption / version skew bugs.
 export function phaseToCoachingKey(phase) {
-  return TRAINING_PHASES.find(p => p.value === phase)?.coachingPhaseKey ?? 'maint';
+  const match = TRAINING_PHASES.find(p => p.value === phase);
+  if (!match) {
+    try {
+      // eslint-disable-next-line global-require
+      require('./errorLog').logWarn(
+        'coachingGoals.phaseToCoachingKey',
+        `unknown phase "${phase}" — falling back to maint`,
+        { phase },
+      );
+    } catch (_) { /* errorLog itself failed — nothing more to do */ }
+    return 'maint';
+  }
+  return match.coachingPhaseKey;
 }
 
 // Map days per week → nutritionEngine activity level

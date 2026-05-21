@@ -152,9 +152,20 @@ export default function ProUpgradeScreen({ navigation }) {
     // recovery, then generate a fresh plan and nutrition targets. Without
     // this the user lands back on the main app with no plan and no diet.
     // resetFirstRun flips firstRunComplete=false, which makes RootNavigator
-    // mount ProOnboardingStack on next render.
+    // mount ProOnboardingStack on next render. Returns an error if a
+    // workout is in progress so we don't yank the user out mid-set.
     async function startSetup() {
-      try { await resetFirstRun(); } catch (_) {}
+      try {
+        const result = await resetFirstRun();
+        if (result && result.ok === false) {
+          if (result.error === 'workout_in_progress') {
+            Alert.alert(
+              'Finish your workout first',
+              'You have a workout in progress. Wrap it up, then come back to set up your Pro training plan.',
+            );
+          }
+        }
+      } catch (_) {}
     }
     return (
       <SafeAreaView style={styles.safe}>

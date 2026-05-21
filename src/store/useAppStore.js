@@ -348,12 +348,25 @@ const useAppStore = create((set, get) => ({
   // Free → Pro upgrade re-runs the Pro setup (profile → training → plan +
   // nutrition generation). Without this, an existing user who upgrades is
   // dumped back on the main app with no plan and no nutrition targets.
+  //
+  // Returns { ok: false, error: 'workout_in_progress' } if the user is
+  // mid-workout — flipping firstRunComplete=false would unmount MainTabs
+  // and lose the live set log. Caller surfaces this to the UI.
   resetFirstRun: async () => {
+    if (get().activeWorkout) {
+      require('../lib/errorLog').logWarn(
+        'useAppStore.resetFirstRun',
+        'refused — workout in progress',
+        { workoutId: get().activeWorkout?.id }
+      );
+      return { ok: false, error: 'workout_in_progress' };
+    }
     try {
       await AsyncStorage.setItem(FIRST_RUN_KEY, 'false');
     } catch (_e) {}
     set({ firstRunComplete: false, firstRunChecked: true });
     require('../lib/errorLog').logInfo('useAppStore.resetFirstRun', 'firstRunComplete → false');
+    return { ok: true };
   },
 
   completeFirstRun: async () => {

@@ -66,23 +66,30 @@ const DEFAULT_DAYS_PER_WEEK = 4;
  * touching the database.
  */
 export function buildPlanInputs(profile) {
-  if (!profile?.trainingGoal || !profile?.trainingPhase) {
-    return null;
-  }
+  if (!profile?.trainingGoal) return null;
+  // Migrate legacy IDs (general_hypertrophy / strength_hypertrophy /
+  // weak_point_spec) so old profiles round-trip through the new two-axis
+  // model. migrateProfileGoals adds a sensible trainingPhase for the
+  // ones that imply a phase; for the rest, fall back to 'maintain' so
+  // legacy users can still regenerate without re-onboarding.
+  // eslint-disable-next-line global-require
+  const { migrateProfileGoals } = require('./coachingGoals');
+  const migrated = migrateProfileGoals(profile);
+  const phase = migrated.trainingPhase || 'maintain';
   return {
-    experience: profile.experience ?? 'intermediate',
-    daysPerWeek: profile.daysPerWeek ?? DEFAULT_DAYS_PER_WEEK,
-    sessionLengthMinutes: profile.sessionLengthMinutes ?? 60,
-    equipment: profile.equipment ?? 'full_gym',
-    goal: profile.trainingGoal,
+    experience: migrated.experience ?? 'intermediate',
+    daysPerWeek: migrated.daysPerWeek ?? DEFAULT_DAYS_PER_WEEK,
+    sessionLengthMinutes: migrated.sessionLengthMinutes ?? 60,
+    equipment: migrated.equipment ?? 'full_gym',
+    goal: migrated.trainingGoal,
     // phase is now the load-bearing question post-merge: it drives nutrition,
     // weak_point overlay, and strength_size's isolation reduction. Engine
     // reads `phase` for the overlay decisions and `nutritionPhase` for the
     // calorie/volume tuning math.
-    phase: profile.trainingPhase,
-    weakPoints: profile.planWeakPoints ?? [],
-    recoveryRating: profile.recoveryRating ?? 'average',
-    nutritionPhase: phaseToNutritionKey(profile.trainingPhase),
+    phase,
+    weakPoints: migrated.planWeakPoints ?? [],
+    recoveryRating: migrated.recoveryRating ?? 'average',
+    nutritionPhase: phaseToNutritionKey(phase),
   };
 }
 

@@ -440,6 +440,15 @@ ALTER TABLE achievements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE weekly_checkins ENABLE ROW LEVEL SECURITY;
 ALTER TABLE autoregulation_suggestions ENABLE ROW LEVEL SECURITY;
 
+-- Pro sync tables (added across later migrations — must be RLS-protected
+-- or any authenticated user can read/write each other's data)
+ALTER TABLE programmes              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE morning_weights         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE coach_outputs           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_body_profile       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE exercise_user_notes     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE weekly_checkins_v2      ENABLE ROW LEVEL SECURITY;
+
 
 -- ═══ 3. RLS POLICIES (with WITH CHECK) ═══════════════════════════════════
 -- DROP + CREATE ensures any older USING-only policy is replaced.
@@ -537,6 +546,38 @@ CREATE POLICY "Users can manage own autoregulation suggestions" ON autoregulatio
   FOR ALL USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
+-- ── Pro sync table policies (mirrored from migrate_007) ──────────────
+
+DROP POLICY IF EXISTS "Users can manage own programmes" ON programmes;
+CREATE POLICY "Users can manage own programmes" ON programmes
+  FOR ALL USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can manage own morning weights" ON morning_weights;
+CREATE POLICY "Users can manage own morning weights" ON morning_weights
+  FOR ALL USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can manage own coach outputs" ON coach_outputs;
+CREATE POLICY "Users can manage own coach outputs" ON coach_outputs
+  FOR ALL USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can manage own body profile" ON user_body_profile;
+CREATE POLICY "Users can manage own body profile" ON user_body_profile
+  FOR ALL USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can manage own exercise notes" ON exercise_user_notes;
+CREATE POLICY "Users can manage own exercise notes" ON exercise_user_notes
+  FOR ALL USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can manage own v2 checkins" ON weekly_checkins_v2;
+CREATE POLICY "Users can manage own v2 checkins" ON weekly_checkins_v2
+  FOR ALL USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
 
 -- ═══ 4. tier lockdown trigger ════════════════════════════════════════════
 -- Reverts any client UPDATE that tries to change the `tier` column.
@@ -547,8 +588,16 @@ CREATE OR REPLACE FUNCTION protect_users_profile_tier()
 RETURNS TRIGGER AS $func$
 BEGIN
   IF auth.uid() IS NOT NULL THEN
-    IF NEW.tier IS DISTINCT FROM OLD.tier THEN
-      NEW.tier := OLD.tier;
+    IF TG_OP = 'UPDATE' THEN
+      IF NEW.tier IS DISTINCT FROM OLD.tier THEN
+        NEW.tier := OLD.tier;
+      END IF;
+    ELSIF TG_OP = 'INSERT' THEN
+      -- New profiles must start as 'free'; only service role can
+      -- promote them (auth.uid() IS NULL bypasses this branch).
+      IF NEW.tier IS DISTINCT FROM 'free' THEN
+        NEW.tier := 'free';
+      END IF;
     END IF;
   END IF;
   RETURN NEW;
@@ -557,7 +606,7 @@ $func$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 DROP TRIGGER IF EXISTS users_profile_protect_tier ON users_profile;
 CREATE TRIGGER users_profile_protect_tier
-  BEFORE UPDATE ON users_profile
+  BEFORE INSERT OR UPDATE ON users_profile
   FOR EACH ROW
   EXECUTE FUNCTION protect_users_profile_tier();
 

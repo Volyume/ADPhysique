@@ -18,9 +18,19 @@ import { buildPlanInputs } from '../planAutoGen';
 describe('buildPlanInputs', () => {
   test('returns null when trainingGoal is missing', () => {
     expect(buildPlanInputs({ trainingPhase: 'maint' })).toBeNull();
-    expect(buildPlanInputs({ trainingGoal: 'build_muscle' })).toBeNull();
     expect(buildPlanInputs(null)).toBeNull();
     expect(buildPlanInputs(undefined)).toBeNull();
+  });
+
+  test('falls back to maintain phase for legacy profiles missing trainingPhase', () => {
+    // Legacy users with only trainingGoal (general_hypertrophy etc.)
+    // used to be stuck — buildPlanInputs returned null and they couldn't
+    // regenerate. Now we migrate the goal ID and back-fill phase=maintain
+    // so they can refresh their plan without re-onboarding.
+    const inputs = buildPlanInputs({ trainingGoal: 'build_muscle' });
+    expect(inputs).not.toBeNull();
+    expect(inputs.phase).toBe('maintain');
+    expect(inputs.nutritionPhase).toBe('maintain');
   });
 
   test('returns inputs with all the user-supplied fields', () => {
