@@ -90,6 +90,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
         const withExercises = await getRoutineExercisesWithDetails(workout.routineId);
         initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
           exercise, routineExercise, sets: [],
+          supersetGroupId: routineExercise?.supersetGroupId ?? null,
         }));
       }
       startWorkout(newWorkout, initialExercises);

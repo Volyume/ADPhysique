@@ -254,6 +254,7 @@ const SCHEMA_MIGRATIONS = [
   [
     'ALTER TABLE routine_exercises ADD COLUMN starting_weight REAL',
     'ALTER TABLE routine_exercises ADD COLUMN rest_seconds INTEGER',
+    'ALTER TABLE routine_exercises ADD COLUMN superset_group_id TEXT',
     'ALTER TABLE workouts ADD COLUMN last_activity_at INTEGER',
     'ALTER TABLE workouts ADD COLUMN active_elapsed_seconds INTEGER',
     'ALTER TABLE routines ADD COLUMN is_library INTEGER DEFAULT 0',
@@ -1083,18 +1084,18 @@ export async function getRoutineExercisesWithDetails(routineId) {
   });
 }
 
-export async function addExerciseToRoutine(routineId, exerciseId, order, repsMin = 6, repsMax = 12, notes = null, sets = 3, startingWeight = null, restSeconds = null) {
+export async function addExerciseToRoutine(routineId, exerciseId, order, repsMin = 6, repsMax = 12, notes = null, sets = 3, startingWeight = null, restSeconds = null, supersetGroupId = null) {
   const d = await db();
   const id = uid();
   const now = Date.now();
   await d.runAsync(
     `INSERT INTO routine_exercises
       (id, routine_id, exercise_id, order_in_routine, recommended_sets,
-       recommended_reps_min, recommended_reps_max, notes, starting_weight, rest_seconds, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, routineId, exerciseId, order, sets, repsMin, repsMax, notes, startingWeight, restSeconds, now, now],
+       recommended_reps_min, recommended_reps_max, notes, starting_weight, rest_seconds, superset_group_id, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, routineId, exerciseId, order, sets, repsMin, repsMax, notes, startingWeight, restSeconds, supersetGroupId, now, now],
   );
-  return { id, routineId, exerciseId, orderInRoutine: order };
+  return { id, routineId, exerciseId, orderInRoutine: order, supersetGroupId };
 }
 
 export async function updateRoutineExercise(id, data) {
@@ -1168,6 +1169,7 @@ export async function duplicateRoutine(routineId, userId, newName) {
         re.recommendedSets,
         re.startingWeight,
         re.restSeconds,
+        re.supersetGroupId,
       );
     }
   });

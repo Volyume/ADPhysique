@@ -99,6 +99,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [showExercisePicker, setShowExercisePicker] = useState(false);
   const [noteText, setNoteText] = useState('');
   const [showNoteInput, setShowNoteInput] = useState(false);
+  // Superset notification — tracks which group IDs the user has already
+  // seen the "heads up, paired exercises" modal for in this workout. We
+  // show it once per pair so the user can grab both stations before
+  // starting. Set, not array, for O(1) membership checks.
+  const acknowledgedSupersetsRef = useRef(new Set());
+  const [supersetHeadsUp, setSupersetHeadsUp] = useState(null);
+  // shape: { groupId, exerciseAName, exerciseBName } | null
   const [saving, setSaving] = useState(false);
   const [progression, setProgression] = useState(null);
   const [setTargets, setSetTargets] = useState([]);
@@ -370,6 +377,26 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     }).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeWorkout?.id]);
+
+  // Superset heads-up: when the user lands on an exercise that's part of a
+  // pair we haven't already shown the modal for in this workout, surface a
+  // clear instructional sheet so a first-timer isn't lost. Shown once per
+  // group id per workout — dismissing acknowledges; unlinking removes the
+  // pair entirely; swap opens the swap UI for either exercise.
+  useEffect(() => {
+    if (currentSGI == null) return;
+    if (acknowledgedSupersetsRef.current.has(currentSGI)) return;
+    if (!pairedExerciseName) return; // safety
+    // Tag as acknowledged immediately so navigating away+back doesn't re-fire
+    // before the user dismisses.
+    acknowledgedSupersetsRef.current.add(currentSGI);
+    setSupersetHeadsUp({
+      groupId: currentSGI,
+      exerciseAName: exercise?.name ?? 'this exercise',
+      exerciseBName: pairedExerciseName,
+    });
+    Haptics.selectionAsync().catch(() => {});
+  }, [currentSGI, pairedExerciseName, exercise?.name]);
 
   // First-use info tip: pulse the Info button until tapped
   useEffect(() => {
@@ -1477,6 +1504,98 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           }}
         />
 
+        {/* Superset heads-up modal — appears once per pair when the user
+            lands on a paired exercise. Educational for first-timers,
+            and gives a clear out (unlink or swap) if they're not set up
+            for it today. */}
+        <Modal
+          visible={!!supersetHeadsUp}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setSupersetHeadsUp(null)}
+        >
+          <View style={styles.supOverlay}>
+            <View style={styles.supSheet}>
+              <View style={styles.supIconRow}>
+                <Ionicons name="link" size={24} color={colors.primary} />
+                <Text style={styles.supTitle}>Superset coming up</Text>
+              </View>
+              <Text style={styles.supSubtitle}>
+                Two exercises paired back-to-back with no rest between them.
+              </Text>
+
+              <View style={styles.supPairCard}>
+                <View style={styles.supPairRow}>
+                  <View style={styles.supPairChip}><Text style={styles.supPairChipText}>1</Text></View>
+                  <Text style={styles.supPairName} numberOfLines={2}>
+                    {supersetHeadsUp?.exerciseAName}
+                  </Text>
+                </View>
+                <View style={styles.supPairConnector} />
+                <View style={styles.supPairRow}>
+                  <View style={styles.supPairChip}><Text style={styles.supPairChipText}>2</Text></View>
+                  <Text style={styles.supPairName} numberOfLines={2}>
+                    {supersetHeadsUp?.exerciseBName}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.supSteps}>
+                <View style={styles.supStep}>
+                  <Text style={styles.supStepNum}>1</Text>
+                  <Text style={styles.supStepText}>Set up both stations now if you can.</Text>
+                </View>
+                <View style={styles.supStep}>
+                  <Text style={styles.supStepNum}>2</Text>
+                  <Text style={styles.supStepText}>Do all reps of the first exercise.</Text>
+                </View>
+                <View style={styles.supStep}>
+                  <Text style={styles.supStepNum}>3</Text>
+                  <Text style={styles.supStepText}>Move straight to the second — no rest between.</Text>
+                </View>
+                <View style={styles.supStep}>
+                  <Text style={styles.supStepNum}>4</Text>
+                  <Text style={styles.supStepText}>After both, rest the full rest period, then repeat.</Text>
+                </View>
+              </View>
+
+              <Text style={styles.supTip}>
+                Tip: if you can't grab both stations right now, unlink and do them as normal sets.
+              </Text>
+
+              <TouchableOpacity
+                style={styles.supPrimaryBtn}
+                onPress={() => setSupersetHeadsUp(null)}
+              >
+                <Text style={styles.supPrimaryBtnText}>Got it — start</Text>
+              </TouchableOpacity>
+
+              <View style={styles.supSecondaryRow}>
+                <TouchableOpacity
+                  style={styles.supSecondaryBtn}
+                  onPress={() => {
+                    handleTogglePair(); // unpair
+                    setSupersetHeadsUp(null);
+                  }}
+                >
+                  <Ionicons name="unlink" size={14} color={colors.textSecondary} />
+                  <Text style={styles.supSecondaryBtnText}>Unlink</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.supSecondaryBtn}
+                  onPress={() => {
+                    setSupersetHeadsUp(null);
+                    handleOpenSwap();
+                  }}
+                >
+                  <Ionicons name="swap-horizontal" size={14} color={colors.textSecondary} />
+                  <Text style={styles.supSecondaryBtnText}>Swap exercise</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
         {/* Stale workout recovery modal */}
         <Modal visible={showStaleModal} transparent animationType="fade" onRequestClose={() => setShowStaleModal(false)}>
           <View style={styles.staleOverlay}>
@@ -2072,6 +2191,29 @@ const styles = StyleSheet.create({
   infoNotes: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 22 },
   targetBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.successBg, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderWidth: 1, borderColor: colors.success },
   targetBannerText: { fontSize: fontSize.sm, color: colors.success, fontWeight: fontWeight.semibold, flex: 1 },
+  // Superset heads-up modal
+  supOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.78)', justifyContent: 'flex-end' },
+  supSheet: { backgroundColor: colors.surface, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, padding: spacing.xl, paddingBottom: spacing.xxl, borderTopWidth: 1, borderColor: colors.border, gap: spacing.md },
+  supIconRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  supTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  supSubtitle: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  supPairCard: { backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md, borderLeftWidth: 3, borderLeftColor: colors.primary, gap: spacing.xs },
+  supPairRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  supPairChip: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  supPairChipText: { color: colors.background, fontSize: fontSize.xs, fontWeight: fontWeight.bold },
+  supPairName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold, flex: 1 },
+  supPairConnector: { width: 2, height: 14, backgroundColor: colors.border, marginLeft: 10 },
+  supSteps: { gap: spacing.sm, marginTop: spacing.xs },
+  supStep: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  supStepNum: { color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.bold, minWidth: 14 },
+  supStepText: { color: colors.textPrimary, fontSize: fontSize.sm, lineHeight: 20, flex: 1 },
+  supTip: { color: colors.textMuted, fontSize: fontSize.xs, fontStyle: 'italic', marginTop: spacing.xs },
+  supPrimaryBtn: { backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.sm },
+  supPrimaryBtnText: { color: colors.background, fontSize: fontSize.md, fontWeight: fontWeight.bold },
+  supSecondaryRow: { flexDirection: 'row', gap: spacing.sm },
+  supSecondaryBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: 'transparent' },
+  supSecondaryBtnText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
+
   staleOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
   staleSheet: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.xl, width: '100%', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.border },
   staleTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, textAlign: 'center' },

@@ -19,9 +19,39 @@ import {
   addExerciseToRoutine,
   getAllExercises,
   activatePlanWithBlock,
+  getAllProgrammes,
 } from './database';
 import { generatePlan } from './planEngine';
 import { phaseToNutritionKey } from './coachingGoals';
+
+/**
+ * If the user already has a programme with this exact name, append a
+ * short date suffix (and time if needed) so the new one is visibly
+ * distinct in the Plans list. Otherwise return the name unchanged.
+ *
+ * Pure function modulo the DB read for the existing-names list.
+ */
+async function makeUniquePlanName(userId, baseName) {
+  let existingNames = [];
+  try {
+    const programmes = await getAllProgrammes(userId);
+    existingNames = (programmes ?? []).map(p => p?.name).filter(Boolean);
+  } catch (_) {
+    return baseName; // can't tell — return the base name
+  }
+  if (!existingNames.includes(baseName)) return baseName;
+
+  const now = new Date();
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const dateStr = `${now.getDate()} ${months[now.getMonth()]}`;
+  const withDate = `${baseName} — ${dateStr}`;
+  if (!existingNames.includes(withDate)) return withDate;
+
+  // Same name + same day already exists — append time too
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  return `${baseName} — ${dateStr} ${hh}:${mm}`;
+}
 
 const DEFAULT_DAYS_PER_WEEK = 4;
 
@@ -69,7 +99,8 @@ export async function generateAndSavePlan(userId, profile) {
   }
   if (!plan?.workouts?.length) return { ok: false, error: 'Plan engine returned no workouts' };
 
-  const planName = plan.name ?? 'Your plan';
+  const baseName = plan.name ?? 'Your plan';
+  const planName = await makeUniquePlanName(userId, baseName);
   try {
     const prog = await createProgramme(userId, planName, plan.description ?? '', 0);
     const allExercises = await getAllExercises();
@@ -87,6 +118,9 @@ export async function generateAndSavePlan(userId, profile) {
         if (!dbEx) continue;
         await addExerciseToRoutine(
           routine.id, dbEx.id, i, ex.repMin, ex.repMax, ex.notes ?? null, ex.sets,
+          null,                          // startingWeight — engine doesn't set this
+          ex.restSec ?? null,
+          ex.supersetGroupId ?? null,    // pairing from plan engine
         );
         totalWritten++;
       }

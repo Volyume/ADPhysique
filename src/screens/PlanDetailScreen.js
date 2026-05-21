@@ -104,6 +104,7 @@ export default function PlanDetailScreen({ navigation, route }) {
       const withExercises = await getRoutineExercisesWithDetails(routine.id);
       const initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
         exercise, routineExercise, sets: [],
+        supersetGroupId: routineExercise?.supersetGroupId ?? null,
       }));
       startWorkout(workout, initialExercises);
       navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });

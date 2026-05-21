@@ -259,6 +259,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
         exercise,
         routineExercise,
         sets: [],
+        supersetGroupId: routineExercise?.supersetGroupId ?? null,
       }));
       startWorkout(workout, initialExercises);
       navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });

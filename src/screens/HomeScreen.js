@@ -436,6 +436,9 @@ export default function HomeScreen({ navigation }) {
       const withExercises = await getRoutineExercisesWithDetails(routine.id);
       const initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
         exercise, routineExercise, sets: [],
+        // Hydrate plan-time superset pairings onto the workout entry so
+        // ActiveWorkoutScreen renders them as paired from the start.
+        supersetGroupId: routineExercise?.supersetGroupId ?? null,
       }));
       pendingStartRef.current = { routineId: routine.id, initialExercises };
       setShowIntentPrompt(true);
@@ -474,6 +477,7 @@ export default function HomeScreen({ navigation }) {
         const withExercises = await getRoutineExercisesWithDetails(routineId);
         initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
           exercise, routineExercise, sets: [],
+          supersetGroupId: routineExercise?.supersetGroupId ?? null,
         }));
       } else {
         // No routine linked — fall back to exercises from the session's sets

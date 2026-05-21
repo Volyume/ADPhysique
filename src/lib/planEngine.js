@@ -645,6 +645,13 @@ function buildSession(name, muscles, sessionsPerMuscle, weeklyTargets, equipment
       usedNames, wTarget, landmarks, experience, nutritionPhase
     );
     usedNamesByMuscle[muscle] = usedNames;
+    // Tag each emitted exercise with the muscle it was picked for so the
+    // downstream superset planner can pair antagonist / non-competing pairs.
+    // These underscore-prefixed fields are stripped by planAutoGen before
+    // writing to the DB.
+    for (const ex of exs) {
+      if (ex._muscle == null) ex._muscle = muscle;
+    }
     exercises.push(...exs);
   }
 
@@ -1125,6 +1132,114 @@ function buildWarnings(inputs, effectiveDays, weakPointUILabels) {
 // Main export
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Superset assignment
+// ---------------------------------------------------------------------------
+//
+// Pairs adjacent accessory exercises into supersets when it's actually useful:
+//   - Goal is hypertrophy/physique-family (volume + pump > max load)
+//   - Experience is intermediate+ (beginners need to lock in form on straight sets)
+//   - Both exercises are in the accessory / isolation portion (not the heavy
+//     compounds — those get full rest periods to express max load)
+//   - The two muscle groups are antagonist or non-competing (no fatigue
+//     cross-talk that would tank the second exercise's working load)
+//
+// Mutates entries in place by adding `supersetGroupId` to paired pairs.
+
+// Muscle pairs that superset cleanly. Symmetric — pair-lookup checks both
+// directions. Excludes same-muscle pairs and competing pairs like
+// chest+triceps or back+biceps (shared fatigue from compounds).
+const SUPERSET_COMPATIBLE = {
+  // Push ↔ Pull (antagonist)
+  chest:       ['back', 'biceps', 'rear_delts', 'abs', 'calves'],
+  back:        ['chest', 'triceps', 'side_delts', 'front_delts', 'abs', 'calves'],
+  // Arms — bi/tri antagonist + delt + small isolations
+  biceps:      ['triceps', 'chest', 'side_delts', 'rear_delts', 'abs', 'calves'],
+  triceps:     ['biceps', 'back', 'side_delts', 'rear_delts', 'abs', 'calves'],
+  // Delts — different heads antagonise, plus arms / small isolations
+  front_delts: ['rear_delts', 'back', 'biceps', 'abs', 'calves'],
+  side_delts:  ['rear_delts', 'biceps', 'triceps', 'back', 'abs', 'calves'],
+  rear_delts:  ['front_delts', 'side_delts', 'chest', 'biceps', 'triceps', 'abs', 'calves'],
+  // Legs — antagonist quads/hams; glutes already overlap with both compounds
+  quads:       ['hamstrings', 'calves', 'abs'],
+  hamstrings:  ['quads', 'calves', 'abs'],
+  glutes:      ['calves', 'abs'],
+  // Small isolations pair with almost anything that isn't themselves
+  calves:      ['abs', 'biceps', 'triceps', 'side_delts', 'rear_delts', 'chest', 'back', 'quads', 'hamstrings', 'glutes'],
+  abs:         ['calves', 'biceps', 'triceps', 'side_delts', 'rear_delts', 'chest', 'back', 'quads', 'hamstrings', 'glutes'],
+};
+
+function canSuperset(muscleA, muscleB) {
+  if (!muscleA || !muscleB || muscleA === muscleB) return false;
+  const compat = SUPERSET_COMPATIBLE[muscleA];
+  return Array.isArray(compat) && compat.includes(muscleB);
+}
+
+// Goal families that benefit most from supersets (volume + pump emphasis).
+const SUPERSET_GOAL_ALLOWLIST = new Set([
+  'general_hypertrophy', 'weak_point_spec',
+  'mens_physique', 'classic_physique', 'bodybuilding',
+  'bikini', 'wellness', 'figure', 'womens_physique',
+]);
+
+function assignSupersets(exercises, { goal, experience, sessionLengthMinutes }) {
+  if (!Array.isArray(exercises) || exercises.length < 4) return;
+  // Gate: skip if beginner (form takes priority over time efficiency)
+  if (experience === 'beginner') return;
+  // Gate: skip if goal isn't volume/pump-focused AND the user has a generous
+  // session window. Short sessions (≤ 50 min) get supersets regardless of
+  // goal because the time saving outweighs the strength trade.
+  const goalAllows = SUPERSET_GOAL_ALLOWLIST.has(goal);
+  const timeConstrained = (sessionLengthMinutes ?? 60) <= 50;
+  if (!goalAllows && !timeConstrained) return;
+
+  // Find the start of the accessory portion: skip leading exercises that look
+  // like heavy compounds (long rest period > 150s indicates main lift).
+  let accessoryStart = 0;
+  while (
+    accessoryStart < exercises.length &&
+    (exercises[accessoryStart].restSec ?? 0) >= 150
+  ) accessoryStart++;
+  // Always leave at least the first exercise alone, even if rest is short.
+  if (accessoryStart === 0) accessoryStart = 1;
+
+  // Walk adjacent pairs from the accessory portion. Cap pairs per workout at 2
+  // so we don't superset every accessory — that's exhausting and the engine
+  // shouldn't make every session feel like circuit training.
+  const MAX_PAIRS_PER_WORKOUT = 2;
+  let pairsAssigned = 0;
+  let quadsHamsPairAlreadyUsed = false;
+  let i = accessoryStart;
+  while (i < exercises.length - 1 && pairsAssigned < MAX_PAIRS_PER_WORKOUT) {
+    const a = exercises[i];
+    const b = exercises[i + 1];
+    // Skip if either is already paired (defensive — shouldn't happen on first
+    // assignment) or either is a heavy compound (long rest period).
+    if (a.supersetGroupId != null || b.supersetGroupId != null
+        || (a.restSec ?? 0) >= 150 || (b.restSec ?? 0) >= 150) {
+      i++;
+      continue;
+    }
+    if (canSuperset(a._muscle, b._muscle)) {
+      const isQuadsHamsPair =
+        (a._muscle === 'quads' && b._muscle === 'hamstrings') ||
+        (a._muscle === 'hamstrings' && b._muscle === 'quads');
+      if (isQuadsHamsPair && quadsHamsPairAlreadyUsed) {
+        i++;
+        continue;
+      }
+      const groupId = `sg_${i}_${pairsAssigned}`;
+      a.supersetGroupId = groupId;
+      b.supersetGroupId = groupId;
+      if (isQuadsHamsPair) quadsHamsPairAlreadyUsed = true;
+      pairsAssigned++;
+      i += 2; // skip past the pair so we don't try to chain
+    } else {
+      i++;
+    }
+  }
+}
+
 export function generatePlan(inputs) {
   const {
     experience        = 'intermediate',
@@ -1192,12 +1307,16 @@ export function generatePlan(inputs) {
     }
   }
 
-  // Finalise: deduplicate, trim to time budget, stamp duration
+  // Finalise: deduplicate, trim to time budget, assign supersets, stamp duration
   const workouts = rawWorkouts.map(w => {
     const deduped  = deduplicateExercises(w.exercises);
     const trimmed  = trimToTimeBudget(deduped, sessionLengthMinutes, equipment);
-    // Strip internal-only tags (_m, _req) used during trimming.
-    const clean = trimmed.map(({ _m, _req, ...rest }) => rest);
+    // Assign superset pairings while we still have the internal _muscle tag
+    // available. Function mutates entries in place adding `supersetGroupId`.
+    assignSupersets(trimmed, { goal, experience, sessionLengthMinutes });
+    // Strip internal-only tags (_m, _req used by trimming; _muscle by
+    // assignSupersets). supersetGroupId is public and survives the strip.
+    const clean = trimmed.map(({ _m, _req, _muscle, ...rest }) => rest);
     return {
       name: w.name,
       exercises: clean,
@@ -1242,7 +1361,27 @@ export function generatePlan(inputs) {
   // Progressive multi-week plan (v2)
   const isAdvancedExp = experience === 'advanced' || experience === 'competitive';
   const totalMesoWeeks = isAdvancedExp ? 6 : 5;
-  const planName = `${goalShort} ${splitShort} ${effectiveDays}×/week`;
+  // Include the nutrition phase in the plan name so a user who re-rolls
+  // their plan from the Hub (changing only the phase from "Bulk" to
+  // "Lean Gain", for example) gets visually distinct entries in Plans
+  // instead of three rows all called "Build Muscle Upper-Lower 4×/week".
+  const phaseShort = {
+    cut:       'Cut',
+    bulk:      'Bulk',
+    lean_gain: 'Lean Gain',
+    recomp:    'Recomp',
+    maintain:  'Maintain',
+    // coachingPhaseKey variants — planEngine receives either form
+    mild_cut:  'Cut',
+    mod_cut:   'Cut',
+    agg_cut:   'Aggressive Cut',
+    mild_bulk: 'Lean Gain',
+    mod_bulk:  'Bulk',
+    maint:     'Maintain',
+  }[nutritionPhase] ?? null;
+  const planName = phaseShort
+    ? `${goalShort} · ${phaseShort} · ${splitShort} ${effectiveDays}×/week`
+    : `${goalShort} ${splitShort} ${effectiveDays}×/week`;
   const weeklyPlan = buildWeeklyPlan(validWorkouts, totalMesoWeeks, planName);
 
   return {
