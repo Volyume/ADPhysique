@@ -41,6 +41,10 @@ const DEFAULTS = {
   error:   { icon: 'alert-circle',     tint: colors.error,   duration: 4000 },
   warning: { icon: 'warning',          tint: colors.warning, duration: 3500 },
   info:    { icon: 'information-circle', tint: colors.primary, duration: 2500 },
+  // Undo variant for destructive actions. Longer duration so the user
+  // has time to read + react. Neutral icon, white text — looks distinct
+  // from success/error to signal "you can take this back".
+  undo:    { icon: 'arrow-undo',      tint: colors.warning, duration: 8000 },
 };
 
 export function ToastProvider({ children }) {
@@ -63,6 +67,15 @@ export function ToastProvider({ children }) {
       icon: options.icon || cfg.icon,
       tint: options.tint || cfg.tint,
       duration: options.duration || cfg.duration,
+      // Optional action button. { label, onPress } — e.g. { label: 'Undo',
+      // onPress: () => restoreWorkout(...) }. Tapping the action runs the
+      // callback AND dismisses the toast. Use 'undo' variant for the
+      // destructive-action pattern (8s window).
+      action: options.action || null,
+      // Called when the toast dismisses WITHOUT the action being tapped.
+      // For undo-style flows the caller registers the destructive commit
+      // here (e.g. actually delete the row from SQLite + cloud).
+      onTimeout: options.onTimeout || null,
     };
     setQueue(q => [...q, next]);
   }, []);
@@ -107,10 +120,16 @@ export function ToastProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current, reduceMotion]);
 
-  function dismiss() {
+  function dismiss(opts = {}) {
     if (dismissTimer.current) {
       clearTimeout(dismissTimer.current);
       dismissTimer.current = null;
+    }
+    // Fire onTimeout only if this dismiss is automatic (timer ran out
+    // or user tapped the toast body). Action-tap dismissals skip it,
+    // since the action already replaced the timeout behaviour.
+    if (current?.onTimeout && !opts.skipTimeout) {
+      try { current.onTimeout(); } catch (_) {}
     }
     Animated.parallel([
       Animated.timing(opacity, {
@@ -138,16 +157,37 @@ export function ToastProvider({ children }) {
           pointerEvents="box-none"
           style={[styles.host, { opacity, transform: [{ translateY }] }]}
         >
-          <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={dismiss}
+          <View
             style={[styles.toast, { borderLeftColor: current.tint }]}
             accessibilityRole="alert"
             accessibilityLiveRegion="polite"
           >
-            <Ionicons name={current.icon} size={18} color={current.tint} />
-            <Text style={styles.text} numberOfLines={3}>{current.message}</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={dismiss}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 }}
+            >
+              <Ionicons name={current.icon} size={18} color={current.tint} />
+              <Text style={styles.text} numberOfLines={3}>{current.message}</Text>
+            </TouchableOpacity>
+            {current.action && (
+              <TouchableOpacity
+                onPress={() => {
+                  try { current.action.onPress?.(); } catch (_) {}
+                  // Action-tap dismisses without firing onTimeout — the
+                  // action replaced the destructive commit.
+                  dismiss({ skipTimeout: true });
+                }}
+                style={styles.actionBtn}
+                accessibilityRole="button"
+                accessibilityLabel={current.action.label}
+              >
+                <Text style={[styles.actionText, { color: current.tint }]}>
+                  {current.action.label}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </Animated.View>
       )}
     </ToastContext.Provider>
@@ -189,5 +229,16 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontWeight: fontWeight.medium,
     lineHeight: 19,
+  },
+  actionBtn: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    marginLeft: spacing.xs,
+  },
+  actionText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
   },
 });
