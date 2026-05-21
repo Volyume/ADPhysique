@@ -495,6 +495,12 @@ export default function SettingsScreen({ navigation }) {
         {/* Account */}
         <SectionHeader title="Account" />
         <View style={styles.section}>
+          <SettingRow
+            icon="information-circle-outline"
+            label="Free, Pro, and your data"
+            sub="What's free, what Pro adds, what stays if you switch back"
+            onPress={() => navigation.navigate('SubscriptionPolicy')}
+          />
           {tier === 'pro' && (
             <SettingRow
               icon="arrow-down-circle-outline"
@@ -502,7 +508,7 @@ export default function SettingsScreen({ navigation }) {
               onPress={() =>
                 Alert.alert(
                   'Switch to Free?',
-                  'You can come back to Pro any time. Your logbook and history stay exactly as they are.',
+                  'Everything you\'ve logged stays. Past coach outputs, check-ins, mesocycles and PRs remain readable. You just won\'t get new Pro coaching adjustments until you re-enable Pro.',
                   [
                     { text: 'Keep Pro', style: 'cancel' },
                     {

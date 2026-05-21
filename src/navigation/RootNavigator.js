@@ -67,6 +67,7 @@ import WellbeingCheckScreen from '../screens/WellbeingCheckScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import DebugLogScreen from '../screens/DebugLogScreen';
 import NutritionEducationScreen from '../screens/NutritionEducationScreen';
+import SubscriptionPolicyScreen from '../screens/SubscriptionPolicyScreen';
 import { withProGuard } from '../components/ProGate';
 
 const Tab = createBottomTabNavigator();
@@ -178,6 +179,7 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="WellbeingCheck" component={WellbeingCheckScreen} options={{ title: 'Wellbeing check' }} />
       <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ headerShown: false }} />
       <Stack.Screen name="DebugLog" component={DebugLogScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="SubscriptionPolicy" component={SubscriptionPolicyScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
     </Stack.Navigator>
   );

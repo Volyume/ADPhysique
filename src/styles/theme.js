@@ -6,8 +6,8 @@ export const colors = {
   surface: '#1A1A1A',
   surface2: '#242424',
   surface3: '#2E2E2E',
-  border: '#525252',       // 3.06:1 on background — meets WCAG 1.4.11 (3:1 for UI separators)
-  borderLight: '#5C5C5C',  // 3.71:1 on background
+  border: '#6E6E6E',       // 3.81:1 on background — meets WCAG 1.4.11 (3:1 for UI separators)
+  borderLight: '#7A7A7A',  // 4.53:1 on background
 
   // Primary accent — amber gold
   primary: '#F59E0B',
@@ -23,10 +23,10 @@ export const colors = {
   errorBg: 'rgba(244, 67, 54, 0.15)',
 
   // Text hierarchy
-  textPrimary: '#FFFFFF',
-  textSecondary: '#9E9E9E',
-  textMuted: '#909090',    // 5.55:1 on bg, 4.92:1 on surface — passes WCAG AA 4.5:1 everywhere
-  textDisabled: '#727272', // 3.85:1 on bg — passes WCAG 1.4.11 (3:1 UI minimum) for disabled state
+  textPrimary: '#FFFFFF',  // 19.44:1 on bg — AAA
+  textSecondary: '#9E9E9E', // 7.25:1 on bg — AAA body, AA on raised surfaces
+  textMuted: '#9B9B9B',    // 6.99:1 on bg — AAA at body-text bar; ≥4.89:1 on every surface (AA)
+  textDisabled: '#727272', // 4.04:1 on bg — disabled state only, no WCAG body-text requirement
 
   // Tab bar
   tabBar: '#111111',

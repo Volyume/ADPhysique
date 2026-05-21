@@ -153,6 +153,17 @@ export default function ProUpgradeScreen({ navigation }) {
             ))}
           </View>
 
+          <TouchableOpacity
+            style={styles.policyLink}
+            onPress={() => navigation.navigate('SubscriptionPolicy')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />
+            <Text style={styles.policyLinkText}>
+              What stays if you switch back to Free later
+            </Text>
+          </TouchableOpacity>
+
           {hasAccount ? (
             <>
               <Text style={styles.accountNote}>
@@ -294,7 +305,9 @@ const styles = StyleSheet.create({
     textAlign: 'center', lineHeight: 22, marginBottom: spacing.xl,
   },
 
-  perks: { gap: spacing.md, marginBottom: spacing.xl },
+  perks: { gap: spacing.md, marginBottom: spacing.md },
+  policyLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, marginBottom: spacing.lg },
+  policyLinkText: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.medium, textDecorationLine: 'underline' },
   perkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   perkIcon: {
     width: 32, height: 32, borderRadius: radius.md,
