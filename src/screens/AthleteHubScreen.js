@@ -12,6 +12,7 @@ import { colors, fontSize, fontWeight, spacing, radius, shadow } from '../styles
 import { VolyumeMark } from '../components/BrandMark';
 import InfoTooltip from '../components/InfoTooltip';
 import { ProBadge } from '../components/ProGate';
+import { SkeletonCard } from '../components/Skeleton';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { formatBodyWeightShort } from '../lib/units';
@@ -231,6 +232,7 @@ export default function AthleteHubScreen({ navigation }) {
   const [nutritionTargets, setNutritionTargets] = useState(null);
   const [latestMetric, setLatestMetric]         = useState(null);
   const [refreshing, setRefreshing]             = useState(false);
+  const [initialLoading, setInitialLoading]     = useState(true);
   const [totalWorkouts, setTotalWorkouts]       = useState(0);
   const [recovery, setRecovery]                 = useState({ soreness: null, fatigue: null, joint: null });
   const [weekVolume, setWeekVolume]             = useState(null);
@@ -284,6 +286,7 @@ export default function AthleteHubScreen({ navigation }) {
       loadWorkoutStats(),
       ...(tier === 'pro' ? [loadBodyMetrics(), loadNutrition(), loadAdaptationHistory(), loadRecoveryTrend(), loadMuscleFreshness()] : []),
     ]);
+    setInitialLoading(false);
   }
 
   async function loadRecoveryTrend() {
@@ -450,6 +453,18 @@ export default function AthleteHubScreen({ navigation }) {
           />
         }
       >
+
+        {/* Initial-load skeleton banner. Hides as soon as the first
+            load() promise.all resolves (typically 100-400ms on local
+            SQLite). Without it, cold launch shows a blank-looking
+            screen for that window. */}
+        {initialLoading && (
+          <View style={{ gap: spacing.md, marginBottom: spacing.md }}>
+            <SkeletonCard height={88} />
+            <SkeletonCard height={140} />
+            <SkeletonCard height={120} />
+          </View>
+        )}
 
         {/* ── Profile card ──────────────────────────────── */}
         <View style={styles.profileCard}>

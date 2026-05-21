@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg, kgToStoneLbsStrings, kgToLbs } from '../lib/units';
 import { VolyumeMark } from '../components/BrandMark';
+import { SkeletonCard } from '../components/Skeleton';
 import {
   getAllWorkouts, getCompletedWorkoutSets, getActivePlan, getRoutinesForPlan,
   getAllRoutineExerciseCounts, createWorkout, getRoutineExercisesWithDetails,
@@ -61,6 +62,11 @@ export default function HomeScreen({ navigation }) {
   const [blockProgress, setBlockProgress] = useState([]);
   const [currentMesoWeek, setCurrentMesoWeek] = useState(null);
   const [latestCoachOutput, setLatestCoachOutput] = useState(null);
+  // First-load flag — flipped false in loadData. While true, the
+  // home screen renders skeleton cards in place of the main cards so
+  // the user sees structure instantly on cold launch rather than a
+  // blank screen until SQLite reads complete.
+  const [initialLoading, setInitialLoading] = useState(true);
   const [coachBannerDismissed, setCoachBannerDismissed] = useState(false);
   const [todayWeight, setTodayWeight] = useState(null);       // logged weight for today
   const [weightInput, setWeightInput] = useState('');          // draft for kg/lbs mode
@@ -130,6 +136,7 @@ export default function HomeScreen({ navigation }) {
       loadBriefDismissal(),
       ...(tier === 'pro' ? [loadTodayWeight(), loadLatestCoachOutput()] : []),
     ]);
+    setInitialLoading(false);
   }
 
   async function loadLatestCoachOutput() {
@@ -668,6 +675,19 @@ export default function HomeScreen({ navigation }) {
               <Ionicons name="close" size={16} color={colors.textMuted} />
             </TouchableOpacity>
           </TouchableOpacity>
+        )}
+
+        {/* Skeleton placeholders shown during initial cold-load. As
+            soon as loadData completes, this block disappears and the
+            real content (which is largely below) renders. Without it,
+            the user sees a blank screen for the ~100-300ms it takes
+            SQLite reads to complete on a fresh app start. */}
+        {initialLoading && (
+          <View style={{ gap: spacing.md, marginBottom: spacing.md }}>
+            <SkeletonCard height={84} />
+            <SkeletonCard height={120} />
+            <SkeletonCard height={160} />
+          </View>
         )}
 
         {/* ── Morning weight card ── */}
