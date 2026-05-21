@@ -17,33 +17,37 @@ beforeEach(() => {
 });
 
 describe('clearAuthStateForSignOut', () => {
-  test('wipes all @volyume_* AsyncStorage keys tied to the session', async () => {
-    // Pre-seed the storage with the keys an active session would have
+  test('preserves all AsyncStorage keys — sign-out is session-only, not data destruction', async () => {
+    // Sign-out should be like logging out of any other app: the active
+    // session ends, but the data stays. When the same user signs back
+    // in, everything is exactly as they left it. Data destruction is
+    // the Delete Account path, not this one.
     const Store = require('@react-native-async-storage/async-storage');
     const setItem = Store.default?.setItem ?? Store.setItem;
     const target = Store.default ?? Store;
-    await setItem.call(target, '@volyume_local_user_id', 'u1');
-    await setItem.call(target, '@volyume_tier', 'pro');
-    await setItem.call(target, '@volyume_user_profile_u1', JSON.stringify({ firstName: 'Allan' }));
-    await setItem.call(target, '@volyume_block_snooze', '1');
-    await setItem.call(target, '@volyume_schedule_v1', '{}');
-    await setItem.call(target, '@volyume_body_metrics_migrated_u1', 'true');
-    await setItem.call(target, '@volyume_first_run_complete', 'true');
-    await setItem.call(target, '@volyume_crash_log', '{}');
+    const SEEDED = {
+      '@volyume_local_user_id': 'u1',
+      '@volyume_tier': 'pro',
+      '@volyume_user_profile_u1': JSON.stringify({ firstName: 'Allan' }),
+      '@volyume_block_snooze': '1',
+      '@volyume_schedule_v1': '{}',
+      '@volyume_body_metrics_migrated_u1': 'true',
+      '@volyume_first_run_complete': 'true',
+      '@volyume_first_run_complete_u1': 'true',
+      '@volyume_crash_log': '{}',
+    };
+    for (const [k, v] of Object.entries(SEEDED)) {
+      await setItem.call(target, k, v);
+    }
 
     const useAppStore = require('../../store/useAppStore').default;
     await useAppStore.getState().clearAuthStateForSignOut();
 
     const getItem = Store.default?.getItem ?? Store.getItem;
-    // Critical keys are gone
-    expect(await getItem.call(target, '@volyume_local_user_id')).toBeNull();
-    expect(await getItem.call(target, '@volyume_tier')).toBeNull();
-    expect(await getItem.call(target, '@volyume_user_profile_u1')).toBeNull();
-    expect(await getItem.call(target, '@volyume_block_snooze')).toBeNull();
-    expect(await getItem.call(target, '@volyume_schedule_v1')).toBeNull();
-    expect(await getItem.call(target, '@volyume_body_metrics_migrated_u1')).toBeNull();
-    expect(await getItem.call(target, '@volyume_first_run_complete')).toBeNull();
-    expect(await getItem.call(target, '@volyume_crash_log')).toBeNull();
+    // EVERY key is still there post-signout. Nothing destroyed.
+    for (const [k, expected] of Object.entries(SEEDED)) {
+      expect(await getItem.call(target, k)).toBe(expected);
+    }
   });
 
   test('resets in-memory store to a clean post-signout state', async () => {

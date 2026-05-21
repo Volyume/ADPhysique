@@ -4,6 +4,7 @@ import { A11Y_PREFS_KEY, loadA11yPrefs } from '../lib/accessibilityPrefs';
 
 const LOCAL_USER_KEY   = '@volyume_local_user_id';
 const FIRST_RUN_KEY    = '@volyume_first_run_complete';
+const FIRST_RUN_KEY_PFX = '@volyume_first_run_complete_'; // per-uid: + supabase user.id
 const PROFILE_KEY_PFX  = '@volyume_user_profile_';
 const TIER_KEY         = '@volyume_tier';
 
@@ -112,50 +113,38 @@ const useAppStore = create((set, get) => ({
   // (the user's training history stays local — if they sign back in to
   // the same account on this device, it's instantly available without
   // waiting for pullFromCloud). The actual SQLite wipe happens only on
-  // delete-account or when a DIFFERENT user signs in on this device.
+  // Sign-out is a SESSION-LEVEL operation. It does NOT touch AsyncStorage
+  // or local data. All per-user content (profile, completed-onboarding
+  // flag, body metrics migration flags, nutrition targets, etc.) stays
+  // exactly where it is. When the same user signs back in, everything
+  // is intact — no cloud roundtrip needed for routing.
+  //
+  // Per-user safety on a shared device: keys that are user-specific use
+  // a uid prefix (FIRST_RUN_KEY_PFX, PROFILE_KEY_PFX, etc.) so a
+  // different user signing in on the same device reads THEIR own keys,
+  // not the previous user's. The few legacy global keys
+  // (FIRST_RUN_KEY, TIER_KEY) are kept in sync per-user via the
+  // restoreSessionFromCloud path.
+  //
+  // The only path that wipes data is the explicit Settings →
+  // Delete account flow (wipeAllUserData + delete-account Edge
+  // Function). Sign-out is not that.
   clearAuthStateForSignOut: async () => {
     // eslint-disable-next-line global-require
     try { require('../lib/errorLog').logInfo('clearAuthStateForSignOut', 'start', { prevTier: get().tier, prevUid: get().user?.id ?? null }); } catch (_) {}
-    const keysToRemove = [
-      LOCAL_USER_KEY,
-      FIRST_RUN_KEY,
-      TIER_KEY,
-      // Block snooze and schedule prefs — tied to the signed-out account
-      '@volyume_block_snooze',
-      '@volyume_schedule_v1',
-      '@volyume_seen_workout_info',
-      '@volyume_body_metrics_migrated_*', // pattern below
-    ];
-    try {
-      const allKeys = await AsyncStorage.getAllKeys();
-      const toRemove = allKeys.filter(k =>
-        k.startsWith('@volyume_user_profile_') ||
-        k.startsWith('@volyume_body_metrics_migrated_') ||
-        k.startsWith('@volyume_nutrition_targets') ||
-        k === '@volyume_crash_log' ||
-        keysToRemove.includes(k)
-      );
-      if (toRemove.length) await AsyncStorage.multiRemove(toRemove);
-    } catch (_) {
-      // Best-effort — fall back to removing just the most critical keys
-      try { await AsyncStorage.removeItem(LOCAL_USER_KEY); } catch (__) {}
-      try { await AsyncStorage.removeItem(TIER_KEY); } catch (__) {}
-    }
     set({
+      // Session-level fields only. These are in-memory state, not
+      // AsyncStorage. AsyncStorage data persists untouched.
       user: null,
       session: null,
       userProfile: null,
       tier: null,
-      // KEY POINT: tierChecked / firstRunChecked stay TRUE because we just
-      // checked them by clearing them. The RootNavigator splash gate is
-      //   if (!tierChecked || !firstRunChecked) return <Splash />
-      // — setting them to false here used to hang the splash screen forever
-      // after sign-out / delete-account because nothing re-runs the checks.
       tierChecked: true,
       firstRunComplete: false,
       firstRunChecked: true,
-      // Reset workout state too — a stale active workout from the prior
-      // session would otherwise re-appear on next sign-in.
+      // Workout in-memory state is per-session and shouldn't survive
+      // sign-out into a future session (could be a different user).
+      // The completed workout rows in SQLite are user-keyed and stay.
       activeWorkout: null,
       workoutExercises: [],
       currentExerciseIndex: 0,
@@ -234,7 +223,7 @@ const useAppStore = create((set, get) => ({
   // they completed it months ago — the cloud row is the source of truth.
   // Writes to AsyncStorage directly (not via completeFirstRun) so we don't
   // round-trip the just-read value back to Supabase.
-  restoreSessionFromCloud: async (supabaseUserId, sessionUser = null) => {
+  restoreSessionFromCloud: async (supabaseUserId, _sessionUser = null) => {
     if (!supabaseUserId) return;
     // eslint-disable-next-line global-require
     const log = require('../lib/errorLog');
@@ -243,9 +232,7 @@ const useAppStore = create((set, get) => ({
     // Beta tier policy — set tier='pro' UP FRONT before any cloud reads.
     // This must happen regardless of whether the cloud profile row exists
     // (fresh signups don't have one yet; deleted-but-unpurged accounts
-    // never get one back). Doing it conditionally on cloudData.tier was
-    // the bug — it left tier='free' or null in the very cases where Pro
-    // needed to persist most.
+    // never get one back).
     // eslint-disable-next-line global-require
     const { PRO_BETA_ACTIVE } = require('../lib/proGate');
     if (PRO_BETA_ACTIVE) {
@@ -254,31 +241,38 @@ const useAppStore = create((set, get) => ({
       log.logInfo('restoreSessionFromCloud.betaPro', 'forced tier=pro');
     }
 
-    // Fast path for brand-new signups: if the auth.users row was created
-    // in the last 60 seconds, we KNOW this user has no cloud profile
-    // (syncProfile is fire-and-forget on a background thread and hasn't
-    // written one yet). Skip the cloud read entirely — no splash,
-    // wizard mounts instantly. Existing users have created_at days /
-    // weeks / months old and still take the slow path (where the
-    // restoringSession splash is correct).
-    if (sessionUser?.created_at) {
-      const ageMs = Date.now() - new Date(sessionUser.created_at).getTime();
-      if (Number.isFinite(ageMs) && ageMs >= 0 && ageMs < 60_000) {
-        log.logInfo('restoreSessionFromCloud.freshSignup', `ageMs=${ageMs} — skipping cloud read`);
-        // restoringSession stays false; navigator routes immediately
-        // based on tier='pro' + firstRunComplete=false → wizard mounts.
+    // ── Fast path: per-user local cache ──────────────────────────────
+    // If this device has previously seen this uid (either by completing
+    // onboarding here, or by a prior successful cloud restore writing
+    // the cache), trust the cached firstRunComplete value and route
+    // immediately. NO splash. NO cloud read on the foreground path.
+    //
+    // A background sync still fires below so cross-device changes are
+    // picked up — but the navigator never waits for it.
+    //
+    // This makes sign-out → sign-back-in on the same device instant,
+    // which is the common case Allan testers hit constantly. The slow
+    // path (splash + cloud read) only triggers for genuinely new uids
+    // on this device: first signup, OAuth on a new device, etc.
+    try {
+      const cached = await AsyncStorage.getItem(FIRST_RUN_KEY_PFX + supabaseUserId);
+      if (cached === 'true' || cached === 'false') {
+        const isComplete = cached === 'true';
+        set({ firstRunComplete: isComplete, firstRunChecked: true });
+        try { await AsyncStorage.setItem(FIRST_RUN_KEY, cached); } catch (_) {}
+        log.logInfo('restoreSessionFromCloud.cacheHit', `firstRunComplete=${cached}`);
+        // Cross-device profile sync (e.g. user edited their goal on
+        // another device) is picked up by other paths: refreshTierFromCloud
+        // runs after this, bulkUploadLocalData reconciles on AppState
+        // foreground, and a cold launch re-runs this with no cache.
+        // No background cloud read here — sign-in stays purely local.
         return;
       }
-    }
+    } catch (_) { /* cache read failed — fall through to cloud read */ }
 
-    // Returning user path — wait for cloud read to confirm their state.
-    // Mark the cloud restore as in-flight so the navigator doesn't route
-    // on stale local state (the wizard-flash bug). Without this, the
-    // 200ms-10s cloud read window let the navigator see tier='pro' AND
-    // firstRunComplete=false → mount ProOnboardingStack briefly. The
-    // user starts filling the wizard, then cloud returns
-    // firstRunComplete=true and the stack unmounts mid-fill. Splash
-    // stays up until we know the resolved cloud state.
+    // ── Slow path: no per-uid cache, must hit the cloud ──────────────
+    // Only fires the FIRST time a uid sees this device. Subsequent
+    // sign-ins for the same uid take the fast path above.
     set({ restoringSession: true });
 
     let cloudData = null;
@@ -375,6 +369,17 @@ const useAppStore = create((set, get) => ({
       log.logInfo('restoreSessionFromCloud.firstRunRestored', 'true (from cloud)');
     }
 
+    // Populate the per-uid cache so the next sign-in for this uid on
+    // this device takes the fast path — no cloud read, no splash. The
+    // cache is only invalidated on explicit account deletion (where
+    // wipeAllUserData runs). Sign-out preserves it.
+    try {
+      await AsyncStorage.setItem(
+        FIRST_RUN_KEY_PFX + supabaseUserId,
+        cloudData.first_run_complete ? 'true' : 'false',
+      );
+    } catch (_) {}
+
     // Cloud state resolved — release the routing gate. Navigator now
     // routes based on the freshly-restored firstRunComplete + tier.
     set({ restoringSession: false });
@@ -451,8 +456,10 @@ const useAppStore = create((set, get) => ({
       );
       return { ok: false, error: 'workout_in_progress' };
     }
+    const uid = get().session?.user?.id;
     try {
       await AsyncStorage.setItem(FIRST_RUN_KEY, 'false');
+      if (uid) await AsyncStorage.setItem(FIRST_RUN_KEY_PFX + uid, 'false');
     } catch (_e) {}
     set({ firstRunComplete: false, firstRunChecked: true });
     require('../lib/errorLog').logInfo('useAppStore.resetFirstRun', 'firstRunComplete → false');
@@ -460,8 +467,12 @@ const useAppStore = create((set, get) => ({
   },
 
   completeFirstRun: async () => {
+    const uid = get().session?.user?.id;
     try {
       await AsyncStorage.setItem(FIRST_RUN_KEY, 'true');
+      // Per-uid cache lets sign-out → sign-back-in on the same device
+      // skip the cloud read entirely. Only this user's key, not global.
+      if (uid) await AsyncStorage.setItem(FIRST_RUN_KEY_PFX + uid, 'true');
     } catch (_e) {}
     set({ firstRunComplete: true });
     // Mirror to cloud so a user who signs in on a new device doesn't
