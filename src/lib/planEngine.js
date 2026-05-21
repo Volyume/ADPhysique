@@ -4,7 +4,7 @@
  * Pure functions only — no side effects, no DB calls, no Math.random().
  */
 
-import { GOAL_LABELS as _GOAL_LABELS, GOAL_OVERLAYS, GOALS_WITH_WEAK_POINTS } from './coachingGoals';
+import { GOAL_LABELS as _GOAL_LABELS, GOAL_OVERLAYS, PHASE_OVERLAYS, GOALS_WITH_WEAK_POINTS } from './coachingGoals';
 import { VOLUME_LANDMARKS } from './algorithms';
 
 // ---------------------------------------------------------------------------
@@ -120,10 +120,14 @@ function computeLandmarks(experience, recoveryRating, nutritionPhase, age) {
 // Goal overlays
 // ---------------------------------------------------------------------------
 
-function applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys) {
+function applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys, phase) {
   const t = { ...weeklyTargets };
 
-  if (goal === 'weak_point_spec') {
+  // weak_point used to live under `goal` (weak_point_spec). It now lives
+  // under `phase` (weak_point) since it's a current-block emphasis, not a
+  // body shape. When it's active, ignore the physique-category overlay —
+  // priority muscles get MAV-ish volume; everything else drops to MV.
+  if (phase === 'weak_point') {
     for (const m of Object.keys(t)) {
       if (weakPointKeys.includes(m)) {
         t[m] = Math.max(landmarks[m].MEV, landmarks[m].MRV - 2);
@@ -132,8 +136,20 @@ function applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys) {
       }
     }
   } else {
+    // 1. Physique-category overlay (mens_physique, bikini, etc.) — bias
+    //    volume toward the muscles that drive that category's judging.
     const overlay = GOAL_OVERLAYS[goal] ?? {};
     for (const [m, mult] of Object.entries(overlay)) {
+      if (t[m] != null) {
+        t[m] = Math.round(t[m] * mult);
+      }
+    }
+    // 2. Phase overlay (strength_size's isolation reduction). Applied on
+    //    top of the goal overlay so a Men's Physique competitor on a
+    //    strength-size block still keeps the upper-body bias but with
+    //    less isolation work.
+    const phaseOverlay = PHASE_OVERLAYS[phase] ?? {};
+    for (const [m, mult] of Object.entries(phaseOverlay)) {
       if (t[m] != null) {
         t[m] = Math.round(t[m] * mult);
       }
@@ -1002,8 +1018,13 @@ function buildPersonalisationSummary(inputs, effectiveDays, splitType, weakPoint
 // ---------------------------------------------------------------------------
 
 function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILabels) {
-  const { experience, goal, recoveryRating, nutritionPhase, equipment, sessionLengthMinutes, daysPerWeek } = inputs;
+  const { experience, goal, phase, recoveryRating, nutritionPhase, equipment, sessionLengthMinutes, daysPerWeek } = inputs;
   const eqLabel = EQUIPMENT_LABELS[equipment] ?? equipment;
+  // Same shadow as generatePlan — map post-merge phase to legacy goal IDs
+  // so the goalMap below still keys narrative text correctly.
+  const internalGoal = phase === 'weak_point'   ? 'weak_point_spec'
+                     : phase === 'strength_size' ? 'strength_hypertrophy'
+                     : goal;
 
   const avgSets = workouts.length
     ? Math.round(workouts.reduce((s, w) => s + w.exercises.reduce((t, e) => t + e.sets, 0), 0) / workouts.length)
@@ -1030,10 +1051,13 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
   };
   result.schedule = scheduleMap[splitType] ?? `${splitName} was selected to match your ${effectiveDays} days, ${experience} level, and goal.`;
 
-  // goal
+  // goal explanation — uses internalGoal so strength_size / weak_point
+  // phases get their narrative (kept under the legacy keys so this map
+  // doesn't grow).
   const goalMap = {
+    general:               `Even, well-rounded muscle growth. Sets are spread across all major muscle groups so nothing gets systematically undertrained, which is the most common cause of stalled progress.`,
     general_hypertrophy:   `Even, well-rounded muscle growth. Sets are spread across all major muscle groups so nothing gets systematically undertrained, which is the most common cause of stalled progress.`,
-    weak_point_spec:        `This goal gives${weakPointUILabels.length ? ' ' + weakPointUILabels.join(' and ') : ' your selected muscles'} more sets than a balanced plan would assign, while keeping everything else at enough to hold current size. Consistent targeted work over several weeks is how muscles behind the rest close the gap.`,
+    weak_point_spec:        `This block gives${weakPointUILabels.length ? ' ' + weakPointUILabels.join(' and ') : ' your selected muscles'} more sets than a balanced plan would assign, while keeping everything else at enough to hold current size. Consistent targeted work over several weeks is how muscles behind the rest close the gap.`,
     strength_hypertrophy:  `Muscle growth is still the goal, but your main compound lifts are loaded heavier and in a lower rep range. Building strength lets you use more weight over time, and more weight applied correctly means more muscle.`,
     mens_physique:         `Upper-body width and a sharp V-shape. Shoulder and lat development drive the look. More sets are placed on side delts, back width, and rear delts than a general plan would assign.`,
     classic_physique:      `Proportional symmetry and balanced mass. Calves, shoulders, and waist definition are all judged. Sets are spread to build a complete physique with particular attention to the landmark muscles of the division.`,
@@ -1043,7 +1067,7 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
     figure:                `Balanced upper and lower development with particular attention to shoulder width and back detail. A full, muscular look with symmetry across the entire physique.`,
     womens_physique:       `Greater overall muscle development than figure, with conditioning a key criterion. Sets are pushed higher across the board, with attention to the detail muscles that show best on stage.`,
   };
-  result.goal = goalMap[goal] ?? `Goal: ${GOAL_LABELS[goal] ?? goal}.`;
+  result.goal = goalMap[internalGoal] ?? goalMap[goal] ?? `Goal: ${GOAL_LABELS[goal] ?? goal}.`;
 
   // experience
   const expMap = {
@@ -1176,8 +1200,10 @@ function canSuperset(muscleA, muscleB) {
 }
 
 // Goal families that benefit most from supersets (volume + pump emphasis).
+// Keyed off `internalGoal` (legacy IDs) — the strength_size phase deliberately
+// stays OUT of this set so compound work isn't rushed under fatigue.
 const SUPERSET_GOAL_ALLOWLIST = new Set([
-  'general_hypertrophy', 'weak_point_spec',
+  'general', 'general_hypertrophy', 'weak_point_spec',
   'mens_physique', 'classic_physique', 'bodybuilding',
   'bikini', 'wellness', 'figure', 'womens_physique',
 ]);
@@ -1247,7 +1273,8 @@ export function generatePlan(inputs) {
     daysPerWeek       = 4,
     sessionLengthMinutes = 60,
     equipment         = 'full_gym',
-    goal              = 'general_hypertrophy',
+    goal              = 'general',
+    phase             = null,  // training phase — drives weak_point / strength_size overlays
     weakPoints        = [],
     recoveryRating    = 'average',
     nutritionPhase    = null,
@@ -1262,7 +1289,18 @@ export function generatePlan(inputs) {
   // Beginners capped at 4 days
   const effectiveDays = (experience === 'beginner' && daysPerWeek > 4) ? 4 : daysPerWeek;
 
-  const splitType = selectSplit(experience, effectiveDays, goal);
+  // Shadow goal for legacy engine code paths. Post-merge, weak_point and
+  // strength_size live under `phase`, not `goal`. applyGoalOverlay already
+  // handles both directly. But the internal builders (split selection,
+  // rep range / rest selection in makeEx, plan name labels, etc.) still
+  // key off the old goal IDs — and threading `phase` through every helper
+  // would touch 30+ call sites. Mapping back to the legacy IDs here is
+  // surgical and contained.
+  const internalGoal = phase === 'weak_point'   ? 'weak_point_spec'
+                     : phase === 'strength_size' ? 'strength_hypertrophy'
+                     : goal;
+
+  const splitType = selectSplit(experience, effectiveDays, internalGoal);
 
   // Compute adjusted landmarks
   const landmarks = computeLandmarks(experience, recoveryRating, nutritionPhase, age);
@@ -1274,30 +1312,30 @@ export function generatePlan(inputs) {
   }
 
   // Apply goal overlay
-  const adjustedTargets = applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys);
+  const adjustedTargets = applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys, phase);
 
   // Build workouts
   let rawWorkouts;
   switch (splitType) {
     case 'full_body':
-      rawWorkouts = buildFullBodyWorkouts(adjustedTargets, landmarks, equipment, goal, experience, nutritionPhase, effectiveDays);
+      rawWorkouts = buildFullBodyWorkouts(adjustedTargets, landmarks, equipment, internalGoal, experience, nutritionPhase, effectiveDays);
       break;
     case 'upper_lower':
-      rawWorkouts = buildUpperLowerWorkouts(adjustedTargets, landmarks, equipment, goal, experience, nutritionPhase);
+      rawWorkouts = buildUpperLowerWorkouts(adjustedTargets, landmarks, equipment, internalGoal, experience, nutritionPhase);
       break;
     case 'upper_lower_wp':
-      rawWorkouts = buildUpperLowerWPWorkouts(adjustedTargets, landmarks, equipment, goal, weakPointKeys, experience, nutritionPhase);
+      rawWorkouts = buildUpperLowerWPWorkouts(adjustedTargets, landmarks, equipment, internalGoal, weakPointKeys, experience, nutritionPhase);
       break;
     case 'ppl':
     case 'ppl_ab':
-      rawWorkouts = buildPPLWorkouts(adjustedTargets, landmarks, equipment, goal, experience, nutritionPhase, effectiveDays);
+      rawWorkouts = buildPPLWorkouts(adjustedTargets, landmarks, equipment, internalGoal, experience, nutritionPhase, effectiveDays);
       break;
     default:
-      rawWorkouts = buildFullBodyWorkouts(adjustedTargets, landmarks, equipment, goal, experience, nutritionPhase, effectiveDays);
+      rawWorkouts = buildFullBodyWorkouts(adjustedTargets, landmarks, equipment, internalGoal, experience, nutritionPhase, effectiveDays);
   }
 
-  // Strength notes
-  if (goal === 'strength_hypertrophy') {
+  // Strength notes (strength_size phase OR legacy goal)
+  if (internalGoal === 'strength_hypertrophy') {
     for (const w of rawWorkouts) {
       for (const ex of w.exercises) {
         if (ex.restSec >= 150 && !ex.notes) {
@@ -1337,7 +1375,10 @@ export function generatePlan(inputs) {
   );
   const mesocycleSchedule     = buildMesocycleSchedule(experience);
 
+  // Plan-name label keyed off internalGoal so strength_size / weak_point
+  // phases produce their own short labels (kept under the legacy keys).
   const goalShort = {
+    general:              'Build Muscle',
     general_hypertrophy:  'Build Muscle',
     weak_point_spec:      'Specialisation',
     strength_hypertrophy: 'Strength + Size',
@@ -1348,7 +1389,7 @@ export function generatePlan(inputs) {
     wellness:             'Wellness',
     figure:               'Figure',
     womens_physique:      "Women's Physique",
-  }[goal] ?? 'Training';
+  }[internalGoal] ?? 'Training';
 
   const splitShort = {
     full_body:      'Full Body',

@@ -222,10 +222,13 @@ export default function ProGoalSetupScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* ── Physique goal ── */}
-        <Text style={styles.sectionLabel}>What are you training for?</Text>
+        {/* ── Physique category (optional) ──
+            Most users leave this on "Not competing — General". Competitive
+            lifters pick their division so volume gets biased toward the
+            muscles their category is judged on. */}
+        <Text style={styles.sectionLabel}>Competing in a category? (optional)</Text>
         <Text style={styles.sectionSub}>
-          Shapes how your plan allocates volume across muscle groups.
+          Only matters if you're chasing a competitive physique. Biases plan volume toward the muscles that category is judged on.
         </Text>
 
         {/* Filter tabs */}
@@ -299,10 +302,12 @@ export default function ProGoalSetupScreen({ navigation }) {
           </>
         )}
 
-        {/* ── Training phase ── */}
-        <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>Training phase</Text>
+        {/* ── Current focus (primary question post-merge) ──
+            Drives nutrition, plan structure, and emphasis overlays
+            (weak_point spec, strength_size's isolation reduction). */}
+        <Text style={[styles.sectionLabel, styles.sectionLabelSpaced]}>What are you focused on right now?</Text>
         <Text style={styles.sectionSub}>
-          Shapes your calorie and nutrition targets, and how hard the plan pushes you.
+          Drives your calorie target and how the plan is built. Pick what your current block is doing.
         </Text>
 
         {TRAINING_PHASES.map(phase => {

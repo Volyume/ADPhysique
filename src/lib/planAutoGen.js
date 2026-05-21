@@ -75,6 +75,10 @@ export function buildPlanInputs(profile) {
     sessionLengthMinutes: profile.sessionLengthMinutes ?? 60,
     equipment: profile.equipment ?? 'full_gym',
     goal: profile.trainingGoal,
+    // phase is now the load-bearing question post-merge: it drives nutrition,
+    // weak_point overlay, and strength_size's isolation reduction. Engine
+    // reads `phase` for the overlay decisions and `nutritionPhase` for the
+    // calorie/volume tuning math.
     phase: profile.trainingPhase,
     weakPoints: profile.planWeakPoints ?? [],
     recoveryRating: profile.recoveryRating ?? 'average',

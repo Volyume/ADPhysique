@@ -302,12 +302,15 @@ function estimateWeeklyRate(targetKcal, maintenanceKcal, weightKg) {
 // Main export: calculateNutritionTargets
 // ---------------------------------------------------------------------------
 
-// Physique competitor and strength goals warrant the advanced protein approach
-// because coaches prescribe 2.4 g/kg BW for bulking phases in these categories.
+// Physique competitor categories warrant the advanced protein approach
+// because coaches prescribe 2.4 g/kg BW for bulking phases in these
+// categories. 'strength_hypertrophy' used to live here too, but that
+// concept moved to TRAINING_PHASES.strength_size — a phase emphasis,
+// not a physique. Strength-size users on general physique get the
+// standard 2.0 g/kg protein target, which is fine for them.
 export const ADVANCED_PROTEIN_GOALS = [
   'mens_physique', 'classic_physique', 'bodybuilding',
   'bikini', 'wellness', 'figure', 'womens_physique',
-  'strength_hypertrophy',
 ];
 
 // Experience-based surplus multipliers. Beginners utilise larger surpluses efficiently;

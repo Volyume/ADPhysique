@@ -4,6 +4,19 @@
  * volume overlays, and nutrition constants used across the entire app.
  *
  * Pure data + pure functions — no side effects, no imports, no React.
+ *
+ * Conceptual model (post-merge):
+ *   - PHYSIQUE_GOALS  → "Which body are you building?"  (volume distribution)
+ *     This is the optional, secondary question — most users default to
+ *     'general'. Competitive lifters pick their division.
+ *   - TRAINING_PHASES → "What are you focused on right now?"  (calories +
+ *     plan tuning + emphasis). This is the primary, prominent question.
+ *
+ * Previous shape had these two concepts mixed: PHYSIQUE_GOALS used to
+ * include 'general_hypertrophy' / 'strength_hypertrophy' / 'weak_point_spec'
+ * which weren't physique categories at all. Those moved into TRAINING_PHASES
+ * (strength_size, weak_point) and a 'general' default replaces them in
+ * PHYSIQUE_GOALS. migrateProfileGoals() handles the data migration.
  */
 
 // ─── Physique categories ────────────────────────────────────────────────────
@@ -11,29 +24,13 @@
 export const PHYSIQUE_GOAL_GROUPS = ['General', 'Male', 'Female'];
 
 export const PHYSIQUE_GOALS = [
-  // ── General ──
+  // ── Default: not competing ──
   {
-    value: 'general_hypertrophy',
-    label: 'Build Muscle',
+    value: 'general',
+    label: 'Not competing',
     group: 'General',
-    icon: 'trending-up-outline',
-    subtitle: 'Balanced muscle growth across the whole body. Good for any level.',
-    weakPointsEnabled: true,
-  },
-  {
-    value: 'strength_hypertrophy',
-    label: 'Strength + Size',
-    group: 'General',
-    icon: 'flash-outline',
-    subtitle: 'Compound-focused training with heavier loads. Build strength and muscle together.',
-    weakPointsEnabled: false,
-  },
-  {
-    value: 'weak_point_spec',
-    label: 'Bring Up a Weak Point',
-    group: 'General',
-    icon: 'git-branch-outline',
-    subtitle: 'Target specific muscles you want to bring up while maintaining everything else.',
+    icon: 'body-outline',
+    subtitle: 'Balanced volume across all muscle groups. Default for everyone not training for a specific category.',
     weakPointsEnabled: true,
   },
 
@@ -113,7 +110,7 @@ export const GOALS_WITH_WEAK_POINTS = PHYSIQUE_GOALS
   .filter(g => g.weakPointsEnabled)
   .map(g => g.value);
 
-// ─── Training phases ────────────────────────────────────────────────────────
+// ─── Training phases (the primary "what are you focused on" question) ──────
 // `nutritionKey` maps to nutritionEngine.js PHASE_ADJUSTMENTS keys
 // `coachingPhaseKey` maps to planEngine NUT_MULT and weeklyCoach phaseConfig
 
@@ -122,7 +119,7 @@ export const TRAINING_PHASES = [
     value: 'lean_gain',
     nutritionKey: 'lean_gain',
     coachingPhaseKey: 'mild_bulk',
-    label: 'Lean Gain',
+    label: 'Build muscle (lean gain)',
     icon: 'arrow-up-circle-outline',
     subtitle: 'Building muscle slowly with minimal fat gain.',
     detail: 'A small calorie surplus. Steady, clean gains. Takes patience but keeps you lean throughout.',
@@ -131,16 +128,38 @@ export const TRAINING_PHASES = [
     value: 'bulk',
     nutritionKey: 'build',
     coachingPhaseKey: 'bulk',
-    label: 'Bulk',
+    label: 'Build muscle (bulk)',
     icon: 'rocket-outline',
     subtitle: 'Pushing muscle growth with a bigger calorie surplus.',
     detail: 'A moderate surplus. Faster muscle gains with some expected fat gain alongside.',
   },
   {
+    // Previously a "PHYSIQUE_GOAL" called strength_hypertrophy.
+    // It's actually a training emphasis for the current block, not a body shape.
+    value: 'strength_size',
+    nutritionKey: 'build',
+    coachingPhaseKey: 'bulk',
+    label: 'Strength + size',
+    icon: 'flash-outline',
+    subtitle: 'Compound-focused training with heavier loads. Build strength and muscle together.',
+    detail: 'Eating in a surplus to support strength gains. Compound lifts take priority, isolation work pared back.',
+  },
+  {
+    // Previously a "PHYSIQUE_GOAL" called weak_point_spec.
+    // Specialisation block — strip volume from non-priority muscles.
+    value: 'weak_point',
+    nutritionKey: 'lean_gain',
+    coachingPhaseKey: 'mild_bulk',
+    label: 'Bring up a weak point',
+    icon: 'git-branch-outline',
+    subtitle: 'Target specific muscles you want to bring up while maintaining everything else.',
+    detail: 'Priority muscles get MAV-level volume; everything else drops to maintenance. Pair with a small surplus.',
+  },
+  {
     value: 'cut',
     nutritionKey: 'mild_cut',
     coachingPhaseKey: 'mild_cut',
-    label: 'Cut',
+    label: 'Lose fat (cut)',
     icon: 'arrow-down-circle-outline',
     subtitle: 'Losing fat while holding onto muscle.',
     detail: 'A calorie deficit with high protein. Train hard to protect your muscle while the fat comes off.',
@@ -149,7 +168,7 @@ export const TRAINING_PHASES = [
     value: 'recomp',
     nutritionKey: 'recomp',
     coachingPhaseKey: 'maint',
-    label: 'Body Recomposition',
+    label: 'Recomp',
     icon: 'swap-horizontal-outline',
     subtitle: 'Improving your shape without a big change in weight.',
     detail: 'Eating around maintenance. A slow process, but works well for beginners and people returning after a break.',
@@ -187,11 +206,49 @@ export function daysToActivityLevel(daysPerWeek) {
   return 'very_active';
 }
 
+// ─── Profile migration ─────────────────────────────────────────────────────
+//
+// Existing user profiles store legacy trainingGoal values that no longer
+// exist post-merge. Run this on every profile load so the new code paths
+// see clean values without forcing the user to re-onboard.
+
+export function migrateProfileGoals(profile) {
+  if (!profile || typeof profile !== 'object') return profile;
+  const out = { ...profile };
+  switch (profile.trainingGoal) {
+    case 'general_hypertrophy':
+      out.trainingGoal = 'general';
+      break;
+    case 'strength_hypertrophy':
+      out.trainingGoal = 'general';
+      // Don't clobber a user-set phase that's already a phase (e.g. cut).
+      // Only assume strength_size if their phase was the auto-derived
+      // surplus default (bulk / lean_gain).
+      if (profile.trainingPhase === 'bulk' || profile.trainingPhase === 'lean_gain' || !profile.trainingPhase) {
+        out.trainingPhase = 'strength_size';
+      }
+      break;
+    case 'weak_point_spec':
+      out.trainingGoal = 'general';
+      if (profile.trainingPhase === 'bulk' || profile.trainingPhase === 'lean_gain' || !profile.trainingPhase) {
+        out.trainingPhase = 'weak_point';
+      }
+      break;
+    default:
+      // mens_physique / classic_physique / bodybuilding / bikini /
+      // wellness / figure / womens_physique → unchanged
+      break;
+  }
+  return out;
+}
+
 // ─── Volume overlays per physique category ──────────────────────────────────
 //
 // Multipliers applied to computed weekly set targets in planEngine.
 // 1.0 = no change. Values are relative to the balanced intermediate baseline.
 // Scientific basis for each:
+//
+// general:         Balanced volume across all muscles. No overlay applied.
 //
 // mens_physique:   Judged from front/back, upper body only. Shoulder width
 //                  and lat V-taper drive the look. Legs de-emphasised (shorts).
@@ -215,15 +272,7 @@ export function daysToActivityLevel(daysPerWeek) {
 //                  All groups developed within a feminine frame.
 
 export const GOAL_OVERLAYS = {
-  general_hypertrophy: {},
-
-  strength_hypertrophy: {
-    // Compound-dominant. Reduce isolation-heavy muscles, keep prime movers.
-    side_delts: 0.70, rear_delts: 0.70, biceps: 0.80, triceps: 0.80,
-    abs: 0.80, calves: 0.70, traps: 0.85, forearms: 0.80,
-  },
-
-  weak_point_spec: {}, // handled by separate weak-point logic in planEngine
+  general: {}, // no per-muscle bias — balanced volume
 
   // ── Male categories ──
 
@@ -338,6 +387,27 @@ export const GOAL_OVERLAYS = {
   },
 };
 
+// ─── Phase overlays (applied on top of GOAL_OVERLAYS) ──────────────────────
+//
+// strength_size: compound-dominant. Reduce isolation-heavy muscles so the
+//   sets budget goes to prime movers. (Previously lived under
+//   GOAL_OVERLAYS.strength_hypertrophy when this was mis-filed as a goal.)
+//
+// weak_point: handled by separate weak-point logic in planEngine — empty
+//   here so we don't double-up.
+//
+// All other phases (bulk, cut, lean_gain, recomp, maintain) leave the
+// per-muscle distribution alone. Phase affects calories and overall volume
+// tuning via NUT_MULT, not muscle-level emphasis.
+
+export const PHASE_OVERLAYS = {
+  strength_size: {
+    side_delts: 0.70, rear_delts: 0.70, biceps: 0.80, triceps: 0.80,
+    abs: 0.80, calves: 0.70, traps: 0.85, forearms: 0.80,
+  },
+  weak_point: {}, // handled by separate weak-point logic in planEngine
+};
+
 // ─── Goal-specific weekly coaching training notes ───────────────────────────
 
 export function getTrainingNote(trainingGoal, volumeSignal, trainingSignal, matrixDeload) {
@@ -347,48 +417,42 @@ export function getTrainingNote(trainingGoal, volumeSignal, trainingSignal, matr
 
   if (trainingSignal === 'hold') {
     const holdNotes = {
-      general_hypertrophy:  'Performance and recovery need to stabilise. Hold your current plan before adding anything more.',
-      strength_hypertrophy: 'Keep your main compound lifts as they are. No need to push load this week.',
-      weak_point_spec:      'Stay the course. Hold your priority muscle volume where it is for now.',
-      mens_physique:        'Keep shoulder and back sessions steady. Performance is stable and consistent sessions build the look.',
-      classic_physique:     'Hold everything steady. Consistent sessions across all groups build proportion over time.',
-      bodybuilding:         'No changes needed. Stay with current volume across all groups.',
-      bikini:               'Hold your current sessions. Glute and hamstring work is tracking well.',
-      wellness:             'Keep lower body volume steady. Recovery needs more time before adding.',
-      figure:               'Hold current plan. Keep shoulder and back sessions consistent.',
-      womens_physique:      'Maintain current volume. Performance is stable across all groups.',
+      general:          'Performance and recovery need to stabilise. Hold your current plan before adding anything more.',
+      mens_physique:    'Keep shoulder and back sessions steady. Performance is stable and consistent sessions build the look.',
+      classic_physique: 'Hold everything steady. Consistent sessions across all groups build proportion over time.',
+      bodybuilding:     'No changes needed. Stay with current volume across all groups.',
+      bikini:           'Hold your current sessions. Glute and hamstring work is tracking well.',
+      wellness:         'Keep lower body volume steady. Recovery needs more time before adding.',
+      figure:           'Hold current plan. Keep shoulder and back sessions consistent.',
+      womens_physique:  'Maintain current volume. Performance is stable across all groups.',
     };
-    return holdNotes[trainingGoal] ?? 'Performance and recovery need to stabilise first. Stay with what you have been doing before adding anything more.';
+    return holdNotes[trainingGoal] ?? holdNotes.general;
   }
 
   if (volumeSignal >= 2) {
     const pushHighNotes = {
-      general_hypertrophy:  'Recovery is excellent and performance is climbing. A great window to add a set where you feel strong.',
-      strength_hypertrophy: 'Conditions are right to push your main lifts. Add load on your compounds where form holds solid.',
-      weak_point_spec:      'Recovery looks excellent. This is the week to push harder on your priority muscles.',
-      mens_physique:        'Recovery is on your side. Add volume or effort to shoulder and back sessions this week.',
-      classic_physique:     'Good recovery. Calves, shoulders and back should take any extra sets this week.',
-      bodybuilding:         'Everything is looking good. Push volume across all groups while recovery supports it.',
-      bikini:               'Recovery is strong. This is the week to push your glute and hamstring sessions harder.',
-      wellness:             'Energy and recovery are good. Add effort to lower body, especially glutes and quads.',
-      figure:               'Great recovery window. Shoulders, back and glutes should get the extra effort this week.',
-      womens_physique:      'Recovery is solid. Push across all groups with a focus on back and shoulder development.',
+      general:          'Recovery is excellent and performance is climbing. A great window to add a set where you feel strong.',
+      mens_physique:    'Recovery is on your side. Add volume or effort to shoulder and back sessions this week.',
+      classic_physique: 'Good recovery. Calves, shoulders and back should take any extra sets this week.',
+      bodybuilding:     'Everything is looking good. Push volume across all groups while recovery supports it.',
+      bikini:           'Recovery is strong. This is the week to push your glute and hamstring sessions harder.',
+      wellness:         'Energy and recovery are good. Add effort to lower body, especially glutes and quads.',
+      figure:           'Great recovery window. Shoulders, back and glutes should get the extra effort this week.',
+      womens_physique:  'Recovery is solid. Push across all groups with a focus on back and shoulder development.',
     };
-    return pushHighNotes[trainingGoal] ?? 'Recovery looks excellent and performance is climbing. This is exactly the window to push harder and take advantage of it.';
+    return pushHighNotes[trainingGoal] ?? pushHighNotes.general;
   }
 
   // volumeSignal === 1 — push lightly
   const pushNotes = {
-    general_hypertrophy:  'Recovery is solid. Keep the effort consistent and push for small progress where you can.',
-    strength_hypertrophy: 'Recovery is solid. Small increments on your main lifts this week.',
-    weak_point_spec:      'Recovery is solid. Keep pushing your priority muscles at a consistent pace.',
-    mens_physique:        'Recovery is solid. Keep shoulder and back sessions consistent and focus on quality.',
-    classic_physique:     'Recovery is solid. Keep the pace consistent across all groups.',
-    bodybuilding:         'Recovery is solid. Consistent effort across all groups this week.',
-    bikini:               'Recovery is solid. Keep glute and hamstring sessions consistent with quality execution.',
-    wellness:             'Recovery is solid. Keep lower body sessions consistent and precise.',
-    figure:               'Recovery is solid. Keep shoulder, back and glute sessions on track.',
-    womens_physique:      'Recovery is solid. Keep all groups consistent with quality focus.',
+    general:          'Recovery is solid. Keep the effort consistent and push for small progress where you can.',
+    mens_physique:    'Recovery is solid. Keep shoulder and back sessions consistent and focus on quality.',
+    classic_physique: 'Recovery is solid. Keep the pace consistent across all groups.',
+    bodybuilding:     'Recovery is solid. Consistent effort across all groups this week.',
+    bikini:           'Recovery is solid. Keep glute and hamstring sessions consistent with quality execution.',
+    wellness:         'Recovery is solid. Keep lower body sessions consistent and precise.',
+    figure:           'Recovery is solid. Keep shoulder, back and glute sessions on track.',
+    womens_physique:  'Recovery is solid. Keep all groups consistent with quality focus.',
   };
-  return pushNotes[trainingGoal] ?? 'Recovery is solid. Keep the effort consistent and push for small progress where you can.';
+  return pushNotes[trainingGoal] ?? pushNotes.general;
 }

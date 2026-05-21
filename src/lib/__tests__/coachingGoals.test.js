@@ -12,14 +12,19 @@ import {
   phaseToCoachingKey,
   daysToActivityLevel,
   getTrainingNote,
+  migrateProfileGoals,
 } from '../coachingGoals';
 
 describe('PHYSIQUE_GOALS catalogue', () => {
-  test('has at least the canonical generic and physique goals', () => {
+  test('has at least the general default and competitive physique categories', () => {
     const values = PHYSIQUE_GOALS.map(g => g.value);
-    expect(values).toContain('general_hypertrophy');
+    expect(values).toContain('general');     // default for non-competitive users
     expect(values).toContain('wellness');
     expect(values).toContain('bodybuilding');
+    // Post-merge: these moved to TRAINING_PHASES (strength_size / weak_point)
+    expect(values).not.toContain('general_hypertrophy');
+    expect(values).not.toContain('strength_hypertrophy');
+    expect(values).not.toContain('weak_point_spec');
   });
 
   test('every goal has value + label + group', () => {
@@ -45,13 +50,16 @@ describe('PHYSIQUE_GOALS catalogue', () => {
 });
 
 describe('TRAINING_PHASES catalogue', () => {
-  test('has the canonical phases', () => {
+  test('has the canonical phases including the post-merge additions', () => {
     const values = TRAINING_PHASES.map(p => p.value);
     expect(values).toContain('cut');
     expect(values).toContain('maintain');
     expect(values).toContain('bulk');
     expect(values).toContain('lean_gain');
     expect(values).toContain('recomp');
+    // Post-merge — these absorbed the misplaced "physique goals":
+    expect(values).toContain('strength_size');
+    expect(values).toContain('weak_point');
   });
 
   test('every phase maps to a non-empty nutritionKey and coachingPhaseKey', () => {
@@ -126,5 +134,43 @@ describe('getTrainingNote', () => {
 
   test('does not throw for unknown goal / signal', () => {
     expect(() => getTrainingNote('made_up_goal', 'whatever', 'something', false)).not.toThrow();
+  });
+});
+
+describe('migrateProfileGoals', () => {
+  test('general_hypertrophy → general (trainingGoal only)', () => {
+    const out = migrateProfileGoals({ trainingGoal: 'general_hypertrophy', trainingPhase: 'cut' });
+    expect(out.trainingGoal).toBe('general');
+    expect(out.trainingPhase).toBe('cut'); // user-set phase preserved
+  });
+
+  test('strength_hypertrophy → general + strength_size phase (when phase was bulk)', () => {
+    const out = migrateProfileGoals({ trainingGoal: 'strength_hypertrophy', trainingPhase: 'bulk' });
+    expect(out.trainingGoal).toBe('general');
+    expect(out.trainingPhase).toBe('strength_size');
+  });
+
+  test('strength_hypertrophy + user-set cut → trainingGoal becomes general, phase stays cut', () => {
+    const out = migrateProfileGoals({ trainingGoal: 'strength_hypertrophy', trainingPhase: 'cut' });
+    expect(out.trainingGoal).toBe('general');
+    expect(out.trainingPhase).toBe('cut');
+  });
+
+  test('weak_point_spec → general + weak_point phase', () => {
+    const out = migrateProfileGoals({ trainingGoal: 'weak_point_spec', trainingPhase: 'lean_gain' });
+    expect(out.trainingGoal).toBe('general');
+    expect(out.trainingPhase).toBe('weak_point');
+  });
+
+  test('physique categories are untouched', () => {
+    const out = migrateProfileGoals({ trainingGoal: 'mens_physique', trainingPhase: 'bulk' });
+    expect(out.trainingGoal).toBe('mens_physique');
+    expect(out.trainingPhase).toBe('bulk');
+  });
+
+  test('handles null / undefined input safely', () => {
+    expect(migrateProfileGoals(null)).toBe(null);
+    expect(migrateProfileGoals(undefined)).toBe(undefined);
+    expect(() => migrateProfileGoals({})).not.toThrow();
   });
 });

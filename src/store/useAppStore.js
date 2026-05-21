@@ -44,7 +44,15 @@ const useAppStore = create((set, get) => ({
       }
       const raw = await AsyncStorage.getItem(PROFILE_KEY_PFX + userId).catch(() => null);
       if (raw) {
-        try { profile = JSON.parse(raw); }
+        try {
+          profile = JSON.parse(raw);
+          // Migrate legacy trainingGoal values (general_hypertrophy /
+          // strength_hypertrophy / weak_point_spec) to the post-merge
+          // split (general + phase). No-op for clean profiles.
+          // eslint-disable-next-line global-require
+          const { migrateProfileGoals } = require('../lib/coachingGoals');
+          profile = migrateProfileGoals(profile);
+        }
         catch (e) {
           // Corrupt profile — keep going with null profile; the user can
           // re-onboard. Don't swallow this entirely — surface to debug log.

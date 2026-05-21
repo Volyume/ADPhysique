@@ -153,7 +153,9 @@ export default function ProOnboardingScreen({ navigation }) {
   const [experience, setExperience] = useState(null);
   const [sessionLengthMinutes, setSessionLengthMinutes] = useState(60);
   const [equipment, setEquipment] = useState(null);
-  const [trainingGoal, setTrainingGoal] = useState(null);
+  // Defaults to 'general' (not competing). Users tap into the optional
+  // "Competing in a category?" dropdown to pick a physique category.
+  const [trainingGoal, setTrainingGoal] = useState('general');
   const [trainingPhase, setTrainingPhase] = useState(null);
 
   // Step 4 — recovery + reminders
@@ -841,22 +843,28 @@ export default function ProOnboardingScreen({ navigation }) {
               placeholder="Select your equipment"
             />
 
+            {/* Primary question — single source of truth for what the
+                current block is doing. Drives calories, plan structure,
+                weak-point spec, and strength-size emphasis. */}
             <Dropdown
-              label="What are you training for?"
-              hint="Shapes how volume is distributed across muscle groups."
-              value={trainingGoal}
-              options={goalOptions}
-              onChange={setTrainingGoal}
-              placeholder="Select your goal"
-            />
-
-            <Dropdown
-              label="What is your goal?"
-              hint="Sets your calorie target and plan structure."
+              label="What are you focused on right now?"
+              hint="Drives your calorie target and how your plan is built. Pick what your current block is doing."
               value={trainingPhase}
               options={phaseOptions}
               onChange={setTrainingPhase}
-              placeholder="Select what fits you best"
+              placeholder="Pick your current focus"
+            />
+
+            {/* Secondary, optional — only matters for competitive lifters
+                chasing a specific physique category. Defaults to 'general'
+                (balanced volume) for everyone else. */}
+            <Dropdown
+              label="Competing in a category? (optional)"
+              hint="Only if you're chasing a competitive physique. Biases volume toward the muscles that category is judged on."
+              value={trainingGoal}
+              options={goalOptions}
+              onChange={setTrainingGoal}
+              placeholder="Not competing — General"
             />
 
             <TouchableOpacity
