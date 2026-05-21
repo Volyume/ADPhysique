@@ -432,7 +432,7 @@ export default function RootNavigator() {
             // 8s race timeout still applies to keep the await bounded.
             try {
               await Promise.race([
-                useAppStore.getState().restoreSessionFromCloud(session.user.id),
+                useAppStore.getState().restoreSessionFromCloud(session.user.id, session.user),
                 new Promise(resolve => setTimeout(resolve, 8000)),
               ]);
               refreshTierFromCloud(client, session.user.id).catch(() => {});

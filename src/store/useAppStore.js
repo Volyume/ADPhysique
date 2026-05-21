@@ -234,20 +234,11 @@ const useAppStore = create((set, get) => ({
   // they completed it months ago — the cloud row is the source of truth.
   // Writes to AsyncStorage directly (not via completeFirstRun) so we don't
   // round-trip the just-read value back to Supabase.
-  restoreSessionFromCloud: async (supabaseUserId) => {
+  restoreSessionFromCloud: async (supabaseUserId, sessionUser = null) => {
     if (!supabaseUserId) return;
     // eslint-disable-next-line global-require
     const log = require('../lib/errorLog');
     log.logInfo('restoreSessionFromCloud.start', `uid=${supabaseUserId}`, { uid: supabaseUserId });
-
-    // Mark the cloud restore as in-flight so the navigator doesn't route
-    // on stale local state (the wizard-flash bug). Without this, the
-    // ~8s cloud read window let the navigator see tier='pro' AND
-    // firstRunComplete=false → mount ProOnboardingStack briefly. The
-    // user starts filling the wizard, then cloud returns
-    // firstRunComplete=true and the stack unmounts mid-fill. Splash
-    // stays up until we know the resolved cloud state.
-    set({ restoringSession: true });
 
     // Beta tier policy — set tier='pro' UP FRONT before any cloud reads.
     // This must happen regardless of whether the cloud profile row exists
@@ -262,6 +253,33 @@ const useAppStore = create((set, get) => ({
       set({ tier: 'pro', tierChecked: true });
       log.logInfo('restoreSessionFromCloud.betaPro', 'forced tier=pro');
     }
+
+    // Fast path for brand-new signups: if the auth.users row was created
+    // in the last 60 seconds, we KNOW this user has no cloud profile
+    // (syncProfile is fire-and-forget on a background thread and hasn't
+    // written one yet). Skip the cloud read entirely — no splash,
+    // wizard mounts instantly. Existing users have created_at days /
+    // weeks / months old and still take the slow path (where the
+    // restoringSession splash is correct).
+    if (sessionUser?.created_at) {
+      const ageMs = Date.now() - new Date(sessionUser.created_at).getTime();
+      if (Number.isFinite(ageMs) && ageMs >= 0 && ageMs < 60_000) {
+        log.logInfo('restoreSessionFromCloud.freshSignup', `ageMs=${ageMs} — skipping cloud read`);
+        // restoringSession stays false; navigator routes immediately
+        // based on tier='pro' + firstRunComplete=false → wizard mounts.
+        return;
+      }
+    }
+
+    // Returning user path — wait for cloud read to confirm their state.
+    // Mark the cloud restore as in-flight so the navigator doesn't route
+    // on stale local state (the wizard-flash bug). Without this, the
+    // 200ms-10s cloud read window let the navigator see tier='pro' AND
+    // firstRunComplete=false → mount ProOnboardingStack briefly. The
+    // user starts filling the wizard, then cloud returns
+    // firstRunComplete=true and the stack unmounts mid-fill. Splash
+    // stays up until we know the resolved cloud state.
+    set({ restoringSession: true });
 
     let cloudData = null;
     let timedOut = false;
