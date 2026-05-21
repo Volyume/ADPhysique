@@ -18,7 +18,7 @@ const V_ICON = require('../../assets/volyume-v.png');
 // any surface colour. size prop drives the HEIGHT in each component;
 // width derives from the asset's aspect so letterforms stay correctly
 // proportioned at any scale.
-const WORDMARK_ASPECT = 1004 / 265;
+const WORDMARK_ASPECT = 1032 / 277;
 const V_ICON_ASPECT = 685 / 741;
 
 /**

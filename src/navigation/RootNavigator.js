@@ -10,7 +10,7 @@ import { View, Text, Image, StyleSheet, Animated, Easing, Dimensions } from 'rea
 import { Ionicons } from '@expo/vector-icons';
 
 const SPLASH_HERO = require('../../assets/volyume-wordmark.png');
-const HERO_ASPECT = 1004 / 265;
+const HERO_ASPECT = 1032 / 277;
 const SPLASH_W = Math.round(Dimensions.get('window').width * 0.7);
 import AsyncStorage from '@react-native-async-storage/async-storage';
 

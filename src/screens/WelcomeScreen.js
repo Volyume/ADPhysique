@@ -8,7 +8,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 
 const HERO = require('../../assets/volyume-wordmark.png');
-const HERO_ASPECT = 1004 / 265;
+const HERO_ASPECT = 1032 / 277;
 
 const FREE_BULLETS = [
   'Unlimited workout logging, fully offline',
