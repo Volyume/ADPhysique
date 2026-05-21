@@ -381,7 +381,16 @@ export default function RootNavigator() {
           if (event === 'SIGNED_IN' && session?.user?.id) {
             setAuthLoading(true);
             try {
-              await useAppStore.getState().restoreSessionFromCloud(session.user.id);
+              // Race the cloud restore against an 8s timeout. The Supabase JS
+              // client has no built-in query timeout, so a flaky connection
+              // can leave the request hanging indefinitely — and because
+              // restoreSessionFromCloud catches its own errors internally,
+              // a hung request never rejects the await. Without this race,
+              // the splash sits forever after a successful sign-in.
+              await Promise.race([
+                useAppStore.getState().restoreSessionFromCloud(session.user.id),
+                new Promise(resolve => setTimeout(resolve, 8000)),
+              ]);
               refreshTierFromCloud(client, session.user.id).catch(() => {});
             } finally {
               setAuthLoading(false);

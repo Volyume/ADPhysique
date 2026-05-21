@@ -136,6 +136,13 @@ export function getVolumeStatus(workingSets, muscle, customLandmarks = null) {
 
   const { mev, mav, mrv } = landmarks;
 
+  // Zero work is always 'below', regardless of mev. Without this short-circuit,
+  // muscles with mev=0 (front_delts — get plenty of indirect work from
+  // pressing) read as 'optimal' green on the body heatmap before the user
+  // has logged a single set, which makes the diagram look wrong.
+  if (workingSets <= 0) {
+    return { status: 'below', color: '#616161', label: 'Below target', landmarks };
+  }
   if (workingSets < mev) {
     return { status: 'below', color: '#616161', label: 'Below target', landmarks };
   }
