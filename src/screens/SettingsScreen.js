@@ -190,16 +190,33 @@ export default function SettingsScreen({ navigation }) {
     let cloudErr = null;
     try {
       if (!user?.isLocal) {
-        // Server-side wipe via the RPC. RPC checks auth.uid() so we don't
-        // need to pass it. If this fails, surface the error to the user
-        // — don't silently pretend their cloud data is gone.
+        // Server-side wipe via the delete-account Edge Function. The
+        // function wipes public.* rows AND deletes auth.users — the RPC
+        // alone can't reach auth.users (different schema, lacks rights),
+        // which left zombie auth records that resurrected on next sign-in.
+        // Falls back to the RPC if the function isn't deployed, so the
+        // client keeps working until the function lands in production.
         const sb = getSupabaseClient();
         if (sb) {
-          const { error } = await sb.rpc('delete_user_data');
-          if (error) {
-            cloudOk = false;
-            cloudErr = error.message ?? 'Unknown error';
-            logError('SettingsScreen.deleteAccount.rpc', error, { userId });
+          let invokeErr = null;
+          try {
+            const { error } = await sb.functions.invoke('delete-account');
+            if (error) invokeErr = error;
+          } catch (e) {
+            invokeErr = e;
+          }
+          if (invokeErr) {
+            // Fall back to the RPC so a missing/un-deployed Edge Function
+            // doesn't block the user. Cloud auth.users row will remain
+            // until the function is deployed, but the rest of the wipe
+            // still runs. Logged for visibility.
+            logError('SettingsScreen.deleteAccount.fnInvoke', invokeErr, { userId });
+            const { error: rpcErr } = await sb.rpc('delete_user_data');
+            if (rpcErr) {
+              cloudOk = false;
+              cloudErr = rpcErr.message ?? 'Unknown error';
+              logError('SettingsScreen.deleteAccount.rpc', rpcErr, { userId });
+            }
           }
         }
         try { await signOut(); }
