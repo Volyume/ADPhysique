@@ -10,6 +10,7 @@ import { format, differenceInDays } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius, shadow } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';
+import GradientCard from '../components/GradientCard';
 import InfoTooltip from '../components/InfoTooltip';
 import { ProBadge } from '../components/ProGate';
 import { SkeletonCard } from '../components/Skeleton';
@@ -488,7 +489,7 @@ export default function AthleteHubScreen({ navigation }) {
         )}
 
         {/* ── Profile card ──────────────────────────────── */}
-        <View style={styles.profileCard}>
+        <GradientCard tone={tier === 'pro' ? 'gold' : 'primary'} intensity={0.22} style={styles.profileCard}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>
               {(displayName?.[0] || 'A').toUpperCase()}
@@ -504,7 +505,7 @@ export default function AthleteHubScreen({ navigation }) {
               <Text style={styles.profileStat}>{totalWorkouts} sessions</Text>
             </View>
           </View>
-        </View>
+        </GradientCard>
 
         {/* ── Milestone progress ─────────────────────────── */}
         {(lastUnlocked || next) && (
@@ -992,9 +993,9 @@ const styles = StyleSheet.create({
 
   // Profile
   profileCard: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.lg,
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    padding: spacing.lg, borderWidth: 1, borderColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
   },
   avatar: {
     width: 56, height: 56, borderRadius: 28,

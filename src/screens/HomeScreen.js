@@ -13,6 +13,7 @@ import { formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg, kgToStoneLbsS
 import { VolyumeIcon } from '../components/BrandMark';
 import ScreenHeader from '../components/ScreenHeader';
 import GradientCard from '../components/GradientCard';
+import PressableCard from '../components/PressableCard';
 import { buildDailyNarrative } from '../lib/dailyNarrative';
 import { SkeletonCard } from '../components/Skeleton';
 import Sparkline from '../components/Sparkline';
@@ -1015,11 +1016,9 @@ export default function HomeScreen({ navigation }) {
 
         {/* ── Primary workout area ── */}
         {hasActiveWorkout ? (
-          <TouchableOpacity
+          <PressableCard
             style={styles.continueCard}
             onPress={() => navigation.navigate('ActiveWorkout')}
-            activeOpacity={0.85}
-            accessibilityRole="button"
             accessibilityLabel="Continue active workout"
           >
             <View style={styles.continueInner}>

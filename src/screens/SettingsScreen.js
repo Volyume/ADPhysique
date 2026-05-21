@@ -351,8 +351,21 @@ export default function SettingsScreen({ navigation }) {
       // wipe succeeded, or (b) local-only user (no cloud to wipe).
       try { await wipeAllUserData(userId); }
       catch (e) { logError('SettingsScreen.deleteAccount.wipeLocal', e); }
-      // Clear auth state + AsyncStorage prefs
+      // Clear in-memory state.
       await clearAuthStateForSignOut();
+      // Delete-account is the "truly wipe everything" path — distinct
+      // from sign-out, which is session-only by policy. Without this,
+      // AsyncStorage keeps TIER_KEY, FIRST_RUN_KEY, LOCAL_USER_KEY,
+      // PROFILE_KEY_PFX, etc., so the next launch's bootstrap reads
+      // them and re-routes the user into the app as a phantom local
+      // Pro account ("local · PRO · 0 sessions"). Enumerate all
+      // @volyume_-prefixed keys and remove them so the next launch
+      // boots a genuine fresh-install state.
+      try {
+        const keys = await AsyncStorage.getAllKeys();
+        const volyumeKeys = keys.filter(k => k.startsWith('@volyume_'));
+        if (volyumeKeys.length) await AsyncStorage.multiRemove(volyumeKeys);
+      } catch (e) { logError('SettingsScreen.deleteAccount.wipeAsyncStorage', e); }
     } finally {
       setDeletingAccount(false);
     }
