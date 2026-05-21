@@ -351,8 +351,18 @@ export default function App() {
           drainSyncQueue(sb, supabaseUserId).catch(() => {});
         }
         // Error log shipping is now Sentry's job (initialised below).
-        // The SDK has its own offline buffer + transport — we don't need
-        // to push from here.
+        // The SDK has its own offline buffer + transport, so we don't
+        // need to push from here.
+
+        // Health connections: pull any new weight readings the user
+        // logged on a smart scale or wearable since the last foreground.
+        // Local user id is enough; importNewWeights silently no-ops if
+        // permissions aren't granted yet.
+        if (localUserId) {
+          // eslint-disable-next-line global-require
+          const { importNewWeights } = require('./src/lib/health');
+          importNewWeights(localUserId).catch(() => {});
+        }
       } catch (_) { /* offline / no session — try again next foreground */ }
     }
     const sub = AppState.addEventListener('change', state => {

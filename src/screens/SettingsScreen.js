@@ -17,6 +17,10 @@ import { clearWorkoutHistory, buildWorkoutCSV, wipeAllUserData } from '../lib/da
 import { logError } from '../lib/errorLog';
 import { exportBackup, importBackup } from '../lib/dataBackup';
 import { getWellbeingMode, setWellbeingMode } from '../lib/wellbeing';
+import {
+  isHealthAvailable, getHealthProviderLabel,
+  getHealthPermissionStatus, requestHealthPermissions, importNewWeights,
+} from '../lib/health';
 import Constants from 'expo-constants';
 import * as Updates from 'expo-updates';
 
@@ -102,6 +106,14 @@ export default function SettingsScreen({ navigation }) {
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [editName, setEditName] = useState(userProfile?.firstName ?? '');
   const [calmEnabled, setCalmEnabled] = useState(false);
+  // Health integration (Apple Health on iOS, Health Connect on Android).
+  // 'unavailable' when the native module isn't bundled in this build,
+  // 'denied' when the user hasn't granted weight read yet, 'granted'
+  // when imports will succeed. healthSyncing tracks the manual
+  // "Sync now" tap so we can show feedback.
+  const [healthStatus, setHealthStatus] = useState('unavailable');
+  const [healthSyncing, setHealthSyncing] = useState(false);
+
   async function toggleCalmMode(value) {
     const mode = value ? 'calm' : 'normal';
     await setWellbeingMode(mode);
@@ -111,8 +123,56 @@ export default function SettingsScreen({ navigation }) {
   useFocusEffect(
     useCallback(() => {
       getWellbeingMode().then(m => setCalmEnabled(m === 'calm'));
+      if (isHealthAvailable()) {
+        getHealthPermissionStatus(['weight']).then(setHealthStatus).catch(() => {});
+      }
     }, []),
   );
+
+  async function handleConnectHealth() {
+    setHealthSyncing(true);
+    try {
+      const status = await requestHealthPermissions(['weight']);
+      setHealthStatus(status);
+      if (status === 'granted') {
+        const { imported } = await importNewWeights(user?.id);
+        if (imported > 0) {
+          toast.show(`${imported} weight ${imported === 1 ? 'reading' : 'readings'} imported`, { variant: 'success' });
+        } else {
+          toast.show(`Connected. No new readings yet.`, { variant: 'success' });
+        }
+      } else if (status === 'denied') {
+        toast.show(`Permission needed to read weight from ${getHealthProviderLabel()}`, { variant: 'warning' });
+      }
+    } catch (e) {
+      logError('SettingsScreen.connectHealth', e);
+      toast.show('Could not connect. Try again in a moment.', { variant: 'error' });
+    } finally {
+      setHealthSyncing(false);
+    }
+  }
+
+  async function handleSyncHealthNow() {
+    if (healthStatus !== 'granted') {
+      await handleConnectHealth();
+      return;
+    }
+    setHealthSyncing(true);
+    try {
+      const { imported } = await importNewWeights(user?.id);
+      toast.show(
+        imported > 0
+          ? `${imported} new weight ${imported === 1 ? 'reading' : 'readings'} imported`
+          : 'Already up to date',
+        { variant: imported > 0 ? 'success' : 'info' },
+      );
+    } catch (e) {
+      logError('SettingsScreen.syncHealthNow', e);
+      toast.show('Sync failed. Check your Health connection.', { variant: 'error' });
+    } finally {
+      setHealthSyncing(false);
+    }
+  }
 
   async function handleSignOut() {
     Alert.alert(
@@ -510,6 +570,41 @@ export default function SettingsScreen({ navigation }) {
             Reduce motion takes effect immediately. Larger text, higher contrast, and the colour-blind safe palette need Volyume to reopen. You'll be prompted to reload after toggling.
           </Text>
         </View>
+
+        {/* Health connections */}
+        {isHealthAvailable() && (
+          <>
+            <SectionHeader title="Health connections" />
+            <View style={styles.section}>
+              <SettingRow
+                icon="fitness-outline"
+                label={getHealthProviderLabel()}
+                sub={
+                  healthStatus === 'granted'
+                    ? 'Connected. Your weight readings flow in automatically.'
+                    : healthStatus === 'denied'
+                    ? `Tap to connect. Volyume will read your weight from ${getHealthProviderLabel()}.`
+                    : 'Not available on this device.'
+                }
+                value={healthStatus === 'granted' ? 'Connected' : healthStatus === 'denied' ? 'Off' : ''}
+                onPress={healthStatus === 'unavailable' ? null : handleConnectHealth}
+                showArrow={healthStatus !== 'granted'}
+              />
+              {healthStatus === 'granted' && (
+                <SettingRow
+                  icon="refresh-outline"
+                  label={healthSyncing ? 'Syncing…' : 'Sync now'}
+                  sub="Pull any new weight readings from your scale or wearable."
+                  onPress={healthSyncing ? null : handleSyncHealthNow}
+                  showArrow={!healthSyncing}
+                />
+              )}
+            </View>
+            <Text style={styles.dataPrivacyNote}>
+              Volyume only reads your weight. Workouts, nutrition and personal data stay on this device unless you back them up.
+            </Text>
+          </>
+        )}
 
         {/* Data */}
         <SectionHeader title="Data & privacy" />
