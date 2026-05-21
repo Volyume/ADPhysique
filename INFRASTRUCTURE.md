@@ -281,11 +281,18 @@ From the multi-agent audit (2026-05-21):
 | Critical | delete-account FK violation on auth.users | ✅ Fixed (migrate_006) |
 | High | `resetFirstRun` could yank mid-workout | ✅ Fixed (guard added) |
 | High | `phaseToCoachingKey` silent fallback | ✅ Fixed (logs warn) |
-| Medium | Excess `useAppStore()` subscriptions causing re-renders | ⚠ Open — performance only |
-| Medium | OAuth instrumentation gaps | ⚠ Open — diagnostic only |
-| Medium | Determinism not asserted for `generatePlan()` | ⚠ Open — testing gap |
-| Medium | Free `FirstRunScreen` doesn't surface a "what now" hint | ⚠ Open — UX |
-| Low | Stack traces on `setTier` are useless under Hermes | ⚠ Open — would need explicit caller-tag refactor |
+| Medium | Excess `useAppStore()` subscriptions causing re-renders | ✅ Fixed (5 hottest screens migrated to useShallow) |
+| Medium | OAuth instrumentation gaps | ✅ Fixed (logInfo/logError at every decision point in Login + ProUpgrade + ProOnboarding) |
+| Medium | Determinism not asserted for `generatePlan()` | ✅ Fixed (audit-stress.test.js) |
+| Medium | Free `FirstRunScreen` doesn't surface a "what now" hint | ✅ Fixed (hint card pointing to Plans tab) |
+| Low | Stack traces on `setTier` are useless under Hermes | ✅ Fixed (explicit callerScope param, all 4 deliberate callers tagged) |
+| Low | `refreshTierFromCloud` no timeout | ✅ Fixed (5s Promise.race timeout, warn on failure) |
+| Low | AsyncStorage not atomic with store set() | ✅ Fixed (persist before set; failures logged) |
+| Low | ProOnboarding skipped `goalStartDate` for cut-phase entry | ✅ Fixed (set on onboarding into a deficit phase) |
+| Low | `selectSplit` silent fallback on out-of-range days | ✅ Fixed (logs warn) |
+| Low | Missing accessibility on RestTimer / SetEntry 1RM | ✅ Fixed (labels + liveRegion) |
+| Low | RestTimer notification leak on sign-out mid-rest | ✅ Fixed (cleanup cancels lock-screen notif + clears interval) |
+| Low | ActiveWorkout AppState.remove() unguarded | ✅ Fixed (try/catch) |
 
 ---
 
