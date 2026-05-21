@@ -182,6 +182,21 @@ export default function ProOnboardingScreen({ navigation }) {
     }
   }, [step]);
 
+  // Auto-advance past Step 1 if the user is already authenticated when the
+  // screen mounts. Happens after OAuth: SIGNED_IN flips isAuthLoading true,
+  // RootNavigator's splash gate unmounts ProOnboardingStack, the cloud
+  // restore finishes, the stack remounts — and `step` resets to 1, dropping
+  // the user back on "Create your account" even though they're signed in.
+  // Without this, the OAuth flow loops: Step 1 → auth → splash → Step 1.
+  // Local-only users (isLocal: true) still see Step 1 because they haven't
+  // created a cloud account yet.
+  useEffect(() => {
+    if (step === 1 && user && !user.isLocal) {
+      setAccountCreated(true);
+      setStep(2);
+    }
+  }, [step, user]);
+
 
   // ── Step transition helpers ──────────────────────────────────────────────────
 
