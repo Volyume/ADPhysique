@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, Alert,
+  View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,6 +31,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
   const { user, startWorkout } = useAppStore(useShallow(s => ({ user: s.user, startWorkout: s.startWorkout })));
   const [workouts, setWorkouts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [expandedSets, setExpandedSets] = useState({}); // workoutId -> grouped exercise data
 
@@ -550,6 +551,17 @@ export default function WorkoutHistoryScreen({ navigation }) {
         renderItem={renderItem}
         contentContainerStyle={styles.list}
         ListHeaderComponent={listHeader}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={async () => {
+              setRefreshing(true);
+              try { await loadWorkouts(); } finally { setRefreshing(false); }
+            }}
+            tintColor={colors.textMuted}
+            colors={[colors.primary]}
+          />
+        }
         ListEmptyComponent={
           loading ? (
             // Skeleton rows instead of a blank screen while SQLite reads.

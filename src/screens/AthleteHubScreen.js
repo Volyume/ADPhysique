@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -230,6 +230,7 @@ export default function AthleteHubScreen({ navigation }) {
   })));
   const [nutritionTargets, setNutritionTargets] = useState(null);
   const [latestMetric, setLatestMetric]         = useState(null);
+  const [refreshing, setRefreshing]             = useState(false);
   const [totalWorkouts, setTotalWorkouts]       = useState(0);
   const [recovery, setRecovery]                 = useState({ soreness: null, fatigue: null, joint: null });
   const [weekVolume, setWeekVolume]             = useState(null);
@@ -434,7 +435,21 @@ export default function AthleteHubScreen({ navigation }) {
         <VolyumeMark size={38} color={colors.textMuted} />
       </View>
 
-      <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={async () => {
+              setRefreshing(true);
+              try { await load(); } finally { setRefreshing(false); }
+            }}
+            tintColor={colors.textMuted}
+            colors={[colors.primary]}
+          />
+        }
+      >
 
         {/* ── Profile card ──────────────────────────────── */}
         <View style={styles.profileCard}>
