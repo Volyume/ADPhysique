@@ -236,18 +236,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setProgression(null);
   }
 
-  function handleRepeatLastSet() {
-    const last = loggedSets[loggedSets.length - 1];
-    if (!last) return;
-    Haptics.selectionAsync();
-    setCurrentSet(prev => ({
-      ...prev,
-      weight: last.weight,
-      reps: last.actualReps ?? last.reps ?? prev.reps,
-      isGhost: false,
-    }));
-  }
-
   function handleSuggestWarmups() {
     const w = parseFloat(currentSet.weight);
     if (!w || w < 20) return;
@@ -1237,17 +1225,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <Text style={styles.warmupSuggestText}>Suggest warm-up sets</Text>
               </TouchableOpacity>
             )}
-            {loggedSets.length > 0 && currentSet.setType !== 'warmup' && (() => {
-              const last = loggedSets[loggedSets.length - 1];
-              return (
-                <TouchableOpacity style={styles.repeatChip} onPress={handleRepeatLastSet} activeOpacity={0.7}>
-                  <Ionicons name="copy-outline" size={13} color={colors.textMuted} />
-                  <Text style={styles.repeatChipText}>
-                    Repeat last: {last.weight}{units} × {last.actualReps ?? last.reps}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })()}
+            {/* Rest timer lives directly above the inputs so the countdown
+                sits in the user's eye-line while they're setting up the
+                next weight/reps. Margin pulled tight so the two read as a
+                single block — timer at top, log inputs immediately below. */}
+            <View style={styles.timerSlot}>
+              <RestTimer />
+            </View>
             <SetEntry
               value={currentSet}
               onChange={(next) => {
@@ -1410,9 +1394,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               <Text style={[styles.actionBtnText, { color: colors.error }]}>Remove</Text>
             </TouchableOpacity>
           </View>
-
-          {/* Rest Timer */}
-          <RestTimer />
 
           {/* Logged Sets */}
           {loggedSets.length > 0 && (
@@ -2301,13 +2282,9 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.warning + '40',
   },
   warmupSuggestText: { fontSize: fontSize.xs, color: colors.warning, fontWeight: fontWeight.medium },
-  repeatChip: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    alignSelf: 'flex-start',
-    paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
-    borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border,
-  },
-  repeatChipText: { fontSize: fontSize.xs, color: colors.textMuted },
+  // Tight margin between the rest timer and the weight/reps inputs — they
+  // read as one block visually so the user's gaze doesn't have to bounce.
+  timerSlot: { marginTop: spacing.xs, marginBottom: -spacing.xs },
   warmupSheetTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.xs },
   warmupSheetSub: { fontSize: fontSize.sm, color: colors.textSecondary, marginBottom: spacing.lg, lineHeight: 20 },
   warmupRow: {
