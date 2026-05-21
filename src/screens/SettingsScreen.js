@@ -222,8 +222,8 @@ export default function SettingsScreen({ navigation }) {
               status: invokeErr?.context?.status ?? null,
             });
             // Fall back to the RPC so a missing or un-deployed Edge Function
-            // doesn't block the user. Cloud auth.users row will remain
-            // until the function is deployed.
+            // doesn't block the user. RPC v3 (migrate_008) tolerates missing
+            // tables; older RPCs may still fail on a missing table.
             const { error: rpcErr } = await sb.rpc('delete_user_data');
             if (rpcErr) {
               cloudOk = false;
@@ -232,22 +232,32 @@ export default function SettingsScreen({ navigation }) {
             }
           }
         }
+
+        // CRITICAL: if the cloud wipe failed, ABORT. Previously we still
+        // called signOut() and wipeAllUserData() unconditionally, which
+        // left the user logged out locally with their cloud account fully
+        // intact — and on next sign-in they were dumped back into the
+        // main app because firstRunComplete=true still lived in the cloud
+        // profile they thought they deleted. Now we surface the failure
+        // and leave the session alone so they can retry or contact us.
+        if (!cloudOk) {
+          Alert.alert(
+            "Couldn't delete your account",
+            `The cloud delete failed: ${cloudErr}\n\nYour account and data are still safe. Try again in a few minutes, or contact support if it keeps happening.`,
+          );
+          setDeletingAccount(false);
+          return;
+        }
+
         try { await signOut(); }
         catch (e) { logError('SettingsScreen.deleteAccount.signOut', e); }
       }
-      // Wipe local SQLite regardless of cloud outcome — if cloud failed
-      // the local data still goes (it's the user's intent).
+      // Wipe local SQLite. Reached only when (a) cloud user and cloud
+      // wipe succeeded, or (b) local-only user (no cloud to wipe).
       try { await wipeAllUserData(userId); }
       catch (e) { logError('SettingsScreen.deleteAccount.wipeLocal', e); }
       // Clear auth state + AsyncStorage prefs
       await clearAuthStateForSignOut();
-
-      if (!cloudOk) {
-        Alert.alert(
-          'Local data deleted',
-          'Your local data has been removed from this device, but the cloud delete failed: ' + cloudErr + '. Sign in again to retry, or contact support.',
-        );
-      }
     } finally {
       setDeletingAccount(false);
     }
