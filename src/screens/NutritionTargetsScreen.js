@@ -797,16 +797,25 @@ export default function NutritionTargetsScreen() {
                 const fatPct = Math.round(fatKcal / results.targetKcal * 100);
                 const carbKcal = results.carbsG * 4;
 
-                // Goal-aware text helpers
-                const isGain  = ['lean_gain', 'build'].includes(results.goal);
-                const isCut   = ['mild_cut', 'aggressive_cut', 'contest_prep'].includes(results.goal);
-                const isRecomp = results.goal === 'recomp';
+                // Goal-aware text helpers. Maintain (0% deficit) and
+                // Recomp (~5% deficit) need separate copy — they're
+                // different intents. Maintain used to inherit the
+                // recomp template which rendered "A slight 0% deficit"
+                // — nonsense.
+                const isGain     = ['lean_gain', 'build'].includes(results.goal);
+                const isCut      = ['mild_cut', 'aggressive_cut', 'contest_prep'].includes(results.goal);
+                const isRecomp   = results.goal === 'recomp';
+                const isMaintain = results.goal === 'maintain';
 
                 const calorieWhy = isGain
                   ? `Your maintenance is ${maintenanceKcal.toLocaleString()} kcal. That is what you need to stay the same weight. Adding a ${absPct}% surplus (+${surplusDelta} kcal) gives your muscles the extra energy and building blocks to grow. At ${rateAbs.toFixed(2)} kg/week projected gain, you're in a good spot: fast enough to build muscle, slow enough to keep fat gain minimal.`
                   : isCut
                   ? `Your maintenance is ${maintenanceKcal.toLocaleString()} kcal. A ${absPct}% deficit (${Math.abs(surplusDelta)} kcal below maintenance) puts you on track to ${rateDir} roughly ${rateAbs.toFixed(2)} kg/week. That rate is ${rateAbs <= 0.5 ? 'conservative. You will lose mostly fat while holding onto more muscle' : rateAbs <= 0.8 ? 'moderate. Effective fat loss with manageable risk to muscle' : 'aggressive. Protein has been set higher to protect your muscle'}. Consistency over weeks matters far more than perfection each day.`
-                  : `Your maintenance is ${maintenanceKcal.toLocaleString()} kcal. A slight ${Math.abs(absPct)}% deficit gives you enough of a calorie gap to use body fat as fuel, while high protein and consistent training tell your body to hold on to muscle. Progress is slower than a dedicated muscle building or fat loss phase, but your body composition improves at the same time.`;
+                  : isMaintain
+                  ? `Your target is ${results.targetKcal.toLocaleString()} kcal — your maintenance level. Eating at maintenance gives you the energy to recover hard and train hard, without gaining fat. With high protein and consistent training, you can still build muscle slowly and improve body composition. No deficit, no surplus: a clean baseline.`
+                  : isRecomp
+                  ? `Your maintenance is ${maintenanceKcal.toLocaleString()} kcal. A small ${Math.abs(absPct)}% deficit (${Math.abs(surplusDelta)} kcal below maintenance) gives just enough of a calorie gap to use body fat as fuel, while high protein and consistent training keep muscle on. Progress is slower than a dedicated muscle building or fat loss phase, but your body composition improves at the same time.`
+                  : `Your target is ${results.targetKcal.toLocaleString()} kcal based on your maintenance of ${maintenanceKcal.toLocaleString()} kcal.`;
 
                 const approachLabel =
                   results.proteinApproach === 'standard'
@@ -825,6 +834,8 @@ export default function NutritionTargetsScreen() {
                         ? `Protein is the raw material your muscles rebuild with after every session. Your target is above the threshold where muscle repair and growth is fully supported.`
                         : isRecomp
                         ? `High protein does two things: it gives your muscles what they need to rebuild after training, and it signals your body to hold on to muscle even as the slight calorie gap burns fat. That combination is what separates losing weight from actually improving how you look.`
+                        : isMaintain
+                        ? `Even at maintenance, protein is what rebuilds muscle after training. Your target keeps the supply steady so every session contributes to slow, lean gains rather than just being recovery food.`
                         : `In a deficit, the body can start breaking down muscle for fuel. High protein is the main way to prevent that. Your target keeps you well above the amount needed to preserve muscle.`;
                       return lbmLine + scalingLine + purposeLine;
                     })()
@@ -837,6 +848,8 @@ export default function NutritionTargetsScreen() {
                         ? `Protein is the raw material muscles rebuild with after every session. At this target you're above the threshold where muscle repair and growth is fully supported.`
                         : isRecomp
                         ? `When you are trying to hold muscle while losing fat, high protein provides the amino acids needed for muscle repair while telling your body to use fat as fuel instead.`
+                        : isMaintain
+                        ? `At maintenance, protein supplies the amino acids your muscles need to rebuild after each session. Hitting this target consistently is what lets you add muscle slowly on a stable bodyweight.`
                         : `In a calorie deficit, muscle tissue can become a fuel source if protein is too low. This target keeps you well above that threshold, and the high satiety of protein makes it easier to stick to your calories.`;
                       return bwLine + tipLine + purposeLine;
                     })();
@@ -847,6 +860,8 @@ export default function NutritionTargetsScreen() {
                   ? `Carbs are your main training fuel. Glycogen (the carbohydrate stored in muscle) powers you through your sets. By the fourth or fifth set it is almost exclusively glycogen being used. Your ${results.carbsG}g gives you plenty to top up between sessions and arrive at every workout ready to push hard. Better-fuelled sessions mean better training, which means more muscle growth.`
                   : isCut
                   ? `After protein and fat are set, carbs fill the remaining ${carbKcal} kcal. They get reduced in a deficit because, unlike protein and fat, they do not have critical structural roles in the body. Your ${results.carbsG}g still provides meaningful glycogen for training. If performance drops significantly late in your cut, that is a signal to bring calories up slightly. Timing carbs around your sessions (before and after training) will give you the most out of each gram.`
+                  : isMaintain
+                  ? `Carbs fill the remaining ${carbKcal} kcal after protein and fat are set. At maintenance there's no need to restrict them — your ${results.carbsG}g keeps glycogen full so every session has the fuel to push. Timing the bulk of them around training is the only nuance worth bothering with.`
                   : `Carbs fill the remaining ${carbKcal} kcal after protein and fat are set. When holding muscle while losing fat, carbs are kept moderate: enough to fuel your sessions and top up your energy stores, but not so many that they cancel the small deficit needed for fat loss. Eat most of your carbs around your training sessions. The rest of the day can be lower-carb without affecting performance.`;
 
                 return (
