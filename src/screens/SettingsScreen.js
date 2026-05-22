@@ -847,7 +847,12 @@ export default function SettingsScreen({ navigation }) {
 
         {/* About */}
         <View style={styles.about}>
-          <Text style={styles.appName}>Volyume</Text>
+          <View style={styles.appNameRow}>
+            <Text style={styles.appName}>Volyume</Text>
+            <View style={styles.betaBadge}>
+              <Text style={styles.betaBadgeText}>BETA</Text>
+            </View>
+          </View>
           <TouchableOpacity
             onPress={() => {
               // Tap to share the build identifier. Useful for beta
@@ -947,6 +952,19 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
   },
   appName: { fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.textPrimary, letterSpacing: 2 },
+  appNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  betaBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.sm,
+    backgroundColor: colors.primary,
+  },
+  betaBadgeText: {
+    fontSize: 10,
+    fontWeight: fontWeight.bold,
+    color: colors.background,
+    letterSpacing: 1,
+  },
   appVersion: { fontSize: fontSize.sm, color: colors.textMuted },
   a11yNote: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic', paddingHorizontal: spacing.md, paddingTop: spacing.xs, lineHeight: 16 },
   tagline: { fontSize: fontSize.xs, color: colors.textMuted },

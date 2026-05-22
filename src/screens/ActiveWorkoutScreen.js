@@ -23,6 +23,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import SetEntry from '../components/SetEntry';
+import PlateCalculator from '../components/PlateCalculator';
 import RestTimer from '../components/RestTimer';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -143,6 +144,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [setTargets, setSetTargets] = useState([]);
   const [targetReason, setTargetReason] = useState(null);
   const [showSetTypePicker, setShowSetTypePicker] = useState(false);
+  const [showPlateCalc, setShowPlateCalc] = useState(false);
+  const [plateCalcTarget, setPlateCalcTarget] = useState(0);
   const [showExecution, setShowExecution] = useState(false);
   const [showStaleModal, setShowStaleModal] = useState(false);
   const [showSwapModal, setShowSwapModal] = useState(false);
@@ -1280,6 +1283,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               }}
               units={units}
               onOpenSetTypePicker={() => setShowSetTypePicker(true)}
+              onOpenPlateCalc={(targetW) => {
+                setPlateCalcTarget(targetW);
+                setShowPlateCalc(true);
+              }}
               isWarmup={currentSet.setType === 'warmup'}
             />
 
@@ -1661,6 +1668,29 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         </Modal>
 
 
+
+        {/* Plate Calculator Bottom Sheet — opens with the current
+            working weight pre-filled so the user gets an answer in
+            one tap. */}
+        <Modal
+          visible={showPlateCalc}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowPlateCalc(false)}
+        >
+          <TouchableOpacity
+            style={styles.sheetOverlay}
+            activeOpacity={1}
+            onPress={() => setShowPlateCalc(false)}
+          />
+          <View style={[styles.sheet, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}>
+            <View style={styles.sheetHandle} />
+            <PlateCalculator
+              targetWeight={plateCalcTarget}
+              onClose={() => setShowPlateCalc(false)}
+            />
+          </View>
+        </Modal>
 
         {/* Set Type Picker Bottom Sheet */}
         <Modal

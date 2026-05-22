@@ -16,7 +16,7 @@ const SET_TYPE_LABELS = {
   amrap: 'Working',
 };
 
-export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypePicker, isWarmup = false }) {
+export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypePicker, onOpenPlateCalc, isWarmup = false }) {
   const { weight, reps, setType, isGhost } = value;
   const repsRef = useRef(null);
 
@@ -52,7 +52,21 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
     <View style={styles.container}>
       {/* Weight Row */}
       <View style={styles.inputRow}>
-        <Text style={styles.fieldLabel}>Weight ({units})</Text>
+        <View style={styles.fieldLabelWrap}>
+          <Text style={styles.fieldLabel}>Weight ({units})</Text>
+          {onOpenPlateCalc && !isWarmup && (
+            <TouchableOpacity
+              onPress={() => { Haptics.selectionAsync().catch(() => {}); onOpenPlateCalc(parseFloat(value.weight) || 0); }}
+              style={styles.plateBtn}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              accessibilityRole="button"
+              accessibilityLabel="Plate calculator"
+            >
+              <Ionicons name="cube-outline" size={12} color={colors.primary} />
+              <Text style={styles.plateBtnText}>Plates</Text>
+            </TouchableOpacity>
+          )}
+        </View>
         <View style={styles.stepper}>
           <TouchableOpacity
             style={styles.stepBtn}
@@ -194,6 +208,25 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textSecondary,
     fontWeight: fontWeight.medium,
+  },
+  fieldLabelWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  plateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 2,
+    paddingHorizontal: spacing.xs,
+    backgroundColor: colors.primaryBg,
+    borderRadius: radius.sm,
+  },
+  plateBtnText: {
+    fontSize: fontSize.xs,
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
   },
   stepper: {
     flex: 1,
