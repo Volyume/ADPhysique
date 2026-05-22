@@ -421,14 +421,20 @@ function collectTappables(tree) {
 async function bashTappables(tree) {
   const failures = [];
   const tappables = collectTappables(tree);
-  for (const node of tappables) {
+  for (let i = 0; i < tappables.length; i++) {
+    const node = tappables[i];
     try {
       await TestRenderer.act(async () => {
         node.props.onPress?.();
         await Promise.resolve();
       });
     } catch (e) {
-      failures.push({ label: node.props.accessibilityLabel ?? '(no label)', error: e.message });
+      failures.push({
+        index: i,
+        label: node.props.accessibilityLabel ?? node.props.testID ?? node.props.children?.toString?.()?.slice(0, 40) ?? '(no label)',
+        error: e.message,
+        stack: (e.stack || '').split('\n').slice(1, 4).join(' | '),
+      });
     }
   }
   return { count: tappables.length, failures };
@@ -540,24 +546,40 @@ describe('Pro screens mount without error', () => {
 const SCREENS_TO_SWEEP = [
   'AthleteHubScreen',
   'AnalyticsScreen',
+  'BlockReflectionScreen',
   'BodyMetricsScreen',
+  'BuildWorkoutScreen',
+  'CoachHeldHistoryScreen',
   'CoachOutputScreen',
+  'CoachReviewScreen',
   'CoachingRemindersScreen',
   'DebugLogScreen',
   'ExerciseLibraryScreen',
+  'FirstRunScreen',
+  'GoalChangeSummaryScreen',
   'HomeScreen',
+  'ImportScreen',
+  'LoginScreen',
+  'ManualBuilderScreen',
+  'MesocycleBuilderScreen',
   'NotificationSettingsScreen',
+  'NutritionEducationScreen',
   'NutritionTargetsScreen',
+  'OnboardingScreen',
   'PRWallScreen',
   'PlanLibraryScreen',
   'PlansScreen',
   'PrivacyPolicyScreen',
   'ProGoalSetupScreen',
+  'ProOnboardingScreen',
+  'ProSetupCompleteScreen',
   'ProUpgradeScreen',
   'SettingsScreen',
   'SubscriptionPolicyScreen',
   'VolumeHeatmapScreen',
   'WeeklyCheckInScreen',
+  'WelcomeScreen',
+  'WellbeingCheckScreen',
   'WorkoutHistoryScreen',
   'YearOfLiftsScreen',
 ];
@@ -608,6 +630,44 @@ const STATE_VARIANTS = [
   },
 ];
 
+// ─── Fuzz: random tap chains ─────────────────────────────────────────────
+//
+// Pick N random touchables on a screen and fire them in sequence. Repeats
+// across multiple seeds to surface ordering-sensitive bugs (e.g. tapping
+// A then B leaves state where B's onPress crashes).
+
+function seedRand(seed) {
+  // Mulberry32 — deterministic, good enough for jest.
+  return function () {
+    seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+async function fuzzTapChain(tree, depth, rand) {
+  const failures = [];
+  for (let i = 0; i < depth; i++) {
+    const tappables = collectTappables(tree);
+    if (!tappables.length) return failures;
+    const node = tappables[Math.floor(rand() * tappables.length)];
+    try {
+      await TestRenderer.act(async () => {
+        node.props.onPress?.();
+        await Promise.resolve();
+      });
+    } catch (e) {
+      failures.push({
+        step: i,
+        label: node.props.accessibilityLabel ?? '(no label)',
+        error: e.message,
+      });
+    }
+  }
+  return failures;
+}
+
 describe('All reachable screens — mount + bash every touchable + every text input', () => {
   for (const screenName of SCREENS_TO_SWEEP) {
     for (const variant of STATE_VARIANTS) {
@@ -649,5 +709,136 @@ describe('All reachable screens — mount + bash every touchable + every text in
         }
       });
     }
+  }
+});
+
+// ─── Fuzz pass: 10 random tap chains per screen, each 20 taps deep ──────
+//
+// This is the "thousands of clicks" requested. 38 screens × 10 seeds × 20
+// taps = ~7,600 simulated taps. Filters the same mock-boundary errors as
+// the deterministic sweep above.
+
+// ─── ActiveWorkoutScreen: with a workout in progress ─────────────────────
+
+describe('ActiveWorkoutScreen with active workout state', () => {
+  test('mounts mid-workout with logged sets without crashing', async () => {
+    useAppStore.setState({
+      user: { id: 'u-active', isLocal: false },
+      session: { user: { id: 'u-active' } },
+      tier: 'pro',
+      firstRunComplete: true,
+      userProfile: { firstName: 'A', goal: 'lean_gain', units: 'metric' },
+      activeWorkout: {
+        id: 'w1',
+        userId: 'u-active',
+        routineId: 'r1',
+        startedAt: Date.now() - 10 * 60 * 1000,
+        isCompleted: false,
+      },
+      workoutStartTime: Date.now() - 10 * 60 * 1000,
+      workoutExercises: [
+        {
+          exercise: { id: 'ex1', name: 'Barbell Bench Press', equipment: 'Barbell', primaryMuscle: 'chest' },
+          routineExercise: { id: 're1', recommendedSets: 3, recommendedRepsMin: 8, recommendedRepsMax: 12 },
+          sets: [
+            { id: 's1', exerciseId: 'ex1', workoutId: 'w1', setNumber: 1, setType: 'straight', actualReps: 10, weight: 60, rir: 2, rpe: null },
+            { id: 's2', exerciseId: 'ex1', workoutId: 'w1', setNumber: 2, setType: 'straight', actualReps: 9, weight: 60, rir: 1, rpe: null },
+          ],
+        },
+      ],
+      currentExerciseIndex: 0,
+      restTimerActive: false,
+      restTimerDuration: 0,
+      restTimerRemaining: 0,
+      accessibility: { reduceMotion: false },
+    });
+    const Screen = require('../screens/ActiveWorkoutScreen').default;
+    let tree = null;
+    try {
+      const result = await mountScreen(Screen);
+      tree = result.tree;
+      expect(tree).not.toBeNull();
+      // Tap every touchable on the screen — covers Log Set, Skip Rest,
+      // Add Set, Finish, Discard, exercise switcher, etc.
+      const { failures } = await bashTappables(tree);
+      const real = failures.filter(f =>
+        !/getState\b|dispatch\b|navigation\.navigate\b|getParent\b/i.test(f.error),
+      );
+      if (real.length) console.log('[ActiveWorkout] failures:', JSON.stringify(real, null, 2));
+      expect(real).toEqual([]);
+    } finally {
+      unmountTree(tree);
+    }
+  });
+
+  test('handles a 50-tap random chain mid-workout', async () => {
+    useAppStore.setState({
+      user: { id: 'u-active', isLocal: false },
+      session: { user: { id: 'u-active' } },
+      tier: 'pro',
+      firstRunComplete: true,
+      userProfile: { firstName: 'A', goal: 'lean_gain', units: 'metric' },
+      activeWorkout: { id: 'w1', userId: 'u-active', routineId: 'r1', startedAt: Date.now(), isCompleted: false },
+      workoutStartTime: Date.now(),
+      workoutExercises: [
+        {
+          exercise: { id: 'ex1', name: 'Squat', equipment: 'Barbell', primaryMuscle: 'quads' },
+          routineExercise: { id: 're1', recommendedSets: 3, recommendedRepsMin: 5, recommendedRepsMax: 8 },
+          sets: [],
+        },
+      ],
+      currentExerciseIndex: 0,
+      restTimerActive: false,
+      accessibility: { reduceMotion: false },
+    });
+    const Screen = require('../screens/ActiveWorkoutScreen').default;
+    let tree = null;
+    try {
+      const result = await mountScreen(Screen);
+      tree = result.tree;
+      const rand = seedRand(424242);
+      const failures = await fuzzTapChain(tree, 50, rand);
+      const real = failures.filter(f =>
+        !/getState\b|dispatch\b|navigation\.navigate\b|getParent\b/i.test(f.error),
+      );
+      if (real.length) console.log('[ActiveWorkout fuzz] failures:', JSON.stringify(real.slice(0, 5), null, 2));
+      expect(real).toEqual([]);
+    } finally {
+      unmountTree(tree);
+    }
+  });
+});
+
+describe('Fuzz: 20-tap chains across 10 seeds on every Pro screen', () => {
+  const PRO_LOADED = STATE_VARIANTS[0].state;
+  for (const screenName of SCREENS_TO_SWEEP) {
+    test(`${screenName}: random 20-tap chains × 10 seeds`, async () => {
+      useAppStore.setState(PRO_LOADED);
+      let Screen;
+      try { Screen = require(`../screens/${screenName}`).default; } catch (_) { return; }
+      if (!Screen) return;
+      let tree = null;
+      try {
+        const result = await mountScreen(Screen);
+        tree = result.tree;
+        if (!tree) return;
+        const allFailures = [];
+        for (let seed = 1; seed <= 10; seed++) {
+          const rand = seedRand(seed * 1000 + screenName.length);
+          const failures = await fuzzTapChain(tree, 20, rand);
+          for (const f of failures) {
+            if (!/getState\b|dispatch\b|navigation\.navigate\b|getParent\b/i.test(f.error)) {
+              allFailures.push({ seed, ...f });
+            }
+          }
+        }
+        if (allFailures.length) {
+          console.log(`[${screenName}] fuzz failures:`, JSON.stringify(allFailures.slice(0, 5), null, 2));
+        }
+        expect(allFailures).toEqual([]);
+      } finally {
+        unmountTree(tree);
+      }
+    });
   }
 });

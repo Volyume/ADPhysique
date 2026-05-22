@@ -1150,7 +1150,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 >
                   {entry.exercise?.name?.split(' ').slice(0, 2).join(' ')}
                 </Text>
-                {entry.sets.length > 0 && (
+                {entry.sets?.length > 0 && (
                   <View style={styles.navTabBadge}>
                     <Text style={styles.navTabBadgeText}>{entry.sets.length}</Text>
                   </View>

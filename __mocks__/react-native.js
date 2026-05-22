@@ -71,6 +71,39 @@ const AppState = {
   addEventListener: jest.fn(() => ({ remove: () => {} })),
 };
 
+const BackHandler = {
+  addEventListener: jest.fn(() => ({ remove: () => {} })),
+  removeEventListener: jest.fn(),
+  exitApp: jest.fn(),
+};
+
+const InteractionManager = {
+  runAfterInteractions: jest.fn(fn => { fn?.(); return { cancel: () => {} }; }),
+  createInteractionHandle: jest.fn(() => 1),
+  clearInteractionHandle: jest.fn(),
+};
+
+const LayoutAnimation = {
+  configureNext: jest.fn(),
+  Presets: { easeInEaseOut: {}, linear: {}, spring: {} },
+  create: jest.fn(),
+  Types: {}, Properties: {},
+};
+
+const UIManager = {
+  measure: jest.fn(),
+  measureInWindow: jest.fn(),
+  setLayoutAnimationEnabledExperimental: jest.fn(),
+};
+
+const PermissionsAndroid = {
+  PERMISSIONS: new Proxy({}, { get: (_, k) => k }),
+  RESULTS: { GRANTED: 'granted', DENIED: 'denied', NEVER_ASK_AGAIN: 'never_ask_again' },
+  request: jest.fn(() => Promise.resolve('granted')),
+  check: jest.fn(() => Promise.resolve(true)),
+  requestMultiple: jest.fn(() => Promise.resolve({})),
+};
+
 const Keyboard = {
   dismiss: jest.fn(),
   addListener: jest.fn(() => ({ remove: () => {} })),
@@ -134,6 +167,7 @@ module.exports = {
   Pressable, TextInput, Image, ImageBackground, Switch, Modal, FlatList, SectionList,
   KeyboardAvoidingView, SafeAreaView, ActivityIndicator, RefreshControl, StatusBar,
   Button, InputAccessoryView, VirtualizedList, DrawerLayoutAndroid, ProgressBarAndroid, ToolbarAndroid,
-  StyleSheet, Platform, Dimensions, Alert, Linking, AppState, Keyboard, Share, Vibration,
+  StyleSheet, Platform, Dimensions, Alert, Linking, AppState, BackHandler, Keyboard, Share, Vibration,
   NativeModules, NativeEventEmitter, PixelRatio, Animated, Easing,
+  InteractionManager, LayoutAnimation, UIManager, PermissionsAndroid,
 };
