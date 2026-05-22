@@ -46,6 +46,8 @@ import {
   insertWeeklyCheckinFromCloud,
   insertCoachOutputFromCloud,
   insertNutritionTargetsFromCloud,
+  insertMesocycleFromCloud,
+  insertMesocycleWeekFromCloud,
   getNutritionTargets,
 } from './database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -79,6 +81,40 @@ function logPgErr(scope, err) {
     details: err.details ?? null,
     hint: err.hint ?? null,
   });
+}
+
+// PostgREST caps each response at 1000 rows by default. Loop with
+// .range() until a short page comes back so users with large libraries
+// (long-running accounts, imported templates) get every row back.
+async function fetchAllRows(scope, queryBuilder) {
+  const PAGE = 1000;
+  let from = 0;
+  const out = [];
+  for (;;) {
+    const { data, error } = await queryBuilder().range(from, from + PAGE - 1);
+    if (error) { logWarn(scope, error.message); return out; }
+    if (!data?.length) return out;
+    out.push(...data);
+    if (data.length < PAGE) return out;
+    from += PAGE;
+  }
+}
+
+// IN-list queries can hit URL length limits with thousands of IDs.
+// Chunk to keep the query string well under any practical cap.
+async function fetchByIdsChunked(scope, table, column, ids, queryFactory) {
+  const CHUNK = 200;
+  const out = [];
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const slice = ids.slice(i, i + CHUNK);
+    const q = queryFactory ? queryFactory(slice) : null;
+    const { data, error } = q
+      ? await q
+      : await getClient().from(table).select('*').in(column, slice);
+    if (error) { logWarn(scope, error.message); continue; }
+    if (data?.length) out.push(...data);
+  }
+  return out;
 }
 
 // ─── Profile ──────────────────────────────────────────────────────────────────
@@ -606,8 +642,18 @@ async function _pushRoutinesAndExercises(sb, supabaseUserId, localUserId) {
         source_routine_id: r.sourceRoutineId ?? null,
         updated_at: new Date().toISOString(),
       }));
-      const { error: rErr } = await sb.from('routines').upsert(rows, { onConflict: 'id' });
-      if (rErr) logPgErr('sync._pushRoutines', rErr);
+      // Chunk so a single row's RLS rejection doesn't take the whole
+      // library down, and so the payload stays small.
+      let rPushed = 0;
+      for (let i = 0; i < rows.length; i += 200) {
+        const slice = rows.slice(i, i + 200);
+        const { error: rErr } = await sb.from('routines').upsert(slice, { onConflict: 'id' });
+        if (rErr) logPgErr('sync._pushRoutines', rErr);
+        else rPushed += slice.length;
+      }
+      if (rPushed < rows.length) {
+        logWarn('sync._pushRoutines', 'partial push', { pushed: rPushed, total: rows.length });
+      }
     }
     const routineExs = await getAllRoutineExercisesForUser(localUserId);
     if (routineExs?.length) {
@@ -1096,6 +1142,7 @@ export async function pullFromCloud(supabaseUserId) {
     // workouts came back; one missing table doesn't break the others.
     const programmeCount = await _pullProgrammes(sb, supabaseUserId);
     const routineCount = await _pullRoutinesAndExercises(sb, supabaseUserId);
+    const mesoCount = await _pullMesocycles(sb, supabaseUserId);
     const weightCount = await _pullMorningWeights(sb, supabaseUserId);
     const checkinCount = await _pullWeeklyCheckins(sb, supabaseUserId);
     const coachCount = await _pullCoachOutputs(sb, supabaseUserId);
@@ -1124,6 +1171,7 @@ export async function pullFromCloud(supabaseUserId) {
       sets: setCount,
       programmes: programmeCount,
       routines: routineCount,
+      mesocycles: mesoCount,
       morningWeights: weightCount,
       checkins: checkinCount,
       coachOutputs: coachCount,
@@ -1389,6 +1437,29 @@ async function _pullRoutinesAndExercises(sb, supabaseUserId) {
     }
     return n;
   } catch (e) { logWarn('sync._pullRoutinesAndExercises', e?.message); return 0; }
+}
+
+async function _pullMesocycles(sb, supabaseUserId) {
+  try {
+    const { data: mesos, error: mErr } = await sb
+      .from('mesocycles').select('*').eq('user_id', supabaseUserId);
+    if (mErr) { logWarn('sync._pullMesocycles', mErr.message); return 0; }
+    let n = 0;
+    for (const m of mesos ?? []) {
+      try { await insertMesocycleFromCloud(supabaseUserId, m); n++; }
+      catch (e) { logWarn('sync._pullMesocycles', 'insert failed', { id: m?.id, error: e?.message }); }
+    }
+    const mesoIds = (mesos ?? []).map(m => m.id);
+    if (mesoIds.length === 0) return n;
+    const weeks = await fetchByIdsChunked(
+      'sync._pullMesocycleWeeks', 'mesocycle_weeks', 'mesocycle_id', mesoIds,
+    );
+    for (const w of weeks) {
+      try { await insertMesocycleWeekFromCloud(w); }
+      catch (e) { logWarn('sync._pullMesocycleWeeks', 'insert failed', { id: w?.id, error: e?.message }); }
+    }
+    return n;
+  } catch (e) { logWarn('sync._pullMesocycles', e?.message); return 0; }
 }
 
 async function _pullMorningWeights(sb, supabaseUserId) {

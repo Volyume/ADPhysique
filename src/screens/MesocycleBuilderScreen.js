@@ -125,7 +125,9 @@ export default function MesocycleBuilderScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <FlatList
-        data={mesocycles}
+        // The active block is already shown via ActiveMesoDashboard
+        // in the header; "All blocks" is the archive of past blocks.
+        data={mesocycles.filter(m => !(m.isActive === 1 || m.isActive === true))}
         keyExtractor={m => m.id}
         contentContainerStyle={styles.list}
         ListHeaderComponent={
@@ -144,7 +146,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
                       'Your plan (the workouts and exercises) lives independently. A block is an ' +
                       'optional layer you add on top to track week-by-week progress across those weeks.\n\n' +
                       'After the block ends:\n' +
-                      '• The block is archived in All Blocks below\n' +
+                      '• The block is archived in Past blocks below\n' +
                       '• Your plan keeps going. The workouts are still there.\n' +
                       '• Start a new block to begin the next training phase\n\n' +
                       'Most people run 2 to 4 blocks per year, with each one starting slightly harder than the last one ended.'
@@ -199,8 +201,8 @@ export default function MesocycleBuilderScreen({ navigation }) {
               />
             )}
 
-            {mesocycles.length > 0 && (
-              <Text style={styles.historyLabel}>All blocks</Text>
+            {mesocycles.some(m => !(m.isActive === 1 || m.isActive === true)) && (
+              <Text style={styles.historyLabel}>Past blocks</Text>
             )}
           </>
         }
@@ -245,7 +247,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
                         `This block runs for ${totalWeeks} weeks` +
                         (meso.deloadWeek ? `. Week ${meso.deloadWeek} is your lighter recovery week.` : '.') +
                         '\n\nEach week your sets increase slightly until the recovery week, where the load drops so your body can absorb all the progress you have been making.\n\n' +
-                        `When Week ${totalWeeks} is complete, the block closes and moves to All Blocks below. ` +
+                        `When Week ${totalWeeks} is complete, the block closes and moves to Past blocks below. ` +
                         'Your plan keeps running. Start a new block to begin the next training phase.'
                       }
                     />
@@ -271,15 +273,19 @@ export default function MesocycleBuilderScreen({ navigation }) {
           );
         }}
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="calendar-outline" size={48} color={colors.surface3} />
-            <Text style={styles.emptyTitle}>No training blocks yet</Text>
-            <Text style={styles.emptyText}>
-              {activePlan
-                ? 'Your plan above is active and ready to train. A training block is optional. Add one to track your week-by-week progress across a full training phase.'
-                : 'Create a block to track your multi-week training progress.'}
-            </Text>
-          </View>
+          activeStats ? null : (
+            <View style={styles.empty}>
+              <Ionicons name="calendar-outline" size={48} color={colors.surface3} />
+              <Text style={styles.emptyTitle}>
+                {activePlan ? 'Add a training block' : 'No training blocks yet'}
+              </Text>
+              <Text style={styles.emptyText}>
+                {activePlan
+                  ? 'Your plan above is active and ready to train. A training block is optional. Add one to track your week-by-week progress across a full training phase.'
+                  : 'Create a block to track your multi-week training progress.'}
+              </Text>
+            </View>
+          )
         }
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
       />

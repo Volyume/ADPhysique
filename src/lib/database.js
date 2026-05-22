@@ -690,6 +690,30 @@ const SCHEMA_MIGRATIONS = [
     'CREATE INDEX IF NOT EXISTS idx_planned_muscle_volume_sync_user_updated ON planned_muscle_volume_sync(user_id, updated_at)',
     'CREATE INDEX IF NOT EXISTS idx_adaptation_events_sync_user_updated ON adaptation_events_sync(user_id, updated_at)',
   ],
+
+  // v21 — backfill mesocycles.end_date for rows that pre-date the fix
+  // in activatePlanWithBlock. The cloud schema declares end_date NOT
+  // NULL, so any pre-existing local block with a null end_date was
+  // silently dropped by the push and never reached the user's other
+  // devices.
+  [
+    async (d) => {
+      const rows = await d.getAllAsync(
+        'SELECT id, start_date, duration_weeks FROM mesocycles WHERE end_date IS NULL AND start_date IS NOT NULL',
+      );
+      for (const r of rows) {
+        const weeks = r.duration_weeks || 6;
+        const startMs = new Date(r.start_date).getTime();
+        if (!Number.isFinite(startMs)) continue;
+        const endDate = new Date(startMs + weeks * 7 * 24 * 60 * 60 * 1000)
+          .toISOString().slice(0, 10);
+        await d.runAsync(
+          'UPDATE mesocycles SET end_date = ?, updated_at = ? WHERE id = ?',
+          [endDate, Date.now(), r.id],
+        );
+      }
+    },
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
@@ -1637,13 +1661,18 @@ export async function activatePlanWithBlock(userId, planId, planName) {
 
   const id = uid();
   const startDate = new Date().toISOString().slice(0, 10);
+  // end_date is required by the cloud schema (NOT NULL). Without it the
+  // push silently drops the row and a fresh-install sign-in lands with
+  // an active plan but no training block.
+  const endDate = new Date(Date.now() + 6 * 7 * 24 * 60 * 60 * 1000)
+    .toISOString().slice(0, 10);
   // 6 weeks: 5 accumulation (RIR 3→2→1→0→0) + 1 deload (RIR 4)
   await d.runAsync(
     `INSERT INTO mesocycles
-      (id, user_id, name, start_date, duration_weeks, planned_weeks, focus,
+      (id, user_id, name, start_date, end_date, duration_weeks, planned_weeks, focus,
        block_type, rir_ladder, is_active, auto_regulation_enabled, created_at, updated_at)
-     VALUES (?, ?, ?, ?, 6, 6, ?, ?, ?, 1, 1, ?, ?)`,
-    [id, userId, planName, startDate, 'hypertrophy', 'offseason_hypertrophy', '[3,2,1,0,0,4]', now, now],
+     VALUES (?, ?, ?, ?, ?, 6, 6, ?, ?, ?, 1, 1, ?, ?)`,
+    [id, userId, planName, startDate, endDate, 'hypertrophy', 'offseason_hypertrophy', '[3,2,1,0,0,4]', now, now],
   );
 
   await generateMesocycleWeeks(id);
@@ -3635,6 +3664,49 @@ export async function insertWorkoutFromCloud(userId, w) {
       w.soreness_24h_before ?? null, w.fatigue_level ?? null, w.joint_discomfort ?? null,
       w.set_count ?? null, w.total_volume ?? null,
       toMs(w.started_at) ?? Date.now(), Date.now(),
+    ],
+  );
+}
+
+export async function insertMesocycleFromCloud(userId, m) {
+  const d = await db();
+  const now = Date.now();
+  await d.runAsync(
+    `INSERT OR REPLACE INTO mesocycles
+      (id, user_id, name, start_date, end_date, duration_weeks, planned_weeks,
+       focus, block_type, rir_ladder, is_active, auto_regulation_enabled,
+       deload_week, created_at, updated_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [
+      m.id, userId, m.name ?? null,
+      m.start_date ?? null, m.end_date ?? null,
+      m.duration_weeks ?? null, m.planned_weeks ?? m.duration_weeks ?? null,
+      m.focus ?? null, m.block_type ?? null,
+      m.rir_ladder ?? null,
+      m.is_active ? 1 : 0,
+      m.auto_regulation_enabled ? 1 : 0,
+      m.deload_week ?? null,
+      now, now,
+    ],
+  );
+}
+
+export async function insertMesocycleWeekFromCloud(w) {
+  const d = await db();
+  // Cloud uses week_number, local uses week_index. rir_target is
+  // NOT NULL locally but isn't on the cloud schema; default it from
+  // is_deload so the row still slots back in.
+  const weekIdx = w.week_number ?? w.week_index ?? 1;
+  await d.runAsync(
+    `INSERT OR REPLACE INTO mesocycle_weeks
+      (id, mesocycle_id, week_index, is_deload, rir_target, notes, created_at, updated_at)
+     VALUES (?,?,?,?,?,?,?,?)`,
+    [
+      w.id, w.mesocycle_id, weekIdx,
+      w.is_deload ? 1 : 0,
+      w.is_deload ? 4 : 2,
+      w.notes ?? null,
+      Date.now(), Date.now(),
     ],
   );
 }
