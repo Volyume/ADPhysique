@@ -914,6 +914,47 @@ describe('NutritionTargets: fill form then tap Calculate', () => {
   });
 });
 
+// ─── Accessibility mode variants ────────────────────────────────────────
+//
+// Reduce Motion + Higher Contrast + Larger Text are all user-toggleable.
+// Each rebakes StyleSheets and changes some component branches. Mount
+// every screen against each combination to catch crashes that only fire
+// under accessibility overrides.
+
+const A11Y_VARIANTS = [
+  { name: 'rm-on', accessibility: { reduceMotion: true, higherContrast: false, largerText: false } },
+  { name: 'hc-on', accessibility: { reduceMotion: false, higherContrast: true, largerText: false } },
+  { name: 'lt-on', accessibility: { reduceMotion: false, higherContrast: false, largerText: true } },
+  { name: 'all-on', accessibility: { reduceMotion: true, higherContrast: true, largerText: true } },
+];
+
+describe('A11y: mount every screen under each accessibility override', () => {
+  for (const screenName of SCREENS_TO_SWEEP) {
+    for (const a11y of A11Y_VARIANTS) {
+      test(`${screenName} [a11y: ${a11y.name}]`, async () => {
+        useAppStore.setState({
+          ...STATE_VARIANTS[0].state,
+          accessibility: a11y.accessibility,
+          accessibilityLoaded: true,
+        });
+        let Screen;
+        try { Screen = require(`../screens/${screenName}`).default; } catch (_) { return; }
+        if (!Screen) return;
+        let tree = null;
+        try {
+          const result = await mountScreen(Screen);
+          tree = result.tree;
+          if (!tree) return;
+          const { failures } = await bashTappables(tree);
+          const real = failures.filter(f => !/getState|dispatch|navigation\.navigate|getParent/i.test(f.error));
+          if (real.length) console.log(`[${screenName} a11y ${a11y.name}] failures:`, JSON.stringify(real.slice(0, 3), null, 2));
+          expect(real).toEqual([]);
+        } finally { unmountTree(tree); }
+      });
+    }
+  }
+});
+
 // ─── Stress: corrupted / unusual data shapes from the DB ────────────────
 //
 // What happens when getWorkouts() returns one workout with missing
