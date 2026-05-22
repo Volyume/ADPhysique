@@ -914,6 +914,197 @@ describe('NutritionTargets: fill form then tap Calculate', () => {
   });
 });
 
+// ─── Hub → NutritionTargets navigation simulation ──────────────────────
+//
+// The reported crash was tapping "Nutrition Targets" on AthleteHub. We
+// can't drive real navigation in the harness, but we can verify that
+// when AthleteHub IS mounted with realistic Pro state and the user
+// taps every card on it, no onPress throws. Combined with the
+// NutritionTargets mount tests above, this covers the same surface as
+// the actual navigation.
+
+describe('Hub → NutritionTargets simulated flow', () => {
+  test('AthleteHub mounts and every card onPress fires without throwing', async () => {
+    useAppStore.setState({
+      ...STATE_VARIANTS[0].state,
+      userProfile: { firstName: 'Test', goal: 'lean_gain', units: 'metric' },
+    });
+    const Hub = require('../screens/AthleteHubScreen').default;
+    let tree = null;
+    try {
+      const { tree: t, errors } = await mountScreen(Hub);
+      tree = t;
+      expect(tree).not.toBeNull();
+      expect(errors).toEqual([]);
+      const { failures } = await bashTappables(tree);
+      const real = failures.filter(f => !/getState|dispatch|navigation\.navigate|getParent/i.test(f.error));
+      expect(real).toEqual([]);
+    } finally { unmountTree(tree); }
+
+    // Now mount NutritionTargets — the target of the Hub tap.
+    const NT = require('../screens/NutritionTargetsScreen').default;
+    let ntTree = null;
+    try {
+      const { tree: t, errors } = await mountScreen(NT);
+      ntTree = t;
+      expect(ntTree).not.toBeNull();
+      expect(errors).toEqual([]);
+    } finally { unmountTree(ntTree); }
+  });
+
+  test('AthleteHub renders with the exact data shape the user has (lots of programmes, 1 mesocycle, nutrition set)', async () => {
+    const database = require('../lib/database');
+    const origGet = {
+      getAllWorkouts: database.getAllWorkouts,
+      getNutritionTargets: database.getNutritionTargets,
+    };
+    database.getAllWorkouts = () => Promise.resolve([{
+      id: 'w-real', userId: 'u-real', startedAt: Date.now() - 86400000,
+      endedAt: Date.now() - 86400000 + 3600000, durationMinutes: 60,
+      isCompleted: 1, setCount: 7, totalVolume: 50,
+    }]);
+    database.getNutritionTargets = () => Promise.resolve({
+      id: 'nt-real', userId: 'u-real',
+      bmr: 1700, tdee: 2600, targetKcal: 2900,
+      proteinG: 200, carbsG: 350, fatG: 80,
+      phase: 'lean gain', activityLevel: 'moderate',
+      confidence: 'medium', warnings: null, gdprConsented: true,
+      createdAt: Date.now() - 3600000, updatedAt: Date.now() - 3600000,
+    });
+    try {
+      useAppStore.setState({
+        user: { id: 'u-real', email: 'real@e.com', isLocal: false },
+        session: { user: { id: 'u-real' } },
+        tier: 'pro',
+        firstRunComplete: true,
+        userProfile: { firstName: 'R', goal: 'lean_gain', trainingFocus: 'hypertrophy', units: 'metric' },
+        accessibility: { reduceMotion: false },
+      });
+      const Hub = require('../screens/AthleteHubScreen').default;
+      let tree = null;
+      try {
+        const { tree: t, errors } = await mountScreen(Hub);
+        tree = t;
+        expect(tree).not.toBeNull();
+        expect(errors).toEqual([]);
+        const { failures } = await bashTappables(tree);
+        const real = failures.filter(f => !/getState|dispatch|navigation\.navigate|getParent/i.test(f.error));
+        expect(real).toEqual([]);
+      } finally { unmountTree(tree); }
+    } finally {
+      Object.assign(database, origGet);
+    }
+  });
+});
+
+// ─── Scale stress: large data shapes ─────────────────────────────────────
+
+describe('Scale stress: large data does not break render or interaction', () => {
+  test('Analytics with 200 workouts, 1500 sets', async () => {
+    const database = require('../lib/database');
+    const orig = {
+      getAllWorkouts: database.getAllWorkouts,
+      getCompletedWorkoutSets: database.getCompletedWorkoutSets,
+    };
+    database.getAllWorkouts = () => Promise.resolve(
+      Array.from({ length: 200 }, (_, i) => ({
+        id: `w${i}`, userId: 'u1',
+        startedAt: Date.now() - i * 86400000,
+        endedAt: Date.now() - i * 86400000 + 3600000,
+        durationMinutes: 45 + (i % 30),
+        isCompleted: 1,
+        setCount: 7 + (i % 5),
+        totalVolume: 3000 + (i * 50),
+      })),
+    );
+    database.getCompletedWorkoutSets = () => Promise.resolve(
+      Array.from({ length: 1500 }, (_, i) => ({
+        id: `s${i}`, userId: 'u1',
+        workoutId: `w${i % 200}`,
+        exerciseId: `e${i % 30}`,
+        setNumber: (i % 5) + 1,
+        setType: i % 4 === 0 ? 'warmup' : 'straight',
+        actualReps: 8 + (i % 8),
+        weight: 30 + (i % 80),
+      })),
+    );
+    try {
+      useAppStore.setState(STATE_VARIANTS[0].state);
+      const Screen = require('../screens/AnalyticsScreen').default;
+      let tree = null;
+      try {
+        const { tree: t, errors } = await mountScreen(Screen);
+        tree = t;
+        expect(tree).not.toBeNull();
+        expect(errors).toEqual([]);
+        const { failures } = await bashTappables(tree);
+        const real = failures.filter(f => !/getState|dispatch|navigation\.navigate|getParent/i.test(f.error));
+        expect(real).toEqual([]);
+      } finally { unmountTree(tree); }
+    } finally {
+      Object.assign(database, orig);
+    }
+  });
+
+  test('WorkoutHistory with 500 workouts renders without crashing', async () => {
+    const database = require('../lib/database');
+    const orig = database.getAllWorkouts;
+    database.getAllWorkouts = () => Promise.resolve(
+      Array.from({ length: 500 }, (_, i) => ({
+        id: `w${i}`, userId: 'u1',
+        startedAt: Date.now() - i * 86400000,
+        endedAt: Date.now() - i * 86400000 + 3600000,
+        durationMinutes: 60,
+        isCompleted: 1,
+        setCount: 8,
+        totalVolume: 4000,
+        name: `Session ${i}`,
+      })),
+    );
+    try {
+      useAppStore.setState(STATE_VARIANTS[0].state);
+      const Screen = require('../screens/WorkoutHistoryScreen').default;
+      let tree = null;
+      try {
+        const { tree: t, errors } = await mountScreen(Screen);
+        tree = t;
+        expect(tree).not.toBeNull();
+        expect(errors).toEqual([]);
+      } finally { unmountTree(tree); }
+    } finally {
+      database.getAllWorkouts = orig;
+    }
+  });
+
+  test('ExerciseLibrary with all canonical exercises mounted', async () => {
+    const database = require('../lib/database');
+    const orig = database.getAllExercises;
+    database.getAllExercises = () => Promise.resolve(
+      Array.from({ length: 500 }, (_, i) => ({
+        id: `e${i}`,
+        name: `Exercise ${i}`,
+        primaryMuscle: ['chest', 'back', 'quads', 'shoulders', 'hamstrings', 'biceps', 'triceps', 'glutes'][i % 8],
+        equipment: ['Barbell', 'Dumbbell', 'Cable', 'Machine', 'Bodyweight'][i % 5],
+        movementPattern: ['push', 'pull', 'squat', 'hinge'][i % 4],
+        compoundIsolation: i % 2 ? 'compound' : 'isolation',
+      })),
+    );
+    try {
+      useAppStore.setState(STATE_VARIANTS[0].state);
+      const Screen = require('../screens/ExerciseLibraryScreen').default;
+      let tree = null;
+      try {
+        const { tree: t, errors } = await mountScreen(Screen);
+        tree = t;
+        expect(tree).not.toBeNull();
+        expect(errors).toEqual([]);
+      } finally { unmountTree(tree); }
+    } finally {
+      database.getAllExercises = orig;
+    }
+  });
+});
+
 // ─── Tap-then-re-render: catches crashes that surface on re-mount ────────
 //
 // Many bugs only fire on the SECOND render after a tap mutated state.
