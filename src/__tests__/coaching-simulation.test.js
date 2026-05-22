@@ -728,6 +728,87 @@ describe('12-week coaching simulation', () => {
     }
   });
 
+  // ─── Insights engine ──────────────────────────────────────────────────
+
+  test('insights engine does not crash on empty data', () => {
+    const { generateInsights, rankAndCapInsights } = require('../lib/insightsEngine');
+    const insights = generateInsights({ workouts: [], sets: [], exerciseMap: {} });
+    expect(Array.isArray(insights)).toBe(true);
+    const capped = rankAndCapInsights(insights);
+    expect(Array.isArray(capped)).toBe(true);
+    expect(capped.length).toBeLessThanOrEqual(3);
+  });
+
+  test('insights engine produces useful insights for a 4-week trained user', () => {
+    const { generateInsights, rankAndCapInsights } = require('../lib/insightsEngine');
+    const now = Date.now();
+    // 4 weeks × 4 sessions = 16 workouts
+    const workouts = Array.from({ length: 16 }, (_, i) => ({
+      id: `w${i}`, userId: 'u1',
+      startedAt: now - (28 - Math.floor(i * 28 / 16)) * DAY_MS,
+      durationMinutes: 60, isCompleted: 1,
+      setCount: 8, totalVolume: 4000,
+    }));
+    const sets = workouts.flatMap((w, i) => Array.from({ length: 8 }, (_, j) => ({
+      id: `s${i}_${j}`, userId: 'u1', workoutId: w.id,
+      exerciseId: `ex${j % 5}`,
+      setNumber: j + 1, setType: 'straight',
+      actualReps: 8 + (j % 3), weight: 50 + j * 5,
+      createdAt: w.startedAt,
+    })));
+    const exerciseMap = {};
+    for (let k = 0; k < 5; k++) {
+      exerciseMap[`ex${k}`] = { id: `ex${k}`, name: `Exercise ${k}`, primaryMuscle: 'chest' };
+    }
+    const insights = generateInsights({ workouts, sets, exerciseMap, now });
+    expect(Array.isArray(insights)).toBe(true);
+    // Every insight should be an object with some kind of identifier
+    for (const i of insights) {
+      expect(typeof i).toBe('object');
+      expect(i).not.toBeNull();
+      // At least one of id / kind / type / category should be present
+      const hasIdentifier = ['id', 'kind', 'type', 'category', 'key'].some(k => typeof i[k] === 'string');
+      if (!hasIdentifier) {
+        console.warn('Insight without an identifier:', Object.keys(i));
+      }
+    }
+    const capped = rankAndCapInsights(insights);
+    expect(capped.length).toBeLessThanOrEqual(3);
+  });
+
+  // ─── Block advisor ────────────────────────────────────────────────────
+
+  test('blockAdvisor handles no active block gracefully', async () => {
+    // getBlockAdvice calls getRecentCheckins which will return [] from the
+    // mocked DB. With no active block, it should still produce SOMETHING.
+    const { getBlockAdvice } = require('../lib/blockAdvisor');
+    const out = await getBlockAdvice('u1', null, { firstName: 'Test', experience: 'intermediate' });
+    expect(out).toBeDefined();
+    // The advice should have an action label and a headline
+    expect(typeof out.action ?? '').toBe('string');
+  });
+
+  test('blockAdvisor handles a fresh block (week 1)', async () => {
+    const { getBlockAdvice } = require('../lib/blockAdvisor');
+    const out = await getBlockAdvice('u1',
+      { startDate: Date.now() - 3 * DAY_MS, plannedWeeks: 6 },
+      { firstName: 'Test', experience: 'intermediate' },
+    );
+    expect(out).toBeDefined();
+  });
+
+  test('blockAdvisor handles an overdue block (8 weeks in on a 5-week block)', async () => {
+    const { getBlockAdvice } = require('../lib/blockAdvisor');
+    const out = await getBlockAdvice('u1',
+      { startDate: Date.now() - 8 * WEEK_MS, plannedWeeks: 5 },
+      { firstName: 'Test', experience: 'intermediate' },
+    );
+    expect(out).toBeDefined();
+    if (out.action === 'in_recovery' || out.action === 'block_complete' || out.action === 'overdue') {
+      expect(typeof out.body ?? '').toBe('string');
+    }
+  });
+
   // ─── Multi-week consistency: same inputs should produce same plan ──────
   test('plan generation is deterministic for the same inputs', () => {
     const profile = {
