@@ -149,10 +149,23 @@ jest.mock('expo-notifications', () => ({
   setNotificationHandler: jest.fn(),
   scheduleNotificationAsync: jest.fn(() => Promise.resolve('id')),
   cancelScheduledNotificationAsync: jest.fn(() => Promise.resolve()),
+  cancelAllScheduledNotificationsAsync: jest.fn(() => Promise.resolve()),
+  getAllScheduledNotificationsAsync: jest.fn(() => Promise.resolve([])),
   getPermissionsAsync: jest.fn(() => Promise.resolve({ status: 'granted' })),
   requestPermissionsAsync: jest.fn(() => Promise.resolve({ status: 'granted' })),
   setNotificationChannelAsync: jest.fn(() => Promise.resolve()),
   addNotificationResponseReceivedListener: jest.fn(() => ({ remove: () => {} })),
+  addNotificationReceivedListener: jest.fn(() => ({ remove: () => {} })),
+  SchedulableTriggerInputTypes: {
+    DAILY: 'daily',
+    WEEKLY: 'weekly',
+    YEARLY: 'yearly',
+    DATE: 'date',
+    TIME_INTERVAL: 'timeInterval',
+    CALENDAR: 'calendar',
+  },
+  AndroidImportance: { MAX: 5, HIGH: 4, DEFAULT: 3, LOW: 2, MIN: 1, NONE: 0 },
+  AndroidNotificationPriority: { MAX: 'max', HIGH: 'high', DEFAULT: 'default' },
 }));
 
 jest.mock('@sentry/react-native', () => ({
@@ -776,13 +789,92 @@ describe('Screens with route.params', () => {
     } finally { unmountTree(tree); }
   });
 
-  test('PlanDetailScreen renders with programmeId param', async () => {
+  test('PlanDetailScreen renders with planId param', async () => {
     useAppStore.setState(STATE_VARIANTS[0].state);
     const Screen = require('../screens/PlanDetailScreen').default;
     let tree = null;
     try {
       const { tree: t, errors } = await mountScreen(Screen, {
-        route: { params: { programmeId: 'p1' }, name: 'PlanDetail' },
+        route: { params: { planId: 'p1', isLibrary: false }, name: 'PlanDetail' },
+      });
+      tree = t;
+      expect(tree).not.toBeNull();
+      expect(errors).toEqual([]);
+    } finally { unmountTree(tree); }
+  });
+
+  test('PlanDetailScreen with isLibrary=true (library mode)', async () => {
+    useAppStore.setState(STATE_VARIANTS[0].state);
+    const Screen = require('../screens/PlanDetailScreen').default;
+    let tree = null;
+    try {
+      const { tree: t, errors } = await mountScreen(Screen, {
+        route: { params: { planId: 'lib1', isLibrary: true }, name: 'PlanDetail' },
+      });
+      tree = t;
+      expect(tree).not.toBeNull();
+      expect(errors).toEqual([]);
+    } finally { unmountTree(tree); }
+  });
+
+  test('BlockReflectionScreen with valid mesocycleId param', async () => {
+    useAppStore.setState(STATE_VARIANTS[0].state);
+    const Screen = require('../screens/BlockReflectionScreen').default;
+    let tree = null;
+    try {
+      const { tree: t, errors } = await mountScreen(Screen, {
+        route: { params: { mesocycleId: 'm1' }, name: 'BlockReflection' },
+      });
+      tree = t;
+      expect(tree).not.toBeNull();
+      expect(errors).toEqual([]);
+    } finally { unmountTree(tree); }
+  });
+
+  test('CoachOutputScreen with weekStart param', async () => {
+    useAppStore.setState(STATE_VARIANTS[0].state);
+    const Screen = require('../screens/CoachOutputScreen').default;
+    let tree = null;
+    try {
+      const { tree: t, errors } = await mountScreen(Screen, {
+        route: { params: { weekStart: '2026-05-19' }, name: 'CoachOutput' },
+      });
+      tree = t;
+      expect(tree).not.toBeNull();
+      expect(errors).toEqual([]);
+    } finally { unmountTree(tree); }
+  });
+
+  test('GoalChangeSummaryScreen with previous and next params', async () => {
+    useAppStore.setState(STATE_VARIANTS[0].state);
+    const Screen = require('../screens/GoalChangeSummaryScreen').default;
+    let tree = null;
+    try {
+      const { tree: t, errors } = await mountScreen(Screen, {
+        route: {
+          params: {
+            previous: { goal: 'lean_gain', phase: 'maintenance', kcal: 2500 },
+            next: { goal: 'mild_cut', phase: 'cut', kcal: 2200 },
+          },
+          name: 'GoalChangeSummary',
+        },
+      });
+      tree = t;
+      expect(tree).not.toBeNull();
+      expect(errors).toEqual([]);
+      const { failures } = await bashTappables(tree);
+      const real = failures.filter(f => !/getState|dispatch|navigation\.navigate|getParent/i.test(f.error));
+      expect(real).toEqual([]);
+    } finally { unmountTree(tree); }
+  });
+
+  test('YearOfLiftsScreen with yearMs param', async () => {
+    useAppStore.setState(STATE_VARIANTS[0].state);
+    const Screen = require('../screens/YearOfLiftsScreen').default;
+    let tree = null;
+    try {
+      const { tree: t, errors } = await mountScreen(Screen, {
+        route: { params: { yearMs: new Date('2026-01-01').getTime() }, name: 'YearOfLifts' },
       });
       tree = t;
       expect(tree).not.toBeNull();
@@ -912,6 +1004,73 @@ describe('NutritionTargets: fill form then tap Calculate', () => {
       expect(real).toEqual([]);
     } finally { unmountTree(tree); }
   });
+});
+
+// ─── Form-driven screens: interleaved text input + tap ─────────────────
+//
+// Many bugs only surface when a user fills inputs then taps a button.
+// This is more aggressive than the original input-stress: for each
+// screen that has inputs, pump values into every input then tap every
+// button, then re-pump, re-tap, repeat 3 cycles.
+
+async function interleavedFormBash(tree, cycles = 3) {
+  const failures = [];
+  const inputValues = ['10', '50', '25', '100', ''];
+  for (let cycle = 0; cycle < cycles; cycle++) {
+    const inputs = collectTextInputs(tree);
+    for (let i = 0; i < inputs.length; i++) {
+      try {
+        await TestRenderer.act(async () => {
+          inputs[i].props.onChangeText?.(inputValues[(i + cycle) % inputValues.length]);
+          await Promise.resolve();
+        });
+      } catch (e) {
+        failures.push({ cycle, kind: 'input', index: i, error: e.message });
+      }
+    }
+    const taps = collectTappables(tree);
+    for (let i = 0; i < taps.length; i++) {
+      try {
+        await TestRenderer.act(async () => {
+          taps[i].props.onPress?.();
+          await Promise.resolve();
+        });
+      } catch (e) {
+        failures.push({ cycle, kind: 'tap', index: i, label: taps[i].props.accessibilityLabel ?? '(no label)', error: e.message });
+      }
+    }
+  }
+  return failures;
+}
+
+describe('Form-driven screens: interleaved input + tap × 3 cycles', () => {
+  const FORM_SCREENS = [
+    'NutritionTargetsScreen',
+    'WeeklyCheckInScreen',
+    'BodyMetricsScreen',
+    'ImportScreen',
+    'NotificationSettingsScreen',
+    'CoachingRemindersScreen',
+    'ManualBuilderScreen',
+  ];
+  for (const screenName of FORM_SCREENS) {
+    test(`${screenName}: 3 cycles of fill-and-tap`, async () => {
+      useAppStore.setState(STATE_VARIANTS[0].state);
+      let Screen;
+      try { Screen = require(`../screens/${screenName}`).default; } catch (_) { return; }
+      if (!Screen) return;
+      let tree = null;
+      try {
+        const result = await mountScreen(Screen);
+        tree = result.tree;
+        if (!tree) return;
+        const failures = await interleavedFormBash(tree, 3);
+        const real = failures.filter(f => !/getState|dispatch|navigation\.navigate|getParent/i.test(f.error));
+        if (real.length) console.log(`[${screenName} form] failures:`, JSON.stringify(real.slice(0, 5), null, 2));
+        expect(real).toEqual([]);
+      } finally { unmountTree(tree); }
+    });
+  }
 });
 
 // ─── Hub → NutritionTargets navigation simulation ──────────────────────
