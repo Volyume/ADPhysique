@@ -127,7 +127,7 @@ function WhySection({ icon, color, title, body }) {
 const BODY_METRICS_KEY_PREFIX = '@volyume_body_metrics_';
 const PHYSIQUE_PREF_KEY = '@volyume_physique_tracking_enabled';
 
-export default function NutritionTargetsScreen() {
+export default function NutritionTargetsScreen({ navigation }) {
   const { user, userProfile } = useAppStore();
 
   // ── Form state ────────────────────────────────────────────────────────────────
@@ -813,10 +813,10 @@ export default function NutritionTargetsScreen() {
                   : isCut
                   ? `Your maintenance is ${maintenanceKcal.toLocaleString()} kcal. A ${absPct}% deficit (${Math.abs(surplusDelta)} kcal below maintenance) puts you on track to ${rateDir} roughly ${rateAbs.toFixed(2)} kg/week. That rate is ${rateAbs <= 0.5 ? 'conservative. You will lose mostly fat while holding onto more muscle' : rateAbs <= 0.8 ? 'moderate. Effective fat loss with manageable risk to muscle' : 'aggressive. Protein has been set higher to protect your muscle'}. Consistency over weeks matters far more than perfection each day.`
                   : isMaintain
-                  ? `Your target is ${results.targetKcal.toLocaleString()} kcal, which matches your maintenance level. Eating at maintenance gives you the energy to recover hard and train hard, without gaining fat. With high protein and consistent training, you can still build muscle slowly and improve body composition. No deficit, no surplus: a clean baseline.`
+                  ? `Your target is ${(results.targetKcal ?? 0).toLocaleString()} kcal, which matches your maintenance level. Eating at maintenance gives you the energy to recover hard and train hard, without gaining fat. With high protein and consistent training, you can still build muscle slowly and improve body composition. No deficit, no surplus: a clean baseline.`
                   : isRecomp
                   ? `Your maintenance is ${maintenanceKcal.toLocaleString()} kcal. A small ${Math.abs(absPct)}% deficit (${Math.abs(surplusDelta)} kcal below maintenance) gives just enough of a calorie gap to use body fat as fuel, while high protein and consistent training keep muscle on. Progress is slower than a dedicated muscle building or fat loss phase, but your body composition improves at the same time.`
-                  : `Your target is ${results.targetKcal.toLocaleString()} kcal based on your maintenance of ${maintenanceKcal.toLocaleString()} kcal.`;
+                  : `Your target is ${(results.targetKcal ?? 0).toLocaleString()} kcal based on your maintenance of ${maintenanceKcal.toLocaleString()} kcal.`;
 
                 const approachLabel =
                   results.proteinApproach === 'standard'
