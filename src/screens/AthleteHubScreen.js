@@ -490,7 +490,7 @@ export default function AthleteHubScreen({ navigation }) {
         )}
 
         {/* ── Profile card ──────────────────────────────── */}
-        <GradientCard tone={tier === 'pro' ? 'gold' : 'primary'} intensity={0.22} style={styles.profileCard}>
+        <View style={styles.profileCard}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>
               {(displayName?.[0] || 'A').toUpperCase()}
@@ -506,7 +506,7 @@ export default function AthleteHubScreen({ navigation }) {
               <Text style={styles.profileStat}>{totalWorkouts} sessions</Text>
             </View>
           </View>
-        </GradientCard>
+        </View>
 
         {/* ── Milestone progress ─────────────────────────── */}
         {(lastUnlocked || next) && (
@@ -935,11 +935,11 @@ function RecoveryGauge({ label, value, invertGood = false }) {
 
 function QuickStat({ value, label, icon, color }) {
   return (
-    <GradientCard tint={color} intensity={0.14} style={styles.quickStat}>
+    <View style={styles.quickStat}>
       <Ionicons name={icon} size={18} color={color} />
       <Text style={[styles.quickStatValue, { color }]}>{value}</Text>
       <Text style={styles.quickStatLabel}>{label}</Text>
-    </GradientCard>
+    </View>
   );
 }
 
@@ -994,9 +994,9 @@ const styles = StyleSheet.create({
 
   // Profile
   profileCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.lg,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.lg,
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    padding: spacing.lg, borderWidth: 1, borderColor: colors.border,
   },
   avatar: {
     width: 56, height: 56, borderRadius: 28,
@@ -1047,9 +1047,9 @@ const styles = StyleSheet.create({
   // Quick stats
   quickStatsRow: { flexDirection: 'row', gap: spacing.md },
   quickStat: {
-    flex: 1,
-    alignItems: 'center',
-    gap: spacing.xs,
+    flex: 1, backgroundColor: colors.surface, borderRadius: radius.lg,
+    padding: spacing.lg, alignItems: 'center', gap: spacing.xs,
+    borderWidth: 1, borderColor: colors.border,
   },
   quickStatValue: { fontSize: fontSize.xl, fontWeight: fontWeight.black },
   quickStatLabel: { fontSize: fontSize.xs, color: colors.textSecondary, textAlign: 'center' },

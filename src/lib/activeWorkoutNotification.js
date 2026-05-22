@@ -28,10 +28,11 @@ const CHANNEL_ID = 'volyume_active_workout';
 // When false, we use the standard expo-notifications sticky path
 // (works while the app is alive, dies on force-close). When true, we
 // drive the native foreground service in rest-timer-live which
-// survives force-close. Default OFF so the next build is identical
-// to the previous one and we can verify everything else is still
-// green before flipping it on with a one-line change.
-const USE_FOREGROUND_SERVICE = false;
+// survives force-close. Flipped ON so the workout state stays on the
+// lock screen even after Android (or the user) force-closes Volyume.
+// If anything misbehaves on Android 14 health-permission prompts,
+// flip back to false here and rebuild.
+const USE_FOREGROUND_SERVICE = true;
 
 // Lazy require of the native module. The require itself is cheap on
 // Android (the module is already loaded by the runtime); on iOS or in

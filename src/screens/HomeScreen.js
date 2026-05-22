@@ -84,10 +84,6 @@ export default function HomeScreen({ navigation }) {
   const [weightInputSt, setWeightInputSt] = useState('');     // stone field (st mode)
   const [weightInputStLbs, setWeightInputStLbs] = useState(''); // lbs field (st mode)
   const [savingWeight, setSavingWeight] = useState(false);
-  // One-time inline nudge that points users to Health Connect for
-  // weight import. Shown only when the platform supports it, weight
-  // read isn't already granted, and the user hasn't dismissed it.
-  const [showHealthNudge, setShowHealthNudge] = useState(false);
   // Hero narrative line at the top of Home: one-sentence story drawn
   // from the user's recent data ("Last session beat your 4-week
   // average by 14%"). Null when we don't have enough signal.
@@ -392,24 +388,7 @@ export default function HomeScreen({ navigation }) {
         });
       }
 
-      // Health Connect nudge: surface ONCE on Home for Pro users on a
-      // device that supports Health Connect, only when weight read
-      // isn't already granted and the user hasn't dismissed it. The
-      // What's New sheet covers the first impression; this is the
-      // gentle reminder for anyone who skipped it.
-      if (tier === 'pro') {
-        try {
-          // eslint-disable-next-line global-require
-          const { isHealthAvailable, getHealthPermissionStatus } = require('../lib/health');
-          if (isHealthAvailable()) {
-            const dismissed = await AsyncStorage.getItem('@volyume_seen_health_nudge');
-            if (dismissed !== 'true') {
-              const status = await getHealthPermissionStatus(['weight']);
-              if (status !== 'granted') setShowHealthNudge(true);
-            }
-          }
-        } catch (_) { /* ignore: nudge is purely additive */ }
-      }
+
 
       // Compute tonnage for last session
       if (completed[0]) {
@@ -877,11 +856,8 @@ export default function HomeScreen({ navigation }) {
           </View>
         ) : (
           <View style={[styles.weightCard, styles.weightCardEmpty]}>
-            <Ionicons name="scale-outline" size={18} color={colors.primary} />
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={styles.weightCardPrompt}>Log morning weight</Text>
-              <Text style={styles.weightCardHint}>Helps your coach track trends and suggest adjustments each week</Text>
-            </View>
+            <Ionicons name="scale-outline" size={16} color={colors.primary} />
+            <Text style={styles.weightCardPrompt}>Morning weight</Text>
             {bwu === 'st' ? (
               <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'center' }}>
                 <TextInput
@@ -926,36 +902,6 @@ export default function HomeScreen({ navigation }) {
             </TouchableOpacity>
           </View>
         ))}
-
-        {/* Health Connect / Apple Health one-time nudge. Sits just under
-            the morning weight card so the value prop reads in context.
-            Dismisses permanently on either action. */}
-        {tier === 'pro' && showHealthNudge && (
-          <TouchableOpacity
-            style={styles.healthNudge}
-            activeOpacity={0.8}
-            onPress={() => {
-              AsyncStorage.setItem('@volyume_seen_health_nudge', 'true').catch(() => {});
-              setShowHealthNudge(false);
-              navigation.getParent()?.navigate('ProfileTab', { screen: 'Settings' });
-            }}
-          >
-            <Ionicons name="link-outline" size={14} color={colors.primary} />
-            <Text style={styles.healthNudgeText} numberOfLines={2}>
-              Got a smart scale? Pull your weights from Health Connect automatically.
-            </Text>
-            <TouchableOpacity
-              onPress={() => {
-                AsyncStorage.setItem('@volyume_seen_health_nudge', 'true').catch(() => {});
-                setShowHealthNudge(false);
-              }}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              accessibilityLabel="Dismiss"
-            >
-              <Ionicons name="close" size={14} color={colors.textMuted} />
-            </TouchableOpacity>
-          </TouchableOpacity>
-        )}
 
         {/* ── This week — progress bars ── */}
         <View style={styles.weekCard}>
@@ -1033,13 +979,10 @@ export default function HomeScreen({ navigation }) {
             </View>
           </PressableCard>
         ) : activePlan && nextWorkout ? (
-          <GradientCard tone="primary" intensity={0.22} style={styles.heroCard}>
-            <View style={styles.heroTopRow}>
-              <View style={styles.planBadge}>
-                <Text style={styles.planBadgeText} numberOfLines={1}>{activePlan.name}</Text>
-              </View>
-              <Text style={styles.dayProgress}>{planProgress}</Text>
-            </View>
+          <View style={styles.heroCard}>
+            <Text style={styles.heroEyebrow} numberOfLines={1}>
+              {activePlan.name} · {planProgress}
+            </Text>
             <Text style={styles.workoutName} numberOfLines={2}>
               {displayWorkout?.routine?.name}
             </Text>
@@ -1051,40 +994,39 @@ export default function HomeScreen({ navigation }) {
             {coachBrief && (
               <CoachBriefCard brief={coachBrief} onDismiss={dismissBrief} />
             )}
-            <View style={styles.heroActions}>
+            <TouchableOpacity
+              style={[styles.primaryBtn, isStartingWorkout && { opacity: 0.6 }]}
+              onPress={handleStartNextWorkout}
+              disabled={isStartingWorkout}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel={isStartingWorkout ? 'Starting workout' : `Start ${displayWorkout?.routine?.name || 'workout'}`}
+            >
+              <Ionicons name="play" size={16} color={colors.background} />
+              <Text style={styles.primaryBtnText}>
+                {isStartingWorkout ? 'Starting…' : 'Start workout'}
+              </Text>
+            </TouchableOpacity>
+            <View style={styles.heroSecondaryRow}>
               <TouchableOpacity
-                style={[styles.primaryBtn, isStartingWorkout && { opacity: 0.6 }]}
-                onPress={handleStartNextWorkout}
-                disabled={isStartingWorkout}
-                activeOpacity={0.85}
-                accessibilityRole="button"
-                accessibilityLabel={isStartingWorkout ? 'Starting workout' : `Start ${displayWorkout?.routine?.name || 'workout'}`}
-              >
-                <Ionicons name="play" size={16} color={colors.background} />
-                <Text style={styles.primaryBtnText}>
-                  {isStartingWorkout ? 'Starting…' : 'Start Workout'}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.changeBtn}
                 onPress={() => setShowChangeWorkout(true)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 accessibilityRole="button"
                 accessibilityLabel="Change planned workout"
               >
-                <Ionicons name="swap-horizontal-outline" size={16} color={colors.primary} />
-                <Text style={styles.changeBtnText}>Change</Text>
+                <Text style={styles.heroSecondaryLink}>Change workout</Text>
+              </TouchableOpacity>
+              <Text style={styles.heroSecondaryDot}>·</Text>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('BuildWorkout')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Start a blank workout instead"
+              >
+                <Text style={styles.heroSecondaryLink}>Blank session</Text>
               </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={styles.blankLink}
-              onPress={() => navigation.navigate('BuildWorkout')}
-              accessibilityRole="button"
-              accessibilityLabel="Start a blank workout instead"
-            >
-              <Ionicons name="add-circle-outline" size={14} color={colors.textMuted} />
-              <Text style={styles.blankLinkText}>Start Blank Workout instead</Text>
-            </TouchableOpacity>
-          </GradientCard>
+          </View>
         ) : (
           <View style={styles.noPlanSection}>
             <View style={styles.noPlanHero}>
@@ -1605,9 +1547,9 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   weightCardEmpty: {
-    backgroundColor: colors.primaryBg,
-    borderColor: colors.primary + '35',
-    paddingVertical: spacing.md,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    paddingVertical: spacing.sm,
   },
   weightCardPrompt: {
     fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary,
@@ -1640,23 +1582,6 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
     lineHeight: 20,
-  },
-  healthNudge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  healthNudgeText: {
-    flex: 1,
-    fontSize: fontSize.xs,
-    color: colors.textSecondary,
-    lineHeight: 16,
   },
   weightLogBtn: {
     backgroundColor: colors.primary, borderRadius: radius.sm,
@@ -1774,36 +1699,25 @@ const styles = StyleSheet.create({
   continueTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
   continueSub: { fontSize: fontSize.xs, color: colors.background + 'CC', marginTop: 2 },
 
-  // Hero plan card
+  // Hero plan card. Restrained: flat surface, one primary CTA, two
+  // discreet text links underneath. Stat goes in the eyebrow line so
+  // we don't waste a row on a coloured pill that fights the workout
+  // name for attention.
   heroCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    gap: spacing.md,
+    gap: spacing.sm,
   },
-  heroTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  planBadge: {
-    flex: 1,
-    backgroundColor: colors.primaryBg,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: colors.primary + '40',
-  },
-  planBadgeText: {
+  heroEyebrow: {
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
-    color: colors.primary,
+    color: colors.textMuted,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+    fontWeight: fontWeight.semibold,
   },
-  dayProgress: { fontSize: fontSize.xs, color: colors.textMuted, flexShrink: 0 },
   workoutName: {
     fontSize: fontSize.xxl,
     fontWeight: fontWeight.black,
@@ -1811,9 +1725,7 @@ const styles = StyleSheet.create({
     lineHeight: 30,
   },
   workoutMeta: { fontSize: fontSize.sm, color: colors.textSecondary },
-  heroActions: { flexDirection: 'row', gap: spacing.sm },
   primaryBtn: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1821,25 +1733,25 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: radius.md,
     paddingVertical: spacing.md,
+    marginTop: spacing.xs,
   },
   primaryBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
-  changeBtn: {
+  heroSecondaryRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.primary + '50',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingTop: spacing.xs,
   },
-  changeBtnText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
-  blankLink: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
+  heroSecondaryLink: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    fontWeight: fontWeight.semibold,
   },
-  blankLinkText: { fontSize: fontSize.sm, color: colors.textMuted, fontWeight: fontWeight.medium },
+  heroSecondaryDot: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+  },
 
   // No plan — plan-first section
   noPlanSection: { gap: spacing.md },

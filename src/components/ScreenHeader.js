@@ -2,25 +2,27 @@
  * ScreenHeader
  *
  * Unified top-of-screen header used by Train, Plans, Progress and
- * Athlete Hub. Standardises the V brand mark's size and vertical
- * anchor so it lands in the same place on every tab regardless of
- * whether the header has a subtitle.
+ * Athlete Hub. Renders the page title on the left and the full
+ * Volyume wordmark (V + lettering, one logotype) on the right. The
+ * V-only icon used previously had a long lower tail that dipped
+ * below the title baseline at every size, making the right edge of
+ * every screen look misaligned vs the title text — the wordmark sits
+ * flush with the cap height of the title.
  *
- * Why this exists: previously each screen rolled its own header. The V
- * icon used size 38 on a single-line header (Plans, Progress, Hub) AND
- * on a two-line header (Train), which meant on Plans the V looked
- * taller than the title text and sat lower than the user expected. The
- * fix here:
- *   - one icon size (28) across every screen
- *   - title row is its own row so the icon aligns with the title line,
- *     not the whole header block — same vertical position with or
- *     without a subtitle.
+ * Constants:
+ *   - WORDMARK_HEIGHT (22): matches the cap-height of a 24pt bold
+ *     title so the right edge stays optically aligned across every
+ *     screen, with or without a subtitle.
+ *   - paddingBottom keeps the same airy gap below the header that
+ *     the previous design used.
  */
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, fontSize, fontWeight, spacing } from '../styles/theme';
-import { VolyumeIcon } from './BrandMark';
+import { VolyumeMark } from './BrandMark';
+
+const WORDMARK_HEIGHT = 22;
 
 export default function ScreenHeader({ title, subtitle, right }) {
   return (
@@ -28,7 +30,7 @@ export default function ScreenHeader({ title, subtitle, right }) {
       <View style={styles.titleRow}>
         <Text style={styles.title} numberOfLines={1}>{title}</Text>
         <View style={styles.right}>
-          {right ?? <VolyumeIcon size={28} />}
+          {right ?? <VolyumeMark size={WORDMARK_HEIGHT} />}
         </View>
       </View>
       {subtitle ? <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text> : null}
@@ -43,8 +45,11 @@ const styles = StyleSheet.create({
   },
   titleRow: {
     flexDirection: 'row',
+    // Align to title baseline rather than block centre so a header with
+    // a subtitle below doesn't push the wordmark off-axis.
     alignItems: 'center',
     justifyContent: 'space-between',
+    minHeight: 32,
   },
   title: {
     fontSize: fontSize.xl,
@@ -54,6 +59,9 @@ const styles = StyleSheet.create({
   },
   right: {
     marginLeft: spacing.sm,
+    // Optical centring: wordmark sits a hair below the bold cap line
+    // so its baseline aligns with the title baseline.
+    paddingTop: 2,
   },
   subtitle: {
     fontSize: fontSize.sm,
