@@ -971,19 +971,35 @@ export default function HomeScreen({ navigation }) {
             {coachBrief && (
               <CoachBriefCard brief={coachBrief} onDismiss={dismissBrief} />
             )}
-            <TouchableOpacity
-              style={[styles.primaryBtn, isStartingWorkout && { opacity: 0.6 }]}
-              onPress={handleStartNextWorkout}
-              disabled={isStartingWorkout}
-              activeOpacity={0.85}
-              accessibilityRole="button"
-              accessibilityLabel={isStartingWorkout ? 'Starting workout' : `Start ${displayWorkout?.routine?.name || 'workout'}`}
-            >
-              <Ionicons name="play" size={16} color={colors.background} />
-              <Text style={styles.primaryBtnText}>
-                {isStartingWorkout ? 'Starting…' : 'Start workout'}
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.startWorkoutRow}>
+              <TouchableOpacity
+                style={[styles.primaryBtn, styles.startBtnSplit, isStartingWorkout && { opacity: 0.6 }]}
+                onPress={handleStartNextWorkout}
+                disabled={isStartingWorkout}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel={isStartingWorkout ? 'Starting workout' : `Start ${displayWorkout?.routine?.name || 'workout'}`}
+              >
+                <Ionicons name="play" size={16} color={colors.background} />
+                <Text style={styles.primaryBtnText}>
+                  {isStartingWorkout ? 'Starting…' : 'Start workout'}
+                </Text>
+              </TouchableOpacity>
+              {displayWorkout?.routine?.id ? (
+                <TouchableOpacity
+                  style={styles.viewWorkoutBtn}
+                  onPress={() => navigation.navigate('PlansTab', {
+                    screen: 'RoutineDetail',
+                    params: { routineId: displayWorkout.routine.id },
+                  })}
+                  activeOpacity={0.85}
+                  accessibilityRole="button"
+                  accessibilityLabel={`View ${displayWorkout?.routine?.name || 'workout'} before starting`}
+                >
+                  <Text style={styles.viewWorkoutBtnText}>View</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
             <View style={styles.heroSecondaryRow}>
               <TouchableOpacity
                 onPress={() => setShowChangeWorkout(true)}
@@ -1713,6 +1729,27 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   primaryBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
+  // Two-button row: primary "Start workout" + secondary "View" so the
+  // user can preview the routine's exercises before committing. Mirrors
+  // the Start Next Workout + View Plan layout on PlansScreen for visual
+  // consistency.
+  startWorkoutRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  startBtnSplit: { flex: 1, marginTop: 0 },
+  viewWorkoutBtn: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewWorkoutBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textSecondary },
   heroSecondaryRow: {
     flexDirection: 'row',
     alignItems: 'center',

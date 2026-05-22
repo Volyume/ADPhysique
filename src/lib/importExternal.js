@@ -366,13 +366,16 @@ export async function runImport(userId, parsed, analysis) {
         perExCounter.set(exerciseId, setNum);
 
         const sid = uuid();
+        // Denormalise the exercise name onto the row — this is what
+        // makes cross-device sync recoverable when a future install's
+        // canonical exercise IDs differ.
         await d.runAsync(
           `INSERT INTO workout_sets
-            (id, user_id, workout_id, exercise_id, set_number, set_type,
+            (id, user_id, workout_id, exercise_id, exercise_name, set_number, set_type,
              actual_reps, weight, rpe, notes, failed, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
           [
-            sid, userId, wid, exerciseId, setNum, s.setType || 'straight',
+            sid, userId, wid, exerciseId, s.exerciseName, setNum, s.setType || 'straight',
             s.reps || 0, s.weightKg ?? null, s.rpe ?? null,
             s.notes || null, now, now,
           ],

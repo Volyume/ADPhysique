@@ -112,14 +112,30 @@ export async function syncProfile(supabaseUserId, userProfile, _tier, { isBetaTe
  * Upload custom exercises (user-created ones) to Supabase.
  * Canonical exercises are seeded separately via scripts/seed-exercises.js.
  */
-export async function syncCustomExercises(supabaseUserId) {
+/**
+ * Push EVERY exercise — canonical + custom — to the cloud.
+ *
+ * Renamed from syncCustomExercises (which only pushed is_custom=1
+ * rows). Without canonical exercises in cloud, every routine_exercise
+ * and workout_set ref to a canonical exercise was rejected by the FK
+ * (now relaxed in migration 010) and silently fell into the cloud as
+ * an orphan id with no name lookup possible. Now canonical exercises
+ * round-trip with deterministic IDs (canonicalExerciseId in
+ * seedExercises.js) so every device produces the same UUID for
+ * "Bench Press" — the natural primary key dedupes upserts across
+ * sign-ins from multiple devices.
+ *
+ * Idempotent — onConflict: 'id' means re-running the push touches
+ * existing rows' updated_at but creates no duplicates.
+ */
+export async function syncExercises(supabaseUserId, { customOnly = false } = {}) {
   const sb = getClient();
   if (!sb || !supabaseUserId) return;
   try {
     const all = await getAllExercises();
-    const custom = all.filter(e => e.isCustom);
-    if (!custom.length) return;
-    const rows = custom.map(e => ({
+    const subset = customOnly ? all.filter(e => e.isCustom) : all;
+    if (!subset.length) return;
+    const rows = subset.map(e => ({
       id: e.id,
       user_id: supabaseUserId,
       name: e.name,
@@ -129,15 +145,32 @@ export async function syncCustomExercises(supabaseUserId) {
       movement_pattern: e.movementPattern ?? null,
       fatigue_cost: e.fatigueCost ?? 1,
       stimulus_to_fatigue_ratio: e.stimulusToFatigueRatio ?? 3,
-      is_custom: true,
+      compound_isolation: e.compoundIsolation ?? null,
+      default_rep_min: e.defaultRepMin ?? null,
+      default_rep_max: e.defaultRepMax ?? null,
+      exercise_category: e.exerciseCategory ?? 'compound',
+      increment_kg: e.incrementKg ?? 2.5,
+      subregion: e.subregion ?? null,
+      is_custom: !!e.isCustom,
       notes: e.notes ?? null,
       updated_at: new Date().toISOString(),
     }));
-    await sb.from('exercises').upsert(rows, { onConflict: 'id', ignoreDuplicates: false });
+    // Chunk to avoid hitting Supabase's request size limit on the
+    // first full-canonical upload (~450 rows × a dozen columns).
+    for (let i = 0; i < rows.length; i += 200) {
+      const { error } = await sb.from('exercises').upsert(
+        rows.slice(i, i + 200), { onConflict: 'id', ignoreDuplicates: false },
+      );
+      if (error) logPgErr('sync.syncExercises', error);
+    }
   } catch (e) {
-    logWarn('sync.syncCustomExercises', e?.message);
+    logWarn('sync.syncExercises', e?.message);
   }
 }
+
+// Back-compat alias for any code still calling the old name. New
+// code should call syncExercises() directly.
+export const syncCustomExercises = syncExercises;
 
 // ─── Single workout ───────────────────────────────────────────────────────────
 
@@ -198,6 +231,10 @@ async function _upsertSets(sb, supabaseUserId, sets) {
     user_id: supabaseUserId,
     workout_id: s.workoutId,
     exercise_id: s.exerciseId,
+    // Denormalised exercise name — restores correctly on a new
+    // device even when the cloud exercise_id doesn't resolve locally
+    // (e.g. data pushed before deterministic canonical IDs landed).
+    exercise_name: s.exerciseName ?? null,
     set_number: s.setNumber ?? 1,
     set_type: s.setType ?? 'straight',
     target_reps_min: s.targetRepsMin ?? null,
@@ -213,6 +250,7 @@ async function _upsertSets(sb, supabaseUserId, sets) {
     joint_discomfort: s.jointDiscomfort ?? null,
     is_amrap: s.isAmrap === 1,
     amrap_reps: s.amrapReps ?? null,
+    missed_reps: s.missedReps ?? null,
     updated_at: new Date().toISOString(),
   }));
   // Chunk to avoid hitting Supabase row limits
@@ -427,8 +465,13 @@ async function _pushRoutinesAndExercises(sb, supabaseUserId, localUserId) {
       // by migrate_010 — they govern the pre-filled weight, the rest
       // timer default, and superset pairing. Without them, every restore
       // dropped users back to the global default rest timer.
+      //
+      // exercise_name is the denormalised display name added by
+      // migrate_012 — it's what makes a routine recoverable on a new
+      // device even if the exercise_id can't resolve locally.
       const rows = routineExs.map(re => ({
         id: re.id, routine_id: re.routineId, exercise_id: re.exerciseId,
+        exercise_name: re.exerciseName ?? null,
         order_in_routine: re.orderInRoutine ?? 0,
         recommended_sets: re.recommendedSets ?? 3,
         recommended_reps_min: re.recommendedRepsMin ?? 6,
@@ -580,9 +623,18 @@ export async function pullFromCloud(supabaseUserId) {
   let setFailures = 0;
 
   try {
+    // ─── 1. Exercises FIRST ──────────────────────────────────────────────
+    // routine_exercises and workout_sets carry exercise_id references
+    // that need to resolve against local exercises. Pulling exercises
+    // first means the FK targets exist before the dependent rows
+    // arrive. Dedupe-by-name inside _pullExercises rewrites any
+    // mismatched canonical IDs to the local deterministic one so old
+    // cloud rows that pre-date deterministic IDs heal automatically.
+    const exerciseCount = await _pullExercises(sb, supabaseUserId);
+
     const { data: cloudWorkouts, error: wErr } = await sb
       .from('workouts')
-      .select('id, started_at, ended_at, duration_minutes, notes, is_completed, session_difficulty, overall_pump, soreness_24h_before, fatigue_level, routine_id, mesocycle_id')
+      .select('id, started_at, ended_at, duration_minutes, notes, is_completed, session_difficulty, overall_pump, soreness_24h_before, fatigue_level, routine_id, mesocycle_id, name, pre_workout_intent, set_count, total_volume, mesocycle_week_id, joint_discomfort')
       .eq('user_id', supabaseUserId)
       .eq('is_completed', true)
       .order('started_at', { ascending: false })
@@ -630,12 +682,25 @@ export async function pullFromCloud(supabaseUserId) {
     const coachCount = await _pullCoachOutputs(sb, supabaseUserId);
     const nutritionFound = await _pullNutritionTargets(sb, supabaseUserId);
     const bodyMetricCount = await _pullBodyMetrics(sb, supabaseUserId);
+    // New tables that previously stayed local-only on every cross-
+    // device sign-in. Each is fault-tolerant — a missing cloud table
+    // logs and returns 0 rather than crashing the whole pull.
+    const bodyProfileFound = await _pullUserBodyProfile(sb, supabaseUserId);
+    const insightCount = await _pullUserInsights(sb, supabaseUserId);
+    const exerciseNoteCount = await _pullExerciseUserNotes(sb, supabaseUserId);
+    const workoutNoteCount = await _pullWorkoutNotes(sb, supabaseUserId);
+    const goalCount = await _pullExerciseGoals(sb, supabaseUserId);
+    const peakWeekCount = await _pullPeakWeekPlans(sb, supabaseUserId);
+    const plannedVolCount = await _pullPlannedMuscleVolume(sb, supabaseUserId);
+    const adaptCount = await _pullAdaptationEvents(sb, supabaseUserId);
+    const prefCount = await _pullUserPrefs(sb, supabaseUserId);
 
     // Verbose success log so the user (and we) can see EXACTLY what
     // came back. The previous "silent return 0" path made it
     // impossible to tell whether the pull found the user's data or
     // not.
     logInfo('sync.pullFromCloud.done', `uid=${supabaseUserId}`, {
+      exercises: exerciseCount,
       workouts: workoutCount,
       sets: setCount,
       programmes: programmeCount,
@@ -645,6 +710,15 @@ export async function pullFromCloud(supabaseUserId) {
       coachOutputs: coachCount,
       nutritionTargets: nutritionFound ? 1 : 0,
       bodyMetrics: bodyMetricCount,
+      bodyProfile: bodyProfileFound ? 1 : 0,
+      insights: insightCount,
+      exerciseNotes: exerciseNoteCount,
+      workoutNotes: workoutNoteCount,
+      exerciseGoals: goalCount,
+      peakWeekPlans: peakWeekCount,
+      plannedVolume: plannedVolCount,
+      adaptationEvents: adaptCount,
+      prefs: prefCount,
     });
 
     return workoutCount;
@@ -652,6 +726,194 @@ export async function pullFromCloud(supabaseUserId) {
     logError('sync.pullFromCloud', e, { supabaseUserId });
     return 0;
   }
+}
+
+/**
+ * Pull every cloud exercise into local SQLite.
+ *
+ * Runs BEFORE routines / routine_exercises / workout_sets pulls so
+ * those rows' exercise_id references resolve against the local
+ * exercises table immediately.
+ *
+ * Dedupe-by-name logic:
+ *   - Cloud row's id matches a local id → skip (already present)
+ *   - Cloud row's name matches a local exercise of a different id
+ *     → rewrite all local refs (routine_exercises / workout_sets /
+ *       exercise_user_notes / exercise_goals) from the local id to
+ *       the cloud id, then leave the local row at the cloud id.
+ *       This is how an install whose deterministic canonical IDs
+ *       differ from a sibling install (e.g. different app versions)
+ *       gets the two devices' worlds joined up cleanly.
+ *   - No match by id or name → INSERT as a new local exercise
+ *     (custom or new canonical from a build the local app hasn't
+ *     seeded yet).
+ *
+ * The function uses INSERT OR REPLACE under the hood via
+ * insertOrUpdateExerciseFromCloud in database.js. Returns the number
+ * of rows touched.
+ */
+async function _pullExercises(sb, supabaseUserId) {
+  try {
+    const { data, error } = await sb.from('exercises')
+      .select('*')
+      .eq('user_id', supabaseUserId);
+    if (error) { logPgErr('sync._pullExercises', error); return 0; }
+    if (!data?.length) return 0;
+    // eslint-disable-next-line global-require
+    const { insertOrUpdateExerciseFromCloud } = require('./database');
+    let n = 0;
+    for (const e of data) {
+      try { await insertOrUpdateExerciseFromCloud(e); n++; }
+      catch (err) { logWarn('sync._pullExercises', 'insert failed', { id: e?.id, error: err?.message }); }
+    }
+    return n;
+  } catch (e) { logWarn('sync._pullExercises', e?.message); return 0; }
+}
+
+async function _pullUserBodyProfile(sb, supabaseUserId) {
+  try {
+    const { data, error } = await sb.from('user_body_profile')
+      .select('*').eq('user_id', supabaseUserId).maybeSingle();
+    if (error) { logPgErr('sync._pullUserBodyProfile', error); return false; }
+    if (!data) return false;
+    // eslint-disable-next-line global-require
+    const { insertOrUpdateUserBodyProfileFromCloud } = require('./database');
+    try { await insertOrUpdateUserBodyProfileFromCloud(supabaseUserId, data); return true; }
+    catch (e) { logWarn('sync._pullUserBodyProfile', 'insert failed', { error: e?.message }); return false; }
+  } catch (e) { logWarn('sync._pullUserBodyProfile', e?.message); return false; }
+}
+
+async function _pullUserInsights(sb, supabaseUserId) {
+  try {
+    const { data, error } = await sb.from('user_insights')
+      .select('*').eq('user_id', supabaseUserId);
+    if (error) { logPgErr('sync._pullUserInsights', error); return 0; }
+    if (!data?.length) return 0;
+    // eslint-disable-next-line global-require
+    const { insertOrUpdateUserInsightFromCloud } = require('./database');
+    let n = 0;
+    for (const row of data) {
+      try { await insertOrUpdateUserInsightFromCloud(supabaseUserId, row); n++; }
+      catch (e) { logWarn('sync._pullUserInsights', 'insert failed', { id: row?.id, error: e?.message }); }
+    }
+    return n;
+  } catch (e) { logWarn('sync._pullUserInsights', e?.message); return 0; }
+}
+
+async function _pullExerciseUserNotes(sb, supabaseUserId) {
+  try {
+    const { data, error } = await sb.from('exercise_user_notes')
+      .select('*').eq('user_id', supabaseUserId);
+    if (error) { logPgErr('sync._pullExerciseUserNotes', error); return 0; }
+    if (!data?.length) return 0;
+    // eslint-disable-next-line global-require
+    const { insertOrUpdateExerciseUserNoteFromCloud } = require('./database');
+    let n = 0;
+    for (const row of data) {
+      try { await insertOrUpdateExerciseUserNoteFromCloud(supabaseUserId, row); n++; }
+      catch (e) { logWarn('sync._pullExerciseUserNotes', 'insert failed', { id: row?.id, error: e?.message }); }
+    }
+    return n;
+  } catch (e) { logWarn('sync._pullExerciseUserNotes', e?.message); return 0; }
+}
+
+async function _pullWorkoutNotes(sb, supabaseUserId) {
+  try {
+    const { data, error } = await sb.from('workout_notes')
+      .select('*').eq('user_id', supabaseUserId);
+    if (error) { logPgErr('sync._pullWorkoutNotes', error); return 0; }
+    if (!data?.length) return 0;
+    // eslint-disable-next-line global-require
+    const { insertOrUpdateWorkoutNoteFromCloud } = require('./database');
+    let n = 0;
+    for (const row of data) {
+      try { await insertOrUpdateWorkoutNoteFromCloud(supabaseUserId, row); n++; }
+      catch (e) { logWarn('sync._pullWorkoutNotes', 'insert failed', { id: row?.id, error: e?.message }); }
+    }
+    return n;
+  } catch (e) { logWarn('sync._pullWorkoutNotes', e?.message); return 0; }
+}
+
+async function _pullExerciseGoals(sb, supabaseUserId) {
+  try {
+    const { data, error } = await sb.from('exercise_goals')
+      .select('*').eq('user_id', supabaseUserId);
+    if (error) { logPgErr('sync._pullExerciseGoals', error); return 0; }
+    if (!data?.length) return 0;
+    // eslint-disable-next-line global-require
+    const { insertOrUpdateExerciseGoalFromCloud } = require('./database');
+    let n = 0;
+    for (const row of data) {
+      try { await insertOrUpdateExerciseGoalFromCloud(supabaseUserId, row); n++; }
+      catch (e) { logWarn('sync._pullExerciseGoals', 'insert failed', { id: row?.id, error: e?.message }); }
+    }
+    return n;
+  } catch (e) { logWarn('sync._pullExerciseGoals', e?.message); return 0; }
+}
+
+async function _pullPeakWeekPlans(sb, supabaseUserId) {
+  try {
+    const { data, error } = await sb.from('peak_week_plans')
+      .select('*').eq('user_id', supabaseUserId);
+    if (error) { logPgErr('sync._pullPeakWeekPlans', error); return 0; }
+    if (!data?.length) return 0;
+    // eslint-disable-next-line global-require
+    const { insertOrUpdatePeakWeekPlanFromCloud } = require('./database');
+    let n = 0;
+    for (const row of data) {
+      try { await insertOrUpdatePeakWeekPlanFromCloud(supabaseUserId, row); n++; }
+      catch (e) { logWarn('sync._pullPeakWeekPlans', 'insert failed', { id: row?.id, error: e?.message }); }
+    }
+    return n;
+  } catch (e) { logWarn('sync._pullPeakWeekPlans', e?.message); return 0; }
+}
+
+async function _pullPlannedMuscleVolume(sb, supabaseUserId) {
+  try {
+    const { data, error } = await sb.from('planned_muscle_volume')
+      .select('*').eq('user_id', supabaseUserId);
+    if (error) { logPgErr('sync._pullPlannedMuscleVolume', error); return 0; }
+    if (!data?.length) return 0;
+    // eslint-disable-next-line global-require
+    const { insertOrUpdatePlannedMuscleVolumeFromCloud } = require('./database');
+    let n = 0;
+    for (const row of data) {
+      try { await insertOrUpdatePlannedMuscleVolumeFromCloud(supabaseUserId, row); n++; }
+      catch (e) { logWarn('sync._pullPlannedMuscleVolume', 'insert failed', { id: row?.id, error: e?.message }); }
+    }
+    return n;
+  } catch (e) { logWarn('sync._pullPlannedMuscleVolume', e?.message); return 0; }
+}
+
+async function _pullAdaptationEvents(sb, supabaseUserId) {
+  try {
+    const { data, error } = await sb.from('adaptation_events')
+      .select('*').eq('user_id', supabaseUserId);
+    if (error) { logPgErr('sync._pullAdaptationEvents', error); return 0; }
+    if (!data?.length) return 0;
+    // eslint-disable-next-line global-require
+    const { insertOrUpdateAdaptationEventFromCloud } = require('./database');
+    let n = 0;
+    for (const row of data) {
+      try { await insertOrUpdateAdaptationEventFromCloud(supabaseUserId, row); n++; }
+      catch (e) { logWarn('sync._pullAdaptationEvents', 'insert failed', { id: row?.id, error: e?.message }); }
+    }
+    return n;
+  } catch (e) { logWarn('sync._pullAdaptationEvents', e?.message); return 0; }
+}
+
+async function _pullUserPrefs(sb, supabaseUserId) {
+  try {
+    const { data, error } = await sb.from('user_prefs')
+      .select('*').eq('user_id', supabaseUserId);
+    if (error) { logPgErr('sync._pullUserPrefs', error); return 0; }
+    if (!data?.length) return 0;
+    // eslint-disable-next-line global-require
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    const entries = data.map(r => [r.key, r.value == null ? '' : String(r.value)]);
+    try { await AsyncStorage.multiSet(entries); } catch (_) {}
+    return entries.length;
+  } catch (e) { logWarn('sync._pullUserPrefs', e?.message); return 0; }
 }
 
 // ─── Per-table pull helpers ───────────────────────────────────────────────

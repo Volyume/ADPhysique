@@ -512,6 +512,159 @@ const SCHEMA_MIGRATIONS = [
     'ALTER TABLE routines ADD COLUMN day_of_week INTEGER',
     'ALTER TABLE programmes ADD COLUMN source_programme_id TEXT',
   ],
+  // v18 — backfill deterministic canonical exercise IDs.
+  //
+  // Canonical exercises had random uid() IDs minted at seed time, so
+  // every install produced a different ID for the same exercise. That
+  // meant a routine_exercises row pushed from device A with
+  // exercise_id = X resolved on device B's INNER JOIN only if device
+  // B's seed had produced the same random X — which it never did.
+  //
+  // From this version forward the seed uses canonicalExerciseId(name)
+  // (a name hash) instead of uid(). This migration brings existing
+  // installs up to the new scheme by recomputing the ID for every
+  // is_custom=0 row and cascading the UPDATE through every reference.
+  //
+  // Run order matters: update the referencing tables first so the FK
+  // never points at a stale id, then update exercises itself.
+  [
+    async (d) => {
+      // eslint-disable-next-line global-require
+      const { canonicalExerciseId } = require('./seedExercises');
+      const rows = await d.getAllAsync(
+        'SELECT id, name FROM exercises WHERE is_custom = 0',
+      );
+      for (const row of rows) {
+        if (!row?.name) continue;
+        const newId = canonicalExerciseId(row.name);
+        if (newId === row.id) continue;
+        await d.runAsync(
+          'UPDATE routine_exercises SET exercise_id = ? WHERE exercise_id = ?',
+          [newId, row.id],
+        );
+        await d.runAsync(
+          'UPDATE workout_sets SET exercise_id = ? WHERE exercise_id = ?',
+          [newId, row.id],
+        );
+        await d.runAsync(
+          'UPDATE exercise_user_notes SET exercise_id = ? WHERE exercise_id = ?',
+          [newId, row.id],
+        );
+        await d.runAsync(
+          'UPDATE exercise_goals SET exercise_id = ? WHERE exercise_id = ?',
+          [newId, row.id],
+        ).catch(() => { /* table may not exist yet on older installs */ });
+        // Update the exercise row last so the FK references stay
+        // valid throughout the transaction.
+        await d.runAsync(
+          'UPDATE exercises SET id = ? WHERE id = ?',
+          [newId, row.id],
+        );
+      }
+    },
+  ],
+  // v19 — universal sync columns + denormalised exercise_name.
+  //
+  // updated_at gives the sync layer a stable cursor for delta
+  // queries ("give me everything modified since last sync"). Without
+  // it, the previous bulk-upload / full-pull dance had to ship every
+  // row on every sign-in, which got increasingly slow for power users
+  // and silently dropped writes that happened between pull start and
+  // local insert.
+  //
+  // deleted_at carries a soft-delete tombstone so a delete made on
+  // device A propagates to device B as a deleted_at IS NOT NULL row
+  // rather than getting resurrected by an in-flight push.
+  //
+  // exercise_name on routine_exercises and workout_sets denormalises
+  // the exercise display name onto the row so a pull can recover
+  // even when the cloud exercise_id no longer matches any local
+  // exercise (the architectural bug that caused the 114-routines-
+  // with-zero-exercises issue on the prior build).
+  [
+    'ALTER TABLE workouts ADD COLUMN updated_at_iso TEXT',
+    'ALTER TABLE workouts ADD COLUMN deleted_at INTEGER',
+    'ALTER TABLE workout_sets ADD COLUMN deleted_at INTEGER',
+    'ALTER TABLE workout_sets ADD COLUMN exercise_name TEXT',
+    'ALTER TABLE routines ADD COLUMN deleted_at INTEGER',
+    'ALTER TABLE programmes ADD COLUMN deleted_at INTEGER',
+    'ALTER TABLE routine_exercises ADD COLUMN updated_at INTEGER',
+    'ALTER TABLE routine_exercises ADD COLUMN deleted_at INTEGER',
+    'ALTER TABLE routine_exercises ADD COLUMN exercise_name TEXT',
+    'ALTER TABLE mesocycles ADD COLUMN deleted_at INTEGER',
+    'ALTER TABLE mesocycle_weeks ADD COLUMN deleted_at INTEGER',
+    'ALTER TABLE mesocycle_weeks ADD COLUMN updated_at INTEGER',
+    'ALTER TABLE nutrition_targets ADD COLUMN deleted_at INTEGER',
+    'ALTER TABLE body_metric_log ADD COLUMN updated_at INTEGER',
+    'ALTER TABLE body_metric_log ADD COLUMN deleted_at INTEGER',
+    'ALTER TABLE morning_weights ADD COLUMN updated_at INTEGER',
+    'ALTER TABLE morning_weights ADD COLUMN deleted_at INTEGER',
+    'ALTER TABLE weekly_checkins ADD COLUMN updated_at INTEGER',
+    'ALTER TABLE weekly_checkins ADD COLUMN deleted_at INTEGER',
+    'ALTER TABLE coach_outputs ADD COLUMN updated_at INTEGER',
+    'ALTER TABLE coach_outputs ADD COLUMN deleted_at INTEGER',
+    'ALTER TABLE exercises ADD COLUMN updated_at_v2 INTEGER',
+    'ALTER TABLE exercises ADD COLUMN deleted_at INTEGER',
+    'ALTER TABLE user_body_profile ADD COLUMN deleted_at INTEGER',
+    'ALTER TABLE user_insights ADD COLUMN updated_at INTEGER',
+    'ALTER TABLE user_insights ADD COLUMN deleted_at INTEGER',
+    'ALTER TABLE exercise_user_notes ADD COLUMN deleted_at INTEGER',
+    'ALTER TABLE peak_week_plans ADD COLUMN deleted_at INTEGER',
+    `CREATE TABLE IF NOT EXISTS workout_notes_v2 (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      workout_id TEXT NOT NULL,
+      note TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      deleted_at INTEGER
+    )`,
+    `CREATE TABLE IF NOT EXISTS planned_muscle_volume_sync (
+      id TEXT PRIMARY KEY,
+      mesocycle_week_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      muscle TEXT NOT NULL,
+      planned_sets INTEGER,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      deleted_at INTEGER
+    )`,
+    `CREATE TABLE IF NOT EXISTS adaptation_events_sync (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      mesocycle_week_id TEXT,
+      event_type TEXT NOT NULL,
+      payload TEXT,
+      recorded_at INTEGER NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      deleted_at INTEGER
+    )`,
+    `CREATE TABLE IF NOT EXISTS sync_meta (
+      table_name TEXT PRIMARY KEY,
+      last_pull_at INTEGER,
+      last_push_at INTEGER
+    )`,
+    // Backfill: populate exercise_name on every existing routine_exercise
+    // and workout_set by joining against the local exercises table. This
+    // is best-effort — rows whose exercise_id no longer resolves locally
+    // (the broken-from-cloud rows) get NULL and will surface in the
+    // self-healing UI on the next pull.
+    `UPDATE routine_exercises SET exercise_name = (
+      SELECT name FROM exercises WHERE exercises.id = routine_exercises.exercise_id
+    ) WHERE exercise_name IS NULL`,
+    `UPDATE workout_sets SET exercise_name = (
+      SELECT name FROM exercises WHERE exercises.id = workout_sets.exercise_id
+    ) WHERE exercise_name IS NULL`,
+    // Index every per-table updated_at so delta pull can use an index
+    // scan rather than a full-table scan on increasingly large
+    // workout_sets / morning_weights tables.
+    'CREATE INDEX IF NOT EXISTS idx_workout_sets_updated ON workout_sets(updated_at)',
+    'CREATE INDEX IF NOT EXISTS idx_workouts_updated ON workouts(updated_at)',
+    'CREATE INDEX IF NOT EXISTS idx_morning_weights_updated ON morning_weights(updated_at)',
+    'CREATE INDEX IF NOT EXISTS idx_body_metric_log_updated ON body_metric_log(updated_at)',
+    'CREATE INDEX IF NOT EXISTS idx_routine_exercises_updated ON routine_exercises(updated_at)',
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
@@ -997,17 +1150,32 @@ export async function createWorkoutSet(data) {
   const d = await db();
   const id = uid();
   const now = Date.now();
+  // Look up the exercise name once and denormalise it onto the set row.
+  // The sync layer ships this alongside exercise_id so a new device can
+  // recover the row's identity even if the exercise_id doesn't resolve
+  // locally (e.g. canonical exercises that pre-date deterministic IDs).
+  let exerciseName = data.exerciseName ?? null;
+  if (!exerciseName && data.exerciseId) {
+    try {
+      const exRow = await d.getFirstAsync(
+        'SELECT name FROM exercises WHERE id = ?',
+        [data.exerciseId],
+      );
+      exerciseName = exRow?.name ?? null;
+    } catch (_) { /* tolerate */ }
+  }
   await d.runAsync(
     `INSERT INTO workout_sets
-      (id, user_id, workout_id, exercise_id, set_number, set_type,
+      (id, user_id, workout_id, exercise_id, exercise_name, set_number, set_type,
        target_reps_min, target_reps_max, actual_reps, weight, rir, rpe,
        failed, notes, is_amrap, amrap_reps, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       data.userId,
       data.workoutId,
       data.exerciseId,
+      exerciseName,
       data.setNumber || 1,
       data.setType || 'straight',
       data.targetRepsMin ?? null,
@@ -1148,9 +1316,14 @@ export async function copyRoutineFromLibrary(routineId, userId) {
 
 export async function getRoutineExercisesWithDetails(routineId) {
   const d = await db();
+  // LEFT JOIN — a routine_exercise whose exercise_id doesn't resolve to
+  // a local exercise (e.g. cloud-restored rows from before deterministic
+  // canonical IDs) still surfaces. The fallback uses the denormalised
+  // exercise_name stored on the routine_exercises row so the user sees
+  // the name they originally logged rather than a blank slot.
   const rows = await d.getAllAsync(
     `SELECT re.*,
-            e.name AS exercise_name,
+            COALESCE(e.name, re.exercise_name) AS resolved_name,
             e.primary_muscle,
             e.secondary_muscles,
             e.equipment,
@@ -1161,8 +1334,8 @@ export async function getRoutineExercisesWithDetails(routineId) {
             e.fatigue_cost,
             e.stimulus_to_fatigue_ratio
      FROM routine_exercises re
-     JOIN exercises e ON e.id = re.exercise_id
-     WHERE re.routine_id = ?
+     LEFT JOIN exercises e ON e.id = re.exercise_id
+     WHERE re.routine_id = ? AND re.deleted_at IS NULL
      ORDER BY re.order_in_routine ASC`,
     [routineId],
   );
@@ -1170,7 +1343,9 @@ export async function getRoutineExercisesWithDetails(routineId) {
     const re = rowToCamel(row);
     const exercise = {
       id: row.exercise_id,
-      name: row.exercise_name,
+      name: row.resolved_name,
+      // When the FK didn't resolve these are all null — coach insights
+      // and volume calculations downstream guard on missing muscle.
       primaryMuscle: row.primary_muscle,
       secondaryMuscles: (() => { try { return JSON.parse(row.secondary_muscles || '[]'); } catch { return []; } })(),
       equipment: row.equipment,
@@ -1180,6 +1355,10 @@ export async function getRoutineExercisesWithDetails(routineId) {
       defaultRepMax: row.default_rep_max,
       fatigueCost: row.fatigue_cost,
       stimulusToFatigueRatio: row.stimulus_to_fatigue_ratio,
+      // Flag for the UI: this row needs to be repaired by the user
+      // because the exercise lookup failed. Active screens can render
+      // an inline "Re-link exercise" affordance here.
+      unresolved: !row.primary_muscle && !!row.resolved_name,
     };
     return { routineExercise: re, exercise };
   });
@@ -1189,12 +1368,20 @@ export async function addExerciseToRoutine(routineId, exerciseId, order, repsMin
   const d = await db();
   const id = uid();
   const now = Date.now();
+  // Denormalise the exercise name onto the routine_exercise row so the
+  // sync layer can ship it alongside exercise_id. A new device pulling
+  // this row recovers the lift even when the FK can't resolve.
+  let exerciseName = null;
+  try {
+    const exRow = await d.getFirstAsync('SELECT name FROM exercises WHERE id = ?', [exerciseId]);
+    exerciseName = exRow?.name ?? null;
+  } catch (_) { /* tolerate */ }
   await d.runAsync(
     `INSERT INTO routine_exercises
-      (id, routine_id, exercise_id, order_in_routine, recommended_sets,
+      (id, routine_id, exercise_id, exercise_name, order_in_routine, recommended_sets,
        recommended_reps_min, recommended_reps_max, notes, starting_weight, rest_seconds, superset_group_id, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, routineId, exerciseId, order, sets, repsMin, repsMax, notes, startingWeight, restSeconds, supersetGroupId, now, now],
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, routineId, exerciseId, exerciseName, order, sets, repsMin, repsMax, notes, startingWeight, restSeconds, supersetGroupId, now, now],
   );
   return { id, routineId, exerciseId, orderInRoutine: order, supersetGroupId };
 }
@@ -2991,14 +3178,34 @@ export async function insertProgrammeFromCloud(userId, p) {
 
 export async function insertRoutineExerciseFromCloud(re) {
   const d = await db();
+  // Heal mismatched canonical IDs at insert time.
+  // If the cloud row references an exercise_id that doesn't resolve
+  // locally but carries a denormalised exercise_name, look up the
+  // local exercise of that name and rewrite the FK. This turns a
+  // would-be-broken row into a fully-resolved one without any user
+  // action — the cure for the 114-routines-with-zero-exercises bug.
+  let exerciseId = re.exercise_id;
+  const exerciseName = re.exercise_name ?? null;
+  if (exerciseId) {
+    const local = await d.getFirstAsync(
+      'SELECT 1 FROM exercises WHERE id = ?', [exerciseId],
+    );
+    if (!local && exerciseName) {
+      const byName = await d.getFirstAsync(
+        'SELECT id FROM exercises WHERE LOWER(name) = LOWER(?) LIMIT 1',
+        [exerciseName],
+      );
+      if (byName?.id) exerciseId = byName.id;
+    }
+  }
   await d.runAsync(
-    `INSERT OR IGNORE INTO routine_exercises
-      (id, routine_id, exercise_id, order_in_routine, recommended_sets,
+    `INSERT OR REPLACE INTO routine_exercises
+      (id, routine_id, exercise_id, exercise_name, order_in_routine, recommended_sets,
        recommended_reps_min, recommended_reps_max, notes, starting_weight,
-       rest_seconds, superset_group_id, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       rest_seconds, superset_group_id, created_at, updated_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
-      re.id, re.routine_id, re.exercise_id,
+      re.id, re.routine_id, exerciseId, exerciseName,
       re.order_in_routine ?? 0,
       re.recommended_sets ?? 3,
       re.recommended_reps_min ?? 6,
@@ -3009,6 +3216,7 @@ export async function insertRoutineExerciseFromCloud(re) {
       re.superset_group_id ?? null,
       typeof re.created_at === 'string' ? new Date(re.created_at).getTime() : (re.created_at ?? Date.now()),
       Date.now(),
+      re.deleted_at ? new Date(re.deleted_at).getTime() : null,
     ],
   );
 }
@@ -3264,15 +3472,33 @@ export async function getProgressionTeaser(userId, lastWorkoutId, prevWorkoutId)
 
 export async function insertWorkoutSetFromCloud(userId, s) {
   const d = await db();
+  // Same self-heal as insertRoutineExerciseFromCloud: rewrite the FK
+  // via name lookup when the original exercise_id doesn't resolve
+  // locally. Crucial for restoring historical workouts cleanly across
+  // devices.
+  let exerciseId = s.exercise_id;
+  const exerciseName = s.exercise_name ?? null;
+  if (exerciseId) {
+    const local = await d.getFirstAsync(
+      'SELECT 1 FROM exercises WHERE id = ?', [exerciseId],
+    );
+    if (!local && exerciseName) {
+      const byName = await d.getFirstAsync(
+        'SELECT id FROM exercises WHERE LOWER(name) = LOWER(?) LIMIT 1',
+        [exerciseName],
+      );
+      if (byName?.id) exerciseId = byName.id;
+    }
+  }
   await d.runAsync(
-    `INSERT OR IGNORE INTO workout_sets
-      (id, user_id, workout_id, exercise_id, set_number, set_type,
+    `INSERT OR REPLACE INTO workout_sets
+      (id, user_id, workout_id, exercise_id, exercise_name, set_number, set_type,
        target_reps_min, target_reps_max, actual_reps, weight, rir, rpe,
        failed, notes, post_set_pump, post_set_muscle_connection, joint_discomfort,
-       is_amrap, amrap_reps, created_at, updated_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+       is_amrap, amrap_reps, missed_reps, created_at, updated_at, deleted_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [
-      s.id, userId, s.workout_id, s.exercise_id,
+      s.id, userId, s.workout_id, exerciseId, exerciseName,
       s.set_number ?? 1, s.set_type ?? 'straight',
       s.target_reps_min ?? null, s.target_reps_max ?? null,
       s.actual_reps ?? 0, s.weight ?? null, s.rir ?? null, s.rpe ?? null,
@@ -3280,7 +3506,242 @@ export async function insertWorkoutSetFromCloud(userId, s) {
       s.post_set_pump ?? null, s.post_set_muscle_connection ?? null,
       s.joint_discomfort ?? null,
       s.is_amrap ? 1 : 0, s.amrap_reps ?? null,
+      s.missed_reps ?? null,
       Date.now(), Date.now(),
+      s.deleted_at ? new Date(s.deleted_at).getTime() : null,
+    ],
+  );
+}
+
+// ─── Sync helpers for previously local-only tables ────────────────────────
+//
+// Each helper accepts a raw cloud row (snake_case keys) and writes it
+// into the matching local table. INSERT OR REPLACE keeps repeated
+// syncs idempotent — re-pulling the same row updates instead of
+// double-inserting. Cloud timestamps (ISO strings) are converted to
+// the local ms epoch convention.
+
+const _tsToMs = (v) => {
+  if (v == null) return null;
+  if (typeof v === 'number') return v;
+  const ms = Date.parse(String(v));
+  return Number.isFinite(ms) ? ms : null;
+};
+
+export async function insertOrUpdateExerciseFromCloud(e) {
+  if (!e?.id || !e?.name) return;
+  const d = await db();
+  const now = Date.now();
+  // First: check if a local exercise of the same name exists with a
+  // DIFFERENT id. If so, rewrite local refs from the local id to the
+  // cloud id, then update the exercise row in place. This is how two
+  // devices' canonical IDs merge cleanly into one source of truth.
+  const sameName = await d.getFirstAsync(
+    'SELECT id FROM exercises WHERE LOWER(name) = LOWER(?) AND id != ? LIMIT 1',
+    [e.name, e.id],
+  );
+  if (sameName?.id) {
+    await d.runAsync('UPDATE routine_exercises SET exercise_id = ? WHERE exercise_id = ?', [e.id, sameName.id]);
+    await d.runAsync('UPDATE workout_sets SET exercise_id = ? WHERE exercise_id = ?', [e.id, sameName.id]);
+    await d.runAsync(
+      'UPDATE exercise_user_notes SET exercise_id = ? WHERE exercise_id = ?',
+      [e.id, sameName.id],
+    ).catch(() => {});
+    await d.runAsync(
+      'UPDATE exercise_goals SET exercise_id = ? WHERE exercise_id = ?',
+      [e.id, sameName.id],
+    ).catch(() => {});
+    // Remove the duplicate-by-name local row; the upsert below puts
+    // the cloud row in its place.
+    await d.runAsync('DELETE FROM exercises WHERE id = ?', [sameName.id]);
+  }
+  const secondary = (() => {
+    if (e.secondary_muscles == null) return null;
+    try { return JSON.stringify(e.secondary_muscles); } catch { return null; }
+  })();
+  await d.runAsync(
+    `INSERT OR REPLACE INTO exercises
+      (id, name, primary_muscle, secondary_muscles, equipment, movement_pattern,
+       compound_isolation, default_rep_min, default_rep_max, fatigue_cost,
+       stimulus_to_fatigue_ratio, subregion, is_custom, notes, created_at, updated_at,
+       exercise_category, increment_kg)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      e.id, e.name,
+      e.primary_muscle ?? null, secondary,
+      e.equipment ?? null, e.movement_pattern ?? null,
+      e.compound_isolation ?? null,
+      e.default_rep_min ?? null, e.default_rep_max ?? null,
+      e.fatigue_cost ?? 1, e.stimulus_to_fatigue_ratio ?? 3,
+      e.subregion ?? null,
+      e.is_custom ? 1 : 0, e.notes ?? null,
+      _tsToMs(e.created_at) ?? now, now,
+      e.exercise_category ?? 'compound', e.increment_kg ?? 2.5,
+    ],
+  );
+}
+
+export async function insertOrUpdateUserBodyProfileFromCloud(userId, p) {
+  if (!userId) return;
+  const d = await db();
+  const now = Date.now();
+  const existing = await d.getFirstAsync(
+    'SELECT id FROM user_body_profile WHERE user_id = ? LIMIT 1', [userId],
+  );
+  if (existing?.id) {
+    await d.runAsync(
+      `UPDATE user_body_profile SET
+        sex = ?, date_of_birth = ?, height_cm = ?, experience_level = ?,
+        training_age_years = ?, primary_goal = ?, scoff_score = ?,
+        gdpr_consented = ?, updated_at = ?
+       WHERE user_id = ?`,
+      [
+        p.sex ?? null, p.date_of_birth ?? null, p.height_cm ?? null,
+        p.experience_level ?? null, p.training_age_years ?? null,
+        p.primary_goal ?? null, p.scoff_score ?? null,
+        p.gdpr_consented ? 1 : 0, now, userId,
+      ],
+    );
+    return;
+  }
+  await d.runAsync(
+    `INSERT INTO user_body_profile
+      (id, user_id, sex, date_of_birth, height_cm, experience_level,
+       training_age_years, primary_goal, scoff_score, gdpr_consented,
+       created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      uid(), userId,
+      p.sex ?? null, p.date_of_birth ?? null, p.height_cm ?? null,
+      p.experience_level ?? null, p.training_age_years ?? null,
+      p.primary_goal ?? null, p.scoff_score ?? null,
+      p.gdpr_consented ? 1 : 0,
+      _tsToMs(p.created_at) ?? now, now,
+    ],
+  );
+}
+
+export async function insertOrUpdateUserInsightFromCloud(userId, row) {
+  if (!row?.id) return;
+  const d = await db();
+  await d.runAsync(
+    `INSERT OR REPLACE INTO user_insights
+      (id, user_id, insight_key, type, severity, copy, action_payload,
+       generated_at, dismissed_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      row.id, userId, row.insight_key, row.type ?? null, row.severity ?? null,
+      row.copy ?? null, row.action_payload ?? null,
+      _tsToMs(row.generated_at) ?? Date.now(),
+      row.dismissed_at ? _tsToMs(row.dismissed_at) : null,
+    ],
+  );
+}
+
+export async function insertOrUpdateExerciseUserNoteFromCloud(userId, row) {
+  if (!row?.id) return;
+  const d = await db();
+  await d.runAsync(
+    `INSERT OR REPLACE INTO exercise_user_notes
+      (id, user_id, exercise_id, note, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [
+      row.id, userId, row.exercise_id, row.note,
+      _tsToMs(row.created_at) ?? Date.now(),
+      _tsToMs(row.updated_at) ?? Date.now(),
+    ],
+  );
+}
+
+export async function insertOrUpdateWorkoutNoteFromCloud(userId, row) {
+  if (!row?.id) return;
+  const d = await db();
+  // Local table is workout_notes_v2 — the v1 schema had a different
+  // shape and we don't migrate user-typed notes between them.
+  await d.runAsync(
+    `INSERT OR REPLACE INTO workout_notes_v2
+      (id, user_id, workout_id, note, created_at, updated_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      row.id, userId, row.workout_id, row.note ?? '',
+      _tsToMs(row.created_at) ?? Date.now(),
+      _tsToMs(row.updated_at) ?? Date.now(),
+      row.deleted_at ? _tsToMs(row.deleted_at) : null,
+    ],
+  );
+}
+
+export async function insertOrUpdateExerciseGoalFromCloud(userId, row) {
+  if (!row?.id) return;
+  const d = await db();
+  await d.runAsync(
+    `INSERT OR REPLACE INTO exercise_goals
+      (id, user_id, exercise_id, target_weight, target_reps, target_date, notes, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      row.id, userId, row.exercise_id,
+      row.target_weight ?? null, row.target_reps ?? null,
+      row.target_date ?? null, row.notes ?? null,
+      _tsToMs(row.created_at) ?? Date.now(),
+      _tsToMs(row.updated_at) ?? Date.now(),
+    ],
+  );
+}
+
+export async function insertOrUpdatePeakWeekPlanFromCloud(userId, row) {
+  if (!row?.id) return;
+  const d = await db();
+  await d.runAsync(
+    `INSERT OR REPLACE INTO peak_week_plans
+      (id, user_id, show_date, federation, current_bodyweight, lean_estimate,
+       prep_carbs_per_kg, prep_sodium_mg, prep_water_l, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      row.id, userId,
+      row.show_date ?? null, row.federation ?? null,
+      row.current_bodyweight ?? null, row.lean_estimate ?? null,
+      row.prep_carbs_per_kg ?? null, row.prep_sodium_mg ?? null,
+      row.prep_water_l ?? null,
+      row.status ?? 'active',
+      _tsToMs(row.created_at) ?? Date.now(),
+      _tsToMs(row.updated_at) ?? Date.now(),
+    ],
+  );
+}
+
+export async function insertOrUpdatePlannedMuscleVolumeFromCloud(userId, row) {
+  if (!row?.id) return;
+  const d = await db();
+  await d.runAsync(
+    `INSERT OR REPLACE INTO planned_muscle_volume_sync
+      (id, mesocycle_week_id, user_id, muscle, planned_sets, created_at, updated_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      row.id, row.mesocycle_week_id, userId,
+      row.muscle, row.planned_sets ?? null,
+      _tsToMs(row.created_at) ?? Date.now(),
+      _tsToMs(row.updated_at) ?? Date.now(),
+      row.deleted_at ? _tsToMs(row.deleted_at) : null,
+    ],
+  );
+}
+
+export async function insertOrUpdateAdaptationEventFromCloud(userId, row) {
+  if (!row?.id) return;
+  const d = await db();
+  await d.runAsync(
+    `INSERT OR REPLACE INTO adaptation_events_sync
+      (id, user_id, mesocycle_week_id, event_type, payload, recorded_at,
+       created_at, updated_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      row.id, userId,
+      row.mesocycle_week_id ?? null, row.event_type,
+      row.payload ?? null,
+      _tsToMs(row.recorded_at) ?? Date.now(),
+      _tsToMs(row.created_at) ?? Date.now(),
+      _tsToMs(row.updated_at) ?? Date.now(),
+      row.deleted_at ? _tsToMs(row.deleted_at) : null,
     ],
   );
 }
