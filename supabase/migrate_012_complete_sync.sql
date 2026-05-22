@@ -27,6 +27,13 @@
 -- device A propagates to device B without leaving the row resurrected
 -- by an in-flight push.
 
+-- Two passes: (1) add the universal updated_at + deleted_at columns
+-- on every user-owned table, (2) add the (user_id, updated_at) index
+-- on tables that actually carry user_id. routine_exercises owns its
+-- user via routine_id → routines.user_id; mesocycle_weeks via
+-- mesocycle_id → mesocycles.user_id. Those rows don't need their own
+-- user_id index — a delta pull joins through the parent.
+
 DO $$
 DECLARE
   t text;
@@ -41,9 +48,36 @@ BEGIN
   LOOP
     EXECUTE format('ALTER TABLE %I ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()', t);
     EXECUTE format('ALTER TABLE %I ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ', t);
-    EXECUTE format('CREATE INDEX IF NOT EXISTS idx_%I_user_updated ON %I(user_id, updated_at DESC) WHERE deleted_at IS NULL', t, t);
   END LOOP;
 END $$;
+
+DO $$
+DECLARE
+  t text;
+BEGIN
+  FOREACH t IN ARRAY ARRAY[
+    'workouts', 'workout_sets', 'routines', 'programmes',
+    'mesocycles',
+    'nutrition_targets', 'body_metrics', 'morning_weights',
+    'weekly_checkins_v2', 'coach_outputs', 'exercises',
+    'exercise_user_notes'
+  ]
+  LOOP
+    EXECUTE format(
+      'CREATE INDEX IF NOT EXISTS idx_%I_user_updated ON %I(user_id, updated_at DESC) WHERE deleted_at IS NULL',
+      t, t
+    );
+  END LOOP;
+END $$;
+
+-- routine_exercises uses (routine_id, updated_at) for the delta
+-- query path. mesocycle_weeks uses (mesocycle_id, updated_at).
+-- user_body_profile is one row per user (PK = user_id), so a
+-- compound index would duplicate the PK; skipped.
+CREATE INDEX IF NOT EXISTS idx_routine_exercises_routine_updated
+  ON routine_exercises(routine_id, updated_at DESC) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_mesocycle_weeks_meso_updated
+  ON mesocycle_weeks(mesocycle_id, updated_at DESC) WHERE deleted_at IS NULL;
 
 -- ─── 2. Denormalised exercise name on FK-bearing rows ────────────────────
 -- routine_exercises.exercise_id and workout_sets.exercise_id are

@@ -1418,9 +1418,19 @@ export async function updateRoutineExercise(id, data) {
 export async function updateRoutineExerciseExercise(routineExerciseId, newExerciseId) {
   const d = await db();
   const now = Date.now();
+  // Look up the canonical name for the new exercise and store it on
+  // the row alongside the FK update. Keeps the denormalised
+  // exercise_name in sync with the FK so future syncs ship the
+  // correct name and other devices' LEFT JOIN fallback resolves
+  // correctly.
+  let newName = null;
+  try {
+    const exRow = await d.getFirstAsync('SELECT name FROM exercises WHERE id = ?', [newExerciseId]);
+    newName = exRow?.name ?? null;
+  } catch (_) { /* tolerate */ }
   await d.runAsync(
-    'UPDATE routine_exercises SET exercise_id = ?, updated_at = ? WHERE id = ?',
-    [newExerciseId, now, routineExerciseId],
+    'UPDATE routine_exercises SET exercise_id = ?, exercise_name = ?, updated_at = ? WHERE id = ?',
+    [newExerciseId, newName, now, routineExerciseId],
   );
 }
 

@@ -292,15 +292,42 @@ export default function RoutineDetailScreen({ navigation, route }) {
         }
         renderItem={({ item: { routineExercise, exercise }, index }) => (
           <TouchableOpacity
-            style={styles.exerciseCard}
-            onPress={() => !isReordering && openEdit(routineExercise, exercise)}
+            style={[styles.exerciseCard, exercise.unresolved && styles.exerciseCardUnresolved]}
+            onPress={() => {
+              if (isReordering) return;
+              if (exercise.unresolved) {
+                // Broken-FK row left over from the pre-deterministic-ID
+                // sync era. Open the existing swap modal so the user
+                // can re-link this slot to a real exercise in one tap.
+                setSwapState({
+                  routineExerciseId: routineExercise.id,
+                  exercise,
+                });
+                // Show all exercises as candidates rather than the
+                // recovery-narrow list — we don't know what muscle the
+                // original was so we can't filter intelligently.
+                setSwapCandidates(allExercises.map(e => ({ exercise: e })));
+                return;
+              }
+              openEdit(routineExercise, exercise);
+            }}
             activeOpacity={isReordering ? 1 : 0.8}
           >
-            <View style={styles.orderBadge}>
+            <View style={[styles.orderBadge, exercise.unresolved && styles.orderBadgeUnresolved]}>
               <Text style={styles.orderNum}>{index + 1}</Text>
             </View>
             <View style={styles.exerciseInfo}>
-              <Text style={styles.exerciseName}>{exercise.name}</Text>
+              <View style={styles.exerciseTitleRow}>
+                <Text style={[styles.exerciseName, exercise.unresolved && styles.exerciseNameUnresolved]}>
+                  {exercise.name || 'Exercise (couldn’t restore)'}
+                </Text>
+                {exercise.unresolved && (
+                  <View style={styles.relinkChip}>
+                    <Ionicons name="link-outline" size={12} color={colors.warning} />
+                    <Text style={styles.relinkChipText}>Tap to re-link</Text>
+                  </View>
+                )}
+              </View>
               <Text style={styles.exerciseMeta}>
                 {routineExercise.recommendedSets} sets ·{' '}
                 {routineExercise.recommendedRepsMin}–{routineExercise.recommendedRepsMax} reps
@@ -584,6 +611,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  // Visual variant for rows whose exercise_id couldn't be resolved
+  // against the local exercises table (cloud-restored from a build
+  // that pre-dates deterministic canonical IDs + denormalised
+  // exercise_name). The warning border tells the user this row
+  // needs their attention; tapping opens the swap modal to re-link.
+  exerciseCardUnresolved: {
+    borderColor: colors.warning,
+    backgroundColor: colors.warningBg,
+  },
   orderBadge: {
     width: 32,
     height: 32,
@@ -592,9 +628,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  orderBadgeUnresolved: { backgroundColor: colors.warning + '40' },
   orderNum: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textSecondary },
   exerciseInfo: { flex: 1, gap: 2 },
+  exerciseTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
   exerciseName: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  exerciseNameUnresolved: { color: colors.warning },
+  relinkChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+    backgroundColor: colors.warningBg,
+    borderWidth: 1,
+    borderColor: colors.warning + '60',
+  },
+  relinkChipText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.warning,
+  },
   exerciseMeta: { fontSize: fontSize.sm, color: colors.primary },
   exerciseMuscle: { fontSize: fontSize.xs, color: colors.textMuted },
   exerciseWhy: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic', marginTop: 2, lineHeight: 16 },
