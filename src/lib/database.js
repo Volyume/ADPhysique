@@ -3012,12 +3012,29 @@ export async function insertMorningWeightFromCloud(userId, w) {
 }
 
 // Restores a single body_metrics row from cloud into local SQLite.
-// Missing optional columns are coerced to null so the INSERT doesn't
-// trip the NOT NULL constraint on id/user_id. INSERT OR IGNORE so
-// repeated cloud syncs are idempotent.
+// The cloud column names diverge from the local _cm-suffixed naming:
+// cloud uses body_weight / waist / chest / hips / quads / arms /
+// shoulders / forearms / hamstrings / calves with a DATE-typed
+// metric_date instead of an ms epoch logged_at. The previous version
+// of this function was reading m.weight_kg / m.thigh_cm / m.arm_cm
+// / etc. — none of which exist on the cloud row — so every measured
+// value came back as null on cross-device restore. The Athlete Hub
+// then showed "Body metrics: No entries yet" even though the user had
+// dutifully logged dozens of weigh-ins.
+//
+// INSERT OR IGNORE so repeated cloud syncs are idempotent.
 export async function insertBodyMetricFromCloud(userId, m) {
   const d = await db();
-  const toMs = (v) => v == null ? null : (typeof v === 'string' ? new Date(v).getTime() : v);
+  const dateToMs = (s) => {
+    if (s == null) return null;
+    if (typeof s === 'number') return s;
+    // Cloud metric_date is a YYYY-MM-DD DATE. Parse at midnight UTC so
+    // the local representation is the same instant regardless of
+    // device time zone, then app code shows local-day dates from it.
+    const ms = new Date(`${s}T00:00:00Z`).getTime();
+    return Number.isFinite(ms) ? ms : null;
+  };
+  const tsToMs = (v) => v == null ? null : (typeof v === 'string' ? new Date(v).getTime() : v);
   await d.runAsync(
     `INSERT OR IGNORE INTO body_metric_log
       (id, user_id, logged_at, weight_kg, body_fat_percent, body_fat_source,
@@ -3026,21 +3043,21 @@ export async function insertBodyMetricFromCloud(userId, m) {
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       m.id, userId,
-      toMs(m.logged_at),
-      m.weight_kg ?? null,
+      dateToMs(m.metric_date) ?? tsToMs(m.logged_at),
+      m.body_weight ?? null,
       m.body_fat_percent ?? null,
       m.body_fat_source ?? null,
-      m.waist_cm ?? null,
-      m.chest_cm ?? null,
-      m.hips_cm ?? null,
-      m.thigh_cm ?? null,
-      m.arm_cm ?? null,
-      m.shoulders_cm ?? null,
-      m.forearm_cm ?? null,
-      m.ham_cm ?? null,
-      m.calf_cm ?? null,
+      m.waist ?? null,
+      m.chest ?? null,
+      m.hips ?? null,
+      m.quads ?? null,
+      m.arms ?? null,
+      m.shoulders ?? null,
+      m.forearms ?? null,
+      m.hamstrings ?? null,
+      m.calves ?? null,
       m.notes ?? null,
-      toMs(m.created_at) ?? Date.now(),
+      tsToMs(m.created_at) ?? Date.now(),
     ],
   );
 }

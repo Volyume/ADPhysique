@@ -58,6 +58,20 @@ function getClient() {
   return getSupabaseClient();
 }
 
+// PostgREST errors carry a code + hint + details that the user (and we)
+// need to see. The default `e?.message` we'd been logging often comes
+// back empty or as a useless one-liner, which made every silently-
+// failed upsert look the same. Surface the full shape so the next
+// debug log dump tells us exactly which column / constraint blew up.
+function logPgErr(scope, err) {
+  if (!err) return;
+  logWarn(scope, err.message || String(err), {
+    code: err.code ?? null,
+    details: err.details ?? null,
+    hint: err.hint ?? null,
+  });
+}
+
 // ─── Profile ──────────────────────────────────────────────────────────────────
 
 /**
@@ -154,7 +168,7 @@ export async function syncWorkout(supabaseUserId, workoutId) {
 }
 
 async function _upsertWorkout(sb, supabaseUserId, w) {
-  await sb.from('workouts').upsert({
+  const { error } = await sb.from('workouts').upsert({
     id: w.id,
     user_id: supabaseUserId,
     routine_id: w.routineId ?? null,
@@ -171,6 +185,10 @@ async function _upsertWorkout(sb, supabaseUserId, w) {
     synced_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   }, { onConflict: 'id' });
+  if (error) {
+    logPgErr('sync._upsertWorkout', error);
+    throw error;
+  }
 }
 
 async function _upsertSets(sb, supabaseUserId, sets) {
@@ -200,10 +218,12 @@ async function _upsertSets(sb, supabaseUserId, sets) {
   // Chunk to avoid hitting Supabase row limits
   for (let i = 0; i < rows.length; i += 200) {
     const chunk = rows.slice(i, i + 200);
-    try {
-      await sb.from('workout_sets').upsert(chunk, { onConflict: 'id' });
-    } catch (e) {
-      logWarn('sync._upsertSets', 'chunk failed', { error: e?.message });
+    const { error } = await sb.from('workout_sets').upsert(chunk, { onConflict: 'id' });
+    if (error) {
+      logPgErr('sync._upsertSets', error);
+      // Continue with the next chunk rather than aborting all
+      // remaining work — the previous behaviour swallowed the error
+      // and silently lost every set in the failing batch.
     }
   }
 }
@@ -217,25 +237,36 @@ export async function syncBodyMetric(supabaseUserId, metric) {
   const sb = getClient();
   if (!sb || !supabaseUserId || !metric) return;
   try {
-    await sb.from('body_metrics').upsert({
+    // Cloud column names: body_weight, waist, chest, hips, quads,
+    // hamstrings, arms, shoulders, forearms, calves. The previous push
+    // wrote `thigh` / `ham` / `body_fat_percent` / `body_fat_source`
+    // which don't exist in the body_metrics schema → PostgREST
+    // rejected the entire upsert and every body metric the user logged
+    // was lost on cross-device restore. Migration 010 adds the
+    // body-fat columns; the limb columns map straight onto the
+    // existing cloud names.
+    const { error } = await sb.from('body_metrics').upsert({
       id: metric.id,
       user_id: supabaseUserId,
       metric_date: msToDate(metric.loggedAt),
       body_weight: metric.weightKg ?? null,
       waist: metric.waistCm ?? null,
-      // Extended measurement fields — match the local body_metric_log shape
       chest: metric.chestCm ?? null,
       hips: metric.hipsCm ?? null,
-      thigh: metric.thighCm ?? null,
+      quads: metric.thighCm ?? null,
       arms: metric.armCm ?? null,
       shoulders: metric.shouldersCm ?? null,
       forearms: metric.forearmCm ?? null,
-      ham: metric.hamCm ?? null,
+      hamstrings: metric.hamCm ?? null,
       calves: metric.calfCm ?? null,
       body_fat_percent: metric.bodyFatPercent ?? null,
       body_fat_source: metric.bodyFatSource ?? null,
       notes: metric.notes ?? null,
     }, { onConflict: 'id' });
+    if (error) {
+      logPgErr('sync.syncBodyMetric', error);
+      throw error;
+    }
   } catch (e) {
     logWarn('sync.syncBodyMetric', e?.message, { metricId: metric?.id });
     try {
@@ -292,7 +323,10 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
       logWarn('sync.bulkUploadLocalData', `${failures} of ${completed.length} workouts failed to upload`, { supabaseUserId });
     }
 
-    // Body metrics
+    // Body metrics — see syncBodyMetric for the column-name rationale.
+    // thigh→quads, ham→hamstrings, plus body_fat_* columns added in
+    // migrate_010. Pre-migration this upsert had been silently rejected
+    // for every metric in the user's history.
     try {
       const metrics = await getBodyMetricLog(localUserId, 365);
       if (metrics?.length) {
@@ -302,22 +336,23 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
           metric_date: msToDate(m.loggedAt),
           body_weight: m.weightKg ?? null,
           waist: m.waistCm ?? null,
-          // Extended columns added in setup_complete.sql so the Pro user
-          // doesn't lose chest/hips/quads/etc. measurements on device loss.
           chest: m.chestCm ?? null,
           hips: m.hipsCm ?? null,
-          thigh: m.thighCm ?? null,
+          quads: m.thighCm ?? null,
           arms: m.armCm ?? null,
           shoulders: m.shouldersCm ?? null,
           forearms: m.forearmCm ?? null,
-          ham: m.hamCm ?? null,
+          hamstrings: m.hamCm ?? null,
           calves: m.calfCm ?? null,
           body_fat_percent: m.bodyFatPercent ?? null,
           body_fat_source: m.bodyFatSource ?? null,
           notes: m.notes ?? null,
         })).filter(r => r.metric_date);
         for (let i = 0; i < rows.length; i += 200) {
-          await sb.from('body_metrics').upsert(rows.slice(i, i + 200), { onConflict: 'id' });
+          const { error } = await sb.from('body_metrics').upsert(
+            rows.slice(i, i + 200), { onConflict: 'id' },
+          );
+          if (error) logPgErr('sync.bulkUploadLocalData.body_metrics', error);
         }
       }
     } catch (e) {
@@ -356,7 +391,8 @@ async function _pushProgrammes(sb, supabaseUserId, localUserId) {
       source_programme_id: p.sourceProgrammeId ?? null,
       updated_at: new Date().toISOString(),
     }));
-    await sb.from('programmes').upsert(rows, { onConflict: 'id' });
+    const { error } = await sb.from('programmes').upsert(rows, { onConflict: 'id' });
+    if (error) logPgErr('sync._pushProgrammes', error);
   } catch (e) { logWarn('sync._pushProgrammes', e?.message, { error: e?.message }); }
 }
 
@@ -364,17 +400,33 @@ async function _pushRoutinesAndExercises(sb, supabaseUserId, localUserId) {
   try {
     const routines = await getAllRoutinesForUser(localUserId);
     if (routines?.length) {
+      // programme_id, day_of_week, is_sample, is_library, source_routine_id
+      // are added to the cloud routines table in migrate_010. They were
+      // local-only before, which is why a fresh-device sign-in restored
+      // 114 routines but lost the link back to the active plan — every
+      // routine came back with programme_id = null and the plan-detail
+      // screen showed "0 workouts".
       const rows = routines.map(r => ({
         id: r.id, user_id: supabaseUserId,
         name: r.name, description: r.description ?? null,
         split_type: r.splitType ?? null,
         is_active: r.isActive == null ? true : !!r.isActive,
+        programme_id: r.programmeId ?? null,
+        day_of_week: r.dayOfWeek ?? null,
+        is_sample: !!r.isSample,
+        is_library: !!r.isLibrary,
+        source_routine_id: r.sourceRoutineId ?? null,
         updated_at: new Date().toISOString(),
       }));
-      await sb.from('routines').upsert(rows, { onConflict: 'id' });
+      const { error: rErr } = await sb.from('routines').upsert(rows, { onConflict: 'id' });
+      if (rErr) logPgErr('sync._pushRoutines', rErr);
     }
     const routineExs = await getAllRoutineExercisesForUser(localUserId);
     if (routineExs?.length) {
+      // starting_weight, rest_seconds, superset_group_id are also added
+      // by migrate_010 — they govern the pre-filled weight, the rest
+      // timer default, and superset pairing. Without them, every restore
+      // dropped users back to the global default rest timer.
       const rows = routineExs.map(re => ({
         id: re.id, routine_id: re.routineId, exercise_id: re.exerciseId,
         order_in_routine: re.orderInRoutine ?? 0,
@@ -382,9 +434,15 @@ async function _pushRoutinesAndExercises(sb, supabaseUserId, localUserId) {
         recommended_reps_min: re.recommendedRepsMin ?? 6,
         recommended_reps_max: re.recommendedRepsMax ?? 12,
         notes: re.notes ?? null,
+        starting_weight: re.startingWeight ?? null,
+        rest_seconds: re.restSeconds ?? null,
+        superset_group_id: re.supersetGroupId ?? null,
       }));
       for (let i = 0; i < rows.length; i += 200) {
-        await sb.from('routine_exercises').upsert(rows.slice(i, i + 200), { onConflict: 'id' });
+        const { error: reErr } = await sb.from('routine_exercises').upsert(
+          rows.slice(i, i + 200), { onConflict: 'id' },
+        );
+        if (reErr) logPgErr('sync._pushRoutineExercises', reErr);
       }
     }
   } catch (e) { logWarn('sync._pushRoutinesAndExercises', e?.message, { error: e?.message }); }
@@ -394,6 +452,10 @@ async function _pushMesocycles(sb, supabaseUserId, localUserId) {
   try {
     const mesos = await getAllMesocyclesForUser(localUserId);
     if (mesos?.length) {
+      // The cloud mesocycles schema declares start_date and end_date as
+      // NOT NULL. Local rows can legitimately have nulls (a planned
+      // block before its first week is laid out), so filter those out
+      // rather than letting the whole batch reject.
       const rows = mesos.map(m => ({
         id: m.id, user_id: supabaseUserId,
         name: m.name,
@@ -403,8 +465,11 @@ async function _pushMesocycles(sb, supabaseUserId, localUserId) {
         focus: m.focus ?? null,
         is_active: !!m.isActive,
         updated_at: new Date().toISOString(),
-      }));
-      await sb.from('mesocycles').upsert(rows, { onConflict: 'id' });
+      })).filter(r => r.start_date && r.end_date);
+      if (rows.length) {
+        const { error } = await sb.from('mesocycles').upsert(rows, { onConflict: 'id' });
+        if (error) logPgErr('sync._pushMesocycles', error);
+      }
     }
     const weeks = await getAllMesocycleWeeksForUser(localUserId);
     if (weeks?.length) {
@@ -415,7 +480,10 @@ async function _pushMesocycles(sb, supabaseUserId, localUserId) {
         notes: w.notes ?? null,
       }));
       for (let i = 0; i < rows.length; i += 200) {
-        await sb.from('mesocycle_weeks').upsert(rows.slice(i, i + 200), { onConflict: 'id' });
+        const { error } = await sb.from('mesocycle_weeks').upsert(
+          rows.slice(i, i + 200), { onConflict: 'id' },
+        );
+        if (error) logPgErr('sync._pushMesocycleWeeks', error);
       }
     }
   } catch (e) { logWarn('sync._pushMesocycles', e?.message, { error: e?.message }); }
@@ -430,9 +498,12 @@ async function _pushMorningWeights(sb, supabaseUserId, localUserId) {
       weight_kg: w.weightKg,
       logged_at: msToISO(w.loggedAt),
       notes: w.notes ?? null,
-    })).filter(r => r.logged_at);
+    })).filter(r => r.logged_at && r.weight_kg != null);
     for (let i = 0; i < rows.length; i += 200) {
-      await sb.from('morning_weights').upsert(rows.slice(i, i + 200), { onConflict: 'id' });
+      const { error } = await sb.from('morning_weights').upsert(
+        rows.slice(i, i + 200), { onConflict: 'id' },
+      );
+      if (error) logPgErr('sync._pushMorningWeights', error);
     }
   } catch (e) { logWarn('sync._pushMorningWeights', e?.message, { error: e?.message }); }
 }
@@ -460,7 +531,10 @@ async function _pushWeeklyCheckins(sb, supabaseUserId, localUserId) {
       notes: c.notes ?? null,
     }));
     for (let i = 0; i < rows.length; i += 200) {
-      await sb.from('weekly_checkins_v2').upsert(rows.slice(i, i + 200), { onConflict: 'id' });
+      const { error } = await sb.from('weekly_checkins_v2').upsert(
+        rows.slice(i, i + 200), { onConflict: 'id' },
+      );
+      if (error) logPgErr('sync._pushWeeklyCheckins', error);
     }
   } catch (e) { logWarn('sync._pushWeeklyCheckins', e?.message, { error: e?.message }); }
 }
@@ -476,7 +550,10 @@ async function _pushCoachOutputs(sb, supabaseUserId, localUserId) {
       applied: !!o.applied,
     }));
     for (let i = 0; i < rows.length; i += 200) {
-      await sb.from('coach_outputs').upsert(rows.slice(i, i + 200), { onConflict: 'id' });
+      const { error } = await sb.from('coach_outputs').upsert(
+        rows.slice(i, i + 200), { onConflict: 'id' },
+      );
+      if (error) logPgErr('sync._pushCoachOutputs', error);
     }
   } catch (e) { logWarn('sync._pushCoachOutputs', e?.message, { error: e?.message }); }
 }

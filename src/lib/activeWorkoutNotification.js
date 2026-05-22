@@ -28,11 +28,23 @@ const CHANNEL_ID = 'volyume_active_workout';
 // When false, we use the standard expo-notifications sticky path
 // (works while the app is alive, dies on force-close). When true, we
 // drive the native foreground service in rest-timer-live which
-// survives force-close. Flipped ON so the workout state stays on the
-// lock screen even after Android (or the user) force-closes Volyume.
-// If anything misbehaves on Android 14 health-permission prompts,
-// flip back to false here and rebuild.
-const USE_FOREGROUND_SERVICE = true;
+// survives force-close.
+//
+// HELD OFF until the manifest declares a health-related runtime
+// permission. WorkoutForegroundService starts itself with
+// FOREGROUND_SERVICE_TYPE_HEALTH (the correct fit for a workout
+// tracker), and from Android 14 (API 34) the OS rejects that service
+// type with SecurityException unless the app also declares one of:
+//   - ACTIVITY_RECOGNITION
+//   - BODY_SENSORS
+//   - HIGH_SAMPLING_RATE_SENSORS
+// The current manifest only carries FOREGROUND_SERVICE and
+// FOREGROUND_SERVICE_HEALTH, so startForeground() throws a native
+// SecurityException → "Volyume keeps stopping" on workout start.
+// Re-enable only after wiring the manifest entry + a runtime grant
+// prompt; flipping this back on without that change reintroduces the
+// crash.
+const USE_FOREGROUND_SERVICE = false;
 
 // Lazy require of the native module. The require itself is cheap on
 // Android (the module is already loaded by the runtime); on iOS or in
