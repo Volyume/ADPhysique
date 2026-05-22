@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert,
-  Modal, KeyboardAvoidingView, Platform,
+  Modal, KeyboardAvoidingView, Platform, Animated,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -565,19 +565,21 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         </View>
 
         <View style={styles.statsGrid}>
-          <StatBox icon="barbell-outline" value={String(exerciseCount || 0)} label="Exercises" />
+          <StatBox icon="barbell-outline" value={String(exerciseCount || 0)} label="Exercises" animateOrder={0} />
           <StatBox
             icon="layers-outline"
             value={String(displayWorkingSets)}
             label="Working Sets"
             tooltip={'Hard sets counted in your weekly totals. Warm-up sets are excluded.\n\nA working set is any set where you trained close to your limit, typically 0 to 3 reps from failure.'}
+            animateOrder={1}
           />
-          <StatBox icon="time-outline" value={`${durationMinutes || 0}m`} label="Duration" />
+          <StatBox icon="time-outline" value={`${durationMinutes || 0}m`} label="Duration" animateOrder={2} />
           <StatBox
             icon="trending-up-outline"
             value={`${Math.round(tonnage || 0).toLocaleString('en-GB')} kg`}
             label="Total kg"
             tooltip={'Total weight moved this session: sets × reps × weight added together. A rough measure of how much work you did. More is not always better; quality of effort matters more than raw numbers.'}
+            animateOrder={3}
           />
         </View>
 
@@ -905,16 +907,74 @@ function getVolumeWhy(muscle, sets, status) {
   return null;
 }
 
-function StatBox({ icon, value, label, tooltip }) {
+// StatBox renders a single hero stat. When the value is a pure
+// number-like string (no letters), the value animates from 0 up to
+// the target across ~900ms with an ease-out curve. The user sees
+// "Total kg: 4,000 → 8,432 → 12,800" tick by rather than the number
+// just appearing — gives the summary a cinematic beat. Reduce-motion
+// users get the final value immediately.
+function StatBox({ icon, value, label, tooltip, animateOrder = 0 }) {
+  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  // Parse the value to detect whether it's "10,432 kg" (number with
+  // optional suffix) or "12m" (number + unit) or "8" (pure number).
+  // We keep the suffix and animate only the number.
+  const parsed = React.useMemo(() => {
+    const m = String(value || '').match(/^([\d,]+(?:\.\d+)?)(.*)$/);
+    if (!m) return null;
+    const cleanNum = parseFloat(m[1].replace(/,/g, ''));
+    if (!Number.isFinite(cleanNum)) return null;
+    return { num: cleanNum, suffix: m[2] };
+  }, [value]);
+
+  const [displayed, setDisplayed] = useState(() => parsed ? 0 : value);
+  const opacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+  const translateY = useRef(new Animated.Value(reduceMotion ? 0 : 8)).current;
+
+  useEffect(() => {
+    if (!parsed) { setDisplayed(value); return; }
+    if (reduceMotion) { setDisplayed(value); return; }
+    // Staggered reveal — each StatBox starts ~80ms after the previous
+    // one. Gives the grid a left-to-right shimmer rather than four
+    // boxes appearing simultaneously.
+    const delay = animateOrder * 80;
+    Animated.parallel([
+      Animated.timing(opacity, { toValue: 1, duration: 280, delay, useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 320, delay, useNativeDriver: true }),
+    ]).start();
+    // Counter animation: tick from 0 to target across ~900ms with
+    // ease-out so the increment slows as it approaches the final
+    // value. Smooth, not janky.
+    const target = parsed.num;
+    const durationMs = 900;
+    const startedAt = Date.now() + delay;
+    let raf = null;
+    function step() {
+      const now = Date.now();
+      if (now < startedAt) { raf = requestAnimationFrame(step); return; }
+      const t = Math.min(1, (now - startedAt) / durationMs);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const current = Math.round(target * eased);
+      const formatted = target >= 100
+        ? `${current.toLocaleString('en-GB')}${parsed.suffix}`
+        : `${current}${parsed.suffix}`;
+      setDisplayed(formatted);
+      if (t < 1) raf = requestAnimationFrame(step);
+      else setDisplayed(value);
+    }
+    raf = requestAnimationFrame(step);
+    return () => { if (raf) cancelAnimationFrame(raf); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
   return (
-    <View style={styles.statBox}>
+    <Animated.View style={[styles.statBox, { opacity, transform: [{ translateY }] }]}>
       <Ionicons name={icon} size={20} color={colors.primary} />
-      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statValue}>{displayed}</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xxs }}>
         <Text style={styles.statLabel}>{label}</Text>
         {tooltip ? <InfoTooltip size={10} text={tooltip} /> : null}
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
