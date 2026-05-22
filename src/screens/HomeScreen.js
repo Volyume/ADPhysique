@@ -148,6 +148,20 @@ export default function HomeScreen({ navigation }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cloudSyncVersion]);
 
+  // Safety-net delayed refreshes after sign-in. The cloudSyncVersion
+  // effect above usually fires fast enough, but pull payloads can be
+  // large (450+ exercises, 100+ routines, hundreds of sets) and the
+  // version flips only after the WHOLE pull completes. Re-loading at
+  // +3s + +10s catches the case where some inserts land after the
+  // first effect ran. Cheap; only runs once per session per user.
+  useEffect(() => {
+    if (!user?.id) return;
+    const t1 = setTimeout(() => loadData().catch(() => {}), 3000);
+    const t2 = setTimeout(() => loadData().catch(() => {}), 10000);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
   async function loadData() {
     await Promise.all([
       loadWeekStats(),

@@ -3133,6 +3133,67 @@ export async function getAllExerciseUserNotesForUser(userId) {
   return rows.map(rowToCamel);
 }
 
+// ─── Bulk getters for tables that previously didn't sync ──────────────────
+// Each returns rows in camelCase ready for the sync push payload.
+// They mirror the existing getAllX patterns above.
+
+export async function getAllUserInsightsForUser(userId) {
+  const d = await db();
+  const rows = await d.getAllAsync('SELECT * FROM user_insights WHERE user_id = ?', [userId]);
+  return rows.map(rowToCamel);
+}
+
+export async function getAllWorkoutNotesForUser(userId) {
+  const d = await db();
+  // workout_notes_v2 is the sync-aware table introduced in migration v19.
+  // Older notes in the original workout_notes table are migrated lazily
+  // on first read by the WorkoutSummary screen; we only sync v2 rows.
+  try {
+    const rows = await d.getAllAsync(
+      'SELECT * FROM workout_notes_v2 WHERE user_id = ?', [userId],
+    );
+    return rows.map(rowToCamel);
+  } catch (_) { return []; }
+}
+
+export async function getAllExerciseGoalsForUser(userId) {
+  const d = await db();
+  try {
+    const rows = await d.getAllAsync('SELECT * FROM exercise_goals WHERE user_id = ?', [userId]);
+    return rows.map(rowToCamel);
+  } catch (_) { return []; }
+}
+
+export async function getAllPeakWeekPlansForUser(userId) {
+  const d = await db();
+  try {
+    const rows = await d.getAllAsync('SELECT * FROM peak_week_plans WHERE user_id = ?', [userId]);
+    return rows.map(rowToCamel);
+  } catch (_) { return []; }
+}
+
+export async function getAllPlannedMuscleVolumeForUser(userId) {
+  const d = await db();
+  try {
+    // _sync mirror table; primary planned_muscle_volume table also exists.
+    // Read from the sync mirror — write paths populate both.
+    const rows = await d.getAllAsync(
+      'SELECT * FROM planned_muscle_volume_sync WHERE user_id = ?', [userId],
+    );
+    return rows.map(rowToCamel);
+  } catch (_) { return []; }
+}
+
+export async function getAllAdaptationEventsForUser(userId) {
+  const d = await db();
+  try {
+    const rows = await d.getAllAsync(
+      'SELECT * FROM adaptation_events_sync WHERE user_id = ?', [userId],
+    );
+    return rows.map(rowToCamel);
+  } catch (_) { return []; }
+}
+
 // ─── Bulk-sync write helpers (used by pullFromCloud) ──────────────────────
 // Insert OR IGNORE so a cloud restore doesn't overwrite a row that's already
 // locally updated. Each function takes a row in camelCase as it comes back

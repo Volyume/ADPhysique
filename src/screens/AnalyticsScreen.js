@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  RefreshControl, Animated, Dimensions,
+  RefreshControl, Animated, Dimensions, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -117,6 +117,12 @@ export default function AnalyticsScreen({ navigation }) {
   const [workloadData, setWorkloadData] = useState(null);
   const [fatigueSessions, setFatigueSessions] = useState([]);   // last 6 sessions w/ feedback
   const [blockProgress, setBlockProgress]     = useState([]);   // planned vs actual per muscle
+  // Year of Lifts is gated until the user has 365 days of training
+  // history (or close to it) so the swipeable wrap-up has enough data
+  // to be meaningful rather than nine months of empty bars.
+  // earliestWorkoutAt is set in load() from the oldest completed
+  // workout's started_at, and the locked state derives from it.
+  const [earliestWorkoutAt, setEarliestWorkoutAt] = useState(null);
   const [currentMesoWeek, setCurrentMesoWeek] = useState(null); // {weekIndex, plannedWeeks, isDeload, rirTarget}
 
   const scrollRef = useRef(null);
@@ -141,6 +147,14 @@ export default function AnalyticsScreen({ navigation }) {
       const exMap = Object.fromEntries(exercises.map(e => [e.id, e]));
       setAllSets(sets);
       setExerciseMap(exMap);
+      // Earliest completed workout — drives Year of Lifts unlock.
+      // Comparing started_at across workouts is fine since values
+      // are ms-epoch integers.
+      const completed = (workouts || []).filter(w => w.isCompleted && w.startedAt);
+      const earliest = completed.length
+        ? completed.reduce((m, w) => (w.startedAt < m ? w.startedAt : m), completed[0].startedAt)
+        : null;
+      setEarliestWorkoutAt(earliest);
 
       const wl = await getAcuteChronicWorkload(user.id).catch(() => null);
       setWorkloadData(wl);
@@ -638,7 +652,43 @@ export default function AnalyticsScreen({ navigation }) {
             <NavTile icon="trophy" color={colors.gold} label="Personal Records" onPress={() => navigation.navigate('PRWall')} />
             <NavTile icon="barbell" color={colors.primary} label="Lift Progress" onPress={() => navigation.navigate('ExerciseLibrary')} />
             <NavTile icon="time" color={colors.textSecondary} label="Full History" onPress={() => navigation.navigate('WorkoutHistory')} />
-            <NavTile icon="calendar-outline" color={colors.textSecondary} label="Year of Lifts" onPress={() => navigation.navigate('YearOfLifts')} />
+            {(() => {
+              // Year of Lifts unlocks once the user has 365 days of
+              // training history. Until then it shows a locked state
+              // with the remaining days so the user has a concrete
+              // milestone to look forward to.
+              const YEAR_MS = 365 * 86400000;
+              const elapsed = earliestWorkoutAt ? Date.now() - earliestWorkoutAt : 0;
+              const unlocked = elapsed >= YEAR_MS;
+              const daysLeft = earliestWorkoutAt
+                ? Math.max(0, Math.ceil((YEAR_MS - elapsed) / 86400000))
+                : 365;
+              return (
+                <NavTile
+                  icon="calendar-outline"
+                  color={colors.textSecondary}
+                  label="Year of Lifts"
+                  locked={!unlocked}
+                  lockedSub={
+                    earliestWorkoutAt
+                      ? `${daysLeft} day${daysLeft === 1 ? '' : 's'} to go`
+                      : 'Start training to unlock'
+                  }
+                  onPress={() => {
+                    if (!unlocked) {
+                      Alert.alert(
+                        'Year of Lifts',
+                        earliestWorkoutAt
+                          ? `Your wrap-up unlocks after a full year of training. ${daysLeft} day${daysLeft === 1 ? '' : 's'} to go.`
+                          : 'Log your first session to start the year-long countdown.',
+                      );
+                      return;
+                    }
+                    navigation.navigate('YearOfLifts');
+                  }}
+                />
+              );
+            })()}
           </View>
         </View>
       </ScrollView>
@@ -870,11 +920,28 @@ function SessionCard({ workout, units }) {
   );
 }
 
-function NavTile({ icon, color, label, onPress }) {
+function NavTile({ icon, color, label, onPress, locked, lockedSub }) {
+  // When locked, the tile is dimmed and onPress fires an inline
+  // explanation rather than navigating. Used for features that need
+  // accumulated training data (e.g. Year of Lifts needs a year).
   return (
-    <TouchableOpacity style={styles.navTile} onPress={onPress} activeOpacity={0.75}>
-      <Ionicons name={icon} size={22} color={color} />
-      <Text style={styles.navTileLabel}>{label}</Text>
+    <TouchableOpacity
+      style={[styles.navTile, locked && styles.navTileLocked]}
+      onPress={onPress}
+      activeOpacity={0.75}
+      accessibilityRole="button"
+      accessibilityLabel={locked ? `${label} — locked. ${lockedSub ?? ''}` : label}
+      accessibilityState={{ disabled: !!locked }}
+    >
+      <Ionicons
+        name={locked ? 'lock-closed-outline' : icon}
+        size={22}
+        color={locked ? colors.textMuted : color}
+      />
+      <Text style={[styles.navTileLabel, locked && styles.navTileLabelLocked]}>{label}</Text>
+      {locked && lockedSub ? (
+        <Text style={styles.navTileSub} numberOfLines={1}>{lockedSub}</Text>
+      ) : null}
     </TouchableOpacity>
   );
 }
@@ -1168,6 +1235,16 @@ const styles = StyleSheet.create({
   navTileLabel: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
     color: colors.textSecondary, textAlign: 'center',
+  },
+  // Locked tile variant — used while accumulating training data needed
+  // for a feature (e.g. Year of Lifts requires 365 days of history).
+  navTileLocked: { opacity: 0.55 },
+  navTileLabelLocked: { color: colors.textMuted },
+  navTileSub: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    marginTop: spacing.xxs,
+    textAlign: 'center',
   },
   deloadBanner: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,

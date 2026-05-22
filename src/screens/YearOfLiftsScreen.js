@@ -304,9 +304,16 @@ export default function YearOfLiftsScreen({ navigation, route }) {
             getItemLayout={(_, i) => ({ length: SCREEN_W, offset: SCREEN_W * i, index: i })}
           />
 
-          {/* Tap zones — invisible but live above the card. Left third
-              rewinds, right two-thirds advances. Pressable rather than
-              TouchableOpacity so we don't flash a feedback colour. */}
+          {/* Tap zones live as a narrow band ABOVE the card content
+              (under the pips, above the hero). Previously they spanned
+              the entire screen which meant any tap on the card body
+              was consumed by the Pressables — and on Android a press-
+              start anywhere on screen blocked the FlatList from
+              starting a horizontal swipe. Net effect: the story
+              advanced once via tap, then refused to swipe further.
+              Now the swipe gesture has the full card area to itself;
+              tap-to-advance is still available via a narrow strip
+              under the pips. */}
           <View style={styles.tapZones} pointerEvents="box-none">
             <Pressable style={styles.tapLeft} onPress={rewind} />
             <Pressable style={styles.tapRight} onPress={advance} />
@@ -441,11 +448,15 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 
-  // Tap zones overlay
+  // Tap-zone band — narrow strip just under the pips, so the bulk of
+  // the card area is left clean for FlatList swipe gestures. Without
+  // this layout the previous full-screen overlay swallowed every
+  // horizontal drag on Android.
   tapZones: {
     position: 'absolute',
-    top: 60, // below the pips row
-    bottom: 0, left: 0, right: 0,
+    top: 50,
+    height: 56,
+    left: 0, right: 0,
     flexDirection: 'row',
   },
   tapLeft: { flex: 1 },

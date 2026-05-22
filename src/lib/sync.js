@@ -30,6 +30,14 @@ import {
   getAllCoachOutputsForUser,
   getAllBodyMetricsForUser,
   getAllExerciseUserNotesForUser,
+  // Newly-syncing tables (migration 012)
+  getUserBodyProfile,
+  getAllUserInsightsForUser,
+  getAllWorkoutNotesForUser,
+  getAllExerciseGoalsForUser,
+  getAllPeakWeekPlansForUser,
+  getAllPlannedMuscleVolumeForUser,
+  getAllAdaptationEventsForUser,
   // Cloud restore helpers
   insertRoutineFromCloud,
   insertProgrammeFromCloud,
@@ -40,6 +48,7 @@ import {
   insertNutritionTargetsFromCloud,
   getNutritionTargets,
 } from './database';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logError, logWarn, logInfo } from './errorLog';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -327,8 +336,12 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
   if (!sb || !supabaseUserId || !localUserId) return;
 
   try {
-    // Custom exercises first (sets reference them)
-    await syncCustomExercises(supabaseUserId);
+    // Every exercise — canonical + custom — pushed first so all the
+    // downstream FK references (routine_exercises, workout_sets) land
+    // on cloud rows that exist. Previously only is_custom=1 rows were
+    // pushed, which is what left routine_exercises pointing at
+    // unresolvable canonical UUIDs and broke cross-device restore.
+    await syncExercises(supabaseUserId);
 
     const allWorkouts = await getAllWorkouts(localUserId);
     const completed = allWorkouts.filter(w => w.isCompleted);
@@ -409,6 +422,21 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
     await _pushWeeklyCheckins(sb, supabaseUserId, localUserId);
     await _pushCoachOutputs(sb, supabaseUserId, localUserId);
     await _pushNutritionTargets(sb, supabaseUserId, localUserId);
+    // Tables that previously stayed local-only. Each is safe to call
+    // for free-tier users — they return zero rows and the helper
+    // exits cleanly. No new dependencies between them.
+    await _pushUserBodyProfile(sb, supabaseUserId, localUserId);
+    await _pushUserInsights(sb, supabaseUserId, localUserId);
+    await _pushExerciseUserNotes(sb, supabaseUserId, localUserId);
+    await _pushWorkoutNotes(sb, supabaseUserId, localUserId);
+    await _pushExerciseGoals(sb, supabaseUserId, localUserId);
+    await _pushPeakWeekPlans(sb, supabaseUserId, localUserId);
+    await _pushPlannedMuscleVolume(sb, supabaseUserId, localUserId);
+    await _pushAdaptationEvents(sb, supabaseUserId, localUserId);
+    // AsyncStorage prefs (units, accessibility, wellbeing, etc.).
+    // Pushed AFTER the structured tables so a sign-in catch-up
+    // doesn't block on the larger writes.
+    await _pushAllUserPrefs(sb, supabaseUserId);
 
     console.log('[sync] bulk upload complete');
   } catch (e) {
@@ -599,6 +627,259 @@ async function _pushCoachOutputs(sb, supabaseUserId, localUserId) {
       if (error) logPgErr('sync._pushCoachOutputs', error);
     }
   } catch (e) { logWarn('sync._pushCoachOutputs', e?.message, { error: e?.message }); }
+}
+
+// ─── Push helpers for previously local-only tables ───────────────────────
+// Each helper batches its table's rows into 200-row chunks and logs the
+// full Postgres error metadata via logPgErr when an upsert is rejected.
+// Failures don't propagate — a single bad table doesn't stop the rest
+// of the bulk upload.
+
+async function _pushExerciseUserNotes(sb, supabaseUserId, localUserId) {
+  try {
+    const notes = await getAllExerciseUserNotesForUser(localUserId);
+    if (!notes?.length) return;
+    const rows = notes.map(n => ({
+      id: n.id, user_id: supabaseUserId,
+      exercise_id: n.exerciseId, note: n.note ?? '',
+      created_at: new Date(n.createdAt ?? Date.now()).toISOString(),
+      updated_at: new Date(n.updatedAt ?? n.createdAt ?? Date.now()).toISOString(),
+    }));
+    for (let i = 0; i < rows.length; i += 200) {
+      const { error } = await sb.from('exercise_user_notes').upsert(
+        rows.slice(i, i + 200), { onConflict: 'id' },
+      );
+      if (error) logPgErr('sync._pushExerciseUserNotes', error);
+    }
+  } catch (e) { logWarn('sync._pushExerciseUserNotes', e?.message); }
+}
+
+async function _pushUserBodyProfile(sb, supabaseUserId, localUserId) {
+  try {
+    const p = await getUserBodyProfile(localUserId);
+    if (!p) return;
+    const { error } = await sb.from('user_body_profile').upsert({
+      user_id: supabaseUserId,
+      sex: p.sex ?? null,
+      date_of_birth: p.dateOfBirth ?? null,
+      height_cm: p.heightCm ?? null,
+      experience_level: p.experienceLevel ?? null,
+      training_age_years: p.trainingAgeYears ?? null,
+      primary_goal: p.primaryGoal ?? null,
+      scoff_score: p.scoffScore ?? null,
+      gdpr_consented: !!p.gdprConsented,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' });
+    if (error) logPgErr('sync._pushUserBodyProfile', error);
+  } catch (e) { logWarn('sync._pushUserBodyProfile', e?.message); }
+}
+
+async function _pushUserInsights(sb, supabaseUserId, localUserId) {
+  try {
+    const rows = await getAllUserInsightsForUser(localUserId);
+    if (!rows?.length) return;
+    const payload = rows.map(r => ({
+      id: r.id, user_id: supabaseUserId,
+      insight_key: r.insightKey, type: r.type ?? null,
+      severity: r.severity ?? null, copy: r.copy ?? null,
+      action_payload: r.actionPayload ?? null,
+      generated_at: r.generatedAt ? new Date(r.generatedAt).toISOString() : new Date().toISOString(),
+      dismissed_at: r.dismissedAt ? new Date(r.dismissedAt).toISOString() : null,
+      updated_at: new Date().toISOString(),
+    }));
+    for (let i = 0; i < payload.length; i += 200) {
+      const { error } = await sb.from('user_insights').upsert(
+        payload.slice(i, i + 200), { onConflict: 'id' },
+      );
+      if (error) logPgErr('sync._pushUserInsights', error);
+    }
+  } catch (e) { logWarn('sync._pushUserInsights', e?.message); }
+}
+
+async function _pushWorkoutNotes(sb, supabaseUserId, localUserId) {
+  try {
+    const rows = await getAllWorkoutNotesForUser(localUserId);
+    if (!rows?.length) return;
+    const payload = rows.map(r => ({
+      id: r.id, user_id: supabaseUserId,
+      workout_id: r.workoutId, note: r.note,
+      created_at: new Date(r.createdAt ?? Date.now()).toISOString(),
+      updated_at: new Date(r.updatedAt ?? r.createdAt ?? Date.now()).toISOString(),
+      deleted_at: r.deletedAt ? new Date(r.deletedAt).toISOString() : null,
+    }));
+    for (let i = 0; i < payload.length; i += 200) {
+      const { error } = await sb.from('workout_notes').upsert(
+        payload.slice(i, i + 200), { onConflict: 'id' },
+      );
+      if (error) logPgErr('sync._pushWorkoutNotes', error);
+    }
+  } catch (e) { logWarn('sync._pushWorkoutNotes', e?.message); }
+}
+
+async function _pushExerciseGoals(sb, supabaseUserId, localUserId) {
+  try {
+    const rows = await getAllExerciseGoalsForUser(localUserId);
+    if (!rows?.length) return;
+    const payload = rows.map(r => ({
+      id: r.id, user_id: supabaseUserId,
+      exercise_id: r.exerciseId,
+      target_weight: r.targetWeight ?? null,
+      target_reps: r.targetReps ?? null,
+      target_date: r.targetDate ?? null,
+      notes: r.notes ?? null,
+      created_at: new Date(r.createdAt ?? Date.now()).toISOString(),
+      updated_at: new Date(r.updatedAt ?? r.createdAt ?? Date.now()).toISOString(),
+    }));
+    for (let i = 0; i < payload.length; i += 200) {
+      const { error } = await sb.from('exercise_goals').upsert(
+        payload.slice(i, i + 200), { onConflict: 'id' },
+      );
+      if (error) logPgErr('sync._pushExerciseGoals', error);
+    }
+  } catch (e) { logWarn('sync._pushExerciseGoals', e?.message); }
+}
+
+async function _pushPeakWeekPlans(sb, supabaseUserId, localUserId) {
+  try {
+    const rows = await getAllPeakWeekPlansForUser(localUserId);
+    if (!rows?.length) return;
+    const payload = rows.map(r => ({
+      id: r.id, user_id: supabaseUserId,
+      show_date: r.showDate ?? null,
+      federation: r.federation ?? null,
+      current_bodyweight: r.currentBodyweight ?? null,
+      lean_estimate: r.leanEstimate ?? null,
+      prep_carbs_per_kg: r.prepCarbsPerKg ?? null,
+      prep_sodium_mg: r.prepSodiumMg ?? null,
+      prep_water_l: r.prepWaterL ?? null,
+      status: r.status ?? 'active',
+      created_at: new Date(r.createdAt ?? Date.now()).toISOString(),
+      updated_at: new Date(r.updatedAt ?? r.createdAt ?? Date.now()).toISOString(),
+    }));
+    for (let i = 0; i < payload.length; i += 200) {
+      const { error } = await sb.from('peak_week_plans').upsert(
+        payload.slice(i, i + 200), { onConflict: 'id' },
+      );
+      if (error) logPgErr('sync._pushPeakWeekPlans', error);
+    }
+  } catch (e) { logWarn('sync._pushPeakWeekPlans', e?.message); }
+}
+
+async function _pushPlannedMuscleVolume(sb, supabaseUserId, localUserId) {
+  try {
+    const rows = await getAllPlannedMuscleVolumeForUser(localUserId);
+    if (!rows?.length) return;
+    const payload = rows.map(r => ({
+      id: r.id, user_id: supabaseUserId,
+      mesocycle_week_id: r.mesocycleWeekId,
+      muscle: r.muscle,
+      planned_sets: r.plannedSets ?? null,
+      created_at: new Date(r.createdAt ?? Date.now()).toISOString(),
+      updated_at: new Date(r.updatedAt ?? r.createdAt ?? Date.now()).toISOString(),
+      deleted_at: r.deletedAt ? new Date(r.deletedAt).toISOString() : null,
+    }));
+    for (let i = 0; i < payload.length; i += 200) {
+      const { error } = await sb.from('planned_muscle_volume').upsert(
+        payload.slice(i, i + 200), { onConflict: 'id' },
+      );
+      if (error) logPgErr('sync._pushPlannedMuscleVolume', error);
+    }
+  } catch (e) { logWarn('sync._pushPlannedMuscleVolume', e?.message); }
+}
+
+async function _pushAdaptationEvents(sb, supabaseUserId, localUserId) {
+  try {
+    const rows = await getAllAdaptationEventsForUser(localUserId);
+    if (!rows?.length) return;
+    const payload = rows.map(r => ({
+      id: r.id, user_id: supabaseUserId,
+      mesocycle_week_id: r.mesocycleWeekId ?? null,
+      event_type: r.eventType,
+      payload: r.payload ?? null,
+      recorded_at: new Date(r.recordedAt ?? Date.now()).toISOString(),
+      created_at: new Date(r.createdAt ?? Date.now()).toISOString(),
+      updated_at: new Date(r.updatedAt ?? r.createdAt ?? Date.now()).toISOString(),
+      deleted_at: r.deletedAt ? new Date(r.deletedAt).toISOString() : null,
+    }));
+    for (let i = 0; i < payload.length; i += 200) {
+      const { error } = await sb.from('adaptation_events').upsert(
+        payload.slice(i, i + 200), { onConflict: 'id' },
+      );
+      if (error) logPgErr('sync._pushAdaptationEvents', error);
+    }
+  } catch (e) { logWarn('sync._pushAdaptationEvents', e?.message); }
+}
+
+// ─── AsyncStorage prefs sync ─────────────────────────────────────────────
+// Every @volyume_ prefix key in AsyncStorage that isn't an excluded
+// internal key gets shipped to the user_prefs (user_id, key, value)
+// table. On a new device pull, _pullUserPrefs writes them back into
+// AsyncStorage so the user's units, accessibility, wellbeing mode,
+// and one-time seen-flags all restore exactly.
+
+const PREF_PREFIX = '@volyume_';
+// Keys that hold transient or device-specific state — never sync.
+// crash_log: ephemeral diagnostic ring buffer.
+// local_user_id: per-device anonymous id, regenerated on a fresh install.
+// palette_recents: local-only ordering of recently-opened items.
+const PREF_EXCLUDE_PATTERNS = [
+  /^@volyume_crash_log$/,
+  /^@volyume_local_user_id$/,
+  /^@volyume_palette_recents/,
+  // Notification subscriptions are tied to a device-bound expo push
+  // token; syncing them across devices would resubscribe the wrong
+  // token. The user's stated reminder preferences ARE synced (see
+  // training_reminders_config below) — only the token/subscription
+  // mapping is device-bound.
+  /^@volyume_expo_push_token/,
+];
+
+function shouldSyncPref(key) {
+  if (!key.startsWith(PREF_PREFIX)) return false;
+  return !PREF_EXCLUDE_PATTERNS.some(re => re.test(key));
+}
+
+/**
+ * Push one preference key to the cloud. Idempotent — upsert on
+ * (user_id, key). Called from the store whenever a synced
+ * preference changes so the cloud copy stays current.
+ */
+export async function syncUserPref(supabaseUserId, key, value) {
+  const sb = getClient();
+  if (!sb || !supabaseUserId || !key || !shouldSyncPref(key)) return;
+  try {
+    const { error } = await sb.from('user_prefs').upsert({
+      user_id: supabaseUserId, key,
+      value: value == null ? '' : String(value),
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id,key' });
+    if (error) logPgErr('sync.syncUserPref', error);
+  } catch (e) { logWarn('sync.syncUserPref', e?.message, { key }); }
+}
+
+/**
+ * Push every synced preference. Called from bulkUploadLocalData on
+ * sign-in so a returning user's settings are fully captured even if
+ * they predate the per-key sync hook.
+ */
+async function _pushAllUserPrefs(sb, supabaseUserId) {
+  try {
+    const allKeys = await AsyncStorage.getAllKeys();
+    const keys = allKeys.filter(shouldSyncPref);
+    if (!keys.length) return;
+    const pairs = await AsyncStorage.multiGet(keys);
+    const rows = pairs.map(([k, v]) => ({
+      user_id: supabaseUserId, key: k,
+      value: v == null ? '' : String(v),
+      updated_at: new Date().toISOString(),
+    }));
+    for (let i = 0; i < rows.length; i += 200) {
+      const { error } = await sb.from('user_prefs').upsert(
+        rows.slice(i, i + 200), { onConflict: 'user_id,key' },
+      );
+      if (error) logPgErr('sync._pushAllUserPrefs', error);
+    }
+  } catch (e) { logWarn('sync._pushAllUserPrefs', e?.message); }
 }
 
 // ─── Pull (new device) ────────────────────────────────────────────────────────

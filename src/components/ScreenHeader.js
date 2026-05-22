@@ -60,8 +60,11 @@ const styles = StyleSheet.create({
   right: {
     marginLeft: spacing.sm,
     // Optical centring: wordmark sits a hair below the bold cap line
-    // so its baseline aligns with the title baseline.
-    paddingTop: 2,
+    // so its baseline aligns with the title baseline. Bumped from 2px
+    // to 6px after user feedback — the V was still riding above the
+    // title cap height at the current weight + size, especially on
+    // taller statusbar devices where the title kerns slightly taller.
+    paddingTop: 6,
   },
   subtitle: {
     fontSize: fontSize.sm,
