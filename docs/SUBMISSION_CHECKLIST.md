@@ -11,7 +11,7 @@ This checklist reflects the **actual** build setup: GitHub Actions builds the AA
 - [x] Google Play developer account verified
 - [ ] App created in Play Console with package name `app.volyume`
 - [ ] Default language set to English (UK)
-- [ ] Contact email set: `support@volyume.app`
+- [ ] Contact email set: `allansdouglas1983@gmail.com` (swap to a support@ address once volyume.app is live)
 - [ ] Privacy policy URL hosted at `https://volyume.app/privacy`
       (source markdown lives at `public/privacy-policy.md`)
 

@@ -13,7 +13,7 @@ _Ready to paste into Google Play Console. All fields comply with Play Store poli
 | **App category** | Health & Fitness |
 | **Content rating** | Everyone (PEGI 3) |
 | **Package name** | app.volyume |
-| **Contact email** | support@volyume.app |
+| **Contact email** | allansdouglas1983@gmail.com |
 | **Privacy Policy URL** | https://volyume.app/privacy |
 
 ---

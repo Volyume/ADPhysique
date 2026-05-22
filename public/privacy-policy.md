@@ -13,8 +13,7 @@ selling of your data.
 Volyume is operated by the developer of the Volyume mobile app
 (iPhone and Android). Contact for privacy queries:
 
-- **Email**: privacy@volyume.app
-- **General support**: support@volyume.app
+- **Email**: allansdouglas1983@gmail.com
 
 This policy applies to the Volyume mobile app (`app.volyume`). Volyume
 does not offer a web version.
@@ -147,7 +146,7 @@ Under UK and EU GDPR you have the right to:
 - **Lodge a complaint** with the UK Information Commissioner's Office
   (https://ico.org.uk/) or your local EU supervisory authority
 
-To exercise any of these rights, email privacy@volyume.app or use
+To exercise any of these rights, email allansdouglas1983@gmail.com or use
 Settings → Delete account. We respond to verifiable requests within
 30 days.
 
@@ -155,7 +154,7 @@ Settings → Delete account. We respond to verifiable requests within
 
 Volyume is not directed at children under 13 and we do not knowingly
 collect data from anyone under 13. If you believe a child has
-created an account, contact privacy@volyume.app and we will delete
+created an account, contact allansdouglas1983@gmail.com and we will delete
 the account on receipt.
 
 ## 9. Changes to this policy
@@ -163,12 +162,12 @@ the account on receipt.
 If we change this policy materially we will update the "Last updated"
 date at the top and notify signed-in users via an in-app banner. Minor
 clarifications may be made without notice. The current version is
-always at https://volyume.app/privacy.
+always available in the app under Settings → Privacy policy, and will
+move to https://volyume.app/privacy once that domain is live.
 
 ## 10. Contact
 
-- **Email**: privacy@volyume.app
-- **General support**: support@volyume.app
+- **Email**: allansdouglas1983@gmail.com
 
 For complaints about how we handle your data you can also contact
 the UK Information Commissioner's Office at https://ico.org.uk/.

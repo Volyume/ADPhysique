@@ -102,7 +102,7 @@ Recommended rule set (matches what you said you want):
 
 Send these to:
 - Slack / Discord webhook to a private channel, OR
-- Email to `support@volyume.app` once the domain is live
+- Email to `allansdouglas1983@gmail.com` (or `support@volyume.app` once the domain is live)
 
 Do NOT enable "every event" rules. Those are the flood.
 
