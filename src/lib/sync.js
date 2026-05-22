@@ -40,7 +40,7 @@ import {
   insertNutritionTargetsFromCloud,
   getNutritionTargets,
 } from './database';
-import { logError, logWarn } from './errorLog';
+import { logError, logWarn, logInfo } from './errorLog';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -491,8 +491,19 @@ async function _pushCoachOutputs(sb, supabaseUserId, localUserId) {
 export async function pullFromCloud(supabaseUserId) {
   const sb = getClient();
   if (!sb || !supabaseUserId) return 0;
+  // Pull every Pro-state table independently so a user with plans
+  // but no workouts (or vice versa) still gets everything that IS
+  // in the cloud restored locally. Earlier versions early-returned
+  // on empty workouts, which meant a user whose previous install had
+  // synced plans + nutrition but no completed sessions came back to
+  // empty everything. Each per-table helper logs counts so we can
+  // verify in Debug logs exactly what landed.
+  let workoutCount = 0;
+  let setCount = 0;
+  let setFailures = 0;
+
   try {
-    const { data: cloudWorkouts } = await sb
+    const { data: cloudWorkouts, error: wErr } = await sb
       .from('workouts')
       .select('id, started_at, ended_at, duration_minutes, notes, is_completed, session_difficulty, overall_pump, soreness_24h_before, fatigue_level, routine_id, mesocycle_id')
       .eq('user_id', supabaseUserId)
@@ -500,51 +511,66 @@ export async function pullFromCloud(supabaseUserId) {
       .order('started_at', { ascending: false })
       .limit(500);
 
-    if (!cloudWorkouts?.length) return 0;
-
-    let count = 0;
-    let setFailures = 0;
-    for (const w of cloudWorkouts) {
-      try {
-        await insertWorkoutFromCloud(supabaseUserId, w);
-        const { data: sets } = await sb
-          .from('workout_sets')
-          .select('*')
-          .eq('workout_id', w.id);
-        if (sets?.length) {
-          for (const s of sets) {
-            try {
-              await insertWorkoutSetFromCloud(supabaseUserId, s);
-            } catch (setErr) {
-              // A single set failure shouldn't break the workout import.
-              // Log it so the user can spot recurring schema mismatches.
-              setFailures++;
-              logWarn('sync.pullFromCloud', 'set insert failed', {
-                workoutId: w.id, setId: s.id, error: setErr?.message,
-              });
+    if (wErr) {
+      logError('sync.pullFromCloud.workouts', wErr, { supabaseUserId });
+    } else if (cloudWorkouts?.length) {
+      for (const w of cloudWorkouts) {
+        try {
+          await insertWorkoutFromCloud(supabaseUserId, w);
+          const { data: sets } = await sb
+            .from('workout_sets')
+            .select('*')
+            .eq('workout_id', w.id);
+          if (sets?.length) {
+            for (const s of sets) {
+              try {
+                await insertWorkoutSetFromCloud(supabaseUserId, s);
+                setCount++;
+              } catch (setErr) {
+                setFailures++;
+                logWarn('sync.pullFromCloud', 'set insert failed', {
+                  workoutId: w.id, setId: s.id, error: setErr?.message,
+                });
+              }
             }
           }
+          workoutCount++;
+        } catch (e) {
+          logWarn('sync.pullFromCloud', 'workout insert failed', { workoutId: w?.id, error: e?.message });
         }
-        count++;
-      } catch (e) {
-        logWarn('sync.pullFromCloud', 'workout insert failed', { workoutId: w?.id, error: e?.message });
       }
     }
     if (setFailures > 0) {
       logWarn('sync.pullFromCloud', `${setFailures} sets failed to insert`, { supabaseUserId });
     }
 
-    // Pull the Pro-state tables. Each is independent — if the cloud schema
-    // doesn't have the table yet, the .from() select returns an error which
-    // is caught and logged without breaking the rest of the restore.
-    await _pullProgrammes(sb, supabaseUserId);
-    await _pullRoutinesAndExercises(sb, supabaseUserId);
-    await _pullMorningWeights(sb, supabaseUserId);
-    await _pullWeeklyCheckins(sb, supabaseUserId);
-    await _pullCoachOutputs(sb, supabaseUserId);
-    await _pullNutritionTargets(sb, supabaseUserId);
+    // Pro-state tables. Each runs independently regardless of whether
+    // workouts came back; one missing table doesn't break the others.
+    const programmeCount = await _pullProgrammes(sb, supabaseUserId);
+    const routineCount = await _pullRoutinesAndExercises(sb, supabaseUserId);
+    const weightCount = await _pullMorningWeights(sb, supabaseUserId);
+    const checkinCount = await _pullWeeklyCheckins(sb, supabaseUserId);
+    const coachCount = await _pullCoachOutputs(sb, supabaseUserId);
+    const nutritionFound = await _pullNutritionTargets(sb, supabaseUserId);
+    const bodyMetricCount = await _pullBodyMetrics(sb, supabaseUserId);
 
-    return count;
+    // Verbose success log so the user (and we) can see EXACTLY what
+    // came back. The previous "silent return 0" path made it
+    // impossible to tell whether the pull found the user's data or
+    // not.
+    logInfo('sync.pullFromCloud.done', `uid=${supabaseUserId}`, {
+      workouts: workoutCount,
+      sets: setCount,
+      programmes: programmeCount,
+      routines: routineCount,
+      morningWeights: weightCount,
+      checkins: checkinCount,
+      coachOutputs: coachCount,
+      nutritionTargets: nutritionFound ? 1 : 0,
+      bodyMetrics: bodyMetricCount,
+    });
+
+    return workoutCount;
   } catch (e) {
     logError('sync.pullFromCloud', e, { supabaseUserId });
     return 0;
@@ -552,70 +578,100 @@ export async function pullFromCloud(supabaseUserId) {
 }
 
 // ─── Per-table pull helpers ───────────────────────────────────────────────
+// Each helper returns the number of rows it inserted so the orchestrator
+// can emit a single verbose log line showing exactly what came back from
+// the cloud. Errors are logged but never thrown — one missing table
+// shouldn't take down the rest of the restore.
 
 async function _pullProgrammes(sb, supabaseUserId) {
   try {
     const { data, error } = await sb.from('programmes').select('*').eq('user_id', supabaseUserId);
-    if (error) { logWarn('sync._pullProgrammes', error.message); return; }
+    if (error) { logWarn('sync._pullProgrammes', error.message); return 0; }
+    let n = 0;
     for (const p of data ?? []) {
-      try { await insertProgrammeFromCloud(supabaseUserId, p); }
+      try { await insertProgrammeFromCloud(supabaseUserId, p); n++; }
       catch (e) { logWarn('sync._pullProgrammes', 'insert failed', { id: p.id, error: e?.message }); }
     }
-  } catch (e) { logWarn('sync._pullProgrammes', e?.message); }
+    return n;
+  } catch (e) { logWarn('sync._pullProgrammes', e?.message); return 0; }
 }
 
 async function _pullRoutinesAndExercises(sb, supabaseUserId) {
   try {
     const { data: routines, error: rErr } = await sb.from('routines').select('*').eq('user_id', supabaseUserId);
-    if (rErr) { logWarn('sync._pullRoutines', rErr.message); return; }
+    if (rErr) { logWarn('sync._pullRoutines', rErr.message); return 0; }
+    let n = 0;
     for (const r of routines ?? []) {
-      try { await insertRoutineFromCloud(supabaseUserId, r); }
+      try { await insertRoutineFromCloud(supabaseUserId, r); n++; }
       catch (e) { logWarn('sync._pullRoutines', 'insert failed', { id: r.id, error: e?.message }); }
     }
-    // Pull every routine_exercise for these routines.
     const routineIds = (routines ?? []).map(r => r.id);
-    if (routineIds.length === 0) return;
+    if (routineIds.length === 0) return n;
     const { data: reRows, error: reErr } = await sb
       .from('routine_exercises').select('*').in('routine_id', routineIds);
-    if (reErr) { logWarn('sync._pullRoutineExercises', reErr.message); return; }
+    if (reErr) { logWarn('sync._pullRoutineExercises', reErr.message); return n; }
     for (const re of reRows ?? []) {
       try { await insertRoutineExerciseFromCloud(re); }
       catch (e) { logWarn('sync._pullRoutineExercises', 'insert failed', { id: re.id, error: e?.message }); }
     }
-  } catch (e) { logWarn('sync._pullRoutinesAndExercises', e?.message); }
+    return n;
+  } catch (e) { logWarn('sync._pullRoutinesAndExercises', e?.message); return 0; }
 }
 
 async function _pullMorningWeights(sb, supabaseUserId) {
   try {
     const { data, error } = await sb.from('morning_weights').select('*').eq('user_id', supabaseUserId);
-    if (error) { logWarn('sync._pullMorningWeights', error.message); return; }
+    if (error) { logWarn('sync._pullMorningWeights', error.message); return 0; }
+    let n = 0;
     for (const w of data ?? []) {
-      try { await insertMorningWeightFromCloud(supabaseUserId, w); }
+      try { await insertMorningWeightFromCloud(supabaseUserId, w); n++; }
       catch (e) { logWarn('sync._pullMorningWeights', 'insert failed', { id: w.id, error: e?.message }); }
     }
-  } catch (e) { logWarn('sync._pullMorningWeights', e?.message); }
+    return n;
+  } catch (e) { logWarn('sync._pullMorningWeights', e?.message); return 0; }
 }
 
 async function _pullWeeklyCheckins(sb, supabaseUserId) {
   try {
     const { data, error } = await sb.from('weekly_checkins_v2').select('*').eq('user_id', supabaseUserId);
-    if (error) { logWarn('sync._pullWeeklyCheckins', error.message); return; }
+    if (error) { logWarn('sync._pullWeeklyCheckins', error.message); return 0; }
+    let n = 0;
     for (const c of data ?? []) {
-      try { await insertWeeklyCheckinFromCloud(supabaseUserId, c); }
+      try { await insertWeeklyCheckinFromCloud(supabaseUserId, c); n++; }
       catch (e) { logWarn('sync._pullWeeklyCheckins', 'insert failed', { id: c.id, error: e?.message }); }
     }
-  } catch (e) { logWarn('sync._pullWeeklyCheckins', e?.message); }
+    return n;
+  } catch (e) { logWarn('sync._pullWeeklyCheckins', e?.message); return 0; }
 }
 
 async function _pullCoachOutputs(sb, supabaseUserId) {
   try {
     const { data, error } = await sb.from('coach_outputs').select('*').eq('user_id', supabaseUserId);
-    if (error) { logWarn('sync._pullCoachOutputs', error.message); return; }
+    if (error) { logWarn('sync._pullCoachOutputs', error.message); return 0; }
+    let n = 0;
     for (const co of data ?? []) {
-      try { await insertCoachOutputFromCloud(supabaseUserId, co); }
+      try { await insertCoachOutputFromCloud(supabaseUserId, co); n++; }
       catch (e) { logWarn('sync._pullCoachOutputs', 'insert failed', { id: co.id, error: e?.message }); }
     }
-  } catch (e) { logWarn('sync._pullCoachOutputs', e?.message); }
+    return n;
+  } catch (e) { logWarn('sync._pullCoachOutputs', e?.message); return 0; }
+}
+
+async function _pullBodyMetrics(sb, supabaseUserId) {
+  try {
+    const { data, error } = await sb.from('body_metrics').select('*').eq('user_id', supabaseUserId);
+    if (error) { logWarn('sync._pullBodyMetrics', error.message); return 0; }
+    let n = 0;
+    for (const m of data ?? []) {
+      try {
+        // eslint-disable-next-line global-require
+        const { insertBodyMetricFromCloud } = require('./database');
+        await insertBodyMetricFromCloud(supabaseUserId, m);
+        n++;
+      } catch (e) { logWarn('sync._pullBodyMetrics', 'insert failed', { id: m.id, error: e?.message }); }
+    }
+    return n;
+  } catch (e) { logWarn('sync._pullBodyMetrics', e?.message); return 0; }
 }
 
 // Public-facing push for nutrition targets. Call this any time
@@ -658,9 +714,9 @@ async function _pullNutritionTargets(sb, supabaseUserId) {
   try {
     const { data, error } = await sb
       .from('nutrition_targets').select('*').eq('user_id', supabaseUserId).maybeSingle();
-    if (error) { logWarn('sync._pullNutritionTargets', error.message); return; }
-    if (!data) return;
-    try { await insertNutritionTargetsFromCloud(supabaseUserId, data); }
-    catch (e) { logWarn('sync._pullNutritionTargets', 'insert failed', { error: e?.message }); }
-  } catch (e) { logWarn('sync._pullNutritionTargets', e?.message); }
+    if (error) { logWarn('sync._pullNutritionTargets', error.message); return false; }
+    if (!data) return false;
+    try { await insertNutritionTargetsFromCloud(supabaseUserId, data); return true; }
+    catch (e) { logWarn('sync._pullNutritionTargets', 'insert failed', { error: e?.message }); return false; }
+  } catch (e) { logWarn('sync._pullNutritionTargets', e?.message); return false; }
 }

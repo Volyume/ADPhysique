@@ -458,8 +458,18 @@ export default function RootNavigator() {
       const client = getSupabaseClient();
       if (client) {
         const { data } = client.auth.onAuthStateChange(async (event, session) => {
+          // CRITICAL: capture the local user id BEFORE setUser
+          // replaces it with the cloud session user. Without this, the
+          // migrateLocalUserId check below ("are these different?") is
+          // always false on OAuth signin, the local rows never get
+          // re-keyed to the supabase user id, and bulkUploadLocalData
+          // ends up querying SQLite with the supabase id (which
+          // matches nothing) so the user's history never reaches the
+          // cloud. This was the cross-device data loss bug the user
+          // flagged five times.
+          const localUserIdBeforeSignIn = useAppStore.getState().user?.id ?? null;
           // eslint-disable-next-line global-require
-          try { require('../lib/errorLog').logInfo('auth.event', event, { uid: session?.user?.id ?? null }); } catch (_) {}
+          try { require('../lib/errorLog').logInfo('auth.event', event, { uid: session?.user?.id ?? null, prevLocal: localUserIdBeforeSignIn }); } catch (_) {}
           // Bind / unbind the Sentry user so errors are searchable by
           // who hit them. Safe no-op if Sentry isn't installed yet.
           try {
@@ -500,15 +510,32 @@ export default function RootNavigator() {
             // sync queue's retry pass on next foreground.
             (async () => {
               try {
-                const localUserId = useAppStore.getState().user?.id;
-                if (localUserId && localUserId !== session.user.id) {
+                // eslint-disable-next-line global-require
+                const log = require('../lib/errorLog');
+                // Use the captured pre-setUser value, NOT the
+                // post-setUser one (which is already the supabase id).
+                if (localUserIdBeforeSignIn && localUserIdBeforeSignIn !== session.user.id) {
                   // eslint-disable-next-line global-require
                   const { migrateLocalUserId } = require('../lib/database');
-                  await migrateLocalUserId(localUserId, session.user.id).catch(() => {});
+                  try {
+                    await migrateLocalUserId(localUserIdBeforeSignIn, session.user.id);
+                    log.logInfo('SignIn.migrate.ok', `localUid=${localUserIdBeforeSignIn} -> cloudUid=${session.user.id}`);
+                  } catch (e) {
+                    log.logError('SignIn.migrate.fail', e, { localUid: localUserIdBeforeSignIn, cloudUid: session.user.id });
+                  }
                 }
+                // Always re-key with the cloud id after migrate (or
+                // directly if there was no local user). Both args are
+                // now the supabase id; bulkUpload reads local SQLite
+                // by user_id and pushes to cloud.
                 // eslint-disable-next-line global-require
                 const { bulkUploadLocalData } = require('../lib/sync');
-                await bulkUploadLocalData(session.user.id, session.user.id).catch(() => {});
+                try {
+                  await bulkUploadLocalData(session.user.id, session.user.id);
+                  log.logInfo('SignIn.bulkUpload.ok', `uid=${session.user.id}`);
+                } catch (e) {
+                  log.logError('SignIn.bulkUpload.fail', e, { uid: session.user.id });
+                }
               } catch (_) {}
             })();
 

@@ -2994,6 +2994,40 @@ export async function insertMorningWeightFromCloud(userId, w) {
   );
 }
 
+// Restores a single body_metrics row from cloud into local SQLite.
+// Missing optional columns are coerced to null so the INSERT doesn't
+// trip the NOT NULL constraint on id/user_id. INSERT OR IGNORE so
+// repeated cloud syncs are idempotent.
+export async function insertBodyMetricFromCloud(userId, m) {
+  const d = await db();
+  const toMs = (v) => v == null ? null : (typeof v === 'string' ? new Date(v).getTime() : v);
+  await d.runAsync(
+    `INSERT OR IGNORE INTO body_metric_log
+      (id, user_id, logged_at, weight_kg, body_fat_percent, body_fat_source,
+       waist_cm, chest_cm, hips_cm, thigh_cm, arm_cm, shoulders_cm,
+       forearm_cm, ham_cm, calf_cm, notes, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      m.id, userId,
+      toMs(m.logged_at),
+      m.weight_kg ?? null,
+      m.body_fat_percent ?? null,
+      m.body_fat_source ?? null,
+      m.waist_cm ?? null,
+      m.chest_cm ?? null,
+      m.hips_cm ?? null,
+      m.thigh_cm ?? null,
+      m.arm_cm ?? null,
+      m.shoulders_cm ?? null,
+      m.forearm_cm ?? null,
+      m.ham_cm ?? null,
+      m.calf_cm ?? null,
+      m.notes ?? null,
+      toMs(m.created_at) ?? Date.now(),
+    ],
+  );
+}
+
 export async function insertWeeklyCheckinFromCloud(userId, c) {
   const d = await db();
   await d.runAsync(

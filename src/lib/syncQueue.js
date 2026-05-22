@@ -90,11 +90,17 @@ export async function drainSyncQueue(supabaseClient, userId) {
           await d.runAsync(`DELETE FROM pending_sync_ops WHERE id = ?`, [row.id]);
           drained++;
         } else {
-          await _scheduleRetry(d, row, 'sync function returned false');
+          try { await _scheduleRetry(d, row, 'sync function returned false'); }
+          catch (retryErr) { logWarn('syncQueue.retrySchedule', retryErr?.message ?? 'unknown', { id: row.id }); }
           failed++;
         }
       } catch (e) {
-        await _scheduleRetry(d, row, e?.message ?? 'unknown error');
+        // Belt-and-braces: a thrown _scheduleRetry was the only way an
+        // error could escape this catch and tear down the entire drain
+        // for every other queued op. Wrap it so a single bad row can't
+        // strand the rest.
+        try { await _scheduleRetry(d, row, e?.message ?? 'unknown error'); }
+        catch (retryErr) { logWarn('syncQueue.retrySchedule', retryErr?.message ?? 'unknown', { id: row.id, originalError: e?.message }); }
         failed++;
       }
     }
