@@ -1272,6 +1272,80 @@ export async function softDeleteRoutine(id) {
   );
 }
 
+/**
+ * Find routines where every routine_exercise row has an exercise_id
+ * that doesn't resolve against the local exercises table. These are
+ * the "orphaned" routines left over from a cloud restore that
+ * pre-dates the denormalised exercise_name + deterministic canonical
+ * IDs. They can't be opened in ActiveWorkout meaningfully — the
+ * INNER JOIN returns zero rows. The user's only path forward is to
+ * either re-link each exercise manually OR delete the routine.
+ *
+ * Returns an array of { id, name, exerciseCount, programmeId } so the
+ * cleanup UI can show the user what's about to be removed before they
+ * confirm. exerciseCount is the TOTAL count in routine_exercises; all
+ * of those are unresolved (otherwise the routine isn't fully
+ * orphaned and shouldn't appear in the cleanup list).
+ *
+ * A routine with zero routine_exercises is NOT orphaned — that's just
+ * an empty draft the user can still add exercises to.
+ */
+export async function getOrphanedRoutines(userId) {
+  const d = await db();
+  // Pull every routine with its exercise count + count of unresolved
+  // routine_exercises (those whose FK target doesn't exist in
+  // exercises). A routine is orphaned when total > 0 AND all of
+  // them are unresolved.
+  const rows = await d.getAllAsync(
+    `SELECT r.id, r.name, r.programme_id,
+            COUNT(re.id) AS total_count,
+            SUM(CASE WHEN ex.id IS NULL THEN 1 ELSE 0 END) AS unresolved_count
+     FROM routines r
+     LEFT JOIN routine_exercises re ON re.routine_id = r.id
+     LEFT JOIN exercises ex ON ex.id = re.exercise_id
+     WHERE r.user_id = ? AND (r.is_active = 1 OR r.is_active IS NULL)
+     GROUP BY r.id, r.name, r.programme_id
+     HAVING total_count > 0 AND unresolved_count = total_count`,
+    [userId],
+  );
+  return rows.map(r => ({
+    id: r.id,
+    name: r.name,
+    programmeId: r.programme_id,
+    exerciseCount: r.total_count,
+  }));
+}
+
+/**
+ * Soft-delete every orphaned routine in a single transaction. Returns
+ * the number deleted so the UI can confirm "Removed N routines".
+ *
+ * The deletion is soft (is_active = 0) so the sync layer ships the
+ * deletion to the cloud rather than just dropping the row locally.
+ * The cloud row's updated_at advances; other devices pick up the
+ * deletion on next pull.
+ */
+export async function deleteOrphanedRoutines(userId) {
+  const orphans = await getOrphanedRoutines(userId);
+  if (!orphans.length) return 0;
+  const d = await db();
+  await d.execAsync('BEGIN');
+  try {
+    const now = Date.now();
+    for (const r of orphans) {
+      await d.runAsync(
+        'UPDATE routines SET is_active = 0, deleted_at = ?, updated_at = ? WHERE id = ?',
+        [now, now, r.id],
+      );
+    }
+    await d.execAsync('COMMIT');
+    return orphans.length;
+  } catch (e) {
+    try { await d.execAsync('ROLLBACK'); } catch (_) {}
+    throw e;
+  }
+}
+
 // ─── Programmes ───────────────────────────────────────────────────────────────────────────────────────
 
 export async function createProgramme(userId, name, description = null, isLibrary = 0, tags = null, splitType = null, difficulty = null) {

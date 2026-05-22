@@ -13,7 +13,7 @@ import { useShallow } from 'zustand/react/shallow';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-import { clearWorkoutHistory, buildWorkoutCSV, wipeAllUserData } from '../lib/database';
+import { clearWorkoutHistory, buildWorkoutCSV, wipeAllUserData, getOrphanedRoutines, deleteOrphanedRoutines } from '../lib/database';
 import { logError } from '../lib/errorLog';
 import { exportBackup, importBackup } from '../lib/dataBackup';
 import { useFeedback } from '../components/FeedbackSheet';
@@ -440,6 +440,45 @@ export default function SettingsScreen({ navigation }) {
     );
   }
 
+  // Surfaces the cloud-restored routines that have all-broken
+  // exercise references — the "I have 114 routines but none of them
+  // open with exercises" state. Counts them, asks for confirmation,
+  // soft-deletes in bulk. Soft delete so the change syncs to the
+  // cloud and propagates to the user's other devices.
+  async function handleCleanOrphanedRoutines() {
+    if (!user?.id) return;
+    try {
+      const orphans = await getOrphanedRoutines(user.id);
+      if (!orphans.length) {
+        toast.show('No orphaned routines to clean up.', { variant: 'success' });
+        return;
+      }
+      Alert.alert(
+        `Clean up ${orphans.length} orphaned routine${orphans.length === 1 ? '' : 's'}?`,
+        `These routines were restored from cloud but their exercise references couldn't be resolved on this device. Deleting them removes the broken entries; intact routines are not touched.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: `Delete ${orphans.length}`,
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                const n = await deleteOrphanedRoutines(user.id);
+                toast.show(`Removed ${n} orphaned routine${n === 1 ? '' : 's'}`, { variant: 'success' });
+              } catch (e) {
+                logError('SettingsScreen.cleanOrphans', e, { userId: user.id });
+                Alert.alert("Couldn't clean up", e?.message ?? 'Please try again.');
+              }
+            },
+          },
+        ],
+      );
+    } catch (e) {
+      logError('SettingsScreen.cleanOrphans.scan', e, { userId: user.id });
+      Alert.alert("Couldn't scan routines", e?.message ?? 'Please try again.');
+    }
+  }
+
   async function handleClearHistory() {
     Alert.alert(
       'Clear workout history?',
@@ -694,6 +733,12 @@ export default function SettingsScreen({ navigation }) {
             label="Import from another app"
             sub="Bring sessions over from Hevy or Strong"
             onPress={() => navigation.navigate('Import')}
+          />
+          <SettingRow
+            icon="construct-outline"
+            label="Clean up restored routines"
+            sub="Remove cloud-restored routines whose exercises couldn't be linked"
+            onPress={handleCleanOrphanedRoutines}
           />
           <SettingRow
             icon="save-outline"
