@@ -355,3 +355,45 @@ export async function restoreNotifications(prefs, userId = null) {
     );
   }
 }
+
+// ─── Year of Lifts unlock ──────────────────────────────────────────────────
+// Year of Lifts is gated until the user has 365 days of training (see
+// AnalyticsScreen). The first time the gate opens, we fire a one-shot
+// local notification so the user doesn't have to discover the unlock
+// by checking the tile. Idempotent via AsyncStorage flag — only fires
+// once per account ever.
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const YEAR_OF_LIFTS_NOTIFIED_KEY = '@volyume_year_of_lifts_notified';
+
+/**
+ * Check whether the user has just crossed the 365-day mark and, if so,
+ * present a celebratory local notification + flip the seen flag so the
+ * notification never fires twice.
+ *
+ * Called on app foreground from App.js's AppState 'active' handler.
+ * Caller passes the earliest completed workout's started_at (ms epoch).
+ */
+export async function checkYearOfLiftsUnlock(earliestWorkoutAt) {
+  if (Platform.OS === 'web') return;
+  if (!earliestWorkoutAt) return;
+  const YEAR_MS = 365 * 86400000;
+  if (Date.now() - earliestWorkoutAt < YEAR_MS) return;
+  try {
+    const already = await AsyncStorage.getItem(YEAR_OF_LIFTS_NOTIFIED_KEY);
+    if (already === 'true') return;
+    await Notifications.scheduleNotificationAsync({
+      identifier: 'volyume_year_of_lifts_unlock',
+      content: {
+        title: 'A year of lifts',
+        body: 'Your wrap-up is ready. Swipe through your training year on the Progress tab.',
+        data: { type: 'year_of_lifts_unlock' },
+        sound: true,
+      },
+      trigger: null, // present immediately
+    });
+    await AsyncStorage.setItem(YEAR_OF_LIFTS_NOTIFIED_KEY, 'true');
+  } catch (e) {
+    console.warn('[notifications] year of lifts unlock failed:', e?.message);
+  }
+}

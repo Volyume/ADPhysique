@@ -335,10 +335,16 @@ export default function RootNavigator() {
   useEffect(() => {
     function handleNotificationResponse(response) {
       const type = response?.notification?.request?.content?.data?.type;
-      if (type === 'weekly_checkin') {
+      const routeFor = (t) => {
+        if (t === 'weekly_checkin') return ['ProfileTab', 'WeeklyCheckIn'];
+        if (t === 'year_of_lifts_unlock') return ['ProgressTab', 'YearOfLifts'];
+        return null;
+      };
+      const target = routeFor(type);
+      if (target) {
         const tryNavigate = (attempts = 0) => {
           if (navigationRef.isReady()) {
-            navigationRef.navigate('ProfileTab', { screen: 'WeeklyCheckIn' });
+            navigationRef.navigate(target[0], { screen: target[1] });
           } else if (attempts < 20) {
             setTimeout(() => tryNavigate(attempts + 1), 150);
           }

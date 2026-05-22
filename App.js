@@ -363,6 +363,28 @@ export default function App() {
           const { importNewWeights } = require('./src/lib/health');
           importNewWeights(localUserId).catch(() => {});
         }
+
+        // Year of Lifts unlock — fire the one-shot "your wrap-up is
+        // ready" local notification the first time the user crosses
+        // the 365-day training mark. Cheap query (single SELECT for
+        // the earliest completed workout); the helper itself is
+        // idempotent via an AsyncStorage flag so it never fires
+        // twice.
+        if (localUserId) {
+          try {
+            // eslint-disable-next-line global-require
+            const { db } = require('./src/lib/database');
+            // eslint-disable-next-line global-require
+            const { checkYearOfLiftsUnlock } = require('./src/lib/notifications');
+            db().then(async (d) => {
+              const row = await d.getFirstAsync(
+                'SELECT MIN(started_at) AS first_at FROM workouts WHERE user_id = ? AND is_completed = 1',
+                [localUserId],
+              ).catch(() => null);
+              await checkYearOfLiftsUnlock(row?.first_at ?? null);
+            }).catch(() => {});
+          } catch (_) { /* tolerate — feature is a "nice to have" */ }
+        }
       } catch (_) { /* offline / no session — try again next foreground */ }
     }
     const sub = AppState.addEventListener('change', state => {

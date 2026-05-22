@@ -8,6 +8,25 @@ const FIRST_RUN_KEY_PFX = '@volyume_first_run_complete_'; // per-uid: + supabase
 const PROFILE_KEY_PFX  = '@volyume_user_profile_';
 const TIER_KEY         = '@volyume_tier';
 
+// Fire-and-forget push of a single AsyncStorage pref to the cloud.
+// Called from store setters whenever a synced preference changes so
+// the cloud copy stays current without waiting for the next sign-in
+// catch-up. Lazy-requires sync to avoid the circular import — sync.js
+// imports from this file. No-op when there's no cloud session, when
+// the pref's key is on the device-only exclude list, or when the
+// sync module errors out (offline, transient network failure — the
+// queue will catch up on the next foreground).
+function pushPrefSoon(supabaseUid, key, value) {
+  if (!supabaseUid || !key) return;
+  setTimeout(() => {
+    try {
+      // eslint-disable-next-line global-require
+      const { syncUserPref } = require('../lib/sync');
+      syncUserPref(supabaseUid, key, value).catch(() => {});
+    } catch (_) { /* sync module not loadable yet (e.g. very early boot) */ }
+  }, 0);
+}
+
 function generateUUID() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
     const r = (Math.random() * 16) | 0;
@@ -618,8 +637,11 @@ const useAppStore = create((set, get) => ({
     const { user, userProfile } = get();
     if (user?.id) {
       const updated = { ...(userProfile || {}), units };
-      try { await AsyncStorage.setItem(PROFILE_KEY_PFX + user.id, JSON.stringify(updated)); } catch (_) {}
+      const key = PROFILE_KEY_PFX + user.id;
+      const value = JSON.stringify(updated);
+      try { await AsyncStorage.setItem(key, value); } catch (_) {}
       set({ userProfile: updated });
+      pushPrefSoon(user.id, key, value);
     }
   },
 
@@ -630,8 +652,11 @@ const useAppStore = create((set, get) => ({
     const { user, userProfile } = get();
     if (user?.id) {
       const updated = { ...(userProfile || {}), bodyWeightUnits: bwu };
-      try { await AsyncStorage.setItem(PROFILE_KEY_PFX + user.id, JSON.stringify(updated)); } catch (_) {}
+      const key = PROFILE_KEY_PFX + user.id;
+      const value = JSON.stringify(updated);
+      try { await AsyncStorage.setItem(key, value); } catch (_) {}
       set({ userProfile: updated });
+      pushPrefSoon(user.id, key, value);
     }
   },
 
@@ -642,8 +667,11 @@ const useAppStore = create((set, get) => ({
     const { user, userProfile } = get();
     if (user?.id) {
       const updated = { ...(userProfile || {}), barWeight: w };
-      try { await AsyncStorage.setItem(PROFILE_KEY_PFX + user.id, JSON.stringify(updated)); } catch (_) {}
+      const key = PROFILE_KEY_PFX + user.id;
+      const value = JSON.stringify(updated);
+      try { await AsyncStorage.setItem(key, value); } catch (_) {}
       set({ userProfile: updated });
+      pushPrefSoon(user.id, key, value);
     }
   },
 
@@ -671,7 +699,10 @@ const useAppStore = create((set, get) => ({
   setAccessibilityPref: async (key, value) => {
     const next = { ...get().accessibility, [key]: value };
     set({ accessibility: next });
-    try { await AsyncStorage.setItem(A11Y_PREFS_KEY, JSON.stringify(next)); } catch (_) {}
+    const serialised = JSON.stringify(next);
+    try { await AsyncStorage.setItem(A11Y_PREFS_KEY, serialised); } catch (_) {}
+    const { user } = get();
+    if (user?.id) pushPrefSoon(user.id, A11Y_PREFS_KEY, serialised);
   },
 }));
 
