@@ -10,6 +10,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';
 import PressableCard from '../components/PressableCard';
+import PeekMenu from '../components/PeekMenu';
+import { EmptyPlanIllustration } from '../components/Illustrations';
 import {
   getActivePlan, getAllPlansForUser,
   getWorkoutTemplates, getPlanWorkoutCounts, getAllRoutineExerciseCounts,
@@ -99,6 +101,7 @@ export default function PlansScreen({ navigation }) {
   const [blockSnoozed, setBlockSnoozed] = useState(false);
 
   const scrollRef = useRef(null);
+  const peekRef = useRef(null);
   useScrollToTop(scrollRef);
 
   useEffect(() => {
@@ -236,16 +239,25 @@ export default function PlansScreen({ navigation }) {
 
   async function handlePlanOptions(plan) {
     const isActiveForUser = activePlan?.id === plan.id;
-    // Pro users keep an always-active plan as part of Precision Coaching —
+    // Pro users keep an always-active plan as part of Precision Coaching:
     // no duplicating, no archiving the active one. They manage their plan
     // through the goal-change wizard in Athlete Hub.
-    const buttons = [
-      { text: 'View Plan', onPress: () => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false }) },
-      { text: 'Set Active', onPress: () => handleSetActive(plan) },
+    const items = [
+      {
+        icon: 'eye-outline',
+        label: 'View plan',
+        onPress: () => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false }),
+      },
+      {
+        icon: 'play-circle-outline',
+        label: 'Set active',
+        onPress: () => handleSetActive(plan),
+      },
     ];
     if (tier !== 'pro') {
-      buttons.push({
-        text: 'Duplicate',
+      items.push({
+        icon: 'copy-outline',
+        label: 'Duplicate',
         onPress: async () => {
           const copy = await duplicatePlan(plan.id, user.id);
           await loadData();
@@ -253,9 +265,10 @@ export default function PlansScreen({ navigation }) {
         },
       });
       if (!isActiveForUser) {
-        buttons.push({
-          text: 'Archive',
-          style: 'destructive',
+        items.push({
+          icon: 'archive-outline',
+          label: 'Archive plan',
+          destructive: true,
           onPress: () => Alert.alert(
             'Archive Plan?',
             'The plan will be hidden. Session history remains intact.',
@@ -267,8 +280,7 @@ export default function PlansScreen({ navigation }) {
         });
       }
     }
-    buttons.push({ text: 'Cancel', style: 'cancel' });
-    Alert.alert(plan.name, undefined, buttons);
+    peekRef.current?.open({ title: plan.name, items });
   }
 
   async function handleTemplateOptions(routine) {
@@ -479,9 +491,11 @@ export default function PlansScreen({ navigation }) {
             <Text style={styles.sectionTitle}>My plans</Text>
             {myPlans.map(plan => (
               <View key={plan.id} style={styles.planCard}>
-                <TouchableOpacity
+                <PressableCard
                   style={styles.planCardMain}
                   onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
+                  onLongPress={() => handlePlanOptions(plan)}
+                  accessibilityLabel={plan.name}
                 >
                   <Text style={styles.planCardName} numberOfLines={2}>{plan.name}</Text>
                   {planWorkoutCounts[plan.id] ? (
@@ -489,7 +503,7 @@ export default function PlansScreen({ navigation }) {
                       {planWorkoutCounts[plan.id]} workout{planWorkoutCounts[plan.id] !== 1 ? 's' : ''}
                     </Text>
                   ) : null}
-                </TouchableOpacity>
+                </PressableCard>
                 <View style={styles.planCardActions}>
                   <TouchableOpacity style={styles.setActiveBtn} onPress={() => handleSetActive(plan)}>
                     <Text style={styles.setActiveBtnText}>Set Active</Text>
@@ -594,6 +608,7 @@ export default function PlansScreen({ navigation }) {
           })}
         </View>
       </ScrollView>
+      <PeekMenu ref={peekRef} />
     </SafeAreaView>
   );
 }

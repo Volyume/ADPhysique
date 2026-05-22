@@ -935,11 +935,11 @@ function RecoveryGauge({ label, value, invertGood = false }) {
 
 function QuickStat({ value, label, icon, color }) {
   return (
-    <View style={styles.quickStat}>
+    <GradientCard tint={color} intensity={0.14} style={styles.quickStat}>
       <Ionicons name={icon} size={18} color={color} />
       <Text style={[styles.quickStatValue, { color }]}>{value}</Text>
       <Text style={styles.quickStatLabel}>{label}</Text>
-    </View>
+    </GradientCard>
   );
 }
 
@@ -1047,9 +1047,9 @@ const styles = StyleSheet.create({
   // Quick stats
   quickStatsRow: { flexDirection: 'row', gap: spacing.md },
   quickStat: {
-    flex: 1, backgroundColor: colors.surface, borderRadius: radius.lg,
-    padding: spacing.lg, alignItems: 'center', gap: spacing.xs,
-    borderWidth: 1, borderColor: colors.border,
+    flex: 1,
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   quickStatValue: { fontSize: fontSize.xl, fontWeight: fontWeight.black },
   quickStatLabel: { fontSize: fontSize.xs, color: colors.textSecondary, textAlign: 'center' },

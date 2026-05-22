@@ -10,6 +10,7 @@ import { LineChart } from 'react-native-gifted-charts';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logBodyMetric, getBodyMetricLog } from '../lib/database';
+import { EmptyBodyIllustration } from '../components/Illustrations';
 import { syncBodyMetric } from '../lib/sync';
 import { computeEWMA, computeWeeklyWeightChange } from '../lib/nutritionEngine';
 import useAppStore from '../store/useAppStore';
@@ -627,7 +628,7 @@ export default function BodyMetricsScreen({ navigation }) {
           </View>
         ) : (
           <View style={styles.emptyCard}>
-            <Ionicons name="body-outline" size={40} color={colors.surface3} />
+            <EmptyBodyIllustration size={140} />
             <Text style={styles.emptyTitle}>No entries logged yet</Text>
             {onboardingWeightKg ? (
               <>
