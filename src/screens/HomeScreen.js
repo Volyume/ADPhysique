@@ -1011,6 +1011,28 @@ export default function HomeScreen({ navigation }) {
                 {exerciseCounts[displayWorkout.routine.id]} exercises
               </Text>
             ) : null}
+            {/* Mesocycle context chip: tells the user where they are in
+                the training block and what effort to bring today. Keeps
+                Volyume's coaching identity visible at the start of every
+                session, the way an RP-style plan would. Tooltip-free
+                because the row is glanceable on its own. */}
+            {currentMesoWeek && (
+              <View style={styles.mesoBriefChip}>
+                <Ionicons
+                  name={currentMesoWeek.isDeload ? 'bed-outline' : 'trending-up-outline'}
+                  size={12}
+                  color={currentMesoWeek.isDeload ? colors.success : colors.primary}
+                />
+                <Text style={styles.mesoBriefText}>
+                  {currentMesoWeek.isDeload
+                    ? `Deload week · pull effort back`
+                    : `Week ${currentMesoWeek.weekIndex} of ${currentMesoWeek.plannedWeeks ?? '-'}` +
+                      (currentMesoWeek.rirTarget != null
+                        ? ` · RIR ${currentMesoWeek.rirTarget}`
+                        : '')}
+                </Text>
+              </View>
+            )}
             {coachBrief && (
               <CoachBriefCard brief={coachBrief} onDismiss={dismissBrief} />
             )}
@@ -1783,6 +1805,16 @@ const styles = StyleSheet.create({
     lineHeight: 30,
   },
   workoutMeta: { fontSize: fontSize.sm, color: colors.textSecondary },
+  mesoBriefChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    alignSelf: 'flex-start',
+    marginTop: spacing.xs,
+    paddingHorizontal: spacing.sm, paddingVertical: 4,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface2,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  mesoBriefText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
   primaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
