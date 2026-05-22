@@ -688,6 +688,12 @@ export default function SettingsScreen({ navigation }) {
         <SectionHeader title="Data & privacy" />
         <View style={styles.section}>
           <SettingRow
+            icon="swap-horizontal-outline"
+            label="Import from another app"
+            sub="Bring sessions over from Hevy or Strong"
+            onPress={() => navigation.navigate('Import')}
+          />
+          <SettingRow
             icon="save-outline"
             label="Back up everything (JSON)"
             onPress={handleFullBackup}
