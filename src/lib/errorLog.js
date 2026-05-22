@@ -37,15 +37,26 @@ let loadingPromise = null;
 // so anything sensitive that reaches it is effectively shared. Same list
 // as src/lib/sentry.js#PII_KEYS but applied caller-side here too.
 const PII_KEYS = new Set([
-  'email', 'password', 'token', 'access_token', 'refresh_token', 'session',
+  // Auth secrets — every shape we've seen plus camelCase variants.
+  'email', 'emailAddress', 'email_address',
+  'password', 'pwd', 'passcode',
+  'token', 'authToken', 'auth_token',
+  'access_token', 'accessToken',
+  'refresh_token', 'refreshToken',
+  'session', 'sessionToken', 'session_token',
+  'idToken', 'id_token', 'jwt', 'apiKey', 'api_key',
+  // Body data
   'weight', 'weightKg', 'weight_kg', 'bodyWeight', 'bodyweight',
   'bodyFatPercent', 'body_fat_percent', 'bodyFat',
   'heightCm', 'height_cm', 'height',
-  'dateOfBirth', 'date_of_birth', 'dob', 'birthDate',
+  'dateOfBirth', 'date_of_birth', 'dob', 'birthDate', 'birthdate',
   'waistCm', 'chestCm', 'hipsCm', 'thighCm', 'armCm',
   'shouldersCm', 'forearmCm', 'hamCm', 'calfCm',
+  'measurements',
+  // Free text (workout notes, feedback messages)
   'notes', 'note', 'message',
-  'firstName', 'first_name', 'lastName', 'last_name',
+  // Names
+  'firstName', 'first_name', 'lastName', 'last_name', 'fullName', 'full_name',
 ]);
 
 function redactPII(value, depth = 0) {

@@ -189,6 +189,38 @@ describe('Error logging pipeline', () => {
     expect(exported).toContain('[redacted]');
   });
 
+  test('PII redaction also applies to the context forwarded to Sentry', () => {
+    // Regression for Codex P1 #2: the original code redacted before the
+    // local ring buffer but forwarded the raw context to Sentry. Verify
+    // captureError now receives a redacted context.
+    const sentry = require('../lib/sentry');
+    const captured = [];
+    const origCaptureError = sentry.captureError;
+    sentry.captureError = (err, ctx) => { captured.push({ err, ctx }); };
+    try {
+      const { logError, clearErrors } = require('../lib/errorLog');
+      clearErrors();
+      logError('sentry.pii', new Error('boom'), {
+        email: 'leak@example.com',
+        accessToken: 'eyJ-secret',
+        weightKg: 88,
+        session: { access_token: 'eyJ-leak' },
+      });
+      expect(captured.length).toBeGreaterThanOrEqual(1);
+      const last = captured[captured.length - 1];
+      const ctx = last.ctx?.extra?.context;
+      // The forwarded context must be the REDACTED version.
+      expect(ctx).toBeDefined();
+      const serialized = JSON.stringify(ctx);
+      expect(serialized).not.toContain('leak@example.com');
+      expect(serialized).not.toContain('eyJ-secret');
+      expect(serialized).not.toContain('eyJ-leak');
+      expect(serialized).not.toContain('88');
+    } finally {
+      sentry.captureError = origCaptureError;
+    }
+  });
+
   test('PII redaction handles nested objects', async () => {
     const { logError, exportErrorsAsText, clearErrors } = require('../lib/errorLog');
     await clearErrors();
