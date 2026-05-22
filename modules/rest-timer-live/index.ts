@@ -8,9 +8,18 @@ type StartOptions = {
   deepLink?: string;
 };
 
+type WorkoutForegroundOptions = {
+  title: string;
+  body: string;
+  channelId?: string;
+  deepLink?: string;
+};
+
 type NativeModuleShape = {
   start(options: StartOptions): Promise<boolean>;
   cancel(): Promise<void>;
+  startWorkoutForeground?(options: WorkoutForegroundOptions): Promise<boolean>;
+  stopWorkoutForeground?(): Promise<void>;
 };
 
 let nativeModule: NativeModuleShape | null = null;
@@ -58,4 +67,45 @@ export async function cancel(): Promise<void> {
   } catch (_e) {
     // swallow — cancellation is best-effort
   }
+}
+
+/**
+ * True when the foreground-service variant is available. Two reasons it
+ * can be false even when isAvailable() is true:
+ *   1. Older native module shipped without the methods (returns
+ *      undefined from requireNativeModule), so we don't try to call
+ *      them.
+ *   2. iOS / Expo Go.
+ */
+export function isWorkoutForegroundAvailable(): boolean {
+  return isAvailable() && typeof nativeModule?.startWorkoutForeground === 'function';
+}
+
+/**
+ * Start (or update) the workout foreground service. Unlike the
+ * standard NotificationManager sticky notification, this one is owned
+ * by a service and survives a force-close.
+ *
+ * Calling repeatedly with new title / body updates the existing
+ * notification body in place — no flicker, no re-vibrate, no
+ * permission re-prompt.
+ */
+export async function startWorkoutForeground(options: WorkoutForegroundOptions): Promise<boolean> {
+  if (!isWorkoutForegroundAvailable()) return false;
+  try {
+    return await nativeModule!.startWorkoutForeground!(options);
+  } catch (_e) {
+    return false;
+  }
+}
+
+/**
+ * Stop the workout foreground service and tear down its notification.
+ * Best-effort; no-op when the module / service isn't running.
+ */
+export async function stopWorkoutForeground(): Promise<void> {
+  if (!isWorkoutForegroundAvailable()) return;
+  try {
+    await nativeModule!.stopWorkoutForeground!();
+  } catch (_e) { /* swallow */ }
 }

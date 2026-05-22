@@ -101,6 +101,59 @@ class RestTimerLiveModule : Module() {
         promise.resolve(null)
       }
     }
+
+    // Foreground-service-backed "active workout" notification. Uses
+    // WorkoutForegroundService so the notification survives an app
+    // force-close — sticky NotificationManager notifications don't.
+    AsyncFunction("startWorkoutForeground") { options: Map<String, Any?>, promise: Promise ->
+      try {
+        val context = appContext.reactContext
+        if (context == null) {
+          promise.resolve(false)
+          return@AsyncFunction
+        }
+        val title = (options["title"] as? String) ?: "Volyume · Workout in progress"
+        val body = (options["body"] as? String) ?: ""
+        val channelId = (options["channelId"] as? String) ?: "volyume_active_workout"
+        val deepLink = options["deepLink"] as? String
+
+        val intent = Intent(context, WorkoutForegroundService::class.java).apply {
+          action = WorkoutForegroundService.ACTION_START
+          putExtra(WorkoutForegroundService.EXTRA_TITLE, title)
+          putExtra(WorkoutForegroundService.EXTRA_BODY, body)
+          putExtra(WorkoutForegroundService.EXTRA_CHANNEL_ID, channelId)
+          if (deepLink != null) putExtra(WorkoutForegroundService.EXTRA_DEEP_LINK, deepLink)
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+          context.startForegroundService(intent)
+        } else {
+          context.startService(intent)
+        }
+        promise.resolve(true)
+      } catch (e: Throwable) {
+        promise.reject("ERR_WORKOUT_FOREGROUND_START", e.message ?: "Failed to start workout foreground service", e)
+      }
+    }
+
+    AsyncFunction("stopWorkoutForeground") { promise: Promise ->
+      try {
+        val context = appContext.reactContext
+        if (context == null) {
+          promise.resolve(null)
+          return@AsyncFunction
+        }
+        val intent = Intent(context, WorkoutForegroundService::class.java).apply {
+          action = WorkoutForegroundService.ACTION_STOP
+        }
+        // ACTION_STOP makes the service tear itself down via stopSelf;
+        // startService is the cleanest way to deliver the intent.
+        context.startService(intent)
+        promise.resolve(null)
+      } catch (_: Throwable) {
+        promise.resolve(null)
+      }
+    }
   }
 
   /**

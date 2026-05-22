@@ -1,1 +1,18 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required for any startForeground() call from API 28+. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!--
+        Android 14 (API 34) introduced typed foreground-service permissions.
+        A workout tracker is the canonical "health" use case (alongside
+        Strava, Whoop, Apple Fitness). Declaring this lets the service
+        run with foregroundServiceType="health" without throwing.
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+
+    <application>
+        <service
+            android:name=".WorkoutForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="health" />
+    </application>
+</manifest>

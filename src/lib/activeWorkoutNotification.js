@@ -24,6 +24,25 @@ import * as Notifications from 'expo-notifications';
 const NOTIF_ID = 'volyume_active_workout';
 const CHANNEL_ID = 'volyume_active_workout';
 
+// Feature flag for the foreground-service-backed notification path.
+// When false, we use the standard expo-notifications sticky path
+// (works while the app is alive, dies on force-close). When true, we
+// drive the native foreground service in rest-timer-live which
+// survives force-close. Default OFF so the next build is identical
+// to the previous one and we can verify everything else is still
+// green before flipping it on with a one-line change.
+const USE_FOREGROUND_SERVICE = false;
+
+// Lazy require of the native module. The require itself is cheap on
+// Android (the module is already loaded by the runtime); on iOS or in
+// Expo Go it throws and we silently fall back to the JS-only path.
+function getRestTimerLive() {
+  try {
+    // eslint-disable-next-line global-require
+    return require('rest-timer-live');
+  } catch (_) { return null; }
+}
+
 let channelEnsured = false;
 
 async function ensureChannel() {
@@ -58,40 +77,61 @@ async function ensureChannel() {
  *
  * Safe to call repeatedly; each call replaces the previous body.
  */
-export async function showActiveWorkoutNotification({
-  workoutName,
-  elapsedSeconds = 0,
-  currentSetIndex,
-  totalSetsForExercise,
-  exerciseName,
-  isResting = false,
-  restRemainingSec = 0,
-} = {}) {
+function buildTitleAndBody({
+  workoutName, elapsedSeconds = 0, currentSetIndex,
+  totalSetsForExercise, exerciseName, isResting = false, restRemainingSec = 0,
+}) {
+  const title = workoutName
+    ? `Volyume · ${workoutName}`
+    : 'Volyume · Workout in progress';
+  let body;
+  if (isResting && restRemainingSec > 0) {
+    const mins = Math.floor(restRemainingSec / 60);
+    const secs = restRemainingSec % 60;
+    const t = mins > 0 ? `${mins}:${String(secs).padStart(2, '0')}` : `${secs}s`;
+    body = `Resting · ${t}${exerciseName ? `  ·  ${exerciseName}` : ''}`;
+  } else if (currentSetIndex != null) {
+    const elapsed = formatElapsed(elapsedSeconds);
+    const setLabel = totalSetsForExercise
+      ? `Set ${currentSetIndex} of ${totalSetsForExercise}`
+      : `Set ${currentSetIndex}`;
+    body = exerciseName
+      ? `${setLabel}  ·  ${exerciseName}  ·  ${elapsed}`
+      : `${setLabel}  ·  ${elapsed}`;
+  } else {
+    body = formatElapsed(elapsedSeconds);
+  }
+  return { title, body };
+}
+
+export async function showActiveWorkoutNotification(args = {}) {
   if (Platform.OS !== 'android') return;
+  const { title, body } = buildTitleAndBody(args);
+
+  // Path A: native foreground service. Survives force-close and
+  // doesn't need the user to grant POST_NOTIFICATIONS in advance
+  // (Android shows the notif at service start). Off by default until
+  // we verify the next build is healthy.
+  if (USE_FOREGROUND_SERVICE) {
+    const rtl = getRestTimerLive();
+    if (rtl?.isWorkoutForegroundAvailable?.()) {
+      try {
+        const ok = await rtl.startWorkoutForeground({
+          title,
+          body,
+          channelId: CHANNEL_ID,
+          deepLink: 'volyume://active-workout',
+        });
+        if (ok) return; // success — skip the JS fallback
+      } catch (_) { /* fall through to JS fallback */ }
+    }
+  }
+
+  // Path B: standard expo-notifications sticky. Works while the app
+  // is alive; cleared on force-close. This is the prior behaviour and
+  // the safe default.
   try {
     await ensureChannel();
-
-    const title = workoutName
-      ? `Volyume · ${workoutName}`
-      : 'Volyume · Workout in progress';
-
-    let body;
-    if (isResting && restRemainingSec > 0) {
-      const mins = Math.floor(restRemainingSec / 60);
-      const secs = restRemainingSec % 60;
-      const t = mins > 0 ? `${mins}:${String(secs).padStart(2, '0')}` : `${secs}s`;
-      body = `Resting · ${t}${exerciseName ? `  ·  ${exerciseName}` : ''}`;
-    } else if (currentSetIndex != null) {
-      const elapsed = formatElapsed(elapsedSeconds);
-      const setLabel = totalSetsForExercise
-        ? `Set ${currentSetIndex} of ${totalSetsForExercise}`
-        : `Set ${currentSetIndex}`;
-      body = exerciseName
-        ? `${setLabel}  ·  ${exerciseName}  ·  ${elapsed}`
-        : `${setLabel}  ·  ${elapsed}`;
-    } else {
-      body = formatElapsed(elapsedSeconds);
-    }
 
     await Notifications.scheduleNotificationAsync({
       identifier: NOTIF_ID,
@@ -111,10 +151,17 @@ export async function showActiveWorkoutNotification({
 
 /**
  * Dismisses the persistent notification. Call this when the workout
- * ends or is cancelled.
+ * ends or is cancelled. Tears down both the foreground service
+ * (if running) and the standard sticky notification, so it doesn't
+ * matter which path was used to start things.
  */
 export async function dismissActiveWorkoutNotification() {
   if (Platform.OS !== 'android') return;
+  // Stop the foreground service if it's running. Safe even when the
+  // feature flag is off — stopWorkoutForeground is a no-op when the
+  // service isn't active or the module is unavailable.
+  const rtl = getRestTimerLive();
+  try { await rtl?.stopWorkoutForeground?.(); } catch (_) {}
   try {
     await Notifications.dismissNotificationAsync(NOTIF_ID);
     await Notifications.cancelScheduledNotificationAsync(NOTIF_ID).catch(() => {});
