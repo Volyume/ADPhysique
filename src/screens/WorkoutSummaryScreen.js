@@ -589,8 +589,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
 
         {/* 4-week comparison — only when we have at least one prior session
             of this routine. Lives right under the stat row so the user
-            reads "your numbers" and then "how those numbers compare". */}
-        {comparison && comparison.priorCount > 0 && (() => {
+            reads "your numbers" and then "how those numbers compare".
+            Wrapped in RevealSection so it fades in after the stat
+            counters have settled (~1100ms grid + 0ms own delay). */}
+        {comparison && comparison.priorCount > 0 && (
+          <RevealSection delay={1100}>{(() => {
           const { verdict, pct, position, total, priorCount } = comparison;
           let headline, sub, accent;
           if (verdict === 'best') {
@@ -625,9 +628,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               </View>
             </View>
           );
-        })()}
+        })()}</RevealSection>
+        )}
 
-        {(() => {
+        <RevealSection delay={1220}>{(() => {
           const display = readOnly
             ? readOnlyExerciseData
             : exerciseData.length > 0 ? exerciseData : [];
@@ -659,9 +663,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               })}
             </View>
           );
-        })()}
+        })()}</RevealSection>
 
         {detectedPRs.length > 0 && (
+          <RevealSection delay={1340}>
           <View style={styles.prRow}>
             <Ionicons name="trophy-outline" size={18} color={colors.warning} />
             <Text style={styles.prRowText}>
@@ -669,11 +674,13 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               {prExerciseNames ? ` · ${prExerciseNames}` : ''}
             </Text>
           </View>
+          </RevealSection>
         )}
 
         <View style={styles.divider} />
 
         {musclesWorked.length > 0 && (
+          <RevealSection delay={1460}>
           <View style={styles.section}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
               <Text style={styles.sectionTitle}>This week's volume</Text>
@@ -734,9 +741,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               );
             })}
           </View>
+          </RevealSection>
         )}
 
         {!readOnly && (
+          <RevealSection delay={1580}>
           <View style={styles.section}>
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionTitle}>How did it feel?</Text>
@@ -776,18 +785,22 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               </View>
             )}
           </View>
+          </RevealSection>
         )}
 
         {!readOnly && !routineId && exerciseData.length > 0 && (
+          <RevealSection delay={1700}>
           <View style={styles.secondaryActions}>
             <TouchableOpacity style={styles.templateBtn} onPress={handleSaveAsTemplate}>
               <Ionicons name="bookmark-outline" size={18} color={colors.textSecondary} />
               <Text style={styles.templateBtnText}>Save as Workout Template</Text>
             </TouchableOpacity>
           </View>
+          </RevealSection>
         )}
 
         {!readOnly && (
+          <RevealSection delay={1820}>
           <View style={styles.section}>
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionTitle}>Notes for next time</Text>
@@ -803,6 +816,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               numberOfLines={3}
             />
           </View>
+          </RevealSection>
         )}
       </ScrollView>
 
@@ -909,6 +923,35 @@ function getVolumeWhy(muscle, sets, status) {
     return `Past the recovery ceiling for ${name} (${mrv} sets per week). Soreness, performance drops and joint chatter usually follow. Drop a few sets next week to land back in the green band. Backing off here is how you come back stronger.${closing}`;
   }
   return null;
+}
+
+// RevealSection — staggered fade-in + small upward translate for the
+// major sections below the stat grid. Sequences the comparison card,
+// exercise list, PRs, feedback, and finish CTA so the screen reads
+// top-to-bottom as the eye scans rather than landing all at once.
+//
+// Each section's `delay` is roughly the previous section's delay +
+// 120ms; the first reveal kicks off after the StatBox counters
+// settle (~1100ms total for the grid). Reduce-motion users see the
+// final state immediately — no opacity ramp, no transform.
+function RevealSection({ delay = 0, children }) {
+  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  const opacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+  const translateY = useRef(new Animated.Value(reduceMotion ? 0 : 14)).current;
+
+  useEffect(() => {
+    if (reduceMotion) return;
+    Animated.parallel([
+      Animated.timing(opacity, { toValue: 1, duration: 320, delay, useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 360, delay, useNativeDriver: true }),
+    ]).start();
+  }, [delay, reduceMotion, opacity, translateY]);
+
+  return (
+    <Animated.View style={{ opacity, transform: [{ translateY }] }}>
+      {children}
+    </Animated.View>
+  );
 }
 
 // StatBox renders a single hero stat. When the value is a pure
