@@ -121,7 +121,18 @@ export default function OnboardingScreen({ navigation, route }) {
         primaryEquipment: selections.primary_equipment,
         units: selections.units,
       };
-      await saveLocalProfile(user.id, profileData);
+      try {
+        await saveLocalProfile(user.id, profileData);
+      } catch (e) {
+        // eslint-disable-next-line global-require
+        try { require('../lib/errorLog').logError('OnboardingScreen.saveLocalProfile', e, { userId: user.id }); } catch (_) {}
+        Alert.alert(
+          'Couldn\'t save your setup',
+          'Something went wrong saving your preferences. Tap Continue to try again.',
+        );
+        setLoading(false);
+        return;
+      }
       // Also write to SQLite body profile (physical attributes) and Supabase for cloud users
       await saveUserBodyProfile(user.id, { trainingAgeYears: selections.training_age }).catch(() => {});
       if (!user?.isLocal) {

@@ -459,10 +459,16 @@ export default function ProOnboardingScreen({ navigation }) {
           planWeakPoints: [],
           recoveryRating,
         };
-        const planResult = await generateAndSavePlan(user.id, planProfile);
+        let planResult = { ok: false, error: 'not attempted' };
+        try { planResult = await generateAndSavePlan(user.id, planProfile); }
+        catch (e) { planResult = { ok: false, error: e?.message ?? 'unknown' }; }
         if (!planResult.ok) {
-          console.warn('Auto plan generation failed:', planResult.error);
-          // Non-fatal — the user can recover from Home if the plan didn't write.
+          // eslint-disable-next-line global-require
+          try { require('../lib/errorLog').logError('ProOnboardingScreen.generateAndSavePlan', planResult.error, { userId: user.id }); } catch (_) {}
+          Alert.alert(
+            'Plan setup didn\'t finish',
+            `Your profile is saved but your training plan didn\'t generate (${planResult.error}). Open Home and tap "Build my plan" to retry.`,
+          );
         }
       }
     } catch (e) {
