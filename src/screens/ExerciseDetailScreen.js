@@ -383,7 +383,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
 
             <View style={styles.goalWeightRow}>
               <View style={styles.goalWeightItem}>
-                <Text style={styles.goalWeightValue}>{best1RM > 0 ? best1RM.toFixed(1) : '—'}{best1RM > 0 ? units : ''}</Text>
+                <Text style={styles.goalWeightValue}>{best1RM > 0 ? best1RM.toFixed(1) : '-'}{best1RM > 0 ? units : ''}</Text>
                 <Text style={styles.goalWeightLabel}>Current est. 1RM</Text>
               </View>
               <Ionicons name="arrow-forward" size={14} color={colors.textMuted} />

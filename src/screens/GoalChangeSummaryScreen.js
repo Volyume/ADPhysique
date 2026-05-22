@@ -105,15 +105,15 @@ function MacroRow({ label, prev, next, unit = 'g' }) {
       <View style={styles.macroValues}>
         {changed ? (
           <>
-            <Text style={styles.macroPrev}>{prev ?? '—'}{unit}</Text>
+            <Text style={styles.macroPrev}>{prev ?? '-'}{unit}</Text>
             <Ionicons name="arrow-forward" size={11} color={colors.textMuted} style={{ marginHorizontal: 4 }} />
-            <Text style={styles.macroNext}>{next ?? '—'}{unit}</Text>
+            <Text style={styles.macroNext}>{next ?? '-'}{unit}</Text>
             <Text style={[styles.macroDelta, delta > 0 ? styles.macroDeltaUp : styles.macroDeltaDown]}>
               {' '}({sign}{delta}{unit})
             </Text>
           </>
         ) : (
-          <Text style={styles.macroUnchanged}>{next ?? '—'}{unit}</Text>
+          <Text style={styles.macroUnchanged}>{next ?? '-'}{unit}</Text>
         )}
       </View>
     </View>

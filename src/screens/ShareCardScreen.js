@@ -947,8 +947,8 @@ function PRPreview({ prData: p, showPRWeight, showPrevBest, showDate, isSquare, 
   const d = p || {};
   const dateStr = formatLongDate(d.date);
   const weightStr = showPRWeight
-    ? `${d.weight || '—'}${d.units || 'kg'} × ${d.reps || '—'}`
-    : `${d.reps || '—'} reps`;
+    ? `${d.weight || '-'}${d.units || 'kg'} × ${d.reps || '-'}`
+    : `${d.reps || '-'} reps`;
 
   return (
     <GradientBg style={[pvStyles.card, isSquare ? pvStyles.square : pvStyles.story]}>

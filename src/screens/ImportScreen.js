@@ -215,7 +215,7 @@ export default function ImportScreen({ navigation }) {
                 <View style={styles.breakdownRow}>
                   <BreakdownDot tone="muted" />
                   <Text style={styles.breakdownText}>
-                    {analysis.alreadyImported} already in Volyume — will skip
+                    {analysis.alreadyImported} already in Volyume, will skip
                   </Text>
                 </View>
               )}

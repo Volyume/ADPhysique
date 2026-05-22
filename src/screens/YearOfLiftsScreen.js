@@ -54,7 +54,7 @@ function buildCards(data, units) {
     icon: 'sparkles',
     tone: 'gold',
     headline: 'Your year of lifts',
-    subline: `${fmtDate(data.yearStart)} — ${fmtDate(data.yearEnd)}`,
+    subline: `${fmtDate(data.yearStart)} to ${fmtDate(data.yearEnd)}`,
   });
 
   // 2. Sessions

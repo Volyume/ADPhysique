@@ -467,7 +467,7 @@ export default function AnalyticsScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <ScrollView
         ref={scrollRef}
         contentContainerStyle={styles.content}
@@ -930,7 +930,7 @@ function NavTile({ icon, color, label, onPress, locked, lockedSub }) {
       onPress={onPress}
       activeOpacity={0.75}
       accessibilityRole="button"
-      accessibilityLabel={locked ? `${label} — locked. ${lockedSub ?? ''}` : label}
+      accessibilityLabel={locked ? `${label}. Locked. ${lockedSub ?? ''}` : label}
       accessibilityState={{ disabled: !!locked }}
     >
       <Ionicons
