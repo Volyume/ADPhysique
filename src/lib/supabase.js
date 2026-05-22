@@ -28,7 +28,7 @@ export function getSupabaseClient() {
   const key = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return null;
   try {
-    _client = createClient(url, key, {
+    const rawClient = createClient(url, key, {
       auth: {
         storage: secureAuthStorage,
         autoRefreshToken: true,
@@ -36,6 +36,17 @@ export function getSupabaseClient() {
         detectSessionInUrl: false,
       },
     });
+    // Wrap the client in the observability proxy so every .from(table)
+    // call emits a breadcrumb with the table name, operation, and
+    // round-trip duration. The breadcrumb is opaque to the rest of
+    // the code — the proxied client forwards every method through.
+    try {
+      // eslint-disable-next-line global-require
+      const { instrumentSupabase } = require('./observability');
+      _client = instrumentSupabase(rawClient);
+    } catch (_) {
+      _client = rawClient;
+    }
   } catch (_e) {
     _client = null;
   }

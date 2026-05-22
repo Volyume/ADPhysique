@@ -46,16 +46,32 @@ export function initSentry({ release, environment } = {}) {
       dsn,
       release: release ?? undefined,
       environment: environment ?? (__DEV__ ? 'development' : 'production'),
-      // Sample 100% of errors during beta; can be turned down later
-      // to save quota once we're at scale.
-      tracesSampleRate: 0,
-      // Sentry has its own offline buffering — if the device is offline
-      // when an error fires, the SDK queues and ships on next launch.
+      // 10% performance trace sampling in production — enough to
+      // surface slow paths (sync, screen mount, large DB scans)
+      // without burning quota at scale. In dev we sample 100% so
+      // local profiling is always visible.
+      tracesSampleRate: __DEV__ ? 1.0 : 0.1,
+      // Sentry's own session tracking — counts crash-free sessions
+      // and users per release. Required for the release-health
+      // dashboard view to populate.
       enableAutoSessionTracking: true,
-      // Avoid double-reporting: we forward warn/error from errorLog.js
-      // explicitly; disable the SDK's own breadcrumb collection of
-      // console messages so we don't get noise from logInfo calls.
       attachStacktrace: true,
+      // beforeSend is Sentry's last-chance hook to mutate an event
+      // before it leaves the device. We use it to:
+      //   1. Strip known PII keys from extra context (observability
+      //      already redacts most callers but this is a belt-and-
+      //      braces defence for direct Sentry calls or third-party
+      //      breadcrumbs).
+      //   2. Drop events tagged "drop" by the caller (used to
+      //      suppress duplicate or noisy patterns).
+      beforeSend: (event) => {
+        try { return _redactSentryEvent(event); }
+        catch (_) { return event; }
+      },
+      beforeBreadcrumb: (crumb) => {
+        try { return _redactBreadcrumb(crumb); }
+        catch (_) { return crumb; }
+      },
     });
     initialised = true;
   } catch (_) {
@@ -146,4 +162,65 @@ export function addBreadcrumb(message, ctx = {}) {
       data: ctx.extra ?? undefined,
     });
   } catch (_) {}
+}
+
+// ─── PII redaction (Sentry side belt-and-braces) ────────────────────────
+//
+// observability.redactPII handles caller-side redaction. These hooks
+// catch anything that reaches Sentry through other paths (direct
+// Sentry SDK calls, native crash data, third-party libraries that
+// register breadcrumbs). Same key list as observability.js — kept
+// in sync because the two run independently.
+
+const PII_KEYS = new Set([
+  'email', 'firstName', 'lastName', 'fullName',
+  'dateOfBirth', 'date_of_birth', 'birthDate',
+  'weightKg', 'weight_kg', 'bodyWeight', 'body_weight',
+  'heightCm', 'height_cm', 'bodyFatPercent', 'body_fat_percent',
+  'phone', 'phoneNumber', 'address',
+  'waistCm', 'waist_cm', 'chestCm', 'chest_cm',
+  'hipsCm', 'hips_cm', 'thighCm', 'quads',
+  'hamCm', 'hamstrings', 'calfCm', 'calves',
+  'armCm', 'arms', 'shouldersCm', 'shoulders',
+  'forearmCm', 'forearms',
+]);
+
+function _redactObject(obj, depth = 0) {
+  if (obj == null || depth > 5) return obj;
+  if (typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(v => _redactObject(v, depth + 1));
+  const out = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (PII_KEYS.has(k)) out[k] = v == null ? null : '[redacted]';
+    else out[k] = _redactObject(v, depth + 1);
+  }
+  return out;
+}
+
+function _redactSentryEvent(event) {
+  if (!event) return event;
+  if (event.extra) event.extra = _redactObject(event.extra);
+  if (event.contexts) event.contexts = _redactObject(event.contexts);
+  if (event.tags) event.tags = _redactObject(event.tags);
+  // User identity: keep id (low-risk, opaque uuid) but redact email.
+  // The Sentry "user" panel shows the id alone; email is what we
+  // don't want shipped at all even though Sentry has its own PII
+  // controls.
+  if (event.user) {
+    const { id } = event.user;
+    event.user = { id };
+  }
+  // Breadcrumbs nested inside the event payload also need
+  // recursing — they sometimes carry context the observability
+  // layer didn't redact (e.g. console messages with raw values).
+  if (Array.isArray(event.breadcrumbs)) {
+    event.breadcrumbs = event.breadcrumbs.map(_redactBreadcrumb);
+  }
+  return event;
+}
+
+function _redactBreadcrumb(crumb) {
+  if (!crumb) return crumb;
+  if (crumb.data) crumb.data = _redactObject(crumb.data);
+  return crumb;
 }

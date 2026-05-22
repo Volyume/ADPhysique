@@ -495,6 +495,13 @@ export default function RootNavigator() {
               ? { id: session.user.id, email: session.user.email }
               : null);
           } catch (_) {}
+          // Tell observability about the user id too so every
+          // breadcrumb + event from here on carries it as context.
+          try {
+            // eslint-disable-next-line global-require
+            const { setCurrentUserId } = require('../lib/observability');
+            setCurrentUserId(session?.user?.id ?? null);
+          } catch (_) {}
           setSession(session);
           setUser(session?.user ?? null);
           // On a fresh sign-in (email OR OAuth), pull the cloud profile
@@ -629,6 +636,18 @@ export default function RootNavigator() {
   return (
     <NavigationContainer
       ref={navigationRef}
+      onReady={() => {
+        // Wire the observability layer's screen-tracking. Emits a
+        // breadcrumb on every navigation so any error fired later
+        // in the session carries the user's path. Idempotent —
+        // re-mounting the navigator (e.g. signing out and back in)
+        // re-subscribes cleanly.
+        try {
+          // eslint-disable-next-line global-require
+          const { instrumentNavigation } = require('../lib/observability');
+          instrumentNavigation(navigationRef);
+        } catch (_) { /* tolerate */ }
+      }}
       theme={{
         dark: true,
         colors: {

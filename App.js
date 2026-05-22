@@ -226,12 +226,26 @@ export default function App() {
   const [calm, setCalm] = useState(false);
   const [themeReady, setThemeReady] = useState(false);
 
+  const [priorCrash, setPriorCrash] = useState(false);
+
   // Mutate the theme exports from saved a11y prefs BEFORE the navigator (and
   // therefore every screen's StyleSheet.create) is required. Without this
   // gate, the user toggles Higher Contrast in Settings, restarts, and sees
   // no change because the StyleSheets were baked with the default palette.
   useEffect(() => {
     bootstrapAccessibility().then(() => setThemeReady(true));
+  }, []);
+
+  // Boot the observability layer — session id, build identity, crash
+  // detection, shutdown handler. Returns the prior-crash flag so we
+  // can surface a calm "we crashed last session, report's already
+  // away" indicator without the user having to do anything.
+  useEffect(() => {
+    // eslint-disable-next-line global-require
+    const { bootObservability } = require('./src/lib/observability');
+    bootObservability()
+      .then(({ wasCrashed }) => setPriorCrash(!!wasCrashed))
+      .catch(() => {});
   }, []);
 
   // Hydrate accessibility prefs into the store too so SettingsScreen's
@@ -378,6 +392,17 @@ export default function App() {
           importNewWeights(localUserId).catch(() => {});
         }
 
+        // Flush any feedback rows that were captured offline (the user
+        // tapped a sentiment chip while signed-out, etc.). Idempotent;
+        // returns 0 quickly when nothing's queued.
+        if (supabaseUserId) {
+          try {
+            // eslint-disable-next-line global-require
+            const { flushPendingFeedback } = require('./src/lib/feedback');
+            flushPendingFeedback(supabaseUserId).catch(() => {});
+          } catch (_) {}
+        }
+
         // Year of Lifts unlock — fire the one-shot "your wrap-up is
         // ready" local notification the first time the user crosses
         // the 365-day training mark. Cheap query (single SELECT for
@@ -429,6 +454,8 @@ export default function App() {
   const { ToastProvider } = require('./src/components/Toast');
   // eslint-disable-next-line global-require
   const WhatsNewSheet = require('./src/components/WhatsNewSheet').default;
+  // eslint-disable-next-line global-require
+  const { FeedbackProvider } = require('./src/components/FeedbackSheet');
 
   // Items surfaced ONCE on this release. Each item is a small icon +
   // headline + one-line body. Keep this list short so the sheet
@@ -464,29 +491,31 @@ export default function App() {
         <SafeAreaProvider>
           <StatusBar style="light" backgroundColor="#0D0D0D" />
           <ToastProvider>
-            <RootNavigator />
-            {prCelebration && (
-              <PRCelebration
-                pr={prCelebration}
-                onDismiss={hidePRCelebration}
-                // Honour either calm-mode (wellbeing preference) OR the
-                // accessibility "reduce motion" pref. Both should suppress
-                // particles + heavy spring animations.
-                subdued={calm || reduceMotion}
+            <FeedbackProvider>
+              <RootNavigator />
+              {prCelebration && (
+                <PRCelebration
+                  pr={prCelebration}
+                  onDismiss={hidePRCelebration}
+                  // Honour either calm-mode (wellbeing preference) OR the
+                  // accessibility "reduce motion" pref. Both should suppress
+                  // particles + heavy spring animations.
+                  subdued={calm || reduceMotion}
+                />
+              )}
+              <WhatsNewSheet
+                items={whatsNewItems}
+                onOpenSettings={() => {
+                  try {
+                    // eslint-disable-next-line global-require
+                    const { navigationRef } = require('./src/navigation/RootNavigator');
+                    if (navigationRef?.isReady?.()) {
+                      navigationRef.navigate('ProfileTab', { screen: 'Settings' });
+                    }
+                  } catch (_) {}
+                }}
               />
-            )}
-            <WhatsNewSheet
-              items={whatsNewItems}
-              onOpenSettings={() => {
-                try {
-                  // eslint-disable-next-line global-require
-                  const { navigationRef } = require('./src/navigation/RootNavigator');
-                  if (navigationRef?.isReady?.()) {
-                    navigationRef.navigate('ProfileTab', { screen: 'Settings' });
-                  }
-                } catch (_) {}
-              }}
-            />
+            </FeedbackProvider>
           </ToastProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>

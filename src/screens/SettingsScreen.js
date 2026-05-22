@@ -16,6 +16,7 @@ import * as Sharing from 'expo-sharing';
 import { clearWorkoutHistory, buildWorkoutCSV, wipeAllUserData } from '../lib/database';
 import { logError } from '../lib/errorLog';
 import { exportBackup, importBackup } from '../lib/dataBackup';
+import { useFeedback } from '../components/FeedbackSheet';
 import { getWellbeingMode, setWellbeingMode } from '../lib/wellbeing';
 import {
   isHealthAvailable, getHealthProviderLabel,
@@ -85,6 +86,7 @@ function SectionHeader({ title }) {
 
 export default function SettingsScreen({ navigation }) {
   const toast = useToast();
+  const feedback = useFeedback();
   const { user, setUser, setSession, clearAuthStateForSignOut, userProfile, saveLocalProfile, tier, setTier, accessibility, setAccessibilityPref, loadAccessibility, accessibilityLoaded } =
     useAppStore(useShallow(s => ({
       user: s.user, setUser: s.setUser, setSession: s.setSession,
@@ -774,6 +776,12 @@ export default function SettingsScreen({ navigation }) {
         {/* Diagnostics */}
         <SectionHeader title="Diagnostics" />
         <View style={styles.section}>
+          <SettingRow
+            icon="chatbubble-ellipses-outline"
+            label="Send feedback"
+            sub="Quick sentiment + optional note"
+            onPress={() => feedback?.open({ trigger: 'settings' })}
+          />
           <SettingRow
             icon="bug-outline"
             label="Debug logs"

@@ -7,6 +7,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import InfoTooltip from '../components/InfoTooltip';
+import { useFeedback } from '../components/FeedbackSheet';
+import { shouldPrompt } from '../lib/feedback';
 import {
   getCompletedWorkoutSets, getAllExercises, getAllWorkouts, updateWorkout,
   getActivePlan, getRoutinesForPlan, advancePlanNextWorkout,
@@ -75,6 +77,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   } = route.params || {};
   const { user, units, userProfile, session } = useAppStore();
   const toast = useToast();
+  const feedback = useFeedback();
   const insets = useSafeAreaInsets();
 
   const [feedback, setFeedback] = useState({
@@ -130,6 +133,35 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   useEffect(() => {
     loadVolumeAndHistory();
   }, []);
+
+  // Contextual feedback prompt — fires ONCE after the user has
+  // completed their first ~3 sessions. Suppressed thereafter via
+  // the @volyume_feedback_prompt_history_v1 store. Never fires in
+  // read-only mode (viewing old history).
+  useEffect(() => {
+    if (readOnly || !feedback) return;
+    const totalDone = completedWorkoutCount ?? 0;
+    // Trigger windows: after session 1 (the "is this for you?" beat)
+    // and after session 10 (the "still working?" beat). Both gated
+    // by the 14-day suppression in feedback.js.
+    let triggerKey = null;
+    if (totalDone === 1) triggerKey = 'first_workout_summary';
+    else if (totalDone === 10) triggerKey = 'tenth_workout_summary';
+    if (!triggerKey) return;
+    // Show the sheet a beat after the screen settles so the user
+    // has registered the summary before we ask. 1.4s feels natural
+    // — long enough to read the headline, short enough to not feel
+    // detached from the completion moment.
+    const t = setTimeout(async () => {
+      const ok = await shouldPrompt(triggerKey).catch(() => false);
+      if (!ok) return;
+      feedback.open({
+        trigger: 'contextual',
+        triggerKey,
+      });
+    }, 1400);
+    return () => clearTimeout(t);
+  }, [readOnly, completedWorkoutCount, feedback]);
 
   // 4-week comparison against prior sessions of the SAME routine. Skipped
   // for one-off sessions (no routineId) and for read-only history views

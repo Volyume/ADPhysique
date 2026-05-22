@@ -2,6 +2,13 @@ import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { A11Y_PREFS_KEY, loadA11yPrefs } from '../lib/accessibilityPrefs';
 
+// Auto-instrumentation lives in observability.js. Wrapping the store
+// once at module evaluation means every action call gets a
+// breadcrumb + duration without any per-action change at the call
+// sites. See src/lib/observability.js for the wrapping logic.
+// eslint-disable-next-line global-require
+const _observability = (() => { try { return require('../lib/observability'); } catch (_) { return null; } })();
+
 const LOCAL_USER_KEY   = '@volyume_local_user_id';
 const FIRST_RUN_KEY    = '@volyume_first_run_complete';
 const FIRST_RUN_KEY_PFX = '@volyume_first_run_complete_'; // per-uid: + supabase user.id
@@ -705,5 +712,14 @@ const useAppStore = create((set, get) => ({
     if (user?.id) pushPrefSoon(user.id, A11Y_PREFS_KEY, serialised);
   },
 }));
+
+// Wrap every action with auto-breadcrumb + duration tracking. The
+// instrumented actions still work exactly like the originals — the
+// wrapper only adds observability side effects. Calling this once at
+// module load means every existing useAppStore(s => s.someAction)
+// selector benefits without changing a single call site.
+if (_observability?.instrumentStore) {
+  try { _observability.instrumentStore(useAppStore); } catch (_) {}
+}
 
 export default useAppStore;
