@@ -72,6 +72,12 @@ export function FeedbackProvider({ children }) {
     // expo-sensors is a runtime-optional dep; lazy require so the
     // app keeps building if it ever gets removed. No-op on web /
     // platforms without an accelerometer.
+    //
+    // Explicit web bypass: expo-sensors on web has historically thrown
+    // during Accelerometer.setUpdateInterval (no Web Sensor API on
+    // most browsers). Codex caught this as a real web startup crash
+    // — gate it here so the rest of the lazy chain doesn't even run.
+    if (Platform.OS === 'web') return;
     let Accelerometer;
     try {
       // eslint-disable-next-line global-require, import/no-unresolved
