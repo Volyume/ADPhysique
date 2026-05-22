@@ -3615,17 +3615,25 @@ export async function getCoachOutputHistory(userId, limit = 52) {
 export async function insertWorkoutFromCloud(userId, w) {
   const d = await db();
   const toMs = iso => iso ? new Date(iso).getTime() : null;
+  // Must stay column-symmetric with _upsertWorkout in sync.js.
+  // Missing columns here silently drop user-entered fields on
+  // cross-device restore.
   await d.runAsync(
-    `INSERT OR IGNORE INTO workouts
-      (id, user_id, routine_id, mesocycle_id, started_at, ended_at, duration_minutes,
-       notes, session_difficulty, overall_pump, soreness_24h_before, fatigue_level,
+    `INSERT OR REPLACE INTO workouts
+      (id, user_id, routine_id, mesocycle_id, mesocycle_week_id,
+       started_at, ended_at, duration_minutes,
+       notes, name, pre_workout_intent,
+       session_difficulty, overall_pump, soreness_24h_before, fatigue_level, joint_discomfort,
+       set_count, total_volume,
        is_completed, created_at, updated_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,1,?,?)`,
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?)`,
     [
-      w.id, userId, w.routine_id ?? null, w.mesocycle_id ?? null,
+      w.id, userId, w.routine_id ?? null, w.mesocycle_id ?? null, w.mesocycle_week_id ?? null,
       toMs(w.started_at), toMs(w.ended_at), w.duration_minutes ?? null,
-      w.notes ?? null, w.session_difficulty ?? null, w.overall_pump ?? null,
-      w.soreness_24h_before ?? null, w.fatigue_level ?? null,
+      w.notes ?? null, w.name ?? null, w.pre_workout_intent ?? null,
+      w.session_difficulty ?? null, w.overall_pump ?? null,
+      w.soreness_24h_before ?? null, w.fatigue_level ?? null, w.joint_discomfort ?? null,
+      w.set_count ?? null, w.total_volume ?? null,
       toMs(w.started_at) ?? Date.now(), Date.now(),
     ],
   );

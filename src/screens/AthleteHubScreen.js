@@ -384,10 +384,21 @@ export default function AthleteHubScreen({ navigation }) {
         getCompletedWorkoutSets(user.id),
         getAllExercises(),
       ]);
-      const completed = workouts.filter(w =>
-        (w.isCompleted ?? w.is_completed ?? false) &&
-        (w.setCount ?? w.set_count ?? 0) > 0,
-      );
+      // Cloud-restored workouts can have set_count = NULL even when
+      // workout_sets is populated, so count live from the sets table.
+      const setsPerWorkout = new Map();
+      for (const s of sets ?? []) {
+        const wid = s.workoutId ?? s.workout_id;
+        if (!wid) continue;
+        setsPerWorkout.set(wid, (setsPerWorkout.get(wid) ?? 0) + 1);
+      }
+      const completed = workouts.filter(w => {
+        const isComplete = !!(w.isCompleted ?? w.is_completed);
+        if (!isComplete) return false;
+        const cachedCount = w.setCount ?? w.set_count;
+        const liveCount = setsPerWorkout.get(w.id) ?? 0;
+        return (cachedCount != null && cachedCount > 0) || liveCount > 0;
+      });
       setTotalWorkouts(completed.length);
 
       // Recovery EMAs
