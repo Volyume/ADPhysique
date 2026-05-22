@@ -1121,10 +1121,10 @@ export default function HomeScreen({ navigation }) {
 
         {/* ── Last session ── */}
         {lastSession && (
-          <TouchableOpacity
+          <PressableCard
             style={styles.lastSessionCard}
             onPress={() => navigation.navigate('WorkoutHistory')}
-            activeOpacity={0.7}
+            accessibilityLabel="Open workout history"
           >
             <View style={styles.lastSessionTop}>
               <View style={{ gap: 2 }}>
@@ -1175,7 +1175,7 @@ export default function HomeScreen({ navigation }) {
                 </View>
               ) : null}
             </View>
-          </TouchableOpacity>
+          </PressableCard>
         )}
 
 
