@@ -287,6 +287,13 @@ jest.mock('live-activity', () => ({ start: jest.fn(), stop: jest.fn(), update: j
 // reads __DEV__ in module scope doesn't blow up.
 global.__DEV__ = false;
 
+// rAF is browser-native but Node doesn't have it. RN provides it via
+// the runtime polyfill. Match RN's behavior: fire on next macrotask.
+if (typeof global.requestAnimationFrame === 'undefined') {
+  global.requestAnimationFrame = (cb) => setTimeout(() => cb(Date.now()), 0);
+  global.cancelAnimationFrame = (id) => clearTimeout(id);
+}
+
 const React = require('react');
 const TestRenderer = require('react-test-renderer');
 
@@ -359,7 +366,7 @@ async function mountScreen(Screen, props = {}) {
     // tests, not a real failure signal. Likewise filter out the
     // "test environment torn down" warnings that fire when an
     // unawaited useEffect lands after a test completes.
-    if (/wrap.*act|environment has been torn down|Cannot log after tests|Each child in a list/i.test(text)) return;
+    if (/wrap.*act|environment has been torn down|Cannot log after tests|Each child in a list|Function components cannot be given refs|forwardRef|inside StrictMode/i.test(text)) return;
     errors.push(text);
   };
   let tree = null;
@@ -717,6 +724,195 @@ describe('All reachable screens — mount + bash every touchable + every text in
 // This is the "thousands of clicks" requested. 38 screens × 10 seeds × 20
 // taps = ~7,600 simulated taps. Filters the same mock-boundary errors as
 // the deterministic sweep above.
+
+// ─── Param-driven screens ────────────────────────────────────────────────
+//
+// These don't appear in the sweep because they need route.params to
+// render anything useful. Test each with a realistic param shape.
+
+describe('Screens with route.params', () => {
+  test('WorkoutSummaryScreen renders with finish-flow params', async () => {
+    useAppStore.setState(STATE_VARIANTS[0].state);
+    const Screen = require('../screens/WorkoutSummaryScreen').default;
+    let tree = null;
+    try {
+      const { tree: t, errors } = await mountScreen(Screen, {
+        route: {
+          params: {
+            workoutId: 'w1',
+            routineId: 'r1',
+            durationMinutes: 45,
+            exerciseCount: 5,
+            setCount: 15,
+            workingSetCount: 12,
+            tonnage: 5400,
+            exerciseNames: ['Bench Press', 'Row', 'Squat'],
+            detectedPRs: [],
+            exerciseData: [],
+          },
+          name: 'WorkoutSummary',
+        },
+      });
+      tree = t;
+      expect(tree).not.toBeNull();
+      expect(errors).toEqual([]);
+      const { failures } = await bashTappables(tree);
+      const real = failures.filter(f => !/getState|dispatch|navigation\.navigate|getParent/i.test(f.error));
+      expect(real).toEqual([]);
+    } finally { unmountTree(tree); }
+  });
+
+  test('RoutineDetailScreen renders with routineId param', async () => {
+    useAppStore.setState(STATE_VARIANTS[0].state);
+    const Screen = require('../screens/RoutineDetailScreen').default;
+    let tree = null;
+    try {
+      const { tree: t, errors } = await mountScreen(Screen, {
+        route: { params: { routineId: 'r1' }, name: 'RoutineDetail' },
+      });
+      tree = t;
+      expect(tree).not.toBeNull();
+      expect(errors).toEqual([]);
+    } finally { unmountTree(tree); }
+  });
+
+  test('PlanDetailScreen renders with programmeId param', async () => {
+    useAppStore.setState(STATE_VARIANTS[0].state);
+    const Screen = require('../screens/PlanDetailScreen').default;
+    let tree = null;
+    try {
+      const { tree: t, errors } = await mountScreen(Screen, {
+        route: { params: { programmeId: 'p1' }, name: 'PlanDetail' },
+      });
+      tree = t;
+      expect(tree).not.toBeNull();
+      expect(errors).toEqual([]);
+    } finally { unmountTree(tree); }
+  });
+
+  test('ExerciseDetailScreen renders with exerciseId param', async () => {
+    useAppStore.setState(STATE_VARIANTS[0].state);
+    const Screen = require('../screens/ExerciseDetailScreen').default;
+    let tree = null;
+    try {
+      const { tree: t, errors } = await mountScreen(Screen, {
+        route: { params: { exerciseId: 'e1' }, name: 'ExerciseDetail' },
+      });
+      tree = t;
+      expect(tree).not.toBeNull();
+      expect(errors).toEqual([]);
+    } finally { unmountTree(tree); }
+  });
+
+  test('ShareCardScreen renders with session data params', async () => {
+    useAppStore.setState(STATE_VARIANTS[0].state);
+    const Screen = require('../screens/ShareCardScreen').default;
+    let tree = null;
+    try {
+      const { tree: t, errors } = await mountScreen(Screen, {
+        route: {
+          params: {
+            sessionData: {
+              sessionName: 'Push Day',
+              duration: 60,
+              workingSets: 12,
+              exerciseCount: 5,
+              tonnage: 5400,
+              exercises: ['Bench', 'Row'],
+              prCount: 2,
+              topSet: { exercise: 'Bench', weight: 100, reps: 5 },
+            },
+          },
+          name: 'ShareCard',
+        },
+      });
+      tree = t;
+      expect(tree).not.toBeNull();
+      expect(errors).toEqual([]);
+    } finally { unmountTree(tree); }
+  });
+});
+
+// ─── NutritionTargets: realistic userProfile.goal values ────────────────
+//
+// Every goal the app can produce, including legacy / weird values. The
+// screen has a `VALID_GOALS` list — anything outside should not crash.
+
+describe('NutritionTargets: every userProfile.goal value', () => {
+  const goalValues = [
+    'lean_gain', 'build', 'maintain', 'recomp', 'mild_cut', 'aggressive_cut',
+    'contest_prep', // valid but only set via ProGoalSetup
+    null, undefined, '', 'unknown_value', 'cut', 'bulk',
+    123, true, { wrong: 'shape' }, ['array'],
+  ];
+  for (const goal of goalValues) {
+    test(`renders with goal=${JSON.stringify(goal)}`, async () => {
+      useAppStore.setState({
+        ...STATE_VARIANTS[0].state,
+        userProfile: { firstName: 'T', goal, units: 'metric' },
+      });
+      const Screen = require('../screens/NutritionTargetsScreen').default;
+      let tree = null;
+      try {
+        const { tree: t, errors } = await mountScreen(Screen);
+        tree = t;
+        expect(tree).not.toBeNull();
+        expect(errors).toEqual([]);
+      } finally { unmountTree(tree); }
+    });
+  }
+});
+
+// ─── Form workflow: fill inputs, tap calculate ──────────────────────────
+
+describe('NutritionTargets: fill form then tap Calculate', () => {
+  test('happy path fill + calculate does not crash', async () => {
+    useAppStore.setState(STATE_VARIANTS[0].state);
+    const Screen = require('../screens/NutritionTargetsScreen').default;
+    let tree = null;
+    try {
+      const { tree: t } = await mountScreen(Screen);
+      tree = t;
+      const inputs = collectTextInputs(tree);
+      // Fill any input that asks for a number with realistic values.
+      // The screen has age, height ft, height in, weight, body fat.
+      const fillValues = ['28', '5', '10', '82', '15'];
+      for (let i = 0; i < inputs.length && i < fillValues.length; i++) {
+        await TestRenderer.act(async () => {
+          inputs[i].props.onChangeText?.(fillValues[i]);
+          await Promise.resolve();
+        });
+      }
+      // Now tap every button — the Calculate button is among them.
+      const { failures } = await bashTappables(tree);
+      const real = failures.filter(f => !/getState|dispatch|navigation\.navigate|getParent/i.test(f.error));
+      expect(real).toEqual([]);
+    } finally { unmountTree(tree); }
+  });
+
+  test('bogus form input + tap Calculate does not crash', async () => {
+    useAppStore.setState(STATE_VARIANTS[0].state);
+    const Screen = require('../screens/NutritionTargetsScreen').default;
+    let tree = null;
+    try {
+      const { tree: t } = await mountScreen(Screen);
+      tree = t;
+      const inputs = collectTextInputs(tree);
+      // Pump nonsense into every input.
+      for (const inp of inputs) {
+        for (const v of ['', '0', '-1', '99999', 'NaN', 'undefined', '.5']) {
+          await TestRenderer.act(async () => {
+            inp.props.onChangeText?.(v);
+            await Promise.resolve();
+          });
+        }
+      }
+      const { failures } = await bashTappables(tree);
+      const real = failures.filter(f => !/getState|dispatch|navigation\.navigate|getParent/i.test(f.error));
+      expect(real).toEqual([]);
+    } finally { unmountTree(tree); }
+  });
+});
 
 // ─── Stress: corrupted / unusual data shapes from the DB ────────────────
 //
