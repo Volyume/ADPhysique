@@ -104,11 +104,18 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
-            echo "ANDROID_KEYSTORE_BASE64 secret is empty - building unsigned (debug keystore fallback)."
-            echo "APK from this build will work for sideload but cannot be uploaded to Play Store."
-            exit 0
+            echo "::error::ANDROID_KEYSTORE_BASE64 secret is empty. Set the 4 signing secrets in repo Settings before re-running."
+            exit 1
+          fi
+          if [ -z "$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEY_ALIAS" ] || [ -z "$ANDROID_KEY_PASSWORD" ]; then
+            echo "::error::One of ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD is empty."
+            exit 1
           fi
           echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/upload.keystore
+          if [ ! -s android/app/upload.keystore ]; then
+            echo "::error::Decoded keystore is empty. ANDROID_KEYSTORE_BASE64 is not valid base64 of a keystore."
+            exit 1
+          fi
           cat >> android/gradle.properties <<EOF
           VOLYUME_UPLOAD_STORE_FILE=upload.keystore
           VOLYUME_UPLOAD_STORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD
@@ -116,33 +123,71 @@ jobs:
           VOLYUME_UPLOAD_KEY_PASSWORD=$ANDROID_KEY_PASSWORD
           EOF
           # Rewrite the release signingConfig in app/build.gradle to use the
-          # upload keystore instead of the debug keystore. Expo's prebuild
-          # template hard-codes the debug signingConfig, so we patch it
-          # post-prebuild rather than maintaining a fork of the template.
-          GRADLE_FILE=android/app/build.gradle
+          # upload keystore. Expo's prebuild template hard-codes the debug
+          # signingConfig in the release buildType. We add a release{} entry
+          # inside signingConfigs{} and flip the buildTypes.release reference
+          # to signingConfigs.release. The previous regex assumed release{}
+          # came right after buildTypes{, which is wrong because debug{} sits
+          # in between, so it silently no-op'd and produced debug-signed AABs.
           python3 - <<'PYEOF'
-          import re, pathlib
+          import re, pathlib, sys
           p = pathlib.Path('android/app/build.gradle')
           src = p.read_text()
-          # Add a new signingConfigs.release block right before the existing release {} buildType.
-          if 'signingConfigs.release' not in src and 'VOLYUME_UPLOAD_STORE_FILE' not in src:
-              src = src.replace(
-                  'signingConfigs {',
-                  'signingConfigs {\n        release {\n            if (project.hasProperty(\"VOLYUME_UPLOAD_STORE_FILE\")) {\n                storeFile file(VOLYUME_UPLOAD_STORE_FILE)\n                storePassword VOLYUME_UPLOAD_STORE_PASSWORD\n                keyAlias VOLYUME_UPLOAD_KEY_ALIAS\n                keyPassword VOLYUME_UPLOAD_KEY_PASSWORD\n            }\n        }',
-                  1,
-              )
-              src = re.sub(
-                  r'buildTypes\s*\{\s*release\s*\{([^}]*?)signingConfig\s+signingConfigs\.debug',
-                  lambda m: m.group(0).replace('signingConfigs.debug', 'signingConfigs.release'),
-                  src,
-                  count=1,
-                  flags=re.DOTALL,
-              )
-              p.write_text(src)
-              print('Patched build.gradle to use upload signing config')
-          else:
-              print('build.gradle already references upload signing config')
+
+          if 'VOLYUME_UPLOAD_STORE_FILE' in src:
+              print('build.gradle already references upload signing config — skipping patch')
+              sys.exit(0)
+
+          if 'signingConfigs {' not in src:
+              print('::error::signingConfigs block not found in build.gradle')
+              sys.exit(1)
+
+          # 1. Insert a release{} block inside signingConfigs{}.
+          src = src.replace(
+              'signingConfigs {',
+              'signingConfigs {\n        release {\n'
+              '            if (project.hasProperty("VOLYUME_UPLOAD_STORE_FILE")) {\n'
+              '                storeFile file(VOLYUME_UPLOAD_STORE_FILE)\n'
+              '                storePassword VOLYUME_UPLOAD_STORE_PASSWORD\n'
+              '                keyAlias VOLYUME_UPLOAD_KEY_ALIAS\n'
+              '                keyPassword VOLYUME_UPLOAD_KEY_PASSWORD\n'
+              '            }\n'
+              '        }',
+              1,
+          )
+
+          # 2. Swap the release buildType to point at signingConfigs.release.
+          # Match `release { ... signingConfig signingConfigs.debug` anywhere
+          # in the file. [^{}]*? keeps the match local to the release block.
+          new_src, count = re.subn(
+              r'(release\s*\{[^{}]*?)signingConfig\s+signingConfigs\.debug',
+              r'\1signingConfig signingConfigs.release',
+              src,
+              count=1,
+              flags=re.DOTALL,
+          )
+          if count == 0:
+              print('::error::Could not find `signingConfig signingConfigs.debug` inside release{} buildType.')
+              m = re.search(r'buildTypes\s*\{.{0,1500}', src, re.DOTALL)
+              if m:
+                  print('--- buildTypes block found in file: ---')
+                  print(m.group(0))
+              sys.exit(1)
+          src = new_src
+
+          p.write_text(src)
+          if 'signingConfigs.release' not in p.read_text():
+              print('::error::Verification failed: signingConfigs.release not present after write')
+              sys.exit(1)
+          print('✓ Patched build.gradle to use upload signing config')
           PYEOF
+          # Dump the patched signingConfigs and buildTypes blocks to the log so
+          # any future "why is it still debug-signed?" question takes 10s to
+          # diagnose instead of three hours.
+          echo "--- signingConfigs block after patch ---"
+          awk '/signingConfigs *\{/,/^    \}/' android/app/build.gradle
+          echo "--- release buildType after patch ---"
+          awk '/release *\{/,/^        \}/' android/app/build.gradle | head -20
 
       # Release build embeds the JS bundle (index.android.bundle) into the
       # APK/AAB, so it runs standalone without a Metro dev server.
@@ -154,6 +199,50 @@ jobs:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
           EXPO_PUBLIC_SENTRY_DSN: ${{ secrets.EXPO_PUBLIC_SENTRY_DSN }}
+
+      # Verify the AAB is signed with the upload keystore, NOT the debug
+      # keystore. Play Store rejects debug-signed bundles with a generic
+      # "you uploaded an APK or Android App Bundle that was signed in debug
+      # mode" error, which is what bit us before this check existed.
+      - name: Verify AAB is release-signed
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          AAB=android/app/build/outputs/bundle/release/app-release.aab
+          if [ ! -f "$AAB" ]; then
+            echo "::error::AAB not produced at $AAB"
+            exit 1
+          fi
+          # Extract the keystore's SHA-1 (the signer's cert fingerprint).
+          UPLOAD_SHA1=$(keytool -list -v -keystore android/app/upload.keystore \
+            -storepass "$ANDROID_KEYSTORE_PASSWORD" 2>/dev/null \
+            | grep -E '^\s*SHA1:' | head -1 | awk '{print $2}')
+          # Pull the cert SHA-1 actually used to sign the AAB.
+          AAB_SHA1=$(unzip -p "$AAB" 'META-INF/*.RSA' 2>/dev/null \
+            | keytool -printcert 2>/dev/null \
+            | grep -E '^\s*SHA1:' | head -1 | awk '{print $2}')
+          if [ -z "$AAB_SHA1" ]; then
+            # Older AABs land the signer block under a different name. Fall
+            # back to apksigner if available.
+            if command -v apksigner >/dev/null 2>&1; then
+              AAB_SHA1=$(apksigner verify --print-certs "$AAB" 2>/dev/null \
+                | grep -iE 'SHA-1 digest' | head -1 | awk '{print toupper($NF)}' \
+                | sed 's/\(..\)/\1:/g;s/:$//')
+            fi
+          fi
+          DEBUG_SHA1='B1:11:B1:11:B1:11:B1:11:B1:11:B1:11:B1:11:B1:11:B1:11:B1:11' # well-known Android debug
+          echo "Upload keystore SHA-1: $UPLOAD_SHA1"
+          echo "AAB signer SHA-1     : $AAB_SHA1"
+          if [ -z "$AAB_SHA1" ]; then
+            echo "::warning::Could not extract AAB signer cert (verification skipped)"
+          elif [ "$UPLOAD_SHA1" = "$AAB_SHA1" ]; then
+            echo "✓ AAB is signed with the upload keystore. Play-ready."
+          else
+            echo "::error::AAB is NOT signed with the upload keystore."
+            echo "::error::Expected $UPLOAD_SHA1, got $AAB_SHA1."
+            echo "::error::Play Store will reject this AAB. Check the Configure release signing step."
+            exit 1
+          fi
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
