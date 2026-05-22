@@ -3416,10 +3416,18 @@ export async function getAllPeakWeekPlansForUser(userId) {
 export async function getAllPlannedMuscleVolumeForUser(userId) {
   const d = await db();
   try {
-    // _sync mirror table; primary planned_muscle_volume table also exists.
-    // Read from the sync mirror — write paths populate both.
+    // The primary planned_muscle_volume table has no user_id column, so
+    // we JOIN through mesocycle_weeks → mesocycles to filter. Previously
+    // this read from the _sync mirror, which was only populated by
+    // cloud pulls — so locally-computed planned volumes never reached
+    // the cloud and were lost on cross-device restore.
     const rows = await d.getAllAsync(
-      'SELECT * FROM planned_muscle_volume_sync WHERE user_id = ?', [userId],
+      `SELECT pmv.*, m.user_id AS user_id
+       FROM planned_muscle_volume pmv
+       JOIN mesocycle_weeks mw ON mw.id = pmv.mesocycle_week_id
+       JOIN mesocycles m ON m.id = mw.mesocycle_id
+       WHERE m.user_id = ?`,
+      [userId],
     );
     return rows.map(rowToCamel);
   } catch (_) { return []; }
@@ -3428,8 +3436,18 @@ export async function getAllPlannedMuscleVolumeForUser(userId) {
 export async function getAllAdaptationEventsForUser(userId) {
   const d = await db();
   try {
+    // Same shape as getAllPlannedMuscleVolumeForUser: the primary
+    // adaptation_events table has no user_id column, so we JOIN through
+    // mesocycle_weeks → mesocycles. Reading from the _sync mirror only
+    // ever returned cloud-pulled rows, never the locally-written ones,
+    // which meant adaptation decisions never reached the cloud.
     const rows = await d.getAllAsync(
-      'SELECT * FROM adaptation_events_sync WHERE user_id = ?', [userId],
+      `SELECT ae.*, m.user_id AS user_id
+       FROM adaptation_events ae
+       JOIN mesocycle_weeks mw ON mw.id = ae.mesocycle_week_id
+       JOIN mesocycles m ON m.id = mw.mesocycle_id
+       WHERE m.user_id = ?`,
+      [userId],
     );
     return rows.map(rowToCamel);
   } catch (_) { return []; }
