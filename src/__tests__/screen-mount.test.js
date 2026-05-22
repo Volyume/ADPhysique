@@ -718,6 +718,150 @@ describe('All reachable screens — mount + bash every touchable + every text in
 // taps = ~7,600 simulated taps. Filters the same mock-boundary errors as
 // the deterministic sweep above.
 
+// ─── Stress: corrupted / unusual data shapes from the DB ────────────────
+//
+// What happens when getWorkouts() returns one workout with missing
+// fields, when an exercise has no name, when set_count is NaN, when
+// the cloud restore inserted a row with target_kcal=null but
+// gdpr_consented=true? These are realistic post-restore shapes.
+
+describe('Stress: screens render against corrupted DB shapes', () => {
+  test('NutritionTargets: row with null targetKcal does not crash render', async () => {
+    const database = require('../lib/database');
+    const orig = database.getNutritionTargets;
+    database.getNutritionTargets = () => Promise.resolve({
+      id: 'nt1', userId: 'u1',
+      bmr: null, tdee: null, targetKcal: null,
+      proteinG: null, carbsG: null, fatG: null,
+      phase: null, bmrMethod: null, activityLevel: null,
+      confidence: null, warnings: null, gdprConsented: true,
+      createdAt: 0, updatedAt: 0,
+    });
+    try {
+      const Screen = require('../screens/NutritionTargetsScreen').default;
+      const { tree, errors } = await mountScreen(Screen);
+      expect(tree).not.toBeNull();
+      expect(errors).toEqual([]);
+    } finally {
+      database.getNutritionTargets = orig;
+    }
+  });
+
+  test('HomeScreen: getAllExercises returns rows with null names', async () => {
+    const database = require('../lib/database');
+    const orig = database.getAllExercises;
+    database.getAllExercises = () => Promise.resolve([
+      { id: 'e1', name: null, primaryMuscle: 'chest' },
+      { id: 'e2', name: 'Squat', primaryMuscle: null },
+      { id: 'e3', name: '', primaryMuscle: 'quads' },
+    ]);
+    try {
+      const Screen = require('../screens/HomeScreen').default;
+      const { tree, errors } = await mountScreen(Screen);
+      expect(tree).not.toBeNull();
+      expect(errors).toEqual([]);
+    } finally {
+      database.getAllExercises = orig;
+    }
+  });
+
+  test('AnalyticsScreen: empty data set renders without crashing', async () => {
+    const database = require('../lib/database');
+    const orig = {
+      getAllWorkouts: database.getAllWorkouts,
+      getCompletedWorkoutSets: database.getCompletedWorkoutSets,
+    };
+    database.getAllWorkouts = () => Promise.resolve([]);
+    database.getCompletedWorkoutSets = () => Promise.resolve([]);
+    try {
+      const Screen = require('../screens/AnalyticsScreen').default;
+      const { tree, errors } = await mountScreen(Screen);
+      expect(tree).not.toBeNull();
+      expect(errors).toEqual([]);
+    } finally {
+      Object.assign(database, orig);
+    }
+  });
+
+  test('AnalyticsScreen: dataset with one workout and one set', async () => {
+    const database = require('../lib/database');
+    const orig = {
+      getAllWorkouts: database.getAllWorkouts,
+      getCompletedWorkoutSets: database.getCompletedWorkoutSets,
+    };
+    database.getAllWorkouts = () => Promise.resolve([{
+      id: 'w1', userId: 'u1', startedAt: Date.now() - 86400000,
+      endedAt: Date.now() - 86400000 + 3600000, durationMinutes: 60,
+      isCompleted: 1, setCount: 1, totalVolume: 600,
+    }]);
+    database.getCompletedWorkoutSets = () => Promise.resolve([{
+      id: 's1', userId: 'u1', workoutId: 'w1', exerciseId: 'e1',
+      setNumber: 1, setType: 'straight', actualReps: 10, weight: 60,
+    }]);
+    try {
+      const Screen = require('../screens/AnalyticsScreen').default;
+      const { tree, errors } = await mountScreen(Screen);
+      expect(tree).not.toBeNull();
+      expect(errors).toEqual([]);
+    } finally {
+      Object.assign(database, orig);
+    }
+  });
+});
+
+// ─── Rapid double-tap stress on critical buttons ─────────────────────────
+//
+// Beta testers WILL mash buttons. We simulate that by tapping every
+// touchable five times in rapid succession with no state flush. Should
+// catch any onPress handler that doesn't guard against re-entrance.
+
+async function bashTappablesRapid(tree, repeats = 5) {
+  const failures = [];
+  const tappables = collectTappables(tree);
+  for (let i = 0; i < tappables.length; i++) {
+    const node = tappables[i];
+    try {
+      await TestRenderer.act(async () => {
+        for (let r = 0; r < repeats; r++) node.props.onPress?.();
+        await Promise.resolve();
+      });
+    } catch (e) {
+      failures.push({
+        index: i,
+        label: node.props.accessibilityLabel ?? '(no label)',
+        error: e.message,
+      });
+    }
+  }
+  return { count: tappables.length, failures };
+}
+
+describe('Rapid double-tap stress on every screen', () => {
+  const PRO_LOADED = STATE_VARIANTS[0].state;
+  for (const screenName of SCREENS_TO_SWEEP) {
+    test(`${screenName}: 5x rapid tap on every button`, async () => {
+      useAppStore.setState(PRO_LOADED);
+      let Screen;
+      try { Screen = require(`../screens/${screenName}`).default; } catch (_) { return; }
+      if (!Screen) return;
+      let tree = null;
+      try {
+        const result = await mountScreen(Screen);
+        tree = result.tree;
+        if (!tree) return;
+        const { failures } = await bashTappablesRapid(tree, 5);
+        const real = failures.filter(f =>
+          !/getState\b|dispatch\b|navigation\.navigate\b|getParent\b/i.test(f.error),
+        );
+        if (real.length) console.log(`[${screenName} rapid] failures:`, JSON.stringify(real.slice(0, 3), null, 2));
+        expect(real).toEqual([]);
+      } finally {
+        unmountTree(tree);
+      }
+    });
+  }
+});
+
 // ─── ActiveWorkoutScreen: with a workout in progress ─────────────────────
 
 describe('ActiveWorkoutScreen with active workout state', () => {

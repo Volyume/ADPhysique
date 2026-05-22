@@ -97,17 +97,28 @@ export default function OnboardingScreen({ navigation, route }) {
   });
   const [loading, setLoading] = useState(false);
 
-  const currentStep = STEPS[step];
+  // Clamp to the last step. Without this guard, two rapid taps on
+  // Next while `step === STEPS.length - 1` both pass the `step <
+  // STEPS.length - 1` check (the closure's `step` is stale), both
+  // call setStep(s => s + 1), step lands at STEPS.length, and the
+  // render below crashes with "Cannot read properties of undefined
+  // (reading 'title')".
+  const currentStep = STEPS[step] ?? STEPS[STEPS.length - 1];
 
   function selectOption(value) {
     setSelections(prev => ({ ...prev, [currentStep.field]: value }));
   }
 
   async function handleNext() {
-    if (step < STEPS.length - 1) {
-      setStep(s => s + 1);
-      return;
-    }
+    // Guard against rapid double-taps. The closure's `step` can be
+    // stale between two onPress fires, so we re-check inside the
+    // setter to keep the advance safe.
+    let advanced = false;
+    setStep(s => {
+      if (s < STEPS.length - 1) { advanced = true; return s + 1; }
+      return s;
+    });
+    if (advanced) return;
     if (!user) {
       Alert.alert('Error', 'User not found. Please sign in again.');
       return;
