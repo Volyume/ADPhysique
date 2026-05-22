@@ -547,7 +547,12 @@ async function runMigrations(d) {
   }
 }
 
-async function db() {
+// Exported so peer modules (syncQueue.js) can grab the SQLite handle
+// directly. Without this export, `import { db } from './database'` in
+// syncQueue resolved to undefined and every `await db()` call there
+// threw "undefined is not a function" on entry — the bug that made
+// every drainSyncQueue invocation fail before processing any row.
+export async function db() {
   return _db || initDatabase();
 }
 

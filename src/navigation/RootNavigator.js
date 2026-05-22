@@ -97,6 +97,14 @@ const stackOptions = {
 // "tap a card → it expands".
 const heroZoomTransition = {
   cardStyleInterpolator: ({ current }) => {
+    // Defensive: react-navigation can call this with current.progress
+    // missing during certain pop/back gestures, which throws an
+    // "interpolate of undefined" the user reads as an app crash on
+    // first session-start. Fall back to the default opacity behaviour
+    // so the transition still completes cleanly.
+    if (!current?.progress) {
+      return { cardStyle: { opacity: 1 } };
+    }
     const opacity = current.progress.interpolate({
       inputRange: [0, 1],
       outputRange: [0, 1],
