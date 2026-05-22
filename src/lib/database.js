@@ -677,6 +677,19 @@ const SCHEMA_MIGRATIONS = [
     'CREATE INDEX IF NOT EXISTS idx_body_metric_log_updated ON body_metric_log(updated_at)',
     'CREATE INDEX IF NOT EXISTS idx_routine_exercises_updated ON routine_exercises(updated_at)',
   ],
+  // v20 — indexes on the sync-mirror tables introduced in v19. The
+  // bulk getters (getAllWorkoutNotesForUser etc.) all scan by
+  // user_id; without the index those scans degrade to full-table
+  // sweeps as the row count grows. Cheap to add now while the
+  // tables are still small for most users.
+  [
+    'CREATE INDEX IF NOT EXISTS idx_workout_notes_v2_user ON workout_notes_v2(user_id) WHERE deleted_at IS NULL',
+    'CREATE INDEX IF NOT EXISTS idx_planned_muscle_volume_sync_user ON planned_muscle_volume_sync(user_id) WHERE deleted_at IS NULL',
+    'CREATE INDEX IF NOT EXISTS idx_adaptation_events_sync_user ON adaptation_events_sync(user_id) WHERE deleted_at IS NULL',
+    'CREATE INDEX IF NOT EXISTS idx_workout_notes_v2_user_updated ON workout_notes_v2(user_id, updated_at)',
+    'CREATE INDEX IF NOT EXISTS idx_planned_muscle_volume_sync_user_updated ON planned_muscle_volume_sync(user_id, updated_at)',
+    'CREATE INDEX IF NOT EXISTS idx_adaptation_events_sync_user_updated ON adaptation_events_sync(user_id, updated_at)',
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
