@@ -376,6 +376,42 @@ describe('Feedback submission pipeline', () => {
     expect(raw).toBeFalsy();
   });
 
+  test('flushPendingFeedback keeps the specific failed items, not a tail slice', async () => {
+    // Regression for the slice(shipped) bug: if item 0 fails and item 1
+    // succeeds, the OLD code would drop the failed item and keep the
+    // successful one for retry. Verify the SPECIFIC failed item is
+    // preserved.
+    const AS = require('@react-native-async-storage/async-storage').default;
+    await AS.setItem('@volyume_feedback_pending_v1', JSON.stringify([
+      { trigger: 'shake', sentiment: 'love', message: 'FAIL-ME', capturedAt: Date.now() },
+      { trigger: 'shake', sentiment: 'love', message: 'pass1', capturedAt: Date.now() },
+      { trigger: 'shake', sentiment: 'love', message: 'pass2', capturedAt: Date.now() },
+    ]));
+
+    const { flushPendingFeedback } = require('../lib/feedback');
+    const { getSupabaseClient } = require('../lib/supabase');
+    const sb = getSupabaseClient();
+    if (!sb) return;
+    sb.from = () => ({
+      insert: (payload) => {
+        // Fail only the FAIL-ME item; everything else passes
+        if (payload?.message === 'FAIL-ME') {
+          return Promise.resolve({ data: null, error: { code: '500', message: 'transient' } });
+        }
+        return Promise.resolve({ data: null, error: null });
+      },
+    });
+
+    const shipped = await flushPendingFeedback('u-test');
+    expect(shipped).toBe(2);
+    const raw = await AS.getItem('@volyume_feedback_pending_v1');
+    expect(raw).toBeTruthy();
+    const remaining = JSON.parse(raw);
+    // The failed item MUST be the one preserved, not a tail slice
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0].message).toBe('FAIL-ME');
+  });
+
   test('flushPendingFeedback keeps unshipped items on partial failure', async () => {
     const AS = require('@react-native-async-storage/async-storage').default;
     await AS.setItem('@volyume_feedback_pending_v1', JSON.stringify([

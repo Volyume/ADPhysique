@@ -1452,11 +1452,19 @@ function buildCoachBrief({ fatigueHistory, weeklyVolume, deloadSuggestion, lastW
 }
 
 function getRelativeDay(ts) {
-  const days = Math.floor((Date.now() - ts) / (24 * 60 * 60 * 1000));
-  if (days === 0) return 'Today';
-  if (days === 1) return 'Yesterday';
-  if (days < 7) return `${days} days ago`;
-  return format(new Date(ts), 'd MMM');
+  // Compare LOCAL calendar dates rather than epoch-ms deltas so a
+  // session logged at 23:50 doesn't read as "Yesterday" when the user
+  // opens the app at 00:10 (or vice versa across DST). The previous
+  // floor-based math also broke across DST jumps and for users
+  // outside UTC.
+  const now = new Date();
+  const then = new Date(ts);
+  const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const dayDiff = Math.round((startOfDay(now) - startOfDay(then)) / (24 * 60 * 60 * 1000));
+  if (dayDiff <= 0) return 'Today';
+  if (dayDiff === 1) return 'Yesterday';
+  if (dayDiff < 7) return `${dayDiff} days ago`;
+  return format(then, 'd MMM');
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────

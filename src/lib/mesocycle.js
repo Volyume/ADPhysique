@@ -46,8 +46,14 @@ const MESO_SCHEDULE = {
 export function getCurrentMesoWeek(startDateMs, experience = 'intermediate') {
   const schedule = getMesoSchedule(experience);
   const start = typeof startDateMs === 'string' ? new Date(startDateMs).getTime() : startDateMs;
-  const now = Date.now();
-  const daysElapsed = Math.max(0, Math.floor((now - start) / (1000 * 60 * 60 * 24)));
+  // Compare local calendar days rather than raw ms deltas so a DST
+  // jump during the block (spring-forward / fall-back) doesn't shift
+  // the user's week counter by a day. We anchor at local midnight on
+  // each side and count whole calendar days, which is what the user's
+  // calendar shows them anyway.
+  const startDayMs = (() => { const d = new Date(start); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); })();
+  const nowDayMs   = (() => { const d = new Date();      return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); })();
+  const daysElapsed = Math.max(0, Math.round((nowDayMs - startDayMs) / (1000 * 60 * 60 * 24)));
   const weeksElapsed = Math.floor(daysElapsed / 7);
   return (weeksElapsed % schedule.length) + 1;
 }

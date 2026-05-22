@@ -748,6 +748,20 @@ const SCHEMA_MIGRATIONS = [
       }
     },
   ],
+
+  // v23 — indexes that matter at scale. Every aggregate query
+  // (analytics, history, weekly volume) filters by created_at; without
+  // a btree index those queries scan the full workout_sets table.
+  // Same for mesocycle_weeks.mesocycle_id which is the most common
+  // join column in the plan + progress screens. SQLite ignores
+  // CREATE INDEX IF NOT EXISTS gracefully so re-runs are cheap.
+  [
+    'CREATE INDEX IF NOT EXISTS idx_workout_sets_created_at ON workout_sets(created_at)',
+    'CREATE INDEX IF NOT EXISTS idx_workout_sets_user_created ON workout_sets(user_id, created_at)',
+    'CREATE INDEX IF NOT EXISTS idx_mesocycle_weeks_mesocycle ON mesocycle_weeks(mesocycle_id)',
+    'CREATE INDEX IF NOT EXISTS idx_mesocycle_weeks_meso_index ON mesocycle_weeks(mesocycle_id, week_index)',
+    'CREATE INDEX IF NOT EXISTS idx_planned_muscle_volume_week ON planned_muscle_volume(mesocycle_week_id)',
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
@@ -2865,10 +2879,20 @@ export async function logMorningWeight(userId, { weightKg, loggedAt = Date.now()
   const d = await db();
   const id = uid();
   const now = Date.now();
-  const dayStart = loggedAt - (loggedAt % 86400000);
+  // Local-time midnight, not UTC midnight. The previous `loggedAt %
+  // 86400000` form bucketed by UTC days, which meant a user in the UK
+  // logging at 00:30 BST got the same bucket as one logging at 22:30
+  // the previous day, and a user in PT logging at 23:30 got bucketed
+  // with the next UTC day's entry.
+  const startLocalDay = (ms) => {
+    const d2 = new Date(ms);
+    return new Date(d2.getFullYear(), d2.getMonth(), d2.getDate()).getTime();
+  };
+  const dayStart = startLocalDay(loggedAt);
+  const dayEnd = dayStart + 86400000;
   const existing = await d.getFirstAsync(
     'SELECT id FROM morning_weights WHERE user_id = ? AND logged_at >= ? AND logged_at < ?',
-    [userId, dayStart, dayStart + 86400000],
+    [userId, dayStart, dayEnd],
   );
   let savedId = id;
   if (existing?.id) {
@@ -2916,7 +2940,9 @@ export async function getMorningWeights(userId, limit = 90) {
 
 export async function getMorningWeightToday(userId) {
   const d = await db();
-  const dayStart = Date.now() - (Date.now() % 86400000);
+  // Local-time midnight. See note in logMorningWeight above.
+  const now = new Date();
+  const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const row = await d.getFirstAsync(
     'SELECT * FROM morning_weights WHERE user_id = ? AND logged_at >= ? AND logged_at < ?',
     [userId, dayStart, dayStart + 86400000],

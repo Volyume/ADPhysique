@@ -206,6 +206,12 @@ export async function flushPendingFeedback(userId) {
     const raw = await AsyncStorage.getItem('@volyume_feedback_pending_v1');
     const list = raw ? JSON.parse(raw) : [];
     if (!list.length) return 0;
+    // Track which specific items failed so we keep them, not "the last N
+    // of the queue". Previously this kept list.slice(shipped) which
+    // only works if successes are a prefix — an interleaved failure
+    // (item 1 fails, item 2 succeeds) would drop the failed item and
+    // keep the successful one for retry.
+    const stillPending = [];
     let shipped = 0;
     for (const item of list) {
       try {
@@ -214,15 +220,17 @@ export async function flushPendingFeedback(userId) {
           userId: userId ?? null,
         });
         if (res.ok) shipped++;
-      } catch (_) { /* leave for next foreground */ }
+        else stillPending.push(item);
+      } catch (_) {
+        stillPending.push(item);
+      }
     }
-    if (shipped === list.length) {
+    if (stillPending.length === 0) {
       await AsyncStorage.removeItem('@volyume_feedback_pending_v1');
-    } else if (shipped > 0) {
-      // Keep the items that failed; we'll try them again next time.
+    } else {
       await AsyncStorage.setItem(
         '@volyume_feedback_pending_v1',
-        JSON.stringify(list.slice(shipped)),
+        JSON.stringify(stillPending),
       );
     }
     return shipped;

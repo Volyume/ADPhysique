@@ -25,6 +25,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import SetEntry from '../components/SetEntry';
 import RestTimer from '../components/RestTimer';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, insertExercise, getCurrentMesocycleWeek, getPlannedMuscleVolume, getWeek1SetsForExercise, getLastNWorkoutSets, saveExerciseUserNote, getExerciseUserNote, getNextTimeNotes, markNoteShown, updateWorkoutSetPostRating } from '../lib/database';
 import { logError } from '../lib/errorLog';
 import {
@@ -83,7 +84,31 @@ function countProgressSets(sets) {
 }
 
 export default function ActiveWorkoutScreen({ navigation, route }) {
-  const store = useAppStore();
+  // Use a shallow selector so every store mutation (rest timer ticks,
+  // PR celebration flag flips, accessibility toggles) doesn't re-render
+  // the 2000-line tree. Without this the rest timer alone fires
+  // 300-600 re-renders per workout because tickRestTimer() ran every
+  // second and store-touch was wholesale.
+  //
+  // Actions are stable function references inside Zustand so they don't
+  // need to participate in the shallow compare — we still pull them
+  // off the store via the selector.
+  const store = useAppStore(useShallow(s => ({
+    user: s.user, units: s.units,
+    activeWorkout: s.activeWorkout,
+    workoutExercises: s.workoutExercises,
+    currentExerciseIndex: s.currentExerciseIndex,
+    setCurrentExerciseIndex: s.setCurrentExerciseIndex,
+    setWorkoutExercises: s.setWorkoutExercises,
+    addExerciseToWorkout: s.addExerciseToWorkout,
+    addSetToCurrentExercise: s.addSetToCurrentExercise,
+    startRestTimer: s.startRestTimer,
+    showPRCelebration: s.showPRCelebration,
+    endWorkout: s.endWorkout,
+    workoutStartTime: s.workoutStartTime,
+    lastActivityAt: s.lastActivityAt,
+    updateLastActivity: s.updateLastActivity,
+  })));
   const {
     user, units, activeWorkout, workoutExercises, currentExerciseIndex,
     setCurrentExerciseIndex, addExerciseToWorkout, addSetToCurrentExercise,
@@ -429,11 +454,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setCurrentSet({ ...DEFAULT_SET });
     setGhostSet(null);
 
+    // Guard so that async state updates don't land after the exercise
+    // changes (rapid swap) or the screen unmounts mid-load. Without this,
+    // a fast tap on the next-exercise button + slow DB read could
+    // overwrite the new exercise's fresh state with stale data from the
+    // previous exercise.
+    let cancelled = false;
+
     async function loadHistory() {
       const [lastN, allTime] = await Promise.all([
         getLastNWorkoutSets(exercise.id, activeWorkout.id, 2),
         getAllCompletedSetsForExercise(exercise.id, activeWorkout.id),
       ]);
+      if (cancelled) return;
       const prev = lastN[0] || [];
       const prevPrev = lastN[1] || [];
       setPrevSets(prev);
@@ -598,6 +631,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     }
 
     loadHistory();
+    return () => { cancelled = true; };
   }, [exercise?.id, currentExerciseIndex]);
 
 

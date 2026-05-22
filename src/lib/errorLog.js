@@ -127,45 +127,49 @@ function _sentry() {
 }
 
 export function logError(scope, error, context) {
-  const entry = buildEntry('error', scope, error, context);
+  const safeContext = redactPII(context);
+  const entry = buildEntry('error', scope, error, safeContext);
   // eslint-disable-next-line no-console
   if (typeof console !== 'undefined' && console.error) {
-    console.error(`[${entry.scope}]`, entry.message, context || '');
+    console.error(`[${entry.scope}]`, entry.message, safeContext || '');
   }
   pushEntry(entry).catch(() => {});
-  // Forward to Sentry — handles its own dedup, source-map symbolication,
-  // alerting. Wrap in try/catch so a Sentry SDK problem can never break
-  // an error log call.
-  try { _sentry()?.captureError(error ?? new Error(entry.message), { scope, extra: { context } }); } catch (_) {}
+  // Forward to Sentry. Use the same redacted context so the broader
+  // PII_KEYS list defined here applies on both the local ring buffer
+  // AND the wire to Sentry. Without this Sentry would receive the raw
+  // tokens, body weights, and notes that the local buffer scrubs.
+  try { _sentry()?.captureError(error ?? new Error(entry.message), { scope, extra: { context: safeContext } }); } catch (_) {}
   return entry;
 }
 
 export function logWarn(scope, message, context) {
-  const entry = buildEntry('warn', scope, message, context);
+  const safeContext = redactPII(context);
+  const entry = buildEntry('warn', scope, message, safeContext);
   if (typeof console !== 'undefined' && console.warn) {
-    console.warn(`[${entry.scope}]`, entry.message, context || '');
+    console.warn(`[${entry.scope}]`, entry.message, safeContext || '');
   }
   pushEntry(entry).catch(() => {});
-  try { _sentry()?.captureWarning(entry.message, { scope, extra: { context } }); } catch (_) {}
+  try { _sentry()?.captureWarning(entry.message, { scope, extra: { context: safeContext } }); } catch (_) {}
   return entry;
 }
 
 export function logInfo(scope, message, context) {
+  const safeContext = redactPII(context);
   // Gated by VERBOSE_LOGGING for the on-device buffer. Even when off,
   // we forward to Sentry as a breadcrumb so the run-up to an error is
   // visible in the issue detail view — breadcrumbs are cheap (no event
   // created on their own, only attached to subsequent errors).
   if (VERBOSE_LOGGING) {
-    const entry = buildEntry('info', scope, message, context);
+    const entry = buildEntry('info', scope, message, safeContext);
     if (typeof console !== 'undefined' && console.log) {
-      console.log(`[${entry.scope}]`, entry.message, context || '');
+      console.log(`[${entry.scope}]`, entry.message, safeContext || '');
     }
     pushEntry(entry).catch(() => {});
-    try { _sentry()?.addBreadcrumb(entry.message, { scope, extra: { context } }); } catch (_) {}
+    try { _sentry()?.addBreadcrumb(entry.message, { scope, extra: { context: safeContext } }); } catch (_) {}
     return entry;
   }
   // Quiet mode (post-beta) still feeds Sentry breadcrumbs — almost free.
-  try { _sentry()?.addBreadcrumb(message, { scope, extra: { context } }); } catch (_) {}
+  try { _sentry()?.addBreadcrumb(message, { scope, extra: { context: safeContext } }); } catch (_) {}
   return null;
 }
 

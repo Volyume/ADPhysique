@@ -55,14 +55,28 @@ async function getDb() {
  *     Hevy nor Strong write multi-line cells)
  *   - Multi-character delimiters
  */
+// Cap the parser so a pathologically large CSV (millions of rows)
+// can't OOM the device. 100k rows is comfortably above the largest
+// realistic gym log (10 yrs × 5 sessions/wk × 30 sets ≈ 80k) so a
+// legitimate import is never blocked by this.
+const MAX_CSV_ROWS = 100_000;
+
 export function parseCSV(text) {
   const rows = [];
   let cur = [];
   let field = '';
   let inQuote = false;
+  let truncated = false;
 
   function pushField() { cur.push(field); field = ''; }
-  function pushRow() { if (cur.length || field !== '') { pushField(); rows.push(cur); cur = []; } }
+  function pushRow() {
+    if (cur.length || field !== '') {
+      pushField();
+      rows.push(cur);
+      cur = [];
+      if (rows.length >= MAX_CSV_ROWS) truncated = true;
+    }
+  }
 
   for (let i = 0; i < text.length; i++) {
     const c = text[i];
@@ -86,6 +100,10 @@ export function parseCSV(text) {
         field += c;
       }
     }
+    // Stop parsing once we've hit the row cap. The remaining bytes
+    // get dropped rather than allocated; the partial result is still
+    // a valid CSV import for the rows we did read.
+    if (truncated) break;
   }
   // Trailing field / row without a final newline
   if (inQuote) {

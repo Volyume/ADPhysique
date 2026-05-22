@@ -165,16 +165,28 @@ export async function detectCrashedLastSession() {
  * still kill the process after this point but the user has chosen
  * to leave so we don't treat that as a crash.
  */
+// Cache the subscription so a second installShutdownHandler() call
+// (which can happen on hot reload during dev) doesn't double-subscribe.
+let _shutdownSub = null;
+
 export function installShutdownHandler() {
   try {
-    AppState.addEventListener('change', state => {
+    if (_shutdownSub) return _shutdownSub;
+    _shutdownSub = AppState.addEventListener('change', state => {
       if (state === 'background' || state === 'inactive') {
         AsyncStorage.setItem(CRASHED_FLAG_KEY, 'false').catch(() => {});
       } else if (state === 'active') {
         AsyncStorage.setItem(CRASHED_FLAG_KEY, 'true').catch(() => {});
       }
     });
-  } catch (_) { /* tolerate */ }
+    return _shutdownSub;
+  } catch (_) { return null; }
+}
+
+// Exposed for tests + hot reload teardown so the listener doesn't leak.
+export function uninstallShutdownHandler() {
+  try { _shutdownSub?.remove(); } catch (_) {}
+  _shutdownSub = null;
 }
 
 export async function getLastCrashMeta() {
