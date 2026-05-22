@@ -1,5 +1,7 @@
 name: Deploy public/ to GitHub Pages
 
+# Re-trigger after lifting the github-pages environment branch restriction.
+
 on:
   push:
     branches:
