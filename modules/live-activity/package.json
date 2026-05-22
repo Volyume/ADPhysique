@@ -1,0 +1,7 @@
+{
+  "name": "live-activity",
+  "version": "0.1.0",
+  "description": "iOS Live Activity / Dynamic Island integration for the Volyume rest timer.",
+  "main": "index.ts",
+  "private": true
+}

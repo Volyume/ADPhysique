@@ -72,10 +72,10 @@ export async function requestNotifPermission() {
 // live "rest ends in 1:24" countdown on their lock screen and in the
 // notification shade without unlocking.
 //
-// On iOS the native module is unavailable (expo-modules-core's
-// requireNativeModule returns null) so isAvailable() is false and
-// these calls become silent no-ops. iOS gets a Live Activity in a
-// follow-up commit; for now the in-app timer is the only feedback.
+// On iOS the equivalent is a Live Activity (Dynamic Island + lock
+// screen). modules/live-activity wraps ActivityKit. Both modules are
+// guarded by lazy requires so this file compiles cleanly even when
+// either is missing from the build.
 
 const REST_CHANNEL_ID = 'rest-timer';
 
@@ -89,6 +89,18 @@ function getNativeRest() {
     _nativeRest = false;
   }
   return _nativeRest || null;
+}
+
+let _nativeLiveActivity = null;
+function getLiveActivity() {
+  if (_nativeLiveActivity !== null) return _nativeLiveActivity;
+  try {
+    // eslint-disable-next-line global-require, import/no-unresolved
+    _nativeLiveActivity = require('live-activity');
+  } catch (_) {
+    _nativeLiveActivity = false;
+  }
+  return _nativeLiveActivity || null;
 }
 
 /**
@@ -108,29 +120,52 @@ function getNativeRest() {
  * @param {string} exerciseName  Shown as the notification title.
  */
 export async function scheduleRestNotif(seconds, exerciseName) {
-  const native = getNativeRest();
-  if (!native?.isAvailable?.()) return null;
   if (!seconds || seconds <= 0) return null;
-  try {
-    await ensureNotifChannels();
-    const ok = await native.start({
-      exerciseName: exerciseName || 'Rest timer',
-      endTimeMs: Date.now() + seconds * 1000,
-      channelId: REST_CHANNEL_ID,
-      deepLink: 'volyume://active-workout',
-    });
-    return ok ? REST_CHANNEL_ID : null;
-  } catch (_) {
-    return null;
+  const endTimeMs = Date.now() + seconds * 1000;
+  // Fire both surfaces — Android chronometer and iOS Live Activity
+  // — concurrently. Either one being unavailable on this platform
+  // is fine; each module guards itself.
+  const native = getNativeRest();
+  const liveActivity = getLiveActivity();
+  let posted = null;
+  if (native?.isAvailable?.()) {
+    try {
+      await ensureNotifChannels();
+      const ok = await native.start({
+        exerciseName: exerciseName || 'Rest timer',
+        endTimeMs,
+        channelId: REST_CHANNEL_ID,
+        deepLink: 'volyume://active-workout',
+      });
+      if (ok) posted = REST_CHANNEL_ID;
+    } catch (_) { /* tolerate */ }
   }
+  if (liveActivity?.isAvailable?.()) {
+    try {
+      await liveActivity.startRestActivity({
+        exerciseName: exerciseName || 'Rest timer',
+        endTimeMs,
+      });
+      // Returning a non-null sentinel so the caller knows SOMETHING
+      // is posted even if the Android path didn't.
+      if (!posted) posted = 'live-activity';
+    } catch (_) { /* tolerate */ }
+  }
+  return posted;
 }
 
 /**
- * Cancel the live-countdown notification. Safe to call when nothing
- * is posted or when the native module is unavailable.
+ * Cancel the live-countdown notification on every platform that
+ * posts one. Safe to call when nothing is posted or when neither
+ * module is bundled.
  */
 export async function cancelRestNotif() {
   const native = getNativeRest();
-  if (!native?.cancel) return;
-  try { await native.cancel(); } catch (_) { /* best effort */ }
+  const liveActivity = getLiveActivity();
+  if (native?.cancel) {
+    try { await native.cancel(); } catch (_) { /* best effort */ }
+  }
+  if (liveActivity?.endRestActivity) {
+    try { await liveActivity.endRestActivity(); } catch (_) { /* best effort */ }
+  }
 }

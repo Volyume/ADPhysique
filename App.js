@@ -245,6 +245,20 @@ export default function App() {
     if (prCelebration) getWellbeingMode().then(m => setCalm(isCalm(m)));
   }, [prCelebration]);
 
+  // End any iOS Live Activity left over from a previous launch. If the
+  // app was force-closed mid-rest or crashed during a workout, the
+  // system retained the Activity — calling endAllActivities here on
+  // cold boot dismisses it so the user doesn't see a stale countdown
+  // on their lock screen for a workout that's no longer happening.
+  // No-op on Android.
+  useEffect(() => {
+    try {
+      // eslint-disable-next-line global-require, import/no-unresolved
+      const liveActivity = require('live-activity');
+      liveActivity.endAllActivities?.().catch(() => {});
+    } catch (_) { /* module not bundled on this platform */ }
+  }, []);
+
   // Deep link handler — processes volyume:// auth callbacks from confirmation emails.
   // RootNavigator's onAuthStateChange listener picks up the resulting session
   // automatically and re-routes the user without any extra navigation calls.
