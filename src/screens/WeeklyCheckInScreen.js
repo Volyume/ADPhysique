@@ -652,7 +652,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             Log {remaining} more {remaining === 1 ? 'reading' : 'readings'} from the Train tab and come back on {dayName}.
           </Text>
           <TouchableOpacity style={styles.gateBtn} onPress={() => navigation.goBack()} activeOpacity={0.85}>
-            <Text style={styles.gateBtnText}>I'll log my weight first</Text>
+            <Text style={styles.gateBtnText}>Log my weight first</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.gateDeferBtn} onPress={() => setGateState('open')} activeOpacity={0.75}>
             <Text style={styles.gateDeferBtnText}>Check in anyway</Text>

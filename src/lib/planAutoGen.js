@@ -124,14 +124,20 @@ export async function generateAndSavePlan(userId, profile) {
     for (const ex of allExercises) exerciseMap[ex.name.toLowerCase()] = ex;
 
     let totalWritten = 0;
+    let totalRequested = 0;
+    const missedNames = [];
     for (const workout of plan.workouts) {
       const routine = await createRoutine(
         userId, workout.name, null, plan.splitType, 0, null, prog.id,
       );
       for (let i = 0; i < workout.exercises.length; i++) {
         const ex = workout.exercises[i];
+        totalRequested++;
         const dbEx = exerciseMap[ex.exerciseName?.toLowerCase()];
-        if (!dbEx) continue;
+        if (!dbEx) {
+          if (missedNames.length < 5 && ex.exerciseName) missedNames.push(ex.exerciseName);
+          continue;
+        }
         await addExerciseToRoutine(
           routine.id, dbEx.id, i, ex.repMin, ex.repMax, ex.notes ?? null, ex.sets,
           null,                          // startingWeight — engine doesn't set this
@@ -141,10 +147,18 @@ export async function generateAndSavePlan(userId, profile) {
         totalWritten++;
       }
     }
-    // If literally no exercises matched the DB (catastrophic name mismatch),
-    // we'd still have created empty routines. That's a bad outcome — flag it.
     if (totalWritten === 0) {
       return { ok: false, programmeId: prog.id, error: 'Plan created but no exercises matched the library' };
+    }
+    // Soft warning when the engine wanted exercises we couldn't fulfil
+    // (typically a bodyweight-only user where the engine picked a barbell
+    // movement). The plan is still usable but visibly thinner than asked
+    // for, so we surface a flag for the caller to show in the UI.
+    if (totalWritten < totalRequested) {
+      try {
+        // eslint-disable-next-line global-require
+        require('./errorLog').logInfo('planAutoGen.partial', `${totalWritten}/${totalRequested} matched`, { missed: missedNames });
+      } catch (_) {}
     }
     await activatePlanWithBlock(userId, prog.id, planName);
     return { ok: true, programmeId: prog.id };

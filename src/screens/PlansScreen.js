@@ -412,7 +412,7 @@ export default function PlansScreen({ navigation }) {
             {blockAdvice.action === 'early_deload' && (
               <View style={styles.blockCardActions}>
                 <TouchableOpacity style={styles.blockRestartBtn} onPress={handleSnoozeBlock} activeOpacity={0.85}>
-                  <Text style={styles.blockRestartBtnText}>Got it, I'll ease off</Text>
+                  <Text style={styles.blockRestartBtnText}>Got it, ease off this week</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.blockNewBtn} onPress={handleSnoozeBlock} activeOpacity={0.85}>
                   <Text style={styles.blockNewBtnText}>Keep going</Text>

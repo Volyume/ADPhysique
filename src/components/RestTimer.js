@@ -99,8 +99,10 @@ export default function RestTimer() {
     // second; the stopAnimation + setValue + start is cheap. The previous
     // useEffect on [restTimerActive] only fired once when the timer
     // started, leaving the animation disconnected from the live remaining.
+    // reduceMotion is in the dep array so toggling Reduce Motion mid-rest
+    // takes effect on the next tick rather than waiting for the next rest.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [restTimerRemaining, restTimerDuration]);
+  }, [restTimerRemaining, restTimerDuration, reduceMotion]);
 
   // Preload beeps once when the timer first becomes active in this mount —
   // pays the WAV synth + disk-write cost up front so the first countdown

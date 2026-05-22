@@ -210,6 +210,17 @@ export default function SettingsScreen({ navigation }) {
   }
 
   async function handleSignOut() {
+    // Block sign-out mid-workout. The workout row stays in SQLite, but the
+    // in-memory active state is cleared and the user lands on Login mid-set,
+    // which reads as data loss even though nothing is lost.
+    const activeWorkout = useAppStore.getState().activeWorkout;
+    if (activeWorkout) {
+      Alert.alert(
+        'Finish your workout first',
+        'You have a session in progress. Finish or discard it before signing out so nothing gets left in a half-state.',
+      );
+      return;
+    }
     Alert.alert(
       'Sign out?',
       user?.isLocal

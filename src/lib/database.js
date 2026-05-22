@@ -927,6 +927,19 @@ export async function updateWorkout(id, data) {
   await d.runAsync(`UPDATE workouts SET ${fields.join(', ')} WHERE id = ?`, values);
 }
 
+// Hard-delete an incomplete workout and its sets. Used when the user
+// discards a session mid-way. Incomplete workouts never sync to the
+// cloud (bulkUploadLocalData + pullFromCloud both filter on
+// is_completed=true), so a hard delete here is safe and avoids the
+// SQLite bloat that comes from leaving orphaned in_progress rows
+// around with all their sets attached.
+export async function deleteIncompleteWorkout(workoutId) {
+  if (!workoutId) return;
+  const d = await db();
+  await d.runAsync('DELETE FROM workout_sets WHERE workout_id = ?', [workoutId]);
+  await d.runAsync('DELETE FROM workouts WHERE id = ? AND is_completed = 0', [workoutId]);
+}
+
 // ─── Workout Sets ──────────────────────────────────────────────────────────────────────────────────────
 
 export async function getAllWorkoutSets(userId) {
@@ -3737,6 +3750,11 @@ export async function migrateLocalUserId(localUserId, supabaseUserId) {
     // present on all three; re-key them so the pre-signin local
     // sample data lands under the cloud uid for the push.
     'workout_notes_v2', 'planned_muscle_volume_sync', 'adaptation_events_sync',
+    // Queued sync ops written while signed-out are keyed by the local
+    // UUID. Without re-keying, the drainer would push them under the
+    // wrong user and they'd fail RLS on the cloud, then get marked as
+    // permanently failed and dropped.
+    'pending_sync_ops',
   ];
   for (const table of tables) {
     try {

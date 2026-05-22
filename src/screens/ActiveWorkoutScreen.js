@@ -25,7 +25,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import SetEntry from '../components/SetEntry';
 import RestTimer from '../components/RestTimer';
 import useAppStore from '../store/useAppStore';
-import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, getAllExercises, insertExercise, getCurrentMesocycleWeek, getPlannedMuscleVolume, getWeek1SetsForExercise, getLastNWorkoutSets, saveExerciseUserNote, getExerciseUserNote, getNextTimeNotes, markNoteShown, updateWorkoutSetPostRating } from '../lib/database';
+import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, insertExercise, getCurrentMesocycleWeek, getPlannedMuscleVolume, getWeek1SetsForExercise, getLastNWorkoutSets, saveExerciseUserNote, getExerciseUserNote, getNextTimeNotes, markNoteShown, updateWorkoutSetPostRating } from '../lib/database';
 import { logError } from '../lib/errorLog';
 import {
   detectPR,
@@ -140,6 +140,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const autoAdvanceRef = useRef(null);
   const sessionSetsRef = useRef([]);   // tracks sets in this session — used for PR detection
   const warmupHintSeenRef = useRef(false); // show one-liner warmup note only on first warmup of this session
+  const warmupSavingRef = useRef(false); // gates handleLogWarmupFromSheet so a rapid double-tap can't double-insert
+  const finishingRef = useRef(false); // gates handleFinishWorkout so a rapid double-tap can't double-finish
   const shownNoteIdsRef = useRef(new Set()); // note IDs already shown in this session
 
   const scrollRef = useRef(null);
@@ -269,6 +271,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     const w = suggestedWarmups[idx];
     if (!w) return;
     if (warmupDoneIdx.includes(idx)) return;
+    if (warmupSavingRef.current) return;
+    warmupSavingRef.current = true;
 
     hapticsVocab.warmupLogged();
 
@@ -334,6 +338,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     } catch (_e) {
       // Surface the failure but keep the sheet open so the user can retry.
       Alert.alert('Could not log warm-up', 'Something went wrong saving that set. Please try again.');
+    } finally {
+      warmupSavingRef.current = false;
     }
   }
 
@@ -958,11 +964,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
   async function handleFinishWorkout() {
     if (!activeWorkout) { navigation.goBack(); return; }
+    if (finishingRef.current) return; // double-tap guard
+    finishingRef.current = true;
     Alert.alert(
       'Finish Workout?',
       `You've logged ${workoutExercises.reduce((sum, e) => sum + e.sets.length, 0)} sets across ${workoutExercises.length} exercises.`,
       [
-        { text: 'Keep Going', style: 'cancel' },
+        { text: 'Keep Going', style: 'cancel', onPress: () => { finishingRef.current = false; } },
         {
           text: 'Finish',
           onPress: async () => {
@@ -1037,6 +1045,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 workoutId: activeWorkout?.id,
                 setCount: snapshotExercises.flatMap(ex => ex.sets).length,
               });
+              // Reset the double-tap guard so the user can retry. On the
+              // happy path the guard stays set forever because we've
+              // already navigated away from this screen.
+              finishingRef.current = false;
               Alert.alert(
                 'Couldn\'t finish workout',
                 'Your sets are still saved but the workout didn\'t close. Tap Finish to retry: ' + (e?.message ?? 'unknown error'),
@@ -1699,9 +1711,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   {
                     text: 'Discard',
                     style: 'destructive',
-                    onPress: () => {
+                    onPress: async () => {
+                      const discardId = activeWorkout?.id;
                       endWorkout();
                       navigation.goBack();
+                      if (discardId) {
+                        try { await deleteIncompleteWorkout(discardId); }
+                        catch (e) { logError('ActiveWorkoutScreen.discardStale', e, { workoutId: discardId }); }
+                      }
                     },
                   },
                 ]);
@@ -1885,7 +1902,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.discardConfirmBtn}
-                onPress={() => { endWorkout(); navigation.goBack(); }}
+                onPress={async () => {
+                  const discardId = activeWorkout?.id;
+                  endWorkout();
+                  navigation.goBack();
+                  if (discardId) {
+                    try { await deleteIncompleteWorkout(discardId); }
+                    catch (e) { logError('ActiveWorkoutScreen.discardModal', e, { workoutId: discardId }); }
+                  }
+                }}
               >
                 <Text style={styles.discardConfirmBtnText}>Discard Workout</Text>
               </TouchableOpacity>
