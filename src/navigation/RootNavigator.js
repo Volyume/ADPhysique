@@ -88,6 +88,31 @@ const stackOptions = {
   cardStyle: { backgroundColor: colors.background },
 };
 
+// Hero-zoom transition for screens that "expand" out of a card on the
+// previous screen (ActiveWorkout opening from the Continue / Next
+// Session hero on Home, WorkoutSummary appearing after a finished
+// session). The destination fades in while scaling from 0.92 to 1.0
+// so it reads as the source card growing into a full screen rather
+// than a flat slide. Matches the Whoop / Apple Health pattern of
+// "tap a card → it expands".
+const heroZoomTransition = {
+  cardStyleInterpolator: ({ current }) => {
+    const opacity = current.progress.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, 1],
+    });
+    const scale = current.progress.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.92, 1],
+    });
+    return { cardStyle: { opacity, transform: [{ scale }] } };
+  },
+  transitionSpec: {
+    open: { animation: 'timing', config: { duration: 280 } },
+    close: { animation: 'timing', config: { duration: 200 } },
+  },
+};
+
 // Pulled from the store at render time so toggling Reduce Motion takes
 // effect on the next navigation push without an app restart. Returns an
 // override merged into the per-stack screenOptions in each navigator.
@@ -106,8 +131,8 @@ function HomeStack({ navigation }) {
     <Stack.Navigator screenOptions={{ ...stackOptions, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
       <Stack.Screen name="BuildWorkout" component={BuildWorkoutScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ title: 'Session Complete' }} />
+      <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} options={{ headerShown: false, ...heroZoomTransition }} />
+      <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ title: 'Session Complete', ...heroZoomTransition }} />
       <Stack.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} options={{ title: 'Workout History' }} />
       <Stack.Screen name="VolumeHeatmap" component={VolumeHeatmapScreen} options={{ title: 'Volume' }} />
       <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ title: 'Share Card' }} />
@@ -148,7 +173,7 @@ function ProgressStack({ navigation }) {
     <Stack.Navigator screenOptions={{ ...stackOptions, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="Analytics" component={AnalyticsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} options={{ title: 'Workout History' }} />
-      <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ title: 'Session Complete' }} />
+      <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ title: 'Session Complete', ...heroZoomTransition }} />
       <Stack.Screen name="VolumeHeatmap" component={VolumeHeatmapScreen} options={{ title: 'Volume Heatmap' }} />
       <Stack.Screen name="PRWall" component={PRWallScreen} options={{ title: 'Personal Records' }} />
       <Stack.Screen name="CoachReview" component={CoachReviewScreen} options={{ title: 'Weekly Review' }} />
@@ -242,7 +267,7 @@ function FirstRunStack() {
       <Stack.Screen name="FirstRunBranch" component={FirstRunScreen} />
       <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ headerShown: true, title: 'Plan Library' }} />
       <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ headerShown: true, title: 'Plan' }} />
-      <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} />
+      <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} options={heroZoomTransition} />
     </Stack.Navigator>
   );
 }
@@ -253,7 +278,7 @@ function ProOnboardingStack() {
       <Stack.Screen name="ProOnboarding" component={ProOnboardingScreen} />
       <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ headerShown: true, title: 'Plan Library' }} />
       <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ headerShown: true, title: 'Plan' }} />
-      <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} />
+      <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} options={heroZoomTransition} />
       <Stack.Screen name="ProSetupComplete" component={ProSetupCompleteScreen} />
       {/* Registered here too so the onboarding hand-off screen can link
           straight into the nutrition guide without leaving the flow. */}

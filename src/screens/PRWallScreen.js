@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Dimensions,
 } from 'react-native';
@@ -11,6 +11,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { getCompletedWorkoutSets, getAllExercises, getLatestBodyWeight } from '../lib/database';
 import { calculate1RM, getStrengthStandard } from '../lib/algorithms';
 import { EmptyPRsIllustration } from '../components/Illustrations';
+import PeekMenu from '../components/PeekMenu';
 import { getStrengthLevel } from '../lib/strengthStandards';
 import useAppStore from '../store/useAppStore';
 import InfoTooltip from '../components/InfoTooltip';
@@ -53,6 +54,23 @@ export default function PRWallScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState('all');
   const [expandedExercise, setExpandedExercise] = useState(null);
+  const [exerciseList, setExerciseList] = useState([]);
+  const peekRef = useRef(null);
+
+  function openPRMenu(exerciseName) {
+    const ex = exerciseList?.find(e => e.name === exerciseName);
+    if (!ex) return;
+    peekRef.current?.open({
+      title: exerciseName,
+      items: [
+        {
+          icon: 'analytics-outline',
+          label: 'View exercise detail',
+          onPress: () => navigation.navigate('ExerciseDetail', { exerciseId: ex.id }),
+        },
+      ],
+    });
+  }
 
   useFocusEffect(useCallback(() => { if (user?.id) loadData(); }, [user?.id]));
 
@@ -94,6 +112,7 @@ export default function PRWallScreen({ navigation }) {
         }
       }
       setGrouped(newGrouped);
+      setExerciseList(allExercises);
 
       // Build per-session 1RM history for trend charts
       const sessionHistory = {};
@@ -247,6 +266,7 @@ export default function PRWallScreen({ navigation }) {
             <TouchableOpacity
               style={styles.prCard}
               onPress={() => history && setExpandedExercise(isExpanded ? null : name)}
+              onLongPress={() => openPRMenu(name)}
               activeOpacity={history ? 0.8 : 1}
             >
               <View style={styles.prCardHeader}>
@@ -366,6 +386,7 @@ export default function PRWallScreen({ navigation }) {
         }
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
       />
+      <PeekMenu ref={peekRef} />
     </SafeAreaView>
   );
 }
