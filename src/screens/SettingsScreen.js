@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, TextInput,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, TextInput, Share, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -848,7 +848,30 @@ export default function SettingsScreen({ navigation }) {
         {/* About */}
         <View style={styles.about}>
           <Text style={styles.appName}>Volyume</Text>
-          <Text style={styles.appVersion}>v{Constants.expoConfig?.version ?? '1.1.0'}</Text>
+          <TouchableOpacity
+            onPress={() => {
+              // Tap to share the build identifier. Useful for beta
+              // testers when they file bugs: paste this into the
+              // report and we know exactly which build they're on.
+              const v = Constants.expoConfig?.version ?? '1.1.0';
+              const code = Platform.OS === 'ios'
+                ? Constants.expoConfig?.ios?.buildNumber
+                : Constants.expoConfig?.android?.versionCode;
+              const env = __DEV__ ? 'dev' : 'release';
+              const id = `Volyume v${v} (${Platform.OS} ${code ?? '?'}, ${env})`;
+              Share.share({ message: id }).catch(() => {});
+            }}
+            activeOpacity={0.7}
+            accessibilityLabel="App version, tap to share"
+          >
+            <Text style={styles.appVersion}>
+              v{Constants.expoConfig?.version ?? '1.1.0'}
+              {' '}
+              ({Platform.OS === 'ios'
+                ? Constants.expoConfig?.ios?.buildNumber
+                : Constants.expoConfig?.android?.versionCode})
+            </Text>
+          </TouchableOpacity>
           <Text style={styles.tagline}>Less thinking. More lifting.</Text>
         </View>
       </ScrollView>
