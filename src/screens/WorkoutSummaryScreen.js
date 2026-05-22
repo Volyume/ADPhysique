@@ -77,7 +77,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   } = route.params || {};
   const { user, units, userProfile, session } = useAppStore();
   const toast = useToast();
-  const feedback = useFeedback();
+  // Renamed to feedbackSheet to avoid clashing with the per-set
+  // feedback state below (sessionDifficulty, overallPump, etc.).
+  // Both live in the same scope — JS doesn't let two consts share a
+  // name in the same block.
+  const feedbackSheet = useFeedback();
   const insets = useSafeAreaInsets();
 
   const [feedback, setFeedback] = useState({
@@ -139,7 +143,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // the @volyume_feedback_prompt_history_v1 store. Never fires in
   // read-only mode (viewing old history).
   useEffect(() => {
-    if (readOnly || !feedback) return;
+    if (readOnly || !feedbackSheet) return;
     const totalDone = completedWorkoutCount ?? 0;
     // Trigger windows: after session 1 (the "is this for you?" beat)
     // and after session 10 (the "still working?" beat). Both gated
@@ -155,13 +159,13 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     const t = setTimeout(async () => {
       const ok = await shouldPrompt(triggerKey).catch(() => false);
       if (!ok) return;
-      feedback.open({
+      feedbackSheet.open({
         trigger: 'contextual',
         triggerKey,
       });
     }, 1400);
     return () => clearTimeout(t);
-  }, [readOnly, completedWorkoutCount, feedback]);
+  }, [readOnly, completedWorkoutCount, feedbackSheet]);
 
   // 4-week comparison against prior sessions of the SAME routine. Skipped
   // for one-off sessions (no routineId) and for read-only history views
