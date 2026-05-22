@@ -860,8 +860,8 @@ const styles = StyleSheet.create({
   },
   plateauTitle: {
     color: colors.warning,
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
     marginBottom: spacing.xxs,
   },
   plateauBody: {
@@ -1031,7 +1031,7 @@ const styles = StyleSheet.create({
   saveGoalBtnText: {
     fontSize: fontSize.md,
     fontWeight: fontWeight.bold,
-    color: '#000000',
+    color: colors.background,
   },
   removeGoalLink: {
     alignItems: 'center',

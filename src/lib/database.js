@@ -531,9 +531,17 @@ async function runMigrations(d) {
   } catch (_) { current = 0; }
 
   for (let v = current; v < SCHEMA_MIGRATIONS.length; v++) {
-    for (const sql of SCHEMA_MIGRATIONS[v]) {
+    for (const op of SCHEMA_MIGRATIONS[v]) {
       try {
-        await d.execAsync(sql);
+        // Function migrations let us run JS (e.g. compute deterministic
+        // IDs and UPDATE rows) inside the same versioned migration
+        // pipeline as plain SQL strings. The function is passed the
+        // database handle and may use any of its async methods.
+        if (typeof op === 'function') {
+          await op(d);
+        } else {
+          await d.execAsync(op);
+        }
       } catch (e) {
         if (isBenignMigrationError(e)) continue;
         // A genuine migration failure — surface it instead of silently
@@ -580,8 +588,16 @@ export async function getExercisesByMuscle(muscle) {
 }
 
 export async function insertExercise(data) {
+  return insertExerciseWithId(uid(), data);
+}
+
+// Variant that accepts a caller-supplied id. seedExercisesIfNeeded uses
+// it to plant canonical exercises with deterministic (name-hashed)
+// UUIDs so every install produces the same ID for the same canonical
+// name — see canonicalExerciseId() in seedExercises.js for the
+// rationale.
+export async function insertExerciseWithId(id, data) {
   const d = await db();
-  const id = uid();
   const now = Date.now();
   await d.runAsync(
     `INSERT OR IGNORE INTO exercises

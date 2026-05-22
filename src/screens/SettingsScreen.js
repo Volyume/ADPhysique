@@ -864,7 +864,7 @@ const styles = StyleSheet.create({
   a11yNote: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic', paddingHorizontal: spacing.md, paddingTop: spacing.xs, lineHeight: 16 },
   tagline: { fontSize: fontSize.xs, color: colors.textMuted },
   dataPrivacyNote: {
-    fontSize: 11,
+    fontSize: fontSize.xs,
     color: colors.textMuted,
     paddingHorizontal: spacing.xs,
     paddingBottom: spacing.sm,

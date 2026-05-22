@@ -517,7 +517,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
   },
   strengthLevelNext: {
-    fontSize: 11,
+    fontSize: fontSize.xs,
     color: colors.textMuted,
     marginTop: spacing.xxs,
   },

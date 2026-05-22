@@ -1737,7 +1737,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, borderRadius: 14, paddingVertical: 14, marginTop: 8,
   },
   proRecoverBtnText: {
-    fontSize: 15, fontWeight: '700', color: colors.background,
+    fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background,
   },
   noPlanHero: {
     alignItems: 'center',
@@ -2088,7 +2088,7 @@ const styles = StyleSheet.create({
     padding: 14, marginBottom: 12, gap: 12,
   },
   coachBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
-  coachBannerTitle: { fontSize: 13, fontWeight: '700', color: colors.primary, marginBottom: 2 },
+  coachBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary, marginBottom: 2 },
   coachBannerBody: { fontSize: 12, color: colors.textSecondary, lineHeight: 17 },
   deloadBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -2096,7 +2096,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(245,158,11,0.35)', marginBottom: 12,
   },
   deloadBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
-  deloadBannerTitle: { fontSize: 13, fontWeight: '700', color: colors.warning, marginBottom: 2 },
+  deloadBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.warning, marginBottom: 2 },
   deloadBannerBody: { fontSize: 12, color: colors.textSecondary, lineHeight: 17 },
 
   // Nutrition phase sync banner
@@ -2165,13 +2165,13 @@ const styles = StyleSheet.create({
   },
   quickStartTitle: {
     color: colors.textPrimary,
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
     marginBottom: 3,
   },
   quickStartSub: {
     color: colors.textSecondary,
-    fontSize: 13,
+    fontSize: fontSize.sm,
     lineHeight: 18,
   },
 });

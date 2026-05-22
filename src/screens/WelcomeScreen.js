@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs, paddingTop: spacing.sm,
     borderTopWidth: 1, borderTopColor: colors.border,
   },
-  freeBackupText: { fontSize: 11, color: colors.textMuted, flex: 1, lineHeight: 16 },
+  freeBackupText: { fontSize: fontSize.xs, color: colors.textMuted, flex: 1, lineHeight: 16 },
 
   signInLink: {
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
 
 
   founderNote: {
-    fontSize: 11, color: colors.textMuted, textAlign: 'center',
+    fontSize: fontSize.xs, color: colors.textMuted, textAlign: 'center',
     paddingBottom: spacing.md, opacity: 0.6,
   },
 });

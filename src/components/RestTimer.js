@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
   },
   almostDone: { color: colors.warning },
   countdownNum: {
-    fontSize: 32,
+    fontSize: fontSize.xxxl,
     fontWeight: fontWeight.black,
     color: colors.warning,
     fontVariant: ['tabular-nums'],

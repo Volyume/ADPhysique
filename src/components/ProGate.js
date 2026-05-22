@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, borderRadius: radius.sm,
     paddingHorizontal: 10, paddingVertical: 5,
   },
-  lockChipText: { fontSize: 11, fontWeight: fontWeight.bold, color: colors.background },
+  lockChipText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.background },
 
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' },
   sheet: {

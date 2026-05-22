@@ -117,7 +117,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
           style={{ marginRight: 16 }}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Text style={{ fontSize: 15, color: isReordering ? colors.primary : colors.textSecondary, fontWeight: isReordering ? '700' : '400' }}>
+          <Text style={{ fontSize: fontSize.md, color: isReordering ? colors.primary : colors.textSecondary, fontWeight: isReordering ? fontWeight.bold : fontWeight.regular }}>
             {isReordering ? 'Done' : 'Reorder'}
           </Text>
         </TouchableOpacity>
