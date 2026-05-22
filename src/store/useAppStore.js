@@ -158,6 +158,14 @@ const useAppStore = create((set, get) => ({
   clearAuthStateForSignOut: async () => {
     // eslint-disable-next-line global-require
     try { require('../lib/errorLog').logInfo('clearAuthStateForSignOut', 'start', { prevTier: get().tier, prevUid: get().user?.id ?? null }); } catch (_) {}
+    // Cancel any pending debounced sync — running a push AFTER the
+    // session has been torn down would either fail silently
+    // (no auth) or worse, fire with stale credentials. The next
+    // sign-in's bulkUpload handles any unsynced local writes.
+    try {
+      // eslint-disable-next-line global-require
+      require('../lib/sync').cancelScheduledSync();
+    } catch (_) { /* tolerate */ }
     set({
       // Session-level fields only. These are in-memory state, not
       // AsyncStorage. AsyncStorage data persists untouched.

@@ -6,6 +6,18 @@ import { logError } from './errorLog';
 let _db = null;
 let _initPromise = null;
 
+// Fire a debounced full cloud sync after a local write. Lazy-required
+// to avoid the circular import (sync.js → database.js → sync.js).
+// Every mutating write function below calls this AFTER its local
+// SQLite mutation succeeds so rapid edits coalesce into one push
+// within ~2 seconds.
+function _scheduleSync() {
+  try {
+    // eslint-disable-next-line global-require
+    require('./sync').scheduleSync();
+  } catch (_) { /* sync module unavailable — tolerate */ }
+}
+
 function uid() {
   // UUID v4 — required so rows sync cleanly to Supabase, whose primary-key
   // columns are typed UUID. The previous compact format (timestamp + random
@@ -786,6 +798,7 @@ export async function insertExerciseWithId(id, data) {
 export async function deleteExercise(id) {
   const d = await db();
   await d.runAsync('DELETE FROM exercises WHERE id = ? AND is_custom = 1', [id]);
+  _scheduleSync();
 }
 
 // ─── Workouts ─────────────────────────────────────────────────────────────────────────────────────
@@ -1261,6 +1274,7 @@ export async function createRoutine(userId, name, description = null, splitType 
      VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)`,
     [id, userId, name, description, splitType, isLibrary, isSampleInt, sourceRoutineId, programmeId, now, now],
   );
+  _scheduleSync();
   return { id, userId, name, description, splitType, isActive: 1, isLibrary, isSample: isSampleInt, sourceRoutineId, programmeId, createdAt: now, updatedAt: now };
 }
 
@@ -1270,6 +1284,7 @@ export async function softDeleteRoutine(id) {
     'UPDATE routines SET is_active = 0, updated_at = ? WHERE id = ?',
     [Date.now(), id],
   );
+  _scheduleSync();
 }
 
 /**
@@ -1339,6 +1354,7 @@ export async function deleteOrphanedRoutines(userId) {
       );
     }
     await d.execAsync('COMMIT');
+    _scheduleSync();
     return orphans.length;
   } catch (e) {
     try { await d.execAsync('ROLLBACK'); } catch (_) {}
@@ -1357,6 +1373,7 @@ export async function createProgramme(userId, name, description = null, isLibrar
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [id, userId || null, name, description, isLibrary, tags, splitType, difficulty, now, now],
   );
+  _scheduleSync();
   return { id, userId, name, description, isLibrary, tags, splitType, difficulty, createdAt: now, updatedAt: now };
 }
 
@@ -1457,6 +1474,7 @@ export async function addExerciseToRoutine(routineId, exerciseId, order, repsMin
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [id, routineId, exerciseId, exerciseName, order, sets, repsMin, repsMax, notes, startingWeight, restSeconds, supersetGroupId, now, now],
   );
+  _scheduleSync();
   return { id, routineId, exerciseId, orderInRoutine: order, supersetGroupId };
 }
 
@@ -1483,6 +1501,7 @@ export async function updateRoutineExercise(id, data) {
   fields.push('updated_at = ?');
   values.push(now, id);
   await d.runAsync(`UPDATE routine_exercises SET ${fields.join(', ')} WHERE id = ?`, values);
+  _scheduleSync();
 }
 
 /**
@@ -1506,6 +1525,7 @@ export async function updateRoutineExerciseExercise(routineExerciseId, newExerci
     'UPDATE routine_exercises SET exercise_id = ?, exercise_name = ?, updated_at = ? WHERE id = ?',
     [newExerciseId, newName, now, routineExerciseId],
   );
+  _scheduleSync();
 }
 
 export async function getAllRoutineExerciseCounts() {
@@ -1517,6 +1537,7 @@ export async function getAllRoutineExerciseCounts() {
 export async function updateRoutineName(id, name) {
   const d = await db();
   await d.runAsync('UPDATE routines SET name = ?, updated_at = ? WHERE id = ?', [name, Date.now(), id]);
+  _scheduleSync();
 }
 
 export async function duplicateRoutine(routineId, userId, newName) {
@@ -1559,6 +1580,7 @@ export async function updateRoutineExerciseOrder(id, newOrderIndex) {
     'UPDATE routine_exercises SET order_in_routine = ?, updated_at = ? WHERE id = ?',
     [newOrderIndex, Date.now(), id],
   );
+  _scheduleSync();
 }
 
 // ─── Plans (active plan logic, workout templates) ────────────────────
@@ -1585,6 +1607,7 @@ export async function setActivePlan(userId, planId) {
       [now, planId],
     );
   }
+  _scheduleSync();
 }
 
 // Sets a plan active AND creates a matching training block so the Analytics
@@ -1737,8 +1760,12 @@ export async function createWorkoutTemplateFromWorkout(userId, name, exerciseDat
   for (let i = 0; i < exerciseData.length; i++) {
     const ex = exerciseData[i];
     if (!ex.exerciseId) continue;
+    // addExerciseToRoutine already calls _scheduleSync internally;
+    // the 2-second debounce in sync.scheduleSync coalesces every
+    // call from this loop into a single bulk push.
     await addExerciseToRoutine(id, ex.exerciseId, i, ex.repsMin || 8, ex.repsMax || 12, null, ex.recommendedSets || 3);
   }
+  _scheduleSync();
   return { id, userId, name, isActive: 1, isLibrary: 0, isTemplate: 1, createdAt: now, updatedAt: now };
 }
 
@@ -1755,6 +1782,7 @@ export async function getPlanWorkoutCounts() {
 export async function updateProgrammeName(id, name) {
   const d = await db();
   await d.runAsync('UPDATE programmes SET name = ?, updated_at = ? WHERE id = ?', [name, Date.now(), id]);
+  _scheduleSync();
 }
 
 // ─── Mesocycles ───────────────────────────────────────────────────────────────────────────────────
@@ -1957,6 +1985,7 @@ export async function createAdaptationEvent({ mesocycleWeekId, muscle, exerciseI
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, mesocycleWeekId, muscle || null, exerciseId || null, decision, delta ?? null, reasonCode, reasonText || null, JSON.stringify(signals || {}), now],
     );
+    _scheduleSync();
     return { id };
   } catch (_e) {
     return null;
@@ -2036,6 +2065,7 @@ export async function upsertPlannedMuscleVolume({ mesocycleWeekId, muscle, plann
        ON CONFLICT(id) DO UPDATE SET planned_sets = excluded.planned_sets, source = excluded.source, updated_at = excluded.updated_at`,
       [id, mesocycleWeekId, muscle, plannedSets, mev, mav, mrv, source, now, now],
     );
+    _scheduleSync();
   } catch (_e) {}
 }
 
@@ -2068,6 +2098,7 @@ export async function createMesocycle(data) {
   // Seed planned volume from default landmarks
   const { VOLUME_LANDMARKS } = await import('./algorithms');
   await generateInitialPlannedVolume(id, VOLUME_LANDMARKS);
+  _scheduleSync();
   return { id, ...data, createdAt: now, updatedAt: now };
 }
 
@@ -2170,6 +2201,7 @@ export async function logBodyMetric(userId, data) {
       data.calfCm ?? null, data.notes ?? null, now,
     ],
   );
+  _scheduleSync();
   return { id, userId, createdAt: now, ...data };
 }
 
@@ -2420,6 +2452,7 @@ export async function saveUserBodyProfile(userId, profile) {
         profile.scoffScore ?? null, now, userId,
       ],
     );
+    _scheduleSync();
     return existing.id;
   }
   const id = uid();
@@ -2436,6 +2469,7 @@ export async function saveUserBodyProfile(userId, profile) {
       profile.scoffScore ?? null, now, now,
     ],
   );
+  _scheduleSync();
   return id;
 }
 
@@ -3136,6 +3170,7 @@ export async function saveCoachOutput(userId, data) {
         data.whyThisWeek ?? null, json, existing.id,
       ],
     );
+    _scheduleSync();
     return existing.id;
   }
   const id = uid();
@@ -3153,6 +3188,7 @@ export async function saveCoachOutput(userId, data) {
       data.whyThisWeek ?? null, json, now,
     ],
   );
+  _scheduleSync();
   return id;
 }
 
@@ -3925,6 +3961,7 @@ export async function saveExerciseUserNote(userId, exerciseId, note) {
       'UPDATE exercise_user_notes SET note = ?, updated_at = ? WHERE id = ?',
       [note, now, existing.id],
     );
+    _scheduleSync();
     return existing.id;
   }
   const id = uid();
@@ -3932,6 +3969,7 @@ export async function saveExerciseUserNote(userId, exerciseId, note) {
     'INSERT INTO exercise_user_notes (id, user_id, exercise_id, note, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
     [id, userId, exerciseId, note, now, now],
   );
+  _scheduleSync();
   return id;
 }
 
@@ -3950,6 +3988,7 @@ export async function deleteExerciseUserNote(userId, exerciseId) {
     'DELETE FROM exercise_user_notes WHERE user_id = ? AND exercise_id = ?',
     [userId, exerciseId],
   );
+  _scheduleSync();
 }
 
 // ─── Workout Feedback / Fatigue Trend ────────────────────────────────────────
@@ -3986,6 +4025,7 @@ export async function saveNextTimeNote(userId, { routineId = null, exerciseId = 
      VALUES (?, ?, ?, ?, ?, ?, ?, 0)`,
     [id, userId, routineId ?? null, exerciseId ?? null, note, now, expiresAfterUses],
   );
+  _scheduleSync();
   return { id, userId, routineId, exerciseId, note, createdAt: now, expiresAfterUses, shownCount: 0 };
 }
 
@@ -4029,6 +4069,7 @@ export async function saveExerciseGoal(userId, exerciseId, { targetWeight, targe
       'UPDATE exercise_goals SET target_weight = ?, target_date = ?, achieved_at = NULL WHERE id = ?',
       [targetWeight, targetDate ?? null, existing.id],
     );
+    _scheduleSync();
     return existing.id;
   }
   const id = uid();
@@ -4037,6 +4078,7 @@ export async function saveExerciseGoal(userId, exerciseId, { targetWeight, targe
      VALUES (?, ?, ?, ?, ?, ?)`,
     [id, userId, exerciseId, targetWeight, targetDate ?? null, now],
   );
+  _scheduleSync();
   return id;
 }
 
@@ -4055,6 +4097,7 @@ export async function markGoalAchieved(goalId) {
     'UPDATE exercise_goals SET achieved_at = ? WHERE id = ?',
     [Date.now(), goalId],
   );
+  _scheduleSync();
 }
 
 export async function deleteExerciseGoal(userId, exerciseId) {
@@ -4063,6 +4106,7 @@ export async function deleteExerciseGoal(userId, exerciseId) {
     'DELETE FROM exercise_goals WHERE user_id = ? AND exercise_id = ?',
     [userId, exerciseId],
   );
+  _scheduleSync();
 }
 
 // Returns the most recent completed workout timestamp per primary muscle,

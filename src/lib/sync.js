@@ -286,6 +286,50 @@ async function _upsertSets(sb, supabaseUserId, sets) {
  * next sign-in catch-up — a sign-out between writes loses them.
  * Failures enqueue to the retry queue.
  */
+// ─── Debounced full sync trigger ─────────────────────────────────────────
+//
+// Most write functions in database.js (createRoutine, addExerciseToRoutine,
+// saveExerciseGoal, saveNutritionTargets, etc.) don't have a per-entity
+// sync helper, and adding one per table would multiply maintenance.
+// Instead, every mutating database write calls scheduleSync() — a
+// debounced (2s) full bulkUploadLocalData. Bursty edits coalesce into
+// one push.
+//
+// Reads the supabase user id from the store at fire time so the caller
+// doesn't have to thread it through. No-op when there's no cloud
+// session.
+
+let _syncDebounceTimer = null;
+const _SYNC_DEBOUNCE_MS = 2_000;
+
+export function scheduleSync() {
+  if (_syncDebounceTimer) clearTimeout(_syncDebounceTimer);
+  _syncDebounceTimer = setTimeout(() => {
+    _syncDebounceTimer = null;
+    try {
+      // eslint-disable-next-line global-require
+      const useAppStore = require('../store/useAppStore').default;
+      const state = useAppStore.getState();
+      const supabaseUserId = state.session?.user?.id;
+      const localUserId = state.user?.id;
+      if (!supabaseUserId || !localUserId) return;
+      bulkUploadLocalData(supabaseUserId, localUserId).catch(() => {});
+    } catch (_) { /* store not available — tolerate */ }
+  }, _SYNC_DEBOUNCE_MS);
+}
+
+/**
+ * Cancel any pending debounced sync. Used by sign-out flows so a
+ * scheduled push doesn't fire after the user has cleared their
+ * session and re-keyed local rows.
+ */
+export function cancelScheduledSync() {
+  if (_syncDebounceTimer) {
+    clearTimeout(_syncDebounceTimer);
+    _syncDebounceTimer = null;
+  }
+}
+
 export async function syncMorningWeight(supabaseUserId, entry) {
   const sb = getClient();
   if (!sb || !supabaseUserId || !entry) return;
