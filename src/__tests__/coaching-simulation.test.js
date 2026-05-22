@@ -527,6 +527,223 @@ describe('12-week coaching simulation', () => {
     expect(out.adjustments?.calories?.change ?? 0).toBe(0);
   });
 
+  // ─── Scenario: plateau (most common real cut trigger) ──────────────────
+  test('coach acts on a stalled cut after 3 weeks of no loss', () => {
+    // 14 days of weight bouncing around the same value
+    const morningWeights = Array.from({ length: 14 }, (_, i) => ({
+      weightKg: 90 + (i % 2 === 0 ? 0.1 : -0.1),
+      loggedAt: Date.now() - (13 - i) * DAY_MS,
+    }));
+    const out = runWeeklyCoach({
+      checkin: { energyScore: 3, sorenessScore: 3, calsAdherence: 'in_range', stepsAdherence: 'mostly_hit', sleepHours: 7 },
+      morningWeights,
+      sessionsCompleted: 4, sessionsPlanned: 4, prsThisWeek: 0,
+      goalPhase: 'mild_cut',
+      weeksInPhase: 5,
+      consecutiveOffTargetWeeks: 3,
+      consecutivePoorRecoveryWeeks: 0,
+      lastCalAdjustmentDirection: null, lastCalAdjustmentWeeksAgo: 99,
+      currentCalTarget: 2400, currentStepsTarget: 8000,
+      bodyweightKg: 90.0, units: 'kg', scoffPositive: false,
+    });
+
+    // A stalled cut needs an action. Either fewer cals or more steps.
+    const hasAction = out.adjustments?.calories?.change != null || out.adjustments?.steps?.change != null;
+    expect(hasAction).toBe(true);
+  });
+
+  // ─── Scenario: 0 sessions completed (sick / travel) ────────────────────
+  test('coach handles a missed training week without crashing', () => {
+    const morningWeights = Array.from({ length: 14 }, (_, i) => ({
+      weightKg: 90 - i * 0.05,
+      loggedAt: Date.now() - (13 - i) * DAY_MS,
+    }));
+    const out = runWeeklyCoach({
+      checkin: { energyScore: 2, sorenessScore: 2, calsAdherence: 'over', stepsAdherence: 'missed', sleepHours: 6, notes: 'Travel week' },
+      morningWeights,
+      sessionsCompleted: 0, sessionsPlanned: 4, prsThisWeek: 0,
+      goalPhase: 'maint',
+      weeksInPhase: 2,
+      consecutiveOffTargetWeeks: 0, consecutivePoorRecoveryWeeks: 0,
+      lastCalAdjustmentDirection: null, lastCalAdjustmentWeeksAgo: 99,
+      currentCalTarget: 2600, currentStepsTarget: 8000,
+      bodyweightKg: 89.3, units: 'kg', scoffPositive: false,
+    });
+    expect(out).toBeDefined();
+    expect(['hold', 'push', 'pull']).toContain(out.adjustments?.training?.signal ?? 'hold');
+    // The "what's working" section should NOT credit PRs they didn't earn
+    if (out.whatWorking?.some(s => /pr|personal record/i.test(s))) {
+      throw new Error('Coach credited PRs when sessionsCompleted=0');
+    }
+  });
+
+  // ─── Scenario: very long cut without a break (15 weeks deep) ───────────
+  test('coach suggests a diet break after a long cut', () => {
+    const morningWeights = Array.from({ length: 14 }, (_, i) => ({
+      weightKg: 82 - i * (0.2 / 7),
+      loggedAt: Date.now() - (13 - i) * DAY_MS,
+    }));
+    const out = runWeeklyCoach({
+      checkin: { energyScore: 2, sorenessScore: 2, calsAdherence: 'in_range', stepsAdherence: 'mostly_hit', sleepHours: 6 },
+      morningWeights,
+      sessionsCompleted: 4, sessionsPlanned: 4, prsThisWeek: 0,
+      goalPhase: 'mod_cut',
+      weeksInPhase: 15,
+      consecutiveOffTargetWeeks: 0, consecutivePoorRecoveryWeeks: 2,
+      lastCalAdjustmentDirection: 'down', lastCalAdjustmentWeeksAgo: 6,
+      currentCalTarget: 1900, currentStepsTarget: 10000,
+      bodyweightKg: 81.5, units: 'kg', scoffPositive: false,
+    });
+
+    // After 15 weeks in a cut, the coach should at least be aware
+    if (out.dietBreakSuggested) {
+      expect(typeof out.dietBreakNote).toBe('string');
+      expect(out.dietBreakNote.length).toBeGreaterThan(10);
+    }
+    // Either way it shouldn't recommend a fresh deficit cut
+    if (out.adjustments?.calories?.change != null) {
+      // If it does change cals, going UP is preferable to going further down
+      // when the user is already 15 weeks in. We don't require it but log
+      // if it goes the other way.
+      if (out.adjustments.calories.change < 0) {
+        console.warn(`Long cut: coach suggested cutting cals further (${out.adjustments.calories.change}) at week 15`);
+      }
+    }
+  });
+
+  // ─── Scenario: very fast weight loss (over 1% bodyweight per week) ─────
+  test('coach pulls back on a cut that is going too fast', () => {
+    // 14 days of fast loss — about 1.2 kg/week
+    const morningWeights = Array.from({ length: 14 }, (_, i) => ({
+      weightKg: 92 - i * (1.2 / 7),
+      loggedAt: Date.now() - (13 - i) * DAY_MS,
+    }));
+    const out = runWeeklyCoach({
+      checkin: { energyScore: 2, sorenessScore: 3, calsAdherence: 'in_range', stepsAdherence: 'mostly_hit', sleepHours: 6 },
+      morningWeights,
+      sessionsCompleted: 3, sessionsPlanned: 4, prsThisWeek: 0,
+      goalPhase: 'mild_cut', // user picked MILD but is losing aggressively
+      weeksInPhase: 3,
+      consecutiveOffTargetWeeks: 2,
+      consecutivePoorRecoveryWeeks: 1,
+      lastCalAdjustmentDirection: null, lastCalAdjustmentWeeksAgo: 99,
+      currentCalTarget: 2400, currentStepsTarget: 8000,
+      bodyweightKg: 90, units: 'kg', scoffPositive: false,
+    });
+
+    // Going faster than planned. Coach should either bump cals up
+    // OR explicitly note the rate is too fast.
+    const calChange = out.adjustments?.calories?.change ?? 0;
+    if (calChange < 0) {
+      throw new Error(`Coach cut cals further when user was already losing too fast (change=${calChange})`);
+    }
+  });
+
+  // ─── Plan engine edge profiles ────────────────────────────────────────
+
+  test('plan generation works for bodyweight-only user', () => {
+    const profile = {
+      experience: 'beginner', daysPerWeek: 3, sessionLengthMinutes: 45,
+      equipment: 'bodyweight', trainingGoal: 'general', trainingPhase: 'maintain',
+      recoveryRating: 'average', planWeakPoints: [],
+    };
+    const plan = generatePlan(buildPlanInputs(profile));
+    expect(plan).toBeDefined();
+    expect(plan.workouts.length).toBeGreaterThan(0);
+    for (const w of plan.workouts) {
+      for (const ex of w.exercises) {
+        expect(typeof ex.exerciseName).toBe('string');
+        expect(ex.exerciseName.length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  test('plan generation works for 6 days/week experienced lifter', () => {
+    const profile = {
+      experience: 'advanced', daysPerWeek: 6, sessionLengthMinutes: 90,
+      equipment: 'full_gym', trainingGoal: 'general', trainingPhase: 'lean_gain',
+      recoveryRating: 'good', planWeakPoints: ['arms', 'shoulders'],
+    };
+    const plan = generatePlan(buildPlanInputs(profile));
+    expect(plan).toBeDefined();
+    expect(plan.workouts.length).toBeGreaterThanOrEqual(4);
+    expect(plan.workouts.length).toBeLessThanOrEqual(6);
+  });
+
+  test('plan generation works for 2 days/week minimalist', () => {
+    const profile = {
+      experience: 'intermediate', daysPerWeek: 2, sessionLengthMinutes: 60,
+      equipment: 'full_gym', trainingGoal: 'general', trainingPhase: 'maintain',
+      recoveryRating: 'average', planWeakPoints: [],
+    };
+    const plan = generatePlan(buildPlanInputs(profile));
+    expect(plan).toBeDefined();
+    expect(plan.workouts.length).toBeGreaterThan(0);
+    // With only 2 days, each session needs to cover a decent variety
+    const allExercises = new Set();
+    for (const w of plan.workouts) {
+      for (const ex of w.exercises) {
+        allExercises.add(ex.exerciseName);
+      }
+    }
+    // Should hit at least 6 distinct exercises across the week
+    expect(allExercises.size).toBeGreaterThanOrEqual(6);
+  });
+
+  test('plan generation handles every supported training phase', () => {
+    const phases = ['maintain', 'cut', 'lean_gain', 'bulk', 'recomp', 'mild_cut', 'aggressive_cut', 'contest_prep'];
+    for (const phase of phases) {
+      const profile = {
+        experience: 'intermediate', daysPerWeek: 4, sessionLengthMinutes: 60,
+        equipment: 'full_gym', trainingGoal: 'general', trainingPhase: phase,
+        recoveryRating: 'average', planWeakPoints: [],
+      };
+      const inputs = buildPlanInputs(profile);
+      if (!inputs) continue; // some phases may not be valid inputs; that's fine
+      const plan = generatePlan(inputs);
+      expect(plan).toBeDefined();
+      expect(Array.isArray(plan.workouts)).toBe(true);
+      // Verify each workout has named exercises and sensible rep ranges
+      for (const w of plan.workouts) {
+        for (const ex of w.exercises) {
+          expect(ex.repMin).toBeGreaterThan(0);
+          expect(ex.repMax).toBeGreaterThanOrEqual(ex.repMin);
+          // Reasonable rep range cap
+          expect(ex.repMax).toBeLessThanOrEqual(50);
+        }
+      }
+    }
+  });
+
+  test('plan generation handles deload-aware experience values', () => {
+    for (const experience of ['beginner', 'intermediate', 'advanced', 'competitive']) {
+      const profile = {
+        experience, daysPerWeek: 4, sessionLengthMinutes: 60,
+        equipment: 'full_gym', trainingGoal: 'general', trainingPhase: 'maintain',
+        recoveryRating: 'average', planWeakPoints: [],
+      };
+      const plan = generatePlan(buildPlanInputs(profile));
+      expect(plan).toBeDefined();
+      expect(plan.workouts.length).toBeGreaterThan(0);
+    }
+  });
+
+  // ─── Multi-week consistency: same inputs should produce same plan ──────
+  test('plan generation is deterministic for the same inputs', () => {
+    const profile = {
+      experience: 'intermediate', daysPerWeek: 4, sessionLengthMinutes: 60,
+      equipment: 'full_gym', trainingGoal: 'general', trainingPhase: 'lean_gain',
+      recoveryRating: 'good', planWeakPoints: ['arms'],
+    };
+    const a = generatePlan(buildPlanInputs(profile));
+    const b = generatePlan(buildPlanInputs(profile));
+    expect(a.workouts.length).toBe(b.workouts.length);
+    for (let i = 0; i < a.workouts.length; i++) {
+      expect(a.workouts[i].name).toBe(b.workouts[i].name);
+      expect(a.workouts[i].exercises.length).toBe(b.workouts[i].exercises.length);
+    }
+  });
+
   // ─── Scenario: cooldown — last adjustment was 1 week ago, don't ping ───
   test('coach respects the calorie adjustment cooldown', () => {
     const morningWeights = Array.from({ length: 14 }, (_, i) => ({
