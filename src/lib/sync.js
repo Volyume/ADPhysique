@@ -1097,40 +1097,34 @@ export async function pullFromCloud(supabaseUserId) {
     // cloud rows that pre-date deterministic IDs heal automatically.
     const exerciseCount = await _pullExercises(sb, supabaseUserId);
 
-    const { data: cloudWorkouts, error: wErr } = await sb
-      .from('workouts')
-      .select('id, started_at, ended_at, duration_minutes, notes, is_completed, session_difficulty, overall_pump, soreness_24h_before, fatigue_level, routine_id, mesocycle_id, name, pre_workout_intent, set_count, total_volume, mesocycle_week_id, joint_discomfort')
-      .eq('user_id', supabaseUserId)
-      .eq('is_completed', true)
-      .order('started_at', { ascending: false })
-      .limit(500);
+    const cloudWorkouts = await fetchAllRows(
+      'sync.pullFromCloud.workouts',
+      () => sb.from('workouts')
+        .select('id, started_at, ended_at, duration_minutes, notes, is_completed, session_difficulty, overall_pump, soreness_24h_before, fatigue_level, routine_id, mesocycle_id, name, pre_workout_intent, set_count, total_volume, mesocycle_week_id, joint_discomfort')
+        .eq('user_id', supabaseUserId)
+        .eq('is_completed', true)
+        .order('started_at', { ascending: false }),
+    );
 
-    if (wErr) {
-      logError('sync.pullFromCloud.workouts', wErr, { supabaseUserId });
-    } else if (cloudWorkouts?.length) {
+    if (cloudWorkouts?.length) {
+      // First pass: insert every workout shell. Don't fetch sets per
+      // workout (that was N+1 round-trips); batch them after.
       for (const w of cloudWorkouts) {
-        try {
-          await insertWorkoutFromCloud(supabaseUserId, w);
-          const { data: sets } = await sb
-            .from('workout_sets')
-            .select('*')
-            .eq('workout_id', w.id);
-          if (sets?.length) {
-            for (const s of sets) {
-              try {
-                await insertWorkoutSetFromCloud(supabaseUserId, s);
-                setCount++;
-              } catch (setErr) {
-                setFailures++;
-                logWarn('sync.pullFromCloud', 'set insert failed', {
-                  workoutId: w.id, setId: s.id, error: setErr?.message,
-                });
-              }
-            }
-          }
-          workoutCount++;
-        } catch (e) {
-          logWarn('sync.pullFromCloud', 'workout insert failed', { workoutId: w?.id, error: e?.message });
+        try { await insertWorkoutFromCloud(supabaseUserId, w); workoutCount++; }
+        catch (e) { logWarn('sync.pullFromCloud', 'workout insert failed', { workoutId: w?.id, error: e?.message }); }
+      }
+      // Second pass: one chunked query per ~200 workouts for their sets.
+      const workoutIds = cloudWorkouts.map(w => w.id);
+      const allSets = await fetchByIdsChunked(
+        'sync.pullFromCloud.sets', 'workout_sets', 'workout_id', workoutIds,
+      );
+      for (const s of allSets) {
+        try { await insertWorkoutSetFromCloud(supabaseUserId, s); setCount++; }
+        catch (setErr) {
+          setFailures++;
+          logWarn('sync.pullFromCloud', 'set insert failed', {
+            workoutId: s?.workout_id, setId: s?.id, error: setErr?.message,
+          });
         }
       }
     }
@@ -1221,10 +1215,10 @@ export async function pullFromCloud(supabaseUserId) {
  */
 async function _pullExercises(sb, supabaseUserId) {
   try {
-    const { data, error } = await sb.from('exercises')
-      .select('*')
-      .eq('user_id', supabaseUserId);
-    if (error) { logPgErr('sync._pullExercises', error); return 0; }
+    const data = await fetchAllRows(
+      'sync._pullExercises',
+      () => sb.from('exercises').select('*').eq('user_id', supabaseUserId),
+    );
     if (!data?.length) return 0;
     // eslint-disable-next-line global-require
     const { insertOrUpdateExerciseFromCloud } = require('./database');
@@ -1354,9 +1348,10 @@ async function _pullPlannedMuscleVolume(sb, supabaseUserId) {
 
 async function _pullAdaptationEvents(sb, supabaseUserId) {
   try {
-    const { data, error } = await sb.from('adaptation_events')
-      .select('*').eq('user_id', supabaseUserId);
-    if (error) { logPgErr('sync._pullAdaptationEvents', error); return 0; }
+    const data = await fetchAllRows(
+      'sync._pullAdaptationEvents',
+      () => sb.from('adaptation_events').select('*').eq('user_id', supabaseUserId),
+    );
     if (!data?.length) return 0;
     // eslint-disable-next-line global-require
     const { insertOrUpdateAdaptationEventFromCloud } = require('./database');
@@ -1409,8 +1404,10 @@ async function _pullProgrammes(sb, supabaseUserId) {
 
 async function _pullRoutinesAndExercises(sb, supabaseUserId) {
   try {
-    const { data: routines, error: rErr } = await sb.from('routines').select('*').eq('user_id', supabaseUserId);
-    if (rErr) { logWarn('sync._pullRoutines', rErr.message); return 0; }
+    const routines = await fetchAllRows(
+      'sync._pullRoutines',
+      () => sb.from('routines').select('*').eq('user_id', supabaseUserId),
+    );
     let n = 0;
     let routineFailures = 0;
     let firstRoutineErr = null;
@@ -1423,9 +1420,9 @@ async function _pullRoutinesAndExercises(sb, supabaseUserId) {
     }
     const routineIds = (routines ?? []).map(r => r.id);
     if (routineIds.length === 0) return n;
-    const { data: reRows, error: reErr } = await sb
-      .from('routine_exercises').select('*').in('routine_id', routineIds);
-    if (reErr) { logWarn('sync._pullRoutineExercises', reErr.message); return n; }
+    const reRows = await fetchByIdsChunked(
+      'sync._pullRoutineExercises', 'routine_exercises', 'routine_id', routineIds,
+    );
     let reFailures = 0;
     let firstReErr = null;
     for (const re of reRows ?? []) {
@@ -1464,8 +1461,10 @@ async function _pullMesocycles(sb, supabaseUserId) {
 
 async function _pullMorningWeights(sb, supabaseUserId) {
   try {
-    const { data, error } = await sb.from('morning_weights').select('*').eq('user_id', supabaseUserId);
-    if (error) { logWarn('sync._pullMorningWeights', error.message); return 0; }
+    const data = await fetchAllRows(
+      'sync._pullMorningWeights',
+      () => sb.from('morning_weights').select('*').eq('user_id', supabaseUserId),
+    );
     let n = 0;
     for (const w of data ?? []) {
       try { await insertMorningWeightFromCloud(supabaseUserId, w); n++; }
