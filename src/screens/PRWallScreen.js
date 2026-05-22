@@ -319,7 +319,7 @@ export default function PRWallScreen({ navigation }) {
                   )}
                 </>
               )}
-              {isExpanded && history && (
+              {isExpanded && history && history.length > 0 && (
                 <View style={styles.chartWrap}>
                   <View style={styles.chartHeaderRow}>
                     <Text style={styles.chartLabel}>Estimated max over time</Text>
