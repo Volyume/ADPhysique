@@ -958,7 +958,7 @@ export default function HomeScreen({ navigation }) {
         ) : activePlan && nextWorkout ? (
           <View style={styles.heroCard}>
             <Text style={styles.heroEyebrow} numberOfLines={1}>
-              {activePlan.name} · {planProgress}
+              {planProgress}
             </Text>
             <Text style={styles.workoutName} numberOfLines={2}>
               {displayWorkout?.routine?.name}
