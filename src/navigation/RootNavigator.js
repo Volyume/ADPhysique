@@ -365,9 +365,17 @@ export default function RootNavigator() {
   useEffect(() => {
     async function bootstrap() {
       try {
-        initDatabase()
-          .then(() => seedExercisesIfNeeded().catch(console.warn))
-          .catch(console.warn);
+        // Await the SQLite init so subsequent reads (checkFirstRun,
+        // checkTier, getSession-driven hydrators) can't race against a
+        // half-open database. Failure here is rare but catastrophic, so
+        // surface it via the log layer.
+        try {
+          await initDatabase();
+          seedExercisesIfNeeded().catch(console.warn);
+        } catch (e) {
+          // eslint-disable-next-line global-require
+          try { require('../lib/errorLog').logError('RootNavigator.bootstrap.initDb', e); } catch (_) {}
+        }
 
         checkFirstRun().catch(console.warn);
         // AWAIT checkTier so the local 'pro' value is in the store before
@@ -529,8 +537,16 @@ export default function RootNavigator() {
             // created_at heuristic) so firstRunComplete + tier are
             // already set by the time the navigator next renders.
             // The cloud read itself runs to completion on its own.
-            useAppStore.getState().restoreSessionFromCloud(session.user.id, session.user).catch(() => {});
-            refreshTierFromCloud(client, session.user.id).catch(() => {});
+            useAppStore.getState().restoreSessionFromCloud(session.user.id, session.user)
+              .catch(e => {
+                // eslint-disable-next-line global-require
+                try { require('../lib/errorLog').logError('RootNavigator.restoreSessionFromCloud', e, { userId: session.user.id }); } catch (_) {}
+              });
+            refreshTierFromCloud(client, session.user.id)
+              .catch(e => {
+                // eslint-disable-next-line global-require
+                try { require('../lib/errorLog').logError('RootNavigator.refreshTierFromCloud', e, { userId: session.user.id }); } catch (_) {}
+              });
 
             // Bring local-only state up to the cloud and re-key any
             // rows that were owned by the pre-sign-in local UUID. Two

@@ -137,11 +137,14 @@ export default function LoginScreen({ navigation, route }) {
           catch (e) { logError('LoginScreen.handleEmailAuth.migrateLocalUserId', e); }
         }
 
-        // Fire-and-forget: sync profile then upload local data in background
-        syncProfile(supabaseUserId, userProfile, tier).catch(() => {});
+        // Fire-and-forget but capture failures so silent network drops
+        // during sign-in stop swallowing data loss.
+        syncProfile(supabaseUserId, userProfile, tier)
+          .catch(e => logError('LoginScreen.syncProfile', e, { supabaseUserId }));
         if (mode === 'signup') {
           // New account — push local history up
-          bulkUploadLocalData(supabaseUserId, localUserId).catch(() => {});
+          bulkUploadLocalData(supabaseUserId, localUserId)
+            .catch(e => logError('LoginScreen.bulkUploadLocalData.signup', e, { supabaseUserId }));
           // Switch the navigator into ProOnboardingStack by setting the tier.
           // The previous navigation.replace('ProOnboarding') was a no-op
           // when LoginScreen was reached from WelcomeStack — that stack
@@ -153,8 +156,10 @@ export default function LoginScreen({ navigation, route }) {
           // out, then pull cloud data down (new device scenario).
           // firstRunComplete + tier + userProfile are restored centrally
           // by RootNavigator's onAuthStateChange SIGNED_IN handler.
-          bulkUploadLocalData(supabaseUserId, supabaseUserId).catch(() => {});
-          pullFromCloud(supabaseUserId).catch(() => {});
+          bulkUploadLocalData(supabaseUserId, supabaseUserId)
+            .catch(e => logError('LoginScreen.bulkUploadLocalData.signin', e, { supabaseUserId }));
+          pullFromCloud(supabaseUserId)
+            .catch(e => logError('LoginScreen.pullFromCloud', e, { supabaseUserId }));
         }
       }
     } finally {

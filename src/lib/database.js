@@ -46,7 +46,15 @@ function rowToCamel(row) {
 export function initDatabase() {
   if (_db) return Promise.resolve(_db);
   if (_initPromise) return _initPromise;
-  _initPromise = _doInit();
+  _initPromise = _doInit().catch(e => {
+    // Clear state so a retry attempt re-runs init instead of returning
+    // a half-open handle. SQLite.openDatabaseAsync sets _db before
+    // schema work completes; without this reset the next caller would
+    // get a database where some tables were never created.
+    _db = null;
+    _initPromise = null;
+    throw e;
+  });
   return _initPromise;
 }
 
