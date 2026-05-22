@@ -118,6 +118,17 @@ export default function ImportScreen({ navigation }) {
       setResult(res);
       setStage('done');
       toast.show(`Imported ${res.workouts} sessions`, { variant: 'success' });
+      // Kick the just-imported rows up to the cloud immediately so the
+      // user's freshly-imported Hevy / Strong history shows on any
+      // other device they sign into. Without this the user could
+      // re-open the app, see no data on a sibling device, and assume
+      // the import failed. Fire-and-forget — failures surface in the
+      // debug log via the existing sync warnings.
+      try {
+        // eslint-disable-next-line global-require
+        const { bulkUploadLocalData } = require('../lib/sync');
+        bulkUploadLocalData(user.id, user.id).catch(() => {});
+      } catch (_) { /* tolerate */ }
     } catch (e) {
       logError('ImportScreen.runImport', e);
       setStage('preview');

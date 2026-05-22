@@ -472,7 +472,16 @@ export default function App() {
       } catch (_) { /* offline / no session — try again next foreground */ }
     }
     const sub = AppState.addEventListener('change', state => {
-      if (state === 'active') maybeSync();
+      // Fire on BOTH foreground (active) and backgrounding
+      // (inactive/background). Foreground sync catches up cloud
+      // changes from other devices; background sync flushes
+      // pending local writes before the OS kills the app. Without
+      // the background path, a user who logs a workout + backgrounds
+      // the app without ever re-foregrounding loses changes if
+      // Android reaps the process.
+      if (state === 'active' || state === 'background' || state === 'inactive') {
+        maybeSync();
+      }
     });
     // Also run once on mount so an app launched after a long offline period
     // catches up immediately.

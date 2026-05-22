@@ -1016,21 +1016,24 @@ export default function HomeScreen({ navigation }) {
             </View>
             <View style={styles.heroSecondaryRow}>
               <TouchableOpacity
+                style={styles.heroSecondaryBtn}
                 onPress={() => setShowChangeWorkout(true)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                activeOpacity={0.85}
                 accessibilityRole="button"
                 accessibilityLabel="Change planned workout"
               >
-                <Text style={styles.heroSecondaryLink}>Change workout</Text>
+                <Ionicons name="swap-horizontal-outline" size={14} color={colors.textSecondary} />
+                <Text style={styles.heroSecondaryBtnText}>Change workout</Text>
               </TouchableOpacity>
-              <Text style={styles.heroSecondaryDot}>·</Text>
               <TouchableOpacity
+                style={styles.heroSecondaryBtn}
                 onPress={() => navigation.navigate('BuildWorkout')}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                activeOpacity={0.85}
                 accessibilityRole="button"
                 accessibilityLabel="Start a blank workout instead"
               >
-                <Text style={styles.heroSecondaryLink}>Blank session</Text>
+                <Ionicons name="add-circle-outline" size={14} color={colors.textSecondary} />
+                <Text style={styles.heroSecondaryBtnText}>Blank session</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1766,19 +1769,31 @@ const styles = StyleSheet.create({
   viewWorkoutBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textSecondary },
   heroSecondaryRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    paddingTop: spacing.xs,
+    paddingTop: spacing.md,
   },
-  heroSecondaryLink: {
+  // Boxed secondary buttons matching the View / surface2 pill style
+  // used elsewhere on the screen — gives the Change workout / Blank
+  // session affordances proper tap targets and aligns visually with
+  // the History / Records / Volume tiles below.
+  heroSecondaryBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  heroSecondaryBtnText: {
     fontSize: fontSize.xs,
-    color: colors.textMuted,
+    color: colors.textSecondary,
     fontWeight: fontWeight.semibold,
-  },
-  heroSecondaryDot: {
-    fontSize: fontSize.xs,
-    color: colors.textMuted,
   },
 
   // No plan — plan-first section
