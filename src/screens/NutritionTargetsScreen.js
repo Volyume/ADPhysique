@@ -13,6 +13,7 @@ import InfoTooltip from '../components/InfoTooltip';
 import { calculateNutritionTargets, PROTEIN_APPROACHES } from '../lib/nutritionEngine';
 import { saveNutritionTargets, getNutritionTargets, logBodyMetric, getUserBodyProfile } from '../lib/database';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -128,7 +129,12 @@ const BODY_METRICS_KEY_PREFIX = '@volyume_body_metrics_';
 const PHYSIQUE_PREF_KEY = '@volyume_physique_tracking_enabled';
 
 export default function NutritionTargetsScreen({ navigation }) {
-  const { user, userProfile } = useAppStore();
+  // Use a shallow selector instead of useAppStore() with no args. The
+  // bare call subscribes to the entire store object, so every store
+  // mutation (rest timer ticks, sync events, etc.) re-renders this
+  // huge screen. Selecting just the two fields we read means we only
+  // re-render when those change.
+  const { user, userProfile } = useAppStore(useShallow(s => ({ user: s.user, userProfile: s.userProfile })));
 
   // ── Form state ────────────────────────────────────────────────────────────────
   const [sex,            setSex]            = useState('male');
