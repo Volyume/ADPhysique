@@ -168,9 +168,9 @@ const styles = StyleSheet.create({
 
   hero: { alignItems: 'center', gap: spacing.sm, paddingTop: spacing.xl },
   // Sized down so the wordmark reads as a brand mark, not a billboard.
-  // At ~200px the lettering sits comfortably above the tagline and lets
-  // the Pro card below take centre stage.
-  logoImg: { width: 200, height: Math.round(200 / HERO_ASPECT) },
+  // Dialled from 200→150 — at 200 it was still overpowering the Pro
+  // card below; 150 keeps the brand visible without dominating.
+  logoImg: { width: 150, height: Math.round(150 / HERO_ASPECT) },
   wordmark: {
     fontSize: 28, fontWeight: fontWeight.black, color: colors.textPrimary,
     letterSpacing: 5, marginTop: spacing.xs,

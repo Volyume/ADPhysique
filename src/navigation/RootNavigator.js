@@ -508,7 +508,21 @@ export default function RootNavigator() {
           // before the navigator routes. Otherwise a returning user whose
           // local AsyncStorage was wiped on sign-out gets routed back
           // through onboarding because firstRunComplete is still false.
-          if (event === 'SIGNED_IN' && session?.user?.id) {
+          // Run the full restore + pull pipeline on BOTH events that
+          // bring a user into the app:
+          //   - 'SIGNED_IN' fires on explicit sign-in
+          //   - 'INITIAL_SESSION' fires on cold launch when a session
+          //     was restored from SecureStore (no user action needed)
+          //
+          // Previously only SIGNED_IN triggered pullFromCloud, so a
+          // returning user on the same device saw stale local data
+          // until they pull-to-refresh'd or navigated to a screen
+          // that refetched. Including INITIAL_SESSION means every
+          // launch with a valid session auto-syncs.
+          const isAuthEnter =
+            (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') &&
+            session?.user?.id;
+          if (isAuthEnter) {
             // Optimistic sign-in: kick off the cloud restore but DON'T
             // await it. restoreSessionFromCloud makes its routing
             // decision synchronously at the top (per-uid cache OR

@@ -548,18 +548,27 @@ export default function App() {
                   subdued={calm || reduceMotion}
                 />
               )}
-              <WhatsNewSheet
-                items={whatsNewItems}
-                onOpenSettings={() => {
-                  try {
-                    // eslint-disable-next-line global-require
-                    const { navigationRef } = require('./src/navigation/RootNavigator');
-                    if (navigationRef?.isReady?.()) {
-                      navigationRef.navigate('ProfileTab', { screen: 'Settings' });
-                    }
-                  } catch (_) {}
-                }}
-              />
+              {/* WhatsNewSheet stays in the codebase + the items
+                  array stays defined — useful surface for future
+                  releases. Suppressed for the initial launch because
+                  presenting "what's new" to a brand-new install reads
+                  as confusing rather than informative. Re-enable by
+                  rendering the component again when there are real
+                  release changes to announce. */}
+              {false && (
+                <WhatsNewSheet
+                  items={whatsNewItems}
+                  onOpenSettings={() => {
+                    try {
+                      // eslint-disable-next-line global-require
+                      const { navigationRef } = require('./src/navigation/RootNavigator');
+                      if (navigationRef?.isReady?.()) {
+                        navigationRef.navigate('ProfileTab', { screen: 'Settings' });
+                      }
+                    } catch (_) {}
+                  }}
+                />
+              )}
               <CrashRecoveryToast priorCrash={priorCrash} />
             </FeedbackProvider>
           </ToastProvider>

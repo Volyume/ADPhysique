@@ -234,10 +234,11 @@ export default function LoginScreen({ navigation, route }) {
 
           {/* ── Brand block ── */}
           {/* The wordmark asset already contains the "Volyume" lettering,
-              so we render the mark bigger and skip the duplicate text
-              underneath. Tagline stays. */}
+              so we render the mark and skip the duplicate text underneath.
+              Tagline stays. Size dialled back from 80→56 — the previous
+              scale dominated the screen above the auth form. */}
           <View style={styles.brand}>
-            <VolyumeMark size={80} style={styles.brandMark} />
+            <VolyumeMark size={56} style={styles.brandMark} />
             <Text style={styles.brandTagline}>Less thinking. More lifting.</Text>
           </View>
 
