@@ -210,19 +210,32 @@ export async function syncWorkout(supabaseUserId, workoutId) {
 }
 
 async function _upsertWorkout(sb, supabaseUserId, w) {
+  // Columns: every user-entered + computed field on a workout row.
+  // The previous payload omitted name / pre_workout_intent /
+  // joint_discomfort / set_count / total_volume / mesocycle_week_id
+  // — the cloud columns existed (migrate_012) but the push never
+  // wrote them, so on cross-device restore the session card showed
+  // a generic "Workout" without the user's chosen name and the
+  // analytics paths missed the cached tonnage.
   const { error } = await sb.from('workouts').upsert({
     id: w.id,
     user_id: supabaseUserId,
     routine_id: w.routineId ?? null,
     mesocycle_id: w.mesocycleId ?? null,
+    mesocycle_week_id: w.mesocycleWeekId ?? null,
     started_at: msToISO(w.startedAt),
     ended_at: msToISO(w.endedAt),
     duration_minutes: w.durationMinutes ?? null,
     notes: w.notes ?? null,
+    name: w.name ?? null,
+    pre_workout_intent: w.preWorkoutIntent ?? null,
     session_difficulty: w.sessionDifficulty ?? null,
     overall_pump: w.overallPump ?? null,
     soreness_24h_before: w.soreness24hBefore ?? null,
     fatigue_level: w.fatigueLevel ?? null,
+    joint_discomfort: w.jointDiscomfort ?? null,
+    set_count: w.setCount ?? null,
+    total_volume: w.totalVolume ?? null,
     is_completed: true,
     synced_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
