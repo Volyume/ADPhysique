@@ -1073,6 +1073,140 @@ describe('Form-driven screens: interleaved input + tap × 3 cycles', () => {
   }
 });
 
+// ─── Complete workout lifecycle simulation ──────────────────────────────
+//
+// Walks through start → log sets → finish, mounting each intermediate
+// state and bashing every interaction. Mirrors what a user does in one
+// session.
+
+describe('Workout lifecycle: start → log → finish', () => {
+  test('1. Start: HomeScreen with an active plan mounts and tap-bash clean', async () => {
+    const database = require('../lib/database');
+    const orig = {
+      getActivePlan: database.getActivePlan,
+      getRoutinesForPlan: database.getRoutinesForPlan,
+    };
+    database.getActivePlan = () => Promise.resolve({
+      id: 'p1', userId: 'u1', name: 'Push Pull Legs',
+      isActive: 1, nextWorkoutIndex: 0,
+    });
+    database.getRoutinesForPlan = () => Promise.resolve([
+      { id: 'r1', planId: 'p1', name: 'Push', orderIndex: 0 },
+      { id: 'r2', planId: 'p1', name: 'Pull', orderIndex: 1 },
+      { id: 'r3', planId: 'p1', name: 'Legs', orderIndex: 2 },
+    ]);
+    try {
+      useAppStore.setState(STATE_VARIANTS[0].state);
+      const Screen = require('../screens/HomeScreen').default;
+      let tree = null;
+      try {
+        const { tree: t, errors } = await mountScreen(Screen);
+        tree = t;
+        expect(tree).not.toBeNull();
+        expect(errors).toEqual([]);
+        const { failures } = await bashTappables(tree);
+        const real = failures.filter(f => !/getState|dispatch|navigation\.navigate|getParent/i.test(f.error));
+        expect(real).toEqual([]);
+      } finally { unmountTree(tree); }
+    } finally {
+      Object.assign(database, orig);
+    }
+  });
+
+  test('2. Mid-workout: ActiveWorkoutScreen with 3 exercises, sets logged in some', async () => {
+    useAppStore.setState({
+      user: { id: 'u-lifecycle', isLocal: false },
+      session: { user: { id: 'u-lifecycle' } },
+      tier: 'pro',
+      firstRunComplete: true,
+      userProfile: { firstName: 'L', goal: 'lean_gain', units: 'metric' },
+      activeWorkout: { id: 'wlc', userId: 'u-lifecycle', routineId: 'r1', startedAt: Date.now() - 600000, isCompleted: false },
+      workoutStartTime: Date.now() - 600000,
+      workoutExercises: [
+        {
+          exercise: { id: 'ex1', name: 'Bench Press', equipment: 'Barbell', primaryMuscle: 'chest' },
+          routineExercise: { id: 're1', recommendedSets: 3, recommendedRepsMin: 8, recommendedRepsMax: 12 },
+          sets: [
+            { id: 's1', exerciseId: 'ex1', workoutId: 'wlc', setNumber: 1, setType: 'straight', actualReps: 10, weight: 80 },
+            { id: 's2', exerciseId: 'ex1', workoutId: 'wlc', setNumber: 2, setType: 'straight', actualReps: 9, weight: 80 },
+          ],
+        },
+        {
+          exercise: { id: 'ex2', name: 'Pull Up', equipment: 'Bodyweight', primaryMuscle: 'back' },
+          routineExercise: { id: 're2', recommendedSets: 3, recommendedRepsMin: 5, recommendedRepsMax: 10 },
+          sets: [
+            { id: 's3', exerciseId: 'ex2', workoutId: 'wlc', setNumber: 1, setType: 'warmup', actualReps: 5, weight: 0 },
+          ],
+        },
+        {
+          exercise: { id: 'ex3', name: 'Squat', equipment: 'Barbell', primaryMuscle: 'quads' },
+          routineExercise: { id: 're3', recommendedSets: 3, recommendedRepsMin: 5, recommendedRepsMax: 8 },
+          sets: [],
+        },
+      ],
+      currentExerciseIndex: 0,
+      restTimerActive: false,
+      accessibility: { reduceMotion: false },
+    });
+    const Screen = require('../screens/ActiveWorkoutScreen').default;
+    let tree = null;
+    try {
+      const { tree: t, errors } = await mountScreen(Screen);
+      tree = t;
+      expect(tree).not.toBeNull();
+      expect(errors).toEqual([]);
+      // Bash every touchable across this mid-workout state.
+      const { failures } = await bashTappables(tree);
+      const real = failures.filter(f => !/getState|dispatch|navigation\.navigate|getParent/i.test(f.error));
+      if (real.length) console.log('[lifecycle/mid] failures:', JSON.stringify(real.slice(0, 5), null, 2));
+      expect(real).toEqual([]);
+    } finally { unmountTree(tree); }
+  });
+
+  test('3. Finish: WorkoutSummaryScreen with realistic finished-workout params', async () => {
+    useAppStore.setState(STATE_VARIANTS[0].state);
+    const Screen = require('../screens/WorkoutSummaryScreen').default;
+    let tree = null;
+    try {
+      const { tree: t, errors } = await mountScreen(Screen, {
+        route: {
+          params: {
+            workoutId: 'wlc',
+            routineId: 'r1',
+            durationMinutes: 52,
+            exerciseCount: 3,
+            setCount: 8,
+            workingSetCount: 6,
+            tonnage: 4320,
+            exerciseNames: ['Bench Press', 'Pull Up', 'Squat'],
+            detectedPRs: [
+              { exerciseName: 'Bench Press', kind: 'volume', value: 800 },
+            ],
+            exerciseData: [
+              {
+                exerciseId: 'ex1', name: 'Bench Press',
+                recommendedSets: 3, repsMin: 8, repsMax: 12,
+                loggedSets: [
+                  { weight: 80, reps: 10, setType: 'straight' },
+                  { weight: 80, reps: 9, setType: 'straight' },
+                  { weight: 80, reps: 8, setType: 'straight' },
+                ],
+              },
+            ],
+          },
+          name: 'WorkoutSummary',
+        },
+      });
+      tree = t;
+      expect(tree).not.toBeNull();
+      expect(errors).toEqual([]);
+      const { failures } = await bashTappables(tree);
+      const real = failures.filter(f => !/getState|dispatch|navigation\.navigate|getParent/i.test(f.error));
+      expect(real).toEqual([]);
+    } finally { unmountTree(tree); }
+  });
+});
+
 // ─── Hub → NutritionTargets navigation simulation ──────────────────────
 //
 // The reported crash was tapping "Nutrition Targets" on AthleteHub. We
