@@ -727,9 +727,11 @@ export default function AthleteHubScreen({ navigation }) {
               </View>
               <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
             </View>
-            {latestMetric && (
+            {latestMetric && (latestMetric.bodyFatPercent != null || latestMetric.waistCm != null) && (
               <View style={styles.metricRow}>
-                {latestMetric.weightKg != null && <MetricChip label="Weight" value={formatBodyWeightShort(latestMetric.weightKg, bodyWeightUnits || 'st')} />}
+                {/* Weight is already in the subtitle above. Only show
+                    chips here for the *secondary* metrics so the row
+                    isn't a redundant restatement of the same number. */}
                 {latestMetric.bodyFatPercent != null && <MetricChip label="Body fat" value={`${latestMetric.bodyFatPercent}%`} />}
                 {latestMetric.waistCm != null && <MetricChip label="Waist" value={`${latestMetric.waistCm} cm`} />}
               </View>
