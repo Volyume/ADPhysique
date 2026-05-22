@@ -410,7 +410,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     showActiveWorkoutNotification({
       workoutName: activeWorkout?.name,
       elapsedSeconds,
-      currentSetIndex: (loggedSets?.length ?? 0) + 1,
+      // Count only WORKING sets toward the index. Including warm-ups
+      // produced "Set 3 of 2" on the lock-screen / persistent
+      // notification when the user logged a warm-up before the first
+      // working set. totalSetsForExercise is the *working* target.
+      currentSetIndex: countProgressSets(loggedSets) + 1,
       totalSetsForExercise: routineExercise?.recommendedSets,
       exerciseName: exercise?.name,
     }).catch(() => {});
@@ -431,7 +435,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     showActiveWorkoutNotification({
       workoutName: activeWorkout?.name,
       elapsedSeconds,
-      currentSetIndex: (loggedSets?.length ?? 0) + 1,
+      // Count only WORKING sets toward the index. Including warm-ups
+      // produced "Set 3 of 2" on the lock-screen / persistent
+      // notification when the user logged a warm-up before the first
+      // working set. totalSetsForExercise is the *working* target.
+      currentSetIndex: countProgressSets(loggedSets) + 1,
       totalSetsForExercise: routineExercise?.recommendedSets,
       exerciseName: exercise?.name,
     }).catch(() => {});
@@ -1430,6 +1438,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </TouchableOpacity>
           )}
 
+          {/* Manual warm-up button. The auto-suggest chip was removed
+              earlier in this branch; this button is the deliberate
+              "if someone wants to they can add one" path. Hidden once
+              the user has already switched the current entry to a
+              warm-up so the row isn't redundant. */}
           {currentSet.setType !== 'warmup' && (
             <TouchableOpacity
               style={styles.addWarmupBtn}

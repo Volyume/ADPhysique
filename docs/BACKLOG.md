@@ -2,6 +2,8 @@
 
 Features listed here are explicitly deferred. None should be implemented without the user explicitly reopening the item and confirming scope.
 
+_Last updated: 2026-05-22. Recent additions in this beta-prep branch are noted in the section "Shipped in May 2026 beta-prep" near the bottom._
+
 ---
 
 ## NEVER implement (hard product exclusions)
@@ -12,8 +14,8 @@ These are product decisions, not technical deferrals. Do not add them even if re
 |---|---|
 | **Food / meal logging** | Out of scope permanently. Volyume is a training logbook, not a diet tracker. Nutrition Targets provides calorie/macro *targets* only — no food diary, no barcode scanner, no meal logging. |
 | **Social feed / community** | Volyume is private by design. No public profiles, leaderboards, or activity feeds. |
-| **Gamification** | No XP, badges, streaks, achievements, or virtual rewards. Progress is real or it is nothing. |
-| **Wearable / Health API integration** | No Apple Watch, Garmin, Fitbit, or HealthKit/Google Fit integration. Heart rate and step data are not surfaced. |
+| **Gamification** | No XP, badges, achievements, or virtual rewards. Progress is real or it is nothing. **Carve-out (2026-05-22):** a single "week-streak" chip on the HomeScreen "This week" card was added to surface training consistency without ranking, levelling, or rewarding. If this drifts into stickers / XP / leaderboards, pull it back. |
+| **Wearable / Health API integration** | No Apple Watch, Garmin, or Fitbit integration. **Carve-out:** `src/lib/health.js` wraps HealthKit (iOS) + Health Connect (Android) for one-way reads of morning weight + step count, and for writing completed workouts to the platform Health app. This is opt-in, surfaced in Settings only. Heart rate, sleep, HRV remain out of scope. |
 | **Coach / client mode** | Volyume is a self-coaching tool. No role separation, no athlete roster, no coach-controlled plan assignment. |
 
 ---
@@ -80,3 +82,40 @@ These are product decisions, not technical deferrals. Do not add them even if re
 - Do not hardcode hex colours. Use theme tokens only.
 - Do not hardcode pixel values. Use spacing tokens only.
 - Explicit GDPR consent checkbox (not pre-ticked) before storing any nutrition or body composition data.
+
+---
+
+## Shipped in May 2026 beta-prep
+
+These items were either backlog candidates or polish-pass additions. They are
+in main now; listing here so they don't get re-proposed.
+
+- **Plate calculator surfaced.** The `PlateCalculator` component existed but
+  was never reachable from a UI surface. Added a "Plates" pill next to the
+  Weight label inside SetEntry that opens the calculator pre-filled with the
+  current weight.
+- **Live e1RM in SetEntry.** Shows "e1RM 102kg" inline next to the Reps label
+  the moment weight + reps are both entered.
+- **Repeat-last quick chip.** One-tap copy of the most recent logged set's
+  weight + reps. Auto-hides when the current entry already matches.
+- **Stalled-progress nudge.** On the first working set of an exercise, if the
+  user has done the same heaviest weight × reps for the last 3 sessions, show
+  a coaching nudge ("Try N+2.5kg × R-1, or stick at N for R+1").
+- **Week-streak chip** on the Train tab's "This week" card (consecutive
+  Mon-start weeks with ≥1 completed workout). See carve-out note above.
+- **Mesocycle context chip** on the workout card showing "Week 3 of 6 · RIR 1"
+  or "Deload week · pull effort back". Surfaces Volyume's coaching identity
+  before every session start.
+- **BETA badge** in Settings → About.
+- **Tester build identifier share** — tap the version in Settings to copy
+  `Volyume v1.1.0 (android 2, release)` to a share sheet for bug reports.
+- **HealthKit / Health Connect.** Settings → Health surfaces opt-in toggles
+  for reading weight + writing workouts to the platform Health app.
+  (See carve-out under "NEVER implement" above — limited scope.)
+- **Discard workout cleanup.** Discarding now hard-deletes the incomplete
+  workout row + its sets so SQLite stops accumulating orphan rows.
+- **Finish workout double-tap guard.** Mashing the Finish button can no
+  longer fire two concurrent finish chains.
+- **Auto warm-up suggestion removed.** Users mark warm-ups via the existing
+  Set type picker. Sheet + handler + ~200 lines of orphan code deleted.
+

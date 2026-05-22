@@ -5,7 +5,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useShallow } from 'zustand/react/shallow';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
-import { scheduleRestNotif, cancelRestNotif } from '../lib/restNotifications';
+// Rest-timer notifications removed — see comment in the timer
+// useEffect below. Keep the file in tree because the timer
+// component still uses imports from theme + store + haptics.
 import { playRestBeep, preloadRestBeeps } from '../lib/restSound';
 
 const TIME_ADJUSTMENTS = [
@@ -40,7 +42,6 @@ export default function RestTimer() {
   const currentExerciseName =
     workoutExercises[currentExerciseIndex]?.exercise?.name || '';
   const intervalRef = useRef(null);
-  const notifIdRef = useRef(null);
   const progressAnim = useRef(new Animated.Value(1)).current;
   const [showDone, setShowDone] = useState(false);
   // Track all queued timeouts so we can cancel them on unmount (was
@@ -66,17 +67,16 @@ export default function RestTimer() {
         }).start();
       }
       intervalRef.current = setInterval(() => { tickRestTimer(); }, 1000);
-      // Post lock-screen notification and schedule the done alert
-      scheduleRestNotif(remaining, currentExerciseName).then(id => {
-        notifIdRef.current = id;
-      }).catch(() => {});
+      // Lock-screen / Live Activity notification disabled. The
+      // notification path reported the wrong "Set N of M" label
+      // (showed N=current+1 against M=target, which read as "Set 3
+      // of 2" mid-set) and added more friction than it removed,
+      // per user feedback during beta-prep. The in-app countdown
+      // card with Skip / +15 / +30 / -15 / -30 stays.
     } else {
       clearInterval(intervalRef.current);
       progressAnim.stopAnimation();
       progressAnim.setValue(1);
-      // Cancel the ongoing lock-screen notification and any pending done alert
-      cancelRestNotif(notifIdRef.current);
-      notifIdRef.current = null;
     }
     return () => clearInterval(intervalRef.current);
   }, [restTimerActive]);
@@ -149,10 +149,6 @@ export default function RestTimer() {
     timeoutsRef.current.forEach(clearTimeout);
     timeoutsRef.current = [];
     clearInterval(intervalRef.current);
-    if (notifIdRef.current) {
-      try { cancelRestNotif(notifIdRef.current); } catch (_) {}
-      notifIdRef.current = null;
-    }
   }, []);
 
   function handleAdjust(delta) {

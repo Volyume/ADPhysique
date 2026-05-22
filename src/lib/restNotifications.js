@@ -120,6 +120,12 @@ function getLiveActivity() {
  * @param {string} exerciseName  Shown as the notification title.
  */
 export async function scheduleRestNotif(seconds, exerciseName) {
+  // Lock-screen / Live Activity rest-timer surface disabled per user
+  // feedback. The in-app countdown card with Skip / +15 / +30 / -15 / -30
+  // stays — that's enough. Returning null so callers' notifIdRef stays
+  // unset and the cancel path is a no-op.
+  return null;
+  // eslint-disable-next-line no-unreachable
   if (!seconds || seconds <= 0) return null;
   const endTimeMs = Date.now() + seconds * 1000;
   // Fire both surfaces — Android chronometer and iOS Live Activity

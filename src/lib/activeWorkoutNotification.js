@@ -117,7 +117,15 @@ function buildTitleAndBody({
   return { title, body };
 }
 
+// All workout-progress notifications are disabled. The user found the
+// set numbering ("Set 3 of 2") confusing and the lock-screen surface
+// itself unhelpful, so the entire path no-ops. The functions are
+// kept exported so call sites in ActiveWorkoutScreen can stay
+// untouched — they fire into the void. Re-enable later only with a
+// correct numbering policy + a settings toggle.
 export async function showActiveWorkoutNotification(args = {}) {
+  return; // notification surface disabled — see comment above
+  // eslint-disable-next-line no-unreachable
   if (Platform.OS !== 'android') return;
   const { title, body } = buildTitleAndBody(args);
 
