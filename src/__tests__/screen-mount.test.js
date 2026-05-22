@@ -1060,6 +1060,86 @@ describe('Rapid double-tap stress on every screen', () => {
 
 // ─── ActiveWorkoutScreen: with a workout in progress ─────────────────────
 
+describe('ActiveWorkoutScreen — many exercises, varied set shapes', () => {
+  test('5 exercises with varied set arrays mounts and renders', async () => {
+    const mkExercise = (i, sets) => ({
+      exercise: { id: `ex${i}`, name: `Exercise ${i}`, equipment: i % 2 ? 'Barbell' : 'Dumbbell', primaryMuscle: 'chest' },
+      routineExercise: { id: `re${i}`, recommendedSets: 3, recommendedRepsMin: 8, recommendedRepsMax: 12 },
+      sets,
+    });
+    useAppStore.setState({
+      user: { id: 'u-many', isLocal: false },
+      session: { user: { id: 'u-many' } },
+      tier: 'pro',
+      firstRunComplete: true,
+      userProfile: { firstName: 'M', goal: 'lean_gain', units: 'metric' },
+      activeWorkout: { id: 'w-many', userId: 'u-many', routineId: 'r-many', startedAt: Date.now(), isCompleted: false },
+      workoutStartTime: Date.now(),
+      workoutExercises: [
+        mkExercise(1, [
+          { id: 's1', exerciseId: 'ex1', workoutId: 'w-many', setNumber: 1, setType: 'warmup', actualReps: 10, weight: 40 },
+          { id: 's2', exerciseId: 'ex1', workoutId: 'w-many', setNumber: 2, setType: 'straight', actualReps: 8, weight: 80 },
+        ]),
+        mkExercise(2, []),                          // empty array
+        mkExercise(3, [{ id: 's3', exerciseId: 'ex3', workoutId: 'w-many', setNumber: 1, setType: 'straight', actualReps: 6, weight: 100 }]),
+        // intentionally omit sets to confirm the entry.sets?.length guard fires
+        { exercise: { id: 'ex4', name: 'Exercise 4', equipment: 'Cable' }, routineExercise: { id: 're4' } },
+        mkExercise(5, [{ id: 's5', exerciseId: 'ex5', workoutId: 'w-many', setNumber: 1, setType: 'amrap', actualReps: 15, weight: 50 }]),
+      ],
+      currentExerciseIndex: 0,
+      restTimerActive: false,
+      accessibility: { reduceMotion: false },
+    });
+    const Screen = require('../screens/ActiveWorkoutScreen').default;
+    let tree = null;
+    try {
+      const { tree: t, errors } = await mountScreen(Screen);
+      tree = t;
+      expect(tree).not.toBeNull();
+      expect(errors).toEqual([]);
+      const { failures } = await bashTappables(tree);
+      const real = failures.filter(f => !/getState|dispatch|navigation\.navigate|getParent/i.test(f.error));
+      if (real.length) console.log('[5 exercises] failures:', JSON.stringify(real.slice(0, 5), null, 2));
+      expect(real).toEqual([]);
+    } finally { unmountTree(tree); }
+  });
+
+  test('1 exercise with a set missing weight / reps fields', async () => {
+    useAppStore.setState({
+      user: { id: 'u1', isLocal: false },
+      session: { user: { id: 'u1' } },
+      tier: 'pro',
+      firstRunComplete: true,
+      userProfile: { firstName: 'A', goal: 'lean_gain', units: 'metric' },
+      activeWorkout: { id: 'w1', userId: 'u1', routineId: 'r1', startedAt: Date.now(), isCompleted: false },
+      workoutStartTime: Date.now(),
+      workoutExercises: [{
+        exercise: { id: 'ex1', name: 'Bench Press', equipment: 'Barbell', primaryMuscle: 'chest' },
+        routineExercise: { id: 're1', recommendedSets: 3, recommendedRepsMin: 8, recommendedRepsMax: 12 },
+        sets: [
+          { id: 's1', exerciseId: 'ex1', workoutId: 'w1', setNumber: 1, setType: 'straight' }, // no weight or reps
+          { id: 's2', exerciseId: 'ex1', workoutId: 'w1', setNumber: 2, setType: 'straight', actualReps: null, weight: null },
+        ],
+      }],
+      currentExerciseIndex: 0,
+      restTimerActive: false,
+      accessibility: { reduceMotion: false },
+    });
+    const Screen = require('../screens/ActiveWorkoutScreen').default;
+    let tree = null;
+    try {
+      const { tree: t, errors } = await mountScreen(Screen);
+      tree = t;
+      expect(tree).not.toBeNull();
+      expect(errors).toEqual([]);
+      const { failures } = await bashTappables(tree);
+      const real = failures.filter(f => !/getState|dispatch|navigation\.navigate|getParent/i.test(f.error));
+      if (real.length) console.log('[missing fields] failures:', JSON.stringify(real.slice(0, 5), null, 2));
+      expect(real).toEqual([]);
+    } finally { unmountTree(tree); }
+  });
+});
+
 describe('ActiveWorkoutScreen with active workout state', () => {
   test('mounts mid-workout with logged sets without crashing', async () => {
     useAppStore.setState({
@@ -1109,6 +1189,51 @@ describe('ActiveWorkoutScreen with active workout state', () => {
     } finally {
       unmountTree(tree);
     }
+  });
+
+  test('handles 100-tap chains × 20 seeds in a 5-exercise workout', async () => {
+    const mkExercise = (i, sets) => ({
+      exercise: { id: `ex${i}`, name: `Exercise ${i}`, equipment: i % 2 ? 'Barbell' : 'Dumbbell', primaryMuscle: 'chest' },
+      routineExercise: { id: `re${i}`, recommendedSets: 3, recommendedRepsMin: 8, recommendedRepsMax: 12 },
+      sets,
+    });
+    useAppStore.setState({
+      user: { id: 'u-fuzz', isLocal: false },
+      session: { user: { id: 'u-fuzz' } },
+      tier: 'pro',
+      firstRunComplete: true,
+      userProfile: { firstName: 'F', goal: 'lean_gain', units: 'metric' },
+      activeWorkout: { id: 'wf', userId: 'u-fuzz', routineId: 'rf', startedAt: Date.now(), isCompleted: false },
+      workoutStartTime: Date.now(),
+      workoutExercises: [
+        mkExercise(1, [{ id: 's1', exerciseId: 'ex1', workoutId: 'wf', setNumber: 1, setType: 'straight', actualReps: 10, weight: 60 }]),
+        mkExercise(2, []),
+        mkExercise(3, [{ id: 's3', exerciseId: 'ex3', workoutId: 'wf', setNumber: 1, setType: 'warmup', actualReps: 8, weight: 30 }]),
+        { exercise: { id: 'ex4', name: 'Ex4', equipment: 'Cable' }, routineExercise: { id: 're4' } },
+        mkExercise(5, [{ id: 's5', exerciseId: 'ex5', workoutId: 'wf', setNumber: 1, setType: 'amrap', actualReps: 12, weight: 40 }]),
+      ],
+      currentExerciseIndex: 0,
+      restTimerActive: false,
+      accessibility: { reduceMotion: false },
+    });
+    const Screen = require('../screens/ActiveWorkoutScreen').default;
+    let tree = null;
+    try {
+      const result = await mountScreen(Screen);
+      tree = result.tree;
+      const allFailures = [];
+      for (let seed = 1; seed <= 20; seed++) {
+        const rand = seedRand(seed * 7919);
+        const failures = await fuzzTapChain(tree, 100, rand);
+        for (const f of failures) {
+          if (!/getState|dispatch|navigation\.navigate|getParent/i.test(f.error)) {
+            allFailures.push({ seed, ...f });
+          }
+        }
+      }
+      if (allFailures.length) console.log('[100×20 fuzz] failures:', JSON.stringify(allFailures.slice(0, 10), null, 2));
+      expect(allFailures).toEqual([]);
+    } finally { unmountTree(tree); }
   });
 
   test('handles a 50-tap random chain mid-workout', async () => {

@@ -345,7 +345,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
   function handleCancelWorkout() {
     const store = useAppStore.getState();
-    const totalSets = store.workoutExercises.reduce((sum, e) => sum + e.sets.length, 0);
+    const totalSets = store.workoutExercises.reduce((sum, e) => sum + (e.sets?.length ?? 0), 0);
     if (totalSets === 0) {
       store.endWorkout();
       // eslint-disable-next-line global-require
@@ -916,7 +916,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // Build exercise list in planEngine format for estimator
     const asExercises = remainingExercises.map(e => ({
       exerciseName:       e.exercise?.name ?? '',
-      sets:               Math.max(1, (e.exercise?.recommendedSets ?? 3) - e.sets.length),
+      sets:               Math.max(1, (e.exercise?.recommendedSets ?? 3) - (e.sets?.length ?? 0)),
       restSec:            e.exercise?.restSec ?? 90,
       compoundIsolation:  e.exercise?.compoundIsolation ?? 'isolation',
     }));
@@ -941,7 +941,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         const updated = [...prev];
         for (let i = currentExerciseIndex; i < updated.length; i++) {
           const name = updated[i].exercise?.name ?? '';
-          if (droppedNames.has(name) && updated[i].sets.length === 0) {
+          if (droppedNames.has(name) && (updated[i].sets?.length ?? 0) === 0) {
             updated[i] = { ...updated[i], _timeCrunchSkipped: true };
           } else if (updated[i].exercise) {
             updated[i] = {
@@ -968,7 +968,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     finishingRef.current = true;
     Alert.alert(
       'Finish Workout?',
-      `You've logged ${workoutExercises.reduce((sum, e) => sum + e.sets.length, 0)} sets across ${workoutExercises.length} exercises.`,
+      `You've logged ${workoutExercises.reduce((sum, e) => sum + (e.sets?.length ?? 0), 0)} sets across ${workoutExercises.length} exercises.`,
       [
         { text: 'Keep Going', style: 'cancel', onPress: () => { finishingRef.current = false; } },
         {
@@ -1944,7 +1944,7 @@ function EmptyExerciseView({ onAdd, onFinish, onCancel, elapsed, workoutExercise
               <Text style={[styles.navTabText, i === currentExerciseIndex && styles.navTabTextActive]} numberOfLines={1}>
                 {entry.exercise?.name?.split(' ').slice(0, 2).join(' ')}
               </Text>
-              {entry.sets.length > 0 && <View style={styles.navTabBadge}><Text style={styles.navTabBadgeText}>{entry.sets.length}</Text></View>}
+              {entry.sets?.length > 0 && <View style={styles.navTabBadge}><Text style={styles.navTabBadgeText}>{entry.sets.length}</Text></View>}
             </TouchableOpacity>
           ))}
         </ScrollView>
