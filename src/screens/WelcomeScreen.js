@@ -167,7 +167,10 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1, padding: spacing.xl, gap: spacing.xl, paddingBottom: spacing.xxl },
 
   hero: { alignItems: 'center', gap: spacing.sm, paddingTop: spacing.xl },
-  logoImg: { width: 320, height: Math.round(320 / HERO_ASPECT) },
+  // Sized down so the wordmark reads as a brand mark, not a billboard.
+  // At ~200px the lettering sits comfortably above the tagline and lets
+  // the Pro card below take centre stage.
+  logoImg: { width: 200, height: Math.round(200 / HERO_ASPECT) },
   wordmark: {
     fontSize: 28, fontWeight: fontWeight.black, color: colors.textPrimary,
     letterSpacing: 5, marginTop: spacing.xs,
