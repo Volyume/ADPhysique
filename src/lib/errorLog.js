@@ -32,10 +32,41 @@ const MAX_MSG = 600;
 let memBuffer = null;
 let loadingPromise = null;
 
+// Keys whose values should never land in the on-device ring buffer. The
+// buffer is exportable by the user via Settings → Debug Logs → Share,
+// so anything sensitive that reaches it is effectively shared. Same list
+// as src/lib/sentry.js#PII_KEYS but applied caller-side here too.
+const PII_KEYS = new Set([
+  'email', 'password', 'token', 'access_token', 'refresh_token', 'session',
+  'weight', 'weightKg', 'weight_kg', 'bodyWeight', 'bodyweight',
+  'bodyFatPercent', 'body_fat_percent', 'bodyFat',
+  'heightCm', 'height_cm', 'height',
+  'dateOfBirth', 'date_of_birth', 'dob', 'birthDate',
+  'waistCm', 'chestCm', 'hipsCm', 'thighCm', 'armCm',
+  'shouldersCm', 'forearmCm', 'hamCm', 'calfCm',
+  'notes', 'note', 'message',
+  'firstName', 'first_name', 'lastName', 'last_name',
+]);
+
+function redactPII(value, depth = 0) {
+  if (depth > 4) return '[deep]';
+  if (value == null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value.map(v => redactPII(v, depth + 1));
+  const out = {};
+  for (const [k, v] of Object.entries(value)) {
+    if (PII_KEYS.has(k)) out[k] = v == null ? null : '[redacted]';
+    else out[k] = redactPII(v, depth + 1);
+  }
+  return out;
+}
+
 function safeStringify(v) {
   if (v == null) return '';
   if (typeof v === 'string') return v.slice(0, MAX_MSG);
-  try { return JSON.stringify(v).slice(0, MAX_MSG); }
+  // Redact PII keys recursively before stringifying. The buffer can be
+  // exported by the user, so workout notes, body weights, emails etc.
+  // must not land in it verbatim.
+  try { return JSON.stringify(redactPII(v)).slice(0, MAX_MSG); }
   catch (_) { return String(v).slice(0, MAX_MSG); }
 }
 

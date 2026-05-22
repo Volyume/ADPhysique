@@ -722,6 +722,32 @@ const SCHEMA_MIGRATIONS = [
       }
     },
   ],
+
+  // v22 — re-issue mesocycle_weeks IDs that pre-date the UUID fix.
+  // Old rows used a composite key `mw_<mesocycleId>_<weekIndex>` which
+  // the cloud's UUID column rejected on every push, leaving every
+  // user's weekly progression unable to sync. This migration rewrites
+  // each bad ID to a fresh UUID and updates the three tables that
+  // reference it.
+  [
+    async (d) => {
+      const bad = await d.getAllAsync(
+        "SELECT id FROM mesocycle_weeks WHERE id LIKE 'mw\\_%' ESCAPE '\\'",
+      );
+      for (const row of bad) {
+        const oldId = row.id;
+        const newId = uid();
+        await d.withTransactionAsync(async () => {
+          await d.runAsync('UPDATE planned_muscle_volume      SET mesocycle_week_id = ? WHERE mesocycle_week_id = ?', [newId, oldId]);
+          await d.runAsync('UPDATE planned_muscle_volume_sync SET mesocycle_week_id = ? WHERE mesocycle_week_id = ?', [newId, oldId]);
+          await d.runAsync('UPDATE adaptation_events          SET mesocycle_week_id = ? WHERE mesocycle_week_id = ?', [newId, oldId]);
+          await d.runAsync('UPDATE adaptation_events_sync     SET mesocycle_week_id = ? WHERE mesocycle_week_id = ?', [newId, oldId]);
+          await d.runAsync('UPDATE workouts                   SET mesocycle_week_id = ? WHERE mesocycle_week_id = ?', [newId, oldId]);
+          await d.runAsync('UPDATE mesocycle_weeks            SET id = ?, updated_at = ? WHERE id = ?', [newId, Date.now(), oldId]);
+        });
+      }
+    },
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
@@ -1893,7 +1919,14 @@ export async function generateMesocycleWeeks(mesocycleId) {
       const weekIndex = i + 1;
       const isDeload = weekIndex === plannedWeeks ? 1 : 0;
       const rirTarget = rirLadder[i] ?? (isDeload ? 4 : Math.max(0, 3 - i));
-      const id = `mw_${mesocycleId}_${weekIndex}`;
+      // Use a proper UUID v4. The previous composite id format
+      // `mw_${mesocycleId}_${weekIndex}` looked sensible locally but the
+      // cloud's mesocycle_weeks.id column is TYPE UUID and rejected
+      // every push with "invalid input syntax for type uuid", which
+      // meant mesocycle weeks never synced. Now uses uid() like every
+      // other table; the (mesocycle_id, week_index) pair is the logical
+      // key inside the row.
+      const id = uid();
 
       await d.runAsync(
         `INSERT OR IGNORE INTO mesocycle_weeks (id, mesocycle_id, week_index, is_deload, rir_target, created_at)
