@@ -2735,18 +2735,29 @@ export async function logMorningWeight(userId, { weightKg, loggedAt = Date.now()
     'SELECT id FROM morning_weights WHERE user_id = ? AND logged_at >= ? AND logged_at < ?',
     [userId, dayStart, dayStart + 86400000],
   );
+  let savedId = id;
   if (existing?.id) {
     await d.runAsync(
-      'UPDATE morning_weights SET weight_kg = ?, notes = ? WHERE id = ?',
-      [weightKg, notes, existing.id],
+      'UPDATE morning_weights SET weight_kg = ?, notes = ?, updated_at = ? WHERE id = ?',
+      [weightKg, notes, now, existing.id],
     );
-    return existing.id;
+    savedId = existing.id;
+  } else {
+    await d.runAsync(
+      'INSERT INTO morning_weights (id, user_id, logged_at, weight_kg, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [id, userId, loggedAt, weightKg, notes, now, now],
+    );
   }
-  await d.runAsync(
-    'INSERT INTO morning_weights (id, user_id, logged_at, weight_kg, notes, created_at) VALUES (?, ?, ?, ?, ?, ?)',
-    [id, userId, loggedAt, weightKg, notes, now],
-  );
-  return id;
+  // Fire-and-forget cloud push so a sign-out between writes doesn't
+  // strand the entry locally. Synthesises the row payload from the
+  // arguments since the SELECT round-trip isn't worth it for a
+  // single weight value.
+  try {
+    // eslint-disable-next-line global-require
+    const { syncMorningWeight } = require('./sync');
+    syncMorningWeight(userId, { id: savedId, weightKg, loggedAt, notes }).catch(() => {});
+  } catch (_) { /* sync module unavailable — bulk upload will catch up later */ }
+  return savedId;
 }
 
 export async function getMorningWeightsLast14Days(userId) {
@@ -2787,6 +2798,7 @@ export async function saveWeeklyCheckin(userId, data) {
     'SELECT id FROM weekly_checkins WHERE user_id = ? AND week_start = ?',
     [userId, data.weekStart],
   );
+  let savedId;
   if (existing?.id) {
     await d.runAsync(
       `UPDATE weekly_checkins SET
@@ -2802,25 +2814,33 @@ export async function saveWeeklyCheckin(userId, data) {
         data.soreMuscles ?? null, data.sleepQuality ?? null, now, existing.id,
       ],
     );
-    return existing.id;
+    savedId = existing.id;
+  } else {
+    savedId = uid();
+    await d.runAsync(
+      `INSERT INTO weekly_checkins
+        (id, user_id, week_start, energy_score, soreness_score, stress_score, sleep_hours,
+         cals_adherence, steps_adherence, cycle_override, notes,
+         training_performance, joint_pain, sore_muscles, sleep_quality, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        savedId, userId, data.weekStart,
+        data.energyScore ?? null, data.sorenessScore ?? null, data.stressScore ?? null,
+        data.sleepHours ?? null, data.calsAdherence ?? null, data.stepsAdherence ?? null,
+        data.cycleOverride ? 1 : 0, data.notes ?? null,
+        data.trainingPerformance ?? null, data.jointPain ? 1 : 0,
+        data.soreMuscles ?? null, data.sleepQuality ?? null, now, now,
+      ],
+    );
   }
-  const id = uid();
-  await d.runAsync(
-    `INSERT INTO weekly_checkins
-      (id, user_id, week_start, energy_score, soreness_score, stress_score, sleep_hours,
-       cals_adherence, steps_adherence, cycle_override, notes,
-       training_performance, joint_pain, sore_muscles, sleep_quality, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      id, userId, data.weekStart,
-      data.energyScore ?? null, data.sorenessScore ?? null, data.stressScore ?? null,
-      data.sleepHours ?? null, data.calsAdherence ?? null, data.stepsAdherence ?? null,
-      data.cycleOverride ? 1 : 0, data.notes ?? null,
-      data.trainingPerformance ?? null, data.jointPain ? 1 : 0,
-      data.soreMuscles ?? null, data.sleepQuality ?? null, now, now,
-    ],
-  );
-  return id;
+  // Fire-and-forget cloud push — fires from BOTH insert and update
+  // paths so an edit-then-sign-out doesn't strand the change.
+  try {
+    // eslint-disable-next-line global-require
+    const { syncWeeklyCheckin } = require('./sync');
+    syncWeeklyCheckin(userId, { id: savedId, ...data }).catch(() => {});
+  } catch (_) { /* sync module unavailable — bulk upload will catch up later */ }
+  return savedId;
 }
 
 export async function getLatestCheckin(userId, weekStart = null) {

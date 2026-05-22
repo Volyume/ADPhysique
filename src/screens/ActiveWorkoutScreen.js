@@ -451,18 +451,49 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
   // Persistent lock-screen / shade notification. Mirrors current
   // exercise + set + elapsed time so the user sees their workout
-  // state without unlocking. Updates throttled to every 15s OR on
-  // set / exercise change so we're not re-presenting the notif every
-  // tick. Dismissed on unmount + endWorkout (handled below).
+  // state without unlocking. Two update paths:
+  //
+  //   1. Real-time updates (immediate, no throttle) — fire whenever
+  //      the user-visible state changes: current exercise, set count,
+  //      target set count. The notification re-presents on the next
+  //      render tick so the lock screen always shows the same set the
+  //      user just logged, not the one before. Previously the 15s
+  //      throttle dropped these updates and the user saw stale state
+  //      until the next tick passed the throttle window.
+  //
+  //   2. Elapsed-time refresh (throttled to 15s) — keeps the "12:34"
+  //      counter in the notification body roughly fresh without
+  //      hammering the notification manager every second.
+  //
+  // Splitting the two paths into separate effects means the
+  // dependency arrays don't fight each other and we get instant
+  // feedback on user actions + cheap upkeep on the timer.
   const lastNotifUpdateRef = useRef(0);
+
+  // Path 1: immediate update on state change.
+  useEffect(() => {
+    if (!workoutStartTime || !activeWorkout) return;
+    lastNotifUpdateRef.current = Date.now();
+    // eslint-disable-next-line global-require
+    const { showActiveWorkoutNotification } = require('../lib/activeWorkoutNotification');
+    showActiveWorkoutNotification({
+      workoutName: activeWorkout?.name,
+      elapsedSeconds,
+      currentSetIndex: (loggedSets?.length ?? 0) + 1,
+      totalSetsForExercise: routineExercise?.recommendedSets,
+      exerciseName: exercise?.name,
+    }).catch(() => {});
+    // Intentionally exclude elapsedSeconds — that's handled by
+    // the throttled effect below. This effect responds only to
+    // user-driven state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeWorkout?.id, loggedSets?.length, exercise?.name, routineExercise?.recommendedSets, workoutStartTime]);
+
+  // Path 2: throttled elapsed-time refresh.
   useEffect(() => {
     if (!workoutStartTime || !activeWorkout) return;
     const now = Date.now();
-    const sinceLast = now - lastNotifUpdateRef.current;
-    // Re-present at most once per 15 seconds. The body shows
-    // "Set N · Bench Press · 12:34" which doesn't need a second-by-
-    // second update; the activity feedback is the in-app timer.
-    if (sinceLast < 15_000 && elapsedSeconds > 0) return;
+    if (now - lastNotifUpdateRef.current < 15_000) return;
     lastNotifUpdateRef.current = now;
     // eslint-disable-next-line global-require
     const { showActiveWorkoutNotification } = require('../lib/activeWorkoutNotification');
@@ -954,6 +985,22 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 setCount: workingSetCount,
                 totalVolume: calculateTonnage(allSets),
               });
+              // Push to cloud IMMEDIATELY on finish. Previously the
+              // syncWorkout call only fired when the user tapped Close
+              // on the Workout Summary screen — if they swiped away to
+              // another tab or backgrounded the app between Finish and
+              // Close, the completed workout never reached the cloud.
+              // Cross-device sign-in then restored everything except
+              // workouts and sets. Fire-and-forget; failures fall into
+              // pending_sync_ops via syncWorkout's own retry path.
+              try {
+                const supabaseUserId = useAppStore.getState().session?.user?.id;
+                if (supabaseUserId) {
+                  // eslint-disable-next-line global-require
+                  const { syncWorkout } = require('../lib/sync');
+                  syncWorkout(supabaseUserId, activeWorkout.id).catch(() => {});
+                }
+              } catch (_) { /* tolerate */ }
               endWorkout();
               // eslint-disable-next-line global-require
               try { require('../lib/activeWorkoutNotification').dismissActiveWorkoutNotification(); } catch (_) {}

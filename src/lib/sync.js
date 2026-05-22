@@ -280,6 +280,71 @@ async function _upsertSets(sb, supabaseUserId, sets) {
 /**
  * Sync a single body metric entry after it's logged locally.
  */
+/**
+ * Push a single morning weight entry to cloud immediately after it's
+ * logged locally. Without this, weights live local-only until the
+ * next sign-in catch-up — a sign-out between writes loses them.
+ * Failures enqueue to the retry queue.
+ */
+export async function syncMorningWeight(supabaseUserId, entry) {
+  const sb = getClient();
+  if (!sb || !supabaseUserId || !entry) return;
+  try {
+    const { error } = await sb.from('morning_weights').upsert({
+      id: entry.id,
+      user_id: supabaseUserId,
+      weight_kg: entry.weightKg,
+      logged_at: msToISO(entry.loggedAt),
+      notes: entry.notes ?? null,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'id' });
+    if (error) { logPgErr('sync.syncMorningWeight', error); throw error; }
+  } catch (e) {
+    logWarn('sync.syncMorningWeight', e?.message, { id: entry?.id });
+    try {
+      // eslint-disable-next-line global-require
+      const { enqueueSyncOp } = require('./syncQueue');
+      await enqueueSyncOp('morning_weight', entry?.id ?? `mw-${Date.now()}`, supabaseUserId, entry);
+    } catch (_) {}
+  }
+}
+
+/**
+ * Push a single weekly check-in to cloud immediately. Cloud table is
+ * weekly_checkins_v2 (the modern schema runWeeklyCoach reads from).
+ */
+export async function syncWeeklyCheckin(supabaseUserId, checkin) {
+  const sb = getClient();
+  if (!sb || !supabaseUserId || !checkin) return;
+  try {
+    const { error } = await sb.from('weekly_checkins_v2').upsert({
+      id: checkin.id,
+      user_id: supabaseUserId,
+      week_start: checkin.weekStart,
+      energy_score: checkin.energyScore ?? null,
+      soreness_score: checkin.sorenessScore ?? null,
+      stress_score: checkin.stressScore ?? null,
+      sleep_hours: checkin.sleepHours ?? null,
+      cals_adherence: checkin.calsAdherence ?? null,
+      steps_adherence: checkin.stepsAdherence ?? null,
+      training_performance: checkin.trainingPerformance ?? null,
+      joint_pain: !!checkin.jointPain,
+      sore_muscles: checkin.soreMuscles ?? null,
+      cycle_override: !!checkin.cycleOverride,
+      notes: checkin.notes ?? null,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'id' });
+    if (error) { logPgErr('sync.syncWeeklyCheckin', error); throw error; }
+  } catch (e) {
+    logWarn('sync.syncWeeklyCheckin', e?.message, { id: checkin?.id });
+    try {
+      // eslint-disable-next-line global-require
+      const { enqueueSyncOp } = require('./syncQueue');
+      await enqueueSyncOp('check_in', checkin?.id ?? `ci-${Date.now()}`, supabaseUserId, checkin);
+    } catch (_) {}
+  }
+}
+
 export async function syncBodyMetric(supabaseUserId, metric) {
   const sb = getClient();
   if (!sb || !supabaseUserId || !metric) return;
@@ -497,18 +562,34 @@ async function _pushRoutinesAndExercises(sb, supabaseUserId, localUserId) {
       // exercise_name is the denormalised display name added by
       // migrate_012 — it's what makes a routine recoverable on a new
       // device even if the exercise_id can't resolve locally.
-      const rows = routineExs.map(re => ({
-        id: re.id, routine_id: re.routineId, exercise_id: re.exerciseId,
-        exercise_name: re.exerciseName ?? null,
-        order_in_routine: re.orderInRoutine ?? 0,
-        recommended_sets: re.recommendedSets ?? 3,
-        recommended_reps_min: re.recommendedRepsMin ?? 6,
-        recommended_reps_max: re.recommendedRepsMax ?? 12,
-        notes: re.notes ?? null,
-        starting_weight: re.startingWeight ?? null,
-        rest_seconds: re.restSeconds ?? null,
-        superset_group_id: re.supersetGroupId ?? null,
-      }));
+      //
+      // Filter: drop routine_exercises whose routine_id doesn't appear
+      // in the routines we just pushed. Cloud RLS on
+      // routine_exercises checks EXISTS (SELECT 1 FROM routines WHERE
+      // id = routine_id AND user_id = auth.uid()) — an orphan
+      // routine_id (left over from a soft-deleted routine or a partial
+      // sync state locally) fails that check and rejects the entire
+      // 200-row chunk. Excluding orphans keeps the rest of the batch
+      // alive.
+      const pushableRoutineIds = new Set((routines || []).map(r => r.id));
+      const rows = routineExs
+        .filter(re => pushableRoutineIds.has(re.routineId))
+        .map(re => ({
+          id: re.id, routine_id: re.routineId, exercise_id: re.exerciseId,
+          exercise_name: re.exerciseName ?? null,
+          order_in_routine: re.orderInRoutine ?? 0,
+          recommended_sets: re.recommendedSets ?? 3,
+          recommended_reps_min: re.recommendedRepsMin ?? 6,
+          recommended_reps_max: re.recommendedRepsMax ?? 12,
+          notes: re.notes ?? null,
+          starting_weight: re.startingWeight ?? null,
+          rest_seconds: re.restSeconds ?? null,
+          superset_group_id: re.supersetGroupId ?? null,
+        }));
+      const orphanCount = routineExs.length - rows.length;
+      if (orphanCount > 0) {
+        logWarn('sync._pushRoutinesAndExercises', 'orphan routine_exercises skipped', { orphanCount });
+      }
       for (let i = 0; i < rows.length; i += 200) {
         const { error: reErr } = await sb.from('routine_exercises').upsert(
           rows.slice(i, i + 200), { onConflict: 'id' },
