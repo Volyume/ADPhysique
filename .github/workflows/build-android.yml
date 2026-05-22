@@ -103,6 +103,7 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
+          set -e
           if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
             echo "::error::ANDROID_KEYSTORE_BASE64 secret is empty. Set the 4 signing secrets in repo Settings before re-running."
             exit 1
@@ -116,26 +117,21 @@ jobs:
             echo "::error::Decoded keystore is empty. ANDROID_KEYSTORE_BASE64 is not valid base64 of a keystore."
             exit 1
           fi
-          cat >> android/gradle.properties <<EOF
-          VOLYUME_UPLOAD_STORE_FILE=upload.keystore
-          VOLYUME_UPLOAD_STORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD
-          VOLYUME_UPLOAD_KEY_ALIAS=$ANDROID_KEY_ALIAS
-          VOLYUME_UPLOAD_KEY_PASSWORD=$ANDROID_KEY_PASSWORD
-          EOF
+          echo "✓ upload.keystore decoded ($(wc -c < android/app/upload.keystore) bytes) at android/app/upload.keystore"
+
           # Rewrite the release signingConfig in app/build.gradle to use the
-          # upload keystore. Expo's prebuild template hard-codes the debug
-          # signingConfig in the release buildType. We add a release{} entry
-          # inside signingConfigs{} and flip the buildTypes.release reference
-          # to signingConfigs.release. The previous regex assumed release{}
-          # came right after buildTypes{, which is wrong because debug{} sits
-          # in between, so it silently no-op'd and produced debug-signed AABs.
+          # upload keystore. Credentials come from -P CLI flags at build
+          # time (see the build step) so the keystore filename is the only
+          # value baked into build.gradle. storeFile is unguarded — if the
+          # keystore is missing, the build fails loudly instead of producing
+          # a debug-signed AAB.
           python3 - <<'PYEOF'
           import re, pathlib, sys
           p = pathlib.Path('android/app/build.gradle')
           src = p.read_text()
 
-          if 'VOLYUME_UPLOAD_STORE_FILE' in src:
-              print('build.gradle already references upload signing config — skipping patch')
+          if 'upload.keystore' in src:
+              print('build.gradle already references upload.keystore — skipping patch')
               sys.exit(0)
 
           if 'signingConfigs {' not in src:
@@ -143,15 +139,17 @@ jobs:
               sys.exit(1)
 
           # 1. Insert a release{} block inside signingConfigs{}.
+          # storeFile is hardcoded; credentials come from -P flags via
+          # project.findProperty. findProperty returns null if the property
+          # isn't set, which gradle treats as "missing required property"
+          # and fails the build — the desired loud failure.
           src = src.replace(
               'signingConfigs {',
               'signingConfigs {\n        release {\n'
-              '            if (project.hasProperty("VOLYUME_UPLOAD_STORE_FILE")) {\n'
-              '                storeFile file(VOLYUME_UPLOAD_STORE_FILE)\n'
-              '                storePassword VOLYUME_UPLOAD_STORE_PASSWORD\n'
-              '                keyAlias VOLYUME_UPLOAD_KEY_ALIAS\n'
-              '                keyPassword VOLYUME_UPLOAD_KEY_PASSWORD\n'
-              '            }\n'
+              '            storeFile file("upload.keystore")\n'
+              '            storePassword project.findProperty("VOLYUME_UPLOAD_STORE_PASSWORD")\n'
+              '            keyAlias project.findProperty("VOLYUME_UPLOAD_KEY_ALIAS")\n'
+              '            keyPassword project.findProperty("VOLYUME_UPLOAD_KEY_PASSWORD")\n'
               '        }',
               1,
           )
@@ -176,8 +174,9 @@ jobs:
           src = new_src
 
           p.write_text(src)
-          if 'signingConfigs.release' not in p.read_text():
-              print('::error::Verification failed: signingConfigs.release not present after write')
+          final = p.read_text()
+          if 'signingConfigs.release' not in final or 'upload.keystore' not in final:
+              print('::error::Verification failed after write')
               sys.exit(1)
           print('✓ Patched build.gradle to use upload signing config')
           PYEOF
@@ -192,13 +191,22 @@ jobs:
       # Release build embeds the JS bundle (index.android.bundle) into the
       # APK/AAB, so it runs standalone without a Metro dev server.
       # assembleRelease produces an APK (for sideload), bundleRelease
-      # produces an AAB (the format Play Store wants).
+      # produces an AAB (the format Play Store wants). Signing credentials
+      # are passed via -P so they never have to be written to disk.
       - name: Build Release APK + AAB
-        run: cd android && ./gradlew assembleRelease bundleRelease --no-daemon --no-configuration-cache
         env:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
           EXPO_PUBLIC_SENTRY_DSN: ${{ secrets.EXPO_PUBLIC_SENTRY_DSN }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          cd android && ./gradlew assembleRelease bundleRelease \
+            --no-daemon --no-configuration-cache \
+            -PVOLYUME_UPLOAD_STORE_PASSWORD="$ANDROID_KEYSTORE_PASSWORD" \
+            -PVOLYUME_UPLOAD_KEY_ALIAS="$ANDROID_KEY_ALIAS" \
+            -PVOLYUME_UPLOAD_KEY_PASSWORD="$ANDROID_KEY_PASSWORD"
 
       # Verify the AAB is signed with the upload keystore, NOT the debug
       # keystore. Play Store rejects debug-signed bundles with a generic
