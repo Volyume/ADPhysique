@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Android (APK + AAB, signed)
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    name: Build Release APK
+    name: Build Release APK + AAB
     runs-on: ubuntu-latest
 
     steps:
@@ -84,13 +84,72 @@ jobs:
           sed -i 's|org.gradle.configurationcache.extensions.serviceOf|org.gradle.kotlin.dsl.support.serviceOf|' "$FILE"
           grep -n 'serviceOf' "$FILE" || echo "✗ Patch did not apply"
 
-      # Release build embeds the JS bundle (index.android.bundle) into the APK,
-      # so it runs standalone without a Metro dev server. Expo's prebuild
-      # template signs the release buildType with the debug keystore by
-      # default, so this APK installs and runs without a custom keystore —
-      # suitable for sideloaded testing (not for Play Store submission).
-      - name: Build Release APK
-        run: cd android && ./gradlew assembleRelease --no-daemon --no-configuration-cache
+      # Decode the upload keystore from the ANDROID_KEYSTORE_BASE64 secret
+      # and wire it into the release signing config. When the secret is
+      # absent the build falls back to Expo's prebuild default (debug
+      # keystore) so the workflow still runs for branches that haven't
+      # been granted the secret — those builds work for sideload but
+      # can't be uploaded to Play Store.
+      #
+      # The four secrets that need to exist for Play-ready signing:
+      #   ANDROID_KEYSTORE_BASE64  base64 of the .keystore file
+      #   ANDROID_KEYSTORE_PASSWORD  the keystore password
+      #   ANDROID_KEY_ALIAS  e.g. volyume-upload
+      #   ANDROID_KEY_PASSWORD  same as keystore password for PKCS12
+      - name: Configure release signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "ANDROID_KEYSTORE_BASE64 secret is empty - building unsigned (debug keystore fallback)."
+            echo "APK from this build will work for sideload but cannot be uploaded to Play Store."
+            exit 0
+          fi
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/upload.keystore
+          cat >> android/gradle.properties <<EOF
+          VOLYUME_UPLOAD_STORE_FILE=upload.keystore
+          VOLYUME_UPLOAD_STORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD
+          VOLYUME_UPLOAD_KEY_ALIAS=$ANDROID_KEY_ALIAS
+          VOLYUME_UPLOAD_KEY_PASSWORD=$ANDROID_KEY_PASSWORD
+          EOF
+          # Rewrite the release signingConfig in app/build.gradle to use the
+          # upload keystore instead of the debug keystore. Expo's prebuild
+          # template hard-codes the debug signingConfig, so we patch it
+          # post-prebuild rather than maintaining a fork of the template.
+          GRADLE_FILE=android/app/build.gradle
+          python3 - <<'PYEOF'
+          import re, pathlib
+          p = pathlib.Path('android/app/build.gradle')
+          src = p.read_text()
+          # Add a new signingConfigs.release block right before the existing release {} buildType.
+          if 'signingConfigs.release' not in src and 'VOLYUME_UPLOAD_STORE_FILE' not in src:
+              src = src.replace(
+                  'signingConfigs {',
+                  'signingConfigs {\n        release {\n            if (project.hasProperty(\"VOLYUME_UPLOAD_STORE_FILE\")) {\n                storeFile file(VOLYUME_UPLOAD_STORE_FILE)\n                storePassword VOLYUME_UPLOAD_STORE_PASSWORD\n                keyAlias VOLYUME_UPLOAD_KEY_ALIAS\n                keyPassword VOLYUME_UPLOAD_KEY_PASSWORD\n            }\n        }',
+                  1,
+              )
+              src = re.sub(
+                  r'buildTypes\s*\{\s*release\s*\{([^}]*?)signingConfig\s+signingConfigs\.debug',
+                  lambda m: m.group(0).replace('signingConfigs.debug', 'signingConfigs.release'),
+                  src,
+                  count=1,
+                  flags=re.DOTALL,
+              )
+              p.write_text(src)
+              print('Patched build.gradle to use upload signing config')
+          else:
+              print('build.gradle already references upload signing config')
+          PYEOF
+
+      # Release build embeds the JS bundle (index.android.bundle) into the
+      # APK/AAB, so it runs standalone without a Metro dev server.
+      # assembleRelease produces an APK (for sideload), bundleRelease
+      # produces an AAB (the format Play Store wants).
+      - name: Build Release APK + AAB
+        run: cd android && ./gradlew assembleRelease bundleRelease --no-daemon --no-configuration-cache
         env:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
@@ -99,6 +158,13 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: volyume-release-${{ github.run_number }}
+          name: volyume-release-apk-${{ github.run_number }}
           path: android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 30
+
+      - name: Upload AAB artifact (Play Store)
+        uses: actions/upload-artifact@v4
+        with:
+          name: volyume-release-aab-${{ github.run_number }}
+          path: android/app/build/outputs/bundle/release/app-release.aab
           retention-days: 30
