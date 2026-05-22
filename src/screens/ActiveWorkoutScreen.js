@@ -1239,6 +1239,44 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <Text style={styles.coachReasonText}>{targetReason}</Text>
               </View>
             )}
+            {/* Stalled-progress nudge: if the user has done the same
+                weight & reps for the same exercise across the last 3
+                sessions, the suggestion engine isn't doing enough on
+                its own — pull-back the loop and offer a concrete next
+                step. Only shown on the first working set of an
+                exercise so it doesn't blare repeatedly. */}
+            {currentSet.setType !== 'warmup' && workingLogged === 0 && (() => {
+              if (!allTimeSets || allTimeSets.length < 9) return null;
+              // Group by workoutId, take the heaviest set of each session
+              const bySession = new Map();
+              for (const s of allTimeSets) {
+                if ((s.setType ?? s.set_type ?? 'straight') === 'warmup') continue;
+                const wid = s.workoutId ?? s.workout_id;
+                if (!wid) continue;
+                const cur = bySession.get(wid);
+                if (!cur || (s.weight ?? 0) > (cur.weight ?? 0)) bySession.set(wid, s);
+              }
+              const sessions = Array.from(bySession.values())
+                .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
+                .slice(0, 3);
+              if (sessions.length < 3) return null;
+              const w0 = sessions[0].weight ?? 0;
+              const r0 = sessions[0].actualReps ?? 0;
+              const stalled = sessions.every(s =>
+                Math.abs((s.weight ?? 0) - w0) < 0.1 &&
+                Math.abs((s.actualReps ?? 0) - r0) <= 1,
+              );
+              if (!stalled || w0 === 0) return null;
+              const bumpKg = units === 'lbs' ? 5 : 2.5;
+              return (
+                <View style={styles.stalledChip}>
+                  <Ionicons name="trending-up-outline" size={12} color={colors.warning} />
+                  <Text style={styles.stalledChipText}>
+                    Same load 3 sessions running. Try {w0 + bumpKg}{units} × {Math.max(1, r0 - 1)}, or stick at {w0}{units} for {r0 + 1} reps.
+                  </Text>
+                </View>
+              );
+            })()}
             {currentSet.setType !== 'warmup' && prevSets[workingLogged] && (() => {
               const prev = prevSets[workingLogged];
               const cw = parseFloat(currentSet.weight) || 0;
@@ -1252,6 +1290,40 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                       : `Last time: ${prev.weight}${units} × ${prev.actualReps} reps`}
                   </Text>
                 </View>
+              );
+            })()}
+            {/* Quick-repeat: pre-fill the entry card from the most
+                recent logged set so the user doesn't have to type the
+                same numbers twice in a row. Hidden when the entry
+                already matches the last logged set (no value) or when
+                no sets have been logged this session yet. */}
+            {(() => {
+              const last = loggedSets[loggedSets.length - 1];
+              if (!last) return null;
+              const cw = parseFloat(currentSet.weight) || 0;
+              const cr = parseInt(currentSet.reps, 10) || 0;
+              if (Math.abs(cw - (last.weight ?? 0)) < 0.01 && cr === (last.actualReps ?? 0)) return null;
+              return (
+                <TouchableOpacity
+                  style={styles.repeatLastBtn}
+                  onPress={() => {
+                    hapticsVocab.setLogged();
+                    setCurrentSet(s => ({
+                      ...s,
+                      weight: String(last.weight ?? 0),
+                      reps: last.actualReps ?? s.reps,
+                      isGhost: false,
+                    }));
+                  }}
+                  hitSlop={{ top: 6, bottom: 6, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Repeat last set: ${last.weight}${units} times ${last.actualReps}`}
+                >
+                  <Ionicons name="repeat-outline" size={13} color={colors.textSecondary} />
+                  <Text style={styles.repeatLastText}>
+                    Repeat last: {last.weight}{units} × {last.actualReps}
+                  </Text>
+                </TouchableOpacity>
               );
             })()}
             {showInfoTipPulse && loggedSets.length === 0 && prevSets.length === 0 && (
@@ -2286,6 +2358,24 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   beatChipText: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
+  repeatLastBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    alignSelf: 'flex-start', marginBottom: spacing.xs,
+    paddingVertical: 4, paddingHorizontal: spacing.sm,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface2,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  repeatLastText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  stalledChip: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 6,
+    marginBottom: spacing.xs,
+    paddingVertical: 6, paddingHorizontal: spacing.sm,
+    borderRadius: radius.sm,
+    backgroundColor: colors.warningBg || 'rgba(245,158,11,0.10)',
+    borderWidth: 1, borderColor: colors.warning + '40',
+  },
+  stalledChipText: { fontSize: fontSize.xs, color: colors.warning, fontWeight: fontWeight.medium, flex: 1, lineHeight: 16 },
   nextTimeBanner: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
     backgroundColor: colors.primaryBg,

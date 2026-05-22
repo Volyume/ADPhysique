@@ -114,7 +114,12 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
 
       {/* Reps Row */}
       <View style={styles.inputRow}>
-        <Text style={styles.fieldLabel}>Reps</Text>
+        <View style={styles.fieldLabelWrap}>
+          <Text style={styles.fieldLabel}>Reps</Text>
+          {live1RM != null && live1RM > 0 && (
+            <Text style={styles.e1rmHint}>e1RM {Math.round(live1RM)}{units}</Text>
+          )}
+        </View>
         <View style={styles.stepper}>
           <TouchableOpacity
             style={styles.stepBtn}
@@ -227,6 +232,11 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.primary,
     fontWeight: fontWeight.semibold,
+  },
+  e1rmHint: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    fontWeight: fontWeight.medium,
   },
   stepper: {
     flex: 1,

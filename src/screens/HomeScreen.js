@@ -57,6 +57,7 @@ export default function HomeScreen({ navigation }) {
   const bwu = bodyWeightUnits || 'st';
 
   const [weekStats, setWeekStats] = useState({ sessions: 0, sets: 0, volume: 0 });
+  const [weekStreak, setWeekStreak] = useState(0);
   const [activePlan, setActivePlanData] = useState(null);
   const [nextWorkout, setNextWorkout] = useState(null);
   const [exerciseCounts, setExerciseCounts] = useState({});
@@ -389,6 +390,28 @@ export default function HomeScreen({ navigation }) {
       const weekSets = allSets.filter(s => workoutIds.has(s.workoutId) && s.setType !== 'warmup');
       const totalVol = weekSets.reduce((t, s) => t + (s.weight || 0) * (s.actualReps || 0), 0);
       setWeekStats({ sessions: thisWeek.length, sets: weekSets.length, volume: totalVol });
+
+      // Consecutive-week streak. Bucket every completed workout into
+      // the local Mon-start week it falls in, then count back from this
+      // week until we hit an empty week. Local-time-anchored so the
+      // streak doesn't break across DST.
+      const completedTs = allWorkouts.filter(w => w.isCompleted).map(w => w.startedAt);
+      function localWeekStartMs(ts) {
+        const d = new Date(ts);
+        const dow = d.getDay(); // 0=Sun ... 6=Sat
+        const daysBack = dow === 0 ? 6 : dow - 1; // Mon=0
+        const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - daysBack);
+        return monday.getTime();
+      }
+      const trainedWeeks = new Set(completedTs.map(localWeekStartMs));
+      let streak = 0;
+      const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+      let cursor = localWeekStartMs(Date.now());
+      while (trainedWeeks.has(cursor)) {
+        streak += 1;
+        cursor -= WEEK_MS;
+      }
+      setWeekStreak(streak);
 
       const completed = allWorkouts.filter(w => w.isCompleted).sort((a, b) => b.startedAt - a.startedAt);
       setLastSession(completed[0] || null);
@@ -898,6 +921,12 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.weekCard}>
           <View style={styles.weekCardHeader}>
             <Text style={styles.weekLabel}>This week</Text>
+            {weekStreak > 1 && (
+              <View style={styles.streakChip}>
+                <Ionicons name="flame" size={11} color={colors.primary} />
+                <Text style={styles.streakChipText}>{weekStreak}-week streak</Text>
+              </View>
+            )}
           </View>
           <View style={styles.weekStats}>
             <WeekBar
@@ -1657,6 +1686,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  streakChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: spacing.sm, paddingVertical: 2,
+    borderRadius: radius.full,
+    backgroundColor: colors.primaryBg,
+  },
+  streakChipText: {
+    fontSize: fontSize.xs,
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
   },
   weekLabel: {
     fontSize: fontSize.xs,
