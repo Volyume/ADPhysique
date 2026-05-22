@@ -468,7 +468,11 @@ export default function AthleteHubScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md }}>
+      {/* Header padding matches Train / Plans / Progress (spacing.lg top
+          + horizontal) so the title sits at the same Y across all four
+          tabs. Previously this used spacing.md which made the Hub
+          title sit ~4px higher than its siblings. */}
+      <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg }}>
         <ScreenHeader title="Athlete Hub" />
       </View>
 
@@ -799,7 +803,7 @@ export default function AthleteHubScreen({ navigation }) {
           </>
         )}
 
-        {/* ── Coaching tools ────────────────────────────── */}
+        {/* ── Coaching ────────────────────────────────────── */}
         <View style={styles.section}>
           {tier === 'pro' && (
             <>
@@ -815,12 +819,6 @@ export default function AthleteHubScreen({ navigation }) {
                 label="Strategic journal"
                 sub="Every coaching decision, and why"
                 onPress={() => navigation.navigate('CoachHeldHistory')}
-              />
-              <NavRow
-                icon="shield-checkmark-outline"
-                label="Wellbeing check"
-                sub="Update your health screening answers. Shapes how your Precision Coaching is applied."
-                onPress={() => navigation.navigate('WellbeingCheck')}
               />
 
               {/* Engine Log — collapsible */}
@@ -899,6 +897,24 @@ export default function AthleteHubScreen({ navigation }) {
             </>
           )}
 
+        </View>
+
+        {/* ── Preferences ──────────────────────────────────
+            Settings and wellbeing don't belong under Coaching: one is
+            account-level (units, exports), the other is a calmness /
+            health screening that adjusts UX rather than the plan. Both
+            sit in their own section so the Coaching block reads as
+            actual coaching tools. */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Preferences</Text>
+          {tier === 'pro' && (
+            <NavRow
+              icon="shield-checkmark-outline"
+              label="Wellbeing check"
+              sub="Update your health screening answers. Shapes how your Precision Coaching is applied."
+              onPress={() => navigation.navigate('WellbeingCheck')}
+            />
+          )}
           <NavRow icon="settings-outline" label="Settings" sub="Units, data export, preferences" onPress={() => navigation.navigate('Settings')} />
         </View>
 
