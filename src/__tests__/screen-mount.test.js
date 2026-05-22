@@ -914,6 +914,91 @@ describe('NutritionTargets: fill form then tap Calculate', () => {
   });
 });
 
+// ─── Tap-then-re-render: catches crashes that surface on re-mount ────────
+//
+// Many bugs only fire on the SECOND render after a tap mutated state.
+// This pass: tap every touchable, then re-collect the tree's tappables
+// (catches new buttons that appeared after the tap) and bash those too.
+
+async function bashTwoLevels(tree) {
+  const failures = [];
+  const firstPass = collectTappables(tree);
+  for (let i = 0; i < firstPass.length; i++) {
+    const node = firstPass[i];
+    try {
+      await TestRenderer.act(async () => {
+        node.props.onPress?.();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+    } catch (e) {
+      failures.push({
+        depth: 1, index: i,
+        label: node.props.accessibilityLabel ?? '(no label)',
+        error: e.message,
+      });
+    }
+    // After the tap, re-collect and bash any newly-visible touchables.
+    const secondPass = collectTappables(tree);
+    for (let j = 0; j < secondPass.length; j++) {
+      try {
+        await TestRenderer.act(async () => {
+          secondPass[j].props.onPress?.();
+          await Promise.resolve();
+        });
+      } catch (e) {
+        failures.push({
+          depth: 2, primary: i, follow: j,
+          label: secondPass[j].props.accessibilityLabel ?? '(no label)',
+          error: e.message,
+        });
+      }
+    }
+  }
+  return { firstCount: firstPass.length, failures };
+}
+
+describe('Two-level tap: bash, then bash again after each tap re-renders', () => {
+  const PRO_LOADED = STATE_VARIANTS[0].state;
+  // 38 screens × 2 levels would be slow. Sample the 12 highest-stakes
+  // screens — anything the user touches multiple times in one session.
+  // ProGoalSetupScreen is excluded because its Save button kicks off a
+  // full plan-engine generation in the test env; the two-level depth
+  // ends up regenerating the plan dozens of times and blows the jest
+  // default timeout. That path is covered by the deterministic sweep.
+  const HOT_SCREENS = [
+    'AthleteHubScreen',
+    'BodyMetricsScreen',
+    'CoachOutputScreen',
+    'CoachingRemindersScreen',
+    'HomeScreen',
+    'NotificationSettingsScreen',
+    'NutritionTargetsScreen',
+    'PlansScreen',
+    'SettingsScreen',
+    'WeeklyCheckInScreen',
+    'WorkoutHistoryScreen',
+  ];
+  for (const screenName of HOT_SCREENS) {
+    test(`${screenName}: two-level tap stress`, async () => {
+      useAppStore.setState(PRO_LOADED);
+      let Screen;
+      try { Screen = require(`../screens/${screenName}`).default; } catch (_) { return; }
+      if (!Screen) return;
+      let tree = null;
+      try {
+        const result = await mountScreen(Screen);
+        tree = result.tree;
+        if (!tree) return;
+        const { failures } = await bashTwoLevels(tree);
+        const real = failures.filter(f => !/getState|dispatch|navigation\.navigate|getParent/i.test(f.error));
+        if (real.length) console.log(`[${screenName} two-level] failures:`, JSON.stringify(real.slice(0, 5), null, 2));
+        expect(real).toEqual([]);
+      } finally { unmountTree(tree); }
+    });
+  }
+});
+
 // ─── Accessibility mode variants ────────────────────────────────────────
 //
 // Reduce Motion + Higher Contrast + Larger Text are all user-toggleable.
