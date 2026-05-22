@@ -2519,6 +2519,11 @@ export async function wipeAllUserData(userId) {
     'exercise_user_notes', 'exercise_goals', 'workout_notes',
     'pending_sync_ops', // queue table from v16 — wipe so deleted user
                          // doesn't have orphan ops still trying to ship
+    // Sync-mirror tables added by migration v19. Must be wiped on
+    // account deletion otherwise the next account that lands on
+    // this device inherits orphan rows tagged with the deleted
+    // user's id.
+    'workout_notes_v2', 'planned_muscle_volume_sync', 'adaptation_events_sync',
   ];
 
   // Tables that DON'T have user_id and must be wiped through a parent FK.
@@ -3626,6 +3631,11 @@ export async function migrateLocalUserId(localUserId, supabaseUserId) {
     'nutrition_targets', 'body_metric_log', 'morning_weights',
     'weekly_checkins', 'coach_outputs', 'mesocycles', 'user_body_profile',
     'user_insights', 'peak_week_plans', 'exercise_user_notes',
+    'exercise_goals', // missed in the original migrate list — these are user-keyed
+    // Sync-mirror tables from migration v19. user_id column is
+    // present on all three; re-key them so the pre-signin local
+    // sample data lands under the cloud uid for the push.
+    'workout_notes_v2', 'planned_muscle_volume_sync', 'adaptation_events_sync',
   ];
   for (const table of tables) {
     try {
