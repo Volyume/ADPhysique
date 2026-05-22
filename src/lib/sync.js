@@ -588,9 +588,14 @@ async function _pullProgrammes(sb, supabaseUserId) {
     const { data, error } = await sb.from('programmes').select('*').eq('user_id', supabaseUserId);
     if (error) { logWarn('sync._pullProgrammes', error.message); return 0; }
     let n = 0;
+    let failures = 0;
+    let firstErr = null;
     for (const p of data ?? []) {
       try { await insertProgrammeFromCloud(supabaseUserId, p); n++; }
-      catch (e) { logWarn('sync._pullProgrammes', 'insert failed', { id: p.id, error: e?.message }); }
+      catch (e) { failures++; if (!firstErr) firstErr = e?.message; }
+    }
+    if (failures > 0) {
+      logWarn('sync._pullProgrammes', `${failures} programme insert(s) failed`, { firstError: firstErr });
     }
     return n;
   } catch (e) { logWarn('sync._pullProgrammes', e?.message); return 0; }
@@ -601,18 +606,28 @@ async function _pullRoutinesAndExercises(sb, supabaseUserId) {
     const { data: routines, error: rErr } = await sb.from('routines').select('*').eq('user_id', supabaseUserId);
     if (rErr) { logWarn('sync._pullRoutines', rErr.message); return 0; }
     let n = 0;
+    let routineFailures = 0;
+    let firstRoutineErr = null;
     for (const r of routines ?? []) {
       try { await insertRoutineFromCloud(supabaseUserId, r); n++; }
-      catch (e) { logWarn('sync._pullRoutines', 'insert failed', { id: r.id, error: e?.message }); }
+      catch (e) { routineFailures++; if (!firstRoutineErr) firstRoutineErr = e?.message; }
+    }
+    if (routineFailures > 0) {
+      logWarn('sync._pullRoutines', `${routineFailures} routine insert(s) failed`, { firstError: firstRoutineErr });
     }
     const routineIds = (routines ?? []).map(r => r.id);
     if (routineIds.length === 0) return n;
     const { data: reRows, error: reErr } = await sb
       .from('routine_exercises').select('*').in('routine_id', routineIds);
     if (reErr) { logWarn('sync._pullRoutineExercises', reErr.message); return n; }
+    let reFailures = 0;
+    let firstReErr = null;
     for (const re of reRows ?? []) {
       try { await insertRoutineExerciseFromCloud(re); }
-      catch (e) { logWarn('sync._pullRoutineExercises', 'insert failed', { id: re.id, error: e?.message }); }
+      catch (e) { reFailures++; if (!firstReErr) firstReErr = e?.message; }
+    }
+    if (reFailures > 0) {
+      logWarn('sync._pullRoutineExercises', `${reFailures} routine_exercise insert(s) failed`, { firstError: firstReErr });
     }
     return n;
   } catch (e) { logWarn('sync._pullRoutinesAndExercises', e?.message); return 0; }

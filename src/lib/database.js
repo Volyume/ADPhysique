@@ -500,6 +500,18 @@ const SCHEMA_MIGRATIONS = [
     `CREATE INDEX IF NOT EXISTS idx_pending_sync_user_ready
       ON pending_sync_ops(user_id, next_attempt_at)`,
   ],
+  // v17 — columns that insertRoutineFromCloud + insertProgrammeFromCloud
+  // had been INSERTing into for ages without ever being added to the
+  // local schema. Every cross-device restore was failing every
+  // routine and programme insert with "table routines has no column
+  // named day_of_week" / "table programmes has no column named
+  // source_programme_id". A user signing into a populated cloud
+  // account came back to zero plans and zero routines because each
+  // INSERT was rejected.
+  [
+    'ALTER TABLE routines ADD COLUMN day_of_week INTEGER',
+    'ALTER TABLE programmes ADD COLUMN source_programme_id TEXT',
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
