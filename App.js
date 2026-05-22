@@ -217,6 +217,51 @@ const eb = StyleSheet.create({
   btnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
 });
 
+// Small inner component that fires the "crash recovered" toast +
+// (optionally) opens the feedback sheet primed with the crash
+// trigger so the user can tell us what they were doing right before
+// the previous session died. Mounted inside ToastProvider +
+// FeedbackProvider so it can use both hooks. Fires once per launch.
+function CrashRecoveryToast({ priorCrash }) {
+  // eslint-disable-next-line global-require
+  const { useToast } = require('./src/components/Toast');
+  // eslint-disable-next-line global-require
+  const { useFeedback } = require('./src/components/FeedbackSheet');
+  const toast = useToast();
+  const feedback = useFeedback();
+  const firedRef = useRef(false);
+
+  useEffect(() => {
+    if (!priorCrash || firedRef.current) return;
+    firedRef.current = true;
+    // Wait a beat after launch so the toast doesn't compete with the
+    // splash → home transition. 1.6s lands it clearly inside Home.
+    const t = setTimeout(() => {
+      try {
+        toast?.show?.(
+          'Volyume crashed last session. Report sent.',
+          {
+            variant: 'info',
+            duration: 7000,
+            // Action button on the toast — taps open the feedback
+            // sheet pre-filled with the crash_recovery trigger so the
+            // user can add what they were doing in one sentence. The
+            // sheet auto-attaches the crash metadata from the
+            // observability layer.
+            action: {
+              label: 'Add details',
+              onPress: () => feedback?.open?.({ trigger: 'crash_recovery' }),
+            },
+          },
+        );
+      } catch (_) { /* tolerate */ }
+    }, 1600);
+    return () => clearTimeout(t);
+  }, [priorCrash, toast, feedback]);
+
+  return null;
+}
+
 export default function App() {
   const prCelebration = useAppStore(s => s.prCelebration);
   const hidePRCelebration = useAppStore(s => s.hidePRCelebration);
@@ -515,6 +560,7 @@ export default function App() {
                   } catch (_) {}
                 }}
               />
+              <CrashRecoveryToast priorCrash={priorCrash} />
             </FeedbackProvider>
           </ToastProvider>
         </SafeAreaProvider>

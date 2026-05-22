@@ -54,6 +54,12 @@ export function useFeedback() {
 /**
  * Mount this once at the App root. Renders the sheet at a global
  * z-level so any screen can open it via useFeedback().open(...).
+ *
+ * The provider also installs the shake-to-report handler when
+ * expo-sensors is available. Triggering on a sustained shake (not
+ * a single jolt) avoids accidental opens during heavy lifts.
+ * Suppressed for 30 seconds after each open so the user doesn't
+ * get prompted twice in a row.
  */
 export function FeedbackProvider({ children }) {
   const ref = useRef(null);
@@ -61,6 +67,45 @@ export function FeedbackProvider({ children }) {
     open: (opts = {}) => ref.current?.open(opts),
     close: () => ref.current?.close(),
   };
+
+  useEffect(() => {
+    // expo-sensors is a runtime-optional dep; lazy require so the
+    // app keeps building if it ever gets removed. No-op on web /
+    // platforms without an accelerometer.
+    let Accelerometer;
+    try {
+      // eslint-disable-next-line global-require, import/no-unresolved
+      const sensors = require('expo-sensors');
+      Accelerometer = sensors.Accelerometer;
+    } catch (_) { return; }
+    if (!Accelerometer?.addListener) return;
+    // Sample at ~5 Hz — high enough to detect a shake, low enough
+    // to be invisible to battery. Threshold tuned so a phone in a
+    // gym bag bouncing about doesn't trigger.
+    Accelerometer.setUpdateInterval(200);
+    let lastOpen = 0;
+    let shakeStreak = 0;
+    const subscription = Accelerometer.addListener(({ x, y, z }) => {
+      const magnitude = Math.sqrt(x * x + y * y + z * z);
+      // Idle phone reads ~1.0 (gravity). A vigorous shake spikes to
+      // >2.5. Require three consecutive samples above the threshold
+      // (~0.6s of sustained shaking) so a single thump doesn't fire.
+      if (magnitude > 2.5) {
+        shakeStreak++;
+        if (shakeStreak >= 3 && Date.now() - lastOpen > 30_000) {
+          lastOpen = Date.now();
+          shakeStreak = 0;
+          try {
+            ref.current?.open({ trigger: 'shake' });
+          } catch (_) {}
+        }
+      } else if (magnitude < 1.5) {
+        shakeStreak = 0;
+      }
+    });
+    return () => { try { subscription?.remove?.(); } catch (_) {} };
+  }, []);
+
   return (
     <FeedbackContext.Provider value={api}>
       {children}
