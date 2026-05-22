@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing } from '../styles/theme';
 
-const LAST_UPDATED = '20 May 2025';
+const LAST_UPDATED = '22 May 2026';
 
 export default function PrivacyPolicyScreen({ navigation }) {
   return (

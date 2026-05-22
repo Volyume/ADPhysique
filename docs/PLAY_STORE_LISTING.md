@@ -219,19 +219,24 @@ Complete the Data Safety form with these answers:
 
 ## Internal Test Track Setup
 
-1. Go to Play Console > Internal Testing
-2. Upload the AAB built with `eas build --platform android --profile production`
-3. Add testers by email (up to 100 for internal track)
-4. Share the opt-in URL with testers
-5. Testers install from Play Store directly
+Builds are produced by GitHub Actions, not EAS Build. The workflow at `.github/workflows/build-android.yml` runs on every push to `main` or `claude/**` and produces two artifacts:
 
-**Build command:**
-```bash
-eas build --platform android --profile production
-```
+- `volyume-release-apk-<run>` — for sideload testing
+- `volyume-release-aab-<run>` — for Play Store upload
 
-**Submit command (after build completes):**
-```bash
-eas submit --platform android --profile production --latest
-```
-_(Requires `google-play-service-account.json` — see SUBMISSION_CHECKLIST.md)_
+Steps:
+
+1. Push the release commit to the configured branch and wait for the CI workflow to finish (green)
+2. Download the `volyume-release-aab-<run>` artifact from the workflow run page
+3. Go to Play Console > Internal Testing > Create new release
+4. Drag-and-drop the AAB into the release
+5. Add testers by email (up to 100 for internal track)
+6. Share the opt-in URL with testers
+7. Testers install from Play Store directly
+
+**Build command:** none — the build is triggered by a push.
+To force a build without code changes, re-run the latest workflow run from the GitHub Actions UI.
+
+**Submit command:** none for the first upload — drag-and-drop the AAB into Play Console. Automated submission via the Play Developer API can be added later (service account creation is covered in `docs/SUBMISSION_CHECKLIST.md`).
+
+Full keystore + signing details and the per-step pre-launch checklist live in `docs/SUBMISSION_CHECKLIST.md`.

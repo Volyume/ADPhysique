@@ -1,83 +1,174 @@
 # Volyume Privacy Policy
 
-**Effective Date: [INSERT DATE]**
+**Effective date: 22 May 2026**
+**Last updated: 22 May 2026**
 
-## Introduction
+This policy explains what Volyume collects, why, and how to delete it.
+Volyume is a training logbook and self-coaching tool. We are private by
+design: no social feed, no community, no targeted advertising, no
+selling of your data.
 
-Volyume ("we," "us," "our," or "Company") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application and website.
+## 1. Who we are
 
-## 1. Information We Collect
+Volyume is operated by the developer of the Volyume mobile app
+(iPhone and Android). Contact for privacy queries:
 
-### Personal Information
-- Name and email address (for account creation)
-- Age, biological sex, height, weight (for personalized coaching)
-- Training data: exercises, sets, reps, dates (logged by user)
-- Nutrition data: meals, macros, calorie targets
-- Progress photos (stored locally, synced if user authorizes)
+- **Email**: privacy@volyume.app
+- **General support**: support@volyume.app
 
-### Automatically Collected Information
-- Device type and OS version
-- App usage patterns and session duration
-- Error logs and crash reports
-- IP address and location (general)
+This policy applies to the Volyume mobile app (`app.volyume`). Volyume
+does not offer a web version.
 
-### Camera and Photo Library Access
-We only access your camera or photo library when you explicitly choose to take or upload progress photos. These permissions are requested at the point of use.
+## 2. Data we collect
 
-## 2. How We Use Your Information
+### Account data (cloud-stored, signed-in users only)
 
-We use your information to:
-- Provide personalized training and nutrition coaching
-- Improve our app and services
-- Send notifications (with your consent)
-- Support customer service and technical issues
-- Comply with legal obligations
+- Email address (Supabase Auth)
+- A randomly-generated user ID (Supabase Auth)
+- First name (if you choose to enter one)
+- Authentication tokens (encrypted in device secure storage)
 
-**We do not:**
-- Sell your personal data to third parties
-- Share your training/nutrition data without your consent
-- Use your data for marketing purposes outside the app
+### Profile data (cloud-stored, signed-in users only)
 
-## 3. Data Storage and Security
+- Biological sex, age, height, body weight, body fat percentage
+- Training preferences (experience level, goal, equipment available,
+  days per week, session length)
+- Phase and goal selections for coaching
 
-- Your data is encrypted in transit (TLS/SSL)
-- Database access is restricted to authenticated app and backend services
-- Authentication credentials are stored securely using Supabase Auth
-- Local device data is encrypted using platform-native secure storage
+### Training data (cloud-stored, signed-in users only)
 
-## 4. Third-Party Services
+- Workouts, exercises, sets, reps, weight lifted, rest times, dates
+- Training notes you choose to add to specific exercises or sessions
+- Personal records, volume by muscle, training-block progress
+- Weekly check-in answers (energy, soreness, sleep, adherence)
+- Calorie and macro **targets** (we don't track meals or food)
+- Morning body weight if you choose to log it
+- Body measurements (waist, chest, etc.) if you choose to log them
 
-Volyume uses:
-- **Supabase**: Cloud database and authentication provider
-  - [Supabase Privacy Policy](https://supabase.com/privacy)
-- **Expo**: Mobile app development platform
-  - [Expo Privacy Policy](https://expo.dev/privacy)
+### Local-only data (never leaves your device)
 
-## 5. Data Retention
+- App preferences (units, dark/light, accessibility)
+- A local error ring buffer used for crash diagnostics. The buffer
+  redacts known-sensitive fields (emails, tokens, body weights,
+  notes) before storing them. You can view the buffer in
+  Settings → Debug Logs and export or clear it at any time.
 
-- Active account data is retained while your account is active
-- Deleted accounts: data is deleted within 30 days
-- Local app data can be deleted by uninstalling the app
+### Crash and performance telemetry
 
-## 6. Your Privacy Rights
+- Crash stack traces and error events sent to Sentry, used to fix
+  bugs. Sentitive fields (emails, tokens, body weights, notes, names)
+  are redacted before transmission. We do not use Sentry for product
+  analytics or behavioural tracking.
 
-You have the right to:
-- Access your personal data
-- Request correction of inaccurate data
-- Request deletion of your account and data
-- Opt out of optional notifications
+### Camera and photo library
 
-To exercise these rights, contact us at [SUPPORT EMAIL]
+We access the camera or photo library only when you explicitly take
+a progress photo or save a workout share card. These permissions are
+requested at the moment of use, not at app startup. Progress photos
+remain on your device unless you explicitly export them.
 
-## 7. Contact Us
+### Health data (iOS HealthKit / Android Health Connect)
 
-For privacy questions or concerns, contact:
+If you opt in via Settings → Health, Volyume can:
 
-**Email:** privacy@volyume.app
+- **Read** your most recent body weight so the morning-weight card
+  picks up entries from your smart scale or wearable
+- **Write** completed workouts so the Health app shows your training
+  alongside other activity
 
-**Mailing Address:**
-[INSERT ADDRESS]
+We do not read heart rate, sleep, HRV, or step data (step-count read
+is gated behind a separate explicit opt-in). All health-app access
+is opt-in and revocable from the OS Settings app at any time.
 
-## 8. Changes to This Policy
+### Data we do NOT collect
 
-We may update this Privacy Policy periodically. We will notify users of material changes via email or app notification.
+- Meals or food (Volyume is not a diet tracker)
+- Heart rate, HRV, sleep stages
+- Precise location (we don't use GPS)
+- Browsing history outside the app
+- Contacts or address book
+- Social-graph data (no friends, followers, leaderboards)
+
+## 3. Why we collect this data
+
+| Purpose | Data used | Lawful basis (UK/EU GDPR) |
+|---|---|---|
+| Run the app + sync between your devices | account, profile, training data | Performance of contract (Art. 6(1)(b)) |
+| Personalised coaching adjustments | training data, check-ins, body weight | Performance of contract |
+| Crash diagnostics | redacted error events | Legitimate interest (Art. 6(1)(f)) — keeping the app working |
+| Optional Health-app integration | weight read / workout write | Explicit consent (Art. 6(1)(a)), revocable in OS Settings |
+| Storing your data while signed-in | all of the above | Performance of contract |
+
+We do not use your data for advertising, profiling, or sale to third
+parties. We do not run behavioural analytics.
+
+## 4. Third parties we share data with
+
+We process data through these services. Each has its own privacy policy.
+
+| Service | What's shared | Why | Their privacy policy |
+|---|---|---|---|
+| Supabase | account + training + profile data | Cloud database and authentication | https://supabase.com/privacy |
+| Sentry | redacted error events | Crash diagnostics | https://sentry.io/privacy |
+| Apple / Google (HealthKit / Health Connect) | weight read / workout write (opt-in only) | OS-level health integration | https://www.apple.com/legal/privacy / https://policies.google.com/privacy |
+
+We do not pass data to advertising networks, analytics providers,
+or any third party not listed above.
+
+## 5. Where data is stored
+
+- **Cloud data** (account, training, profile) is stored in Supabase,
+  which uses AWS data centres. The region depends on the Supabase
+  project configuration; for the Volyume production project it is
+  in the EU.
+- **Local data** is stored on your device in encrypted secure
+  storage (Keychain on iOS, EncryptedSharedPreferences on Android)
+  for tokens, and in SQLite for training history.
+
+## 6. How long we keep your data
+
+- While your account is active: indefinitely
+- If you delete your account (Settings → Delete account): all
+  cloud-stored data is removed within 24 hours; auth record is
+  removed immediately. Local device data is wiped at the same time.
+- If you uninstall the app without deleting your account: cloud
+  data is retained so you can sign back in on a new device.
+- Crash and error logs: 90 days in Sentry, then aged out.
+
+## 7. Your rights
+
+Under UK and EU GDPR you have the right to:
+
+- **Access** the personal data we hold on you
+- **Correct** inaccurate or incomplete data
+- **Delete** your account and all associated data
+- **Export** your data in a portable format (Settings → Export data)
+- **Withdraw consent** for optional features (Health integration, etc.)
+- **Lodge a complaint** with the UK Information Commissioner's Office
+  (https://ico.org.uk/) or your local EU supervisory authority
+
+To exercise any of these rights, email privacy@volyume.app or use
+Settings → Delete account. We respond to verifiable requests within
+30 days.
+
+## 8. Children's privacy
+
+Volyume is not directed at children under 13 and we do not knowingly
+collect data from anyone under 13. If you believe a child has
+created an account, contact privacy@volyume.app and we will delete
+the account on receipt.
+
+## 9. Changes to this policy
+
+If we change this policy materially we will update the "Last updated"
+date at the top and notify signed-in users via an in-app banner. Minor
+clarifications may be made without notice. The current version is
+always at https://volyume.app/privacy.
+
+## 10. Contact
+
+- **Email**: privacy@volyume.app
+- **General support**: support@volyume.app
+
+For complaints about how we handle your data you can also contact
+the UK Information Commissioner's Office at https://ico.org.uk/.

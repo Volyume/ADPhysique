@@ -7,8 +7,9 @@ symbolication so Hermes-mangled async stacks become readable function
 names, "alert me only on new issues or regressions" rules, a
 searchable web + mobile dashboard, release tracking, per-user filters.
 
-Source-side wiring is already done — this doc covers what you do in
-Sentry's UI + EAS once to activate it.
+Source-side wiring is already done. This doc covers what you do in
+Sentry's UI + GitHub Actions once to activate it. EAS Build is not used
+for this project; release AABs are produced by `.github/workflows/build-android.yml`.
 
 ## 1. Create the Sentry project
 
@@ -27,14 +28,14 @@ Add to your local `.env` (gitignored):
 EXPO_PUBLIC_SENTRY_DSN=https://abc123@o000000.ingest.sentry.io/000000
 ```
 
-And as an EAS build secret so production builds pick it up:
-
-```
-eas secret:create --scope project --name EXPO_PUBLIC_SENTRY_DSN --value 'https://...'
-```
+And as a GitHub Actions repository secret so production CI builds pick
+it up. In the repo: **Settings → Secrets and variables → Actions → New
+repository secret**, name `EXPO_PUBLIC_SENTRY_DSN`, value the DSN. The
+build workflow exposes it to the Metro bundler so it ends up in the JS
+bundle.
 
 (The `EXPO_PUBLIC_` prefix makes the var available in the JS bundle.
-The DSN is safe to ship in the client — it identifies the project,
+The DSN is safe to ship in the client. It identifies the project,
 not your account.)
 
 ## 3. Install the SDK
@@ -44,8 +45,8 @@ npx expo install @sentry/react-native
 ```
 
 This adds the dependency and runs the iOS/Android native setup. After
-this, rebuild the dev client (`eas build --profile development`) or
-make a release build.
+this, push the change so the GitHub Actions release build picks it up,
+or run a fresh local prebuild for the dev client.
 
 The Sentry wrapper in `src/lib/sentry.js` is lazy-loaded — if the
 package isn't installed, every Sentry call is a silent no-op. So the
@@ -68,15 +69,21 @@ Add to `app.json` under `expo.plugins`:
 ]
 ```
 
-And set the auth token as an EAS secret (lets EAS upload source maps
-during the build):
+For automatic source-map upload during the release build, add the auth
+token as a GitHub Actions repository secret:
 
-```
-eas secret:create --scope project --name SENTRY_AUTH_TOKEN --value '<token from Sentry → User Auth Tokens with project:releases scope>'
-```
+- Secret name: `SENTRY_AUTH_TOKEN`
+- Value: token from Sentry → User Auth Tokens with `project:releases` scope
 
-This is one-time. After that, every EAS build uploads its source map
-to Sentry automatically and stacks symbolicate on arrival.
+The build workflow at `.github/workflows/build-android.yml` does not yet
+forward `SENTRY_AUTH_TOKEN` to the Sentry plugin. Add it under the
+`env:` block of the build job once the secret is created, alongside
+`EXPO_PUBLIC_SENTRY_DSN`. Once both pieces are wired, every release CI
+run uploads its source map to Sentry automatically and stacks
+symbolicate on arrival.
+
+Without this, Hermes-mangled stack traces still arrive in Sentry — they
+just stay mangled until you upload the matching source map manually.
 
 ## 5. Configure alerts (the "no flood" part)
 
