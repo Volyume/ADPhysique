@@ -95,7 +95,7 @@ is opt-in and revocable from the OS Settings app at any time.
 |---|---|---|
 | Run the app + sync between your devices | account, profile, training data | Performance of contract (Art. 6(1)(b)) |
 | Personalised coaching adjustments | training data, check-ins, body weight | Performance of contract |
-| Crash diagnostics | redacted error events | Legitimate interest (Art. 6(1)(f)) — keeping the app working |
+| Crash diagnostics | redacted error events | Legitimate interest (Art. 6(1)(f)), keeping the app working |
 | Optional Health-app integration | weight read / workout write | Explicit consent (Art. 6(1)(a)), revocable in OS Settings |
 | Storing your data while signed-in | all of the above | Performance of contract |
 

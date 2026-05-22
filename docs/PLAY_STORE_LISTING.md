@@ -35,7 +35,7 @@ get smarter every session.
 LESS THINKING. MORE LIFTING.
 
 Open the app, start your session, and log each set as you go. Volyume handles
-the rest — tracking your progress, spotting patterns, and surfacing exactly what
+the rest: tracking your progress, spotting patterns, and surfacing exactly what
 you need to keep growing.
 
 ---
@@ -57,14 +57,14 @@ The Pro tier builds your personalised training plan based on your goal, schedule
 recovery capacity, and available equipment. It adjusts week to week based on how
 your body responds.
 
-Set your physique goal — whether that's building muscle, staying lean, competing,
+Set your physique goal, whether that's building muscle, staying lean, competing,
 or improving your strength. Choose your training phase (building, cutting,
 maintaining, or contest preparation). Your plan and nutrition targets update
 immediately.
 
 Nutrition targets are calculated from your body weight, age, height, and activity
 level using established scientific principles. Protein, carbohydrates, and fat
-targets adapt to your phase — more carbs when you're building, controlled deficits
+targets adapt to your phase: more carbs when you're building, controlled deficits
 when you're cutting.
 
 Check in once a week. Tell us how your training felt. Volyume adjusts your plan
@@ -78,7 +78,7 @@ Your training data belongs to you. No social feed. No public profiles. No sharin
 your stats with anyone.
 
 All data is stored on your device. If you create an account, it syncs to your
-private cloud backup — visible only to you.
+private cloud backup that is visible only to you.
 
 Export your full workout history at any time as a CSV. Take it with you wherever
 you go.
@@ -91,7 +91,7 @@ Training
 - Log every set with weight and reps
 - See last session's performance inline
 - Automatic rest timer after each set
-- PR detection — know when you hit a lifetime best
+- PR detection: know when you hit a lifetime best
 - Exercise library with 150+ movements
 - Swap exercises mid-session without losing progress
 - Build custom training programmes
@@ -141,7 +141,7 @@ making significant changes to your diet or exercise programme.
 ## What's New (Release Notes — v1.1.0 Beta)
 
 ```
-Beta 1.1 — Initial beta release.
+Beta 1.1. Initial beta release.
 
 Training logbook with automatic rest timer, PR detection, and inline previous
 performance display. Pro Coaching with personalised plan generation, weekly
