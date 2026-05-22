@@ -1073,6 +1073,64 @@ describe('Form-driven screens: interleaved input + tap × 3 cycles', () => {
   }
 });
 
+// ─── Edge: empty arrays where rendering might assume non-empty ─────────
+
+describe('Edge: empty arrays in expected-populated state', () => {
+  test('PRWallScreen with one exercise but empty history array', async () => {
+    const database = require('../lib/database');
+    const orig = {
+      getAllCompletedSetsForExercise: database.getAllCompletedSetsForExercise,
+      getAllExercises: database.getAllExercises,
+    };
+    database.getAllExercises = () => Promise.resolve([
+      { id: 'e1', name: 'Bench Press', primaryMuscle: 'chest', equipment: 'Barbell' },
+    ]);
+    database.getAllCompletedSetsForExercise = () => Promise.resolve([]);
+    try {
+      useAppStore.setState(STATE_VARIANTS[0].state);
+      const Screen = require('../screens/PRWallScreen').default;
+      let tree = null;
+      try {
+        const { tree: t, errors } = await mountScreen(Screen);
+        tree = t;
+        expect(tree).not.toBeNull();
+        expect(errors).toEqual([]);
+        const { failures } = await bashTappables(tree);
+        const real = failures.filter(f => !/getState|dispatch|navigation\.navigate|getParent/i.test(f.error));
+        expect(real).toEqual([]);
+      } finally { unmountTree(tree); }
+    } finally {
+      Object.assign(database, orig);
+    }
+  });
+
+  test('AnalyticsScreen with workouts but empty sets', async () => {
+    const database = require('../lib/database');
+    const orig = {
+      getAllWorkouts: database.getAllWorkouts,
+      getCompletedWorkoutSets: database.getCompletedWorkoutSets,
+    };
+    database.getAllWorkouts = () => Promise.resolve([{
+      id: 'w1', userId: 'u1', startedAt: Date.now() - 86400000,
+      isCompleted: 1, setCount: 0, totalVolume: 0,
+    }]);
+    database.getCompletedWorkoutSets = () => Promise.resolve([]);
+    try {
+      useAppStore.setState(STATE_VARIANTS[0].state);
+      const Screen = require('../screens/AnalyticsScreen').default;
+      let tree = null;
+      try {
+        const { tree: t, errors } = await mountScreen(Screen);
+        tree = t;
+        expect(tree).not.toBeNull();
+        expect(errors).toEqual([]);
+      } finally { unmountTree(tree); }
+    } finally {
+      Object.assign(database, orig);
+    }
+  });
+});
+
 // ─── Complete workout lifecycle simulation ──────────────────────────────
 //
 // Walks through start → log sets → finish, mounting each intermediate
