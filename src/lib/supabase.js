@@ -1,7 +1,6 @@
 import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
-import { Platform } from 'react-native';
 
 // SecureStore adapter for Supabase auth session — encrypted on both iOS and Android.
 // Falls back silently so the app still launches if SecureStore is unavailable (e.g. emulator).
@@ -156,96 +155,7 @@ async function _signInWithOAuthProvider(provider) {
   }
 }
 
-// ─── Native Google Sign-In (Android) ─────────────────────────────────────
-//
-// Replaces the browser OAuth flow on Android so users get the native
-// account chooser sheet instead of a Chrome Custom Tab that shows the
-// Supabase project subdomain in the URL bar. Flow:
-//
-//   1. GoogleSignin.signIn() opens the native account picker.
-//   2. We pull the ID token out of the result.
-//   3. supabase.auth.signInWithIdToken({ provider: 'google', token })
-//      verifies the ID token server-side and creates a session.
-//
-// Requires:
-//   - EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID set to the *Web* OAuth client
-//     id from the Google Cloud project (same one Supabase Auth uses).
-//   - An *Android* OAuth client id registered in the same Google Cloud
-//     project, with package name app.volyume and SHA-1 matching the
-//     signing key that ships the APK (Play App Signing if using
-//     internal testing). No code uses the Android client id directly,
-//     but Google enforces its existence for the package + SHA-1 to be
-//     trusted.
-
-let _gsi = null;          // GoogleSignin handle, lazy-loaded
-let _gsiConfigured = false;
-
-function loadGoogleSignin() {
-  if (_gsi !== null) return _gsi;
-  try {
-    // eslint-disable-next-line global-require
-    _gsi = require('@react-native-google-signin/google-signin').GoogleSignin;
-  } catch (_) {
-    _gsi = false; // sentinel: module not present in this build
-  }
-  return _gsi || null;
-}
-
-function configureGoogleSignin() {
-  if (_gsiConfigured) return true;
-  const gs = loadGoogleSignin();
-  if (!gs) return false;
-  const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
-  if (!webClientId) return false;
-  try {
-    gs.configure({ webClientId, offlineAccess: false });
-    _gsiConfigured = true;
-    return true;
-  } catch (_) {
-    return false;
-  }
-}
-
-async function _signInWithGoogleNative() {
-  const gs = loadGoogleSignin();
-  if (!gs) {
-    return { error: { message: 'Native Google Sign-In is not bundled in this build.' } };
-  }
-  if (!configureGoogleSignin()) {
-    return { error: { message: 'Google Sign-In is missing its web client id (EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID).' } };
-  }
-  const c = getSupabaseClient();
-  if (!c) {
-    return { error: { message: 'Cloud auth is not available right now. Try email sign-in or Continue Locally.' } };
-  }
-  try {
-    await gs.hasPlayServices({ showPlayServicesUpdateDialog: true });
-    const result = await gs.signIn();
-    // Handle both return shapes: v12 and earlier returned the
-    // userInfo object directly; v13+ wraps it as
-    // { type: 'success'|'cancelled', data: { idToken, ... } }.
-    if (result?.type === 'cancelled') return { cancelled: true };
-    const idToken = result?.idToken ?? result?.data?.idToken ?? null;
-    if (!idToken) {
-      return { error: { message: 'Google did not return an ID token.' } };
-    }
-    const { error } = await c.auth.signInWithIdToken({ provider: 'google', token: idToken });
-    if (error) return { error };
-    return { ok: true };
-  } catch (e) {
-    const code = String(e?.code ?? '');
-    if (code === '12501' || code === 'SIGN_IN_CANCELLED' || /cancel/i.test(e?.message ?? '')) {
-      return { cancelled: true };
-    }
-    return { error: { message: e?.message ?? 'Google Sign-In failed.' } };
-  }
-}
-
 export function signInWithGoogle() {
-  // Use the native account picker on Android. iOS still uses the
-  // browser OAuth flow until a separate iOS OAuth client id is wired
-  // through the config plugin's iosUrlScheme.
-  if (Platform.OS === 'android') return _signInWithGoogleNative();
   return _signInWithOAuthProvider('google');
 }
 
