@@ -575,23 +575,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         });
       }
 
-      // Auto-select warmup type if no sets logged yet for this exercise
-      if (allLoggedForExercise.length === 0) {
-        const prevWorking = prev.filter(s => s.setType !== 'warmup');
-        const baseWeight = prevWorking.length > 0
-          ? prevWorking[prevWorking.length - 1].weight
-          : (routineExercise?.startingWeight ?? 0);
-        const warmupWeight = baseWeight ? Math.round(baseWeight * 0.5 * 2) / 2 : '';
-        setCurrentSet(cs => ({
-          ...cs,
-          setType: 'warmup',
-          weight: warmupWeight || cs.weight,
-          // A general warmup is light weight for ~10 reps regardless of the
-          // working rep target — high-rep warmups before low-rep work are
-          // illogical, so keep this a clean fixed default.
-          reps: 10,
-        }));
-      }
+      // Warm-up sets are no longer forced on the first set of every
+      // exercise. Forcing every exercise to start with a warm-up that
+      // the user has to click through (or change the set type to
+      // skip) is the friction the user kept hitting — they don't want
+      // it. The default is now a clean working set. Users who want a
+      // warm-up first tap the "Add warm-up set" button which flips
+      // the current entry to warmup with sensible defaults.
 
       // Load planned volume for this exercise's muscle this week
       try {
