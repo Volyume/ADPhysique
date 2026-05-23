@@ -126,16 +126,6 @@ export async function getRecentFoodEntries(userId, limit = 25) {
   );
 }
 
-export async function getFoodEntriesForRange(userId, startDate, endDate) {
-  const d = await db();
-  return d.getAllAsync(
-    `SELECT * FROM food_entries
-     WHERE user_id = ? AND entry_date BETWEEN ? AND ? AND deleted_at IS NULL
-     ORDER BY entry_date, meal_slot, logged_at`,
-    [userId, startDate, endDate]
-  );
-}
-
 // ─── custom_foods ────────────────────────────────────────────────────────
 
 export async function insertCustomFood(userId, food) {

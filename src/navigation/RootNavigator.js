@@ -72,7 +72,6 @@ import SubscriptionPolicyScreen from '../screens/SubscriptionPolicyScreen';
 import DiaryScreen from '../screens/DiaryScreen';
 import AddCustomFoodScreen from '../screens/AddCustomFoodScreen';
 import FoodSearchScreen from '../screens/FoodSearchScreen';
-import FoodInsightsScreen from '../screens/FoodInsightsScreen';
 import { withProGuard } from '../components/ProGate';
 
 const Tab = createBottomTabNavigator();
@@ -153,11 +152,6 @@ function DiaryStack({ navigation }) {
         name="AddCustomFood"
         component={AddCustomFoodScreen}
         options={{ headerShown: false, presentation: 'modal' }}
-      />
-      <Stack.Screen
-        name="FoodInsights"
-        component={FoodInsightsScreen}
-        options={{ headerShown: false }}
       />
     </Stack.Navigator>
   );

@@ -20,7 +20,6 @@ import {
   getFoodEntriesForDay, deleteFoodEntry, getRollupForDay,
   recomputeRollup, setWater, getWater,
 } from '../lib/food/db';
-import { getNutritionTargets } from '../lib/database';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -61,20 +60,17 @@ export default function DiaryScreen({ navigation }) {
   const [rollup, setRollup] = useState(null);
   const [waterMl, setWaterMl] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
-  const [targets, setTargets] = useState(null);
 
   const load = useCallback(async () => {
     if (!userId) return;
-    const [es, r, w, t] = await Promise.all([
+    const [es, r, w] = await Promise.all([
       getFoodEntriesForDay(userId, selectedDate),
       getRollupForDay(userId, selectedDate),
       getWater(userId, selectedDate),
-      getNutritionTargets(userId),
     ]);
     setEntries(es);
     setRollup(r);
     setWaterMl(w);
-    setTargets(t);
   }, [userId, selectedDate]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -131,26 +127,15 @@ export default function DiaryScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <View style={styles.headerSide}>
-          <TouchableOpacity onPress={gotoYesterday} hitSlop={12}>
-            <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity onPress={gotoYesterday} hitSlop={12}>
+          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
         <TouchableOpacity onPress={gotoToday} hitSlop={12}>
           <Text style={styles.dateLabel}>{friendlyDate(selectedDate)}</Text>
         </TouchableOpacity>
-        <View style={styles.headerSide}>
-          <TouchableOpacity onPress={gotoTomorrow} hitSlop={12}>
-            <Ionicons name="chevron-forward" size={24} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('FoodInsights')}
-            hitSlop={12}
-            accessibilityLabel="View 7-day insights and export diary"
-          >
-            <Ionicons name="stats-chart-outline" size={22} color={colors.textPrimary} />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity onPress={gotoTomorrow} hitSlop={12}>
+          <Ionicons name="chevron-forward" size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -158,7 +143,7 @@ export default function DiaryScreen({ navigation }) {
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
-        <MacroSummary rollup={rollup} targets={targets} />
+        <MacroSummary rollup={rollup} />
 
         {MEAL_SLOTS.map((slot) => (
           <MealSection
@@ -185,72 +170,31 @@ export default function DiaryScreen({ navigation }) {
   );
 }
 
-function MacroSummary({ rollup, targets }) {
+function MacroSummary({ rollup }) {
   const kcal = Math.round(rollup?.kcal_total ?? 0);
   const p = Math.round(rollup?.protein_g ?? 0);
   const c = Math.round(rollup?.carbs_g ?? 0);
   const f = Math.round(rollup?.fat_g ?? 0);
-  const kcalTarget = targets?.targetKcal ?? null;
-  const pTarget = targets?.proteinG ?? null;
-  const cTarget = targets?.carbsG ?? null;
-  const fTarget = targets?.fatG ?? null;
-  const kcalRemaining = kcalTarget != null ? kcalTarget - kcal : null;
-
   return (
     <View style={styles.macroCard}>
       <View style={styles.macroKcalRow}>
-        <View>
-          <Text style={styles.macroKcalValue}>{kcal}</Text>
-          {kcalTarget != null ? (
-            <Text style={styles.macroKcalSubLabel}>of {kcalTarget} kcal</Text>
-          ) : (
-            <Text style={styles.macroKcalLabel}>kcal</Text>
-          )}
-        </View>
-        {kcalRemaining != null ? (
-          <View style={styles.macroKcalRemainingWrap}>
-            <Text style={[
-              styles.macroKcalRemainingValue,
-              kcalRemaining < 0 && { color: colors.warning },
-            ]}>
-              {kcalRemaining >= 0 ? kcalRemaining : Math.abs(kcalRemaining)}
-            </Text>
-            <Text style={styles.macroKcalRemainingLabel}>
-              {kcalRemaining >= 0 ? 'remaining' : 'over'}
-            </Text>
-          </View>
-        ) : null}
+        <Text style={styles.macroKcalValue}>{kcal}</Text>
+        <Text style={styles.macroKcalLabel}>kcal</Text>
       </View>
-      <View style={styles.macroBars}>
-        <MacroBar label="Protein" value={p} target={pTarget} />
-        <MacroBar label="Carbs"   value={c} target={cTarget} />
-        <MacroBar label="Fat"     value={f} target={fTarget} />
+      <View style={styles.macroPills}>
+        <MacroPill label="P" value={p} />
+        <MacroPill label="C" value={c} />
+        <MacroPill label="F" value={f} />
       </View>
     </View>
   );
 }
 
-function MacroBar({ label, value, target }) {
-  const pct = target && target > 0
-    ? Math.min(1.5, Math.max(0, value / target))
-    : 0;
-  const over = target && value > target;
-  const fillWidthPct = `${Math.min(100, Math.round(pct * 100))}%`;
+function MacroPill({ label, value }) {
   return (
-    <View style={styles.macroBar}>
-      <View style={styles.macroBarHeader}>
-        <Text style={styles.macroBarLabel}>{label}</Text>
-        <Text style={[styles.macroBarValue, over && { color: colors.warning }]}>
-          {value}{target != null ? ` / ${target}` : ''}g
-        </Text>
-      </View>
-      <View style={styles.macroBarTrack}>
-        <View style={[
-          styles.macroBarFill,
-          { width: fillWidthPct },
-          over && { backgroundColor: colors.warning },
-        ]} />
-      </View>
+    <View style={styles.macroPill}>
+      <Text style={styles.macroPillValue}>{value}g</Text>
+      <Text style={styles.macroPillLabel}>{label}</Text>
     </View>
   );
 }
@@ -330,10 +274,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  headerSide: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    minWidth: 80,
-  },
   dateLabel: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold },
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxxl },
@@ -343,35 +283,19 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
     padding: spacing.lg, marginBottom: spacing.lg,
   },
-  macroKcalRow: {
-    flexDirection: 'row', alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    marginBottom: spacing.md,
-  },
-  macroKcalValue: { color: colors.textPrimary, fontSize: 36, fontWeight: fontWeight.bold, lineHeight: 40 },
-  macroKcalLabel: { color: colors.textSecondary, fontSize: fontSize.md },
-  macroKcalSubLabel: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: 2 },
-  macroKcalRemainingWrap: { alignItems: 'flex-end' },
-  macroKcalRemainingValue: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold },
-  macroKcalRemainingLabel: { color: colors.textMuted, fontSize: fontSize.xs },
-
-  macroBars: { gap: spacing.sm },
-  macroBar: {},
-  macroBarHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline',
-    marginBottom: 4,
-  },
-  macroBarLabel: { color: colors.textSecondary, fontSize: fontSize.sm },
-  macroBarValue: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
-  macroBarTrack: {
-    height: 6, borderRadius: 3,
+  macroKcalRow: { flexDirection: 'row', alignItems: 'baseline', marginBottom: spacing.md },
+  macroKcalValue: { color: colors.textPrimary, fontSize: 36, fontWeight: fontWeight.bold },
+  macroKcalLabel: { color: colors.textSecondary, fontSize: fontSize.md, marginLeft: spacing.sm },
+  macroPills: { flexDirection: 'row', gap: spacing.sm },
+  macroPill: {
+    flex: 1,
     backgroundColor: colors.surface2,
-    overflow: 'hidden',
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    alignItems: 'center',
   },
-  macroBarFill: {
-    height: '100%', borderRadius: 3,
-    backgroundColor: colors.primary,
-  },
+  macroPillValue: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  macroPillLabel: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: 2 },
 
   section: { marginBottom: spacing.lg },
   sectionHeader: {
