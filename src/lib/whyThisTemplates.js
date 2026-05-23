@@ -2,7 +2,16 @@
  * whyThisTemplates.js
  * Plain-language template library for user-facing exercise and plan explanations.
  *
- * JARGON BLOCKLIST — these words must NEVER appear in any exported string:
+ * Voice rules from docs/COACHING_VOICE_SYNTHESIS_LOCKED.md:
+ *   - Precision Coaching is the named decider for engine actions
+ *     (volume holds, weight changes, scheduled deloads).
+ *   - Descriptive strings (what an exercise does, what a week phase is for)
+ *     do not name Precision Coaching because no decision is being attributed.
+ *   - Every output passes the honesty test: "would this still be true if the
+ *     user did nothing but kept logging?"
+ *   - Numbers before narrative where applicable.
+ *
+ * JARGON BLOCKLIST -- these words must NEVER appear in any exported string:
  *   - Gym abbreviations: MEV, MAV, MRV, RIR, RPE, mesocycle, "junk volume"
  *   - Science jargon: "metabolic adaptation", "training stimulus",
  *     "stimulus-to-fatigue ratio"
@@ -15,8 +24,8 @@
  *   training stimulus        -> "muscle growth signal"
  *   stimulus-to-fatigue ratio -> "training payoff"
  *
- * All explanations are ≤ 30 words unless the context specifically warrants more.
- * All explanations are in plain English — no gym abbreviations, no science jargon.
+ * All explanations are short and plain English. No gym abbreviations, no
+ * science jargon.
  */
 
 // ---------------------------------------------------------------------------
@@ -138,10 +147,10 @@ export function getExerciseWhyThis(exerciseName, subregion) {
  */
 export function getVolumeStatusMessage(status, muscleDisplayName, currentSets) {
   const messages = {
-    below_minimum:     `${muscleDisplayName}: only ${currentSets} sets this week. Add at least one or two more sessions to keep this muscle growing.`,
+    below_minimum:     `${muscleDisplayName}: ${currentSets} sets this week. Precision Coaching can add a session or two if you want this muscle growing faster.`,
     optimal:           `${muscleDisplayName}: ${currentSets} sets this week, right in the range where muscle adapts best.`,
-    approaching_limit: `${muscleDisplayName}: ${currentSets} sets this week, near the upper end. Good, but watch recovery. Reduce if soreness builds.`,
-    over_limit:        `${muscleDisplayName}: ${currentSets} sets this week. That is more than your body can likely recover from. Cut 2–3 sets next week.`,
+    approaching_limit: `${muscleDisplayName}: ${currentSets} sets this week, near the upper end. Good, but watch recovery. Precision Coaching will pull volume back if soreness builds.`,
+    over_limit:        `${muscleDisplayName}: ${currentSets} sets this week, more than your body can likely recover from. Precision Coaching has cut 2-3 sets from next week's plan.`,
   };
   return clean(messages[status] ?? `${muscleDisplayName}: ${currentSets} sets this week.`);
 }
@@ -162,11 +171,11 @@ export function getVolumeStatusMessage(status, muscleDisplayName, currentSets) {
 export function getProgressionMessage(action, currentWeight, suggestedWeight, units = 'kg') {
   const messages = {
     add_weight: suggestedWeight
-      ? `Move to ${suggestedWeight}${units} next session. You've earned the extra weight.`
-      : `Add a little weight next session. Your current load is no longer challenging enough.`,
-    add_rep:    `Same weight, push for one more rep next time.`,
-    hold:       `Keep the same weight and reps. Match this performance before going heavier.`,
-    reduce:     `Drop the weight slightly and rebuild. Quality sets beat grinding reps.`,
+      ? `Precision Coaching has moved your next session to ${suggestedWeight}${units}. You completed every working set at the current weight.`
+      : `Precision Coaching has lifted the target weight for next session. Your current load is no longer challenging enough.`,
+    add_rep:    `Precision Coaching is holding the weight and asking for one more rep next time.`,
+    hold:       `Precision Coaching is holding the weight and reps steady. Match this performance before going heavier.`,
+    reduce:     `Precision Coaching has dropped the weight slightly to rebuild. Quality sets beat grinding reps.`,
   };
   return clean(messages[action] ?? `Continue as planned.`);
 }
@@ -184,10 +193,10 @@ export function getProgressionMessage(action, currentWeight, suggestedWeight, un
  */
 export function getAutoRegMessage(action, weeksInBlock = 1) {
   const messages = {
-    continue:      `You're recovering well. Continue the plan as written. This is what good progress feels like.`,
-    hold_volume:   `Training is feeling hard. Keep your session content the same this week. Don't add anything new. Focus on sleep and protein.`,
-    reduce_volume: `Your body is asking for less right now. Cut 1–2 sets per exercise this week and come back stronger next week.`,
-    deload_now:    `${weeksInBlock >= 4 ? 'Good timing. You\'ve been building for a few weeks.' : 'Your body is telling you it needs a breather.'} Take a lighter week: shorter sessions, same exercises, half the sets.`,
+    continue:      `Recovery scores are holding. Precision Coaching is keeping the plan as written. This is what good progress feels like.`,
+    hold_volume:   `Training is showing strain. Precision Coaching is holding your session content the same this week. Focus on sleep and protein.`,
+    reduce_volume: `Recovery scores have dropped. Precision Coaching has cut 1-2 sets per exercise this week. Come back stronger next week.`,
+    deload_now:    `${weeksInBlock >= 4 ? `Good timing: you've been building for ${weeksInBlock} weeks.` : 'Recovery scores are flagging.'} Precision Coaching has scheduled a lighter week: shorter sessions, same exercises, half the sets.`,
   };
   return clean(messages[action] ?? `Continue as planned.`);
 }
@@ -248,15 +257,15 @@ export function getSplitRationale(splitType) {
  */
 export function getDeloadPredictionMessage(weeksUntilDeload, reason) {
   if (weeksUntilDeload === 0) {
-    return clean(`Now is a good time for a lighter week. ${reason}`);
+    return clean(`Precision Coaching has scheduled a lighter week. ${reason}`);
   }
   if (weeksUntilDeload === 1) {
-    return clean(`A lighter week is likely coming up next week. ${reason}`);
+    return clean(`Precision Coaching expects a lighter week next week. ${reason}`);
   }
   if (weeksUntilDeload != null) {
-    return clean(`You're ${weeksUntilDeload} weeks from your next lighter week. ${reason}`);
+    return clean(`Precision Coaching expects your next lighter week in ${weeksUntilDeload} weeks. ${reason}`);
   }
-  return clean(reason ?? `Continue building. A lighter week will come when your body needs it.`);
+  return clean(reason ?? `Continue building. Precision Coaching will schedule a lighter week when recovery scores call for it.`);
 }
 
 // ---------------------------------------------------------------------------
@@ -273,7 +282,7 @@ export function getDeloadPredictionMessage(weeksUntilDeload, reason) {
  */
 export function getTimeCrunchMessage(droppedExercises, restReductionPct, newEstimatedMins) {
   const restPct = Math.round(restReductionPct * 100);
-  const parts = [`Rest reduced by ${restPct}%.`];
+  const parts = [`Precision Coaching has cut rest by ${restPct}%.`];
   if (droppedExercises.length === 1) {
     parts.push(`${droppedExercises[0]} removed to fit your time.`);
   } else if (droppedExercises.length > 1) {
