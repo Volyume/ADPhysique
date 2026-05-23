@@ -228,7 +228,7 @@ like vs. steady-state surfaces (week 3+) vs. safety surfaces
 (ED-pattern, FFM floor, rapid-loss) at any point. All stages share
 the same honesty rule; they differ in warmth.
 
-## The seven surface types needing the voice pass
+## The eight surface types needing the voice pass
 
 For each, return one recommended phrasing pattern at the end of
 your deliverable, plus a sample applied to the existing draft we
@@ -331,6 +331,43 @@ Current draft:
 > it gently from here. Your body responds better to a steady pull
 > than a sharp one.
 
+### Surface 8: Existing weekly coach output (the shipping app)
+
+Volyume already ships a weekly coach engine that produces output
+strings the user reads at every Sunday-evening check-in. These
+strings live in `src/lib/whyThisTemplates.js` (a 12-key library of
+"why this advice" explanations covering volume status, progression,
+auto-regulation, week-phase descriptions, split rationales, deload
+predictions, time-crunch adjustments, travel-mode adjustments,
+posing/conditioning) and in `src/lib/weeklyCoach.js` (the weekly
+output assembly including calorie adjustment magnitudes, held
+decisions, energy and recovery scores, autoregulation matrix
+outputs, MATADOR diet-break triggers).
+
+The existing register tends toward direct factual statements
+("Your bench has stalled three weeks. Try N+2.5kg × R-1, or stick
+at N for R+1") and inherits the existing app's "Direct. Precise.
+No fluff." rule. It does not use jargon, does not use AI tells, and
+does not over-celebrate. But it has not been written against the
+honesty-about-decision-authority principle (pillar 9) or the
+relationship-depth principle (pillar 10), because both principles
+are outputs of this research.
+
+Your phrasing patterns and the eventual voice pass should apply to
+this existing surface too. The implementation will be a coordinated
+re-write across the seven new surfaces and the existing weekly
+coach output, so they all share one voice rather than the new
+surfaces sounding warmer than the legacy ones.
+
+You don't need to re-draft the existing strings as part of this
+brief. The synthesis step after the three-AI pass will produce the
+revised text. What you need to do in this pass is ensure the
+patterns and the failure-mode catalogue you propose work cleanly
+when applied to the existing coach register, not just to the
+newer safety-hold and consent surfaces. Flag any patterns where
+the existing direct factual register and the new coach voice
+create tension you can't resolve.
+
 ## Constraints and existing locked rules
 
 Voice rules already locked for Volyume (from CLAUDE.md and
@@ -389,17 +426,22 @@ each pattern given:
 - A 1-2 sentence example of the pattern in use
 - The opposite/failure mode it avoids
 
-### Part 3: Re-drafts of the seven surfaces
+### Part 3: Re-drafts of surfaces 1-7
 
-For each of the seven surface types listed above, write your
-recommended copy applying the phrasing patterns from Part 2. Match
-the format/length constraints noted (e.g. push under 80 characters,
+For each of surfaces 1-7 listed above, write your recommended
+copy applying the phrasing patterns from Part 2. Match the
+format/length constraints noted (e.g. push under 80 characters,
 cascade gate is one modal screen).
 
 Note where you're uncertain. Note where you'd want to A/B test if
-we could. Note where the seven surfaces should use different
-voice registers based on the relationship-depth principle from
-pillar 10.
+we could. Note where the surfaces should use different voice
+registers based on the relationship-depth principle from pillar 10.
+
+Surface 8 (existing weekly coach output) is not re-drafted in this
+research pass. The synthesis step does that. Your job for surface 8
+is to confirm the patterns from Part 2 work cleanly against the
+existing direct factual register, and to flag any unresolvable
+tension between the new voice and the legacy register.
 
 ### Part 4: Failure-mode catalogue
 
