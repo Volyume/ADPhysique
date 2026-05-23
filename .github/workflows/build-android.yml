@@ -28,19 +28,33 @@ jobs:
       # Fail loudly if backend credentials aren't set. Without these, Metro
       # bundles empty strings and the app crashes at first launch with
       # "Error: supabaseUrl is required." — a silent config bug that has
-      # bitten us once already.
+      # bitten us once already. Prints the length (not the value) so we
+      # can sanity-check from the log that the secret is reaching the
+      # workflow and is the expected size.
       - name: Verify required secrets are set
         env:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
         run: |
-          if [ -z "$EXPO_PUBLIC_SUPABASE_URL" ]; then
-            echo "::error::EXPO_PUBLIC_SUPABASE_URL secret is empty. Set it in repo Settings → Secrets and variables → Actions."
+          URL_LEN=${#EXPO_PUBLIC_SUPABASE_URL}
+          KEY_LEN=${#EXPO_PUBLIC_SUPABASE_ANON_KEY}
+          echo "EXPO_PUBLIC_SUPABASE_URL length: $URL_LEN"
+          echo "EXPO_PUBLIC_SUPABASE_ANON_KEY length: $KEY_LEN"
+          # A typical Supabase URL is ~40 chars (https://<20-char-id>.supabase.co)
+          # A typical anon key is ~220 chars (JWT with three base64 segments).
+          if [ "$URL_LEN" -eq 0 ]; then
+            echo "::error::EXPO_PUBLIC_SUPABASE_URL secret is empty. Re-paste the value in repo Settings → Secrets and variables → Actions."
             exit 1
           fi
-          if [ -z "$EXPO_PUBLIC_SUPABASE_ANON_KEY" ]; then
-            echo "::error::EXPO_PUBLIC_SUPABASE_ANON_KEY secret is empty. Set it in repo Settings → Secrets and variables → Actions."
+          if [ "$URL_LEN" -lt 20 ] || [ "$URL_LEN" -gt 100 ]; then
+            echo "::warning::EXPO_PUBLIC_SUPABASE_URL length looks wrong ($URL_LEN chars). Expected ~40 chars like https://abcdef.supabase.co"
+          fi
+          if [ "$KEY_LEN" -eq 0 ]; then
+            echo "::error::EXPO_PUBLIC_SUPABASE_ANON_KEY secret is empty. Re-paste the value in repo Settings → Secrets and variables → Actions."
             exit 1
+          fi
+          if [ "$KEY_LEN" -lt 100 ]; then
+            echo "::warning::EXPO_PUBLIC_SUPABASE_ANON_KEY length looks wrong ($KEY_LEN chars). Expected ~220 chars (JWT starting with eyJ)."
           fi
           echo "✓ Supabase credentials present"
 
