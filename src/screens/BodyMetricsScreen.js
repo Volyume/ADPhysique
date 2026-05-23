@@ -5,6 +5,22 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO } from 'date-fns';
+
+// date-fns format() throws "Invalid time value" if given an Invalid Date.
+// Body-metric rows pulled from older cloud snapshots occasionally have a
+// missing or malformed metric_date, which used to take the whole screen
+// down. Guard at the call site rather than letting one bad row crash a
+// histogram of 30 good ones.
+function safeFormatDate(value, fmt) {
+  try {
+    if (!value) return '';
+    const d = typeof value === 'string' ? parseISO(value) : new Date(value);
+    if (!d || isNaN(d.getTime())) return '';
+    return format(d, fmt);
+  } catch (_) {
+    return '';
+  }
+}
 import { useFocusEffect } from '@react-navigation/native';
 import { LineChart } from 'react-native-gifted-charts';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
@@ -130,7 +146,7 @@ function WeightTrendChart({ entries, units, bodyWeightUnits }) {
   const data = withWeight.map((e, i) => ({
     value: e.body_weight,
     label: i === 0 || i === withWeight.length - 1
-      ? format(parseISO(e.metric_date), 'MMM d')
+      ? safeFormatDate(e.metric_date, 'MMM d')
       : '',
   }));
 
@@ -196,7 +212,7 @@ function MeasurementTrendChart({ entries, measureKey, label }) {
   const data = withData.map((e, i) => ({
     value: e[measureKey],
     label: i === 0 || i === withData.length - 1
-      ? format(parseISO(e.metric_date), 'MMM d')
+      ? safeFormatDate(e.metric_date, 'MMM d')
       : '',
   }));
 
@@ -569,7 +585,7 @@ export default function BodyMetricsScreen({ navigation }) {
             {/* Header row with phase chip */}
             <View style={styles.snapshotHeader}>
               <Text style={styles.sectionTitle}>
-                Weight · {latest?.metric_date ? format(new Date(latest.metric_date), 'MMM d, yyyy') : 'Today'}
+                Weight · {safeFormatDate(latest?.metric_date, 'MMM d, yyyy') || 'Today'}
               </Text>
               {phase && (
                 <View style={[styles.phaseChip, { borderColor: phase.color }]}>
@@ -814,7 +830,7 @@ export default function BodyMetricsScreen({ navigation }) {
               const measuredKeys = MEASUREMENTS.filter(m => entry[m.key] != null);
               return (
                 <View key={entry.id} style={styles.historyRow}>
-                  <Text style={styles.historyDate}>{format(new Date(entry.metric_date), 'MMM d, yyyy')}</Text>
+                  <Text style={styles.historyDate}>{safeFormatDate(entry.metric_date, 'MMM d, yyyy') || '—'}</Text>
                   <View style={styles.historyValues}>
                     {entry.body_weight ? (
                       <Text style={styles.historyWeight}>{formatBodyWeightShort(entry.body_weight, bwu)}</Text>
