@@ -84,34 +84,16 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # Source-map upload to Sentry is nice-to-have, not build-critical.
-      # If the token is empty, has stray whitespace, or doesn't match a
-      # known Sentry token format, set SENTRY_DISABLE_AUTO_UPLOAD=true
-      # so the upload step skips cleanly. The build still produces a
-      # signed APK + AAB; only stack-trace symbolication in Sentry is
-      # affected. When the secret is fixed, the upload starts working
-      # again automatically.
-      - name: Configure Sentry source-map upload
-        run: |
-          TOKEN_RAW='${{ secrets.SENTRY_AUTH_TOKEN }}'
-          TOKEN="$(printf '%s' "$TOKEN_RAW" | tr -d '[:space:]')"
-          if [ -z "$TOKEN" ]; then
-            echo "::warning::SENTRY_AUTH_TOKEN is empty. Skipping source-map upload; build will continue."
-            echo "SENTRY_DISABLE_AUTO_UPLOAD=true" >> "$GITHUB_ENV"
-          elif [[ "$TOKEN" =~ ^(sntrys_|sntryu_) ]] || [[ "$TOKEN" =~ ^[a-f0-9]{64}$ ]]; then
-            echo "SENTRY_AUTH_TOKEN looks valid (length ${#TOKEN}). Upload enabled."
-          else
-            echo "::warning::SENTRY_AUTH_TOKEN does not match known formats (sntrys_/sntryu_ prefix or 64-char hex). Skipping source-map upload."
-            echo "SENTRY_DISABLE_AUTO_UPLOAD=true" >> "$GITHUB_ENV"
-          fi
-
       - name: Run Expo Prebuild
         run: npx expo prebuild --platform android --clean
         env:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
           EXPO_PUBLIC_SENTRY_DSN: ${{ secrets.EXPO_PUBLIC_SENTRY_DSN }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          # Sentry uses DSN at runtime to send events. Source-map upload
+          # at build time is disabled; events arrive without symbolicated
+          # stack traces, which is fine for v1.
+          SENTRY_DISABLE_AUTO_UPLOAD: 'true'
 
       - name: Cache Gradle
         uses: actions/cache@v4
@@ -270,7 +252,7 @@ jobs:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
           EXPO_PUBLIC_SENTRY_DSN: ${{ secrets.EXPO_PUBLIC_SENTRY_DSN }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_DISABLE_AUTO_UPLOAD: 'true'
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
