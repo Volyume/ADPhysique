@@ -621,33 +621,38 @@ Once the open decisions in Section 20 are resolved:
 
 ## Document tree
 
-Existing locked docs:
+All locked docs:
 
+**Strategy and direction**
 - `BRIEF_C_CLAUDE_ADJUDICATION.md`
-- `BUDGET_POSTURE_LOCKED.md`
-- `COMPLETE_TIER_SCOPE_LOCKED.md`
-- `DATABASE_SCHEMA_LOCKED.md`
-- `FOOD_DATA_STRATEGY_LOCKED.md`
-- `OPEN_QUESTIONS_RESOLVED.md`
-- `PRODUCTION_READINESS_LOCKED.md`
 - `RESEARCH_FINDINGS_SYNTHESISED.md`
-- `SYNC_ARCHITECTURE_LOCKED.md`
+- `COMPLETE_TIER_SCOPE_LOCKED.md`
+- `OPEN_QUESTIONS_RESOLVED.md`
 - (this doc) `MASTER_VISION_AND_PLAN.md`
 
-To be created in the next pass:
-
+**Foundation (data, sync, food, posture)**
 - `DATABASE_SCHEMA_LOCKED.md`
 - `SYNC_ARCHITECTURE_LOCKED.md`
 - `FOOD_DATA_STRATEGY_LOCKED.md`
+- `BUDGET_POSTURE_LOCKED.md`
+- `PRODUCTION_READINESS_LOCKED.md`
+
+**User-facing**
 - `UI_FLOWS_LOCKED.md`
 - `ONBOARDING_SEQUENCE_LOCKED.md`
+- `PRIVACY_CONSENT_LOCKED.md`
 - `SUBSCRIPTION_AND_PAYMENT_LOCKED.md`
 - `NOTIFICATIONS_LOCKED.md`
-- `PRIVACY_CONSENT_LOCKED.md`
+
+**Quality and observability**
 - `TELEMETRY_DASHBOARDS_LOCKED.md`
 - `TESTING_STRATEGY_LOCKED.md`
 - `RELEASE_PLAN_LOCKED.md`
+
+**Phase 2 scoped**
 - `B2B_COACH_PHASE_2_SCOPED.md`
+
+**Move-level integration plans**
 - `MOVE_0_CODE_CORRECTIONS.md`
 - `MOVE_1_FOOD_FOUNDATION_AND_FFM.md`
 - `MOVE_1_5_BARCODE_AND_OCR.md`
