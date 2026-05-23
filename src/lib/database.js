@@ -762,6 +762,139 @@ const SCHEMA_MIGRATIONS = [
     'CREATE INDEX IF NOT EXISTS idx_mesocycle_weeks_meso_index ON mesocycle_weeks(mesocycle_id, week_index)',
     'CREATE INDEX IF NOT EXISTS idx_planned_muscle_volume_week ON planned_muscle_volume(mesocycle_week_id)',
   ],
+  // Food logging schema (Move #1, mirrors Supabase migrate_015_food_logging.sql).
+  // SQLite types map: jsonb -> TEXT (JSON encoded), timestamptz -> INTEGER (ms since epoch),
+  // numeric -> REAL, uuid -> TEXT. All user-owned data; sync registry handles push/pull.
+  [
+    `CREATE TABLE IF NOT EXISTS foods (
+      id TEXT PRIMARY KEY,
+      source TEXT NOT NULL,
+      source_id TEXT,
+      barcode_ean TEXT,
+      name TEXT NOT NULL,
+      brand TEXT,
+      serving_g REAL NOT NULL,
+      serving_label TEXT,
+      kcal_100g REAL NOT NULL,
+      protein_100g REAL NOT NULL,
+      carbs_100g REAL NOT NULL,
+      fat_100g REAL NOT NULL,
+      fibre_100g REAL,
+      sodium_100g REAL,
+      sugar_100g REAL,
+      verified INTEGER DEFAULT 0,
+      fetched_at INTEGER,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )`,
+    'CREATE INDEX IF NOT EXISTS idx_foods_barcode ON foods(barcode_ean) WHERE barcode_ean IS NOT NULL',
+    'CREATE INDEX IF NOT EXISTS idx_foods_name_lower ON foods(lower(name))',
+    'CREATE UNIQUE INDEX IF NOT EXISTS uq_foods_source_source_id ON foods(source, source_id)',
+
+    `CREATE TABLE IF NOT EXISTS custom_foods (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      brand TEXT,
+      serving_g REAL NOT NULL,
+      serving_label TEXT,
+      kcal_100g REAL NOT NULL,
+      protein_100g REAL NOT NULL,
+      carbs_100g REAL NOT NULL,
+      fat_100g REAL NOT NULL,
+      fibre_100g REAL,
+      sodium_100g REAL,
+      sugar_100g REAL,
+      photo_url TEXT,
+      notes TEXT,
+      deleted_at INTEGER,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )`,
+    'CREATE INDEX IF NOT EXISTS idx_custom_foods_user_active ON custom_foods(user_id) WHERE deleted_at IS NULL',
+    'CREATE INDEX IF NOT EXISTS idx_custom_foods_user_name ON custom_foods(user_id, lower(name))',
+
+    `CREATE TABLE IF NOT EXISTS food_entries (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      entry_date TEXT NOT NULL,
+      meal_slot TEXT NOT NULL,
+      food_ref TEXT NOT NULL,
+      quantity_g REAL NOT NULL,
+      kcal REAL NOT NULL,
+      protein_g REAL NOT NULL,
+      carbs_g REAL NOT NULL,
+      fat_g REAL NOT NULL,
+      fibre_g REAL,
+      logged_at INTEGER NOT NULL,
+      deleted_at INTEGER,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )`,
+    'CREATE INDEX IF NOT EXISTS idx_food_entries_user_date_slot ON food_entries(user_id, entry_date, meal_slot) WHERE deleted_at IS NULL',
+    'CREATE INDEX IF NOT EXISTS idx_food_entries_user_recent ON food_entries(user_id, logged_at) WHERE deleted_at IS NULL',
+
+    `CREATE TABLE IF NOT EXISTS daily_intake_rollups (
+      user_id TEXT NOT NULL,
+      entry_date TEXT NOT NULL,
+      kcal_total REAL NOT NULL DEFAULT 0,
+      protein_g REAL NOT NULL DEFAULT 0,
+      carbs_g REAL NOT NULL DEFAULT 0,
+      fat_g REAL NOT NULL DEFAULT 0,
+      fibre_g REAL,
+      entries_count INTEGER NOT NULL DEFAULT 0,
+      updated_at INTEGER NOT NULL,
+      PRIMARY KEY (user_id, entry_date)
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS saved_meals (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      items_json TEXT NOT NULL,
+      deleted_at INTEGER,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )`,
+    'CREATE INDEX IF NOT EXISTS idx_saved_meals_user_active ON saved_meals(user_id) WHERE deleted_at IS NULL',
+
+    `CREATE TABLE IF NOT EXISTS recipes (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      total_servings REAL NOT NULL,
+      notes TEXT,
+      deleted_at INTEGER,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )`,
+    'CREATE INDEX IF NOT EXISTS idx_recipes_user_active ON recipes(user_id) WHERE deleted_at IS NULL',
+
+    `CREATE TABLE IF NOT EXISTS recipe_ingredients (
+      id TEXT PRIMARY KEY,
+      recipe_id TEXT NOT NULL,
+      food_ref TEXT NOT NULL,
+      quantity_g REAL NOT NULL,
+      order_index INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL
+    )`,
+    'CREATE INDEX IF NOT EXISTS idx_recipe_ingredients_recipe ON recipe_ingredients(recipe_id)',
+
+    `CREATE TABLE IF NOT EXISTS food_favourites (
+      user_id TEXT NOT NULL,
+      food_ref TEXT NOT NULL,
+      last_used_at INTEGER NOT NULL,
+      PRIMARY KEY (user_id, food_ref)
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS daily_water (
+      user_id TEXT NOT NULL,
+      entry_date TEXT NOT NULL,
+      ml INTEGER NOT NULL DEFAULT 0,
+      updated_at INTEGER NOT NULL,
+      PRIMARY KEY (user_id, entry_date)
+    )`,
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
