@@ -1,7 +1,7 @@
 # Volyume Complete: session handoff
 
-**Last updated:** 2026-05-23
-**Last session ended at commit:** 7a9a994 (HomeScreen Today's Intake card)
+**Last updated:** 2026-05-23 (resumed after compaction; concentrated push round)
+**Last session ended at commit:** ddcf99b (Insights + macro targets + CSV export)
 **Active branch:** `claude/volyume-food-logging-app-B9JZv`
 
 If you're a Claude session picking this up cold, read this document
@@ -138,10 +138,40 @@ In chronological order, every commit:
 11. `Move 1: DiaryScreen, AddCustomFoodScreen, new Diary tab`
 12. `Move 1: Today's intake card on HomeScreen`
 
-**Test state:** 548 passing (478 baseline + 70 new), 25 snapshots
-locked, 1 pre-existing failure (rapid-loss test that Move #3 will
-address) and 1 pre-existing suite-load failure (screen-mount mocking
-expo-image). Both predate this session.
+Then a research round and a concentrated build push picked up after
+the context summary:
+
+13. Growth strategy three-AI research (ChatGPT non-deep, Gemini DR,
+    Claude DR) commissioned and archived in `docs/GROWTH_STRATEGY_PASS_*.md`.
+14. Citation pressure-test audit run as a background agent, then
+    folded into `GROWTH_STRATEGY_SYNTHESIS_LOCKED.md` as a 29-row
+    verified-citations table. 21 verified, 8 miscited URL drift, 1
+    fabrication (TrueCoach pricing) caught and replaced.
+15. `feat(sync): wire food domain into hand-rolled sync engine`. Six
+    `getAllXSince` fetchers + six `applyXFromCloud` appliers on
+    `food/db.js`. `_pushFoodChanges` and `_pullFoodChanges` in
+    `sync.js` calling the `food_sync_push` / `food_sync_pull` RPCs
+    from migration 016. `migrateLocalUserId` extended to re-stamp
+    food tables on sign-in. 12 new tests on the appliers and
+    fetchers.
+16. `feat(food): search-first add flow and 7-day intake on body
+    metrics`. New `FoodSearchScreen` with 250ms debounced waterfall,
+    recents, favourites, source chips, long-press favourite, and a
+    ServingPicker modal. Diary's Add food button now routes here.
+    `BodyMetricsScreen` reads `getRecentIntakeSummary` and surfaces
+    a 7-day average intake line inside the weight-trend card.
+17. `feat(food): macro targets on diary, 7-day insights, CSV export`.
+    `MacroSummary` reads `nutrition_targets` and shows
+    consumed-vs-target progress bars plus a kcal-remaining number.
+    New `FoodInsightsScreen` with 7-day bar chart, macro adherence
+    rates, and CSV export. Diary header gains a chart icon that
+    routes there. CSV writer split into a pure formatter
+    (`buildDiaryCsv`, 5 tests) and a thin I/O wrapper.
+
+**Test state:** 565 passing (548 baseline + 17 new across sync +
+CSV), 25 snapshots locked, 1 pre-existing failure (rapid-loss test
+that Move #3 will address) and 1 pre-existing suite-load failure
+(screen-mount mocking expo-image). Both predate this session.
 
 ---
 
@@ -151,7 +181,7 @@ expo-image). Both predate this session.
 | --- | --- |
 | Move #0 -- code corrections (jargon blocklist + SportRxiv citation fix) | SHIPPED |
 | Move #0.5 -- voice retrofit | SHIPPED PARTIAL. whyThisTemplates, weeklyCoach WHY_LIBRARY, HomeScreen mesocycle chip, SettingsScreen done. Deeper screen-by-screen surface audit (PRICE strings, onboarding screens) not yet done. |
-| Move #1 -- food foundation + FFM floor | SHIPPED MOSTLY. Migrations, FFM floor function + wiring, food data layer, Diary screen, Add custom food, Diary tab, Today's intake card. Remaining: sync helpers for food tables (food data writes locally but does not yet push to Supabase via sync.js), Search screen, food detail sheet, BodyMetrics 7-day intake line, Insights extensions, MacroRings Skia component. |
+| Move #1 -- food foundation + FFM floor | SHIPPED. Migrations, FFM floor function + wiring, food data layer, Diary screen with macro-target progress bars, Add custom food, Diary tab, Today's intake card, food sync wired both directions to migration 016 RPCs, FoodSearchScreen with waterfall + recents + favourites + serving picker, BodyMetrics 7-day intake line, FoodInsightsScreen with 7-day bar chart + macro adherence + CSV export. Remaining polish (not launch-blocking): MacroRings Skia component, ServingPicker as a sheet rather than modal, food detail sheet for edit (currently a modal). |
 | Move #1.5 -- barcode + OCR | NOT STARTED. Camera + MLKit + OCR + OFF write-back. |
 | Move #2 -- ED-pattern detection | NOT STARTED. The Article 9 consent screen + Goal lock screen are also part of this. |
 | Move #3 -- upward gate compression | NOT STARTED. |
@@ -162,30 +192,39 @@ expo-image). Both predate this session.
 
 ## 5. What's pending right now (resume points, in priority)
 
-If picking up Move #1 to finish it:
+Move #1 is shipped. The remaining work is split between launch
+polish, growth-strategy follow-through, and the next moves.
 
-1. **Wire food tables into sync.js.** Currently the `_scheduleSync()`
-   call in `src/lib/food/db.js` triggers the existing sync runner,
-   but `sync.js` has no per-table helpers for the food tables.
-   Need to add either:
-   - Per-table push helpers (matches existing pattern of
-     `syncMorningWeight`, `syncWeeklyCheckin`, etc.)
-   - OR a single `syncFoodLayer` helper that calls the
-     `food_sync_push` RPC from migrate_016 with a batched payload.
-   - AND a pull on app foreground that calls `food_sync_pull`.
-2. **Search screen.** `src/lib/food/waterfall.js` has `searchFoods()`
-   wired to the local cache. The UI does not surface it yet. Add a
-   SearchScreen and a route from Diary "Add food" CTA.
-3. **Food detail sheet.** Right now AddCustomFood handles both
-   create + log. A separate FoodDetailSheet for re-adding existing
-   foods (Recents / Favourites / search results) is needed.
-4. **BodyMetricsScreen 7-day intake line.** Simple addition using
-   `getRollupsForRange` from `food/db.js`.
-5. **InsightsScreen extensions.** Today panel + 7-day intake chart.
-6. **MacroRings Skia component.** Currently using pill display.
-   Replace with proper rings per UI_FLOWS_LOCKED.md.
+**Move #1 polish (nice-to-have, not blocking):**
 
-If moving on to Move #2 (ED-pattern detection):
+1. **MacroRings (Skia).** Currently progress bars in
+   `DiaryScreen.MacroSummary`. Skia rings per UI_FLOWS_LOCKED.md.
+   Roughly 2 hours; defer until post-launch unless user pushes.
+2. **Food detail sheet for edits.** Diary entries are currently
+   delete-or-keep; no edit path. Plan calls for a long-press
+   "Edit quantity" / "Move meal" flow.
+3. **ServingPicker as a bottom sheet.** Currently a centred modal in
+   `FoodSearchScreen`; the locked spec wants a sheet that ladders
+   from the bottom for one-thumb reach.
+
+**Growth strategy follow-through (from synthesis):**
+
+1. **Cascade telemetry events (synthesis §6).** No event pipeline
+   exists yet. Need: an `engine_telemetry` SQLite table, a push
+   helper into `engine_telemetry_daily` on Supabase (column already
+   reserved per locked plan), hooks on tier transitions (cascade
+   start, Pro downgrade, Free hold, paid conversions, churn at gate).
+   The Hold-at-Pro mechanic is the variable to instrument.
+2. **Onboarding disqualifier copy (synthesis §9.1, churn risk #1).**
+   Founder writes the copy per synthesis. Engineering scope: add a
+   "Who Volyume is for" block on `WelcomeScreen.js` above the tier
+   cards, with copy provided by the founder. Do not ship Claude-
+   written copy here.
+3. **Cohort dashboard (synthesis §9.3).** Day 1 completion %,
+   Day 7-14 first/second workout %, retention by 3-workout cohort.
+   Likely a Supabase view + a coach-only screen.
+
+**Move #2 (ED-pattern detection, separate work stream):**
 
 1. Read MOVE_2_ED_PATTERN_DETECTION.md end to end.
 2. Apply COACHING_VOICE_SYNTHESIS_LOCKED.md Surface 1 + Surface 7
@@ -195,6 +234,10 @@ If moving on to Move #2 (ED-pattern detection):
 3. Build `src/lib/edPatternDetector.js`. The synthesis Section 3
    patterns apply. Add property tests covering the goal-lock 2-vs-3
    signal threshold.
+4. Build the Article 9 consent screen + Goal Lock onboarding screen.
+5. Wire into `runWeeklyCoach` so the detector reads the same
+   morning weights + intake + check-in inputs the FFM floor already
+   consumes.
 
 ---
 
