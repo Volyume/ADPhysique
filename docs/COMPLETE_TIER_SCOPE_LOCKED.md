@@ -79,6 +79,31 @@ Rules:
   (downgraded to Pro), day 26 (Pro winding down), day 28 (downgraded
   to Free). Notifications respect user notification settings.
 
+## Open beta pricing window
+
+Between internal closed testing and full general availability,
+Volyume runs an **open beta** phase. Open beta is the first
+public-facing release with the food layer included and the three-tier
+cascade live. Pricing during open beta:
+
+- **Open beta upgrade prices sit below founders pricing:** Pro
+  £0.99/month, Complete £1.99/month. Duration of open beta is locked
+  at four weeks from GA-1.
+- **Users who upgrade during open beta lock those prices for the
+  life of the subscription** as long as the subscription remains
+  active without lapse.
+- At the end of the open beta window, prices step up to founders
+  pricing (Pro £1.49, Complete £3.49) for the next 12 weeks.
+- After the founders window, prices step up to standard (Pro £2.99,
+  Complete £6.99).
+- The 28-day trial cascade runs identically across all three pricing
+  windows. The difference is the price the user sees at the hold and
+  upgrade gates.
+
+This lets the open beta period deliver real price-elasticity data and
+a thank-you to early adopters without compromising the long-term
+revenue model.
+
 ## Closed testing entitlement
 
 Closed testing on the Play Store is an internal testing group, not an
