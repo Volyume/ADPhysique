@@ -18,7 +18,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontWeight, spacing } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { getSupabaseClient } from '../lib/supabase';
-import { initDatabase } from '../lib/database';
+import { initDatabase, cleanupOrphanRoutineExercises } from '../lib/database';
 import { seedExercisesIfNeeded } from '../lib/seedExercises';
 import { configureNotificationHandler, restoreNotifications } from '../lib/notifications';
 
@@ -377,6 +377,7 @@ export default function RootNavigator() {
         try {
           await initDatabase();
           seedExercisesIfNeeded().catch(console.warn);
+          cleanupOrphanRoutineExercises().catch(console.warn);
         } catch (e) {
           // eslint-disable-next-line global-require
           try { require('../lib/errorLog').logError('RootNavigator.bootstrap.initDb', e); } catch (_) {}

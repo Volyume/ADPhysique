@@ -1430,6 +1430,28 @@ export async function getOrphanedRoutines(userId) {
 }
 
 /**
+ * Hard-delete routine_exercises whose routine_id no longer exists in
+ * the routines table. These rows can accumulate when older code paths
+ * removed routines without cascading children, and they break the
+ * cloud push because Supabase's RLS check on routine_exercises
+ * requires a matching routine row owned by the same user — every
+ * sync without this cleanup logs "orphan routine_exercises skipped".
+ * Idempotent, runs once at boot.
+ */
+export async function cleanupOrphanRoutineExercises() {
+  try {
+    const d = await db();
+    const result = await d.runAsync(
+      `DELETE FROM routine_exercises
+       WHERE routine_id NOT IN (SELECT id FROM routines)`,
+    );
+    return result?.changes ?? 0;
+  } catch (_) {
+    return 0;
+  }
+}
+
+/**
  * Soft-delete every orphaned routine in a single transaction. Returns
  * the number deleted so the UI can confirm "Removed N routines".
  *
