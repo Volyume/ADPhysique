@@ -810,7 +810,7 @@ export default function SettingsScreen({ navigation }) {
               onPress={() =>
                 Alert.alert(
                   'Switch to Free?',
-                  'Everything you\'ve logged stays. Past coach outputs, check-ins, mesocycles and PRs remain readable. You just won\'t get new Pro coaching adjustments until you re-enable Pro.',
+                  'Everything you\'ve logged stays. Past coach outputs, check-ins, training blocks and PRs remain readable. You just won\'t get new Precision Coaching adjustments until you re-enable Pro.',
                   [
                     { text: 'Keep Pro', style: 'cancel' },
                     {

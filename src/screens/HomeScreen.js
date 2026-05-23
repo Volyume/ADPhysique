@@ -1028,7 +1028,7 @@ export default function HomeScreen({ navigation }) {
                     ? `Deload week · pull effort back`
                     : `Week ${currentMesoWeek.weekIndex} of ${currentMesoWeek.plannedWeeks ?? '-'}` +
                       (currentMesoWeek.rirTarget != null
-                        ? ` · RIR ${currentMesoWeek.rirTarget}`
+                        ? ` · stop ${currentMesoWeek.rirTarget} short of failure`
                         : '')}
                 </Text>
               </View>
