@@ -7,6 +7,7 @@ import * as Notifications from 'expo-notifications';
 
 export const navigationRef = createNavigationContainerRef();
 import { View, Text, Image, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 const SPLASH_HERO = require('../../assets/volyume-wordmark.png');
@@ -228,6 +229,10 @@ function ProfileStack({ navigation }) {
 }
 
 function MainTabs() {
+  // Android 15 (targetSdk 35) and iOS both draw the app edge-to-edge under
+  // the system nav / home indicator. Pad the tab bar by the bottom inset so
+  // the icons and labels don't collide with the OS chrome.
+  const insets = useSafeAreaInsets();
   return (
     <Tab.Navigator
       lazy={false}
@@ -236,8 +241,8 @@ function MainTabs() {
         tabBarStyle: {
           backgroundColor: colors.tabBar,
           borderTopColor: colors.tabBarBorder,
-          paddingBottom: 4,
-          height: 60,
+          paddingBottom: 4 + insets.bottom,
+          height: 60 + insets.bottom,
         },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
