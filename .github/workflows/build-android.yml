@@ -217,7 +217,7 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           cd android && ./gradlew assembleRelease bundleRelease \
-            --no-daemon --no-configuration-cache \
+            --no-daemon --no-configuration-cache --stacktrace \
             -PVOLYUME_UPLOAD_STORE_PASSWORD="$ANDROID_KEYSTORE_PASSWORD" \
             -PVOLYUME_UPLOAD_KEY_ALIAS="$ANDROID_KEY_ALIAS" \
             -PVOLYUME_UPLOAD_KEY_PASSWORD="$ANDROID_KEY_PASSWORD"
