@@ -2,15 +2,17 @@
 
 Single source of truth for Volyume's user-facing voice. Combines the
 three deep-research passes (Gemini, ChatGPT, Claude) on
-`COACHING_VOICE_RESEARCH_BRIEF.md`. Citations marked `[PENDING AUDIT]`
-will be replaced with verified references when
-`COACHING_VOICE_CITATION_AUDIT.md` completes. This document supersedes
-the three individual passes for any voice-related decision and
-extends `CLAUDE.md` plus `DESIGN_SYSTEM.md`.
+`COACHING_VOICE_RESEARCH_BRIEF.md`. Citations verified against
+`COACHING_VOICE_CITATION_AUDIT.md` (26 verified, 11 miscitations
+corrected, 1 fabrication dropped). This document supersedes the
+three individual passes for any voice-related decision and extends
+`CLAUDE.md` plus `DESIGN_SYSTEM.md`.
 
-Locked principles already triangulated; surface re-drafts already
-applied with Precision Coaching naming; only specific citations and
-two contested questions wait on the audit.
+Locked principles triangulated across all three passes; surface
+re-drafts applied with Precision Coaching naming; evidence base
+fully verified. One principle held provisionally (no fake-autonomy
+on locked decisions, Pattern 15) pending a single user-study; see
+Section 8.
 
 ## 1. The non-negotiable foundation: honesty about decision authority
 
@@ -37,11 +39,15 @@ support, marketing, policy, and "the team behind Volyume". Banned
 first-person plural: "we" used inside Precision Coaching output to
 imply shared decision-making with the user.
 
-Evidence: SDT autonomy-support literature [PENDING AUDIT:
-Ntoumanis 2021], explainable-AI trust [PENDING AUDIT: Kaur 2020],
-product-copy ethics [PENDING AUDIT: Lakkaraju & Bastani 2020], trust
-model [PENDING AUDIT: Mayer Davis Schoorman 1995]. Convergent
-across all three deep-research passes.
+Evidence: SDT autonomy-support literature (Ntoumanis et al. 2021,
+*Health Psychol Rev* 15(2):214-244, DOI 10.1080/17437199.2020.1718529,
+verified); explainable-AI trust (Kaur et al. 2020, *Proc CHI 2020*,
+DOI 10.1145/3313831.3376219, verified); product-copy ethics
+(Lakkaraju & Bastani 2020, "How do I fool you?", *Proc AIES 2020*,
+arXiv 1911.06473, verified — ChatGPT's original arXiv ID was wrong);
+trust model (Mayer, Davis & Schoorman 1995, *Acad Manage Rev*
+20(3):709-734, DOI 10.5465/AMR.1995.9508080335, verified).
+Convergent across all three deep-research passes.
 
 ## 2. Three voice registers (all share the honesty rule, differ in warmth)
 
@@ -88,11 +94,15 @@ rapid-loss correction), warmth **tightens**, not loosens. The
 register becomes more clinical, more specific, more anchored to
 numbers, and externalises the **pattern**, not the person.
 Motivational filler is a measurable risk to the at-risk subgroup
-[PENDING AUDIT: Eikey 2021, Cruz 2025, Cerea 2025] and is banned in
-this register.
+(Eikey 2021, *BJPsych Open* 7(5):e176, DOI 10.1192/bjo.2021.1011,
+verified; Cruz et al. 2025, *Int J Eat Disord*, DOI
+10.1002/eat.24488, verified; Cerea et al. 2025, *Int J Eat Disord*
+58(12):2253-2256, DOI 10.1002/eat.24536, verified) and is banned
+in this register.
 
-Externalisation rule (from FBT, [PENDING AUDIT: Rienecke & Le
-Grange 2022]): the **trajectory** is the object of concern, not
+Externalisation rule (from FBT, Rienecke & Le Grange 2022, *J Eat
+Disord* 10(1):60, DOI 10.1186/s40337-022-00585-y, verified): the
+**trajectory** is the object of concern, not
 the user. "This pattern — weight falling fast plus low energy plus
 eating under target — is the one that breaks cuts" is correct.
 "You're being too aggressive" is not (locates the problem in the
@@ -176,9 +186,13 @@ spec for copy review.
     "Your coach can see this hold in their dashboard."
 
 15. **No fake-autonomy framing on locked decisions** (from the
-    Claude pass, [PENDING AUDIT: 2024 experiment showing fake
-    autonomy-supportive language reduced behavioural intentions
-    through reactance]). Reserve "could", "might", "consider" for
+    Claude pass; the underlying 2024 experiment Claude referenced
+    was not named specifically, so the principle is held
+    provisionally on Claude's reasoning rather than a verified
+    primary source. Likely maps to van Strien-Knippenberg et al.
+    2024 *Eur J Health Psychol* DOI 10.1027/2512-8442/a000159 per
+    the citation audit, but unconfirmed.) Reserve "could", "might",
+    "consider" for
     places where the user genuinely has a choice. Where Precision
     Coaching has already locked a decision, state the decision
     directly. "Eat to the target this week" passes; "you could
@@ -544,10 +558,10 @@ Hard-block any of these in copy review. Linter-enforceable.
 | "Streak broken" / "you missed a day" | Shame trigger. In ED-and-app qualitative literature, streak language drives abandonment. | "You logged on 19 of 21 days this block." |
 | "AI has analysed your data" | Violates the deterministic-engine spec; users may infer Precision Coaching learns about them in ways it does not. | "Precision Coaching applied its rules to your data." |
 | "You need to eat more" / "you should" / "you must" | Controlling. For at-risk subgroup, triggers reactance. | "Precision Coaching held the target. The reason: rapid loss plus low energy plus eating under target. Eat to the target this week." |
-| "It's up to you" / "you decide" (on a locked target) | Fake-autonomy framing. Backfires per Claude's [PENDING AUDIT: 2024 reactance experiment]. | State the locked decision directly. |
+| "It's up to you" / "you decide" (on a locked target) | Fake-autonomy framing. Backfires per Claude's reading of recent reactance work (specific 2024 paper not identified in the audit; principle held on reasoning). | State the locked decision directly. |
 | "Storage of health metrics" / GDPR boilerplate | Corporate register. Reads as legal document, not coach. | Plain English ("the health data you log"). |
 | "How do you feel about your progress?" | Open question in a one-way surface. User frustrates trying to respond. | State observation, give rationale, state next step. |
-| "Save 50% now" / "act now" / "don't miss out" | False urgency. App-abandonment literature [PENDING AUDIT: Kidman 2024] lists urgency framing among churn drivers. | State the option and its tradeoff calmly. |
+| "Save 50% now" / "act now" / "don't miss out" | False urgency. App-abandonment literature (Kidman et al. 2024, *J Med Internet Res* 26:e56897, DOI 10.2196/56897, verified — 525,824 participants, 22 churn drivers across 6 categories) lists urgency framing among churn drivers. | State the option and its tradeoff calmly. |
 | "Volyume coaches you better than any human" | Violates "alongside coaches not above them" rule. | Volyume helps you get more out of any coach you work with. |
 | "We've adjusted your plan with AI" | Violates deterministic-rules framing. | "Precision Coaching has adjusted your plan." |
 
@@ -572,26 +586,81 @@ implementation move that follows.
 | `src/lib/whyThisTemplates.js` | 12 WHY_LIBRARY keys | Surface 8 mechanical pass. Each key's copy retrofitted to patterns 1, 2, 6, 8, 9, 10, 15. Each output line passes the honesty test. |
 | `src/lib/weeklyCoach.js` | Weekly coach output assembly | Surface 8 mechanical pass. Output strings retrofitted. Internal logic unchanged. |
 
-## 8. Evidence base and confidence ratings
+## 8. Evidence base (post-audit)
 
-Confidence per principle, pending the citation audit completion:
+Citation audit completed (see `COACHING_VOICE_CITATION_AUDIT.md`).
+Headline: 26 verified, 11 miscited (real papers with wrong DOIs or
+titles, now corrected below), 1 outright fabricated (Cronin et al.
+2022 JMIR mHealth, used in Gemini's Pillar 5 and Claude's Pillar 5;
+dropped). 6 needs-human-verification (paywalled).
 
-| Principle | Confidence | Source convergence |
+The Cronin fabrication was load-bearing for the "tone-driven
+abandonment" claim. That claim still holds on the verified Kidman
+et al. 2024 (525,824 participants, 22 churn drivers including
+tone) and Eikey 2017/2021 evidence; the Cronin reference is
+dropped throughout this document.
+
+### Verified citation table per principle
+
+| Principle | Strongest verified source | DOI / URL |
 | --- | --- | --- |
-| Honesty about decision authority | High | All 3 passes converge. Trust model and xAI literature both cited. |
-| Three-stage voice register | High | All 3 passes converge. |
-| Numbers before narrative | High | All 3 passes converge. Aligns with existing DESIGN_SYSTEM.md. |
-| Mirror-not-infer | High | All 3 passes converge. |
-| Externalise the pattern, not the person | Moderate | Convergent. FBT caveat (overdoing externalisation reads as dismissive) noted. |
-| Plain-mechanism language | High | Convergent. Lang 2025 evidence verified in prior research round. |
-| Upward counterfactual framing | High | Kuhl 2023 verified in prior research round. |
-| Safety-cold register | Moderate-High | Convergent. Pending Cruz 2025 / Cerea 2025 / Eikey 2021 DOI verification in audit. |
-| No fake-autonomy on locked decisions | Moderate | Single source (Claude), [PENDING AUDIT]. Important if confirmed. Apply provisionally. |
-| Volyume alongside coaches, not above | High | Already in CLAUDE.md, reinforced by all three passes. |
+| Honesty about decision authority | Mayer, Davis & Schoorman 1995, "An Integrative Model of Organizational Trust", *Acad Manage Rev* 20(3):709-734 | 10.5465/AMR.1995.9508080335 |
+| Honesty: misleading explanations destroy trust once detected | Lakkaraju & Bastani 2020, "How do I fool you? Manipulating User Trust via Misleading Black Box Explanations", *Proc AIES 2020* | arXiv 1911.06473 |
+| Honesty: confident-sounding xAI explanations cause false trust | Kaur et al. 2020, "Interpreting Interpretability", *Proc CHI 2020* | 10.1145/3313831.3376219 |
+| Three-stage voice register | Mayer Davis Schoorman 1995 (above) + Bansal, Zahedi & Gefen 2010, *Decision Support Systems* 49(2):138-150 | 10.1016/j.dss.2010.01.010 |
+| Autonomy-supportive language (SDT) | Ntoumanis et al. 2021, "A meta-analysis of self-determination theory-informed intervention studies in the health domain", *Health Psychol Rev* 15(2):214-244 (Hedges' g = 0.450, CI 0.329-0.571 for need-supportive interventions on health behaviour) | 10.1080/17437199.2020.1718529 |
+| Autonomy-supportive language: corroborating | Reeve & Cheon 2021, "Autonomy-supportive teaching", *Educational Psychologist* 56(2):54-77 | 10.1080/00461520.2020.1862657 |
+| Autonomy-supportive in digital health | Smit, Zeidler, Resnicow & de Vries 2019, *JMIR* 21(10):e14074 | 10.2196/14074 |
+| Numbers before narrative | Existing `docs/DESIGN_SYSTEM.md` ("Numbers Are Content") + Lang et al. 2025 plain-language evidence | n/a + 10.2196/50862 |
+| Mirror-not-infer | Kaur et al. 2020 (above) | 10.1145/3313831.3376219 |
+| Externalise the pattern, not the person | Rienecke & Le Grange 2022, "The five tenets of family-based treatment for adolescent eating disorders", *J Eat Disord* 10(1):60 (includes the caveat that overdoing externalisation reads as dismissive) | 10.1186/s40337-022-00585-y |
+| Externalise: CBT-E source | Fairburn 2008, *Cognitive Behavior Therapy and Eating Disorders*, Guilford (book; non-DOI, verified to exist) | n/a |
+| Plain-mechanism language | Lang et al. 2025, "Jargon and Readability in Plain Language Summaries of Health Research", *J Med Internet Res* 27:e50862 (1,241 NIHR summaries, only 21.7% met 5% jargon threshold) | 10.2196/50862 |
+| Plain-mechanism: policy basis | CDC "Everyday Words for Public Health Communication" + NHS Service Manual: How We Write | n/a |
+| Upward counterfactual framing | Kuhl, Artelt & Hammer 2023, "For Better or Worse: The Impact of Counterfactual Explanations' Directionality on User Behavior in xAI", *Springer LNCS* (N=161, upward outperformed downward and no-explanation) | 10.1007/978-3-031-44070-0_14 |
+| Safety-cold register: ED-app harm pattern | Eikey 2021, "Effects of diet and fitness apps on eating disorder behaviours: qualitative study", *BJPsych Open* 7(5):e176 | 10.1192/bjo.2021.1011 |
+| Safety-cold register: meta-analysis | Cruz et al. 2025, "Smartphone Applications for Eating Disorders: A Systematic Review and Meta-Analysis", *Int J Eat Disord* | 10.1002/eat.24488 |
+| Safety-cold register: commentary on app-store landscape | Cerea et al. 2025, "The Light and Shadow of Smartphone Applications for Eating Disorders", *Int J Eat Disord* 58(12):2253-2256 | 10.1002/eat.24536 |
+| Safety floor energy threshold | Mountjoy et al. 2023 IOC RED-S consensus, *Br J Sports Med* 57:1073-1097 (verified in prior research round) | 10.1136/bjsports-2023-106994 |
+| App abandonment: 22-driver taxonomy | Kidman et al. 2024, "When and Why Adults Abandon Lifestyle Behavior and Mental Health Mobile Apps", *J Med Internet Res* 26:e56897 (18 studies, 525,824 participants, median 70% abandonment in 100 days) | 10.2196/56897 |
+| App abandonment: BCT engagement | Milne-Ives et al. 2023, "Potential associations between behavior change techniques and engagement with mobile health apps", *Front Psychol* 14:1227443 | 10.3389/fpsyg.2023.1227443 |
+| ED-app qualitative harm | Eikey & Reddy 2017, "It's definitely been a journey", *Proc CHI 2017*:642-654 | 10.1145/3025453.3025591 |
+| Volyume alongside coaches, not above | Existing `CLAUDE.md` rule; reinforced by Helms et al. 2014 evidence-based bodybuilding contest-prep review, *J Int Soc Sports Nutr* 11:20 | 10.1186/1550-2783-11-20 |
+| Trust in conversational agents (verified post-DOI-format scare) | Wang, Fatima, Shahbaz & Asif 2026, "Building user trust in AI chatbots", *Scientific Reports* 16(1):7860 | 10.1038/s41598-026-38179-2 |
 
-When the citation audit completes, this section will be replaced
-with a verified citations table mapping each principle to its
-strongest verified source.
+### Held provisionally (no verified primary source)
+
+- "No fake-autonomy framing on locked decisions" (Pattern 15, Section
+  3). Claude referenced a 2024 experiment without naming it
+  specifically. The citation audit notes this likely maps to
+  van Strien-Knippenberg et al. 2024 (*Eur J Health Psychol*, DOI
+  10.1027/2512-8442/a000159) but could not confirm. The principle
+  is held on Claude's reasoning plus the broader Ntoumanis 2021
+  SDT framework: imitation-autonomy fails the same psychological-
+  reactance test that crude controlling language fails. If a
+  user-study suggests the rule is wrong, revisit.
+
+### Confidence ratings per principle (post-audit)
+
+| Principle | Confidence | Notes |
+| --- | --- | --- |
+| Honesty about decision authority | High | Multi-source verified |
+| Three-stage voice register | High | Convergent across all three passes plus verified trust-model literature |
+| Numbers before narrative | High | Aligns with existing locked design system |
+| Mirror-not-infer | High | Kaur 2020 verified |
+| Externalise pattern not person | Moderate-High | Rienecke & Le Grange 2022 verified, with their own caveat included |
+| Plain-mechanism language | High | Lang 2025 verified |
+| Upward counterfactual framing | High | Kuhl 2023 verified |
+| Safety-cold register | High | Cruz 2025 + Cerea 2025 + Eikey 2021 all verified |
+| No fake-autonomy on locked decisions | Moderate | Held provisionally (see above) |
+| Volyume alongside coaches | High | Already in CLAUDE.md plus practitioner literature |
+
+### Citation corrections folded back
+
+Eleven miscitations from the original three passes were corrected
+during this audit. The corrected forms above are the ones now used
+in this synthesis. The original wrong forms are listed in
+`COACHING_VOICE_CITATION_AUDIT.md` for the record.
 
 ## 9. Open questions
 
