@@ -561,6 +561,24 @@ lean. All five engine guardrails, Article 9 consent, FTC HBNR
 language, Sentry, and account deletion are non-negotiable at v1
 regardless of budget.
 
+## 18b. Domain layout (locked)
+
+`volyume.app` is registered on Namecheap. DNS points to Supabase for
+email. Subdomains and paths:
+
+| Surface | URL | Hosting | Phase |
+| --- | --- | --- | --- |
+| Marketing + waitlist | volyume.app | Static (Vercel free tier) | Phase A onwards |
+| Privacy policy | volyume.app/privacy | Same | Phase A |
+| Credits / attributions | volyume.app/credits | Same | Phase A |
+| Coach dashboard | coach.volyume.app | Next.js static export, Vercel free | Phase 2 |
+| Status page | status.volyume.app | Reads from Supabase `status` table | Phase B onwards |
+| Auth callbacks | Default Supabase project domain (native SDKs hide it) | Supabase free tier | All phases |
+
+Email already configured via Supabase; no DNS changes needed there.
+Adding new subdomains is a Namecheap DNS A/CNAME record + Vercel
+DNS verification.
+
 ## 19. Explicit out-of-scope (do not build at v1)
 
 Recorded so they aren't accidentally added by scope creep:

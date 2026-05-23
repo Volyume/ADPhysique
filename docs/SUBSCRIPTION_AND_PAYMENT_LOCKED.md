@@ -4,6 +4,46 @@ The cascade state machine, the payment integration, and the rules
 that keep tier state consistent across platforms and devices. Locked
 2026-05-23.
 
+## Sign-in providers
+
+Locked at native SDKs on mobile, not web OAuth flows. Reason: the
+web-based Supabase OAuth flow shows the Supabase project domain on
+Google's account picker (e.g. `xyz.supabase.co`) which reads
+unprofessional. Native SDKs show our app branding instead.
+
+### Android: Google Sign-In via native SDK
+
+- Library: `@react-native-google-signin/google-signin`.
+- Google Cloud Console: OAuth client (Android type) configured with
+  the app's package name and SHA-1 signing cert. App name set to
+  "Volyume" so the picker shows "Sign in to Volyume."
+- Flow: native Google picker -> Google ID token -> Supabase
+  `signInWithIdToken({ provider: 'google', token })`.
+- Cost: free. No Supabase paid plan needed.
+
+### iOS: Apple Sign-In via Expo native module
+
+- Library: `expo-apple-authentication`.
+- Apple's rules require apps offering third-party sign-in to also
+  offer Apple Sign-In. So iOS leads with Apple; Google Sign-In is
+  optional secondary on iOS.
+- Flow: native Apple picker -> Apple identity token -> Supabase
+  `signInWithIdToken({ provider: 'apple', token })`.
+
+### Email magic link (fallback)
+
+Existing Supabase email magic link flow. Works on both platforms.
+Used as a fallback when native sign-in fails or for users who
+prefer email.
+
+### Why not Supabase custom domain at v1
+
+Supabase's custom-domain feature (`auth.volyume.app` instead of the
+project-default domain) costs $10/month on the Pro plan. Native
+sign-in solves the same UX problem (no public-facing Supabase
+domain) for free. Revisit if we later need it for web-based OAuth
+flows that don't have native SDK alternatives.
+
 ## Provider
 
 RevenueCat on top of Apple StoreKit 2 and Google Play Billing. Locked
