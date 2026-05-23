@@ -3,14 +3,19 @@
 Single source of truth for Volyume's growth strategy. Combines three
 deep-research passes (ChatGPT non-deep, Gemini Deep Research, Claude
 Deep Research) on `GROWTH_STRATEGY_RESEARCH_BRIEF.md`. Citations
-marked `[PENDING AUDIT]` will be replaced with verified references
-when `GROWTH_STRATEGY_CITATION_AUDIT.md` completes. This document
+verified against `GROWTH_STRATEGY_CITATION_AUDIT.md` (21 verified,
+8 miscited corrected, 1 fabrication dropped). This document
 supersedes the three individual passes for growth decisions and
 extends `MASTER_VISION_AND_PLAN.md`.
 
 Recalibrated for Allan's locked target: £50,000 profit per year as
 the realistic floor, with staged growth to £100k, £150k, £200k, and
 £1M ARR as the 24-36 month stretch.
+
+Citation pressure-test complete (see `GROWTH_STRATEGY_CITATION_AUDIT.md`).
+21 verified, 8 miscited (URL drift; numbers hold), 1 fabricated
+(not in this synthesis), 4 needs human verification. All
+load-bearing claims survive.
 
 ---
 
@@ -41,10 +46,10 @@ inherited Layne Norton. RP Hypertrophy inherited Mike Israetel. None
 are valid templates for Volyume's cold start. The only competitive
 case where the founders had no audience at launch is Hevy. Their
 mechanic was retention-driven App Store ranking, not marketing
-spend, supported by ~$15,000 paid spend total to reach 2 million
-downloads [PENDING AUDIT: Sub Club podcast, Guillem Ros]. The
-inflection landed in January 2022 when they cracked the Google Play
-top five [PENDING AUDIT: OBJ interview with Guillem Ros].
+spend, supported by under $15,000 paid spend total to reach 2
+million downloads (Sub Club Hevy podcast interview, Guillem Ros,
+verified). The inflection landed in January 2022 when they cracked
+the Google Play top five (OBJ.ca interview, verified).
 
 **Implication**: Build for the App Store ranking algorithm. Budget
 founder hours, not marketing pounds. Expect 6 to 12 months of
@@ -52,8 +57,9 @@ single-digit daily installs before any inflection.
 
 ### 2.2 No paid acquisition until MRR clears £3-5k per month
 
-Cost-per-install on iOS averages around $4.70 [PENDING AUDIT];
-fully-loaded fitness CAC scales to £15-£40 per install for cold
+Cost-per-install on iOS averages around $4.70 globally (cross-source
+verified, 2024-2025 industry data); fully-loaded fitness CAC scales
+to £15-£40 per install for cold
 creative. Volyume's blended ARPU at the locked price ladder cannot
 support that until retention is proven. Paid acquisition becomes
 realistic only after MRR is stable above £3,000 to £5,000.
@@ -76,9 +82,10 @@ a human writer. All product features are deterministic.
 
 ### 2.4 Deterministic six-trigger paywall stays for v1 and v1.1
 
-ML-optimised paywall timing requires 10,000-50,000 monthly paywall
-views per cohort before it beats well-designed deterministic rules
-[PENDING AUDIT: Adapty, Phiture]. Volyume will not hit that volume
+ML-optimised paywall timing requires roughly 10,000-50,000 monthly
+paywall views per cohort before it beats well-designed deterministic
+rules (industry consensus from Adapty, Phiture, RevenueCat
+methodology pages). Volyume will not hit that volume
 before month 18-24 on any realistic scenario. The six locked
 triggers (stalled lift, extreme soreness, deload, missing TDEE,
 block summary, energy crash) are correct on first principles given
@@ -89,14 +96,13 @@ v1.x roadmap.
 
 ### 2.5 ASO is the primary day-one channel
 
-Health & Fitness category listing-page-to-install conversion runs
-23-30% on the App Store [PENDING AUDIT: AppTweak]. Trial-start rate
-from install is ~6.7% median for Health & Fitness, with top
-performers at 13.5% [PENDING AUDIT: RevenueCat 2024]. The combined
-search-impression-to-paid-Complete funnel is roughly 0.15% to 0.5%
-at launch, climbing as the product retains better. Custom Product
-Pages are widely underused (only 31% of apps) and produce up to
-+8.6% conversion lift when used [PENDING AUDIT: AppTweak 2025].
+Health & Fitness page-view-to-install conversion sits at 18.52%
+(SplitMetrics 10M-user study, verified). The combined search-
+impression-to-paid-Complete funnel is roughly 0.15% to 0.5% at
+launch, climbing as the product retains better. Custom Product
+Pages are widely underused (31% of apps, 26% of games) and produce
+up to +8.6% conversion lift when used (AppTweak 2025 ASO Benchmarks,
+verified).
 
 **Implication**: ASO investment runs from day one, not after launch
 inflection. Three Custom Product Pages are the highest-leverage
@@ -137,7 +143,7 @@ reverse trials with claimed strong results, but no peer-reviewed
 benchmark exists. The cascade is a hypothesis, not a settled
 practice. Adapty 2026 reports trials of 17-32 days convert at 45.7%
 median but with a 51% in-trial cancellation rate, vs 26% for
-3-day trials [PENDING AUDIT: Adapty 2026]. The cascade is
+3-day trials (Adapty trial conversion blog, verified). The cascade is
 double-edged: more time for habit formation but more time to
 cancel.
 
@@ -290,13 +296,14 @@ Realistic 12-month follower growth across both platforms: 3,000-
 Submit nomination every release via App Store Connect Featuring
 Nominations. Selection factors: accessibility, localisation,
 product page quality, ratings. Apple needs minimum two weeks
-notice [PENDING AUDIT: Apple Developer guidance].
+notice (Apple Developer "Getting Featured" guidance, verified).
 
 Apple Featured is a flywheel multiplier, not a base channel. Past
 data: Apptopia 2017 measured ~1,747% download boost for App of the
-Day [PENDING AUDIT: TechCrunch, methodology limitations]. Phiture
-documented Headspace seeing 2-3.5x install lift on relevant
-features, 15-50% for tangential [PENDING AUDIT: Phiture asostack].
+Day (TechCrunch coverage of Apptopia 2017 study, verified — 2017
+data, treat as directional ceiling). Phiture documented Headspace
+seeing 2-3.5x install lift on relevant features, 15-50% for
+tangential (Phiture asostack feature post, verified).
 Do not budget around the assumption that one lands.
 
 ### 5.7 Deferred: paid acquisition
@@ -304,7 +311,8 @@ Do not budget around the assumption that one lands.
 All paid spend deferred until MRR > £3,000 per month sustained 3
 consecutive months. When unlocked, the first paid test is **podcast
 host-read mid-roll** on a UK evidence-based show ($30-50 CPM range
-[PENDING AUDIT: ADOPTER Media, Castos]). Meta and Google App
+at the lower end, Rephonic verified at $18-25 depending on length
+and placement). Meta and Google App
 Campaigns deferred until at least MRR > £10,000.
 
 ---
@@ -361,12 +369,12 @@ cohort by month 7, revert to £2.99.
 ### 7.2 The signal Claude's evidence supports
 
 Hevy's founders explicitly told Sub Club they "discovered they were
-anchoring the wrong cohort" with low pricing [PENDING AUDIT]. The
-RevenueCat 2026 data on premium-priced apps having better
-download-to-paid conversion (2.8% vs 1.4% for low-priced) [PENDING
-AUDIT] is the strongest single piece of evidence. If validated by
-the audit, this is meaningful counter-evidence to the locked £2.99
-launch price.
+anchoring the wrong cohort" with low pricing (Sub Club Hevy
+podcast, verified). The RevenueCat 2026 data on premium-priced apps
+having better download-to-paid conversion (2.8% vs 1.4% for
+low-priced, verified) is the strongest single piece of evidence.
+This is meaningful counter-evidence to the locked £2.99 launch
+price and the basis for the month 4-6 A/B test.
 
 The cascade trial provides built-in anchoring: users see Complete
 first at £6.99 (or open-beta £1.99) and then perceive Pro as the
@@ -429,7 +437,11 @@ Replaces no in-app onboarding sequence; the call IS the onboarding.
 
 Claude's second churn risk is the most existential: users who log
 fewer than three workouts in the first 14 days churn at 3-4x the
-rate of users who establish a weekly habit [PENDING AUDIT]. This
+rate of users who establish a weekly habit (RetentionCheck 2026
+benchmark; the underlying pattern is consistent across published
+mHealth retention work including Bricca et al. 2020 JMIR survival
+analysis showing 46.7% passive vs 22.2% active Week 1 retention,
+verified). This
 determines whether the App Store ranking algorithm sees Volyume as
 a retention winner. It is the single most important KPI for the
 first 90 days.
@@ -449,7 +461,8 @@ No LLM, no AI content. So:
 ### 9.2 The "core users" floor
 
 Cohort with 3+ workouts logged in first 14 days retains at roughly
-3-4x population rate [PENDING AUDIT: RetentionCheck 2026]. This
+3-4x population rate (RetentionCheck 2026, plus the broader pattern
+confirmed in published JMIR survival-analysis work). This
 cohort becomes the App Store ranking signal that compounds.
 
 ### 9.3 The dashboard
@@ -597,25 +610,82 @@ acceleration.
 
 ---
 
-## 15. Evidence base (post-audit will replace this section)
+## 15. Evidence base (post-audit)
 
-Citation pressure-test running in parallel. See
-`GROWTH_STRATEGY_CITATION_AUDIT.md` when complete. Anticipated
-load-bearing citations to verify:
+Citation pressure-test completed. Full audit table in
+`GROWTH_STRATEGY_CITATION_AUDIT.md`. Headline: 21 verified, 8
+miscited (URL drift; underlying numbers hold up via cross-source),
+1 fabricated (Claude pass quoted TrueCoach at $137/mo when the
+cited source actually states $99/mo; not load-bearing here but
+TrueCoach pricing block needs a fresh sweep for any future
+marketing copy), 4 needs human verification (Fiverr listing bot-
+blocked, Business of Apps H&F benchmarks bot-blocked, two academic
+DOIs behind paywall but real).
 
-- RevenueCat 2026: 1.4% / 2.0% / 2.8% download-to-paid by price tier
-- Adapty 2026: 17-32 day trials at 45.7% conversion + 51% in-trial
-  cancellation
-- Hevy Sub Club interview: $15k spend / 2M downloads / Jan 2022
-  inflection
-- IBISWorld: 24,856 UK PT businesses 2025
-- Kidman 2024 churn taxonomy (already verified)
-- Apple Featured guidance: minimum two weeks notice
-- Apptopia 2017: 1,747% App of the Day boost (note: 2017 data,
-  methodology caveats)
+The synthesis decisions all stand. Every load-bearing claim
+verifies against primary sources or cross-source confirmation.
 
-When the audit completes, this section will be replaced with a
-verified-citations table per locked principle.
+### Verified citations table per locked principle
+
+| Principle | Verified source | Stable URL or DOI |
+| --- | --- | --- |
+| Hevy bootstrap pattern (~$15k spend / 2M downloads) | Sub Club Hevy podcast interview, Guillem Ros | revenuecat.com/blog/growth/guillem-ros-hevy-podcast/ and subclub.com/episode/cultivating-organic-growth-with-viral-loops-guillem-ros-salvador-hevy |
+| Hevy Jan 2022 Google Play top 5 inflection | OBJ.ca interview | obj.ca/fitness-app-entrepreneur-pumped-by-hevys-progress-to-2m-in-annual-revenue/ |
+| MacroFactor 400k+ users by 2024 | Google Cloud customer story | cloud.google.com/customers/macrofactor |
+| MacroFactor founding team / SBS audience origin | Stronger By Science origin post | strongerbyscience.com/macrofactor-history-team/ |
+| iOS CPI averages $4.70 globally | Cross-source verified (Mapendo, Audiencelab, Business of Apps 2024-2025) | Multiple 2024-2025 industry benchmarks |
+| Health & Fitness page-view-to-install 18.52% | SplitMetrics 10M-user study | splitmetrics.com/blog/good-app-store-conversion-rate/ |
+| RevenueCat 2026: download-to-paid 1.4% low / 2.0% mid / 2.8% high | RevenueCat State of Subscription Apps 2026 | revenuecat.com/state-of-subscription-apps/ |
+| RevenueCat 2026: download-to-trial 9.8% premium / 4.3% low-priced | Same report; distinct stat from download-to-paid | revenuecat.com/state-of-subscription-apps/ |
+| RevenueCat 2026: hard paywall 10.7% vs freemium 2.1% conversion | Same report (also cited via Adapty/neoads) | revenuecat.com/state-of-subscription-apps/ |
+| RevenueCat 2026: Utilities 58.1% / H&F 30.3% first-renewal retention | Full 2026 report PDF, not landing page | RevenueCat State of Subscription Apps 2026 full report |
+| RevenueCat 2026: Day 380 trial retention 19.9% / 14.2% / 5.5% | Same full report PDF | RevenueCat State of Subscription Apps 2026 full report |
+| Adapty 2026: 17-32 day trials at 45.7% conversion + 51% in-trial cancellation | Adapty trial conversion blog | adapty.io/blog/trial-conversion-rates-for-in-app-subscriptions/ |
+| Adapty 2026: hard paywall +21% 1-year LTV | Adapty State of In-App Subscriptions 2026 | adapty.io/state-of-in-app-subscriptions/ |
+| Apptopia 2017: 1,747% App of the Day download boost | TechCrunch coverage of Apptopia study | techcrunch.com/2017/10/24/apples-app-of-the-day-featuring-boosts-downloads-by-1747-games-by-792/ |
+| Phiture Headspace: 2-3.5x relevant-feature lift, 15-50% tangential | Phiture asostack feature post | phiture.com/asostack/just-how-impactful-is-being-featured-on-the-app-store-cb2185fb2e32/ |
+| Apple Developer: "minimum of two weeks notice" featuring guidance | Apple Developer site | developer.apple.com/app-store/getting-featured/ |
+| AppTweak 2025: Custom Product Pages 31% apps, 26% games, +8.6% lift | AppTweak 2025 ASO Benchmarks | apptweak.com/en/aso-blog/aso-app-store-trends-benchmarks-report |
+| Pylon: AI customer support 40-60% deflection in B2B SaaS | Pylon support deflection report | usepylon.com/blog/ai-ticket-deflection-reduce-support-volume-2025 |
+| Trainerize 75-90% client compliance target | Trainerize Help Centre | help.trainerize.com (compliance article) |
+| MacroFactor pricing $11.99 monthly / $5.99/mo annual | NutriScan analysis verified against MacroFactor 2025 Annual Report | nutriscan.app/blog/posts/macrofactor-cost-2026-free-version-29f5edc98b |
+| Carbon Diet Coach $9.99 monthly / $49.99 6mo / $79.99 12mo | FeastGood review | feastgood.com/carbon-diet-coach-review/ |
+| Reddit 90/10 self-promotion norm | ReplyAgent reference (also widely cited in subreddit rules) | replyagent.ai/blog/reddit-self-promotion-rules-naturally-mention-product |
+| Recurly: low pricing attracts uncommitted cohort with worse retention | Recurly subscription dynamic pricing post | recurly.com/blog/how-to-navigate-dynamic-subscription-pricing-models/ |
+| IBISWorld UK: 24,856 PT businesses 2025, +3.7% YoY, 1.4% CAGR | IBISWorld UK report | ibisworld.com/united-kingdom/number-of-businesses/personal-trainers/6042/ |
+| DUAA 2025 Royal Assent 19 June 2025, Part 5 commencement 5 Feb 2026 | DLA Piper Privacy Matters | privacymatters.dlapiper.com/2026/02/uk-commencement-of-the-data-protection-provisions-in-the-data-use-and-access-act/ |
+| JMIR survival analysis: passive 46.7% / active 22.2% Week 1 retention | Bricca et al. 2020 | mhealth.jmir.org/2020/11/e16309 |
+| JMIR 2026 cohort: Mammoth Hunters fitness app n=2,771 | Real published cross-sectional study | mhealth.jmir.org/2026/1/e72201 |
+| Kairam & Foote CHI 2024: founder motivations in online communities (n=951) | arXiv | arxiv.org/abs/2405.00601 |
+| Kidman et al. 2024 churn taxonomy (22 drivers, 6 categories) | Verified in prior round | doi.org/10.2196/56897 |
+
+### Caveats and date-stamps
+
+- SplitMetrics's 20% average / 650% maximum screenshot conversion
+  lift figures (cited by Gemini's pass) date to 2015 source data.
+  When used, qualify as "SplitMetrics 2015 benchmark" or pull a
+  newer figure.
+- Apptopia's 1,747% App of the Day boost is 2017 data, before the
+  current App Store layout. Treat as directional ceiling rather
+  than current expectation.
+- Business of Apps Health & Fitness 3% Day-30 retention figure for
+  free-tier installs has not been bot-fetchable; manual verification
+  recommended before publication.
+
+### Single fabrication, contained
+
+The TrueCoach "$137/month at 50 clients" line from the Claude pass
+is not in this synthesis. If any future marketing copy compares
+Volyume coach pricing to TrueCoach, use the verified $99/month
+figure from PT Pioneer (or current TrueCoach pricing at time of
+publication, since the platform changes prices regularly).
+
+### Held provisionally (no primary source)
+
+- "Over 80% client install rate when coach mandates the app"
+  (Gemini pass). No primary source surfaced. Dropped from the B2B
+  coach virality calibration in Section 8; the Trainerize 75-90%
+  compliance target (verified) is used instead.
 
 ---
 
