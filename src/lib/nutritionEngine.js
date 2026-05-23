@@ -258,7 +258,17 @@ function calcConfidence(bodyFatSource) {
 
 // Returns { proteinG, basis, proteinRateUsed } where basis is 'lbm' or 'bodyweight'.
 function calcProtein(goal, weightKg, lbm, bodyFatSource, proteinApproach = 'optimised', customGPerKg = null) {
-  const approach = PROTEIN_APPROACHES[proteinApproach] ?? PROTEIN_APPROACHES.optimised;
+  // The 'custom' entry only carries metadata (label, floor); its lbm/bw
+  // tables are null because the rate comes from the user. If 'custom' is
+  // selected without a value, fall back to 'optimised' so the bw/lbm
+  // lookup below has tables to read. Without this fallback, the next
+  // line dereferences null and Hermes throws "Cannot convert null value
+  // to object".
+  const effectiveApproach =
+    proteinApproach === 'custom' && !(customGPerKg != null && customGPerKg > 0)
+      ? 'optimised'
+      : proteinApproach;
+  const approach = PROTEIN_APPROACHES[effectiveApproach] ?? PROTEIN_APPROACHES.optimised;
   const floorG = approach.floor * weightKg;
 
   // Custom override — apply rate directly to bodyweight (coaches typically specify g/kg BW).

@@ -266,6 +266,20 @@ export default function NutritionTargetsScreen({ navigation }) {
       return;
     }
 
+    // Custom protein approach without a g/kg value used to crash the
+    // engine. The engine now falls back, but warn here so the user knows
+    // their custom value didn't take effect.
+    if (proteinApproach === 'custom') {
+      const customNum = parseFloat(customProteinGPerKg);
+      if (!customNum || customNum <= 0) {
+        Alert.alert(
+          'Custom protein rate needed',
+          'Enter a value in g/kg, or switch to Optimised protein.',
+        );
+        return;
+      }
+    }
+
     setCalculating(true);
     try {
       const targets = calculateNutritionTargets({
