@@ -9,8 +9,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';
 import * as BackgroundFetch from 'expo-background-fetch';
-import * as Font from 'expo-font';
-import { Ionicons } from '@expo/vector-icons';
 import { ensureNotifChannels } from './src/lib/restNotifications';
 import { installGlobalHandlers, logError } from './src/lib/errorLog';
 
@@ -272,21 +270,8 @@ export default function App() {
   const loadAccessibility = useAppStore(s => s.loadAccessibility);
   const [calm, setCalm] = useState(false);
   const [themeReady, setThemeReady] = useState(false);
-  const [fontsReady, setFontsReady] = useState(false);
 
   const [priorCrash, setPriorCrash] = useState(false);
-
-  // Preload the icon font BEFORE any screen renders. Without this, the
-  // first Icon's componentDidMount calls Font.loadAsync with an asset
-  // id Metro hasn't fully wired up yet, which deep-calls require(undefined)
-  // and crashes the JS thread on cold launch. Loading the font here
-  // makes the asset registry resolve up front so every icon downstream
-  // is safe.
-  useEffect(() => {
-    Font.loadAsync(Ionicons.font)
-      .catch((e) => { try { logError('App.fontPreload', e); } catch (_) {} })
-      .finally(() => setFontsReady(true));
-  }, []);
 
   // Mutate the theme exports from saved a11y prefs BEFORE the navigator (and
   // therefore every screen's StyleSheet.create) is required. Without this
@@ -504,11 +489,10 @@ export default function App() {
     return () => sub.remove();
   }, []);
 
-  if (!themeReady || !fontsReady) {
-    // Minimal pre-theme placeholder. No theme tokens here on purpose: uses
+  if (!themeReady) {
+    // Minimal pre-theme placeholder. No theme tokens here on purpose — uses
     // hard-coded background that matches the splash so the transition is
-    // invisible to the user. Fonts also gated here so the first Icon
-    // render isn't the thing that triggers font registration.
+    // invisible to the user.
     return <View style={{ flex: 1, backgroundColor: '#0D0D0D' }} />;
   }
 
