@@ -1,9 +1,10 @@
 # Volyume Complete: growth strategy deep research brief
 
-You are running one of three parallel deep-research passes (ChatGPT,
-Gemini, Claude) to ground Volyume Complete's growth strategy in
-evidence. The other two AIs are running the same brief
-independently. A fourth pass adjudicates between your outputs.
+You are running one of two parallel deep-research passes (Claude
+Deep Research and Gemini Deep Research) to ground Volyume Complete's
+growth strategy in evidence. The other AI is running the same brief
+independently. A third pass adjudicates between your outputs and
+pressure-tests every citation.
 
 Be sceptical of received marketing wisdom. Surface real
 peer-reviewed evidence, real published app post-mortems, real
@@ -417,4 +418,5 @@ but the magnitude is wrong, say so.
 ---
 
 End of brief. Run independently; do not condition your output on
-the other two AIs. We'll synthesise across the three after.
+the other AI's response. We'll synthesise across both passes after,
+with citation pressure-testing.
