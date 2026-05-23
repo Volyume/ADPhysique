@@ -99,7 +99,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const [autoRegSuggestions, setAutoRegSuggestions] = useState([]);
   const [saving, setSaving] = useState(false);
   const [completedWorkoutCount, setCompletedWorkoutCount] = useState(null);
-  const [feedbackExpanded, setFeedbackExpanded] = useState(false);
+  // Default-expanded so the energy + sleep prompts surface naturally
+  // at the end of the session. The coach engine relies on these
+  // signals; hiding them behind a tap was making the post-workout
+  // check-in feel like it had disappeared.
+  const [feedbackExpanded, setFeedbackExpanded] = useState(!readOnly);
   const [expandedVolumeWhy, setExpandedVolumeWhy] = useState(null);
   const [mesoAdvice, setMesoAdvice] = useState(null);
   const [deloadPrediction, setDeloadPrediction] = useState(null);
