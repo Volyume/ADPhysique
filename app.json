@@ -103,6 +103,14 @@
             "minSdkVersion": 24
           }
         }
+      ],
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "volyume",
+          "project": "volyume",
+          "url": "https://sentry.io/"
+        }
       ]
     ],
     "notification": {

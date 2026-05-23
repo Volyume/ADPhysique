@@ -70,6 +70,56 @@ jobs:
           fi
           echo "✓ Supabase credentials present"
 
+      # Diagnose SENTRY_AUTH_TOKEN format without leaking it. sentry-cli
+      # accepts these formats:
+      #   sntryu_...     — User Auth Token
+      #   sntrys_...     — Organization Auth Token
+      #   <64 hex chars> — Legacy token
+      # Anything else triggers "Unrecognized auth token format!" then a
+      # 401 from Sentry. Most common mistakes: pasted the DSN
+      # (https://...) into the token secret, or copied with leading or
+      # trailing whitespace. This step prints the LENGTH and the first
+      # 8 chars (enough to see the prefix like "sntryu_") and flags
+      # whitespace/quotes — never the secret itself.
+      - name: Diagnose Sentry auth token shape
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          T="$SENTRY_AUTH_TOKEN"
+          LEN=${#T}
+          echo "SENTRY_AUTH_TOKEN length: $LEN"
+          if [ "$LEN" -eq 0 ]; then
+            echo "::warning::SENTRY_AUTH_TOKEN secret is empty. Source-map upload will be skipped."
+            exit 0
+          fi
+          # Prefix: chars before first underscore, or first 8 chars if none.
+          PREFIX="${T%%_*}"
+          if [ "$PREFIX" = "$T" ]; then
+            # No underscore. Show first 8 chars only.
+            echo "Token has no underscore prefix. First 8 chars: '${T:0:8}...'"
+          else
+            echo "Token prefix: '${PREFIX}_'"
+          fi
+          # Check for whitespace at edges that often comes from copy-paste.
+          TRIMMED="$(echo -n "$T" | xargs)"
+          if [ "${#TRIMMED}" != "$LEN" ]; then
+            echo "::warning::Token has leading/trailing whitespace ($(( LEN - ${#TRIMMED} )) chars). sentry-cli will reject it. Re-paste in repo Secrets without surrounding spaces or quotes."
+          fi
+          case "$T" in
+            https://*|http://*)
+              echo "::error::Token starts with 'https://' — this looks like a DSN, not an auth token. The DSN goes in EXPO_PUBLIC_SENTRY_DSN. The auth token comes from Sentry → User Auth Tokens (sntryu_...) or Org Auth Tokens (sntrys_...).";;
+            sntryu_*|sntrys_*|sntrysi_*)
+              echo "✓ Token format recognised (modern Sentry token)";;
+            *)
+              # Legacy: 64-char hex.
+              if [ "$LEN" = "64" ] && echo "$T" | grep -qE '^[a-f0-9]{64}$'; then
+                echo "✓ Token format recognised (legacy 64-char hex)"
+              else
+                echo "::warning::Token doesn't match any known Sentry format (sntryu_, sntrys_, sntrysi_, or 64 hex chars). sentry-cli will likely reject it."
+              fi
+              ;;
+          esac
+
       - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
