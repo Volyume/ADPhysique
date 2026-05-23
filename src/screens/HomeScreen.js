@@ -26,6 +26,7 @@ import {
   getRecentWorkoutFeedback, getLatestCoachOutput,
 } from '../lib/database';
 import { generateAndSavePlan } from '../lib/planAutoGen';
+import { getRollupForDay } from '../lib/food/db';
 import { logError } from '../lib/errorLog';
 import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload, VOLUME_LANDMARKS } from '../lib/algorithms';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
@@ -58,6 +59,7 @@ export default function HomeScreen({ navigation }) {
 
   const [weekStats, setWeekStats] = useState({ sessions: 0, sets: 0, volume: 0 });
   const [weekStreak, setWeekStreak] = useState(0);
+  const [todayIntake, setTodayIntake] = useState(null);
   const [activePlan, setActivePlanData] = useState(null);
   const [nextWorkout, setNextWorkout] = useState(null);
   const [exerciseCounts, setExerciseCounts] = useState({});
@@ -174,9 +176,19 @@ export default function HomeScreen({ navigation }) {
       loadScheduleContext(),
       loadBriefDismissal(),
       loadDailyNarrative(),
+      loadTodayIntake(),
       ...(tier === 'pro' ? [loadTodayWeight(), loadLatestCoachOutput()] : []),
     ]);
     setInitialLoading(false);
+  }
+
+  async function loadTodayIntake() {
+    if (!user?.id) return;
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const r = await getRollupForDay(user.id, today);
+      setTodayIntake(r);
+    } catch (_) { setTodayIntake(null); }
   }
 
   async function loadDailyNarrative() {
@@ -951,6 +963,35 @@ export default function HomeScreen({ navigation }) {
             />
           </View>
         </View>
+
+        {/* ── Today's intake (Move #1) ── */}
+        {(todayIntake?.entries_count ?? 0) > 0 ? (
+          <TouchableOpacity
+            style={styles.todayIntakeCard}
+            onPress={() => navigation.navigate('DiaryTab')}
+            accessibilityRole="button"
+            accessibilityLabel="View today's food diary"
+          >
+            <View style={styles.todayIntakeHeader}>
+              <Text style={styles.todayIntakeLabel}>Today's intake</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+            </View>
+            <View style={styles.todayIntakeRow}>
+              <View style={styles.todayIntakeKcal}>
+                <Text style={styles.todayIntakeKcalValue}>{Math.round(todayIntake.kcal_total)}</Text>
+                <Text style={styles.todayIntakeKcalLabel}>kcal</Text>
+              </View>
+              <View style={styles.todayIntakeMacros}>
+                <Text style={styles.todayIntakeMacroLine}>
+                  {Math.round(todayIntake.protein_g)}P · {Math.round(todayIntake.carbs_g)}C · {Math.round(todayIntake.fat_g)}F
+                </Text>
+                <Text style={styles.todayIntakeEntries}>
+                  {todayIntake.entries_count} {todayIntake.entries_count === 1 ? 'entry' : 'entries'}
+                </Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        ) : null}
 
         {/* ── Training trend mini-graph ── */}
         {/* Training trend moved to Progress tab — sits with Mesocycle pulse there. */}
@@ -1740,6 +1781,60 @@ const styles = StyleSheet.create({
     height: 48,
     backgroundColor: colors.border,
     alignSelf: 'center',
+  },
+  todayIntakeCard: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+    padding: spacing.lg,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  todayIntakeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  todayIntakeLabel: {
+    color: colors.textSecondary,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  todayIntakeRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+  },
+  todayIntakeKcal: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  todayIntakeKcalValue: {
+    color: colors.textPrimary,
+    fontSize: fontSize.xxl,
+    fontWeight: fontWeight.bold,
+  },
+  todayIntakeKcalLabel: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    marginLeft: spacing.xs,
+  },
+  todayIntakeMacros: {
+    alignItems: 'flex-end',
+  },
+  todayIntakeMacroLine: {
+    color: colors.textPrimary,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.medium,
+  },
+  todayIntakeEntries: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    marginTop: 2,
   },
   weekBarValue: {
     fontSize: fontSize.xl,
