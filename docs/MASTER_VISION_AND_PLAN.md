@@ -56,31 +56,31 @@ Headlines:
 - 28-day cascade (14 Complete → 14 Pro → Free), hold-at-any-stage,
   one-time entitlement.
 
-**DECISION NEEDED 2.1:** Open beta access mechanism. Three options:
+**LOCKED 2.1: Open beta access mechanism.** Waitlist with rolling
+invites. Paces at 200-500 sign-ups per week, protects engine
+telemetry from spam, supports controlled load-on the support and
+observability stack.
 
-- (a) **Open signup**, no gating. Maximum reach, maximum noise.
-- (b) **Waitlist with rolling invites**. Lets you control rate and
-  protect the engine telemetry from spam signups.
-- (c) **Promo code via specific channels** (Reddit, Discord, your
-  coaching network). Tightest cohort control, smallest reach.
+Operational specifics:
 
-Recommendation: (b). Lets you pace at 200-500 signups/week, gives
-you real elasticity data without crashing observability or support.
+- Waitlist signup screen on volyume.app with email capture and an
+  optional "how did you hear about us" field.
+- Invites sent in weekly batches of 200 to 500 based on observability
+  capacity. Pace adjusted weekly based on crash-free session rate and
+  sync failure rate.
+- Each invite includes a one-time signup link valid 14 days from
+  issue.
+- Waitlist position visible to user on the marketing page (anchors
+  expectation, reduces support load).
 
-**DECISION NEEDED 2.2:** Subscription billing provider.
+**LOCKED 2.2: Subscription billing provider.** RevenueCat on top of
+native IAP (Apple StoreKit 2, Google Play Billing).
 
-- (a) **Apple IAP + Google Play Billing native**. Cheapest, but
-  cascade state across platforms is harder, and refunds vary.
-- (b) **RevenueCat** on top of native IAP. Adds 1% revenue cut but
-  handles cross-platform subscription state, server-side validation,
-  and dashboards.
-- (c) **Stripe** for web checkout + native IAP for mobile (dual
-  rails). Maximum flexibility, maximum complexity. Probably not
-  needed at launch.
-
-Recommendation: (b). The cascade state machine is the highest-risk
-new logic; outsourcing receipt validation to RevenueCat reduces
-that risk by 80% for a 1% revenue cost.
+Reasoning: the cascade state machine is the highest-risk new logic
+and outsourcing receipt validation, cross-platform subscription
+state, and refund handling to RevenueCat reduces that risk
+substantially for a 1% revenue cost. RevenueCat dashboards also give
+us conversion telemetry out of the box.
 
 ---
 
@@ -172,19 +172,15 @@ Will name:
 - Sync telemetry events.
 - Test matrix per table.
 
-**DECISION NEEDED 6.1:** Sync engine library choice.
+**LOCKED 6.1: Sync engine library.** Hand-rolled on top of existing
+SQLite (expo-sqlite) + Supabase REST.
 
-- (a) **Hand-rolled** on top of existing SQLite + Supabase REST.
-  Maximum control, maximum maintenance.
-- (b) **WatermelonDB** (replaces expo-sqlite for most tables; has a
-  built-in `synchronize()` flow). Faster offline writes, observables
-  out of the box. Forces a SQLite migration.
-- (c) **PowerSync** (Supabase-compatible offline-first sync engine).
-  Open-source self-host or hosted service. Newest of the three.
-
-Recommendation: (a) for v1. The current SQLite layer works. Don't
-replace it for a feature ship. Revisit at v2 if hand-rolled sync
-hits scaling issues.
+Reasoning: the current SQLite layer is working in production. A
+sync-engine migration (WatermelonDB or PowerSync) is a multi-week
+rebuild for a benefit that isn't yet justified by scale. Revisit at
+v2 if hand-rolled sync hits scaling issues. The sync architecture
+doc (Section 6) will name the queue pattern, conflict resolution, and
+table registry that make the hand-rolled approach maintainable.
 
 ---
 
@@ -205,17 +201,15 @@ Will name the waterfall:
 Cost: £0 recurring. Hit-rate target: ≥85% UK supermarket coverage
 out of the box, ≥90% after 30 days of OCR write-back contributions.
 
-**DECISION NEEDED 7.1:** Barcode scan in move #1 or deferred?
+**LOCKED 7.1: Barcode scan timing.** Deferred to move #1.5, between
+moves #1 and #2.
 
-- (a) **Defer to move #1.5** (between #1 and #2). Manual entry only
-  at first; barcode scan ships once OCR write-back loop is proven.
-  Cleaner move boundaries.
-- (b) **Include in move #1**. Camera + vision-camera + MLKit. Ships
-  the killer feature day one. Bigger surface to test.
-
-Recommendation: (a). Move #1 is already the largest move bundle.
-Adding camera + MLKit doubles its scope. Manual entry validates the
-schema and engine integration; barcode lands fast after.
+Reasoning: move #1 already bundles food schema, manual entry UI, and
+the FFM floor guardrail. Adding camera, vision-camera, MLKit and the
+OCR write-back loop doubles its surface area. Shipping manual entry
+first validates the schema and engine integration with the smaller
+blast radius; barcode and OCR land in move #1.5 once the foundation
+is stable.
 
 ---
 
@@ -321,16 +315,12 @@ Locked principles:
 - Push provider: Expo Push (already wired) for v1. Move to FCM /
   APNs direct if Expo Push limits become a problem at scale.
 
-**DECISION NEEDED 11.1:** Email notifications at v1?
+**LOCKED 11.1: Email notifications at v1.** No. Push only for v1.
+Email lands in v1.1 once the core flows are stable in production.
 
-- (a) **No email at v1.** Push only. Simpler infra, fewer compliance
-  surfaces (no email deliverability monitoring, no unsubscribe
-  flow).
-- (b) **Email at v1.** Cascade gate emails (day 12, 26) reach users
-  who have push disabled. Probably higher conversion.
-
-Recommendation: (a) for v1, (b) for v1.1. Email infrastructure is a
-real maintenance burden and isn't on the critical path.
+Exception: coach-facing emails are in scope from phase 2 launch
+(trial-ending alerts at day 45/55/59, billing confirmations).
+Coaches read email; clients react to push.
 
 ---
 
@@ -447,27 +437,24 @@ Will cover:
 - Notification (in-app and email) of coach changes.
 - Coach pricing model.
 
-**DECISION NEEDED 17.1:** Coach-client linking mechanism.
+**LOCKED 17.1: Coach-client linking mechanism.** One-time share URL
+with expiry, for phase 2 v1. Coach signs up to Volyume Coach, sends a
+scoped link to each client. Client taps, signs in or creates a
+Volyume account, and the link is established for the life of the
+coach's subscription.
 
-- (a) **One-time share URL with expiry.** Coach scans QR, gets
-  scoped access for 90 days. No coach account needed. Lowest friction.
-- (b) **Volyume B2B accounts.** Coaches sign up separately, link
-  multiple clients, pay per-client or flat fee. More platform-like.
-- (c) **Both.** Share URL for occasional coaches, B2B account for
-  professionals.
+Coach account model upgrades to a full B2B account in phase 2 v2 if
+pull justifies the build (multi-coach studios, agency accounts, role
+permissions).
 
-Recommendation: (a) for phase 2 v1. Validates demand without the
-B2B infrastructure tax. (b) lands as phase 2 v2 if there's pull.
+**LOCKED 17.2: Coach dashboard location.** Web app at
+coach.volyume.app. Separate codebase optimised for the table-heavy
+review workflow a coach needs.
 
-**DECISION NEEDED 17.2:** Coach dashboard location.
-
-- (a) **Web app at coach.volyume.app.** Separate codebase, browser-
-  optimised for the tables and charts a coach needs.
-- (b) **In-app "coach mode" toggle.** Reuses RN app on iPad. Faster
-  ship, worse UX for a coach reviewing 30 clients.
-
-Recommendation: (a). Coaches expect web. Mobile-only B2B has been
-tried (Trainerize, TrueCoach) and they all ended up on web.
+Reasoning: every mobile-only coach platform has eventually shipped
+web (Trainerize, TrueCoach). Coaches review 10 to 50 clients at a
+time; that's a desktop workflow. Native mobile app for coaches lands
+later if there's demand for on-the-go review.
 
 **LOCKED 17.3: Coach pricing model.**
 
@@ -581,27 +568,27 @@ Recorded so they aren't accidentally added by scope creep:
 
 ---
 
-## 20. Open decisions summary
+## 20. Decisions summary (all locked)
 
-For your call before the supporting docs land:
+All eight open decisions resolved 2026-05-23.
 
-| ID | Decision | Recommendation |
+| ID | Decision | Locked value |
 | --- | --- | --- |
-| 2.1 | Open beta access | Waitlist with rolling invites |
-| 2.2 | Billing provider | RevenueCat |
-| 6.1 | Sync engine library | Hand-rolled on existing SQLite + Supabase |
-| 7.1 | Barcode scan timing | Defer to move #1.5 |
-| 11.1 | Email notifications at v1 | No, push only |
-| 17.1 | Coach-client linking | Share URL with expiry |
-| 17.2 | Coach dashboard location | Web app |
-| 17.3 | Coach pricing model | LOCKED: tiered flat (£29.99 / £59.99 / £119.99), client gets Complete free during link |
-| 17.4 | Coach trial length | LOCKED: 60 days standard, full Studio tier during trial |
-| 17.5 | Founding Coach programme | LOCKED: first 100, 6 months free + lifetime 50% off |
-| 17.6 | Coach migration tools | LOCKED: bulk invite, CSV import, programme templates, exercise library import (phase 2 scope expansion) |
+| 2.1 | Open beta access | Waitlist with rolling invites (200-500/week) |
+| 2.2 | Billing provider | RevenueCat on native IAP |
+| 6.1 | Sync engine library | Hand-rolled on SQLite + Supabase |
+| 7.1 | Barcode scan timing | Move #1.5 (after move #1) |
+| 11.1 | Email notifications at v1 | No (push only); v1.1 adds cascade gate emails. Coach emails in scope from phase 2 |
+| 17.1 | Coach-client linking | One-time share URL with expiry |
+| 17.2 | Coach dashboard location | Web app at coach.volyume.app |
+| 17.3 | Coach pricing model | Tiered flat £29.99 / £59.99 / £119.99; client gets Complete free during link |
+| 17.4 | Coach trial length | 60 days standard, full Studio tier |
+| 17.5 | Founding Coach programme | First 100; 6 months free + lifetime 50% off |
+| 17.6 | Coach migration tools | Bulk invite, CSV import, programme templates, exercise library import |
 
-Plus the founder-pricing window length (currently 12 weeks after
-open beta — adjust if you want 8 or 16) and any tweaks to the open
-beta pricing levels (£0.99 / £1.99).
+Open beta pricing (£0.99 / £1.99), founders window length (12 weeks
+after open beta), and goal-lock signal threshold (3 instead of 2)
+also locked previously.
 
 ---
 
