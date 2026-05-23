@@ -26,7 +26,6 @@ import { LineChart } from 'react-native-gifted-charts';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logBodyMetric, getBodyMetricLog } from '../lib/database';
-import { getRecentIntakeSummary } from '../lib/food/db';
 import { EmptyBodyIllustration } from '../components/Illustrations';
 import { syncBodyMetric } from '../lib/sync';
 import { computeEWMA, computeWeeklyWeightChange } from '../lib/nutritionEngine';
@@ -298,7 +297,6 @@ export default function BodyMetricsScreen({ navigation }) {
   const [sessionConfirmed, setSessionConfirmed] = useState(bodyMetricsSessionConfirmed);
   const [history, setHistory] = useState([]);
   const [nutritionTargets, setNutritionTargets] = useState(null);
-  const [recentIntake, setRecentIntake] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [showMeasurements, setShowMeasurements] = useState(false);
   const [form, setForm] = useState({
@@ -348,7 +346,6 @@ export default function BodyMetricsScreen({ navigation }) {
       await migrateFromAsyncStorage();
       await loadHistory();
       await loadNutritionTargets();
-      await loadRecentIntake();
     })();
   }, [physiqueEnabled, user?.id]);
 
@@ -444,14 +441,6 @@ export default function BodyMetricsScreen({ navigation }) {
       const raw = await AsyncStorage.getItem(NUTRITION_KEY);
       setNutritionTargets(raw ? JSON.parse(raw) : null);
     } catch (_e) { setNutritionTargets(null); }
-  }
-
-  async function loadRecentIntake() {
-    if (!user?.id) { setRecentIntake(null); return; }
-    try {
-      const summary = await getRecentIntakeSummary(user.id);
-      setRecentIntake(summary);
-    } catch (_e) { setRecentIntake(null); }
   }
 
   async function enablePhysique() {
@@ -645,11 +634,6 @@ export default function BodyMetricsScreen({ navigation }) {
                   <Text style={styles.ewmaMuted}>
                     Smoothed across daily fluctuations. More reliable than a single weigh-in.
                   </Text>
-                  {recentIntake?.daysLogged > 0 && (
-                    <Text style={styles.ewmaIntake}>
-                      Average intake {recentIntake.avgKcal} kcal over the last {recentIntake.daysLogged} {recentIntake.daysLogged === 1 ? 'day' : 'days'}.
-                    </Text>
-                  )}
                 </>
               ) : (
                 <Text style={styles.ewmaMuted}>
@@ -1021,5 +1005,4 @@ const styles = StyleSheet.create({
   ewmaValue: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
   ewmaWeekly: { fontSize: fontSize.sm, color: colors.textSecondary },
   ewmaMuted: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
-  ewmaIntake: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: spacing.xs },
 });

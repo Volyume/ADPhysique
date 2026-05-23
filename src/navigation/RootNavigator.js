@@ -71,7 +71,6 @@ import NutritionEducationScreen from '../screens/NutritionEducationScreen';
 import SubscriptionPolicyScreen from '../screens/SubscriptionPolicyScreen';
 import DiaryScreen from '../screens/DiaryScreen';
 import AddCustomFoodScreen from '../screens/AddCustomFoodScreen';
-import FoodSearchScreen from '../screens/FoodSearchScreen';
 import { withProGuard } from '../components/ProGate';
 
 const Tab = createBottomTabNavigator();
@@ -143,11 +142,6 @@ function DiaryStack({ navigation }) {
   return (
     <Stack.Navigator screenOptions={{ ...stackOptions, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="Diary" component={DiaryScreen} options={{ headerShown: false }} />
-      <Stack.Screen
-        name="FoodSearch"
-        component={FoodSearchScreen}
-        options={{ headerShown: false, presentation: 'modal' }}
-      />
       <Stack.Screen
         name="AddCustomFood"
         component={AddCustomFoodScreen}

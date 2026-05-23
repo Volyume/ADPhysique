@@ -95,9 +95,7 @@ export default function DiaryScreen({ navigation }) {
   function gotoToday()     { setSelectedDate(isoDate(new Date())); }
 
   function addFood(slot) {
-    // Search-first flow: most adds will be a known food. The search
-    // screen surfaces a "create a custom food" CTA inline for misses.
-    navigation.navigate('FoodSearch', { mealSlot: slot, entryDate: selectedDate });
+    navigation.navigate('AddCustomFood', { mealSlot: slot, entryDate: selectedDate });
   }
 
   async function confirmDelete(entry) {
