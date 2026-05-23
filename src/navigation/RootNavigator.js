@@ -69,6 +69,8 @@ import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import DebugLogScreen from '../screens/DebugLogScreen';
 import NutritionEducationScreen from '../screens/NutritionEducationScreen';
 import SubscriptionPolicyScreen from '../screens/SubscriptionPolicyScreen';
+import DiaryScreen from '../screens/DiaryScreen';
+import AddCustomFoodScreen from '../screens/AddCustomFoodScreen';
 import { withProGuard } from '../components/ProGate';
 
 const Tab = createBottomTabNavigator();
@@ -129,6 +131,24 @@ const heroZoomTransition = {
 function useStackMotionOverride() {
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   return reduceMotion ? { animationEnabled: false } : null;
+}
+
+function DiaryStack({ navigation }) {
+  useEffect(() => {
+    return navigation.addListener('tabPress', () => {
+      navigation.dispatch(StackActions.popToTop());
+    });
+  }, [navigation]);
+  return (
+    <Stack.Navigator screenOptions={{ ...stackOptions, ...(useStackMotionOverride() || {}) }}>
+      <Stack.Screen name="Diary" component={DiaryScreen} options={{ headerShown: false }} />
+      <Stack.Screen
+        name="AddCustomFood"
+        component={AddCustomFoodScreen}
+        options={{ headerShown: false, presentation: 'modal' }}
+      />
+    </Stack.Navigator>
+  );
 }
 
 function HomeStack({ navigation }) {
@@ -251,6 +271,7 @@ function MainTabs() {
           const icons = {
             HomeTab: focused ? 'home' : 'home-outline',
             PlansTab: focused ? 'list' : 'list-outline',
+            DiaryTab: focused ? 'restaurant' : 'restaurant-outline',
             ProgressTab: focused ? 'stats-chart' : 'stats-chart-outline',
             ProfileTab: focused ? 'person' : 'person-outline',
           };
@@ -260,6 +281,7 @@ function MainTabs() {
     >
       <Tab.Screen name="HomeTab" component={HomeStack} options={{ title: 'Train' }} />
       <Tab.Screen name="PlansTab" component={PlansStack} options={{ title: 'Plans' }} />
+      <Tab.Screen name="DiaryTab" component={DiaryStack} options={{ title: 'Diary' }} />
       <Tab.Screen name="ProgressTab" component={ProgressStack} options={{ title: 'Progress' }} />
       <Tab.Screen name="ProfileTab" component={ProfileStack} options={{ title: 'You' }} />
     </Tab.Navigator>
