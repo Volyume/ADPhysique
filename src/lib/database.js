@@ -3987,6 +3987,12 @@ export async function migrateLocalUserId(localUserId, supabaseUserId) {
     // wrong user and they'd fail RLS on the cloud, then get marked as
     // permanently failed and dropped.
     'pending_sync_ops',
+    // Food domain tables (migration 015). Same rule: rows written
+    // while signed-out are keyed under the anonymous localUserId and
+    // need re-stamping before food_sync_push so RLS accepts them.
+    // foods is a shared lookup cache and has no user_id column.
+    'custom_foods', 'food_entries', 'daily_intake_rollups',
+    'saved_meals', 'recipes', 'food_favourites', 'daily_water',
   ];
   for (const table of tables) {
     try {

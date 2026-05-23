@@ -591,6 +591,9 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
     await _pushPeakWeekPlans(sb, supabaseUserId, localUserId);
     await _pushPlannedMuscleVolume(sb, supabaseUserId, localUserId);
     await _pushAdaptationEvents(sb, supabaseUserId, localUserId);
+    // Food-domain push via the food_sync_push RPC. Delta against
+    // last_food_pushed_at so debounced cycles only ship the diff.
+    await _pushFoodChanges(sb, supabaseUserId, localUserId);
     // AsyncStorage prefs (units, accessibility, wellbeing, etc.).
     // Pushed AFTER the structured tables so a sign-in catch-up
     // doesn't block on the larger writes.
@@ -1006,6 +1009,252 @@ async function _pushAdaptationEvents(sb, supabaseUserId, localUserId) {
   } catch (e) { logWarn('sync._pushAdaptationEvents', e?.message); }
 }
 
+// ─── Food domain push/pull (via food_sync_pull / food_sync_push RPCs) ────
+// Schema in supabase/migrate_015_food_logging.sql and the RPCs in
+// supabase/migrate_016_food_sync_rpcs.sql. Last-write-wins per record
+// with updated_at compared server-side. Soft-deleted rows ship as
+// tombstones so cross-device deletes propagate.
+
+const FOOD_LAST_PUSHED_KEY = uid => `@volyume_food_last_pushed_${uid}`;
+const FOOD_LAST_PULLED_KEY = uid => `@volyume_food_last_pulled_${uid}`;
+
+function _bucketFoodRow(row) {
+  // Soft-deleted → tombstone. created_at == updated_at → first-ever
+  // sync of this row. Otherwise an update.
+  if (row.deleted_at) return 'deleted';
+  if (row.updated_at && row.created_at && row.updated_at === row.created_at) {
+    return 'created';
+  }
+  return 'updated';
+}
+
+function _msToISOorNull(ms) {
+  if (ms == null) return null;
+  try { return new Date(ms).toISOString(); } catch { return null; }
+}
+
+function _foodEntryToCloud(row, supabaseUserId) {
+  return {
+    id: row.id,
+    user_id: supabaseUserId,
+    entry_date: row.entry_date,
+    meal_slot: row.meal_slot,
+    food_ref: row.food_ref,
+    quantity_g: row.quantity_g,
+    kcal: row.kcal,
+    protein_g: row.protein_g,
+    carbs_g: row.carbs_g,
+    fat_g: row.fat_g,
+    fibre_g: row.fibre_g ?? null,
+    logged_at: _msToISOorNull(row.logged_at),
+    created_at: _msToISOorNull(row.created_at),
+    updated_at: _msToISOorNull(row.updated_at),
+    deleted_at: _msToISOorNull(row.deleted_at),
+  };
+}
+
+function _customFoodToCloud(row, supabaseUserId) {
+  return {
+    id: row.id,
+    user_id: supabaseUserId,
+    name: row.name,
+    brand: row.brand ?? null,
+    serving_g: row.serving_g,
+    serving_label: row.serving_label ?? null,
+    kcal_100g: row.kcal_100g,
+    protein_100g: row.protein_100g,
+    carbs_100g: row.carbs_100g,
+    fat_100g: row.fat_100g,
+    fibre_100g: row.fibre_100g ?? null,
+    sodium_100g: row.sodium_100g ?? null,
+    sugar_100g: row.sugar_100g ?? null,
+    photo_url: row.photo_url ?? null,
+    notes: row.notes ?? null,
+    created_at: _msToISOorNull(row.created_at),
+    updated_at: _msToISOorNull(row.updated_at),
+    deleted_at: _msToISOorNull(row.deleted_at),
+  };
+}
+
+function _savedMealToCloud(row, supabaseUserId) {
+  let items;
+  try { items = JSON.parse(row.items_json ?? '[]'); }
+  catch { items = []; }
+  return {
+    id: row.id,
+    user_id: supabaseUserId,
+    name: row.name,
+    items_json: items,
+    created_at: _msToISOorNull(row.created_at),
+    updated_at: _msToISOorNull(row.updated_at),
+    deleted_at: _msToISOorNull(row.deleted_at),
+  };
+}
+
+function _recipeToCloud(row, supabaseUserId) {
+  return {
+    id: row.id,
+    user_id: supabaseUserId,
+    name: row.name,
+    total_servings: row.total_servings,
+    notes: row.notes ?? null,
+    created_at: _msToISOorNull(row.created_at),
+    updated_at: _msToISOorNull(row.updated_at),
+    deleted_at: _msToISOorNull(row.deleted_at),
+  };
+}
+
+function _favouriteToCloud(row) {
+  return {
+    food_ref: row.food_ref,
+    last_used_at: _msToISOorNull(row.last_used_at),
+  };
+}
+
+function _waterToCloud(row) {
+  return {
+    entry_date: row.entry_date,
+    ml: row.ml,
+    updated_at: _msToISOorNull(row.updated_at),
+  };
+}
+
+async function _pushFoodChanges(sb, supabaseUserId, localUserId) {
+  try {
+    // eslint-disable-next-line global-require
+    const food = require('./food/db');
+    const key = FOOD_LAST_PUSHED_KEY(supabaseUserId);
+    const sinceStr = await AsyncStorage.getItem(key);
+    const sinceMs = sinceStr ? Number(sinceStr) : 0;
+
+    const [entries, customs, meals, recipesRows, favs, water] = await Promise.all([
+      food.getAllFoodEntriesSince(localUserId, sinceMs),
+      food.getAllCustomFoodsSince(localUserId, sinceMs),
+      food.getAllSavedMealsSince(localUserId, sinceMs),
+      food.getAllRecipesSince(localUserId, sinceMs),
+      food.getAllFavouritesSince(localUserId, sinceMs),
+      food.getAllWaterSince(localUserId, sinceMs),
+    ]);
+
+    const bucket = (rows, mapper) => {
+      const out = { created: [], updated: [], deleted: [] };
+      for (const r of rows) out[_bucketFoodRow(r)].push(mapper(r, supabaseUserId));
+      return out;
+    };
+
+    const changes = {
+      food_entries: bucket(entries, _foodEntryToCloud),
+      custom_foods: bucket(customs, _customFoodToCloud),
+      saved_meals: bucket(meals, _savedMealToCloud),
+      recipes: bucket(recipesRows, _recipeToCloud),
+      food_favourites: {
+        created: [],
+        updated: favs.map(_favouriteToCloud),
+        deleted: [],
+      },
+      daily_water: {
+        created: [],
+        updated: water.map(_waterToCloud),
+        deleted: [],
+      },
+    };
+
+    const totalRows = entries.length + customs.length + meals.length
+      + recipesRows.length + favs.length + water.length;
+    if (totalRows === 0) return;
+
+    const { data, error } = await sb.rpc('food_sync_push', { changes });
+    if (error) {
+      logPgErr('sync._pushFoodChanges', error);
+      return;
+    }
+
+    const ts = data?.timestamp ?? new Date().toISOString();
+    const tsMs = Date.parse(ts);
+    if (Number.isFinite(tsMs)) {
+      try { await AsyncStorage.setItem(key, String(tsMs)); } catch (_) {}
+    }
+    logInfo('sync._pushFoodChanges', `pushed ${totalRows} food rows`, {
+      foodEntries: entries.length,
+      customFoods: customs.length,
+      savedMeals: meals.length,
+      recipes: recipesRows.length,
+      favourites: favs.length,
+      water: water.length,
+    });
+  } catch (e) {
+    logWarn('sync._pushFoodChanges', e?.message, { error: e?.message });
+  }
+}
+
+async function _pullFoodChanges(sb, supabaseUserId) {
+  const empty = {
+    foodEntries: 0, customFoods: 0, savedMeals: 0,
+    recipes: 0, favourites: 0, water: 0,
+  };
+  try {
+    const key = FOOD_LAST_PULLED_KEY(supabaseUserId);
+    const sinceStr = await AsyncStorage.getItem(key);
+    const lastPulledAt = sinceStr
+      ? new Date(Number(sinceStr)).toISOString()
+      : new Date(0).toISOString();
+
+    const { data, error } = await sb.rpc('food_sync_pull', { last_pulled_at: lastPulledAt });
+    if (error) { logPgErr('sync._pullFoodChanges', error); return empty; }
+
+    const changes = data?.changes ?? {};
+    // eslint-disable-next-line global-require
+    const food = require('./food/db');
+
+    const counts = { ...empty };
+    const datesToRecompute = new Set();
+
+    const applyGroup = async (table, applyFn, perRowSideEffect) => {
+      const g = changes[table] ?? { created: [], updated: [], deleted: [] };
+      const all = [...(g.created ?? []), ...(g.updated ?? []), ...(g.deleted ?? [])];
+      let n = 0;
+      for (const row of all) {
+        try {
+          const result = await applyFn(supabaseUserId, row);
+          if (perRowSideEffect) perRowSideEffect(row, result);
+          n++;
+        } catch (e) {
+          logWarn(`sync._pullFoodChanges.${table}`, e?.message, { id: row?.id });
+        }
+      }
+      return n;
+    };
+
+    counts.foodEntries = await applyGroup(
+      'food_entries',
+      food.applyFoodEntryFromCloud,
+      (row, date) => { if (date) datesToRecompute.add(date); }
+    );
+    counts.customFoods = await applyGroup('custom_foods', food.applyCustomFoodFromCloud);
+    counts.savedMeals = await applyGroup('saved_meals', food.applySavedMealFromCloud);
+    counts.recipes = await applyGroup('recipes', food.applyRecipeFromCloud);
+    counts.favourites = await applyGroup('food_favourites', food.applyFavouriteFromCloud);
+    counts.water = await applyGroup('daily_water', food.applyWaterFromCloud);
+
+    // Recompute local rollups for every date whose food_entries changed.
+    // We don't trust the cloud daily_intake_rollups because the local
+    // SQLite copy is what HomeScreen / Insights read.
+    for (const d of datesToRecompute) {
+      try { await food.recomputeRollup(supabaseUserId, d); } catch (_) {}
+    }
+
+    const ts = data?.timestamp ?? new Date().toISOString();
+    const tsMs = Date.parse(ts);
+    if (Number.isFinite(tsMs)) {
+      try { await AsyncStorage.setItem(key, String(tsMs)); } catch (_) {}
+    }
+    return counts;
+  } catch (e) {
+    logWarn('sync._pullFoodChanges', e?.message);
+    return empty;
+  }
+}
+
 // ─── AsyncStorage prefs sync ─────────────────────────────────────────────
 // Every @volyume_ prefix key in AsyncStorage that isn't an excluded
 // internal key gets shipped to the user_prefs (user_id, key, value)
@@ -1166,6 +1415,9 @@ export async function pullFromCloud(supabaseUserId) {
     const plannedVolCount = await _pullPlannedMuscleVolume(sb, supabaseUserId);
     const adaptCount = await _pullAdaptationEvents(sb, supabaseUserId);
     const prefCount = await _pullUserPrefs(sb, supabaseUserId);
+    // Food-domain pull via the food_sync_pull RPC. Returns a count map
+    // per table so the success log shows exactly what landed.
+    const foodCounts = await _pullFoodChanges(sb, supabaseUserId);
 
     // Verbose success log so the user (and we) can see EXACTLY what
     // came back. The previous "silent return 0" path made it
@@ -1192,6 +1444,12 @@ export async function pullFromCloud(supabaseUserId) {
       plannedVolume: plannedVolCount,
       adaptationEvents: adaptCount,
       prefs: prefCount,
+      foodEntries: foodCounts.foodEntries,
+      customFoods: foodCounts.customFoods,
+      savedMeals: foodCounts.savedMeals,
+      recipes: foodCounts.recipes,
+      favourites: foodCounts.favourites,
+      water: foodCounts.water,
     });
 
     return workoutCount;
