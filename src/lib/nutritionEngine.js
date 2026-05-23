@@ -101,6 +101,26 @@ const KCAL_PER_KG_FAT = 7700;       // rough energy equivalent of 1 kg body fat
 // every 8–12 weeks preserves metabolic rate better than continuous restriction.
 export const DIET_BREAK_THRESHOLD_WEEKS = 8;
 
+// FFM (fat-free mass) energy floor. The IOC RED-S consensus
+// (Mountjoy et al. 2014 BJSM 48:491-497; updated Mountjoy et al. 2023
+// BJSM 57:1073-1097, DOI 10.1136/bjsports-2023-106994) labels sustained
+// intake at or below 30 kcal per kg of fat-free mass per day as
+// "problematic low energy availability". Precision Coaching uses this
+// as a hard floor: when the 7-day rolling intake average falls at or
+// below the user's FFM-derived floor, deficit suggestions are refused
+// and a held-decision card surfaces.
+export const FFM_FLOOR_KCAL_PER_KG = 30;
+
+// When BF% is unknown or unreliable, FFM is estimated from population
+// averages. Conservative defaults chosen so the floor errs on the
+// higher (safer) side rather than the lower side that would let the
+// engine keep cutting under-fuelled users. Sex-aware because typical
+// body-fat percentages differ meaningfully by sex.
+const FFM_FALLBACK_FRACTION = {
+  male:   0.78, // ~22% BF (conservative for typical male trainee)
+  female: 0.72, // ~28% BF (conservative for typical female trainee)
+};
+
 // Morton et al. (2018) meta-analysis upper CI — no benefit beyond 2.2 g/kg BW when
 // body fat % is unknown (lean mass-based calculation already handles the known-BF% case).
 export const PROTEIN_MAX_GKGBW = 2.2;
@@ -248,6 +268,58 @@ function calcBMR(sex, ageYears, heightCm, weightKg, bodyFatPercent, bodyFatSourc
       : 10 * weightKg + 6.25 * heightCm - 5 * ageYears - 161;
 
   return { bmr: base, formula: 'mifflin', lbm: null };
+}
+
+/**
+ * Compute the FFM-derived energy floor for a user.
+ *
+ * Returns the minimum daily kcal Precision Coaching will permit on a
+ * cut, based on the user's fat-free mass and the Mountjoy 2014/2023
+ * 30 kcal/kg FFM/day threshold for problematic low energy availability.
+ *
+ * When the user has a credible BF% measurement (DEXA, caliper, BIA,
+ * but not visual self-estimate), FFM is computed from weight × (1 -
+ * BF%/100). When BF% is unknown or visual-only, FFM falls back to a
+ * sex-aware conservative population estimate that errs on the
+ * higher (safer) FFM side so the floor protects more, not less.
+ *
+ * @param {number} weightKg
+ * @param {object} options
+ * @param {number|null} options.bodyFatPercent
+ * @param {string|null} options.bodyFatSource - 'dexa'|'caliper'|'bia'|'visual'|null
+ * @param {'male'|'female'|null} options.sex
+ * @returns {{ floorKcal: number, ffmKg: number, source: 'katch_mcardle'|'fallback' }}
+ */
+export function computeFFMFloor(weightKg, { bodyFatPercent = null, bodyFatSource = null, sex = null } = {}) {
+  if (typeof weightKg !== 'number' || !isFinite(weightKg) || weightKg <= 0) {
+    throw new Error('computeFFMFloor: weightKg must be a positive number');
+  }
+
+  const credibleBF =
+    bodyFatPercent !== null &&
+    bodyFatPercent !== undefined &&
+    isFinite(bodyFatPercent) &&
+    bodyFatPercent > 0 &&
+    bodyFatPercent < 60 &&
+    bodyFatSource !== null &&
+    bodyFatSource !== 'visual';
+
+  if (credibleBF) {
+    const ffmKg = weightKg * (1 - bodyFatPercent / 100);
+    return {
+      floorKcal: Math.round(ffmKg * FFM_FLOOR_KCAL_PER_KG),
+      ffmKg: Math.round(ffmKg * 10) / 10,
+      source: 'katch_mcardle',
+    };
+  }
+
+  const fraction = FFM_FALLBACK_FRACTION[sex] ?? FFM_FALLBACK_FRACTION.male;
+  const ffmKg = weightKg * fraction;
+  return {
+    floorKcal: Math.round(ffmKg * FFM_FLOOR_KCAL_PER_KG),
+    ffmKg: Math.round(ffmKg * 10) / 10,
+    source: 'fallback',
+  };
 }
 
 function calcConfidence(bodyFatSource) {
