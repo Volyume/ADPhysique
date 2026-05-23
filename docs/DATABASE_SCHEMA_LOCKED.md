@@ -428,20 +428,27 @@ aggregates to `engine_telemetry_daily`.
 
 ## Migration files
 
-The schema lands across these migrations, in order:
+The schema lands across these migrations, in order. Migration numbers
+015 onward because 001-014 are already taken in the live Supabase
+project. The locked plan originally said 005-008; the actual filenames
+are 015-018:
 
-- `supabase/migrate_005_food_logging.sql`: foods, custom_foods,
-  food_entries, daily_intake_rollups, saved_meals, recipes,
-  recipe_ingredients, food_favourites, daily_water. Plus food_sync RPCs.
-- `supabase/migrate_006_ed_pattern_and_engine_telemetry.sql`:
+- `supabase/migrate_015_food_logging.sql`: foods, custom_foods,
+  food_entries, daily_intake_rollups (with trigger), saved_meals,
+  recipes, recipe_ingredients, food_favourites, daily_water.
+- `supabase/migrate_016_food_sync_rpcs.sql`: food_sync_pull,
+  food_sync_push. Both scoped to auth.uid() and last-write-wins per
+  record by updated_at.
+- `supabase/migrate_017_ed_pattern_and_engine_telemetry.sql` (Move #2):
   ed_pattern_flags, engine_telemetry_daily, engine_overrides
   (groundwork), record_engine_telemetry RPC, clear_goal_lock RPC.
-- `supabase/migrate_007_tier_infrastructure.sql`: tier_history,
-  profiles column additions, upgrade_tier RPC, tier-protect trigger
-  update to whitelist upgrade_tier.
-- `supabase/migrate_008_body_composition.sql`: body_composition_log
-  only. `photo_progress` is client-side SQLite, added in a SQLite
-  migration (`src/lib/db/migrations/v25_photo_progress.js`).
+- `supabase/migrate_018_tier_infrastructure.sql` (Move #5):
+  tier_history, profiles column additions, upgrade_tier RPC,
+  tier-protect trigger update to whitelist upgrade_tier.
+- `supabase/migrate_019_body_composition.sql` (Complete tier surface):
+  body_composition_log only. `photo_progress` is client-side SQLite,
+  added in a SQLite migration
+  (`src/lib/db/migrations/v25_photo_progress.js`).
 
 `sync_queue` is client-side only; it lives in a SQLite migration
 (`src/lib/db/migrations/v24_sync_queue.js` or equivalent).
