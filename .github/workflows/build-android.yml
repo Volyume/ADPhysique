@@ -5,6 +5,11 @@ on:
     branches:
       - main
       - 'claude/**'
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+      - '.gitignore'
+      - 'LICENSE'
   workflow_dispatch:
 
 # Needed so the "Publish build status" step can push a small status
