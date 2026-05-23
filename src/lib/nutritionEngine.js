@@ -191,11 +191,20 @@ export function computeAdaptiveTDEEAdjustment({
   prescribedKcal,
   currentTDEEEstimate,
   adherenceFactor = 1.0,
+  // FFM-floor safety context. When provided, Precision Coaching refuses
+  // to suggest further deficit (clamps negative adjustments to zero) once
+  // the 7-day rolling intake average sits at or below the user's
+  // FFM-derived energy floor. Positive adjustments (increase calories)
+  // are unaffected; the floor only blocks cuts.
+  //
+  // Locked in COACHING_VOICE_SYNTHESIS_LOCKED.md, MOVE_1_FOOD_FOUNDATION_AND_FFM.md.
+  // Threshold from Mountjoy 2014/2023 IOC RED-S consensus (30 kcal/kg FFM/day).
+  ffmFloorContext = null,
 }) {
   const MIN_POINTS = 14; // need at least 2 weeks
 
   if (!ewmaData || ewmaData.length < MIN_POINTS || !prescribedKcal || !currentTDEEEstimate) {
-    return { adjustmentKcal: 0, confidence: 'insufficient_data', insight: null };
+    return { adjustmentKcal: 0, confidence: 'insufficient_data', insight: null, floorHeld: false };
   }
 
   const weeks = Math.floor(ewmaData.length / 7);
@@ -234,14 +243,45 @@ export function computeAdaptiveTDEEAdjustment({
     insight = `Your weight has moved ${Math.abs(actualKgPerWeek).toFixed(2)} kg/week — slower than planned. Adding ${absAdj} kcal/day to match your true energy needs.`;
   }
 
+  // FFM-floor safety check. Runs only when the caller supplied an
+  // ffmFloorContext with enough recent food-intake data (>=5 days in
+  // the last 7) and a credible-or-fallback body composition input.
+  // If the user's 7-day rolling intake sits at or below their
+  // FFM-derived floor, Precision Coaching refuses any further deficit
+  // suggestion this run. Positive adjustments (add calories) are
+  // never blocked.
+  let floorHeld = false;
+  let finalAdjustmentKcal = adjustmentKcal;
+  let finalInsight = insight;
+  if (
+    ffmFloorContext &&
+    typeof ffmFloorContext.weightKg === 'number' &&
+    typeof ffmFloorContext.recentIntakeAvgKcal === 'number' &&
+    typeof ffmFloorContext.recentIntakeDaysLogged === 'number' &&
+    ffmFloorContext.recentIntakeDaysLogged >= 5
+  ) {
+    const floor = computeFFMFloor(ffmFloorContext.weightKg, {
+      bodyFatPercent: ffmFloorContext.bodyFatPercent ?? null,
+      bodyFatSource:  ffmFloorContext.bodyFatSource ?? null,
+      sex:            ffmFloorContext.sex ?? null,
+    });
+    if (ffmFloorContext.recentIntakeAvgKcal <= floor.floorKcal && adjustmentKcal < 0) {
+      // Clamp the cut. Increases are never clamped.
+      floorHeld = true;
+      finalAdjustmentKcal = 0;
+      finalInsight = `Precision Coaching has held your calorie target. Your seven-day average intake of ${Math.round(ffmFloorContext.recentIntakeAvgKcal)} kcal is at or below your safety floor of ${floor.floorKcal} kcal. Eating below this level for long stretches breaks down muscle and stalls recovery.`;
+    }
+  }
+
   return {
-    adjustmentKcal,   // negative = cut kcal, positive = add kcal
+    adjustmentKcal: finalAdjustmentKcal,   // negative = cut kcal, positive = add kcal
     adjustedTDEE,
     actualKgPerWeek,
     expectedKgPerWeek,
     confidence,
-    insight,
+    insight: finalInsight,
     weeks,
+    floorHeld,
   };
 }
 

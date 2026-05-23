@@ -9,7 +9,7 @@
  */
 
 import { getTrainingNote } from './coachingGoals';
-import { shouldSuggestDietBreak } from './nutritionEngine';
+import { shouldSuggestDietBreak, computeFFMFloor } from './nutritionEngine';
 
 // ─── EWMA ────────────────────────────────────────────────────────────────────
 
@@ -227,6 +227,9 @@ const WHY_LIBRARY = {
   low_data_weight: [
     "Weight data is thin this week. The trend will sharpen with more daily logs.",
   ],
+  ffm_floor_hold: [
+    "Precision Coaching has held your calorie target. Your seven-day average intake is at or below the safety floor for your fat-free mass.",
+  ],
 };
 
 function pickWhy(keys, seed = 0) {
@@ -278,6 +281,15 @@ export function runWeeklyCoach(inputs) {
     bodyweightKg = null,
     units = 'kg',
     scoffPositive = false,
+    // FFM-floor safety context (Move #1). Optional; floor only fires
+    // when the caller supplies a 7-day intake average AND at least 5
+    // days of food data within that window. Body composition inputs
+    // determine which FFM path computeFFMFloor takes.
+    bodyFatPercent = null,
+    bodyFatSource = null,
+    sex = null,
+    recentIntakeAvgKcal = null,
+    recentIntakeDaysLogged = 0,
   } = inputs;
 
   // ── DATA CONFIDENCE ───────────────────────────────────────────────────────
@@ -300,6 +312,10 @@ export function runWeeklyCoach(inputs) {
       adjustments: { training: { signal: 'hold', note: 'Plan unchanged. A few more weigh-ins needed to act on.' }, calories: null, steps: null, cardio: null },
       whyThisWeek: confidence.holdMessage,
       deloadSuggested: false, deloadNote: null, dietBreakSuggested: false, dietBreakNote: null,
+      heldDecisions: [],
+      rapidWeightLossFlag: false,
+      ffmFloorHeld: false,
+      ffmFloorContext: null,
       adherenceNote: null, prsThisWeek, sessionsCompleted, sessionsPlanned,
       volumeSignal: 0, loadSignal: 'hold', recoveryFlag: 'normal', goalPhase,
     };
@@ -456,6 +472,44 @@ export function runWeeklyCoach(inputs) {
     }
   }
 
+  // ── FFM FLOOR SAFETY GATE ────────────────────────────────────────────────
+  // Mountjoy 2014/2023 IOC RED-S consensus: 30 kcal/kg fat-free mass per
+  // day is the threshold below which sustained intake is "problematic
+  // low energy availability". If the user's 7-day rolling intake sits
+  // at or below their FFM-derived floor and Precision Coaching was
+  // about to suggest a calorie cut, Precision Coaching refuses the cut
+  // and surfaces it as a held decision instead. Calorie INCREASES are
+  // never blocked. Data sufficiency gate: only fires with >=5 days of
+  // intake logged in the last 7.
+  let ffmFloorHeld = false;
+  let ffmFloorContext = null;
+  if (
+    bodyweightKg != null &&
+    recentIntakeAvgKcal != null &&
+    recentIntakeDaysLogged >= 5
+  ) {
+    const floor = computeFFMFloor(bodyweightKg, {
+      bodyFatPercent,
+      bodyFatSource,
+      sex,
+    });
+    ffmFloorContext = {
+      floorKcal: floor.floorKcal,
+      ffmKg: floor.ffmKg,
+      source: floor.source,
+      recentIntakeAvgKcal,
+      recentIntakeDaysLogged,
+    };
+    if (
+      recentIntakeAvgKcal <= floor.floorKcal &&
+      calorieAdjustment != null &&
+      calorieAdjustment.change < 0
+    ) {
+      ffmFloorHeld = true;
+      calorieAdjustment = null;
+    }
+  }
+
   // ── STEPS PRESCRIPTION ────────────────────────────────────────────────────
   let stepsAdjustment = null;
   const band = stepsBand(goalPhase, bwRef);
@@ -568,7 +622,18 @@ export function runWeeklyCoach(inputs) {
   // ── HELD DECISIONS ────────────────────────────────────────────────────────
   const heldDecisions = [];
 
-  if ((phase.isCut || phase.isBulk) && currentCalTarget !== null && calorieAdjustment === null) {
+  // FFM-floor hold goes first because it's a safety hold that
+  // supersedes the other calorie-hold reasons. The user needs to see
+  // this one above any "still gathering data" or "trend is on target"
+  // type messages.
+  if (ffmFloorHeld && ffmFloorContext) {
+    heldDecisions.push({
+      type: 'ffm_floor',
+      reason: `Calorie target held. Your seven-day average intake of ${Math.round(ffmFloorContext.recentIntakeAvgKcal)} kcal is at or below your safety floor of ${ffmFloorContext.floorKcal} kcal. Eating below this level for long stretches breaks down muscle and stalls recovery.`,
+    });
+  }
+
+  if ((phase.isCut || phase.isBulk) && currentCalTarget !== null && calorieAdjustment === null && !ffmFloorHeld) {
     if (scoffPositive) {
       heldDecisions.push({ type: 'calories', reason: "Calories held. Wellbeing screen flagged restriction concerns." });
     } else if (cycleOverride) {
@@ -626,7 +691,10 @@ export function runWeeklyCoach(inputs) {
   // ── "WHY THIS WEEK" ───────────────────────────────────────────────────────
   const whyKeys = [];
 
-  if (deloadSuggested)                          whyKeys.push('deload_suggested');
+  // FFM-floor hold supersedes other why-keys when it fires. The user
+  // needs to see the safety reason above any other framing.
+  if (ffmFloorHeld)                             whyKeys.push('ffm_floor_hold');
+  else if (deloadSuggested)                     whyKeys.push('deload_suggested');
   else if (dietBreakSuggested)                  whyKeys.push('diet_break_suggested');
   else if (poorRecovery)                        whyKeys.push('recovery_lagging');
   else if (volumeSignal >= 1 && excellentRec)   whyKeys.push('push_volume');
@@ -667,6 +735,8 @@ export function runWeeklyCoach(inputs) {
     dietBreakWeeksInDeficit,
     heldDecisions,
     rapidWeightLossFlag,
+    ffmFloorHeld,
+    ffmFloorContext,
     adherenceNote: null,
     prsThisWeek,
     sessionsCompleted,
@@ -698,6 +768,10 @@ function _buildBaselineOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, we
     deloadNote: null,
     dietBreakSuggested: false,
     dietBreakNote: null,
+    heldDecisions: [],
+    rapidWeightLossFlag: false,
+    ffmFloorHeld: false,
+    ffmFloorContext: null,
     adherenceNote: null,
     prsThisWeek,
     sessionsCompleted,
