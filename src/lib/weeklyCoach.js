@@ -182,42 +182,50 @@ function stepsBand(goalPhase, bodyweightKg = null) {
 // Tagged by signal type. All strings are ≤ 2 sentences, plain English.
 // NO jargon: no MEV/MAV/MRV/RIR/RPE/mesocycle/deload.
 
+// User-facing reason strings surfaced under the Precision Coaching header
+// on CoachOutputScreen. The header already names Precision Coaching, so
+// body lines stay terse: factual, mirror-data, short. Where Precision
+// Coaching is taking a specific action (holding calories, raising steps),
+// the action is named so the user can see what changed.
+//
+// Voice rules: docs/COACHING_VOICE_SYNTHESIS_LOCKED.md. Honesty test
+// applied to every line.
 const WHY_LIBRARY = {
   on_target_holding: [
-    "Weight is tracking the target rate. No change needed.",
+    "Weight is tracking the target rate. No change needed this week.",
   ],
   off_target_cal_up: [
-    "Trend is off target in the direction a small kcal increase corrects.",
+    "Trend is off target. Precision Coaching has raised your calorie target.",
   ],
   off_target_cal_down: [
-    "Trend is off target in the direction a small kcal reduction corrects.",
+    "Trend is off target. Precision Coaching has lowered your calorie target.",
   ],
   recovery_lagging: [
-    "Recovery markers are down. Holding calories until they're back.",
+    "Recovery scores are down. Precision Coaching is holding calories until they're back.",
   ],
   performance_regressed: [
-    "Strength is dipping. Holding calories until it stabilises.",
+    "Strength is dipping. Precision Coaching is holding calories until it stabilises.",
   ],
   building_baseline: [
-    "Not enough data yet to adjust. Keep logging weight and sessions.",
+    "Not enough data yet to adjust. Keep logging weight and sessions and Precision Coaching will catch up.",
   ],
   stabilise_sessions: [
-    "Sessions were inconsistent this week. Adherence first, adjustments after.",
+    "Sessions were inconsistent this week. Precision Coaching is holding the plan steady until adherence settles.",
   ],
   steps_bump: [
-    "Trend is behind target. Raising the step target is the lowest-fatigue lever.",
+    "Trend is behind target. Precision Coaching has raised your step target as the lowest-fatigue lever.",
   ],
   deload_suggested: [
-    "Recovery flags across multiple signals. A lighter week sets up the next run.",
+    "Recovery flags across multiple signals. Precision Coaching has scheduled a lighter week to set up the next run.",
   ],
   diet_break_suggested: [
-    "Long stretch in a deficit. A short break at maintenance helps the next stretch.",
+    "Long stretch in a deficit. Precision Coaching suggests a short break at maintenance to help the next stretch.",
   ],
   push_volume: [
-    "Recovery and performance both clean. Room to add work.",
+    "Recovery and performance both clean. Precision Coaching has added work to the plan.",
   ],
   low_data_weight: [
-    "Weight data is thin this week. Trend will sharpen with more daily logs.",
+    "Weight data is thin this week. The trend will sharpen with more daily logs.",
   ],
 };
 
@@ -552,8 +560,8 @@ export function runWeeklyCoach(inputs) {
       dietBreakSuggested = true;
       dietBreakWeeksInDeficit = weeksInPhase;
       dietBreakNote = weeksInPhase >= 12
-        ? `You have been eating below maintenance for ${weeksInPhase} weeks. A full week at maintenance will help your body reset before continuing.`
-        : 'Eight or more consecutive weeks eating below maintenance is a long time. One week at your full calorie need helps your body reset and makes the next stretch more effective.';
+        ? `You've been eating below maintenance for ${weeksInPhase} weeks. Precision Coaching suggests a full week at maintenance to let your body reset before continuing.`
+        : 'Eight or more consecutive weeks below maintenance is a long stretch. Precision Coaching suggests a week at your full calorie need to let your body reset and make the next stretch more effective.';
     }
   }
 
