@@ -26,7 +26,7 @@ function csvEscape(value) {
 
 /**
  * Build a CSV string from an array of food_entries rows and a
- * food-ref lookup map keyed by food_ref. Pure — no I/O.
+ * food-ref lookup map keyed by food_ref. Pure, no I/O.
  */
 export function buildDiaryCsv(entries, foodLookup) {
   const lines = [CSV_HEADERS.join(',')];

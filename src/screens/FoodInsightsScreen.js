@@ -100,15 +100,12 @@ export default function FoodInsightsScreen({ navigation }) {
     try {
       const entries = await getFoodEntriesForRange(userId, startDate, endDate);
       if (!entries.length) {
-        Alert.alert('Nothing to export', 'No food entries in the last seven days.');
+        Alert.alert('Nothing to export', 'No entries in the last seven days.');
         return;
       }
-      const result = await exportDiaryCsv({ userId, entries, startDate, endDate });
-      if (result.rowCount > 0) {
-        Alert.alert('Exported', `${result.rowCount} ${result.rowCount === 1 ? 'entry' : 'entries'} written to CSV.`);
-      }
+      await exportDiaryCsv({ userId, entries, startDate, endDate });
     } catch (e) {
-      Alert.alert("Export failed", 'Try again. If it keeps failing, restart the app.');
+      Alert.alert('Export failed', 'Try again.');
     } finally {
       setExporting(false);
     }
@@ -156,13 +153,9 @@ export default function FoodInsightsScreen({ navigation }) {
           })}
           {targets?.targetKcal ? (
             <Text style={styles.cardFootnote}>
-              Target: {targets.targetKcal} kcal. Bars within 10% turn green.
+              Target {targets.targetKcal} kcal. Green when within 10%.
             </Text>
-          ) : (
-            <Text style={styles.cardFootnote}>
-              Set your calorie target in Precision Coaching to see adherence colours.
-            </Text>
-          )}
+          ) : null}
         </View>
 
         <Text style={styles.sectionLabel}>MACRO ADHERENCE</Text>
@@ -174,12 +167,12 @@ export default function FoodInsightsScreen({ navigation }) {
               <AdherenceRow label="Carbs"    hit={adherence.cDays}    total={adherence.logged} />
               <AdherenceRow label="Fat"      hit={adherence.fDays}    total={adherence.logged} />
               <Text style={styles.cardFootnote}>
-                Out of {adherence.logged} {adherence.logged === 1 ? 'day' : 'days'} logged. Hit = within target range.
+                {adherence.logged} of 7 days logged.
               </Text>
             </>
           ) : (
             <Text style={styles.emptyText}>
-              Log a few days to see your macro adherence.
+              Nothing logged in the last week.
             </Text>
           )}
         </View>

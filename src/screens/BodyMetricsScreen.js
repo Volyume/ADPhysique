@@ -647,7 +647,7 @@ export default function BodyMetricsScreen({ navigation }) {
                   </Text>
                   {recentIntake?.daysLogged > 0 && (
                     <Text style={styles.ewmaIntake}>
-                      Avg intake last 7d: {recentIntake.avgKcal} kcal across {recentIntake.daysLogged} {recentIntake.daysLogged === 1 ? 'day' : 'days'}.
+                      Average intake {recentIntake.avgKcal} kcal over the last {recentIntake.daysLogged} {recentIntake.daysLogged === 1 ? 'day' : 'days'}.
                     </Text>
                   )}
                 </>

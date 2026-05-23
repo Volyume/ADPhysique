@@ -29,6 +29,66 @@ when those will end up in the repo.
 - Be careful not to be seen to have a go at coaches. Volyume sits
   alongside coaches, not above them.
 
+## No AI fingerprint, ever
+
+Nothing Volyume ships, in copy or in design, should read as if a
+language model produced it. This is a hard constraint. It applies to:
+shipped UI strings, alerts, toasts, push notifications, store
+listings, App Store screenshots, in-app help, marketing site copy,
+and the visual composition of every screen.
+
+### Copy fingerprints to avoid
+
+The bullet list above (em dashes, hedge words, "let me", "ensure",
+"streamline", etc.) is the language half. Beyond that list, watch
+for:
+
+- Tutorial voice in places that aren't tutorials. Empty states do
+  not need a three-sentence explanation of what the screen will
+  look like once it has data. One short line, or nothing.
+- Over-explanatory error toasts. "Try again. If it keeps failing,
+  restart the app and your entry will be queued for sync if needed."
+  reads as a chatbot. The right shape is "Couldn't log." plus
+  "Try again." Nothing more.
+- Encouragement that nobody asked for. "Great job logging today!"
+  is out. So is "Keep it up." Volyume reports facts; the user's
+  emotional response is their own.
+- Footnote-creep. Helpful tooltips beneath every chart, every
+  toggle, every section header. One footnote per surface, at most,
+  only when it answers a real question.
+
+### Design fingerprints to avoid
+
+These are the visual patterns generative tools default to. Volyume
+should look like a tool one lifter built for themselves and
+polished until it shipped, not a Figma template populated by
+prompting.
+
+- Three-card dashboards with parallel headers and parallel CTAs.
+  If three sections genuinely earn three cards, fine. If you're
+  adding a third just to balance the page, drop it.
+- Generic Ionicons used as decoration on every list item. The
+  amber affordance is the brand. Decorative icons next to every
+  row dilute it.
+- Hero gradients, abstract orbs, soft-glow backgrounds. The locked
+  background is `#0D0D0D`. No gradients.
+- Centred-feature carousels with paginating dots. Volyume is not
+  an onboarding template.
+- Overly rounded corners on everything. Theme radii are tiered;
+  use them. A modal corner is not a button corner.
+- "Coming soon" placeholders or greyed-out future features. Ship
+  what's there or hide it.
+- Bullet lists with checkmark icons everywhere. Where they earn
+  their keep (Welcome screen tier cards) they're fine. Inside
+  Insights, inside Diary, inside settings, they aren't.
+- Stat tiles arranged in a perfect 2x2 grid because there happen to
+  be four numbers. If the four numbers don't relate, lay them out
+  by importance, not by symmetry.
+
+The test: would a lifter who built this for themselves choose this
+arrangement? If the honest answer is "no, that's there because it
+fills the space", strip it back.
+
 ## Engineering
 
 - Branch policy is set per session in the system prompt. Follow it

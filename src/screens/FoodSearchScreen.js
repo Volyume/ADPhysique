@@ -143,7 +143,7 @@ export default function FoodSearchScreen({ navigation, route }) {
       setPicker(null);
       navigation.goBack();
     } catch (_) {
-      Alert.alert("Couldn't log", 'Try again. Your entry will be queued for sync if needed.');
+      Alert.alert("Couldn't log", 'Try again.');
     }
   }
 
@@ -177,19 +177,15 @@ export default function FoodSearchScreen({ navigation, route }) {
   const flat = useMemo(() => {
     const out = [];
     for (const s of sections) {
+      if (s.rows.length === 0) continue;
       out.push({ type: 'header', key: `h-${s.key}`, label: s.label });
-      if (s.rows.length === 0) {
-        out.push({ type: 'empty', key: `e-${s.key}`, label: 'Nothing here yet.' });
-      } else {
-        for (const r of s.rows) out.push({ type: 'row', key: `${s.key}-${r.food_ref}`, food: r });
-      }
+      for (const r of s.rows) out.push({ type: 'row', key: `${s.key}-${r.food_ref}`, food: r });
     }
     return out;
   }, [sections]);
 
   function renderItem({ item }) {
     if (item.type === 'header') return <Text style={styles.sectionHeader}>{item.label}</Text>;
-    if (item.type === 'empty') return <Text style={styles.sectionEmpty}>{item.label}</Text>;
     const food = item.food;
     const isFav = favouriteRefs.has(food.food_ref);
     const sourceTag = SOURCE_LABEL[food.source] ?? null;
@@ -375,10 +371,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg, paddingBottom: spacing.sm,
-  },
-  sectionEmpty: {
-    color: colors.textMuted, fontSize: fontSize.sm,
-    paddingHorizontal: spacing.lg, paddingBottom: spacing.md,
   },
 
   row: {
