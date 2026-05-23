@@ -71,12 +71,7 @@ import NutritionEducationScreen from '../screens/NutritionEducationScreen';
 import SubscriptionPolicyScreen from '../screens/SubscriptionPolicyScreen';
 import DiaryScreen from '../screens/DiaryScreen';
 import AddCustomFoodScreen from '../screens/AddCustomFoodScreen';
-// DIAGNOSTIC: FoodSearchScreen registration temporarily disabled to
-// isolate the APK 578/581 launch crash. If launch works with this
-// disabled, the bug is in the FoodSearchScreen module-evaluation
-// chain. addFood navigates to AddCustomFood (the pre-e64a370
-// behaviour) so the diary still has a path to add food.
-// import FoodSearchScreen from '../screens/FoodSearchScreen';
+import FoodSearchScreen from '../screens/FoodSearchScreen';
 import { withProGuard } from '../components/ProGate';
 
 const Tab = createBottomTabNavigator();
@@ -148,7 +143,11 @@ function DiaryStack({ navigation }) {
   return (
     <Stack.Navigator screenOptions={{ ...stackOptions, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="Diary" component={DiaryScreen} options={{ headerShown: false }} />
-      {/* DIAGNOSTIC: FoodSearch registration disabled. See import above. */}
+      <Stack.Screen
+        name="FoodSearch"
+        component={FoodSearchScreen}
+        options={{ headerShown: false, presentation: 'modal' }}
+      />
       <Stack.Screen
         name="AddCustomFood"
         component={AddCustomFoodScreen}
