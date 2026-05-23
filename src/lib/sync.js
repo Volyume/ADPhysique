@@ -975,12 +975,24 @@ async function _pushAdaptationEvents(sb, supabaseUserId, localUserId) {
   try {
     const rows = await getAllAdaptationEventsForUser(localUserId);
     if (!rows?.length) return;
+    // Local schema uses decision/reason_code/signals_json; cloud schema
+    // uses event_type (NOT NULL) + payload (JSON). Map decision → event_type
+    // since decision is locally NOT NULL, and roll the rest of the richer
+    // local fields into the payload column so nothing is lost.
     const payload = rows.map(r => ({
       id: r.id, user_id: supabaseUserId,
       mesocycle_week_id: r.mesocycleWeekId ?? null,
-      event_type: r.eventType,
-      payload: r.payload ?? null,
-      recorded_at: new Date(r.recordedAt ?? Date.now()).toISOString(),
+      event_type: r.eventType ?? r.decision ?? 'unknown',
+      payload: r.payload ?? {
+        decision: r.decision ?? null,
+        delta: r.delta ?? null,
+        muscle: r.muscle ?? null,
+        exercise_id: r.exerciseId ?? null,
+        reason_code: r.reasonCode ?? null,
+        reason_text: r.reasonText ?? null,
+        signals: (() => { try { return r.signalsJson ? JSON.parse(r.signalsJson) : null; } catch (_) { return null; } })(),
+      },
+      recorded_at: new Date(r.recordedAt ?? r.createdAt ?? Date.now()).toISOString(),
       created_at: new Date(r.createdAt ?? Date.now()).toISOString(),
       updated_at: new Date(r.updatedAt ?? r.createdAt ?? Date.now()).toISOString(),
       deleted_at: r.deletedAt ? new Date(r.deletedAt).toISOString() : null,
