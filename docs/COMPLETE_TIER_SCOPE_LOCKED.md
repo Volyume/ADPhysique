@@ -43,6 +43,60 @@ with the same flag.
   energy score history showing accumulated low-energy weeks. Available
   to Pro with that flag, not Complete-only.
 
+## Trial cascade (locked)
+
+New signups at general availability enter a 28-day cascade:
+
+1. **Days 1 to 14: Complete free.** Full ceiling. No payment captured
+   at signup, just consent to the cascade rules.
+2. **Day 14 gate: "Hold on Complete" prompt.** User can pay (founders
+   price if eligible, standard otherwise), skip to Pro now, skip to
+   Free now, or do nothing and auto-downgrade to Pro at day 15.
+3. **Days 15 to 28: Pro free.** Engine, food logging, the lot at the
+   Pro feature set. Complete-only surfaces (Peak Week, photo timeline,
+   coach link, unlimited history, body composition charts) lock at
+   day 15.
+4. **Day 28 gate: "Hold on Pro" prompt.** User can pay for Pro, pay
+   for Complete (re-upgrade), skip to Free, or do nothing and
+   auto-downgrade to Free at day 29.
+5. **Day 29 onward: Free.** Engine still runs with the safety
+   guardrails. Pro-tier surfaces lock. Differential-output paywall
+   triggers (move four) become active.
+
+Rules:
+
+- A user who pays at any stage stops the cascade at that tier.
+- A user who skips ahead (Complete to Free at day 14, for example)
+  cannot re-enter the trial later. Cascade is a one-time entitlement
+  per account.
+- Trial state is server-side. `trial_state` enum:
+  `complete_trial_active`, `pro_trial_active`, `paid_complete`,
+  `paid_pro`, `free`, `cascade_expired`.
+- The `tier_history` table records every transition with timestamp,
+  reason (`auto_downgrade`, `user_skip`, `user_paid`,
+  `user_cancelled`), and source surface.
+- Notifications fire at day 12 (Complete winding down), day 14
+  (downgraded to Pro), day 26 (Pro winding down), day 28 (downgraded
+  to Free). Notifications respect user notification settings.
+
+## Closed beta entitlement (locked)
+
+Closed beta users receive **Complete free for the full duration of the
+closed test period** (currently scoped to 12 weeks against the existing
+Play Store closed testing track) as a contributor benefit. At the
+transition to general availability, beta accounts drop into the
+standard 28-day cascade starting from day 1, not into Free directly.
+This means a beta user who tested for 12 weeks gets:
+
+- 12 weeks at Complete during beta
+- 14 days at Complete post-GA
+- 14 days at Pro post-GA
+- Then Free or paid, by their choice
+
+The cascade rule (`one-time entitlement per account`) treats the
+post-GA cascade as the user's first cascade. The beta period is not
+counted against trial entitlement.
+
 ## Engine code implications
 
 `src/lib/proGate.js` gains three helpers. None of them gate safety
