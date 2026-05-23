@@ -549,6 +549,18 @@ criteria.
 
 ---
 
+## 18a. Budget posture (cross-cutting)
+
+Locked. See `BUDGET_POSTURE_LOCKED.md`.
+
+Headline: every third-party tool starts on its free tier; every
+feature ships at MVP scope at v1; no speculative paid spend.
+Photo cloud sync, refeed automation, body composition deep view,
+share-pack PDF, and recipe URL importer defer to v1.1 to keep v1
+lean. All five engine guardrails, Article 9 consent, FTC HBNR
+language, Sentry, and account deletion are non-negotiable at v1
+regardless of budget.
+
 ## 19. Explicit out-of-scope (do not build at v1)
 
 Recorded so they aren't accidentally added by scope creep:
@@ -612,10 +624,14 @@ Once the open decisions in Section 20 are resolved:
 Existing locked docs:
 
 - `BRIEF_C_CLAUDE_ADJUDICATION.md`
+- `BUDGET_POSTURE_LOCKED.md`
 - `COMPLETE_TIER_SCOPE_LOCKED.md`
+- `DATABASE_SCHEMA_LOCKED.md`
+- `FOOD_DATA_STRATEGY_LOCKED.md`
 - `OPEN_QUESTIONS_RESOLVED.md`
 - `PRODUCTION_READINESS_LOCKED.md`
 - `RESEARCH_FINDINGS_SYNTHESISED.md`
+- `SYNC_ARCHITECTURE_LOCKED.md`
 - (this doc) `MASTER_VISION_AND_PLAN.md`
 
 To be created in the next pass:
