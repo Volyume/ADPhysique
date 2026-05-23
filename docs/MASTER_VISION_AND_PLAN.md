@@ -469,21 +469,72 @@ B2B infrastructure tax. (b) lands as phase 2 v2 if there's pull.
 Recommendation: (a). Coaches expect web. Mobile-only B2B has been
 tried (Trainerize, TrueCoach) and they all ended up on web.
 
-**DECISION NEEDED 17.3:** Coach pricing model.
+**LOCKED 17.3: Coach pricing model.**
 
-- (a) **Per-client/month** (e.g. £4.99 per linked client). Aligns
-  cost with usage.
-- (b) **Flat coach fee** (e.g. £29.99/month for up to 20 clients).
-  Simple, predictable.
-- (c) **Free for the coach, paid by the client** (client's Complete
-  tier covers the link). Lowest friction for coaches; revenue stays
-  client-side.
+Principle: the coach pays. The client gets Complete tier free for the
+duration of the active coach link. Charging the client twice (their
+coach plus Volyume Complete) for the coach's convenience was the
+wrong call; corrected to match industry norm (Trainerize, TrueCoach,
+MyPTHub all charge the coach).
 
-Recommendation: (c) for phase 2 v1. Most coach apps charge the
-coach; flipping that is a positioning win. Coaches market Volyume
-to their clients because it's a free leg-up for them. Client pays
-Complete to get the handoff. (a) or (b) becomes a second tier of
-coach-specific features later.
+Coach price tiers:
+
+| Tier | Price | Client cap |
+| --- | --- | --- |
+| Starter | £29.99/month | Up to 5 active clients |
+| Pro Coach | £59.99/month | Up to 20 active clients |
+| Studio | £119.99/month | Up to 50 active clients |
+| Enterprise | Custom | 50+ active clients |
+
+Each linked client gets Complete tier free for the life of the
+active link. If coach billing pauses, client Complete entitlement
+reverts to whatever they were paying personally (Pro, Free, or
+self-paid Complete). Client data is preserved through the lapse.
+
+**LOCKED 17.4: Coach trial structure.**
+
+Coach migration is real work (2-4 weeks for a typical book of 10-20
+clients). A 14-day trial like TrueCoach barely covers migration, let
+alone evaluation. Locked trial:
+
+- **Standard trial: 60 days**, no card required to start.
+- Trial includes the full Studio tier (50-client cap) regardless of
+  which tier the coach picks at trial end.
+- Clients linked during the trial get Complete tier free for the
+  trial duration.
+- Trial-ending notifications at day 45, 55, and 59 (in-app and
+  email; email matters for coaches).
+- Auto-downgrade at trial end: coach picks tier or defaults to
+  Starter. Clients above the new cap revert to non-linked status; data
+  is preserved.
+
+**LOCKED 17.5: Founding Coach programme.**
+
+For the first 100 coach sign-ups during open beta plus the founders
+window:
+
+- **6 months free** instead of 60 days.
+- **Lifetime 50% off** the published rate as long as subscription
+  stays continuously active. Founding-coach rates: Starter £14.99,
+  Pro Coach £29.99, Studio £59.99 per month.
+- Featured in the coach directory at launch (directory itself is
+  separately scoped; see migration tools below).
+
+**LOCKED 17.6: Coach migration tools (phase 2 scope expansion).**
+
+A trial is wasted without tooling. The phase 2 coach scope must
+include, before the trial offer is published:
+
+- Bulk client invite (paste email list; sends Volyume invites with
+  pre-linked coach relationship).
+- CSV import for client weight history and programme assignments.
+- Programme templates applied to multiple clients at once.
+- Exercise library import (CSV with mapping to Volyume's exercise
+  registry).
+
+Without these, even 60 days does not beat the migration cost of
+leaving Trainerize or TrueCoach. With them, the trial becomes a
+viable switching window.
 
 ---
 
@@ -543,7 +594,10 @@ For your call before the supporting docs land:
 | 11.1 | Email notifications at v1 | No, push only |
 | 17.1 | Coach-client linking | Share URL with expiry |
 | 17.2 | Coach dashboard location | Web app |
-| 17.3 | Coach pricing model | Free for coach, paid by client |
+| 17.3 | Coach pricing model | LOCKED: tiered flat (£29.99 / £59.99 / £119.99), client gets Complete free during link |
+| 17.4 | Coach trial length | LOCKED: 60 days standard, full Studio tier during trial |
+| 17.5 | Founding Coach programme | LOCKED: first 100, 6 months free + lifetime 50% off |
+| 17.6 | Coach migration tools | LOCKED: bulk invite, CSV import, programme templates, exercise library import (phase 2 scope expansion) |
 
 Plus the founder-pricing window length (currently 12 weeks after
 open beta — adjust if you want 8 or 16) and any tweaks to the open
