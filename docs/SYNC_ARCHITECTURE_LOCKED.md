@@ -123,15 +123,9 @@ export const SYNC_REGISTRY = [
     softDelete: false,
     direction: 'pull_only',
   },
-  {
-    table: 'photo_progress',
-    pk: 'id',
-    conflictStrategy: 'last_write_wins',
-    serverAuthoritative: false,
-    softDelete: true,
-    direction: 'bidirectional',
-    storage: 'user-photos',
-  },
+  // photo_progress is client-side SQLite only; not in the sync
+  // registry. Photos never leave the device. See
+  // BUDGET_POSTURE_LOCKED.md.
   {
     table: 'body_composition_log',
     pk: 'id',

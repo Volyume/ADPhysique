@@ -48,7 +48,7 @@ without breaking the locked product story.
 
 | Feature | Original locked move | Defer to | Reason |
 | --- | --- | --- | --- |
-| Photo progress timeline | Move #5 (Complete surfaces) | v1.1 | Photo storage is bandwidth/disk cost. Ship on-device-only at v1 (no Supabase Storage write); add cloud sync at v1.1 as the carrot for cohort growth. |
+| Photo progress timeline | Move #5 (Complete surfaces) | v1 on-device only, no cloud sync ever | Photos are personal record. OS-level backup (iCloud Photos, Google Photos) covers loss protection. No Supabase Storage write at any version saves bandwidth and storage permanently. |
 | Recipe URL importer | Always v1.1+ | v1.1 | Already deferred. |
 | Refeed automation (any cut, not just contest prep) | Move #5 Complete surface | v1.1 | Existing contest-prep path covers the safety case. Automating across all cuts is polish. |
 | Body composition charts deep view | Move #5 | v1.1 | Ship read-only summary at v1; full charts + export at v1.1. |
@@ -61,21 +61,24 @@ the UI ships in a later iteration.
 
 ## Storage and bandwidth specifics
 
-Photos are the highest cost lever in Supabase. Locked posture:
+Photos are not stored in Supabase Storage at any version. Locked
+posture:
 
-- **At v1: no photo upload to Supabase Storage.** `photo_progress`
-  table exists, but `storage_path` is local-only (the SQLite path on
-  device). Photos do not sync between devices at v1. Users see a
-  banner: "Photo backup arrives in a future update. Your photos stay
-  on this device for now."
-- **At v1.1: opt-in cloud sync for Complete tier.** Users toggle
-  "Back up photos" in You tab. Quota: 100MB per Complete user. Beyond
-  quota, oldest photos archive to a downgraded format (compressed
-  JPEG at 70% quality, max 1080px on the long edge).
-- **Why this is fine.** Photos are personal record keeping. Most
-  users only care about the most recent 12 weeks; the on-device path
-  serves that use case. Cloud sync is a real benefit that justifies
-  upgrading to v1.1.
+- **Photos stay on-device only.** The `photo_progress` table lives
+  in client-side SQLite only, never in Supabase. Photos do not
+  transfer between devices and are not part of account backup.
+- **OS-level backup is the user's responsibility.** iCloud Photos
+  on iOS, Google Photos on Android. Volyume's camera roll save
+  (optional toggle in You tab, default off) writes photos to the
+  device gallery, which the OS backup then captures.
+- **Coach handoff does not include photos.** The share-pack PDF
+  (v1.1) and CSV export at v1 cover weight, food, training history,
+  and macros. Photos remain personal record; coach sees the data, not
+  the image timeline.
+- **Why this is fine.** Photos are personal record keeping. Cloud
+  sync added cost, complexity, and a privacy surface for marginal
+  benefit. The OS-level backup path is what users already trust for
+  every other photo on their phone.
 
 Bundled OpenFoodFacts snapshot is the second cost lever (app binary
 size). 20-40 MB compressed is acceptable; OTA delta downloads stay

@@ -345,23 +345,11 @@ last_error          text
 Lives only in SQLite; never synced. The sync runner reads from this,
 attempts the Supabase write, removes on success or backs off on error.
 
-### Photo and body composition (Complete tier surfaces)
+### Body composition (Complete tier surface)
 
-#### `photo_progress`
-
-```
-id              uuid PK
-user_id         uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE
-storage_path    text NOT NULL                   -- Supabase Storage path
-taken_at        date NOT NULL
-pose            text                            -- 'front','side','back', user-chosen label
-notes           text
-deleted_at      timestamptz
-created_at      timestamptz DEFAULT now()
-```
-
-RLS: full CRUD for `auth.uid() = user_id`. Storage bucket
-`user-photos` has matching policy.
+Note: `photo_progress` is client-side SQLite only, not a Supabase
+table. Photos stay on-device; OS-level backup (iCloud Photos, Google
+Photos) is the user's responsibility. See `BUDGET_POSTURE_LOCKED.md`.
 
 #### `body_composition_log`
 
@@ -451,8 +439,9 @@ The schema lands across these migrations, in order:
 - `supabase/migrate_007_tier_infrastructure.sql`: tier_history,
   profiles column additions, upgrade_tier RPC, tier-protect trigger
   update to whitelist upgrade_tier.
-- `supabase/migrate_008_photo_and_body_composition.sql`:
-  photo_progress, body_composition_log, photos storage bucket policy.
+- `supabase/migrate_008_body_composition.sql`: body_composition_log
+  only. `photo_progress` is client-side SQLite, added in a SQLite
+  migration (`src/lib/db/migrations/v25_photo_progress.js`).
 
 `sync_queue` is client-side only; it lives in a SQLite migration
 (`src/lib/db/migrations/v24_sync_queue.js` or equivalent).
