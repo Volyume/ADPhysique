@@ -79,23 +79,12 @@ Rules:
   (downgraded to Pro), day 26 (Pro winding down), day 28 (downgraded
   to Free). Notifications respect user notification settings.
 
-## Closed beta entitlement (locked)
+## Closed testing entitlement
 
-Closed beta users receive **Complete free for the full duration of the
-closed test period** (currently scoped to 12 weeks against the existing
-Play Store closed testing track) as a contributor benefit. At the
-transition to general availability, beta accounts drop into the
-standard 28-day cascade starting from day 1, not into Free directly.
-This means a beta user who tested for 12 weeks gets:
-
-- 12 weeks at Complete during beta
-- 14 days at Complete post-GA
-- 14 days at Pro post-GA
-- Then Free or paid, by their choice
-
-The cascade rule (`one-time entitlement per account`) treats the
-post-GA cascade as the user's first cascade. The beta period is not
-counted against trial entitlement.
+Closed testing on the Play Store is an internal testing group, not an
+end-user beta cohort. No special tier entitlement applies. Internal
+testers run on whichever tier matches their development account, and
+the 28-day cascade applies normally at general availability.
 
 ## Engine code implications
 
