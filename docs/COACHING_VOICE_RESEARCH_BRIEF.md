@@ -21,12 +21,30 @@ locked (Free / Pro at £0.99-£2.99 / Complete at £1.99-£6.99 across
 open beta, founders, standard windows). Three tiers, no LLM in the
 engine (deterministic rules), B2B coach surface is phase 2.
 
-The engine produces output weekly. It can observe (read the user's
-weight, food log, training, check-ins), apply deterministic rules
-(adaptive TDEE, FFM floor, ED-pattern detection, refeed prescription),
-and explain (surface why decisions were made). It cannot converse,
-negotiate, listen in real time, or remember between sessions in any
-human sense.
+The system has a name in the existing app: **Precision Coaching**.
+It already appears on the welcome screen ("Precision Coaching that
+adjusts your training and nutrition as your body responds"), on
+the check-in surface header, on the weekly coach output screen
+header, in the notification titles ("Precision Coaching · check-in"),
+in the Pro upgrade and subscription policy copy, and across the
+Play Store and App Store listings. Your phrasing recommendations
+must use this name, not "the engine" or "the system" as
+placeholders. Generic terms read as anonymous machine output;
+"Precision Coaching" is what the user already knows it as.
+
+Existing app surfaces use the name two ways: as a proper noun on
+its own ("Precision Coaching has held...") and as a possessive ("your
+Precision Coaching adjusts at the next check-in"). Both are
+acceptable. Engine internals (weeklyCoach.js, the deterministic
+rules) can be referenced descriptively but the user-facing label is
+Precision Coaching.
+
+Precision Coaching produces output weekly. It can observe (read the
+user's weight, food log, training, check-ins), apply deterministic
+rules (adaptive TDEE, FFM floor, ED-pattern detection, refeed
+prescription), and explain (surface why decisions were made). It
+cannot converse, negotiate, listen in real time, or remember
+between sessions in any human sense.
 
 The user base skews male (typical training-app demographic) but
 deliberately includes recovering-disordered-eating populations, the
@@ -52,22 +70,22 @@ said. That's a trust-erosion path.
 So the brief is not "make it warmer." It's:
 
 1. Find an evidence-based coaching voice that is **honest about
-   who makes the decisions** (the engine, not the user, not a
-   "together"), **warm without manufactured intimacy**, **safe for
+   who makes the decisions** (Precision Coaching, not the user, not
+   a "together"), **warm without manufactured intimacy**, **safe for
    the at-risk subgroup**, and **calibrated to relationship depth**
    (early surfaces more factual, later surfaces can be warmer once
-   the engine has visibly worked for the user).
+   Precision Coaching has visibly worked for the user).
 2. Provide specific phrasing patterns for seven surface types.
 3. Pressure-test against the failure modes documented in app
    abandonment research and ED-app harm research.
 
 The non-negotiable foundation is honesty about decision authority.
-Volyume is a deterministic engine. The user logs, trains, eats,
-checks in. The engine reads that data, applies rules, decides.
-Phrases that imply the user is part of the decision ("we'll work it
-out together", "let's decide", "your call") are lies. Lies in copy
-break trust at first contact. The voice must be warm and supportive
-without lying about agency.
+Volyume's Precision Coaching is a deterministic engine. The user
+logs, trains, eats, checks in. Precision Coaching reads that data,
+applies rules, decides. Phrases that imply the user is part of the
+decision ("we'll work it out together", "let's decide", "your call")
+are lies. Lies in copy break trust at first contact. The voice
+must be warm and supportive without lying about agency.
 
 ## The ten research pillars
 
@@ -167,21 +185,21 @@ the explainable-AI literature on user trust).
 
 ### 9. Honesty about decision authority (the most important pillar)
 
-In Volyume the user does not make the engine's decisions. The user
-logs, trains, eats, weighs, checks in. The engine reads that data,
-applies deterministic rules, and decides what target to set, what
-to hold, what to adjust. There is no negotiation. The user's
-"input" to the engine is their behaviour, not their preferences in
-that moment.
+In Volyume the user does not make Precision Coaching's decisions.
+The user logs, trains, eats, weighs, checks in. Precision Coaching
+reads that data, applies deterministic rules, and decides what
+target to set, what to hold, what to adjust. There is no
+negotiation. The user's "input" to Precision Coaching is their
+behaviour, not their preferences in that moment.
 
 This means phrases like "we'll work it out together", "let's
 decide what's next", "tell us if you want a different approach"
-are factual lies. The engine will decide next week the same way it
-decided this week, regardless of what the user thinks about it.
-Lying about decision authority breaks trust at first contact, not
-over time. A user who reads "together" and then experiences
-another one-way output the following week has learned the system
-lies.
+are factual lies. Precision Coaching will decide next week the
+same way it decided this week, regardless of what the user thinks
+about it. Lying about decision authority breaks trust at first
+contact, not over time. A user who reads "together" and then
+experiences another one-way output the following week has learned
+the system lies.
 
 Research areas:
 
@@ -212,9 +230,9 @@ lie and has to be rewritten.
 Separately from honesty, there's a question of warmth calibration.
 A first-time user reading "let's give your body a moment" hasn't
 seen Volyume work for them yet. By contrast, a user at week 12 who
-has watched the engine catch a stall, suggest a refeed, and walk
-through a deload has earned the right to a warmer tone, and
-Volyume has earned the right to use it.
+has watched Precision Coaching catch a stall, suggest a refeed,
+and walk through a deload has earned the right to a warmer tone,
+and Volyume has earned the right to use it.
 
 Research on relationship-depth calibration in product copy. Stages
 of trust formation in digital products (Mayer & Davis 1995 and the
