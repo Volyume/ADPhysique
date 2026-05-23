@@ -129,20 +129,6 @@ jobs:
           sed -i 's|org.gradle.configurationcache.extensions.serviceOf|org.gradle.kotlin.dsl.support.serviceOf|' "$FILE"
           grep -n 'serviceOf' "$FILE" || echo "✗ Patch did not apply"
 
-      # expo-modules-core 1.12.x's PermissionsService.kt calls .contains()
-      # on Android's PackageInfo.requestedPermissions, which is a nullable
-      # Array<String>?. Newer Kotlin compilers (shipped with compileSdk 35
-      # build tools) treat this as an error rather than a warning:
-      #   Only safe (?.) or non-null asserted (!!.) calls are allowed on a
-      #   nullable receiver of type Array<(out) String!>?
-      # The fix is a safe-call + truthy check. Without this the release
-      # Kotlin compile fails before we ever get to AAB packaging.
-      - name: Patch expo-modules-core PermissionsService for Kotlin strict nullability (SDK 35)
-        run: |
-          FILE=node_modules/expo-modules-core/android/src/main/java/expo/modules/adapters/react/permissions/PermissionsService.kt
-          sed -i 's|return requestedPermissions\.contains(permission)|return requestedPermissions?.contains(permission) == true|' "$FILE"
-          grep -n 'requestedPermissions?.contains' "$FILE" || echo "✗ PermissionsService patch did not apply"
-
       # Decode the upload keystore from the ANDROID_KEYSTORE_BASE64 secret
       # and wire it into the release signing config. When the secret is
       # absent the build falls back to Expo's prebuild default (debug
