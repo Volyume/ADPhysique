@@ -7,6 +7,12 @@ on:
       - 'claude/**'
   workflow_dispatch:
 
+# Needed so the "Publish build status" step can push a small status
+# file back to the same branch. The auto-commit uses [skip ci] in the
+# message so it doesn't trigger another run.
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build Release APK + AAB
@@ -32,6 +38,7 @@ jobs:
       # can sanity-check from the log that the secret is reaching the
       # workflow and is the expected size.
       - name: Verify required secrets are set
+        id: verify
         env:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
@@ -40,6 +47,11 @@ jobs:
           KEY_LEN=${#EXPO_PUBLIC_SUPABASE_ANON_KEY}
           echo "EXPO_PUBLIC_SUPABASE_URL length: $URL_LEN"
           echo "EXPO_PUBLIC_SUPABASE_ANON_KEY length: $KEY_LEN"
+          # Expose to subsequent steps + the publish-status step so the
+          # diagnostic ends up in .ci-status/latest.md even if the build
+          # later fails.
+          echo "url_len=$URL_LEN" >> "$GITHUB_OUTPUT"
+          echo "key_len=$KEY_LEN" >> "$GITHUB_OUTPUT"
           # A typical Supabase URL is ~40 chars (https://<20-char-id>.supabase.co)
           # A typical anon key is ~220 chars (JWT with three base64 segments).
           if [ "$URL_LEN" -eq 0 ]; then
@@ -312,3 +324,62 @@ jobs:
           name: volyume-release-aab-${{ github.run_number }}
           path: android/app/build/outputs/bundle/release/app-release.aab
           retention-days: 30
+
+      # Always-runs status writer. Dumps a small markdown file with
+      # diagnostic info (run number, commit, job status, secret lengths)
+      # to .ci-status/latest.md and pushes it back to the same branch
+      # with [skip ci] so it doesn't trigger another run. This lets the
+      # assistant fetch the file via the GitHub API (read-only access to
+      # workflow run logs isn't exposed by the MCP server in use) to
+      # self-diagnose build outcomes without the user having to paste
+      # log lines.
+      - name: Publish build status to repo
+        if: always()
+        env:
+          URL_LEN: ${{ steps.verify.outputs.url_len }}
+          KEY_LEN: ${{ steps.verify.outputs.key_len }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -e
+          mkdir -p .ci-status
+          cat > .ci-status/latest.md <<EOF
+          # Latest CI Build Status
+
+          - **Run number**: ${{ github.run_number }}
+          - **Run URL**: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          - **Branch**: \`${{ github.ref_name }}\`
+          - **Commit**: \`${{ github.sha }}\`
+          - **Triggered at**: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          - **Job status at write time**: \`$JOB_STATUS\`
+
+          ## Secret lengths (values not logged)
+
+          | Secret | Length |
+          |---|---|
+          | EXPO_PUBLIC_SUPABASE_URL | ${URL_LEN:-unset} |
+          | EXPO_PUBLIC_SUPABASE_ANON_KEY | ${KEY_LEN:-unset} |
+
+          ## Interpretation
+
+          - URL length \`0\`: secret is empty, re-paste in repo Settings.
+          - URL length \`~40\`: looks right (\`https://abcdef.supabase.co\`).
+          - KEY length \`0\`: secret is empty, re-paste in repo Settings.
+          - KEY length \`~220\`: looks right (JWT starting with \`eyJ\`).
+          - Length \`unset\`: the verify step didn't run (build failed before npm install).
+
+          EOF
+
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add .ci-status/latest.md
+          # If nothing changed (e.g. a re-run produced identical content), exit cleanly.
+          if git diff --cached --quiet; then
+            echo "No status changes to commit"
+            exit 0
+          fi
+          git commit -m "ci: build status update [skip ci]"
+          # Pull-rebase in case another job pushed in the meantime, then push.
+          # If push fails (concurrent run, permission issue), don't fail the
+          # whole build over a status update.
+          git pull --rebase origin "${{ github.ref_name }}" || true
+          git push origin "HEAD:${{ github.ref_name }}" || echo "::warning::Status push failed (continuing)"
