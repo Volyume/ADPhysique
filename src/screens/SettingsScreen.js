@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import * as SecureStore from 'expo-secure-store';
 import { getSupabaseClient, signOut } from '../lib/supabase';
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
@@ -367,18 +368,34 @@ export default function SettingsScreen({ navigation }) {
       // Clear in-memory state.
       await clearAuthStateForSignOut();
       // Delete-account is the "truly wipe everything" path — distinct
-      // from sign-out, which is session-only by policy. Without this,
-      // AsyncStorage keeps TIER_KEY, FIRST_RUN_KEY, LOCAL_USER_KEY,
-      // PROFILE_KEY_PFX, etc., so the next launch's bootstrap reads
-      // them and re-routes the user into the app as a phantom local
-      // Pro account ("local · PRO · 0 sessions"). Enumerate all
-      // @volyume_-prefixed keys and remove them so the next launch
-      // boots a genuine fresh-install state.
+      // from sign-out, which is session-only by policy. The selective
+      // @volyume_ prefix wipe used to miss three keys that don't carry
+      // the @ (volyume_review_prompted, volyume_notif_prompt_seen,
+      // volyume_sessions_since_install) and any future un-prefixed key.
+      // AsyncStorage.clear() is scoped to this app only, so it's the
+      // right hammer here. Without this, next launch sees a stale
+      // firstRunComplete=true and re-routes into the home flow as a
+      // phantom user.
       try {
-        const keys = await AsyncStorage.getAllKeys();
-        const volyumeKeys = keys.filter(k => k.startsWith('@volyume_'));
-        if (volyumeKeys.length) await AsyncStorage.multiRemove(volyumeKeys);
+        await AsyncStorage.clear();
       } catch (e) { logError('SettingsScreen.deleteAccount.wipeAsyncStorage', e); }
+
+      // Belt-and-braces SecureStore wipe. signOut() above should have
+      // cleared the supabase-js auth tokens, but if the network call
+      // failed the tokens can persist and restoreSessionFromCloud will
+      // happily revive a session for an account that no longer exists.
+      // The Supabase storage key is `sb-<projectref>-auth-token`, which
+      // we can derive from the public URL. Best-effort: any failure
+      // here is a logged warning, not a blocker.
+      try {
+        const url = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+        const projectRef = url.replace(/^https?:\/\//, '').split('.')[0];
+        if (projectRef) {
+          await SecureStore.deleteItemAsync(`sb-${projectRef}-auth-token`).catch(() => {});
+        }
+        // Older supabase-js versions used this key.
+        await SecureStore.deleteItemAsync('supabase.auth.token').catch(() => {});
+      } catch (e) { logError('SettingsScreen.deleteAccount.wipeSecureStore', e); }
     } finally {
       setDeletingAccount(false);
     }
