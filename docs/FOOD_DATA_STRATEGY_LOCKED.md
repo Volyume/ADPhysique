@@ -92,7 +92,7 @@ GET https://world.openfoodfacts.org/api/v2/product/{ean}.json
 ```
 
 OFF's rule: 1 API call per real user action; never scrape; respect
-their cache. The waterfall enforces this — the API is only called
+their cache. The waterfall enforces this. the API is only called
 after cache misses.
 
 On hit: response is normalised and inserted into the local `foods`
@@ -198,12 +198,12 @@ miss). Aggregated daily for the dashboards.
 In the food detail sheet and search results, each row shows a small
 chip naming the source:
 
-- `OFF` — Open Food Facts (bundled or live)
-- `USDA` — USDA FoodData Central
-- `CoFID` — UK Composition of Foods (Public Health England)
-- `Custom` — User-created
-- `Coach` — Created by the user's linked coach (phase 2)
-- `Verified` — Volyume-curated, manually checked
+- `OFF`: Open Food Facts (bundled or live)
+- `USDA`: USDA FoodData Central
+- `CoFID`: UK Composition of Foods (Public Health England)
+- `Custom`: User-created
+- `Coach`: Created by the user's linked coach (phase 2)
+- `Verified`: Volyume-curated, manually checked
 
 Chip styling reuses the existing tag/badge component from
 `src/components/`. Colour matches the design system (amber for

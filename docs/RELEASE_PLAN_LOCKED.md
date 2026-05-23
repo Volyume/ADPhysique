@@ -48,21 +48,21 @@ Phase F: Coach GA (phase 2 v2)
 Aligned to the locked move sequence in
 `MASTER_VISION_AND_PLAN.md` Section 16.
 
-1. **Move #0: Code corrections** — citation fix, blocklist
+1. **Move #0: Code corrections**. citation fix, blocklist
    extension, surname audit. Smallest, can ship first, no schema
    changes.
-2. **Move #1: Food foundation + FFM floor** — schema, manual
+2. **Move #1: Food foundation + FFM floor**. schema, manual
    entry, FFM guardrail.
-3. **Move #1.5: Barcode + OCR** — camera, MLKit, OCR fallback,
+3. **Move #1.5: Barcode + OCR**. camera, MLKit, OCR fallback,
    write-back to OFF.
-4. **Move #2: ED-pattern detection** — state machine, lockout
+4. **Move #2: ED-pattern detection**. state machine, lockout
    copy, goal-lock interaction.
-5. **Move #3: Upward gate compression** — engine math change.
-6. **Move #4: Differential paywall output** — output block,
+5. **Move #3: Upward gate compression**. engine math change.
+6. **Move #4: Differential paywall output**. output block,
    trigger logic, conversion copy. (Trigger logic is wired but
    paywall CTAs are disabled until Phase B, since cascade isn't
    live in Phase A.)
-7. **Move #5: Tier infrastructure** — three tiers, cascade state
+7. **Move #5: Tier infrastructure**. three tiers, cascade state
    machine, RevenueCat integration, web checkout endpoint stubs.
 
 After move #5 lands and stabilises in Phase A internal testing, we
@@ -153,7 +153,7 @@ transition to Phase B.
    a "Founders pricing ends [date]" countdown.
 4. **Email all open-beta subscribers** thanking them and confirming
    they keep their open-beta price for life.
-5. **Open the waitlist signup further** — at this stage Volyume is
+5. **Open the waitlist signup further**. at this stage Volyume is
    publicly available, not invite-only. Waitlist toggles to a "Sign
    up now" path.
 

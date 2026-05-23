@@ -91,13 +91,13 @@ transitions.
 
 States:
 
-- `unstarted` — fresh account, hasn't passed Article 9 consent yet
-- `complete_trial_active` — days 1-14 of the cascade
-- `pro_trial_active` — days 15-28 of the cascade
-- `paid_complete` — user paid for Complete (any pricing window)
-- `paid_pro` — user paid for Pro (any pricing window)
-- `free` — cascade expired without payment, or user skipped to Free
-- `cascade_expired` — equivalent to `free`; kept distinct for telemetry
+- `unstarted`: fresh account, hasn't passed Article 9 consent yet
+- `complete_trial_active`: days 1-14 of the cascade
+- `pro_trial_active`: days 15-28 of the cascade
+- `paid_complete`: user paid for Complete (any pricing window)
+- `paid_pro`: user paid for Pro (any pricing window)
+- `free`: cascade expired without payment, or user skipped to Free
+- `cascade_expired`: equivalent to `free`; kept distinct for telemetry
 
 Transitions:
 

@@ -156,7 +156,7 @@ don't track tap-through to the destination (privacy).
 
 ### Unit
 
-- `tests/edPatternDetector.test.js` — every signal combination
+- `tests/edPatternDetector.test.js`: every signal combination
   + thresholds + goal-lock interaction.
 
 ### Property
@@ -179,7 +179,7 @@ don't track tap-through to the destination (privacy).
 
 ### Snapshot
 
-- `tests/snapshots/edPatternCopy.snap.js` — both variants of the
+- `tests/snapshots/edPatternCopy.snap.js`: both variants of the
   held-decision card.
 
 ### E2E

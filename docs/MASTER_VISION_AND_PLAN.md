@@ -254,8 +254,8 @@ Locked flow (revisions to existing onboarding):
    consent"). Separate from ToS. Lists categories: weight, body
    composition, dietary intake, energy/recovery scores, ED-pattern
    detection signals. User must tick to proceed.
-4. Basic stats (height, weight, sex, DOB) — unchanged.
-5. Goal selection — unchanged structure, but:
+4. Basic stats (height, weight, sex, DOB). unchanged.
+5. Goal selection. unchanged structure, but:
 6. **NEW: Goal lock screen** (only shown for "physique competition"
    or "advanced recomp"). Self-attested experience confirmation. Sets
    `goal_lock_advanced = true` on user record. Can be cleared from
@@ -429,8 +429,8 @@ Will cover:
 
 - Coach account model.
 - Coach-client linking flow (one-time share URL with expiry, vs.
-  Volyume B2B account model — pending DECISION 17.1 below).
-- Coach dashboard layout (web app or in-app surface? — pending
+  Volyume B2B account model. pending DECISION 17.1 below).
+- Coach dashboard layout (web app or in-app surface?: pending
   DECISION 17.2).
 - Override mechanism (engine reads override at output, original
   feeds trends).
@@ -585,7 +585,7 @@ Recorded so they aren't accidentally added by scope creep:
 
 - AI photo logging (cost, accuracy, ED-amplification risk).
 - Recipe URL importer (deferred to v1.1).
-- Year of Fuel (food-adherence badges) — ruled out as ED-pattern
+- Year of Fuel (food-adherence badges): ruled out as ED-pattern
   accelerant. See Claude adjudication Section A.7.
 - Adaptive macro algorithm beyond what the engine already does.
 - Micronutrient dashboards beyond fibre, sodium, sugar.
@@ -628,7 +628,7 @@ Once the open decisions in Section 20 are resolved:
 
 1. I write the 13 supporting docs named above, in batches.
 2. You review each, push back, lock or tweak.
-3. We start work on Move #0 (the immediate code corrections — does
+3. We start work on Move #0 (the immediate code corrections. does
    not need any open decisions resolved).
 4. Move #1 file-level plan goes deep enough that the implementation
    is a translation exercise, not a design exercise.

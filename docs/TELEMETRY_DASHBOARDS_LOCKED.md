@@ -268,9 +268,9 @@ Existing views:
 - `v_feedback_error_correlation`
 
 New for the food and cascade work:
-- `v_feedback_food_layer` — feedback strings filtered to those
+- `v_feedback_food_layer`: feedback strings filtered to those
   posted within 7 days of the user's first food log
-- `v_feedback_cascade_gates` — feedback posted within 24h of a
+- `v_feedback_cascade_gates`: feedback posted within 24h of a
   cascade gate appearing
 
 All reviewed weekly by the founder. Any feedback tied to a safety

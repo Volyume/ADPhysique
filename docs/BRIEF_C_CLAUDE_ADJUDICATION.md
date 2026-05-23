@@ -489,8 +489,8 @@ Which is right given the 14-day window context? Is there an even better 1 neithe
 
 ### 4. Sequencing of the five moves
 
-- ChatGPT (Area 8): Stage 1 backend (moves 1, 3, 4 — auto-fill schema, protein adherence logic, new templates). Stage 2 UI (move 5 — TodaysIntakeCard, visual insights). Stage 3 safety (move 2 last, gate compression, "heavily monitored").
-- Gemini (Area 8): Stage 1 backend-only (moves 2 & 3 — gate compression and protein gating, so testers see quicker calorie adjustments). Stage 2 UI + adherence + insights (moves 1, 4, 5 — diary interface, auto-fill, new templates).
+- ChatGPT (Area 8): Stage 1 backend (moves 1, 3, 4: auto-fill schema, protein adherence logic, new templates). Stage 2 UI (move 5: TodaysIntakeCard, visual insights). Stage 3 safety (move 2 last, gate compression, "heavily monitored").
+- Gemini (Area 8): Stage 1 backend-only (moves 2 & 3: gate compression and protein gating, so testers see quicker calorie adjustments). Stage 2 UI + adherence + insights (moves 1, 4, 5: diary interface, auto-fill, new templates).
 
 Different orderings. ChatGPT puts move 2 last because it's the most safety-sensitive. Gemini puts move 2 first because it doesn't need new UI. Which sequencing is right?
 
@@ -533,7 +533,7 @@ Mostly aligned but threshold differs. Where's the right line?
 
 Both passes propose specific paywall trigger moments. ChatGPT proposes 6 moments with exact copy. Gemini proposes ~6 moments with different copy. The copy itself diverges in voice.
 
-Apply the live voice rules (British English, no em dashes, no AI tells, no jargon-blocklist terms, ≤25 words for in-app copy). For each of these 6 trigger moments — Stalled Lift, Extreme Soreness, Deload, Missing TDEE, Mesocycle Summary, Energy Crash — recommend the best copy from either pass, rewriting where neither pass nails the voice.
+Apply the live voice rules (British English, no em dashes, no AI tells, no jargon-blocklist terms, ≤25 words for in-app copy). For each of these 6 trigger moments. Stalled Lift, Extreme Soreness, Deload, Missing TDEE, Mesocycle Summary, Energy Crash. recommend the best copy from either pass, rewriting where neither pass nails the voice.
 
 ---
 

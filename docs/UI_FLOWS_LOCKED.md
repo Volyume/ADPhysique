@@ -16,15 +16,15 @@ Existing components reused verbatim:
 - existing button, card, sheet, modal primitives
 
 New components introduced (live in `src/components/food/`):
-- `MacroRings` — kcal + P/C/F ring set (Skia-based, already a dep)
-- `MealSection` — meal slot header + list of entries
-- `FoodRow` — single food entry in a list
-- `ServingPicker` — quantity input with unit toggle
-- `EntryRow` — diary row with swipe-delete and long-press multi-select
-- `SourceChip` — small badge showing OFF / USDA / CoFID / Custom
-- `EmptyDiary` — empty-state for a day with no entries
-- `DifferentialBadge` — "with food data, this would have said X" badge
-- `HeldDecisionCard` — used for FFM-floor and ED-flag holds (reuses existing card primitive with a new variant)
+- `MacroRings`: kcal + P/C/F ring set (Skia-based, already a dep)
+- `MealSection`: meal slot header + list of entries
+- `FoodRow`: single food entry in a list
+- `ServingPicker`: quantity input with unit toggle
+- `EntryRow`: diary row with swipe-delete and long-press multi-select
+- `SourceChip`: small badge showing OFF / USDA / CoFID / Custom
+- `EmptyDiary`: empty-state for a day with no entries
+- `DifferentialBadge`: "with food data, this would have said X" badge
+- `HeldDecisionCard`: used for FFM-floor and ED-flag holds (reuses existing card primitive with a new variant)
 
 ## Navigation changes
 
@@ -294,7 +294,8 @@ All new screens meet the existing app's accessibility bar:
 - VoiceOver / TalkBack rotor-friendly headings.
 - Reduced motion mode: disable Skia ring animation (show static
   segments).
-- 44pt minimum tap target across all rows.
+- 48px minimum tap target across all interactive elements, matching
+  the existing design system rule in `docs/DESIGN_SYSTEM.md`.
 
 A linting rule (`react-native-a11y-lint` or similar) is added to CI
 to catch missing accessibility labels.

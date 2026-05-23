@@ -266,10 +266,10 @@ For tables with `softDelete: true`:
 
 A single status indicator in the navigation header shows one of:
 
-- **Synced** — last sync within 60s, queue empty, no errors.
-- **Pending** — queue has entries waiting to push.
-- **Offline** — network unavailable.
-- **Error** — last sync failed; tap for details.
+- **Synced**: last sync within 60s, queue empty, no errors.
+- **Pending**: queue has entries waiting to push.
+- **Offline**: network unavailable.
+- **Error**: last sync failed; tap for details.
 
 Tappable. Tap opens a sheet with: last sync timestamp, queue depth,
 last error (if any), manual "Sync now" button, "Force full pull"

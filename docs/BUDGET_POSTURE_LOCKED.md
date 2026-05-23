@@ -24,7 +24,7 @@ Locked posture per service.
 
 | Service | Posture at v1 | Upgrade trigger |
 | --- | --- | --- |
-| **Supabase** | Free tier (500MB DB, 1GB Storage, 2GB egress, 50k MAU). No custom-domain add-on — native sign-in SDKs solve the OAuth branding question. | Hit any free-tier limit, or a feature only available on a paid plan that telemetry proves we need |
+| **Supabase** | Free tier (500MB DB, 1GB Storage, 2GB egress, 50k MAU). No custom-domain add-on. native sign-in SDKs solve the OAuth branding question. | Hit any free-tier limit, or a feature only available on a paid plan that telemetry proves we need |
 | **Sentry** | Free Developer tier (5k errors, 10k performance/month) | More than 5k errors/month for 2 weeks running |
 | **Expo Push** | Free (no per-message cost) | If push reliability drops or we need richer scheduling, evaluate FCM/APNs direct |
 | **RevenueCat** | Free below $2,500/month MRR (1% cut above that) | Crossing $2.5k MRR triggers the cut, still cheaper than building it ourselves |

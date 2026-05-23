@@ -112,13 +112,13 @@ Supabase via the same auth.
 
 ### Pages
 
-- **Login** — Supabase auth, same as mobile.
-- **Onboarding** (first time coach) — business name, tier choice,
+- **Login**: Supabase auth, same as mobile.
+- **Onboarding** (first time coach): business name, tier choice,
   60-day trial start.
-- **Dashboard home** — list of linked clients with quick-glance:
+- **Dashboard home**: list of linked clients with quick-glance:
   name, current phase, last check-in date, current weight, current
   target kcal. Click row -> client detail.
-- **Client detail** — multiple panels:
+- **Client detail**: multiple panels:
   - Header: name, photo (if client allows; per locked decision
     photos don't sync, so this is initials-based avatar), phase,
     week.
@@ -128,12 +128,12 @@ Supabase via the same auth.
   - Actions: "Override targets" (creates an `engine_overrides`
     row), "Add note" (visible to client and coach), "Send message"
     (in-app DM in phase 2 v2).
-- **Programme builder** — create reusable training programmes, apply
+- **Programme builder**: create reusable training programmes, apply
   to one or many clients.
-- **Foods** — verify community-sourced foods for clients, mark as
+- **Foods**: verify community-sourced foods for clients, mark as
   `Coach`-source in the source chip.
-- **Invite clients** — bulk paste emails, send invite URLs.
-- **Settings** — coach tier management, billing, business profile.
+- **Invite clients**: bulk paste emails, send invite URLs.
+- **Settings**: coach tier management, billing, business profile.
 
 ## Coach pricing and billing
 

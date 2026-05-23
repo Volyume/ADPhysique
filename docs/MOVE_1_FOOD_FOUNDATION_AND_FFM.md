@@ -129,9 +129,9 @@ From `TESTING_STRATEGY_LOCKED.md`:
 
 ### Engine
 
-- `tests/engine/ffmFloor.property.test.js` — property tests for the
+- `tests/engine/ffmFloor.property.test.js`: property tests for the
   floor calculation.
-- `tests/engine/ffmFloor.scenarios.test.js` — simulator scenarios
+- `tests/engine/ffmFloor.scenarios.test.js`: simulator scenarios
   `red_s_trajectory`, `straight_cut`, `aggressive_cut_supervised`.
 
 ### Sync

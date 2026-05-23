@@ -114,11 +114,11 @@ action; no scraping; respect their cache headers.
 
 ### E2E (Maestro)
 
-- `e2e/scan_barcode_happy_path.yaml` — scan a known UK product,
+- `e2e/scan_barcode_happy_path.yaml`: scan a known UK product,
   verify add sheet appears.
-- `e2e/scan_barcode_miss_ocr.yaml` — scan an unknown product, run
+- `e2e/scan_barcode_miss_ocr.yaml`: scan an unknown product, run
   OCR, verify prefilled custom food form.
-- `e2e/ocr_writeback_consent.yaml` — verify OFF write-back is OFF
+- `e2e/ocr_writeback_consent.yaml`: verify OFF write-back is OFF
   by default and on tap actually fires.
 
 ## Acceptance check
