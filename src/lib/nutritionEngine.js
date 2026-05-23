@@ -9,12 +9,13 @@
 // Constants
 // ---------------------------------------------------------------------------
 
-// Mifflin-St Jeor / Katch-McArdle activity multipliers corrected for gym-only training.
-// The traditional 1.725 ("active") and 1.9 ("very active") values were calibrated for
-// physically active occupations, not resistance training alone. Research on gym-going
-// populations (SportRxiv, 2024) supports reducing these by ~0.05–0.1 to avoid systematic
-// TDEE overestimation (~200–400 kcal/day). Users should compare their 4-week weight trend
-// against targets and adjust if needed.
+// Mifflin-St Jeor / Katch-McArdle activity multipliers tuned downward from the
+// generic 1.725 / 1.9 values for gym-only populations. The downward tuning is
+// based on coaching observation that standard multipliers overestimate gym-only
+// TDEE by 200-400 kcal/day. Theoretical basis in the constrained-TDEE literature
+// (Pontzer et al. 2016, Current Biology 26:410-417) is contested by Davy et al.
+// 2025 (PNAS, 10.1073/pnas.2519626122). Users should compare their 4-week weight
+// trend against targets and adjust if needed.
 const ACTIVITY_MULTIPLIERS = {
   sedentary: 1.2,
   light: 1.375,

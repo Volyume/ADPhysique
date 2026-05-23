@@ -3,7 +3,17 @@
  * Plain-language template library for user-facing exercise and plan explanations.
  *
  * JARGON BLOCKLIST — these words must NEVER appear in any exported string:
- *   MEV, MAV, MRV, RIR, RPE, mesocycle, deload (as noun), "junk volume"
+ *   - Gym abbreviations: MEV, MAV, MRV, RIR, RPE, mesocycle, "junk volume"
+ *   - Science jargon: "metabolic adaptation", "training stimulus",
+ *     "stimulus-to-fatigue ratio"
+ *   - Bare researcher surnames: Helms, Schoenfeld, Morton, Mountjoy, Eikey,
+ *     Refalo, Trexler. Citations belong in InfoTooltip panels, not surface
+ *     copy.
+ *
+ * Plain-language alternatives:
+ *   metabolic adaptation     -> "your body has adjusted"
+ *   training stimulus        -> "muscle growth signal"
+ *   stimulus-to-fatigue ratio -> "training payoff"
  *
  * All explanations are ≤ 30 words unless the context specifically warrants more.
  * All explanations are in plain English — no gym abbreviations, no science jargon.
@@ -13,12 +23,37 @@
 // Internal jargon guard (development safety check)
 // ---------------------------------------------------------------------------
 
-const JARGON_BLOCKLIST = ['MEV', 'MAV', 'MRV', ' RIR', ' RPE', 'mesocycle', 'junk volume'];
+// Word-boundary regex patterns. Word boundaries avoid false positives
+// (e.g. "helmsman" does not match "Helms") while still catching surnames at
+// start of string, after punctuation, or mid-sentence.
+const JARGON_PATTERNS = [
+  // Gym abbreviations
+  { name: 'MEV', re: /\bMEV\b/ },
+  { name: 'MAV', re: /\bMAV\b/ },
+  { name: 'MRV', re: /\bMRV\b/ },
+  { name: 'RIR', re: /\bRIR\b/ },
+  { name: 'RPE', re: /\bRPE\b/ },
+  { name: 'mesocycle', re: /\bmesocycle\b/i },
+  { name: 'junk volume', re: /\bjunk volume\b/i },
+  // Science jargon
+  { name: 'metabolic adaptation', re: /\bmetabolic adaptation\b/i },
+  { name: 'training stimulus', re: /\btraining stimulus\b/i },
+  { name: 'stimulus-to-fatigue ratio', re: /\bstimulus-to-fatigue ratio\b/i },
+  // Bare researcher surnames in surface copy. Citations belong in
+  // InfoTooltip panels, not user-facing strings.
+  { name: 'Helms', re: /\bHelms\b/ },
+  { name: 'Schoenfeld', re: /\bSchoenfeld\b/ },
+  { name: 'Morton', re: /\bMorton\b/ },
+  { name: 'Mountjoy', re: /\bMountjoy\b/ },
+  { name: 'Eikey', re: /\bEikey\b/ },
+  { name: 'Refalo', re: /\bRefalo\b/ },
+  { name: 'Trexler', re: /\bTrexler\b/ },
+];
 
 function assertNoJargon(str) {
-  for (const term of JARGON_BLOCKLIST) {
-    if (str.includes(term)) {
-      throw new Error(`Jargon detected in whyThis output: "${term}" in: "${str}"`);
+  for (const { name, re } of JARGON_PATTERNS) {
+    if (re.test(str)) {
+      throw new Error(`Jargon detected in whyThis output: "${name}" in: "${str}"`);
     }
   }
   return str;
@@ -303,6 +338,6 @@ export function getPosingConditioningMessage(type, minutesPerSession, weeksToCom
  * @returns {{ clean: boolean, violations: string[] }}
  */
 export function checkJargon(str) {
-  const violations = JARGON_BLOCKLIST.filter(term => str.includes(term));
+  const violations = JARGON_PATTERNS.filter(({ re }) => re.test(str)).map(({ name }) => name);
   return { clean: violations.length === 0, violations };
 }
