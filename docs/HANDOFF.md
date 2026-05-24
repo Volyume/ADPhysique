@@ -231,6 +231,19 @@ Move #1, Move #2 (core), and Move #3 (telemetry slice) are
 shipped. The remaining work splits into post-Move-2 cleanup,
 growth-strategy follow-through, and the next moves.
 
+**BLOCKER (must come before further feature work):**
+
+0. **Identity + data ownership redesign** per
+   `docs/IDENTITY_AND_OWNERSHIP_LOCKED.md`. A multi-account
+   device hit a 400-row 42501 cascade because `user_id` columns
+   were being re-stamped at sign-in (legitimate for
+   anonymous→first-account, illegitimate for account-A→account-B).
+   The locked doc covers 13 scenarios + implementation rules +
+   anti-patterns. Implementation pending; on completion, all
+   existing affected data (local + cloud) is wiped under the
+   user's explicit go-ahead. Until this lands, sign-in flow
+   remains broken on devices with multi-account history.
+
 **Things needing user action outside the app:**
 
 1. **Apply Supabase migration 017** (`supabase/migrate_017_ed_pattern_and_telemetry.sql`).

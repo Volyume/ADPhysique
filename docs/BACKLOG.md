@@ -128,6 +128,17 @@ in main now; listing here so they don't get re-proposed.
 - **Auto warm-up suggestion removed.** Users mark warm-ups via the existing
   Set type picker. Sheet + handler + ~200 lines of orphan code deleted.
 
+## Must-fix design debt (blocks further work)
+
+Items tracked here are KNOWN design flaws that must be fixed before
+any feature work continues that touches the same surface. They are
+locked in their respective design docs; the implementation is the
+outstanding piece.
+
+| Item | Design doc | Status |
+|---|---|---|
+| **Identity + data ownership.** Row `user_id` mutation, anonymous-vs-account id conflation, sign-in re-stamping. Triggered a 400-row 42501 cascade on a multi-account device. Doc covers 13 scenarios + implementation rules + anti-patterns. | `IDENTITY_AND_OWNERSHIP_LOCKED.md` | Design locked 2026-05-24. Implementation pending. Local + cloud data cleanup follows the design fix (must not lead it). |
+
 ## Shipped in May 2026 -- 2026-05-24 round
 
 Late-May ship covering the Volyume Complete food layer end-to-end, the

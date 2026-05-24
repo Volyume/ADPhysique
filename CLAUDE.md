@@ -94,8 +94,24 @@ fills the space", strip it back.
 - Branch policy is set per session in the system prompt. Follow it
   exactly. Never push to a branch the user hasn't named.
 - Never use `git --no-verify` or skip hooks.
-- Sign-out is session-only. It clears in-memory state but never
-  touches SQLite or destructive AsyncStorage data. The only path that
-  wipes data is the explicit Delete account flow.
+- Sign-out is session-only. It clears in-memory state. It keeps the
+  signed-out user's local SQLite rows so the next sign-in to the SAME
+  account works offline. It wipes them on the next sign-in to a
+  DIFFERENT account (see Identity and ownership doc, scenario S6).
+  The explicit Delete account flow wipes everything for that user
+  (local + cloud + AsyncStorage scoped to them).
+- **Identity and data ownership is locked in
+  `docs/IDENTITY_AND_OWNERSHIP_LOCKED.md`.** Read it before touching
+  sign-in, sign-out, account-delete, install, re-install, or any
+  code path that writes a `user_id` column. The principle: a row's
+  id and user_id are set at creation and never change. Anonymous
+  identities (`anon:` prefix) and account identities (Supabase uid)
+  are distinct types; code that conflates them is wrong.
+- **Never write `UPDATE ... SET user_id = ?` anywhere.** Ownership
+  transitions are copy-then-delete with new ids, never re-stamps.
+- **Diagnose before fixing data.** If a sync error keeps firing, it's
+  a design flaw. Fix the design first, then clean down the data.
+  Suppressing the error is not a fix; data fixes without design
+  fixes guarantee the problem returns.
 - Don't commit the model identifier in any artifact pushed to the
   repo (commit messages, PR titles, code comments).
