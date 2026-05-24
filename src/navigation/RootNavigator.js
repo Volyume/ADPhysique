@@ -445,6 +445,13 @@ export default function RootNavigator() {
           await initDatabase();
           seedExercisesIfNeeded().catch(console.warn);
           cleanupOrphanRoutineExercises().catch(console.warn);
+          // OpenFoodFacts UK snapshot import. Idempotent + safe;
+          // logs to errorLog at every fault boundary. Fire-and-
+          // forget -- doesn't block app boot. On failure, the food
+          // layer falls back to live OFF / USDA / manual.
+          // eslint-disable-next-line global-require
+          require('../lib/food/seed').importOffSnapshotIfNeeded()
+            .catch((err) => console.warn('[seed] off snapshot import threw:', err?.message));
         } catch (e) {
           // eslint-disable-next-line global-require
           try { require('../lib/errorLog').logError('RootNavigator.bootstrap.initDb', e); } catch (_) {}

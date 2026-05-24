@@ -1,0 +1,10 @@
+{
+  "_meta": {
+    "format": "off-uk-snapshot",
+    "version": 1,
+    "generatedAt": "1970-01-01T00:00:00.000Z",
+    "rowCount": 0,
+    "note": "Placeholder. Run `node scripts/seed/buildOffSnapshot.js` to generate the real snapshot before the next EAS build."
+  },
+  "rows": []
+}
