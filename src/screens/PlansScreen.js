@@ -357,7 +357,7 @@ export default function PlansScreen({ navigation }) {
   const actionCards = isProWithPlan ? ACTION_CARDS_PRO_SWITCH : ACTION_CARDS_DEFAULT;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView
         ref={scrollRef}
         contentContainerStyle={styles.content}

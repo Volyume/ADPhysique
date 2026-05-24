@@ -467,7 +467,7 @@ export default function AnalyticsScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView
         ref={scrollRef}
         contentContainerStyle={styles.content}

@@ -695,7 +695,7 @@ export default function HomeScreen({ navigation }) {
   const today = format(new Date(), 'EEE d MMM');
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView
         ref={scrollRef}
         style={styles.scroll}

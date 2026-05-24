@@ -495,7 +495,7 @@ export default function AthleteHubScreen({ navigation }) {
   const lastUnlocked = unlockedMilestones[unlockedMilestones.length - 1] ?? null;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       {/* Header padding matches Train / Plans / Progress (spacing.lg top
           + horizontal) so the title sits at the same Y across all four
           tabs. Previously this used spacing.md which made the Hub
