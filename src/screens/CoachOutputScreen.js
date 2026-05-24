@@ -536,20 +536,32 @@ export default function CoachOutputScreen({ navigation, route }) {
   }, [user?.id]);
 
   function handleClose() {
-    navigation.goBack();
+    // The user arrived here from the Athlete Hub check-in card via
+    // WeeklyCheckIn. Closing the coach output should land them back on
+    // Hub, not on the WeeklyCheckIn screen they just submitted. Both
+    // screens sit in the same Profile stack, so popToTop is the right
+    // primitive: AthleteHub is the stack root.
+    navigation.popToTop();
   }
+
+  // Replace the navigator-provided back chevron's default goBack with
+  // the same Hub-bound handler so the back arrow and the in-screen
+  // "Got it" button behave consistently.
+  useEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity onPress={handleClose} hitSlop={{ top: 8, bottom: 8, left: 16, right: 16 }} style={{ paddingHorizontal: spacing.md }}>
+          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
+      ),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Loading state ──────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.headerBack} onPress={handleClose} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="close" size={24} color={colors.textSecondary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Precision Coaching</Text>
-          <View style={styles.headerSpacer} />
-        </View>
+      <SafeAreaView style={styles.safe} edges={['left', 'right']}>
         <LoadingView />
       </SafeAreaView>
     );
@@ -558,14 +570,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   // ── Insufficient data state ────────────────────────────────────────────────
   if (!output || !output.hasEnoughData) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.headerBack} onPress={handleClose} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="close" size={24} color={colors.textSecondary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Precision Coaching</Text>
-          <View style={styles.headerSpacer} />
-        </View>
+      <SafeAreaView style={styles.safe} edges={['left', 'right']}>
         <InsufficientDataView dataNote={output?.dataNote} onClose={handleClose} />
       </SafeAreaView>
     );
@@ -609,16 +614,7 @@ export default function CoachOutputScreen({ navigation, route }) {
     trend.deltaLabel && trend.delta !== null ? trend.deltaLabel : 'No weights logged';
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.headerBack} onPress={handleClose} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="close" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Precision Coaching</Text>
-        <View style={styles.headerSpacer} />
-      </View>
-
+    <SafeAreaView style={styles.safe} edges={['left', 'right']}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}

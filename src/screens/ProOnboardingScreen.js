@@ -11,7 +11,7 @@ import { VolyumeIcon } from '../components/BrandMark';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import {
-  logBodyMetric, saveNutritionTargets, saveUserBodyProfile, migrateLocalUserId,
+  logBodyMetric, logMorningWeight, saveNutritionTargets, saveUserBodyProfile, migrateLocalUserId,
 } from '../lib/database';
 import { stoneLbsToKg, ftInToCm, parseBodyWeightToKg } from '../lib/units';
 import { signUpWithEmail, signInWithEmail, signInWithGoogle, signInWithApple } from '../lib/supabase';
@@ -434,6 +434,12 @@ export default function ProOnboardingScreen({ navigation }) {
 
       if (user?.id && !isNaN(bwKg) && bwKg > 0) {
         await logBodyMetric(user.id, { weightKg: bwKg, loggedAt: Date.now() });
+        // Also seed the morning weights series so the weekly check-in
+        // gate (needs 3 readings in the last 7 days) counts enrolment
+        // day. Without this, a user who enrols on their chosen check-in
+        // day and tries to check in is told "0 readings this week" even
+        // though they just typed a weight two screens ago.
+        await logMorningWeight(user.id, { weightKg: bwKg, loggedAt: Date.now() }).catch(() => {});
       }
 
       if (user?.id && (sex || hcm || ageNum)) {
