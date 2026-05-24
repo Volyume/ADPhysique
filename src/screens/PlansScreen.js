@@ -716,7 +716,7 @@ export default function PlansScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
+  content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
   screenHeader: {
     flexDirection: 'row',
     alignItems: 'center',

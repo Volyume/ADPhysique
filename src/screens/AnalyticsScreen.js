@@ -1106,7 +1106,7 @@ function diffChipColor(d) {
 
 const styles = StyleSheet.create({
   safe:        { flex: 1, backgroundColor: colors.background },
-  content:     { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxxl },
+  content:     { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxxl },
   header:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   pageTitle:   { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
 

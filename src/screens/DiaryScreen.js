@@ -26,6 +26,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import MacroRings from '../components/food/MacroRings';
 import FoodDetailSheet from '../components/food/FoodDetailSheet';
+import ScreenHeader from '../components/ScreenHeader';
 
 const MEAL_SLOTS = [
   { key: 'breakfast', label: 'Breakfast' },
@@ -155,39 +156,45 @@ export default function DiaryScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <View style={styles.headerSide}>
-          {selectedDate !== isoDate(new Date()) ? (
-            <TouchableOpacity onPress={gotoToday} hitSlop={12} style={styles.todayPill} accessibilityLabel="Jump to today">
-              <Text style={styles.todayPillText}>Today</Text>
-            </TouchableOpacity>
-          ) : null}
-        </View>
-        <View style={styles.dateGroup}>
-          <TouchableOpacity onPress={gotoYesterday} hitSlop={12} accessibilityLabel="Previous day">
-            <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.dateLabel}>{friendlyDate(selectedDate)}</Text>
-          <TouchableOpacity onPress={gotoTomorrow} hitSlop={12} accessibilityLabel="Next day">
-            <Ionicons name="chevron-forward" size={22} color={colors.textPrimary} />
-          </TouchableOpacity>
-        </View>
-        <View style={[styles.headerSide, styles.headerSideRight]}>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('FoodInsights')}
-            hitSlop={12}
-            accessibilityLabel="View 7-day insights and export diary"
-          >
-            <Ionicons name="stats-chart-outline" size={22} color={colors.textPrimary} />
-          </TouchableOpacity>
-        </View>
-      </View>
-
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
+        <ScreenHeader title="Diary" />
+
+        {/* Day pager + insights icon. Sits under the standard
+            ScreenHeader so the Diary tab now matches Train, Plans,
+            Progress and You at the top, with day navigation as a
+            secondary row rather than the whole header bar. */}
+        <View style={styles.dayPagerRow}>
+          <View style={styles.dayPagerSide}>
+            {selectedDate !== isoDate(new Date()) ? (
+              <TouchableOpacity onPress={gotoToday} hitSlop={12} style={styles.todayPill} accessibilityLabel="Jump to today">
+                <Text style={styles.todayPillText}>Today</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+          <View style={styles.dateGroup}>
+            <TouchableOpacity onPress={gotoYesterday} hitSlop={12} accessibilityLabel="Previous day">
+              <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
+            </TouchableOpacity>
+            <Text style={styles.dateLabel}>{friendlyDate(selectedDate)}</Text>
+            <TouchableOpacity onPress={gotoTomorrow} hitSlop={12} accessibilityLabel="Next day">
+              <Ionicons name="chevron-forward" size={22} color={colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
+          <View style={[styles.dayPagerSide, styles.dayPagerSideRight]}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('FoodInsights')}
+              hitSlop={12}
+              accessibilityLabel="View 7-day insights and export diary"
+            >
+              <Ionicons name="stats-chart-outline" size={22} color={colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
         <View style={styles.macroRingsWrap}>
           <MacroRings rollup={rollup} targets={targets} />
         </View>
@@ -298,16 +305,16 @@ function WaterRow({ ml, onAdd, onSub }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  header: {
+  dayPagerRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.md,
   },
-  headerSide: {
+  dayPagerSide: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     minWidth: 72,
   },
-  headerSideRight: { justifyContent: 'flex-end' },
+  dayPagerSideRight: { justifyContent: 'flex-end' },
   dateGroup: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
   },
