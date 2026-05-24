@@ -1,0 +1,63 @@
+name: Refresh OFF UK food snapshot
+
+# Runs weekly on Sunday at 03:00 UTC, and on a manual click of
+# "Run workflow" in the Actions tab. Pulls the latest UK products
+# from OpenFoodFacts, writes the bundled snapshot used by the APK,
+# uploads the same rows to Supabase cloud `foods` for the client
+# delta-pull RPC, and commits the snapshot file back to the branch
+# so the next EAS build ships fresh data.
+#
+# Founder setup (one time):
+#   1. Repo → Settings → Secrets and variables → Actions → New repo secret
+#      - SUPABASE_URL              = https://<project>.supabase.co
+#      - SUPABASE_SERVICE_ROLE_KEY = the service_role JWT (Supabase Dashboard → API → service_role)
+#   2. Default branch for the workflow's cron is whatever the
+#      repo's default branch is. To run from a non-default branch,
+#      use the "Run workflow" button and pick that branch.
+#
+# Free: GitHub Actions free tier covers this (about 6 minutes per
+# run, weekly = 25 minutes/month against a 2000 min/month free
+# allowance). Supabase free tier covers the upserts.
+
+on:
+  schedule:
+    # Sunday 03:00 UTC. Off-peak; OFF's CDN is happiest then.
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: write   # so the job can commit the refreshed snapshot back
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build OFF UK snapshot
+        run: node scripts/seed/buildOffSnapshot.js
+
+      - name: Upload snapshot to Supabase cloud foods
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/seed/uploadOffToSupabase.js
+
+      - name: Commit refreshed snapshot back to branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/seed/off_uk_snapshot.json
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "data(off): refresh UK snapshot $(date -u +%Y-%m-%d)"
+            git push
+          fi

@@ -287,23 +287,24 @@ done and what's still unverified.
   returns; local snapshot + live OFF fallback still work. Apply
   via Dashboard → SQL Editor.
 
-**Founder actions outstanding for the food layer:**
-1. Apply migration 028 in Supabase Dashboard.
-2. Run `node scripts/seed/buildOffSnapshot.js` locally to generate
-   the real `assets/seed/off_uk_snapshot.json` (the placeholder
-   shipped at `56a390b` is empty). Commit + push the generated
-   file. The OFF API blocks the cloud sandbox, so this has to be
-   run from your machine.
-3. Trigger an EAS rebuild once both 1 + 2 are done so the
-   vision-camera native module, the MLKit OCR binding, the
-   bundled snapshot, and the delta puller all land on-device
-   together.
-4. Set up a server-side CI job (e.g. weekly GitHub Action) that
-   pulls the OFF UK dump and upserts into cloud `foods` via
-   service-role. The puller needs cloud foods to actually have
-   data in it for delta sync to do anything. Sample script not
-   yet written; see `scripts/seed/README.md` for the shape it
-   should take.
+**Founder actions outstanding for the food layer (all one-time, no code work):**
+
+1. Apply migration 028 in Supabase Dashboard → SQL Editor.
+
+2. Add two GitHub Actions secrets at
+   `Settings → Secrets and variables → Actions`:
+   - `SUPABASE_URL` — same as `EXPO_PUBLIC_SUPABASE_URL`.
+   - `SUPABASE_SERVICE_ROLE_KEY` — Supabase Dashboard → Settings
+     → API → `service_role` JWT (NOT the anon key).
+
+3. Trigger the workflow once manually so the first snapshot lands:
+   GitHub → Actions tab → "Refresh OFF UK food snapshot" → Run
+   workflow → pick the branch → green button. ~6 minutes.
+
+After that, the weekly cron keeps both the bundled snapshot and
+cloud foods fresh forever, no further action needed. EAS picks
+up the refreshed `assets/seed/off_uk_snapshot.json` on its next
+build automatically.
 
 **Code changes pushed this session that need the next APK build
 to take effect (founder does NOT build APKs locally; the branch
