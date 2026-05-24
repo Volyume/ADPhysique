@@ -232,6 +232,14 @@ export default function DiaryScreen({ navigation }) {
         onDelete={deleteFromEditSheet}
         onClose={() => setEditSheet(null)}
       />
+
+      <TouchableOpacity
+        style={styles.scanFab}
+        onPress={() => navigation.navigate('ScanBarcode', { entryDate: selectedDate })}
+        activeOpacity={0.85}
+      >
+        <Ionicons name="barcode-outline" size={26} color="#000" />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -304,6 +312,14 @@ function WaterRow({ ml, onAdd, onSub }) {
 }
 
 const styles = StyleSheet.create({
+  scanFab: {
+    position: 'absolute', right: spacing.lg, bottom: spacing.xl,
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: colors.primary,
+    alignItems: 'center', justifyContent: 'center',
+    elevation: 6,
+    shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 4 },
+  },
   safe: { flex: 1, backgroundColor: colors.background },
   dayPagerRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

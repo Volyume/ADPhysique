@@ -75,6 +75,7 @@ import SubscriptionPolicyScreen from '../screens/SubscriptionPolicyScreen';
 import DiaryScreen from '../screens/DiaryScreen';
 import AddCustomFoodScreen from '../screens/AddCustomFoodScreen';
 import FoodSearchScreen from '../screens/FoodSearchScreen';
+import ScanBarcodeScreen from '../screens/ScanBarcodeScreen';
 import FoodInsightsScreen from '../screens/FoodInsightsScreen';
 import { withProGuard } from '../components/ProGate';
 
@@ -155,6 +156,11 @@ function DiaryStack({ navigation }) {
       <Stack.Screen
         name="AddCustomFood"
         component={AddCustomFoodScreen}
+        options={{ headerShown: false, presentation: 'modal' }}
+      />
+      <Stack.Screen
+        name="ScanBarcode"
+        component={ScanBarcodeScreen}
         options={{ headerShown: false, presentation: 'modal' }}
       />
       <Stack.Screen

@@ -124,6 +124,21 @@ export default function FoodSearchScreen({ navigation, route }) {
     setPicker({ food });
   }
 
+  // Auto-open the detail sheet when arriving from ScanBarcodeScreen.
+  // The barcode scan resolves the food, then navigates here with the
+  // result in route params so the user lands on a sheet ready to log.
+  // Clearing the param prevents a re-open if the user closes the
+  // sheet (without this, navigating back into the screen would
+  // re-trigger the effect on every focus).
+  const scannedFood = route?.params?.scannedFood;
+  useEffect(() => {
+    if (scannedFood && !picker) {
+      openPicker(scannedFood);
+      navigation.setParams({ scannedFood: undefined });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scannedFood]);
+
   async function confirmLog({ quantityG, mealSlot: chosenSlot, entryDate: chosenDate }) {
     if (!picker?.food) return;
     const food = picker.food;
@@ -218,7 +233,12 @@ export default function FoodSearchScreen({ navigation, route }) {
           <Ionicons name="close" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Add to {MEAL_LABELS[mealSlot] ?? 'Snacks'}</Text>
-        <View style={{ width: 24 }} />
+        <TouchableOpacity
+          onPress={() => navigation.navigate('ScanBarcode', { mealSlot, entryDate })}
+          hitSlop={12}
+        >
+          <Ionicons name="barcode-outline" size={24} color={colors.primary} />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.searchWrap}>

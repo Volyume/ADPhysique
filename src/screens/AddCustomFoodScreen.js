@@ -32,6 +32,11 @@ export default function AddCustomFoodScreen({ navigation, route }) {
 
   const mealSlot = route?.params?.mealSlot ?? 'snack';
   const entryDate = route?.params?.entryDate ?? new Date().toISOString().slice(0, 10);
+  // Set when arriving from a barcode-scan miss. Displayed as a hint
+  // so the user knows what was scanned. Persisting the barcode to
+  // custom_foods is a phase 3 follow-up (needs a schema column +
+  // localCache lookup extension).
+  const prefillBarcode = route?.params?.prefillBarcode ?? null;
 
   const [name, setName] = useState('');
   const [brand, setBrand] = useState('');
@@ -114,6 +119,9 @@ export default function AddCustomFoodScreen({ navigation, route }) {
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <Text style={styles.contextLabel}>Logging to {MEAL_LABELS[mealSlot] ?? 'Snacks'}</Text>
+        {prefillBarcode ? (
+          <Text style={styles.barcodeHint}>Scanned barcode: {prefillBarcode}</Text>
+        ) : null}
 
         <Field label="Name" value={name} onChange={setName} placeholder="Chicken breast, raw" autoFocus />
         <Field label="Brand (optional)" value={brand} onChange={setBrand} placeholder="Tesco" />
@@ -194,6 +202,10 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxxl },
   contextLabel: { color: colors.textMuted, fontSize: fontSize.sm, marginBottom: spacing.lg },
+  barcodeHint: {
+    color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold,
+    marginTop: -spacing.md, marginBottom: spacing.lg,
+  },
 
   sectionLabel: {
     color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.bold,

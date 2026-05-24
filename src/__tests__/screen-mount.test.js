@@ -67,6 +67,11 @@ jest.mock('expo-updates', () => ({
   manifest: null,
 }), { virtual: true });
 
+jest.mock('expo-camera', () => ({
+  CameraView: () => null,
+  useCameraPermissions: () => ([{ granted: true, canAskAgain: true }, jest.fn()]),
+}), { virtual: true });
+
 jest.mock('expo-file-system', () => ({
   documentDirectory: '/tmp/',
   cacheDirectory: '/tmp/',

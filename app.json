@@ -26,7 +26,7 @@
         "applinks:volyume.app"
       ],
       "infoPlist": {
-        "NSCameraUsageDescription": "Used to take progress photos",
+        "NSCameraUsageDescription": "Volyume uses the camera to scan barcodes, read nutrition labels, and take progress photos.",
         "NSPhotoLibraryUsageDescription": "Used to select and save progress photos",
         "NSPhotoLibraryAddUsageDescription": "Used to save shared workout cards to your photo library",
         "NSHealthShareUsageDescription": "Volyume reads your weight from Apple Health so your morning weight log stays in sync with your smart scale or wearable.",
@@ -86,6 +86,13 @@
     },
     "plugins": [
       "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Volyume uses the camera to scan barcodes and read nutrition labels.",
+          "recordAudioAndroid": false
+        }
+      ],
       [
         "expo-notifications",
         {
