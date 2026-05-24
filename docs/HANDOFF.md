@@ -1,12 +1,27 @@
 # Volyume Complete: session handoff
 
-**Last updated:** 2026-05-24 (post Move #1.5 + Article 9 consent + identity refactor + audit pass)
-**Last session ended at commit:** see `git log` head on the active branch. Recent landmarks: `63c2f18` (migration 022 DROP+CREATE fix), `a15017d` (migration 020 backfill fix), `29f92a6` (consent Continue unblocked), `4b5c3de` (Move #1.5 phase 3 OCR + write-back), `d72353c` (Move #1.5 phase 2 scan screen), `e62b22a` (Move #1.5 phase 1 OFF + USDA), `6caf5e2` (food composite PKs), `1304a4f` (custom_exercises), `1df96bb` (Article 9 consent), `be8e1cc` (identity refactor).
-**Active branch:** `claude/volyume-food-logging-app-B9JZv`
+**Last updated:** 2026-05-24 (post delete-account + sign-out wipe + tab inset fix + exercises bulk-push removal + FoodLayerIntro removal)
+**Last session ended at commit:** `b240188` (revert: delete migration 026 silencer). Active branch: `claude/volyume-food-logging-app-B9JZv`.
+
+Recent landmarks (in push order):
+- `b240188` revert migration 026 silencer (founder direction: fix source, don't silence)
+- `c49e596` sync.js fix: only push customs to `custom_exercises`, stop hitting `exercises` RLS
+- `a54df93` remove FoodLayerIntro onboarding screen (did nothing)
+- `67bf5f6` one-shot SQL to nuke an orphan uid + verify queries
+- `5873e67` migration 024 + audit doc updates
+- `7c0dce8` sign-out wipes AsyncStorage fully (no carve-outs)
+- `aa0d2b7` migration 025 (delete_user_data completeness) + scope-wipe (later replaced by 7c0dce8)
+- `75ed020` tab leaf screens: drop double bottom inset (fixed black band under content)
+- `29f92a6` consent Continue unblocked when cloud RPC fails
+- `4b5c3de` Move #1.5 phase 3 OCR + OFF write-back + barcode persistence
+- `be8e1cc` identity + ownership refactor
 
 If you're a Claude session picking this up cold, read this document
-end to end before doing anything. The previous session crashed or
-ended; this is the rescue document.
+end to end before doing anything. The previous session ended; this
+is the rescue document. **The founder is allansdouglas1983@gmail.com,
+direct, low tolerance for guesses presented as facts.** Always
+verify against code or database before claiming something works or
+broke.
 
 ---
 
@@ -226,12 +241,68 @@ ED-pattern detector.
 
 ---
 
+## 4a. State of in-flight things at the end of this session
+
+This session ended in frustration. Be honest about what's actually
+done and what's still unverified.
+
+**Cloud SQL the founder confirmed running:**
+- Migrations 019, 020, 021, 022, 023, 024 — all applied. Founder
+  ran a verify query (`pg_get_function_arguments` against
+  `record_engine_telemetry` + `record_health_consent`) and got the
+  expected two rows.
+- Migration 025 (delete_user_data completeness) — pushed to
+  branch; founder applied. NOT independently verified by running
+  Delete Account from the device after applying — the founder
+  tried Delete Account earlier in the session, the Edge Function
+  500'd with "Auth deletion failed: Database error deleting
+  user", and we never re-verified after 025 landed. Open question
+  whether migration 025 actually finishes the delete or whether
+  something else still blocks `auth.admin.deleteUser`.
+- `supabase/nuke_uid_a7379dc8.sql` — one-shot SQL to hard-delete
+  the orphan account `a7379dc8-a597-4d00-9ebf-5693ae8450cb` that
+  earlier failed deletes left half-alive. Founder unclear whether
+  they've run it. Verify queries at the bottom of the file say
+  exactly which rows remain.
+
+**Code changes pushed this session that need the next APK build
+to take effect (founder does NOT build APKs locally; the branch
+build pipeline produces the artifact):**
+- `c49e596` `sync.js` — only push customs to `custom_exercises`,
+  no more bulk push of library rows to `exercises`. Fix for the
+  `42501` warns the founder kept seeing on fresh signups. Until
+  this is in an installed APK, those warns will keep firing.
+- `a54df93` removed `FoodLayerIntroScreen` from the onboarding
+  flow.
+- `75ed020` removed the double bottom-inset (black band under tab
+  content) from `HomeScreen`, `PlansScreen`, `AthleteHubScreen`,
+  `AnalyticsScreen`.
+- `7c0dce8` sign-out now `AsyncStorage.clear()`s everything (no
+  carve-outs, per founder direction).
+- `29f92a6` consent screen "Continue" no longer strands user when
+  cloud RPC fails.
+
+**Things that were proposed and explicitly rejected:**
+- Migration 026 `BEFORE INSERT` trigger on `exercises` to silently
+  drop the bulk-push 42501s. Founder: "silently dropping errors
+  is not acceptable, fix the source". Deleted in `b240188`. The
+  source fix is `c49e596`.
+
+**Outstanding diagnostic questions the founder hasn't confirmed
+either way:**
+1. Does Delete Account complete cleanly on cloud after migration
+   025? If not, what does the Edge Function return now?
+2. After the next build with `c49e596` is installed, do the
+   `sync.syncExercises 42501` warns stop?
+3. Is the orphan `a7379dc8` account fully nuked?
+
 ## 5. What's pending right now (resume points, in priority)
 
 Moves #1, #1.5, #2 (full including Article 9 consent), #3 (telemetry
 slice), and the identity refactor are all shipped. Cloud migrations
-018–024 have all been applied. The remaining work splits into
-release prep, growth-strategy follow-through, and the next moves.
+018–025 are all in branch and applied. The remaining work splits
+into verification of this session's fixes, release prep, growth-
+strategy follow-through, and the next moves.
 
 **Release policy (still locked 2026-05-24):**
 

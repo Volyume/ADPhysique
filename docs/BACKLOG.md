@@ -130,12 +130,20 @@ in main now; listing here so they don't get re-proposed.
 
 ## Must-fix design debt (blocks further work)
 
-No outstanding design debt as of 2026-05-24. The identity + data
-ownership refactor (the one item that lived here) shipped on
-2026-05-24 in migrations 018, 020, 021 and 024 (composite PKs), code
-commits `be8e1cc` + `1304a4f` + `6caf5e2` + `d80813a` (sign-out wipe,
-custom_exercises split, food composite-PK sync, old-client triggers).
-See HANDOFF.md "Move status" and `IDENTITY_AND_OWNERSHIP_LOCKED.md`.
+Open items at end of 2026-05-24 session (verification debt, not
+design debt):
+
+| Item | Status | Owner | Next step |
+|---|---|---|---|
+| Delete Account end-to-end | Migration 025 pushed + applied; founder hasn't re-tested since. Earlier attempts 500'd at `auth.admin.deleteUser` ("Database error deleting user"). | Founder | Sign into a test account, tap Delete Account, capture the Edge Function response. If 500 still: read the new `fnErrorBody` to find what FK is still blocking. |
+| `sync.syncExercises 42501` warns on `exercises` | Source fix in `c49e596` (only push customs to `custom_exercises`, no writes to `exercises`). Needs APK build that includes this commit. | Build pipeline | After next build is installed, verify the warns are gone on fresh signup. |
+| Orphan account `a7379dc8` | One-shot SQL written in `supabase/nuke_uid_a7379dc8.sql`. Founder unclear whether it was run. | Founder | Run the SQL or confirm it's already done. |
+
+The identity + data ownership refactor (the one item that lived
+here as design debt) shipped on 2026-05-24 in migrations 018, 020,
+021 and 024 (composite PKs), code commits `be8e1cc` + `1304a4f` +
+`6caf5e2` + `d80813a` (sign-out wipe, custom_exercises split, food
+composite-PK sync, old-client triggers).
 
 ## Shipped in May 2026 -- 2026-05-24 round
 
@@ -182,4 +190,34 @@ identity + data ownership refactor. Detail in HANDOFF.md.
   collapsible "Archived plans · N" section with Restore action.
 - **17 founder-reported QA fixes from the device testing pass on
   2026-05-24.** Logged in KNOWN_ISSUES_FROM_QA.md.
+- **Sign-out wipes the device fully** (`7c0dce8`). No carve-outs:
+  per founder direction the device should leave nothing of the
+  signed-out user behind. Same hammer as delete-account on the
+  device side. AsyncStorage.clear() + SQLite wipe + SecureStore
+  token wipe.
+- **`delete_user_data` RPC completeness** (migration 025). The
+  RPC was last touched in migration 008 and only wiped ten
+  legacy tables; every table added since (food, engine, identity,
+  consent, custom_exercises etc) was orphaned by every delete
+  attempt, which is what kept the auth admin delete from
+  finishing. 025 enumerates every user-scoped table. Applied;
+  end-to-end retest still pending.
+- **Tab leaf bottom inset double-counted** (`75ed020`). The tab
+  bar already pads its own bottom by `insets.bottom`; the four
+  tab leaves (`HomeScreen`, `PlansScreen`, `AthleteHubScreen`,
+  `AnalyticsScreen`) were also asking SafeAreaView for the
+  `bottom` edge. Removed. DiaryScreen already did it right.
+- **FoodLayerIntro onboarding screen removed** (`a54df93`). It
+  was a marketing-style "try it now / set up later" intro that
+  landed both paths in the same place. The Diary tab is the
+  real entry point.
+- **`syncExercises` only pushes customs to `custom_exercises`**
+  (`c49e596`). Until this commit, the sync layer bulk-pushed
+  every local exercise (450+ library rows) to cloud `exercises`
+  with `user_id` stamped, which hit the canonical library rows'
+  RLS USING clause (existing `user_id` IS NULL) and fired
+  `42501` warns per chunk on every sync cycle. The post-020
+  design is `exercises` = library, `custom_exercises` = per-user;
+  the sync push didn't catch up at the time. Needs APK install
+  to take effect.
 
