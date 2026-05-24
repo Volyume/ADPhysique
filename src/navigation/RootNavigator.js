@@ -6,7 +6,7 @@ import { StackActions } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 
 export const navigationRef = createNavigationContainerRef();
-import { View, Text, Image, StyleSheet, Animated, Easing, Dimensions, Platform } from 'react-native';
+import { View, Text, Image, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -742,19 +742,6 @@ export default function RootNavigator() {
 
 function SplashScreen() {
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
-  // Diagnostic overlay: if the previous launch crashed before reaching
-  // boot.ready, render its trace right here on the splash. The splash
-  // is the first thing painted, so the user sees the trace even when
-  // this launch is also about to die before LoginScreen mounts. This
-  // is the screenshot surface for the launch-crash investigation.
-  const [prevTrace, setPrevTrace] = useState('');
-  useEffect(() => {
-    // eslint-disable-next-line global-require
-    const { getPreviousStartupTrace, formatTrace } = require('../lib/startupTrace');
-    getPreviousStartupTrace().then(trace => {
-      if (trace?.length) setPrevTrace(formatTrace(trace));
-    }).catch(() => {});
-  }, []);
   // Reduce Motion: start every animated value at its end state so the splash
   // appears instantly without the hero scale / fade / accent-bar sweep.
   const heroOpacity  = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
@@ -837,13 +824,6 @@ function SplashScreen() {
       <Animated.Text style={[splashStyles.tagline, { opacity: tagOpacity }]}>
         Less thinking. More lifting.
       </Animated.Text>
-
-      {!!prevTrace && (
-        <View style={splashStyles.traceBox}>
-          <Text style={splashStyles.traceTitle}>Previous launch trace</Text>
-          <Text selectable style={splashStyles.traceBody}>{prevTrace}</Text>
-        </View>
-      )}
     </View>
   );
 }
@@ -884,27 +864,5 @@ const splashStyles = StyleSheet.create({
     fontWeight: fontWeight.regular,
     textAlign: 'center',
     marginTop: spacing.md,
-  },
-  traceBox: {
-    position: 'absolute',
-    top: 40,
-    left: 12,
-    right: 12,
-    backgroundColor: 'rgba(255, 60, 60, 0.92)',
-    padding: 10,
-    borderRadius: 8,
-    maxHeight: '60%',
-  },
-  traceTitle: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '700',
-    marginBottom: 6,
-  },
-  traceBody: {
-    color: '#ffffff',
-    fontSize: 10,
-    fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
-    lineHeight: 14,
   },
 });
