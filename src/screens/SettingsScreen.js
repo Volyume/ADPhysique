@@ -267,6 +267,16 @@ export default function SettingsScreen({ navigation }) {
                   logError('SettingsScreen.handleSignOut.cloudSignOut', e);
                 }
               }
+              // Reload the JS bundle. An install-on-top of a newer APK
+              // leaves the OLD bundle running in memory until the
+              // process restarts; without this, a sign-out -> sign-up
+              // cycle re-executes the old sync code against a fresh
+              // account and re-triggers whatever the fix was meant to
+              // silence. Best-effort: dev builds and Expo Go don't
+              // support reload and that's fine, the next manual launch
+              // picks up the new bundle.
+              try { await Updates.reloadAsync(); }
+              catch (_) { /* dev / Expo Go — no-op */ }
             } finally {
               setSigningOut(false);
             }
@@ -418,6 +428,15 @@ export default function SettingsScreen({ navigation }) {
         // Older supabase-js versions used this key.
         await SecureStore.deleteItemAsync('supabase.auth.token').catch(() => {});
       } catch (e) { logError('SettingsScreen.deleteAccount.wipeSecureStore', e); }
+      // Reload the JS bundle so any installed-but-not-yet-loaded APK
+      // update takes effect on the next launch back to Welcome. Without
+      // this, an install-on-top of a newer APK keeps the OLD bundle
+      // running, the user signs up again, and the old sync code fires
+      // against a fresh account, re-producing whatever the new bundle
+      // was meant to fix. Best-effort: dev builds and Expo Go don't
+      // support reload.
+      try { await Updates.reloadAsync(); }
+      catch (_) { /* dev / Expo Go — no-op */ }
     } finally {
       setDeletingAccount(false);
     }
