@@ -75,47 +75,13 @@ function getClient() {
 // back empty or as a useless one-liner, which made every silently-
 // failed upsert look the same. Surface the full shape so the next
 // debug log dump tells us exactly which column / constraint blew up.
-//
-// 42501 ("new row violates row-level security policy") is a special
-// case: it's deterministic per row (an existing cloud row belongs to a
-// different auth.uid, so this upsert can never succeed under the
-// current account), and it fires per-row -- a sync with 400 conflicts
-// would dump 400 identical warnings into the debug log. De-dupe by
-// scope: log once the first time we see RLS rejection from this
-// scope in the current process, drop subsequent ones silently.
-// Module-level Set resets only on app cold start, which matches when
-// the conflict set could realistically change (user signs out, signs
-// back in as a different account, etc).
-const _seenRlsScopes = new Set();
-const _rlsSkipCounts = new Map();
-
 function logPgErr(scope, err) {
   if (!err) return;
-  if (err.code === '42501') {
-    _rlsSkipCounts.set(scope, (_rlsSkipCounts.get(scope) ?? 0) + 1);
-    if (_seenRlsScopes.has(scope)) return;
-    _seenRlsScopes.add(scope);
-    logWarn(scope, 'cloud ownership mismatch on at least one row; further matching rejections are aggregated, not logged', {
-      code: err.code,
-      tableHint: err.message ? err.message.match(/table "([^"]+)"/)?.[1] ?? null : null,
-    });
-    return;
-  }
   logWarn(scope, err.message || String(err), {
     code: err.code ?? null,
     details: err.details ?? null,
     hint: err.hint ?? null,
   });
-}
-
-// Snapshot of the RLS-skip aggregation. The sync runner emits this
-// once per push cycle so the debug log carries the total count rather
-// than nothing. Cleared by the caller after the snapshot is logged.
-export function _drainRlsSkipSummary() {
-  if (_rlsSkipCounts.size === 0) return null;
-  const summary = Object.fromEntries(_rlsSkipCounts);
-  _rlsSkipCounts.clear();
-  return summary;
 }
 
 // PostgREST caps each response at 1000 rows by default. Loop with
@@ -551,18 +517,12 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
             await _upsertSets(sb, supabaseUserId, sets);
           } catch (e) {
             failures++;
-            // Per-workout failure doesn't abort the batch. RLS rejections
-            // (cloud ownership mismatch) are already aggregated at the
-            // bottom of bulkUploadLocalData -- don't spam one warn per
-            // workout. Non-RLS failures still get logged per-row so the
-            // user can spot patterns in the Debug logs surface (e.g.
-            // "every workout from 2024-12 fails -- schema mismatch").
-            const isRls = e?.code === '42501' || /row-level security/.test(e?.message ?? '');
-            if (!isRls) {
-              logWarn('sync.bulkUploadLocalData', 'workout upload failed', {
-                workoutId: w?.id, supabaseUserId, error: e?.message,
-              });
-            }
+            // Per-workout failure doesn't abort the batch but it is logged
+            // so the user can spot patterns in the Debug logs surface
+            // (e.g. "every workout from 2024-12 fails — schema mismatch").
+            logWarn('sync.bulkUploadLocalData', 'workout upload failed', {
+              workoutId: w?.id, supabaseUserId, error: e?.message,
+            });
           }
         })
       );
@@ -639,18 +599,6 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
     // Pushed AFTER the structured tables so a sign-in catch-up
     // doesn't block on the larger writes.
     await _pushAllUserPrefs(sb, supabaseUserId);
-
-    // Emit aggregated RLS-skip totals so the user can see at a glance
-    // how many rows were rejected for cloud-ownership reasons without
-    // the per-row warnings filling the debug log. Truly silent when
-    // there were no conflicts.
-    const rlsSummary = _drainRlsSkipSummary();
-    if (rlsSummary) {
-      const total = Object.values(rlsSummary).reduce((a, n) => a + n, 0);
-      logInfo('sync.bulkUploadLocalData.rlsSkips',
-        `${total} rows skipped across ${Object.keys(rlsSummary).length} tables (existing cloud rows owned by another account)`,
-        { summary: rlsSummary });
-    }
 
     console.log('[sync] bulk upload complete');
   } catch (e) {
