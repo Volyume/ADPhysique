@@ -25,6 +25,19 @@ try {
   // Package not installed yet — that's fine. All calls below no-op.
 }
 
+// Lazy logger that writes to the in-app Debug logs ring buffer.
+// Lazy-required to avoid the circular import: errorLog.js imports
+// from this file to forward logs to Sentry, so sentry.js requiring
+// errorLog at module-load time would deadlock the import graph.
+// Keeping the require inside the function defers it past module init.
+function _logInternal(message, extra) {
+  try {
+    // eslint-disable-next-line global-require
+    const { logInfo } = require('./errorLog');
+    logInfo('sentry.init', message, extra ?? {});
+  } catch (_) {}
+}
+
 export function isSentryAvailable() {
   return SentryNative != null;
 }
@@ -38,9 +51,19 @@ export function isSentryAvailable() {
  * grouped by app version and "regression after release" alerts work.
  */
 export function initSentry({ release, environment } = {}) {
-  if (!SentryNative || initialised) return;
+  if (!SentryNative) {
+    _logInternal('skipped: @sentry/react-native module not loaded');
+    return;
+  }
+  if (initialised) {
+    _logInternal('skipped: already initialised');
+    return;
+  }
   const dsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
-  if (!dsn) return;
+  if (!dsn) {
+    _logInternal('skipped: EXPO_PUBLIC_SENTRY_DSN env var is empty or undefined');
+    return;
+  }
   // Validate the DSN shape before handing it to the native SDK. The
   // JS-side try/catch below can't catch a Java exception thrown
   // async on the native init thread, and a malformed DSN crashes the
@@ -51,15 +74,27 @@ export function initSentry({ release, environment } = {}) {
   // don't get captured until the DSN is fixed.
   const DSN_PATTERN = /^https:\/\/[^@\s]+@[^/\s]+\/\d+$/;
   const trimmed = String(dsn).trim();
+  const dsnLen = trimmed.length;
+  const dsnPrefix = trimmed.slice(0, 8); // 'https://' if normal, anything else if not
   if (!DSN_PATTERN.test(trimmed)) {
+    _logInternal('skipped: DSN failed validator', {
+      length: dsnLen,
+      prefix: dsnPrefix,
+      hasAt: trimmed.includes('@'),
+      endsWithDigits: /\d+$/.test(trimmed),
+    });
     // eslint-disable-next-line no-console
     console.warn(
       '[sentry] EXPO_PUBLIC_SENTRY_DSN does not look like a valid DSN '
       + '(expected https://<key>@<host>/<projectId>). Length: '
-      + trimmed.length + '. Skipping init.',
+      + dsnLen + '. Skipping init.',
     );
     return;
   }
+  _logInternal('DSN validator passed, calling SentryNative.init()', {
+    length: dsnLen,
+    release: release ?? 'unset',
+  });
   try {
     SentryNative.init({
       dsn: trimmed,
@@ -93,9 +128,20 @@ export function initSentry({ release, environment } = {}) {
       },
     });
     initialised = true;
-  } catch (_) {
+    _logInternal('SentryNative.init() returned successfully');
+    // Fire a one-time test event so we can confirm end-to-end delivery.
+    // If this lands in the Sentry dashboard, the pipeline works. If
+    // it doesn't, look at Inbound Filters, project setup, or network.
+    try {
+      SentryNative.captureMessage('volyume: launch test event');
+      _logInternal('captureMessage test event sent');
+    } catch (e) {
+      _logInternal('captureMessage threw', { error: String(e?.message ?? e) });
+    }
+  } catch (e) {
     // SDK init can throw on missing native modules in some builds.
     // Treat as "not available" rather than crashing the app.
+    _logInternal('SentryNative.init() threw', { error: String(e?.message ?? e) });
     SentryNative = null;
   }
 }
