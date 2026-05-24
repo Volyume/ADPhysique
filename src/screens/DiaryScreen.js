@@ -132,17 +132,22 @@ export default function DiaryScreen({ navigation }) {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <View style={styles.headerSide}>
-          <TouchableOpacity onPress={gotoYesterday} hitSlop={12}>
-            <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+          {selectedDate !== isoDate(new Date()) ? (
+            <TouchableOpacity onPress={gotoToday} hitSlop={12} style={styles.todayPill} accessibilityLabel="Jump to today">
+              <Text style={styles.todayPillText}>Today</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+        <View style={styles.dateGroup}>
+          <TouchableOpacity onPress={gotoYesterday} hitSlop={12} accessibilityLabel="Previous day">
+            <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <Text style={styles.dateLabel}>{friendlyDate(selectedDate)}</Text>
+          <TouchableOpacity onPress={gotoTomorrow} hitSlop={12} accessibilityLabel="Next day">
+            <Ionicons name="chevron-forward" size={22} color={colors.textPrimary} />
           </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={gotoToday} hitSlop={12}>
-          <Text style={styles.dateLabel}>{friendlyDate(selectedDate)}</Text>
-        </TouchableOpacity>
-        <View style={styles.headerSide}>
-          <TouchableOpacity onPress={gotoTomorrow} hitSlop={12}>
-            <Ionicons name="chevron-forward" size={24} color={colors.textPrimary} />
-          </TouchableOpacity>
+        <View style={[styles.headerSide, styles.headerSideRight]}>
           <TouchableOpacity
             onPress={() => navigation.navigate('FoodInsights')}
             hitSlop={12}
@@ -332,9 +337,18 @@ const styles = StyleSheet.create({
   },
   headerSide: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    minWidth: 80,
+    minWidth: 72,
   },
-  dateLabel: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold },
+  headerSideRight: { justifyContent: 'flex-end' },
+  dateGroup: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+  },
+  dateLabel: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold, minWidth: 96, textAlign: 'center' },
+  todayPill: {
+    paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
+    borderRadius: 999, borderWidth: 1, borderColor: colors.border,
+  },
+  todayPillText: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxxl },
   macroCard: {
