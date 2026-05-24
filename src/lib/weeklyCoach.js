@@ -248,6 +248,9 @@ const WHY_LIBRARY = {
   ffm_floor_hold: [
     "Precision Coaching has held your calorie target. Your seven-day average intake is at or below the safety floor for your fat-free mass.",
   ],
+  rapid_loss_corrected: [
+    "Weight dropped fast this week with low energy. Precision Coaching has added calories now rather than waiting two weeks.",
+  ],
 };
 
 function pickWhy(keys, seed = 0) {
@@ -454,29 +457,59 @@ export function runWeeklyCoach(inputs) {
 
   // ── CALORIE ADJUSTMENT ────────────────────────────────────────────────────
   let calorieAdjustment = null;
+  let rapidLossCorrectionApplied = false;
 
   // At low/medium confidence, require an extra week before adjusting
   const offTargetWeeksRequired = confidence.level === 'high' ? 2 : 3;
+
+  // Move #3 rapid-loss compression: when the safety condition fires
+  // (weekly loss <= -1.5% AND energy_score <= 2 AND not cycle-flagged)
+  // on a cutting phase, Precision Coaching bypasses the two-week
+  // cooldown AND the consecutiveOffTargetWeeks gate to add calories
+  // immediately. Upward-only by design -- the same condition during
+  // a bulk does not compress the downward gate. Locked in
+  // MOVE_3_UPWARD_GATE_COMPRESSION.md.
+  const rapidLossOverride = !!(
+    phase.isCut &&
+    !cycleOverride &&
+    actualRatePct !== null && actualRatePct <= -1.5 &&
+    energyScore !== null && energyScore <= 2
+  );
 
   const canAdjustCals = (
     !cycleOverride &&
     !scoffPositive &&
     currentCalTarget != null &&
     calsAdherence !== 'untracked' &&
-    consecutiveOffTargetWeeks >= offTargetWeeksRequired &&
-    lastCalAdjustmentWeeksAgo >= 2  // cooldown: don't adjust two weeks in a row
+    (
+      rapidLossOverride ||
+      (
+        consecutiveOffTargetWeeks >= offTargetWeeksRequired &&
+        lastCalAdjustmentWeeksAgo >= 2  // cooldown: don't adjust two weeks in a row
+      )
+    )
   );
 
-  if (canAdjustCals && !onTarget) {
+  if (canAdjustCals && (rapidLossOverride || !onTarget)) {
     let change = 0;
     let calNote = '';
 
-    if (phase.isCut && offTargetDirection > 0) {
+    if (rapidLossOverride) {
+      // Magnitude scales with how far past -1.5% the actual rate
+      // sits. Base +125 (matches the existing fast-loss adjustment),
+      // +150 per additional 1.0% of weekly loss, capped at +300 per
+      // MOVE_3_UPWARD_GATE_COMPRESSION.md.
+      const severityExcess = Math.max(0, -1.5 - actualRatePct);
+      const scaledBoost = Math.round(125 + severityExcess * 150);
+      change = Math.min(300, scaledBoost);
+      calNote = "Weight is dropping faster than the target rate and energy is low. Adding calories straight away to protect recovery.";
+      rapidLossCorrectionApplied = true;
+    } else if (phase.isCut && offTargetDirection > 0) {
       // Losing too slowly
       change = calsAdherence === 'hit' ? -150 : -100;
       calNote = "Weight is coming down slower than the target rate.";
     } else if (phase.isCut && offTargetDirection < 0) {
-      // Losing too fast — protect muscle
+      // Losing too fast — protect muscle (standard, non-compressed)
       change = +125;
       calNote = "Weight is dropping faster than the target rate. Slowing it down protects muscle.";
     } else if (phase.isBulk && offTargetDirection < 0) {
@@ -489,7 +522,9 @@ export function runWeeklyCoach(inputs) {
       calNote = "Weight is going on faster than the target rate. Pulling back keeps fat gain in check.";
     }
 
-    // Cap at ±5% of current target
+    // Cap at ±5% of current target. The rapid-loss compression has
+    // its own absolute +300 cap above; the percentage cap can only
+    // tighten it further on smaller targets, never relax it.
     if (currentCalTarget > 0) {
       const maxChange = Math.round(currentCalTarget * 0.05);
       change = Math.sign(change) * Math.min(Math.abs(change), maxChange);
@@ -712,6 +747,21 @@ export function runWeeklyCoach(inputs) {
     });
   }
 
+  // Move #3: surface the rapid-loss compression as a structured
+  // held-decision row. Renders in HeldDecisionsCard with the locked
+  // RAPID_LOSS_CORRECTED_COPY title + body. Includes the magnitude
+  // applied so the card can show "+N kcal added" instead of being
+  // an abstract reason string.
+  if (rapidLossCorrectionApplied && calorieAdjustment) {
+    heldDecisions.push({
+      type: 'rapid_loss_corrected',
+      reason: `Calorie target raised by ${calorieAdjustment.change} kcal. Weight dropped ${Math.abs(actualRatePct).toFixed(1)}% this week with low energy; the standard two-week wait is bypassed.`,
+      kcalDelta: calorieAdjustment.change,
+      weeklyLossPct: parseFloat(actualRatePct.toFixed(2)),
+      energyScore,
+    });
+  }
+
   if ((phase.isCut || phase.isBulk) && currentCalTarget !== null && calorieAdjustment === null && !ffmFloorHeld) {
     if (scoffPositive) {
       heldDecisions.push({ type: 'calories', reason: "Calories held. Wellbeing screen flagged restriction concerns." });
@@ -771,8 +821,12 @@ export function runWeeklyCoach(inputs) {
   const whyKeys = [];
 
   // FFM-floor hold supersedes other why-keys when it fires. The user
-  // needs to see the safety reason above any other framing.
+  // needs to see the safety reason above any other framing. Rapid-
+  // loss compression takes precedence over the generic
+  // off_target_cal_up so the user sees the safety framing rather than
+  // the standard adjustment story.
   if (ffmFloorHeld)                             whyKeys.push('ffm_floor_hold');
+  else if (rapidLossCorrectionApplied)          whyKeys.push('rapid_loss_corrected');
   else if (deloadSuggested)                     whyKeys.push('deload_suggested');
   else if (dietBreakSuggested)                  whyKeys.push('diet_break_suggested');
   else if (poorRecovery)                        whyKeys.push('recovery_lagging');
@@ -814,6 +868,7 @@ export function runWeeklyCoach(inputs) {
     dietBreakWeeksInDeficit,
     heldDecisions,
     rapidWeightLossFlag,
+    rapidLossCorrectionApplied,
     ffmFloorHeld,
     ffmFloorContext,
     edPatternFired: !!edPatternResult?.fired,

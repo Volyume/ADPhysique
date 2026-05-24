@@ -47,6 +47,11 @@ const ALLOWED_EVENTS = new Set([
   // it, so the bundled snapshot strategy stays evidence-based.
   'food_lookup_barcode',
   'ocr_writeback_attempted',
+  // Move #3: upward-only gate compression fires when the rapid-loss
+  // safety condition skips the two-week cooldown and adds calories
+  // straight away. Cohort dashboard reads it as a count of how often
+  // the safety override actually engages in the wild.
+  'rapid_loss_compression_triggered',
 ]);
 
 let _flushTimer = null;

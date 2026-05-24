@@ -200,6 +200,15 @@ export function computeAdaptiveTDEEAdjustment({
   // Locked in COACHING_VOICE_SYNTHESIS_LOCKED.md, MOVE_1_FOOD_FOUNDATION_AND_FFM.md.
   // Threshold from Mountjoy 2014/2023 IOC RED-S consensus (30 kcal/kg FFM/day).
   ffmFloorContext = null,
+  // Move #3: upward-only override. Set by the caller when the rapid-
+  // loss safety condition fires (weekly loss <= -1.5% AND energy low).
+  // True clamps any negative adjustment to zero -- only upward
+  // corrections survive. The gating-bypass semantics (no 2-week
+  // cooldown, no consecutiveOffTargetWeeks gate) live in the caller
+  // (runWeeklyCoach); this function just forces the upward-only shape
+  // of the adjustment value so a misconfigured caller can't push a
+  // cut while the override is on.
+  rapidLossOverride = false,
 }) {
   const MIN_POINTS = 14; // need at least 2 weeks
 
@@ -271,6 +280,14 @@ export function computeAdaptiveTDEEAdjustment({
       finalAdjustmentKcal = 0;
       finalInsight = `Precision Coaching has held your calorie target. Your seven-day average intake of ${Math.round(ffmFloorContext.recentIntakeAvgKcal)} kcal is at or below your safety floor of ${floor.floorKcal} kcal. Eating below this level for long stretches breaks down muscle and stalls recovery.`;
     }
+  }
+
+  // Move #3 upward-only override. Clamps negative adjustments to
+  // zero so the caller can't accidentally push a cut while the
+  // rapid-loss safety condition is open. Applied last so it composes
+  // with the FFM floor without double-counting.
+  if (rapidLossOverride && finalAdjustmentKcal < 0) {
+    finalAdjustmentKcal = 0;
   }
 
   return {

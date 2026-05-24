@@ -33,6 +33,26 @@ function trend(startKg, kgPerWeek, count = 14) {
   return out;
 }
 
+// `trend()` keeps the original fixture shape (14 days, fixed NOW)
+// for tests that rely on its specific EWMA dampening characteristics.
+// `trendSharp()` is the right helper when the test labels a specific
+// weekly rate and expects runWeeklyCoach to read the trend at that
+// rate: it anchors to Date.now() (so getEwmaSevenDaysAgo's
+// Date.now()-anchored lookback lines up with the data) and uses 35
+// days so the alpha=0.1 EWMA has time to converge.
+function trendSharp(startKg, kgPerWeek, count = 35) {
+  const out = [];
+  const t0 = Date.now();
+  const weeks = (count - 1) / 7;
+  const endKg = startKg + kgPerWeek * weeks;
+  for (let i = 0; i < count; i++) {
+    const t = t0 - (count - 1 - i) * DAY;
+    const w = startKg + (endKg - startKg) * (i / Math.max(1, count - 1));
+    out.push({ loggedAt: t, weightKg: Math.round(w * 100) / 100 });
+  }
+  return out;
+}
+
 function checkin(overrides = {}) {
   return {
     weekStart: NOW - 7 * DAY,
@@ -174,7 +194,12 @@ describe('off-target threshold gating', () => {
 
   test('weight dropping too fast on cut → apply calorie increase (protect muscle)', () => {
     const out = runWeeklyCoach(baseInputs({
-      morningWeights: trend(85, -1.3), // -1.5%/wk for 85kg, way over target
+      // trendSharp anchors to Date.now() and uses 35 days so the
+      // EWMA actually converges to the requested weekly rate; the
+      // default trend() helper (14 days, fixed NOW) dampens the
+      // delta to less than half the requested rate and was the
+      // reason this test sat failing in the suite.
+      morningWeights: trendSharp(85, -1.3), // -1.5%/wk for 85kg, way over target
       weeksInPhase: 5,
       consecutiveOffTargetWeeks: 2,
       lastCalAdjustmentWeeksAgo: 99,
@@ -186,7 +211,7 @@ describe('off-target threshold gating', () => {
   test('lean bulk gaining too fast → apply calorie reduction', () => {
     const out = runWeeklyCoach(baseInputs({
       goalPhase: 'mild_bulk',
-      morningWeights: trend(80, 0.6),
+      morningWeights: trendSharp(80, 0.6),
       bodyweightKg: 80,
       currentCalTarget: 3000,
       weeksInPhase: 5,

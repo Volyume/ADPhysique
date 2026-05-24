@@ -371,6 +371,20 @@ export const ED_PATTERN_CLEARED_COPY = {
     "Take this gently. Energy recovery beats rushing back into a deep cut.",
 };
 
+// Locked copy for Move #3 (upward gate compression). When weekly loss
+// exceeds -1.5% AND energy is low (<= 2), Precision Coaching bypasses
+// the standard two-week cooldown and applies an upward calorie
+// correction immediately. The held-decision card surfaces the change
+// to the user so the move isn't silent. Identical for free, pro,
+// complete users -- safety output is tier-blind.
+export const RAPID_LOSS_CORRECTED_COPY = {
+  header: 'Acted this week',
+  title: "We've added calories straight away",
+  body:
+    "Your weight dropped more than 1.5% this week and your energy is low. We're not waiting two weeks to react; we've bumped your daily target up immediately.\n\n" +
+    "This isn't a punishment for hitting your goal too fast. It's a safety call. Steady is the goal.",
+};
+
 // Locale-appropriate eating disorder support links (locked).
 export const ED_SUPPORT_LINKS = {
   'en-GB': { name: 'Beat',       url: 'https://www.beateatingdisorders.org.uk' },

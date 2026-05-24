@@ -30,6 +30,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import {
   ED_PATTERN_LOCKOUT_COPY,
   ED_PATTERN_CLEARED_COPY,
+  RAPID_LOSS_CORRECTED_COPY,
   getEdSupportLink,
 } from '../lib/whyThisTemplates';
 
@@ -321,19 +322,24 @@ function HeldDecisionsCard({ decisions, history }) {
   if (!decisions || decisions.length === 0) return null;
   const edLockout = decisions.find(d => d.type === 'ed_pattern_lockout');
   const edCleared = decisions.find(d => d.type === 'ed_pattern_cleared');
+  const rapidLossCorrected = decisions.find(d => d.type === 'rapid_loss_corrected');
   // Filter history entries that have held decisions
   const historyWithHeld = (history ?? []).filter(
     h => h.heldDecisions && h.heldDecisions.length > 0
   );
-  // Other decisions render in the standard plain-reason rows; ED
-  // variants render in their own rich block above.
+  // Other decisions render in the standard plain-reason rows; the
+  // structured variants (ED-pattern, rapid-loss compression) render
+  // in their own rich blocks above.
   const standardDecisions = decisions.filter(
-    d => d.type !== 'ed_pattern_lockout' && d.type !== 'ed_pattern_cleared',
+    d => d.type !== 'ed_pattern_lockout' &&
+         d.type !== 'ed_pattern_cleared' &&
+         d.type !== 'rapid_loss_corrected',
   );
   return (
     <View style={styles.heldCard}>
       {edLockout ? <EdPatternLockoutBlock decision={edLockout} /> : null}
       {edCleared ? <EdPatternClearedBlock /> : null}
+      {rapidLossCorrected ? <RapidLossCorrectedBlock decision={rapidLossCorrected} /> : null}
       {standardDecisions.length > 0 ? (
         <>
           <SectionHeader title="What we held this week" />
@@ -423,6 +429,26 @@ function EdPatternClearedBlock() {
       <Text style={styles.edClearedHeader}>{ED_PATTERN_CLEARED_COPY.header}</Text>
       <Text style={styles.edClearedTitle}>{ED_PATTERN_CLEARED_COPY.title}</Text>
       <Text style={styles.edClearedBody}>{ED_PATTERN_CLEARED_COPY.body}</Text>
+    </View>
+  );
+}
+
+// Move #3: rapid-loss compression structured block. Reuses the
+// ed-cleared card style (calm green, not alert red) because the
+// engine has already acted: this is reporting the action, not asking
+// the user to do anything. The kcal delta on the row makes the
+// magnitude explicit so the user sees the size of the change, not
+// just that "something happened".
+function RapidLossCorrectedBlock({ decision }) {
+  const delta = decision?.kcalDelta;
+  return (
+    <View style={styles.edClearedCard}>
+      <Text style={styles.edClearedHeader}>{RAPID_LOSS_CORRECTED_COPY.header}</Text>
+      <Text style={styles.edClearedTitle}>{RAPID_LOSS_CORRECTED_COPY.title}</Text>
+      <Text style={styles.edClearedBody}>{RAPID_LOSS_CORRECTED_COPY.body}</Text>
+      {typeof delta === 'number' && delta > 0 ? (
+        <Text style={styles.edClearedBody}>{`Daily target raised by +${delta} kcal.`}</Text>
+      ) : null}
     </View>
   );
 }
@@ -579,6 +605,28 @@ export default function CoachOutputScreen({ navigation, route }) {
         }
       } catch (e) {
         logError('CoachOutputScreen.edPatternPersist', e);
+      }
+
+      // Move #3 telemetry. Fire once when the rapid-loss compression
+      // applies on this run. Idempotent at the row level (per
+      // weekStart) because saveCoachOutput de-dupes the parent row,
+      // but the engine event itself is allowed to repeat if a user
+      // re-opens the weekly card -- the cohort dashboard counts
+      // unique user-days, not raw event rows.
+      try {
+        if (result.rapidLossCorrectionApplied) {
+          const heldRow = (result.heldDecisions ?? []).find(
+            d => d.type === 'rapid_loss_corrected',
+          );
+          await trackEngineEvent(user.id, 'rapid_loss_compression_triggered', {
+            weekly_loss_pct: heldRow?.weeklyLossPct ?? null,
+            energy_score: heldRow?.energyScore ?? null,
+            kcal_delta: heldRow?.kcalDelta ?? result.adjustments?.calories?.change ?? null,
+            days_compressed: 7,
+          });
+        }
+      } catch (e) {
+        logError('CoachOutputScreen.rapidLossTelemetry', e);
       }
 
       await saveCoachOutput(user.id, { weekStart, ...result });
