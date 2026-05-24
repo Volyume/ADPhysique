@@ -110,6 +110,27 @@ export const GOALS_WITH_WEAK_POINTS = PHYSIQUE_GOALS
   .filter(g => g.weakPointsEnabled)
   .map(g => g.value);
 
+// Goals that trigger the Article 9 / safety-check goal-lock prompt
+// during onboarding. Per ONBOARDING_SEQUENCE_LOCKED.md screen 6:
+// shown to users picking physique competition divisions (where
+// aggressive cuts are the norm) OR the recomp phase at an advanced
+// experience level. Maps the locked spec's "physique_competition"
+// and "advanced_recomp" to the actual values in this codebase.
+const _GOAL_LOCK_COMPETITION_VALUES = new Set([
+  'mens_physique',
+  'classic_physique',
+  'bodybuilding',
+  'bikini',
+  'figure',
+  'wellness',
+]);
+
+export function shouldShowGoalLockOnboarding({ trainingGoal, trainingPhase, experience }) {
+  if (trainingGoal && _GOAL_LOCK_COMPETITION_VALUES.has(trainingGoal)) return true;
+  if (trainingPhase === 'recomp' && experience === 'advanced') return true;
+  return false;
+}
+
 // ─── Training phases (the primary "what are you focused on" question) ──────
 // `nutritionKey` maps to nutritionEngine.js PHASE_ADJUSTMENTS keys
 // `coachingPhaseKey` maps to planEngine NUT_MULT and weeklyCoach phaseConfig

@@ -28,6 +28,7 @@ import {
   phaseToNutritionKey,
   phaseToCoachingKey,
   daysToActivityLevel,
+  shouldShowGoalLockOnboarding,
 } from '../lib/coachingGoals';
 import { calculateNutritionTargets } from '../lib/nutritionEngine';
 
@@ -336,6 +337,21 @@ export default function ProOnboardingScreen({ navigation }) {
       Alert.alert('Complete all fields', 'Please fill out your training profile to continue.');
       return;
     }
+    // Goal lock consent gate. Locked in ONBOARDING_SEQUENCE_LOCKED.md
+    // screen 6: users picking competition divisions OR advanced recomp
+    // see the goal-lock prompt so they can opt into the higher
+    // ED-pattern detector threshold. GoalLockConsentScreen writes the
+    // choice directly to user_body_profile; here we just chain its
+    // onContinue back into our step machine.
+    if (shouldShowGoalLockOnboarding({ trainingGoal, trainingPhase, experience })) {
+      navigation.navigate('GoalLockConsent', {
+        onContinue: () => {
+          navigation.goBack();
+          setStep(4);
+        },
+      });
+      return;
+    }
     setStep(4);
   }
 
@@ -494,7 +510,13 @@ export default function ProOnboardingScreen({ navigation }) {
       return;
     }
     setBusy(false);
-    navigation.navigate('ProSetupComplete');
+    // Food layer intro per ONBOARDING_SEQUENCE_LOCKED.md screen 10.
+    // Shown once at the end of onboarding, before the setup-complete
+    // hand-off. onComplete chains into ProSetupComplete regardless of
+    // whether the user opted to add a food now or set it up later.
+    navigation.navigate('FoodLayerIntro', {
+      onComplete: () => navigation.replace('ProSetupComplete'),
+    });
   }
 
   // ── Progress bar ─────────────────────────────────────────────────────────────
