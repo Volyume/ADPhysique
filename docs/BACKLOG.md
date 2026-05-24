@@ -21,11 +21,11 @@ These are product decisions, not technical deferrals. Do not add them even if re
 
 | Feature | Reason excluded |
 |---|---|
-| **Food / meal logging** | Out of scope permanently. Volyume is a training logbook, not a diet tracker. Nutrition Targets provides calorie/macro *targets* only — no food diary, no barcode scanner, no meal logging. |
+| ~~**Food / meal logging**~~ | **REVERSED 2026-05-23 under Volyume Complete strategy.** Food diary, barcode scanner, OCR write-back, custom foods, recipes, daily water + macro rollups all ship in Move #1 and Move #1.5. The original exclusion ("Volyume is a training logbook") no longer holds; the unlock condition was the FFM-aware safety floor that lets food data flow into the engine without harming at-risk users. See `MASTER_VISION_AND_PLAN.md`, `MOVE_1_FOOD_FOUNDATION_AND_FFM.md`, `FOOD_DATA_STRATEGY_LOCKED.md`. |
 | **Social feed / community** | Volyume is private by design. No public profiles, leaderboards, or activity feeds. |
 | **Gamification** | No XP, badges, achievements, or virtual rewards. Progress is real or it is nothing. **Carve-out (2026-05-22):** a single "week-streak" chip on the HomeScreen "This week" card was added to surface training consistency without ranking, levelling, or rewarding. If this drifts into stickers / XP / leaderboards, pull it back. |
 | **Wearable / Health API integration** | No Apple Watch, Garmin, or Fitbit integration. **Carve-out:** `src/lib/health.js` wraps HealthKit (iOS) + Health Connect (Android) for one-way reads of morning weight + step count, and for writing completed workouts to the platform Health app. This is opt-in, surfaced in Settings only. Heart rate, sleep, HRV remain out of scope. |
-| **Coach / client mode** | Volyume is a self-coaching tool. No role separation, no athlete roster, no coach-controlled plan assignment. |
+| ~~**Coach / client mode**~~ | **REVERSED 2026-05-23 under Volyume Complete strategy (phase 2).** Coach handoff is a first-class workflow at the Complete tier. Coach pays, client gets Complete free. Schema groundwork (`engine_overrides`, `coach_id` columns) ships in Move #5; the coach-facing surface itself is phase 2. See `B2B_COACH_PHASE_2_SCOPED.md`, `COMPLETE_TIER_SCOPE_LOCKED.md`. |
 
 ---
 

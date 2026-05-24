@@ -10,9 +10,12 @@ discovery. Show the user the smallest set of screens that lets the
 engine produce its first useful output. Feature discovery happens
 inside the app after onboarding completes.
 
-Existing Volyume onboarding works. The new flow adds three screens
-(Article 9 consent, goal lock when triggered, food layer intro) and
-otherwise keeps the existing structure intact.
+Existing Volyume onboarding works. The new flow adds two screens
+(Article 9 consent, goal lock when triggered) and otherwise keeps
+the existing structure intact. A third addition, the food layer
+intro, was scoped in earlier and then removed on 2026-05-24 once
+it became clear it added a screen of friction with no functional
+payoff (the Diary tab in the bottom nav is the real entry point).
 
 ## Sequence
 
@@ -31,12 +34,6 @@ otherwise keeps the existing structure intact.
 
 Total screens: 11. The user reaches a useful Train tab + Diary tab
 within 2-3 minutes of first launch.
-
-The "Food layer intro" screen that originally sat between equipment
-and notifications was removed 2026-05-24. It was a marketing-style
-intro with a "try it now or set up later" choice that landed both
-paths in the same place. The Diary tab in the bottom nav is the
-real entry point.
 
 ## Screen-by-screen detail (NEW screens only)
 
@@ -103,36 +100,7 @@ unless they explicitly opt in.
 
 The FFM floor (30 kcal/kg FFM/day) applies in both cases regardless.
 
-### Screen 10: Food layer intro (NEW)
-
-Locked copy:
-
-```
-Title:    Food tracking, made light
-Body:     Volyume can use your food data to:
-
-          - Tell you if a stalled lift is training or fuel
-          - Catch low-fuelling before it becomes a problem
-          - Adapt your calorie target as you go
-
-          You can log foods by scanning a barcode, typing a name,
-          or snapping a label. Most things resolve in under a
-          second.
-
-          Want to try it now or set it up later?
-CTAs:     [ Set it up later ]
-          [ Try a barcode now ]
-```
-
-"Try a barcode now" opens the scan flow (move #1.5+; before move
-#1.5 ships, this button is replaced with "Add a food now" which
-opens Search). User can return to the main app from either path.
-
-"Set it up later" closes the intro and continues to screen 11.
-
-Either way, `profiles.food_layer_introduced_at = now()`.
-
-### Screen 12: First-run summary (EXTENDED)
+### Screen 11: First-run summary (EXTENDED)
 
 Existing screen, lightly extended. The current screen shows the
 user their calculated targets and a Train tab CTA. The extension
@@ -182,7 +150,7 @@ Two paths to revisit screens 3 and 6 after onboarding:
   profile write on next foreground. If retry fails twice, surface a
   "Trouble saving your account. Try again later." with retry button.
 - **Account already exists** (returning user signing in): skip
-  straight to the Train tab. Onboarding screens 3-12 are not
+  straight to the Train tab. Onboarding screens 3-11 are not
   reshown. (If the user has not completed onboarding, they re-enter
   at the last incomplete screen.)
 
@@ -199,7 +167,6 @@ src/screens/onboarding/
 ├── ScoffScreenerScreen.js          (existing)
 ├── ActivityLevelScreen.js          (existing)
 ├── EquipmentFrequencyScreen.js     (existing)
-├── FoodLayerIntroScreen.js         (NEW)
 ├── NotificationsPermissionScreen.js (existing)
 └── FirstRunSummaryScreen.js        (existing, extended)
 
@@ -208,12 +175,10 @@ src/navigation/OnboardingNavigator.js (extended with new screens)
 
 ## Acceptance check
 
-- A fresh install reaches screen 12 (First-run summary) in 12
+- A fresh install reaches screen 11 (First-run summary) in 11
   screens with no skip path.
 - Article 9 checkbox blocks Continue button until ticked.
 - Goal lock screen appears only for physique competition or
   advanced recomp.
 - Declining Article 9 deletes the account and exits cleanly.
 - Backing out and reopening resumes at the last-incomplete screen.
-- Food layer intro shows the right "Try a barcode" or "Add a food
-  now" CTA based on whether move #1.5 has shipped (feature-flagged).

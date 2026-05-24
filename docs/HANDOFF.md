@@ -330,13 +330,12 @@ strategy follow-through, and the next moves.
 
 **Post Move #2 follow-through (housekeeping):**
 
-1. **Onboarding navigator refactor.** Insert Article 9 → goal
-   selection → conditional goal lock → SCOFF → activity → equipment
-   → Food layer intro → notifications → summary, per
-   ONBOARDING_SEQUENCE_LOCKED.md. The screens themselves all
-   exist (`Article9ConsentScreen`, `GoalLockConsentScreen`,
-   `FoodLayerIntroScreen`); the wiring is what's outstanding for
-   the new-user flow.
+1. **Onboarding navigator refactor.** SHIPPED. Article 9 consent
+   gates the navigator post-SIGNED_IN; GoalLockConsentScreen is
+   registered in ProOnboardingStack and reachable from
+   ProOnboardingScreen step 3. FoodLayerIntroScreen was removed
+   in `a54df93`; ONBOARDING_SEQUENCE_LOCKED.md updated to 11
+   screens.
 2. **Cohort dashboard (synthesis §9.3).** `engine_telemetry_daily`
    view lives in migration 017 and is readable from Supabase Studio.
    Open question: do you want an in-app coach-only dashboard
