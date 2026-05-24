@@ -1,60 +1,60 @@
 /**
- * OCR source adapter.
+ * OCR adapter — on-device MLKit text recognition.
  *
- * Takes a base64-encoded image and returns recognised text. The
- * underlying engine is pluggable so the rest of the food layer
- * (ScanLabelScreen, parser, writeback) doesn't care which one is
- * wired up:
+ * Per MOVE_1_5_BARCODE_AND_OCR.md (locked spec): free, on-device,
+ * no per-call cost. Uses @react-native-ml-kit/text-recognition which
+ * wraps Google's MLKit Text Recognition v2 on Android and iOS.
+ * Bundled into the native binary at EAS build time; no API key, no
+ * network round-trip, no env var configuration.
  *
- *   - Google Cloud Vision via HTTP when EXPO_PUBLIC_GOOGLE_VISION_KEY
- *     is set. Per-call cost; no native binary.
- *   - "unavailable" stub otherwise: returns null so the UI can show
- *     "OCR not configured" and fall back to manual entry.
+ * Earlier branches of this file had a Google Cloud Vision (paid)
+ * adapter and an `EXPO_PUBLIC_GOOGLE_VISION_KEY` env-var gate. Both
+ * are removed: they violated the locked free-stack constraint and
+ * the spec which explicitly named MLKit.
  *
- * A future MLKit-based local OCR engine slots in here as a third
- * branch without touching anything that imports this module.
+ * Public API stays stable so call sites (ScanLabelScreen, writeback,
+ * parser) don't change:
+ *
+ *   isOcrConfigured()              true when MLKit is linkable.
+ *                                  Native module presence is the
+ *                                  source of truth; tests + jest
+ *                                  mock to false (module not loaded).
+ *
+ *   recogniseText(imageUri)        Returns the concatenated text or
+ *                                  null on failure. Input is a file
+ *                                  URI from camera takePictureAsync
+ *                                  (`photo.uri`), NOT base64. MLKit
+ *                                  reads files directly which avoids
+ *                                  the base64 encode/decode round-
+ *                                  trip the old adapter needed.
  */
 
-// Indirect access defeats babel-preset-expo's compile-time
-// EXPO_PUBLIC_* inliner (see usda.js for why).
-const _GV_KEY_NAME = 'EXPO_PUBLIC_GOOGLE_VISION_KEY';
-
-function _visionKey() {
-  return process.env[_GV_KEY_NAME] || null;
+let _TextRecognition = null;
+try {
+  // eslint-disable-next-line global-require
+  _TextRecognition = require('@react-native-ml-kit/text-recognition').default;
+} catch (_) {
+  // Module not installed (or running under jest with no native binding).
+  // isOcrConfigured() will report false; ScanLabelScreen surfaces the
+  // manual-entry CTA in that case. EAS dev-client builds with the
+  // package in dependencies pick it up via autolinking.
 }
 
 export function isOcrConfigured() {
-  return !!_visionKey();
+  return !!_TextRecognition;
 }
 
 /**
- * Recognise text in an image. Returns the concatenated text or null
- * if OCR is not configured / the call failed.
+ * Recognise text in an image. Returns the full text block or null
+ * if OCR is unavailable / the recognition failed.
  *
- * @param {string} base64 Image data in base64 (no data: prefix).
+ * @param {string} imageUri  Local file URI from camera takePictureAsync.
  */
-export async function recogniseText(base64) {
-  const key = _visionKey();
-  if (!key || !base64) return null;
-  const url = `https://vision.googleapis.com/v1/images:annotate?key=${encodeURIComponent(key)}`;
-  const body = {
-    requests: [{
-      image: { content: base64 },
-      features: [{ type: 'TEXT_DETECTION', maxResults: 1 }],
-    }],
-  };
+export async function recogniseText(imageUri) {
+  if (!_TextRecognition || !imageUri) return null;
   try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) return null;
-    const json = await res.json();
-    const txt = json?.responses?.[0]?.fullTextAnnotation?.text
-             ?? json?.responses?.[0]?.textAnnotations?.[0]?.description
-             ?? null;
-    return txt || null;
+    const result = await _TextRecognition.recognize(imageUri);
+    return result?.text || null;
   } catch {
     return null;
   }

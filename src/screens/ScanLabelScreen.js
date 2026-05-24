@@ -1,14 +1,17 @@
 /**
  * ScanLabelScreen (Move #1.5 phase 3).
  *
- * Nutrition-label OCR capture. Takes a photo of the label, runs OCR,
- * parses macros, navigates to AddCustomFood with the macros
- * prefilled and the original image queued for OFF write-back (if
- * the user has opted in).
+ * Nutrition-label OCR capture. Takes a photo of the label, runs the
+ * on-device MLKit text recogniser (@react-native-ml-kit/text-recognition),
+ * parses macros, navigates to AddCustomFood with the macros prefilled
+ * and the original image queued for OFF write-back (if the user has
+ * opted in).
  *
- * If OCR isn't configured at build time (no EXPO_PUBLIC_GOOGLE_VISION_KEY),
- * the capture button is hidden and the screen surfaces a short
- * "Type it in instead" CTA that routes straight to AddCustomFood.
+ * If the MLKit native module isn't present in the running binary
+ * (e.g. Expo Go without the dev client), the capture button is
+ * hidden and the screen surfaces a "Type it in instead" CTA that
+ * routes straight to AddCustomFood. EAS dev-client builds with the
+ * package in dependencies pick it up automatically via autolinking.
  *
  * Voice rules: short, no encouragement, no AI tells.
  */
@@ -45,15 +48,15 @@ export default function ScanLabelScreen({ navigation, route }) {
     setBusy(true);
     try {
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.7, base64: true, skipProcessing: true,
+        quality: 0.7, skipProcessing: true,
       });
-      if (!photo?.base64) {
+      if (!photo?.uri) {
         navigation.replace('AddCustomFood', {
           mealSlot, entryDate, prefillBarcode,
         });
         return;
       }
-      const text = await recogniseText(photo.base64);
+      const text = await recogniseText(photo.uri);
       const parsed = text ? parseNutritionLabel(text) : null;
       const macros = parsed?.fields || {};
 

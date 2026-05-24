@@ -42,12 +42,23 @@ Shipping separately lets us:
 ### Dependencies
 
 ```
-react-native-vision-camera ~4.x
-@sentry/react-native-mlkit (or equivalent MLKit binding)
-react-native-vision-camera-mlkit-text-recognition
+expo-camera                              -- barcode scan + label capture
+@react-native-ml-kit/text-recognition    -- on-device MLKit text recognition for label OCR
 ```
 
-Added to `package.json` and `package-lock.json`.
+Added to `package.json`. Both autolink under EAS Build; no Expo
+config plugin required for the MLKit binding.
+
+The originally drafted dep set was `react-native-vision-camera` +
+`react-native-vision-camera-mlkit-text-recognition` (frame-processor
+plugin). Swapped to `expo-camera` + `@react-native-ml-kit/text-recognition`:
+`expo-camera` already covers barcode scanning across the required
+EAN/UPC formats and integrates cleanly with the existing managed-
+workflow setup, and the ML Kit binding runs against captured stills
+from `takePictureAsync` (no frame processor needed for a one-shot
+label capture). Same MLKit engine underneath; smaller install
+footprint. Locked free-stack constraint satisfied: no Google Cloud
+Vision API key, no per-call cost.
 
 ### Permissions
 
