@@ -8,6 +8,15 @@
 -- references another user's data.
 --
 -- Apply with: paste into Supabase Dashboard → SQL Editor → Run.
+--
+-- Re-runnable: the DROPs below make the migration safe to re-apply on
+-- a database that already has an earlier version of these functions.
+-- CREATE OR REPLACE cannot change a function's return type or argument
+-- list -- Postgres throws 42P13 ("cannot change return type of
+-- existing function"). Dropping first sidesteps that path entirely.
+
+DROP FUNCTION IF EXISTS food_sync_pull(timestamptz);
+DROP FUNCTION IF EXISTS food_sync_push(jsonb);
 
 -- ─────────────────────────────────────────────────────────────────────
 -- food_sync_pull: returns changes since last_pulled_at.
