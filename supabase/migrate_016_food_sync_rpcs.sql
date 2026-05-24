@@ -9,14 +9,31 @@
 --
 -- Apply with: paste into Supabase Dashboard → SQL Editor → Run.
 --
--- Re-runnable: the DROPs below make the migration safe to re-apply on
--- a database that already has an earlier version of these functions.
--- CREATE OR REPLACE cannot change a function's return type or argument
--- list -- Postgres throws 42P13 ("cannot change return type of
--- existing function"). Dropping first sidesteps that path entirely.
+-- Re-runnable: the DO block below drops every overload of the two
+-- function names regardless of signature. CREATE OR REPLACE cannot
+-- change a function's return type or argument list -- Postgres
+-- throws 42P13 ("cannot change return type of existing function").
+-- A plain DROP FUNCTION IF EXISTS food_sync_push(jsonb) only matches
+-- byte-identical signatures, so an earlier version with a different
+-- argument list survives and 42P13 still fires. The DO block walks
+-- pg_proc and drops every variant by exact identity arguments.
 
-DROP FUNCTION IF EXISTS food_sync_pull(timestamptz);
-DROP FUNCTION IF EXISTS food_sync_push(jsonb);
+DO $$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN
+    SELECT format('DROP FUNCTION IF EXISTS %I.%I(%s) CASCADE',
+                  n.nspname, p.proname,
+                  pg_get_function_identity_arguments(p.oid)) AS cmd
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE p.proname IN ('food_sync_pull', 'food_sync_push')
+      AND n.nspname = 'public'
+  LOOP
+    EXECUTE r.cmd;
+  END LOOP;
+END $$;
 
 -- ─────────────────────────────────────────────────────────────────────
 -- food_sync_pull: returns changes since last_pulled_at.

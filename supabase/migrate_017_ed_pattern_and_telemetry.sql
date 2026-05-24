@@ -58,7 +58,22 @@ ALTER TABLE user_body_profile
 -- edit surface. This RPC also writes a telemetry event so cohort
 -- analysis can track who turned advanced mode off vs on.
 
-DROP FUNCTION IF EXISTS clear_goal_lock();
+DO $$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN
+    SELECT format('DROP FUNCTION IF EXISTS %I.%I(%s) CASCADE',
+                  n.nspname, p.proname,
+                  pg_get_function_identity_arguments(p.oid)) AS cmd
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE p.proname = 'clear_goal_lock'
+      AND n.nspname = 'public'
+  LOOP
+    EXECUTE r.cmd;
+  END LOOP;
+END $$;
 
 CREATE OR REPLACE FUNCTION clear_goal_lock()
 RETURNS void
@@ -120,7 +135,22 @@ CREATE POLICY "Users can write own engine_telemetry"
 -- the event name against an allow-list so a misconfigured client
 -- can't pollute the table with arbitrary strings.
 
-DROP FUNCTION IF EXISTS record_engine_telemetry(text, jsonb, timestamptz);
+DO $$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN
+    SELECT format('DROP FUNCTION IF EXISTS %I.%I(%s) CASCADE',
+                  n.nspname, p.proname,
+                  pg_get_function_identity_arguments(p.oid)) AS cmd
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE p.proname = 'record_engine_telemetry'
+      AND n.nspname = 'public'
+  LOOP
+    EXECUTE r.cmd;
+  END LOOP;
+END $$;
 
 CREATE OR REPLACE FUNCTION record_engine_telemetry(
   _event   text,
