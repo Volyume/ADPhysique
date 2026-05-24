@@ -234,10 +234,10 @@ ED-pattern detector.
 | Move #1 -- food foundation + FFM floor | SHIPPED FULL. Migrations 015 + 016, FFM floor function + wiring, food data layer, Diary screen with MacroRings (Skia), Add custom food, Diary tab, Today's intake card, food sync wired both directions, FoodSearchScreen with waterfall + recents + favourites + bottom-sheet picker, BodyMetrics 7-day intake line, FoodInsightsScreen with 7-day bar chart + macro adherence + CSV export, FoodDetailSheet handling both add and edit. |
 | Move #1.5 -- barcode + OCR | SHIPPED FULL. Three phases: (1) live OFF + USDA waterfall sources, (2) camera barcode scan screen + Diary scan FAB, (3) OCR (vision-camera + MLKit), OFF write-back queue, custom_foods.barcode_ean persistence. Migrations 022 (telemetry allow-list extension) + 023 (barcode column + food_sync_push update). Bundled OFF snapshot + CoFID remain deferred per FOOD_DATA_STRATEGY_LOCKED.md (live paths cover the miss surface). |
 | Move #2 -- ED-pattern detection | SHIPPED FULL including Article 9 consent. edPatternDetector with 4 signals + thresholds, 23 unit/property tests, weeklyCoach integration, locked verbatim copy in HeldDecisionsCard with Get-support + Read-more CTAs, GoalLockConsentScreen registered in nav + reachable from AthleteHub, migration 017 (engine RPC + RLS). Article 9 health-data consent screen (Article9ConsentScreen, migration 019) shipped as the locked Move #2 deferral — onboarding screen 3 per ONBOARDING_SEQUENCE_LOCKED.md. |
-| Move #3 -- cascade telemetry + upward gate compression | SHIPPED PARTIAL (telemetry done). engine_telemetry local table + Supabase mirror, record_engine_telemetry RPC, allow-listed event taxonomy extended in migration 022 to include food_lookup_barcode + ocr_writeback_attempted, debounced push helper, sign-in drain. Hooks: tier_changed, ed_pattern_flag_fired/_cleared, goal_lock_set/_cleared. The upward-gate-compression scope (separate work stream per MOVE_3_UPWARD_GATE_COMPRESSION.md) is NOT STARTED. |
+| Move #3 -- cascade telemetry + upward gate compression | SHIPPED FULL. Telemetry slice (engine_telemetry table + record_engine_telemetry RPC + allow-listed taxonomy + debounced push + sign-in drain + tier_changed / ed_pattern / goal_lock hooks) plus the upward-only gate compression per MOVE_3_UPWARD_GATE_COMPRESSION.md. weeklyCoach.js bypasses the 2-week cooldown AND consecutiveOffTargetWeeks gate when weekly loss <= -1.5% AND energy_score <= 2 on a cutting phase; magnitude scales with severity capped at +300; held-decision row renders a structured RapidLossCorrectedBlock; rapid_loss_compression_triggered telemetry event added to client + server allow-lists (migration 027). 15 new tests in upwardGateCompression.test.js plus the two long-standing weeklyCoach.test.js failing tests fixed via a trendSharp() helper that aligns the EWMA fixture math with Date.now(). Suite is now 1086 pass / 0 fail. |
 | Identity + data ownership refactor | SHIPPED in migrations 018 + 020 + 021 + 024 and code commit `be8e1cc`. Composite `(user_id, id)` PKs on every user-scoped table; sign-out wipes local SQLite; no anonymous mode; custom_exercises split from mixed-ownership exercises; food_sync_push updated to composite-conflict pattern; old-client safety triggers on child tables (routine_exercises, mesocycle_weeks, recipe_ingredients); CI grep blocks `SET user_id` in src/. Step 7 of the locked sequence (existing-user data fix-up) runs automatically on the next sync cycle after the schema lands. |
-| Move #4 -- differential paywall | NOT STARTED. |
-| Move #5 -- tier infrastructure + RevenueCat | NOT STARTED. |
+| Move #4 -- differential paywall | NOT STARTED. Depends on Move #1 (done) and Move #5. |
+| Move #5 -- tier infrastructure + RevenueCat | NOT STARTED. Needs a RevenueCat account + six SKUs in App Store Connect + Google Play Console before the code work can be wired end-to-end. |
 
 ---
 
@@ -265,13 +265,32 @@ done and what's still unverified.
   they've run it. Verify queries at the bottom of the file say
   exactly which rows remain.
 
+**Cloud SQL pending application (new this session):**
+- Migration 027 (`rapid_loss_compression_telemetry`) — adds
+  `rapid_loss_compression_triggered` to the
+  `record_engine_telemetry` server-side allow-list so Move #3's
+  upward-gate-compression fire site can push its event without
+  the RPC rejecting the row. Until applied, the client write
+  succeeds locally (the row sits in the `engine_telemetry` SQLite
+  table) but the cloud push warns and the row stays unpushed.
+  Apply via Dashboard → SQL Editor.
+
 **Code changes pushed this session that need the next APK build
 to take effect (founder does NOT build APKs locally; the branch
 build pipeline produces the artifact):**
 - `c49e596` `sync.js` — only push customs to `custom_exercises`,
-  no more bulk push of library rows to `exercises`. Fix for the
-  `42501` warns the founder kept seeing on fresh signups. Until
-  this is in an installed APK, those warns will keep firing.
+  no more bulk push of library rows to `exercises`. Source fix
+  for the `42501` warns founder kept seeing on fresh signups.
+  Already in the latest APK (build #638) per founder's screenshot.
+- `917aee6` `SettingsScreen.js` — sign-out and delete-account
+  now call `Updates.reloadAsync()` after the local wipe so an
+  install-on-top of a newer APK can't leave the old JS bundle
+  running. Without this fix, a user who installs a newer APK,
+  hits Delete Account, then signs up with a fresh email keeps
+  running the OLD bundle's sync code and re-triggers whatever the
+  newer bundle was meant to fix.
+- `1fb70dd` Move #3 upward-gate compression -- the engine change
+  + the structured held-decision card.
 - `a54df93` removed `FoodLayerIntroScreen` from the onboarding
   flow.
 - `75ed020` removed the double bottom-inset (black band under tab
@@ -292,9 +311,17 @@ build pipeline produces the artifact):**
 either way:**
 1. Does Delete Account complete cleanly on cloud after migration
    025? If not, what does the Edge Function return now?
-2. After the next build with `c49e596` is installed, do the
-   `sync.syncExercises 42501` warns stop?
+2. After the next build with the reload fix (`917aee6`) is
+   installed AND the user does one manual force-stop to get onto
+   that bundle, do the `sync.syncExercises 42501` warns stop on
+   fresh signups?
 3. Is the orphan `a7379dc8` account fully nuked?
+4. After migration 027 is applied and the next APK is installed,
+   does the rapid-loss compression scenario produce a
+   `rapid_loss_compression_triggered` row in the cloud
+   `engine_telemetry` table? (Easiest verify: synthetic test via
+   weekly check-in entry with energy = 1 and weights showing
+   sustained -1.5%+/wk loss.)
 
 ## 5. What's pending right now (resume points, in priority)
 

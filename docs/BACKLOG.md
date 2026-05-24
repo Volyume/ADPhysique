@@ -172,11 +172,21 @@ identity + data ownership refactor. Detail in HANDOFF.md.
   users_profile columns + record_health_consent RPC). Cloud-failure
   resilient: local AsyncStorage flag gates progression, cloud
   reconciles when reachable.
-- **Move #3 cascade telemetry slice.** SHIPPED PARTIAL. Local-first
+- **Move #3 cascade telemetry slice.** SHIPPED. Local-first
   event log, allow-listed event taxonomy, debounced push, sign-in
   drain. Hooks: tier_changed, ed_pattern_flag_fired/_cleared,
-  goal_lock_set/_cleared. The upward-gate-compression scope is a
-  separate work stream and remains not-started.
+  goal_lock_set/_cleared.
+- **Move #3 upward gate compression.** SHIPPED. Rapid-loss safety
+  condition (weekly loss <= -1.5% AND energy_score <= 2 on a cut)
+  bypasses the standard two-week cooldown and consecutiveOff-
+  TargetWeeks gate; magnitude scales with severity (base +125,
+  +150 per additional 1.0% past -1.5%, capped at +300). Upward-only
+  by design -- bulks do not get the same compression on the
+  downward side. Structured RapidLossCorrectedBlock renders the
+  held-decision; `rapid_loss_compression_triggered` event added to
+  the telemetry allow-list (migration 027). 15 new tests +
+  2 long-standing weeklyCoach.test.js failures fixed; suite green
+  at 1086/0.
 - **Identity + data ownership refactor.** SHIPPED in migrations 018
   + 020 + 021 + 024 and code commit `be8e1cc`. Composite `(user_id,
   id)` PKs on every user-scoped table, sign-out wipe, no anonymous
