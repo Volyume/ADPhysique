@@ -4694,3 +4694,64 @@ export async function markEngineTelemetryPushed(ids) {
     [now, ...ids],
   );
 }
+
+// ─── Sync diagnostics (one-shot, read-only) ──────────────────────────────────
+
+/**
+ * Counts rows per user_id across every user-scoped local table. Used
+ * to diagnose RLS-rejection cascades on push -- a healthy local DB
+ * has every user_id column matching the current auth.uid; anything
+ * else is bad data that will either fail to sync (different uid in
+ * cloud) or syncs but accumulates noise.
+ *
+ * Read-only. Returns a structured report the caller can render or log.
+ */
+export async function diagnoseSyncConflicts(currentSessionUid) {
+  const d = await db();
+  const tables = [
+    'workouts', 'workout_sets', 'routines', 'routine_exercises', 'programmes',
+    'mesocycles', 'mesocycle_weeks', 'planned_muscle_volume', 'adaptation_events',
+    'nutrition_targets', 'body_metric_log', 'morning_weights',
+    'weekly_checkins', 'coach_outputs', 'user_body_profile',
+    'user_insights', 'peak_week_plans', 'exercise_user_notes',
+    'exercise_goals', 'workout_notes_v2',
+    'custom_foods', 'food_entries', 'daily_intake_rollups',
+    'saved_meals', 'recipes', 'food_favourites', 'daily_water',
+    'pending_sync_ops',
+  ];
+  const report = {
+    currentSessionUid: currentSessionUid ?? null,
+    tables: {},
+    summary: { totalRowsUnderForeignUids: 0, distinctForeignUids: new Set() },
+  };
+  for (const table of tables) {
+    try {
+      // routine_exercises has no user_id column -- join through routines.
+      const isJoinTable = table === 'routine_exercises';
+      const sql = isJoinTable
+        ? `SELECT r.user_id AS user_id, COUNT(*) AS n
+           FROM routine_exercises re
+           LEFT JOIN routines r ON r.id = re.routine_id
+           GROUP BY r.user_id
+           ORDER BY n DESC`
+        : `SELECT user_id, COUNT(*) AS n FROM ${table} GROUP BY user_id ORDER BY n DESC`;
+      const rows = await d.getAllAsync(sql);
+      const buckets = rows.map(r => ({
+        userId: r.user_id ?? null,
+        rowCount: r.n ?? 0,
+        isCurrent: r.user_id === currentSessionUid,
+      }));
+      report.tables[table] = buckets;
+      for (const b of buckets) {
+        if (b.userId && !b.isCurrent) {
+          report.summary.totalRowsUnderForeignUids += b.rowCount;
+          report.summary.distinctForeignUids.add(b.userId);
+        }
+      }
+    } catch (e) {
+      report.tables[table] = [{ error: e?.message ?? 'query failed' }];
+    }
+  }
+  report.summary.distinctForeignUids = Array.from(report.summary.distinctForeignUids);
+  return report;
+}

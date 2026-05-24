@@ -3,7 +3,9 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Share } fr
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { getRecentErrors, clearErrors, exportErrorsAsText, getCrashLog, clearCrashLog } from '../lib/errorLog';
+import { getRecentErrors, clearErrors, exportErrorsAsText, getCrashLog, clearCrashLog, logInfo } from '../lib/errorLog';
+import { diagnoseSyncConflicts } from '../lib/database';
+import useAppStore from '../store/useAppStore';
 
 // Errors auto-ship to Sentry (configured in App.js). This screen is the
 // on-device viewer for the last 200 buffered events — useful when a
@@ -47,6 +49,33 @@ export default function DebugLogScreen({ navigation }) {
     catch (_) {}
   }
 
+  async function handleDiagnose() {
+    const sessionUid = useAppStore.getState().session?.user?.id ?? null;
+    const report = await diagnoseSyncConflicts(sessionUid);
+    // Render the report into the debug log so the user can read it
+    // in the same surface as the errors it explains. Per-table buckets
+    // get one info entry each so filtering / scrolling stays useful.
+    logInfo('diag.sync.summary',
+      `${report.summary.totalRowsUnderForeignUids} rows under ${report.summary.distinctForeignUids.length} foreign uid(s)`,
+      {
+        currentSessionUid: sessionUid,
+        foreignUids: report.summary.distinctForeignUids,
+      },
+    );
+    for (const [table, buckets] of Object.entries(report.tables)) {
+      const hasForeign = buckets.some(b => b.userId && !b.isCurrent && b.rowCount > 0);
+      if (!hasForeign && buckets.length <= 1) continue;
+      logInfo(`diag.sync.${table}`, JSON.stringify(buckets), { table });
+    }
+    await load();
+    Alert.alert(
+      'Diagnostic complete',
+      `Scanned ${Object.keys(report.tables).length} tables. ` +
+      `${report.summary.totalRowsUnderForeignUids} rows are under user_ids that aren't your current session (${report.summary.distinctForeignUids.length} distinct foreign uid${report.summary.distinctForeignUids.length === 1 ? '' : 's'}). ` +
+      `Filter the log by "info" and look for diag.sync entries for the per-table breakdown.`,
+    );
+  }
+
   const filtered = filter === 'all' ? entries : entries.filter(e => e.level === filter);
   const counts = entries.reduce((acc, e) => { acc[e.level] = (acc[e.level] || 0) + 1; return acc; }, {});
 
@@ -84,6 +113,10 @@ export default function DebugLogScreen({ navigation }) {
         <TouchableOpacity style={styles.actionBtn} onPress={handleShare}>
           <Ionicons name="share-outline" size={16} color={colors.primary} />
           <Text style={[styles.actionLabel, { color: colors.primary }]}>Share</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionBtn} onPress={handleDiagnose}>
+          <Ionicons name="medkit-outline" size={16} color={colors.primary} />
+          <Text style={[styles.actionLabel, { color: colors.primary }]}>Sync diag</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.actionBtn, styles.actionBtnDanger]} onPress={handleClear}>
           <Ionicons name="trash-outline" size={16} color={colors.error} />
