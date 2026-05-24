@@ -49,6 +49,7 @@ import {
   insertMesocycleFromCloud,
   insertMesocycleWeekFromCloud,
   getNutritionTargets,
+  cleanupOrphanRoutineExercises,
 } from './database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logError, logWarn, logInfo } from './errorLog';
@@ -625,6 +626,14 @@ async function _pushProgrammes(sb, supabaseUserId, localUserId) {
 
 async function _pushRoutinesAndExercises(sb, supabaseUserId, localUserId) {
   try {
+    // Clear orphan routine_exercises (parent routine row missing) just
+    // before computing the push set. Boot-time cleanup only catches
+    // orphans that exist at app start; any created mid-session (e.g.
+    // routine hard-deleted during a cloud restore) leak through and
+    // log "orphan routine_exercises skipped" on every push cycle until
+    // the next boot. Running the cleanup here makes the warning fire
+    // at most once per genuine state-drift event, not every 5 minutes.
+    await cleanupOrphanRoutineExercises().catch(() => {});
     const routines = await getAllRoutinesForUser(localUserId);
     if (routines?.length) {
       // programme_id, day_of_week, is_sample, is_library, source_routine_id

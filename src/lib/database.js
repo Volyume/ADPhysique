@@ -429,6 +429,7 @@ const SCHEMA_MIGRATIONS = [
       cardio_prescription TEXT,
       why_this TEXT,
       output_json TEXT,
+      applied INTEGER DEFAULT 0,
       created_at INTEGER NOT NULL
     )`,
     `CREATE INDEX IF NOT EXISTS idx_coach_outputs_user ON coach_outputs(user_id, week_start)`,
@@ -894,6 +895,14 @@ const SCHEMA_MIGRATIONS = [
       updated_at INTEGER NOT NULL,
       PRIMARY KEY (user_id, entry_date)
     )`,
+  ],
+  // Coach output "applied" flag: insertCoachOutputFromCloud (the puller)
+  // writes the column, but the v6 CREATE TABLE for coach_outputs never
+  // included it. On installs that pre-date the CREATE TABLE update, every
+  // pull cycle logs "table coach_outputs has no column named applied".
+  // Additive ALTER is no-op for installs that already have the column.
+  [
+    'ALTER TABLE coach_outputs ADD COLUMN applied INTEGER DEFAULT 0',
   ],
 ];
 
