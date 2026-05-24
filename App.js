@@ -11,12 +11,21 @@ import * as TaskManager from 'expo-task-manager';
 import * as BackgroundFetch from 'expo-background-fetch';
 import { ensureNotifChannels } from './src/lib/restNotifications';
 import { installGlobalHandlers, logError } from './src/lib/errorLog';
+import { beginStartupTrace, traceStep } from './src/lib/startupTrace';
+
+// Begin the startup trace BEFORE anything else. Every subsequent phase
+// records a marker so a crash on the next launch can tell us exactly
+// where the previous session died. Fire-and-forget; the tracer never
+// throws.
+beginStartupTrace().catch(() => {});
+traceStep('app.module.load');
 
 // Install verbose error logging — ring buffer in AsyncStorage, viewable from
 // Settings → Debug logs. Catches uncaught exceptions and unhandled promise
 // rejections. Coexists with the legacy single-slot crash log used by the
 // LoginScreen banner.
 installGlobalHandlers();
+traceStep('app.errorhandlers.installed');
 
 // Initialise Sentry as early as possible so any startup error is
 // captured. No-op if @sentry/react-native isn't installed yet or the
@@ -32,6 +41,7 @@ installGlobalHandlers();
       ? `volyume@${Constants.expoConfig.version}`
       : undefined,
   });
+  traceStep('app.sentry.init');
 }
 
 // ---------------------------------------------------------------------------
@@ -48,6 +58,7 @@ TaskManager.defineTask(VOLYUME_REST_TIMER_KEEPALIVE, () => {
     ? TaskManager.TaskManagerTaskBody.NEW_DATA
     : 'newData';
 });
+traceStep('app.taskmanager.rest.defined');
 
 // ---------------------------------------------------------------------------
 // Daily background cloud sync — runs whenever the OS gives us a quiet
@@ -59,6 +70,7 @@ TaskManager.defineTask(VOLYUME_REST_TIMER_KEEPALIVE, () => {
 // ---------------------------------------------------------------------------
 const VOLYUME_DAILY_SYNC = 'VOLYUME_DAILY_SYNC';
 
+traceStep('app.taskmanager.dailysync.defining');
 TaskManager.defineTask(VOLYUME_DAILY_SYNC, async () => {
   try {
     // eslint-disable-next-line global-require
@@ -78,6 +90,7 @@ TaskManager.defineTask(VOLYUME_DAILY_SYNC, async () => {
     return 'failed';
   }
 });
+traceStep('app.taskmanager.dailysync.defined');
 
 // Suppress foreground notification banners — the rest timer handles in-app alerts with haptics.
 // The rest-done channel fires when the app is backgrounded, so sound is handled by the channel.
@@ -278,7 +291,12 @@ export default function App() {
   // gate, the user toggles Higher Contrast in Settings, restarts, and sees
   // no change because the StyleSheets were baked with the default palette.
   useEffect(() => {
-    bootstrapAccessibility().then(() => setThemeReady(true));
+    traceStep('app.a11y.start');
+    bootstrapAccessibility().then(() => {
+      traceStep('app.a11y.done');
+      setThemeReady(true);
+      traceStep('app.theme.ready');
+    });
   }, []);
 
   // Boot the observability layer — session id, build identity, crash
@@ -286,10 +304,14 @@ export default function App() {
   // can surface a calm "we crashed last session, report's already
   // away" indicator without the user having to do anything.
   useEffect(() => {
+    traceStep('app.observability.start');
     // eslint-disable-next-line global-require
     const { bootObservability } = require('./src/lib/observability');
     bootObservability()
-      .then(({ wasCrashed }) => setPriorCrash(!!wasCrashed))
+      .then(({ wasCrashed }) => {
+        traceStep('app.observability.done', { wasCrashed: !!wasCrashed });
+        setPriorCrash(!!wasCrashed);
+      })
       .catch(() => {});
   }, []);
 
@@ -401,16 +423,21 @@ export default function App() {
       const now = Date.now();
       if (now - lastSyncAt < MIN_SYNC_INTERVAL_MS) return;
       try {
+        traceStep('app.foregroundsync.start');
         const sb = getSupabaseClient();
-        if (!sb) return;
+        if (!sb) { traceStep('app.foregroundsync.noclient'); return; }
         const { data: { session: s } } = await sb.auth.getSession();
         const supabaseUserId = s?.user?.id;
         const localUserId = useAppStore.getState().user?.id;
         lastSyncAt = now;
+        traceStep('app.foregroundsync.session', { hasSupabase: !!supabaseUserId, hasLocal: !!localUserId });
         if (supabaseUserId && localUserId) {
           // eslint-disable-next-line global-require
           const { bulkUploadLocalData } = require('./src/lib/sync');
-          bulkUploadLocalData(supabaseUserId, localUserId).catch(() => {});
+          traceStep('app.foregroundsync.bulkupload.start');
+          bulkUploadLocalData(supabaseUserId, localUserId)
+            .then(() => traceStep('app.foregroundsync.bulkupload.done'))
+            .catch((e) => traceStep('app.foregroundsync.bulkupload.err', { msg: e?.message }));
         }
         // Drain the sync queue — retries any cloud writes that failed
         // since the last foreground (offline at the gym, flaky 5G, 5xx
@@ -496,11 +523,14 @@ export default function App() {
     return <View style={{ flex: 1, backgroundColor: '#0D0D0D' }} />;
   }
 
+  traceStep('app.render.postTheme');
+
   // Lazy-require after applyAccessibility has mutated the theme. These
   // requires synchronously evaluate the whole screen graph; doing them
   // here guarantees every StyleSheet.create sees the post-a11y tokens.
   // eslint-disable-next-line global-require
   const RootNavigator = require('./src/navigation/RootNavigator').default;
+  traceStep('app.rootnav.required');
   // eslint-disable-next-line global-require
   const PRCelebration = require('./src/components/PRCelebration').default;
 
