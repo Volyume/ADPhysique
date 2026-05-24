@@ -1,31 +1,38 @@
 /**
- * ScanBarcodeScreen (Move #1.5 phase 2).
+ * ScanBarcodeScreen (Move #1.5 phase 2, vision-camera build).
  *
  * Live camera barcode scan -> waterfall lookup -> route to detail
- * sheet (hit) or AddCustomFood (miss). Uses expo-camera which has
- * built-in barcode detection across EAN/UPC formats; no MLKit
- * native lib needed at this phase.
+ * sheet (hit) or AddCustomFood (miss). Uses react-native-vision-camera,
+ * the same library family MFP and Cronometer use. Better detection
+ * quality + integrated torch + future-proofs the MLKit OCR path as
+ * a frame processor.
  *
  * Behaviour:
- *   - Permission denied: shows the settings deep-link, nothing else
+ *   - Permission denied: shows a settings deep-link, nothing else
  *     fires.
- *   - First successful scan locks scanning, runs resolveBarcode, then
- *     navigates. The lock prevents a second scan from firing while
- *     the user is mid-navigation.
- *   - Cache-hit performance target: under 250ms scan-to-detail. The
- *     waterfall handles that; this screen just blocks further scans
- *     and dispatches.
+ *   - First successful scan locks scanning, runs resolveBarcode,
+ *     then navigates. The lock prevents a second scan from firing
+ *     while the user is mid-navigation.
+ *   - Re-arms on focus (so back-swipe from a hit/miss landing
+ *     resumes scanning without an app restart).
+ *   - Pauses the camera while the app is backgrounded or the screen
+ *     is unfocused -- saves battery and avoids holding the camera
+ *     resource captive when the user navigates away.
+ *   - Torch toggle in the header.
  *
  * Voice rules from CLAUDE.md: short sentences, no AI tells, no
  * encouragement.
  */
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
-  Linking,
+  Linking, AppState,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import {
+  Camera, useCameraDevice, useCodeScanner,
+} from 'react-native-vision-camera';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
@@ -34,10 +41,11 @@ import { logError, logInfo } from '../lib/errorLog';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
-// Supported barcode types: the common supermarket formats. Adding
-// QR / DataMatrix would slow the detector for no gain on a food
-// scanner.
-const BARCODE_TYPES = ['ean13', 'ean8', 'upc_a', 'upc_e', 'code128'];
+// Supported barcode types: the common supermarket formats. Code-128
+// is included for some UK weighed-deli labels. QR / DataMatrix
+// excluded -- food products almost never use them and adding them
+// slows the detector.
+const CODE_TYPES = ['ean-13', 'ean-8', 'upc-a', 'upc-e', 'code-128'];
 
 export default function ScanBarcodeScreen({ navigation, route }) {
   const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
@@ -46,38 +54,65 @@ export default function ScanBarcodeScreen({ navigation, route }) {
   const mealSlot = route?.params?.mealSlot ?? 'snack';
   const entryDate = route?.params?.entryDate ?? new Date().toISOString().slice(0, 10);
 
-  const [permission, requestPermission] = useCameraPermissions();
+  const [permission, setPermission] = useState(Camera.getCameraPermissionStatus());
   const [resolving, setResolving] = useState(false);
+  const [torch, setTorch] = useState(false);
+  const [appActive, setAppActive] = useState(AppState.currentState === 'active');
+  const [focused, setFocused] = useState(true);
   const scanLock = useRef(false);
+  const device = useCameraDevice('back');
 
-  const onBarcodeScanned = useCallback(async ({ data, type }) => {
+  useFocusEffect(useCallback(() => {
+    setFocused(true);
+    scanLock.current = false;
+    setResolving(false);
+    return () => setFocused(false);
+  }, []));
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (s) => setAppActive(s === 'active'));
+    return () => sub.remove();
+  }, []);
+
+  const requestPermission = useCallback(async () => {
+    const next = await Camera.requestCameraPermission();
+    setPermission(next);
+  }, []);
+
+  const onCodeScanned = useCallback(async (codes) => {
     if (scanLock.current) return;
-    if (!data) return;
+    const value = codes?.[0]?.value;
+    if (!value) return;
     scanLock.current = true;
     setResolving(true);
-    logInfo('ScanBarcode.detect', `data=${data} type=${type}`);
+    logInfo('ScanBarcode.detect', `data=${value} type=${codes[0]?.type}`);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     try {
-      const food = await resolveBarcode(data, userId);
+      const food = await resolveBarcode(value, userId);
       if (food) {
-        logInfo('ScanBarcode.hit', `data=${data} food_ref=${food.food_ref}`);
+        logInfo('ScanBarcode.hit', `data=${value} food_ref=${food.food_ref}`);
         navigation.replace('FoodSearch', {
           mealSlot, entryDate, scannedFood: food,
         });
       } else {
-        logInfo('ScanBarcode.miss', `data=${data}`);
+        logInfo('ScanBarcode.miss', `data=${value}`);
         navigation.replace('ScanLabel', {
-          mealSlot, entryDate, prefillBarcode: data,
+          mealSlot, entryDate, prefillBarcode: value,
         });
       }
     } catch (e) {
-      logError('ScanBarcode.resolveThrew', e, { data, message: e?.message });
+      logError('ScanBarcode.resolveThrew', e, { data: value, message: e?.message });
       scanLock.current = false;
       setResolving(false);
     }
   }, [navigation, userId, mealSlot, entryDate]);
 
-  if (!permission) {
+  const codeScanner = useCodeScanner({
+    codeTypes: CODE_TYPES,
+    onCodeScanned,
+  });
+
+  if (permission === 'not-determined') {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
@@ -87,7 +122,7 @@ export default function ScanBarcodeScreen({ navigation, route }) {
     );
   }
 
-  if (!permission.granted) {
+  if (permission !== 'granted') {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.header}>
@@ -103,19 +138,39 @@ export default function ScanBarcodeScreen({ navigation, route }) {
           <Text style={styles.permissionBody}>
             Volyume uses the camera to scan barcodes. Turn it on in Settings.
           </Text>
-          {permission.canAskAgain ? (
-            <TouchableOpacity style={styles.permissionBtn} onPress={requestPermission}>
-              <Text style={styles.permissionBtnText}>Allow camera</Text>
-            </TouchableOpacity>
-          ) : (
+          {permission === 'denied' ? (
             <TouchableOpacity style={styles.permissionBtn} onPress={() => Linking.openSettings()}>
               <Text style={styles.permissionBtnText}>Open Settings</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={styles.permissionBtn} onPress={requestPermission}>
+              <Text style={styles.permissionBtnText}>Allow camera</Text>
             </TouchableOpacity>
           )}
         </View>
       </SafeAreaView>
     );
   }
+
+  if (!device) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
+            <Ionicons name="close" size={24} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Scan</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <View style={styles.permissionWrap}>
+          <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} />
+          <Text style={styles.permissionTitle}>No camera available</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const isActive = focused && appActive && !resolving;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -124,15 +179,23 @@ export default function ScanBarcodeScreen({ navigation, route }) {
           <Ionicons name="close" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Scan barcode</Text>
-        <View style={{ width: 24 }} />
+        <TouchableOpacity onPress={() => setTorch(v => !v)} hitSlop={12}>
+          <Ionicons
+            name={torch ? 'flashlight' : 'flashlight-outline'}
+            size={22}
+            color={torch ? colors.primary : colors.textPrimary}
+          />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.cameraWrap}>
-        <CameraView
+        <Camera
           style={StyleSheet.absoluteFillObject}
-          facing="back"
-          barcodeScannerSettings={{ barcodeTypes: BARCODE_TYPES }}
-          onBarcodeScanned={resolving ? undefined : onBarcodeScanned}
+          device={device}
+          isActive={isActive}
+          codeScanner={codeScanner}
+          torch={torch ? 'on' : 'off'}
+          enableZoomGesture
         />
         <View style={styles.overlay} pointerEvents="none">
           <View style={styles.reticle} />

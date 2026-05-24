@@ -87,10 +87,11 @@
     "plugins": [
       "expo-secure-store",
       [
-        "expo-camera",
+        "react-native-vision-camera",
         {
-          "cameraPermission": "Volyume uses the camera to scan barcodes and read nutrition labels.",
-          "recordAudioAndroid": false
+          "cameraPermissionText": "Volyume uses the camera to scan barcodes and read nutrition labels.",
+          "enableCodeScanner": true,
+          "enableMicrophonePermission": false
         }
       ],
       [

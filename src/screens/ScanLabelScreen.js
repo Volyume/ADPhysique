@@ -1,27 +1,34 @@
 /**
- * ScanLabelScreen (Move #1.5 phase 3).
+ * ScanLabelScreen (Move #1.5 phase 3, vision-camera build).
  *
- * Nutrition-label OCR capture. Takes a photo of the label, runs the
- * on-device MLKit text recogniser (@react-native-ml-kit/text-recognition),
- * parses macros, navigates to AddCustomFood with the macros prefilled
- * and the original image queued for OFF write-back (if the user has
- * opted in).
+ * Nutrition-label capture. Takes a photo via react-native-vision-camera,
+ * runs the on-device MLKit text recogniser
+ * (@react-native-ml-kit/text-recognition), parses macros, navigates
+ * to AddCustomFood with the macros prefilled and the original image
+ * queued for OFF write-back (if the user has opted in).
+ *
+ * Two entry contexts:
+ *   - With prefillBarcode (from a ScanBarcode miss): top banner
+ *     surfaces "Barcode {ean} not in our database" + guidance.
+ *   - Without prefillBarcode (direct "snap a label" entry): default
+ *     "Frame the nutrition panel" hint.
  *
  * If the MLKit native module isn't present in the running binary
- * (e.g. Expo Go without the dev client), the capture button is
- * hidden and the screen surfaces a "Type it in instead" CTA that
- * routes straight to AddCustomFood. EAS dev-client builds with the
- * package in dependencies pick it up automatically via autolinking.
+ * (e.g. Expo Go without the dev client), the capture button hides
+ * and the screen surfaces a "Type it in" CTA that routes straight
+ * to AddCustomFood. EAS dev-client builds with the package in
+ * dependencies pick it up via autolinking.
  *
  * Voice rules: short, no encouragement, no AI tells.
  */
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
-  Linking,
+  Linking, AppState,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { Camera, useCameraDevice } from 'react-native-vision-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { isOcrConfigured, recogniseText } from '../lib/food/ocr';
@@ -38,35 +45,56 @@ export default function ScanLabelScreen({ navigation, route }) {
   const entryDate = route?.params?.entryDate ?? new Date().toISOString().slice(0, 10);
   const prefillBarcode = route?.params?.prefillBarcode ?? null;
 
-  const [permission, requestPermission] = useCameraPermissions();
+  const [permission, setPermission] = useState(Camera.getCameraPermissionStatus());
   const [busy, setBusy] = useState(false);
+  const [torch, setTorch] = useState(false);
+  const [appActive, setAppActive] = useState(AppState.currentState === 'active');
+  const [focused, setFocused] = useState(true);
   const cameraRef = useRef(null);
+  const device = useCameraDevice('back');
   const ocrAvailable = isOcrConfigured();
+
+  useFocusEffect(useCallback(() => {
+    setFocused(true);
+    return () => setFocused(false);
+  }, []));
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (s) => setAppActive(s === 'active'));
+    return () => sub.remove();
+  }, []);
+
+  const requestPermission = useCallback(async () => {
+    const next = await Camera.requestCameraPermission();
+    setPermission(next);
+  }, []);
 
   const onCapture = useCallback(async () => {
     if (busy || !cameraRef.current) return;
     setBusy(true);
     try {
-      const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.7, skipProcessing: true,
+      const photo = await cameraRef.current.takePhoto({
+        flash: torch ? 'on' : 'off',
+        enableShutterSound: false,
       });
-      if (!photo?.uri) {
+      // vision-camera returns path without scheme; recogniseText
+      // needs a file:// URI so MLKit's image loader can read it.
+      const uri = photo?.path?.startsWith('file://') ? photo.path : `file://${photo?.path ?? ''}`;
+      if (!uri) {
         navigation.replace('AddCustomFood', {
           mealSlot, entryDate, prefillBarcode,
         });
         return;
       }
-      const text = await recogniseText(photo.uri);
+      const text = await recogniseText(uri);
       const parsed = text ? parseNutritionLabel(text) : null;
       const macros = parsed?.fields || {};
 
-      // Queue OFF contribution if user is opted in + there's a
+      // Queue OFF contribution if the user opted in AND we have a
       // barcode to attach. Fires now; the parsed macros are what
-      // the user is about to confirm in AddCustomFood, so the
-      // contribution reflects their (eventual) review. We could
-      // wait until the AddCustomFood save fires, but the simpler
-      // path is to queue on capture and trust the user to abort
-      // the save if the OCR was nonsense.
+      // the user is about to confirm in AddCustomFood. We could
+      // wait for the save to fire, but queuing on capture is simpler
+      // and the user can abort the save if the OCR was nonsense.
       if (prefillBarcode && (await getConsent())) {
         await queueContribution(userId, {
           barcode: prefillBarcode,
@@ -84,7 +112,7 @@ export default function ScanLabelScreen({ navigation, route }) {
         mealSlot, entryDate, prefillBarcode,
       });
     }
-  }, [busy, navigation, mealSlot, entryDate, prefillBarcode, userId]);
+  }, [busy, navigation, mealSlot, entryDate, prefillBarcode, userId, torch]);
 
   const gotoManual = () => {
     navigation.replace('AddCustomFood', {
@@ -92,7 +120,7 @@ export default function ScanLabelScreen({ navigation, route }) {
     });
   };
 
-  if (!permission) {
+  if (permission === 'not-determined') {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}><ActivityIndicator color={colors.textMuted} /></View>
@@ -100,7 +128,7 @@ export default function ScanLabelScreen({ navigation, route }) {
     );
   }
 
-  if (!permission.granted) {
+  if (permission !== 'granted') {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.header}>
@@ -116,13 +144,13 @@ export default function ScanLabelScreen({ navigation, route }) {
           <Text style={styles.fallbackBody}>
             Volyume uses the camera to read nutrition labels.
           </Text>
-          {permission.canAskAgain ? (
-            <TouchableOpacity style={styles.primaryBtn} onPress={requestPermission}>
-              <Text style={styles.primaryBtnText}>Allow camera</Text>
-            </TouchableOpacity>
-          ) : (
+          {permission === 'denied' ? (
             <TouchableOpacity style={styles.primaryBtn} onPress={() => Linking.openSettings()}>
               <Text style={styles.primaryBtnText}>Open Settings</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={styles.primaryBtn} onPress={requestPermission}>
+              <Text style={styles.primaryBtnText}>Allow camera</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity style={styles.secondaryBtn} onPress={gotoManual}>
@@ -133,6 +161,29 @@ export default function ScanLabelScreen({ navigation, route }) {
     );
   }
 
+  if (!device) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
+            <Ionicons name="close" size={24} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Snap label</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <View style={styles.fallbackWrap}>
+          <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} />
+          <Text style={styles.fallbackTitle}>No camera available</Text>
+          <TouchableOpacity style={styles.secondaryBtn} onPress={gotoManual}>
+            <Text style={styles.secondaryBtnText}>Type it in instead</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const isActive = focused && appActive;
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
@@ -140,14 +191,24 @@ export default function ScanLabelScreen({ navigation, route }) {
           <Ionicons name="close" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Snap label</Text>
-        <View style={{ width: 24 }} />
+        <TouchableOpacity onPress={() => setTorch(v => !v)} hitSlop={12}>
+          <Ionicons
+            name={torch ? 'flashlight' : 'flashlight-outline'}
+            size={22}
+            color={torch ? colors.primary : colors.textPrimary}
+          />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.cameraWrap}>
-        <CameraView
+        <Camera
           ref={cameraRef}
           style={StyleSheet.absoluteFillObject}
-          facing="back"
+          device={device}
+          isActive={isActive}
+          photo={true}
+          torch={torch ? 'on' : 'off'}
+          enableZoomGesture
         />
         {prefillBarcode ? (
           <View style={styles.missBanner} pointerEvents="none">
