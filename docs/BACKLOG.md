@@ -137,7 +137,7 @@ outstanding piece.
 
 | Item | Design doc | Status |
 |---|---|---|
-| **Identity + data ownership.** Row `user_id` mutation, anonymous-vs-account id conflation, sign-in re-stamping. Triggered a 400-row 42501 cascade on a multi-account device. Doc covers 13 scenarios + implementation rules + anti-patterns. | `IDENTITY_AND_OWNERSHIP_LOCKED.md` | Design locked 2026-05-24. Implementation pending. Local + cloud data cleanup follows the design fix (must not lead it). |
+| **Identity + data ownership.** Row `user_id` mutation, anonymous-vs-account id conflation, cross-user id collision in cloud. Triggered a 400-row 42501 cascade on a multi-account device. Doc locks four decisions: no anonymous mode, sign-out wipes local, composite `(user_id, id)` PKs, no destructive cleanup (schema fix rescues existing data). | `IDENTITY_AND_OWNERSHIP_LOCKED.md` | Design locked 2026-05-24. 7-step implementation sequence in the doc. Step 7 (existing-user data fix-up) happens automatically on the next sync cycle after the schema migration ships. |
 
 ## Shipped in May 2026 -- 2026-05-24 round
 

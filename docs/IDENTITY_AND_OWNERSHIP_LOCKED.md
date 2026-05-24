@@ -1,317 +1,212 @@
 # Identity and data ownership (locked)
 
-Locked 2026-05-24 after a sync-conflict cascade exposed a fundamental
-design flaw: row `user_id` values were being mutated after creation,
-and anonymous local IDs were being conflated with real account IDs.
-This document is the corrective. It is hard-locked: code must not
-violate the principles below, and any future change that touches
-identity, ownership, sign-in, sign-out, account deletion, install or
-re-install behaviour must be reconciled against this doc first.
+Locked 2026-05-24 after a 400-row 42501 cascade exposed three design
+flaws: row `user_id` was mutated after creation, anonymous and account
+identities were conflated, and row IDs could collide between users in
+the cloud. This document is the corrective. It is hard-locked: code
+must not violate it, and any future change that touches sign-in,
+sign-out, account delete, install, or any code path that writes a
+`user_id` column must be reconciled against this doc first.
 
-If the principles here conflict with code that ships later, the code
-is wrong, not this doc.
+If code conflicts with this doc, the code is wrong.
+
+## Four locked decisions
+
+1. **No anonymous mode.** Tapping Free on Welcome routes to sign-up.
+   Every user has a real account from the first row they create.
+   There is no `anon:` identity, no `@volyume_anonymous_local_id`,
+   no `initLocalUser` flow.
+2. **Sign-out wipes local data.** Every sign-in is a fresh cloud
+   pull. By the time anyone signs in, local SQLite for user-scoped
+   tables is empty.
+3. **Composite primary keys.** Every user-scoped table is
+   `PRIMARY KEY (user_id, id)`. Two users cannot collide on a row at
+   the schema level. Cross-user-id-clash becomes impossible, not
+   merely unlikely.
+4. **No destructive cleanup of existing user data.** The composite-PK
+   refactor itself fixes the bug: the previously-failing local rows
+   push cleanly under their new `(current_user, id)` primary key, so
+   the user gets their data back in cloud rather than losing it. Old
+   orphan cloud rows under abandoned user_ids stay inert. RLS hides
+   them from everyone.
 
 ## The principle
 
-> A row identifies one piece of data, owned by one user, for the life
-> of that data. Neither the row id nor the user_id is mutable after
-> creation. Two users on the same device, or the same user across
-> devices, never share the same row id.
+> A row's `user_id` is set at INSERT and never changes. A row's
+> primary key includes its `user_id`, so two users cannot share the
+> same row at the schema level. Local SQLite holds at most one user's
+> data at a time; sign-out empties it.
 
-Every design decision below follows from that one sentence.
-
-## What the principle rules out
-
-- Re-stamping `user_id` on an existing row, ever, for any reason.
-- Two accounts on the same device sharing any row by id.
-- An ID generated under one account being adopted by another account.
-- Local "anonymous" identifiers being indistinguishable at the type
-  level from real account identifiers. They are different concepts and
-  the code must treat them differently.
-- Sign-out leaving stale rows behind that a future sign-in could
-  inherit.
-- Account deletion leaving cloud rows behind under the deleted user's
-  id. Account deletion means the user is gone, everywhere.
-
-## Identifiers
-
-Three distinct kinds of identity exist in Volyume. They are named, kept
-in separate AsyncStorage keys, and the code must never treat one as
-the other.
-
-| Identity | Storage key | Lifetime | Format |
-| --- | --- | --- | --- |
-| **Anonymous device identity.** A user who has tapped Free on Welcome but never signed up. Only this identity owns anonymous-tier local rows. | `@volyume_anonymous_local_id` | Created on first Free tap. Removed the moment a real account is created (the rows it owned are migrated then). Never restored once removed. | UUID v4 prefixed `anon:` so it's visually + programmatically distinct from a Supabase auth.uid. |
-| **Active session identity.** The currently-signed-in real account. | Supabase session (`session.user.id`). Mirrored to `@volyume_last_supabase_user_id` for cross-user safety checks at sign-in. | Lifetime of the auth session. Cleared on sign-out. | Supabase auth.uid (UUID, no prefix). |
-| **Row owner identity.** The `user_id` column on every row in user-scoped tables. Set at INSERT, never UPDATEd. | Per-row. | Lifetime of the row. | Either an `anon:` id (anonymous-tier rows) or a real account uid. Never both for the same row. |
-
-Code that writes a row must read the OWNING identity from one of the
-first two surfaces above (anonymous or active). It must not read it
-from an arbitrary in-memory cache that might lag behind.
-
-Row ids themselves are UUID v4, minted at row creation. They have
-astronomically negligible collision probability between users. If a
-collision ever occurs in cloud it is a bug (almost certainly a row
-copied with its id from another database) and must be investigated,
-not papered over.
+Every implementation rule below follows from those two sentences.
 
 ## Scenarios
 
-Every transition the user can put the app through, and the correct
-behaviour. If a scenario is missing from this list, the principle
-above is the tiebreaker.
+With the four decisions above, most scenarios collapse to "wipe local,
+pull cloud, push edits". Listing them anyway so behaviour is explicit.
 
-### S1. Fresh install, taps Free, never signs up
+### A. Fresh install, signs up
 
-- App boot: no `@volyume_anonymous_local_id`, no Supabase session.
-- User taps Free on Welcome.
-- App mints a new `anon:<uuid>`, stores it under
-  `@volyume_anonymous_local_id`.
-- All rows created from this point have `user_id = 'anon:<uuid>'`.
-- App is fully usable offline. No cloud sync (anonymous rows never
-  push).
+- App boot: no local data, no session.
+- User taps Free or Pro on Welcome. Both route to sign-up.
+- Supabase issues session `user.id = U`.
+- Local SQLite is empty. Nothing to push, nothing to pull.
+- All new rows created with `user_id = U`.
 
-### S2. Fresh install, signs up immediately
+### B. Returning user signs in
 
-- App boot: no anonymous id, no session.
-- User taps Pro on Welcome, signs up.
-- Supabase issues a session with `user.id = U_A`.
-- App stores `U_A` under `@volyume_last_supabase_user_id`.
-- All rows created from this point have `user_id = U_A`.
-- No migration needed: there were no anonymous rows.
+- App boot: no local data (could be reinstall, sign-out, or first
+  sign-in on this device).
+- User signs in. Supabase issues session `user.id = U`.
+- App pulls all of `U`'s data from cloud. Local SQLite populated
+  with `user_id = U` rows whose IDs match the cloud rows.
 
-### S3. Free user signs up after using the app
+### C. Signed-in user signs out
 
-- App state: `anon:X` exists in AsyncStorage, local rows under `anon:X`.
-- User signs up. Supabase issues session with `user.id = U_A`.
-- App stores `U_A` under `@volyume_last_supabase_user_id`.
-- App copies each anonymous-tier local row to a NEW row with a NEW
-  id under `user_id = U_A`. The original `anon:X` rows are deleted.
-  Foreign-key references inside the copy block are remapped to the
-  new ids in lockstep.
-- `@volyume_anonymous_local_id` is removed. There is no longer any
-  anonymous identity on this device; the user is signed in.
-- New cloud rows under `U_A` are then pushed normally.
-
-This is the ONE legitimate "migrate anonymous to account" operation.
-It is a copy-then-delete, not a re-stamp. New IDs everywhere.
-
-### S4. Signed-in user signs out
-
-- App state: session present, `user.id = U_A`, rows under `U_A`.
+- App state: `user.id = U`, local rows under `U`.
 - User taps Sign out.
-- Supabase session cleared.
-- In-memory user state cleared.
-- Local SQLite rows under `U_A` are **kept**. They sync back to cloud
-  on next sign-in to U_A.
-- `@volyume_last_supabase_user_id` retains `U_A` so the next sign-in
-  knows whose data is currently sitting in local SQLite.
-- App routes back to Welcome / Login.
+- App wipes every user-scoped row from local SQLite. (Reference
+  data — exercise library — stays.)
+- App clears in-memory user / session / profile / tier state.
+- App clears AsyncStorage keys scoped to `U` (profile cache,
+  nutrition prefs, notification prefs etc).
+- Routes back to Welcome.
 
-Sign-out is a session-level operation. It does not destroy data.
+### D. Different user signs in after sign-out
 
-### S5. Signed-in user signs out, signs back in as the SAME account
+- Picks up from C. Local SQLite is already empty.
+- Sign-in is identical to B. Pull fresh from cloud under the new
+  `user.id`.
 
-- Picks up from S4. Local SQLite has U_A's rows under U_A.
-- User signs in to U_A again. Session restored with `user.id = U_A`.
-- `@volyume_last_supabase_user_id` already equals `U_A`. Nothing to
-  wipe.
-- No migration runs. Local rows are already owned by the correct user.
-- Sync resumes normally: push any local-only edits made while signed
-  out, pull anything new from cloud.
+### E. Account delete
 
-### S6. Signed-in user signs out, signs in as a DIFFERENT account
-
-- Picks up from S4. Local SQLite has U_A's rows under U_A.
-- User signs in to U_B. Session arrives with `user.id = U_B`.
-- `@volyume_last_supabase_user_id` is `U_A`, which differs from `U_B`.
-  This is a cross-user sign-in.
-- Before doing anything else, app wipes every local row whose
-  `user_id` is `U_A`. That data still exists in U_A's cloud and can
-  be restored if U_A signs back in.
-- `@volyume_last_supabase_user_id` is set to `U_B`.
-- App pulls `U_B`'s data from cloud.
-
-The previous account's data does not get re-stamped, re-keyed,
-inherited, or partially leaked. It is gone from local SQLite. The
-cloud rows remain under U_A's ownership, untouched.
-
-### S7. User deletes their account
-
-- App state: session present, `user.id = U_A`.
+- App state: `user.id = U`.
 - User triggers Delete account.
 - App calls `delete_user_data` RPC → cloud deletes every row owned by
-  `U_A` across every user-scoped table.
-- Edge Function `delete-account` calls Supabase admin
-  `auth.admin.deleteUser(U_A)` → auth row gone.
-- App calls `wipeAllUserData(U_A)` → local SQLite rows under `U_A`
-  deleted.
-- App also wipes `@volyume_last_supabase_user_id`,
-  `@volyume_anonymous_local_id` (if present), profile cache, tier
-  cache, prefs scoped to U_A, SecureStore tokens.
-- Session signed out. Routes to Welcome.
+  `U` across every user-scoped table.
+- Edge Function `delete-account` calls
+  `auth.admin.deleteUser(U)` → auth row gone.
+- App wipes local SQLite (same path as sign-out).
+- App wipes AsyncStorage + SecureStore for `U`.
+- Routes to Welcome. Indistinguishable from a fresh install.
 
-After delete, the device is indistinguishable from a fresh install.
-No leftover state. No orphan rows in cloud. Re-signing-up creates a
-brand new user; no inherited data of any kind.
+### F. Uninstall, reinstall
 
-### S8. User uninstalls the app
+- OS removes app sandbox. Everything local gone.
+- Reinstall: identical to "fresh install" (A or B depending on
+  whether the user signs in or signs up).
 
-- OS removes the app and its sandbox. AsyncStorage gone. SQLite gone.
-  SecureStore gone (modulo platform quirks; treat as gone).
-- Supabase cloud rows under `U_A` are NOT touched. User still owns
-  their cloud data.
+### G. Same user, multiple devices
 
-### S9. User reinstalls the app, signs back in to the SAME account
+- Each device, on sign-in, pulls `U`'s data from cloud.
+- Both devices have the same row IDs (those IDs came from cloud).
+- Edits push back; the other device pulls them on its next sync.
+- Conflict resolution per `SYNC_ARCHITECTURE_LOCKED.md` (last-write-
+  wins per row, scoped to `U`).
+- The composite PK `(U, id)` is the same on both devices for the
+  same row — that's what makes shared editing work.
 
-- Fresh install. No local state.
-- User installs, opens, taps Pro / Sign in, enters credentials.
-- Session arrives with `user.id = U_A`.
-- `@volyume_last_supabase_user_id` is absent (fresh install). No
-  cross-user wipe needed.
-- App stores `U_A` under `@volyume_last_supabase_user_id`.
-- App pulls `U_A`'s data from cloud. Local SQLite rebuilt fresh under
-  `U_A`. All rows carry their original cloud ids.
+### H. Two users on the same physical device
 
-### S10. User reinstalls, signs up with a NEW email
+- User A is signed in. Local SQLite has A's rows.
+- A signs out → local wiped (C).
+- B signs in → local is empty, pulls B's data (B).
+- B signs out → local wiped.
+- A signs back in → local empty, pulls A's data.
 
-- Fresh install. No local state.
-- User signs up. Session arrives with `user.id = U_C` (brand new uid).
-- `@volyume_last_supabase_user_id` is absent.
-- All rows created from this point have `user_id = U_C`, brand new
-  UUIDs. There is no path by which any rows previously owned by any
-  other account get to `U_C`.
-
-### S11. User uses the same account on two devices
-
-- Device 1 has U_A's data, synced to cloud.
-- Device 2: user signs in to U_A. Pulls everything from cloud. Local
-  rows on device 2 carry the SAME ids as on device 1 (those ids came
-  from cloud). Both devices reference the same canonical rows.
-- Edits on device 2 push back to cloud; device 1 pulls them next
-  sync. Conflict resolution per `SYNC_ARCHITECTURE_LOCKED.md` (last
-  write wins per row, scoped to the user).
-
-This is the ONLY scenario in which the same row id legitimately
-exists in two local SQLite databases. Both belong to the same user.
-
-### S12. Two users share a physical device (e.g. partners, family)
-
-- Device starts on U_A's account.
-- U_A signs out. Local SQLite has U_A's rows under U_A.
-- U_B signs in. Cross-user sign-in (S6). U_A's local rows wiped. U_B
-  pulls their data fresh.
-- U_B signs out. U_B's local rows under U_B stay.
-- U_A signs in again. Cross-user sign-in (S6). U_B's local rows wiped.
-  U_A pulls their data fresh.
-
-Each sign-in is a full hand-over. The previous occupant's data is
-removed from local SQLite before the new occupant gets in. Their
-cloud data is preserved.
-
-This costs network on every account switch. That is the correct cost
-for guaranteed isolation. There is no path by which U_A sees U_B's
-data or vice versa.
-
-### S13. Cloud-side row was created by another user with the same id (impossible-by-design)
-
-If this ever happens, it is a bug. Possible causes (none legitimate):
-
-- A direct database manipulation outside the app's code path.
-- A backup-and-restore that re-introduced a row whose owner has
-  changed.
-- An import flow that copied row ids instead of minting new ones.
-
-The fix is to find the source. The fix is NOT to re-mint the local
-row to dodge the conflict, or to silence the RLS rejection, or to
-"reclaim ownership" of another user's row.
+No application-layer wall is needed because the local store is
+single-user-at-a-time by construction.
 
 ## Implementation rules
 
-These are the code-level statements of the principle.
+These are the code-level statements of the principle. Any PR that
+violates one must justify the deviation in writing.
 
-1. **No `UPDATE ... SET user_id = ?` anywhere.** The only legitimate
-   transitions of ownership are `INSERT` (creation) and `DELETE`
-   (destruction). Any code that wants to change ownership must
-   copy-then-delete: INSERT a new row under the new owner with a new
-   id, DELETE the old row.
-2. **The anonymous identity has its own AsyncStorage key**
-   (`@volyume_anonymous_local_id`) and a visually distinct prefix
-   (`anon:`). Code that checks "is this an anonymous user" does so by
-   prefix, never by structure or absence-of-session.
-3. **`migrateLocalUserId` is deprecated** in its current shape. Its
-   only legitimate use case (S3) is replaced by a
-   `copyAnonymousRowsToAccount(anonId, accountUid)` helper that does
-   the explicit copy-then-delete with new ids and FK remapping. Once
-   that helper lands, `migrateLocalUserId` is deleted, not just
-   unused. Leaving it in source is a hazard.
-4. **Sign-in to a different account always wipes the previous
-   account's local data first.** This rule applies in both code
-   paths: explicit `LoginScreen.handleEmailAuth` AND
-   `RootNavigator.onAuthStateChange.SIGNED_IN`. Both call sites must
-   call `wipeAllUserData(previousUid)` before doing anything else.
-5. **Account delete wipes everything for that user.** Both cloud (via
-   `delete_user_data` RPC) and local (via `wipeAllUserData`), plus
-   the AsyncStorage keys named in S7. The function that runs this
-   sequence must be the only path to delete; there is no manual cleanup.
-6. **Row ids are minted by `uid()` which is UUID v4.** Never derived
-   from anything else (no hashes of names, no concatenations of
-   user_id and timestamp, no deterministic seeds shared across
-   users). Deterministic ids are valid for canonical reference data
-   that is the same for every user (exercise library), but never for
-   user-scoped data.
-7. **The diagnostic in `database.diagnoseSyncConflicts` is the truth
-   test.** If it reports any rows under a `user_id` that is neither
-   the current session uid nor the current anonymous id, the
-   invariant is violated. A test should fail. An alert should fire.
+1. **Schema.** Every user-scoped table uses `PRIMARY KEY (user_id,
+   id)`. Local SQLite and Supabase schemas match. Child tables that
+   reference a parent (e.g. `routine_exercises → routines`,
+   `workout_sets → workouts`) carry the parent's `user_id` column
+   and reference it as part of the FK.
+2. **Upserts.** PostgREST upserts use `onConflict: 'user_id,id'`
+   (not `id`). Local UPSERTs use composite ON CONFLICT.
+3. **No UPDATE on user_id.** Static enforcement: a CI check runs
+   `grep -rn 'SET user_id' src/` and fails the build on any match.
+   The only legitimate ownership change is INSERT (creation) or
+   DELETE (destruction).
+4. **Sign-out path** calls `wipeAllUserData(userId)` BEFORE clearing
+   in-memory state. Without that order, the wipe can lose its uid
+   reference and become a no-op.
+5. **Sign-in path** does not call `migrateLocalUserId`. That
+   function is deleted from `database.js` in this refactor. Its old
+   call sites in `RootNavigator.onAuthStateChange` and
+   `LoginScreen.handleEmailAuth` are removed.
+6. **Welcome screen** routes both Free and Pro CTAs to the sign-up
+   flow. No `initLocalUser`. No `handleContinueLocally` button on
+   LoginScreen.
+7. **Account delete path** is the only path that calls
+   `delete_user_data` RPC + `auth.admin.deleteUser`. Sign-out does
+   not.
+8. **Reference data** (the global exercise library, the bundled
+   foods cache, anything not user-scoped) is exempt from the wipe.
+   The wipe explicitly enumerates user-scoped tables; reference
+   tables are not on the list.
 
 ## Anti-patterns to never reintroduce
 
-- "Hide the error, the data is fine." (Hiding 42501 warnings without
-  fixing the cause is what triggered this document.)
-- "Migrate the user_id, the rows are useful." (Bug source #1.)
-- "Reclaim the cloud row's ownership." (Treats another user's data as
-  yours.)
-- "Re-mint the local id on conflict." (Papers over a design failure
-  rather than preventing it.)
-- "Sign-out preserves all local state across accounts." (Conflates
-  session lifetime with data lifetime.)
+- Anonymous local mode of any kind.
+- `migrateLocalUserId` or any function that updates `user_id` on
+  existing rows.
+- "Continue locally" or any sign-in-skip path on Welcome / Login.
+- Suppressing 42501 errors to mask cross-user collisions. (With
+  composite PKs, a 42501 from cross-user collision is impossible. If
+  one ever fires, the schema invariant is broken and we investigate,
+  not silence.)
+- "Reclaim ownership" of cloud rows belonging to another user.
+- "Re-mint id on conflict" as a workaround.
 
 ## Enforcement
 
-- **Diagnostic.** `database.diagnoseSyncConflicts` exposes per-table
-  per-user_id row counts. A user can run it from Settings → Debug.
-  The expectation is that the only user_ids reported are the current
-  session uid and, if present, the current anonymous id.
-- **Test.** A new unit test (TBD when the implementation lands) asserts
-  that no code path writes to `user_id` column on an existing row.
-  Static check via `grep -r "SET user_id"` should return no matches
-  in `src/`.
-- **CLAUDE.md reference.** This document is cited as a hard rule in
-  `CLAUDE.md` so future Claude sessions cannot violate it through
-  ignorance.
-- **PR checklist.** Any PR that touches sign-in, sign-out, account
-  delete, or any code path that writes a `user_id` column must state
-  in its description which scenario above it preserves and which it
-  changes.
+- **Diagnostic** (`database.diagnoseSyncConflicts`) reports per-table
+  per-user_id row counts. On a healthy install, only the current
+  session uid appears. Any other uid in the report is a bug.
+- **CI grep** rejects any `SET user_id` in `src/`.
+- **Mount tests** cover the sign-out + sign-in cycle and assert
+  local SQLite is empty between them.
+- **CLAUDE.md** cites this doc as a hard rule (see "Engineering"
+  section). Future Claude sessions read it before touching identity-
+  related code.
 
-## Migration plan (the existing bad data)
+## Implementation sequence
 
-This document defines what correct looks like. Cleaning down the
-existing 400+ rows that violate the invariant is a separate workstream
-and must follow the same principle:
+The refactor lands in this order. Each step is its own commit so any
+single step can be reverted cleanly.
 
-1. Confirm the design fix is in place and passes the diagnostic on a
-   clean install.
-2. Run the diagnostic on the affected install to enumerate exactly
-   which `user_id` values are foreign.
-3. Surgically delete those rows from cloud via a one-off SQL DELETE
-   that targets specific abandoned uids. The current account's data
-   under the current uid is untouched.
-4. Local SQLite for the affected device is wiped at next sign-in via
-   the new cross-user-wipe rule (S6). The user signs in fresh, pulls
-   the cleaned cloud state, and the diagnostic comes up clean.
+1. **Cloud schema (migration 018).** For each user-scoped table:
+   drop existing PK, add `PRIMARY KEY (user_id, id)`, expand FK
+   constraints to include `user_id`. Add `user_id` columns to
+   child tables that don't yet have one (e.g. `routine_exercises`).
+   Tested via Dashboard SQL Editor before code goes near it.
+2. **Local schema migration.** New entry in `SCHEMA_MIGRATIONS` that
+   mirrors the cloud changes for SQLite. Adds `user_id` columns
+   where missing; sets composite PKs.
+3. **Sync code update.** Every upsert call switches from
+   `onConflict: 'id'` to `onConflict: 'user_id,id'`. Push helpers
+   that didn't include `user_id` in child rows now do.
+4. **Sign-out wipe.** `wipeAllUserData(userId)` is wired into the
+   sign-out flow. Local SQLite is emptied before in-memory state
+   clears.
+5. **Remove anonymous mode.** Welcome buttons both route to sign-up.
+   `initLocalUser`, `handleContinueLocally`, the `LOCAL_USER_KEY`
+   AsyncStorage key, and `migrateLocalUserId` are deleted from
+   the codebase.
+6. **Verification.** Diagnostic reports clean. CI grep passes. Mount
+   tests pass. Manual sign-out/sign-in cycle on device confirms
+   data round-trips cleanly.
+7. **Existing-user data fix-up.** On the next sync cycle after the
+   schema change ships, the previously-failing local rows push to
+   cloud under their new composite PKs. The user's data is
+   automatically rescued. No manual SQL needed.
 
-No data fix happens before the design fix lands. The design fix must
-prevent the issue recurring; data cleanup without the design fix
-guarantees the issue returns.
+Step 7 is the answer to "the user's data goes back to cloud". The
+composite-PK schema turns what used to be a 42501 into a clean
+INSERT, because `(current_user, id)` is a brand-new primary key
+even when `id` already exists under another user.

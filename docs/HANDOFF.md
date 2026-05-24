@@ -235,14 +235,15 @@ growth-strategy follow-through, and the next moves.
 
 0. **Identity + data ownership redesign** per
    `docs/IDENTITY_AND_OWNERSHIP_LOCKED.md`. A multi-account
-   device hit a 400-row 42501 cascade because `user_id` columns
-   were being re-stamped at sign-in (legitimate for
-   anonymous→first-account, illegitimate for account-A→account-B).
-   The locked doc covers 13 scenarios + implementation rules +
-   anti-patterns. Implementation pending; on completion, all
-   existing affected data (local + cloud) is wiped under the
-   user's explicit go-ahead. Until this lands, sign-in flow
-   remains broken on devices with multi-account history.
+   device hit a 400-row 42501 cascade. Root cause: row `user_id`
+   was mutable, anonymous and account identities were conflated,
+   row IDs could collide across users in cloud. Four locked
+   decisions: no anonymous mode, sign-out wipes local SQLite,
+   composite `(user_id, id)` primary keys, no destructive data
+   cleanup (the schema fix automatically rescues the affected
+   user's data on the next sync cycle). The doc carries a 7-step
+   implementation sequence. Until it lands, sign-in flow remains
+   broken on devices with multi-account history.
 
 **Things needing user action outside the app:**
 
