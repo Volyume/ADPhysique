@@ -53,12 +53,16 @@ export function initSentry({ release, environment } = {}) {
   // is fixed.
   // Expected shape: https://<publicKey>@<host>/<projectId>
   // Self-hosted Sentry instances are allowed http for local-network use.
+  // Trim first: env vars routinely pick up a trailing newline from
+  // shell heredocs and CI secret injection, and the native parser
+  // treats that as a malformed value.
+  const trimmed = dsn.trim();
   const DSN_PATTERN = /^https?:\/\/[^@\s/]+@[^/\s]+\/\d+$/;
-  if (!DSN_PATTERN.test(dsn)) return;
+  if (!DSN_PATTERN.test(trimmed)) return;
 
   try {
     SentryNative.init({
-      dsn,
+      dsn: trimmed,
       release: release ?? undefined,
       environment: environment ?? (__DEV__ ? 'development' : 'production'),
       // 10% performance trace sampling in production — enough to
