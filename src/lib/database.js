@@ -997,6 +997,24 @@ const SCHEMA_MIGRATIONS = [
     'CREATE INDEX IF NOT EXISTS idx_custom_exercises_id ON custom_exercises(id)',
     'CREATE INDEX IF NOT EXISTS idx_custom_exercises_user_updated ON custom_exercises(user_id, updated_at)',
   ],
+  // Food layer: mirror cloud migration 021. Add user_id to
+  // recipe_ingredients (the one food child table that lacked it),
+  // backfill from parent recipes. Composite PK at this layer would
+  // require dropping + recreating the existing recipe_ingredients
+  // table -- SQLite doesn't support ALTER ... DROP CONSTRAINT --
+  // and we'd need to copy data through a temp table. Skipping that
+  // for now since local SQLite doesn't enforce PK at the same
+  // strictness as Postgres; the user_id column + index is enough
+  // for the sync layer to operate correctly. Future migration
+  // rebuilds the table properly when we have a clean window.
+  [
+    'ALTER TABLE recipe_ingredients ADD COLUMN user_id TEXT',
+    // LOCKED-OK: one-shot backfill, same pattern as routine_exercises.
+    `UPDATE recipe_ingredients SET user_id = (
+      SELECT r.user_id FROM recipes r WHERE r.id = recipe_ingredients.recipe_id
+    ) WHERE user_id IS NULL`,
+    'CREATE INDEX IF NOT EXISTS idx_recipe_ingredients_user ON recipe_ingredients(user_id, recipe_id)',
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
