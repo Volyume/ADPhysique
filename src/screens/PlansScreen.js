@@ -492,28 +492,39 @@ export default function PlansScreen({ navigation }) {
             {myPlans.map(plan => (
               <View key={plan.id} style={styles.planCard}>
                 <PressableCard
-                  style={styles.planCardMain}
+                  style={styles.planCardBody}
                   onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
                   onLongPress={() => handlePlanOptions(plan)}
                   accessibilityLabel={plan.name}
                 >
+                  <View style={styles.planCardMetaRow}>
+                    {planWorkoutCounts[plan.id] ? (
+                      <Text style={styles.planCardMeta}>
+                        {planWorkoutCounts[plan.id]} workout{planWorkoutCounts[plan.id] !== 1 ? 's' : ''}
+                      </Text>
+                    ) : <View />}
+                    <TouchableOpacity
+                      style={styles.moreBtn}
+                      onPress={() => handlePlanOptions(plan)}
+                      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                    >
+                      <Ionicons name="ellipsis-vertical" size={18} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
                   <Text style={styles.planCardName} numberOfLines={2}>{plan.name}</Text>
-                  {planWorkoutCounts[plan.id] ? (
-                    <Text style={styles.planCardMeta}>
-                      {planWorkoutCounts[plan.id]} workout{planWorkoutCounts[plan.id] !== 1 ? 's' : ''}
-                    </Text>
-                  ) : null}
                 </PressableCard>
-                <View style={styles.planCardActions}>
-                  <TouchableOpacity style={styles.setActiveBtn} onPress={() => handleSetActive(plan)}>
-                    <Text style={styles.setActiveBtnText}>Set Active</Text>
+                <View style={styles.planCardFooter}>
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text style={styles.planCardFooterGhost}>View plan</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={styles.moreBtn}
-                    onPress={() => handlePlanOptions(plan)}
-                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                    onPress={() => handleSetActive(plan)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Ionicons name="ellipsis-vertical" size={18} color={colors.textSecondary} />
+                    <Text style={styles.planCardFooterPrimary}>Set as active</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -687,19 +698,23 @@ const styles = StyleSheet.create({
   viewPlanBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textSecondary },
 
   planCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    borderWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
   },
-  planCardMain: { flex: 1, gap: spacing.xs },
+  planCardBody: { padding: spacing.lg, gap: spacing.sm },
+  planCardMetaRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+  },
   planCardName: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
   planCardMeta: { fontSize: fontSize.xs, color: colors.textSecondary },
-  planCardActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  setActiveBtn: {
-    backgroundColor: colors.surface2, borderRadius: radius.md, paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm, borderWidth: 1, borderColor: colors.border,
+  planCardFooter: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    borderTopWidth: 1, borderTopColor: colors.border,
   },
-  setActiveBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
-  moreBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  planCardFooterGhost: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary },
+  planCardFooterPrimary: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
+  moreBtn: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
 
   templateCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
