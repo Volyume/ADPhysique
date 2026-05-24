@@ -233,6 +233,16 @@ growth-strategy follow-through, and the next moves.
 
 **BLOCKER (must come before further feature work):**
 
+> **Release policy (locked 2026-05-24):** The current Play Console
+> closed testing build (pre-Eat-component version) stays in place
+> until the full app is "totally cleaned and built out — not half
+> done". No new app version goes to closed testers, no Supabase
+> migration runs in production, until every committed move + every
+> pending design fix is shipped on the branch and reviewed. This
+> branch (`claude/volyume-food-logging-app-B9JZv`) accumulates
+> changes; the user explicitly controls when the accumulated work
+> graduates to a release.
+
 0. **Identity + data ownership redesign** per
    `docs/IDENTITY_AND_OWNERSHIP_LOCKED.md`. A multi-account
    device hit a 400-row 42501 cascade. Root cause: row `user_id`

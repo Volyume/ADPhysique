@@ -1,30 +1,27 @@
 -- Migration 018: composite (user_id, id) primary keys
 --
 -- ============================================================
--- DO NOT APPLY UNTIL ROLLOUT IS COORDINATED.
+-- DO NOT APPLY YET.
 --
--- This migration changes primary keys on every user-scoped table
--- from `PRIMARY KEY (id)` to `PRIMARY KEY (user_id, id)`. Once
--- applied, any client that still uses `onConflict: 'id'` on an
--- upsert will receive an error from Postgres ("there is no unique
--- or exclusion constraint matching the ON CONFLICT specification").
+-- Release policy locked 2026-05-24: the current Play Console
+-- closed-testing build stays in place until the full app is built
+-- out -- not half done. This migration ships as part of the
+-- accumulated branch state; it applies to production cloud only at
+-- the coordinated release the user decides to trigger.
 --
--- Rollout order:
---   1. Build the new app version on branch
---      claude/volyume-food-logging-app-B9JZv (this branch).
---   2. Ship to Play Console closed testing.
---   3. Wait until every tester has updated (Play Console reports
---      "Active devices" per release).
+-- When the user is ready to release, the sequence is:
+--   1. Confirm every committed move + design fix on the branch is
+--      ready (no pending blockers in HANDOFF.md).
+--   2. Build the new app version from this branch and upload to
+--      Play Console closed testing.
+--   3. Wait until every tester device shows the new release
+--      (Play Console > Releases > Active devices).
 --   4. THEN apply this migration via Supabase Dashboard -> SQL Editor.
 --   5. New code uses onConflict: 'user_id,id' from this point on.
 --
--- Old app versions still on cloud after step 4 will continue to:
---   - Read (SELECT) data normally. Existing functionality intact.
---   - Insert new rows successfully (rows carry user_id).
---   - Fail to UPSERT updates (no unique constraint matching `id`).
---   - Log the upsert errors but not crash.
--- That degraded mode is acceptable per the rollout contract; users
--- get full functionality back the moment they update.
+-- Until that day arrives, this file sits unapplied. The current
+-- production cloud schema (no composite PK) continues to serve the
+-- old app build without disruption.
 --
 -- ============================================================
 --
