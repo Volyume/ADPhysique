@@ -125,7 +125,7 @@ export async function resolveBarcode(ean, userId = null) {
   if (!ean) return null;
   const t0 = Date.now();
 
-  const local = await findLocalByBarcode(ean);
+  const local = await findLocalByBarcode(ean, userId);
   if (local) {
     if (userId) trackEvent(userId, 'food_lookup_barcode', { source: 'local', ms: Date.now() - t0, ean });
     return local;

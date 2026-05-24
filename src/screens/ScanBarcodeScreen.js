@@ -66,10 +66,11 @@ export default function ScanBarcodeScreen({ navigation, route }) {
           mealSlot, entryDate, scannedFood: food,
         });
       } else {
-        // Miss. Send the user to AddCustomFood with the barcode
-        // prefilled. They can fill in the macros themselves (and
-        // in phase 3, snap the label).
-        navigation.replace('AddCustomFood', {
+        // Miss. Route to ScanLabel: it offers OCR if configured, or
+        // falls through to AddCustomFood manually otherwise. Always
+        // carries the scanned barcode forward so a follow-up save
+        // persists it on the new custom food.
+        navigation.replace('ScanLabel', {
           mealSlot, entryDate, prefillBarcode: data,
         });
       }

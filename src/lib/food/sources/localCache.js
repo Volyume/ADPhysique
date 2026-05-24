@@ -55,9 +55,28 @@ export async function searchLocalByName(userId, query, limit = 25) {
 /**
  * Look up a single food by barcode. Returns the first match or null.
  */
-export async function findLocalByBarcode(ean) {
+export async function findLocalByBarcode(ean, userId = null) {
   if (!ean) return null;
   const d = await db();
+
+  // Search the user's custom foods first: an item they keyed in
+  // themselves beats anything from the shared library, since they
+  // chose to override it. Requires barcode_ean to have been written
+  // when the custom food was created (Move #1.5 phase 3 onward).
+  if (userId) {
+    const customRow = await d.getFirstAsync(
+      `SELECT
+         'custom:' || id AS food_ref, 'custom' AS source, name, brand,
+         serving_g, serving_label,
+         kcal_100g, protein_100g, carbs_100g, fat_100g, fibre_100g
+       FROM custom_foods
+       WHERE user_id = ? AND barcode_ean = ? AND deleted_at IS NULL
+       LIMIT 1`,
+      [userId, ean]
+    );
+    if (customRow) return customRow;
+  }
+
   const row = await d.getFirstAsync(
     `SELECT
        'global:' || id AS food_ref, source, name, brand,

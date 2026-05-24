@@ -1015,6 +1015,14 @@ const SCHEMA_MIGRATIONS = [
     ) WHERE user_id IS NULL`,
     'CREATE INDEX IF NOT EXISTS idx_recipe_ingredients_user ON recipe_ingredients(user_id, recipe_id)',
   ],
+  // Move #1.5 phase 3: barcode persistence on custom_foods.
+  // Closes the scan-miss -> save -> rescan loop: a barcode the
+  // user entered manually now lives on the custom food, so the
+  // next scan resolves locally instead of hitting OFF/USDA again.
+  [
+    'ALTER TABLE custom_foods ADD COLUMN barcode_ean TEXT',
+    'CREATE INDEX IF NOT EXISTS idx_custom_foods_barcode ON custom_foods(barcode_ean) WHERE barcode_ean IS NOT NULL',
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on

@@ -37,15 +37,20 @@ export default function AddCustomFoodScreen({ navigation, route }) {
   // custom_foods is a phase 3 follow-up (needs a schema column +
   // localCache lookup extension).
   const prefillBarcode = route?.params?.prefillBarcode ?? null;
+  // Prefilled by ScanLabel after OCR. Each value may be null if the
+  // parser couldn't extract that field; the input fields render an
+  // empty string for null so the user can fill in manually.
+  const prefillMacros = route?.params?.prefillMacros ?? null;
+  const _num = (v) => (v == null || !Number.isFinite(v) ? '' : String(v));
 
   const [name, setName] = useState('');
   const [brand, setBrand] = useState('');
-  const [servingG, setServingG] = useState('100');
-  const [kcal, setKcal] = useState('');
-  const [protein, setProtein] = useState('');
-  const [carbs, setCarbs] = useState('');
-  const [fat, setFat] = useState('');
-  const [fibre, setFibre] = useState('');
+  const [servingG, setServingG] = useState(_num(prefillMacros?.servingG) || '100');
+  const [kcal, setKcal] = useState(_num(prefillMacros?.kcal100g));
+  const [protein, setProtein] = useState(_num(prefillMacros?.protein100g));
+  const [carbs, setCarbs] = useState(_num(prefillMacros?.carbs100g));
+  const [fat, setFat] = useState(_num(prefillMacros?.fat100g));
+  const [fibre, setFibre] = useState(_num(prefillMacros?.fibre100g));
   const [quantityG, setQuantityG] = useState('100');
   const [saving, setSaving] = useState(false);
 
@@ -58,7 +63,8 @@ export default function AddCustomFoodScreen({ navigation, route }) {
     carbs100g: Number(carbs) || 0,
     fat100g: Number(fat) || 0,
     fibre100g: fibre.trim() ? Number(fibre) : null,
-  }), [name, brand, servingG, kcal, protein, carbs, fat, fibre]);
+    barcodeEan: prefillBarcode || null,
+  }), [name, brand, servingG, kcal, protein, carbs, fat, fibre, prefillBarcode]);
 
   const canSave = name.trim().length > 0 && Number(kcal) >= 0 && Number(servingG) > 0;
 

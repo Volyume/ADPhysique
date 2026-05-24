@@ -76,6 +76,7 @@ import DiaryScreen from '../screens/DiaryScreen';
 import AddCustomFoodScreen from '../screens/AddCustomFoodScreen';
 import FoodSearchScreen from '../screens/FoodSearchScreen';
 import ScanBarcodeScreen from '../screens/ScanBarcodeScreen';
+import ScanLabelScreen from '../screens/ScanLabelScreen';
 import FoodInsightsScreen from '../screens/FoodInsightsScreen';
 import { withProGuard } from '../components/ProGate';
 
@@ -161,6 +162,11 @@ function DiaryStack({ navigation }) {
       <Stack.Screen
         name="ScanBarcode"
         component={ScanBarcodeScreen}
+        options={{ headerShown: false, presentation: 'modal' }}
+      />
+      <Stack.Screen
+        name="ScanLabel"
+        component={ScanLabelScreen}
         options={{ headerShown: false, presentation: 'modal' }}
       />
       <Stack.Screen

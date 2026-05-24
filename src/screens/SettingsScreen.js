@@ -20,6 +20,10 @@ import { exportBackup, importBackup } from '../lib/dataBackup';
 import { useFeedback } from '../components/FeedbackSheet';
 import { getWellbeingMode, setWellbeingMode } from '../lib/wellbeing';
 import {
+  getConsent as getOffWritebackConsent,
+  setConsent as setOffWritebackConsent,
+} from '../lib/food/writeback';
+import {
   isHealthAvailable, getHealthProviderLabel,
   getHealthPermissionStatus, requestHealthPermissions, importNewWeights,
   openSystemHealthSettings,
@@ -110,6 +114,7 @@ export default function SettingsScreen({ navigation }) {
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [editName, setEditName] = useState(userProfile?.firstName ?? '');
   const [calmEnabled, setCalmEnabled] = useState(false);
+  const [offConsent, setOffConsent] = useState(false);
   // Health integration. Per-scope status: weight read separately from
   // workout write so the user can enable one without the other.
   // healthSyncing tracks the manual "Sync now" tap.
@@ -123,9 +128,15 @@ export default function SettingsScreen({ navigation }) {
     setCalmEnabled(value);
   }
 
+  async function toggleOffConsent(value) {
+    await setOffWritebackConsent(value);
+    setOffConsent(value);
+  }
+
   useFocusEffect(
     useCallback(() => {
       getWellbeingMode().then(m => setCalmEnabled(m === 'calm'));
+      getOffWritebackConsent().then(setOffConsent);
       if (isHealthAvailable()) {
         getHealthPermissionStatus(['weight']).then(setHealthWeightStatus).catch(() => {});
         getHealthPermissionStatus(['workout']).then(setHealthWorkoutStatus).catch(() => {});
@@ -799,6 +810,20 @@ export default function SettingsScreen({ navigation }) {
             label="Clear workout history"
             destructive
             onPress={handleClearHistory}
+          />
+          <SettingRow
+            icon="share-social-outline"
+            label="Share scanned labels with Open Food Facts"
+            sub="Sends the macros you confirm and the label photo. Helps the next user get a hit."
+            showArrow={false}
+            rightElement={
+              <Switch
+                value={offConsent}
+                onValueChange={toggleOffConsent}
+                trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                thumbColor={offConsent ? colors.primary : colors.textMuted}
+              />
+            }
           />
         </View>
         <Text style={styles.dataPrivacyNote}>

@@ -1142,6 +1142,7 @@ function _customFoodToCloud(row, supabaseUserId) {
     sugar_100g: row.sugar_100g ?? null,
     photo_url: row.photo_url ?? null,
     notes: row.notes ?? null,
+    barcode_ean: row.barcode_ean ?? null,
     created_at: _msToISOorNull(row.created_at),
     updated_at: _msToISOorNull(row.updated_at),
     deleted_at: _msToISOorNull(row.deleted_at),

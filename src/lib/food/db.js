@@ -147,14 +147,15 @@ export async function insertCustomFood(userId, food) {
       id, user_id, name, brand, serving_g, serving_label,
       kcal_100g, protein_100g, carbs_100g, fat_100g,
       fibre_100g, sodium_100g, sugar_100g, photo_url, notes,
-      created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      barcode_ean, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id, userId, food.name, food.brand ?? null,
       food.servingG, food.servingLabel ?? null,
       food.kcal100g, food.protein100g, food.carbs100g, food.fat100g,
       food.fibre100g ?? null, food.sodium100g ?? null, food.sugar100g ?? null,
       food.photoUrl ?? null, food.notes ?? null,
+      food.barcodeEan ?? null,
       now, now,
     ]
   );
@@ -414,14 +415,15 @@ export async function applyCustomFoodFromCloud(userId, row) {
       id, user_id, name, brand, serving_g, serving_label,
       kcal_100g, protein_100g, carbs_100g, fat_100g,
       fibre_100g, sodium_100g, sugar_100g, photo_url, notes,
-      deleted_at, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      barcode_ean, deleted_at, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       row.id, userId, row.name, row.brand ?? null,
       row.serving_g, row.serving_label ?? null,
       row.kcal_100g, row.protein_100g, row.carbs_100g, row.fat_100g,
       row.fibre_100g ?? null, row.sodium_100g ?? null, row.sugar_100g ?? null,
       row.photo_url ?? null, row.notes ?? null,
+      row.barcode_ean ?? null,
       deletedAt, createdAt, updatedAt,
     ]
   );
