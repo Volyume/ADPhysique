@@ -12,10 +12,14 @@
 -- Safe to apply now. Old app builds don't push either event, so
 -- nothing breaks if cloud rolls ahead of client.
 
+-- Migration 017 declared the function with `_occurred_at timestamptz
+-- DEFAULT now()`. Postgres forbids removing a parameter default via
+-- CREATE OR REPLACE FUNCTION (42P13), so we keep the default here.
+-- The COALESCE below covers callers that pass NULL explicitly.
 CREATE OR REPLACE FUNCTION record_engine_telemetry(
   _event text,
   _payload jsonb,
-  _occurred_at timestamptz
+  _occurred_at timestamptz DEFAULT now()
 ) RETURNS uuid
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $$
