@@ -350,14 +350,25 @@ export default function ProOnboardingScreen({ navigation }) {
       if (morningEnabled || checkinEnabled) {
         const status = await requestNotificationPermissions();
         if (status === 'granted') {
-          const prefs = {};
+          // Flat schema: CoachingReminders, WeeklyCheckIn and AthleteHub
+          // all read these top-level keys. An earlier nested shape
+          // (prefs.checkin.weekday, prefs.morning.hour) was silently
+          // dropped by every reader, defaulting every enrolled user to
+          // a Sunday check-in regardless of the day they picked here.
+          const prefs = {
+            morningEnabled,
+            checkinEnabled,
+            morningHour,
+            morningMinute: 0,
+            checkinDay,
+            checkinHour: 12,
+            checkinMinute: 0,
+          };
           if (morningEnabled) {
             await scheduleMorningWeightNotification(morningHour, 0);
-            prefs.morning = { hour: morningHour, minute: 0, enabled: true };
           }
           if (checkinEnabled) {
             await scheduleCheckinReminder(checkinDay, 12, 0);
-            prefs.checkin = { weekday: checkinDay, hour: 12, minute: 0, enabled: true };
           }
           await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(prefs)).catch(() => {});
         }
