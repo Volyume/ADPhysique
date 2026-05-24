@@ -1,9 +1,15 @@
 # Volyume Complete: session handoff
 
-**Last updated:** 2026-05-24 (post delete-account + sign-out wipe + tab inset fix + exercises bulk-push removal + FoodLayerIntro removal)
-**Last session ended at commit:** `b240188` (revert: delete migration 026 silencer). Active branch: `claude/volyume-food-logging-app-B9JZv`.
+**Last updated:** 2026-05-24 (post food-layer scan upgrade: vision-camera + MLKit OCR + bundled OFF snapshot importer + cloud delta-pull infrastructure)
+**Last session ended at commit:** `0833a57` (food delta-pull RPC + client puller). Active branch: `claude/volyume-food-logging-app-B9JZv`.
 
-Recent landmarks (in push order):
+Recent landmarks (newest first):
+- `0833a57` migration 028 + `src/lib/food/libraryDelta.js` — Supabase delta-pull RPC + client puller (step 3 of food-data plan)
+- `0b4e5dc` `scripts/seed/buildOffSnapshot.js` + README — generates the bundled OFF UK snapshot data locally
+- `56a390b` `src/lib/food/seed.js` + placeholder JSON — first-launch snapshot importer with per-boundary logging
+- `08402aa` scan screens swapped from `expo-camera` to `react-native-vision-camera` 4.7.3 + torch + zoom + better detection
+- `0f4c1ae` `database.uid` finally exported — fixes the silent throw in `_promoteToLocal` that caused the barcode-rescan loop
+- `0aace68` diagnostic logging on ScanBarcode (the diagnostic that found the `uid` bug)
 - `b240188` revert migration 026 silencer (founder direction: fix source, don't silence)
 - `c49e596` sync.js fix: only push customs to `custom_exercises`, stop hitting `exercises` RLS
 - `a54df93` remove FoodLayerIntro onboarding screen (did nothing)
@@ -265,7 +271,7 @@ done and what's still unverified.
   they've run it. Verify queries at the bottom of the file say
   exactly which rows remain.
 
-**Cloud SQL pending application (new this session):**
+**Cloud SQL pending application:**
 - Migration 027 (`rapid_loss_compression_telemetry`) — adds
   `rapid_loss_compression_triggered` to the
   `record_engine_telemetry` server-side allow-list so Move #3's
@@ -274,6 +280,30 @@ done and what's still unverified.
   succeeds locally (the row sits in the `engine_telemetry` SQLite
   table) but the cloud push warns and the row stays unpushed.
   Apply via Dashboard → SQL Editor.
+- Migration 028 (`food_library_pull`) — read-only RPC that returns
+  cloud `foods` rows updated since a timestamp. Powers the client-
+  side delta puller in `src/lib/food/libraryDelta.js`. Until
+  applied, the puller logs `food.libraryDelta.rpc` warnings and
+  returns; local snapshot + live OFF fallback still work. Apply
+  via Dashboard → SQL Editor.
+
+**Founder actions outstanding for the food layer:**
+1. Apply migration 028 in Supabase Dashboard.
+2. Run `node scripts/seed/buildOffSnapshot.js` locally to generate
+   the real `assets/seed/off_uk_snapshot.json` (the placeholder
+   shipped at `56a390b` is empty). Commit + push the generated
+   file. The OFF API blocks the cloud sandbox, so this has to be
+   run from your machine.
+3. Trigger an EAS rebuild once both 1 + 2 are done so the
+   vision-camera native module, the MLKit OCR binding, the
+   bundled snapshot, and the delta puller all land on-device
+   together.
+4. Set up a server-side CI job (e.g. weekly GitHub Action) that
+   pulls the OFF UK dump and upserts into cloud `foods` via
+   service-role. The puller needs cloud foods to actually have
+   data in it for delta sync to do anything. Sample script not
+   yet written; see `scripts/seed/README.md` for the shape it
+   should take.
 
 **Code changes pushed this session that need the next APK build
 to take effect (founder does NOT build APKs locally; the branch
