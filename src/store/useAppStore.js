@@ -209,32 +209,32 @@ const useAppStore = create((set, get) => ({
       }
     }
 
-    // Sign-out wipes per-user AsyncStorage keys. Without this,
-    // first-run flags, cached profile fragments, tier hints, and
-    // similar per-user state survive into the next sign-in and
-    // route a different user into a stale UI (no plan, no wizard,
-    // old weight visible because it came from the previous user's
-    // profile cache). IDENTITY_AND_OWNERSHIP_LOCKED scenario C:
-    // "AsyncStorage keys scoped to U" clear; device-level keys
-    // (accessibility prefs, crash log, sessions-since-install
-    // counter) survive.
+    // Sign-out wipes everything from the device for this user.
+    // Per founder direction: signing out should leave nothing
+    // behind. Same hammer as delete-account. AsyncStorage.clear()
+    // is scoped to this app only.
     try {
-      const PRESERVE = new Set([
-        A11Y_PREFS_KEY,
-        '@volyume_crash_log',
-        'volyume_review_prompted',
-        'volyume_notif_prompt_seen',
-        'volyume_sessions_since_install',
-      ]);
-      const allKeys = await AsyncStorage.getAllKeys();
-      const toRemove = allKeys.filter(k => !PRESERVE.has(k));
-      if (toRemove.length > 0) {
-        await AsyncStorage.multiRemove(toRemove);
-      }
-      log.logInfo('clearAuthStateForSignOut.asyncStorage.scopedWipe',
-        `removed=${toRemove.length} preserved=${allKeys.length - toRemove.length}`);
+      await AsyncStorage.clear();
+      log.logInfo('clearAuthStateForSignOut.asyncStorage.clear', 'ok');
     } catch (e) {
-      log.logError('clearAuthStateForSignOut.asyncStorage.scopedWipe.failed', e, { prevUid });
+      log.logError('clearAuthStateForSignOut.asyncStorage.clear.failed', e, { prevUid });
+    }
+
+    // SecureStore tokens too. supabase-js signOut() should have done
+    // this, but if the cloud call failed the tokens persist and a
+    // restoreSession revives the session under the same uid. Same
+    // best-effort pattern as delete-account.
+    try {
+      // eslint-disable-next-line global-require
+      const SecureStore = require('expo-secure-store');
+      const url = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+      const projectRef = url.replace(/^https?:\/\//, '').split('.')[0];
+      if (projectRef) {
+        await SecureStore.deleteItemAsync(`sb-${projectRef}-auth-token`).catch(() => {});
+      }
+      await SecureStore.deleteItemAsync('supabase.auth.token').catch(() => {});
+    } catch (e) {
+      log.logWarn('clearAuthStateForSignOut.secureStore.failed', e?.message ?? 'unknown', { prevUid });
     }
 
     set({

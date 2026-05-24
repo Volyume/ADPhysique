@@ -77,8 +77,11 @@ pull cloud, push edits". Listing them anyway so behaviour is explicit.
 - App wipes every user-scoped row from local SQLite. (Reference
   data — exercise library — stays.)
 - App clears in-memory user / session / profile / tier state.
-- App clears AsyncStorage keys scoped to `U` (profile cache,
-  nutrition prefs, notification prefs etc).
+- App calls `AsyncStorage.clear()` — every key gone. No carve-outs
+  for accessibility prefs, crash log, install counters, or
+  anything else. Same hammer as delete-account; if a user wants a
+  setting back, they can set it again after signing in.
+- App clears the supabase auth token from SecureStore.
 - Routes back to Welcome.
 
 ### D. Different user signs in after sign-out
