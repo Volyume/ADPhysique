@@ -23,25 +23,22 @@ installGlobalHandlers();
 // EXPO_PUBLIC_SENTRY_DSN env var isn't set — safe to ship before
 // you've added the SDK.
 //
-// DIAGNOSTIC: Sentry init is temporarily disabled to isolate a launch
-// crash. Every build after 2a608e8 flashes and dies before any JS-side
-// error can be reported. Files in the repo are identical to 2a608e8.
-// Either @sentry/react-native or the DSN value bundled with it is
-// killing the app during native init, before JS error handlers can
-// even register. Removing the call proves or disproves Sentry. If the
-// app launches with this commented out, restore once we know what's
-// wrong with the Sentry config.
-// {
-//   // eslint-disable-next-line global-require
-//   const { initSentry } = require('./src/lib/sentry');
-//   // eslint-disable-next-line global-require
-//   const Constants = require('expo-constants').default;
-//   initSentry({
-//     release: Constants?.expoConfig?.version
-//       ? `volyume@${Constants.expoConfig.version}`
-//       : undefined,
-//   });
-// }
+// initSentry now validates the DSN format before calling the native
+// SDK. A malformed DSN previously crashed the Android process during
+// async native init (no JS-catchable error, no logcat tombstone, just
+// flash + close). With the validator in place, a bad DSN skips init
+// cleanly and the app launches.
+{
+  // eslint-disable-next-line global-require
+  const { initSentry } = require('./src/lib/sentry');
+  // eslint-disable-next-line global-require
+  const Constants = require('expo-constants').default;
+  initSentry({
+    release: Constants?.expoConfig?.version
+      ? `volyume@${Constants.expoConfig.version}`
+      : undefined,
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Background task — keeps the JS thread alive during rest periods on iOS so

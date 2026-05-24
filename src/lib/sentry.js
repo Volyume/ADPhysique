@@ -41,9 +41,28 @@ export function initSentry({ release, environment } = {}) {
   if (!SentryNative || initialised) return;
   const dsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
   if (!dsn) return;
+  // Validate the DSN shape before handing it to the native SDK. The
+  // JS-side try/catch below can't catch a Java exception thrown
+  // async on the native init thread, and a malformed DSN crashes the
+  // Android process before the first frame renders (flash + close,
+  // no error reachable from JS, no Sentry event, no logcat tombstone).
+  // Sentry DSNs are always https://<key>@<host>/<projectId>.
+  // Anything else: log and skip init. App boots fine; errors just
+  // don't get captured until the DSN is fixed.
+  const DSN_PATTERN = /^https:\/\/[^@\s]+@[^/\s]+\/\d+$/;
+  const trimmed = String(dsn).trim();
+  if (!DSN_PATTERN.test(trimmed)) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      '[sentry] EXPO_PUBLIC_SENTRY_DSN does not look like a valid DSN '
+      + '(expected https://<key>@<host>/<projectId>). Length: '
+      + trimmed.length + '. Skipping init.',
+    );
+    return;
+  }
   try {
     SentryNative.init({
-      dsn,
+      dsn: trimmed,
       release: release ?? undefined,
       environment: environment ?? (__DEV__ ? 'development' : 'production'),
       // 10% performance trace sampling in production — enough to
