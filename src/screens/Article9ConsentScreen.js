@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, Pressable, Linking, Platform,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, Pressable, Linking, Platform, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -46,16 +46,28 @@ export default function Article9ConsentScreen() {
         _app_version: Application.nativeApplicationVersion ?? null,
         _platform: Platform.OS,
       });
-      if (error) throw error;
+      // The cloud RPC is the source of truth for the audit log, but
+      // network failure or a missing RPC (cloud migration not yet
+      // applied) must not strand the user on this screen. Local
+      // consent is still recorded so they can proceed. The cloud
+      // sync layer will reconcile when the RPC + connectivity are
+      // both available; until then the local flag governs gating.
+      if (error) {
+        logError('Article9.consent.cloudFailed', error, { uid: user?.id });
+      }
       if (user?.id) {
         await AsyncStorage.setItem(`${CONSENT_KEY_PFX}${user.id}`, 'true');
       }
-      logInfo('Article9.consent.granted', `uid=${user?.id ?? 'unknown'}`);
+      logInfo('Article9.consent.granted', `uid=${user?.id ?? 'unknown'}`, {
+        cloudRecorded: !error,
+      });
       healthConsentGranted?.();
     } catch (e) {
       logError('Article9.consent.failed', e, { uid: user?.id });
-      // Don't navigate; let the user retry. Network failure is the
-      // most likely cause and a retry will work once they're online.
+      Alert.alert(
+        'Could not save',
+        'We could not record your consent. Check your connection and try again.',
+      );
       setBusy(false);
     }
   }
