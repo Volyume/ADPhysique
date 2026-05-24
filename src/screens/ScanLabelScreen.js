@@ -149,12 +149,23 @@ export default function ScanLabelScreen({ navigation, route }) {
           style={StyleSheet.absoluteFillObject}
           facing="back"
         />
-        <View style={styles.overlay} pointerEvents="none">
-          <View style={styles.frame} />
-          <Text style={styles.hint}>
-            {busy ? 'Reading' : 'Frame the nutrition panel'}
-          </Text>
-        </View>
+        {prefillBarcode ? (
+          <View style={styles.missBanner} pointerEvents="none">
+            <Text style={styles.missTitle}>Barcode {prefillBarcode} not in our database</Text>
+            <Text style={styles.missBody}>
+              {ocrAvailable
+                ? 'Frame the nutrition panel and tap the shutter, or type it in.'
+                : 'Type the macros in — we’ll keep the barcode on the saved food so the next scan hits.'}
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.overlay} pointerEvents="none">
+            <View style={styles.frame} />
+            <Text style={styles.hint}>
+              {busy ? 'Reading' : 'Frame the nutrition panel'}
+            </Text>
+          </View>
+        )}
         <View style={styles.captureRow}>
           {ocrAvailable ? (
             <TouchableOpacity
@@ -166,7 +177,7 @@ export default function ScanLabelScreen({ navigation, route }) {
             </TouchableOpacity>
           ) : (
             <TouchableOpacity style={styles.secondaryBtn} onPress={gotoManual}>
-              <Text style={styles.secondaryBtnText}>OCR not configured. Type it in.</Text>
+              <Text style={styles.secondaryBtnText}>Type it in</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -194,6 +205,17 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg, color: colors.textPrimary, fontSize: fontSize.md,
     backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm, borderRadius: radius.sm,
+  },
+  missBanner: {
+    position: 'absolute', top: spacing.lg, left: spacing.lg, right: spacing.lg,
+    backgroundColor: 'rgba(0,0,0,0.78)', borderRadius: radius.md,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.md, gap: spacing.xs,
+  },
+  missTitle: {
+    color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold,
+  },
+  missBody: {
+    color: colors.textSecondary, fontSize: fontSize.sm, lineHeight: 20,
   },
   captureRow: {
     position: 'absolute', bottom: spacing.xl, left: 0, right: 0,
