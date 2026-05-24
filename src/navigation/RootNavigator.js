@@ -452,6 +452,14 @@ export default function RootNavigator() {
           // eslint-disable-next-line global-require
           require('../lib/food/seed').importOffSnapshotIfNeeded()
             .catch((err) => console.warn('[seed] off snapshot import threw:', err?.message));
+          // Food library delta pull (step 3): refresh local foods
+          // cache against cloud foods that were updated since the
+          // last pull. Throttled to once per 6 hours by default;
+          // skipped silently if no session. Same fire-and-forget
+          // pattern as the snapshot import.
+          // eslint-disable-next-line global-require
+          require('../lib/food/libraryDelta').pullFoodLibraryDelta()
+            .catch((err) => console.warn('[libraryDelta] threw:', err?.message));
         } catch (e) {
           // eslint-disable-next-line global-require
           try { require('../lib/errorLog').logError('RootNavigator.bootstrap.initDb', e); } catch (_) {}
