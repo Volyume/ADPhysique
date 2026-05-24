@@ -1,5 +1,11 @@
 # Move #1: Food foundation + FFM floor (locked)
 
+> **Status (2026-05-24): SHIPPED FULL including all polish.**
+> Foundation landed in earlier commits. The three deferred polish
+> items (MacroRings Skia, FoodDetailSheet bottom sheet,
+> tap-to-edit on diary entries replacing the long-press-delete
+> footgun) landed in commit `2191530`.
+
 The bundled move. Ships food schema, manual food entry UI, and the
 30 kcal/kg FFM/day safety floor as one unit. Locked 2026-05-23.
 

@@ -1,8 +1,46 @@
 # Move #2: ED-pattern detection (locked)
 
+> **Status (2026-05-24): SHIPPED FULL.** Detector + tests +
+> weeklyCoach integration + locked copy in HeldDecisionsCard +
+> GoalLockConsentScreen + AthleteHub edit row + Supabase migration
+> 017 all landed in commit `98367c4`. The Article 9 consent
+> screen was descoped from this slice and belongs to the
+> onboarding-flow refactor (see HANDOFF.md). Migration 017 still
+> needs the founder to apply via Supabase Dashboard before ED-flag
+> sync round-trips across devices.
+
 The harm-prevention move. A multi-signal detector that holds further
 deficit when risk patterns co-occur, with explicit (not silent)
 lockout copy and a single signposting link. Locked 2026-05-23.
+
+## Implementation notes (2026-05-24 ship)
+
+- Detector lives at `src/lib/edPatternDetector.js`. Pure logic
+  per the spec: 4 signals, 2-vs-3 threshold gated on
+  goal_lock_advanced, `hasEdPatternCleared` mirror for clearance.
+- 23 tests in `src/lib/__tests__/edPatternDetector.test.js`
+  including the four locked acceptance properties.
+- Engine integration via three new inputs on `runWeeklyCoach`:
+  `recentWeeklyHistory`, `goalLockAdvanced`, `edPatternOpen`.
+  Output adds `edPatternFired`, `edPatternSignals`,
+  `edPatternClearedThisWeek`, `goalLockAdvanced`.
+- Locked copy lives in `whyThisTemplates.js` as
+  `ED_PATTERN_LOCKOUT_COPY` and `ED_PATTERN_CLEARED_COPY`.
+  HeldDecisionsCard reads the type field on each decision and
+  switches to the rich variant for the two ED types.
+- Support link resolves by device locale via
+  `getEdSupportLink()`; Beat (UK), NEDA (US), Butterfly (AU),
+  Beat as default.
+- GoalLockConsentScreen registered in RootNavigator and
+  reachable from AthleteHub Goal lock row (editMode=true).
+- Migration 017 ships `clear_goal_lock` and
+  `record_engine_telemetry` RPCs.
+- Engine_overrides table shipped in 017 as groundwork; no client
+  consumers yet (phase 2 / B2B).
+- Tests + onboarding screen for the simulator scenarios
+  (`aggressive_cut_unsupervised`, `aggressive_cut_supervised`,
+  `red_s_trajectory`) are deferred until a simulator framework
+  exists in the repo.
 
 ## Scope
 

@@ -1,5 +1,18 @@
 # Database schema (locked)
 
+> **Status (2026-05-24):**
+> - Food domain (Move #1): SHIPPED in `migrate_015_food_logging.sql`
+>   and `migrate_016_food_sync_rpcs.sql`. Applied to production.
+> - Engine domain (Move #2 + #3): SHIPPED in
+>   `migrate_017_ed_pattern_and_telemetry.sql`. Includes
+>   `ed_pattern_flags`, `engine_telemetry`, `engine_overrides`
+>   (groundwork), `clear_goal_lock` RPC,
+>   `record_engine_telemetry` RPC, `engine_telemetry_daily` view,
+>   `user_body_profile.goal_lock_advanced` +
+>   `user_body_profile.goal_lock_set_at` columns. **NOT YET APPLIED
+>   to production — founder action pending.**
+> - Tier and subscription domain (Move #5): NOT STARTED.
+
 Every new table, column, index, RLS policy, and RPC function needed to
 support moves #0 through #5. Locked 2026-05-23.
 

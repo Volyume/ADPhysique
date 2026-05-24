@@ -2,7 +2,16 @@
 
 Features listed here are explicitly deferred. None should be implemented without the user explicitly reopening the item and confirming scope.
 
-_Last updated: 2026-05-22. Recent additions in this beta-prep branch are noted in the section "Shipped in May 2026 beta-prep" near the bottom._
+_Last updated: 2026-05-24. Recent additions in this beta-prep branch are noted in the section "Shipped in May 2026 beta-prep" near the bottom._
+
+> **Note (2026-05-24): the "food / meal logging" hard exclusion below was
+> reversed under the Volyume Complete strategy (locked
+> 2026-05-23). Food logging ships as part of Move #1 + #1.5 with
+> the FFM-aware safety floor as the unlock condition. The line below
+> remains for historical context; the active behaviour is the
+> three-tier ladder in COMPLETE_TIER_SCOPE_LOCKED.md. Coach / client
+> mode similarly reversed under Volyume Complete's coach handoff
+> path; locked phase 2.**
 
 ---
 
@@ -118,4 +127,30 @@ in main now; listing here so they don't get re-proposed.
   longer fire two concurrent finish chains.
 - **Auto warm-up suggestion removed.** Users mark warm-ups via the existing
   Set type picker. Sheet + handler + ~200 lines of orphan code deleted.
+
+## Shipped in May 2026 -- 2026-05-24 round
+
+Late-May ship covering the Volyume Complete food layer end-to-end, the
+harm-prevention safety check, and the first slice of cascade telemetry.
+Detail in HANDOFF.md.
+
+- **Move #1 food foundation + FFM floor.** SHIPPED FULL including
+  polish: MacroRings (Skia), FoodDetailSheet bottom sheet,
+  tap-to-edit on diary entries, FoodSearch / Insights / CSV export.
+- **Move #2 ED-pattern detection.** SHIPPED FULL. Multi-signal
+  detector with 4 signals + 2/3 threshold on goal_lock_advanced.
+  Locked verbatim copy in HeldDecisionsCard with Get-support and
+  Read-more CTAs. GoalLockConsentScreen reachable from AthleteHub.
+  Supabase migration 017 (needs founder to apply).
+- **Move #3 cascade telemetry slice.** SHIPPED PARTIAL. Local-first
+  event log, allow-listed event taxonomy, debounced push, sign-in
+  drain. Hooks: tier_changed, ed_pattern_flag_fired/_cleared,
+  goal_lock_set/_cleared. The upward-gate-compression scope is a
+  separate work stream and remains not-started.
+- **WelcomeScreen disqualifier (Claude draft).** "Who Volyume is
+  for" block above the tier cards, founder to edit.
+- **Plans archive system.** Auto-archive other plans on goal-reroll;
+  collapsible "Archived plans · N" section with Restore action.
+- **17 founder-reported QA fixes from the device testing pass on
+  2026-05-24.** Logged in KNOWN_ISSUES_FROM_QA.md.
 

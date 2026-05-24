@@ -1,5 +1,27 @@
 # Telemetry, dashboards, alerts (locked)
 
+> **Status (2026-05-24): infrastructure SHIPPED PARTIAL.**
+> `src/lib/engineTelemetry.js` provides `track(userId, event,
+> payload)` + `flushPendingTelemetry()`. Local SQLite table
+> `engine_telemetry` queues events; debounced push ships them via
+> the `record_engine_telemetry` RPC in Supabase migration 017.
+> Allow-listed event taxonomy enforced client-side AND server-side.
+>
+> **Currently emitting:** `tier_changed`, `ed_pattern_flag_fired`,
+> `ed_pattern_flag_cleared`, `goal_lock_set`, `goal_lock_cleared`.
+>
+> **Allow-listed but no caller yet** (belong to Move #4 / #5):
+> `cascade_started`, `cascade_advanced`, `cascade_skipped_ahead`,
+> `paid_converted`, `churn_at_gate`.
+>
+> **Cohort dashboard:** the `engine_telemetry_daily` view in
+> migration 017 aggregates per day, readable directly from
+> Supabase Studio. No in-app coach-only dashboard surface yet —
+> open question whether one is needed for v1.
+>
+> Migration 017 needs the founder to apply via Supabase
+> Dashboard before any telemetry round-trips to the server.
+
 Every event we emit, every dashboard panel, every alert threshold.
 Locked 2026-05-23.
 

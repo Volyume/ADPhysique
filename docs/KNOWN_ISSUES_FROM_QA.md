@@ -1,9 +1,37 @@
 # Volyume — Known Issues from QA
 
-_Last updated: 2026-05-22. Original audit dated 2026-05-16; subsequent
-multi-agent audits 2026-05-20, 2026-05-21, and 2026-05-22 (+ a Codex
-parallel pass on 2026-05-22) added more findings. Status flags below
-reflect the current state._
+_Last updated: 2026-05-24. Founder-reported issues from device
+testing this session reconciled below. Earlier multi-agent audits
+2026-05-20, 2026-05-21, and 2026-05-22 still apply for the older
+items._
+
+## 2026-05-24 — founder device-testing pass
+
+User-reported issues caught while exercising the food layer, the
+goal-change flow, the Plans surface, and the check-in cluster.
+All listed are now fixed and on the active branch.
+
+| Issue | Severity | Status | Resolved in |
+|---|---|---|---|
+| App crashed at launch when `SENTRY_DSN` env var was missing or whitespace-only — the Sentry init treated `undefined` as a valid string and the SDK threw during construction | **Critical** | **Fixed** | Sentry init now validates + trims DSN; crash path can no longer block boot |
+| AthleteHub check-in title hardcoded "Wednesday" regardless of user's chosen weekly day | High | **Fixed** | Title now reads `userProfile.checkInDay` |
+| Enrolment wrote prefs to a different storage key than the readers used; check-in gate defaulted to Sunday for every fresh enrolment | **Critical** | **Fixed** | Enrolment now writes via `setNotificationPrefs`; readers and writers share the canonical AsyncStorage key |
+| Early-deload card fired at week 1 with 0 check-ins logged | High | **Fixed** | `shouldDeload` now requires ≥2 check-ins AND block week ≥2 |
+| Plans tab "My plans" card layout diverged from the Plan Library shape | Medium | **Fixed** | Card structure unified |
+| Morning weight input lost unit suffix when input was non-empty | Medium | **Fixed** | Unit chip moved to absolute position so it stays visible while typing |
+| Heads-up banner on HomeScreen couldn't be dismissed | Medium | **Fixed** | Added close affordance + per-banner dismissal in AsyncStorage |
+| Body diagram legend exposed raw RP-style abbreviations "Below MEV", "Approaching MRV", "Over MRV" — the only remaining user-visible jargon hits in the codebase | High | **Fixed** | Plain-English labels "Below target / Optimal / Near limit / Over limit"; full jargon sweep across screens, components, seed data found this was the only leak |
+| Weekly check-in told user "0 readings this week" the day they enrolled and tried to check in on their chosen day | High | **Fixed** | Enrolment now also calls `logMorningWeight` alongside `logBodyMetric` so the enrolment day counts toward the 3-weights gate |
+| Precision Coaching screen rendered the navigator header AND an in-screen header (close X + "Precision Coaching") on the same row, giving the user a double header | Medium | **Fixed** | In-screen headers removed across loading + insufficient-data + main states; navigator title renamed from "Your Week" to "Precision Coaching" to preserve the locked voice naming |
+| "Got it" on the Precision Coaching baseline-building card called `goBack()`, landing the user on the WeeklyCheckIn screen they'd just submitted | Medium | **Fixed** | Uses `popToTop()` to land on AthleteHub (stack root + where the user came from); navigator back chevron overridden with the same handler |
+| Debug log noise: `sync._pullCoachOutputs` warned "table coach_outputs has no column named applied" every pull cycle — the puller wrote the column but the v6 CREATE TABLE never included it | Medium | **Fixed** | Column added to CREATE TABLE for fresh installs + additive ALTER migration for installs that already created the table without it |
+| Debug log noise: `sync._pushRoutinesAndExercises` logged "orphan routine_exercises skipped, count: 11" every push cycle — `cleanupOrphanRoutineExercises` ran only at boot so mid-session orphans leaked through | Low | **Fixed** | Cleanup runs just before computing pushable routine IDs so the warning fires at most once per genuine state-drift event |
+| Diary header had a chevron-back icon at the far left visually identical to the system back arrow, on a tab root with nothing to go back to | Medium | **Fixed** | New layout: optional Today pill on left, grouped `‹ Tomorrow ›` date pager in the centre, chart icon on the right |
+| Goal-change summary "What happens next" bullet said "Your active plan stays in place" — but `generateAndSavePlan` had been rebuilding the plan all along; the screen just refused to mention it | Medium | **Fixed** | Pass `planRerolled` from ProGoalSetup → GoalChangeSummary; copy now reads "A fresh plan has been built for your new goal and is now your active plan. Your next session comes from it." |
+| Plans "My plans" stacked one card per goal-reroll, four cards showing for a user who'd changed goals four times, each with a "Set as active" CTA | High | **Fixed** | Auto-archive other plans on `generateAndSavePlan` success. New collapsible "Archived plans · N" section with Restore action. Pro tier can now archive inactive plans from the kebab too (was free-only) |
+| Food entry long-press on diary row silently deleted it with no visible affordance — destructive action triggered by a gesture nobody discovers | High | **Fixed** | Tap now opens FoodDetailSheet in edit mode (change quantity / move meal / delete via explicit trash button with confirm) |
+| FoodSearch picker was a centred Modal with `animationType="fade"` — locked spec calls for a bottom sheet for one-thumb reach | Medium | **Fixed** | Replaced with FoodDetailSheet (same component as edit), slides from bottom |
+| Diary macro card was linear progress bars — locked spec calls for MacroRings (Skia) | Low | **Fixed** | New MacroRings component: hero kcal ring + three macro mini-rings, amber on overshoot |
 
 ## 2026-05-22 — beta-prep multi-agent + Codex pass
 

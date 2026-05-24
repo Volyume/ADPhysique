@@ -1,7 +1,7 @@
 # Volyume Complete: session handoff
 
-**Last updated:** 2026-05-23 (resumed after compaction; concentrated push round)
-**Last session ended at commit:** ddcf99b (Insights + macro targets + CSV export)
+**Last updated:** 2026-05-24 (post Move #2 + Move #3 + food polish ship)
+**Last session ended at commit:** 98367c4 (Move #2 ED-pattern + Move #3 telemetry + WelcomeScreen disqualifier)
 **Active branch:** `claude/volyume-food-logging-app-B9JZv`
 
 If you're a Claude session picking this up cold, read this document
@@ -168,10 +168,45 @@ the context summary:
     routes there. CSV writer split into a pure formatter
     (`buildDiaryCsv`, 5 tests) and a thin I/O wrapper.
 
-**Test state:** 565 passing (548 baseline + 17 new across sync +
-CSV), 25 snapshots locked, 1 pre-existing failure (rapid-loss test
-that Move #3 will address) and 1 pre-existing suite-load failure
-(screen-mount mocking expo-image). Both predate this session.
+The 2026-05-24 round shipped a packed series of fixes plus the
+three deferred polish items, then Move #2 in full, then Move #3:
+
+18. Launch-crash fix on missing Sentry DSN, AthleteHub check-in
+    title reading the chosen day, enrolment prefs writing where
+    readers look, early-deload gates (≥2 check-ins, block week ≥2),
+    Plans "My plans" matching Plan Library layout, morning weight
+    unit visible, dismissible heads-up banner.
+19. Jargon sweep (heatmap legend stripped MEV/MRV terminology),
+    check-in cluster (enrolment weight counts as a reading,
+    single header on Precision Coaching, "Got it" exits to Hub),
+    re-introduced ddcf99b after a prior revert.
+20. Debug-log noise (`coach_outputs.applied` migration, orphan
+    cleanup before push), Diary header grouping with a Today pill,
+    goal-change summary copy now tells the truth about the
+    rerolled plan.
+21. Plans archive system: auto-archive other plans on goal change,
+    Archived collapsible section, restore action.
+22. **Food polish block (Move #1 remaining):** MacroRings Skia
+    component replaces the linear bars, FoodDetailSheet bottom
+    sheet replaces the centred picker modal in FoodSearch AND
+    handles tap-to-edit on diary entries (long-press-delete
+    footgun killed). Three deferred polish items now done.
+23. **Move #2 (ED-pattern detection) — SHIPPED FULL.** Detector
+    with 4 signals + thresholds, 23 unit/property tests,
+    weeklyCoach integration, locked verbatim copy in
+    HeldDecisionsCard, GoalLockConsentScreen, YouHub edit row,
+    Supabase migration 017.
+24. **Move #3 (cascade telemetry) — SHIPPED.** Local-first event
+    log, debounced push helper, sign-in drain hook,
+    tier_changed + ED-flag + goal_lock events wired.
+25. **WelcomeScreen disqualifier (Claude draft).** "Who Volyume
+    is for" block above tier cards. Founder to edit in place.
+
+**Test state:** 1036 passing, 2 pre-existing failures
+(off-target threshold gating in weeklyCoach.test.js — Move #3
+won't fix these, they're a separate issue from the rapid-loss
+test mentioned earlier). 23 new tests added this session for the
+ED-pattern detector.
 
 ---
 
@@ -181,10 +216,10 @@ that Move #3 will address) and 1 pre-existing suite-load failure
 | --- | --- |
 | Move #0 -- code corrections (jargon blocklist + SportRxiv citation fix) | SHIPPED |
 | Move #0.5 -- voice retrofit | SHIPPED PARTIAL. whyThisTemplates, weeklyCoach WHY_LIBRARY, HomeScreen mesocycle chip, SettingsScreen done. Deeper screen-by-screen surface audit (PRICE strings, onboarding screens) not yet done. |
-| Move #1 -- food foundation + FFM floor | SHIPPED. Migrations, FFM floor function + wiring, food data layer, Diary screen with macro-target progress bars, Add custom food, Diary tab, Today's intake card, food sync wired both directions to migration 016 RPCs, FoodSearchScreen with waterfall + recents + favourites + serving picker, BodyMetrics 7-day intake line, FoodInsightsScreen with 7-day bar chart + macro adherence + CSV export. Remaining polish (not launch-blocking): MacroRings Skia component, ServingPicker as a sheet rather than modal, food detail sheet for edit (currently a modal). |
+| Move #1 -- food foundation + FFM floor | SHIPPED FULL. Migrations, FFM floor function + wiring, food data layer, Diary screen with MacroRings (Skia), Add custom food, Diary tab, Today's intake card, food sync wired both directions to migration 016 RPCs, FoodSearchScreen with waterfall + recents + favourites + bottom-sheet picker, BodyMetrics 7-day intake line, FoodInsightsScreen with 7-day bar chart + macro adherence + CSV export, FoodDetailSheet handling both add and edit. All locked polish done. |
 | Move #1.5 -- barcode + OCR | NOT STARTED. Camera + MLKit + OCR + OFF write-back. |
-| Move #2 -- ED-pattern detection | NOT STARTED. The Article 9 consent screen + Goal lock screen are also part of this. |
-| Move #3 -- upward gate compression | NOT STARTED. |
+| Move #2 -- ED-pattern detection | SHIPPED FULL. edPatternDetector with 4 signals + thresholds, 23 unit/property tests, weeklyCoach integration, locked verbatim copy in HeldDecisionsCard with Get-support + Read-more CTAs, GoalLockConsentScreen registered in nav + reachable from AthleteHub, Supabase migration 017 (RPC + RLS). Article 9 consent screen still pending (separate from the ED-pattern slice and depends on the onboarding flow refactor). |
+| Move #3 -- cascade telemetry + upward gate compression | SHIPPED PARTIAL (telemetry done). engine_telemetry local table + Supabase mirror, record_engine_telemetry RPC, allow-listed event taxonomy, debounced push helper, sign-in drain. Hooks: tier_changed, ed_pattern_flag_fired/_cleared, goal_lock_set/_cleared. The upward-gate-compression scope (separate work stream per MOVE_3_UPWARD_GATE_COMPRESSION.md) is NOT STARTED. |
 | Move #4 -- differential paywall | NOT STARTED. |
 | Move #5 -- tier infrastructure + RevenueCat | NOT STARTED. |
 
@@ -192,52 +227,56 @@ that Move #3 will address) and 1 pre-existing suite-load failure
 
 ## 5. What's pending right now (resume points, in priority)
 
-Move #1 is shipped. The remaining work is split between launch
-polish, growth-strategy follow-through, and the next moves.
+Move #1, Move #2 (core), and Move #3 (telemetry slice) are
+shipped. The remaining work splits into post-Move-2 cleanup,
+growth-strategy follow-through, and the next moves.
 
-**Move #1 polish (nice-to-have, not blocking):**
+**Things needing user action outside the app:**
 
-1. **MacroRings (Skia).** Currently progress bars in
-   `DiaryScreen.MacroSummary`. Skia rings per UI_FLOWS_LOCKED.md.
-   Roughly 2 hours; defer until post-launch unless user pushes.
-2. **Food detail sheet for edits.** Diary entries are currently
-   delete-or-keep; no edit path. Plan calls for a long-press
-   "Edit quantity" / "Move meal" flow.
-3. **ServingPicker as a bottom sheet.** Currently a centred modal in
-   `FoodSearchScreen`; the locked spec wants a sheet that ladders
-   from the bottom for one-thumb reach.
+1. **Apply Supabase migration 017** (`supabase/migrate_017_ed_pattern_and_telemetry.sql`).
+   Paste into Supabase Dashboard → SQL Editor → Run. Until this lands:
+   - engine_telemetry events queue locally but never reach the server
+   - ED-pattern flags do not round-trip across devices
+   - `record_engine_telemetry` / `clear_goal_lock` RPCs do not exist
+2. **Edit the WelcomeScreen disqualifier copy in place.** Currently
+   Claude-drafted per founder instruction; founder to revise.
 
-**Growth strategy follow-through (from synthesis):**
+**Post Move #2 follow-through:**
 
-1. **Cascade telemetry events (synthesis §6).** No event pipeline
-   exists yet. Need: an `engine_telemetry` SQLite table, a push
-   helper into `engine_telemetry_daily` on Supabase (column already
-   reserved per locked plan), hooks on tier transitions (cascade
-   start, Pro downgrade, Free hold, paid conversions, churn at gate).
-   The Hold-at-Pro mechanic is the variable to instrument.
-2. **Onboarding disqualifier copy (synthesis §9.1, churn risk #1).**
-   Founder writes the copy per synthesis. Engineering scope: add a
-   "Who Volyume is for" block on `WelcomeScreen.js` above the tier
-   cards, with copy provided by the founder. Do not ship Claude-
-   written copy here.
-3. **Cohort dashboard (synthesis §9.3).** Day 1 completion %,
-   Day 7-14 first/second workout %, retention by 3-workout cohort.
-   Likely a Supabase view + a coach-only screen.
+1. **Article 9 health-data consent screen.** Locked copy in
+   `PRIVACY_CONSENT_LOCKED.md`. ONBOARDING_SEQUENCE_LOCKED.md
+   Screen 3. Was bundled with Move #2 in the spec; deferred since
+   the goal-lock screen and ED-pattern detector were the
+   harm-prevention core. Belongs to the onboarding-flow refactor
+   that adds three new screens (Article 9, Goal lock conditional,
+   Food layer intro) per the locked sequence.
+2. **Onboarding navigator refactor.** Insert Article 9 → goal
+   selection → conditional goal lock → SCOFF → activity → equipment
+   → Food layer intro → notifications → summary, per the locked
+   sequence. Goal-lock screen already exists and is reachable from
+   AthleteHub; needs to be wired into the onboarding stack with the
+   conditional gate (physique_competition / advanced_recomp only).
+3. **Cohort dashboard (synthesis §9.3).** Server side is half done:
+   `engine_telemetry_daily` view ships in migration 017 and is
+   readable from Supabase Studio. Open question: do you want an
+   in-app coach-only dashboard surface, or is reading from Studio
+   sufficient for the founder weekly review? If the latter, this
+   item closes once migration 017 is applied.
+4. **Cascade events instrumentation.** The allow-list already
+   includes `cascade_started`, `cascade_advanced`,
+   `cascade_skipped_ahead`, `paid_converted`, `churn_at_gate`. No
+   callers yet — these belong to Move #4 / Move #5 (the cascade
+   mechanic and tier infrastructure) and have nowhere to fire from
+   until those ship.
 
-**Move #2 (ED-pattern detection, separate work stream):**
+**Next moves (in spec, not started):**
 
-1. Read MOVE_2_ED_PATTERN_DETECTION.md end to end.
-2. Apply COACHING_VOICE_SYNTHESIS_LOCKED.md Surface 1 + Surface 7
-   redrafts for the lockout / cleared copy. Don't use the old draft
-   copy in MOVE_2 -- the synthesis Section 5 has the corrected
-   coach-voice versions.
-3. Build `src/lib/edPatternDetector.js`. The synthesis Section 3
-   patterns apply. Add property tests covering the goal-lock 2-vs-3
-   signal threshold.
-4. Build the Article 9 consent screen + Goal Lock onboarding screen.
-5. Wire into `runWeeklyCoach` so the detector reads the same
-   morning weights + intake + check-in inputs the FFM floor already
-   consumes.
+- **Move #1.5** -- barcode scan + label OCR + OFF write-back.
+- **Move #3 (upward gate compression)** -- the separate work stream
+  per MOVE_3_UPWARD_GATE_COMPRESSION.md, distinct from the
+  telemetry slice shipped this session.
+- **Move #4** -- differential paywall + cascade mechanic.
+- **Move #5** -- tier infrastructure + RevenueCat.
 
 ---
 
@@ -359,12 +398,27 @@ Decisions LOCKED this session that older session might not know:
 - `src/lib/weeklyCoach.js` -- the weekly output assembly.
   `runWeeklyCoach()` accepts food-context inputs
   (`bodyFatPercent`, `bodyFatSource`, `sex`,
-  `recentIntakeAvgKcal`, `recentIntakeDaysLogged`). Returns
-  `ffmFloorHeld` and `ffmFloorContext` fields. WHY_LIBRARY has new
-  `ffm_floor_hold` key.
+  `recentIntakeAvgKcal`, `recentIntakeDaysLogged`). Also accepts
+  Move #2 inputs (`recentWeeklyHistory`, `goalLockAdvanced`,
+  `edPatternOpen`). Returns `ffmFloorHeld`, `ffmFloorContext`,
+  `edPatternFired`, `edPatternSignals`,
+  `edPatternClearedThisWeek`, `goalLockAdvanced`. WHY_LIBRARY has
+  `ffm_floor_hold` and (via whyThisTemplates) the locked verbatim
+  copy for ED-pattern lockout + cleared.
+- `src/lib/edPatternDetector.js` -- NEW (Move #2). Pure logic
+  with 4 signals (rapid loss, low energy, under adherence,
+  weight-only check-ins). Threshold 2 normally, 3 with
+  goal_lock_advanced. Exports `detectEdPatternFlag`,
+  `hasEdPatternCleared`, `ED_PATTERN_CONSTANTS`.
+- `src/lib/engineTelemetry.js` -- NEW (Move #3). Local-first
+  event log. `track(userId, event, payload)` + allow-list +
+  debounced push helper. `flushPendingTelemetry()` for explicit
+  drains on app sign-in.
 - `src/lib/whyThisTemplates.js` -- 12 exported template functions.
   Voice-retrofitted: decision outputs name Precision Coaching;
-  descriptive outputs stay factual.
+  descriptive outputs stay factual. Plus
+  `ED_PATTERN_LOCKOUT_COPY`, `ED_PATTERN_CLEARED_COPY`,
+  `ED_SUPPORT_LINKS`, `getEdSupportLink(locale)` for Move #2.
 - `src/lib/algorithms.js` -- 1RM, set selection, mesocycle math
 - `src/lib/insightsEngine.js` -- 6 insight types, deterministic
 - `src/lib/proGate.js` -- two tiers currently (free, pro). Move #5
@@ -390,23 +444,62 @@ Decisions LOCKED this session that older session might not know:
 **Database:**
 
 - `src/lib/database.js` -- existing SQLite layer. SCHEMA_MIGRATIONS
-  array has v9 entry for the food tables.
+  has entries through food schema, the `coach_outputs.applied`
+  fix (this session), and the Move #2/3 block (this session)
+  which adds `ed_pattern_flags`, `engine_telemetry`,
+  `user_body_profile.goal_lock_advanced`,
+  `user_body_profile.goal_lock_set_at`. Helper functions:
+  `getOpenEdPatternFlag`, `getRecentEdPatternFlags`,
+  `raiseEdPatternFlag`, `clearEdPatternFlag`,
+  `setGoalLockAdvanced`, `getGoalLockAdvanced`,
+  `recordEngineTelemetry`, `getUnpushedEngineTelemetry`,
+  `markEngineTelemetryPushed`. Plans helpers:
+  `unarchivePlan`, `getArchivedPlansForUser`,
+  `archiveOtherUserPlans` (Plans archive system, this session).
 - `supabase/migrate_015_food_logging.sql` -- foods, custom_foods,
   food_entries, daily_intake_rollups (with recompute trigger),
   saved_meals, recipes, recipe_ingredients, food_favourites,
   daily_water. RLS on every user-scoped table.
 - `supabase/migrate_016_food_sync_rpcs.sql` -- food_sync_pull,
   food_sync_push. Last-write-wins per record, scoped to auth.uid().
+- `supabase/migrate_017_ed_pattern_and_telemetry.sql` -- NEW
+  (Move #2 + #3). `ed_pattern_flags` table + RLS,
+  `user_body_profile.goal_lock_*` columns, `clear_goal_lock` RPC,
+  `engine_telemetry` table + RLS, `record_engine_telemetry` RPC
+  with the locked event allow-list, `engine_telemetry_daily`
+  view for the cohort dashboard, `engine_overrides` table
+  (groundwork for B2B phase 2). **NEEDS USER ACTION:** paste into
+  Supabase Dashboard → SQL Editor → Run.
 
-**UI (NEW):**
+**UI:**
 
-- `src/screens/DiaryScreen.js` -- the food diary.
+- `src/screens/DiaryScreen.js` -- the food diary. Uses MacroRings
+  + FoodDetailSheet for tap-to-edit.
 - `src/screens/AddCustomFoodScreen.js` -- manual food entry with
   sanity-check warnings.
+- `src/screens/FoodSearchScreen.js` -- search/recents/favourites,
+  uses FoodDetailSheet for add.
+- `src/screens/FoodInsightsScreen.js` -- 7-day bar chart, macro
+  adherence rates, CSV export.
 - `src/screens/HomeScreen.js` -- extended with the "Today's intake"
   card and `loadTodayIntake` parallel fetch.
-- `src/navigation/RootNavigator.js` -- has DiaryStack and the new
-  DiaryTab in the 5-tab nav.
+- `src/screens/CoachOutputScreen.js` -- renders MacroRings,
+  routes the ed_pattern_lockout held-decision into the rich
+  variant, persists ED-pattern state machine transitions,
+  fires telemetry events.
+- `src/screens/GoalLockConsentScreen.js` -- NEW (Move #2). Two
+  radio options with the locked Screen 6 copy. Used in
+  onboarding (when wired) and from AthleteHub Goal lock row in
+  edit mode.
+- `src/screens/WelcomeScreen.js` -- now carries the disqualifier
+  block above the tier cards (Claude draft, founder to edit).
+- `src/components/food/MacroRings.js` -- NEW. Skia hero kcal ring
+  + three macro mini-rings.
+- `src/components/food/FoodDetailSheet.js` -- NEW. Bottom sheet
+  used by both FoodSearch (add mode) and Diary (edit mode).
+- `src/navigation/RootNavigator.js` -- has DiaryStack, the
+  5-tab nav, GoalLockConsent screen registered, sign-in flush
+  hook for engineTelemetry.
 
 **Tests:**
 
@@ -419,14 +512,22 @@ Decisions LOCKED this session that older session might not know:
   compliance tests
 - `src/lib/__tests__/food.sanityChecks.test.js` -- 18 tests
 - `src/lib/__tests__/jargonBlocklist.test.js` -- 25 tests (Move #0)
+- `src/lib/__tests__/csvExport.test.js` -- 5 tests for diary CSV
+  formatter
+- `src/lib/__tests__/edPatternDetector.test.js` -- NEW. 23 tests
+  covering each signal in isolation, the goal-lock threshold
+  flip, missing-data edge cases, and the four locked acceptance
+  properties from MOVE_2_ED_PATTERN_DETECTION.md.
+- `src/__tests__/screen-mount.test.js` -- 449 mount tests
+  covering every screen at four data states.
 
-Pre-existing failures (not my fault, will be fixed in later moves):
+Pre-existing failures (not from this session):
 
 - `src/lib/__tests__/weeklyCoach.test.js` -- the
   `weight dropping too fast on cut → apply calorie increase` test
-  fails. Move #3 (upward gate compression) will resolve.
-- `src/__tests__/screen-mount.test.js` -- suite fails to load due to
-  missing `expo-image` mock setup. Pre-existing, unrelated.
+  + `lean bulk gaining too fast → apply calorie reduction` test
+  both fail. Predate this session and survived all changes.
+  Belong to the off-target threshold gating logic.
 
 ---
 
@@ -471,12 +572,19 @@ From `CLAUDE.md`, `DESIGN_SYSTEM.md`, and
 - **Build workflow:** `.github/workflows/build-android.yml`. Runs on
   push to main and `claude/**` with `paths-ignore` for docs and
   markdown. Sentry source-map upload disabled.
-- **Test command:** `npx jest` (548 tests pass, 1 pre-existing
-  failure, 2 pre-existing suite-load failures).
+- **Test command:** `npx jest` (1036 pass, 2 pre-existing
+  off-target failures unchanged).
 - **Lint command:** check repo for existing setup.
-- **Test database state:** SCHEMA_MIGRATIONS now has 9 entries
-  (last was indexes; my food schema added at index 8 / v9). Existing
-  installs will run the new migration on next boot.
+- **Test database state:** SCHEMA_MIGRATIONS extended this session
+  with the `coach_outputs.applied` ALTER and the Move #2/3 block
+  (ed_pattern_flags, user_body_profile.goal_lock_*,
+  engine_telemetry). Existing installs run the new entries on
+  next boot; the migration runner ignores duplicate-column
+  errors so a re-run is a no-op.
+- **Supabase migration state:** migration 017 written but
+  **NOT YET APPLIED** to the production project. Apply via
+  Dashboard → SQL Editor before Move #2 / #3 telemetry can
+  round-trip.
 
 ---
 
