@@ -11,7 +11,7 @@ import { format } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import InfoTooltip from '../components/InfoTooltip';
 import { calculateNutritionTargets, PROTEIN_APPROACHES } from '../lib/nutritionEngine';
-import { saveNutritionTargets, getNutritionTargets, logBodyMetric, getUserBodyProfile } from '../lib/database';
+import { saveNutritionTargets, getNutritionTargets, logBodyMetric, logMorningWeight, getUserBodyProfile } from '../lib/database';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
@@ -322,6 +322,17 @@ export default function NutritionTargetsScreen({ navigation }) {
               weightKg: weightNum,
               bodyFatPercent: bfNum ?? null,
               bodyFatSource: bfNum != null ? bfSource : null,
+              loggedAt: Date.now(),
+            }).catch(() => {});
+            // Also seed morning_weights so WeeklyCheckIn doesn't gate on
+            // 'need_weights' immediately after onboarding. Both tables
+            // hold a weight reading, but check-in only reads from
+            // morning_weights and was popping a "log your weight"
+            // prompt for users who'd already entered it during setup.
+            // logMorningWeight de-dupes by day, so this is safe to call
+            // even if the user later logs the morning weight from Home.
+            logMorningWeight(user.id, {
+              weightKg: weightNum,
               loggedAt: Date.now(),
             }).catch(() => {});
           }
