@@ -42,6 +42,11 @@ const ALLOWED_EVENTS = new Set([
   'cascade_skipped_ahead',
   'paid_converted',
   'churn_at_gate',
+  // Move #1.5: food source observability. Lets us see how often
+  // the network fall-through actually fires and which API resolves
+  // it, so the bundled snapshot strategy stays evidence-based.
+  'food_lookup_barcode',
+  'ocr_writeback_attempted',
 ]);
 
 let _flushTimer = null;
