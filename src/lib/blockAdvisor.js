@@ -91,9 +91,13 @@ function detectSignals(checkins) {
   }
 
   // ── Persistent high soreness ──────────────────────────────────────────────
+  // "Carrying over" needs TWO consecutive high readings to be true. A single
+  // first-ever check-in with high soreness is a snapshot, not a pattern, and
+  // shouldn't be labelled as carrying over from anything. Promote to high
+  // only when we can actually see the carry-over in the data.
   const soreness = latest.sorenessScore ?? 3;
   const prevSoreness = checkins[1]?.sorenessScore ?? null;
-  if (soreness >= 4 && (prevSoreness === null || prevSoreness >= 4)) {
+  if (soreness >= 4 && prevSoreness !== null && prevSoreness >= 4) {
     signals.push({ type: 'soreness', severity: 'high', label: 'High soreness carrying over into sessions', data: soreness });
   } else if (soreness >= 4) {
     signals.push({ type: 'soreness', severity: 'medium', label: 'Soreness higher than normal this week', data: soreness });
@@ -270,9 +274,16 @@ export async function getBlockAdvice(userId, activeBlock, userProfile) {
   const deloadHighThreshold  = isMasters ? 1 : 2;
   const headsUpMediumThreshold = isMasters ? 1 : 2;
 
-  // Strong deload trigger: enough high signals OR sustained fatigue
+  // Strong deload trigger: enough high signals OR sustained fatigue.
+  // Gated on enough history to be a pattern rather than a single bad day.
+  // A user one week into their first block, with one check-in entered on
+  // enrolment day, shouldn't be told to drop their sets in half. That
+  // recommendation is for accumulated fatigue, which requires at least
+  // two weeks of check-ins and a block that's been running long enough
+  // for fatigue to actually accumulate.
   const hasSustainedFatigue = signals.some(s => s.type === 'sustained_fatigue');
-  if (highSignals.length >= deloadHighThreshold || hasSustainedFatigue) {
+  const hasEnoughHistory = checkins.length >= 2 && (blockStatus?.currentWeek ?? 1) >= 2;
+  if (hasEnoughHistory && (highSignals.length >= deloadHighThreshold || hasSustainedFatigue)) {
     const nextBlock = buildNextBlockRecommendation(checkins, userProfile, signals);
     return {
       action: 'early_deload',
