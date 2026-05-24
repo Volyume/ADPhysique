@@ -30,6 +30,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { resolveBarcode } from '../lib/food/waterfall';
+import { logError, logInfo } from '../lib/errorLog';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -49,32 +50,28 @@ export default function ScanBarcodeScreen({ navigation, route }) {
   const [resolving, setResolving] = useState(false);
   const scanLock = useRef(false);
 
-  const onBarcodeScanned = useCallback(async ({ data }) => {
+  const onBarcodeScanned = useCallback(async ({ data, type }) => {
     if (scanLock.current) return;
     if (!data) return;
     scanLock.current = true;
     setResolving(true);
+    logInfo('ScanBarcode.detect', `data=${data} type=${type}`);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     try {
       const food = await resolveBarcode(data, userId);
       if (food) {
-        // Hit. Navigate to FoodSearch with the scanned food so the
-        // detail sheet opens against it. Replace (not push) so the
-        // back stack goes Diary -> FoodSearch, not Diary -> Scan ->
-        // FoodSearch.
+        logInfo('ScanBarcode.hit', `data=${data} food_ref=${food.food_ref}`);
         navigation.replace('FoodSearch', {
           mealSlot, entryDate, scannedFood: food,
         });
       } else {
-        // Miss. Route to ScanLabel: it offers OCR if configured, or
-        // falls through to AddCustomFood manually otherwise. Always
-        // carries the scanned barcode forward so a follow-up save
-        // persists it on the new custom food.
+        logInfo('ScanBarcode.miss', `data=${data}`);
         navigation.replace('ScanLabel', {
           mealSlot, entryDate, prefillBarcode: data,
         });
       }
-    } catch {
+    } catch (e) {
+      logError('ScanBarcode.resolveThrew', e, { data, message: e?.message });
       scanLock.current = false;
       setResolving(false);
     }
