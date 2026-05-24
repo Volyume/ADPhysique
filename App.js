@@ -11,7 +11,8 @@ import * as TaskManager from 'expo-task-manager';
 import * as BackgroundFetch from 'expo-background-fetch';
 import { ensureNotifChannels } from './src/lib/restNotifications';
 import { installGlobalHandlers, logError } from './src/lib/errorLog';
-import { beginStartupTrace, traceStep } from './src/lib/startupTrace';
+import { beginStartupTrace, traceStep, getPreviousStartupTrace, formatTrace } from './src/lib/startupTrace';
+import { ToastAndroid, Platform as RNPlatform } from 'react-native';
 
 // Begin the startup trace BEFORE anything else. Every subsequent phase
 // records a marker so a crash on the next launch can tell us exactly
@@ -19,6 +20,31 @@ import { beginStartupTrace, traceStep } from './src/lib/startupTrace';
 // throws.
 beginStartupTrace().catch(() => {});
 traceStep('app.module.load');
+
+// If the previous launch crashed before reaching boot.ready, the React
+// tree never had a chance to render the trace overlay. Fire a series of
+// native Android toasts at the OS level so the user sees the last step
+// even when this launch is also dying. Toasts survive the JS thread
+// being killed because they're handed off to the system server. Repeat
+// for 30 seconds so a user who wasn't watching still catches one.
+(async () => {
+  try {
+    const trace = await getPreviousStartupTrace();
+    if (!trace?.length) return;
+    const last = trace[trace.length - 1];
+    const first = trace[0];
+    const offsetMs = (last?.ts ?? 0) - (first?.ts ?? 0);
+    const summary = `Last launch died at: ${last.step} (+${offsetMs}ms, ${trace.length} steps)`;
+    if (RNPlatform.OS === 'android' && ToastAndroid?.showWithGravity) {
+      ToastAndroid.showWithGravity(summary, ToastAndroid.LONG, ToastAndroid.TOP);
+      let count = 0;
+      const id = setInterval(() => {
+        try { ToastAndroid.showWithGravity(summary, ToastAndroid.LONG, ToastAndroid.TOP); } catch (_) {}
+        if (++count >= 12) clearInterval(id);
+      }, 3000);
+    }
+  } catch (_) {}
+})();
 
 // Install verbose error logging — ring buffer in AsyncStorage, viewable from
 // Settings → Debug logs. Catches uncaught exceptions and unhandled promise
