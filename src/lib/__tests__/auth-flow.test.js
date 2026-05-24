@@ -27,15 +27,20 @@ beforeEach(() => {
 });
 
 describe('clearAuthStateForSignOut', () => {
-  test('preserves all AsyncStorage keys — sign-out is session-only, not data destruction', async () => {
-    // Sign-out should be like logging out of any other app: the active
-    // session ends, but the data stays. When the same user signs back
-    // in, everything is exactly as they left it. Data destruction is
-    // the Delete Account path, not this one.
+  test('wipes per-user AsyncStorage keys, preserves device-level keys', async () => {
+    // Policy update 2026-05-24: sign-out clears per-user state so
+    // the next user signing in on the same device gets a clean
+    // routing decision (no stale firstRunComplete, no stale tier,
+    // no cached profile carrying the previous user's weight). The
+    // previous "session-only sign-out" left per-user keys behind
+    // and routed the next user into a stale UI. Device-level keys
+    // (accessibility prefs, crash log, the install-time counters
+    // used by the review prompt) survive per IDENTITY scenario C
+    // ("AsyncStorage keys scoped to U" — not device-level prefs).
     const Store = require('@react-native-async-storage/async-storage');
     const setItem = Store.default?.setItem ?? Store.setItem;
     const target = Store.default ?? Store;
-    const SEEDED = {
+    const USER_SCOPED = {
       '@volyume_local_user_id': 'u1',
       '@volyume_tier': 'pro',
       '@volyume_user_profile_u1': JSON.stringify({ firstName: 'Allan' }),
@@ -44,9 +49,15 @@ describe('clearAuthStateForSignOut', () => {
       '@volyume_body_metrics_migrated_u1': 'true',
       '@volyume_first_run_complete': 'true',
       '@volyume_first_run_complete_u1': 'true',
-      '@volyume_crash_log': '{}',
     };
-    for (const [k, v] of Object.entries(SEEDED)) {
+    const DEVICE_LEVEL = {
+      '@volyume_a11y_prefs': '{"reduceMotion":true}',
+      '@volyume_crash_log': '{}',
+      'volyume_review_prompted': '1',
+      'volyume_notif_prompt_seen': '1',
+      'volyume_sessions_since_install': '42',
+    };
+    for (const [k, v] of Object.entries({ ...USER_SCOPED, ...DEVICE_LEVEL })) {
       await setItem.call(target, k, v);
     }
 
@@ -54,8 +65,10 @@ describe('clearAuthStateForSignOut', () => {
     await useAppStore.getState().clearAuthStateForSignOut();
 
     const getItem = Store.default?.getItem ?? Store.getItem;
-    // EVERY key is still there post-signout. Nothing destroyed.
-    for (const [k, expected] of Object.entries(SEEDED)) {
+    for (const k of Object.keys(USER_SCOPED)) {
+      expect(await getItem.call(target, k)).toBeNull();
+    }
+    for (const [k, expected] of Object.entries(DEVICE_LEVEL)) {
       expect(await getItem.call(target, k)).toBe(expected);
     }
   });

@@ -209,6 +209,34 @@ const useAppStore = create((set, get) => ({
       }
     }
 
+    // Sign-out wipes per-user AsyncStorage keys. Without this,
+    // first-run flags, cached profile fragments, tier hints, and
+    // similar per-user state survive into the next sign-in and
+    // route a different user into a stale UI (no plan, no wizard,
+    // old weight visible because it came from the previous user's
+    // profile cache). IDENTITY_AND_OWNERSHIP_LOCKED scenario C:
+    // "AsyncStorage keys scoped to U" clear; device-level keys
+    // (accessibility prefs, crash log, sessions-since-install
+    // counter) survive.
+    try {
+      const PRESERVE = new Set([
+        A11Y_PREFS_KEY,
+        '@volyume_crash_log',
+        'volyume_review_prompted',
+        'volyume_notif_prompt_seen',
+        'volyume_sessions_since_install',
+      ]);
+      const allKeys = await AsyncStorage.getAllKeys();
+      const toRemove = allKeys.filter(k => !PRESERVE.has(k));
+      if (toRemove.length > 0) {
+        await AsyncStorage.multiRemove(toRemove);
+      }
+      log.logInfo('clearAuthStateForSignOut.asyncStorage.scopedWipe',
+        `removed=${toRemove.length} preserved=${allKeys.length - toRemove.length}`);
+    } catch (e) {
+      log.logError('clearAuthStateForSignOut.asyncStorage.scopedWipe.failed', e, { prevUid });
+    }
+
     set({
       user: null,
       session: null,
