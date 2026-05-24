@@ -19,6 +19,7 @@ import {
   addExerciseToRoutine,
   getAllExercises,
   activatePlanWithBlock,
+  archiveOtherUserPlans,
   getAllProgrammes,
 } from './database';
 import { generatePlan } from './planEngine';
@@ -161,6 +162,13 @@ export async function generateAndSavePlan(userId, profile) {
       } catch (_) {}
     }
     await activatePlanWithBlock(userId, prog.id, planName);
+    // Pro auto-gen is the "single managed plan" path: rerolling on goal
+    // change creates a fresh programme each time, and the previous ones
+    // pile up in My plans on the Plans tab. Archive everything except
+    // the newly-activated programme so the list shows just the current
+    // plan. Users can restore any archived plan from the Archived
+    // section on the Plans tab.
+    await archiveOtherUserPlans(userId, prog.id);
     return { ok: true, programmeId: prog.id };
   } catch (e) {
     return { ok: false, error: e?.message ?? 'DB write failed' };

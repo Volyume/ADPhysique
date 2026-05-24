@@ -13,10 +13,10 @@ import PressableCard from '../components/PressableCard';
 import PeekMenu from '../components/PeekMenu';
 import { EmptyPlanIllustration } from '../components/Illustrations';
 import {
-  getActivePlan, getAllPlansForUser,
+  getActivePlan, getAllPlansForUser, getArchivedPlansForUser,
   getWorkoutTemplates, getPlanWorkoutCounts, getAllRoutineExerciseCounts,
   activatePlanWithBlock, getRoutinesForPlan, createWorkout, getRoutineExercisesWithDetails,
-  archivePlan, duplicatePlan, softDeleteRoutine, getActiveBlock,
+  archivePlan, unarchivePlan, duplicatePlan, softDeleteRoutine, getActiveBlock,
 } from '../lib/database';
 import { getBlockAdvice } from '../lib/blockAdvisor';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
@@ -93,6 +93,8 @@ export default function PlansScreen({ navigation }) {
   })));
   const [activePlan, setActivePlanData] = useState(null);
   const [myPlans, setMyPlans] = useState([]);
+  const [archivedPlans, setArchivedPlans] = useState([]);
+  const [archivedExpanded, setArchivedExpanded] = useState(false);
   const [templates, setTemplates] = useState([]);
   const [planWorkoutCounts, setPlanWorkoutCounts] = useState({});
   const [exerciseCounts, setExerciseCounts] = useState({});
@@ -130,9 +132,10 @@ export default function PlansScreen({ navigation }) {
   async function loadData() {
     if (!user?.id) return;
     try {
-      const [active, all, tmpl, pwc, exc, block] = await Promise.all([
+      const [active, all, archived, tmpl, pwc, exc, block] = await Promise.all([
         getActivePlan(user.id),
         getAllPlansForUser(user.id),
+        getArchivedPlansForUser(user.id),
         getWorkoutTemplates(user.id),
         getPlanWorkoutCounts(),
         getAllRoutineExerciseCounts(),
@@ -140,6 +143,7 @@ export default function PlansScreen({ navigation }) {
       ]);
       setActivePlanData(active || null);
       setMyPlans(all.filter(p => !active || p.id !== active.id));
+      setArchivedPlans(archived || []);
       setTemplates(tmpl);
       setPlanWorkoutCounts(pwc);
       setExerciseCounts(exc);
@@ -239,9 +243,9 @@ export default function PlansScreen({ navigation }) {
 
   async function handlePlanOptions(plan) {
     const isActiveForUser = activePlan?.id === plan.id;
-    // Pro users keep an always-active plan as part of Precision Coaching:
-    // no duplicating, no archiving the active one. They manage their plan
-    // through the goal-change wizard in Athlete Hub.
+    // Pro users keep an always-active plan as part of Precision Coaching,
+    // so they don't get the Duplicate action. They CAN archive inactive
+    // plans though, with restore available from the Archived section.
     const items = [
       {
         icon: 'eye-outline',
@@ -264,22 +268,38 @@ export default function PlansScreen({ navigation }) {
           navigation.navigate('PlanDetail', { planId: copy.id, isLibrary: false });
         },
       });
-      if (!isActiveForUser) {
-        items.push({
-          icon: 'archive-outline',
-          label: 'Archive plan',
-          destructive: true,
-          onPress: () => Alert.alert(
-            'Archive Plan?',
-            'The plan will be hidden. Session history remains intact.',
-            [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Archive', style: 'destructive', onPress: async () => { await archivePlan(plan.id); await loadData(); } },
-            ],
-          ),
-        });
-      }
     }
+    if (!isActiveForUser) {
+      items.push({
+        icon: 'archive-outline',
+        label: 'Archive plan',
+        destructive: true,
+        onPress: () => Alert.alert(
+          'Archive Plan?',
+          'The plan will be hidden from My plans. Session history stays intact and you can restore it from the Archived section.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Archive', style: 'destructive', onPress: async () => { await archivePlan(plan.id); await loadData(); } },
+          ],
+        ),
+      });
+    }
+    peekRef.current?.open({ title: plan.name, items });
+  }
+
+  function handleArchivedPlanOptions(plan) {
+    const items = [
+      {
+        icon: 'eye-outline',
+        label: 'View plan',
+        onPress: () => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false }),
+      },
+      {
+        icon: 'arrow-undo-outline',
+        label: 'Restore plan',
+        onPress: async () => { await unarchivePlan(plan.id); await loadData(); },
+      },
+    ];
     peekRef.current?.open({ title: plan.name, items });
   }
 
@@ -542,6 +562,66 @@ export default function PlansScreen({ navigation }) {
           </View>
         )}
 
+        {/* Archived Plans */}
+        {archivedPlans.length > 0 && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.archivedHeader}
+              onPress={() => setArchivedExpanded(v => !v)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.archivedHeaderText}>
+                Archived plans · {archivedPlans.length}
+              </Text>
+              <Ionicons
+                name={archivedExpanded ? 'chevron-up' : 'chevron-down'}
+                size={18}
+                color={colors.textSecondary}
+              />
+            </TouchableOpacity>
+            {archivedExpanded && archivedPlans.map(plan => (
+              <View key={plan.id} style={[styles.planCard, styles.archivedPlanCard]}>
+                <PressableCard
+                  style={styles.planCardBody}
+                  onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
+                  onLongPress={() => handleArchivedPlanOptions(plan)}
+                  accessibilityLabel={plan.name}
+                >
+                  <View style={styles.planCardMetaRow}>
+                    {planWorkoutCounts[plan.id] ? (
+                      <Text style={styles.planCardMeta}>
+                        {planWorkoutCounts[plan.id]} workout{planWorkoutCounts[plan.id] !== 1 ? 's' : ''}
+                      </Text>
+                    ) : <View />}
+                    <TouchableOpacity
+                      style={styles.moreBtn}
+                      onPress={() => handleArchivedPlanOptions(plan)}
+                      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                    >
+                      <Ionicons name="ellipsis-vertical" size={18} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={[styles.planCardName, styles.archivedPlanCardName]} numberOfLines={2}>{plan.name}</Text>
+                </PressableCard>
+                <View style={styles.planCardFooter}>
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text style={styles.planCardFooterGhost}>View plan</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={async () => { await unarchivePlan(plan.id); await loadData(); }}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text style={styles.planCardFooterPrimary}>Restore</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
         {/* Workout Templates */}
         {templates.length > 0 && (
           <View style={styles.section}>
@@ -710,6 +790,16 @@ const styles = StyleSheet.create({
   planCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg,
     borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+  },
+  archivedPlanCard: { opacity: 0.7 },
+  archivedPlanCardName: { color: colors.textSecondary },
+  archivedHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
+  },
+  archivedHeaderText: {
+    fontSize: fontSize.sm, fontWeight: fontWeight.semibold,
+    color: colors.textSecondary, letterSpacing: 0.2,
   },
   planCardBody: { padding: spacing.lg, gap: spacing.sm },
   planCardMetaRow: {

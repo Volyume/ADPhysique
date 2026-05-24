@@ -1980,6 +1980,42 @@ export async function archivePlan(planId) {
   );
 }
 
+export async function unarchivePlan(planId) {
+  const d = await db();
+  await d.runAsync(
+    'UPDATE programmes SET is_archived = 0, updated_at = ? WHERE id = ?',
+    [Date.now(), planId],
+  );
+}
+
+export async function getArchivedPlansForUser(userId) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT * FROM programmes
+     WHERE user_id = ? AND (is_library = 0 OR is_library IS NULL) AND is_archived = 1
+     ORDER BY updated_at DESC`,
+    [userId],
+  );
+  return rows.map(rowToCamel);
+}
+
+// Pro auto-gen contract: a single managed plan. When a fresh plan is
+// auto-generated and activated, every other non-archived non-library plan
+// for this user gets archived so the "My plans" list shows just the
+// current plan. Users can restore from the Archived section if needed.
+export async function archiveOtherUserPlans(userId, keepPlanId) {
+  const d = await db();
+  await d.runAsync(
+    `UPDATE programmes
+     SET is_active = 0, is_archived = 1, updated_at = ?
+     WHERE user_id = ?
+       AND id != ?
+       AND (is_library = 0 OR is_library IS NULL)
+       AND (is_archived = 0 OR is_archived IS NULL)`,
+    [Date.now(), userId, keepPlanId],
+  );
+}
+
 export async function duplicatePlan(planId, userId) {
   const plan = await getProgrammeById(planId);
   if (!plan) throw new Error('Plan not found');
