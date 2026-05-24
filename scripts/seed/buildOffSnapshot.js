@@ -94,14 +94,37 @@ async function fetchPage(page) {
     + `&page=${page}&page_size=${PAGE_SIZE}`
     + `&fields=code,product_name,product_name_en,generic_name,brands,`
     + `serving_quantity,serving_size,nutriments`;
-  const res = await fetch(url, {
-    method: 'GET',
-    headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' },
-  });
-  if (!res.ok) {
-    throw new Error(`OFF page ${page} returned ${res.status}`);
+  // Retry transient failures (5xx, network errors, timeouts) with
+  // exponential backoff. OFF's CDN occasionally throws a 503 even
+  // for legitimate paginated requests; the script should ride that
+  // out rather than fatal on first failure.
+  const MAX_ATTEMPTS = 4;
+  let lastErr = null;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' },
+      });
+      if (res.status >= 500 || res.status === 429) {
+        // Transient: retry.
+        lastErr = new Error(`OFF page ${page} returned ${res.status}`);
+      } else if (!res.ok) {
+        // 4xx other than 429: bail, no retry will help.
+        throw new Error(`OFF page ${page} returned ${res.status}`);
+      } else {
+        return res.json();
+      }
+    } catch (e) {
+      lastErr = e;
+    }
+    if (attempt < MAX_ATTEMPTS) {
+      const backoffMs = 1500 * Math.pow(2, attempt - 1);   // 1.5s, 3s, 6s
+      warn(`page ${page} attempt ${attempt} failed (${lastErr.message}); retrying in ${backoffMs}ms`);
+      await sleep(backoffMs);
+    }
   }
-  return res.json();
+  throw lastErr ?? new Error(`OFF page ${page} unknown failure`);
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────
