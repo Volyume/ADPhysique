@@ -123,7 +123,7 @@ function MacroRow({ label, prev, next, unit = 'g' }) {
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function GoalChangeSummaryScreen({ navigation, route }) {
-  const { previous = {}, next = {} } = route.params || {};
+  const { previous = {}, next = {}, planRerolled = false } = route.params || {};
 
   const goalChanged = previous.goal && next.goal && previous.goal !== next.goal;
   const phaseChanged = previous.phase && next.phase && previous.phase !== next.phase;
@@ -253,7 +253,9 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
           <View style={styles.nextRow}>
             <Ionicons name="ellipse" size={6} color={colors.primary} style={styles.bullet} />
             <Text style={styles.nextText}>
-              Your active plan stays in place. Your Precision Coaching uses the new goal and phase from your next session onwards.
+              {planRerolled
+                ? 'A fresh plan has been built for your new goal and is now your active plan. Your next session comes from it. Open Plans to see the full breakdown.'
+                : 'Your goal is saved, but the training plan didn\'t reroll this time. Open Plans and tap "Build my plan" to retry.'}
             </Text>
           </View>
           <View style={styles.nextRow}>

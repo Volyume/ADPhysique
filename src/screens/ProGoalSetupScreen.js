@@ -232,7 +232,9 @@ export default function ProGoalSetupScreen({ navigation }) {
     }
 
     // Navigate to the change-summary screen instead of just popping back so
-    // the user can see exactly what shifted and why.
+    // the user can see exactly what shifted and why. planRerolled tells the
+    // summary whether the active plan was rebuilt (the path generateAndSavePlan
+    // returns ok) or left in place (engine failure, see the Alert above).
     navigation.replace('GoalChangeSummary', {
       previous: {
         goal: previousProfile.goal,
@@ -252,6 +254,7 @@ export default function ProGoalSetupScreen({ navigation }) {
         carbs: nextTargets?.carbsG ?? null,
         fat: nextTargets?.fatG ?? null,
       },
+      planRerolled: !!planResult?.ok,
     });
   }
 
