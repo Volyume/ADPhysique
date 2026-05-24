@@ -18,7 +18,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList,
-  ActivityIndicator, Alert, Modal, Pressable, KeyboardAvoidingView, Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -31,6 +31,7 @@ import { searchFoods } from '../lib/food/waterfall';
 import { resolveFoodRef } from '../lib/food/sources/localCache';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
+import FoodDetailSheet from '../components/food/FoodDetailSheet';
 
 const MEAL_LABELS = {
   breakfast: 'Breakfast',
@@ -120,31 +121,25 @@ export default function FoodSearchScreen({ navigation, route }) {
   }, [query, userId]);
 
   function openPicker(food) {
-    setPicker({ food, quantityG: String(Math.round(food.serving_g || 100)) });
+    setPicker({ food });
   }
 
-  async function confirmLog() {
+  async function confirmLog({ quantityG, mealSlot: chosenSlot, entryDate: chosenDate }) {
     if (!picker?.food) return;
     const food = picker.food;
-    const qty = Number(picker.quantityG) || food.serving_g || 100;
-    const factor = qty / 100;
-    try {
-      await logFoodEntry(userId, {
-        entryDate,
-        mealSlot,
-        foodRef: food.food_ref,
-        quantityG: qty,
-        kcal:      Math.round((food.kcal_100g    ?? 0) * factor),
-        proteinG:  Math.round((food.protein_100g ?? 0) * factor * 10) / 10,
-        carbsG:    Math.round((food.carbs_100g   ?? 0) * factor * 10) / 10,
-        fatG:      Math.round((food.fat_100g     ?? 0) * factor * 10) / 10,
-        fibreG:    food.fibre_100g != null ? Math.round(food.fibre_100g * factor * 10) / 10 : null,
-      });
-      setPicker(null);
-      navigation.goBack();
-    } catch (_) {
-      Alert.alert("Couldn't log", 'Try again.');
-    }
+    const factor = quantityG / 100;
+    await logFoodEntry(userId, {
+      entryDate: chosenDate,
+      mealSlot: chosenSlot,
+      foodRef: food.food_ref,
+      quantityG,
+      kcal:      Math.round((food.kcal_100g    ?? 0) * factor),
+      proteinG:  Math.round((food.protein_100g ?? 0) * factor * 10) / 10,
+      carbsG:    Math.round((food.carbs_100g   ?? 0) * factor * 10) / 10,
+      fatG:      Math.round((food.fat_100g     ?? 0) * factor * 10) / 10,
+      fibreG:    food.fibre_100g != null ? Math.round(food.fibre_100g * factor * 10) / 10 : null,
+    });
+    navigation.goBack();
   }
 
   async function onLongPress(food) {
@@ -268,80 +263,19 @@ export default function FoodSearchScreen({ navigation, route }) {
         }
       />
 
-      <Modal
+      <FoodDetailSheet
         visible={!!picker}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setPicker(null)}
-      >
-        <Pressable style={styles.modalBackdrop} onPress={() => setPicker(null)}>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            style={{ width: '100%' }}
-          >
-            <Pressable style={styles.modalCard} onPress={() => {}}>
-              {picker?.food && (
-                <>
-                  <Text style={styles.modalTitle} numberOfLines={2}>{picker.food.name}</Text>
-                  {picker.food.brand ? (
-                    <Text style={styles.modalSubtitle}>{picker.food.brand}</Text>
-                  ) : null}
-                  <Text style={styles.modalContext}>
-                    {MEAL_LABELS[mealSlot]} · {friendlyDateLabel(entryDate)}
-                  </Text>
-
-                  <Text style={styles.modalFieldLabel}>Quantity (g)</Text>
-                  <TextInput
-                    style={styles.modalInput}
-                    value={picker.quantityG}
-                    onChangeText={(v) => setPicker(p => ({ ...p, quantityG: v }))}
-                    keyboardType="decimal-pad"
-                    autoFocus
-                    selectTextOnFocus
-                  />
-
-                  <View style={styles.modalSummary}>
-                    {renderSummary(picker.food, Number(picker.quantityG))}
-                  </View>
-
-                  <View style={styles.modalActions}>
-                    <TouchableOpacity style={styles.modalCancel} onPress={() => setPicker(null)}>
-                      <Text style={styles.modalCancelText}>Cancel</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.modalConfirm} onPress={confirmLog}>
-                      <Text style={styles.modalConfirmText}>Add to diary</Text>
-                    </TouchableOpacity>
-                  </View>
-                </>
-              )}
-            </Pressable>
-          </KeyboardAvoidingView>
-        </Pressable>
-      </Modal>
+        mode="add"
+        food={picker?.food}
+        initialMealSlot={mealSlot}
+        initialEntryDate={entryDate}
+        onSave={confirmLog}
+        onClose={() => setPicker(null)}
+      />
     </SafeAreaView>
   );
 }
 
-function friendlyDateLabel(iso) {
-  const today = new Date().toISOString().slice(0, 10);
-  if (iso === today) return 'Today';
-  return iso;
-}
-
-function renderSummary(food, qty) {
-  const q = Number.isFinite(qty) && qty > 0 ? qty : 0;
-  const factor = q / 100;
-  const kcal = Math.round((food.kcal_100g ?? 0) * factor);
-  const p = Math.round((food.protein_100g ?? 0) * factor * 10) / 10;
-  const c = Math.round((food.carbs_100g ?? 0) * factor * 10) / 10;
-  const f = Math.round((food.fat_100g ?? 0) * factor * 10) / 10;
-  return (
-    <>
-      <Text style={styles.modalSummaryKcal}>{kcal} kcal</Text>
-      <Text style={styles.modalSummaryMacros}>{p}P · {c}C · {f}F</Text>
-    </>
-  );
-}
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
@@ -401,51 +335,4 @@ const styles = StyleSheet.create({
     borderTopWidth: 1, borderTopColor: colors.border,
   },
   footerBtnText: { color: colors.primary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
-
-  modalBackdrop: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center', alignItems: 'center',
-    padding: spacing.lg,
-  },
-  modalCard: {
-    backgroundColor: colors.surface, padding: spacing.lg,
-    borderRadius: radius.lg, width: '100%', maxWidth: 420,
-  },
-  modalTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold },
-  modalSubtitle: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: 2 },
-  modalContext: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: spacing.xs, marginBottom: spacing.md },
-
-  modalFieldLabel: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: spacing.sm, marginBottom: spacing.xs },
-  modalInput: {
-    backgroundColor: colors.inputBg,
-    color: colors.textPrimary,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
-    fontSize: fontSize.md, minHeight: 48,
-  },
-
-  modalSummary: {
-    flexDirection: 'row', alignItems: 'center',
-    gap: spacing.md,
-    marginTop: spacing.md,
-  },
-  modalSummaryKcal: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold },
-  modalSummaryMacros: { color: colors.textSecondary, fontSize: fontSize.sm },
-
-  modalActions: {
-    flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg,
-  },
-  modalCancel: {
-    flex: 1, paddingVertical: spacing.md,
-    borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
-    alignItems: 'center',
-  },
-  modalCancelText: { color: colors.textSecondary, fontSize: fontSize.md },
-  modalConfirm: {
-    flex: 1, paddingVertical: spacing.md,
-    borderRadius: radius.md, backgroundColor: colors.primary,
-    alignItems: 'center',
-  },
-  modalConfirmText: { color: colors.background, fontSize: fontSize.md, fontWeight: fontWeight.bold },
 });

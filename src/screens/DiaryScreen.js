@@ -10,19 +10,22 @@
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import {
-  getFoodEntriesForDay, deleteFoodEntry, getRollupForDay,
+  getFoodEntriesForDay, deleteFoodEntry, updateFoodEntry, getRollupForDay,
   recomputeRollup, setWater, getWater,
 } from '../lib/food/db';
+import { resolveFoodRef } from '../lib/food/sources/localCache';
 import { getNutritionTargets } from '../lib/database';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
+import MacroRings from '../components/food/MacroRings';
+import FoodDetailSheet from '../components/food/FoodDetailSheet';
 
 const MEAL_SLOTS = [
   { key: 'breakfast', label: 'Breakfast' },
@@ -104,22 +107,44 @@ export default function DiaryScreen({ navigation }) {
     navigation.navigate('FoodSearch', { mealSlot: slot, entryDate: selectedDate });
   }
 
-  async function confirmDelete(entry) {
-    Alert.alert(
-      'Remove entry?',
-      `${friendlyFoodName(entry)} will be removed from ${MEAL_SLOTS.find(m => m.key === entry.meal_slot)?.label.toLowerCase()}.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            await deleteFoodEntry(entry.id, userId);
-            await load();
-          },
-        },
-      ]
-    );
+  const [editSheet, setEditSheet] = useState(null); // { entry, food } | null
+
+  async function openEditSheet(entry) {
+    const food = await resolveFoodRef(userId, entry.food_ref).catch(() => null);
+    setEditSheet({
+      entry,
+      food: food ?? {
+        name: friendlyFoodName(entry), brand: null, source: null,
+        kcal_100g: entry.kcal && entry.quantity_g ? (entry.kcal / entry.quantity_g) * 100 : 0,
+        protein_100g: entry.protein_g && entry.quantity_g ? (entry.protein_g / entry.quantity_g) * 100 : 0,
+        carbs_100g: entry.carbs_g && entry.quantity_g ? (entry.carbs_g / entry.quantity_g) * 100 : 0,
+        fat_100g: entry.fat_g && entry.quantity_g ? (entry.fat_g / entry.quantity_g) * 100 : 0,
+        fibre_100g: entry.fibre_g && entry.quantity_g ? (entry.fibre_g / entry.quantity_g) * 100 : null,
+      },
+    });
+  }
+
+  async function saveEditSheet({ quantityG, mealSlot, entryDate }) {
+    const { entry, food } = editSheet;
+    const k = quantityG / 100;
+    await updateFoodEntry(entry.id, userId, {
+      entryDate,
+      mealSlot,
+      foodRef: entry.food_ref,
+      quantityG,
+      kcal:     Math.round((food.kcal_100g    ?? 0) * k),
+      proteinG: Math.round((food.protein_100g ?? 0) * k * 10) / 10,
+      carbsG:   Math.round((food.carbs_100g   ?? 0) * k * 10) / 10,
+      fatG:     Math.round((food.fat_100g     ?? 0) * k * 10) / 10,
+      fibreG:   food.fibre_100g != null ? Math.round((food.fibre_100g) * k * 10) / 10 : null,
+    });
+    await load();
+  }
+
+  async function deleteFromEditSheet() {
+    if (!editSheet?.entry) return;
+    await deleteFoodEntry(editSheet.entry.id, userId);
+    await load();
   }
 
   async function logWaterDelta(deltaMl) {
@@ -163,7 +188,9 @@ export default function DiaryScreen({ navigation }) {
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
-        <MacroSummary rollup={rollup} targets={targets} />
+        <View style={styles.macroRingsWrap}>
+          <MacroRings rollup={rollup} targets={targets} />
+        </View>
 
         {MEAL_SLOTS.map((slot) => (
           <MealSection
@@ -171,7 +198,7 @@ export default function DiaryScreen({ navigation }) {
             slot={slot}
             entries={entriesBySlot[slot.key]}
             onAdd={() => addFood(slot.key)}
-            onDelete={confirmDelete}
+            onEdit={openEditSheet}
           />
         ))}
 
@@ -186,81 +213,23 @@ export default function DiaryScreen({ navigation }) {
           </View>
         )}
       </ScrollView>
+
+      <FoodDetailSheet
+        visible={!!editSheet}
+        mode="edit"
+        food={editSheet?.food}
+        initialQuantityG={editSheet?.entry?.quantity_g}
+        initialMealSlot={editSheet?.entry?.meal_slot ?? 'snack'}
+        initialEntryDate={editSheet?.entry?.entry_date ?? selectedDate}
+        onSave={saveEditSheet}
+        onDelete={deleteFromEditSheet}
+        onClose={() => setEditSheet(null)}
+      />
     </SafeAreaView>
   );
 }
 
-function MacroSummary({ rollup, targets }) {
-  const kcal = Math.round(rollup?.kcal_total ?? 0);
-  const p = Math.round(rollup?.protein_g ?? 0);
-  const c = Math.round(rollup?.carbs_g ?? 0);
-  const f = Math.round(rollup?.fat_g ?? 0);
-  const kcalTarget = targets?.targetKcal ?? null;
-  const pTarget = targets?.proteinG ?? null;
-  const cTarget = targets?.carbsG ?? null;
-  const fTarget = targets?.fatG ?? null;
-  const kcalRemaining = kcalTarget != null ? kcalTarget - kcal : null;
-
-  return (
-    <View style={styles.macroCard}>
-      <View style={styles.macroKcalRow}>
-        <View>
-          <Text style={styles.macroKcalValue}>{kcal}</Text>
-          {kcalTarget != null ? (
-            <Text style={styles.macroKcalSubLabel}>of {kcalTarget} kcal</Text>
-          ) : (
-            <Text style={styles.macroKcalLabel}>kcal</Text>
-          )}
-        </View>
-        {kcalRemaining != null ? (
-          <View style={styles.macroKcalRemainingWrap}>
-            <Text style={[
-              styles.macroKcalRemainingValue,
-              kcalRemaining < 0 && { color: colors.warning },
-            ]}>
-              {kcalRemaining >= 0 ? kcalRemaining : Math.abs(kcalRemaining)}
-            </Text>
-            <Text style={styles.macroKcalRemainingLabel}>
-              {kcalRemaining >= 0 ? 'remaining' : 'over'}
-            </Text>
-          </View>
-        ) : null}
-      </View>
-      <View style={styles.macroBars}>
-        <MacroBar label="Protein" value={p} target={pTarget} />
-        <MacroBar label="Carbs"   value={c} target={cTarget} />
-        <MacroBar label="Fat"     value={f} target={fTarget} />
-      </View>
-    </View>
-  );
-}
-
-function MacroBar({ label, value, target }) {
-  const pct = target && target > 0
-    ? Math.min(1.5, Math.max(0, value / target))
-    : 0;
-  const over = target && value > target;
-  const fillWidthPct = `${Math.min(100, Math.round(pct * 100))}%`;
-  return (
-    <View style={styles.macroBar}>
-      <View style={styles.macroBarHeader}>
-        <Text style={styles.macroBarLabel}>{label}</Text>
-        <Text style={[styles.macroBarValue, over && { color: colors.warning }]}>
-          {value}{target != null ? ` / ${target}` : ''}g
-        </Text>
-      </View>
-      <View style={styles.macroBarTrack}>
-        <View style={[
-          styles.macroBarFill,
-          { width: fillWidthPct },
-          over && { backgroundColor: colors.warning },
-        ]} />
-      </View>
-    </View>
-  );
-}
-
-function MealSection({ slot, entries, onAdd, onDelete }) {
+function MealSection({ slot, entries, onAdd, onEdit }) {
   const slotKcal = Math.round(entries.reduce((a, e) => a + (e.kcal ?? 0), 0));
   return (
     <View style={styles.section}>
@@ -269,7 +238,7 @@ function MealSection({ slot, entries, onAdd, onDelete }) {
         <Text style={styles.sectionTotal}>{slotKcal} kcal</Text>
       </View>
       {entries.map((e) => (
-        <EntryRow key={e.id} entry={e} onDelete={() => onDelete(e)} />
+        <EntryRow key={e.id} entry={e} onEdit={() => onEdit(e)} />
       ))}
       <TouchableOpacity style={styles.addRow} onPress={onAdd} accessibilityLabel={`Add food to ${slot.label}`}>
         <Ionicons name="add" size={18} color={colors.primary} />
@@ -283,7 +252,7 @@ function friendlyFoodName(entry) {
   return entry.food_ref?.startsWith('custom:') ? 'Custom food' : 'Food';
 }
 
-function EntryRow({ entry, onDelete }) {
+function EntryRow({ entry, onEdit }) {
   const kcal = Math.round(entry.kcal ?? 0);
   const p = Math.round(entry.protein_g ?? 0);
   const c = Math.round(entry.carbs_g ?? 0);
@@ -291,9 +260,8 @@ function EntryRow({ entry, onDelete }) {
   return (
     <TouchableOpacity
       style={styles.entryRow}
-      onLongPress={onDelete}
-      delayLongPress={400}
-      accessibilityLabel={`${friendlyFoodName(entry)}, ${kcal} kcal. Long press to remove.`}
+      onPress={onEdit}
+      accessibilityLabel={`${friendlyFoodName(entry)}, ${kcal} kcal. Tap to edit.`}
     >
       <View style={styles.entryMain}>
         <Text style={styles.entryName}>{entry.food_ref?.split(':')[0] === 'custom' ? 'Custom food' : 'Food'}</Text>
@@ -351,42 +319,7 @@ const styles = StyleSheet.create({
   todayPillText: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxxl },
-  macroCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border,
-    padding: spacing.lg, marginBottom: spacing.lg,
-  },
-  macroKcalRow: {
-    flexDirection: 'row', alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    marginBottom: spacing.md,
-  },
-  macroKcalValue: { color: colors.textPrimary, fontSize: 36, fontWeight: fontWeight.bold, lineHeight: 40 },
-  macroKcalLabel: { color: colors.textSecondary, fontSize: fontSize.md },
-  macroKcalSubLabel: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: 2 },
-  macroKcalRemainingWrap: { alignItems: 'flex-end' },
-  macroKcalRemainingValue: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold },
-  macroKcalRemainingLabel: { color: colors.textMuted, fontSize: fontSize.xs },
-
-  macroBars: { gap: spacing.sm },
-  macroBar: {},
-  macroBarHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline',
-    marginBottom: 4,
-  },
-  macroBarLabel: { color: colors.textSecondary, fontSize: fontSize.sm },
-  macroBarValue: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
-  macroBarTrack: {
-    height: 6, borderRadius: 3,
-    backgroundColor: colors.surface2,
-    overflow: 'hidden',
-  },
-  macroBarFill: {
-    height: '100%', borderRadius: 3,
-    backgroundColor: colors.primary,
-  },
-
+  macroRingsWrap: { marginBottom: spacing.lg },
   section: { marginBottom: spacing.lg },
   sectionHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
