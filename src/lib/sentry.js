@@ -41,6 +41,21 @@ export function initSentry({ release, environment } = {}) {
   if (!SentryNative || initialised) return;
   const dsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
   if (!dsn) return;
+
+  // Validate the DSN format in JS BEFORE handing it to the native SDK.
+  // sentry-android continues init on a background thread after
+  // SentryNative.init() returns; a malformed DSN throws a Java
+  // exception on that thread which JS try/catch cannot catch and which
+  // kills the process before any handler is registered. The symptom is
+  // a splash flash then immediate close, with no JS log, no tombstone
+  // and no Sentry event. Reject obviously bad DSNs here so the app
+  // still launches; the only cost is no error reporting until the DSN
+  // is fixed.
+  // Expected shape: https://<publicKey>@<host>/<projectId>
+  // Self-hosted Sentry instances are allowed http for local-network use.
+  const DSN_PATTERN = /^https?:\/\/[^@\s/]+@[^/\s]+\/\d+$/;
+  if (!DSN_PATTERN.test(dsn)) return;
+
   try {
     SentryNative.init({
       dsn,
