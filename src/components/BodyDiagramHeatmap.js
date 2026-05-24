@@ -244,10 +244,10 @@ export default function BodyDiagramHeatmap({ volumeByMuscle = {}, onMuscleTap })
 
       {/* Legend */}
       <View style={styles.legend}>
-        <LegendSwatch color={colors.textMuted} label="Below MEV" />
+        <LegendSwatch color={colors.textMuted} label="Below target" />
         <LegendSwatch color={colors.success} label="Optimal" />
-        <LegendSwatch color={colors.warning} label="Approaching MRV" />
-        <LegendSwatch color={colors.error} label="Over MRV" />
+        <LegendSwatch color={colors.warning} label="Near limit" />
+        <LegendSwatch color={colors.error} label="Over limit" />
         <LegendSwatch color={colors.surface2} label="No data" bordered />
       </View>
     </View>
