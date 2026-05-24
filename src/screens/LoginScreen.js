@@ -15,16 +15,30 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { VolyumeMark } from '../components/BrandMark';
-import { signInWithEmail, signUpWithEmail, resetPassword, getSupabaseClient } from '../lib/supabase';
+import { signInWithEmail, signUpWithEmail, resetPassword, signInWithGoogle, signInWithApple } from '../lib/supabase';
 import { syncProfile, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
+import { wipeAllUserData, migrateLocalUserId } from '../lib/database';
+import { logError } from '../lib/errorLog';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
+import { useToast } from '../components/Toast';
 
 const CRASH_LOG_KEY = '@volyume_crash_log';
 
 export default function LoginScreen({ navigation, route }) {
-  const { initLocalUser, user: localUser, userProfile, tier, refreshTierFromCloud } = useAppStore();
-  const promptSignup = route?.params?.promptSignup === true;
+  const { initLocalUser, user: localUser, userProfile, tier, setTier } = useAppStore(useShallow(s => ({
+    initLocalUser: s.initLocalUser,
+    user: s.user,
+    userProfile: s.userProfile,
+    tier: s.tier,
+    setTier: s.setTier,
+  })));
+  const toast = useToast();
+  // Either explicit promptSignup OR Welcome's "Go Pro" intent lands us
+  // in signup tab. Returning users will switch to "Sign in" themselves.
+  const promptSignup = route?.params?.promptSignup === true
+    || route?.params?.intent === 'pro_signup';
   const [mode, setMode] = useState(promptSignup ? 'signup' : 'signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -51,7 +65,38 @@ export default function LoginScreen({ navigation, route }) {
       const fn = mode === 'signup' ? signUpWithEmail : signInWithEmail;
       const { data, error } = await fn(email.trim(), password);
       if (error) {
-        Alert.alert('Error', error.message);
+        // If a sign-in failed because the credentials don't match any
+        // existing account, offer to switch to sign-up rather than just
+        // bouncing the user back to the same screen. Supabase returns
+        // "Invalid login credentials" for both wrong-password AND
+        // unknown-email — we can't disambiguate, so the prompt is
+        // permissive: the user knows which they meant.
+        const msg = (error.message || '').toLowerCase();
+        const looksUnregistered = mode === 'signin' && (
+          msg.includes('invalid login') ||
+          msg.includes('invalid credentials') ||
+          msg.includes('user not found') ||
+          msg.includes('email not confirmed') === false && msg.includes('invalid')
+        );
+        if (looksUnregistered) {
+          Alert.alert(
+            'No account found',
+            `We couldn't sign in with that email. Want to create a new account instead?`,
+            [
+              { text: 'Try again', style: 'cancel' },
+              {
+                text: 'Create account',
+                onPress: () => {
+                  setMode('signup');
+                  // Password stays — they only need to confirm it meets
+                  // the 8-char minimum.
+                },
+              },
+            ],
+          );
+        } else {
+          Alert.alert('Error', error.message);
+        }
       } else if (mode === 'signup' && data.user && !data.session) {
         Alert.alert(
           'Check your email',
@@ -61,19 +106,92 @@ export default function LoginScreen({ navigation, route }) {
       } else if (data.session) {
         const supabaseUserId = data.session.user.id;
         const localUserId = localUser?.id;
-        // Fire-and-forget: sync profile then upload local data in background
-        syncProfile(supabaseUserId, userProfile, tier).catch(() => {});
+        const lastSignedInUserId = await AsyncStorage.getItem('@volyume_last_supabase_user_id').catch(() => null);
+
+        // Cross-user safety: if a DIFFERENT user previously used this phone,
+        // wipe their data from local SQLite before pulling the new user's
+        // data down. Without this, two people sharing a device (or the
+        // same person using multiple accounts) would see each other's
+        // workouts, plans, and check-ins because SQLite persists across
+        // sign-out.
+        if (lastSignedInUserId && lastSignedInUserId !== supabaseUserId) {
+          try {
+            await wipeAllUserData(lastSignedInUserId);
+            // Also remove the migrate-from-AsyncStorage flag for the
+            // previous user so the next-launch migration doesn't re-run.
+            await AsyncStorage.removeItem(`@volyume_body_metrics_migrated_${lastSignedInUserId}`).catch(() => {});
+          } catch (e) {
+            logError('LoginScreen.handleEmailAuth.crossUserWipe', e, {
+              previous: lastSignedInUserId, incoming: supabaseUserId,
+            });
+          }
+        }
+        await AsyncStorage.setItem('@volyume_last_supabase_user_id', supabaseUserId).catch(() => {});
+
+        // Anonymous-to-account migration: only on SIGN-UP, never on
+        // SIGN-IN. Per IDENTITY_AND_OWNERSHIP_LOCKED.md the only
+        // legitimate user_id mutation is moving rows from an
+        // anonymous local UUID to a fresh real account at the
+        // moment of sign-up. Sign-in with a previous real account
+        // already cached locally is the path that caused the 42501
+        // cascade; that path is now handled by the cross-user wipe
+        // in RootNavigator.onAuthStateChange + the sign-out wipe in
+        // useAppStore.clearAuthStateForSignOut.
+        if (mode === 'signup' && localUserId && localUserId !== supabaseUserId) {
+          try { await migrateLocalUserId(localUserId, supabaseUserId); }
+          catch (e) { logError('LoginScreen.handleEmailAuth.migrateLocalUserId', e); }
+        }
+
+        // Fire-and-forget but capture failures so silent network drops
+        // during sign-in stop swallowing data loss.
+        syncProfile(supabaseUserId, userProfile, tier)
+          .catch(e => logError('LoginScreen.syncProfile', e, { supabaseUserId }));
         if (mode === 'signup') {
           // New account — push local history up
-          bulkUploadLocalData(supabaseUserId, localUserId).catch(() => {});
-          navigation.replace('ProOnboarding');
+          bulkUploadLocalData(supabaseUserId, localUserId)
+            .catch(e => logError('LoginScreen.bulkUploadLocalData.signup', e, { supabaseUserId }));
+          // Switch the navigator into ProOnboardingStack by setting the tier.
+          // The previous navigation.replace('ProOnboarding') was a no-op
+          // when LoginScreen was reached from WelcomeStack — that stack
+          // doesn't register ProOnboarding. Tier change is the routing
+          // signal RootNavigator watches.
+          if (!tier) await setTier('pro', 'LoginScreen.newAccountSetup');
         } else {
-          // Existing account — pull cloud data down (new device scenario)
-          pullFromCloud(supabaseUserId).catch(() => {});
-          // Server-authoritative tier — enforcement point after beta
-          refreshTierFromCloud(getSupabaseClient(), supabaseUserId).catch(() => {});
+          // Existing account — push any local-only edits made while signed
+          // out, then pull cloud data down (new device scenario).
+          // firstRunComplete + tier + userProfile are restored centrally
+          // by RootNavigator's onAuthStateChange SIGNED_IN handler.
+          bulkUploadLocalData(supabaseUserId, supabaseUserId)
+            .catch(e => logError('LoginScreen.bulkUploadLocalData.signin', e, { supabaseUserId }));
+          pullFromCloud(supabaseUserId)
+            .catch(e => logError('LoginScreen.pullFromCloud', e, { supabaseUserId }));
         }
       }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleOAuth(provider) {
+    // Disable both buttons while the OAuth dialog is up. The actual sign-in
+    // completion is handled by RootNavigator's onAuthStateChange listener
+    // once the deep-link redirect comes back into App.js.
+    const { logInfo, logError } = require('../lib/errorLog');
+    logInfo('LoginScreen.oauth.begin', `provider=${provider}`);
+    setLoading(true);
+    try {
+      const fn = provider === 'google' ? signInWithGoogle : signInWithApple;
+      const result = await fn();
+      if (result?.error) {
+        logError('LoginScreen.oauth.providerError', result.error, { provider });
+        Alert.alert('Sign-in failed', result.error.message);
+      } else {
+        // Success is fully driven by onAuthStateChange — log so the
+        // upstream SIGNED_IN event can be correlated to this initiation.
+        logInfo('LoginScreen.oauth.dialogReturned', `provider=${provider} — awaiting SIGNED_IN`);
+      }
+    } catch (e) {
+      logError('LoginScreen.oauth.threw', e, { provider });
     } finally {
       setLoading(false);
     }
@@ -87,8 +205,8 @@ export default function LoginScreen({ navigation, route }) {
     setLoading(true);
     const { error } = await resetPassword(email.trim());
     setLoading(false);
-    if (error) { Alert.alert('Error', error.message); }
-    else { Alert.alert('Email sent', 'Check your inbox for a password reset link.'); }
+    if (error) { toast.show(error.message, { variant: 'error' }); }
+    else { toast.show('Check your inbox for the reset link', { variant: 'success' }); }
   }
 
   async function handleContinueLocally() {
@@ -101,9 +219,9 @@ export default function LoginScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      {/* Decorative background V mark — faint, centred */}
+      {/* Decorative background wordmark, faint and centred */}
       <View style={styles.bgDecor} pointerEvents="none">
-        <VolyumeMark size={340} color={colors.primary} accent={colors.primary} style={{ opacity: 0.028 }} />
+        <VolyumeMark size={120} style={{ opacity: 0.04 }} />
       </View>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
@@ -125,16 +243,55 @@ export default function LoginScreen({ navigation, route }) {
           )}
 
           {/* ── Brand block ── */}
+          {/* The wordmark asset already contains the "Volyume" lettering,
+              so we render the mark and skip the duplicate text underneath.
+              Tagline stays. Size dialled back from 80→56 — the previous
+              scale dominated the screen above the auth form. */}
           <View style={styles.brand}>
-            <View style={styles.brandMark}>
-              <VolyumeMark size={72} color={colors.textPrimary} accent={colors.primary} />
-            </View>
-            <Text style={styles.brandName}>Volyume</Text>
+            <VolyumeMark size={56} style={styles.brandMark} />
             <Text style={styles.brandTagline}>Less thinking. More lifting.</Text>
           </View>
 
           {/* Thin divider below brand */}
           <View style={styles.brandDivider} />
+
+          {/* ── OAuth quick-sign-in ── */}
+          {/* Platform-aware: Apple on iOS (App Store requires Sign in with
+              Apple when any other social provider is offered), Google on
+              both. Surfaced ABOVE the email form because most users prefer
+              continuing with an existing account over creating yet another
+              email/password. Falls back gracefully if the user's Supabase
+              project doesn't have the provider configured — the Supabase
+              error is surfaced via Alert. */}
+          <View style={styles.oauthBlock}>
+            {Platform.OS === 'ios' && (
+              <TouchableOpacity
+                style={[styles.oauthBtnApple, loading && styles.btnDisabled]}
+                onPress={() => handleOAuth('apple')}
+                disabled={loading}
+                accessibilityRole="button"
+                accessibilityLabel="Continue with Apple"
+              >
+                <Ionicons name="logo-apple" size={18} color="#FFFFFF" />
+                <Text style={styles.oauthBtnAppleText}>Continue with Apple</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={[styles.oauthBtn, loading && styles.btnDisabled]}
+              onPress={() => handleOAuth('google')}
+              disabled={loading}
+              accessibilityRole="button"
+              accessibilityLabel="Continue with Google"
+            >
+              <Ionicons name="logo-google" size={18} color={colors.textPrimary} />
+              <Text style={styles.oauthBtnText}>Continue with Google</Text>
+            </TouchableOpacity>
+            <View style={styles.oauthDivider}>
+              <View style={styles.oauthDividerLine} />
+              <Text style={styles.oauthDividerText}>or with email</Text>
+              <View style={styles.oauthDividerLine} />
+            </View>
+          </View>
 
           {/* ── Form block ── */}
           <View style={styles.formBlock}>
@@ -238,35 +395,13 @@ export default function LoginScreen({ navigation, route }) {
             </Text>
           </TouchableOpacity>
 
-          {/* ── Divider ── */}
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
-            <View style={styles.dividerLine} />
-          </View>
+          {/* "Continue without an account" removed per
+              IDENTITY_AND_OWNERSHIP_LOCKED.md decision 1 (no
+              anonymous mode). Every user has a real account from the
+              first row they create; that's what makes cross-device
+              sync and the cross-user wipe rule provable. */}
 
-          {/* ── Continue locally ── */}
-          <TouchableOpacity
-            style={[styles.localBtn, localLoading && styles.btnDisabled]}
-            onPress={handleContinueLocally}
-            disabled={localLoading}
-            activeOpacity={0.8}
-          >
-            {localLoading ? (
-              <ActivityIndicator color={colors.textSecondary} size="small" />
-            ) : (
-              <>
-                <Ionicons name="phone-portrait-outline" size={17} color={colors.textSecondary} />
-                <Text style={styles.localBtnText}>Continue without an account</Text>
-              </>
-            )}
-          </TouchableOpacity>
-
-          <Text style={styles.localNote}>
-            Your data stays on this device. You can add an account later to sync across devices and back up your history.
-          </Text>
-
-          <Text style={styles.betaNote}>Free during beta · No subscription required</Text>
+          <Text style={styles.betaNote}>No subscription required</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -328,6 +463,15 @@ const styles = StyleSheet.create({
 
   // Form
   formBlock: { gap: spacing.lg, marginBottom: spacing.xl },
+  oauthBlock: { gap: spacing.sm, marginBottom: spacing.lg },
+  oauthBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  oauthBtnText: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  // Apple branding requires black background + white text (HIG)
+  oauthBtnApple: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.md, borderRadius: radius.md, backgroundColor: '#000000' },
+  oauthBtnAppleText: { color: '#FFFFFF', fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  oauthDivider: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
+  oauthDividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
+  oauthDividerText: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
   formTitle: {
     fontSize: fontSize.lg,
     fontWeight: fontWeight.semibold,

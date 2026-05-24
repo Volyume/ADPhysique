@@ -9,7 +9,8 @@
  */
 
 import { getTrainingNote } from './coachingGoals';
-import { shouldSuggestDietBreak } from './nutritionEngine';
+import { shouldSuggestDietBreak, computeFFMFloor } from './nutritionEngine';
+import { detectEdPatternFlag, hasEdPatternCleared } from './edPatternDetector';
 
 // ─── EWMA ────────────────────────────────────────────────────────────────────
 
@@ -36,6 +37,23 @@ export function computeEWMA(weights, alpha = 0.1) {
 export function getLatestEwma(weights, alpha = 0.1) {
   const series = computeEWMA(weights, alpha);
   return series.length ? series[series.length - 1].ewmaKg : null;
+}
+
+/**
+ * Signed weekly trend in % of body weight per week. -1.5 means the
+ * EWMA has dropped 1.5% in the last 7 days. Returns null when
+ * there aren't enough readings to compute a meaningful trend.
+ *
+ * Used by the ED-pattern detector for its rapid-loss signal.
+ */
+export function computeWeeklyTrendPct(morningWeights, currentBodyweightKg = null) {
+  if (!morningWeights || morningWeights.length < 4) return null;
+  const ewmaNow = getLatestEwma(morningWeights);
+  const ewmaPrior = getEwmaSevenDaysAgo(morningWeights);
+  if (ewmaNow == null || ewmaPrior == null) return null;
+  const reference = currentBodyweightKg || ewmaNow;
+  if (!reference) return null;
+  return ((ewmaNow - ewmaPrior) / reference) * 100;
 }
 
 /**
@@ -68,7 +86,7 @@ export function assessDataConfidence({ weigh_ins, adherenceKnown, weeksInPhase, 
     return {
       level: 'data_hold',
       reasons: ['Fewer than 3 weigh-ins this week'],
-      holdMessage: "We need at least 3 morning weights to calculate a reliable trend. Your plan stays the same this week. Keep logging each morning and we'll have enough data to coach you properly next check-in.",
+      holdMessage: "Need at least 3 morning weights for a reliable trend. Calories held this week. Log daily and the next check-in has clean data to act on.",
     };
   }
 
@@ -76,7 +94,7 @@ export function assessDataConfidence({ weigh_ins, adherenceKnown, weeksInPhase, 
     return {
       level: 'data_hold',
       reasons: ['Unusual event flagged with limited weight data'],
-      holdMessage: "You flagged something unusual this week (illness, travel, stress) and weight data is limited. Scale readings aren't reliable enough to act on right now, so we're holding your plan. Log weight consistently next week for a clean read.",
+      holdMessage: "Unusual week flagged and weight data is thin. Scale isn't a reliable signal right now. Calories held. Log consistently next week for a clean read.",
     };
   }
 
@@ -182,58 +200,56 @@ function stepsBand(goalPhase, bodyweightKg = null) {
 // Tagged by signal type. All strings are ≤ 2 sentences, plain English.
 // NO jargon: no MEV/MAV/MRV/RIR/RPE/mesocycle/deload.
 
+// User-facing reason strings surfaced under the Precision Coaching header
+// on CoachOutputScreen. The header already names Precision Coaching, so
+// body lines stay terse: factual, mirror-data, short. Where Precision
+// Coaching is taking a specific action (holding calories, raising steps),
+// the action is named so the user can see what changed.
+//
+// Voice rules: docs/COACHING_VOICE_SYNTHESIS_LOCKED.md. Honesty test
+// applied to every line.
 const WHY_LIBRARY = {
   on_target_holding: [
-    "Weight's trending exactly as planned. The algorithm doesn't change what's working (that's a feature, not a bug).",
-    "Everything's on track this week. Hold the course and keep the effort level consistent.",
-    "Your trend is right where it needs to be. No changes needed. This is what good progress feels like.",
-    "Solid week. Weight and performance are both trending the right way. Stay the course.",
+    "Weight is tracking the target rate. No change needed this week.",
   ],
   off_target_cal_up: [
-    "Weight's moving faster than your target rate, so bringing calories up slightly will protect what you've built.",
-    "You're gaining a little more than planned, so a small calorie bump will slow it down without disrupting momentum.",
+    "Trend is off target. Precision Coaching has raised your calorie target.",
   ],
   off_target_cal_down: [
-    "Weight isn't moving at the rate you're aiming for. A modest calorie reduction keeps the plan on track.",
-    "Progress has stalled slightly versus your goal. A small calorie adjustment gets things moving again.",
-    "The trend's behind schedule, so a controlled reduction moves things in the right direction without a dramatic cut.",
+    "Trend is off target. Precision Coaching has lowered your calorie target.",
   ],
   recovery_lagging: [
-    "Recovery's lagging: sleep dropped, soreness is up. A lighter week now pays back the next four.",
-    "Your body is asking for less right now. Backing off training slightly protects the quality of next week's sessions.",
-    "Energy and soreness signals are telling us to ease back. This isn't losing progress. It's protecting it.",
+    "Recovery scores are down. Precision Coaching is holding calories until they're back.",
   ],
   performance_regressed: [
-    "Performance dropped on some key lifts. Before adding more work, we recover first. Then we push again.",
-    "Strength has dipped recently. The priority is stabilising performance before any further increases.",
+    "Strength is dipping. Precision Coaching is holding calories until it stabilises.",
   ],
   building_baseline: [
-    "You're in the early weeks of logging. Volyume is building your baseline, and adjustments start once the data is more established.",
-    "Not enough data yet to make confident adjustments. Keep logging weight and sessions and we'll start coaching properly soon.",
+    "Not enough data yet to adjust. Keep logging weight and sessions and Precision Coaching will catch up.",
   ],
   stabilise_sessions: [
-    "Sessions were inconsistent this week. Stable training is the most important variable, and we don't adjust anything else until that's solid.",
-    "Less than half your planned sessions were completed. Getting back on schedule takes priority over any programming tweak.",
+    "Sessions were inconsistent this week. Precision Coaching is holding the plan steady until adherence settles.",
   ],
   steps_bump: [
-    "Weight trend is behind target and steps have room to increase. More daily movement is the most recovery-friendly way to close the gap.",
-    "Bumping the daily step target is the lowest-fatigue lever available and it won't affect training quality.",
+    "Trend is behind target. Precision Coaching has raised your step target as the lowest-fatigue lever.",
   ],
   deload_suggested: [
-    "Several signals (soreness, energy, and performance) are all pointing the same way. A lighter week now sets you up for a stronger run after.",
-    "Your body is accumulating fatigue across multiple signals. One reduced week is the most efficient path to your next personal best.",
+    "Recovery flags across multiple signals. Precision Coaching has scheduled a lighter week to set up the next run.",
   ],
   diet_break_suggested: [
-    "Eight or more consecutive weeks eating below maintenance is a long time. One week at your full calorie need helps your body reset and makes the next stretch of dieting more effective.",
-    "A short break at normal calories after a long deficit pays dividends: more energy, better training, better results in the weeks that follow.",
+    "Long stretch in a deficit. Precision Coaching suggests a short break at maintenance to help the next stretch.",
   ],
   push_volume: [
-    "Recovery is solid, energy is high, and performance is climbing. This is the window to add a little more work.",
-    "All the signals are green this week. Adding a little more work while recovery supports it is how progress compounds.",
+    "Recovery and performance both clean. Precision Coaching has added work to the plan.",
   ],
   low_data_weight: [
-    "Not enough weight data this week to make reliable trend calculations. Keep logging morning weight and the trend will stabilise.",
-    "Weight data is limited this week, so the algorithm is working with what it has. More daily logs will sharpen the picture.",
+    "Weight data is thin this week. The trend will sharpen with more daily logs.",
+  ],
+  ffm_floor_hold: [
+    "Precision Coaching has held your calorie target. Your seven-day average intake is at or below the safety floor for your fat-free mass.",
+  ],
+  rapid_loss_corrected: [
+    "Weight dropped fast this week with low energy. Precision Coaching has added calories now rather than waiting two weeks.",
   ],
 };
 
@@ -286,6 +302,25 @@ export function runWeeklyCoach(inputs) {
     bodyweightKg = null,
     units = 'kg',
     scoffPositive = false,
+    // FFM-floor safety context (Move #1). Optional; floor only fires
+    // when the caller supplies a 7-day intake average AND at least 5
+    // days of food data within that window. Body composition inputs
+    // determine which FFM path computeFFMFloor takes.
+    bodyFatPercent = null,
+    bodyFatSource = null,
+    sex = null,
+    recentIntakeAvgKcal = null,
+    recentIntakeDaysLogged = 0,
+    // ED-pattern detector context (Move #2). Optional: when not
+    // supplied the detector is skipped. recentWeeklyHistory is
+    // most-recent-first, each entry { energy, adherence, hasCheckin,
+    // hasFoodData }. goalLockAdvanced raises the firing threshold
+    // from 2 signals to 3. edPatternOpen is the current open flag
+    // state read from the DB (so we know whether to check for
+    // clearance instead of for a fresh raise).
+    recentWeeklyHistory = null,
+    goalLockAdvanced = false,
+    edPatternOpen = false,
   } = inputs;
 
   // ── DATA CONFIDENCE ───────────────────────────────────────────────────────
@@ -304,10 +339,14 @@ export function runWeeklyCoach(inputs) {
       confidence: confidence.level,
       weekLabel: `Week ${weeksInPhase} · ${phaseConfig(goalPhase).label}`,
       trend: { ewma7: ewmaNow, delta: null, onTarget: false, deltaLabel: 'Log morning weight', rateLabel: null },
-      whatWorking: ['Showing up and logging. That\'s the baseline everything else builds on.'],
-      adjustments: { training: { signal: 'hold', note: 'Hold your current plan. We need a few more weigh-ins to coach you accurately.' }, calories: null, steps: null, cardio: null },
+      whatWorking: ['Check-in saved.'],
+      adjustments: { training: { signal: 'hold', note: 'Plan unchanged. A few more weigh-ins needed to act on.' }, calories: null, steps: null, cardio: null },
       whyThisWeek: confidence.holdMessage,
       deloadSuggested: false, deloadNote: null, dietBreakSuggested: false, dietBreakNote: null,
+      heldDecisions: [],
+      rapidWeightLossFlag: false,
+      ffmFloorHeld: false,
+      ffmFloorContext: null,
       adherenceNote: null, prsThisWeek, sessionsCompleted, sessionsPlanned,
       volumeSignal: 0, loadSignal: 'hold', recoveryFlag: 'normal', goalPhase,
     };
@@ -321,8 +360,20 @@ export function runWeeklyCoach(inputs) {
   const cycleOverride  = !!(checkin?.cycleOverride);
   const sleepHours     = checkin?.sleepHours     ?? null;
 
-  // Seed for rotating copy variants (week-based so same week always gives same copy)
-  const weekSeed = checkin?.weekStart ? Math.floor(checkin.weekStart / (7 * 86400000)) : 0;
+  // Seed for rotating copy variants. Anchor to Monday-UTC week buckets so the
+  // same calendar week always yields the same seed regardless of whether the
+  // caller stored weekStart as a Sunday-anchored or Monday-anchored timestamp.
+  // (The notifications module uses Monday; some older check-in rows stored
+  // Sunday — without this normalisation the same week could produce different
+  // copy variants depending on the write path.)
+  const weekSeed = (() => {
+    if (!checkin?.weekStart) return 0;
+    const d = new Date(checkin.weekStart);
+    const day = (d.getUTCDay() + 6) % 7; // 0 = Monday
+    d.setUTCHours(0, 0, 0, 0);
+    d.setUTCDate(d.getUTCDate() - day);
+    return Math.floor(d.getTime() / (7 * 86400000));
+  })();
 
   // ── EWMA weight calculations ──────────────────────────────────────────────
   const ewma7Today   = morningWeights.length >= 3 ? getLatestEwma(morningWeights) : null;
@@ -406,42 +457,74 @@ export function runWeeklyCoach(inputs) {
 
   // ── CALORIE ADJUSTMENT ────────────────────────────────────────────────────
   let calorieAdjustment = null;
+  let rapidLossCorrectionApplied = false;
 
   // At low/medium confidence, require an extra week before adjusting
   const offTargetWeeksRequired = confidence.level === 'high' ? 2 : 3;
+
+  // Move #3 rapid-loss compression: when the safety condition fires
+  // (weekly loss <= -1.5% AND energy_score <= 2 AND not cycle-flagged)
+  // on a cutting phase, Precision Coaching bypasses the two-week
+  // cooldown AND the consecutiveOffTargetWeeks gate to add calories
+  // immediately. Upward-only by design -- the same condition during
+  // a bulk does not compress the downward gate. Locked in
+  // MOVE_3_UPWARD_GATE_COMPRESSION.md.
+  const rapidLossOverride = !!(
+    phase.isCut &&
+    !cycleOverride &&
+    actualRatePct !== null && actualRatePct <= -1.5 &&
+    energyScore !== null && energyScore <= 2
+  );
 
   const canAdjustCals = (
     !cycleOverride &&
     !scoffPositive &&
     currentCalTarget != null &&
     calsAdherence !== 'untracked' &&
-    consecutiveOffTargetWeeks >= offTargetWeeksRequired &&
-    lastCalAdjustmentWeeksAgo >= 2  // cooldown: don't adjust two weeks in a row
+    (
+      rapidLossOverride ||
+      (
+        consecutiveOffTargetWeeks >= offTargetWeeksRequired &&
+        lastCalAdjustmentWeeksAgo >= 2  // cooldown: don't adjust two weeks in a row
+      )
+    )
   );
 
-  if (canAdjustCals && !onTarget) {
+  if (canAdjustCals && (rapidLossOverride || !onTarget)) {
     let change = 0;
     let calNote = '';
 
-    if (phase.isCut && offTargetDirection > 0) {
+    if (rapidLossOverride) {
+      // Magnitude scales with how far past -1.5% the actual rate
+      // sits. Base +125 (matches the existing fast-loss adjustment),
+      // +150 per additional 1.0% of weekly loss, capped at +300 per
+      // MOVE_3_UPWARD_GATE_COMPRESSION.md.
+      const severityExcess = Math.max(0, -1.5 - actualRatePct);
+      const scaledBoost = Math.round(125 + severityExcess * 150);
+      change = Math.min(300, scaledBoost);
+      calNote = "Weight is dropping faster than the target rate and energy is low. Adding calories straight away to protect recovery.";
+      rapidLossCorrectionApplied = true;
+    } else if (phase.isCut && offTargetDirection > 0) {
       // Losing too slowly
       change = calsAdherence === 'hit' ? -150 : -100;
-      calNote = "Your weight hasn't been coming down as quickly as the plan calls for. Trimming a little gives it the nudge it needs.";
+      calNote = "Weight is coming down slower than the target rate.";
     } else if (phase.isCut && offTargetDirection < 0) {
-      // Losing too fast — protect muscle
+      // Losing too fast — protect muscle (standard, non-compressed)
       change = +125;
-      calNote = "You're losing weight faster than planned. Dropping too quickly risks losing muscle alongside fat, so a small increase keeps things at a safe pace.";
+      calNote = "Weight is dropping faster than the target rate. Slowing it down protects muscle.";
     } else if (phase.isBulk && offTargetDirection < 0) {
       // Gaining too slowly
       change = +150;
-      calNote = "Weight gain has been slower than expected. A small increase gives your muscles more fuel to build with.";
+      calNote = "Weight gain is below the target rate.";
     } else if (phase.isBulk && offTargetDirection > 0) {
       // Gaining too fast
       change = -125;
-      calNote = "Weight is coming on faster than the plan intends. A small reduction keeps fat gain in check without affecting your training.";
+      calNote = "Weight is going on faster than the target rate. Pulling back keeps fat gain in check.";
     }
 
-    // Cap at ±5% of current target
+    // Cap at ±5% of current target. The rapid-loss compression has
+    // its own absolute +300 cap above; the percentage cap can only
+    // tighten it further on smaller targets, never relax it.
     if (currentCalTarget > 0) {
       const maxChange = Math.round(currentCalTarget * 0.05);
       change = Math.sign(change) * Math.min(Math.abs(change), maxChange);
@@ -449,6 +532,44 @@ export function runWeeklyCoach(inputs) {
 
     if (change !== 0) {
       calorieAdjustment = { change, note: calNote };
+    }
+  }
+
+  // ── FFM FLOOR SAFETY GATE ────────────────────────────────────────────────
+  // Mountjoy 2014/2023 IOC RED-S consensus: 30 kcal/kg fat-free mass per
+  // day is the threshold below which sustained intake is "problematic
+  // low energy availability". If the user's 7-day rolling intake sits
+  // at or below their FFM-derived floor and Precision Coaching was
+  // about to suggest a calorie cut, Precision Coaching refuses the cut
+  // and surfaces it as a held decision instead. Calorie INCREASES are
+  // never blocked. Data sufficiency gate: only fires with >=5 days of
+  // intake logged in the last 7.
+  let ffmFloorHeld = false;
+  let ffmFloorContext = null;
+  if (
+    bodyweightKg != null &&
+    recentIntakeAvgKcal != null &&
+    recentIntakeDaysLogged >= 5
+  ) {
+    const floor = computeFFMFloor(bodyweightKg, {
+      bodyFatPercent,
+      bodyFatSource,
+      sex,
+    });
+    ffmFloorContext = {
+      floorKcal: floor.floorKcal,
+      ffmKg: floor.ffmKg,
+      source: floor.source,
+      recentIntakeAvgKcal,
+      recentIntakeDaysLogged,
+    };
+    if (
+      recentIntakeAvgKcal <= floor.floorKcal &&
+      calorieAdjustment != null &&
+      calorieAdjustment.change < 0
+    ) {
+      ffmFloorHeld = true;
+      calorieAdjustment = null;
     }
   }
 
@@ -481,10 +602,20 @@ export function runWeeklyCoach(inputs) {
   }
 
   // ── CARDIO PRESCRIPTION ───────────────────────────────────────────────────
+  // Cardio fires for cut + off-target high + steps already maxed.
+  // Poor recovery overrides the prescription with a "pause" message instead
+  // of letting cardio compound the recovery deficit.
   let cardioAdjustment = null;
   const stepsAtUpperBand = currentStepsTarget >= band.upper;
+  const cardioConditionsMet = phase.isCut && !onTarget && offTargetDirection > 0 && stepsAtUpperBand;
 
-  if (phase.isCut && !onTarget && offTargetDirection > 0 && stepsAtUpperBand && !poorRecovery) {
+  if (cardioConditionsMet && poorRecovery) {
+    cardioAdjustment = {
+      prescribed: false,
+      type: null,
+      note: 'Cardio paused this week. Recovery takes priority.',
+    };
+  } else if (cardioConditionsMet) {
     if (consecutiveOffTargetWeeks >= 4 && goalPhase === 'agg_cut') {
       cardioAdjustment = {
         prescribed: true,
@@ -498,12 +629,6 @@ export function runWeeklyCoach(inputs) {
         note: 'Add 3 sessions of 20 to 30 min at an easy pace. You should be able to hold a conversation throughout.',
       };
     }
-  } else if (poorRecovery && cardioAdjustment?.prescribed) {
-    cardioAdjustment = {
-      prescribed: false,
-      type: null,
-      note: 'Cardio paused this week. Recovery takes priority.',
-    };
   }
 
   // ── RAPID WEIGHT LOSS SAFETY FLAG ────────────────────────────────────────
@@ -552,28 +677,105 @@ export function runWeeklyCoach(inputs) {
       dietBreakSuggested = true;
       dietBreakWeeksInDeficit = weeksInPhase;
       dietBreakNote = weeksInPhase >= 12
-        ? `You have been eating below maintenance for ${weeksInPhase} weeks. A full week at maintenance will help your body reset before continuing.`
-        : 'Eight or more consecutive weeks eating below maintenance is a long time. One week at your full calorie need helps your body reset and makes the next stretch more effective.';
+        ? `You've been eating below maintenance for ${weeksInPhase} weeks. Precision Coaching suggests a full week at maintenance to let your body reset before continuing.`
+        : 'Eight or more consecutive weeks below maintenance is a long stretch. Precision Coaching suggests a week at your full calorie need to let your body reset and make the next stretch more effective.';
+    }
+  }
+
+  // ── ED-PATTERN DETECTOR (Move #2) ─────────────────────────────────────────
+  // Multi-signal harm-prevention check. Reads recent weight trend +
+  // weekly history and decides whether to raise an ED-pattern flag
+  // or, if one is already open, whether to clear it. The output is
+  // attached to the coach output so the caller (DB layer) can write
+  // the state machine transition. A raised flag also injects an
+  // ed_pattern_lockout held decision so the held-decisions card
+  // renders the locked copy with CTAs.
+  let edPatternResult = null;
+  let edPatternClearedThisWeek = false;
+  if (recentWeeklyHistory) {
+    const weightTrendPctPerWeek = computeWeeklyTrendPct(morningWeights, bodyweightKg);
+    if (edPatternOpen) {
+      const cleared = hasEdPatternCleared({ weightTrendPctPerWeek }, recentWeeklyHistory);
+      if (cleared) {
+        edPatternClearedThisWeek = true;
+      }
+    } else {
+      const result = detectEdPatternFlag(
+        { weightTrendPctPerWeek },
+        recentWeeklyHistory,
+        goalLockAdvanced,
+      );
+      if (result.fired) {
+        edPatternResult = result;
+      }
     }
   }
 
   // ── HELD DECISIONS ────────────────────────────────────────────────────────
   const heldDecisions = [];
 
-  if ((phase.isCut || phase.isBulk) && currentCalTarget !== null && calorieAdjustment === null) {
+  // ED-pattern lockout takes the top slot: it's the strongest hold,
+  // and the held-decision card uses its type to switch to the rich
+  // locked-copy variant rather than the plain reason string. Same
+  // shape as the FFM floor: a downward calorie suggestion is wiped
+  // so the engine never pushes a deeper deficit while the flag is up.
+  if (edPatternResult?.fired || edPatternOpen) {
+    if (calorieAdjustment && calorieAdjustment.change < 0) {
+      calorieAdjustment = null;
+    }
+    heldDecisions.push({
+      type: 'ed_pattern_lockout',
+      reason: 'Calorie cut held. Multiple safety signals are active. See the held-decision card for details.',
+      signals: edPatternResult?.signals ?? null,
+      goalLockAdvanced: !!goalLockAdvanced,
+    });
+  } else if (edPatternClearedThisWeek) {
+    heldDecisions.push({
+      type: 'ed_pattern_cleared',
+      reason: 'Hold lifted. The signals that triggered the hold have settled for two weeks. Standard coaching resumes next week.',
+    });
+  }
+
+  // FFM-floor hold goes second because it's a safety hold that
+  // supersedes the other calorie-hold reasons. The user needs to see
+  // this one above any "still gathering data" or "trend is on target"
+  // type messages.
+  if (ffmFloorHeld && ffmFloorContext) {
+    heldDecisions.push({
+      type: 'ffm_floor',
+      reason: `Calorie target held. Your seven-day average intake of ${Math.round(ffmFloorContext.recentIntakeAvgKcal)} kcal is at or below your safety floor of ${ffmFloorContext.floorKcal} kcal. Eating below this level for long stretches breaks down muscle and stalls recovery.`,
+    });
+  }
+
+  // Move #3: surface the rapid-loss compression as a structured
+  // held-decision row. Renders in HeldDecisionsCard with the locked
+  // RAPID_LOSS_CORRECTED_COPY title + body. Includes the magnitude
+  // applied so the card can show "+N kcal added" instead of being
+  // an abstract reason string.
+  if (rapidLossCorrectionApplied && calorieAdjustment) {
+    heldDecisions.push({
+      type: 'rapid_loss_corrected',
+      reason: `Calorie target raised by ${calorieAdjustment.change} kcal. Weight dropped ${Math.abs(actualRatePct).toFixed(1)}% this week with low energy; the standard two-week wait is bypassed.`,
+      kcalDelta: calorieAdjustment.change,
+      weeklyLossPct: parseFloat(actualRatePct.toFixed(2)),
+      energyScore,
+    });
+  }
+
+  if ((phase.isCut || phase.isBulk) && currentCalTarget !== null && calorieAdjustment === null && !ffmFloorHeld) {
     if (scoffPositive) {
-      heldDecisions.push({ type: 'calories', reason: "Calories left unchanged. Right now the focus is on eating enough to fuel training well, not on restricting." });
+      heldDecisions.push({ type: 'calories', reason: "Calories held. Wellbeing screen flagged restriction concerns." });
     } else if (cycleOverride) {
-      heldDecisions.push({ type: 'calories', reason: "Calories left unchanged. You flagged your cycle this week, so the weight reading is not a reliable signal to act on." });
+      heldDecisions.push({ type: 'calories', reason: "Calories held. Cycle was flagged this week so the weight reading isn't a reliable signal." });
     } else if (onTarget) {
-      heldDecisions.push({ type: 'calories', reason: "Everything is on track. No reason to change what is working." });
+      heldDecisions.push({ type: 'calories', reason: "Calories held. Trend is on target." });
     } else if (lastCalAdjustmentWeeksAgo < 2) {
-      heldDecisions.push({ type: 'calories', reason: "Calories left unchanged. A change was made recently and needs more time to show up in the trend before looking again." });
+      heldDecisions.push({ type: 'calories', reason: "Calories held. Last adjustment needs more weeks to show in the trend." });
     } else if (consecutiveOffTargetWeeks < offTargetWeeksRequired) {
       const weeksLeft = offTargetWeeksRequired - consecutiveOffTargetWeeks;
-      heldDecisions.push({ type: 'calories', reason: `Calories left unchanged. ${weeksLeft} more week${weeksLeft !== 1 ? 's' : ''} of the same trend needed before acting. One week alone is not enough to call it.` });
+      heldDecisions.push({ type: 'calories', reason: `Calories held. ${weeksLeft} more week${weeksLeft !== 1 ? 's' : ''} of the same trend needed before adjusting.` });
     } else if (calsAdherence === 'untracked') {
-      heldDecisions.push({ type: 'calories', reason: "Calories left unchanged. Without knowing how close you got to your target this week, any adjustment would be guesswork." });
+      heldDecisions.push({ type: 'calories', reason: "Calories held. Adherence wasn't tracked, so adjusting now would be a guess." });
     }
   }
 
@@ -581,44 +783,51 @@ export function runWeeklyCoach(inputs) {
   const whatWorking = [];
 
   if (sessionAdherence >= 1.0) {
-    whatWorking.push(`Sessions: ${sessionsCompleted}/${sessionsPlanned}. All done.`);
+    whatWorking.push(`Sessions ${sessionsCompleted}/${sessionsPlanned}.`);
   } else if (sessionAdherence >= 0.75) {
-    whatWorking.push(`Sessions: ${sessionsCompleted}/${sessionsPlanned}. Solid week.`);
+    whatWorking.push(`Sessions ${sessionsCompleted}/${sessionsPlanned}.`);
   }
 
   if (prsThisWeek > 0) {
-    whatWorking.push(`${prsThisWeek} personal best${prsThisWeek > 1 ? 's' : ''} this week.`);
+    whatWorking.push(`${prsThisWeek} PR${prsThisWeek > 1 ? 's' : ''} this week.`);
   }
 
   if (stepsAdherence === 'hit') {
-    whatWorking.push('Steps target hit.');
+    whatWorking.push('Step target hit.');
   } else if (stepsAdherence === 'mostly') {
-    whatWorking.push('Steps mostly on target.');
+    whatWorking.push('Step target mostly hit.');
   }
 
   if (calsAdherence === 'hit') {
-    whatWorking.push('Calorie target on point.');
+    whatWorking.push('Calorie target hit.');
   }
 
   if (excellentRec) {
-    whatWorking.push('Energy and recovery are excellent.');
+    whatWorking.push('Energy and recovery strong.');
   } else if (!poorRecovery && energyScore != null) {
-    whatWorking.push('Recovery is manageable. No red flags.');
+    whatWorking.push('Recovery in range.');
   }
 
   if (onTarget && weightDelta != null) {
-    whatWorking.push(`Weight trend is right on target (${rateLabel}).`);
+    whatWorking.push(`Weight trend on target (${rateLabel}).`);
   }
 
-  // Fallback — always show at least one bullet
+  // Fallback — only when literally nothing to say
   if (whatWorking.length === 0) {
-    whatWorking.push('Showing up and logging. That\'s the baseline everything else builds on.');
+    whatWorking.push('Data logged.');
   }
 
   // ── "WHY THIS WEEK" ───────────────────────────────────────────────────────
   const whyKeys = [];
 
-  if (deloadSuggested)                          whyKeys.push('deload_suggested');
+  // FFM-floor hold supersedes other why-keys when it fires. The user
+  // needs to see the safety reason above any other framing. Rapid-
+  // loss compression takes precedence over the generic
+  // off_target_cal_up so the user sees the safety framing rather than
+  // the standard adjustment story.
+  if (ffmFloorHeld)                             whyKeys.push('ffm_floor_hold');
+  else if (rapidLossCorrectionApplied)          whyKeys.push('rapid_loss_corrected');
+  else if (deloadSuggested)                     whyKeys.push('deload_suggested');
   else if (dietBreakSuggested)                  whyKeys.push('diet_break_suggested');
   else if (poorRecovery)                        whyKeys.push('recovery_lagging');
   else if (volumeSignal >= 1 && excellentRec)   whyKeys.push('push_volume');
@@ -659,6 +868,13 @@ export function runWeeklyCoach(inputs) {
     dietBreakWeeksInDeficit,
     heldDecisions,
     rapidWeightLossFlag,
+    rapidLossCorrectionApplied,
+    ffmFloorHeld,
+    ffmFloorContext,
+    edPatternFired: !!edPatternResult?.fired,
+    edPatternSignals: edPatternResult?.signals ?? null,
+    edPatternClearedThisWeek,
+    goalLockAdvanced: !!goalLockAdvanced,
     adherenceNote: null,
     prsThisWeek,
     sessionsCompleted,
@@ -690,6 +906,10 @@ function _buildBaselineOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, we
     deloadNote: null,
     dietBreakSuggested: false,
     dietBreakNote: null,
+    heldDecisions: [],
+    rapidWeightLossFlag: false,
+    ffmFloorHeld: false,
+    ffmFloorContext: null,
     adherenceNote: null,
     prsThisWeek,
     sessionsCompleted,

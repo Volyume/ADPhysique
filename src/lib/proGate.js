@@ -10,6 +10,7 @@
 export const PRO_BETA_ACTIVE = true;
 export const BETA_END_DATE = null; // set to a timestamp when beta closes
 
+
 /**
  * Returns true if the user has Pro access.
  * During beta this is always true.
@@ -20,21 +21,9 @@ export function isProUser(userProfile) {
   return userProfile?.proEntitled === true;
 }
 
-/**
- * Returns a short label for display in UI ("Beta" / "Pro" / "Free")
- */
 export function getProLabel(userProfile) {
-  if (PRO_BETA_ACTIVE) return 'Beta';
   if (isProUser(userProfile)) return 'Pro';
   return 'Free';
-}
-
-/**
- * Returns the banner text shown at the top of Pro screens during beta.
- */
-export function getBetaBannerText() {
-  if (!PRO_BETA_ACTIVE) return null;
-  return 'Pro is free during beta. Your feedback shapes this.';
 }
 
 /**
@@ -47,12 +36,12 @@ export function getBetaBannerText() {
  * sign up and go through the upgrade flow to switch.
  */
 export const PRO_ROUTES = [
-  'CoachBuilder',
   'WeeklyCheckIn',
   'NutritionTargets',
   'BodyMetrics',
   'CoachOutput',
   'ProGoalSetup',
+  'CoachingReminders',
 ];
 
 export function isProRoute(routeName) {

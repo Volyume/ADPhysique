@@ -2,9 +2,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
+import { useShallow } from 'zustand/react/shallow';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
-import { scheduleRestNotif, cancelRestNotif } from '../lib/restNotifications';
+// Rest-timer notifications removed — see comment in the timer
+// useEffect below. Keep the file in tree because the timer
+// component still uses imports from theme + store + haptics.
+import { playRestBeep, preloadRestBeeps } from '../lib/restSound';
 
 const TIME_ADJUSTMENTS = [
   { delta: -30, label: '−30s' },
@@ -14,19 +18,35 @@ const TIME_ADJUSTMENTS = [
 ];
 
 export default function RestTimer() {
+  // Subscribe to only the fields this component needs; using
+  // `useAppStore()` without a selector re-renders this on every store
+  // mutation (PR celebrations, set saves, profile updates, etc.) which
+  // ran through every second of every workout.
+  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   const {
     restTimerActive, restTimerRemaining, restTimerDuration,
     stopRestTimer, tickRestTimer, addRestTime,
     workoutExercises, currentExerciseIndex,
-  } = useAppStore();
+  } = useAppStore(useShallow(s => ({
+    restTimerActive: s.restTimerActive,
+    restTimerRemaining: s.restTimerRemaining,
+    restTimerDuration: s.restTimerDuration,
+    stopRestTimer: s.stopRestTimer,
+    tickRestTimer: s.tickRestTimer,
+    addRestTime: s.addRestTime,
+    workoutExercises: s.workoutExercises,
+    currentExerciseIndex: s.currentExerciseIndex,
+  })));
 
   // Derive the current exercise name so the lock-screen notification is specific
   const currentExerciseName =
     workoutExercises[currentExerciseIndex]?.exercise?.name || '';
   const intervalRef = useRef(null);
-  const notifIdRef = useRef(null);
   const progressAnim = useRef(new Animated.Value(1)).current;
   const [showDone, setShowDone] = useState(false);
+  // Track all queued timeouts so we can cancel them on unmount (was
+  // leaking three uncancelled setTimeouts per cycle — haptics + done-flag).
+  const timeoutsRef = useRef([]);
 
   useEffect(() => {
     if (restTimerActive) {
@@ -36,40 +56,100 @@ export default function RestTimer() {
       const remaining = restTimerRemaining > 0 ? restTimerRemaining : restTimerDuration;
       const startValue = restTimerDuration > 0 ? remaining / restTimerDuration : 1;
       progressAnim.setValue(startValue);
-      Animated.timing(progressAnim, {
-        toValue: 0,
-        duration: remaining * 1000,
-        useNativeDriver: false,
-      }).start();
+      // Reduce-motion bypasses the continuous progress animation; the bar
+      // just jumps each second as the numeric timer ticks. Less visual
+      // movement for vestibular-sensitive users.
+      if (!reduceMotion) {
+        Animated.timing(progressAnim, {
+          toValue: 0,
+          duration: remaining * 1000,
+          useNativeDriver: false,
+        }).start();
+      }
       intervalRef.current = setInterval(() => { tickRestTimer(); }, 1000);
-      // Post lock-screen notification and schedule the done alert
-      scheduleRestNotif(remaining, currentExerciseName).then(id => {
-        notifIdRef.current = id;
-      });
+      // Lock-screen / Live Activity notification disabled. The
+      // notification path reported the wrong "Set N of M" label
+      // (showed N=current+1 against M=target, which read as "Set 3
+      // of 2" mid-set) and added more friction than it removed,
+      // per user feedback during beta-prep. The in-app countdown
+      // card with Skip / +15 / +30 / -15 / -30 stays.
     } else {
       clearInterval(intervalRef.current);
       progressAnim.stopAnimation();
       progressAnim.setValue(1);
-      // Cancel the ongoing lock-screen notification and any pending done alert
-      cancelRestNotif(notifIdRef.current);
-      notifIdRef.current = null;
     }
     return () => clearInterval(intervalRef.current);
   }, [restTimerActive]);
 
+  // Reanimate the progress bar when the user adjusts the timer with ±15s /
+  // ±30s. Previously the bar finished early or hit 0 with the numeric timer
+  // still counting because this branch never re-ran the Animated.timing.
+  useEffect(() => {
+    if (!restTimerActive || restTimerDuration <= 0 || restTimerRemaining <= 0) return;
+    progressAnim.stopAnimation();
+    progressAnim.setValue(restTimerRemaining / restTimerDuration);
+    if (!reduceMotion) {
+      Animated.timing(progressAnim, {
+        toValue: 0,
+        duration: restTimerRemaining * 1000,
+        useNativeDriver: false,
+      }).start();
+    }
+    // We rebind on every restTimerRemaining change which is once per
+    // second; the stopAnimation + setValue + start is cheap. The previous
+    // useEffect on [restTimerActive] only fired once when the timer
+    // started, leaving the animation disconnected from the live remaining.
+    // reduceMotion is in the dep array so toggling Reduce Motion mid-rest
+    // takes effect on the next tick rather than waiting for the next rest.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restTimerRemaining, restTimerDuration, reduceMotion]);
+
+  // Preload beeps once when the timer first becomes active in this mount —
+  // pays the WAV synth + disk-write cost up front so the first countdown
+  // tick doesn't drop audio. preloadRestBeeps is a no-op if expo-av isn't
+  // installed yet (graceful fallback to haptics only).
+  useEffect(() => {
+    if (restTimerActive) preloadRestBeeps();
+  }, [restTimerActive]);
+
+  // Countdown alerts. 3-2-1 escalates both haptic and audio pitch so the
+  // user can feel/hear which tick they're on without looking at the screen.
+  //   3s → 660 Hz beep + Medium haptic
+  //   2s → 770 Hz beep + Heavy haptic
+  //   1s → 880 Hz beep + Heavy haptic + Warning notification
+  //   0s → 1100 Hz "GO" tone + Success notification + extra haptic pulses
   useEffect(() => {
     if (!restTimerActive) return;
-    if (restTimerRemaining <= 3 && restTimerRemaining > 0) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    }
-    if (restTimerRemaining === 0) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 200);
-      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 400);
+    if (restTimerRemaining === 3) {
+      playRestBeep('three');
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    } else if (restTimerRemaining === 2) {
+      playRestBeep('two');
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+    } else if (restTimerRemaining === 1) {
+      playRestBeep('one');
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+    } else if (restTimerRemaining === 0) {
+      playRestBeep('go');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      const t1 = setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}), 200);
+      const t2 = setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}), 400);
       setShowDone(true);
-      setTimeout(() => setShowDone(false), 3000);
+      const t3 = setTimeout(() => setShowDone(false), 3000);
+      timeoutsRef.current.push(t1, t2, t3);
     }
   }, [restTimerRemaining]);
+
+  // Component-wide cleanup — drains any pending timeouts so they don't fire
+  // on an unmounted component (workout ended, user signed out, etc.).
+  // Also clears the active interval and the rest notification so a
+  // sign-out mid-rest doesn't leave a phantom notification ticking down.
+  useEffect(() => () => {
+    timeoutsRef.current.forEach(clearTimeout);
+    timeoutsRef.current = [];
+    clearInterval(intervalRef.current);
+  }, []);
 
   function handleAdjust(delta) {
     Haptics.selectionAsync();
@@ -103,17 +183,18 @@ export default function RestTimer() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.progressBar}>
-        <Animated.View
-          style={[
-            styles.progressFill,
-            { width: barWidth, backgroundColor: isAlmostDone ? colors.warning : colors.primary },
-          ]}
-        />
-      </View>
-
-      {/* Timer row */}
-      <View style={styles.row}>
+      {/* Timer row. accessibilityLiveRegion announces each tick to screen
+          readers without forcing focus — useful so a non-sighted user
+          knows when their rest is nearly up. We use 'polite' to avoid
+          interrupting other VoiceOver / TalkBack output. */}
+      <View
+        style={styles.row}
+        accessible
+        accessibilityLiveRegion="polite"
+        accessibilityLabel={isCountdown
+          ? `Rest, ${restTimerRemaining} second${restTimerRemaining === 1 ? '' : 's'} remaining`
+          : `Rest timer, ${mins} minute${mins === 1 ? '' : 's'} ${secs} second${secs === 1 ? '' : 's'} remaining`}
+      >
         <Ionicons name="timer-outline" size={18} color={isAlmostDone ? colors.warning : colors.primary} />
         {isCountdown ? (
           <Text style={styles.countdownNum}>{restTimerRemaining}</Text>
@@ -125,6 +206,8 @@ export default function RestTimer() {
           onPress={stopRestTimer}
           style={styles.skipBtn}
           hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+          accessibilityLabel="Skip rest timer"
+          accessibilityRole="button"
         >
           <Text style={styles.skipText}>Skip</Text>
         </TouchableOpacity>
@@ -154,35 +237,41 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.surface2,
     borderRadius: radius.md,
-    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border,
     marginVertical: spacing.sm,
   },
-  progressBar: { height: 3, backgroundColor: colors.border },
-  progressFill: { height: '100%', borderRadius: 2 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   timeText: {
-    fontSize: fontSize.xl,
+    fontSize: 28,
     fontWeight: fontWeight.bold,
-    color: colors.primary,
+    color: colors.textPrimary,
     fontVariant: ['tabular-nums'],
-    minWidth: 52,
+    letterSpacing: -0.5,
   },
   almostDone: { color: colors.warning },
   countdownNum: {
-    fontSize: fontSize.xxl,
+    fontSize: fontSize.xxxl,
     fontWeight: fontWeight.black,
     color: colors.warning,
-    minWidth: 52,
+    fontVariant: ['tabular-nums'],
+    minWidth: 40,
     textAlign: 'center',
   },
-  label: { fontSize: fontSize.sm, color: colors.textSecondary, flex: 1 },
+  label: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    flex: 1,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
   skipBtn: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,

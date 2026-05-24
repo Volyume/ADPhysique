@@ -21,7 +21,7 @@ function buildPhaseReason(prevPhase, nextPhase) {
     return `You're moving to maintenance. Calories settle and the focus shifts to consistency and performance rather than weight change.`;
   }
   if (prevPhase === 'lean_gain' && nextPhase === 'bulk') {
-    return `Bigger surplus for faster gains. Expect some fat to come with the muscle — that's the trade-off.`;
+    return `Bigger surplus for faster gains. Expect some fat to come with the muscle. That's the trade-off.`;
   }
   if (prevPhase === 'bulk' && nextPhase === 'lean_gain') {
     return `Pulling the surplus back so gains come on cleaner. Slower, but you stay in shape throughout.`;
@@ -105,15 +105,15 @@ function MacroRow({ label, prev, next, unit = 'g' }) {
       <View style={styles.macroValues}>
         {changed ? (
           <>
-            <Text style={styles.macroPrev}>{prev ?? '—'}{unit}</Text>
+            <Text style={styles.macroPrev}>{prev ?? '-'}{unit}</Text>
             <Ionicons name="arrow-forward" size={11} color={colors.textMuted} style={{ marginHorizontal: 4 }} />
-            <Text style={styles.macroNext}>{next ?? '—'}{unit}</Text>
+            <Text style={styles.macroNext}>{next ?? '-'}{unit}</Text>
             <Text style={[styles.macroDelta, delta > 0 ? styles.macroDeltaUp : styles.macroDeltaDown]}>
               {' '}({sign}{delta}{unit})
             </Text>
           </>
         ) : (
-          <Text style={styles.macroUnchanged}>{next ?? '—'}{unit}</Text>
+          <Text style={styles.macroUnchanged}>{next ?? '-'}{unit}</Text>
         )}
       </View>
     </View>
@@ -123,7 +123,7 @@ function MacroRow({ label, prev, next, unit = 'g' }) {
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function GoalChangeSummaryScreen({ navigation, route }) {
-  const { previous = {}, next = {} } = route.params || {};
+  const { previous = {}, next = {}, planRerolled = false } = route.params || {};
 
   const goalChanged = previous.goal && next.goal && previous.goal !== next.goal;
   const phaseChanged = previous.phase && next.phase && previous.phase !== next.phase;
@@ -178,7 +178,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
             <Text style={styles.heroBody}>
               {anyChanged
                 ? `Your plan and nutrition targets have been updated to match. Here's a breakdown of what shifted and why.`
-                : `Nothing meaningful changed — your plan and nutrition stay as they were.`}
+                : `Nothing meaningful changed. Your plan and nutrition stay as they were.`}
             </Text>
           </View>
         </View>
@@ -231,7 +231,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
                 <MacroRow label="Carbs"   prev={prevC} next={nextC} />
                 <MacroRow label="Fat"     prev={prevF} next={nextF} />
                 {!macrosChanged && (
-                  <Text style={styles.cardReason}>Your macros stay where they are — the change you made does not shift them meaningfully.</Text>
+                  <Text style={styles.cardReason}>Your macros stay where they are. The change you made does not shift them meaningfully.</Text>
                 )}
               </View>
             )}
@@ -253,7 +253,9 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
           <View style={styles.nextRow}>
             <Ionicons name="ellipse" size={6} color={colors.primary} style={styles.bullet} />
             <Text style={styles.nextText}>
-              Your active plan stays in place. Your Precision Coaching uses the new goal and phase from your next session onwards.
+              {planRerolled
+                ? 'A fresh plan has been built for your new goal and is now your active plan. Your next session comes from it. Open Plans to see the full breakdown.'
+                : 'Your goal is saved, but the training plan didn\'t reroll this time. Open Plans and tap "Build my plan" to retry.'}
             </Text>
           </View>
           <View style={styles.nextRow}>

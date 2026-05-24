@@ -9,12 +9,13 @@
 // Constants
 // ---------------------------------------------------------------------------
 
-// Mifflin-St Jeor / Katch-McArdle activity multipliers corrected for gym-only training.
-// The traditional 1.725 ("active") and 1.9 ("very active") values were calibrated for
-// physically active occupations, not resistance training alone. Research on gym-going
-// populations (SportRxiv, 2024) supports reducing these by ~0.05–0.1 to avoid systematic
-// TDEE overestimation (~200–400 kcal/day). Users should compare their 4-week weight trend
-// against targets and adjust if needed.
+// Mifflin-St Jeor / Katch-McArdle activity multipliers tuned downward from the
+// generic 1.725 / 1.9 values for gym-only populations. The downward tuning is
+// based on coaching observation that standard multipliers overestimate gym-only
+// TDEE by 200-400 kcal/day. Theoretical basis in the constrained-TDEE literature
+// (Pontzer et al. 2016, Current Biology 26:410-417) is contested by Davy et al.
+// 2025 (PNAS, 10.1073/pnas.2519626122). Users should compare their 4-week weight
+// trend against targets and adjust if needed.
 const ACTIVITY_MULTIPLIERS = {
   sedentary: 1.2,
   light: 1.375,
@@ -100,6 +101,26 @@ const KCAL_PER_KG_FAT = 7700;       // rough energy equivalent of 1 kg body fat
 // every 8–12 weeks preserves metabolic rate better than continuous restriction.
 export const DIET_BREAK_THRESHOLD_WEEKS = 8;
 
+// FFM (fat-free mass) energy floor. The IOC RED-S consensus
+// (Mountjoy et al. 2014 BJSM 48:491-497; updated Mountjoy et al. 2023
+// BJSM 57:1073-1097, DOI 10.1136/bjsports-2023-106994) labels sustained
+// intake at or below 30 kcal per kg of fat-free mass per day as
+// "problematic low energy availability". Precision Coaching uses this
+// as a hard floor: when the 7-day rolling intake average falls at or
+// below the user's FFM-derived floor, deficit suggestions are refused
+// and a held-decision card surfaces.
+export const FFM_FLOOR_KCAL_PER_KG = 30;
+
+// When BF% is unknown or unreliable, FFM is estimated from population
+// averages. Conservative defaults chosen so the floor errs on the
+// higher (safer) side rather than the lower side that would let the
+// engine keep cutting under-fuelled users. Sex-aware because typical
+// body-fat percentages differ meaningfully by sex.
+const FFM_FALLBACK_FRACTION = {
+  male:   0.78, // ~22% BF (conservative for typical male trainee)
+  female: 0.72, // ~28% BF (conservative for typical female trainee)
+};
+
 // Morton et al. (2018) meta-analysis upper CI — no benefit beyond 2.2 g/kg BW when
 // body fat % is unknown (lean mass-based calculation already handles the known-BF% case).
 export const PROTEIN_MAX_GKGBW = 2.2;
@@ -141,11 +162,14 @@ export function computeEWMA(weightData, alpha = EWMA_ALPHA) {
 // Compute weekly weight change rate from EWMA-smoothed data.
 // ewmaData: output of computeEWMA, sorted oldest-first.
 // Returns kg/week (positive = gaining, negative = losing).
+//
+// Requires at least 8 points so the window between recent (index -1) and
+// older (index -8) spans a full 7 days. With only 7 points the gap is 6
+// days and the rate would read ~17% optimistic.
 export function computeWeeklyWeightChange(ewmaData) {
-  if (!ewmaData || ewmaData.length < 7) return null;
+  if (!ewmaData || ewmaData.length < 8) return null;
   const recent = ewmaData[ewmaData.length - 1].ewma;
-  // Use point 7 days back, or oldest available
-  const older = ewmaData[Math.max(0, ewmaData.length - 8)].ewma;
+  const older = ewmaData[ewmaData.length - 8].ewma;
   return parseFloat((recent - older).toFixed(3));
 }
 
@@ -167,11 +191,29 @@ export function computeAdaptiveTDEEAdjustment({
   prescribedKcal,
   currentTDEEEstimate,
   adherenceFactor = 1.0,
+  // FFM-floor safety context. When provided, Precision Coaching refuses
+  // to suggest further deficit (clamps negative adjustments to zero) once
+  // the 7-day rolling intake average sits at or below the user's
+  // FFM-derived energy floor. Positive adjustments (increase calories)
+  // are unaffected; the floor only blocks cuts.
+  //
+  // Locked in COACHING_VOICE_SYNTHESIS_LOCKED.md, MOVE_1_FOOD_FOUNDATION_AND_FFM.md.
+  // Threshold from Mountjoy 2014/2023 IOC RED-S consensus (30 kcal/kg FFM/day).
+  ffmFloorContext = null,
+  // Move #3: upward-only override. Set by the caller when the rapid-
+  // loss safety condition fires (weekly loss <= -1.5% AND energy low).
+  // True clamps any negative adjustment to zero -- only upward
+  // corrections survive. The gating-bypass semantics (no 2-week
+  // cooldown, no consecutiveOffTargetWeeks gate) live in the caller
+  // (runWeeklyCoach); this function just forces the upward-only shape
+  // of the adjustment value so a misconfigured caller can't push a
+  // cut while the override is on.
+  rapidLossOverride = false,
 }) {
   const MIN_POINTS = 14; // need at least 2 weeks
 
   if (!ewmaData || ewmaData.length < MIN_POINTS || !prescribedKcal || !currentTDEEEstimate) {
-    return { adjustmentKcal: 0, confidence: 'insufficient_data', insight: null };
+    return { adjustmentKcal: 0, confidence: 'insufficient_data', insight: null, floorHeld: false };
   }
 
   const weeks = Math.floor(ewmaData.length / 7);
@@ -210,14 +252,53 @@ export function computeAdaptiveTDEEAdjustment({
     insight = `Your weight has moved ${Math.abs(actualKgPerWeek).toFixed(2)} kg/week — slower than planned. Adding ${absAdj} kcal/day to match your true energy needs.`;
   }
 
+  // FFM-floor safety check. Runs only when the caller supplied an
+  // ffmFloorContext with enough recent food-intake data (>=5 days in
+  // the last 7) and a credible-or-fallback body composition input.
+  // If the user's 7-day rolling intake sits at or below their
+  // FFM-derived floor, Precision Coaching refuses any further deficit
+  // suggestion this run. Positive adjustments (add calories) are
+  // never blocked.
+  let floorHeld = false;
+  let finalAdjustmentKcal = adjustmentKcal;
+  let finalInsight = insight;
+  if (
+    ffmFloorContext &&
+    typeof ffmFloorContext.weightKg === 'number' &&
+    typeof ffmFloorContext.recentIntakeAvgKcal === 'number' &&
+    typeof ffmFloorContext.recentIntakeDaysLogged === 'number' &&
+    ffmFloorContext.recentIntakeDaysLogged >= 5
+  ) {
+    const floor = computeFFMFloor(ffmFloorContext.weightKg, {
+      bodyFatPercent: ffmFloorContext.bodyFatPercent ?? null,
+      bodyFatSource:  ffmFloorContext.bodyFatSource ?? null,
+      sex:            ffmFloorContext.sex ?? null,
+    });
+    if (ffmFloorContext.recentIntakeAvgKcal <= floor.floorKcal && adjustmentKcal < 0) {
+      // Clamp the cut. Increases are never clamped.
+      floorHeld = true;
+      finalAdjustmentKcal = 0;
+      finalInsight = `Precision Coaching has held your calorie target. Your seven-day average intake of ${Math.round(ffmFloorContext.recentIntakeAvgKcal)} kcal is at or below your safety floor of ${floor.floorKcal} kcal. Eating below this level for long stretches breaks down muscle and stalls recovery.`;
+    }
+  }
+
+  // Move #3 upward-only override. Clamps negative adjustments to
+  // zero so the caller can't accidentally push a cut while the
+  // rapid-loss safety condition is open. Applied last so it composes
+  // with the FFM floor without double-counting.
+  if (rapidLossOverride && finalAdjustmentKcal < 0) {
+    finalAdjustmentKcal = 0;
+  }
+
   return {
-    adjustmentKcal,   // negative = cut kcal, positive = add kcal
+    adjustmentKcal: finalAdjustmentKcal,   // negative = cut kcal, positive = add kcal
     adjustedTDEE,
     actualKgPerWeek,
     expectedKgPerWeek,
     confidence,
-    insight,
+    insight: finalInsight,
     weeks,
+    floorHeld,
   };
 }
 
@@ -246,6 +327,58 @@ function calcBMR(sex, ageYears, heightCm, weightKg, bodyFatPercent, bodyFatSourc
   return { bmr: base, formula: 'mifflin', lbm: null };
 }
 
+/**
+ * Compute the FFM-derived energy floor for a user.
+ *
+ * Returns the minimum daily kcal Precision Coaching will permit on a
+ * cut, based on the user's fat-free mass and the Mountjoy 2014/2023
+ * 30 kcal/kg FFM/day threshold for problematic low energy availability.
+ *
+ * When the user has a credible BF% measurement (DEXA, caliper, BIA,
+ * but not visual self-estimate), FFM is computed from weight × (1 -
+ * BF%/100). When BF% is unknown or visual-only, FFM falls back to a
+ * sex-aware conservative population estimate that errs on the
+ * higher (safer) FFM side so the floor protects more, not less.
+ *
+ * @param {number} weightKg
+ * @param {object} options
+ * @param {number|null} options.bodyFatPercent
+ * @param {string|null} options.bodyFatSource - 'dexa'|'caliper'|'bia'|'visual'|null
+ * @param {'male'|'female'|null} options.sex
+ * @returns {{ floorKcal: number, ffmKg: number, source: 'katch_mcardle'|'fallback' }}
+ */
+export function computeFFMFloor(weightKg, { bodyFatPercent = null, bodyFatSource = null, sex = null } = {}) {
+  if (typeof weightKg !== 'number' || !isFinite(weightKg) || weightKg <= 0) {
+    throw new Error('computeFFMFloor: weightKg must be a positive number');
+  }
+
+  const credibleBF =
+    bodyFatPercent !== null &&
+    bodyFatPercent !== undefined &&
+    isFinite(bodyFatPercent) &&
+    bodyFatPercent > 0 &&
+    bodyFatPercent < 60 &&
+    bodyFatSource !== null &&
+    bodyFatSource !== 'visual';
+
+  if (credibleBF) {
+    const ffmKg = weightKg * (1 - bodyFatPercent / 100);
+    return {
+      floorKcal: Math.round(ffmKg * FFM_FLOOR_KCAL_PER_KG),
+      ffmKg: Math.round(ffmKg * 10) / 10,
+      source: 'katch_mcardle',
+    };
+  }
+
+  const fraction = FFM_FALLBACK_FRACTION[sex] ?? FFM_FALLBACK_FRACTION.male;
+  const ffmKg = weightKg * fraction;
+  return {
+    floorKcal: Math.round(ffmKg * FFM_FLOOR_KCAL_PER_KG),
+    ffmKg: Math.round(ffmKg * 10) / 10,
+    source: 'fallback',
+  };
+}
+
 function calcConfidence(bodyFatSource) {
   if (bodyFatSource === 'dexa' || bodyFatSource === 'caliper') return 'high';
   if (bodyFatSource === 'bia') return 'medium';
@@ -255,7 +388,17 @@ function calcConfidence(bodyFatSource) {
 
 // Returns { proteinG, basis, proteinRateUsed } where basis is 'lbm' or 'bodyweight'.
 function calcProtein(goal, weightKg, lbm, bodyFatSource, proteinApproach = 'optimised', customGPerKg = null) {
-  const approach = PROTEIN_APPROACHES[proteinApproach] ?? PROTEIN_APPROACHES.optimised;
+  // The 'custom' entry only carries metadata (label, floor); its lbm/bw
+  // tables are null because the rate comes from the user. If 'custom' is
+  // selected without a value, fall back to 'optimised' so the bw/lbm
+  // lookup below has tables to read. Without this fallback, the next
+  // line dereferences null and Hermes throws "Cannot convert null value
+  // to object".
+  const effectiveApproach =
+    proteinApproach === 'custom' && !(customGPerKg != null && customGPerKg > 0)
+      ? 'optimised'
+      : proteinApproach;
+  const approach = PROTEIN_APPROACHES[effectiveApproach] ?? PROTEIN_APPROACHES.optimised;
   const floorG = approach.floor * weightKg;
 
   // Custom override — apply rate directly to bodyweight (coaches typically specify g/kg BW).
@@ -299,12 +442,15 @@ function estimateWeeklyRate(targetKcal, maintenanceKcal, weightKg) {
 // Main export: calculateNutritionTargets
 // ---------------------------------------------------------------------------
 
-// Physique competitor and strength goals warrant the advanced protein approach
-// because coaches prescribe 2.4 g/kg BW for bulking phases in these categories.
+// Physique competitor categories warrant the advanced protein approach
+// because coaches prescribe 2.4 g/kg BW for bulking phases in these
+// categories. 'strength_hypertrophy' used to live here too, but that
+// concept moved to TRAINING_PHASES.strength_size — a phase emphasis,
+// not a physique. Strength-size users on general physique get the
+// standard 2.0 g/kg protein target, which is fine for them.
 export const ADVANCED_PROTEIN_GOALS = [
   'mens_physique', 'classic_physique', 'bodybuilding',
   'bikini', 'wellness', 'figure', 'womens_physique',
-  'strength_hypertrophy',
 ];
 
 // Experience-based surplus multipliers. Beginners utilise larger surpluses efficiently;

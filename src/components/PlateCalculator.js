@@ -6,13 +6,20 @@ import { calculatePlates } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 
 export default function PlateCalculator({ targetWeight, onClose }) {
-  const { barWeight, units } = useAppStore();
+  const barWeight = useAppStore(s => s.barWeight);
+  const units = useAppStore(s => s.units);
   const [weight, setWeight] = useState(String(targetWeight || 60));
   const [bar, setBar] = useState(String(barWeight));
 
   const weightNum = parseFloat(weight) || 0;
   const barNum = parseFloat(bar) || 20;
-  const { plates, totalWeight, sideWeight } = calculatePlates(weightNum, barNum);
+  // calculatePlates returns { plates, totalWeight } when weight <= bar and
+  // omits sideWeight in that branch — guard with defaults so the render
+  // doesn't crash on `.toFixed`.
+  const calc = calculatePlates(weightNum, barNum) || {};
+  const plates = calc.plates ?? [];
+  const totalWeight = calc.totalWeight ?? barNum;
+  const sideWeight = calc.sideWeight ?? 0;
 
   const plateColors = {
     25: '#E53935',

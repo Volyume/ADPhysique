@@ -1,140 +1,161 @@
 # Volyume — Play Store Beta Submission Checklist
 
-_Complete every item before triggering the first internal test build._
+_Last updated 2026-05-22. Complete every item before triggering the first Internal Testing release._
+
+This checklist reflects the **actual** build setup: GitHub Actions builds the AAB on every push using a stable upload keystore stored as GitHub secrets. EAS Build is not configured; do not run `eas build` until `extra.eas.projectId` in `app.json` is set via `eas init`.
 
 ---
 
-## 1. Developer Account Setup
+## 1. Developer account setup
 
-- [ ] Google Play developer account verified and active
-- [ ] Payment profile set up (required even for free apps)
+- [x] Google Play developer account verified
 - [ ] App created in Play Console with package name `app.volyume`
-- [ ] Developer identity confirmed (Google Play requires valid address)
+- [ ] Default language set to English (UK)
+- [ ] Contact email set: `allansdouglas1983@gmail.com` (swap to a support@ address once volyume.app is live)
+- [ ] Privacy policy URL hosted at `https://volyume.app/privacy`
+      (source markdown lives at `public/privacy-policy.md`)
 
 ---
 
-## 2. Supabase — Before First Build
+## 2. Supabase — before first build
 
-- [ ] **Run migrate_003_delete_rpc.sql** in Supabase SQL Editor
-  - Go to: Supabase Dashboard > SQL Editor
-  - Paste contents of `supabase/migrate_003_delete_rpc.sql` and run
-  - Verify function appears under Database > Functions
-- [ ] **Run migrate_004_schema_improvements.sql** in Supabase SQL Editor
-  - Creates `weekly_checkins` table (required for GDPR delete RPC to work)
-  - Adds `tension_at_stretch` column to exercises
-  - Updates canonical exercise metadata
-- [ ] **Rotate anon key** — the key in `.env` may have been seen in development
-  - Go to: Project Settings > API > Anon key > Regenerate
-  - Update `.env` with new key
-- [ ] RLS policies active on all tables (verify in Supabase dashboard)
-- [ ] Auth email templates customised (Settings > Auth > Email Templates)
+All migrations must be applied in order. Latest is `migrate_014`.
 
----
+- [x] `migrate_001` through `migrate_007` applied
+- [x] `migrate_008_delete_rpc_tolerant.sql`
+- [x] `migrate_009_nutrition_targets.sql`
+- [x] `migrate_010_sync_completeness.sql`
+- [x] `migrate_012_complete_sync.sql`
+- [x] `migrate_013_user_feedback.sql`
+- [x] `migrate_014_feedback_view_hardening.sql` (locks down the two feedback dashboard views so authenticated users cannot read every user's feedback messages)
+- [ ] Anon key rotated since development if it was ever shared/committed
+- [ ] Auth email templates customised (Settings → Auth → Email Templates)
 
-## 3. EAS Build Setup
-
-- [ ] Install EAS CLI: `npm install -g eas-cli`
-- [ ] Log in: `eas login`
-- [ ] Link project: `eas init` (this gives you the EAS project ID)
-- [ ] Update `app.json` — replace `"your-eas-project-id"` with real ID from `eas init`
-- [ ] Configure environment variables in EAS:
-  ```bash
-  eas secret:create --scope project --name EXPO_PUBLIC_SUPABASE_URL --value "https://xxx.supabase.co"
-  eas secret:create --scope project --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value "eyJ..."
-  ```
+Verify in Supabase Dashboard → Database → Tables that all tables have RLS enabled and at least one policy.
 
 ---
 
-## 4. Google Play Service Account (for EAS Submit)
+## 3. Upload keystore (one-time)
 
-- [ ] Create a service account in Google Cloud Console:
-  1. Go to: console.cloud.google.com > IAM > Service Accounts
-  2. Create account with role: Service Account User
-  3. Download JSON key as `google-play-service-account.json`
-  4. Add `.gitignore` entry: `google-play-service-account.json`
-- [ ] Grant Play Console access:
-  1. Go to: Play Console > Setup > API Access
-  2. Link your Google Cloud project
-  3. Grant the service account "Release manager" permissions
-- [ ] Update `eas.json` submit config:
-  ```json
-  "serviceAccountKeyPath": "./google-play-service-account.json"
-  ```
+The release AAB needs a stable signing certificate that matches what Play
+Store expects. The keystore is held in GitHub secrets, NOT in EAS.
+
+- [x] `volyume-upload.keystore` generated (PKCS12, RSA 2048, validity 10000 days)
+- [x] Keystore base64 + password stored in a password manager outside GitHub
+- [x] Four GitHub repo secrets set:
+  - `ANDROID_KEYSTORE_BASE64`
+  - `ANDROID_KEYSTORE_PASSWORD`
+  - `ANDROID_KEY_ALIAS` (set to `volyume-upload`)
+  - `ANDROID_KEY_PASSWORD`
+- [x] SHA-1 fingerprint noted (`F6:27:29:BB:5B:98:00:AB:01:AE:8D:E4:24:6C:9F:2D:33:44:B6:E5`)
+- [x] SHA-256 noted (`1B:5C:F2:34:32:DD:7A:E2:C4:D5:07:51:E0:54:35:70:9C:8A:3B:8E:44:28:BC:D9:B0:8C:B1:F4:E7:79:AE:2E`)
+- [x] Sentry DSN secret `EXPO_PUBLIC_SENTRY_DSN` set so production crashes reach the dashboard
+
+**Losing the keystore = losing the ability to update the app on Play
+ever.** Back it up.
 
 ---
 
-## 5. Store Listing (Play Console)
+## 4. Build the AAB
 
-- [ ] App name entered: **Volyume — Hypertrophy Logbook**
-- [ ] Short description added (see `docs/PLAY_STORE_LISTING.md`)
-- [ ] Full description added (see `docs/PLAY_STORE_LISTING.md`)
-- [ ] App icon uploaded (512 × 512 px, PNG)
-- [ ] Feature graphic uploaded (1024 × 500 px)
-- [ ] Minimum 2 screenshots uploaded (6 recommended)
+Every push to `main` or `claude/**` triggers the workflow at
+`.github/workflows/build-android.yml`. Two artifacts are produced per run:
+
+- `volyume-release-apk-<run>` — for sideload testing
+- `volyume-release-aab-<run>` — for Play Store upload
+
+- [ ] CI run on the release commit completed without errors
+- [ ] Download `volyume-release-aab-<run>` from GitHub Actions artifacts
+- [ ] Verify the AAB is upload-signed (CI logs include "Patched build.gradle to use upload signing config")
+
+---
+
+## 5. Store listing (Play Console)
+
+- [ ] App name entered (see `docs/PLAY_STORE_LISTING.md`)
+- [ ] Short description added
+- [ ] Full description added
+- [ ] App icon uploaded (512 × 512 PNG)
+- [ ] Feature graphic uploaded (1024 × 500)
+- [ ] ≥2 screenshots uploaded (6 recommended)
 - [ ] Category set: **Health & Fitness**
-- [ ] Contact email set: support@volyume.app
-- [ ] Privacy Policy URL added: https://volyume.app/privacy
-  - Note: You need a hosted version of the Privacy Policy. Copy from
-    `src/screens/PrivacyPolicyScreen.js` and publish at this URL.
+- [ ] Tags set per `docs/PLAY_STORE_LISTING.md`
 
 ---
 
-## 6. Content Rating
+## 6. Content rating + data safety
 
-- [ ] Complete content rating questionnaire in Play Console
-- [ ] Target rating: PEGI 3 / Everyone
-- [ ] Answer data safety questionnaire (answers in `docs/PLAY_STORE_LISTING.md`)
+- [ ] Content rating questionnaire complete (target PEGI 3 / Everyone)
+- [ ] Data safety form filled (answers in `docs/PLAY_STORE_LISTING.md`)
+- [ ] Disclosed data types: email, health & fitness, app activity, device IDs
+- [ ] Disclosed handling: encrypted in transit, deletable on request
 
 ---
 
-## 7. Build and Upload
+## 7. Upload to Internal Testing
 
-```bash
-# Production build (generates signed AAB)
-eas build --platform android --profile production
-
-# After build completes, submit to Play Console internal track
-eas submit --platform android --profile production --latest
-```
-
-- [ ] Build completes without errors
-- [ ] AAB uploaded to Play Console Internal Testing track
+- [ ] Internal Testing track created in Play Console
+- [ ] AAB uploaded via Play Console UI (drag-and-drop the artifact)
 - [ ] Release notes entered (see `docs/PLAY_STORE_LISTING.md`)
+- [ ] Review status reaches "Available to testers"
+
+This first upload is manual. Once Play has processed it, set up the Play API service account (`docs/SENTRY_SETUP.md` covers the Cloud Console steps for the related Google OAuth client setup) and a future CI step can automate subsequent uploads.
+
+After Play has processed the first upload, it gives you a **second SHA-1**
+under Setup → App integrity → App signing key certificate. Save that SHA-1 too —
+that's what the Google OAuth client and other Google APIs need to trust.
 
 ---
 
-## 8. Internal Testing
+## 8. Testers
 
-- [ ] Add tester emails in Play Console > Internal Testing > Testers
-- [ ] Share opt-in URL with testers
-- [ ] Confirm testers can install from Play Store
-- [ ] Verify the app opens, account creation works, and basic workout logging works
-- [ ] Confirm account deletion cascade works (test with a throwaway account)
-
----
-
-## 9. Privacy Policy Hosting
-
-The in-app privacy policy (`PrivacyPolicyScreen.js`) is ready, but Play Store also
-requires a URL. Options:
-
-- Host as a static page at `https://volyume.app/privacy`
-- Use GitHub Pages with the markdown content
-- Use a service like Termly or PrivacyPolicies.com as a temporary host
-
-**This is required before Play Store submission.**
+- [ ] Tester emails added in Play Console → Internal Testing → Testers
+- [ ] Opt-in URL shared with the test group
+- [ ] One tester confirmed they can install from Play and that the app opens
+- [ ] Sign-in works (email + password)
+- [ ] First workout logged end to end
+- [ ] Account-deletion flow tested with a throwaway account
 
 ---
 
-## 10. Beta to Production (Later)
+## 9. OTA updates (post-first-Play-upload)
 
-When ready to move from internal testing to closed/open beta or production:
+`expo-updates` is installed and `App.js` checks for updates on every cold launch. The update server isn't configured yet:
 
-1. Complete all internal testing
-2. Address any crashes from Play Console Android Vitals
-3. Move to closed beta (limited invites)
-4. Move to open beta (anyone can join)
-5. Promote to production when confidence is high
+- [ ] Run `eas init` locally — populates `app.json extra.eas.projectId`
+- [ ] Run `eas update:configure` — adds `updates.url` to `app.json`
+- [ ] Rebuild and upload one more AAB so the binary knows the update URL
+- [ ] From then on, `eas update --branch production --message "..."` ships JS-only updates without going through Play again
 
-_Note: When Pro goes paid, add Google Play Billing SDK and configure in-app
-purchases in Play Console before the pricing change._
+JS-only updates do NOT cover native module additions, dependency upgrades that touch native code, app icon changes, deep-link scheme changes, or permission changes. Those still need a new AAB.
+
+---
+
+## 10. Pre-launch verification
+
+Run through these on a real Android device installed via Internal Testing
+before opening the test group up wider:
+
+- [ ] Cold launch → splash → first-run / Pro onboarding lands on Train
+- [ ] Sign in via Google OAuth (browser flow shows supabase.co URL during beta — expected)
+- [ ] Start a workout, log 3 working sets, finish, see summary
+- [ ] Discard workout halfway — confirm SQLite row + sets removed
+- [ ] Weekly check-in submits and produces a coach card
+- [ ] Body metrics: log a weight, see chart update
+- [ ] Plate calculator: tap "Plates" pill on the weight row, sheet opens pre-filled
+- [ ] Repeat-last quick chip pre-fills correctly
+- [ ] Sign out, sign back in — workouts + plans restore from cloud
+- [ ] Delete account — confirm row + auth user wiped
+- [ ] Force-quit during a workout, relaunch — workout still in progress
+
+---
+
+## 11. Beta → production (later)
+
+When ready to graduate from Internal Testing:
+
+1. Complete the internal cycle, watch Android Vitals
+2. Address every crash that appears in Sentry + Play Console
+3. Set `VERBOSE_LOGGING = false` in `src/lib/errorLog.js`
+4. Move `PRO_BETA_ACTIVE` to `false` when paid tiers go live (Stripe webhook + service-role tier-flip required first)
+5. Move to closed beta → open beta → production

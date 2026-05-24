@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
-import { signUpWithEmail, signInWithEmail, getSupabaseClient } from '../lib/supabase';
+import { signUpWithEmail, signInWithEmail, signInWithGoogle, signInWithApple, getSupabaseClient } from '../lib/supabase';
 import { syncProfile, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
 
 const PRO_PERKS = [
@@ -19,7 +19,7 @@ const PRO_PERKS = [
 
 export default function ProUpgradeScreen({ navigation }) {
   const {
-    user, session, userProfile, tier, setTier, refreshTierFromCloud,
+    user, session, userProfile, tier, setTier, refreshTierFromCloud, resetFirstRun,
   } = useAppStore();
 
   const hasAccount = Boolean(session?.user?.id) && !user?.isLocal;
@@ -40,7 +40,7 @@ export default function ProUpgradeScreen({ navigation }) {
     } else {
       pullFromCloud(supabaseUserId).catch(() => {});
     }
-    await setTier('pro');
+    await setTier('pro', 'ProUpgradeScreen.activatePro');
     refreshTierFromCloud(getSupabaseClient(), supabaseUserId).catch(() => {});
   }
 
@@ -55,6 +55,53 @@ export default function ProUpgradeScreen({ navigation }) {
       Alert.alert('Something went wrong', 'Please try again.');
     }
     setBusy(false);
+  }
+
+  // OAuth path (Google / Apple). Sign-in completes via the deep-link
+  // handler in App.js → onAuthStateChange in RootNavigator. We don't need
+  // to call activatePro from here — the SIGNED_IN handler runs
+  // restoreSessionFromCloud which sets tier from the cloud row. New users
+  // (no users_profile row yet) need the tier set explicitly though, so
+  // we listen briefly for the session and then activate. This mirrors
+  // LoginScreen.handleOAuth + ProOnboardingScreen.handleOAuthOnboarding.
+  async function handleOAuth(provider) {
+    const { logInfo, logError } = require('../lib/errorLog');
+    logInfo('ProUpgrade.oauth.begin', `provider=${provider}`);
+    setBusy(true);
+    try {
+      const fn = provider === 'google' ? signInWithGoogle : signInWithApple;
+      const result = await fn();
+      if (result?.error) {
+        logError('ProUpgrade.oauth.providerError', result.error, { provider });
+        Alert.alert('Sign-in failed', result.error.message);
+        setBusy(false);
+        return;
+      }
+      // Poll for the session for up to 3 s — usually it's there on the
+      // first check because exchangeCodeForSession has already fired by
+      // the time openAuthSessionAsync returns. 8 s was overkill and was
+      // the source of the long spinner users complained about.
+      const sb = getSupabaseClient();
+      let signedInId = null;
+      for (let i = 0; i < 6; i++) {
+        const { data: { session: s } } = await sb.auth.getSession();
+        if (s?.user?.id) { signedInId = s.user.id; break; }
+        await new Promise(r => setTimeout(r, 500));
+      }
+      if (signedInId) {
+        logInfo('ProUpgrade.oauth.success', `provider=${provider} uid=${signedInId}`);
+        await activatePro(signedInId, { isNew: false });
+        setDone(true);
+      } else {
+        // Distinguishing cancel vs timeout reliably needs platform hooks
+        // we don't have; both end up here. Log so we can spot patterns.
+        logInfo('ProUpgrade.oauth.pollExhausted', `provider=${provider} — user cancelled or session never appeared`);
+      }
+    } catch (e) {
+      logError('ProUpgrade.oauth.threw', e, { provider });
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function handleAuth() {
@@ -95,8 +142,37 @@ export default function ProUpgradeScreen({ navigation }) {
   }
 
   // ── Success state ────────────────────────────────────────────────────────────
+  //
+  // Show the "You're Pro" confirmation only when EITHER (a) this screen
+  // just successfully activated them in this session (`done`), OR (b) they
+  // are genuinely Pro — meaning tier='pro' AND they have a cloud account.
+  //
+  // Without the cloud-account part of (b), a local-only Free user with a
+  // stale tier='pro' value in storage (from a prior install, a bug, or
+  // testing) would land here and see "You're Pro" instantly without ever
+  // creating an account. Pro requires cloud sync; tier alone isn't enough.
 
-  if (done || tier === 'pro') {
+  const trulyPro = tier === 'pro' && Boolean(session?.user?.id) && !user?.isLocal;
+  if (done || trulyPro) {
+    // Trigger the Pro onboarding flow: capture profile, training setup,
+    // recovery, then generate a fresh plan and nutrition targets. Without
+    // this the user lands back on the main app with no plan and no diet.
+    // resetFirstRun flips firstRunComplete=false, which makes RootNavigator
+    // mount ProOnboardingStack on next render. Returns an error if a
+    // workout is in progress so we don't yank the user out mid-set.
+    async function startSetup() {
+      try {
+        const result = await resetFirstRun();
+        if (result && result.ok === false) {
+          if (result.error === 'workout_in_progress') {
+            Alert.alert(
+              'Finish your workout first',
+              'You have a workout in progress. Wrap it up, then come back to set up your Pro training plan.',
+            );
+          }
+        }
+      } catch (_) {}
+    }
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.successWrap}>
@@ -105,15 +181,22 @@ export default function ProUpgradeScreen({ navigation }) {
           </View>
           <Text style={styles.successTitle}>You're Pro.</Text>
           <Text style={styles.successBody}>
-            Everything's unlocked and your data is backed up. As a beta tester you keep extended Pro free when we launch fully.
+            Everything's unlocked and your data is backed up. Now let's set up your training plan and nutrition targets so your coach can get to work.
           </Text>
           <TouchableOpacity
             style={styles.primaryBtn}
-            onPress={() => navigation.goBack()}
+            onPress={startSetup}
             activeOpacity={0.88}
           >
-            <Text style={styles.primaryBtnText}>Continue</Text>
-            <Ionicons name="arrow-forward" size={18} color={colors.background} />
+            <Ionicons name="sparkles" size={16} color={colors.background} />
+            <Text style={styles.primaryBtnText}>Set up your training</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.secondaryLink}
+            onPress={() => navigation.goBack()}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={styles.secondaryLinkText}>Skip for now</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -153,33 +236,16 @@ export default function ProUpgradeScreen({ navigation }) {
             ))}
           </View>
 
-          <View style={styles.pricingRow}>
-            <View style={[styles.pricingTier, styles.pricingTierHighlight]}>
-              <View style={styles.pricingTierBadge}>
-                <Text style={styles.pricingTierBadgeText}>Beta rate</Text>
-              </View>
-              <Text style={styles.pricingAmount}>£1.99</Text>
-              <Text style={styles.pricingPeriod}>/month</Text>
-              <Text style={styles.pricingNote}>Locked in permanently</Text>
-            </View>
-            <View style={styles.pricingTier}>
-              <Text style={styles.pricingTierLabel}>After launch</Text>
-              <Text style={[styles.pricingAmount, styles.pricingAmountMuted]}>£2.99</Text>
-              <Text style={styles.pricingPeriod}>/month</Text>
-              <Text style={styles.pricingNote}>or £19.99/year</Text>
-            </View>
-          </View>
-
-          <View style={styles.offerCard}>
-            <View style={styles.offerBadge}>
-              <Ionicons name="star" size={11} color={colors.background} />
-              <Text style={styles.offerBadgeText}>Beta tester offer</Text>
-            </View>
-            <Text style={styles.offerText}>
-              Free during beta. When billing starts, you keep £1.99/month permanently — the standard rate is £2.99. No card required now.
+          <TouchableOpacity
+            style={styles.policyLink}
+            onPress={() => navigation.navigate('SubscriptionPolicy')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />
+            <Text style={styles.policyLinkText}>
+              What stays if you switch back to Free later
             </Text>
-            <Text style={styles.cancelNote}>Cancel anytime, two taps. No questions.</Text>
-          </View>
+          </TouchableOpacity>
 
           {hasAccount ? (
             <>
@@ -207,6 +273,41 @@ export default function ProUpgradeScreen({ navigation }) {
               <Text style={styles.accountNote}>
                 Pro needs a free account so your plan and progress are backed up and your access carries over after beta.
               </Text>
+
+              {/* OAuth buttons — Google on both platforms, Apple on iOS only
+                  (App Store policy: if any other social provider is offered,
+                  Sign in with Apple must be too). Mirrors the LoginScreen and
+                  ProOnboardingScreen patterns so the upgrade flow doesn't
+                  feel like a downgrade. */}
+              <View style={styles.oauthBlock}>
+                {Platform.OS === 'ios' && (
+                  <TouchableOpacity
+                    style={[styles.oauthBtnApple, busy && styles.btnDisabled]}
+                    onPress={() => handleOAuth('apple')}
+                    disabled={busy}
+                    accessibilityRole="button"
+                    accessibilityLabel="Continue with Apple"
+                  >
+                    <Ionicons name="logo-apple" size={18} color="#FFFFFF" />
+                    <Text style={styles.oauthBtnAppleText}>Continue with Apple</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={[styles.oauthBtn, busy && styles.btnDisabled]}
+                  onPress={() => handleOAuth('google')}
+                  disabled={busy}
+                  accessibilityRole="button"
+                  accessibilityLabel="Continue with Google"
+                >
+                  <Ionicons name="logo-google" size={18} color={colors.textPrimary} />
+                  <Text style={styles.oauthBtnText}>Continue with Google</Text>
+                </TouchableOpacity>
+                <View style={styles.oauthDivider}>
+                  <View style={styles.oauthDividerLine} />
+                  <Text style={styles.oauthDividerText}>or with email</Text>
+                  <View style={styles.oauthDividerLine} />
+                </View>
+              </View>
 
               <View style={styles.section}>
                 <Text style={styles.fieldLabel}>Email</Text>
@@ -322,7 +423,9 @@ const styles = StyleSheet.create({
     textAlign: 'center', lineHeight: 22, marginBottom: spacing.xl,
   },
 
-  perks: { gap: spacing.md, marginBottom: spacing.xl },
+  perks: { gap: spacing.md, marginBottom: spacing.md },
+  policyLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, marginBottom: spacing.lg },
+  policyLinkText: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.medium, textDecorationLine: 'underline' },
   perkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   perkIcon: {
     width: 32, height: 32, borderRadius: radius.md,
@@ -330,53 +433,6 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   perkText: { fontSize: fontSize.sm, color: colors.textSecondary, flex: 1, lineHeight: 19 },
-
-  pricingRow: {
-    flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg,
-  },
-  pricingTier: {
-    flex: 1, backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border,
-    padding: spacing.lg, alignItems: 'center', gap: 2,
-  },
-  pricingTierHighlight: {
-    borderColor: colors.primary, borderWidth: 2,
-  },
-  pricingTierBadge: {
-    backgroundColor: colors.primary, borderRadius: 4,
-    paddingHorizontal: 7, paddingVertical: 2, marginBottom: spacing.xs,
-  },
-  pricingTierBadgeText: {
-    fontSize: 9, fontWeight: fontWeight.black,
-    color: colors.background, letterSpacing: 0.6,
-  },
-  pricingTierLabel: {
-    fontSize: fontSize.xs, color: colors.textMuted, marginBottom: spacing.xs,
-  },
-  pricingAmount: {
-    fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.textPrimary,
-  },
-  pricingAmountMuted: { color: colors.textMuted },
-  pricingPeriod: { fontSize: fontSize.xs, color: colors.textMuted },
-  pricingNote: { fontSize: 10, color: colors.textMuted, marginTop: 2 },
-
-  offerCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg, borderWidth: 2, borderColor: colors.primary,
-    padding: spacing.lg, marginBottom: spacing.xl, gap: spacing.sm,
-  },
-  offerBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    alignSelf: 'flex-start',
-    backgroundColor: colors.primary, borderRadius: 4,
-    paddingHorizontal: 8, paddingVertical: 3,
-  },
-  offerBadgeText: {
-    fontSize: 9, fontWeight: fontWeight.black,
-    color: colors.background, letterSpacing: 0.8,
-  },
-  offerText: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
-  cancelNote: { fontSize: 11, color: colors.textMuted, marginTop: spacing.xs },
 
   accountNote: {
     fontSize: fontSize.sm, color: colors.textMuted,
@@ -412,6 +468,23 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   btnDisabled: { opacity: 0.55 },
+
+  oauthBlock: { gap: spacing.sm, marginBottom: spacing.lg },
+  oauthBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.sm, paddingVertical: spacing.md, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface,
+  },
+  oauthBtnText: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  oauthBtnApple: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.sm, paddingVertical: spacing.md, borderRadius: radius.md,
+    backgroundColor: '#000000',
+  },
+  oauthBtnAppleText: { color: '#FFFFFF', fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  oauthDivider: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
+  oauthDividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
+  oauthDividerText: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
   primaryBtnText: {
     fontSize: fontSize.lg, fontWeight: fontWeight.bold,
     color: colors.background,
@@ -443,5 +516,11 @@ const styles = StyleSheet.create({
   successBody: {
     fontSize: fontSize.md, color: colors.textSecondary,
     textAlign: 'center', lineHeight: 22,
+  },
+  secondaryLink: {
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
+  },
+  secondaryLinkText: {
+    fontSize: fontSize.sm, color: colors.textMuted, textAlign: 'center',
   },
 });

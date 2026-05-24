@@ -1,0 +1,7 @@
+{
+  "name": "rest-timer-live",
+  "version": "0.1.0",
+  "description": "Live chronometer notification for the Volyume rest timer (Android).",
+  "main": "index.ts",
+  "private": true
+}

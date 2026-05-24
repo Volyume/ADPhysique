@@ -1,23 +1,26 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert,
-  Modal, KeyboardAvoidingView, Platform,
+  Modal, KeyboardAvoidingView, Platform, Animated,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import InfoTooltip from '../components/InfoTooltip';
+import { useFeedback } from '../components/FeedbackSheet';
+import { shouldPrompt } from '../lib/feedback';
 import {
   getCompletedWorkoutSets, getAllExercises, getAllWorkouts, updateWorkout,
   getActivePlan, getRoutinesForPlan, advancePlanNextWorkout,
   createAdaptationEvent, getCurrentMesocycleWeek,
   getNextMesocycleWeek, upsertPlannedMuscleVolume, getRecentAdaptationEvents,
-  saveWeeklyCheckin, saveNextTimeNote,
+  saveWeeklyCheckin, saveNextTimeNote, getRoutineWorkoutTonnages,
 } from '../lib/database';
 import { calculateWeeklyVolume, getVolumeStatus, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine, computeAdaptiveDecision, VOLUME_LANDMARKS, evaluateDeloadTriggers } from '../lib/algorithms';
 import { evaluateAutoReg, predictDeloadWeek, getMesoSchedule } from '../lib/mesocycle';
 import { getDeloadPredictionMessage, getAutoRegMessage } from '../lib/whyThisTemplates';
 import useAppStore from '../store/useAppStore';
+import { useToast } from '../components/Toast';
 import { syncWorkout } from '../lib/sync';
 import { incrementSessionCount, shouldPromptReview, requestReview } from '../lib/storeReview';
 
@@ -73,6 +76,12 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     routineId = null, detectedPRs = [], exerciseData = [],
   } = route.params || {};
   const { user, units, userProfile, session } = useAppStore();
+  const toast = useToast();
+  // Renamed to feedbackSheet to avoid clashing with the per-set
+  // feedback state below (sessionDifficulty, overallPump, etc.).
+  // Both live in the same scope — JS doesn't let two consts share a
+  // name in the same block.
+  const feedbackSheet = useFeedback();
   const insets = useSafeAreaInsets();
 
   const [feedback, setFeedback] = useState({
@@ -90,7 +99,12 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const [autoRegSuggestions, setAutoRegSuggestions] = useState([]);
   const [saving, setSaving] = useState(false);
   const [completedWorkoutCount, setCompletedWorkoutCount] = useState(null);
-  const [feedbackExpanded, setFeedbackExpanded] = useState(false);
+  // Default-expanded so the energy + sleep prompts surface naturally
+  // at the end of the session. The coach engine relies on these
+  // signals; hiding them behind a tap was making the post-workout
+  // check-in feel like it had disappeared.
+  const [feedbackExpanded, setFeedbackExpanded] = useState(!readOnly);
+  const [expandedVolumeWhy, setExpandedVolumeWhy] = useState(null);
   const [mesoAdvice, setMesoAdvice] = useState(null);
   const [deloadPrediction, setDeloadPrediction] = useState(null);
   const [feedbackHistory, setFeedbackHistory] = useState([]);
@@ -99,6 +113,12 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const [readOnlyExerciseData, setReadOnlyExerciseData] = useState([]);
   const [templateModalVisible, setTemplateModalVisible] = useState(false);
   const [templateName, setTemplateName] = useState('');
+
+  // 4-week comparison: how does this session stack up against the same
+  // routine over the last 4 weeks? null while loading or when there's no
+  // routine / no prior history to compare to (a one-off session is also
+  // an "n/a" case).
+  const [comparison, setComparison] = useState(null);
 
   const feedbackDebounceRef = useRef(null);
 
@@ -122,6 +142,71 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     loadVolumeAndHistory();
   }, []);
 
+  // Contextual feedback prompt — fires ONCE after the user has
+  // completed their first ~3 sessions. Suppressed thereafter via
+  // the @volyume_feedback_prompt_history_v1 store. Never fires in
+  // read-only mode (viewing old history).
+  useEffect(() => {
+    if (readOnly || !feedbackSheet) return;
+    const totalDone = completedWorkoutCount ?? 0;
+    // Trigger windows: after session 1 (the "is this for you?" beat)
+    // and after session 10 (the "still working?" beat). Both gated
+    // by the 14-day suppression in feedback.js.
+    let triggerKey = null;
+    if (totalDone === 1) triggerKey = 'first_workout_summary';
+    else if (totalDone === 10) triggerKey = 'tenth_workout_summary';
+    if (!triggerKey) return;
+    // Show the sheet a beat after the screen settles so the user
+    // has registered the summary before we ask. 1.4s feels natural
+    // — long enough to read the headline, short enough to not feel
+    // detached from the completion moment.
+    const t = setTimeout(async () => {
+      const ok = await shouldPrompt(triggerKey).catch(() => false);
+      if (!ok) return;
+      feedbackSheet.open({
+        trigger: 'contextual',
+        triggerKey,
+      });
+    }, 1400);
+    return () => clearTimeout(t);
+  }, [readOnly, completedWorkoutCount, feedbackSheet]);
+
+  // 4-week comparison against prior sessions of the SAME routine. Skipped
+  // for one-off sessions (no routineId) and for read-only history views
+  // where the "current" workout already lives in the dataset and the
+  // ranking would double-count.
+  useEffect(() => {
+    if (readOnly || !routineId || !user?.id) return;
+    const since = Date.now() - 28 * 24 * 60 * 60 * 1000; // 4 weeks
+    getRoutineWorkoutTonnages(user.id, routineId, since, workoutId)
+      .then(prior => {
+        if (!prior.length) {
+          setComparison({ verdict: 'first', priorCount: 0 });
+          return;
+        }
+        const tonnages = prior.map(p => p.tonnage || 0).filter(t => t > 0);
+        if (!tonnages.length) {
+          setComparison({ verdict: 'first', priorCount: 0 });
+          return;
+        }
+        const avg = tonnages.reduce((a, b) => a + b, 0) / tonnages.length;
+        const current = tonnage || 0;
+        const pct = avg > 0 ? Math.round(((current - avg) / avg) * 100) : 0;
+        // Rank: position of `current` if inserted into sorted list (desc).
+        // 1 = top of the window. of = total sessions inc. current.
+        const allSorted = [...tonnages, current].sort((a, b) => b - a);
+        const position = allSorted.indexOf(current) + 1;
+        const total = allSorted.length;
+        let verdict;
+        if (position === 1) verdict = 'best';
+        else if (pct >= 10) verdict = 'up';
+        else if (pct <= -10) verdict = 'down';
+        else verdict = 'on_pace';
+        setComparison({ verdict, pct, position, total, priorCount: tonnages.length, avgTonnage: Math.round(avg) });
+      })
+      .catch(() => setComparison(null));
+  }, [readOnly, routineId, user?.id, workoutId, tonnage]);
+
   useEffect(() => {
     const suggestions = getAutoRegSuggestion(feedback, weeklyVolume);
     setAutoRegSuggestions(suggestions);
@@ -129,8 +214,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     // Mesocycle autoregulation (Phase 4 engine)
     const window = [...feedbackHistory, feedback];
     const autoReg = evaluateAutoReg(window);
-    const experience = user?.profile?.experience ?? 'intermediate';
-    const mesoWeek = user?.profile?.currentMesoWeek ?? 1;
+    // The store keeps user and userProfile as separate top-level fields;
+    // `user.profile` doesn't exist, so reading it always fell back to
+    // hard-coded defaults and autoreg ran against generic intermediate week-1.
+    const experience = userProfile?.experience ?? 'intermediate';
+    const mesoWeek = userProfile?.currentMesoWeek ?? 1;
     const schedule = getMesoSchedule(experience);
     const currentEntry = schedule.find(s => s.week === mesoWeek) ?? schedule[0];
 
@@ -357,6 +445,23 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       syncWorkout(supabaseUserId, workoutId).catch(() => {});
     }
 
+    // Write the session to Apple Health / Health Connect so the user's
+    // weekly activity stays accurate across their health stack. Silent
+    // no-op if the user hasn't granted the workout write scope.
+    try {
+      const endedAt = Date.now();
+      const startedAt = endedAt - Math.max(1, durationMinutes || 1) * 60_000;
+      // eslint-disable-next-line global-require
+      const { writeWorkoutToHealth } = require('../lib/health');
+      writeWorkoutToHealth({
+        startedAt,
+        endedAt,
+        tonnageKg: tonnage || 0,
+        bodyWeightKg: userProfile?.bodyWeightKg ?? userProfile?.bodyweightKg ?? null,
+        notes: exerciseNames?.length ? exerciseNames.slice(0, 4).join(', ') : null,
+      }).catch(() => {});
+    } catch (_) {}
+
     // Increment session count and request App Store / Play Store review after 5 sessions
     incrementSessionCount().then(count => {
       if (count >= 5) {
@@ -369,16 +474,41 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   }
 
   function handleShareCard() {
+    // Top set across the whole session — heaviest non-warmup set drives the
+    // "best lift" highlight on the share card.
+    let topSet = null;
+    let topWeight = 0;
+    for (const ex of exerciseData || []) {
+      for (const s of ex.loggedSets || []) {
+        if (s.setType === 'warmup') continue;
+        const w = parseFloat(s.weight) || 0;
+        if (w > topWeight) {
+          topWeight = w;
+          topSet = { weight: w, reps: s.reps || 0, exerciseName: ex.name };
+        }
+      }
+    }
+
+    // Intensity tier — drives the badge on the share card. Heuristic, but
+    // gives a "great workout" flavour without needing a full grading system.
+    const sets = workingSetCount ?? setCount ?? 0;
+    const ton = tonnage || 0;
+    let intensityTier = 'solid';
+    if (detectedPRs.length >= 2 || ton > 8000 || sets >= 25) intensityTier = 'epic';
+    else if (detectedPRs.length >= 1 || ton > 4000 || sets >= 18) intensityTier = 'tough';
+
     const sessionData = {
       sessionName: exerciseNames.length > 0
         ? exerciseNames.slice(0, 2).join(' & ') + (exerciseNames.length > 2 ? ' +more' : '')
         : 'Session Complete',
       duration: durationMinutes || 0,
-      workingSets: workingSetCount ?? setCount ?? 0,
+      workingSets: sets,
       exerciseCount: exerciseCount || 0,
-      tonnage: tonnage || 0,
+      tonnage: ton,
       exercises: exerciseNames,
       prCount: detectedPRs.length,
+      topSet,
+      intensityTier,
     };
     const prData = detectedPRs.length > 0 ? detectedPRs[0] : null;
     navigation.navigate('ShareCard', { sessionData, prData });
@@ -400,9 +530,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     try {
       const { createWorkoutTemplateFromWorkout } = require('../lib/database');
       await createWorkoutTemplateFromWorkout(user.id, name, exerciseData);
-      Alert.alert('Template Saved', `"${name}" added to Workout Templates in Plans.`);
+      toast.show(`"${name}" saved to Workout Templates`, { variant: 'success' });
     } catch (_) {
-      Alert.alert('Error', 'Could not save template. Please try again.');
+      toast.show('Could not save template. Try again.', { variant: 'error' });
     }
   }
 
@@ -443,23 +573,69 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         </View>
 
         <View style={styles.statsGrid}>
-          <StatBox icon="barbell-outline" value={String(exerciseCount || 0)} label="Exercises" />
+          <StatBox icon="barbell-outline" value={String(exerciseCount || 0)} label="Exercises" animateOrder={0} />
           <StatBox
             icon="layers-outline"
             value={String(displayWorkingSets)}
             label="Working Sets"
             tooltip={'Hard sets counted in your weekly totals. Warm-up sets are excluded.\n\nA working set is any set where you trained close to your limit, typically 0 to 3 reps from failure.'}
+            animateOrder={1}
           />
-          <StatBox icon="time-outline" value={`${durationMinutes || 0}m`} label="Duration" />
+          <StatBox icon="time-outline" value={`${durationMinutes || 0}m`} label="Duration" animateOrder={2} />
           <StatBox
             icon="trending-up-outline"
             value={`${Math.round(tonnage || 0).toLocaleString('en-GB')} kg`}
             label="Total kg"
             tooltip={'Total weight moved this session: sets × reps × weight added together. A rough measure of how much work you did. More is not always better; quality of effort matters more than raw numbers.'}
+            animateOrder={3}
           />
         </View>
 
-        {(() => {
+        {/* 4-week comparison — only when we have at least one prior session
+            of this routine. Lives right under the stat row so the user
+            reads "your numbers" and then "how those numbers compare".
+            Wrapped in RevealSection so it fades in after the stat
+            counters have settled (~1100ms grid + 0ms own delay). */}
+        {comparison && comparison.priorCount > 0 && (
+          <RevealSection delay={1100}>{(() => {
+          const { verdict, pct, position, total, priorCount } = comparison;
+          let headline, sub, accent;
+          if (verdict === 'best') {
+            headline = `Strongest session in 4 weeks`;
+            sub = `Top of ${total} sessions logged for this routine.`;
+            accent = colors.gold;
+          } else if (verdict === 'up') {
+            headline = `${pct >= 0 ? '+' : ''}${pct}% vs your 4-week average`;
+            sub = `Position ${position} of ${total} sessions in the window.`;
+            accent = colors.success;
+          } else if (verdict === 'down') {
+            headline = `${pct}% vs your 4-week average`;
+            sub = `Recovery or stress matter. Don't chase yesterday's volume; trust the trend.`;
+            accent = colors.textSecondary;
+          } else {
+            headline = `On pace with your last ${priorCount} session${priorCount !== 1 ? 's' : ''}`;
+            sub = `Within ±10% of your 4-week average. Consistency is the goal.`;
+            accent = colors.primary;
+          }
+          return (
+            <View style={[styles.compareCard, { borderColor: accent + '40' }]}>
+              <View style={styles.compareIconWrap}>
+                <Ionicons
+                  name={verdict === 'best' ? 'trophy-outline' : verdict === 'up' ? 'trending-up-outline' : verdict === 'down' ? 'trending-down-outline' : 'analytics-outline'}
+                  size={18}
+                  color={accent}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.compareHeadline, { color: accent }]}>{headline}</Text>
+                <Text style={styles.compareSub}>{sub}</Text>
+              </View>
+            </View>
+          );
+        })()}</RevealSection>
+        )}
+
+        <RevealSection delay={1220}>{(() => {
           const display = readOnly
             ? readOnlyExerciseData
             : exerciseData.length > 0 ? exerciseData : [];
@@ -491,9 +667,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               })}
             </View>
           );
-        })()}
+        })()}</RevealSection>
 
         {detectedPRs.length > 0 && (
+          <RevealSection delay={1340}>
           <View style={styles.prRow}>
             <Ionicons name="trophy-outline" size={18} color={colors.warning} />
             <Text style={styles.prRowText}>
@@ -501,11 +678,13 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               {prExerciseNames ? ` · ${prExerciseNames}` : ''}
             </Text>
           </View>
+          </RevealSection>
         )}
 
         <View style={styles.divider} />
 
         {musclesWorked.length > 0 && (
+          <RevealSection delay={1460}>
           <View style={styles.section}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
               <Text style={styles.sectionTitle}>This week's volume</Text>
@@ -522,6 +701,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               const data = weeklyVolume[muscle];
               const { color, label, status } = getVolumeStatus(data.workingSets, muscle);
               const insight = getVolumeInsight(muscle, data.workingSets, status);
+              const why = getVolumeWhy(muscle, data.workingSets, status);
+              const isExpanded = expandedVolumeWhy === muscle;
               return (
                 <View key={muscle} style={styles.volumeRow}>
                   <View style={styles.volumeRowMain}>
@@ -537,13 +718,38 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                       {Math.round(data.workingSets)} sets this week
                     </Text>
                   )}
+                  {why && (
+                    <>
+                      <TouchableOpacity
+                        onPress={() => setExpandedVolumeWhy(isExpanded ? null : muscle)}
+                        accessibilityRole="button"
+                        accessibilityLabel={isExpanded ? `Hide why ${MUSCLE_DISPLAY_NAMES[muscle] || muscle} sits here` : `Why ${MUSCLE_DISPLAY_NAMES[muscle] || muscle} sits here`}
+                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                        style={styles.volumeWhyToggle}
+                      >
+                        <Text style={styles.volumeWhyToggleText}>
+                          {isExpanded ? 'Hide explanation' : 'Why this status?'}
+                        </Text>
+                        <Ionicons
+                          name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                          size={14}
+                          color={colors.primary}
+                        />
+                      </TouchableOpacity>
+                      {isExpanded && (
+                        <Text style={styles.volumeWhyBody}>{why}</Text>
+                      )}
+                    </>
+                  )}
                 </View>
               );
             })}
           </View>
+          </RevealSection>
         )}
 
         {!readOnly && (
+          <RevealSection delay={1580}>
           <View style={styles.section}>
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionTitle}>How did it feel?</Text>
@@ -583,18 +789,22 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               </View>
             )}
           </View>
+          </RevealSection>
         )}
 
         {!readOnly && !routineId && exerciseData.length > 0 && (
+          <RevealSection delay={1700}>
           <View style={styles.secondaryActions}>
             <TouchableOpacity style={styles.templateBtn} onPress={handleSaveAsTemplate}>
               <Ionicons name="bookmark-outline" size={18} color={colors.textSecondary} />
               <Text style={styles.templateBtnText}>Save as Workout Template</Text>
             </TouchableOpacity>
           </View>
+          </RevealSection>
         )}
 
         {!readOnly && (
+          <RevealSection delay={1820}>
           <View style={styles.section}>
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionTitle}>Notes for next time</Text>
@@ -610,6 +820,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               numberOfLines={3}
             />
           </View>
+          </RevealSection>
         )}
       </ScrollView>
 
@@ -682,24 +893,139 @@ function getVolumeInsight(muscle, sets, status) {
   const { mev, mrv } = landmarks;
   const n = Math.round(sets);
   const range = `${mev}–${mrv} sets/week`;
-  if (status === 'optimal') return `${n} sets — on track for hypertrophy (target: ${range})`;
-  if (status === 'minimum') return `${n} sets — at minimum effective volume (target: ${range})`;
-  if (status === 'below') return `${n} sets — below minimum effective volume (target: ${range})`;
-  if (status === 'near_mrv') return `${n} sets — approaching upper limit (target: ${range})`;
-  if (status === 'over_mrv') return `${n} sets — over your recovery limit (aim for ${range} next week)`;
+  if (status === 'optimal') return `${n} sets · on track for hypertrophy (target: ${range})`;
+  if (status === 'minimum') return `${n} sets · at minimum effective volume (target: ${range})`;
+  if (status === 'below') return `${n} sets · below minimum effective volume (target: ${range})`;
+  if (status === 'near_mrv') return `${n} sets · approaching upper limit (target: ${range})`;
+  if (status === 'over_mrv') return `${n} sets · over your recovery limit (aim for ${range} next week)`;
   return `${n} sets (target: ${range})`;
 }
 
-function StatBox({ icon, value, label, tooltip }) {
+// Longer-form "why this status" explanation surfaced behind a tap on each
+// muscle row. The insight line above is at-a-glance; this body answers
+// the "but why?" question with concrete next-week guidance and the
+// landmark numbers for THIS muscle specifically.
+function getVolumeWhy(muscle, sets, status) {
+  const landmarks = VOLUME_LANDMARKS[muscle];
+  if (!landmarks) return null;
+  const { mev, mrv } = landmarks;
+  const name = MUSCLE_DISPLAY_NAMES[muscle] || muscle;
+  const closing = ' Targets adjust over time as your body responds to training.';
+  if (status === 'optimal') {
+    return `${name}'s productive range sits between ${mev} and ${mrv} sets per week, and you landed inside it. Next week, look for an extra rep on at least one exercise rather than piling on more sets.${closing}`;
+  }
+  if (status === 'minimum') {
+    return `You're right at the floor for ${name}. ${mev} sets is enough to grow, but only just. One or two more sets across the week, or a slower eccentric on one exercise, moves you into a stronger range.${closing}`;
+  }
+  if (status === 'below') {
+    return `Below the ${mev}-set floor where reliable growth signals start to appear in research. Two routes next week: add a couple of sets to an existing exercise, or sneak in one extra movement that hits ${name}.${closing}`;
+  }
+  if (status === 'near_mrv') {
+    return `Close to the recovery ceiling for ${name} (${mrv} sets per week). One more session and recovery costs start to outweigh the gains. Hold here next week. If your reps are still climbing session to session, you're managing the load well.${closing}`;
+  }
+  if (status === 'over_mrv') {
+    return `Past the recovery ceiling for ${name} (${mrv} sets per week). Soreness, performance drops and joint chatter usually follow. Drop a few sets next week to land back in the green band. Backing off here is how you come back stronger.${closing}`;
+  }
+  return null;
+}
+
+// RevealSection — staggered fade-in + small upward translate for the
+// major sections below the stat grid. Sequences the comparison card,
+// exercise list, PRs, feedback, and finish CTA so the screen reads
+// top-to-bottom as the eye scans rather than landing all at once.
+//
+// Each section's `delay` is roughly the previous section's delay +
+// 120ms; the first reveal kicks off after the StatBox counters
+// settle (~1100ms total for the grid). Reduce-motion users see the
+// final state immediately — no opacity ramp, no transform.
+function RevealSection({ delay = 0, children }) {
+  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  const opacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+  const translateY = useRef(new Animated.Value(reduceMotion ? 0 : 14)).current;
+
+  useEffect(() => {
+    if (reduceMotion) return;
+    Animated.parallel([
+      Animated.timing(opacity, { toValue: 1, duration: 320, delay, useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 360, delay, useNativeDriver: true }),
+    ]).start();
+  }, [delay, reduceMotion, opacity, translateY]);
+
   return (
-    <View style={styles.statBox}>
+    <Animated.View style={{ opacity, transform: [{ translateY }] }}>
+      {children}
+    </Animated.View>
+  );
+}
+
+// StatBox renders a single hero stat. When the value is a pure
+// number-like string (no letters), the value animates from 0 up to
+// the target across ~900ms with an ease-out curve. The user sees
+// "Total kg: 4,000 → 8,432 → 12,800" tick by rather than the number
+// just appearing — gives the summary a cinematic beat. Reduce-motion
+// users get the final value immediately.
+function StatBox({ icon, value, label, tooltip, animateOrder = 0 }) {
+  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  // Parse the value to detect whether it's "10,432 kg" (number with
+  // optional suffix) or "12m" (number + unit) or "8" (pure number).
+  // We keep the suffix and animate only the number.
+  const parsed = React.useMemo(() => {
+    const m = String(value || '').match(/^([\d,]+(?:\.\d+)?)(.*)$/);
+    if (!m) return null;
+    const cleanNum = parseFloat(m[1].replace(/,/g, ''));
+    if (!Number.isFinite(cleanNum)) return null;
+    return { num: cleanNum, suffix: m[2] };
+  }, [value]);
+
+  const [displayed, setDisplayed] = useState(() => parsed ? 0 : value);
+  const opacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+  const translateY = useRef(new Animated.Value(reduceMotion ? 0 : 8)).current;
+
+  useEffect(() => {
+    if (!parsed) { setDisplayed(value); return; }
+    if (reduceMotion) { setDisplayed(value); return; }
+    // Staggered reveal — each StatBox starts ~80ms after the previous
+    // one. Gives the grid a left-to-right shimmer rather than four
+    // boxes appearing simultaneously.
+    const delay = animateOrder * 80;
+    Animated.parallel([
+      Animated.timing(opacity, { toValue: 1, duration: 280, delay, useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 320, delay, useNativeDriver: true }),
+    ]).start();
+    // Counter animation: tick from 0 to target across ~900ms with
+    // ease-out so the increment slows as it approaches the final
+    // value. Smooth, not janky.
+    const target = parsed.num;
+    const durationMs = 900;
+    const startedAt = Date.now() + delay;
+    let raf = null;
+    function step() {
+      const now = Date.now();
+      if (now < startedAt) { raf = requestAnimationFrame(step); return; }
+      const t = Math.min(1, (now - startedAt) / durationMs);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const current = Math.round(target * eased);
+      const formatted = target >= 100
+        ? `${current.toLocaleString('en-GB')}${parsed.suffix}`
+        : `${current}${parsed.suffix}`;
+      setDisplayed(formatted);
+      if (t < 1) raf = requestAnimationFrame(step);
+      else setDisplayed(value);
+    }
+    raf = requestAnimationFrame(step);
+    return () => { if (raf) cancelAnimationFrame(raf); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  return (
+    <Animated.View style={[styles.statBox, { opacity, transform: [{ translateY }] }]}>
       <Ionicons name={icon} size={20} color={colors.primary} />
-      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statValue}>{displayed}</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xxs }}>
         <Text style={styles.statLabel}>{label}</Text>
         {tooltip ? <InfoTooltip size={10} text={tooltip} /> : null}
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -741,6 +1067,18 @@ const styles = StyleSheet.create({
   muscleName: { flex: 1, fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.textPrimary },
   muscleSetCount: { fontSize: fontSize.sm, color: colors.textSecondary },
   volumeInsightText: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18 },
+  volumeWhyToggle: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    alignSelf: 'flex-start', paddingVertical: 2,
+  },
+  volumeWhyToggleText: {
+    fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold,
+  },
+  volumeWhyBody: {
+    fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 19,
+    backgroundColor: colors.surface2, borderRadius: radius.sm,
+    padding: spacing.sm, marginTop: 2,
+  },
   statusBadge: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, borderRadius: radius.sm },
   statusText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold },
   limitedCard: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.lg, borderWidth: 1, borderColor: colors.border },
@@ -835,9 +1173,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: radius.lg,
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -961,4 +1297,21 @@ const styles = StyleSheet.create({
     borderRadius: radius.md, backgroundColor: colors.primary,
   },
   templateModalSaveText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.background },
+
+  // 4-week comparison card — same surface treatment as other summary
+  // cards but borderColor is set inline per-verdict (gold for best, green
+  // for up, neutral for on-pace, muted for down).
+  compareCard: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
+    borderWidth: 1,
+    marginTop: spacing.md,
+  },
+  compareIconWrap: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: colors.surface2,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  compareHeadline: { fontSize: fontSize.md, fontWeight: fontWeight.bold },
+  compareSub: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 3, lineHeight: 16 },
 });

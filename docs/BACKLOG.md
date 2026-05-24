@@ -2,6 +2,17 @@
 
 Features listed here are explicitly deferred. None should be implemented without the user explicitly reopening the item and confirming scope.
 
+_Last updated: 2026-05-24. Recent additions in this beta-prep branch are noted in the section "Shipped in May 2026 beta-prep" near the bottom._
+
+> **Note (2026-05-24): the "food / meal logging" hard exclusion below was
+> reversed under the Volyume Complete strategy (locked
+> 2026-05-23). Food logging ships as part of Move #1 + #1.5 with
+> the FFM-aware safety floor as the unlock condition. The line below
+> remains for historical context; the active behaviour is the
+> three-tier ladder in COMPLETE_TIER_SCOPE_LOCKED.md. Coach / client
+> mode similarly reversed under Volyume Complete's coach handoff
+> path; locked phase 2.**
+
 ---
 
 ## NEVER implement (hard product exclusions)
@@ -10,11 +21,11 @@ These are product decisions, not technical deferrals. Do not add them even if re
 
 | Feature | Reason excluded |
 |---|---|
-| **Food / meal logging** | Out of scope permanently. Volyume is a training logbook, not a diet tracker. Nutrition Targets provides calorie/macro *targets* only — no food diary, no barcode scanner, no meal logging. |
+| ~~**Food / meal logging**~~ | **REVERSED 2026-05-23 under Volyume Complete strategy.** Food diary, barcode scanner, OCR write-back, custom foods, recipes, daily water + macro rollups all ship in Move #1 and Move #1.5. The original exclusion ("Volyume is a training logbook") no longer holds; the unlock condition was the FFM-aware safety floor that lets food data flow into the engine without harming at-risk users. See `MASTER_VISION_AND_PLAN.md`, `MOVE_1_FOOD_FOUNDATION_AND_FFM.md`, `FOOD_DATA_STRATEGY_LOCKED.md`. |
 | **Social feed / community** | Volyume is private by design. No public profiles, leaderboards, or activity feeds. |
-| **Gamification** | No XP, badges, streaks, achievements, or virtual rewards. Progress is real or it is nothing. |
-| **Wearable / Health API integration** | No Apple Watch, Garmin, Fitbit, or HealthKit/Google Fit integration. Heart rate and step data are not surfaced. |
-| **Coach / client mode** | Volyume is a self-coaching tool. No role separation, no athlete roster, no coach-controlled plan assignment. |
+| **Gamification** | No XP, badges, achievements, or virtual rewards. Progress is real or it is nothing. **Carve-out (2026-05-22):** a single "week-streak" chip on the HomeScreen "This week" card was added to surface training consistency without ranking, levelling, or rewarding. If this drifts into stickers / XP / leaderboards, pull it back. |
+| **Wearable / Health API integration** | No Apple Watch, Garmin, or Fitbit integration. **Carve-out:** `src/lib/health.js` wraps HealthKit (iOS) + Health Connect (Android) for one-way reads of morning weight + step count, and for writing completed workouts to the platform Health app. This is opt-in, surfaced in Settings only. Heart rate, sleep, HRV remain out of scope. |
+| ~~**Coach / client mode**~~ | **REVERSED 2026-05-23 under Volyume Complete strategy (phase 2).** Coach handoff is a first-class workflow at the Complete tier. Coach pays, client gets Complete free. Schema groundwork (`engine_overrides`, `coach_id` columns) ships in Move #5; the coach-facing surface itself is phase 2. See `B2B_COACH_PHASE_2_SCOPED.md`, `COMPLETE_TIER_SCOPE_LOCKED.md`. |
 
 ---
 
@@ -80,3 +91,143 @@ These are product decisions, not technical deferrals. Do not add them even if re
 - Do not hardcode hex colours. Use theme tokens only.
 - Do not hardcode pixel values. Use spacing tokens only.
 - Explicit GDPR consent checkbox (not pre-ticked) before storing any nutrition or body composition data.
+
+---
+
+## Shipped in May 2026 beta-prep
+
+These items were either backlog candidates or polish-pass additions. They are
+in main now; listing here so they don't get re-proposed.
+
+- **Plate calculator surfaced.** The `PlateCalculator` component existed but
+  was never reachable from a UI surface. Added a "Plates" pill next to the
+  Weight label inside SetEntry that opens the calculator pre-filled with the
+  current weight.
+- **Live e1RM in SetEntry.** Shows "e1RM 102kg" inline next to the Reps label
+  the moment weight + reps are both entered.
+- **Repeat-last quick chip.** One-tap copy of the most recent logged set's
+  weight + reps. Auto-hides when the current entry already matches.
+- **Stalled-progress nudge.** On the first working set of an exercise, if the
+  user has done the same heaviest weight × reps for the last 3 sessions, show
+  a coaching nudge ("Try N+2.5kg × R-1, or stick at N for R+1").
+- **Week-streak chip** on the Train tab's "This week" card (consecutive
+  Mon-start weeks with ≥1 completed workout). See carve-out note above.
+- **Mesocycle context chip** on the workout card showing "Week 3 of 6 · RIR 1"
+  or "Deload week · pull effort back". Surfaces Volyume's coaching identity
+  before every session start.
+- **BETA badge** in Settings → About.
+- **Tester build identifier share** — tap the version in Settings to copy
+  `Volyume v1.1.0 (android 2, release)` to a share sheet for bug reports.
+- **HealthKit / Health Connect.** Settings → Health surfaces opt-in toggles
+  for reading weight + writing workouts to the platform Health app.
+  (See carve-out under "NEVER implement" above — limited scope.)
+- **Discard workout cleanup.** Discarding now hard-deletes the incomplete
+  workout row + its sets so SQLite stops accumulating orphan rows.
+- **Finish workout double-tap guard.** Mashing the Finish button can no
+  longer fire two concurrent finish chains.
+- **Auto warm-up suggestion removed.** Users mark warm-ups via the existing
+  Set type picker. Sheet + handler + ~200 lines of orphan code deleted.
+
+## Must-fix design debt (blocks further work)
+
+Open items at end of 2026-05-24 session (verification debt, not
+design debt):
+
+| Item | Status | Owner | Next step |
+|---|---|---|---|
+| Delete Account end-to-end | Migration 025 pushed + applied; founder hasn't re-tested since. Earlier attempts 500'd at `auth.admin.deleteUser` ("Database error deleting user"). | Founder | Sign into a test account, tap Delete Account, capture the Edge Function response. If 500 still: read the new `fnErrorBody` to find what FK is still blocking. |
+| `sync.syncExercises 42501` warns on `exercises` | Source fix in `c49e596` (only push customs to `custom_exercises`, no writes to `exercises`). Needs APK build that includes this commit. | Build pipeline | After next build is installed, verify the warns are gone on fresh signup. |
+| Orphan account `a7379dc8` | One-shot SQL written in `supabase/nuke_uid_a7379dc8.sql`. Founder unclear whether it was run. | Founder | Run the SQL or confirm it's already done. |
+
+The identity + data ownership refactor (the one item that lived
+here as design debt) shipped on 2026-05-24 in migrations 018, 020,
+021 and 024 (composite PKs), code commits `be8e1cc` + `1304a4f` +
+`6caf5e2` + `d80813a` (sign-out wipe, custom_exercises split, food
+composite-PK sync, old-client triggers).
+
+## Shipped in May 2026 -- 2026-05-24 round
+
+Late-May ship covering the Volyume Complete food layer end-to-end, the
+harm-prevention safety check, the first slice of cascade telemetry,
+Move #1.5 barcode + OCR, Article 9 health-data consent, and the
+identity + data ownership refactor. Detail in HANDOFF.md.
+
+- **Move #1 food foundation + FFM floor.** SHIPPED FULL including
+  polish: MacroRings (Skia), FoodDetailSheet bottom sheet,
+  tap-to-edit on diary entries, FoodSearch / Insights / CSV export.
+- **Move #1.5 barcode + OCR.** SHIPPED FULL across three phases.
+  Phase 1 added live OFF + USDA waterfall sources. Phase 2 added the
+  camera barcode scan screen + Diary scan FAB. Phase 3 added OCR
+  (vision-camera + MLKit), the OFF write-back queue, and barcode
+  persistence on `custom_foods`. Migrations 022 (telemetry events)
+  + 023 (custom_foods.barcode_ean). Bundled OFF snapshot + CoFID
+  remain deferred per `FOOD_DATA_STRATEGY_LOCKED.md`.
+- **Move #2 ED-pattern detection.** SHIPPED FULL. Multi-signal
+  detector with 4 signals + 2/3 threshold on goal_lock_advanced.
+  Locked verbatim copy in HeldDecisionsCard with Get-support and
+  Read-more CTAs. GoalLockConsentScreen reachable from AthleteHub.
+- **Article 9 health-data consent (Move #2 deferral).** SHIPPED.
+  Onboarding screen 3 per `ONBOARDING_SEQUENCE_LOCKED.md`,
+  `Article9ConsentScreen.js`, migration 019 (consent_log table +
+  users_profile columns + record_health_consent RPC). Cloud-failure
+  resilient: local AsyncStorage flag gates progression, cloud
+  reconciles when reachable.
+- **Move #3 cascade telemetry slice.** SHIPPED. Local-first
+  event log, allow-listed event taxonomy, debounced push, sign-in
+  drain. Hooks: tier_changed, ed_pattern_flag_fired/_cleared,
+  goal_lock_set/_cleared.
+- **Move #3 upward gate compression.** SHIPPED. Rapid-loss safety
+  condition (weekly loss <= -1.5% AND energy_score <= 2 on a cut)
+  bypasses the standard two-week cooldown and consecutiveOff-
+  TargetWeeks gate; magnitude scales with severity (base +125,
+  +150 per additional 1.0% past -1.5%, capped at +300). Upward-only
+  by design -- bulks do not get the same compression on the
+  downward side. Structured RapidLossCorrectedBlock renders the
+  held-decision; `rapid_loss_compression_triggered` event added to
+  the telemetry allow-list (migration 027). 15 new tests +
+  2 long-standing weeklyCoach.test.js failures fixed; suite green
+  at 1086/0.
+- **Identity + data ownership refactor.** SHIPPED in migrations 018
+  + 020 + 021 + 024 and code commit `be8e1cc`. Composite `(user_id,
+  id)` PKs on every user-scoped table, sign-out wipe, no anonymous
+  mode, `custom_exercises` split out of the mixed-ownership
+  `exercises` table, `food_sync_push` updated to composite-conflict
+  pattern, old-client safety triggers on child tables, CI grep
+  blocking `SET user_id` in src/.
+- **WelcomeScreen disqualifier (Claude draft).** "Who Volyume is
+  for" block above the tier cards, founder to edit.
+- **Plans archive system.** Auto-archive other plans on goal-reroll;
+  collapsible "Archived plans · N" section with Restore action.
+- **17 founder-reported QA fixes from the device testing pass on
+  2026-05-24.** Logged in KNOWN_ISSUES_FROM_QA.md.
+- **Sign-out wipes the device fully** (`7c0dce8`). No carve-outs:
+  per founder direction the device should leave nothing of the
+  signed-out user behind. Same hammer as delete-account on the
+  device side. AsyncStorage.clear() + SQLite wipe + SecureStore
+  token wipe.
+- **`delete_user_data` RPC completeness** (migration 025). The
+  RPC was last touched in migration 008 and only wiped ten
+  legacy tables; every table added since (food, engine, identity,
+  consent, custom_exercises etc) was orphaned by every delete
+  attempt, which is what kept the auth admin delete from
+  finishing. 025 enumerates every user-scoped table. Applied;
+  end-to-end retest still pending.
+- **Tab leaf bottom inset double-counted** (`75ed020`). The tab
+  bar already pads its own bottom by `insets.bottom`; the four
+  tab leaves (`HomeScreen`, `PlansScreen`, `AthleteHubScreen`,
+  `AnalyticsScreen`) were also asking SafeAreaView for the
+  `bottom` edge. Removed. DiaryScreen already did it right.
+- **FoodLayerIntro onboarding screen removed** (`a54df93`). It
+  was a marketing-style "try it now / set up later" intro that
+  landed both paths in the same place. The Diary tab is the
+  real entry point.
+- **`syncExercises` only pushes customs to `custom_exercises`**
+  (`c49e596`). Until this commit, the sync layer bulk-pushed
+  every local exercise (450+ library rows) to cloud `exercises`
+  with `user_id` stamped, which hit the canonical library rows'
+  RLS USING clause (existing `user_id` IS NULL) and fired
+  `42501` warns per chunk on every sync cycle. The post-020
+  design is `exercises` = library, `custom_exercises` = per-user;
+  the sync push didn't catch up at the time. Needs APK install
+  to take effect.
+

@@ -20,28 +20,32 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "app.volyume",
-      "buildNumber": "2",
+      "buildNumber": "4",
       "requireFullScreen": true,
       "associatedDomains": [
         "applinks:volyume.app"
       ],
       "infoPlist": {
-        "NSCameraUsageDescription": "Used to take progress photos",
+        "NSCameraUsageDescription": "Volyume uses the camera to scan barcodes, read nutrition labels, and take progress photos.",
         "NSPhotoLibraryUsageDescription": "Used to select and save progress photos",
         "NSPhotoLibraryAddUsageDescription": "Used to save shared workout cards to your photo library",
-        "UIBackgroundModes": ["fetch", "remote-notification"]
+        "NSHealthShareUsageDescription": "Volyume reads your weight from Apple Health so your morning weight log stays in sync with your smart scale or wearable.",
+        "NSHealthUpdateUsageDescription": "Volyume writes completed workouts to Apple Health so your weekly activity stays accurate across your other apps.",
+        "UIBackgroundModes": [
+          "fetch",
+          "remote-notification"
+        ],
+        "NSSupportsLiveActivities": true,
+        "NSSupportsLiveActivitiesFrequentUpdates": true
       }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/volyume-icon.png",
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0D0D0D"
       },
       "package": "app.volyume",
-      "versionCode": 2,
-      "compileSdkVersion": 34,
-      "targetSdkVersion": 34,
-      "minSdkVersion": 24,
+      "versionCode": 4,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_MEDIA_IMAGES",
@@ -59,7 +63,10 @@
               "scheme": "volyume"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         },
         {
           "action": "VIEW",
@@ -70,27 +77,52 @@
               "host": "volyume.app"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
-    },
-    "web": {
-      "favicon": "./assets/favicon.png",
-      "bundler": "metro"
     },
     "plugins": [
       "expo-secure-store",
       [
+        "react-native-vision-camera",
+        {
+          "cameraPermissionText": "Volyume uses the camera to scan barcodes and read nutrition labels.",
+          "enableCodeScanner": true,
+          "enableMicrophonePermission": false
+        }
+      ],
+      [
         "expo-notifications",
         {
-          "icon": "./assets/volyume-icon.png",
+          "icon": "./assets/notification-icon.png",
           "color": "#F59E0B",
           "sounds": []
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 34,
+            "targetSdkVersion": 35,
+            "minSdkVersion": 24
+          }
+        }
+      ],
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "volyume",
+          "project": "volyume",
+          "url": "https://sentry.io/"
         }
       ]
     ],
     "notification": {
-      "icon": "./assets/volyume-icon.png",
+      "icon": "./assets/notification-icon.png",
       "color": "#F59E0B",
       "androidMode": "default"
     },

@@ -4,7 +4,7 @@
  * Pure functions only — no side effects, no DB calls, no Math.random().
  */
 
-import { GOAL_LABELS as _GOAL_LABELS, GOAL_OVERLAYS, GOALS_WITH_WEAK_POINTS } from './coachingGoals';
+import { GOAL_LABELS as _GOAL_LABELS, GOAL_OVERLAYS, PHASE_OVERLAYS, GOALS_WITH_WEAK_POINTS } from './coachingGoals';
 import { VOLUME_LANDMARKS } from './algorithms';
 
 // ---------------------------------------------------------------------------
@@ -106,8 +106,8 @@ function computeLandmarks(experience, recoveryRating, nutritionPhase, age) {
 
     // Clash guard
     if (MEVadj >= MRVadj) MEVadj = Math.max(2, MRVadj - 2);
-    // Floor for non-zero-MEV muscles
-    if (MRVadj < 4 && base.MEV > 0) { MRVadj = 4; MEVadj = 2; }
+    // Floor for non-zero-MEV muscles (VOLUME_LANDMARKS uses lowercase keys)
+    if (MRVadj < 4 && base.mev > 0) { MRVadj = 4; MEVadj = 2; }
 
     const MAVlow  = MEVadj + 2;
     const MAVhigh = Math.max(MAVlow, MRVadj - 1);
@@ -120,10 +120,14 @@ function computeLandmarks(experience, recoveryRating, nutritionPhase, age) {
 // Goal overlays
 // ---------------------------------------------------------------------------
 
-function applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys) {
+function applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys, phase) {
   const t = { ...weeklyTargets };
 
-  if (goal === 'weak_point_spec') {
+  // weak_point used to live under `goal` (weak_point_spec). It now lives
+  // under `phase` (weak_point) since it's a current-block emphasis, not a
+  // body shape. When it's active, ignore the physique-category overlay —
+  // priority muscles get MAV-ish volume; everything else drops to MV.
+  if (phase === 'weak_point') {
     for (const m of Object.keys(t)) {
       if (weakPointKeys.includes(m)) {
         t[m] = Math.max(landmarks[m].MEV, landmarks[m].MRV - 2);
@@ -132,8 +136,20 @@ function applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys) {
       }
     }
   } else {
+    // 1. Physique-category overlay (mens_physique, bikini, etc.) — bias
+    //    volume toward the muscles that drive that category's judging.
     const overlay = GOAL_OVERLAYS[goal] ?? {};
     for (const [m, mult] of Object.entries(overlay)) {
+      if (t[m] != null) {
+        t[m] = Math.round(t[m] * mult);
+      }
+    }
+    // 2. Phase overlay (strength_size's isolation reduction). Applied on
+    //    top of the goal overlay so a Men's Physique competitor on a
+    //    strength-size block still keeps the upper-body bias but with
+    //    less isolation work.
+    const phaseOverlay = PHASE_OVERLAYS[phase] ?? {};
+    for (const [m, mult] of Object.entries(phaseOverlay)) {
       if (t[m] != null) {
         t[m] = Math.round(t[m] * mult);
       }
@@ -623,6 +639,18 @@ function selectSplit(experience, effectiveDays, goal) {
   if (effectiveDays === 5) {
     return goal === 'weak_point_spec' ? 'upper_lower_wp' : 'ppl';
   }
+  if (effectiveDays === 6) return 'ppl_ab';
+  // Days outside the supported 3-6 range fall through here — log so we
+  // can spot the bad-input pattern. effectiveDays is normally clamped by
+  // the caller; if we land here something upstream let an invalid value
+  // slip through.
+  try {
+    require('./errorLog').logWarn(
+      'planEngine.selectSplit',
+      `unexpected effectiveDays=${effectiveDays} — falling back to ppl_ab`,
+      { effectiveDays, experience, goal },
+    );
+  } catch (_) {}
   return 'ppl_ab';
 }
 
@@ -645,6 +673,13 @@ function buildSession(name, muscles, sessionsPerMuscle, weeklyTargets, equipment
       usedNames, wTarget, landmarks, experience, nutritionPhase
     );
     usedNamesByMuscle[muscle] = usedNames;
+    // Tag each emitted exercise with the muscle it was picked for so the
+    // downstream superset planner can pair antagonist / non-competing pairs.
+    // These underscore-prefixed fields are stripped by planAutoGen before
+    // writing to the DB.
+    for (const ex of exs) {
+      if (ex._muscle == null) ex._muscle = muscle;
+    }
     exercises.push(...exs);
   }
 
@@ -995,8 +1030,13 @@ function buildPersonalisationSummary(inputs, effectiveDays, splitType, weakPoint
 // ---------------------------------------------------------------------------
 
 function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILabels) {
-  const { experience, goal, recoveryRating, nutritionPhase, equipment, sessionLengthMinutes, daysPerWeek } = inputs;
+  const { experience, goal, phase, recoveryRating, nutritionPhase, equipment, sessionLengthMinutes, daysPerWeek } = inputs;
   const eqLabel = EQUIPMENT_LABELS[equipment] ?? equipment;
+  // Same shadow as generatePlan — map post-merge phase to legacy goal IDs
+  // so the goalMap below still keys narrative text correctly.
+  const internalGoal = phase === 'weak_point'   ? 'weak_point_spec'
+                     : phase === 'strength_size' ? 'strength_hypertrophy'
+                     : goal;
 
   const avgSets = workouts.length
     ? Math.round(workouts.reduce((s, w) => s + w.exercises.reduce((t, e) => t + e.sets, 0), 0) / workouts.length)
@@ -1023,10 +1063,13 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
   };
   result.schedule = scheduleMap[splitType] ?? `${splitName} was selected to match your ${effectiveDays} days, ${experience} level, and goal.`;
 
-  // goal
+  // goal explanation — uses internalGoal so strength_size / weak_point
+  // phases get their narrative (kept under the legacy keys so this map
+  // doesn't grow).
   const goalMap = {
+    general:               `Even, well-rounded muscle growth. Sets are spread across all major muscle groups so nothing gets systematically undertrained, which is the most common cause of stalled progress.`,
     general_hypertrophy:   `Even, well-rounded muscle growth. Sets are spread across all major muscle groups so nothing gets systematically undertrained, which is the most common cause of stalled progress.`,
-    weak_point_spec:        `This goal gives${weakPointUILabels.length ? ' ' + weakPointUILabels.join(' and ') : ' your selected muscles'} more sets than a balanced plan would assign, while keeping everything else at enough to hold current size. Consistent targeted work over several weeks is how muscles behind the rest close the gap.`,
+    weak_point_spec:        `This block gives${weakPointUILabels.length ? ' ' + weakPointUILabels.join(' and ') : ' your selected muscles'} more sets than a balanced plan would assign, while keeping everything else at enough to hold current size. Consistent targeted work over several weeks is how muscles behind the rest close the gap.`,
     strength_hypertrophy:  `Muscle growth is still the goal, but your main compound lifts are loaded heavier and in a lower rep range. Building strength lets you use more weight over time, and more weight applied correctly means more muscle.`,
     mens_physique:         `Upper-body width and a sharp V-shape. Shoulder and lat development drive the look. More sets are placed on side delts, back width, and rear delts than a general plan would assign.`,
     classic_physique:      `Proportional symmetry and balanced mass. Calves, shoulders, and waist definition are all judged. Sets are spread to build a complete physique with particular attention to the landmark muscles of the division.`,
@@ -1036,7 +1079,7 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
     figure:                `Balanced upper and lower development with particular attention to shoulder width and back detail. A full, muscular look with symmetry across the entire physique.`,
     womens_physique:       `Greater overall muscle development than figure, with conditioning a key criterion. Sets are pushed higher across the board, with attention to the detail muscles that show best on stage.`,
   };
-  result.goal = goalMap[goal] ?? `Goal: ${GOAL_LABELS[goal] ?? goal}.`;
+  result.goal = goalMap[internalGoal] ?? goalMap[goal] ?? `Goal: ${GOAL_LABELS[goal] ?? goal}.`;
 
   // experience
   const expMap = {
@@ -1125,6 +1168,116 @@ function buildWarnings(inputs, effectiveDays, weakPointUILabels) {
 // Main export
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Superset assignment
+// ---------------------------------------------------------------------------
+//
+// Pairs adjacent accessory exercises into supersets when it's actually useful:
+//   - Goal is hypertrophy/physique-family (volume + pump > max load)
+//   - Experience is intermediate+ (beginners need to lock in form on straight sets)
+//   - Both exercises are in the accessory / isolation portion (not the heavy
+//     compounds — those get full rest periods to express max load)
+//   - The two muscle groups are antagonist or non-competing (no fatigue
+//     cross-talk that would tank the second exercise's working load)
+//
+// Mutates entries in place by adding `supersetGroupId` to paired pairs.
+
+// Muscle pairs that superset cleanly. Symmetric — pair-lookup checks both
+// directions. Excludes same-muscle pairs and competing pairs like
+// chest+triceps or back+biceps (shared fatigue from compounds).
+const SUPERSET_COMPATIBLE = {
+  // Push ↔ Pull (antagonist)
+  chest:       ['back', 'biceps', 'rear_delts', 'abs', 'calves'],
+  back:        ['chest', 'triceps', 'side_delts', 'front_delts', 'abs', 'calves'],
+  // Arms — bi/tri antagonist + delt + small isolations
+  biceps:      ['triceps', 'chest', 'side_delts', 'rear_delts', 'abs', 'calves'],
+  triceps:     ['biceps', 'back', 'side_delts', 'rear_delts', 'abs', 'calves'],
+  // Delts — different heads antagonise, plus arms / small isolations
+  front_delts: ['rear_delts', 'back', 'biceps', 'abs', 'calves'],
+  side_delts:  ['rear_delts', 'biceps', 'triceps', 'back', 'abs', 'calves'],
+  rear_delts:  ['front_delts', 'side_delts', 'chest', 'biceps', 'triceps', 'abs', 'calves'],
+  // Legs — antagonist quads/hams; glutes already overlap with both compounds
+  quads:       ['hamstrings', 'calves', 'abs'],
+  hamstrings:  ['quads', 'calves', 'abs'],
+  glutes:      ['calves', 'abs'],
+  // Small isolations pair with almost anything that isn't themselves
+  calves:      ['abs', 'biceps', 'triceps', 'side_delts', 'rear_delts', 'chest', 'back', 'quads', 'hamstrings', 'glutes'],
+  abs:         ['calves', 'biceps', 'triceps', 'side_delts', 'rear_delts', 'chest', 'back', 'quads', 'hamstrings', 'glutes'],
+};
+
+function canSuperset(muscleA, muscleB) {
+  if (!muscleA || !muscleB || muscleA === muscleB) return false;
+  const compat = SUPERSET_COMPATIBLE[muscleA];
+  return Array.isArray(compat) && compat.includes(muscleB);
+}
+
+// Goal families that benefit most from supersets (volume + pump emphasis).
+// Keyed off `internalGoal` (legacy IDs) — the strength_size phase deliberately
+// stays OUT of this set so compound work isn't rushed under fatigue.
+const SUPERSET_GOAL_ALLOWLIST = new Set([
+  'general', 'general_hypertrophy', 'weak_point_spec',
+  'mens_physique', 'classic_physique', 'bodybuilding',
+  'bikini', 'wellness', 'figure', 'womens_physique',
+]);
+
+function assignSupersets(exercises, { goal, experience, sessionLengthMinutes }) {
+  if (!Array.isArray(exercises) || exercises.length < 4) return;
+  // Gate: skip if beginner (form takes priority over time efficiency)
+  if (experience === 'beginner') return;
+  // Gate: skip if goal isn't volume/pump-focused AND the user has a generous
+  // session window. Short sessions (≤ 50 min) get supersets regardless of
+  // goal because the time saving outweighs the strength trade.
+  const goalAllows = SUPERSET_GOAL_ALLOWLIST.has(goal);
+  const timeConstrained = (sessionLengthMinutes ?? 60) <= 50;
+  if (!goalAllows && !timeConstrained) return;
+
+  // Find the start of the accessory portion: skip leading exercises that look
+  // like heavy compounds (long rest period > 150s indicates main lift).
+  let accessoryStart = 0;
+  while (
+    accessoryStart < exercises.length &&
+    (exercises[accessoryStart].restSec ?? 0) >= 150
+  ) accessoryStart++;
+  // Always leave at least the first exercise alone, even if rest is short.
+  if (accessoryStart === 0) accessoryStart = 1;
+
+  // Walk adjacent pairs from the accessory portion. Cap pairs per workout at 2
+  // so we don't superset every accessory — that's exhausting and the engine
+  // shouldn't make every session feel like circuit training.
+  const MAX_PAIRS_PER_WORKOUT = 2;
+  let pairsAssigned = 0;
+  let quadsHamsPairAlreadyUsed = false;
+  let i = accessoryStart;
+  while (i < exercises.length - 1 && pairsAssigned < MAX_PAIRS_PER_WORKOUT) {
+    const a = exercises[i];
+    const b = exercises[i + 1];
+    // Skip if either is already paired (defensive — shouldn't happen on first
+    // assignment) or either is a heavy compound (long rest period).
+    if (a.supersetGroupId != null || b.supersetGroupId != null
+        || (a.restSec ?? 0) >= 150 || (b.restSec ?? 0) >= 150) {
+      i++;
+      continue;
+    }
+    if (canSuperset(a._muscle, b._muscle)) {
+      const isQuadsHamsPair =
+        (a._muscle === 'quads' && b._muscle === 'hamstrings') ||
+        (a._muscle === 'hamstrings' && b._muscle === 'quads');
+      if (isQuadsHamsPair && quadsHamsPairAlreadyUsed) {
+        i++;
+        continue;
+      }
+      const groupId = `sg_${i}_${pairsAssigned}`;
+      a.supersetGroupId = groupId;
+      b.supersetGroupId = groupId;
+      if (isQuadsHamsPair) quadsHamsPairAlreadyUsed = true;
+      pairsAssigned++;
+      i += 2; // skip past the pair so we don't try to chain
+    } else {
+      i++;
+    }
+  }
+}
+
 export function generatePlan(inputs) {
   const {
     experience        = 'intermediate',
@@ -1132,7 +1285,8 @@ export function generatePlan(inputs) {
     daysPerWeek       = 4,
     sessionLengthMinutes = 60,
     equipment         = 'full_gym',
-    goal              = 'general_hypertrophy',
+    goal              = 'general',
+    phase             = null,  // training phase — drives weak_point / strength_size overlays
     weakPoints        = [],
     recoveryRating    = 'average',
     nutritionPhase    = null,
@@ -1147,7 +1301,18 @@ export function generatePlan(inputs) {
   // Beginners capped at 4 days
   const effectiveDays = (experience === 'beginner' && daysPerWeek > 4) ? 4 : daysPerWeek;
 
-  const splitType = selectSplit(experience, effectiveDays, goal);
+  // Shadow goal for legacy engine code paths. Post-merge, weak_point and
+  // strength_size live under `phase`, not `goal`. applyGoalOverlay already
+  // handles both directly. But the internal builders (split selection,
+  // rep range / rest selection in makeEx, plan name labels, etc.) still
+  // key off the old goal IDs — and threading `phase` through every helper
+  // would touch 30+ call sites. Mapping back to the legacy IDs here is
+  // surgical and contained.
+  const internalGoal = phase === 'weak_point'   ? 'weak_point_spec'
+                     : phase === 'strength_size' ? 'strength_hypertrophy'
+                     : goal;
+
+  const splitType = selectSplit(experience, effectiveDays, internalGoal);
 
   // Compute adjusted landmarks
   const landmarks = computeLandmarks(experience, recoveryRating, nutritionPhase, age);
@@ -1159,30 +1324,30 @@ export function generatePlan(inputs) {
   }
 
   // Apply goal overlay
-  const adjustedTargets = applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys);
+  const adjustedTargets = applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys, phase);
 
   // Build workouts
   let rawWorkouts;
   switch (splitType) {
     case 'full_body':
-      rawWorkouts = buildFullBodyWorkouts(adjustedTargets, landmarks, equipment, goal, experience, nutritionPhase, effectiveDays);
+      rawWorkouts = buildFullBodyWorkouts(adjustedTargets, landmarks, equipment, internalGoal, experience, nutritionPhase, effectiveDays);
       break;
     case 'upper_lower':
-      rawWorkouts = buildUpperLowerWorkouts(adjustedTargets, landmarks, equipment, goal, experience, nutritionPhase);
+      rawWorkouts = buildUpperLowerWorkouts(adjustedTargets, landmarks, equipment, internalGoal, experience, nutritionPhase);
       break;
     case 'upper_lower_wp':
-      rawWorkouts = buildUpperLowerWPWorkouts(adjustedTargets, landmarks, equipment, goal, weakPointKeys, experience, nutritionPhase);
+      rawWorkouts = buildUpperLowerWPWorkouts(adjustedTargets, landmarks, equipment, internalGoal, weakPointKeys, experience, nutritionPhase);
       break;
     case 'ppl':
     case 'ppl_ab':
-      rawWorkouts = buildPPLWorkouts(adjustedTargets, landmarks, equipment, goal, experience, nutritionPhase, effectiveDays);
+      rawWorkouts = buildPPLWorkouts(adjustedTargets, landmarks, equipment, internalGoal, experience, nutritionPhase, effectiveDays);
       break;
     default:
-      rawWorkouts = buildFullBodyWorkouts(adjustedTargets, landmarks, equipment, goal, experience, nutritionPhase, effectiveDays);
+      rawWorkouts = buildFullBodyWorkouts(adjustedTargets, landmarks, equipment, internalGoal, experience, nutritionPhase, effectiveDays);
   }
 
-  // Strength notes
-  if (goal === 'strength_hypertrophy') {
+  // Strength notes (strength_size phase OR legacy goal)
+  if (internalGoal === 'strength_hypertrophy') {
     for (const w of rawWorkouts) {
       for (const ex of w.exercises) {
         if (ex.restSec >= 150 && !ex.notes) {
@@ -1192,12 +1357,16 @@ export function generatePlan(inputs) {
     }
   }
 
-  // Finalise: deduplicate, trim to time budget, stamp duration
+  // Finalise: deduplicate, trim to time budget, assign supersets, stamp duration
   const workouts = rawWorkouts.map(w => {
     const deduped  = deduplicateExercises(w.exercises);
     const trimmed  = trimToTimeBudget(deduped, sessionLengthMinutes, equipment);
-    // Strip internal-only tags (_m, _req) used during trimming.
-    const clean = trimmed.map(({ _m, _req, ...rest }) => rest);
+    // Assign superset pairings while we still have the internal _muscle tag
+    // available. Function mutates entries in place adding `supersetGroupId`.
+    assignSupersets(trimmed, { goal, experience, sessionLengthMinutes });
+    // Strip internal-only tags (_m, _req used by trimming; _muscle by
+    // assignSupersets). supersetGroupId is public and survives the strip.
+    const clean = trimmed.map(({ _m, _req, _muscle, ...rest }) => rest);
     return {
       name: w.name,
       exercises: clean,
@@ -1218,7 +1387,10 @@ export function generatePlan(inputs) {
   );
   const mesocycleSchedule     = buildMesocycleSchedule(experience);
 
+  // Plan-name label keyed off internalGoal so strength_size / weak_point
+  // phases produce their own short labels (kept under the legacy keys).
   const goalShort = {
+    general:              'Build Muscle',
     general_hypertrophy:  'Build Muscle',
     weak_point_spec:      'Specialisation',
     strength_hypertrophy: 'Strength + Size',
@@ -1229,7 +1401,7 @@ export function generatePlan(inputs) {
     wellness:             'Wellness',
     figure:               'Figure',
     womens_physique:      "Women's Physique",
-  }[goal] ?? 'Training';
+  }[internalGoal] ?? 'Training';
 
   const splitShort = {
     full_body:      'Full Body',
@@ -1242,7 +1414,27 @@ export function generatePlan(inputs) {
   // Progressive multi-week plan (v2)
   const isAdvancedExp = experience === 'advanced' || experience === 'competitive';
   const totalMesoWeeks = isAdvancedExp ? 6 : 5;
-  const planName = `${goalShort} ${splitShort} ${effectiveDays}×/week`;
+  // Include the nutrition phase in the plan name so a user who re-rolls
+  // their plan from the Hub (changing only the phase from "Bulk" to
+  // "Lean Gain", for example) gets visually distinct entries in Plans
+  // instead of three rows all called "Build Muscle Upper-Lower 4×/week".
+  const phaseShort = {
+    cut:       'Cut',
+    bulk:      'Bulk',
+    lean_gain: 'Lean Gain',
+    recomp:    'Recomp',
+    maintain:  'Maintain',
+    // coachingPhaseKey variants — planEngine receives either form
+    mild_cut:  'Cut',
+    mod_cut:   'Cut',
+    agg_cut:   'Aggressive Cut',
+    mild_bulk: 'Lean Gain',
+    mod_bulk:  'Bulk',
+    maint:     'Maintain',
+  }[nutritionPhase] ?? null;
+  const planName = phaseShort
+    ? `${goalShort} · ${phaseShort} · ${splitShort} ${effectiveDays}×/week`
+    : `${goalShort} ${splitShort} ${effectiveDays}×/week`;
   const weeklyPlan = buildWeeklyPlan(validWorkouts, totalMesoWeeks, planName);
 
   return {

@@ -8,16 +8,23 @@ import {
 // ─── GOAL_LABELS ──────────────────────────────────────────────────────────────
 
 describe('GOAL_LABELS', () => {
-  test('general_hypertrophy label exists', () => {
-    expect(GOAL_LABELS.general_hypertrophy).toBeDefined();
+  // Post-merge: PHYSIQUE_GOALS contains physique categories only. The
+  // displaced "training methodologies" (Build Muscle / Strength + Size /
+  // Bring Up a Weak Point) moved to TRAINING_PHASES.
+  test('general label exists (default for non-competitive users)', () => {
+    expect(GOAL_LABELS.general).toBeDefined();
   });
 
-  test('strength_hypertrophy label exists', () => {
-    expect(GOAL_LABELS.strength_hypertrophy).toBeDefined();
+  test('legacy generic / strength / weak-point labels are gone', () => {
+    expect(GOAL_LABELS.general_hypertrophy).toBeUndefined();
+    expect(GOAL_LABELS.strength_hypertrophy).toBeUndefined();
+    expect(GOAL_LABELS.weak_point_spec).toBeUndefined();
   });
 
-  test('weak_point_spec label exists', () => {
-    expect(GOAL_LABELS.weak_point_spec).toBeDefined();
+  test('competitive physique labels still present', () => {
+    expect(GOAL_LABELS.mens_physique).toBeDefined();
+    expect(GOAL_LABELS.bodybuilding).toBeDefined();
+    expect(GOAL_LABELS.bikini).toBeDefined();
   });
 
   test('all values are non-empty strings', () => {
@@ -118,7 +125,8 @@ const BASE_INPUTS = {
   daysPerWeek: 4,
   sessionLengthMinutes: 60,
   equipment: 'full_gym',
-  goal: 'general_hypertrophy',
+  goal: 'general',
+  phase: 'lean_gain',
   weakPoints: [],
   recoveryRating: 'average',
   nutritionPhase: 'maintain',
@@ -217,17 +225,19 @@ describe('generatePlan — split selection', () => {
     expect(plan.splitType).toBe('ppl_ab');
   });
 
-  test('5 days, weak_point_spec goal → upper_lower_wp split', () => {
+  test('5 days, weak_point phase → upper_lower_wp split', () => {
+    // weak_point used to be a "goal" (weak_point_spec) before the merge —
+    // now it's a phase. Engine maps it back to the legacy split internally.
     const plan = generatePlan({
       ...BASE_INPUTS,
       daysPerWeek: 5,
-      goal: 'weak_point_spec',
+      phase: 'weak_point',
       weakPoints: ['Side Delts'],
     });
     expect(plan.splitType).toBe('upper_lower_wp');
   });
 
-  test('5 days, general_hypertrophy → ppl split', () => {
+  test('5 days, general goal → ppl split', () => {
     const plan = generatePlan({ ...BASE_INPUTS, daysPerWeek: 5 });
     expect(plan.splitType).toBe('ppl');
   });
@@ -270,7 +280,7 @@ describe('generatePlan — workout count', () => {
     const plan = generatePlan({
       ...BASE_INPUTS,
       daysPerWeek: 5,
-      goal: 'weak_point_spec',
+      phase: 'weak_point',
       weakPoints: ['Biceps'],
     });
     expect(plan.workouts.length).toBe(5);
@@ -297,11 +307,15 @@ describe('generatePlan — determinism', () => {
   });
 });
 
-// ─── generatePlan — strength_hypertrophy goal ────────────────────────────────
+// ─── generatePlan — strength_size phase ──────────────────────────────────────
+// Was the strength_hypertrophy "goal" before the merge. Now it's a phase
+// (current-block emphasis), not a body shape. Engine maps phase===strength_size
+// back to the legacy strength_hypertrophy internalGoal so heavy-compound rep
+// ranges and rest periods still apply.
 
-describe('generatePlan — strength_hypertrophy goal', () => {
+describe('generatePlan — strength_size phase', () => {
   test('compound exercises have repMax ≤ 8 (lower-rep strength range)', () => {
-    const plan = generatePlan({ ...BASE_INPUTS, goal: 'strength_hypertrophy' });
+    const plan = generatePlan({ ...BASE_INPUTS, phase: 'strength_size' });
     for (const w of plan.workouts) {
       for (const ex of w.exercises) {
         // heavy_compound rest ≥ 210s in strength mode; check only those
@@ -313,7 +327,7 @@ describe('generatePlan — strength_hypertrophy goal', () => {
   });
 
   test('compound exercises have notes about adding weight', () => {
-    const plan = generatePlan({ ...BASE_INPUTS, goal: 'strength_hypertrophy' });
+    const plan = generatePlan({ ...BASE_INPUTS, phase: 'strength_size' });
     const compoundExercises = plan.workouts
       .flatMap(w => w.exercises)
       .filter(ex => ex.restSec >= 150);
@@ -471,7 +485,7 @@ describe('generatePlan — plan name', () => {
   });
 
   test('name reflects the goal', () => {
-    const plan = generatePlan({ ...BASE_INPUTS, goal: 'general_hypertrophy' });
+    const plan = generatePlan({ ...BASE_INPUTS, goal: 'general' });
     expect(plan.name).toMatch(/Build Muscle/);
   });
 });

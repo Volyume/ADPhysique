@@ -91,9 +91,13 @@ function detectSignals(checkins) {
   }
 
   // ── Persistent high soreness ──────────────────────────────────────────────
+  // "Carrying over" needs TWO consecutive high readings to be true. A single
+  // first-ever check-in with high soreness is a snapshot, not a pattern, and
+  // shouldn't be labelled as carrying over from anything. Promote to high
+  // only when we can actually see the carry-over in the data.
   const soreness = latest.sorenessScore ?? 3;
   const prevSoreness = checkins[1]?.sorenessScore ?? null;
-  if (soreness >= 4 && (prevSoreness === null || prevSoreness >= 4)) {
+  if (soreness >= 4 && prevSoreness !== null && prevSoreness >= 4) {
     signals.push({ type: 'soreness', severity: 'high', label: 'High soreness carrying over into sessions', data: soreness });
   } else if (soreness >= 4) {
     signals.push({ type: 'soreness', severity: 'medium', label: 'Soreness higher than normal this week', data: soreness });
@@ -261,9 +265,25 @@ export async function getBlockAdvice(userId, activeBlock, userProfile) {
 
   // ── Active block — check for early deload triggers ────────────────────────
 
-  // Strong deload trigger: ≥2 high signals OR sustained fatigue
+  // Masters lifters (age ≥40) recover more slowly from accumulated training
+  // stress (Sullivan & Baker; Rippetoe; Hayes et al. 2023 — older adults show
+  // longer strength-recovery timelines and lower productive-volume ceilings).
+  // Drop the deload trigger from 2 high signals to 1, and the heads-up from
+  // 2 medium signals to 1, so the same recovery state surfaces a week earlier.
+  const isMasters = (userProfile?.age ?? 0) >= 40;
+  const deloadHighThreshold  = isMasters ? 1 : 2;
+  const headsUpMediumThreshold = isMasters ? 1 : 2;
+
+  // Strong deload trigger: enough high signals OR sustained fatigue.
+  // Gated on enough history to be a pattern rather than a single bad day.
+  // A user one week into their first block, with one check-in entered on
+  // enrolment day, shouldn't be told to drop their sets in half. That
+  // recommendation is for accumulated fatigue, which requires at least
+  // two weeks of check-ins and a block that's been running long enough
+  // for fatigue to actually accumulate.
   const hasSustainedFatigue = signals.some(s => s.type === 'sustained_fatigue');
-  if (highSignals.length >= 2 || hasSustainedFatigue) {
+  const hasEnoughHistory = checkins.length >= 2 && (blockStatus?.currentWeek ?? 1) >= 2;
+  if (hasEnoughHistory && (highSignals.length >= deloadHighThreshold || hasSustainedFatigue)) {
     const nextBlock = buildNextBlockRecommendation(checkins, userProfile, signals);
     return {
       action: 'early_deload',
@@ -276,7 +296,7 @@ export async function getBlockAdvice(userId, activeBlock, userProfile) {
   }
 
   // Moderate: heads-up, signals building
-  if (highSignals.length === 1 || mediumSignals.length >= 2) {
+  if (highSignals.length >= 1 || mediumSignals.length >= headsUpMediumThreshold) {
     return {
       action: 'heads_up',
       headline: 'Keep an eye on recovery',

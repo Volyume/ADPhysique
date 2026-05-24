@@ -163,15 +163,21 @@ export function rankSwaps(originalExercise, allExercises, options = {}) {
   const scored = allExercises
     // Mandatory exclusions
     .filter((ex) => !excludeSet.has(ex.id))
-    // Optional equipment filter
-    .filter((ex) => equipment === null || ex.equipment === equipment)
+    // Optional equipment filter — accepts a string or array of strings
+    .filter((ex) => {
+      if (equipment === null) return true;
+      if (Array.isArray(equipment)) return equipment.includes(ex.equipment);
+      return ex.equipment === equipment;
+    })
     // Score each candidate
     .map((ex) => ({
       exercise: ex,
       score: scoreCandidate(originalExercise, ex),
     }))
-    // Sort descending by score; stable tie-break by name for determinism
-    .sort((a, b) => b.score - a.score || a.exercise.name.localeCompare(b.exercise.name))
+    // Sort descending by score; stable tie-break by name for determinism.
+    // Names default to '' so a custom user-added exercise with no name
+    // doesn't crash localeCompare on undefined.
+    .sort((a, b) => b.score - a.score || (a.exercise.name ?? '').localeCompare(b.exercise.name ?? ''))
     // Take top N
     .slice(0, numResults)
     // Attach reason

@@ -7,7 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 
-const HERO = require('../../assets/volyume-icon.png');
+const HERO = require('../../assets/volyume-wordmark.png');
+const HERO_ASPECT = 1032 / 277;
 
 const FREE_BULLETS = [
   'Unlimited workout logging, fully offline',
@@ -24,21 +25,28 @@ const PRO_BULLETS = [
 ];
 
 export default function WelcomeScreen({ navigation }) {
-  const { setTier } = useAppStore();
+  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
 
-  const fadeIn   = useRef(new Animated.Value(0)).current;
-  const slideUp  = useRef(new Animated.Value(24)).current;
+  const fadeIn   = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+  const slideUp  = useRef(new Animated.Value(reduceMotion ? 0 : 24)).current;
 
   useEffect(() => {
+    if (reduceMotion) return;
     Animated.parallel([
       Animated.timing(fadeIn, { toValue: 1, duration: 480, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
       Animated.timing(slideUp, { toValue: 0, duration: 480, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
     ]).start();
   }, []);
 
-  async function chooseTier(tier) {
-    await setTier(tier);
-    // Navigation resolves automatically — RootNavigator re-renders on tier change
+  // Per IDENTITY_AND_OWNERSHIP_LOCKED.md decision 1: no anonymous
+  // mode. Both Free and Pro CTAs route to the sign-up flow. Free
+  // users still get the Free tier, they just create a real account
+  // first so their data is cloud-backed and cross-device safe by
+  // construction. Tier flip happens post-auth via
+  // LoginScreen.newAccountSetup (Pro) or the same flow defaulting to
+  // Free if the user doesn't enable Pro.
+  function chooseTier(tier) {
+    navigation.navigate('Login', { intent: tier === 'pro' ? 'pro_signup' : 'free_signup' });
   }
 
   return (
@@ -46,8 +54,17 @@ export default function WelcomeScreen({ navigation }) {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Animated.View style={[styles.hero, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
           <Image source={HERO} style={styles.logoImg} resizeMode="contain" />
-          <Text style={styles.wordmark}>VOLYUME</Text>
           <Text style={styles.tagline}>Less thinking. More lifting.</Text>
+        </Animated.View>
+
+        <Animated.View style={[styles.disqualifier, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
+          <Text style={styles.disqualifierTitle}>Who Volyume is for</Text>
+          <Text style={styles.disqualifierBody}>
+            Lifters who want a coach reading their weight, food, energy, and training together, then adjusting each week. The Free tier is a clean logbook. Pro is the weekly read.
+          </Text>
+          <Text style={styles.disqualifierBody}>
+            If you want a tap-to-log workout app or a calorie counter on its own, there are faster ones out there. Volyume rewards a few weeks of consistent data with adjustments most apps cannot make.
+          </Text>
         </Animated.View>
 
         <Animated.View style={[styles.cards, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
@@ -81,10 +98,8 @@ export default function WelcomeScreen({ navigation }) {
               ))}
             </View>
 
-            <Text style={styles.cancelNote}>Cancel anytime, two taps. No questions.</Text>
-
             <View style={styles.proCtaRow}>
-              <Text style={styles.proCtaText}>Start your free Pro experience</Text>
+              <Text style={styles.proCtaText}>Go Pro</Text>
               <Ionicons name="arrow-forward" size={16} color={colors.background} />
             </View>
           </TouchableOpacity>
@@ -146,12 +161,34 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1, padding: spacing.xl, gap: spacing.xl, paddingBottom: spacing.xxl },
 
   hero: { alignItems: 'center', gap: spacing.sm, paddingTop: spacing.xl },
-  logoImg: { width: 88, height: 88, borderRadius: 20 },
+  // Sized down so the wordmark reads as a brand mark, not a billboard.
+  // Dialled from 200→150 — at 200 it was still overpowering the Pro
+  // card below; 150 keeps the brand visible without dominating.
+  logoImg: { width: 150, height: Math.round(150 / HERO_ASPECT) },
   wordmark: {
     fontSize: 28, fontWeight: fontWeight.black, color: colors.textPrimary,
     letterSpacing: 5, marginTop: spacing.xs,
   },
   tagline: { fontSize: fontSize.sm, color: colors.textMuted, letterSpacing: 0.3 },
+
+  disqualifier: {
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.xs,
+    gap: spacing.sm,
+  },
+  disqualifierTitle: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.textSecondary,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginBottom: spacing.xs,
+  },
+  disqualifierBody: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: fontSize.sm * 1.5,
+  },
 
   cards: { gap: spacing.md },
 
@@ -222,7 +259,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs, paddingTop: spacing.sm,
     borderTopWidth: 1, borderTopColor: colors.border,
   },
-  freeBackupText: { fontSize: 11, color: colors.textMuted, flex: 1, lineHeight: 16 },
+  freeBackupText: { fontSize: fontSize.xs, color: colors.textMuted, flex: 1, lineHeight: 16 },
 
   signInLink: {
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
@@ -231,13 +268,9 @@ const styles = StyleSheet.create({
   signInText: { fontSize: fontSize.sm, color: colors.textMuted },
   signInAction: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
 
-  cancelNote: {
-    fontSize: 11, color: colors.textMuted, textAlign: 'center',
-    marginHorizontal: spacing.lg, marginBottom: spacing.xs,
-  },
 
   founderNote: {
-    fontSize: 11, color: colors.textMuted, textAlign: 'center',
+    fontSize: fontSize.xs, color: colors.textMuted, textAlign: 'center',
     paddingBottom: spacing.md, opacity: 0.6,
   },
 });

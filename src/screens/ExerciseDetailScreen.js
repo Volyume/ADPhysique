@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Modal, TextInput, KeyboardAvoidingView, Platform, Animated,
+  Modal, TextInput, KeyboardAvoidingView, Platform, Animated, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -52,6 +52,7 @@ function parseLooseDate(str) {
 export default function ExerciseDetailScreen({ navigation, route }) {
   const { exerciseId } = route.params || {};
   const { user, units } = useAppStore();
+  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   const [exercise, setExercise] = useState(null);
   const [history, setHistory] = useState([]);
   const [prs, setPRs] = useState([]);
@@ -142,6 +143,14 @@ export default function ExerciseDetailScreen({ navigation, route }) {
 
   function showCongratsBanner() {
     setCongratusBanner(true);
+    if (reduceMotion) {
+      congratsOpacity.setValue(1);
+      setTimeout(() => {
+        congratsOpacity.setValue(0);
+        setCongratusBanner(false);
+      }, 3500);
+      return;
+    }
     Animated.sequence([
       Animated.timing(congratsOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
       Animated.delay(3500),
@@ -185,7 +194,17 @@ export default function ExerciseDetailScreen({ navigation, route }) {
     setGoalModalVisible(false);
   }
 
-  if (!exercise) return null;
+  if (!exercise) {
+    // Returning null produced a blank screen during the initial DB load —
+    // looked like a crashed screen. Show a spinner so the user has feedback.
+    return (
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const formTip = FORM_TIPS[exercise.name] ?? null;
   const primaryMuscle = MUSCLE_DISPLAY_NAMES[(exercise.primaryMuscle || '').toLowerCase()] || exercise.primaryMuscle;
@@ -364,7 +383,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
 
             <View style={styles.goalWeightRow}>
               <View style={styles.goalWeightItem}>
-                <Text style={styles.goalWeightValue}>{best1RM > 0 ? best1RM.toFixed(1) : '—'}{best1RM > 0 ? units : ''}</Text>
+                <Text style={styles.goalWeightValue}>{best1RM > 0 ? best1RM.toFixed(1) : '-'}{best1RM > 0 ? units : ''}</Text>
                 <Text style={styles.goalWeightLabel}>Current est. 1RM</Text>
               </View>
               <Ionicons name="arrow-forward" size={14} color={colors.textMuted} />
@@ -841,8 +860,8 @@ const styles = StyleSheet.create({
   },
   plateauTitle: {
     color: colors.warning,
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
     marginBottom: spacing.xxs,
   },
   plateauBody: {
@@ -1012,7 +1031,7 @@ const styles = StyleSheet.create({
   saveGoalBtnText: {
     fontSize: fontSize.md,
     fontWeight: fontWeight.bold,
-    color: '#000000',
+    color: colors.background,
   },
   removeGoalLink: {
     alignItems: 'center',

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import useAppStore from '../store/useAppStore';
 import { runWeeklyCoach } from '../lib/weeklyCoach';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getLatestCheckin,
   getRecentCheckins,
@@ -14,12 +15,24 @@ import {
   getWeeklySessionStats,
   getWeeklyPRCount,
   getNutritionTargets,
+  saveNutritionTargets,
   saveCoachOutput,
   getLatestCoachOutput,
   getCoachOutputHistory,
+  getOpenEdPatternFlag,
+  raiseEdPatternFlag,
+  clearEdPatternFlag,
 } from '../lib/database';
+import { track as trackEngineEvent } from '../lib/engineTelemetry';
 import { computeEWMA, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
+import { logError } from '../lib/errorLog';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import {
+  ED_PATTERN_LOCKOUT_COPY,
+  ED_PATTERN_CLEARED_COPY,
+  RAPID_LOSS_CORRECTED_COPY,
+  getEdSupportLink,
+} from '../lib/whyThisTemplates';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -52,6 +65,84 @@ const TRAINING_SIGNAL_LABEL = {
   hold: 'Hold steady',
   reduce: 'Back it off',
 };
+
+// ─── Headline / off-items / focus builders ────────────────────────────────────
+
+function buildHeadline(output, checkin) {
+  if (!output) return '';
+  const { trend, weekLabel, adjustments } = output;
+  // Calories changed
+  if (adjustments?.calories?.applied) {
+    return `${weekLabel}. Calories ${adjustments.calories.change > 0 ? 'raised' : 'lowered'} to ${adjustments.calories.newKcal}.`;
+  }
+  // On target
+  if (trend?.onTarget) {
+    return `${weekLabel}. On target.`;
+  }
+  // Trend off target but holding
+  if (trend?.delta != null && !trend.onTarget) {
+    return `${weekLabel}. Trend off target. Holding for another read.`;
+  }
+  // Default
+  return `${weekLabel}.`;
+}
+
+function buildOffItems(output, checkin) {
+  const items = [];
+  if (!output) return items;
+  const { sessionsCompleted, sessionsPlanned } = output;
+  if (sessionsPlanned > 0 && sessionsCompleted < sessionsPlanned * 0.75) {
+    items.push(`Sessions ${sessionsCompleted}/${sessionsPlanned}.`);
+  }
+  if (checkin?.sleepHours != null && checkin.sleepHours < 6.5) {
+    items.push(`Sleep averaged ${checkin.sleepHours.toFixed(1)}h.`);
+  }
+  if (checkin?.jointPain) {
+    items.push('Joint pain flagged.');
+  }
+  if (checkin?.energyScore != null && checkin.energyScore <= 2) {
+    items.push('Energy was low this week.');
+  }
+  if (checkin?.sorenessScore != null && checkin.sorenessScore >= 4) {
+    items.push('Soreness was high.');
+  }
+  if (checkin?.calsAdherence === 'untracked') {
+    items.push('Calories were not tracked.');
+  } else if (checkin?.calsAdherence === 'under' || checkin?.calsAdherence === 'over') {
+    items.push(`Calorie target ${checkin.calsAdherence}-shot.`);
+  }
+  return items;
+}
+
+function buildFocus(output, checkin) {
+  if (!output) return null;
+  const { sessionsCompleted, sessionsPlanned, trend } = output;
+  // Priority: thin data → log
+  if (!trend?.delta && trend?.deltaLabel === 'Log morning weight') {
+    return 'Log morning weight every day. The trend gets sharper with each log.';
+  }
+  // Sleep is the biggest single lever
+  if (checkin?.sleepHours != null && checkin.sleepHours < 6.5) {
+    return 'Sleep. Aim for 7h+ this week. Nothing else moves until this does.';
+  }
+  // Sessions
+  if (sessionsPlanned > 0 && sessionsCompleted < sessionsPlanned) {
+    return `Hit all ${sessionsPlanned} sessions. Adherence beats everything else.`;
+  }
+  // Joint pain
+  if (checkin?.jointPain) {
+    return 'Reduce load on the painful joint. Substitute exercises if needed.';
+  }
+  // Adherence
+  if (checkin?.calsAdherence === 'untracked') {
+    return 'Track calories this week. Without it, no kcal adjustment is reliable.';
+  }
+  if (checkin?.calsAdherence === 'over') {
+    return 'Stay inside the calorie target.';
+  }
+  // On track default
+  return 'Keep doing what you did this week.';
+}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -99,14 +190,22 @@ function WhatsWorkingCard({ bullets }) {
   );
 }
 
-function AdjustmentRow({ iconName, label, note }) {
+function AdjustmentRow({ iconName, label, note, applied }) {
   return (
     <View style={styles.adjustmentRow}>
       <View style={styles.adjustmentIconWrap}>
         <Ionicons name={iconName} size={18} color={colors.primary} />
       </View>
       <View style={styles.adjustmentContent}>
-        <Text style={styles.adjustmentLabel}>{label}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
+          <Text style={styles.adjustmentLabel}>{label}</Text>
+          {applied && (
+            <View style={styles.appliedChip}>
+              <Ionicons name="checkmark" size={10} color={colors.success} />
+              <Text style={styles.appliedChipText}>Applied</Text>
+            </View>
+          )}
+        </View>
         {note ? <Text style={styles.adjustmentNote}>{note}</Text> : null}
       </View>
     </View>
@@ -114,7 +213,7 @@ function AdjustmentRow({ iconName, label, note }) {
 }
 
 function NextWeekCard({ adjustments }) {
-  const { training, calories, steps, cardio } = adjustments;
+  const { calories, steps, cardio } = adjustments;
 
   const calLabel =
     calories === null
@@ -127,17 +226,19 @@ function NextWeekCard({ adjustments }) {
 
   return (
     <View style={styles.card}>
-      <SectionHeader title="Next week" />
-      <AdjustmentRow
-        iconName="barbell-outline"
-        label={TRAINING_SIGNAL_LABEL[training.signal] ?? training.signal}
-        note={training.note}
-      />
-      {calories !== null && (
+      <SectionHeader title="Nutrition next week" />
+      {calories !== null ? (
         <AdjustmentRow
           iconName="flame-outline"
-          label={calLabel}
+          label={calories.applied && calories.newKcal ? `${calLabel} → ${calories.newKcal} kcal/day` : calLabel}
           note={calories.note}
+          applied={!!calories.applied}
+        />
+      ) : (
+        <AdjustmentRow
+          iconName="flame-outline"
+          label="Calories held"
+          note="No change needed this week."
         />
       )}
       {steps !== null && (
@@ -154,6 +255,12 @@ function NextWeekCard({ adjustments }) {
           note={cardio.note}
         />
       )}
+      <View style={styles.planNote}>
+        <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />
+        <Text style={styles.planNoteText}>
+          Training volume and recovery weeks are adjusted automatically by your plan after each session. Your coach focuses on nutrition.
+        </Text>
+      </View>
     </View>
   );
 }
@@ -189,7 +296,7 @@ function DietBreakCard({ weeksInDeficit }) {
         {weeksInDeficit >= 8
           ? `You have been in a calorie deficit for ${weeksInDeficit} weeks. `
           : 'You have been in a calorie deficit for over eight weeks. '}
-        {'A short diet break — returning to maintenance calories for one to two weeks — can help restore metabolic rate and improve long-term fat loss. Consider taking a break before your next phase.'}
+        {'A short diet break, returning to maintenance calories for one to two weeks, can help restore metabolic rate and improve long-term fat loss. Consider taking a break before your next phase.'}
       </Text>
       <Text style={styles.dietBreakFootnote}>
         Based on the MATADOR trial (2017). This is a suggestion, not a requirement.
@@ -213,19 +320,37 @@ function ConfidencePill({ confidence }) {
 
 function HeldDecisionsCard({ decisions, history }) {
   if (!decisions || decisions.length === 0) return null;
+  const edLockout = decisions.find(d => d.type === 'ed_pattern_lockout');
+  const edCleared = decisions.find(d => d.type === 'ed_pattern_cleared');
+  const rapidLossCorrected = decisions.find(d => d.type === 'rapid_loss_corrected');
   // Filter history entries that have held decisions
   const historyWithHeld = (history ?? []).filter(
     h => h.heldDecisions && h.heldDecisions.length > 0
   );
+  // Other decisions render in the standard plain-reason rows; the
+  // structured variants (ED-pattern, rapid-loss compression) render
+  // in their own rich blocks above.
+  const standardDecisions = decisions.filter(
+    d => d.type !== 'ed_pattern_lockout' &&
+         d.type !== 'ed_pattern_cleared' &&
+         d.type !== 'rapid_loss_corrected',
+  );
   return (
     <View style={styles.heldCard}>
-      <SectionHeader title="What we held this week" />
-      {decisions.map((d, i) => (
-        <View key={i} style={styles.heldRow}>
-          <Ionicons name="pause-circle-outline" size={16} color={colors.textMuted} style={{ marginTop: spacing.xxs }} />
-          <Text style={styles.heldText}>{d.reason}</Text>
-        </View>
-      ))}
+      {edLockout ? <EdPatternLockoutBlock decision={edLockout} /> : null}
+      {edCleared ? <EdPatternClearedBlock /> : null}
+      {rapidLossCorrected ? <RapidLossCorrectedBlock decision={rapidLossCorrected} /> : null}
+      {standardDecisions.length > 0 ? (
+        <>
+          <SectionHeader title="What we held this week" />
+          {standardDecisions.map((d, i) => (
+            <View key={i} style={styles.heldRow}>
+              <Ionicons name="pause-circle-outline" size={16} color={colors.textMuted} style={{ marginTop: spacing.xxs }} />
+              <Text style={styles.heldText}>{d.reason}</Text>
+            </View>
+          ))}
+        </>
+      ) : null}
       {historyWithHeld.length > 0 ? (
         <View style={styles.heldHistoryShelf}>
           <Text style={styles.heldHistoryTitle}>PREVIOUS WEEKS</Text>
@@ -251,6 +376,79 @@ function HeldDecisionsCard({ decisions, history }) {
           </Text>
         </View>
       )}
+    </View>
+  );
+}
+
+function EdPatternLockoutBlock({ decision }) {
+  const [showReadMore, setShowReadMore] = useState(false);
+  const supportLink = getEdSupportLink(
+    // Best-effort locale: Intl.DateTimeFormat reports the device
+    // locale. On a phone without an i18n setup we still get a sane
+    // default from the helper's fallback chain.
+    (() => {
+      try { return Intl.DateTimeFormat().resolvedOptions().locale; } catch (_) { return null; }
+    })(),
+  );
+  async function openSupport() {
+    try { await Linking.openURL(supportLink.url); } catch (_) {}
+  }
+  return (
+    <View style={styles.edLockoutCard}>
+      <Text style={styles.edLockoutHeader}>{ED_PATTERN_LOCKOUT_COPY.header}</Text>
+      <Text style={styles.edLockoutTitle}>{ED_PATTERN_LOCKOUT_COPY.title}</Text>
+      <Text style={styles.edLockoutBody}>{ED_PATTERN_LOCKOUT_COPY.body}</Text>
+      {decision?.goalLockAdvanced ? (
+        <Text style={styles.edLockoutBody}>{ED_PATTERN_LOCKOUT_COPY.bodyGoalLockExtension}</Text>
+      ) : null}
+      {showReadMore ? (
+        <View style={styles.edLockoutReadMoreBox}>
+          <Text style={styles.edLockoutReadMoreText}>{ED_PATTERN_LOCKOUT_COPY.readMoreBody}</Text>
+        </View>
+      ) : null}
+      <View style={styles.edLockoutCtaRow}>
+        <TouchableOpacity onPress={openSupport} style={styles.edLockoutCtaPrimary}>
+          <Text style={styles.edLockoutCtaPrimaryText}>
+            {ED_PATTERN_LOCKOUT_COPY.ctaSupport} · {supportLink.name}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setShowReadMore(v => !v)} style={styles.edLockoutCtaGhost}>
+          <Text style={styles.edLockoutCtaGhostText}>
+            {showReadMore ? 'Hide' : ED_PATTERN_LOCKOUT_COPY.ctaReadMore}
+          </Text>
+        </TouchableOpacity>
+      </View>
+      <Text style={styles.edLockoutBottomNote}>{ED_PATTERN_LOCKOUT_COPY.bottomNote}</Text>
+    </View>
+  );
+}
+
+function EdPatternClearedBlock() {
+  return (
+    <View style={styles.edClearedCard}>
+      <Text style={styles.edClearedHeader}>{ED_PATTERN_CLEARED_COPY.header}</Text>
+      <Text style={styles.edClearedTitle}>{ED_PATTERN_CLEARED_COPY.title}</Text>
+      <Text style={styles.edClearedBody}>{ED_PATTERN_CLEARED_COPY.body}</Text>
+    </View>
+  );
+}
+
+// Move #3: rapid-loss compression structured block. Reuses the
+// ed-cleared card style (calm green, not alert red) because the
+// engine has already acted: this is reporting the action, not asking
+// the user to do anything. The kcal delta on the row makes the
+// magnitude explicit so the user sees the size of the change, not
+// just that "something happened".
+function RapidLossCorrectedBlock({ decision }) {
+  const delta = decision?.kcalDelta;
+  return (
+    <View style={styles.edClearedCard}>
+      <Text style={styles.edClearedHeader}>{RAPID_LOSS_CORRECTED_COPY.header}</Text>
+      <Text style={styles.edClearedTitle}>{RAPID_LOSS_CORRECTED_COPY.title}</Text>
+      <Text style={styles.edClearedBody}>{RAPID_LOSS_CORRECTED_COPY.body}</Text>
+      {typeof delta === 'number' && delta > 0 ? (
+        <Text style={styles.edClearedBody}>{`Daily target raised by +${delta} kcal.`}</Text>
+      ) : null}
     </View>
   );
 }
@@ -289,7 +487,7 @@ function InsufficientDataView({ dataNote, onClose }) {
         <Text style={styles.insufficientTitle}>Building your baseline.</Text>
         <Text style={styles.insufficientBody}>
           {dataNote ??
-            'Volyume needs a couple more weeks of data before it can start coaching. Keep logging sessions and your morning weight and we\'ll be ready soon.'}
+            'A few more weeks of data needed before adjustments kick in. Keep logging sessions and your morning weight.'}
         </Text>
       </View>
       <TouchableOpacity style={styles.doneBtn} onPress={onClose} activeOpacity={0.8}>
@@ -306,6 +504,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   const { user, userProfile, units } = useAppStore();
 
   const [output, setOutput] = useState(null);
+  const [checkin, setCheckin] = useState(null);
   const [loading, setLoading] = useState(true);
   const [coachHistory, setCoachHistory] = useState([]);
   const [adaptiveTDEE, setAdaptiveTDEE] = useState(null);
@@ -313,6 +512,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   useEffect(() => {
     async function load() {
       const checkin = await getLatestCheckin(user.id, weekStart);
+      setCheckin(checkin);
       const weights = await getMorningWeightsLast14Days(user.id);
       const sessionStats = await getWeeklySessionStats(user.id, weekStart);
       const prs = await getWeeklyPRCount(user.id, weekStart);
@@ -347,6 +547,22 @@ export default function CoachOutputScreen({ navigation, route }) {
         : null;
       const lastCalAdjustmentWeeksAgo = lastCalAdjustmentDirection ? 1 : 99;
 
+      // ED-pattern detector context (Move #2). Build the rolling
+      // weekly history from the recent check-ins we already loaded.
+      // Each entry: { energy, adherence, hasCheckin, hasFoodData }.
+      // Most-recent-first to match the detector's contract.
+      const recentWeeklyHistory = recentCheckins.map(ci => ({
+        energy: ci.energyScore ?? null,
+        adherence: ci.calsAdherence ?? null,
+        hasCheckin: true,
+        // Food data presence is best-judged at the check-in row:
+        // hasFoodData true when calsAdherence was tracked.
+        hasFoodData: ci.calsAdherence != null && ci.calsAdherence !== 'untracked',
+      }));
+      const goalLockAdvanced = !!userProfile?.goalLockAdvanced;
+      const openFlag = await getOpenEdPatternFlag(user.id).catch(() => null);
+      const edPatternOpen = !!openFlag;
+
       const result = runWeeklyCoach({
         checkin,
         morningWeights: weights,
@@ -366,9 +582,78 @@ export default function CoachOutputScreen({ navigation, route }) {
         bodyweightKg: userProfile?.weightKg ?? null,
         units,
         scoffPositive: (userProfile?.scoffScore ?? 0) >= 2,
+        recentWeeklyHistory,
+        goalLockAdvanced,
+        edPatternOpen,
       });
 
+      // Persist ED-pattern state machine transition + telemetry.
+      // Raise on first fire, clear on confirmed clearance.
+      try {
+        if (result.edPatternFired && !edPatternOpen) {
+          await raiseEdPatternFlag(user.id, {
+            reason: 'multi-signal harm check',
+            signals: result.edPatternSignals,
+          });
+          await trackEngineEvent(user.id, 'ed_pattern_flag_fired', {
+            signals: result.edPatternSignals,
+            goalLockAdvanced,
+          });
+        } else if (result.edPatternClearedThisWeek && edPatternOpen) {
+          await clearEdPatternFlag(user.id);
+          await trackEngineEvent(user.id, 'ed_pattern_flag_cleared', null);
+        }
+      } catch (e) {
+        logError('CoachOutputScreen.edPatternPersist', e);
+      }
+
+      // Move #3 telemetry. Fire once when the rapid-loss compression
+      // applies on this run. Idempotent at the row level (per
+      // weekStart) because saveCoachOutput de-dupes the parent row,
+      // but the engine event itself is allowed to repeat if a user
+      // re-opens the weekly card -- the cohort dashboard counts
+      // unique user-days, not raw event rows.
+      try {
+        if (result.rapidLossCorrectionApplied) {
+          const heldRow = (result.heldDecisions ?? []).find(
+            d => d.type === 'rapid_loss_corrected',
+          );
+          await trackEngineEvent(user.id, 'rapid_loss_compression_triggered', {
+            weekly_loss_pct: heldRow?.weeklyLossPct ?? null,
+            energy_score: heldRow?.energyScore ?? null,
+            kcal_delta: heldRow?.kcalDelta ?? result.adjustments?.calories?.change ?? null,
+            days_compressed: 7,
+          });
+        }
+      } catch (e) {
+        logError('CoachOutputScreen.rapidLossTelemetry', e);
+      }
+
       await saveCoachOutput(user.id, { weekStart, ...result });
+
+      // Auto-apply calorie adjustment. Protein stays the same (priority macro);
+      // fat and carbs scale with kcal change so the deficit/surplus math holds.
+      try {
+        const calChange = result.adjustments?.calories?.change ?? 0;
+        if (calChange && nutrition?.targetKcal) {
+          const newKcal = Math.max(1200, nutrition.targetKcal + calChange);
+          const ratio = newKcal / nutrition.targetKcal;
+          const newTargets = {
+            targetKcal: newKcal,
+            proteinG: nutrition.proteinG ?? null,
+            fatG: nutrition.fatG ? Math.round(nutrition.fatG * ratio) : nutrition.fatG ?? null,
+            carbsG: nutrition.carbsG ? Math.round(nutrition.carbsG * ratio) : nutrition.carbsG ?? null,
+            maintenanceKcal: nutrition.maintenanceKcal ?? null,
+          };
+          await saveNutritionTargets(user.id, newTargets);
+          await AsyncStorage.setItem('@volyume_nutrition_targets', JSON.stringify(newTargets)).catch(() => {});
+          result.adjustments.calories.applied = true;
+          result.adjustments.calories.newKcal = newKcal;
+        }
+      } catch (e) {
+        console.warn('Auto-apply calories failed:', e);
+      }
+
       setOutput(result);
 
       // Load the last 5 outputs; skip the first (current week) for the history shelf
@@ -400,24 +685,45 @@ export default function CoachOutputScreen({ navigation, route }) {
 
       setLoading(false);
     }
-    load().catch(e => { console.warn(e); setLoading(false); });
-  }, []);
+    // Re-run when user.id flips from null → real (post-auth bootstrap)
+    // so the screen doesn't get stuck in "no data" if the auth race lost.
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
+    load().catch(e => {
+      logError('CoachOutputScreen.load', e, { userId: user?.id });
+      setLoading(false);
+    });
+  }, [user?.id]);
 
   function handleClose() {
-    navigation.goBack();
+    // The user arrived here from the Athlete Hub check-in card via
+    // WeeklyCheckIn. Closing the coach output should land them back on
+    // Hub, not on the WeeklyCheckIn screen they just submitted. Both
+    // screens sit in the same Profile stack, so popToTop is the right
+    // primitive: AthleteHub is the stack root.
+    navigation.popToTop();
   }
+
+  // Replace the navigator-provided back chevron's default goBack with
+  // the same Hub-bound handler so the back arrow and the in-screen
+  // "Got it" button behave consistently.
+  useEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity onPress={handleClose} hitSlop={{ top: 8, bottom: 8, left: 16, right: 16 }} style={{ paddingHorizontal: spacing.md }}>
+          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
+      ),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Loading state ──────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.headerBack} onPress={handleClose} activeOpacity={0.7}>
-            <Ionicons name="close" size={24} color={colors.textSecondary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Precision Coaching</Text>
-          <View style={styles.headerSpacer} />
-        </View>
+      <SafeAreaView style={styles.safe} edges={['left', 'right']}>
         <LoadingView />
       </SafeAreaView>
     );
@@ -426,14 +732,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   // ── Insufficient data state ────────────────────────────────────────────────
   if (!output || !output.hasEnoughData) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.headerBack} onPress={handleClose} activeOpacity={0.7}>
-            <Ionicons name="close" size={24} color={colors.textSecondary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Precision Coaching</Text>
-          <View style={styles.headerSpacer} />
-        </View>
+      <SafeAreaView style={styles.safe} edges={['left', 'right']}>
         <InsufficientDataView dataNote={output?.dataNote} onClose={handleClose} />
       </SafeAreaView>
     );
@@ -477,25 +776,19 @@ export default function CoachOutputScreen({ navigation, route }) {
     trend.deltaLabel && trend.delta !== null ? trend.deltaLabel : 'No weights logged';
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.headerBack} onPress={handleClose} activeOpacity={0.7}>
-          <Ionicons name="close" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Precision Coaching</Text>
-        <View style={styles.headerSpacer} />
-      </View>
-
+    <SafeAreaView style={styles.safe} edges={['left', 'right']}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* 1. Week header */}
+        {/* Week header */}
         <View style={styles.weekHeader}>
           <Text style={styles.weekLabel}>{weekLabel}</Text>
           <Text style={styles.weekRange}>{weekRangeLabel(weekStart)}</Text>
         </View>
+
+        {/* 1. Headline — one sentence */}
+        <Text style={styles.headline}>{buildHeadline(output, checkin)}</Text>
 
         {/* 2. Trend chips */}
         <View style={styles.chipsRow}>
@@ -522,62 +815,62 @@ export default function CoachOutputScreen({ navigation, route }) {
           )}
         </View>
 
-        {/* 3. Confidence pill */}
-        <ConfidencePill confidence={confidence} />
-
-        {/* 4. Adherence note */}
-        {adherenceNote ? <AdherenceNote note={adherenceNote} /> : null}
-
-        {/* 5. What's working */}
+        {/* 3. What went well */}
         {whatWorking && whatWorking.length > 0 && (
           <WhatsWorkingCard bullets={whatWorking} />
         )}
 
-        {/* 5. Next week adjustments */}
+        {/* 4. What was off */}
+        {(() => {
+          const offItems = buildOffItems(output, checkin);
+          if (offItems.length === 0) return null;
+          return (
+            <View style={styles.whatsOffCard}>
+              <SectionHeader title="What was off" />
+              <View style={styles.bulletList}>
+                {offItems.map((item, i) => (
+                  <View key={i} style={styles.bulletRow}>
+                    <Ionicons name="remove" size={15} color={colors.warning} style={styles.bulletIcon} />
+                    <Text style={styles.bulletText}>{item}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          );
+        })()}
+
+        {/* 5. The decision */}
         <NextWeekCard adjustments={adjustments} />
 
-        {/* 6. Why this week */}
+        {/* 6. Why */}
         {whyThisWeek ? <WhyBlock text={whyThisWeek} /> : null}
 
-        {/* 7. Recovery week suggestion */}
-        {deloadSuggested && (
-          <AmberAlertCard
-            title="Recovery week flagged"
-            body={deloadNote ?? 'Your body is showing signs that a lighter week would help.'}
-            footnote="This is a suggestion. Your call."
-          />
-        )}
+        {/* 7. One focus for next week */}
+        {(() => {
+          const focus = buildFocus(output, checkin);
+          if (!focus) return null;
+          return (
+            <View style={styles.focusCard}>
+              <Text style={styles.focusLabel}>Focus this week</Text>
+              <Text style={styles.focusText}>{focus}</Text>
+            </View>
+          );
+        })()}
 
-        {/* 8. Diet break suggestion */}
+        {/* Rapid weight loss safety flag — only if relevant */}
+        {rapidWeightLossFlag && <RapidLossAlert />}
+
+        {/* Diet break — only if relevant */}
         {dietBreakSuggested && (
           <DietBreakCard weeksInDeficit={dietBreakWeeksInDeficit} />
         )}
 
-        {/* 9. Rapid weight loss safety flag */}
-        {rapidWeightLossFlag && <RapidLossAlert />}
-
-        {/* 10. Held decisions — transparency on what wasn't changed and why */}
+        {/* Recent decisions — quieter, at the bottom */}
         {heldDecisions && heldDecisions.length > 0 && (
           <HeldDecisionsCard decisions={heldDecisions} history={coachHistory} />
         )}
 
-        {/* 11. Adaptive TDEE insight — only when confidence is medium or high */}
-        {adaptiveTDEE && adaptiveTDEE.confidence !== 'low' && adaptiveTDEE.confidence !== 'insufficient_data' && (
-          <View style={styles.adaptiveTDEECard}>
-            <Text style={styles.adaptiveTDEETitle}>CALORIE ESTIMATE</Text>
-            <Text style={styles.adaptiveTDEEBody}>{adaptiveTDEE.insight}</Text>
-            {Math.abs(adaptiveTDEE.adjustmentKcal) >= 100 && (
-              <Text style={styles.adaptiveTDEEAdjust}>
-                Suggested adjustment: {adaptiveTDEE.adjustmentKcal > 0 ? '+' : ''}{Math.round(adaptiveTDEE.adjustmentKcal)} kcal/day
-              </Text>
-            )}
-            <Text style={styles.adaptiveTDEENote}>
-              Based on {adaptiveTDEE.weeks} weeks of weight data. This is an estimate, not a prescription.
-            </Text>
-          </View>
-        )}
-
-        {/* 12. Done button */}
+        {/* Done button */}
         <TouchableOpacity style={styles.doneBtn} onPress={handleClose} activeOpacity={0.8}>
           <Text style={styles.doneBtnText}>Done</Text>
         </TouchableOpacity>
@@ -740,6 +1033,13 @@ const styles = StyleSheet.create({
   },
 
   // What's working
+  headline: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+    lineHeight: 26,
+    marginBottom: spacing.md,
+  },
   whatsWorkingCard: {
     backgroundColor: colors.successBg,
     borderRadius: radius.lg,
@@ -747,6 +1047,35 @@ const styles = StyleSheet.create({
     borderColor: colors.success + '40',
     padding: spacing.lg,
     gap: spacing.sm,
+  },
+  whatsOffCard: {
+    backgroundColor: colors.warningBg ?? colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.warning + '40',
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
+  focusCard: {
+    backgroundColor: colors.primaryBg,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.primary + '40',
+    padding: spacing.lg,
+    gap: spacing.xs,
+  },
+  focusLabel: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.primary,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  focusText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+    lineHeight: 22,
   },
   bulletList: {
     gap: spacing.sm,
@@ -791,6 +1120,17 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
   },
+  appliedChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: colors.successBg ?? colors.surface2,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm, paddingVertical: 2,
+    borderWidth: 1, borderColor: (colors.success ?? colors.primary) + '50',
+  },
+  appliedChipText: {
+    fontSize: 10, fontWeight: fontWeight.bold,
+    color: colors.success ?? colors.primary, letterSpacing: 0.4,
+  },
   adjustmentNote: {
     fontSize: fontSize.sm,
     color: colors.textSecondary,
@@ -798,6 +1138,14 @@ const styles = StyleSheet.create({
   },
 
   // Why this week
+  planNote: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs,
+    marginTop: spacing.md, paddingTop: spacing.md,
+    borderTopWidth: 1, borderTopColor: colors.border,
+  },
+  planNoteText: {
+    flex: 1, fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17,
+  },
   whyBlock: {
     flexDirection: 'column',
     gap: spacing.xs,
@@ -923,6 +1271,109 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: spacing.lg,
     gap: spacing.sm,
+  },
+  edLockoutCard: {
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.warning,
+    padding: spacing.lg,
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  edLockoutHeader: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.warning,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  edLockoutTitle: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+  },
+  edLockoutBody: {
+    fontSize: fontSize.sm,
+    color: colors.textPrimary,
+    lineHeight: 21,
+  },
+  edLockoutReadMoreBox: {
+    marginTop: spacing.xs,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  edLockoutReadMoreText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 21,
+  },
+  edLockoutCtaRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+    flexWrap: 'wrap',
+  },
+  edLockoutCtaPrimary: {
+    flex: 1,
+    minWidth: 140,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+  },
+  edLockoutCtaPrimaryText: {
+    color: '#000',
+    fontWeight: fontWeight.bold,
+    fontSize: fontSize.sm,
+  },
+  edLockoutCtaGhost: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  edLockoutCtaGhostText: {
+    color: colors.textSecondary,
+    fontWeight: fontWeight.medium,
+    fontSize: fontSize.sm,
+  },
+  edLockoutBottomNote: {
+    marginTop: spacing.xs,
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    fontStyle: 'italic',
+    lineHeight: 18,
+  },
+  edClearedCard: {
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.success,
+    padding: spacing.lg,
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  edClearedHeader: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.success,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  edClearedTitle: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+  },
+  edClearedBody: {
+    fontSize: fontSize.sm,
+    color: colors.textPrimary,
+    lineHeight: 21,
   },
   heldRow: {
     flexDirection: 'row',

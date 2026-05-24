@@ -8,43 +8,66 @@ import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { VolyumeMark } from '../components/BrandMark';
+import ScreenHeader from '../components/ScreenHeader';
+import PressableCard from '../components/PressableCard';
+import PeekMenu from '../components/PeekMenu';
+import { EmptyPlanIllustration } from '../components/Illustrations';
 import {
-  getActivePlan, getAllPlansForUser,
+  getActivePlan, getAllPlansForUser, getArchivedPlansForUser,
   getWorkoutTemplates, getPlanWorkoutCounts, getAllRoutineExerciseCounts,
   activatePlanWithBlock, getRoutinesForPlan, createWorkout, getRoutineExercisesWithDetails,
-  archivePlan, duplicatePlan, softDeleteRoutine, getActiveBlock,
+  archivePlan, unarchivePlan, duplicatePlan, softDeleteRoutine, getActiveBlock,
 } from '../lib/database';
 import { getBlockAdvice } from '../lib/blockAdvisor';
+import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import useAppStore from '../store/useAppStore';
-import { scheduleTrainingReminders } from '../lib/trainingReminders';
+import { useShallow } from 'zustand/react/shallow';
+import { logError } from '../lib/errorLog';
 
 const BLOCK_SNOOZE_KEY = '@volyume_block_snooze';
-const SCHEDULE_KEY = '@volyume_schedule_v1';
 
-const DAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
 const ACTION_CARDS_DEFAULT = [
-  {
-    id: 'coach',
-    icon: 'sparkles',
-    title: 'Coach Builder',
-    description: "Answer a few questions and we'll build a plan that fits your schedule and goals.",
-    screen: 'CoachBuilder',
-    badge: 'Recommended',
-  },
   {
     id: 'library',
     icon: 'library-outline',
     title: 'Plan Library',
     description: 'Browse ready-made plans for different splits, experience levels and goals.',
     screen: 'PlanLibrary',
+    badge: 'Recommended',
   },
   {
     id: 'manual',
     icon: 'create-outline',
     title: 'Manual Builder',
     description: 'Create a custom multi-day plan from scratch. You choose every exercise.',
+    screen: 'ManualBuilder',
+  },
+];
+
+// Pro users with an active plan see "switch your active plan" framings.
+// "Update goals" sits at the top: it regenerates the plan via the modern
+// single-screen ProGoalSetup flow (the old 8-step Coach Builder is gone).
+const ACTION_CARDS_PRO_SWITCH = [
+  {
+    id: 'goals',
+    icon: 'flag-outline',
+    title: 'Update plan and rebuild',
+    description: 'Change anything from your goal and training phase to your weekly schedule, equipment, and experience. We rebuild your plan and nutrition targets around the new answers. History and PRs are kept.',
+    screen: 'ProGoalSetup',
+  },
+  {
+    id: 'library',
+    icon: 'library-outline',
+    title: 'Pick from the Plan Library',
+    description: "Ready-made plans by other coaches. Your Precision Coaching keeps adjusting whichever plan you're on.",
+    screen: 'PlanLibrary',
+  },
+  {
+    id: 'manual',
+    icon: 'create-outline',
+    title: 'Build your own',
+    description: 'Hand-pick every exercise and day. Coach output keeps reading your data the same way.',
     screen: 'ManualBuilder',
   },
 ];
@@ -57,18 +80,30 @@ const BLOCK_ICON = {
 };
 
 export default function PlansScreen({ navigation }) {
-  const { user, startWorkout, tier, userProfile } = useAppStore();
+  // Selector-scoped subscription: only re-render when these specific
+  // fields change. Without useShallow, the previous `useAppStore()` call
+  // subscribed to every store mutation (rest timer ticks, PR queue
+  // updates, set saves) which forced a full PlansScreen re-render every
+  // second during a workout.
+  const { user, startWorkout, tier, userProfile } = useAppStore(useShallow(s => ({
+    user: s.user,
+    startWorkout: s.startWorkout,
+    tier: s.tier,
+    userProfile: s.userProfile,
+  })));
   const [activePlan, setActivePlanData] = useState(null);
   const [myPlans, setMyPlans] = useState([]);
+  const [archivedPlans, setArchivedPlans] = useState([]);
+  const [archivedExpanded, setArchivedExpanded] = useState(false);
   const [templates, setTemplates] = useState([]);
   const [planWorkoutCounts, setPlanWorkoutCounts] = useState({});
   const [exerciseCounts, setExerciseCounts] = useState({});
   const [refreshing, setRefreshing] = useState(false);
   const [blockAdvice, setBlockAdvice] = useState(null);
   const [blockSnoozed, setBlockSnoozed] = useState(false);
-  const [scheduleDays, setScheduleDays] = useState([]);
 
   const scrollRef = useRef(null);
+  const peekRef = useRef(null);
   useScrollToTop(scrollRef);
 
   useEffect(() => {
@@ -77,29 +112,6 @@ export default function PlansScreen({ navigation }) {
     });
   }, [navigation]);
 
-  // Load saved schedule on mount
-  useEffect(() => {
-    AsyncStorage.getItem(SCHEDULE_KEY)
-      .then(raw => {
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          setScheduleDays(Array.isArray(parsed.days) ? parsed.days : []);
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  // Reset schedule days when the active plan changes
-  const activePlanIdRef = useRef(null);
-  useEffect(() => {
-    if (!activePlan) return;
-    if (activePlanIdRef.current !== null && activePlanIdRef.current !== activePlan.id) {
-      const reset = { activePlanId: activePlan.id, days: [] };
-      setScheduleDays([]);
-      AsyncStorage.setItem(SCHEDULE_KEY, JSON.stringify(reset)).catch(() => {});
-    }
-    activePlanIdRef.current = activePlan.id;
-  }, [activePlan?.id]);
 
   useFocusEffect(
     useCallback(() => {
@@ -107,12 +119,23 @@ export default function PlansScreen({ navigation }) {
     }, [user?.id]),
   );
 
+  // Cloud restore: re-run loadData once pullFromCloud lands so a fresh
+  // device sees the plan / template list populate without navigating
+  // away and back.
+  const cloudSyncVersion = useAppStore(s => s.cloudSyncVersion);
+  useEffect(() => {
+    if (!user?.id || cloudSyncVersion === 0) return;
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cloudSyncVersion]);
+
   async function loadData() {
     if (!user?.id) return;
     try {
-      const [active, all, tmpl, pwc, exc, block] = await Promise.all([
+      const [active, all, archived, tmpl, pwc, exc, block] = await Promise.all([
         getActivePlan(user.id),
         getAllPlansForUser(user.id),
+        getArchivedPlansForUser(user.id),
         getWorkoutTemplates(user.id),
         getPlanWorkoutCounts(),
         getAllRoutineExerciseCounts(),
@@ -120,6 +143,7 @@ export default function PlansScreen({ navigation }) {
       ]);
       setActivePlanData(active || null);
       setMyPlans(all.filter(p => !active || p.id !== active.id));
+      setArchivedPlans(archived || []);
       setTemplates(tmpl);
       setPlanWorkoutCounts(pwc);
       setExerciseCounts(exc);
@@ -162,9 +186,14 @@ export default function PlansScreen({ navigation }) {
         {
           text: 'Start new block',
           onPress: async () => {
-            await activatePlanWithBlock(user.id, activePlan.id, activePlan.name);
-            await AsyncStorage.removeItem(BLOCK_SNOOZE_KEY).catch(() => {});
-            await loadData();
+            try {
+              await activatePlanWithBlock(user.id, activePlan.id, activePlan.name);
+              await AsyncStorage.removeItem(BLOCK_SNOOZE_KEY).catch(() => {});
+              await loadData();
+            } catch (e) {
+              logError('PlansScreen.handleRestartPlan', e, { userId: user?.id, planId: activePlan?.id });
+              Alert.alert('Couldn\'t restart plan', e?.message ?? 'Please try again.');
+            }
           },
         },
       ],
@@ -178,53 +207,100 @@ export default function PlansScreen({ navigation }) {
   }
 
   async function handleStartNextWorkout(plan) {
-    const routines = await getRoutinesForPlan(plan.id);
-    if (routines.length === 0) {
-      Alert.alert('No workouts', 'This plan has no workouts yet.');
-      return;
+    try {
+      const routines = await getRoutinesForPlan(plan.id);
+      if (routines.length === 0) {
+        Alert.alert('No workouts', 'This plan has no workouts yet.');
+        return;
+      }
+      const idx = (plan.nextWorkoutIndex || 0) % routines.length;
+      const routine = routines[idx];
+      const workout = await createWorkout(user.id, routine.id);
+      const withExercises = await getRoutineExercisesWithDetails(routine.id);
+      const initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
+        exercise, routineExercise, sets: [],
+        supersetGroupId: routineExercise?.supersetGroupId ?? null,
+      }));
+      startWorkout(workout, initialExercises);
+      navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
+    } catch (e) {
+      logError('PlansScreen.handleStartNextWorkout', e, { userId: user?.id, planId: plan?.id });
+      Alert.alert('Couldn\'t start workout', e?.message ?? 'Please try again.');
     }
-    const idx = (plan.nextWorkoutIndex || 0) % routines.length;
-    const routine = routines[idx];
-    const workout = await createWorkout(user.id, routine.id);
-    const withExercises = await getRoutineExercisesWithDetails(routine.id);
-    const initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
-      exercise, routineExercise, sets: [],
-    }));
-    startWorkout(workout, initialExercises);
-    navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
   }
 
   async function handleSetActive(plan) {
-    await activatePlanWithBlock(user.id, plan.id, plan.name);
-    await loadData();
+    try {
+      const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: plan.name });
+      if (!ok) return;
+      await activatePlanWithBlock(user.id, plan.id, plan.name);
+      await loadData();
+    } catch (e) {
+      logError('PlansScreen.handleSetActive', e, { userId: user?.id, planId: plan?.id });
+      Alert.alert('Couldn\'t set active plan', e?.message ?? 'Please try again.');
+    }
   }
 
   async function handlePlanOptions(plan) {
-    Alert.alert(plan.name, undefined, [
-      { text: 'View Plan', onPress: () => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false }) },
-      { text: 'Set Active', onPress: () => handleSetActive(plan) },
+    const isActiveForUser = activePlan?.id === plan.id;
+    // Pro users keep an always-active plan as part of Precision Coaching,
+    // so they don't get the Duplicate action. They CAN archive inactive
+    // plans though, with restore available from the Archived section.
+    const items = [
       {
-        text: 'Duplicate',
+        icon: 'eye-outline',
+        label: 'View plan',
+        onPress: () => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false }),
+      },
+      {
+        icon: 'play-circle-outline',
+        label: 'Set active',
+        onPress: () => handleSetActive(plan),
+      },
+    ];
+    if (tier !== 'pro') {
+      items.push({
+        icon: 'copy-outline',
+        label: 'Duplicate',
         onPress: async () => {
           const copy = await duplicatePlan(plan.id, user.id);
           await loadData();
           navigation.navigate('PlanDetail', { planId: copy.id, isLibrary: false });
         },
-      },
-      {
-        text: 'Archive',
-        style: 'destructive',
+      });
+    }
+    if (!isActiveForUser) {
+      items.push({
+        icon: 'archive-outline',
+        label: 'Archive plan',
+        destructive: true,
         onPress: () => Alert.alert(
           'Archive Plan?',
-          'The plan will be hidden. Session history remains intact.',
+          'The plan will be hidden from My plans. Session history stays intact and you can restore it from the Archived section.',
           [
             { text: 'Cancel', style: 'cancel' },
             { text: 'Archive', style: 'destructive', onPress: async () => { await archivePlan(plan.id); await loadData(); } },
           ],
         ),
+      });
+    }
+    peekRef.current?.open({ title: plan.name, items });
+  }
+
+  function handleArchivedPlanOptions(plan) {
+    const items = [
+      {
+        icon: 'eye-outline',
+        label: 'View plan',
+        onPress: () => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false }),
       },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+      {
+        icon: 'arrow-undo-outline',
+        label: 'Restore plan',
+        onPress: async () => { await unarchivePlan(plan.id); await loadData(); },
+      },
+    ];
+    peekRef.current?.open({ title: plan.name, items });
   }
 
   async function handleTemplateOptions(routine) {
@@ -247,13 +323,19 @@ export default function PlansScreen({ navigation }) {
   }
 
   async function handleStartTemplate(routine) {
-    const workout = await createWorkout(user.id, routine.id);
-    const withExercises = await getRoutineExercisesWithDetails(routine.id);
-    const initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
-      exercise, routineExercise, sets: [],
-    }));
-    startWorkout(workout, initialExercises);
-    navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
+    try {
+      const workout = await createWorkout(user.id, routine.id);
+      const withExercises = await getRoutineExercisesWithDetails(routine.id);
+      const initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
+        exercise, routineExercise, sets: [],
+        supersetGroupId: routineExercise?.supersetGroupId ?? null,
+      }));
+      startWorkout(workout, initialExercises);
+      navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
+    } catch (e) {
+      logError('PlansScreen.handleStartTemplate', e, { userId: user?.id, routineId: routine?.id });
+      Alert.alert('Couldn\'t start workout', e?.message ?? 'Please try again.');
+    }
   }
 
   function blockIconColor(action) {
@@ -262,35 +344,26 @@ export default function PlansScreen({ navigation }) {
     return colors.warning;
   }
 
-  function toggleScheduleDay(dayIndex) {
-    const next = scheduleDays.includes(dayIndex)
-      ? scheduleDays.filter(d => d !== dayIndex)
-      : [...scheduleDays, dayIndex].sort((a, b) => a - b);
-    setScheduleDays(next);
-    const payload = { activePlanId: activePlan?.id ?? null, days: next };
-    AsyncStorage.setItem(SCHEDULE_KEY, JSON.stringify(payload))
-      .then(() => scheduleTrainingReminders())
-      .catch(() => {});
-  }
-
   const showBlockCard = blockAdvice && activePlan &&
     blockAdvice.action !== 'continue' &&
-    (blockAdvice.action === 'heads_up' || !blockSnoozed);
+    !blockSnoozed;
 
   const isProWithPlan = tier === 'pro' && !!activePlan;
-  const actionCards = ACTION_CARDS_DEFAULT;
+  // Three audiences share this list:
+  //   * Pro with an active plan → "switch / re-run wizard" framing
+  //   * Pro with active plan → switch framings (update goals / library / manual)
+  //   * Pro without a plan (rare — just after first sign-up) → default order
+  //   * Free → default order (library first, manual second)
+  const actionCards = isProWithPlan ? ACTION_CARDS_PRO_SWITCH : ACTION_CARDS_DEFAULT;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView
         ref={scrollRef}
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
       >
-        <View style={styles.screenHeader}>
-          <Text style={styles.pageTitle}>Plans</Text>
-          <VolyumeMark size={38} color={colors.textMuted} />
-        </View>
+        <ScreenHeader title="Plans" />
 
         {/* Block advisor card */}
         {showBlockCard && (
@@ -345,7 +418,7 @@ export default function PlansScreen({ navigation }) {
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.blockNewBtn}
-                      onPress={() => navigation.navigate(tier === 'pro' ? 'CoachBuilder' : 'ProUpgrade')}
+                      onPress={() => navigation.navigate(tier === 'pro' ? 'ProGoalSetup' : 'ProUpgrade')}
                       activeOpacity={0.85}
                     >
                       <Text style={styles.blockNewBtnText}>{blockAdvice.nextBlock.secondaryLabel}</Text>
@@ -359,7 +432,7 @@ export default function PlansScreen({ navigation }) {
             {blockAdvice.action === 'early_deload' && (
               <View style={styles.blockCardActions}>
                 <TouchableOpacity style={styles.blockRestartBtn} onPress={handleSnoozeBlock} activeOpacity={0.85}>
-                  <Text style={styles.blockRestartBtnText}>Got it, I'll ease off</Text>
+                  <Text style={styles.blockRestartBtnText}>Got it, ease off this week</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.blockNewBtn} onPress={handleSnoozeBlock} activeOpacity={0.85}>
                   <Text style={styles.blockNewBtnText}>Keep going</Text>
@@ -375,6 +448,16 @@ export default function PlansScreen({ navigation }) {
                     ? 'Remind me after recovery week'
                     : 'Not quite ready. Remind me later.'}
                 </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Heads-up acknowledge: lets the user close the banner once
+                they've read it. Reuses the same 7-day snooze used by the
+                recovery states; the next weekly check-in (or fresh signals)
+                will surface the banner again if conditions still apply. */}
+            {blockAdvice.action === 'heads_up' && (
+              <TouchableOpacity onPress={handleSnoozeBlock} style={styles.blockSnooze}>
+                <Text style={styles.blockSnoozeText}>Got it</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -406,32 +489,8 @@ export default function PlansScreen({ navigation }) {
               )}
               {tier === 'pro' && (
                 <Text style={styles.proCoachNote}>
-                  Your Precision Coaching adjusts this plan as you progress and check in. To change your goals, head to You → Athlete Hub.
+                  Your Precision Coaching adjusts this plan as you progress and check in. Change your goals or switch to a different plan from the options below.
                 </Text>
-              )}
-              {/* Training days picker */}
-              <View style={styles.trainingDaysRow}>
-                {DAY_LABELS.map((label, index) => {
-                  const isOn = scheduleDays.includes(index);
-                  return (
-                    <TouchableOpacity
-                      key={index}
-                      style={[styles.dayChip, isOn && styles.dayChipOn]}
-                      onPress={() => toggleScheduleDay(index)}
-                      activeOpacity={0.75}
-                      accessibilityRole="checkbox"
-                      accessibilityState={{ checked: isOn }}
-                      accessibilityLabel={`${label} training day`}
-                    >
-                      <Text style={[styles.dayChipLabel, isOn && styles.dayChipLabelOn]}>
-                        {label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-              {scheduleDays.length === 0 && (
-                <Text style={styles.trainingDaysHint}>Tap to set your training days</Text>
               )}
               <View style={styles.activePlanActions}>
                 <TouchableOpacity style={styles.startNextBtn} onPress={() => handleStartNextWorkout(activePlan)}>
@@ -462,27 +521,100 @@ export default function PlansScreen({ navigation }) {
             <Text style={styles.sectionTitle}>My plans</Text>
             {myPlans.map(plan => (
               <View key={plan.id} style={styles.planCard}>
-                <TouchableOpacity
-                  style={styles.planCardMain}
+                <PressableCard
+                  style={styles.planCardBody}
                   onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
+                  onLongPress={() => handlePlanOptions(plan)}
+                  accessibilityLabel={plan.name}
                 >
+                  <View style={styles.planCardMetaRow}>
+                    {planWorkoutCounts[plan.id] ? (
+                      <Text style={styles.planCardMeta}>
+                        {planWorkoutCounts[plan.id]} workout{planWorkoutCounts[plan.id] !== 1 ? 's' : ''}
+                      </Text>
+                    ) : <View />}
+                    <TouchableOpacity
+                      style={styles.moreBtn}
+                      onPress={() => handlePlanOptions(plan)}
+                      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                    >
+                      <Ionicons name="ellipsis-vertical" size={18} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
                   <Text style={styles.planCardName} numberOfLines={2}>{plan.name}</Text>
-                  {planWorkoutCounts[plan.id] ? (
-                    <Text style={styles.planCardMeta}>
-                      {planWorkoutCounts[plan.id]} workout{planWorkoutCounts[plan.id] !== 1 ? 's' : ''}
-                    </Text>
-                  ) : null}
-                </TouchableOpacity>
-                <View style={styles.planCardActions}>
-                  <TouchableOpacity style={styles.setActiveBtn} onPress={() => handleSetActive(plan)}>
-                    <Text style={styles.setActiveBtnText}>Set Active</Text>
+                </PressableCard>
+                <View style={styles.planCardFooter}>
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text style={styles.planCardFooterGhost}>View plan</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={styles.moreBtn}
-                    onPress={() => handlePlanOptions(plan)}
-                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                    onPress={() => handleSetActive(plan)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Ionicons name="ellipsis-vertical" size={18} color={colors.textSecondary} />
+                    <Text style={styles.planCardFooterPrimary}>Set as active</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Archived Plans */}
+        {archivedPlans.length > 0 && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.archivedHeader}
+              onPress={() => setArchivedExpanded(v => !v)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.archivedHeaderText}>
+                Archived plans · {archivedPlans.length}
+              </Text>
+              <Ionicons
+                name={archivedExpanded ? 'chevron-up' : 'chevron-down'}
+                size={18}
+                color={colors.textSecondary}
+              />
+            </TouchableOpacity>
+            {archivedExpanded && archivedPlans.map(plan => (
+              <View key={plan.id} style={[styles.planCard, styles.archivedPlanCard]}>
+                <PressableCard
+                  style={styles.planCardBody}
+                  onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
+                  onLongPress={() => handleArchivedPlanOptions(plan)}
+                  accessibilityLabel={plan.name}
+                >
+                  <View style={styles.planCardMetaRow}>
+                    {planWorkoutCounts[plan.id] ? (
+                      <Text style={styles.planCardMeta}>
+                        {planWorkoutCounts[plan.id]} workout{planWorkoutCounts[plan.id] !== 1 ? 's' : ''}
+                      </Text>
+                    ) : <View />}
+                    <TouchableOpacity
+                      style={styles.moreBtn}
+                      onPress={() => handleArchivedPlanOptions(plan)}
+                      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                    >
+                      <Ionicons name="ellipsis-vertical" size={18} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={[styles.planCardName, styles.archivedPlanCardName]} numberOfLines={2}>{plan.name}</Text>
+                </PressableCard>
+                <View style={styles.planCardFooter}>
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text style={styles.planCardFooterGhost}>View plan</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={async () => { await unarchivePlan(plan.id); await loadData(); }}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text style={styles.planCardFooterPrimary}>Restore</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -537,77 +669,54 @@ export default function PlansScreen({ navigation }) {
           <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
         </TouchableOpacity>
 
-        {/* Pointer to Athlete Hub for Pro users — replaces the "Change your goals" rebuild card */}
-        {isProWithPlan && (
-          <TouchableOpacity
-            style={styles.goalsPointer}
-            onPress={() => navigation.getParent()?.navigate('ProfileTab', { screen: 'AthleteHub' })}
-            activeOpacity={0.75}
-          >
-            <Ionicons name="information-circle-outline" size={16} color={colors.textSecondary} />
-            <Text style={styles.goalsPointerText}>
-              Want to change your goals? Head to{' '}
-              <Text style={styles.goalsPointerLink}>You → Athlete Hub</Text>.
-            </Text>
-            <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
-          </TouchableOpacity>
-        )}
-
-        {/* Decision Hub — hidden for Pro users with an active plan; they manage goals from Athlete Hub */}
-        {!isProWithPlan && (
+        {/* Decision Hub — visible to everyone. Section title and copy adapt:
+            Pro with active plan → "Switch your plan", Free / no plan → "Start or build a plan". */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Start or build a plan</Text>
+          <Text style={styles.sectionTitle}>
+            {isProWithPlan ? 'Switch your plan' : 'Start or build a plan'}
+          </Text>
+          {isProWithPlan && (
+            <Text style={styles.sectionSubtitle}>
+              Your check-ins, PRs, and coach output keep working whichever plan you choose. Activating a new plan starts a fresh training block.
+            </Text>
+          )}
           {actionCards.map(card => {
-            const isCoach = card.id === 'coach';
-            const proLocked = isCoach && tier !== 'pro';
-            const featured = card.featured !== undefined ? card.featured : (Boolean(card.badge) || proLocked);
+            const featured = card.featured !== undefined ? card.featured : Boolean(card.badge);
             return (
-              <TouchableOpacity
+              <PressableCard
                 key={card.id}
                 style={[styles.actionCard, featured && styles.actionCardFeatured]}
-                onPress={() => navigation.navigate(proLocked ? 'ProUpgrade' : card.screen)}
-                activeOpacity={0.75}
+                onPress={() => navigation.navigate(card.screen)}
+                accessibilityLabel={card.title}
               >
                 <View style={[styles.actionCardIcon, featured && styles.actionCardIconFeatured]}>
-                  <Ionicons
-                    name={proLocked ? 'lock-closed' : card.icon}
-                    size={24}
-                    color={colors.primary}
-                  />
+                  <Ionicons name={card.icon} size={24} color={colors.primary} />
                 </View>
                 <View style={styles.actionCardBody}>
                   <View style={styles.actionCardTitleRow}>
                     <Text style={styles.actionCardTitle}>{card.title}</Text>
-                    {proLocked ? (
-                      <View style={styles.actionCardBadge}>
-                        <Text style={styles.actionCardBadgeText}>Pro</Text>
-                      </View>
-                    ) : card.badge ? (
+                    {card.badge ? (
                       <View style={styles.actionCardBadge}>
                         <Text style={styles.actionCardBadgeText}>{card.badge}</Text>
                       </View>
                     ) : null}
                   </View>
-                  <Text style={styles.actionCardDesc}>
-                    {proLocked
-                      ? 'An intelligent plan built around you. Part of Pro, free during beta.'
-                      : card.description}
-                  </Text>
+                  <Text style={styles.actionCardDesc}>{card.description}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={featured ? colors.primary : colors.textMuted} />
-              </TouchableOpacity>
+              </PressableCard>
             );
           })}
         </View>
-        )}
       </ScrollView>
+      <PeekMenu ref={peekRef} />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
+  content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
   screenHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -679,19 +788,33 @@ const styles = StyleSheet.create({
   viewPlanBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textSecondary },
 
   planCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    borderWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
   },
-  planCardMain: { flex: 1, gap: spacing.xs },
+  archivedPlanCard: { opacity: 0.7 },
+  archivedPlanCardName: { color: colors.textSecondary },
+  archivedHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
+  },
+  archivedHeaderText: {
+    fontSize: fontSize.sm, fontWeight: fontWeight.semibold,
+    color: colors.textSecondary, letterSpacing: 0.2,
+  },
+  planCardBody: { padding: spacing.lg, gap: spacing.sm },
+  planCardMetaRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+  },
   planCardName: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
   planCardMeta: { fontSize: fontSize.xs, color: colors.textSecondary },
-  planCardActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  setActiveBtn: {
-    backgroundColor: colors.surface2, borderRadius: radius.md, paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm, borderWidth: 1, borderColor: colors.border,
+  planCardFooter: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    borderTopWidth: 1, borderTopColor: colors.border,
   },
-  setActiveBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
-  moreBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  planCardFooterGhost: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary },
+  planCardFooterPrimary: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
+  moreBtn: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
 
   templateCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
@@ -734,6 +857,19 @@ const styles = StyleSheet.create({
   actionCardIconFeatured: {
     backgroundColor: colors.surface,
     borderColor: colors.primary + '40',
+  },
+  // Pro-locked variant — matches AthleteHub's lockedCard so gating
+  // reads the same across the app.
+  actionCardLocked: { opacity: 0.6 },
+  actionCardTitleLocked: { color: colors.textSecondary },
+  lockBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: colors.surface2, borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm, paddingVertical: 3,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  lockBadgeText: {
+    fontSize: 10, fontWeight: fontWeight.semibold, color: colors.textMuted,
   },
 
   // Block advisor card
@@ -832,8 +968,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   dayChip: {
-    width: 32,
-    height: 32,
+    width: 44,
+    height: 44,
     borderRadius: radius.full,
     backgroundColor: colors.surface2,
     alignItems: 'center',

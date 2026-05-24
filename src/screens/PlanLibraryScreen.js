@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput,
   Alert, RefreshControl, Modal, Pressable,
@@ -9,6 +9,7 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { getLibraryPlans, getPlanWorkoutCounts, copyPlanFromLibrary, activatePlanWithBlock } from '../lib/database';
+import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import useAppStore from '../store/useAppStore';
 
@@ -89,15 +90,6 @@ const QUIZ_STEPS = [
     ],
   },
   {
-    key: 'days',
-    question: 'How many days per week can you train?',
-    options: [
-      { key: '2_3', label: '2 to 3 days', icon: 'calendar-outline' },
-      { key: '4',   label: '4 days',      icon: 'calendar-outline' },
-      { key: '5_6', label: '5 or 6 days', icon: 'calendar-outline' },
-    ],
-  },
-  {
     key: 'equipment',
     question: 'What equipment do you have access to?',
     options: [
@@ -127,7 +119,7 @@ function matchesCollection(plan, key) {
 }
 
 function getQuizRecommendation(answers, plans) {
-  const { goal, days, equipment } = answers;
+  const { goal, equipment } = answers;
   if (!plans.length) return null;
 
   const scored = plans.map(p => {
@@ -137,9 +129,6 @@ function getQuizRecommendation(answers, plans) {
     if (goal === 'get_stronger'  && hasTag(p, 'goal:get_stronger'))  score += 3;
     if (goal === 'conditioning'  && hasTag(p, 'goal:conditioning'))  score += 3;
     if (goal === 'stage_prep'    && hasTag(p, 'category:division'))  score += 5;
-    if (days === '2_3' && (hasTag(p, 'days:2') || hasTag(p, 'days:3'))) score += 2;
-    if (days === '4'   && hasTag(p, 'days:4')) score += 2;
-    if (days === '5_6' && (hasTag(p, 'days:5') || hasTag(p, 'days:6'))) score += 2;
     if (equipment === 'full_gym'   && !hasTag(p, 'equipment:dumbbell') && !hasTag(p, 'equipment:bodyweight')) score += 1;
     if (equipment === 'dumbbell'   && hasTag(p, 'equipment:dumbbell'))  score += 4;
     if (equipment === 'bodyweight' && hasTag(p, 'equipment:bodyweight')) score += 4;
@@ -243,6 +232,13 @@ export default function PlanLibraryScreen({ navigation, route }) {
     useCallback(() => { loadData(); }, []),
   );
 
+  // Re-load when user.id becomes available — handles the case where the user
+  // reaches this screen (e.g. via "fromFirstRun") before initLocalUser has
+  // finished, so seedRoutinesIfNeeded was skipped on first mount.
+  useEffect(() => {
+    if (user?.id) loadData();
+  }, [user?.id]);
+
   async function loadData() {
     try {
       if (user?.id) await seedRoutinesIfNeeded(user.id);
@@ -259,6 +255,10 @@ export default function PlanLibraryScreen({ navigation, route }) {
   }
 
   async function handleAddToMyPlans(plan) {
+    if (!user?.id) {
+      Alert.alert('One moment', 'Setting up your profile. Please try again in a second.');
+      return;
+    }
     Alert.alert(
       'Add to my plans',
       `Copy "${plan.name}" into your plans?`,
@@ -269,6 +269,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
           onPress: async () => {
             try {
               const copy = await copyPlanFromLibrary(plan.id, user.id);
+              if (!copy?.id) throw new Error('Copy failed.');
               Alert.alert(
                 'Added to my plans',
                 fromFirstRun
@@ -283,6 +284,12 @@ export default function PlanLibraryScreen({ navigation, route }) {
                   {
                     text: fromFirstRun ? 'Start training' : 'Set active',
                     onPress: async () => {
+                      // Skip the mid-block confirm during first-run — there's
+                      // no prior block to disrupt (this IS their first plan).
+                      if (!fromFirstRun) {
+                        const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: plan.name });
+                        if (!ok) { navigation.goBack(); return; }
+                      }
                       await activatePlanWithBlock(user.id, copy.id, plan.name);
                       if (fromFirstRun) navigation.navigate('ProSetupComplete');
                       else navigation.goBack();

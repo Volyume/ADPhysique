@@ -105,7 +105,17 @@ export async function importBackup() {
   if (parsed?.format !== BACKUP_FORMAT || !parsed?.sqlite) {
     throw new Error('That file is not a Volyume backup.');
   }
-  if (parsed.formatVersion > BACKUP_FORMAT_VERSION) {
+  // formatVersion must be present AND in the supported range. Missing or
+  // undefined fails the previous `>` check silently (undefined > 1 is
+  // false), so v0 / pre-version backups would be applied to current tables
+  // with potentially incompatible row shapes.
+  const fv = parsed.formatVersion;
+  if (typeof fv !== 'number' || fv < 1) {
+    throw new Error(
+      'This backup is missing a version marker. It may be from a pre-release build; export a fresh backup from this version of the app.',
+    );
+  }
+  if (fv > BACKUP_FORMAT_VERSION) {
     throw new Error(
       'This backup was made by a newer version of Volyume. Update the app, then import again.',
     );

@@ -25,6 +25,7 @@ import {
   REMINDER_PREF_KEY,
   REMINDER_TIME_KEY,
 } from '../lib/trainingReminders';
+import useAppStore from '../store/useAppStore';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 
@@ -44,13 +45,47 @@ function formatDayHour(dayIndex, hour) {
   return `${DAYS[dayIndex]} at ${formatHour(hour)}`;
 }
 
+// Compute the actual next-fire Date for the check-in reminder honouring the
+// minimum-gap rule from the last check-in. Mirrors the runtime logic in
+// notifications.js so the preview text matches what the reminder will do.
+function computeNextCheckinFireDate(weekday, hour, minute, lastCheckinMs, minGapDays = 7) {
+  const after = new Date();
+  const target = new Date(after);
+  const currentDow = target.getDay();
+  let daysUntil = (weekday - currentDow + 7) % 7;
+  target.setHours(hour, minute, 0, 0);
+  if (daysUntil === 0 && target.getTime() <= after.getTime()) daysUntil = 7;
+  target.setDate(target.getDate() + daysUntil);
+  if (lastCheckinMs > 0 && minGapDays > 0) {
+    const earliest = lastCheckinMs + minGapDays * 24 * 60 * 60 * 1000;
+    while (target.getTime() < earliest) target.setDate(target.getDate() + 7);
+  }
+  return target;
+}
+
+// "Sunday 25 May at 12:00"
+function formatNextFire(date) {
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const h = date.getHours();
+  const m = date.getMinutes().toString().padStart(2, '0');
+  return `${dayNames[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]} at ${formatHour(h)}${m === '00' ? '' : ':' + m}`;
+}
+
 async function applyNotifications(prefs, permissionStatus) {
   await cancelAllNotifications();
   if (prefs.morningEnabled && permissionStatus === 'granted') {
     await scheduleMorningWeightNotification(prefs.morningHour, prefs.morningMinute);
   }
   if (prefs.checkinEnabled && permissionStatus === 'granted') {
-    await scheduleCheckinReminder(prefs.checkinDay, prefs.checkinHour, prefs.checkinMinute);
+    // Pass the last-check-in timestamp + a 7-day minimum gap so that
+    // switching check-in day mid-cycle doesn't reschedule the reminder
+    // to fire only 2-3 days after the last check-in (the coach needs a
+    // full week of data for a meaningful trend read).
+    await scheduleCheckinReminder(
+      prefs.checkinDay, prefs.checkinHour, prefs.checkinMinute,
+      { lastCheckinMs: prefs.lastCheckinMs ?? 0, minGapDays: 7 },
+    );
   }
   await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(prefs));
 }
@@ -114,6 +149,12 @@ function DayChips({ selected, onSelect, disabled }) {
 }
 
 export default function NotificationSettingsScreen({ navigation }) {
+  // Morning weight + weekly check-in reminders are Pro coaching inputs;
+  // they drive the weekly Precision Coaching loop. Training reminders are
+  // a general utility (any user benefits from "remember to train") so they
+  // stay visible to Free users too.
+  const tier = useAppStore(s => s.tier);
+  const isPro = tier === 'pro';
   const [morningEnabled, setMorningEnabled] = useState(false);
   const [morningHour, setMorningHour] = useState(7);
   const [morningMinute, setMorningMinute] = useState(0);
@@ -121,6 +162,10 @@ export default function NotificationSettingsScreen({ navigation }) {
   const [checkinDay, setCheckinDay] = useState(0);
   const [checkinHour, setCheckinHour] = useState(18);
   const [checkinMinute, setCheckinMinute] = useState(0);
+  // Last check-in timestamp in ms — used to enforce the 7-day minimum gap
+  // when the user switches their check-in day, so the next reminder
+  // doesn't fire only 2-3 days after the previous check-in.
+  const [lastCheckinMs, setLastCheckinMs] = useState(0);
   const [trainingEnabled, setTrainingEnabled] = useState(false);
   const [trainingHour, setTrainingHour] = useState(8);
   const [trainingMinute, setTrainingMinute] = useState(0);
@@ -153,6 +198,21 @@ export default function NotificationSettingsScreen({ navigation }) {
         if (trainingEnabledRaw !== null) setTrainingEnabled(trainingEnabledRaw === 'true');
       } catch (_) {}
 
+      // Load the user's last check-in so we can enforce the 7-day minimum
+      // gap when they change their check-in day, and so the UI can show
+      // an honest "next reminder fires on …" preview.
+      try {
+        // eslint-disable-next-line global-require
+        const { getLatestCheckin } = require('../lib/database');
+        // eslint-disable-next-line global-require
+        const { default: store } = require('../store/useAppStore');
+        const userId = store.getState().user?.id;
+        if (userId) {
+          const latest = await getLatestCheckin(userId);
+          if (latest?.weekStart) setLastCheckinMs(latest.weekStart);
+        }
+      } catch (_) {}
+
       try {
         const trainingTimeRaw = await AsyncStorage.getItem(REMINDER_TIME_KEY);
         if (trainingTimeRaw) {
@@ -170,6 +230,14 @@ export default function NotificationSettingsScreen({ navigation }) {
       }
     }
     init();
+  }, []);
+
+  // Clear any pending debounce / saved-flag timers on unmount so they
+  // don't fire setSaved/setSaving on an unmounted component (React warning
+  // and potential leak if the user backed out mid-save).
+  useEffect(() => () => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    if (savedTimer.current) clearTimeout(savedTimer.current);
   }, []);
 
   function scheduleApply(nextPrefs) {
@@ -204,6 +272,7 @@ export default function NotificationSettingsScreen({ navigation }) {
       checkinDay: cd,
       checkinHour: ch,
       checkinMinute: cmin,
+      lastCheckinMs,
     };
   }
 
@@ -289,23 +358,13 @@ export default function NotificationSettingsScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation?.goBack()}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <View style={styles.headerText}>
-          <Text style={styles.title}>Notifications</Text>
-          <Text style={styles.subtitle}>
-            Volyume uses local notifications only. No marketing, ever.
-          </Text>
-        </View>
+      {/* Subtitle only — the stack header (set in RootNavigator with
+          options={{ title: 'Notifications' }}) already shows the back
+          arrow + title at the top of the screen. */}
+      <View style={styles.subtitleWrap}>
+        <Text style={styles.subtitle}>
+          Volyume uses local notifications only. No marketing, ever.
+        </Text>
       </View>
 
       <ScrollView
@@ -322,107 +381,34 @@ export default function NotificationSettingsScreen({ navigation }) {
           </View>
         )}
 
-        {/* Section 1 — Morning weight reminder */}
-        <Text style={styles.sectionLabel}>Morning weight reminder</Text>
-        <View style={styles.card}>
-          {/* Toggle row */}
-          <View style={styles.toggleRow}>
-            <View style={styles.toggleIconWrap}>
-              <Ionicons name="scale-outline" size={18} color={colors.primary} />
-            </View>
-            <Text style={styles.toggleLabel}>Morning weight reminder</Text>
-            <Switch
-              value={morningEnabled}
-              onValueChange={handleMorningToggle}
-              trackColor={{ false: colors.surface2, true: colors.primaryDim }}
-              thumbColor={colors.primary}
-              ios_backgroundColor={colors.surface2}
-              accessibilityLabel="Morning weight reminder toggle"
-            />
-          </View>
-
-          {/* Expanded controls */}
-          {morningEnabled && (
-            <View style={styles.expandedSection}>
-              <View style={styles.divider} />
-              <Text style={styles.pickerLabel}>Hour</Text>
-              <View style={[styles.chipContainer, !morningEnabled && styles.chipContainerDisabled]}>
-                <HourChips
-                  hours={HOURS}
-                  selected={morningHour}
-                  onSelect={handleMorningHour}
-                  disabled={!morningEnabled}
-                />
-              </View>
-              <Text style={styles.scheduleText}>
-                Notification at {formatHour(morningHour)}
-              </Text>
-            </View>
-          )}
-
-          {/* Helper text */}
-          <View style={styles.helperRow}>
-            <Text style={styles.helperText}>
-              Body weight shifts naturally each day due to fluid, food, and hormones. Logging every other day (at minimum) gives your coaching enough readings to smooth out that noise and see what's actually changing. Three or more readings per week unlocks the weekly check-in.
-            </Text>
-          </View>
-        </View>
-
-        {/* Section 2 — Weekly check-in reminder */}
-        <Text style={styles.sectionLabel}>Weekly check-in reminder</Text>
-        <View style={styles.card}>
-          {/* Toggle row */}
-          <View style={styles.toggleRow}>
+        {/* Morning weight + weekly check-in reminders moved to a dedicated
+            Pro screen (Settings → Coaching reminders). The toggles here
+            were misleading. Those reminders are non-optional inputs to
+            Precision Coaching, so flipping them off broke the coaching
+            loop. CoachingRemindersScreen exposes the day + hour pickers
+            without toggles; both reminders are always scheduled for Pro
+            users. This screen now only handles training reminders. */}
+        {isPro && (
+          <TouchableOpacity
+            style={styles.crossLink}
+            onPress={() => navigation.navigate('CoachingReminders')}
+            activeOpacity={0.85}
+          >
             <View style={styles.toggleIconWrap}>
               <Ionicons name="pulse-outline" size={18} color={colors.primary} />
             </View>
-            <Text style={styles.toggleLabel}>Weekly check-in reminder</Text>
-            <Switch
-              value={checkinEnabled}
-              onValueChange={handleCheckinToggle}
-              trackColor={{ false: colors.surface2, true: colors.primaryDim }}
-              thumbColor={colors.primary}
-              ios_backgroundColor={colors.surface2}
-              accessibilityLabel="Weekly check-in reminder toggle"
-            />
-          </View>
-
-          {/* Expanded controls */}
-          {checkinEnabled && (
-            <View style={styles.expandedSection}>
-              <View style={styles.divider} />
-              <Text style={styles.pickerLabel}>Day</Text>
-              <View style={[styles.chipContainer, !checkinEnabled && styles.chipContainerDisabled]}>
-                <DayChips
-                  selected={checkinDay}
-                  onSelect={handleCheckinDay}
-                  disabled={!checkinEnabled}
-                />
-              </View>
-              <Text style={styles.pickerLabel}>Hour</Text>
-              <View style={[styles.chipContainer, !checkinEnabled && styles.chipContainerDisabled]}>
-                <HourChips
-                  hours={EVENING_HOURS}
-                  selected={checkinHour}
-                  onSelect={handleCheckinHour}
-                  disabled={!checkinEnabled}
-                />
-              </View>
-              <Text style={styles.scheduleText}>
-                Reminder every {formatDayHour(checkinDay, checkinHour)}
+            <View style={{ flex: 1 }}>
+              <Text style={styles.crossLinkTitle}>Coaching reminders</Text>
+              <Text style={styles.crossLinkSub}>
+                Morning weight + weekly check-in schedule. Always on for Pro.
               </Text>
             </View>
-          )}
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </TouchableOpacity>
+        )}
 
-          {/* Helper text */}
-          <View style={styles.helperRow}>
-            <Text style={styles.helperText}>
-              Reminds you to complete your weekly coaching check-in.
-            </Text>
-          </View>
-        </View>
 
-        {/* Section 3 — Training reminders */}
+        {/* Section 3 — Training reminders (available to all tiers) */}
         <Text style={styles.sectionLabel}>Training reminders</Text>
         <View style={styles.card}>
           {/* Toggle row */}
@@ -430,7 +416,7 @@ export default function NotificationSettingsScreen({ navigation }) {
             <View style={styles.toggleIconWrap}>
               <Ionicons name="barbell-outline" size={18} color={colors.primary} />
             </View>
-            <Text style={styles.toggleLabel}>Remind me on training days</Text>
+            <Text style={styles.toggleLabel}>Remind me to train</Text>
             <Switch
               value={trainingEnabled}
               onValueChange={handleTrainingToggle}
@@ -463,7 +449,7 @@ export default function NotificationSettingsScreen({ navigation }) {
           {/* Helper text */}
           <View style={styles.helperRow}>
             <Text style={styles.helperText}>
-              Reminders are based on the training days set in your active plan.
+              Pick a time and the days you want the nudge. Plans don't have fixed weekdays in Volyume, so reminders fire on the days you choose.
             </Text>
           </View>
         </View>
@@ -513,6 +499,11 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.bold,
     color: colors.textPrimary,
     letterSpacing: -0.3,
+  },
+  subtitleWrap: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
   },
   subtitle: {
     fontSize: fontSize.sm,
@@ -660,6 +651,14 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     marginBottom: spacing.sm,
   },
+  scheduleSubText: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm,
+    lineHeight: 17,
+  },
 
   // Helper text
   helperRow: {
@@ -714,6 +713,28 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textAlign: 'center',
     marginTop: spacing.sm,
+  },
+  crossLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  crossLinkTitle: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+  },
+  crossLinkSub: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    marginTop: 2,
+    lineHeight: 16,
   },
   savedText: {
     fontSize: fontSize.xs,

@@ -3,6 +3,14 @@
 > Auto-generated reference. Last updated: 2026-05-18.
 > Branch: `claude/build-volyume-app-srY9C`
 
+> **⚠ Partially stale as of 2026-05-21.** Several screens listed below
+> have since been removed (CoachBuilderScreen, OnboardingQuizScreen) and
+> the auth / onboarding / Pro upgrade flows have been reworked. The
+> canonical current-state reference is now `INFRASTRUCTURE.md` at the
+> repo root. This file is kept for historical context and the screen
+> deep-dives that haven't changed; treat anything to do with plan
+> creation flow or first-run paths as historical, not current.
+
 ---
 
 ## Navigation Tree

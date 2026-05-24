@@ -1,0 +1,204 @@
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { Canvas, Path, Skia } from '@shopify/react-native-skia';
+import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
+
+const KCAL_SIZE = 132;
+const KCAL_STROKE = 14;
+const MACRO_SIZE = 44;
+const MACRO_STROKE = 5;
+
+const MACRO_TINTS = {
+  protein: colors.primary,
+  carbs:   '#7AB7FF',
+  fat:     '#F2A65A',
+};
+
+function arcPath(cx, cy, r, startDeg, sweepDeg) {
+  const p = Skia.Path.Make();
+  const start = (startDeg * Math.PI) / 180;
+  const end = ((startDeg + sweepDeg) * Math.PI) / 180;
+  p.moveTo(cx + r * Math.cos(start), cy + r * Math.sin(start));
+  const STEPS = 64;
+  for (let i = 1; i <= STEPS; i++) {
+    const t = start + ((end - start) * i) / STEPS;
+    p.lineTo(cx + r * Math.cos(t), cy + r * Math.sin(t));
+  }
+  return p;
+}
+
+function Ring({ size, stroke, progress, tint, track }) {
+  const r = (size - stroke) / 2;
+  const cx = size / 2;
+  const cy = size / 2;
+  const trackPath = useMemo(() => arcPath(cx, cy, r, 0, 360), [cx, cy, r]);
+  const sweep = Math.max(0, Math.min(1, progress)) * 360;
+  const fillPath = useMemo(() => arcPath(cx, cy, r, -90, sweep), [cx, cy, r, sweep]);
+  return (
+    <Canvas style={{ width: size, height: size }}>
+      <Path
+        path={trackPath}
+        color={track}
+        style="stroke"
+        strokeWidth={stroke}
+        strokeCap="round"
+      />
+      {sweep > 0 && (
+        <Path
+          path={fillPath}
+          color={tint}
+          style="stroke"
+          strokeWidth={stroke}
+          strokeCap="round"
+        />
+      )}
+    </Canvas>
+  );
+}
+
+function MacroChip({ label, value, target, tint }) {
+  const progress = target && target > 0 ? value / target : 0;
+  const over = target && value > target;
+  return (
+    <View style={styles.macroChip}>
+      <View style={styles.macroRingWrap}>
+        <Ring
+          size={MACRO_SIZE}
+          stroke={MACRO_STROKE}
+          progress={progress}
+          tint={over ? colors.warning : tint}
+          track={colors.surface2}
+        />
+      </View>
+      <View style={styles.macroChipText}>
+        <Text style={styles.macroChipLabel}>{label}</Text>
+        <Text style={[styles.macroChipValue, over && { color: colors.warning }]}>
+          {value}{target != null ? `/${target}` : ''}g
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+export default function MacroRings({ rollup, targets }) {
+  const kcal = Math.round(rollup?.kcal_total ?? 0);
+  const p = Math.round(rollup?.protein_g ?? 0);
+  const c = Math.round(rollup?.carbs_g ?? 0);
+  const f = Math.round(rollup?.fat_g ?? 0);
+  const kcalTarget = targets?.targetKcal ?? null;
+  const pTarget = targets?.proteinG ?? null;
+  const cTarget = targets?.carbsG ?? null;
+  const fTarget = targets?.fatG ?? null;
+  const kcalProgress = kcalTarget && kcalTarget > 0 ? kcal / kcalTarget : 0;
+  const kcalRemaining = kcalTarget != null ? kcalTarget - kcal : null;
+  const kcalOver = kcalRemaining != null && kcalRemaining < 0;
+
+  return (
+    <View style={styles.card}>
+      <View style={styles.kcalRow}>
+        <View style={styles.kcalRingWrap}>
+          <Ring
+            size={KCAL_SIZE}
+            stroke={KCAL_STROKE}
+            progress={kcalProgress}
+            tint={kcalOver ? colors.warning : colors.primary}
+            track={colors.surface2}
+          />
+          <View style={styles.kcalCentre} pointerEvents="none">
+            <Text style={styles.kcalValue}>{kcal}</Text>
+            {kcalTarget != null ? (
+              <Text style={styles.kcalSubLabel}>of {kcalTarget}</Text>
+            ) : (
+              <Text style={styles.kcalSubLabel}>kcal</Text>
+            )}
+          </View>
+        </View>
+        {kcalRemaining != null ? (
+          <View style={styles.kcalRemainingWrap}>
+            <Text style={[
+              styles.kcalRemainingValue,
+              kcalOver && { color: colors.warning },
+            ]}>
+              {kcalOver ? Math.abs(kcalRemaining) : kcalRemaining}
+            </Text>
+            <Text style={styles.kcalRemainingLabel}>
+              {kcalOver ? 'over' : 'remaining'}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+      <View style={styles.macroRow}>
+        <MacroChip label="Protein" value={p} target={pTarget} tint={MACRO_TINTS.protein} />
+        <MacroChip label="Carbs"   value={c} target={cTarget} tint={MACRO_TINTS.carbs} />
+        <MacroChip label="Fat"     value={f} target={fTarget} tint={MACRO_TINTS.fat} />
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.border,
+    padding: spacing.lg,
+    gap: spacing.lg,
+  },
+  kcalRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+  },
+  kcalRingWrap: {
+    width: KCAL_SIZE, height: KCAL_SIZE,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  kcalCentre: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  kcalValue: {
+    color: colors.textPrimary,
+    fontSize: 34,
+    fontWeight: fontWeight.bold,
+    lineHeight: 36,
+  },
+  kcalSubLabel: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    marginTop: 2,
+  },
+  kcalRemainingWrap: {
+    alignItems: 'flex-end',
+  },
+  kcalRemainingValue: {
+    color: colors.textPrimary,
+    fontSize: fontSize.xxl,
+    fontWeight: fontWeight.bold,
+  },
+  kcalRemainingLabel: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    marginTop: 2,
+  },
+  macroRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  macroChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  macroRingWrap: { width: MACRO_SIZE, height: MACRO_SIZE },
+  macroChipText: { flex: 1 },
+  macroChipLabel: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.medium,
+  },
+  macroChipValue: {
+    color: colors.textPrimary,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+  },
+});

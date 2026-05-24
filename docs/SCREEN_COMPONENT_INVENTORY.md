@@ -2,6 +2,33 @@
 
 _Last updated: 2026-05-16. Covers build as of branch `claude/build-volyume-app-srY9C`._
 
+> **Note (2026-05-24, audit pass):** this inventory is stale relative
+> to the shipped app. The Volyume Complete + Move #1.5 + identity
+> work added a Diary tab and a stack of food/coaching/onboarding
+> screens that aren't catalogued below:
+>
+> Food + coaching: `DiaryScreen`, `FoodSearchScreen`,
+> `FoodInsightsScreen`, `AddCustomFoodScreen`, `AthleteHubScreen`,
+> `PlansScreen`, `CoachOutputScreen`, `CoachReviewScreen`,
+> `CoachHeldHistoryScreen`, `NutritionTargetsScreen`,
+> `WellbeingCheckScreen`.
+>
+> Onboarding + consent: `Article9ConsentScreen` (Move #2 deferral,
+> Article 9 health-data consent), `GoalLockConsentScreen` (Move #2),
+> `FoodLayerIntroScreen` (Move #1, onboarding screen 10),
+> `ProGoalSetupScreen`, `GoalChangeSummaryScreen`,
+> `ProOnboardingScreen`, `ProSetupCompleteScreen`, `ProUpgradeScreen`.
+>
+> Move #1.5 barcode + OCR: `ScanBarcodeScreen`, `ScanLabelScreen`.
+>
+> Plus assorted nav helpers. New components also missing:
+> `MacroRings`, `FoodDetailSheet`, `BodyDiagramHeatmap`,
+> `FatigueTrendCard`, `PeekMenu`, `FeedbackSheet`, `WhatsNewSheet`,
+> `InfoTooltip`, `ProBadge`, `ProGate`. Background to refresh:
+> each screen's route name + purpose + data dependencies +
+> last-changed commit. Out of scope for the 2026-05-24 doc-update
+> pass; queue a full inventory refresh before launch.
+
 Each entry follows this template:
 
 ```

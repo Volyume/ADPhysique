@@ -97,17 +97,28 @@ export default function OnboardingScreen({ navigation, route }) {
   });
   const [loading, setLoading] = useState(false);
 
-  const currentStep = STEPS[step];
+  // Clamp to the last step. Without this guard, two rapid taps on
+  // Next while `step === STEPS.length - 1` both pass the `step <
+  // STEPS.length - 1` check (the closure's `step` is stale), both
+  // call setStep(s => s + 1), step lands at STEPS.length, and the
+  // render below crashes with "Cannot read properties of undefined
+  // (reading 'title')".
+  const currentStep = STEPS[step] ?? STEPS[STEPS.length - 1];
 
   function selectOption(value) {
     setSelections(prev => ({ ...prev, [currentStep.field]: value }));
   }
 
   async function handleNext() {
-    if (step < STEPS.length - 1) {
-      setStep(s => s + 1);
-      return;
-    }
+    // Guard against rapid double-taps. The closure's `step` can be
+    // stale between two onPress fires, so we re-check inside the
+    // setter to keep the advance safe.
+    let advanced = false;
+    setStep(s => {
+      if (s < STEPS.length - 1) { advanced = true; return s + 1; }
+      return s;
+    });
+    if (advanced) return;
     if (!user) {
       Alert.alert('Error', 'User not found. Please sign in again.');
       return;
@@ -121,7 +132,18 @@ export default function OnboardingScreen({ navigation, route }) {
         primaryEquipment: selections.primary_equipment,
         units: selections.units,
       };
-      await saveLocalProfile(user.id, profileData);
+      try {
+        await saveLocalProfile(user.id, profileData);
+      } catch (e) {
+        // eslint-disable-next-line global-require
+        try { require('../lib/errorLog').logError('OnboardingScreen.saveLocalProfile', e, { userId: user.id }); } catch (_) {}
+        Alert.alert(
+          'Couldn\'t save your setup',
+          'Something went wrong saving your preferences. Tap Continue to try again.',
+        );
+        setLoading(false);
+        return;
+      }
       // Also write to SQLite body profile (physical attributes) and Supabase for cloud users
       await saveUserBodyProfile(user.id, { trainingAgeYears: selections.training_age }).catch(() => {});
       if (!user?.isLocal) {

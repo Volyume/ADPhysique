@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
+import PressableCard from './PressableCard';
 
 export default function ExerciseCard({ exercise, onPress, onAdd, onLongPress, lastLogged, units = 'kg', showAddButton = true }) {
   const primaryMuscle = MUSCLE_DISPLAY_NAMES[(exercise.primaryMuscle || exercise.primary_muscle || '').toLowerCase()]
@@ -12,7 +13,7 @@ export default function ExerciseCard({ exercise, onPress, onAdd, onLongPress, la
   const sfr = exercise.stimulusToFatigueRatio || exercise.stimulus_to_fatigue_ratio || 3;
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} onLongPress={onLongPress} activeOpacity={0.7}>
+    <PressableCard style={styles.card} onPress={onPress} onLongPress={onLongPress} accessibilityLabel={exercise.name}>
       <View style={styles.content}>
         <View style={styles.info}>
           <Text style={styles.name} numberOfLines={1}>{exercise.name}</Text>
@@ -51,7 +52,7 @@ export default function ExerciseCard({ exercise, onPress, onAdd, onLongPress, la
           <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
         </View>
       </View>
-    </TouchableOpacity>
+    </PressableCard>
   );
 }
 

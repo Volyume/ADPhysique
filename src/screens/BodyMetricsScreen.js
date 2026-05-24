@@ -5,13 +5,33 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO } from 'date-fns';
+
+// date-fns format() throws "Invalid time value" if given an Invalid Date.
+// Body-metric rows pulled from older cloud snapshots occasionally have a
+// missing or malformed metric_date, which used to take the whole screen
+// down. Guard at the call site rather than letting one bad row crash a
+// histogram of 30 good ones.
+function safeFormatDate(value, fmt) {
+  try {
+    if (!value) return '';
+    const d = typeof value === 'string' ? parseISO(value) : new Date(value);
+    if (!d || isNaN(d.getTime())) return '';
+    return format(d, fmt);
+  } catch (_) {
+    return '';
+  }
+}
 import { useFocusEffect } from '@react-navigation/native';
 import { LineChart } from 'react-native-gifted-charts';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logBodyMetric, getBodyMetricLog } from '../lib/database';
+import { getRecentIntakeSummary } from '../lib/food/db';
+import { EmptyBodyIllustration } from '../components/Illustrations';
+import { syncBodyMetric } from '../lib/sync';
 import { computeEWMA, computeWeeklyWeightChange } from '../lib/nutritionEngine';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { formatBodyWeight, formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg } from '../lib/units';
 import { getWellbeingMode, isCalm, WELLBEING_HELPLINE } from '../lib/wellbeing';
 
@@ -127,7 +147,7 @@ function WeightTrendChart({ entries, units, bodyWeightUnits }) {
   const data = withWeight.map((e, i) => ({
     value: e.body_weight,
     label: i === 0 || i === withWeight.length - 1
-      ? format(parseISO(e.metric_date), 'MMM d')
+      ? safeFormatDate(e.metric_date, 'MMM d')
       : '',
   }));
 
@@ -193,7 +213,7 @@ function MeasurementTrendChart({ entries, measureKey, label }) {
   const data = withData.map((e, i) => ({
     value: e[measureKey],
     label: i === 0 || i === withData.length - 1
-      ? format(parseISO(e.metric_date), 'MMM d')
+      ? safeFormatDate(e.metric_date, 'MMM d')
       : '',
   }));
 
@@ -260,13 +280,25 @@ function PhysiqueOptIn({ onEnable }) {
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function BodyMetricsScreen({ navigation }) {
-  const { user, units, bodyWeightUnits, tier } = useAppStore();
+  const { user, session, units, bodyWeightUnits, tier, userProfile } = useAppStore(useShallow(s => ({
+    user: s.user,
+    session: s.session,
+    units: s.units,
+    bodyWeightUnits: s.bodyWeightUnits,
+    tier: s.tier,
+    userProfile: s.userProfile,
+  })));
+  // Onboarding weight — surfaced in the empty state so a user who just
+  // completed Pro onboarding doesn't see a misleading "No entries yet"
+  // when they did, in fact, give us a starting bodyweight.
+  const onboardingWeightKg = userProfile?.weightKg ?? userProfile?.bodyWeightKg ?? null;
   const bwu = bodyWeightUnits || 'st';
   const [physiqueEnabled, setPhysiqueEnabled] = useState(null); // null = loading
   const [calm, setCalm] = useState(false);
   const [sessionConfirmed, setSessionConfirmed] = useState(bodyMetricsSessionConfirmed);
   const [history, setHistory] = useState([]);
   const [nutritionTargets, setNutritionTargets] = useState(null);
+  const [recentIntake, setRecentIntake] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [showMeasurements, setShowMeasurements] = useState(false);
   const [form, setForm] = useState({
@@ -316,6 +348,7 @@ export default function BodyMetricsScreen({ navigation }) {
       await migrateFromAsyncStorage();
       await loadHistory();
       await loadNutritionTargets();
+      await loadRecentIntake();
     })();
   }, [physiqueEnabled, user?.id]);
 
@@ -326,25 +359,71 @@ export default function BodyMetricsScreen({ navigation }) {
       if (done === 'true') return;
       const raw = await AsyncStorage.getItem(STORAGE_KEY);
       const legacy = raw ? JSON.parse(raw) : [];
+      // Track per-row failures rather than letting one bad row abort
+      // the whole migration. Previously, a thrown logBodyMetric (e.g.
+      // a NaN value getting through) tripped the outer catch, MIGRATED_KEY
+      // was never written, and the loop reran the partial migration on
+      // every launch — potentially duplicating rows that did succeed.
+      let migrated = 0;
+      let failed = 0;
       for (const entry of legacy) {
-        const data = { notes: entry.notes || null };
-        const d = entry.metric_date ? new Date(entry.metric_date) : new Date();
-        data.loggedAt = isNaN(d.getTime()) ? Date.now() : d.getTime();
-        for (const [formKey, dbField] of Object.entries(FIELD_MAP)) {
-          if (entry[formKey] != null && entry[formKey] !== '') {
-            data[dbField] = parseFloat(entry[formKey]);
+        try {
+          const data = { notes: entry.notes || null };
+          const d = entry.metric_date ? new Date(entry.metric_date) : new Date();
+          data.loggedAt = isNaN(d.getTime()) ? Date.now() : d.getTime();
+          for (const [formKey, dbField] of Object.entries(FIELD_MAP)) {
+            if (entry[formKey] != null && entry[formKey] !== '') {
+              const num = parseFloat(entry[formKey]);
+              if (Number.isFinite(num)) data[dbField] = num;
+            }
           }
+          await logBodyMetric(user.id, data);
+          migrated++;
+        } catch (rowErr) {
+          failed++;
+          // eslint-disable-next-line global-require
+          try { require('../lib/errorLog').logWarn('BodyMetricsScreen.migrate', 'row failed', { error: rowErr?.message }); } catch (_) {}
         }
-        await logBodyMetric(user.id, data);
       }
-      await AsyncStorage.setItem(MIGRATED_KEY, 'true');
-    } catch (_e) {}
+      // Mark migrated only if we made some forward progress. If every
+      // single row failed we leave the flag unset so the user (or a
+      // future fix) can retry.
+      if (migrated > 0 || failed === 0) {
+        await AsyncStorage.setItem(MIGRATED_KEY, 'true');
+      }
+    } catch (e) {
+      // eslint-disable-next-line global-require
+      try { require('../lib/errorLog').logError('BodyMetricsScreen.migrateFromAsyncStorage', e, { userId: user?.id }); } catch (_) {}
+    }
   }
 
   async function loadHistory() {
     if (!user?.id) return;
     try {
-      const rows = await getBodyMetricLog(user.id, 50);
+      let rows = await getBodyMetricLog(user.id, 50);
+
+      // Auto-seed the first entry from the onboarding bodyweight so the
+      // screen isn't a blank slate on first visit. We only do this once
+      // (gated by a per-user AsyncStorage flag) so manually deleting all
+      // entries doesn't re-create them on next visit.
+      const SEED_KEY = `@volyume_body_metric_seeded_${user.id}`;
+      const onboardingKg = userProfile?.weightKg ?? userProfile?.bodyWeightKg ?? null;
+      if (rows.length === 0 && onboardingKg && onboardingKg > 0) {
+        const alreadySeeded = await AsyncStorage.getItem(SEED_KEY).catch(() => null);
+        if (!alreadySeeded) {
+          try {
+            await logBodyMetric(user.id, { weightKg: onboardingKg, notes: 'Starting weight (from onboarding)' });
+            await AsyncStorage.setItem(SEED_KEY, 'true').catch(() => {});
+            rows = await getBodyMetricLog(user.id, 50);
+            // eslint-disable-next-line global-require
+            try { require('../lib/errorLog').logInfo('BodyMetricsScreen.autoSeed', `seeded onboarding weight ${onboardingKg}kg`); } catch (_) {}
+          } catch (e) {
+            // eslint-disable-next-line global-require
+            try { require('../lib/errorLog').logWarn('BodyMetricsScreen.autoSeed', 'seed failed', { error: e?.message }); } catch (_) {}
+          }
+        }
+      }
+
       const entries = rows.map(rowToEntry);
       setHistory(entries);
       const sorted = [...entries].sort((a, b) => a.metric_date.localeCompare(b.metric_date));
@@ -365,6 +444,14 @@ export default function BodyMetricsScreen({ navigation }) {
       const raw = await AsyncStorage.getItem(NUTRITION_KEY);
       setNutritionTargets(raw ? JSON.parse(raw) : null);
     } catch (_e) { setNutritionTargets(null); }
+  }
+
+  async function loadRecentIntake() {
+    if (!user?.id) { setRecentIntake(null); return; }
+    try {
+      const summary = await getRecentIntakeSummary(user.id);
+      setRecentIntake(summary);
+    } catch (_e) { setRecentIntake(null); }
   }
 
   async function enablePhysique() {
@@ -399,7 +486,16 @@ export default function BodyMetricsScreen({ navigation }) {
           if (!isNaN(n)) data[dbField] = n;
         }
       }
-      await logBodyMetric(user.id, data);
+      // Optimistic UI: insert the new entry at the top of the history
+      // list immediately so the user sees it land in real time, rather
+      // than waiting for the SQLite write + a full reload. Same pattern
+      // as set logging in ActiveWorkoutScreen.
+      const optimisticEntry = {
+        id: `tmp-${Date.now()}`, // replaced when SQLite returns
+        loggedAt: Date.now(),
+        ...data,
+      };
+      setHistory(prev => [optimisticEntry, ...prev]);
       setShowForm(false);
       setForm({
         body_weight: '', body_weight_st: '', body_weight_st_lbs: '0',
@@ -407,7 +503,28 @@ export default function BodyMetricsScreen({ navigation }) {
         waist: '', hips: '', quads: '', hamstrings: '', calves: '',
         metric_date: format(new Date(), 'yyyy-MM-dd'), notes: '',
       });
-      await loadHistory();
+      // Background: persist to SQLite + cloud. On success, replace the
+      // optimistic entry with the real saved row. On failure, remove
+      // the optimistic entry and show a toast.
+      try {
+        const saved = await logBodyMetric(user.id, data);
+        if (session?.user?.id) {
+          syncBodyMetric(session.user.id, { id: saved?.id ?? saved, ...data }).catch(() => {});
+        }
+        // Reload to pick up the real id + any DB-computed fields (the
+        // optimistic entry was missing things like a properly formatted
+        // loggedAt). Cheap — same SQLite query as before.
+        await loadHistory();
+      } catch (e) {
+        setHistory(prev => prev.filter(h => h.id !== optimisticEntry.id));
+        try {
+          // eslint-disable-next-line global-require
+          require('../components/Toast'); // ensure module loaded
+        } catch (_) {}
+        // Surface the failure — body weight is important; user needs to
+        // know it didn't save so they can retry.
+        Alert.alert('Could not save', e?.message ?? 'Try again in a moment.');
+      }
     } finally {
       setSaving(false);
     }
@@ -469,55 +586,9 @@ export default function BodyMetricsScreen({ navigation }) {
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
 
-        {/* Nutrition Targets Card */}
-        <View style={styles.nutritionCard}>
-          <View style={styles.nutritionCardHeader}>
-            <View style={styles.nutritionCardLeft}>
-              <Ionicons name="nutrition-outline" size={18} color={colors.primary} />
-              <Text style={styles.nutritionCardTitle}>Nutrition Targets</Text>
-            </View>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('ProfileTab', { screen: 'NutritionTargets', initial: false })}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Text style={styles.nutritionCardLink}>
-                {nutritionTargets ? 'Edit' : 'Calculate'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-          {nutritionTargets ? (
-            <View style={styles.nutritionGrid}>
-              {nutritionTargets.targetKcal ? (
-                <View style={styles.nutritionCell}>
-                  <Text style={styles.nutritionValue}>{Math.round(nutritionTargets.targetKcal)}</Text>
-                  <Text style={styles.nutritionLabel}>kcal</Text>
-                </View>
-              ) : null}
-              {nutritionTargets.proteinG ? (
-                <View style={styles.nutritionCell}>
-                  <Text style={styles.nutritionValue}>{Math.round(nutritionTargets.proteinG)}g</Text>
-                  <Text style={styles.nutritionLabel}>Protein</Text>
-                </View>
-              ) : null}
-              {nutritionTargets.carbsG ? (
-                <View style={styles.nutritionCell}>
-                  <Text style={styles.nutritionValue}>{Math.round(nutritionTargets.carbsG)}g</Text>
-                  <Text style={styles.nutritionLabel}>Carbs</Text>
-                </View>
-              ) : null}
-              {nutritionTargets.fatG ? (
-                <View style={styles.nutritionCell}>
-                  <Text style={styles.nutritionValue}>{Math.round(nutritionTargets.fatG)}g</Text>
-                  <Text style={styles.nutritionLabel}>Fat</Text>
-                </View>
-              ) : null}
-            </View>
-          ) : (
-            <Text style={styles.nutritionEmpty}>
-              No targets set yet. Head to Profile to calculate your daily calorie and protein targets.
-            </Text>
-          )}
-        </View>
+        {/* Body Metrics is for body weight + measurements only. Nutrition
+            Targets have their own dedicated screen reachable from
+            Athlete Hub → Nutrition targets and Settings → Nutrition. */}
 
         {/* Weight trend + snapshot */}
         {history.length > 0 ? (
@@ -525,7 +596,7 @@ export default function BodyMetricsScreen({ navigation }) {
             {/* Header row with phase chip */}
             <View style={styles.snapshotHeader}>
               <Text style={styles.sectionTitle}>
-                Weight · {latest?.metric_date ? format(new Date(latest.metric_date), 'MMM d, yyyy') : 'Today'}
+                Weight · {safeFormatDate(latest?.metric_date, 'MMM d, yyyy') || 'Today'}
               </Text>
               {phase && (
                 <View style={[styles.phaseChip, { borderColor: phase.color }]}>
@@ -574,6 +645,11 @@ export default function BodyMetricsScreen({ navigation }) {
                   <Text style={styles.ewmaMuted}>
                     Smoothed across daily fluctuations. More reliable than a single weigh-in.
                   </Text>
+                  {recentIntake?.daysLogged > 0 && (
+                    <Text style={styles.ewmaIntake}>
+                      Average intake {recentIntake.avgKcal} kcal over the last {recentIntake.daysLogged} {recentIntake.daysLogged === 1 ? 'day' : 'days'}.
+                    </Text>
+                  )}
                 </>
               ) : (
                 <Text style={styles.ewmaMuted}>
@@ -584,11 +660,19 @@ export default function BodyMetricsScreen({ navigation }) {
           </View>
         ) : (
           <View style={styles.emptyCard}>
-            <Ionicons name="body-outline" size={40} color={colors.surface3} />
-            <Text style={styles.emptyTitle}>No entries yet</Text>
-            <Text style={styles.emptyText}>
-              Log your body weight and measurements to track your physique over time.
-            </Text>
+            <EmptyBodyIllustration size={140} />
+            <Text style={styles.emptyTitle}>No entries logged yet</Text>
+            {onboardingWeightKg ? (
+              <>
+                <Text style={styles.emptyText}>
+                  We have your onboarding bodyweight saved as a starting point ({formatBodyWeightShort(onboardingWeightKg, bodyWeightUnits)}). Tap Log Weight to record a fresh entry. That's when the trend starts tracking.
+                </Text>
+              </>
+            ) : (
+              <Text style={styles.emptyText}>
+                Log your body weight and measurements to track your physique over time.
+              </Text>
+            )}
           </View>
         )}
 
@@ -762,7 +846,7 @@ export default function BodyMetricsScreen({ navigation }) {
               const measuredKeys = MEASUREMENTS.filter(m => entry[m.key] != null);
               return (
                 <View key={entry.id} style={styles.historyRow}>
-                  <Text style={styles.historyDate}>{format(new Date(entry.metric_date), 'MMM d, yyyy')}</Text>
+                  <Text style={styles.historyDate}>{safeFormatDate(entry.metric_date, 'MMM d, yyyy') || '—'}</Text>
                   <View style={styles.historyValues}>
                     {entry.body_weight ? (
                       <Text style={styles.historyWeight}>{formatBodyWeightShort(entry.body_weight, bwu)}</Text>
@@ -937,4 +1021,5 @@ const styles = StyleSheet.create({
   ewmaValue: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
   ewmaWeekly: { fontSize: fontSize.sm, color: colors.textSecondary },
   ewmaMuted: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
+  ewmaIntake: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: spacing.xs },
 });

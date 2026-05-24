@@ -9,23 +9,29 @@ import { calculate1RM } from '../lib/algorithms';
 const SET_TYPE_LABELS = {
   straight: 'Working',
   warmup: 'Warm-up',
-  dropset: 'Drop Set',
+  dropset: 'Working',
   superset: 'Working',
   myo_reps: 'Working',
   rest_pause: 'Working',
   amrap: 'Working',
 };
 
-export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypePicker, isWarmup = false }) {
+export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypePicker, onOpenPlateCalc, isWarmup = false }) {
   const { weight, reps, setType, isGhost } = value;
   const repsRef = useRef(null);
 
   function adjust(field, delta) {
-    Haptics.selectionAsync();
+    Haptics.selectionAsync().catch(() => {});
     const steps = { weight: 2.5, reps: 1 };
-    const limits = { weight: [0, 500], reps: [1, 100] };
+    // Reps cap matches the TextInput's [1, 200] so a typed 150 doesn't
+    // snap back to 100 when the user taps −.
+    const limits = { weight: [0, 500], reps: [1, 200] };
     const fieldLimits = limits[field] || [0, 9999];
-    const current = value[field] || 0;
+    // Coerce in case a previous code path wrote a string like '' or '.' —
+    // arithmetic on those produces NaN and the next clamp wedges at the
+    // lower bound forever.
+    const raw = value[field];
+    const current = typeof raw === 'number' ? raw : (parseFloat(raw) || 0);
     const next = Math.min(Math.max(current + delta * (steps[field] || 1), fieldLimits[0]), fieldLimits[1]);
     onChange({ ...value, [field]: field === 'weight' ? Math.round(next * 100) / 100 : Math.round(next), isGhost: false });
   }
@@ -46,7 +52,21 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
     <View style={styles.container}>
       {/* Weight Row */}
       <View style={styles.inputRow}>
-        <Text style={styles.fieldLabel}>Weight ({units})</Text>
+        <View style={styles.fieldLabelWrap}>
+          <Text style={styles.fieldLabel}>Weight ({units})</Text>
+          {onOpenPlateCalc && !isWarmup && (
+            <TouchableOpacity
+              onPress={() => { Haptics.selectionAsync().catch(() => {}); onOpenPlateCalc(parseFloat(value.weight) || 0); }}
+              style={styles.plateBtn}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              accessibilityRole="button"
+              accessibilityLabel="Plate calculator"
+            >
+              <Ionicons name="cube-outline" size={12} color={colors.primary} />
+              <Text style={styles.plateBtnText}>Plates</Text>
+            </TouchableOpacity>
+          )}
+        </View>
         <View style={styles.stepper}>
           <TouchableOpacity
             style={styles.stepBtn}
@@ -59,11 +79,21 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
           <TextInput
             testID="volyume-weight-input"
             style={[styles.valueInput, isGhost && styles.valueInputGhost]}
-            value={String(weight || '')}
+            // Render 0 as "0" not "" (was `String(weight || '')`, which hid
+            // a legitimate zero-weight bodyweight set).
+            value={weight == null || weight === '' ? '' : String(weight)}
             onChangeText={v => {
-              const n = parseFloat(v);
-              if (!isNaN(n)) setField('weight', Math.min(Math.max(n, 0), 500));
-              else if (v === '' || v === '.') setField('weight', v);
+              // Preserve in-progress decimal entry. The previous code did
+              //   const n = parseFloat(v); setField('weight', n)
+              // which stripped the trailing dot — typing "21." stored 21,
+              // re-rendered "21", and the decimal separator was lost so
+              // values like 21.25 kg (fractional plates) couldn't be typed.
+              // Accept up to 3 integer digits and up to 2 decimals, max 500.
+              if (v === '' || /^\d{0,3}\.?\d{0,2}$/.test(v)) {
+                const n = parseFloat(v);
+                if (!isNaN(n) && n > 500) return; // refuse over-cap
+                setField('weight', v); // keep raw string; parseFloat on read
+              }
             }}
             keyboardType="decimal-pad"
             returnKeyType="next"
@@ -84,7 +114,12 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
 
       {/* Reps Row */}
       <View style={styles.inputRow}>
-        <Text style={styles.fieldLabel}>Reps</Text>
+        <View style={styles.fieldLabelWrap}>
+          <Text style={styles.fieldLabel}>Reps</Text>
+          {live1RM != null && live1RM > 0 && (
+            <Text style={styles.e1rmHint}>e1RM {Math.round(live1RM)}{units}</Text>
+          )}
+        </View>
         <View style={styles.stepper}>
           <TouchableOpacity
             style={styles.stepBtn}
@@ -98,7 +133,7 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
             testID="volyume-reps-input"
             ref={repsRef}
             style={[styles.valueInput, isGhost && styles.valueInputGhost]}
-            value={String(reps || '')}
+            value={reps == null || reps === '' ? '' : String(reps)}
             onChangeText={v => {
               const n = parseInt(v, 10);
               if (!isNaN(n)) setField('reps', Math.min(Math.max(n, 1), 200));
@@ -123,7 +158,11 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
 
       {/* Live estimated 1RM chip — shown when weight and reps are present, not a warm-up */}
       {live1RM > 0 && liveReps >= 1 && liveReps <= 15 && !isWarmup && (
-        <View style={styles.oneRmChip}>
+        <View
+          style={styles.oneRmChip}
+          accessible
+          accessibilityLabel={`Estimated one rep max ${Math.round(live1RM)} ${units}`}
+        >
           <Ionicons name="trending-up-outline" size={12} color={colors.textMuted} />
           <Text style={styles.oneRmChipText}>
             Est. max ≈ {Math.round(live1RM)}{units}
@@ -131,46 +170,10 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
         </View>
       )}
 
-      {/* Effort Row — hidden for warm-up sets */}
-      {!isWarmup && (
-        <View style={styles.inputRow}>
-          <View style={styles.fieldLabelRow}>
-            <Text style={styles.fieldLabel}>Effort</Text>
-            <InfoTooltip size={12} text={
-              'How hard did that set feel? Rate from 1 (easy) to 5 (all out).\n\n' +
-              '1: Easy, plenty left in the tank\n' +
-              '2: Moderate, could have done more\n' +
-              '3: Hard, a couple of reps left\n' +
-              '4: Very hard, barely one more\n' +
-              '5: All out, nothing left\n\n' +
-              'Aim for a 2 or 3 early in your training block. Push to 4–5 near the end. ' +
-              'Volyume uses this to track intensity and suggest your next session targets.'
-            } />
-          </View>
-          <View style={styles.rirRow}>
-            {[null, 1, 2, 3, 4, 5].map(v => {
-              const isActive = v === null ? value.rir === null : value.rir === (5 - v);
-              return (
-                <TouchableOpacity
-                  key={String(v)}
-                  style={[styles.rirBtn, isActive && styles.rirBtnActive]}
-                  onPress={() => {
-                    Haptics.selectionAsync();
-                    onChange({ ...value, rir: v === null ? null : 5 - v, isGhost: false });
-                  }}
-                  accessibilityRole="button"
-                  accessibilityLabel={v === null ? 'Effort not set' : v === 5 ? 'Maximum effort, all out' : `Effort level ${v} out of 5`}
-                  accessibilityState={{ selected: isActive }}
-                >
-                  <Text style={[styles.rirBtnText, isActive && styles.rirBtnTextActive]}>
-                    {v === null ? '-' : v}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-      )}
+      {/* Effort picker removed — was rarely used in practice. RIR still
+          gets recorded internally (defaulted in DEFAULT_SET) so the
+          autoregulation engine keeps working; we just don't ask the
+          user to set it per-set. */}
 
       {/* Set Type — compact inline row */}
       <TouchableOpacity
@@ -209,6 +212,30 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: fontSize.sm,
     color: colors.textSecondary,
+    fontWeight: fontWeight.medium,
+  },
+  fieldLabelWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  plateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 2,
+    paddingHorizontal: spacing.xs,
+    backgroundColor: colors.primaryBg,
+    borderRadius: radius.sm,
+  },
+  plateBtnText: {
+    fontSize: fontSize.xs,
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
+  },
+  e1rmHint: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
     fontWeight: fontWeight.medium,
   },
   stepper: {

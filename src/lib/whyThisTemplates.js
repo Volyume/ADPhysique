@@ -2,23 +2,67 @@
  * whyThisTemplates.js
  * Plain-language template library for user-facing exercise and plan explanations.
  *
- * JARGON BLOCKLIST — these words must NEVER appear in any exported string:
- *   MEV, MAV, MRV, RIR, RPE, mesocycle, deload (as noun), "junk volume"
+ * Voice rules from docs/COACHING_VOICE_SYNTHESIS_LOCKED.md:
+ *   - Precision Coaching is the named decider for engine actions
+ *     (volume holds, weight changes, scheduled deloads).
+ *   - Descriptive strings (what an exercise does, what a week phase is for)
+ *     do not name Precision Coaching because no decision is being attributed.
+ *   - Every output passes the honesty test: "would this still be true if the
+ *     user did nothing but kept logging?"
+ *   - Numbers before narrative where applicable.
  *
- * All explanations are ≤ 30 words unless the context specifically warrants more.
- * All explanations are in plain English — no gym abbreviations, no science jargon.
+ * JARGON BLOCKLIST -- these words must NEVER appear in any exported string:
+ *   - Gym abbreviations: MEV, MAV, MRV, RIR, RPE, mesocycle, "junk volume"
+ *   - Science jargon: "metabolic adaptation", "training stimulus",
+ *     "stimulus-to-fatigue ratio"
+ *   - Bare researcher surnames: Helms, Schoenfeld, Morton, Mountjoy, Eikey,
+ *     Refalo, Trexler. Citations belong in InfoTooltip panels, not surface
+ *     copy.
+ *
+ * Plain-language alternatives:
+ *   metabolic adaptation     -> "your body has adjusted"
+ *   training stimulus        -> "muscle growth signal"
+ *   stimulus-to-fatigue ratio -> "training payoff"
+ *
+ * All explanations are short and plain English. No gym abbreviations, no
+ * science jargon.
  */
 
 // ---------------------------------------------------------------------------
 // Internal jargon guard (development safety check)
 // ---------------------------------------------------------------------------
 
-const JARGON_BLOCKLIST = ['MEV', 'MAV', 'MRV', ' RIR', ' RPE', 'mesocycle', 'junk volume'];
+// Word-boundary regex patterns. Word boundaries avoid false positives
+// (e.g. "helmsman" does not match "Helms") while still catching surnames at
+// start of string, after punctuation, or mid-sentence.
+const JARGON_PATTERNS = [
+  // Gym abbreviations
+  { name: 'MEV', re: /\bMEV\b/ },
+  { name: 'MAV', re: /\bMAV\b/ },
+  { name: 'MRV', re: /\bMRV\b/ },
+  { name: 'RIR', re: /\bRIR\b/ },
+  { name: 'RPE', re: /\bRPE\b/ },
+  { name: 'mesocycle', re: /\bmesocycle\b/i },
+  { name: 'junk volume', re: /\bjunk volume\b/i },
+  // Science jargon
+  { name: 'metabolic adaptation', re: /\bmetabolic adaptation\b/i },
+  { name: 'training stimulus', re: /\btraining stimulus\b/i },
+  { name: 'stimulus-to-fatigue ratio', re: /\bstimulus-to-fatigue ratio\b/i },
+  // Bare researcher surnames in surface copy. Citations belong in
+  // InfoTooltip panels, not user-facing strings.
+  { name: 'Helms', re: /\bHelms\b/ },
+  { name: 'Schoenfeld', re: /\bSchoenfeld\b/ },
+  { name: 'Morton', re: /\bMorton\b/ },
+  { name: 'Mountjoy', re: /\bMountjoy\b/ },
+  { name: 'Eikey', re: /\bEikey\b/ },
+  { name: 'Refalo', re: /\bRefalo\b/ },
+  { name: 'Trexler', re: /\bTrexler\b/ },
+];
 
 function assertNoJargon(str) {
-  for (const term of JARGON_BLOCKLIST) {
-    if (str.includes(term)) {
-      throw new Error(`Jargon detected in whyThis output: "${term}" in: "${str}"`);
+  for (const { name, re } of JARGON_PATTERNS) {
+    if (re.test(str)) {
+      throw new Error(`Jargon detected in whyThis output: "${name}" in: "${str}"`);
     }
   }
   return str;
@@ -103,10 +147,10 @@ export function getExerciseWhyThis(exerciseName, subregion) {
  */
 export function getVolumeStatusMessage(status, muscleDisplayName, currentSets) {
   const messages = {
-    below_minimum:     `${muscleDisplayName}: only ${currentSets} sets this week. Add at least one or two more sessions to keep this muscle growing.`,
+    below_minimum:     `${muscleDisplayName}: ${currentSets} sets this week. Precision Coaching can add a session or two if you want this muscle growing faster.`,
     optimal:           `${muscleDisplayName}: ${currentSets} sets this week, right in the range where muscle adapts best.`,
-    approaching_limit: `${muscleDisplayName}: ${currentSets} sets this week, near the upper end. Good, but watch recovery. Reduce if soreness builds.`,
-    over_limit:        `${muscleDisplayName}: ${currentSets} sets this week. That is more than your body can likely recover from. Cut 2–3 sets next week.`,
+    approaching_limit: `${muscleDisplayName}: ${currentSets} sets this week, near the upper end. Good, but watch recovery. Precision Coaching will pull volume back if soreness builds.`,
+    over_limit:        `${muscleDisplayName}: ${currentSets} sets this week, more than your body can likely recover from. Precision Coaching has cut 2-3 sets from next week's plan.`,
   };
   return clean(messages[status] ?? `${muscleDisplayName}: ${currentSets} sets this week.`);
 }
@@ -127,11 +171,11 @@ export function getVolumeStatusMessage(status, muscleDisplayName, currentSets) {
 export function getProgressionMessage(action, currentWeight, suggestedWeight, units = 'kg') {
   const messages = {
     add_weight: suggestedWeight
-      ? `Move to ${suggestedWeight}${units} next session. You've earned the extra weight.`
-      : `Add a little weight next session. Your current load is no longer challenging enough.`,
-    add_rep:    `Same weight, push for one more rep next time.`,
-    hold:       `Keep the same weight and reps. Match this performance before going heavier.`,
-    reduce:     `Drop the weight slightly and rebuild. Quality sets beat grinding reps.`,
+      ? `Precision Coaching has moved your next session to ${suggestedWeight}${units}. You completed every working set at the current weight.`
+      : `Precision Coaching has lifted the target weight for next session. Your current load is no longer challenging enough.`,
+    add_rep:    `Precision Coaching is holding the weight and asking for one more rep next time.`,
+    hold:       `Precision Coaching is holding the weight and reps steady. Match this performance before going heavier.`,
+    reduce:     `Precision Coaching has dropped the weight slightly to rebuild. Quality sets beat grinding reps.`,
   };
   return clean(messages[action] ?? `Continue as planned.`);
 }
@@ -149,10 +193,10 @@ export function getProgressionMessage(action, currentWeight, suggestedWeight, un
  */
 export function getAutoRegMessage(action, weeksInBlock = 1) {
   const messages = {
-    continue:      `You're recovering well. Continue the plan as written. This is what good progress feels like.`,
-    hold_volume:   `Training is feeling hard. Keep your session content the same this week. Don't add anything new. Focus on sleep and protein.`,
-    reduce_volume: `Your body is asking for less right now. Cut 1–2 sets per exercise this week and come back stronger next week.`,
-    deload_now:    `${weeksInBlock >= 4 ? 'Good timing. You\'ve been building for a few weeks.' : 'Your body is telling you it needs a breather.'} Take a lighter week: shorter sessions, same exercises, half the sets.`,
+    continue:      `Recovery scores are holding. Precision Coaching is keeping the plan as written. This is what good progress feels like.`,
+    hold_volume:   `Training is showing strain. Precision Coaching is holding your session content the same this week. Focus on sleep and protein.`,
+    reduce_volume: `Recovery scores have dropped. Precision Coaching has cut 1-2 sets per exercise this week. Come back stronger next week.`,
+    deload_now:    `${weeksInBlock >= 4 ? `Good timing: you've been building for ${weeksInBlock} weeks.` : 'Recovery scores are flagging.'} Precision Coaching has scheduled a lighter week: shorter sessions, same exercises, half the sets.`,
   };
   return clean(messages[action] ?? `Continue as planned.`);
 }
@@ -213,15 +257,15 @@ export function getSplitRationale(splitType) {
  */
 export function getDeloadPredictionMessage(weeksUntilDeload, reason) {
   if (weeksUntilDeload === 0) {
-    return clean(`Now is a good time for a lighter week. ${reason}`);
+    return clean(`Precision Coaching has scheduled a lighter week. ${reason}`);
   }
   if (weeksUntilDeload === 1) {
-    return clean(`A lighter week is likely coming up next week. ${reason}`);
+    return clean(`Precision Coaching expects a lighter week next week. ${reason}`);
   }
   if (weeksUntilDeload != null) {
-    return clean(`You're ${weeksUntilDeload} weeks from your next lighter week. ${reason}`);
+    return clean(`Precision Coaching expects your next lighter week in ${weeksUntilDeload} weeks. ${reason}`);
   }
-  return clean(reason ?? `Continue building. A lighter week will come when your body needs it.`);
+  return clean(reason ?? `Continue building. Precision Coaching will schedule a lighter week when recovery scores call for it.`);
 }
 
 // ---------------------------------------------------------------------------
@@ -238,7 +282,7 @@ export function getDeloadPredictionMessage(weeksUntilDeload, reason) {
  */
 export function getTimeCrunchMessage(droppedExercises, restReductionPct, newEstimatedMins) {
   const restPct = Math.round(restReductionPct * 100);
-  const parts = [`Rest reduced by ${restPct}%.`];
+  const parts = [`Precision Coaching has cut rest by ${restPct}%.`];
   if (droppedExercises.length === 1) {
     parts.push(`${droppedExercises[0]} removed to fit your time.`);
   } else if (droppedExercises.length > 1) {
@@ -292,6 +336,73 @@ export function getPosingConditioningMessage(type, minutesPerSession, weeksToCom
 }
 
 // ---------------------------------------------------------------------------
+// ED-pattern lockout copy (Move #2, locked verbatim in
+// MOVE_2_ED_PATTERN_DETECTION.md). Both variants render inside the
+// HeldDecisionsCard via a richer layout, not as a plain reason
+// string, so we expose structured copy fields rather than a single
+// sentence. Identical for free, pro, complete users.
+// ---------------------------------------------------------------------------
+
+export const ED_PATTERN_LOCKOUT_COPY = {
+  header: 'Held this week',
+  title: 'We\'ve held your calorie cut',
+  body:
+    "We've held your calorie cut. We've noticed a few signals together: your weight has been dropping faster than your intake suggests, your energy scores have been low, and your food log shows you eating less than your target for a few weeks running.\n\n" +
+    "Even when a cut is going well in numbers, sustained low energy is a safety signal. We'd rather pause than push.\n\n" +
+    "Once your fuelling and energy recover for two weeks, we'll suggest new targets.",
+  bodyGoalLockExtension:
+    "You set a goal lock for an aggressive cut, so we've held off until three signals stacked up instead of two. That happened this week.",
+  ctaSupport: 'Get support',
+  ctaReadMore: 'Read more about why',
+  bottomNote:
+    "You can keep using Volyume normally. Your weight log, food diary, training, and check-ins all continue. Only the calorie target stops shifting.",
+  // Tooltip body for the "Read more about why" InfoTooltip.
+  readMoreBody:
+    "Low energy that sticks around alongside fast weight loss is the body's signal that fuel intake is too low for what training is demanding. The condition has a name in sports medicine: relative energy deficiency. It shows up first as low energy, then in training quality, then in hormones and bone health.\n\n" +
+    "Volyume waits for two or more of these signals to stack before holding the cut. One signal on its own is normal: people have low-energy weeks. The pattern that worries us is the combination.\n\n" +
+    "The hold is not a punishment. It's a pause while your numbers settle. Once your energy scores recover and your intake catches up for two weeks, the engine starts adjusting again.",
+};
+
+export const ED_PATTERN_CLEARED_COPY = {
+  header: 'Hold lifted',
+  title: 'Your numbers are looking better',
+  body:
+    "The signals that triggered the hold have settled for two weeks. We're back to the standard coach output. New calorie targets land at the next weekly run.\n\n" +
+    "Take this gently. Energy recovery beats rushing back into a deep cut.",
+};
+
+// Locked copy for Move #3 (upward gate compression). When weekly loss
+// exceeds -1.5% AND energy is low (<= 2), Precision Coaching bypasses
+// the standard two-week cooldown and applies an upward calorie
+// correction immediately. The held-decision card surfaces the change
+// to the user so the move isn't silent. Identical for free, pro,
+// complete users -- safety output is tier-blind.
+export const RAPID_LOSS_CORRECTED_COPY = {
+  header: 'Acted this week',
+  title: "We've added calories straight away",
+  body:
+    "Your weight dropped more than 1.5% this week and your energy is low. We're not waiting two weeks to react; we've bumped your daily target up immediately.\n\n" +
+    "This isn't a punishment for hitting your goal too fast. It's a safety call. Steady is the goal.",
+};
+
+// Locale-appropriate eating disorder support links (locked).
+export const ED_SUPPORT_LINKS = {
+  'en-GB': { name: 'Beat',       url: 'https://www.beateatingdisorders.org.uk' },
+  'en-US': { name: 'NEDA',       url: 'https://www.nationaleatingdisorders.org' },
+  'en-AU': { name: 'Butterfly',  url: 'https://butterfly.org.au' },
+  default: { name: 'Beat',       url: 'https://www.beateatingdisorders.org.uk' },
+};
+
+export function getEdSupportLink(locale) {
+  if (!locale) return ED_SUPPORT_LINKS.default;
+  if (ED_SUPPORT_LINKS[locale]) return ED_SUPPORT_LINKS[locale];
+  // Fallback by language prefix.
+  const lang = String(locale).split(/[-_]/)[0]?.toLowerCase();
+  if (lang === 'en') return ED_SUPPORT_LINKS.default;
+  return ED_SUPPORT_LINKS.default;
+}
+
+// ---------------------------------------------------------------------------
 // Jargon blocklist check (for testing — call on any string before display)
 // ---------------------------------------------------------------------------
 
@@ -303,6 +414,6 @@ export function getPosingConditioningMessage(type, minutesPerSession, weeksToCom
  * @returns {{ clean: boolean, violations: string[] }}
  */
 export function checkJargon(str) {
-  const violations = JARGON_BLOCKLIST.filter(term => str.includes(term));
+  const violations = JARGON_PATTERNS.filter(({ re }) => re.test(str)).map(({ name }) => name);
   return { clean: violations.length === 0, violations };
 }

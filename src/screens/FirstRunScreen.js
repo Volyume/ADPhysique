@@ -5,15 +5,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { VolyumeMark } from '../components/BrandMark';
 import useAppStore from '../store/useAppStore';
-import { ProBadge } from '../components/ProGate';
 
-
-export default function FirstRunScreen({ navigation }) {
-  const { user, units, setUnits, userProfile, saveLocalProfile, completeFirstRun, tier } = useAppStore();
-  // Free users skip plan-selection and go straight to quick setup
-  const [mode, setMode] = useState(tier === 'free' ? 'quick' : 'branch');
+// First-run for Free users only. Pro signups go through ProOnboardingStack
+// (profile → training → recovery → plan + nutrition generation). Free gets
+// the minimum: name + units, then straight to logging. Plan choice happens
+// later via the Plans tab (Library or Manual Builder).
+export default function FirstRunScreen({ navigation: _navigation }) {
+  const { user, units, setUnits, userProfile, saveLocalProfile, completeFirstRun } = useAppStore();
   const [localUnits, setLocalUnits] = useState(units || 'kg');
   const [firstName, setFirstName] = useState('');
   const [busy, setBusy] = useState(false);
@@ -25,28 +24,7 @@ export default function FirstRunScreen({ navigation }) {
     return () => clearTimeout(t);
   }, []);
 
-  async function saveName() {
-    const name = firstName.trim();
-    if (!name || !user?.id) return;
-    await saveLocalProfile(user.id, { ...(userProfile || {}), firstName: name });
-  }
-
-  async function startPathA() {
-    await saveName();
-    navigation.navigate('CoachBuilder', { firstRun: true });
-  }
-
-  async function startPathLibrary() {
-    await saveName();
-    navigation.navigate('PlanLibrary', { fromFirstRun: true });
-  }
-
-  async function startPathQuiz() {
-    await saveName();
-    navigation.navigate('OnboardingQuiz');
-  }
-
-  async function finishPathB() {
+  async function finish() {
     if (!hasName) return;
     setBusy(true);
     try {
@@ -60,158 +38,59 @@ export default function FirstRunScreen({ navigation }) {
     }
   }
 
-  if (mode === 'quick') {
-    return (
-      <SafeAreaView style={styles.safe}>
-        <ScrollView contentContainerStyle={styles.content}>
-          <TouchableOpacity
-            style={styles.backLink}
-            onPress={() => setMode('branch')}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons name="chevron-back" size={18} color={colors.textSecondary} />
-            <Text style={styles.backLinkText}>Back</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.title}>Almost there.</Text>
-          <Text style={styles.subtitle}>
-            {tier === 'free'
-              ? 'A couple of details and you\'re ready to start logging. Change these any time in Settings.'
-              : 'Just a couple of things and you\'re ready to go. You can update these anytime in Settings.'}
-          </Text>
-
-          <Text style={styles.fieldLabel}>What should we call you?</Text>
-          <TextInput
-            ref={nameRef}
-            style={[styles.input, hasName && styles.inputActive]}
-            value={firstName}
-            onChangeText={setFirstName}
-            placeholder="First name"
-            placeholderTextColor={colors.textMuted}
-            autoCapitalize="words"
-            autoCorrect={false}
-            returnKeyType="next"
-          />
-
-          <Text style={styles.fieldLabel}>Units</Text>
-          <View style={styles.unitRow}>
-            {['kg', 'lbs'].map(u => (
-              <TouchableOpacity
-                key={u}
-                style={[styles.unitBtn, localUnits === u && styles.unitBtnActive]}
-                onPress={() => setLocalUnits(u)}
-              >
-                <Text style={[styles.unitBtnText, localUnits === u && styles.unitBtnTextActive]}>
-                  {u.toUpperCase()}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <TouchableOpacity
-            style={[styles.primaryBtn, (!hasName || busy) && styles.btnDisabled]}
-            onPress={finishPathB}
-            disabled={!hasName || busy}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.primaryBtnText}>Start logging</Text>
-            <Ionicons name="arrow-forward" size={18} color={colors.background} />
-          </TouchableOpacity>
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.brandRow}>
-          <VolyumeMark size={48} />
-          <Text style={styles.brandName}>Volyume</Text>
-          {tier === 'pro' && <ProBadge size="md" />}
+        <Text style={styles.title}>Almost there.</Text>
+        <Text style={styles.subtitle}>
+          A couple of details and you're ready to start logging. Change these any time in Settings.
+        </Text>
+
+        <Text style={styles.fieldLabel}>What should we call you?</Text>
+        <TextInput
+          ref={nameRef}
+          style={[styles.input, hasName && styles.inputActive]}
+          value={firstName}
+          onChangeText={setFirstName}
+          placeholder="First name"
+          placeholderTextColor={colors.textMuted}
+          autoCapitalize="words"
+          autoCorrect={false}
+          returnKeyType="next"
+        />
+
+        <Text style={styles.fieldLabel}>Units</Text>
+        <View style={styles.unitRow}>
+          {['kg', 'lbs'].map(u => (
+            <TouchableOpacity
+              key={u}
+              style={[styles.unitBtn, localUnits === u && styles.unitBtnActive]}
+              onPress={() => setLocalUnits(u)}
+            >
+              <Text style={[styles.unitBtnText, localUnits === u && styles.unitBtnTextActive]}>
+                {u.toUpperCase()}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
-        <Text style={styles.title}>
-          {tier === 'pro' ? 'Welcome to Volyume Pro.' : 'Welcome to Volyume.'}
-        </Text>
-        <Text style={styles.welcomeDesc}>
-          {tier === 'pro'
-            ? 'You have the full experience unlocked. Set up your plan and we\'ll track your sets, coach your week, and keep your progress on course.'
-            : 'Training is hard enough. Volyume handles the details: what you lifted, how you\'re progressing, what to do next. Show up, train, and let us take care of the rest.'}
-        </Text>
+        <TouchableOpacity
+          style={[styles.primaryBtn, (!hasName || busy) && styles.btnDisabled]}
+          onPress={finish}
+          disabled={!hasName || busy}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.primaryBtnText}>Start logging</Text>
+          <Ionicons name="arrow-forward" size={18} color={colors.background} />
+        </TouchableOpacity>
 
-        <View style={styles.nameBlock}>
-          <Text style={styles.nameLabel}>What should we call you?</Text>
-          <TextInput
-            ref={nameRef}
-            style={[styles.nameInput, hasName && styles.inputActive]}
-            value={firstName}
-            onChangeText={setFirstName}
-            placeholder="First name"
-            placeholderTextColor={colors.textMuted}
-            autoCapitalize="words"
-            autoCorrect={false}
-            returnKeyType="done"
-          />
+        <View style={styles.hintCard}>
+          <Ionicons name="information-circle-outline" size={16} color={colors.textMuted} />
+          <Text style={styles.hintText}>
+            When you're in, head to <Text style={styles.hintBold}>Plans</Text>{' '}
+            to pick a programme from the library, or build your own from scratch.
+          </Text>
         </View>
-
-        <TouchableOpacity
-          style={[styles.pathCard, !hasName && styles.pathCardDisabled]}
-          onPress={startPathA}
-          disabled={!hasName}
-          activeOpacity={0.85}
-        >
-          <View style={styles.pathIconWrap}>
-            <Ionicons name="sparkles" size={22} color={hasName ? colors.primary : colors.textMuted} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.pathTitle}>Build my plan with Coach</Text>
-            <Text style={styles.pathText}>
-              Answer a few questions and we'll put together a plan that fits your schedule and goals.
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={hasName ? colors.textMuted : colors.border} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.pathCard, !hasName && styles.pathCardDisabled]}
-          onPress={startPathQuiz}
-          disabled={!hasName}
-          activeOpacity={0.85}
-        >
-          <View style={styles.pathIconWrap}>
-            <Ionicons name="help-circle-outline" size={22} color={hasName ? colors.primary : colors.textMuted} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.pathTitle}>Help me choose a programme</Text>
-            <Text style={styles.pathText}>
-              Answer 4 quick questions and we'll recommend the right starting template for you.
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={hasName ? colors.textMuted : colors.border} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.pathCard, !hasName && styles.pathCardDisabled]}
-          onPress={() => setMode('quick')}
-          disabled={!hasName}
-          activeOpacity={0.85}
-        >
-          <View style={styles.pathIconWrap}>
-            <Ionicons name="create-outline" size={22} color={hasName ? colors.primary : colors.textMuted} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.pathTitle}>I already have a plan</Text>
-            <Text style={styles.pathText}>
-              Skip setup and go straight to logging. You can always add a plan later.
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={hasName ? colors.textMuted : colors.border} />
-        </TouchableOpacity>
-
-        <Text style={styles.footnote}>
-          No account needed to start. Your data is yours.
-        </Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -220,37 +99,15 @@ export default function FirstRunScreen({ navigation }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.xl, gap: spacing.lg, flexGrow: 1 },
-  brandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.lg },
-  brandName: { fontSize: 26, fontWeight: fontWeight.black, color: colors.textPrimary, letterSpacing: 1 },
-  title: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary, marginTop: spacing.md },
-  welcomeDesc: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 21, marginTop: spacing.xs },
+  title: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary, marginTop: spacing.lg },
   subtitle: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
-  pathCard: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    borderWidth: 1, borderColor: colors.border,
-  },
-  pathIconWrap: {
-    width: 44, height: 44, borderRadius: radius.md,
-    backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center',
-  },
-  pathTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  pathText: { fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 17, marginTop: 2 },
-  footnote: { fontSize: fontSize.xs, color: colors.textMuted, textAlign: 'center', marginTop: 'auto', paddingTop: spacing.lg },
-
-  backLink: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  backLinkText: { fontSize: fontSize.sm, color: colors.textSecondary },
   fieldLabel: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary, marginTop: spacing.md },
-  fieldOptional: { fontSize: fontSize.xs, fontWeight: fontWeight.regular, color: colors.textMuted },
-  nameBlock: { gap: spacing.xs },
-  nameLabel: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary },
-  nameInput: {
-    backgroundColor: colors.surface, borderRadius: radius.md,
+  input: {
+    backgroundColor: colors.surface2, borderRadius: radius.md,
     paddingHorizontal: spacing.md, paddingVertical: spacing.md,
-    fontSize: fontSize.md, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border,
+    fontSize: fontSize.lg, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border,
   },
   inputActive: { borderColor: colors.primary },
-  pathCardDisabled: { opacity: 0.35 },
   unitRow: { flexDirection: 'row', gap: spacing.sm },
   unitBtn: {
     flex: 1, alignItems: 'center', paddingVertical: spacing.md,
@@ -259,12 +116,6 @@ const styles = StyleSheet.create({
   unitBtnActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
   unitBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textSecondary },
   unitBtnTextActive: { color: colors.primary },
-  input: {
-    backgroundColor: colors.surface2, borderRadius: radius.md,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.md,
-    fontSize: fontSize.lg, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border,
-  },
-  hint: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
   primaryBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
     backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: spacing.lg,
@@ -272,17 +123,12 @@ const styles = StyleSheet.create({
   },
   primaryBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
   btnDisabled: { opacity: 0.6 },
-
-  wbGroup: { gap: spacing.md, marginTop: spacing.lg },
-  wbBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    paddingVertical: spacing.lg, paddingHorizontal: spacing.lg,
+  hintCard: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
+    backgroundColor: colors.surface, borderRadius: radius.md,
+    padding: spacing.md, marginTop: spacing.lg,
     borderWidth: 1, borderColor: colors.border,
   },
-  wbBtnText: { flex: 1, fontSize: fontSize.md, color: colors.textPrimary, fontWeight: fontWeight.semibold },
-  wbHelpline: {
-    fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18,
-    marginTop: 'auto', paddingTop: spacing.xl, textAlign: 'center',
-  },
+  hintText: { flex: 1, fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 17 },
+  hintBold: { color: colors.textPrimary, fontWeight: fontWeight.semibold },
 });

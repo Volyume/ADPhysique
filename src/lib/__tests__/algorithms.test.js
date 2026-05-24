@@ -81,11 +81,13 @@ describe('getVolumeStatus — delt heads', () => {
     expect(result.status).toBe('over_mrv');
   });
 
-  test('0 sets front_delts → below (mev is 0, status is below with 0 sets)', () => {
-    // mev=0, so mev > 0 check fails → falls to optimal check: 0 <= mav(6) → optimal
-    // Actually: workingSets < mev (0 < 0) is false; mev > 0 check fails; 0 <= 6 → optimal
+  test('0 sets front_delts → below (zero-work short-circuit overrides mev=0)', () => {
+    // front_delts.mev is 0 because pressing movements provide plenty of
+    // indirect volume — but zero LOGGED sets shouldn't render green on
+    // the heatmap. The zero-work short-circuit in getVolumeStatus catches
+    // this case before the mev comparison.
     const result = getVolumeStatus(0, 'front_delts');
-    expect(result.status).toBe('optimal');
+    expect(result.status).toBe('below');
   });
 });
 
@@ -147,6 +149,108 @@ describe('calculateWeeklyVolume — legacy normalisation', () => {
     expect(result.side_delts.workingSets).toBeCloseTo(4.5);
     expect(result.front_delts.workingSets).toBe(3);
     expect(result.rear_delts.workingSets).toBe(3);
+  });
+});
+
+// ─── calculateEffectiveSets — RIR/RPE math ─────────────────────────────────
+//
+// Locks in the operator-precedence fix on line 965 (was 950 before edit).
+// The old code was:
+//   getSetEffectivenessWeight(set.rir ?? set.rpe != null ? 10 - set.rpe : null)
+// which parsed as (set.rir ?? (set.rpe != null)) ? 10 - set.rpe : null —
+// any non-null rir>0 evaluated 10 - rpe (NaN when rpe was null), rir===0
+// returned null, and effective-volume was silently corrupted.
+
+describe('calculateEffectiveSets — RIR/RPE precedence fix', () => {
+  // Need access to the function — import it.
+  // eslint-disable-next-line global-require
+  const { calculateEffectiveSets, getSetEffectivenessWeight } = require('../algorithms');
+
+  const makeSetWith = (props) => ({
+    exerciseId: 'ex1',
+    setType: 'straight',
+    weight: 80,
+    actualReps: 10,
+    ...props,
+  });
+
+  test('set with rir=2 and no rpe produces a numeric effectiveSets', () => {
+    const exerciseMap = { ex1: { primary_muscle: 'chest', secondary_muscles: '[]' } };
+    const result = calculateEffectiveSets([makeSetWith({ rir: 2 })], exerciseMap);
+    expect(result.chest).toBeDefined();
+    expect(result.chest.workingSets).toBe(1);
+    expect(Number.isFinite(result.chest.effectiveSets)).toBe(true);
+    expect(result.chest.effectiveSets).toBeGreaterThan(0);
+    // RIR 2 → full credit (weight 1.0)
+    expect(result.chest.effectiveSets).toBeCloseTo(1.0, 3);
+  });
+
+  test('set with rir=0 (failure set) gets full effective credit', () => {
+    const exerciseMap = { ex1: { primary_muscle: 'chest', secondary_muscles: '[]' } };
+    const result = calculateEffectiveSets([makeSetWith({ rir: 0 })], exerciseMap);
+    expect(result.chest.workingSets).toBe(1);
+    expect(Number.isFinite(result.chest.effectiveSets)).toBe(true);
+    expect(result.chest.effectiveSets).toBeCloseTo(1.0, 3);
+  });
+
+  test('set with rpe=8 (no rir) translates to rir=2 internally → full credit', () => {
+    const exerciseMap = { ex1: { primary_muscle: 'chest', secondary_muscles: '[]' } };
+    const rirOnly = calculateEffectiveSets([makeSetWith({ rir: 2 })], exerciseMap);
+    const rpeOnly = calculateEffectiveSets([makeSetWith({ rpe: 8 })], exerciseMap);
+    expect(rpeOnly.chest.effectiveSets).toBeCloseTo(rirOnly.chest.effectiveSets, 3);
+  });
+
+  test('set with neither rir nor rpe still computes (null → 0.9 default weight)', () => {
+    const exerciseMap = { ex1: { primary_muscle: 'chest', secondary_muscles: '[]' } };
+    const result = calculateEffectiveSets([makeSetWith({})], exerciseMap);
+    expect(result.chest.workingSets).toBe(1);
+    expect(Number.isFinite(result.chest.effectiveSets)).toBe(true);
+    // null RIR → treated as ~RIR 2 (conservative) → 0.9 weight
+    expect(result.chest.effectiveSets).toBeCloseTo(0.9, 3);
+  });
+
+  test('high RIR (5+) reduces effective credit', () => {
+    const exerciseMap = { ex1: { primary_muscle: 'chest', secondary_muscles: '[]' } };
+    const lowRIR = calculateEffectiveSets([makeSetWith({ rir: 1 })], exerciseMap);
+    const highRIR = calculateEffectiveSets([makeSetWith({ rir: 5 })], exerciseMap);
+    expect(highRIR.chest.effectiveSets).toBeLessThan(lowRIR.chest.effectiveSets);
+  });
+
+  test('getSetEffectivenessWeight returns expected values for known RIR', () => {
+    expect(getSetEffectivenessWeight(0)).toBe(1.0);
+    expect(getSetEffectivenessWeight(2)).toBe(1.0);
+    expect(getSetEffectivenessWeight(3)).toBe(0.85);
+    expect(getSetEffectivenessWeight(5)).toBe(0.5);
+    expect(getSetEffectivenessWeight(8)).toBe(0.0);
+    expect(getSetEffectivenessWeight(null)).toBe(0.9); // conservative null default
+  });
+});
+
+// Defensive parse — the algorithm should survive bad JSON in
+// exercise.secondary_muscles instead of aborting the whole calc.
+describe('calculateWeeklyVolume — malformed secondary_muscles', () => {
+  const makeSet = (id) => ({
+    exerciseId: id,
+    set_type: 'straight',
+    weight: 80,
+    actual_reps: 10,
+    actualReps: 10,
+  });
+
+  test('non-JSON secondary_muscles string does not throw', () => {
+    const exerciseMap = {
+      ex1: { primary_muscle: 'chest', secondary_muscles: 'not-json-{{{' },
+    };
+    expect(() => calculateWeeklyVolume([makeSet('ex1')], exerciseMap)).not.toThrow();
+    const result = calculateWeeklyVolume([makeSet('ex1')], exerciseMap);
+    expect(result.chest).toBeDefined();
+  });
+
+  test('null secondary_muscles falls back to empty array', () => {
+    const exerciseMap = {
+      ex1: { primary_muscle: 'chest', secondary_muscles: null },
+    };
+    expect(() => calculateWeeklyVolume([makeSet('ex1')], exerciseMap)).not.toThrow();
   });
 });
 

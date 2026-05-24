@@ -1,0 +1,25 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+        The WorkoutForegroundService below is currently disabled at the JS
+        level (USE_FOREGROUND_SERVICE = false in
+        src/lib/activeWorkoutNotification.js) so the service is never
+        actually started. We keep the class compiled in case the feature
+        is revived later, but we do NOT declare the runtime permissions
+        or service registration: Play Console requires a FOREGROUND_SERVICE_HEALTH
+        justification with a demo video, which is pointless for a code
+        path we don't invoke. Revive the entries below this comment block
+        if the foreground service is ever turned back on.
+    -->
+    <!--
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+
+    <application>
+        <service
+            android:name=".WorkoutForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="health" />
+    </application>
+    -->
+</manifest>
+
