@@ -204,6 +204,12 @@ export async function syncExercises(supabaseUserId, { customOnly = false } = {})
     // Chunk to avoid hitting Supabase's request size limit on the
     // first full-canonical upload (~450 rows × a dozen columns).
     for (let i = 0; i < rows.length; i += 200) {
+      // exercises stays on onConflict: 'id' for now. The table is
+      // mixed ownership (shared library rows with user_id NULL plus
+      // per-user custom rows with user_id set), so composite (user_id,
+      // id) PK doesn't apply -- composite PK columns must all be NOT
+      // NULL. A follow-up will split library vs custom into separate
+      // tables, after which custom-exercises can move to composite PK.
       const { error } = await sb.from('exercises').upsert(
         rows.slice(i, i + 200), { onConflict: 'id', ignoreDuplicates: false },
       );
@@ -276,7 +282,7 @@ async function _upsertWorkout(sb, supabaseUserId, w) {
     is_completed: true,
     synced_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
-  }, { onConflict: 'id' });
+  }, { onConflict: 'user_id,id' });
   if (error) {
     logPgErr('sync._upsertWorkout', error);
     throw error;
@@ -315,7 +321,7 @@ async function _upsertSets(sb, supabaseUserId, sets) {
   // Chunk to avoid hitting Supabase row limits
   for (let i = 0; i < rows.length; i += 200) {
     const chunk = rows.slice(i, i + 200);
-    const { error } = await sb.from('workout_sets').upsert(chunk, { onConflict: 'id' });
+    const { error } = await sb.from('workout_sets').upsert(chunk, { onConflict: 'user_id,id' });
     if (error) {
       logPgErr('sync._upsertSets', error);
       // Continue with the next chunk rather than aborting all
@@ -391,7 +397,7 @@ export async function syncMorningWeight(supabaseUserId, entry) {
       logged_at: msToISO(entry.loggedAt),
       notes: entry.notes ?? null,
       updated_at: new Date().toISOString(),
-    }, { onConflict: 'id' });
+    }, { onConflict: 'user_id,id' });
     if (error) { logPgErr('sync.syncMorningWeight', error); throw error; }
   } catch (e) {
     logWarn('sync.syncMorningWeight', e?.message, { id: entry?.id });
@@ -427,7 +433,7 @@ export async function syncWeeklyCheckin(supabaseUserId, checkin) {
       cycle_override: !!checkin.cycleOverride,
       notes: checkin.notes ?? null,
       updated_at: new Date().toISOString(),
-    }, { onConflict: 'id' });
+    }, { onConflict: 'user_id,id' });
     if (error) { logPgErr('sync.syncWeeklyCheckin', error); throw error; }
   } catch (e) {
     logWarn('sync.syncWeeklyCheckin', e?.message, { id: checkin?.id });
@@ -468,7 +474,7 @@ export async function syncBodyMetric(supabaseUserId, metric) {
       body_fat_percent: metric.bodyFatPercent ?? null,
       body_fat_source: metric.bodyFatSource ?? null,
       notes: metric.notes ?? null,
-    }, { onConflict: 'id' });
+    }, { onConflict: 'user_id,id' });
     if (error) {
       logPgErr('sync.syncBodyMetric', error);
       throw error;
@@ -560,7 +566,7 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
         })).filter(r => r.metric_date);
         for (let i = 0; i < rows.length; i += 200) {
           const { error } = await sb.from('body_metrics').upsert(
-            rows.slice(i, i + 200), { onConflict: 'id' },
+            rows.slice(i, i + 200), { onConflict: 'user_id,id' },
           );
           if (error) logPgErr('sync.bulkUploadLocalData.body_metrics', error);
         }
@@ -619,7 +625,7 @@ async function _pushProgrammes(sb, supabaseUserId, localUserId) {
       source_programme_id: p.sourceProgrammeId ?? null,
       updated_at: new Date().toISOString(),
     }));
-    const { error } = await sb.from('programmes').upsert(rows, { onConflict: 'id' });
+    const { error } = await sb.from('programmes').upsert(rows, { onConflict: 'user_id,id' });
     if (error) logPgErr('sync._pushProgrammes', error);
   } catch (e) { logWarn('sync._pushProgrammes', e?.message, { error: e?.message }); }
 }
@@ -659,7 +665,7 @@ async function _pushRoutinesAndExercises(sb, supabaseUserId, localUserId) {
       let rPushed = 0;
       for (let i = 0; i < rows.length; i += 200) {
         const slice = rows.slice(i, i + 200);
-        const { error: rErr } = await sb.from('routines').upsert(slice, { onConflict: 'id' });
+        const { error: rErr } = await sb.from('routines').upsert(slice, { onConflict: 'user_id,id' });
         if (rErr) logPgErr('sync._pushRoutines', rErr);
         else rPushed += slice.length;
       }
@@ -707,7 +713,7 @@ async function _pushRoutinesAndExercises(sb, supabaseUserId, localUserId) {
       }
       for (let i = 0; i < rows.length; i += 200) {
         const { error: reErr } = await sb.from('routine_exercises').upsert(
-          rows.slice(i, i + 200), { onConflict: 'id' },
+          rows.slice(i, i + 200), { onConflict: 'user_id,id' },
         );
         if (reErr) logPgErr('sync._pushRoutineExercises', reErr);
       }
@@ -734,7 +740,7 @@ async function _pushMesocycles(sb, supabaseUserId, localUserId) {
         updated_at: new Date().toISOString(),
       })).filter(r => r.start_date && r.end_date);
       if (rows.length) {
-        const { error } = await sb.from('mesocycles').upsert(rows, { onConflict: 'id' });
+        const { error } = await sb.from('mesocycles').upsert(rows, { onConflict: 'user_id,id' });
         if (error) logPgErr('sync._pushMesocycles', error);
       }
     }
@@ -748,7 +754,7 @@ async function _pushMesocycles(sb, supabaseUserId, localUserId) {
       }));
       for (let i = 0; i < rows.length; i += 200) {
         const { error } = await sb.from('mesocycle_weeks').upsert(
-          rows.slice(i, i + 200), { onConflict: 'id' },
+          rows.slice(i, i + 200), { onConflict: 'user_id,id' },
         );
         if (error) logPgErr('sync._pushMesocycleWeeks', error);
       }
@@ -768,7 +774,7 @@ async function _pushMorningWeights(sb, supabaseUserId, localUserId) {
     })).filter(r => r.logged_at && r.weight_kg != null);
     for (let i = 0; i < rows.length; i += 200) {
       const { error } = await sb.from('morning_weights').upsert(
-        rows.slice(i, i + 200), { onConflict: 'id' },
+        rows.slice(i, i + 200), { onConflict: 'user_id,id' },
       );
       if (error) logPgErr('sync._pushMorningWeights', error);
     }
@@ -799,7 +805,7 @@ async function _pushWeeklyCheckins(sb, supabaseUserId, localUserId) {
     }));
     for (let i = 0; i < rows.length; i += 200) {
       const { error } = await sb.from('weekly_checkins_v2').upsert(
-        rows.slice(i, i + 200), { onConflict: 'id' },
+        rows.slice(i, i + 200), { onConflict: 'user_id,id' },
       );
       if (error) logPgErr('sync._pushWeeklyCheckins', error);
     }
@@ -818,7 +824,7 @@ async function _pushCoachOutputs(sb, supabaseUserId, localUserId) {
     }));
     for (let i = 0; i < rows.length; i += 200) {
       const { error } = await sb.from('coach_outputs').upsert(
-        rows.slice(i, i + 200), { onConflict: 'id' },
+        rows.slice(i, i + 200), { onConflict: 'user_id,id' },
       );
       if (error) logPgErr('sync._pushCoachOutputs', error);
     }
@@ -843,7 +849,7 @@ async function _pushExerciseUserNotes(sb, supabaseUserId, localUserId) {
     }));
     for (let i = 0; i < rows.length; i += 200) {
       const { error } = await sb.from('exercise_user_notes').upsert(
-        rows.slice(i, i + 200), { onConflict: 'id' },
+        rows.slice(i, i + 200), { onConflict: 'user_id,id' },
       );
       if (error) logPgErr('sync._pushExerciseUserNotes', error);
     }
@@ -885,7 +891,7 @@ async function _pushUserInsights(sb, supabaseUserId, localUserId) {
     }));
     for (let i = 0; i < payload.length; i += 200) {
       const { error } = await sb.from('user_insights').upsert(
-        payload.slice(i, i + 200), { onConflict: 'id' },
+        payload.slice(i, i + 200), { onConflict: 'user_id,id' },
       );
       if (error) logPgErr('sync._pushUserInsights', error);
     }
@@ -905,7 +911,7 @@ async function _pushWorkoutNotes(sb, supabaseUserId, localUserId) {
     }));
     for (let i = 0; i < payload.length; i += 200) {
       const { error } = await sb.from('workout_notes').upsert(
-        payload.slice(i, i + 200), { onConflict: 'id' },
+        payload.slice(i, i + 200), { onConflict: 'user_id,id' },
       );
       if (error) logPgErr('sync._pushWorkoutNotes', error);
     }
@@ -928,7 +934,7 @@ async function _pushExerciseGoals(sb, supabaseUserId, localUserId) {
     }));
     for (let i = 0; i < payload.length; i += 200) {
       const { error } = await sb.from('exercise_goals').upsert(
-        payload.slice(i, i + 200), { onConflict: 'id' },
+        payload.slice(i, i + 200), { onConflict: 'user_id,id' },
       );
       if (error) logPgErr('sync._pushExerciseGoals', error);
     }
@@ -954,7 +960,7 @@ async function _pushPeakWeekPlans(sb, supabaseUserId, localUserId) {
     }));
     for (let i = 0; i < payload.length; i += 200) {
       const { error } = await sb.from('peak_week_plans').upsert(
-        payload.slice(i, i + 200), { onConflict: 'id' },
+        payload.slice(i, i + 200), { onConflict: 'user_id,id' },
       );
       if (error) logPgErr('sync._pushPeakWeekPlans', error);
     }
@@ -976,7 +982,7 @@ async function _pushPlannedMuscleVolume(sb, supabaseUserId, localUserId) {
     }));
     for (let i = 0; i < payload.length; i += 200) {
       const { error } = await sb.from('planned_muscle_volume').upsert(
-        payload.slice(i, i + 200), { onConflict: 'id' },
+        payload.slice(i, i + 200), { onConflict: 'user_id,id' },
       );
       if (error) logPgErr('sync._pushPlannedMuscleVolume', error);
     }
@@ -1011,7 +1017,7 @@ async function _pushAdaptationEvents(sb, supabaseUserId, localUserId) {
     }));
     for (let i = 0; i < payload.length; i += 200) {
       const { error } = await sb.from('adaptation_events').upsert(
-        payload.slice(i, i + 200), { onConflict: 'id' },
+        payload.slice(i, i + 200), { onConflict: 'user_id,id' },
       );
       if (error) logPgErr('sync._pushAdaptationEvents', error);
     }

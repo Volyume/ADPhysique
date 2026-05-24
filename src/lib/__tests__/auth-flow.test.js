@@ -11,6 +11,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 
+// Stub the sync module: clearAuthStateForSignOut now push-firsts to
+// cloud before wiping local. In tests we don't run Supabase, so make
+// the push call succeed unconditionally so the sign-out flow proceeds
+// to the wipe step instead of aborting with { ok: false }.
+jest.mock('../sync', () => ({
+  bulkUploadLocalData: jest.fn().mockResolvedValue(undefined),
+  cancelScheduledSync: jest.fn(),
+  flushPendingTelemetry: jest.fn().mockResolvedValue(undefined),
+}));
+
 beforeEach(() => {
   jest.resetModules();
   return AsyncStorage.clear();
@@ -99,8 +109,13 @@ describe('clearAuthStateForSignOut', () => {
     target.getAllKeys = jest.fn().mockRejectedValue(new Error('disk full'));
     try {
       const useAppStore = require('../../store/useAppStore').default;
-      await expect(useAppStore.getState().clearAuthStateForSignOut()).resolves.toBeUndefined();
-      // Falls back to at least clearing the critical keys
+      // Per the locked design, sign-out returns { ok: true } on
+      // success and { ok: false, reason: ... } if it had to abort
+      // (e.g. cloud push failed). An AsyncStorage failure inside the
+      // local wipe step is caught + logged but doesn't abort the
+      // sign-out -- in-memory state still clears.
+      const result = await useAppStore.getState().clearAuthStateForSignOut();
+      expect(result?.ok).toBe(true);
       expect(useAppStore.getState().user).toBeNull();
       expect(useAppStore.getState().tier).toBeNull();
     } finally {

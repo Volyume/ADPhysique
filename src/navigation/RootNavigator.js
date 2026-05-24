@@ -607,22 +607,38 @@ export default function RootNavigator() {
               try {
                 // eslint-disable-next-line global-require
                 const log = require('../lib/errorLog');
-                // Use the captured pre-setUser value, NOT the
-                // post-setUser one (which is already the supabase id).
-                if (localUserIdBeforeSignIn && localUserIdBeforeSignIn !== session.user.id) {
-                  // eslint-disable-next-line global-require
-                  const { migrateLocalUserId } = require('../lib/database');
+                // IDENTITY_AND_OWNERSHIP_LOCKED.md: the cross-user
+                // migrateLocalUserId call that used to live here was
+                // the source of the 42501 cascade. A real account A's
+                // local rows were being re-stamped to a real account
+                // B's user_id on sign-in, then push failed because
+                // cloud still owned them under A. The legitimate
+                // anonymous-to-account migration is now handled
+                // ONCE per account in LoginScreen.handleEmailAuth
+                // under the signup branch only. Sign-out wipes local
+                // SQLite (clearAuthStateForSignOut), so cross-user
+                // sign-in finds local already empty and has nothing
+                // to migrate.
+                //
+                // Cross-user safety net: if a different supabase
+                // account previously signed in on this device AND
+                // their data is still in local SQLite (e.g. a build
+                // crashed mid sign-out before the wipe), wipe it
+                // here before the new account pulls.
+                const lastSignedInUserId = await AsyncStorage.getItem('@volyume_last_supabase_user_id').catch(() => null);
+                if (lastSignedInUserId && lastSignedInUserId !== session.user.id) {
                   try {
-                    await migrateLocalUserId(localUserIdBeforeSignIn, session.user.id);
-                    log.logInfo('SignIn.migrate.ok', `localUid=${localUserIdBeforeSignIn} -> cloudUid=${session.user.id}`);
+                    // eslint-disable-next-line global-require
+                    const { wipeAllUserData } = require('../lib/database');
+                    await wipeAllUserData(lastSignedInUserId);
+                    log.logInfo('SignIn.crossUserWipe.ok',
+                      `previous account ${lastSignedInUserId} wiped, new account ${session.user.id} pulling fresh`);
                   } catch (e) {
-                    log.logError('SignIn.migrate.fail', e, { localUid: localUserIdBeforeSignIn, cloudUid: session.user.id });
+                    log.logError('SignIn.crossUserWipe.failed', e, { previous: lastSignedInUserId, incoming: session.user.id });
                   }
                 }
-                // Always re-key with the cloud id after migrate (or
-                // directly if there was no local user). Both args are
-                // now the supabase id; bulkUpload reads local SQLite
-                // by user_id and pushes to cloud.
+                try { await AsyncStorage.setItem('@volyume_last_supabase_user_id', session.user.id); } catch (_) {}
+                // Push any local-only edits made while signed out
                 // eslint-disable-next-line global-require
                 const { bulkUploadLocalData } = require('../lib/sync');
                 try {

@@ -25,7 +25,6 @@ const PRO_BULLETS = [
 ];
 
 export default function WelcomeScreen({ navigation }) {
-  const { setTier, initLocalUser, user } = useAppStore();
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
 
   const fadeIn   = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
@@ -39,30 +38,15 @@ export default function WelcomeScreen({ navigation }) {
     ]).start();
   }, []);
 
-  async function chooseTier(tier) {
-    // After sign-out, the store is cleared but bootstrap doesn't re-run, so
-    // there's no local user. Without one, downstream screens (Plan Library
-    // seed, Build a Plan) silently no-op because they gate on user.id.
-    // initLocalUser is idempotent — safe to call if a user already exists.
-    if (!user?.id) {
-      await initLocalUser();
-    }
-    if (tier === 'pro') {
-      // CRITICAL: don't setTier('pro') here. firstRunComplete is false
-      // post-signout, so flipping tier=pro would mount ProOnboardingStack
-      // immediately and the wizard would flash before the user has
-      // authenticated. For a returning Pro user, the wizard then briefly
-      // shows steps 1 and 2 before cloud restore catches up and the
-      // navigator unmounts it. Instead, route to LoginScreen — tier
-      // flips post-auth via LoginScreen.newAccountSetup (signup branch)
-      // or via restoreSessionFromCloud (signin branch). Returning users
-      // never see the wizard; new users see it after their account is
-      // actually created.
-      navigation.navigate('Login', { intent: 'pro_signup' });
-      return;
-    }
-    await setTier(tier, 'WelcomeScreen.continueWithTier');
-    // Navigation resolves automatically — RootNavigator re-renders on tier change
+  // Per IDENTITY_AND_OWNERSHIP_LOCKED.md decision 1: no anonymous
+  // mode. Both Free and Pro CTAs route to the sign-up flow. Free
+  // users still get the Free tier, they just create a real account
+  // first so their data is cloud-backed and cross-device safe by
+  // construction. Tier flip happens post-auth via
+  // LoginScreen.newAccountSetup (Pro) or the same flow defaulting to
+  // Free if the user doesn't enable Pro.
+  function chooseTier(tier) {
+    navigation.navigate('Login', { intent: tier === 'pro' ? 'pro_signup' : 'free_signup' });
   }
 
   return (

@@ -941,6 +941,33 @@ const SCHEMA_MIGRATIONS = [
     'CREATE INDEX IF NOT EXISTS idx_engine_telemetry_user ON engine_telemetry(user_id, occurred_at)',
     'CREATE INDEX IF NOT EXISTS idx_engine_telemetry_pushed ON engine_telemetry(pushed_at)',
   ],
+  // Identity + ownership locked design (docs/IDENTITY_AND_OWNERSHIP_LOCKED.md).
+  // Mirror the cloud migration 018: child tables that join through a
+  // parent's user_id need the column locally so the new composite-key
+  // upserts work correctly. SQLite is more forgiving than Postgres so
+  // we don't have to restructure PKs here: the local schema is wiped
+  // on every sign-out under the locked design, so collisions across
+  // accounts cannot happen locally by construction.
+  //
+  // For now we only ADD user_id columns + backfill from parents. The
+  // sign-out wipe + sync code changes ship in parallel commits.
+  [
+    'ALTER TABLE routine_exercises ADD COLUMN user_id TEXT',
+    // LOCKED-OK: one-shot backfill of the column just added above.
+    // Not a runtime ownership mutation; rows get their user_id from
+    // the parent routine. Runs once per install.
+    `UPDATE routine_exercises SET user_id = (
+      SELECT r.user_id FROM routines r WHERE r.id = routine_exercises.routine_id
+    ) WHERE user_id IS NULL`,
+    'CREATE INDEX IF NOT EXISTS idx_routine_exercises_user ON routine_exercises(user_id, routine_id)',
+
+    'ALTER TABLE mesocycle_weeks ADD COLUMN user_id TEXT',
+    // LOCKED-OK: same pattern as routine_exercises above.
+    `UPDATE mesocycle_weeks SET user_id = (
+      SELECT m.user_id FROM mesocycles m WHERE m.id = mesocycle_weeks.mesocycle_id
+    ) WHERE user_id IS NULL`,
+    'CREATE INDEX IF NOT EXISTS idx_mesocycle_weeks_user ON mesocycle_weeks(user_id, mesocycle_id)',
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
@@ -4078,6 +4105,13 @@ export async function migrateLocalUserId(localUserId, supabaseUserId) {
   ];
   for (const table of tables) {
     try {
+      // LOCKED-OK: the anonymous-to-account migration is the one
+      // legitimate user_id mutation per IDENTITY_AND_OWNERSHIP_LOCKED.md
+      // decision 1 + scenario A's note. Caller (LoginScreen) gates
+      // this to mode==='signup' only; the cross-user sign-in path
+      // that used to call this is now removed in favour of
+      // wipeAllUserData via clearAuthStateForSignOut + the
+      // RootNavigator cross-user safety net.
       await d.runAsync(
         `UPDATE ${table} SET user_id = ? WHERE user_id = ?`,
         [supabaseUserId, localUserId],

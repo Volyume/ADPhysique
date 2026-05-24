@@ -29,6 +29,14 @@ jest.mock('../supabase', () => ({
 
 jest.mock('../sync', () => ({
   syncProfile: jest.fn().mockResolvedValue({}),
+  // Per IDENTITY_AND_OWNERSHIP_LOCKED.md the sign-out flow push-firsts
+  // local data to cloud before wiping. In tests we don't run real
+  // Supabase, so mock the push to succeed unconditionally; otherwise
+  // clearAuthStateForSignOut aborts with { ok: false, reason: 'unsynced' }
+  // and the state-clear assertions all fail.
+  bulkUploadLocalData: jest.fn().mockResolvedValue(undefined),
+  cancelScheduledSync: jest.fn(),
+  flushPendingTelemetry: jest.fn().mockResolvedValue(undefined),
 }));
 
 // Use a single store across tests; reset its state in beforeEach by

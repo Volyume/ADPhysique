@@ -235,16 +235,27 @@ export default function SettingsScreen({ navigation }) {
           onPress: async () => {
             setSigningOut(true);
             try {
+              // Push-first sign-out: wipes local SQLite only after a
+              // successful cloud sync, so unsynced edits aren't lost.
+              // If the push fails, sign-out is aborted and the user
+              // stays signed in.
+              const result = await clearAuthStateForSignOut();
+              if (result?.ok === false) {
+                Alert.alert(
+                  "Couldn't sign out",
+                  "We couldn't sync your data to the cloud first. Check your connection and try again. Your edits are safe locally until they ship.",
+                );
+                return;
+              }
               if (!user?.isLocal) {
-                // Best-effort cloud sign-out; we still clear local state
-                // even if the auth call fails (so the user isn't stuck
-                // signed in locally with a dead session).
+                // Cloud auth sign-out happens after the local wipe so
+                // a failed wipe doesn't strand the user with a dead
+                // session (the local state was kept above).
                 try { await signOut(); }
                 catch (e) {
                   logError('SettingsScreen.handleSignOut.cloudSignOut', e);
                 }
               }
-              await clearAuthStateForSignOut();
             } finally {
               setSigningOut(false);
             }

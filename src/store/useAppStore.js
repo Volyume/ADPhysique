@@ -134,41 +134,69 @@ const useAppStore = create((set, get) => ({
     set({ user: null, session: null });
   },
 
-  // Sign-out cleanup. Removes the AsyncStorage state tied to a session so
-  // the next sign-in starts from a clean slate, but DOES NOT touch SQLite
-  // (the user's training history stays local — if they sign back in to
-  // the same account on this device, it's instantly available without
-  // waiting for pullFromCloud). The actual SQLite wipe happens only on
-  // Sign-out is a SESSION-LEVEL operation. It does NOT touch AsyncStorage
-  // or local data. All per-user content (profile, completed-onboarding
-  // flag, body metrics migration flags, nutrition targets, etc.) stays
-  // exactly where it is. When the same user signs back in, everything
-  // is intact — no cloud roundtrip needed for routing.
+  // Sign-out. Per IDENTITY_AND_OWNERSHIP_LOCKED.md the locked design is
+  // "sign-out wipes local SQLite": every sign-in is a fresh cloud pull,
+  // so two users on the same device can never see each other's data
+  // because local SQLite is empty by the time anyone signs in.
   //
-  // Per-user safety on a shared device: keys that are user-specific use
-  // a uid prefix (FIRST_RUN_KEY_PFX, PROFILE_KEY_PFX, etc.) so a
-  // different user signing in on the same device reads THEIR own keys,
-  // not the previous user's. The few legacy global keys
-  // (FIRST_RUN_KEY, TIER_KEY) are kept in sync per-user via the
-  // restoreSessionFromCloud path.
+  // Push-first safety: we attempt a final cloud sync before wiping. If
+  // the push fails (offline, sync errors), we abort the wipe and keep
+  // the user signed in. Otherwise an offline sign-out would silently
+  // destroy any unsynced local edits. The caller surfaces a Toast
+  // explaining what happened.
   //
-  // The only path that wipes data is the explicit Settings →
-  // Delete account flow (wipeAllUserData + delete-account Edge
-  // Function). Sign-out is not that.
+  // Returns:
+  //   { ok: true }                    sign-out succeeded, local wiped
+  //   { ok: false, reason: 'unsynced' }   push failed, sign-out aborted
   clearAuthStateForSignOut: async () => {
     // eslint-disable-next-line global-require
-    try { require('../lib/errorLog').logInfo('clearAuthStateForSignOut', 'start', { prevTier: get().tier, prevUid: get().user?.id ?? null }); } catch (_) {}
-    // Cancel any pending debounced sync — running a push AFTER the
-    // session has been torn down would either fail silently
-    // (no auth) or worse, fire with stale credentials. The next
-    // sign-in's bulkUpload handles any unsynced local writes.
+    const log = require('../lib/errorLog');
+    const prevUid = get().user?.id ?? null;
+    try { log.logInfo('clearAuthStateForSignOut', 'start', { prevTier: get().tier, prevUid }); } catch (_) {}
+
+    // Cancel the debounced sync timer so it doesn't fire mid-wipe.
     try {
       // eslint-disable-next-line global-require
       require('../lib/sync').cancelScheduledSync();
     } catch (_) { /* tolerate */ }
+
+    // Push-first safety: try to push everything before wiping. If we
+    // can't reach cloud (offline) or the push fails, abort the
+    // sign-out so the user doesn't lose unsynced edits. Caller shows
+    // a "couldn't sign out, try again on a stronger connection" toast.
+    if (prevUid && !get().user?.isLocal) {
+      try {
+        // eslint-disable-next-line global-require
+        const { bulkUploadLocalData, flushPendingTelemetry } = require('../lib/sync');
+        await bulkUploadLocalData(prevUid, prevUid);
+        try { await flushPendingTelemetry(); } catch (_) {}
+      } catch (e) {
+        log.logWarn('clearAuthStateForSignOut.pushFirstFailed',
+          'sign-out aborted: cloud push failed, keeping user signed in',
+          { prevUid, error: e?.message });
+        return { ok: false, reason: 'unsynced' };
+      }
+    }
+
+    // Wipe local SQLite rows owned by this user. Cloud copy is intact
+    // (we just pushed). On next sign-in to the same account, data
+    // restores via pullFromCloud. On sign-in to a different account,
+    // local is already empty so nothing to leak.
+    if (prevUid) {
+      try {
+        // eslint-disable-next-line global-require
+        const { wipeAllUserData } = require('../lib/database');
+        await wipeAllUserData(prevUid);
+        log.logInfo('clearAuthStateForSignOut.wipe.ok', `local SQLite wiped for ${prevUid}`);
+      } catch (e) {
+        log.logError('clearAuthStateForSignOut.wipe.failed', e, { prevUid });
+        // Don't abort here -- if wipe partly fails, in-memory clear
+        // still proceeds; next sign-in's cross-user-wipe path is the
+        // safety net.
+      }
+    }
+
     set({
-      // Session-level fields only. These are in-memory state, not
-      // AsyncStorage. AsyncStorage data persists untouched.
       user: null,
       session: null,
       userProfile: null,
@@ -176,9 +204,6 @@ const useAppStore = create((set, get) => ({
       tierChecked: true,
       firstRunComplete: false,
       firstRunChecked: true,
-      // Workout in-memory state is per-session and shouldn't survive
-      // sign-out into a future session (could be a different user).
-      // The completed workout rows in SQLite are user-keyed and stay.
       activeWorkout: null,
       workoutExercises: [],
       currentExerciseIndex: 0,
@@ -186,6 +211,7 @@ const useAppStore = create((set, get) => ({
       prCelebration: null,
       prCelebrationQueue: [],
     });
+    return { ok: true };
   },
 
   // Tier — 'free' | 'pro' | null (null = not yet chosen → show WelcomeScreen)

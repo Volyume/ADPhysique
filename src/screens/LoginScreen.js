@@ -128,11 +128,16 @@ export default function LoginScreen({ navigation, route }) {
         }
         await AsyncStorage.setItem('@volyume_last_supabase_user_id', supabaseUserId).catch(() => {});
 
-        // Re-stamp any local rows that were keyed to the prior local user id
-        // so existing local data is owned by the freshly-signed-in supabase
-        // user. Without this, a user who built a plan as a local user before
-        // signing up would have their plans orphaned.
-        if (localUserId && localUserId !== supabaseUserId) {
+        // Anonymous-to-account migration: only on SIGN-UP, never on
+        // SIGN-IN. Per IDENTITY_AND_OWNERSHIP_LOCKED.md the only
+        // legitimate user_id mutation is moving rows from an
+        // anonymous local UUID to a fresh real account at the
+        // moment of sign-up. Sign-in with a previous real account
+        // already cached locally is the path that caused the 42501
+        // cascade; that path is now handled by the cross-user wipe
+        // in RootNavigator.onAuthStateChange + the sign-out wipe in
+        // useAppStore.clearAuthStateForSignOut.
+        if (mode === 'signup' && localUserId && localUserId !== supabaseUserId) {
           try { await migrateLocalUserId(localUserId, supabaseUserId); }
           catch (e) { logError('LoginScreen.handleEmailAuth.migrateLocalUserId', e); }
         }
@@ -390,33 +395,11 @@ export default function LoginScreen({ navigation, route }) {
             </Text>
           </TouchableOpacity>
 
-          {/* ── Divider ── */}
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* ── Continue locally ── */}
-          <TouchableOpacity
-            style={[styles.localBtn, localLoading && styles.btnDisabled]}
-            onPress={handleContinueLocally}
-            disabled={localLoading}
-            activeOpacity={0.8}
-          >
-            {localLoading ? (
-              <ActivityIndicator color={colors.textSecondary} size="small" />
-            ) : (
-              <>
-                <Ionicons name="phone-portrait-outline" size={17} color={colors.textSecondary} />
-                <Text style={styles.localBtnText}>Continue without an account</Text>
-              </>
-            )}
-          </TouchableOpacity>
-
-          <Text style={styles.localNote}>
-            Your data stays on this device. You can add an account later to sync across devices and back up your history.
-          </Text>
+          {/* "Continue without an account" removed per
+              IDENTITY_AND_OWNERSHIP_LOCKED.md decision 1 (no
+              anonymous mode). Every user has a real account from the
+              first row they create; that's what makes cross-device
+              sync and the cross-user wipe rule provable. */}
 
           <Text style={styles.betaNote}>No subscription required</Text>
         </ScrollView>
