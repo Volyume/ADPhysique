@@ -51,6 +51,19 @@ const useAppStore = create((set, get) => ({
   // during initial bootstrap (splashReady / firstRunChecked / tierChecked).
   isAuthLoading: false,
 
+  // Article 9 health-data consent state (locked in PRIVACY_CONSENT_LOCKED.md
+  // + ONBOARDING_SEQUENCE_LOCKED.md screen 3). Three states:
+  //   null       not yet checked (boot in progress)
+  //   true       user has granted consent; app proceeds normally
+  //   false      no consent yet; RootNavigator routes to Article9ConsentScreen
+  // The check fires once per sign-in; result cached in AsyncStorage under
+  // `@volyume_health_consent_${userId}`. Local users (no real account)
+  // skip the gate entirely.
+  healthConsentChecked: false,
+  healthConsentGranted: () => set({ healthConsent: true, healthConsentChecked: true }),
+  healthConsent: null,
+  setHealthConsent: (value, checked = true) => set({ healthConsent: value, healthConsentChecked: checked }),
+
   setUser: (user) => set({ user }),
   setSession: (session) => set({ session }),
   setUserProfile: (userProfile) => set({ userProfile }),
@@ -204,6 +217,11 @@ const useAppStore = create((set, get) => ({
       tierChecked: true,
       firstRunComplete: false,
       firstRunChecked: true,
+      // Consent state resets so the next sign-in re-checks. Cached
+      // AsyncStorage value persists per-user so a same-account
+      // sign-in won't trigger the gate again unnecessarily.
+      healthConsent: null,
+      healthConsentChecked: false,
       activeWorkout: null,
       workoutExercises: [],
       currentExerciseIndex: 0,

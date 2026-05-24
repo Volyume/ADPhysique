@@ -50,6 +50,7 @@ import ManualBuilderScreen from '../screens/ManualBuilderScreen';
 import NutritionTargetsScreen from '../screens/NutritionTargetsScreen';
 import PlanLibraryScreen from '../screens/PlanLibraryScreen';
 import FirstRunScreen from '../screens/FirstRunScreen';
+import Article9ConsentScreen from '../screens/Article9ConsentScreen';
 import WeeklyCheckInScreen from '../screens/WeeklyCheckInScreen';
 import CoachOutputScreen from '../screens/CoachOutputScreen';
 import ProGoalSetupScreen from '../screens/ProGoalSetupScreen';
@@ -323,6 +324,18 @@ function FirstRunStack() {
   );
 }
 
+// Article 9 consent gate. Single-screen stack; the consent screen
+// itself doesn't navigate anywhere -- on submission the store flips
+// healthConsent to true and the navigator re-renders into the
+// normal flow (FirstRunStack / ProOnboardingStack / MainTabs).
+function Article9ConsentStack() {
+  return (
+    <Stack.Navigator screenOptions={{ ...stackOptions, headerShown: false, ...(useStackMotionOverride() || {}) }}>
+      <Stack.Screen name="Article9Consent" component={Article9ConsentScreen} />
+    </Stack.Navigator>
+  );
+}
+
 function ProOnboardingStack() {
   return (
     <Stack.Navigator screenOptions={{ ...stackOptions, headerShown: false, ...(useStackMotionOverride() || {}) }}>
@@ -349,6 +362,8 @@ export default function RootNavigator() {
   const isAuthLoading = useAppStore(s => s.isAuthLoading);
   const firstRunComplete = useAppStore(s => s.firstRunComplete);
   const firstRunChecked = useAppStore(s => s.firstRunChecked);
+  const healthConsent = useAppStore(s => s.healthConsent);
+  const healthConsentChecked = useAppStore(s => s.healthConsentChecked);
   const tier = useAppStore(s => s.tier);
   const tierChecked = useAppStore(s => s.tierChecked);
   // restoringSession removed — restoreSessionFromCloud is now
@@ -638,6 +653,42 @@ export default function RootNavigator() {
                   }
                 }
                 try { await AsyncStorage.setItem('@volyume_last_supabase_user_id', session.user.id); } catch (_) {}
+
+                // Article 9 health-data consent check. Local cache
+                // first (set after a successful grant in the consent
+                // screen), then cloud fallback for cross-device
+                // restore. Result drives the renderNavigator gate.
+                try {
+                  const cacheKey = `@volyume_health_consent_${session.user.id}`;
+                  const cached = await AsyncStorage.getItem(cacheKey).catch(() => null);
+                  if (cached === 'true') {
+                    useAppStore.getState().setHealthConsent(true, true);
+                  } else {
+                    // No local cache; ask cloud. RLS keeps this
+                    // scoped to the signed-in user.
+                    const { data, error } = await client
+                      .from('users_profile')
+                      .select('health_data_consent')
+                      .eq('id', session.user.id)
+                      .maybeSingle();
+                    if (error) {
+                      // Network error or table missing -- default to
+                      // not-granted so the gate fires. User can grant
+                      // in-app; failures retried on next session.
+                      useAppStore.getState().setHealthConsent(false, true);
+                    } else {
+                      const granted = data?.health_data_consent === true;
+                      useAppStore.getState().setHealthConsent(granted, true);
+                      if (granted) {
+                        try { await AsyncStorage.setItem(cacheKey, 'true'); } catch (_) {}
+                      }
+                    }
+                  }
+                } catch (e) {
+                  log.logWarn('SignIn.healthConsentCheck.failed', e?.message);
+                  useAppStore.getState().setHealthConsent(false, true);
+                }
+
                 // Push any local-only edits made while signed out
                 // eslint-disable-next-line global-require
                 const { bulkUploadLocalData } = require('../lib/sync');
@@ -719,11 +770,19 @@ export default function RootNavigator() {
 
   // Navigation priority:
   // 1. No tier chosen yet → WelcomeScreen (tier selection)
-  // 2. Pro + first-run not done → ProOnboardingStack (guided 5-step setup)
-  // 3. Free + first-run not done → FirstRunStack (quick setup)
-  // 4. Both done → MainTabs
+  // 2. Signed-in + Article 9 consent missing → Article9ConsentStack
+  //    (compliance gate per IDENTITY_AND_OWNERSHIP_LOCKED.md +
+  //    PRIVACY_CONSENT_LOCKED.md). Blocks the rest of the app until
+  //    the user explicitly agrees to health-data processing. Local
+  //    users without a cloud account skip the gate.
+  // 3. Pro + first-run not done → ProOnboardingStack (guided 5-step setup)
+  // 4. Free + first-run not done → FirstRunStack (quick setup)
+  // 5. Both done → MainTabs
   function renderNavigator() {
     if (!tier) return <WelcomeStack />;
+    if (user && !user.isLocal && healthConsentChecked && healthConsent === false) {
+      return <Article9ConsentStack />;
+    }
     if (!firstRunComplete) {
       return tier === 'pro' ? <ProOnboardingStack /> : <FirstRunStack />;
     }
