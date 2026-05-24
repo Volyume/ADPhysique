@@ -13,8 +13,8 @@ web-build/
 .env
 .env.local
 .env.*.local
-ios/
-android/
+/ios/
+/android/
 *.log
 .claude/
 google-play-service-account.json

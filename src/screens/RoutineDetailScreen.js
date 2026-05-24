@@ -13,6 +13,7 @@ import {
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getExerciseWhyThis } from '../lib/whyThisTemplates';
 import { rankSwaps } from '../lib/swapEngine';
+import { logError } from '../lib/errorLog';
 import useAppStore from '../store/useAppStore';
 
 // Compute muscle coverage: { [muscleKey]: count } sorted by count descending
@@ -38,9 +39,9 @@ function MuscleTagRow({ exercises }) {
 
   let warning = null;
   if (noBack && noHamstrings) {
-    warning = 'No pulling work — consider adding a row or pull variation.';
+    warning = 'No pulling work. Consider adding a row or pull variation.';
   } else if (noHamstrings) {
-    warning = 'No hamstring work — consider adding an RDL or leg curl.';
+    warning = 'No hamstring work. Consider adding an RDL or leg curl.';
   }
 
   if (coverage.length === 0) return null;
@@ -116,7 +117,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
           style={{ marginRight: 16 }}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Text style={{ fontSize: 15, color: isReordering ? colors.primary : colors.textSecondary, fontWeight: isReordering ? '700' : '400' }}>
+          <Text style={{ fontSize: fontSize.md, color: isReordering ? colors.primary : colors.textSecondary, fontWeight: isReordering ? fontWeight.bold : fontWeight.regular }}>
             {isReordering ? 'Done' : 'Reorder'}
           </Text>
         </TouchableOpacity>
@@ -252,14 +253,20 @@ export default function RoutineDetailScreen({ navigation, route }) {
       );
       return;
     }
-    const workout = await createWorkout(user.id, routineId);
-    const initialExercises = exercises.map(({ exercise, routineExercise }) => ({
-      exercise,
-      routineExercise,
-      sets: [],
-    }));
-    startWorkout(workout, initialExercises);
-    navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
+    try {
+      const workout = await createWorkout(user.id, routineId);
+      const initialExercises = exercises.map(({ exercise, routineExercise }) => ({
+        exercise,
+        routineExercise,
+        sets: [],
+        supersetGroupId: routineExercise?.supersetGroupId ?? null,
+      }));
+      startWorkout(workout, initialExercises);
+      navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
+    } catch (e) {
+      logError('RoutineDetailScreen.handleStartWorkout', e, { userId: user?.id, routineId });
+      Alert.alert('Couldn\'t start workout', e?.message ?? 'Please try again.');
+    }
   }
 
   const filtered = searchQuery.trim()
@@ -285,15 +292,42 @@ export default function RoutineDetailScreen({ navigation, route }) {
         }
         renderItem={({ item: { routineExercise, exercise }, index }) => (
           <TouchableOpacity
-            style={styles.exerciseCard}
-            onPress={() => !isReordering && openEdit(routineExercise, exercise)}
+            style={[styles.exerciseCard, exercise.unresolved && styles.exerciseCardUnresolved]}
+            onPress={() => {
+              if (isReordering) return;
+              if (exercise.unresolved) {
+                // Broken-FK row left over from the pre-deterministic-ID
+                // sync era. Open the existing swap modal so the user
+                // can re-link this slot to a real exercise in one tap.
+                setSwapState({
+                  routineExerciseId: routineExercise.id,
+                  exercise,
+                });
+                // Show all exercises as candidates rather than the
+                // recovery-narrow list — we don't know what muscle the
+                // original was so we can't filter intelligently.
+                setSwapCandidates(allExercises.map(e => ({ exercise: e })));
+                return;
+              }
+              openEdit(routineExercise, exercise);
+            }}
             activeOpacity={isReordering ? 1 : 0.8}
           >
-            <View style={styles.orderBadge}>
+            <View style={[styles.orderBadge, exercise.unresolved && styles.orderBadgeUnresolved]}>
               <Text style={styles.orderNum}>{index + 1}</Text>
             </View>
             <View style={styles.exerciseInfo}>
-              <Text style={styles.exerciseName}>{exercise.name}</Text>
+              <View style={styles.exerciseTitleRow}>
+                <Text style={[styles.exerciseName, exercise.unresolved && styles.exerciseNameUnresolved]}>
+                  {exercise.name || 'Exercise (couldn’t restore)'}
+                </Text>
+                {exercise.unresolved && (
+                  <View style={styles.relinkChip}>
+                    <Ionicons name="link-outline" size={12} color={colors.warning} />
+                    <Text style={styles.relinkChipText}>Tap to re-link</Text>
+                  </View>
+                )}
+              </View>
               <Text style={styles.exerciseMeta}>
                 {routineExercise.recommendedSets} sets ·{' '}
                 {routineExercise.recommendedRepsMin}–{routineExercise.recommendedRepsMax} reps
@@ -486,7 +520,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
             Replacing: <Text style={{ color: colors.primary }}>{swapState?.exercise?.name}</Text>
           </Text>
           <Text style={styles.swapNote}>
-            Choose a substitute. Your routine will be updated — your set, rep and rest targets stay the same.
+            Choose a substitute. Your routine will be updated. Your set, rep and rest targets stay the same.
           </Text>
           <FlatList
             data={swapCandidates}
@@ -577,6 +611,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  // Visual variant for rows whose exercise_id couldn't be resolved
+  // against the local exercises table (cloud-restored from a build
+  // that pre-dates deterministic canonical IDs + denormalised
+  // exercise_name). The warning border tells the user this row
+  // needs their attention; tapping opens the swap modal to re-link.
+  exerciseCardUnresolved: {
+    borderColor: colors.warning,
+    backgroundColor: colors.warningBg,
+  },
   orderBadge: {
     width: 32,
     height: 32,
@@ -585,9 +628,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  orderBadgeUnresolved: { backgroundColor: colors.warning + '40' },
   orderNum: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textSecondary },
   exerciseInfo: { flex: 1, gap: 2 },
+  exerciseTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
   exerciseName: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  exerciseNameUnresolved: { color: colors.warning },
+  relinkChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+    backgroundColor: colors.warningBg,
+    borderWidth: 1,
+    borderColor: colors.warning + '60',
+  },
+  relinkChipText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.warning,
+  },
   exerciseMeta: { fontSize: fontSize.sm, color: colors.primary },
   exerciseMuscle: { fontSize: fontSize.xs, color: colors.textMuted },
   exerciseWhy: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic', marginTop: 2, lineHeight: 16 },

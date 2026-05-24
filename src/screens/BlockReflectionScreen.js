@@ -47,7 +47,7 @@ function buildNarrative(data) {
 
   if (tonnageDelta !== null) {
     if (tonnageDelta > 5) {
-      lines.push(`Weekly volume climbed ${tonnageDelta}% from the first to the last week — progression doing its job.`);
+      lines.push(`Weekly volume climbed ${tonnageDelta}% from the first to the last week. Progression doing its job.`);
     } else if (tonnageDelta < -5) {
       lines.push(`Volume was lower in the final week than the first. If that was a planned lighter week, that's exactly right.`);
     } else {

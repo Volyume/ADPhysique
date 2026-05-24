@@ -18,13 +18,17 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import * as hapticsVocab from '../lib/haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import SetEntry from '../components/SetEntry';
+import PlateCalculator from '../components/PlateCalculator';
 import RestTimer from '../components/RestTimer';
 import useAppStore from '../store/useAppStore';
-import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, getAllExercises, insertExercise, getCurrentMesocycleWeek, getPlannedMuscleVolume, getWeek1SetsForExercise, getLastNWorkoutSets, saveExerciseUserNote, getExerciseUserNote, getNextTimeNotes, markNoteShown, updateWorkoutSetPostRating } from '../lib/database';
+import { useShallow } from 'zustand/react/shallow';
+import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, insertExercise, getCurrentMesocycleWeek, getPlannedMuscleVolume, getWeek1SetsForExercise, getLastNWorkoutSets, saveExerciseUserNote, getExerciseUserNote, getNextTimeNotes, markNoteShown, updateWorkoutSetPostRating } from '../lib/database';
+import { logError } from '../lib/errorLog';
 import {
   detectPR,
   getProgressionSuggestion,
@@ -40,34 +44,23 @@ import InfoTooltip from '../components/InfoTooltip';
 import { applyTimeCrunch } from '../lib/mesocycle';
 import { getTimeCrunchMessage } from '../lib/whyThisTemplates';
 import { estimateWorkoutMinutes } from '../lib/planEngine';
-import { hasSeenNotifPrompt, markNotifPromptSeen, requestNotifPermission } from '../lib/restNotifications';
 
 const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '', rir: 2 };
+
 
 const SET_TYPE_DISPLAY = {
   straight: 'Working',
   warmup: 'Warm-up',
-  dropset: 'Drop Set',
+  dropset: 'Working',
   amrap: 'Working',
-  myo_reps: 'Myo-reps',
-  rest_pause: 'Rest-pause',
+  myo_reps: 'Working',
+  rest_pause: 'Working',
   superset: 'Working',
 };
 
 const SET_TYPE_OPTIONS = [
-  { value: 'straight', label: 'Working', description: 'Counts as a full working set. Use this for all your main sets.' },
-  { value: 'warmup', label: 'Warm-up', description: 'Preparation set to get ready. Not counted in your weekly totals.' },
-  { value: 'dropset', label: 'Drop Set', description: 'Reduce the weight and keep going. Counted in your weekly totals.' },
-  {
-    value: 'myo_reps',
-    label: 'Myo-reps',
-    description: 'One activation set to near failure, then 3-5 short clusters of 3-5 reps with 10-20s rest between each. High stimulus, time-efficient.',
-  },
-  {
-    value: 'rest_pause',
-    label: 'Rest-pause',
-    description: 'Take your set to near failure, rest 10-20s, then crank out a few more reps. Repeat 2-3 times. Use sparingly on isolation lifts.',
-  },
+  { value: 'straight', label: 'Working', description: 'Counts toward your weekly totals and progress tracking.' },
+  { value: 'warmup', label: 'Warm-up', description: 'Lighter sets before your main work. Not counted in your weekly totals.' },
 ];
 
 // Returns the set to use as the rep-progression anchor.
@@ -92,31 +85,67 @@ function countProgressSets(sets) {
 }
 
 export default function ActiveWorkoutScreen({ navigation, route }) {
-  const store = useAppStore();
+  // Use a shallow selector so every store mutation (rest timer ticks,
+  // PR celebration flag flips, accessibility toggles) doesn't re-render
+  // the 2000-line tree. Without this the rest timer alone fires
+  // 300-600 re-renders per workout because tickRestTimer() ran every
+  // second and store-touch was wholesale.
+  //
+  // Actions are stable function references inside Zustand so they don't
+  // need to participate in the shallow compare — we still pull them
+  // off the store via the selector.
+  const store = useAppStore(useShallow(s => ({
+    user: s.user, units: s.units,
+    activeWorkout: s.activeWorkout,
+    workoutExercises: s.workoutExercises,
+    currentExerciseIndex: s.currentExerciseIndex,
+    setCurrentExerciseIndex: s.setCurrentExerciseIndex,
+    setWorkoutExercises: s.setWorkoutExercises,
+    addExerciseToWorkout: s.addExerciseToWorkout,
+    addSetToCurrentExercise: s.addSetToCurrentExercise,
+    startRestTimer: s.startRestTimer,
+    showPRCelebration: s.showPRCelebration,
+    endWorkout: s.endWorkout,
+    workoutStartTime: s.workoutStartTime,
+    lastActivityAt: s.lastActivityAt,
+    updateLastActivity: s.updateLastActivity,
+  })));
   const {
     user, units, activeWorkout, workoutExercises, currentExerciseIndex,
     setCurrentExerciseIndex, addExerciseToWorkout, addSetToCurrentExercise,
     startRestTimer, showPRCelebration, endWorkout, workoutStartTime,
     lastActivityAt, updateLastActivity,
   } = store;
+  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
 
   const [currentSet, setCurrentSet] = useState({ ...DEFAULT_SET });
   const [prevSets, setPrevSets] = useState([]);
   const [allTimeSets, setAllTimeSets] = useState([]);
   const [loggedSets, setLoggedSets] = useState([]);
+  // Flashes the SetEntry card border amber for ~700ms after a successful
+  // Log set, so the tap is acknowledged visibly. Resets via a tracked
+  // timeout so cycling exercises mid-flash doesn't leave it stuck on.
+  const [logFlash, setLogFlash] = useState(false);
+  const logFlashTimeoutRef = useRef(null);
   const [detectedPRs, setDetectedPRs] = useState([]);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showExercisePicker, setShowExercisePicker] = useState(false);
   const [noteText, setNoteText] = useState('');
   const [showNoteInput, setShowNoteInput] = useState(false);
+  // Superset notification — tracks which group IDs the user has already
+  // seen the "heads up, paired exercises" modal for in this workout. We
+  // show it once per pair so the user can grab both stations before
+  // starting. Set, not array, for O(1) membership checks.
+  const acknowledgedSupersetsRef = useRef(new Set());
+  const [supersetHeadsUp, setSupersetHeadsUp] = useState(null);
+  // shape: { groupId, exerciseAName, exerciseBName } | null
   const [saving, setSaving] = useState(false);
   const [progression, setProgression] = useState(null);
   const [setTargets, setSetTargets] = useState([]);
   const [targetReason, setTargetReason] = useState(null);
   const [showSetTypePicker, setShowSetTypePicker] = useState(false);
-  const [showWarmupSheet, setShowWarmupSheet] = useState(false);
-  const [suggestedWarmups, setSuggestedWarmups] = useState([]);
-  const [warmupDoneIdx, setWarmupDoneIdx] = useState([]); // indices of logged warmups
+  const [showPlateCalc, setShowPlateCalc] = useState(false);
+  const [plateCalcTarget, setPlateCalcTarget] = useState(0);
   const [showExecution, setShowExecution] = useState(false);
   const [showStaleModal, setShowStaleModal] = useState(false);
   const [showSwapModal, setShowSwapModal] = useState(false);
@@ -131,17 +160,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [deloadDismissed, setDeloadDismissed] = useState(false);
   const [exerciseNote, setExerciseNote] = useState('');       // persisted per-user per-exercise note
   const [ghostSet, setGhostSet] = useState(null); // pre-fill from last session (same set index)
-  const [showNotifPrompt, setShowNotifPrompt] = useState(false);
   const [nextTimeNotes, setNextTimeNotes] = useState([]);  // "next time" coaching notes for this routine
-  // Stimulus rating sheet: shown after moving away from an exercise that had working sets
-  // { exerciseName, lastSetId, pump: 3, connection: 3 }
-  const [stimulusRating, setStimulusRating] = useState(null);
   // Cluster counter for myo-reps / rest-pause: 0 = activation set, 1+ = mini-set N+1
-  const [clusterCount, setClusterCount] = useState(0);
   const autoAdvanceRef = useRef(null);
-  const pendingFinishRef = useRef(null); // callback to execute after stimulus rating is dismissed on finish
   const sessionSetsRef = useRef([]);   // tracks sets in this session — used for PR detection
   const warmupHintSeenRef = useRef(false); // show one-liner warmup note only on first warmup of this session
+  const finishingRef = useRef(false); // gates handleFinishWorkout so a rapid double-tap can't double-finish
   const shownNoteIdsRef = useRef(new Set()); // note IDs already shown in this session
 
   const scrollRef = useRef(null);
@@ -166,53 +190,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     ? (workoutExercises.find((e, i) => i !== currentExerciseIndex && e.supersetGroupId === currentSGI)?.exercise?.name ?? '')
     : '';
 
-  function maybeTriggerStimulusRating(prevIdx) {
-    const prevEntry = workoutExercises[prevIdx];
-    if (!prevEntry) return;
-    const workingSets = (prevEntry.sets || []).filter(s => s.setType !== 'warmup');
-    if (workingSets.length >= 1) {
-      const lastSet = workingSets[workingSets.length - 1];
-      setStimulusRating({
-        exerciseName: prevEntry.exercise?.name ?? 'Exercise',
-        lastSetId: lastSet.id,
-        pump: 3,
-        connection: 3,
-      });
-    }
-  }
-
-  async function handleStimulusRatingSave() {
-    if (!stimulusRating) return;
-    try {
-      await updateWorkoutSetPostRating(
-        stimulusRating.lastSetId,
-        stimulusRating.pump,
-        stimulusRating.connection
-      );
-    } catch (_e) {}
-    setStimulusRating(null);
-    const pending = pendingFinishRef.current;
-    if (pending) {
-      pendingFinishRef.current = null;
-      pending();
-    }
-  }
-
-  function handleStimulusRatingSkip() {
-    setStimulusRating(null);
-    const pending = pendingFinishRef.current;
-    if (pending) {
-      pendingFinishRef.current = null;
-      pending();
-    }
-  }
-
   function handleNextExercise() {
     if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
-    const prevIdx = currentExerciseIndex;
     setCurrentExerciseIndex(currentExerciseIndex + 1);
     setTimeout(() => scrollRef.current?.scrollTo({ y: 0, animated: true }), 50);
-    maybeTriggerStimulusRating(prevIdx);
   }
 
   function handleTogglePair() {
@@ -287,112 +268,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setProgression(null);
   }
 
-  function handleRepeatLastSet() {
-    const last = loggedSets[loggedSets.length - 1];
-    if (!last) return;
-    Haptics.selectionAsync();
-    setCurrentSet(prev => ({
-      ...prev,
-      weight: last.weight,
-      reps: last.actualReps ?? last.reps ?? prev.reps,
-      isGhost: false,
-    }));
-  }
-
-  function handleSuggestWarmups() {
-    const w = parseFloat(currentSet.weight);
-    if (!w || w < 20) return;
-    const round = units === 'lbs' ? 5 : 2.5;
-    const snap = (x) => Math.max(round, Math.round(x / round) * round);
-    const warmups = [
-      { pct: 0.4, reps: 8 },
-      { pct: 0.6, reps: 5 },
-      { pct: 0.8, reps: 3 },
-    ].map(({ pct, reps }) => ({ weight: String(snap(w * pct)), reps, setType: 'warmup', notes: '', rir: null }));
-    setSuggestedWarmups(warmups);
-    setWarmupDoneIdx([]);
-    setShowWarmupSheet(true);
-  }
-
-  function closeWarmupSheet() {
-    setShowWarmupSheet(false);
-    // Reset transient sheet state so the next invocation starts fresh.
-    setSuggestedWarmups([]);
-    setWarmupDoneIdx([]);
-  }
-
-  async function handleLogWarmupFromSheet(idx) {
-    if (!exercise || !activeWorkout) return;
-    const w = suggestedWarmups[idx];
-    if (!w) return;
-    if (warmupDoneIdx.includes(idx)) return;
-
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    try {
-      const setNumber = loggedSets.length + 1;
-      const repsNum = parseInt(w.reps, 10);
-      const weightNum = parseFloat(w.weight) || 0;
-
-      const savedSet = await createWorkoutSet({
-        userId: user.id,
-        workoutId: activeWorkout.id,
-        exerciseId: exercise.id,
-        setNumber,
-        setType: 'warmup',
-        targetRepsMin: null,
-        targetRepsMax: null,
-        actualReps: repsNum,
-        weight: weightNum,
-        rir: null,
-        rpe: null,
-        failed: false,
-        notes: null,
-        isAmrap: false,
-      });
-
-      const setData = {
-        id: savedSet.id,
-        exerciseId: exercise.id,
-        workoutId: activeWorkout.id,
-        setNumber,
-        setType: 'warmup',
-        actualReps: repsNum,
-        weight: weightNum,
-        rir: null,
-        rpe: null,
-      };
-
-      const newLoggedSets = [...loggedSets, setData];
-      setLoggedSets(newLoggedSets);
-      addSetToCurrentExercise(setData);
-      // Track in the session ref so future PR detection has the full picture,
-      // even though warm-ups themselves cannot register as PRs.
-      sessionSetsRef.current = [...sessionSetsRef.current, setData];
-      warmupHintSeenRef.current = true;
-
-      updateLastActivity();
-
-      const nextDone = [...warmupDoneIdx, idx];
-      setWarmupDoneIdx(nextDone);
-
-      // Auto-close the sheet once all suggested warmups have been logged.
-      if (nextDone.length >= suggestedWarmups.length) {
-        setTimeout(() => {
-          closeWarmupSheet();
-        }, 600);
-      }
-    } catch (_e) {
-      // Surface the failure but keep the sheet open so the user can retry.
-      Alert.alert('Could not log warm-up', 'Something went wrong saving that set. Please try again.');
-    }
-  }
-
   function handleCancelWorkout() {
     const store = useAppStore.getState();
-    const totalSets = store.workoutExercises.reduce((sum, e) => sum + e.sets.length, 0);
+    const totalSets = store.workoutExercises.reduce((sum, e) => sum + (e.sets?.length ?? 0), 0);
     if (totalSets === 0) {
       store.endWorkout();
+      // eslint-disable-next-line global-require
+      try { require('../lib/activeWorkoutNotification').dismissActiveWorkoutNotification(); } catch (_) {}
       navigation.goBack();
     } else {
       setShowDiscardModal(true);
@@ -430,11 +312,34 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeWorkout?.id]);
 
-  // First-use info tip: pulse the Info button until tapped
+  // Superset heads-up: when the user lands on an exercise that's part of a
+  // pair we haven't already shown the modal for in this workout, surface a
+  // clear instructional sheet so a first-timer isn't lost. Shown once per
+  // group id per workout — dismissing acknowledges; unlinking removes the
+  // pair entirely; swap opens the swap UI for either exercise.
+  useEffect(() => {
+    if (currentSGI == null) return;
+    if (acknowledgedSupersetsRef.current.has(currentSGI)) return;
+    if (!pairedExerciseName) return; // safety
+    // Tag as acknowledged immediately so navigating away+back doesn't re-fire
+    // before the user dismisses.
+    acknowledgedSupersetsRef.current.add(currentSGI);
+    setSupersetHeadsUp({
+      groupId: currentSGI,
+      exerciseAName: exercise?.name ?? 'this exercise',
+      exerciseBName: pairedExerciseName,
+    });
+    Haptics.selectionAsync().catch(() => {});
+  }, [currentSGI, pairedExerciseName, exercise?.name]);
+
+  // First-use info tip: pulse the Info button until tapped. The pulse itself
+  // is suppressed under Reduce Motion (the static badge still shows so the
+  // user can find the button), only the looping animation is killed.
   useEffect(() => {
     AsyncStorage.getItem('@volyume_seen_workout_info').then(val => {
       if (val === 'true') return;
       setShowInfoTipPulse(true);
+      if (reduceMotion) return;
       infoPulseLoop.current = Animated.loop(
         Animated.sequence([
           Animated.timing(infoPulseAnim, { toValue: 1.35, duration: 700, useNativeDriver: true }),
@@ -444,7 +349,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       infoPulseLoop.current.start();
     });
     return () => { infoPulseLoop.current?.stop(); };
-  }, []);
+  }, [reduceMotion]);
 
   // Workout timer — always derived from workoutStartTime so backgrounding never
   // causes drift. Re-syncs on every tick and on app-foreground events.
@@ -464,20 +369,115 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
     return () => {
       clearInterval(timerRef.current);
-      appStateSub.remove();
+      // Subscription remove() can throw on corrupt subscription objects (rare
+      // but possible after RN reload). Swallow so the rest of the cleanup
+      // continues; the worst case is one orphan listener until next reload.
+      try { appStateSub?.remove(); } catch (_) {}
+      // Drop any pending log-flash reset so it doesn't run on an unmounted
+      // component (cancel + finish workout mid-flash would otherwise throw a
+      // React warning).
+      if (logFlashTimeoutRef.current) clearTimeout(logFlashTimeoutRef.current);
     };
   }, [workoutStartTime]);
+
+  // Persistent lock-screen / shade notification. Mirrors current
+  // exercise + set + elapsed time so the user sees their workout
+  // state without unlocking. Two update paths:
+  //
+  //   1. Real-time updates (immediate, no throttle) — fire whenever
+  //      the user-visible state changes: current exercise, set count,
+  //      target set count. The notification re-presents on the next
+  //      render tick so the lock screen always shows the same set the
+  //      user just logged, not the one before. Previously the 15s
+  //      throttle dropped these updates and the user saw stale state
+  //      until the next tick passed the throttle window.
+  //
+  //   2. Elapsed-time refresh (throttled to 15s) — keeps the "12:34"
+  //      counter in the notification body roughly fresh without
+  //      hammering the notification manager every second.
+  //
+  // Splitting the two paths into separate effects means the
+  // dependency arrays don't fight each other and we get instant
+  // feedback on user actions + cheap upkeep on the timer.
+  const lastNotifUpdateRef = useRef(0);
+
+  // Path 1: immediate update on state change.
+  useEffect(() => {
+    if (!workoutStartTime || !activeWorkout) return;
+    lastNotifUpdateRef.current = Date.now();
+    // eslint-disable-next-line global-require
+    const { showActiveWorkoutNotification } = require('../lib/activeWorkoutNotification');
+    showActiveWorkoutNotification({
+      workoutName: activeWorkout?.name,
+      elapsedSeconds,
+      // Count only WORKING sets toward the index. Including warm-ups
+      // produced "Set 3 of 2" on the lock-screen / persistent
+      // notification when the user logged a warm-up before the first
+      // working set. totalSetsForExercise is the *working* target.
+      currentSetIndex: countProgressSets(loggedSets) + 1,
+      totalSetsForExercise: routineExercise?.recommendedSets,
+      exerciseName: exercise?.name,
+    }).catch(() => {});
+    // Intentionally exclude elapsedSeconds — that's handled by
+    // the throttled effect below. This effect responds only to
+    // user-driven state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeWorkout?.id, loggedSets?.length, exercise?.name, routineExercise?.recommendedSets, workoutStartTime]);
+
+  // Path 2: throttled elapsed-time refresh.
+  useEffect(() => {
+    if (!workoutStartTime || !activeWorkout) return;
+    const now = Date.now();
+    if (now - lastNotifUpdateRef.current < 15_000) return;
+    lastNotifUpdateRef.current = now;
+    // eslint-disable-next-line global-require
+    const { showActiveWorkoutNotification } = require('../lib/activeWorkoutNotification');
+    showActiveWorkoutNotification({
+      workoutName: activeWorkout?.name,
+      elapsedSeconds,
+      // Count only WORKING sets toward the index. Including warm-ups
+      // produced "Set 3 of 2" on the lock-screen / persistent
+      // notification when the user logged a warm-up before the first
+      // working set. totalSetsForExercise is the *working* target.
+      currentSetIndex: countProgressSets(loggedSets) + 1,
+      totalSetsForExercise: routineExercise?.recommendedSets,
+      exerciseName: exercise?.name,
+    }).catch(() => {});
+  }, [elapsedSeconds, activeWorkout, loggedSets?.length, exercise?.name, routineExercise?.recommendedSets, workoutStartTime]);
+
+  // Dismiss the persistent notification on screen unmount. Belt-and-
+  // braces because endWorkout() / handleFinishWorkout also clear it,
+  // but the unmount cleanup catches navigation-away cases.
+  useEffect(() => () => {
+    // eslint-disable-next-line global-require
+    const { dismissActiveWorkoutNotification } = require('../lib/activeWorkoutNotification');
+    dismissActiveWorkoutNotification().catch(() => {});
+  }, []);
 
   // Load previous performance and set defaults when exercise changes
   useEffect(() => {
     if (!exercise || !activeWorkout) return;
     sessionSetsRef.current = [];
+    // Clear immediately so the UI never shows a previous exercise's data
+    setLoggedSets([]);
+    setPrevSets([]);
+    setAllTimeSets([]);
+    setCurrentSet({ ...DEFAULT_SET });
+    setGhostSet(null);
+
+    // Guard so that async state updates don't land after the exercise
+    // changes (rapid swap) or the screen unmounts mid-load. Without this,
+    // a fast tap on the next-exercise button + slow DB read could
+    // overwrite the new exercise's fresh state with stale data from the
+    // previous exercise.
+    let cancelled = false;
 
     async function loadHistory() {
       const [lastN, allTime] = await Promise.all([
         getLastNWorkoutSets(exercise.id, activeWorkout.id, 2),
         getAllCompletedSetsForExercise(exercise.id, activeWorkout.id),
       ]);
+      if (cancelled) return;
       const prev = lastN[0] || [];
       const prevPrev = lastN[1] || [];
       setPrevSets(prev);
@@ -501,7 +501,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       if (user?.id && exercise?.id) {
         const savedNote = await getExerciseUserNote(user.id, exercise.id);
         setExerciseNote(savedNote || '');
-        setShowExerciseNote(false);
       }
 
       // Layoff detection: last session was more than 7 days ago
@@ -576,23 +575,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         });
       }
 
-      // Auto-select warmup type if no sets logged yet for this exercise
-      if (allLoggedForExercise.length === 0) {
-        const prevWorking = prev.filter(s => s.setType !== 'warmup');
-        const baseWeight = prevWorking.length > 0
-          ? prevWorking[prevWorking.length - 1].weight
-          : (routineExercise?.startingWeight ?? 0);
-        const warmupWeight = baseWeight ? Math.round(baseWeight * 0.5 * 2) / 2 : '';
-        setCurrentSet(cs => ({
-          ...cs,
-          setType: 'warmup',
-          weight: warmupWeight || cs.weight,
-          // A general warmup is light weight for ~10 reps regardless of the
-          // working rep target — high-rep warmups before low-rep work are
-          // illogical, so keep this a clean fixed default.
-          reps: 10,
-        }));
-      }
+      // Warm-up sets are no longer forced on the first set of every
+      // exercise. Forcing every exercise to start with a warm-up that
+      // the user has to click through (or change the set type to
+      // skip) is the friction the user kept hitting — they don't want
+      // it. The default is now a clean working set. Users who want a
+      // warm-up first tap the "Add warm-up set" button which flips
+      // the current entry to warmup with sensible defaults.
 
       // Load planned volume for this exercise's muscle this week
       try {
@@ -643,16 +632,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     }
 
     loadHistory();
+    return () => { cancelled = true; };
   }, [exercise?.id, currentExerciseIndex]);
 
-  // Reset the cluster counter whenever the user leaves a cluster set type.
-  // This keeps "activation set" / "mini-set N" labelling tied to the currently
-  // active myo-reps or rest-pause cluster only.
-  useEffect(() => {
-    if (currentSet.setType !== 'myo_reps' && currentSet.setType !== 'rest_pause') {
-      setClusterCount(0);
-    }
-  }, [currentSet.setType]);
 
   useEffect(() => {
     if (prevSets.length > 0 && currentSet.weight && currentSet.reps) {
@@ -678,13 +660,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // rather than silently saving a 0 kg set.
     const isBodyweight = /body\s*weight/i.test(exercise.equipment || '');
     const weightNum = parseFloat(currentSet.weight);
-    if (!isBodyweight && (currentSet.weight === '' || currentSet.weight == null || isNaN(weightNum))) {
+    if (!isBodyweight && (currentSet.weight === '' || currentSet.weight == null || isNaN(weightNum) || weightNum <= 0)) {
       Alert.alert('Enter weight', `Enter the weight used (in ${units}) before completing this set.`);
       return;
     }
 
     setSaving(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    hapticsVocab.setLogged();
 
     try {
       const setNumber = loggedSets.length + 1;
@@ -721,6 +703,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       const newLoggedSets = [...loggedSets, setData];
       setLoggedSets(newLoggedSets);
       addSetToCurrentExercise(setData);
+
+      // Visual ack — flash the SetEntry card border amber for ~700 ms so the
+      // user sees their tap landed. Tracked timeout so back-to-back logs
+      // don't truncate the previous flash mid-frame.
+      if (logFlashTimeoutRef.current) clearTimeout(logFlashTimeoutRef.current);
+      setLogFlash(true);
+      logFlashTimeoutRef.current = setTimeout(() => setLogFlash(false), 700);
 
       // PR Detection — check BEFORE adding current set to the session ref so it
       // can never match itself.  sessionSetsRef is a plain ref so it's never stale
@@ -785,11 +774,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // Start rest timer with per-exercise duration
       startRestTimer(routineExercise?.restSeconds || 90);
 
-      // Show notification soft-prompt on first timer start, once per install
-      hasSeenNotifPrompt().then(seen => {
-        if (!seen) setShowNotifPrompt(true);
-      });
-
       // Auto-advance to next exercise when target sets just completed
       const newWorkingCount = countProgressSets(newLoggedSets);
       const justHitTarget = targetSets && newWorkingCount >= targetSets && workingLogged < targetSets;
@@ -806,17 +790,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // Prepare next set
       setNoteText('');
       setShowNoteInput(false);
-      // After a drop set, revert to straight so the count stays clean
-      if (currentSet.setType === 'dropset') {
-        setCurrentSet(cs => ({ ...cs, setType: 'straight' }));
-      }
-      // For myo-reps / rest-pause clusters: keep the set type sticky and just
-      // bump the cluster counter so the next set is labelled as the next
-      // mini-set. The user exits the cluster manually via the "Cluster
-      // complete" button below the Log Set action.
-      if (currentSet.setType === 'myo_reps' || currentSet.setType === 'rest_pause') {
-        setClusterCount(c => c + 1);
-      }
       // If warmup was just completed, mark hint seen and auto-switch to working set
       if (currentSet.setType === 'warmup') {
         warmupHintSeenRef.current = true;
@@ -841,6 +814,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           }));
         }
       }
+    } catch (e) {
+      logError('ActiveWorkoutScreen.handleCompleteSet', e, {
+        userId: user?.id,
+        workoutId: activeWorkout?.id,
+        exerciseId: exercise?.id,
+        setType: currentSet.setType,
+      });
+      Alert.alert(
+        'Couldn\'t save set',
+        'Your set wasn\'t saved. Tap Log set to retry. Tell me if this keeps happening: ' + (e?.message ?? 'unknown error'),
+      );
     } finally {
       setSaving(false);
     }
@@ -852,7 +836,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setTimeCrunchActive(false);
     setTimeCrunchMsg('');
     setPreCrunchSnapshot(null);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    hapticsVocab.commit();
   }
 
   function handleTimeCrunch() {
@@ -864,7 +848,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // Build exercise list in planEngine format for estimator
     const asExercises = remainingExercises.map(e => ({
       exerciseName:       e.exercise?.name ?? '',
-      sets:               Math.max(1, (e.exercise?.recommendedSets ?? 3) - e.sets.length),
+      sets:               Math.max(1, (e.exercise?.recommendedSets ?? 3) - (e.sets?.length ?? 0)),
       restSec:            e.exercise?.restSec ?? 90,
       compoundIsolation:  e.exercise?.compoundIsolation ?? 'isolation',
     }));
@@ -889,7 +873,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         const updated = [...prev];
         for (let i = currentExerciseIndex; i < updated.length; i++) {
           const name = updated[i].exercise?.name ?? '';
-          if (droppedNames.has(name) && updated[i].sets.length === 0) {
+          if (droppedNames.has(name) && (updated[i].sets?.length ?? 0) === 0) {
             updated[i] = { ...updated[i], _timeCrunchSkipped: true };
           } else if (updated[i].exercise) {
             updated[i] = {
@@ -907,16 +891,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
     setTimeCrunchActive(true);
     setTimeCrunchMsg(msg);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    hapticsVocab.error();
   }
 
   async function handleFinishWorkout() {
     if (!activeWorkout) { navigation.goBack(); return; }
+    if (finishingRef.current) return; // double-tap guard
+    finishingRef.current = true;
     Alert.alert(
       'Finish Workout?',
-      `You've logged ${workoutExercises.reduce((sum, e) => sum + e.sets.length, 0)} sets across ${workoutExercises.length} exercises.`,
+      `You've logged ${workoutExercises.reduce((sum, e) => sum + (e.sets?.length ?? 0), 0)} sets across ${workoutExercises.length} exercises.`,
       [
-        { text: 'Keep Going', style: 'cancel' },
+        { text: 'Keep Going', style: 'cancel', onPress: () => { finishingRef.current = false; } },
         {
           text: 'Finish',
           onPress: async () => {
@@ -939,7 +925,25 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 setCount: workingSetCount,
                 totalVolume: calculateTonnage(allSets),
               });
+              // Push to cloud IMMEDIATELY on finish. Previously the
+              // syncWorkout call only fired when the user tapped Close
+              // on the Workout Summary screen — if they swiped away to
+              // another tab or backgrounded the app between Finish and
+              // Close, the completed workout never reached the cloud.
+              // Cross-device sign-in then restored everything except
+              // workouts and sets. Fire-and-forget; failures fall into
+              // pending_sync_ops via syncWorkout's own retry path.
+              try {
+                const supabaseUserId = useAppStore.getState().session?.user?.id;
+                if (supabaseUserId) {
+                  // eslint-disable-next-line global-require
+                  const { syncWorkout } = require('../lib/sync');
+                  syncWorkout(supabaseUserId, activeWorkout.id).catch(() => {});
+                }
+              } catch (_) { /* tolerate */ }
               endWorkout();
+              // eslint-disable-next-line global-require
+              try { require('../lib/activeWorkoutNotification').dismissActiveWorkoutNotification(); } catch (_) {}
               navigation.replace('WorkoutSummary', {
                 workoutId: activeWorkout.id,
                 routineId: activeWorkout.routineId || null,
@@ -965,14 +969,22 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               });
             }
 
-            // Check if the current exercise has working sets that need rating
-            const currentEntry = snapshotExercises[currentExerciseIndex];
-            const hasWorkingSets = (currentEntry?.sets || []).some(s => s.setType !== 'warmup');
-            if (hasWorkingSets) {
-              pendingFinishRef.current = doFinish;
-              maybeTriggerStimulusRating(currentExerciseIndex);
-            } else {
+            try {
               await doFinish();
+            } catch (e) {
+              logError('ActiveWorkoutScreen.handleFinishWorkout', e, {
+                userId: user?.id,
+                workoutId: activeWorkout?.id,
+                setCount: snapshotExercises.flatMap(ex => ex.sets).length,
+              });
+              // Reset the double-tap guard so the user can retry. On the
+              // happy path the guard stays set forever because we've
+              // already navigated away from this screen.
+              finishingRef.current = false;
+              Alert.alert(
+                'Couldn\'t finish workout',
+                'Your sets are still saved but the workout didn\'t close. Tap Finish to retry: ' + (e?.message ?? 'unknown error'),
+              );
             }
           },
         },
@@ -1032,10 +1044,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           </View>
           <View style={styles.headerCenter}>
             <Text style={styles.timerText}>{elapsedStr}</Text>
-            <Text style={styles.headerMuscle}>
-              {(exercise.primaryMuscle || exercise.primary_muscle || '').charAt(0).toUpperCase() +
-                (exercise.primaryMuscle || exercise.primary_muscle || '').slice(1)}
-            </Text>
           </View>
           <View style={styles.headerSideRight}>
             <TouchableOpacity
@@ -1062,9 +1070,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 key={i}
                 style={[styles.navTab, i === currentExerciseIndex && styles.navTabActive]}
                 onPress={() => {
-                  const prevIdx = currentExerciseIndex;
                   setCurrentExerciseIndex(i);
-                  if (i > prevIdx) maybeTriggerStimulusRating(prevIdx);
                 }}
                 accessibilityRole="button"
                 accessibilityLabel={entry.exercise?.name || `Exercise ${i + 1}`}
@@ -1076,7 +1082,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 >
                   {entry.exercise?.name?.split(' ').slice(0, 2).join(' ')}
                 </Text>
-                {entry.sets.length > 0 && (
+                {entry.sets?.length > 0 && (
                   <View style={styles.navTabBadge}>
                     <Text style={styles.navTabBadgeText}>{entry.sets.length}</Text>
                   </View>
@@ -1163,52 +1169,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </View>
           )}
 
-          {/* Previous Performance */}
-          <View style={styles.prevCard}>
-            <Text style={styles.prevTitle}>Previous session</Text>
-            {prevSets.length > 0 ? (
-              <>
-                <Text style={styles.prevSetsSummary}>
-                  {prevSets.map(s => `${s.weight}${units} × ${s.actualReps}`).join('   ')}
-                </Text>
-                {setTargets.length > 0 && (
-                  <View style={styles.setTargetsBlock}>
-                    <Text style={styles.setTargetsLabel}>Next session</Text>
-                    {setTargets.map((t, i) => (
-                      <View key={i} style={styles.setTargetRow}>
-                        <Text style={styles.setTargetNum}>Set {i + 1}</Text>
-                        <Text style={styles.setTargetVal}>
-                          {t.weight}{units} × {t.repsMin === t.repsMax ? t.repsMin : `${t.repsMin}–${t.repsMax}`}
-                        </Text>
-                        {t.action === 'increase' && (
-                          <Ionicons name="trending-up" size={12} color={colors.primary} />
-                        )}
-                        {t.action === 'decrease' && (
-                          <Ionicons name="trending-down" size={12} color={colors.error} />
-                        )}
-                      </View>
-                    ))}
-                    {targetReason && (
-                      <Text style={styles.setTargetReason}>{targetReason}</Text>
-                    )}
-                  </View>
-                )}
-                {!setTargets.length && progression && progression.action !== 'baseline' && (
-                  <View style={styles.progressionBadge}>
-                    <Ionicons
-                      name={progression.action === 'increase_weight' ? 'trending-up' : 'arrow-forward'}
-                      size={13}
-                      color={colors.primary}
-                    />
-                    <Text style={styles.progressionText}>{progression.message}</Text>
-                  </View>
-                )}
-              </>
-            ) : (
-              <Text style={styles.prevEmpty}>No previous logs.</Text>
-            )}
-          </View>
-
           {/* Target */}
           {routineExercise && (
             <View style={styles.targetRow}>
@@ -1219,21 +1179,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </View>
           )}
 
-          {/* Weekly plan progress */}
-          {weeklyPlan && (
-            <View style={styles.weeklyPlanRow}>
-              <Ionicons name="calendar-outline" size={13} color={colors.textMuted} />
-              <Text style={styles.weeklyPlanText}>
-                {weeklyActual}/{weeklyPlan.plannedSets} sets this week
-              </Text>
-              <View style={[
-                styles.weeklyPlanDot,
-                weeklyActual >= weeklyPlan.plannedSets ? styles.dotGreen :
-                weeklyActual >= weeklyPlan.plannedSets - 2 ? styles.dotAmber :
-                styles.dotMuted,
-              ]} />
-            </View>
-          )}
+          {/* Rest timer — sits ABOVE the SetEntry card, in the slot vacated
+              by the old weekly-sets calendar row. Stays in the user's
+              eye-line with the inputs but doesn't clutter the card border.
+              The timer only renders when active so this space is normally
+              empty. */}
+          <RestTimer />
 
           {/* Target complete banner */}
           {targetComplete && (
@@ -1249,21 +1200,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           <View style={[
             styles.setEntryCard,
             currentSet.setType === 'warmup' && styles.setEntryCardWarmup,
-            currentSet.setType === 'dropset' && styles.setEntryCardDrop,
+            logFlash && styles.setEntryCardFlash,
           ]}>
-            {(currentSet.setType === 'myo_reps' || currentSet.setType === 'rest_pause') && (
-              <View style={styles.clusterBanner}>
-                <Ionicons
-                  name={currentSet.setType === 'myo_reps' ? 'pulse-outline' : 'flash-outline'}
-                  size={14}
-                  color={colors.primary}
-                />
-                <Text style={styles.clusterBannerText}>
-                  {currentSet.setType === 'myo_reps' ? 'Myo-reps' : 'Rest-pause'} cluster
-                  {clusterCount > 0 ? ` · mini-set ${clusterCount + 1} · take 10-20s rest` : ' · activation set'}
-                </Text>
-              </View>
-            )}
             {currentSet.setType === 'warmup' && (
               <View style={styles.warmupBanner}>
                 <Ionicons name="flame-outline" size={14} color={colors.warning} />
@@ -1275,24 +1213,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 Get the muscles and joints ready. Light weight, easy reps. Tap Done when you're ready to work.
               </Text>
             )}
-            {currentSet.setType === 'dropset' && (
-              <View style={styles.dropBanner}>
-                <Ionicons name="arrow-down-circle-outline" size={14} color={colors.gold} />
-                <Text style={styles.dropBannerText}>Drop set ↓ · lower the weight, keep going</Text>
-              </View>
-            )}
             <Text style={styles.setEntryTitle}>
               {currentSet.setType === 'warmup'
                 ? 'Warm-up set'
-                : currentSet.setType === 'dropset'
-                  ? `Drop set · after Set ${workingLogged}`
-                  : (currentSet.setType === 'myo_reps' || currentSet.setType === 'rest_pause')
-                    ? (clusterCount === 0 ? 'Activation set' : `Mini-set ${clusterCount + 1}`)
-                    : isDeloadWeek
-                      ? `Light set ${workingLogged + 1} · Easy`
-                      : routineExercise?.recommendedSets
-                        ? `Set ${workingLogged + 1} / ${routineExercise.recommendedSets} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working'}`
-                        : `Set ${workingLogged + 1} · ${SET_TYPE_DISPLAY[currentSet.setType] || 'Working'}`}
+                : isDeloadWeek
+                  ? `Light set ${workingLogged + 1} · Easy`
+                  : routineExercise?.recommendedSets
+                    ? `Set ${workingLogged + 1} / ${routineExercise.recommendedSets}`
+                    : `Set ${workingLogged + 1}`}
             </Text>
             {currentSet.setType !== 'warmup' && setTargets[workingLogged] && (
               <View style={styles.inlineTargetChip}>
@@ -1303,6 +1231,50 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 </Text>
               </View>
             )}
+            {currentSet.setType !== 'warmup' && targetReason && (
+              <View style={styles.coachReasonChip}>
+                <Ionicons name="sparkles-outline" size={11} color={colors.primary} />
+                <Text style={styles.coachReasonText}>{targetReason}</Text>
+              </View>
+            )}
+            {/* Stalled-progress nudge: if the user has done the same
+                weight & reps for the same exercise across the last 3
+                sessions, the suggestion engine isn't doing enough on
+                its own — pull-back the loop and offer a concrete next
+                step. Only shown on the first working set of an
+                exercise so it doesn't blare repeatedly. */}
+            {currentSet.setType !== 'warmup' && workingLogged === 0 && (() => {
+              if (!allTimeSets || allTimeSets.length < 9) return null;
+              // Group by workoutId, take the heaviest set of each session
+              const bySession = new Map();
+              for (const s of allTimeSets) {
+                if ((s.setType ?? s.set_type ?? 'straight') === 'warmup') continue;
+                const wid = s.workoutId ?? s.workout_id;
+                if (!wid) continue;
+                const cur = bySession.get(wid);
+                if (!cur || (s.weight ?? 0) > (cur.weight ?? 0)) bySession.set(wid, s);
+              }
+              const sessions = Array.from(bySession.values())
+                .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
+                .slice(0, 3);
+              if (sessions.length < 3) return null;
+              const w0 = sessions[0].weight ?? 0;
+              const r0 = sessions[0].actualReps ?? 0;
+              const stalled = sessions.every(s =>
+                Math.abs((s.weight ?? 0) - w0) < 0.1 &&
+                Math.abs((s.actualReps ?? 0) - r0) <= 1,
+              );
+              if (!stalled || w0 === 0) return null;
+              const bumpKg = units === 'lbs' ? 5 : 2.5;
+              return (
+                <View style={styles.stalledChip}>
+                  <Ionicons name="trending-up-outline" size={12} color={colors.warning} />
+                  <Text style={styles.stalledChipText}>
+                    Same load 3 sessions running. Try {w0 + bumpKg}{units} × {Math.max(1, r0 - 1)}, or stick at {w0}{units} for {r0 + 1} reps.
+                  </Text>
+                </View>
+              );
+            })()}
             {currentSet.setType !== 'warmup' && prevSets[workingLogged] && (() => {
               const prev = prevSets[workingLogged];
               const cw = parseFloat(currentSet.weight) || 0;
@@ -1318,6 +1290,40 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 </View>
               );
             })()}
+            {/* Quick-repeat: pre-fill the entry card from the most
+                recent logged set so the user doesn't have to type the
+                same numbers twice in a row. Hidden when the entry
+                already matches the last logged set (no value) or when
+                no sets have been logged this session yet. */}
+            {(() => {
+              const last = loggedSets[loggedSets.length - 1];
+              if (!last) return null;
+              const cw = parseFloat(currentSet.weight) || 0;
+              const cr = parseInt(currentSet.reps, 10) || 0;
+              if (Math.abs(cw - (last.weight ?? 0)) < 0.01 && cr === (last.actualReps ?? 0)) return null;
+              return (
+                <TouchableOpacity
+                  style={styles.repeatLastBtn}
+                  onPress={() => {
+                    hapticsVocab.setLogged();
+                    setCurrentSet(s => ({
+                      ...s,
+                      weight: String(last.weight ?? 0),
+                      reps: last.actualReps ?? s.reps,
+                      isGhost: false,
+                    }));
+                  }}
+                  hitSlop={{ top: 6, bottom: 6, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Repeat last set: ${last.weight}${units} times ${last.actualReps}`}
+                >
+                  <Ionicons name="repeat-outline" size={13} color={colors.textSecondary} />
+                  <Text style={styles.repeatLastText}>
+                    Repeat last: {last.weight}{units} × {last.actualReps}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })()}
             {showInfoTipPulse && loggedSets.length === 0 && prevSets.length === 0 && (
               <View style={styles.firstSetHint}>
                 <Ionicons name="sparkles-outline" size={14} color={colors.primary} />
@@ -1330,26 +1336,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             {currentSet.isGhost && ghostSet && (
               <View style={styles.ghostChip}>
                 <Ionicons name="time-outline" size={12} color={colors.textMuted} />
-                <Text style={styles.ghostChipText}>Pre-filled from last session — tap to confirm</Text>
+                <Text style={styles.ghostChipText}>Pre-filled from last session. Tap to confirm.</Text>
               </View>
             )}
-            {loggedSets.length === 0 && parseFloat(currentSet.weight) >= 20 && currentSet.setType !== 'warmup' && (
-              <TouchableOpacity style={styles.warmupSuggestChip} onPress={handleSuggestWarmups}>
-                <Ionicons name="flame-outline" size={13} color={colors.warning} />
-                <Text style={styles.warmupSuggestText}>Suggest warm-up sets</Text>
-              </TouchableOpacity>
-            )}
-            {loggedSets.length > 0 && currentSet.setType !== 'warmup' && (() => {
-              const last = loggedSets[loggedSets.length - 1];
-              return (
-                <TouchableOpacity style={styles.repeatChip} onPress={handleRepeatLastSet} activeOpacity={0.7}>
-                  <Ionicons name="copy-outline" size={13} color={colors.textMuted} />
-                  <Text style={styles.repeatChipText}>
-                    Repeat last: {last.weight}{units} × {last.actualReps ?? last.reps}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })()}
+            {/* Warm-ups are no longer auto-suggested. Two reasons: the
+                chip auto-appeared on every exercise's first set and
+                supersets don't make sense having warm-ups between paired
+                exercises. Users who want a warm-up can mark the current
+                set as Warmup via the Set type picker on the SetEntry
+                card below — same outcome, no prompt. */}
             <SetEntry
               value={currentSet}
               onChange={(next) => {
@@ -1358,6 +1353,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               }}
               units={units}
               onOpenSetTypePicker={() => setShowSetTypePicker(true)}
+              onOpenPlateCalc={(targetW) => {
+                setPlateCalcTarget(targetW);
+                setShowPlateCalc(true);
+              }}
               isWarmup={currentSet.setType === 'warmup'}
             />
 
@@ -1370,6 +1369,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 placeholderTextColor={colors.textMuted}
                 multiline
                 autoFocus
+                autoComplete="off"
+                textContentType="none"
               />
             ) : null}
           </View>
@@ -1427,17 +1428,29 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </TouchableOpacity>
           )}
 
-          {(currentSet.setType === 'myo_reps' || currentSet.setType === 'rest_pause') && clusterCount > 0 && (
+          {/* Manual warm-up button. The auto-suggest chip was removed
+              earlier in this branch; this button is the deliberate
+              "if someone wants to they can add one" path. Hidden once
+              the user has already switched the current entry to a
+              warm-up so the row isn't redundant. */}
+          {currentSet.setType !== 'warmup' && (
             <TouchableOpacity
-              style={styles.clusterDoneBtn}
+              style={styles.addWarmupBtn}
               onPress={() => {
-                setCurrentSet({ ...currentSet, setType: 'straight' });
-                setClusterCount(0);
+                const baseWeight = parseFloat(currentSet.weight) || 0;
+                const warmupWeight = baseWeight ? Math.round(baseWeight * 0.5 * 2) / 2 : '';
+                setCurrentSet(cs => ({
+                  ...cs,
+                  setType: 'warmup',
+                  weight: warmupWeight || cs.weight,
+                  reps: 10,
+                }));
               }}
               accessibilityRole="button"
-              accessibilityLabel="Cluster complete, return to working sets"
+              accessibilityLabel="Add a warm-up set"
             >
-              <Text style={styles.clusterDoneBtnText}>Cluster complete — back to working sets</Text>
+              <Ionicons name="flame-outline" size={15} color={colors.warning} />
+              <Text style={styles.addWarmupBtnText}>Add warm-up set</Text>
             </TouchableOpacity>
           )}
 
@@ -1504,41 +1517,34 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </TouchableOpacity>
           </View>
 
-          {/* Rest Timer */}
-          <RestTimer />
-
           {/* Logged Sets */}
           {loggedSets.length > 0 && (
             <View style={styles.loggedSection}>
               <Text style={styles.loggedTitle}>This workout</Text>
               {loggedSets.map((s, i) => {
                 const isWarmup = s.setType === 'warmup';
-                const isDrop   = s.setType === 'dropset';
-                const est1RM = (isWarmup || isDrop) ? null : calculate1RM(s.weight, s.actualReps);
+                const est1RM = isWarmup ? null : calculate1RM(s.weight, s.actualReps);
                 const progressNum = loggedSets.slice(0, i + 1).filter(x => countProgressSets([x]) > 0).reduce((n, x) => n + 1, 0);
                 return (
                   <View key={i} style={[
                     styles.loggedSetRow,
                     isWarmup && styles.loggedSetRowWarmup,
-                    isDrop && styles.loggedSetRowDrop,
                   ]}>
                     {isWarmup ? (
                       <Ionicons name="flame" size={14} color={colors.warning} style={{ width: 22, textAlign: 'center' }} />
-                    ) : isDrop ? (
-                      <Ionicons name="arrow-down-circle" size={16} color={colors.gold} style={{ width: 22, textAlign: 'center' }} />
                     ) : (
                       <View style={styles.setNumBadge}>
                         <Text style={styles.setNumText}>{progressNum}</Text>
                       </View>
                     )}
-                    <Text style={[styles.loggedSetText, isWarmup && styles.loggedSetTextWarmup, isDrop && styles.loggedSetTextDrop]}>
+                    <Text style={[styles.loggedSetText, isWarmup && styles.loggedSetTextWarmup]}>
                       {s.weight}{units} × {s.actualReps}
-                      {isWarmup ? ' · Warm-up' : isDrop ? ' · Drop' : ''}
+                      {isWarmup ? ' · Warm-up' : ''}
                     </Text>
-                    {!isWarmup && !isDrop && est1RM > 0 && (
+                    {!isWarmup && est1RM > 0 && (
                       <Text style={styles.loggedEst1RM}>Est. max ≈{est1RM.toFixed(0)}{units}</Text>
                     )}
-                    <Ionicons name="checkmark-circle" size={16} color={isWarmup ? colors.warning : isDrop ? colors.gold : colors.success} />
+                    <Ionicons name="checkmark-circle" size={16} color={isWarmup ? colors.warning : colors.success} />
                   </View>
                 );
               })}
@@ -1598,14 +1604,104 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           visible={showExercisePicker}
           onClose={() => setShowExercisePicker(false)}
           onSelect={ex => {
-            const prevIdx = currentExerciseIndex;
             const newIndex = workoutExercises.length;
             addExerciseToWorkout(ex);
             setCurrentExerciseIndex(newIndex);
             setShowExercisePicker(false);
-            maybeTriggerStimulusRating(prevIdx);
           }}
         />
+
+        {/* Superset heads-up modal — appears once per pair when the user
+            lands on a paired exercise. Educational for first-timers,
+            and gives a clear out (unlink or swap) if they're not set up
+            for it today. */}
+        <Modal
+          visible={!!supersetHeadsUp}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setSupersetHeadsUp(null)}
+        >
+          <View style={styles.supOverlay}>
+            <View style={styles.supSheet}>
+              <View style={styles.supIconRow}>
+                <Ionicons name="link" size={24} color={colors.primary} />
+                <Text style={styles.supTitle}>Superset coming up</Text>
+              </View>
+              <Text style={styles.supSubtitle}>
+                Two exercises paired back-to-back with no rest between them.
+              </Text>
+
+              <View style={styles.supPairCard}>
+                <View style={styles.supPairRow}>
+                  <View style={styles.supPairChip}><Text style={styles.supPairChipText}>1</Text></View>
+                  <Text style={styles.supPairName} numberOfLines={2}>
+                    {supersetHeadsUp?.exerciseAName}
+                  </Text>
+                </View>
+                <View style={styles.supPairConnector} />
+                <View style={styles.supPairRow}>
+                  <View style={styles.supPairChip}><Text style={styles.supPairChipText}>2</Text></View>
+                  <Text style={styles.supPairName} numberOfLines={2}>
+                    {supersetHeadsUp?.exerciseBName}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.supSteps}>
+                <View style={styles.supStep}>
+                  <Text style={styles.supStepNum}>1</Text>
+                  <Text style={styles.supStepText}>Set up both stations now if you can.</Text>
+                </View>
+                <View style={styles.supStep}>
+                  <Text style={styles.supStepNum}>2</Text>
+                  <Text style={styles.supStepText}>Do all reps of the first exercise.</Text>
+                </View>
+                <View style={styles.supStep}>
+                  <Text style={styles.supStepNum}>3</Text>
+                  <Text style={styles.supStepText}>Move straight to the second. No rest between.</Text>
+                </View>
+                <View style={styles.supStep}>
+                  <Text style={styles.supStepNum}>4</Text>
+                  <Text style={styles.supStepText}>After both, rest the full rest period, then repeat.</Text>
+                </View>
+              </View>
+
+              <Text style={styles.supTip}>
+                Tip: if you can't grab both stations right now, unlink and do them as normal sets.
+              </Text>
+
+              <TouchableOpacity
+                style={styles.supPrimaryBtn}
+                onPress={() => setSupersetHeadsUp(null)}
+              >
+                <Text style={styles.supPrimaryBtnText}>Got it, start</Text>
+              </TouchableOpacity>
+
+              <View style={styles.supSecondaryRow}>
+                <TouchableOpacity
+                  style={styles.supSecondaryBtn}
+                  onPress={() => {
+                    handleTogglePair(); // unpair
+                    setSupersetHeadsUp(null);
+                  }}
+                >
+                  <Ionicons name="unlink" size={14} color={colors.textSecondary} />
+                  <Text style={styles.supSecondaryBtnText}>Unlink</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.supSecondaryBtn}
+                  onPress={() => {
+                    setSupersetHeadsUp(null);
+                    handleOpenSwap();
+                  }}
+                >
+                  <Ionicons name="swap-horizontal" size={14} color={colors.textSecondary} />
+                  <Text style={styles.supSecondaryBtnText}>Swap exercise</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
 
         {/* Stale workout recovery modal */}
         <Modal visible={showStaleModal} transparent animationType="fade" onRequestClose={() => setShowStaleModal(false)}>
@@ -1628,9 +1724,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   {
                     text: 'Discard',
                     style: 'destructive',
-                    onPress: () => {
+                    onPress: async () => {
+                      const discardId = activeWorkout?.id;
                       endWorkout();
                       navigation.goBack();
+                      if (discardId) {
+                        try { await deleteIncompleteWorkout(discardId); }
+                        catch (e) { logError('ActiveWorkoutScreen.discardStale', e, { workoutId: discardId }); }
+                      }
                     },
                   },
                 ]);
@@ -1642,49 +1743,27 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         </Modal>
 
 
-        {/* Warm-up Suggestion Bottom Sheet */}
+
+        {/* Plate Calculator Bottom Sheet — opens with the current
+            working weight pre-filled so the user gets an answer in
+            one tap. */}
         <Modal
-          visible={showWarmupSheet}
+          visible={showPlateCalc}
           transparent
           animationType="slide"
-          onRequestClose={closeWarmupSheet}
+          onRequestClose={() => setShowPlateCalc(false)}
         >
           <TouchableOpacity
             style={styles.sheetOverlay}
             activeOpacity={1}
-            onPress={closeWarmupSheet}
+            onPress={() => setShowPlateCalc(false)}
           />
           <View style={[styles.sheet, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}>
             <View style={styles.sheetHandle} />
-            <Text style={styles.warmupSheetTitle}>Suggested warm-ups</Text>
-            <Text style={styles.warmupSheetSub}>
-              Based on your working weight of {currentSet.weight}{units}. Tap Log on each row when you finish that set.
-            </Text>
-            {suggestedWarmups.map((w, i) => {
-              const isDone = warmupDoneIdx.includes(i);
-              return (
-                <View key={i} style={[styles.warmupRow, isDone && styles.warmupRowDone]}>
-                  <View style={[styles.warmupBadge, isDone && styles.warmupBadgeDone]}>
-                    {isDone ? (
-                      <Ionicons name="checkmark" size={14} color={colors.success} />
-                    ) : (
-                      <Text style={styles.warmupBadgeText}>{i + 1}</Text>
-                    )}
-                  </View>
-                  <Text style={[styles.warmupRowText, isDone && styles.warmupRowTextDone]}>
-                    {w.weight}{units} × {w.reps}
-                  </Text>
-                  {!isDone && (
-                    <TouchableOpacity
-                      style={styles.warmupLogBtn}
-                      onPress={() => handleLogWarmupFromSheet(i)}
-                    >
-                      <Text style={styles.warmupLogBtnText}>Log</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              );
-            })}
+            <PlateCalculator
+              targetWeight={plateCalcTarget}
+              onClose={() => setShowPlateCalc(false)}
+            />
           </View>
         </Modal>
 
@@ -1801,34 +1880,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             />
           </SafeAreaView>
         </Modal>
-        {/* Notification soft-prompt — shown once, before requesting OS permission */}
-        <Modal visible={showNotifPrompt} transparent animationType="fade" onRequestClose={() => { markNotifPromptSeen(); setShowNotifPrompt(false); }}>
-          <View style={styles.discardOverlay}>
-            <View style={styles.discardSheet}>
-              <Text style={styles.discardTitle}>Stay on track between sets</Text>
-              <Text style={styles.discardBody}>
-                Volyume uses notifications only for the rest timer when your screen is locked. No streaks, no nudges.
-              </Text>
-              <TouchableOpacity
-                style={styles.keepTrainingBtn}
-                onPress={async () => {
-                  await markNotifPromptSeen();
-                  await requestNotifPermission();
-                  setShowNotifPrompt(false);
-                }}
-              >
-                <Text style={styles.keepTrainingBtnText}>Allow notifications</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.discardConfirmBtn}
-                onPress={async () => { await markNotifPromptSeen(); setShowNotifPrompt(false); }}
-              >
-                <Text style={styles.discardConfirmBtnText}>No thanks</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-
         {/* Discard Workout Modal */}
         <Modal visible={showDiscardModal} transparent animationType="fade" onRequestClose={() => setShowDiscardModal(false)}>
           <View style={styles.discardOverlay}>
@@ -1842,7 +1893,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.discardConfirmBtn}
-                onPress={() => { endWorkout(); navigation.goBack(); }}
+                onPress={async () => {
+                  const discardId = activeWorkout?.id;
+                  endWorkout();
+                  navigation.goBack();
+                  if (discardId) {
+                    try { await deleteIncompleteWorkout(discardId); }
+                    catch (e) { logError('ActiveWorkoutScreen.discardModal', e, { workoutId: discardId }); }
+                  }
+                }}
               >
                 <Text style={styles.discardConfirmBtnText}>Discard Workout</Text>
               </TouchableOpacity>
@@ -1850,71 +1909,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           </View>
         </Modal>
 
-        {/* Per-exercise stimulus rating sheet */}
-        <Modal
-          visible={stimulusRating !== null}
-          transparent
-          animationType="slide"
-          onRequestClose={() => handleStimulusRatingSkip()}
-        >
-          <TouchableOpacity
-            style={styles.ratingBackdrop}
-            activeOpacity={1}
-            onPress={() => handleStimulusRatingSkip()}
-          />
-          <View style={styles.ratingSheet}>
-            <Text style={styles.ratingTitle}>
-              How did {stimulusRating?.exerciseName} feel?
-            </Text>
-
-            {/* Pump row */}
-            <View style={styles.ratingRow}>
-              <Text style={styles.ratingLabel}>Pump</Text>
-              <View style={styles.ratingDots}>
-                {[1,2,3,4,5].map(v => (
-                  <TouchableOpacity
-                    key={v}
-                    style={[styles.ratingDot, stimulusRating?.pump >= v && styles.ratingDotFilled]}
-                    onPress={() => setStimulusRating(r => ({ ...r, pump: v }))}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  />
-                ))}
-              </View>
-            </View>
-
-            {/* Mind-muscle connection row */}
-            <View style={styles.ratingRow}>
-              <Text style={styles.ratingLabel}>Connection</Text>
-              <View style={styles.ratingDots}>
-                {[1,2,3,4,5].map(v => (
-                  <TouchableOpacity
-                    key={v}
-                    style={[styles.ratingDot, stimulusRating?.connection >= v && styles.ratingDotFilled]}
-                    onPress={() => setStimulusRating(r => ({ ...r, connection: v }))}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  />
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.ratingActions}>
-              <TouchableOpacity
-                style={styles.ratingSaveBtn}
-                onPress={handleStimulusRatingSave}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.ratingSaveBtnText}>Save</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.ratingSkipBtn}
-                onPress={() => handleStimulusRatingSkip()}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Text style={styles.ratingSkipText}>Skip</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
 
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -1941,7 +1935,7 @@ function EmptyExerciseView({ onAdd, onFinish, onCancel, elapsed, workoutExercise
               <Text style={[styles.navTabText, i === currentExerciseIndex && styles.navTabTextActive]} numberOfLines={1}>
                 {entry.exercise?.name?.split(' ').slice(0, 2).join(' ')}
               </Text>
-              {entry.sets.length > 0 && <View style={styles.navTabBadge}><Text style={styles.navTabBadgeText}>{entry.sets.length}</Text></View>}
+              {entry.sets?.length > 0 && <View style={styles.navTabBadge}><Text style={styles.navTabBadgeText}>{entry.sets.length}</Text></View>}
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -2183,7 +2177,10 @@ const styles = StyleSheet.create({
   targetText: { fontSize: fontSize.sm, color: colors.textMuted },
   setEntryCard: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, gap: spacing.md },
   setEntryCardWarmup: { borderColor: colors.warning, backgroundColor: colors.warningBg || colors.surface },
-  setEntryCardDrop: { borderColor: colors.gold, backgroundColor: 'rgba(255,215,0,0.06)' },
+  // Short amber flash on the card border to ack a successful Log set tap.
+  // Border width stays at 1 so the card doesn't shift its 2px layout for the
+  // 700 ms flash — just the colour swaps.
+  setEntryCardFlash: { borderColor: colors.primary },
   warmupBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   warmupBannerText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.warning, letterSpacing: 0.3 },
   warmupOneTimeHint: {
@@ -2192,12 +2189,6 @@ const styles = StyleSheet.create({
   },
   firstSetHint: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, backgroundColor: colors.primaryBg, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.sm },
   firstSetHintText: { flex: 1, fontSize: fontSize.xs, color: colors.primary, lineHeight: 18 },
-  dropBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  dropBannerText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.gold, letterSpacing: 0.8 },
-  clusterBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, backgroundColor: colors.primaryBg, borderRadius: radius.sm, alignSelf: 'flex-start', marginBottom: spacing.xs },
-  clusterBannerText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary, letterSpacing: 0.3 },
-  clusterDoneBtn: { marginTop: spacing.sm, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radius.sm, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, alignSelf: 'center' },
-  clusterDoneBtnText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
   setEntryTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.2 },
   noteInput: { backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md, fontSize: fontSize.sm, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, minHeight: 60 },
   ghostChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, backgroundColor: colors.surface2, borderRadius: radius.sm, alignSelf: 'flex-start', marginBottom: spacing.xs },
@@ -2209,6 +2200,13 @@ const styles = StyleSheet.create({
   completeBtnTextWarmup: { color: colors.warning },
   extraSetBtn: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, paddingVertical: spacing.md },
   extraSetBtnText: { fontSize: fontSize.md, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  addWarmupBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.xs, paddingVertical: spacing.sm + 2,
+    borderRadius: radius.md, borderWidth: 1, borderColor: colors.warning + '60',
+    backgroundColor: colors.warningBg || colors.surface, marginTop: spacing.sm,
+  },
+  addWarmupBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.warning },
   secondaryActions: { flexDirection: 'row', gap: spacing.sm },
   actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, backgroundColor: colors.surface, borderRadius: radius.md, paddingVertical: spacing.md, borderWidth: 1, borderColor: colors.border },
   actionBtnDanger: { borderColor: colors.error + '40' },
@@ -2241,8 +2239,6 @@ const styles = StyleSheet.create({
   loggedSetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border },
   loggedSetRowWarmup: { borderColor: colors.warning + '60', backgroundColor: colors.warningBg || colors.surface },
   loggedSetTextWarmup: { color: colors.warning },
-  loggedSetRowDrop: { borderColor: colors.gold + '50', backgroundColor: 'rgba(255,215,0,0.05)' },
-  loggedSetTextDrop: { color: colors.gold },
   setNumBadge: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
   setNumText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textSecondary },
   loggedSetText: { flex: 1, fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
@@ -2297,6 +2293,29 @@ const styles = StyleSheet.create({
   infoNotes: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 22 },
   targetBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.successBg, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderWidth: 1, borderColor: colors.success },
   targetBannerText: { fontSize: fontSize.sm, color: colors.success, fontWeight: fontWeight.semibold, flex: 1 },
+  // Superset heads-up modal
+  supOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.78)', justifyContent: 'flex-end' },
+  supSheet: { backgroundColor: colors.surface, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, padding: spacing.xl, paddingBottom: spacing.xxl, borderTopWidth: 1, borderColor: colors.border, gap: spacing.md },
+  supIconRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  supTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  supSubtitle: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  supPairCard: { backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md, borderLeftWidth: 3, borderLeftColor: colors.primary, gap: spacing.xs },
+  supPairRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  supPairChip: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  supPairChipText: { color: colors.background, fontSize: fontSize.xs, fontWeight: fontWeight.bold },
+  supPairName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold, flex: 1 },
+  supPairConnector: { width: 2, height: 14, backgroundColor: colors.border, marginLeft: 10 },
+  supSteps: { gap: spacing.sm, marginTop: spacing.xs },
+  supStep: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  supStepNum: { color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.bold, minWidth: 14 },
+  supStepText: { color: colors.textPrimary, fontSize: fontSize.sm, lineHeight: 20, flex: 1 },
+  supTip: { color: colors.textMuted, fontSize: fontSize.xs, fontStyle: 'italic', marginTop: spacing.xs },
+  supPrimaryBtn: { backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.sm },
+  supPrimaryBtnText: { color: colors.background, fontSize: fontSize.md, fontWeight: fontWeight.bold },
+  supSecondaryRow: { flexDirection: 'row', gap: spacing.sm },
+  supSecondaryBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: 'transparent' },
+  supSecondaryBtnText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
+
   staleOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
   staleSheet: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.xl, width: '100%', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.border },
   staleTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, textAlign: 'center' },
@@ -2328,12 +2347,38 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start', marginBottom: spacing.xs,
   },
   inlineTargetText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
+  coachReasonChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: colors.surface2, borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm, paddingVertical: 4,
+    alignSelf: 'flex-start', marginBottom: spacing.xs,
+    borderWidth: 1, borderColor: colors.primary + '30',
+  },
+  coachReasonText: { fontSize: fontSize.xs, color: colors.textSecondary, flexShrink: 1 },
   beatChip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     marginBottom: spacing.xs,
     alignSelf: 'flex-start',
   },
   beatChipText: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
+  repeatLastBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    alignSelf: 'flex-start', marginBottom: spacing.xs,
+    paddingVertical: 4, paddingHorizontal: spacing.sm,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface2,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  repeatLastText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  stalledChip: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 6,
+    marginBottom: spacing.xs,
+    paddingVertical: 6, paddingHorizontal: spacing.sm,
+    borderRadius: radius.sm,
+    backgroundColor: colors.warningBg || 'rgba(245,158,11,0.10)',
+    borderWidth: 1, borderColor: colors.warning + '40',
+  },
+  stalledChipText: { fontSize: fontSize.xs, color: colors.warning, fontWeight: fontWeight.medium, flex: 1, lineHeight: 16 },
   nextTimeBanner: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
     backgroundColor: colors.primaryBg,
@@ -2364,108 +2409,4 @@ const styles = StyleSheet.create({
   deloadBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.warning },
   deloadBannerSub: { fontSize: fontSize.xs, color: colors.textMuted },
   deloadSkip: { fontSize: fontSize.sm, color: colors.textMuted, fontWeight: fontWeight.medium },
-  warmupSuggestChip: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    paddingVertical: spacing.xs, paddingHorizontal: spacing.sm,
-    backgroundColor: colors.warningBg || 'rgba(245,158,11,0.10)',
-    borderRadius: radius.sm, alignSelf: 'flex-start',
-    borderWidth: 1, borderColor: colors.warning + '40',
-  },
-  warmupSuggestText: { fontSize: fontSize.xs, color: colors.warning, fontWeight: fontWeight.medium },
-  repeatChip: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    alignSelf: 'flex-start',
-    paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
-    borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border,
-  },
-  repeatChipText: { fontSize: fontSize.xs, color: colors.textMuted },
-  warmupSheetTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.xs },
-  warmupSheetSub: { fontSize: fontSize.sm, color: colors.textSecondary, marginBottom: spacing.lg, lineHeight: 20 },
-  warmupRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: colors.surface2, borderRadius: radius.md,
-    padding: spacing.md, marginBottom: spacing.sm,
-    borderWidth: 1, borderColor: colors.border,
-  },
-  warmupRowDone: { opacity: 0.5, borderColor: colors.success + '60' },
-  warmupBadge: {
-    width: 26, height: 26, borderRadius: 13,
-    backgroundColor: colors.warning + '30', alignItems: 'center', justifyContent: 'center',
-  },
-  warmupBadgeDone: { backgroundColor: colors.success + '20' },
-  warmupBadgeText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.warning },
-  warmupRowText: { flex: 1, fontSize: fontSize.md, color: colors.textPrimary, fontWeight: fontWeight.semibold },
-  warmupRowTextDone: { textDecorationLine: 'line-through', color: colors.textMuted },
-  warmupLogBtn: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, backgroundColor: colors.primaryBg, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.primary + '60' },
-  warmupLogBtnText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.bold },
-  ratingBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  ratingSheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    padding: spacing.xl,
-    gap: spacing.lg,
-    paddingBottom: spacing.xxxl,
-  },
-  ratingTitle: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.textPrimary,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  ratingLabel: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    fontWeight: fontWeight.medium,
-    flex: 1,
-  },
-  ratingDots: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  ratingDot: {
-    width: 28,
-    height: 28,
-    borderRadius: radius.sm,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2,
-  },
-  ratingDotFilled: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  ratingActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.lg,
-    marginTop: spacing.xs,
-  },
-  ratingSaveBtn: {
-    flex: 1,
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
-  ratingSaveBtnText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.background,
-  },
-  ratingSkipBtn: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-  },
-  ratingSkipText: {
-    fontSize: fontSize.sm,
-    color: colors.textMuted,
-  },
 });

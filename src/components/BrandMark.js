@@ -1,19 +1,43 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
-import { colors, fontWeight } from '../styles/theme';
+import { Image as RNImage } from 'react-native';
 
-const ICON = require('../../assets/volyume-icon.png');
+// Try expo-image first for disk cache + faster decode. Falls back to
+// the RN Image if @expo-image isn't installed yet (e.g. before the
+// user has run `npx expo install expo-image`). The fallback keeps the
+// app building during the migration.
+let ImageComp = RNImage;
+try {
+  // eslint-disable-next-line global-require, import/no-unresolved
+  const { Image: ExpoImage } = require('expo-image');
+  if (ExpoImage) ImageComp = ExpoImage;
+} catch (_) { /* expo-image not installed yet, use RN Image */ }
+
+const WORDMARK = require('../../assets/volyume-wordmark.png');
+const V_ICON = require('../../assets/volyume-v.png');
+// Both assets ship with a transparent background so they blend with
+// any surface colour. size prop drives the HEIGHT in each component;
+// width derives from the asset's aspect so letterforms stay correctly
+// proportioned at any scale.
+const WORDMARK_ASPECT = 1032 / 277;
+const V_ICON_ASPECT = 685 / 741;
 
 /**
- * VolyumeMark — the V logo mark as a static PNG asset.
- * size controls both width and height (the asset is square).
- * color/accent props are accepted for legacy compat but are unused.
+ * VolyumeMark renders the chrome Volyume wordmark (V + lettering) as a
+ * static PNG. Use this in HERO placements (login, welcome, splash)
+ * where the lettering is the headline. Anywhere it's used, remove any
+ * separate "Volyume" text heading nearby. The asset already says it.
+ *
+ * Uses expo-image when available (disk cache, faster decode), falls
+ * back to RN Image otherwise so the app keeps working pre-install.
  */
 export function VolyumeMark({ size = 28, color, accent, style }) {
+  const height = size;
+  const width = Math.round(height * WORDMARK_ASPECT);
   return (
-    <Image
-      source={ICON}
-      style={[{ width: size, height: size, borderRadius: size * 0.1 }, style]}
+    <ImageComp
+      source={WORDMARK}
+      style={[{ width, height }, style]}
+      contentFit="contain"
       resizeMode="contain"
       accessibilityLabel="Volyume"
     />
@@ -21,53 +45,41 @@ export function VolyumeMark({ size = 28, color, accent, style }) {
 }
 
 /**
- * VolyumeWordmark — V mark + VOLYUME text side by side.
+ * VolyumeIcon renders only the V (no lettering). Use this for compact
+ * inline placements: header chips, screen-corner brand tags, anywhere
+ * a screen title already names the section so the wordmark would be
+ * redundant. size drives the height; width follows the asset aspect.
  */
-export function VolyumeWordmark({ size = 28, color, accent, style }) {
-  const textColor = color || colors.textPrimary;
-  const textSize = size * 0.72;
+export function VolyumeIcon({ size = 28, color, accent, style }) {
+  const height = size;
+  const width = Math.round(height * V_ICON_ASPECT);
   return (
-    <View style={[styles.wordmark, style]}>
-      <VolyumeMark size={size} />
-      <Text style={[styles.wordmarkText, { fontSize: textSize, color: textColor }]}>
-        VOLYUME
-      </Text>
-    </View>
+    <ImageComp
+      source={V_ICON}
+      style={[{ width, height }, style]}
+      contentFit="contain"
+      resizeMode="contain"
+      accessibilityLabel="Volyume"
+    />
   );
 }
 
 /**
- * BrandTag — V mark + 'olyume' flush together as one logotype.
+ * VolyumeWordmark kept as a thin alias for VolyumeMark so legacy
+ * imports keep building. New code should pick VolyumeMark (full
+ * wordmark) or VolyumeIcon (V only) based on context.
+ */
+export function VolyumeWordmark({ size = 28, color, accent, style }) {
+  return <VolyumeMark size={size} color={color} accent={accent} style={style} />;
+}
+
+/**
+ * BrandTag kept for backwards compatibility. Routes through the icon
+ * since the inline placements that used to pair it with text now have
+ * the V alone next to the existing heading.
  */
 export function BrandTag({ size = 15, color, accent, style }) {
-  const textColor = color || colors.textPrimary;
-  const markSize = size * 1.6;
-  return (
-    <View style={[{ flexDirection: 'row', alignItems: 'center' }, style]}>
-      <VolyumeMark size={markSize} />
-      <Text
-        style={{
-          fontSize: size,
-          fontWeight: fontWeight.bold,
-          color: textColor,
-          letterSpacing: 0.2,
-          marginLeft: 4,
-          includeFontPadding: false,
-        }}
-      >
-        olyume
-      </Text>
-    </View>
-  );
+  return <VolyumeIcon size={Math.round(size * 1.6)} color={color} accent={accent} style={style} />;
 }
 
 export default VolyumeMark;
-
-const styles = StyleSheet.create({
-  wordmark: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  wordmarkText: {
-    fontWeight: fontWeight.black,
-    letterSpacing: 2,
-    includeFontPadding: false,
-  },
-});

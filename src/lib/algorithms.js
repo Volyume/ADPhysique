@@ -91,8 +91,18 @@ export function calculateWeeklyVolume(sets, exerciseMap = {}) {
     // Legacy normalisation: old 'shoulders' data maps to side_delts (largest delt head)
     if (primaryMuscle === 'shoulders') primaryMuscle = 'side_delts';
 
-    const secondaryMuscles = exercise.secondaryMuscles ||
-      (exercise.secondary_muscles ? JSON.parse(exercise.secondary_muscles) : []);
+    let secondaryMuscles = Array.isArray(exercise.secondaryMuscles) ? exercise.secondaryMuscles : null;
+    if (!secondaryMuscles) {
+      if (typeof exercise.secondary_muscles === 'string') {
+        try { secondaryMuscles = JSON.parse(exercise.secondary_muscles); }
+        catch (_) { secondaryMuscles = []; }
+      } else if (Array.isArray(exercise.secondary_muscles)) {
+        secondaryMuscles = exercise.secondary_muscles;
+      } else {
+        secondaryMuscles = [];
+      }
+    }
+    if (!Array.isArray(secondaryMuscles)) secondaryMuscles = [];
 
     if (primaryMuscle) {
       if (!volumeByMuscle[primaryMuscle]) {
@@ -126,6 +136,13 @@ export function getVolumeStatus(workingSets, muscle, customLandmarks = null) {
 
   const { mev, mav, mrv } = landmarks;
 
+  // Zero work is always 'below', regardless of mev. Without this short-circuit,
+  // muscles with mev=0 (front_delts — get plenty of indirect work from
+  // pressing) read as 'optimal' green on the body heatmap before the user
+  // has logged a single set, which makes the diagram look wrong.
+  if (workingSets <= 0) {
+    return { status: 'below', color: '#616161', label: 'Below target', landmarks };
+  }
   if (workingSets < mev) {
     return { status: 'below', color: '#616161', label: 'Below target', landmarks };
   }
@@ -372,6 +389,7 @@ export function detectPR(newSet, historicalSets, exercise, units = 'kg') {
     prs.push({
       type: '1rm_estimate',
       value: new1RM,
+      previousValue: best1RM,            // for "+X% vs previous" copy
       reps,
       weight,
       label: `New estimated 1RM: ${new1RM.toFixed(1)}${units}`,
@@ -387,6 +405,7 @@ export function detectPR(newSet, historicalSets, exercise, units = 'kg') {
       type: 'heaviest_weight',
       weight,
       value: weight,
+      previousValue: heaviestEver > 0 ? heaviestEver : null,
       reps,
       label: `New heaviest weight: ${weight}${units} × ${reps} reps`,
     });
@@ -399,7 +418,8 @@ export function detectPR(newSet, historicalSets, exercise, units = 'kg') {
     prs.push({
       type: 'most_reps_at_weight',
       weight,
-      value: weight,
+      value: reps,                       // the metric here is reps, not weight
+      previousValue: maxRepsAtWeight,
       reps,
       label: `Most reps at ${weight}${units}: ${reps} reps`,
     });
@@ -606,7 +626,7 @@ function buildSubstituteReason(sub, target, targetStretch = 'medium') {
   const subStretch = sub.tension_at_stretch || sub.tensionAtStretch || 'medium';
 
   if (subStretch === 'high' && targetStretch !== 'high') {
-    return 'Trains this muscle at a longer length — evidence suggests this produces slightly more growth per set.';
+    return 'Trains this muscle at a longer length. Evidence suggests this produces slightly more growth per set.';
   }
   if (subSFR > targetSFR) return 'Better match for this muscle with less overall fatigue.';
   if (subFatigue < targetFatigue) return 'Less demanding overall. Good for busy or high-volume weeks.';
@@ -947,7 +967,12 @@ export function calculateEffectiveSets(sets, exerciseMap = {}) {
     let primaryMuscle = (exercise.primaryMuscle || exercise.primary_muscle || '').toLowerCase();
     if (primaryMuscle === 'shoulders') primaryMuscle = 'side_delts';
 
-    const weight = getSetEffectivenessWeight(set.rir ?? set.rpe != null ? 10 - set.rpe : null);
+    // Effective-volume weight: prefer logged RIR; fall back to RPE-derived RIR
+    // (RIR ≈ 10 − RPE); null when neither is present.
+    let rirForWeight = null;
+    if (set.rir != null) rirForWeight = set.rir;
+    else if (set.rpe != null) rirForWeight = 10 - set.rpe;
+    const weight = getSetEffectivenessWeight(rirForWeight);
 
     if (primaryMuscle) {
       if (!volumeByMuscle[primaryMuscle]) {
@@ -1010,7 +1035,7 @@ export function detectPlateau(exerciseSessions = [], repMin = 6, repMax = 12) {
 // Volume confidence — how much to trust the adaptive landmark estimate for a muscle.
 // Based on number of feedback data points collected.
 export function getVolumeConfidence(dataPoints) {
-  if (dataPoints < 3)  return { level: 'low',    label: 'Estimated', description: 'Starting range — not yet personalised to you.' };
+  if (dataPoints < 3)  return { level: 'low',    label: 'Estimated', description: 'Starting range. Not yet personalised to you.' };
   if (dataPoints < 6)  return { level: 'medium',  label: 'Learning',  description: 'Based on limited data. Adjust after each check-in.' };
   return                      { level: 'high',    label: 'Personalised', description: 'Based on your logged response data.' };
 }

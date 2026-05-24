@@ -1,11 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getAllExercises, insertExercise, createRoutine, addExerciseToRoutine,
-  createProgramme,
+  createProgramme, getLibraryPlans,
 } from './database';
 
-// Bump to v6: stores tags, splitType, difficulty in DB so filter chips work
-const SEED_KEY = '@volyume_routines_seeded_v11';
+// Bump to v12: adds Mens Physique Width Enhancement plan
+const SEED_KEY = '@volyume_routines_seeded_v12';
 
 // Extra exercises the plan templates rely on that may not be in the base exercise seed
 const REQUIRED_EXERCISES = [
@@ -28,7 +28,7 @@ const REQUIRED_EXERCISES = [
   { name: 'Bodyweight Squat',        primaryMuscle: 'quads',    equipment: 'bodyweight', movementPattern: 'squat',     compoundIsolation: 'compound',  defaultRepMin: 15, defaultRepMax: 30, fatigueCost: 1, stimulusToFatigueRatio: 3 },
 ];
 
-// ─── 18 Library Plans ────────────────────────────────────────────────────────
+// ─── Library Plans ───────────────────────────────────────────────────────────
 
 const LIBRARY_PLANS = [
 
@@ -1302,7 +1302,7 @@ const LIBRARY_PLANS = [
   // ── 29. Women's Bodybuilding — Off-Season ────────────────────────────────────
   {
     name: "Women's Bodybuilding",
-    description: "A five-day programme for Women's Bodybuilding competitors, built around maximum muscular development across every group. This is the most comprehensive of the women's divisions and requires serious, focused training across every major muscle group. Day 1 prioritises quads and calves; Day 2 builds back width and thickness; Day 3 develops chest, shoulders, and triceps; Day 4 targets hamstrings, glutes, and calves; Day 5 finishes the week with arms and shoulder detail. Eat in a moderate surplus throughout the muscle-building phase. Stop 1 to 2 reps before failure on most sets. Progress by adding reps first, then weight.",
+    description: "A five-day programme for Women's Bodybuilding competitors, built around maximum muscular development across every group. This is the most demanding of the women's divisions and requires serious, focused training across every major muscle group. Day 1 prioritises quads and calves; Day 2 builds back width and thickness; Day 3 develops chest, shoulders, and triceps; Day 4 targets hamstrings, glutes, and calves; Day 5 finishes the week with arms and shoulder detail. Eat in a moderate surplus throughout the muscle-building phase. Stop 1 to 2 reps before failure on most sets. Progress by adding reps first, then weight.",
     tags: 'bodybuilding gender:women goal:build_muscle days:5 advanced division:womens_bodybuilding',
     difficulty: 2,
     workouts: [
@@ -1435,6 +1435,39 @@ const LIBRARY_PLANS = [
     ],
   },
 
+  // ── 31. Mens Physique Width Enhancement ───────────────────────────────────
+  {
+    name: 'Mens Physique Width Enhancement',
+    description: 'Two-day upper rotation built for masters physique competitors chasing the wide-shouldered, V-tapered look. Day 1 prioritises lat width, upper-back detail, rear delts and serratus. Day 2 attacks upper chest, side delts and shoulder refinement. All work is cable and machine based for joint-friendly, constant-tension stimulus, well suited to lifters in their 40s and beyond. Pair with any lower-body plan. Add reps each session; once you hit the top of the rep range, add a little weight and start again. Stop 1 to 2 reps before failure on each set.',
+    tags: 'aesthetic upper bodybuilding gender:men goal:build_muscle days:2 audience:masters width featured',
+    difficulty: 1,
+    workouts: [
+      {
+        name: 'Day 1: Width, Rear Delts & Back',
+        exercises: [
+          { name: 'Face Pull',                       sets: 4, repsMin: 20, repsMax: 25, rest: 60,  notes: 'LIGHT. Rope at chest height. Elbows high and wide. Squeeze rear delt. Stop short of pain. First. Warms shoulder before heavy pulling.' },
+          { name: 'HS Plate-Loaded Lat Pulldown',    sets: 4, repsMin: 8,  repsMax: 12, rest: 120, notes: 'Full overhead stretch. Pull elbows to pockets. Lat width, not biceps. 3s eccentric. Slight back lean, chest up.' },
+          { name: 'Underhand Lat Pulldown',          sets: 3, repsMin: 10, repsMax: 12, rest: 90,  notes: 'Full stretch at top. Squeeze lower lat hard at bottom. 3s eccentric. Elongates V-taper.' },
+          { name: 'Plate-Loaded Seated Row',         sets: 3, repsMin: 10, repsMax: 12, rest: 90,  notes: 'Full stretch forward. Pull elbows back. Squeeze rhomboids hard at end. Don\'t shrug.' },
+          { name: 'HS ISO High Row',                 sets: 3, repsMin: 10, repsMax: 12, rest: 90,  notes: 'Higher elbow targets upper lat and mid back. Control the negative. Shoulder packed throughout.' },
+          { name: 'Cable Straight-Arm Pulldown',     sets: 3, repsMin: 12, repsMax: 15, rest: 60,  notes: 'Slight elbow bend throughout. Sweep from overhead to hips. Feel the lat from armpit to hip.' },
+          { name: 'Cable Serratus Punch',            sets: 3, repsMin: 15, repsMax: 25, rest: 45,  notes: 'Single arm. Reach forward and fully protract scapula at end range. Feel serration along ribcage. Slow. Feel it or it does nothing.' },
+        ],
+      },
+      {
+        name: 'Day 2: Upper Chest, Lateral Delts & Shoulders',
+        exercises: [
+          { name: 'Facing-In Shoulder Press',          sets: 4, repsMin: 10, repsMax: 12, rest: 120, notes: 'PRIMARY. Do first when freshest. Face INTO pad. Scapular plane press avoids impingement. Hits upper chest AND anterior delt simultaneously.' },
+          { name: 'Cable Lateral Raise',               sets: 4, repsMin: 12, repsMax: 15, rest: 75,  notes: 'Pulley at SHOULDER height. Arm slightly forward. Lead with elbow. Raise to just above shoulder. Challenging at 12. Not a pump movement.' },
+          { name: 'Cable Lateral Raise (Low Pulley)',  sets: 3, repsMin: 15, repsMax: 20, rest: 60,  notes: 'Pulley at floor/ANKLE level. Different arc to shoulder height. Arm crosses body at bottom. Pump focused. Together these two cables give full lateral coverage.' },
+          { name: 'Cable Fly (Low to Mid, Incline)',   sets: 4, repsMin: 12, repsMax: 15, rest: 90,  notes: 'Bench 30-45°. Cables at lowest position. Fly upward and inward. 3s eccentric. Find pain-free path. Superior upper-chest mind-muscle vs pressing.' },
+          { name: 'Cable Fly (Mid Height, Cuff)',      sets: 3, repsMin: 15, repsMax: 20, rest: 60,  notes: 'Cables at chest height. Cuffed. Strong stretch, squeeze hard at contraction. Pump focused. Higher reps.' },
+          { name: 'Face Pull',                         sets: 4, repsMin: 20, repsMax: 25, rest: 45,  notes: 'Always last. Shoulder fatigued by now. Light weight. Rope at chest height. Elbows high and wide. Pull to comfortable range only.' },
+        ],
+      },
+    ],
+  },
+
 ];
 
 // ─── Seed function ────────────────────────────────────────────────────────────
@@ -1444,7 +1477,20 @@ export async function seedRoutinesIfNeeded(userId) {
 
   try {
     const alreadySeeded = await AsyncStorage.getItem(SEED_KEY);
-    if (alreadySeeded) return;
+
+    // Self-healing check: if the marker is set but the database actually has
+    // no library plans (e.g. a prior seed crashed mid-way, or the DB was
+    // wiped via Clear data), clear the marker and proceed with a fresh seed.
+    // If the marker is set AND plans exist, we're done — skip seeding.
+    if (alreadySeeded) {
+      const existingLibrary = await getLibraryPlans().catch(() => []);
+      if (existingLibrary.length > 0) {
+        return; // healthy state, nothing to do
+      }
+      // Marker set but DB empty — clear marker so the seed below actually runs.
+      await AsyncStorage.removeItem(SEED_KEY).catch(() => {});
+      console.warn(`[Seed] Marker was set but no library plans found. Re-seeding.`);
+    }
 
     const existing = await getAllExercises();
     const byName = {};
@@ -1460,8 +1506,16 @@ export async function seedRoutinesIfNeeded(userId) {
       }
     }
 
-    // Create all library plans
+    // Look up which library plans already exist by name so a SEED_KEY bump
+    // only adds new plans rather than duplicating the entire library. Names
+    // are the natural dedupe key: plan IDs are random UUIDs that change on
+    // every seed, and there's no upsert path through createProgramme.
+    const existingLibrary = await getLibraryPlans().catch(() => []);
+    const existingNames = new Set(existingLibrary.map(p => p.name));
+
+    // Create library plans we haven't seeded yet
     for (const plan of LIBRARY_PLANS) {
+      if (existingNames.has(plan.name)) continue;
       const programme = await createProgramme(
         userId,
         plan.name,

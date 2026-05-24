@@ -1,28 +1,33 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  RefreshControl, Animated, Dimensions,
+  RefreshControl, Animated, Dimensions, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns';
-import { BarChart } from 'react-native-gifted-charts';
 
 import { colors, fontSize, fontWeight, spacing, radius, volumeColors, motion } from '../styles/theme';
-import { VolyumeMark } from '../components/BrandMark';
+import ScreenHeader from '../components/ScreenHeader';
+import { EmptyChartIllustration } from '../components/Illustrations';
 import InfoTooltip from '../components/InfoTooltip';
+import SvgBarSparkline from '../components/SvgBarSparkline';
+import FatigueTrendCard from '../components/FatigueTrendCard';
+import BlockProgressCard from '../components/BlockProgressCard';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import {
   getCompletedWorkoutSets, getAllWorkouts, getAllExercises, getAllMesocycles,
   getActiveInsights, dismissInsight, runInsightsEngine, getActivePlan,
   getAcuteChronicWorkload,
+  getRecentWorkoutFeedback, getCurrentMesocycleWeek, getPlannedMuscleVolume,
 } from '../lib/database';
 import {
   calculateWeeklyVolume, VOLUME_LANDMARKS, MUSCLE_DISPLAY_NAMES,
   calculate1RM, calculateTonnage, shouldDeload,
 } from '../lib/algorithms';
+import { logError } from '../lib/errorLog';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -110,6 +115,15 @@ export default function AnalyticsScreen({ navigation }) {
   const [muscleFreq, setMuscleFreq]         = useState([]);   // [{muscle, thisWeek, lastWeek}]
   const [showAllMuscles, setShowAllMuscles] = useState(false);
   const [workloadData, setWorkloadData] = useState(null);
+  const [fatigueSessions, setFatigueSessions] = useState([]);   // last 6 sessions w/ feedback
+  const [blockProgress, setBlockProgress]     = useState([]);   // planned vs actual per muscle
+  // Year of Lifts is gated until the user has 365 days of training
+  // history (or close to it) so the swipeable wrap-up has enough data
+  // to be meaningful rather than nine months of empty bars.
+  // earliestWorkoutAt is set in load() from the oldest completed
+  // workout's started_at, and the locked state derives from it.
+  const [earliestWorkoutAt, setEarliestWorkoutAt] = useState(null);
+  const [currentMesoWeek, setCurrentMesoWeek] = useState(null); // {weekIndex, plannedWeeks, isDeload, rirTarget}
 
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
@@ -133,6 +147,14 @@ export default function AnalyticsScreen({ navigation }) {
       const exMap = Object.fromEntries(exercises.map(e => [e.id, e]));
       setAllSets(sets);
       setExerciseMap(exMap);
+      // Earliest completed workout — drives Year of Lifts unlock.
+      // Comparing started_at across workouts is fine since values
+      // are ms-epoch integers.
+      const completed = (workouts || []).filter(w => w.isCompleted && w.startedAt);
+      const earliest = completed.length
+        ? completed.reduce((m, w) => (w.startedAt < m ? w.startedAt : m), completed[0].startedAt)
+        : null;
+      setEarliestWorkoutAt(earliest);
 
       const wl = await getAcuteChronicWorkload(user.id).catch(() => null);
       setWorkloadData(wl);
@@ -147,9 +169,11 @@ export default function AnalyticsScreen({ navigation }) {
         loadRecentSessions(workouts),
         loadSessionDurationTrend(workouts),
         loadMuscleFrequency(sets, exMap),
+        loadFatigueTrend(),
+        loadBlockState(),
       ]);
     } catch (e) {
-      console.error('AnalyticsScreen load:', e);
+      logError('AnalyticsScreen.load', e, { userId: user?.id });
     } finally {
       setLoading(false);
     }
@@ -165,7 +189,9 @@ export default function AnalyticsScreen({ navigation }) {
       }
       setActiveMeso(active);
 
-      // Build weekly tonnage sparkline: last 4 weeks
+      // Build weekly tonnage sparkline: last 4 weeks. Current week highlighted in
+      // primary amber, prior weeks dimmed. Shape matches SvgBarSparkline's
+      // {value, label, color} point format.
       const bars = [];
       const now = Date.now();
       for (let wk = 3; wk >= 0; wk--) {
@@ -179,11 +205,32 @@ export default function AnalyticsScreen({ navigation }) {
         bars.push({
           value: Math.round(tonnage),
           label: wk === 0 ? 'Now' : `-${wk}w`,
-          frontColor: wk === 0 ? colors.primary : colors.primaryDim,
+          color: wk === 0 ? colors.primary : colors.primaryDim,
         });
       }
       setMesoTonnage(bars);
     } catch (_) {}
+  }
+
+  async function loadFatigueTrend() {
+    try {
+      const rows = await getRecentWorkoutFeedback(user.id, 6);
+      setFatigueSessions(rows);
+    } catch (_) {
+      setFatigueSessions([]);
+    }
+  }
+
+  async function loadBlockState() {
+    try {
+      const week = await getCurrentMesocycleWeek(user.id).catch(() => null);
+      setCurrentMesoWeek(week);
+      const progress = await getPlannedMuscleVolume(user.id).catch(() => []);
+      setBlockProgress(progress || []);
+    } catch (_) {
+      setCurrentMesoWeek(null);
+      setBlockProgress([]);
+    }
   }
 
   async function loadInsights() {
@@ -420,7 +467,7 @@ export default function AnalyticsScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <ScrollView
         ref={scrollRef}
         contentContainerStyle={styles.content}
@@ -433,15 +480,12 @@ export default function AnalyticsScreen({ navigation }) {
         }
       >
         {/* ── Header ────────────────────────────────────────── */}
-        <View style={styles.header}>
-          <Text style={styles.pageTitle}>Progress</Text>
-          <VolyumeMark size={38} color={colors.textMuted} />
-        </View>
+        <ScreenHeader title="Progress" />
 
         {/* ── Empty state ───────────────────────────────────── */}
         {!loading && allSets.length === 0 && (
           <View style={styles.emptyState}>
-            <Ionicons name="analytics-outline" size={48} color={colors.textMuted} />
+            <EmptyChartIllustration size={140} />
             <Text style={styles.emptyStateHeading}>No data yet</Text>
             <Text style={styles.emptyStateBody}>
               Your progress charts will appear here after your first few sessions. Log a workout to get started.
@@ -466,7 +510,16 @@ export default function AnalyticsScreen({ navigation }) {
             progress={mesoProgress()}
             tonnageBars={mesoTonnage}
             onPress={() => navigation.getParent()?.navigate('PlansTab', { screen: 'MesocycleBuilder', initial: false })}
-            onBuild={() => navigation.getParent()?.navigate('PlansTab', { screen: 'CoachBuilder', initial: false })}
+            onBuild={() => navigation.getParent()?.navigate('PlansTab', { screen: 'PlanLibrary', initial: false })}
+          />
+
+          {/* Training trend (last 6 sessions' fatigue) — moved from Train tab */}
+          <FatigueTrendCard sessions={fatigueSessions} />
+
+          {/* This week's planned vs actual volume per muscle — moved from Train tab */}
+          <BlockProgressCard
+            blockProgress={blockProgress}
+            currentMesoWeek={currentMesoWeek}
           />
         </View>
 
@@ -599,7 +652,43 @@ export default function AnalyticsScreen({ navigation }) {
             <NavTile icon="trophy" color={colors.gold} label="Personal Records" onPress={() => navigation.navigate('PRWall')} />
             <NavTile icon="barbell" color={colors.primary} label="Lift Progress" onPress={() => navigation.navigate('ExerciseLibrary')} />
             <NavTile icon="time" color={colors.textSecondary} label="Full History" onPress={() => navigation.navigate('WorkoutHistory')} />
-            <NavTile icon="calendar-outline" color={colors.textSecondary} label="Year of Lifts" onPress={() => navigation.navigate('YearOfLifts')} />
+            {(() => {
+              // Year of Lifts unlocks once the user has 365 days of
+              // training history. Until then it shows a locked state
+              // with the remaining days so the user has a concrete
+              // milestone to look forward to.
+              const YEAR_MS = 365 * 86400000;
+              const elapsed = earliestWorkoutAt ? Date.now() - earliestWorkoutAt : 0;
+              const unlocked = elapsed >= YEAR_MS;
+              const daysLeft = earliestWorkoutAt
+                ? Math.max(0, Math.ceil((YEAR_MS - elapsed) / 86400000))
+                : 365;
+              return (
+                <NavTile
+                  icon="calendar-outline"
+                  color={colors.textSecondary}
+                  label="Year of Lifts"
+                  locked={!unlocked}
+                  lockedSub={
+                    earliestWorkoutAt
+                      ? `${daysLeft} day${daysLeft === 1 ? '' : 's'} to go`
+                      : 'Start training to unlock'
+                  }
+                  onPress={() => {
+                    if (!unlocked) {
+                      Alert.alert(
+                        'Year of Lifts',
+                        earliestWorkoutAt
+                          ? `Your wrap-up unlocks after a full year of training. ${daysLeft} day${daysLeft === 1 ? '' : 's'} to go.`
+                          : 'Log your first session to start the year-long countdown.',
+                      );
+                      return;
+                    }
+                    navigation.navigate('YearOfLifts');
+                  }}
+                />
+              );
+            })()}
           </View>
         </View>
       </ScrollView>
@@ -652,7 +741,7 @@ function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, onPress,
         </>
       )}
 
-      {/* Tonnage sparkline */}
+      {/* Tonnage sparkline — shared SvgBarSparkline style across the app */}
       {tonnageBars.some(b => b.value > 0) && (
         <View style={styles.sparkWrap}>
           <View style={styles.sparkLabelRow}>
@@ -661,21 +750,15 @@ function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, onPress,
               {(tonnageBars[tonnageBars.length - 1]?.value ?? 0).toLocaleString('en-GB')} kg
             </Text>
           </View>
-          <BarChart
-            data={tonnageBars}
-            barWidth={28}
-            spacing={10}
-            roundedTop
-            hideRules
-            noOfSections={3}
-            height={56}
-            barBorderRadius={3}
-            xAxisThickness={0}
-            yAxisThickness={0}
-            hideYAxisText
-            xAxisLabelTextStyle={styles.barAxisLabel}
-            isAnimated
-          />
+          <View style={styles.sparkChartCentered}>
+            <SvgBarSparkline
+              data={tonnageBars}
+              width={240}
+              height={56}
+              barWidth={36}
+              barGap={12}
+            />
+          </View>
         </View>
       )}
     </TouchableOpacity>
@@ -837,11 +920,28 @@ function SessionCard({ workout, units }) {
   );
 }
 
-function NavTile({ icon, color, label, onPress }) {
+function NavTile({ icon, color, label, onPress, locked, lockedSub }) {
+  // When locked, the tile is dimmed and onPress fires an inline
+  // explanation rather than navigating. Used for features that need
+  // accumulated training data (e.g. Year of Lifts needs a year).
   return (
-    <TouchableOpacity style={styles.navTile} onPress={onPress} activeOpacity={0.75}>
-      <Ionicons name={icon} size={22} color={color} />
-      <Text style={styles.navTileLabel}>{label}</Text>
+    <TouchableOpacity
+      style={[styles.navTile, locked && styles.navTileLocked]}
+      onPress={onPress}
+      activeOpacity={0.75}
+      accessibilityRole="button"
+      accessibilityLabel={locked ? `${label}. Locked. ${lockedSub ?? ''}` : label}
+      accessibilityState={{ disabled: !!locked }}
+    >
+      <Ionicons
+        name={locked ? 'lock-closed-outline' : icon}
+        size={22}
+        color={locked ? colors.textMuted : color}
+      />
+      <Text style={[styles.navTileLabel, locked && styles.navTileLabelLocked]}>{label}</Text>
+      {locked && lockedSub ? (
+        <Text style={styles.navTileSub} numberOfLines={1}>{lockedSub}</Text>
+      ) : null}
     </TouchableOpacity>
   );
 }
@@ -858,7 +958,7 @@ function SessionDurationChart({ bars }) {
   if (recent.length >= 3) {
     const last = recent.slice(-3).map(b => b.avgMin);
     const isDown = last[2] < last[0] - 5;
-    if (isDown) coachingLine = 'Sessions getting shorter — might be fatigue.';
+    if (isDown) coachingLine = 'Sessions getting shorter. Might be fatigue.';
   }
 
   function barColor(avgMin) {
@@ -942,7 +1042,7 @@ function WorkloadCard({ data }) {
   const { acute, chronic, ratio } = data;
 
   let statusColor = colors.textMuted;
-  let statusText = 'Below training average — consider more volume.';
+  let statusText = 'Below training average. Consider more volume.';
   if (ratio >= 1.5) {
     statusColor = colors.error;
     statusText = 'High load this week. Consider an easier session.';
@@ -1046,11 +1146,11 @@ const styles = StyleSheet.create({
   },
   mesoProgressFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
   mesoProgressLabel: { fontSize: fontSize.xs, color: colors.textMuted },
-  sparkWrap:        { marginTop: spacing.xs },
-  sparkLabelRow:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: spacing.xs },
-  sparkLabel:       { fontSize: fontSize.xs, color: colors.textMuted },
-  sparkValue:       { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  barAxisLabel:     { fontSize: 9, color: colors.textMuted },
+  sparkWrap:           { marginTop: spacing.xs },
+  sparkLabelRow:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: spacing.xs },
+  sparkLabel:          { fontSize: fontSize.xs, color: colors.textMuted },
+  sparkValue:          { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  sparkChartCentered:  { alignItems: 'center', paddingTop: spacing.xs },
 
   // ── Insight rows ──
   insightRow: {
@@ -1135,6 +1235,16 @@ const styles = StyleSheet.create({
   navTileLabel: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
     color: colors.textSecondary, textAlign: 'center',
+  },
+  // Locked tile variant — used while accumulating training data needed
+  // for a feature (e.g. Year of Lifts requires 365 days of history).
+  navTileLocked: { opacity: 0.55 },
+  navTileLabelLocked: { color: colors.textMuted },
+  navTileSub: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    marginTop: spacing.xxs,
+    textAlign: 'center',
   },
   deloadBanner: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,

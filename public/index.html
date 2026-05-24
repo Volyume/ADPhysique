@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Volyume</title>
+<meta name="description" content="Volyume is a private, intelligent bodybuilding logbook for iPhone and Android.">
+<style>
+  :root {
+    --bg: #0D0D0D;
+    --surface: #161616;
+    --border: #2A2A2A;
+    --text: #EEEEEE;
+    --muted: #AFAFAF;
+    --accent: #F59E0B;
+    --link: #FBBF24;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 24px;
+  }
+  .card {
+    max-width: 480px;
+    width: 100%;
+    text-align: center;
+  }
+  .wordmark {
+    font-size: 48px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: var(--accent);
+    margin: 0 0 8px;
+  }
+  .tag {
+    color: var(--muted);
+    margin: 0 0 32px;
+    font-size: 16px;
+  }
+  .links { display: flex; flex-direction: column; gap: 12px; }
+  .links a {
+    display: block;
+    padding: 12px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    text-decoration: none;
+    font-size: 15px;
+    transition: border-color 0.15s ease;
+  }
+  .links a:hover {
+    border-color: var(--accent);
+  }
+  footer {
+    text-align: center;
+    padding: 24px;
+    color: var(--muted);
+    font-size: 13px;
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1 class="wordmark">Volyume</h1>
+    <p class="tag">The intelligent bodybuilding logbook for iPhone and Android. Beta.</p>
+    <div class="links">
+      <a href="./privacy.html">Privacy policy</a>
+      <a href="mailto:allansdouglas1983@gmail.com">Contact: allansdouglas1983@gmail.com</a>
+    </div>
+  </div>
+</div>
+<footer>Volyume is currently in closed beta.</footer>
+</body>
+</html>

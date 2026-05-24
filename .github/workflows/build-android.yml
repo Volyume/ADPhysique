@@ -1,15 +1,21 @@
-name: Build Android APK
+name: Build Android (APK + AAB, signed)
 
 on:
   push:
     branches:
       - main
-      - claude/build-volyume-app-srY9C
+      - 'claude/**'
   workflow_dispatch:
+
+# Needed so the "Publish build status" step can push a small status
+# file back to the same branch. The auto-commit uses [skip ci] in the
+# message so it doesn't trigger another run.
+permissions:
+  contents: write
 
 jobs:
   build:
-    name: Build Debug APK
+    name: Build Release APK + AAB
     runs-on: ubuntu-latest
 
     steps:
@@ -25,6 +31,45 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
+      # Fail loudly if backend credentials aren't set. Without these, Metro
+      # bundles empty strings and the app crashes at first launch with
+      # "Error: supabaseUrl is required." — a silent config bug that has
+      # bitten us once already. Prints the length (not the value) so we
+      # can sanity-check from the log that the secret is reaching the
+      # workflow and is the expected size.
+      - name: Verify required secrets are set
+        id: verify
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          URL_LEN=${#EXPO_PUBLIC_SUPABASE_URL}
+          KEY_LEN=${#EXPO_PUBLIC_SUPABASE_ANON_KEY}
+          echo "EXPO_PUBLIC_SUPABASE_URL length: $URL_LEN"
+          echo "EXPO_PUBLIC_SUPABASE_ANON_KEY length: $KEY_LEN"
+          # Expose to subsequent steps + the publish-status step so the
+          # diagnostic ends up in .ci-status/latest.md even if the build
+          # later fails.
+          echo "url_len=$URL_LEN" >> "$GITHUB_OUTPUT"
+          echo "key_len=$KEY_LEN" >> "$GITHUB_OUTPUT"
+          # A typical Supabase URL is ~40 chars (https://<20-char-id>.supabase.co)
+          # A typical anon key is ~220 chars (JWT with three base64 segments).
+          if [ "$URL_LEN" -eq 0 ]; then
+            echo "::error::EXPO_PUBLIC_SUPABASE_URL secret is empty. Re-paste the value in repo Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          if [ "$URL_LEN" -lt 20 ] || [ "$URL_LEN" -gt 100 ]; then
+            echo "::warning::EXPO_PUBLIC_SUPABASE_URL length looks wrong ($URL_LEN chars). Expected ~40 chars like https://abcdef.supabase.co"
+          fi
+          if [ "$KEY_LEN" -eq 0 ]; then
+            echo "::error::EXPO_PUBLIC_SUPABASE_ANON_KEY secret is empty. Re-paste the value in repo Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          if [ "$KEY_LEN" -lt 100 ]; then
+            echo "::warning::EXPO_PUBLIC_SUPABASE_ANON_KEY length looks wrong ($KEY_LEN chars). Expected ~220 chars (JWT starting with eyJ)."
+          fi
+          echo "✓ Supabase credentials present"
+
       - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
@@ -39,6 +84,7 @@ jobs:
         env:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+          EXPO_PUBLIC_SENTRY_DSN: ${{ secrets.EXPO_PUBLIC_SENTRY_DSN }}
 
       - name: Cache Gradle
         uses: actions/cache@v4
@@ -72,20 +118,254 @@ jobs:
           sed -i '/from components\.release/d' "$FILE"
           grep -n 'components' "$FILE" || echo "✓ No components references remain"
 
-      # Release build embeds the JS bundle (index.android.bundle) into the APK,
-      # so it runs standalone without a Metro dev server. Expo's prebuild
-      # template signs the release buildType with the debug keystore by
-      # default, so this APK installs and runs without a custom keystore —
-      # suitable for sideloaded testing (not for Play Store submission).
-      - name: Build Release APK
-        run: cd android && ./gradlew assembleRelease --no-daemon --no-configuration-cache
+      # @react-native/gradle-plugin imports `serviceOf` from an internal
+      # Gradle package that was relocated in Gradle 8.7+. Without this
+      # patch the plugin's own build.gradle.kts fails to compile under
+      # the Gradle 8.9 we pin above with:
+      #   Unresolved reference: serviceOf
+      - name: Patch @react-native/gradle-plugin for Gradle 8.7+ compatibility
+        run: |
+          FILE=node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts
+          sed -i 's|org.gradle.configurationcache.extensions.serviceOf|org.gradle.kotlin.dsl.support.serviceOf|' "$FILE"
+          grep -n 'serviceOf' "$FILE" || echo "✗ Patch did not apply"
+
+      # Decode the upload keystore from the ANDROID_KEYSTORE_BASE64 secret
+      # and wire it into the release signing config. When the secret is
+      # absent the build falls back to Expo's prebuild default (debug
+      # keystore) so the workflow still runs for branches that haven't
+      # been granted the secret — those builds work for sideload but
+      # can't be uploaded to Play Store.
+      #
+      # The four secrets that need to exist for Play-ready signing:
+      #   ANDROID_KEYSTORE_BASE64  base64 of the .keystore file
+      #   ANDROID_KEYSTORE_PASSWORD  the keystore password
+      #   ANDROID_KEY_ALIAS  e.g. volyume-upload
+      #   ANDROID_KEY_PASSWORD  same as keystore password for PKCS12
+      - name: Configure release signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -e
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 secret is empty. Set the 4 signing secrets in repo Settings before re-running."
+            exit 1
+          fi
+          if [ -z "$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEY_ALIAS" ] || [ -z "$ANDROID_KEY_PASSWORD" ]; then
+            echo "::error::One of ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD is empty."
+            exit 1
+          fi
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/upload.keystore
+          if [ ! -s android/app/upload.keystore ]; then
+            echo "::error::Decoded keystore is empty. ANDROID_KEYSTORE_BASE64 is not valid base64 of a keystore."
+            exit 1
+          fi
+          echo "✓ upload.keystore decoded ($(wc -c < android/app/upload.keystore) bytes) at android/app/upload.keystore"
+
+          # Rewrite the release signingConfig in app/build.gradle to use the
+          # upload keystore. Credentials come from -P CLI flags at build
+          # time (see the build step) so the keystore filename is the only
+          # value baked into build.gradle. storeFile is unguarded — if the
+          # keystore is missing, the build fails loudly instead of producing
+          # a debug-signed AAB.
+          python3 - <<'PYEOF'
+          import re, pathlib, sys
+          p = pathlib.Path('android/app/build.gradle')
+          src = p.read_text()
+
+          if 'upload.keystore' in src:
+              print('build.gradle already references upload.keystore — skipping patch')
+              sys.exit(0)
+
+          if 'signingConfigs {' not in src:
+              print('::error::signingConfigs block not found in build.gradle')
+              sys.exit(1)
+
+          # 1. Insert a release{} block inside signingConfigs{}.
+          # storeFile is hardcoded; credentials come from -P flags via
+          # project.findProperty. findProperty returns null if the property
+          # isn't set, which gradle treats as "missing required property"
+          # and fails the build — the desired loud failure.
+          src = src.replace(
+              'signingConfigs {',
+              'signingConfigs {\n        release {\n'
+              '            storeFile file("upload.keystore")\n'
+              '            storePassword project.findProperty("VOLYUME_UPLOAD_STORE_PASSWORD")\n'
+              '            keyAlias project.findProperty("VOLYUME_UPLOAD_KEY_ALIAS")\n'
+              '            keyPassword project.findProperty("VOLYUME_UPLOAD_KEY_PASSWORD")\n'
+              '        }',
+              1,
+          )
+
+          # 2. Swap the release buildType to point at signingConfigs.release.
+          # Match `release { ... signingConfig signingConfigs.debug` anywhere
+          # in the file. [^{}]*? keeps the match local to the release block.
+          new_src, count = re.subn(
+              r'(release\s*\{[^{}]*?)signingConfig\s+signingConfigs\.debug',
+              r'\1signingConfig signingConfigs.release',
+              src,
+              count=1,
+              flags=re.DOTALL,
+          )
+          if count == 0:
+              print('::error::Could not find `signingConfig signingConfigs.debug` inside release{} buildType.')
+              m = re.search(r'buildTypes\s*\{.{0,1500}', src, re.DOTALL)
+              if m:
+                  print('--- buildTypes block found in file: ---')
+                  print(m.group(0))
+              sys.exit(1)
+          src = new_src
+
+          p.write_text(src)
+          final = p.read_text()
+          if 'signingConfigs.release' not in final or 'upload.keystore' not in final:
+              print('::error::Verification failed after write')
+              sys.exit(1)
+          print('✓ Patched build.gradle to use upload signing config')
+          PYEOF
+          # Dump the patched signingConfigs and buildTypes blocks to the log so
+          # any future "why is it still debug-signed?" question takes 10s to
+          # diagnose instead of three hours.
+          echo "--- signingConfigs block after patch ---"
+          awk '/signingConfigs *\{/,/^    \}/' android/app/build.gradle
+          echo "--- release buildType after patch ---"
+          awk '/release *\{/,/^        \}/' android/app/build.gradle | head -20
+
+      # Release build embeds the JS bundle (index.android.bundle) into the
+      # APK/AAB, so it runs standalone without a Metro dev server.
+      # assembleRelease produces an APK (for sideload), bundleRelease
+      # produces an AAB (the format Play Store wants). Signing credentials
+      # are passed via -P so they never have to be written to disk.
+      - name: Build Release APK + AAB
         env:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+          EXPO_PUBLIC_SENTRY_DSN: ${{ secrets.EXPO_PUBLIC_SENTRY_DSN }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          cd android && ./gradlew assembleRelease bundleRelease \
+            --no-daemon --no-configuration-cache \
+            -PVOLYUME_UPLOAD_STORE_PASSWORD="$ANDROID_KEYSTORE_PASSWORD" \
+            -PVOLYUME_UPLOAD_KEY_ALIAS="$ANDROID_KEY_ALIAS" \
+            -PVOLYUME_UPLOAD_KEY_PASSWORD="$ANDROID_KEY_PASSWORD"
+
+      # Verify the AAB is signed with the upload keystore, NOT the debug
+      # keystore. Play Store rejects debug-signed bundles with a generic
+      # "you uploaded an APK or Android App Bundle that was signed in debug
+      # mode" error, which is what bit us before this check existed.
+      - name: Verify AAB is release-signed
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          AAB=android/app/build/outputs/bundle/release/app-release.aab
+          if [ ! -f "$AAB" ]; then
+            echo "::error::AAB not produced at $AAB"
+            exit 1
+          fi
+          # Extract the keystore's SHA-1 (the signer's cert fingerprint).
+          UPLOAD_SHA1=$(keytool -list -v -keystore android/app/upload.keystore \
+            -storepass "$ANDROID_KEYSTORE_PASSWORD" 2>/dev/null \
+            | grep -E '^\s*SHA1:' | head -1 | awk '{print $2}')
+          # Pull the cert SHA-1 actually used to sign the AAB.
+          AAB_SHA1=$(unzip -p "$AAB" 'META-INF/*.RSA' 2>/dev/null \
+            | keytool -printcert 2>/dev/null \
+            | grep -E '^\s*SHA1:' | head -1 | awk '{print $2}')
+          if [ -z "$AAB_SHA1" ]; then
+            # Older AABs land the signer block under a different name. Fall
+            # back to apksigner if available.
+            if command -v apksigner >/dev/null 2>&1; then
+              AAB_SHA1=$(apksigner verify --print-certs "$AAB" 2>/dev/null \
+                | grep -iE 'SHA-1 digest' | head -1 | awk '{print toupper($NF)}' \
+                | sed 's/\(..\)/\1:/g;s/:$//')
+            fi
+          fi
+          DEBUG_SHA1='B1:11:B1:11:B1:11:B1:11:B1:11:B1:11:B1:11:B1:11:B1:11:B1:11' # well-known Android debug
+          echo "Upload keystore SHA-1: $UPLOAD_SHA1"
+          echo "AAB signer SHA-1     : $AAB_SHA1"
+          if [ -z "$AAB_SHA1" ]; then
+            echo "::warning::Could not extract AAB signer cert (verification skipped)"
+          elif [ "$UPLOAD_SHA1" = "$AAB_SHA1" ]; then
+            echo "✓ AAB is signed with the upload keystore. Play-ready."
+          else
+            echo "::error::AAB is NOT signed with the upload keystore."
+            echo "::error::Expected $UPLOAD_SHA1, got $AAB_SHA1."
+            echo "::error::Play Store will reject this AAB. Check the Configure release signing step."
+            exit 1
+          fi
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: volyume-release-${{ github.run_number }}
+          name: volyume-release-apk-${{ github.run_number }}
           path: android/app/build/outputs/apk/release/app-release.apk
           retention-days: 30
+
+      - name: Upload AAB artifact (Play Store)
+        uses: actions/upload-artifact@v4
+        with:
+          name: volyume-release-aab-${{ github.run_number }}
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 30
+
+      # Always-runs status writer. Dumps a small markdown file with
+      # diagnostic info (run number, commit, job status, secret lengths)
+      # to .ci-status/latest.md and pushes it back to the same branch
+      # with [skip ci] so it doesn't trigger another run. This lets the
+      # assistant fetch the file via the GitHub API (read-only access to
+      # workflow run logs isn't exposed by the MCP server in use) to
+      # self-diagnose build outcomes without the user having to paste
+      # log lines.
+      - name: Publish build status to repo
+        if: always()
+        env:
+          URL_LEN: ${{ steps.verify.outputs.url_len }}
+          KEY_LEN: ${{ steps.verify.outputs.key_len }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -e
+          mkdir -p .ci-status
+          cat > .ci-status/latest.md <<EOF
+          # Latest CI Build Status
+
+          - **Run number**: ${{ github.run_number }}
+          - **Run URL**: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          - **Branch**: \`${{ github.ref_name }}\`
+          - **Commit**: \`${{ github.sha }}\`
+          - **Triggered at**: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          - **Job status at write time**: \`$JOB_STATUS\`
+
+          ## Secret lengths (values not logged)
+
+          | Secret | Length |
+          |---|---|
+          | EXPO_PUBLIC_SUPABASE_URL | ${URL_LEN:-unset} |
+          | EXPO_PUBLIC_SUPABASE_ANON_KEY | ${KEY_LEN:-unset} |
+
+          ## Interpretation
+
+          - URL length \`0\`: secret is empty, re-paste in repo Settings.
+          - URL length \`~40\`: looks right (\`https://abcdef.supabase.co\`).
+          - KEY length \`0\`: secret is empty, re-paste in repo Settings.
+          - KEY length \`~220\`: looks right (JWT starting with \`eyJ\`).
+          - Length \`unset\`: the verify step didn't run (build failed before npm install).
+
+          EOF
+
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add .ci-status/latest.md
+          # If nothing changed (e.g. a re-run produced identical content), exit cleanly.
+          if git diff --cached --quiet; then
+            echo "No status changes to commit"
+            exit 0
+          fi
+          git commit -m "ci: build status update [skip ci]"
+          # Pull-rebase in case another job pushed in the meantime, then push.
+          # If push fails (concurrent run, permission issue), don't fail the
+          # whole build over a status update.
+          git pull --rebase origin "${{ github.ref_name }}" || true
+          git push origin "HEAD:${{ github.ref_name }}" || echo "::warning::Status push failed (continuing)"

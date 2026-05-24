@@ -11,8 +11,9 @@ import { format } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import InfoTooltip from '../components/InfoTooltip';
 import { calculateNutritionTargets, PROTEIN_APPROACHES } from '../lib/nutritionEngine';
-import { saveNutritionTargets, getNutritionTargets, logBodyMetric, getUserBodyProfile } from '../lib/database';
+import { saveNutritionTargets, getNutritionTargets, logBodyMetric, logMorningWeight, getUserBodyProfile } from '../lib/database';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { getWellbeingMode, isCalm } from '../lib/wellbeing';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -27,7 +28,6 @@ const ACTIVITY_OPTIONS = [
   { key: 'very_active',  label: 'Very Active' },
 ];
 
-const TRAINING_DAYS_OPTIONS = [3, 4, 5, 6];
 
 const BF_SOURCES = [
   { key: 'visual',  label: 'Visual' },
@@ -52,6 +52,7 @@ const PHASE_DESCRIPTIONS = {
   recomp:          'A slight calorie reduction with high protein allows for gradual fat loss while holding muscle.',
   mild_cut:        'A moderate calorie reduction that preserves strength and muscle while steadily losing fat.',
   aggressive_cut:  'A significant calorie reduction for faster fat loss. Protein is raised to protect muscle during the deficit.',
+  contest_prep:    'A steep calorie reduction for the run-in to a stage. Short-term by design. Protein is pushed hard to defend every kg of muscle.',
 };
 
 const CONFIDENCE_LABELS = {
@@ -127,8 +128,13 @@ function WhySection({ icon, color, title, body }) {
 const BODY_METRICS_KEY_PREFIX = '@volyume_body_metrics_';
 const PHYSIQUE_PREF_KEY = '@volyume_physique_tracking_enabled';
 
-export default function NutritionTargetsScreen() {
-  const { user, userProfile } = useAppStore();
+export default function NutritionTargetsScreen({ navigation }) {
+  // Use a shallow selector instead of useAppStore() with no args. The
+  // bare call subscribes to the entire store object, so every store
+  // mutation (rest timer ticks, sync events, etc.) re-renders this
+  // huge screen. Selecting just the two fields we read means we only
+  // re-render when those change.
+  const { user, userProfile } = useAppStore(useShallow(s => ({ user: s.user, userProfile: s.userProfile })));
 
   // ── Form state ────────────────────────────────────────────────────────────────
   const [sex,            setSex]            = useState('male');
@@ -139,7 +145,6 @@ export default function NutritionTargetsScreen() {
   const [bodyFat,        setBodyFat]        = useState('');
   const [bfSource,       setBfSource]       = useState('visual');
   const [activity,       setActivity]       = useState('moderate');
-  const [trainingDays,   setTrainingDays]   = useState(4);
   const [goal,           setGoal]           = useState('lean_gain');
   const [proteinApproach, setProteinApproach] = useState('optimised');
   const [customProteinGPerKg, setCustomProteinGPerKg] = useState('');
@@ -152,6 +157,30 @@ export default function NutritionTargetsScreen() {
   const [calculating,  setCalculating]  = useState(false);
   const [calm,         setCalm]         = useState(false);
   const [formCollapsed, setFormCollapsed] = useState(false);
+
+  // ── Per-meal distribution — guidance only, daily totals unchanged ───────────────
+  // Per-meal MPS window: ~0.4 g/kg (floor) to ~0.55 g/kg (above this, diminishing
+  // returns). We pick the smallest meal count where per-meal protein stays at or
+  // below the ceiling, so bodybuilders on high daily targets automatically split
+  // across more feedings rather than overshooting the per-meal ceiling.
+  const [mealsPerDay,     setMealsPerDay]     = useState(null);  // null = use recommended
+  useEffect(() => {
+    AsyncStorage.getItem('@volyume_meals_per_day')
+      .then(v => { const n = parseInt(v, 10); if (n >= 3 && n <= 6) setMealsPerDay(n); })
+      .catch(() => {});
+  }, []);
+  function changeMealsPerDay(n) {
+    setMealsPerDay(n);
+    AsyncStorage.setItem('@volyume_meals_per_day', String(n)).catch(() => {});
+  }
+  // Recommended meal count: smallest count keeping per-meal protein ≤ 0.55 g/kg.
+  // Falls back to 4 when bodyweight isn't available.
+  function getRecommendedMeals(proteinG, weightKg) {
+    if (!proteinG || !weightKg) return 4;
+    const upperPerMeal = weightKg * 0.55;
+    const minCount = Math.ceil(proteinG / upperPerMeal);
+    return Math.max(3, Math.min(6, minCount));
+  }
 
   // ── Load saved targets on mount — SQLite primary, AsyncStorage fallback ────────────
   useEffect(() => {
@@ -237,6 +266,20 @@ export default function NutritionTargetsScreen() {
       return;
     }
 
+    // Custom protein approach without a g/kg value used to crash the
+    // engine. The engine now falls back, but warn here so the user knows
+    // their custom value didn't take effect.
+    if (proteinApproach === 'custom') {
+      const customNum = parseFloat(customProteinGPerKg);
+      if (!customNum || customNum <= 0) {
+        Alert.alert(
+          'Custom protein rate needed',
+          'Enter a value in g/kg, or switch to Optimised protein.',
+        );
+        return;
+      }
+    }
+
     setCalculating(true);
     try {
       const targets = calculateNutritionTargets({
@@ -279,6 +322,17 @@ export default function NutritionTargetsScreen() {
               weightKg: weightNum,
               bodyFatPercent: bfNum ?? null,
               bodyFatSource: bfNum != null ? bfSource : null,
+              loggedAt: Date.now(),
+            }).catch(() => {});
+            // Also seed morning_weights so WeeklyCheckIn doesn't gate on
+            // 'need_weights' immediately after onboarding. Both tables
+            // hold a weight reading, but check-in only reads from
+            // morning_weights and was popping a "log your weight"
+            // prompt for users who'd already entered it during setup.
+            // logMorningWeight de-dupes by day, so this is safe to call
+            // even if the user later logs the morning weight from Home.
+            logMorningWeight(user.id, {
+              weightKg: weightNum,
               loggedAt: Date.now(),
             }).catch(() => {});
           }
@@ -329,6 +383,23 @@ export default function NutritionTargetsScreen() {
           <Text style={styles.pageSubtitle}>
             Calculate your personalised daily calorie and protein targets.
           </Text>
+
+          {/* Education entry point — surfaces a 5-min nutrition primer for
+              users new to tracking. Doesn't change targets, just teaches. */}
+          <TouchableOpacity
+            style={styles.eduCard}
+            onPress={() => navigation.navigate('NutritionEducation')}
+            activeOpacity={0.85}
+          >
+            <View style={styles.eduIconWrap}>
+              <Ionicons name="book-outline" size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.eduTitle}>New to calories and macros?</Text>
+              <Text style={styles.eduBody}>5-minute guide to what these numbers mean and how to actually use them.</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </TouchableOpacity>
 
           {!formCollapsed ? (
           <>
@@ -442,17 +513,6 @@ export default function NutritionTargetsScreen() {
               options={ACTIVITY_OPTIONS}
               selected={activity}
               onSelect={setActivity}
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.fieldLabel}>Training days / week</Text>
-            <PillGroup
-              options={TRAINING_DAYS_OPTIONS}
-              selected={trainingDays}
-              onSelect={setTrainingDays}
-              keyExtractor={d => d}
-              labelExtractor={d => String(d)}
             />
           </View>
 
@@ -647,6 +707,101 @@ export default function NutritionTargetsScreen() {
                 <MacroCard label="Fat"   grams={results.fatG}   />
               </View>
 
+              {/* ── Per-meal protein distribution ───────────────────
+                  Guidance only, daily total unchanged. Splits the
+                  prescribed daily protein across 3–6 feedings, with
+                  the recommended count chosen to keep per-meal in the
+                  0.4–0.55 g/kg muscle protein synthesis window. */}
+              {results.proteinG > 0 && (() => {
+                // Derive bodyweight from form or back-calculate from results
+                const formWeightKg = parseFloat(weight) > 0 ? parseFloat(weight) : null;
+                const derivedWeightKg = (results.proteinGPerKg > 0)
+                  ? Math.round(results.proteinG / results.proteinGPerKg)
+                  : null;
+                const weightKg = formWeightKg ?? derivedWeightKg;
+                const recommended = getRecommendedMeals(results.proteinG, weightKg);
+                const effectiveMeals = mealsPerDay ?? recommended;
+                const perMeal = Math.round(results.proteinG / effectiveMeals);
+                const perMealPerKg = weightKg ? perMeal / weightKg : null;
+
+                // Window hint: only surface if user has manually picked a sub-optimal count
+                let windowHint = null;
+                if (mealsPerDay !== null && weightKg) {
+                  if (perMealPerKg > 0.55) {
+                    windowHint = `${perMeal}g is over the per-meal sweet spot. ${recommended} meals (${Math.round(results.proteinG / recommended)}g each) hits it better.`;
+                  } else if (perMealPerKg < 0.4 && results.proteinG / Math.max(3, effectiveMeals - 1) <= weightKg * 0.55) {
+                    windowHint = `${perMeal}g is below the per-meal threshold that maximises growth. Try fewer meals.`;
+                  }
+                }
+
+                return (
+                  <View style={styles.perMealCard}>
+                    <View style={styles.perMealHeader}>
+                      <Text style={styles.perMealHeading}>PER MEAL</Text>
+                      <InfoTooltip
+                        size={12}
+                        text={
+                          'How to split your daily protein across the day.\n\n' +
+                          'Each meal should land in a window of roughly 0.4 to 0.55 g of protein per kilogram of bodyweight. Below the floor, muscle protein synthesis is not fully triggered. Above the ceiling, the extra protein gives diminishing returns at that meal.\n\n' +
+                          'Volyume picks the smallest meal count that keeps every meal at or below the ceiling, so your daily target is hit without overshooting per-meal. Your daily total stays exactly the same. This is purely how to split it.'
+                        }
+                      />
+                    </View>
+
+                    <View style={styles.perMealCenter}>
+                      <Text style={styles.perMealValue}>{perMeal}g</Text>
+                      <Text style={styles.perMealUnit}>protein per meal</Text>
+                    </View>
+
+                    <View style={styles.mealDotsRow}>
+                      {Array.from({ length: effectiveMeals }).map((_, i) => (
+                        <View key={i} style={styles.mealDot} />
+                      ))}
+                    </View>
+
+                    <View style={styles.mealCountRow}>
+                      <Text style={styles.mealCountLabel}>Across</Text>
+                      <View style={styles.mealCountChips}>
+                        {[3, 4, 5, 6].map(n => {
+                          const active = effectiveMeals === n;
+                          const isRecommended = recommended === n;
+                          return (
+                            <TouchableOpacity
+                              key={n}
+                              style={[styles.mealCountChip, active && styles.mealCountChipActive]}
+                              onPress={() => changeMealsPerDay(n)}
+                              accessibilityRole="button"
+                              accessibilityLabel={`${n} meals per day${isRecommended ? ', recommended' : ''}`}
+                              accessibilityState={{ selected: active }}
+                            >
+                              <Text style={[styles.mealCountChipText, active && styles.mealCountChipTextActive]}>
+                                {n}
+                              </Text>
+                              {isRecommended && (
+                                <View style={styles.mealCountRecDot} />
+                              )}
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                      <Text style={styles.mealCountLabel}>feedings</Text>
+                    </View>
+
+                    <Text style={styles.mealCountRecCaption}>
+                      <Text style={styles.mealCountRecCaptionDot}>●</Text>
+                      {' '}Recommended for your protein target
+                    </Text>
+
+                    {windowHint && (
+                      <View style={styles.perMealHint}>
+                        <Ionicons name="information-circle-outline" size={13} color={colors.warning} />
+                        <Text style={styles.perMealHintText}>{windowHint}</Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              })()}
+
               {/* ── Why these numbers for you? ─────────────────────── */}
               {(() => {
                 // Derive weight — form state is preferred; fall back to back-calculation
@@ -674,16 +829,25 @@ export default function NutritionTargetsScreen() {
                 const fatPct = Math.round(fatKcal / results.targetKcal * 100);
                 const carbKcal = results.carbsG * 4;
 
-                // Goal-aware text helpers
-                const isGain  = ['lean_gain', 'build'].includes(results.goal);
-                const isCut   = ['mild_cut', 'aggressive_cut', 'contest_prep'].includes(results.goal);
-                const isRecomp = results.goal === 'recomp';
+                // Goal-aware text helpers. Maintain (0% deficit) and
+                // Recomp (~5% deficit) need separate copy — they're
+                // different intents. Maintain used to inherit the
+                // recomp template which rendered "A slight 0% deficit"
+                // — nonsense.
+                const isGain     = ['lean_gain', 'build'].includes(results.goal);
+                const isCut      = ['mild_cut', 'aggressive_cut', 'contest_prep'].includes(results.goal);
+                const isRecomp   = results.goal === 'recomp';
+                const isMaintain = results.goal === 'maintain';
 
                 const calorieWhy = isGain
-                  ? `Your maintenance is ${maintenanceKcal.toLocaleString()} kcal. That is what you need to stay the same weight. Adding a ${absPct}% surplus (+${surplusDelta} kcal) gives your muscles the extra energy and building blocks to grow. At ${rateAbs.toFixed(2)} kg/week projected gain, you're in a good spot: fast enough to build muscle, slow enough to keep fat gain minimal.`
+                  ? `Your maintenance is ${maintenanceKcal.toLocaleString()} kcal. That is what you need to stay the same weight. Adding a ${absPct}% surplus (+${surplusDelta} kcal) puts you on track to gain roughly ${rateAbs.toFixed(2)} kg/week. ${rateAbs <= 0.3 ? 'That rate is slow and lean. Most of what you gain will be muscle, with very little fat alongside it.' : rateAbs <= 0.5 ? 'That rate is steady. Some fat alongside the muscle is inevitable, but the ratio stays favourable.' : 'That rate is on the faster side. Muscle gain is quicker but more fat comes along with it.'} Consistency over weeks matters far more than perfection each day.`
                   : isCut
                   ? `Your maintenance is ${maintenanceKcal.toLocaleString()} kcal. A ${absPct}% deficit (${Math.abs(surplusDelta)} kcal below maintenance) puts you on track to ${rateDir} roughly ${rateAbs.toFixed(2)} kg/week. That rate is ${rateAbs <= 0.5 ? 'conservative. You will lose mostly fat while holding onto more muscle' : rateAbs <= 0.8 ? 'moderate. Effective fat loss with manageable risk to muscle' : 'aggressive. Protein has been set higher to protect your muscle'}. Consistency over weeks matters far more than perfection each day.`
-                  : `Your maintenance is ${maintenanceKcal.toLocaleString()} kcal. A slight ${Math.abs(absPct)}% deficit gives you enough of a calorie gap to use body fat as fuel, while high protein and consistent training tell your body to hold on to muscle. Progress is slower than a dedicated muscle building or fat loss phase, but your body composition improves at the same time.`;
+                  : isMaintain
+                  ? `Your target is ${(results.targetKcal ?? 0).toLocaleString()} kcal, which matches your maintenance level. Eating at maintenance gives you the energy to recover hard and train hard, without gaining fat. With high protein and consistent training, you can still build muscle slowly and improve body composition. No deficit, no surplus: a clean baseline.`
+                  : isRecomp
+                  ? `Your maintenance is ${maintenanceKcal.toLocaleString()} kcal. A small ${Math.abs(absPct)}% deficit (${Math.abs(surplusDelta)} kcal below maintenance) gives just enough of a calorie gap to use body fat as fuel, while high protein and consistent training keep muscle on. Progress is slower than a dedicated muscle building or fat loss phase, but your body composition improves at the same time.`
+                  : `Your target is ${(results.targetKcal ?? 0).toLocaleString()} kcal based on your maintenance of ${maintenanceKcal.toLocaleString()} kcal.`;
 
                 const approachLabel =
                   results.proteinApproach === 'standard'
@@ -702,6 +866,8 @@ export default function NutritionTargetsScreen() {
                         ? `Protein is the raw material your muscles rebuild with after every session. Your target is above the threshold where muscle repair and growth is fully supported.`
                         : isRecomp
                         ? `High protein does two things: it gives your muscles what they need to rebuild after training, and it signals your body to hold on to muscle even as the slight calorie gap burns fat. That combination is what separates losing weight from actually improving how you look.`
+                        : isMaintain
+                        ? `Even at maintenance, protein is the raw material your muscles rebuild with after every session. Hitting this target consistently is what lets you add muscle slowly even on a stable bodyweight.`
                         : `In a deficit, the body can start breaking down muscle for fuel. High protein is the main way to prevent that. Your target keeps you well above the amount needed to preserve muscle.`;
                       return lbmLine + scalingLine + purposeLine;
                     })()
@@ -714,16 +880,20 @@ export default function NutritionTargetsScreen() {
                         ? `Protein is the raw material muscles rebuild with after every session. At this target you're above the threshold where muscle repair and growth is fully supported.`
                         : isRecomp
                         ? `When you are trying to hold muscle while losing fat, high protein provides the amino acids needed for muscle repair while telling your body to use fat as fuel instead.`
+                        : isMaintain
+                        ? `At maintenance, protein supplies the amino acids your muscles need to rebuild after each session. Hitting this target consistently is what lets you add muscle slowly on a stable bodyweight.`
                         : `In a calorie deficit, muscle tissue can become a fuel source if protein is too low. This target keeps you well above that threshold, and the high satiety of protein makes it easier to stick to your calories.`;
                       return bwLine + tipLine + purposeLine;
                     })();
 
-                const fatWhy = `Fat has two roles you cannot skip: sex hormone production depends on dietary fat, and vitamins A, D, E, and K cannot be absorbed without it. Your ${results.fatG}g target is set by your current phase rather than a fixed percentage of calories. In a building phase fat is kept lean so carbs stay high for training performance. In a cut, fat holds steady while carbs reduce first. The hard floor is ${fatFloorG}g. Dropping below that, even briefly, can suppress testosterone and slow recovery.`;
+                const fatWhy = `Fat does two essential jobs: it supports hormone production, and lets your body absorb vitamins A, D, E, and K. Your ${results.fatG}g target is set by your phase rather than a fixed percentage of calories. ${isGain ? 'In a surplus we keep fat moderate so carbs can take the lion\'s share and fuel hard training.' : isCut ? 'In a deficit fat holds reasonably steady while carbs come down first, since carbs are easier to reduce without affecting hormonal recovery.' : isMaintain ? 'At maintenance fat sits at a comfortable middle, leaving carbs as your main training fuel.' : 'Fat is held moderate so carbs can cover most of your training fuel needs.'} The hard floor is ${fatFloorG}g. Sustained drops below that can disrupt hormonal recovery.`;
 
                 const carbWhy = isGain
                   ? `Carbs are your main training fuel. Glycogen (the carbohydrate stored in muscle) powers you through your sets. By the fourth or fifth set it is almost exclusively glycogen being used. Your ${results.carbsG}g gives you plenty to top up between sessions and arrive at every workout ready to push hard. Better-fuelled sessions mean better training, which means more muscle growth.`
                   : isCut
                   ? `After protein and fat are set, carbs fill the remaining ${carbKcal} kcal. They get reduced in a deficit because, unlike protein and fat, they do not have critical structural roles in the body. Your ${results.carbsG}g still provides meaningful glycogen for training. If performance drops significantly late in your cut, that is a signal to bring calories up slightly. Timing carbs around your sessions (before and after training) will give you the most out of each gram.`
+                  : isMaintain
+                  ? `Carbs fill the remaining ${carbKcal} kcal after protein and fat are set. At maintenance there's no need to restrict them. Your ${results.carbsG}g keeps glycogen full so every session has the fuel to push hard. Timing the bulk of them around training is the only nuance worth bothering with.`
                   : `Carbs fill the remaining ${carbKcal} kcal after protein and fat are set. When holding muscle while losing fat, carbs are kept moderate: enough to fuel your sessions and top up your energy stores, but not so many that they cancel the small deficit needed for fat loss. Eat most of your carbs around your training sessions. The rest of the day can be lower-carb without affecting performance.`;
 
                 return (
@@ -886,6 +1056,10 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginTop: spacing.sm,
   },
+  eduCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, borderLeftWidth: 3, borderLeftColor: colors.primary, padding: spacing.md, marginTop: spacing.sm },
+  eduIconWrap: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center' },
+  eduTitle: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
+  eduBody: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2, lineHeight: 17 },
   pageSubtitle: {
     fontSize: fontSize.sm,
     color: colors.textMuted,
@@ -1146,6 +1320,129 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.textMuted,
     marginTop: spacing.xxs,
+  },
+
+  // Per-meal protein card — distribution guidance, daily total unchanged
+  perMealCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.md,
+  },
+  perMealHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  perMealHeading: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.black,
+    color: colors.textMuted,
+    letterSpacing: 1.5,
+  },
+  perMealCenter: {
+    alignItems: 'center',
+    gap: 2,
+    paddingVertical: spacing.xs,
+  },
+  perMealValue: {
+    fontSize: fontSize.xxxl,
+    fontWeight: fontWeight.black,
+    color: colors.primary,
+    lineHeight: 38,
+  },
+  perMealUnit: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    letterSpacing: 0.2,
+  },
+  mealDotsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  mealDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+    opacity: 0.7,
+  },
+  mealCountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
+  },
+  mealCountLabel: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+  },
+  mealCountChips: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  mealCountChip: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  mealCountChipActive: {
+    backgroundColor: colors.primaryBg,
+    borderColor: colors.primary,
+  },
+  mealCountChipText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+    color: colors.textSecondary,
+  },
+  mealCountChipTextActive: {
+    color: colors.primary,
+  },
+  mealCountRecDot: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.primary,
+  },
+  mealCountRecCaption: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    textAlign: 'center',
+  },
+  mealCountRecCaptionDot: {
+    color: colors.primary,
+    fontSize: 8,
+  },
+  perMealHint: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+    backgroundColor: colors.warningBg,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.warning + '40',
+  },
+  perMealHintText: {
+    flex: 1,
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    lineHeight: 16,
   },
 
   phaseCard: {

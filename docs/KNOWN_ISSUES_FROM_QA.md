@@ -1,6 +1,82 @@
 # Volyume — Known Issues from QA
 
-_Last updated: 2026-05-20. Original audit dated 2026-05-16; all P1 issues and most P2/P3 issues have been resolved in subsequent commits. Status flags below reflect the current state._
+_Last updated: 2026-05-22. Original audit dated 2026-05-16; subsequent
+multi-agent audits 2026-05-20, 2026-05-21, and 2026-05-22 (+ a Codex
+parallel pass on 2026-05-22) added more findings. Status flags below
+reflect the current state._
+
+## 2026-05-22 — beta-prep multi-agent + Codex pass
+
+This pass ran six parallel audit agents (security, race conditions,
+DB integrity, performance, time/timezone, UX heuristics) plus a Codex
+parallel review. Findings from all seven sources are reconciled below.
+
+| Issue | Severity | Status | Resolved in / next step |
+|---|---|---|---|
+| `mesocycle_weeks.id` used composite `mw_<uuid>_<n>` strings; cloud column is UUID; every push failed with `invalid input syntax for type uuid` (seen in user's debug log) | **Critical** | **Fixed** | New IDs use `uid()` + SQLite migration v22 reissues existing rows + updates 5 FK references in one transaction per row |
+| `errorLog` ring buffer (exportable via Settings → Debug Logs) stored unredacted PII — workout notes, body weights, emails, access tokens | **Critical** | **Fixed** | `redactPII()` now runs at the top of `logError`/`logWarn`/`logInfo` and is applied to both the local buffer AND the Sentry forwarder; `PII_KEYS` expanded to cover camelCase variants of auth secrets |
+| Supabase `v_feedback_weekly_digest` + `v_feedback_error_correlation` views bypass underlying `user_feedback` RLS — any authenticated user could read every user's feedback messages | **Critical** | **Fixed** | `migrate_014_feedback_view_hardening.sql` sets `security_invoker = true` (PG15+), REVOKEs anon/authenticated, GRANTs SELECT only to service_role |
+| `planned_muscle_volume` + `adaptation_events` never reached the cloud — sync getters read from `_sync` mirror tables only populated by cloud-pull; locally-computed rows had no push path | **Critical** | **Fixed** | Getters now read from primary tables via JOIN through `mesocycle_weeks → mesocycles` for user_id |
+| `flushPendingFeedback` queue slicing dropped failed reports — `list.slice(shipped)` only works if successes are a prefix; interleaved fail/pass kept the wrong items | High | **Fixed** | Now collects specific failed items into `stillPending` and persists that explicitly; regression test added |
+| ActiveWorkout `useAppStore()` unscoped → 300-600 re-renders per workout (rest timer ticks the 2255-line tree) | High | **Fixed** | `useShallow` selector with 15 explicit fields |
+| `entry.sets.length` unsafe in 5 sites on ActiveWorkoutScreen (nav-tab badge, handleCancelWorkout reduce, handleNextExercise plan bridge, Finish alert, time-crunch filter) — render or onPress crash on any entry without a `sets` array | High | **Fixed** | All five switched to `e.sets?.length ?? 0` |
+| OnboardingScreen rapid-tap on Next from last step blew past `STEPS.length` → `Cannot read properties of undefined (reading 'title')` | High | **Fixed** | Two-part: `setStep` re-checks bounds in the setter callback; `currentStep` falls back to last step on undefined index |
+| PRWallScreen empty-history crash on expanded card (`history[0].date` on `[]`) | High | **Fixed** | Render guard tightened to `history && history.length > 0` |
+| NutritionTargets crash on tap from Athlete Hub (build 2 logs confirmed via session-id change) | High | **Fixed** | Three guards added: navigation prop destructured, `useShallow` selector instead of bare `useAppStore()`, defensive `results.targetKcal ?? 0` fallbacks in template literals |
+| Discard-workout left orphan rows in SQLite — workout row + sets stayed at `is_completed=0` | Medium | **Fixed** | New `deleteIncompleteWorkout()` does cascade delete; discard handlers wait for it before navigating away |
+| Finish-workout double-tap could fire two concurrent finish chains | Medium | **Fixed** | `finishingRef` guard resets on cancel + on finish-error so the user can retry |
+| Warmup sheet rapid double-tap could double-insert | Medium | **Fixed** | `warmupSavingRef` re-entrance guard (later: whole warmup auto-suggest deleted) |
+| Auto warm-up suggestion chip auto-appeared on every exercise's first set, didn't make sense in supersets | Medium | **Fixed** | Auto-suggest removed; users mark warm-ups via existing Set type picker. Sheet + handler + ~200 orphan lines deleted. |
+| Athlete Hub layout: top spacing 4px higher than other tabs; "Coaching" grouping included Settings + Wellbeing check (not coaching tools) | Medium | **Fixed** | Spacing unified to `spacing.lg`; Coaching block now only Update plan + Strategic journal + Engine Log; new "Preferences" section holds Wellbeing + Settings |
+| Body Metrics card on Athlete Hub showed weight twice (subtitle + chip row) | Low | **Fixed** | Chip row only renders when there's a secondary metric (body fat / waist) to show |
+| `getRelativeDay` used UTC epoch floor → "Yesterday" at 00:10 after a 23:50 session, DST-broken | Medium | **Fixed** | Compares local calendar dates via `startOfDay()` helper |
+| `logMorningWeight` + `getMorningWeightToday` + `getCurrentMesoWeek` all UTC-epoch-modulo bucketed; broke across DST and for non-UTC users | Medium | **Fixed** | All switched to local-time midnight comparisons |
+| `loadHistory` in ActiveWorkout set state after possible unmount on rapid exercise swap | Medium | **Fixed** | `cancelled` flag in the useEffect with cleanup |
+| `installShutdownHandler` AppState listener never unsubscribed → small leak per hot reload | Low | **Fixed** | Subscription memoised + `uninstallShutdownHandler()` exported |
+| Importer (`importExternal.parseCSV`) had no row cap → OOM risk on pathologically large CSV | Low | **Fixed** | `MAX_CSV_ROWS = 100,000` cap |
+| Em-dashes in user-facing copy (ImportScreen, YearOfLifts, GoalChangeSummary, ShareCard, ExerciseDetail, AnalyticsScreen accessibility label) | Low | **Fixed** | All replaced per CLAUDE.md voice rules |
+| AI-tells in button copy ("I'll log my weight first", "Got it, I'll ease off") | Low | **Fixed** | Rewritten per CLAUDE.md |
+| Sign-out mid-workout cleared in-memory state silently → confusing | Low | **Fixed** | Sign-out now blocks with "Finish your workout first" alert if `activeWorkout` is non-null |
+| Web release path: `_ExpoSQLiteNext.default.NativeDatabase is not a constructor` blocked DB-backed flows | N/A | **Resolved by scope** | Web removed from supported surfaces (iPhone + Android only); web-only deps + scripts deleted |
+| 33 high-severity npm audit findings, all transitive under Expo SDK 51 toolchain (xmldom, tar) | Medium | **Accepted risk for beta** | Fix path is breaking upgrade to newer Expo SDK; defer until post-beta major-version bump |
+
+False positives flagged by this round of audits that didn't reproduce:
+
+- "Sentry beforeSend doesn't redact PII" — does redact, see `PII_KEYS` in sentry.js
+- "Plate calculator is missing" — it existed but was never wired up; now surfaced on the SetEntry weight row
+- "Promise.all in bulkUploadLocalData kills the batch on first failure" — each iteration has its own try/catch so no promise rejects
+- "restoreSessionFromCloud / pullFromCloud race-write `tier`" — both pin to `'pro'` during `PRO_BETA_ACTIVE` so they agree
+- "`workout_notes_v2` never syncs from local writes" — no local writer exists; feature unfinished, not a sync regression
+- "RestTimer animation desyncs from chronometer after background" — native chronometer counts to a fixed end-time-ms; JS re-syncs on foreground via Date.now() comparison; no real desync
+
+## 2026-05-21 multi-agent audit — security + correctness pass
+
+| Issue | Severity | Status | Resolved in / next step |
+|---|---|---|---|
+| RLS missing on 6 Pro sync tables (programmes, morning_weights, coach_outputs, user_body_profile, exercise_user_notes, weekly_checkins_v2) — any auth user could read/write others' data | **Critical** | **Fixed** | `supabase/migrate_007_pro_rls_hardening.sql` — apply via Dashboard |
+| Tier trigger UPDATE-only, defense-in-depth gap on INSERT | **Critical** | **Fixed** | migrate_007 — trigger now BEFORE INSERT OR UPDATE |
+| delete_user_data RPC missing 9 user-keyed tables, blocking `auth.admin.deleteUser` | **Critical** | **Fixed** | `supabase/migrate_006_delete_rpc_v2.sql` |
+| Edge Function delete-account had no error logging — 500s invisible in dashboard | High | **Fixed** | commit 5fcdf17 — console.log/error at every phase |
+| Legacy profiles (only trainingGoal, no trainingPhase) couldn't regenerate plans | High | **Fixed** | planAutoGen now runs migrateProfileGoals + falls back to phase='maintain' |
+| `resetFirstRun` could yank user out mid-workout, losing live set log | High | **Fixed** | Guard added — returns `{ok:false, error:'workout_in_progress'}` |
+| `phaseToCoachingKey` silently mapped unknown phases to 'maint' | Medium | **Fixed** | Now logs warn with offending value before fallback |
+| `useAppStore()` called without selectors across 25+ screens, causing excessive re-renders | Medium | **Fixed** | useShallow migration on the 5 hottest screens (Plans, AthleteHub, BodyMetrics, Login, ProOnboarding); other screens are low-traffic |
+| OAuth flow instrumentation gaps (no log on cancel / timeout / poll-exhausted) | Medium | **Fixed** | logInfo / logError at every OAuth decision point in LoginScreen, ProUpgradeScreen, ProOnboardingScreen |
+| `generatePlan` determinism not asserted in tests | Medium | **Fixed** | audit-stress.test.js — determinism across 8 goals × 7 phases |
+| Hermes-mangled stack traces in `setTier` warn logs | Low | **Fixed** | `setTier(value, callerScope)` — all 4 deliberate callers tagged |
+| AsyncStorage write order not atomic with store mutations | Low | **Fixed** | setTier + refreshTierFromCloud persist before set(); failures logged |
+| Free `FirstRunScreen` doesn't surface a "what now" hint | Medium | **Fixed** | hint card pointing to Plans tab |
+| ProOnboarding skipped goalStartDate for cut-phase entry | Low | **Fixed** | set on onboarding into a deficit phase |
+| selectSplit silent fallback on unexpected days | Low | **Fixed** | logs warn before fallback |
+| Missing accessibility labels on RestTimer + SetEntry 1RM | Low | **Fixed** | labels + accessibilityLiveRegion="polite" |
+| RestTimer leaked lock-screen notification on sign-out mid-rest | Low | **Fixed** | unmount cleanup cancels the notification + clears interval |
+| ActiveWorkout AppState.remove() unguarded | Low | **Fixed** | try/catch wrap |
+| refreshTierFromCloud no timeout — splash could hang | Low | **Fixed** | 5s Promise.race timeout |
+
+False positives flagged by the audit that didn't reproduce:
+- "ProUpgrade modal has no close button" — actually has TWO (closeBtn at line 196 + laterBtn at line 378)
+- "OAuth auto-advance creates infinite loop" — effect dependency on `step` correctly stops re-firing once step ≥ 2
+- "peak_week_plans missing from wipeAllUserData" — already present at line 2141 of database.js
 
 ## Resolution summary
 

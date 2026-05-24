@@ -2,38 +2,11 @@ import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const NOTIF_PROMPT_KEY = 'volyume_notif_prompt_seen';
-const REST_TIMER_CHANNEL = 'rest-timer';
-const REST_DONE_CHANNEL = 'rest-done';
 const TRAINING_REMINDERS_CHANNEL = 'training-reminders';
+const REST_TIMER_CHANNEL = 'rest-timer';
 
-// Track the IDs of both notifications so we can cancel them cleanly
-let ongoingNotifId = null;
-let doneNotifId = null;
-
-// ---------------------------------------------------------------------------
-// Android notification channels
-// Must be called before any notification is posted. Safe to call multiple times.
-// ---------------------------------------------------------------------------
 export async function ensureNotifChannels() {
   try {
-    await Notifications.setNotificationChannelAsync(REST_TIMER_CHANNEL, {
-      name: 'Rest timer',
-      description: 'Ongoing notification shown while the rest timer is running',
-      importance: Notifications.AndroidImportance.LOW,
-      sound: null,
-      vibrationPattern: null,
-      enableVibrate: false,
-      showBadge: false,
-    });
-    await Notifications.setNotificationChannelAsync(REST_DONE_CHANNEL, {
-      name: 'Rest complete',
-      description: 'Alert when your rest period has finished',
-      importance: Notifications.AndroidImportance.HIGH,
-      sound: 'default',
-      vibrationPattern: [0, 250, 150, 250],
-      enableVibrate: true,
-      showBadge: false,
-    });
     await Notifications.setNotificationChannelAsync(TRAINING_REMINDERS_CHANNEL, {
       name: 'Training reminders',
       description: 'Reminders on your scheduled training days',
@@ -42,14 +15,21 @@ export async function ensureNotifChannels() {
       enableVibrate: true,
       showBadge: false,
     });
-  } catch {
-    // Channels are Android-only; silently skip on iOS
-  }
+    // Low-importance channel for the live rest-timer countdown. No
+    // sound, no vibration — the OS chronometer ticks silently while
+    // the user is between sets. End-of-rest feedback comes from the
+    // in-app sound + haptic in src/lib/restSound + haptics.js.
+    await Notifications.setNotificationChannelAsync(REST_TIMER_CHANNEL, {
+      name: 'Rest timer',
+      description: 'Live countdown shown while a rest timer is running',
+      importance: Notifications.AndroidImportance.LOW,
+      sound: null,
+      enableVibrate: false,
+      showBadge: false,
+    });
+  } catch {}
 }
 
-// ---------------------------------------------------------------------------
-// Permission helpers
-// ---------------------------------------------------------------------------
 export async function hasSeenNotifPrompt() {
   try {
     const val = await AsyncStorage.getItem(NOTIF_PROMPT_KEY);
@@ -68,7 +48,7 @@ export async function markNotifPromptSeen() {
 export async function getNotifPermissionStatus() {
   try {
     const { status } = await Notifications.getPermissionsAsync();
-    return status; // 'granted' | 'denied' | 'undetermined'
+    return status;
   } catch {
     return 'undetermined';
   }
@@ -83,99 +63,115 @@ export async function requestNotifPermission() {
   }
 }
 
-// ---------------------------------------------------------------------------
-// scheduleRestNotif
+// ─── Live chronometer rest-timer notification ────────────────────────────
 //
-// Posts two notifications:
-//   1. An immediate ongoing/sticky notification showing the exercise name and
-//      the absolute end time — visible on the lock screen while the user rests.
-//      On Android this is sticky and stays in the notification shade.
-//      On iOS it appears immediately as a standard local notification.
-//   2. A scheduled alert that fires when rest is over.
+// The native module modules/rest-timer-live posts a notification that
+// uses Android's built-in chronometer to count DOWN to a future
+// timestamp. The OS does the ticking — the app doesn't have to wake
+// every second to update the display. End result: the user sees a
+// live "rest ends in 1:24" countdown on their lock screen and in the
+// notification shade without unlocking.
 //
-// Returns the ID of the ongoing notification so the caller can cancel it.
-// ---------------------------------------------------------------------------
-export async function scheduleRestNotif(seconds, exerciseName = '') {
+// On iOS the equivalent is a Live Activity (Dynamic Island + lock
+// screen). modules/live-activity wraps ActivityKit. Both modules are
+// guarded by lazy requires so this file compiles cleanly even when
+// either is missing from the build.
+
+const REST_CHANNEL_ID = 'rest-timer';
+
+let _nativeRest = null;
+function getNativeRest() {
+  if (_nativeRest !== null) return _nativeRest;
   try {
-    const { status } = await Notifications.getPermissionsAsync();
-    if (status !== 'granted') return null;
-
-    await ensureNotifChannels();
-
-    // Cancel any leftover notifications from a previous rest period
-    await cancelRestNotif();
-
-    const endTime = new Date(Date.now() + seconds * 1000);
-    const timeStr = endTime.toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-
-    const title = exerciseName || 'Rest timer';
-    const ongoingBody = `Rest ends at ${timeStr} — tap to return`;
-
-    // 1. Immediate lock-screen / notification shade notification
-    ongoingNotifId = await Notifications.scheduleNotificationAsync({
-      content: {
-        title,
-        body: ongoingBody,
-        sound: false,
-        data: { url: 'volyume://workout' },
-        // Android-specific sticky/ongoing flags
-        android: {
-          channelId: REST_TIMER_CHANNEL,
-          ongoing: true,
-          sticky: true,
-          priority: Notifications.AndroidNotificationPriority.LOW,
-          color: '#F59E0B',
-          smallIcon: 'notification_icon',
-        },
-      },
-      trigger: null, // show immediately
-    });
-
-    // 2. Alert notification that fires when rest is over
-    doneNotifId = await Notifications.scheduleNotificationAsync({
-      content: {
-        title: exerciseName ? `${exerciseName} — rest complete` : 'Rest complete',
-        body: 'Time for your next set.',
-        sound: true,
-        data: { url: 'volyume://workout' },
-        android: {
-          channelId: REST_DONE_CHANNEL,
-          priority: Notifications.AndroidNotificationPriority.HIGH,
-          color: '#F59E0B',
-          smallIcon: 'notification_icon',
-        },
-      },
-      trigger: { seconds: Math.max(1, seconds) },
-    });
-
-    return ongoingNotifId;
-  } catch {
-    return null;
+    // eslint-disable-next-line global-require, import/no-unresolved
+    _nativeRest = require('rest-timer-live');
+  } catch (_) {
+    _nativeRest = false;
   }
+  return _nativeRest || null;
 }
 
-// ---------------------------------------------------------------------------
-// cancelRestNotif
-//
-// Cancels both the ongoing lock-screen notification and the scheduled alert.
-// Safe to call at any time (no-ops if nothing is pending).
-// ---------------------------------------------------------------------------
-export async function cancelRestNotif(notifId) {
+let _nativeLiveActivity = null;
+function getLiveActivity() {
+  if (_nativeLiveActivity !== null) return _nativeLiveActivity;
   try {
-    // Cancel the ongoing notification (passed ID or module-level ref)
-    const idToCancel = notifId || ongoingNotifId;
-    if (idToCancel) {
-      await Notifications.dismissNotificationAsync(idToCancel).catch(() => {});
-      await Notifications.cancelScheduledNotificationAsync(idToCancel).catch(() => {});
-    }
-    // Cancel the scheduled done alert
-    if (doneNotifId) {
-      await Notifications.cancelScheduledNotificationAsync(doneNotifId).catch(() => {});
-      doneNotifId = null;
-    }
-    ongoingNotifId = null;
-  } catch {}
+    // eslint-disable-next-line global-require, import/no-unresolved
+    _nativeLiveActivity = require('live-activity');
+  } catch (_) {
+    _nativeLiveActivity = false;
+  }
+  return _nativeLiveActivity || null;
+}
+
+/**
+ * Post (or replace) the live-countdown rest-timer notification.
+ * No-op on iOS or when the native module isn't bundled.
+ *
+ * Returns the notification id-equivalent string when posted, or null
+ * if the native side declined (POST_NOTIFICATIONS permission denied,
+ * platform unsupported, etc.). Callers should pass the returned id
+ * to cancelRestNotif when the timer stops.
+ *
+ * @param {number} seconds       Seconds remaining when the timer started.
+ *                               The actual end time is computed as
+ *                               Date.now() + seconds * 1000 so the
+ *                               OS chronometer counts down to a
+ *                               concrete moment, not a duration.
+ * @param {string} exerciseName  Shown as the notification title.
+ */
+export async function scheduleRestNotif(seconds, exerciseName) {
+  // Lock-screen / Live Activity rest-timer surface disabled per user
+  // feedback. The in-app countdown card with Skip / +15 / +30 / -15 / -30
+  // stays — that's enough. Returning null so callers' notifIdRef stays
+  // unset and the cancel path is a no-op.
+  return null;
+  // eslint-disable-next-line no-unreachable
+  if (!seconds || seconds <= 0) return null;
+  const endTimeMs = Date.now() + seconds * 1000;
+  // Fire both surfaces — Android chronometer and iOS Live Activity
+  // — concurrently. Either one being unavailable on this platform
+  // is fine; each module guards itself.
+  const native = getNativeRest();
+  const liveActivity = getLiveActivity();
+  let posted = null;
+  if (native?.isAvailable?.()) {
+    try {
+      await ensureNotifChannels();
+      const ok = await native.start({
+        exerciseName: exerciseName || 'Rest timer',
+        endTimeMs,
+        channelId: REST_CHANNEL_ID,
+        deepLink: 'volyume://active-workout',
+      });
+      if (ok) posted = REST_CHANNEL_ID;
+    } catch (_) { /* tolerate */ }
+  }
+  if (liveActivity?.isAvailable?.()) {
+    try {
+      await liveActivity.startRestActivity({
+        exerciseName: exerciseName || 'Rest timer',
+        endTimeMs,
+      });
+      // Returning a non-null sentinel so the caller knows SOMETHING
+      // is posted even if the Android path didn't.
+      if (!posted) posted = 'live-activity';
+    } catch (_) { /* tolerate */ }
+  }
+  return posted;
+}
+
+/**
+ * Cancel the live-countdown notification on every platform that
+ * posts one. Safe to call when nothing is posted or when neither
+ * module is bundled.
+ */
+export async function cancelRestNotif() {
+  const native = getNativeRest();
+  const liveActivity = getLiveActivity();
+  if (native?.cancel) {
+    try { await native.cancel(); } catch (_) { /* best effort */ }
+  }
+  if (liveActivity?.endRestActivity) {
+    try { await liveActivity.endRestActivity(); } catch (_) { /* best effort */ }
+  }
 }

@@ -41,9 +41,9 @@ function esc(s) {
 }
 
 function fmtDate(ts) {
-  if (!ts) return '—';
+  if (!ts) return '-';
   const d = new Date(ts);
-  if (isNaN(d.getTime())) return '—';
+  if (isNaN(d.getTime())) return '-';
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
@@ -107,7 +107,7 @@ function buildHTML(model) {
       <tr>
         <td>${esc(p.name)}</td>
         <td class="num">${Math.round(p.est)} ${esc(units)}</td>
-        <td class="num">${p.weight ?? '—'} ${esc(units)} × ${p.reps ?? '—'}</td>
+        <td class="num">${p.weight ?? '-'} ${esc(units)} × ${p.reps ?? '-'}</td>
         <td>${fmtDate(p.when)}</td>
       </tr>`).join('')
     : '<tr><td colspan="4" class="muted">No completed sets in this window.</td></tr>';

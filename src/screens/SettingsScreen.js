@@ -1,21 +1,58 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, TextInput,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, TextInput, Share, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import * as SecureStore from 'expo-secure-store';
 import { getSupabaseClient, signOut } from '../lib/supabase';
 import useAppStore from '../store/useAppStore';
+import { useToast } from '../components/Toast';
 import { useShallow } from 'zustand/react/shallow';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-import { clearWorkoutHistory, buildWorkoutCSV } from '../lib/database';
+import { clearWorkoutHistory, buildWorkoutCSV, wipeAllUserData, getOrphanedRoutines, deleteOrphanedRoutines } from '../lib/database';
+import { logError } from '../lib/errorLog';
 import { exportBackup, importBackup } from '../lib/dataBackup';
+import { useFeedback } from '../components/FeedbackSheet';
 import { getWellbeingMode, setWellbeingMode } from '../lib/wellbeing';
+import {
+  isHealthAvailable, getHealthProviderLabel,
+  getHealthPermissionStatus, requestHealthPermissions, importNewWeights,
+  openSystemHealthSettings,
+} from '../lib/health';
 import Constants from 'expo-constants';
+import * as Updates from 'expo-updates';
+
+// Larger Text / Higher Contrast / Colour-Blind Safe mutate theme tokens
+// that StyleSheet.create has already baked at module-evaluation time, so
+// they only take effect after the app is re-launched and bootstrapAccessibility
+// in App.js re-applies them before screens load. Prompt the user to reload now
+// rather than leaving them confused that the toggle "did nothing".
+async function promptRestartForA11y(label) {
+  Alert.alert(
+    `${label} saved`,
+    `Volyume needs to reopen to apply this. Your data and current screen are safe.`,
+    [
+      { text: 'Later', style: 'cancel' },
+      {
+        text: 'Reload now',
+        onPress: async () => {
+          try { await Updates.reloadAsync(); }
+          catch (_) {
+            // Dev clients / Expo Go without OTA support — fall back to a
+            // soft message. The toggle is saved; next manual restart picks
+            // it up.
+            Alert.alert('Reload failed', 'Close and reopen Volyume to apply the change.');
+          }
+        },
+      },
+    ],
+  );
+}
 
 function SettingRow({ icon, label, sub, value, onPress, destructive, rightElement, showArrow = true }) {
   return (
@@ -49,17 +86,37 @@ function SectionHeader({ title }) {
 }
 
 export default function SettingsScreen({ navigation }) {
-  const { user, setUser, setSession, units, setUnits, bodyWeightUnits, setBodyWeightUnits, barWeight, setBarWeight, userProfile, saveLocalProfile, tier, setTier } =
+  const toast = useToast();
+  const feedback = useFeedback();
+  const { user, setUser, setSession, clearAuthStateForSignOut, userProfile, saveLocalProfile, tier, setTier, accessibility, setAccessibilityPref, loadAccessibility, accessibilityLoaded } =
     useAppStore(useShallow(s => ({
       user: s.user, setUser: s.setUser, setSession: s.setSession,
-      units: s.units, setUnits: s.setUnits,
-      bodyWeightUnits: s.bodyWeightUnits, setBodyWeightUnits: s.setBodyWeightUnits,
-      barWeight: s.barWeight, setBarWeight: s.setBarWeight,
+      clearAuthStateForSignOut: s.clearAuthStateForSignOut,
       userProfile: s.userProfile, saveLocalProfile: s.saveLocalProfile,
       tier: s.tier, setTier: s.setTier,
+      accessibility: s.accessibility,
+      setAccessibilityPref: s.setAccessibilityPref,
+      loadAccessibility: s.loadAccessibility,
+      accessibilityLoaded: s.accessibilityLoaded,
     })));
+
+  // Hydrate accessibility prefs once on mount so the toggles reflect the
+  // user's saved state (otherwise they all read as 'off' until the user
+  // touches one).
+  useEffect(() => {
+    if (!accessibilityLoaded) loadAccessibility();
+  }, [accessibilityLoaded, loadAccessibility]);
+  const [signingOut, setSigningOut] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [editName, setEditName] = useState(userProfile?.firstName ?? '');
   const [calmEnabled, setCalmEnabled] = useState(false);
+  // Health integration. Per-scope status: weight read separately from
+  // workout write so the user can enable one without the other.
+  // healthSyncing tracks the manual "Sync now" tap.
+  const [healthWeightStatus, setHealthWeightStatus] = useState('unavailable');
+  const [healthWorkoutStatus, setHealthWorkoutStatus] = useState('unavailable');
+  const [healthSyncing, setHealthSyncing] = useState(false);
+
   async function toggleCalmMode(value) {
     const mode = value ? 'calm' : 'normal';
     await setWellbeingMode(mode);
@@ -69,48 +126,279 @@ export default function SettingsScreen({ navigation }) {
   useFocusEffect(
     useCallback(() => {
       getWellbeingMode().then(m => setCalmEnabled(m === 'calm'));
+      if (isHealthAvailable()) {
+        getHealthPermissionStatus(['weight']).then(setHealthWeightStatus).catch(() => {});
+        getHealthPermissionStatus(['workout']).then(setHealthWorkoutStatus).catch(() => {});
+      }
     }, []),
   );
 
-  async function handleSignOut() {
-    Alert.alert('Sign out?', 'You will need to sign in again.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: async () => {
-          if (!user?.isLocal) {
-            await signOut().catch(() => {});
-          }
-          await AsyncStorage.removeItem('@volyume_local_user_id');
-          setUser(null);
-          setSession(null);
-        },
-      },
-    ]);
+  async function handleToggleWeight(next) {
+    if (!next) {
+      // Health Connect / HealthKit deliberately don't expose a "revoke"
+      // API to the app. Send the user to the system Settings where they
+      // can flip it themselves; reflect the intent in our toast.
+      toast.show(`Open Health settings to turn weight read off`, { variant: 'info' });
+      await openSystemHealthSettings();
+      return;
+    }
+    setHealthSyncing(true);
+    try {
+      const status = await requestHealthPermissions(['weight']);
+      setHealthWeightStatus(status);
+      if (status === 'granted') {
+        const { imported } = await importNewWeights(user?.id);
+        toast.show(
+          imported > 0
+            ? `${imported} weight ${imported === 1 ? 'reading' : 'readings'} imported`
+            : 'Connected. No new readings yet.',
+          { variant: 'success' },
+        );
+      } else if (status === 'denied') {
+        toast.show(`Permission needed to read weight from ${getHealthProviderLabel()}`, { variant: 'warning' });
+      }
+    } catch (e) {
+      logError('SettingsScreen.toggleWeight', e);
+      toast.show('Could not connect. Try again in a moment.', { variant: 'error' });
+    } finally {
+      setHealthSyncing(false);
+    }
   }
 
-  async function handleDeleteAccount() {
+  async function handleToggleWorkout(next) {
+    if (!next) {
+      toast.show(`Open Health settings to turn workout write off`, { variant: 'info' });
+      await openSystemHealthSettings();
+      return;
+    }
+    setHealthSyncing(true);
+    try {
+      const status = await requestHealthPermissions(['workout']);
+      setHealthWorkoutStatus(status);
+      if (status === 'granted') {
+        toast.show('Workouts will appear in your Health log from now on', { variant: 'success' });
+      } else if (status === 'denied') {
+        toast.show(`Permission needed to write workouts to ${getHealthProviderLabel()}`, { variant: 'warning' });
+      }
+    } catch (e) {
+      logError('SettingsScreen.toggleWorkout', e);
+      toast.show('Could not connect. Try again in a moment.', { variant: 'error' });
+    } finally {
+      setHealthSyncing(false);
+    }
+  }
+
+  async function handleSyncHealthNow() {
+    if (healthWeightStatus !== 'granted') {
+      await handleToggleWeight(true);
+      return;
+    }
+    setHealthSyncing(true);
+    try {
+      const { imported } = await importNewWeights(user?.id);
+      toast.show(
+        imported > 0
+          ? `${imported} new weight ${imported === 1 ? 'reading' : 'readings'} imported`
+          : 'Already up to date',
+        { variant: imported > 0 ? 'success' : 'info' },
+      );
+    } catch (e) {
+      logError('SettingsScreen.syncHealthNow', e);
+      toast.show('Sync failed. Check your Health connection.', { variant: 'error' });
+    } finally {
+      setHealthSyncing(false);
+    }
+  }
+
+  async function handleSignOut() {
+    // Block sign-out mid-workout. The workout row stays in SQLite, but the
+    // in-memory active state is cleared and the user lands on Login mid-set,
+    // which reads as data loss even though nothing is lost.
+    const activeWorkout = useAppStore.getState().activeWorkout;
+    if (activeWorkout) {
+      Alert.alert(
+        'Finish your workout first',
+        'You have a session in progress. Finish or discard it before signing out so nothing gets left in a half-state.',
+      );
+      return;
+    }
     Alert.alert(
-      'Delete account?',
-      'This will permanently delete all your data. This cannot be undone.',
+      'Sign out?',
+      user?.isLocal
+        ? "You're signed in locally on this device. Your data stays on this phone. Sign back in any time."
+        : 'Your data is safe in the cloud. Sign in again on any device to pick up where you left off.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Delete Everything',
+          text: 'Sign Out',
           style: 'destructive',
           onPress: async () => {
-            if (!user?.isLocal) {
-              await getSupabaseClient()?.rpc('delete_user_data').catch(() => {});
-              await signOut().catch(() => {});
+            setSigningOut(true);
+            try {
+              if (!user?.isLocal) {
+                // Best-effort cloud sign-out; we still clear local state
+                // even if the auth call fails (so the user isn't stuck
+                // signed in locally with a dead session).
+                try { await signOut(); }
+                catch (e) {
+                  logError('SettingsScreen.handleSignOut.cloudSignOut', e);
+                }
+              }
+              await clearAuthStateForSignOut();
+            } finally {
+              setSigningOut(false);
             }
-            await AsyncStorage.removeItem('@volyume_local_user_id');
-            setUser(null);
-            setSession(null);
           },
         },
       ],
     );
+  }
+
+  async function handleDeleteAccount() {
+    // Two-step confirmation so a thumb-tap can't nuke an account.
+    Alert.alert(
+      'Delete account?',
+      user?.isLocal
+        ? 'This permanently deletes your local data on this device. Local accounts have no cloud backup. This cannot be undone.'
+        : 'This permanently deletes your account and all your training data across every device. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Continue',
+          style: 'destructive',
+          onPress: () => {
+            // Second confirmation
+            Alert.alert(
+              'Are you sure?',
+              user?.isLocal
+                ? "There's no undo. All your workouts, plans, and progress are wiped from this device."
+                : "There's no undo. All your workouts, plans, check-ins, and progress are wiped from every device.",
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Delete forever',
+                  style: 'destructive',
+                  onPress: () => performDeleteAccount(),
+                },
+              ],
+            );
+          },
+        },
+      ],
+    );
+  }
+
+  async function performDeleteAccount() {
+    if (!user?.id) return;
+    setDeletingAccount(true);
+    const userId = user.id;
+    let cloudOk = true;
+    let cloudErr = null;
+    try {
+      if (!user?.isLocal) {
+        // Server-side wipe via the delete-account Edge Function. The
+        // function wipes public.* rows AND deletes auth.users — the RPC
+        // alone can't reach auth.users (different schema, lacks rights),
+        // which left zombie auth records that resurrected on next sign-in.
+        // Falls back to the RPC if the function isn't deployed, so the
+        // client keeps working until the function lands in production.
+        const sb = getSupabaseClient();
+        if (sb) {
+          let invokeErr = null;
+          let fnBody = null;
+          let fnErrorBody = null;
+          try {
+            const result = await sb.functions.invoke('delete-account');
+            if (result.error) invokeErr = result.error;
+            fnBody = result.data;
+          } catch (e) {
+            invokeErr = e;
+          }
+          if (invokeErr) {
+            // FunctionsHttpError stores the Response on `.context`. Read its
+            // body so we can see which branch of the Edge Function actually
+            // failed (missing env var, RPC error, admin deleteUser error).
+            try {
+              const ctx = invokeErr?.context;
+              if (ctx && typeof ctx.text === 'function') {
+                fnErrorBody = await ctx.text();
+              }
+            } catch (_) { /* body already consumed or unreadable */ }
+            logError('SettingsScreen.deleteAccount.fnInvoke', invokeErr, {
+              userId,
+              fnBody: fnBody ? JSON.stringify(fnBody).slice(0, 500) : null,
+              fnErrorBody: fnErrorBody ? String(fnErrorBody).slice(0, 500) : null,
+              status: invokeErr?.context?.status ?? null,
+            });
+            // Fall back to the RPC so a missing or un-deployed Edge Function
+            // doesn't block the user. RPC v3 (migrate_008) tolerates missing
+            // tables; older RPCs may still fail on a missing table.
+            const { error: rpcErr } = await sb.rpc('delete_user_data');
+            if (rpcErr) {
+              cloudOk = false;
+              cloudErr = rpcErr.message ?? 'Unknown error';
+              logError('SettingsScreen.deleteAccount.rpc', rpcErr, { userId });
+            }
+          }
+        }
+
+        // CRITICAL: if the cloud wipe failed, ABORT. Previously we still
+        // called signOut() and wipeAllUserData() unconditionally, which
+        // left the user logged out locally with their cloud account fully
+        // intact — and on next sign-in they were dumped back into the
+        // main app because firstRunComplete=true still lived in the cloud
+        // profile they thought they deleted. Now we surface the failure
+        // and leave the session alone so they can retry or contact us.
+        if (!cloudOk) {
+          Alert.alert(
+            "Couldn't delete your account",
+            `The cloud delete failed: ${cloudErr}\n\nYour account and data are still safe. Try again in a few minutes, or contact support if it keeps happening.`,
+          );
+          setDeletingAccount(false);
+          return;
+        }
+
+        try { await signOut(); }
+        catch (e) { logError('SettingsScreen.deleteAccount.signOut', e); }
+      }
+      // Wipe local SQLite. Reached only when (a) cloud user and cloud
+      // wipe succeeded, or (b) local-only user (no cloud to wipe).
+      try { await wipeAllUserData(userId); }
+      catch (e) { logError('SettingsScreen.deleteAccount.wipeLocal', e); }
+      // Clear in-memory state.
+      await clearAuthStateForSignOut();
+      // Delete-account is the "truly wipe everything" path — distinct
+      // from sign-out, which is session-only by policy. The selective
+      // @volyume_ prefix wipe used to miss three keys that don't carry
+      // the @ (volyume_review_prompted, volyume_notif_prompt_seen,
+      // volyume_sessions_since_install) and any future un-prefixed key.
+      // AsyncStorage.clear() is scoped to this app only, so it's the
+      // right hammer here. Without this, next launch sees a stale
+      // firstRunComplete=true and re-routes into the home flow as a
+      // phantom user.
+      try {
+        await AsyncStorage.clear();
+      } catch (e) { logError('SettingsScreen.deleteAccount.wipeAsyncStorage', e); }
+
+      // Belt-and-braces SecureStore wipe. signOut() above should have
+      // cleared the supabase-js auth tokens, but if the network call
+      // failed the tokens can persist and restoreSessionFromCloud will
+      // happily revive a session for an account that no longer exists.
+      // The Supabase storage key is `sb-<projectref>-auth-token`, which
+      // we can derive from the public URL. Best-effort: any failure
+      // here is a logged warning, not a blocker.
+      try {
+        const url = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+        const projectRef = url.replace(/^https?:\/\//, '').split('.')[0];
+        if (projectRef) {
+          await SecureStore.deleteItemAsync(`sb-${projectRef}-auth-token`).catch(() => {});
+        }
+        // Older supabase-js versions used this key.
+        await SecureStore.deleteItemAsync('supabase.auth.token').catch(() => {});
+      } catch (e) { logError('SettingsScreen.deleteAccount.wipeSecureStore', e); }
+    } finally {
+      setDeletingAccount(false);
+    }
   }
 
   async function exportData() {
@@ -134,10 +422,10 @@ export default function SettingsScreen({ navigation }) {
           UTI: 'public.comma-separated-values-text',
         });
       } else {
-        Alert.alert('Export saved', `${rowCount} sets written to ${fileUri}`);
+        toast.show(`Exported ${rowCount} sets`, { variant: 'success' });
       }
     } catch (e) {
-      Alert.alert('Export failed', e?.message ?? 'Could not export your data. Please try again.');
+      toast.show(e?.message ?? 'Could not export your data', { variant: 'error' });
     }
   }
 
@@ -180,6 +468,45 @@ export default function SettingsScreen({ navigation }) {
     );
   }
 
+  // Surfaces the cloud-restored routines that have all-broken
+  // exercise references — the "I have 114 routines but none of them
+  // open with exercises" state. Counts them, asks for confirmation,
+  // soft-deletes in bulk. Soft delete so the change syncs to the
+  // cloud and propagates to the user's other devices.
+  async function handleCleanOrphanedRoutines() {
+    if (!user?.id) return;
+    try {
+      const orphans = await getOrphanedRoutines(user.id);
+      if (!orphans.length) {
+        toast.show('No orphaned routines to clean up.', { variant: 'success' });
+        return;
+      }
+      Alert.alert(
+        `Clean up ${orphans.length} orphaned routine${orphans.length === 1 ? '' : 's'}?`,
+        `These routines were restored from cloud but their exercise references couldn't be resolved on this device. Deleting them removes the broken entries; intact routines are not touched.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: `Delete ${orphans.length}`,
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                const n = await deleteOrphanedRoutines(user.id);
+                toast.show(`Removed ${n} orphaned routine${n === 1 ? '' : 's'}`, { variant: 'success' });
+              } catch (e) {
+                logError('SettingsScreen.cleanOrphans', e, { userId: user.id });
+                Alert.alert("Couldn't clean up", e?.message ?? 'Please try again.');
+              }
+            },
+          },
+        ],
+      );
+    } catch (e) {
+      logError('SettingsScreen.cleanOrphans.scan', e, { userId: user.id });
+      Alert.alert("Couldn't scan routines", e?.message ?? 'Please try again.');
+    }
+  }
+
   async function handleClearHistory() {
     Alert.alert(
       'Clear workout history?',
@@ -191,8 +518,13 @@ export default function SettingsScreen({ navigation }) {
           style: 'destructive',
           onPress: async () => {
             if (!user?.id) return;
-            await clearWorkoutHistory(user.id).catch(() => {});
-            Alert.alert('Done', 'Your workout history has been cleared.');
+            try {
+              await clearWorkoutHistory(user.id);
+              toast.show('Workout history cleared', { variant: 'success' });
+            } catch (e) {
+              logError('SettingsScreen.handleClearHistory', e, { userId: user.id });
+              Alert.alert('Couldn\'t clear history', e?.message ?? 'Please try again.');
+            }
           },
         },
       ],
@@ -210,7 +542,6 @@ export default function SettingsScreen({ navigation }) {
               <SettingRow
                 icon="sparkles"
                 label="Go Pro"
-                value="Free in beta"
                 onPress={() => navigation.navigate('ProUpgrade')}
               />
             </View>
@@ -244,43 +575,11 @@ export default function SettingsScreen({ navigation }) {
         {/* Preferences */}
         <SectionHeader title="Preferences" />
         <View style={styles.section}>
-          <SettingRow
-            icon="scale-outline"
-            label="Gym weight units"
-            value={units}
-            onPress={() =>
-              Alert.alert('Gym weight units', 'Used for barbells, dumbbells and machines', [
-                { text: 'kg', onPress: () => setUnits('kg') },
-                { text: 'lbs', onPress: () => setUnits('lbs') },
-                { text: 'Cancel', style: 'cancel' },
-              ])
-            }
-          />
-          <SettingRow
-            icon="body-outline"
-            label="Body weight units"
-            value={bodyWeightUnits === 'st' ? 'Stone+lbs' : bodyWeightUnits}
-            onPress={() =>
-              Alert.alert('Body weight units', 'Used for your morning weight and body tracking', [
-                { text: 'Stone + lbs', onPress: () => setBodyWeightUnits('st') },
-                { text: 'kg', onPress: () => setBodyWeightUnits('kg') },
-                { text: 'lbs', onPress: () => setBodyWeightUnits('lbs') },
-                { text: 'Cancel', style: 'cancel' },
-              ])
-            }
-          />
-          <SettingRow
-            icon="barbell"
-            label="Bar weight"
-            value={`${barWeight}kg`}
-            onPress={() =>
-              Alert.alert('Bar weight', 'Standard (20kg) or other?', [
-                { text: '15 kg', onPress: () => setBarWeight(15) },
-                { text: '20 kg', onPress: () => setBarWeight(20) },
-                { text: 'Cancel', style: 'cancel' },
-              ])
-            }
-          />
+          {/* Gym weight units, body weight units, and bar weight rows
+              removed at user request. UK defaults: gym + bar = kg;
+              body weight units come from onboarding (the morning-weight
+              setup screen). The store still holds these values; they
+              just aren't user-editable from Settings any more. */}
           <SettingRow
             icon="heart-outline"
             label="Calmer experience"
@@ -297,25 +596,178 @@ export default function SettingsScreen({ navigation }) {
           />
           {tier === 'pro' && (
             <SettingRow
-              icon="shield-checkmark-outline"
-              label="Wellbeing check"
-              sub="Update your health screening answers. Shapes how your Precision Coaching is applied."
-              onPress={() => navigation.navigate('WellbeingCheck')}
+              icon="pulse-outline"
+              label="Coaching reminders"
+              sub="Schedule your morning weight log and weekly check-in"
+              onPress={() => navigation.navigate('CoachingReminders')}
             />
           )}
-          {tier === 'pro' && (
-            <SettingRow
-              icon="notifications-outline"
-              label="Notifications"
-              sub="Morning weight reminder and weekly check-in"
-              onPress={() => navigation.navigate('NotificationSettings')}
-            />
-          )}
+          <SettingRow
+            icon="notifications-outline"
+            label="Notifications"
+            sub="Training reminders"
+            onPress={() => navigation.navigate('NotificationSettings')}
+          />
         </View>
+
+        {/* Accessibility */}
+        <SectionHeader title="Accessibility" />
+        <View style={styles.section}>
+          <SettingRow
+            icon="text-outline"
+            label="Larger text"
+            sub="Increases font size across the app. For more granular control, use your phone's system text size. Volyume respects it too."
+            showArrow={false}
+            rightElement={
+              <Switch
+                value={!!accessibility.largerText}
+                onValueChange={async v => {
+                  // Await the AsyncStorage write before prompting reload — otherwise
+                  // a fast "Reload now" tap can tear down the JS VM before the pref
+                  // persists, and the user sees no change on restart.
+                  await setAccessibilityPref('largerText', v);
+                  promptRestartForA11y('Larger text');
+                }}
+                trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                thumbColor={accessibility.largerText ? colors.primary : colors.textMuted}
+              />
+            }
+          />
+          <SettingRow
+            icon="contrast-outline"
+            label="Higher contrast"
+            sub="Brightens secondary text and strengthens dividers. Easier to read in bright light or with low vision."
+            showArrow={false}
+            rightElement={
+              <Switch
+                value={!!accessibility.higherContrast}
+                onValueChange={async v => {
+                  await setAccessibilityPref('higherContrast', v);
+                  promptRestartForA11y('Higher contrast');
+                }}
+                trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                thumbColor={accessibility.higherContrast ? colors.primary : colors.textMuted}
+              />
+            }
+          />
+          <SettingRow
+            icon="eye-outline"
+            label="Colour-blind safe palette"
+            sub="Replaces success-green and error-red with sky blue and reddish purple. Distinguishable in red-green colour blindness."
+            showArrow={false}
+            rightElement={
+              <Switch
+                value={!!accessibility.colorBlindSafe}
+                onValueChange={async v => {
+                  await setAccessibilityPref('colorBlindSafe', v);
+                  promptRestartForA11y('Colour-blind safe palette');
+                }}
+                trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                thumbColor={accessibility.colorBlindSafe ? colors.primary : colors.textMuted}
+              />
+            }
+          />
+          <SettingRow
+            icon="pause-circle-outline"
+            label="Reduce motion"
+            sub="Disables PR celebration particles, rest timer animations, and other large transitions. Helps with vestibular sensitivity."
+            showArrow={false}
+            rightElement={
+              <Switch
+                value={!!accessibility.reduceMotion}
+                onValueChange={v => setAccessibilityPref('reduceMotion', v)}
+                trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                thumbColor={accessibility.reduceMotion ? colors.primary : colors.textMuted}
+              />
+            }
+          />
+          <Text style={styles.a11yNote}>
+            Reduce motion takes effect immediately. Larger text, higher contrast, and the colour-blind safe palette need Volyume to reopen. You'll be prompted to reload after toggling.
+          </Text>
+        </View>
+
+        {/* Health connections */}
+        {isHealthAvailable() && (
+          <>
+            <SectionHeader title={getHealthProviderLabel()} />
+            <View style={styles.section}>
+              <SettingRow
+                icon="scale-outline"
+                label="Read morning weight"
+                sub={
+                  healthWeightStatus === 'granted'
+                    ? 'Connected. Volyume picks up new readings from your scale or wearable in the background.'
+                    : `Pull bodyweight readings from ${getHealthProviderLabel()} into your morning weight log.`
+                }
+                showArrow={false}
+                rightElement={
+                  <Switch
+                    value={healthWeightStatus === 'granted'}
+                    onValueChange={handleToggleWeight}
+                    disabled={healthSyncing}
+                    trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                    thumbColor={healthWeightStatus === 'granted' ? colors.primary : colors.textMuted}
+                  />
+                }
+              />
+              <SettingRow
+                icon="barbell-outline"
+                label="Write workouts"
+                sub={
+                  healthWorkoutStatus === 'granted'
+                    ? 'On. Completed sessions are written to your health log so your weekly activity stays accurate.'
+                    : `Send each completed Volyume session to ${getHealthProviderLabel()}.`
+                }
+                showArrow={false}
+                rightElement={
+                  <Switch
+                    value={healthWorkoutStatus === 'granted'}
+                    onValueChange={handleToggleWorkout}
+                    disabled={healthSyncing}
+                    trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                    thumbColor={healthWorkoutStatus === 'granted' ? colors.primary : colors.textMuted}
+                  />
+                }
+              />
+              {healthWeightStatus === 'granted' && (
+                <SettingRow
+                  icon="refresh-outline"
+                  label={healthSyncing ? 'Syncing…' : 'Sync weight now'}
+                  sub="Pull any new readings since the last check."
+                  onPress={healthSyncing ? null : handleSyncHealthNow}
+                  showArrow={!healthSyncing}
+                />
+              )}
+              {(healthWeightStatus === 'granted' || healthWorkoutStatus === 'granted') && (
+                <SettingRow
+                  icon="open-outline"
+                  label="Open Health settings"
+                  sub={`To turn anything off, change it from inside ${getHealthProviderLabel()}.`}
+                  onPress={openSystemHealthSettings}
+                />
+              )}
+            </View>
+            <Text style={styles.dataPrivacyNote}>
+              Volyume only touches what you switch on. Everything else stays on this device.
+            </Text>
+          </>
+        )}
 
         {/* Data */}
         <SectionHeader title="Data & privacy" />
         <View style={styles.section}>
+          <SettingRow
+            icon="swap-horizontal-outline"
+            label="Import from another app"
+            sub="Bring sessions over from Hevy or Strong"
+            onPress={() => navigation.navigate('Import')}
+          />
+          <SettingRow
+            icon="construct-outline"
+            label="Clean up restored routines"
+            sub="Remove cloud-restored routines whose exercises couldn't be linked"
+            onPress={handleCleanOrphanedRoutines}
+          />
           <SettingRow
             icon="save-outline"
             label="Back up everything (JSON)"
@@ -345,6 +797,12 @@ export default function SettingsScreen({ navigation }) {
         {/* Account */}
         <SectionHeader title="Account" />
         <View style={styles.section}>
+          <SettingRow
+            icon="information-circle-outline"
+            label="Free, Pro, and your data"
+            sub="What's free, what Pro adds, what stays if you switch back"
+            onPress={() => navigation.navigate('SubscriptionPolicy')}
+          />
           {tier === 'pro' && (
             <SettingRow
               icon="arrow-down-circle-outline"
@@ -352,12 +810,12 @@ export default function SettingsScreen({ navigation }) {
               onPress={() =>
                 Alert.alert(
                   'Switch to Free?',
-                  'You can come back to Pro any time. Your logbook and history stay exactly as they are.',
+                  'Everything you\'ve logged stays. Past coach outputs, check-ins, mesocycles and PRs remain readable. You just won\'t get new Pro coaching adjustments until you re-enable Pro.',
                   [
                     { text: 'Keep Pro', style: 'cancel' },
                     {
                       text: 'Switch to Free',
-                      onPress: async () => { await setTier('free'); },
+                      onPress: async () => { await setTier('free', 'SettingsScreen.switchToFree'); },
                     },
                   ],
                 )
@@ -366,15 +824,15 @@ export default function SettingsScreen({ navigation }) {
           )}
           <SettingRow
             icon="log-out-outline"
-            label="Sign out"
+            label={signingOut ? 'Signing out…' : 'Sign out'}
             destructive
-            onPress={handleSignOut}
+            onPress={signingOut ? undefined : handleSignOut}
           />
           <SettingRow
             icon="trash-outline"
-            label="Delete account"
+            label={deletingAccount ? 'Deleting account…' : 'Delete account'}
             destructive
-            onPress={handleDeleteAccount}
+            onPress={deletingAccount ? undefined : handleDeleteAccount}
           />
         </View>
 
@@ -388,10 +846,54 @@ export default function SettingsScreen({ navigation }) {
           />
         </View>
 
+        {/* Diagnostics */}
+        <SectionHeader title="Diagnostics" />
+        <View style={styles.section}>
+          <SettingRow
+            icon="chatbubble-ellipses-outline"
+            label="Send feedback"
+            sub="Quick sentiment + optional note"
+            onPress={() => feedback?.open({ trigger: 'settings' })}
+          />
+          <SettingRow
+            icon="bug-outline"
+            label="Debug logs"
+            onPress={() => navigation.navigate('DebugLog')}
+          />
+        </View>
+
         {/* About */}
         <View style={styles.about}>
-          <Text style={styles.appName}>Volyume</Text>
-          <Text style={styles.appVersion}>v{Constants.expoConfig?.version ?? '1.1.0'} · Free during beta</Text>
+          <View style={styles.appNameRow}>
+            <Text style={styles.appName}>Volyume</Text>
+            <View style={styles.betaBadge}>
+              <Text style={styles.betaBadgeText}>BETA</Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            onPress={() => {
+              // Tap to share the build identifier. Useful for beta
+              // testers when they file bugs: paste this into the
+              // report and we know exactly which build they're on.
+              const v = Constants.expoConfig?.version ?? '1.1.0';
+              const code = Platform.OS === 'ios'
+                ? Constants.expoConfig?.ios?.buildNumber
+                : Constants.expoConfig?.android?.versionCode;
+              const env = __DEV__ ? 'dev' : 'release';
+              const id = `Volyume v${v} (${Platform.OS} ${code ?? '?'}, ${env})`;
+              Share.share({ message: id }).catch(() => {});
+            }}
+            activeOpacity={0.7}
+            accessibilityLabel="App version, tap to share"
+          >
+            <Text style={styles.appVersion}>
+              v{Constants.expoConfig?.version ?? '1.1.0'}
+              {' '}
+              ({Platform.OS === 'ios'
+                ? Constants.expoConfig?.ios?.buildNumber
+                : Constants.expoConfig?.android?.versionCode})
+            </Text>
+          </TouchableOpacity>
           <Text style={styles.tagline}>Less thinking. More lifting.</Text>
         </View>
       </ScrollView>
@@ -467,10 +969,24 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
   },
   appName: { fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.textPrimary, letterSpacing: 2 },
+  appNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  betaBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.sm,
+    backgroundColor: colors.primary,
+  },
+  betaBadgeText: {
+    fontSize: 10,
+    fontWeight: fontWeight.bold,
+    color: colors.background,
+    letterSpacing: 1,
+  },
   appVersion: { fontSize: fontSize.sm, color: colors.textMuted },
+  a11yNote: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic', paddingHorizontal: spacing.md, paddingTop: spacing.xs, lineHeight: 16 },
   tagline: { fontSize: fontSize.xs, color: colors.textMuted },
   dataPrivacyNote: {
-    fontSize: 11,
+    fontSize: fontSize.xs,
     color: colors.textMuted,
     paddingHorizontal: spacing.xs,
     paddingBottom: spacing.sm,

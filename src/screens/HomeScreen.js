@@ -1,25 +1,32 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal, TextInput,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal, TextInput, Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns';
-import { Svg, Rect, Text as SvgText } from 'react-native-svg';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg } from '../lib/units';
-import { VolyumeMark } from '../components/BrandMark';
+import { formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg, kgToStoneLbsStrings, kgToLbs } from '../lib/units';
+import { VolyumeIcon } from '../components/BrandMark';
+import ScreenHeader from '../components/ScreenHeader';
+import GradientCard from '../components/GradientCard';
+import PressableCard from '../components/PressableCard';
+import { buildDailyNarrative } from '../lib/dailyNarrative';
+import { SkeletonCard } from '../components/Skeleton';
+import Sparkline from '../components/Sparkline';
 import {
   getAllWorkouts, getCompletedWorkoutSets, getActivePlan, getRoutinesForPlan,
   getAllRoutineExerciseCounts, createWorkout, getRoutineExercisesWithDetails,
   getWorkoutSetsForWorkout, getExerciseById,
   getCurrentMesocycleWeek, getPlannedMuscleVolume, getAllExercises,
-  getMorningWeightToday, logMorningWeight, getProgressionTeaser,
-  getRecentWorkoutFeedback,
+  getMorningWeightToday, getMorningWeights, logMorningWeight, getProgressionTeaser,
+  getRecentWorkoutFeedback, getLatestCoachOutput,
 } from '../lib/database';
+import { generateAndSavePlan } from '../lib/planAutoGen';
+import { logError } from '../lib/errorLog';
 import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload, VOLUME_LANDMARKS } from '../lib/algorithms';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import useAppStore from '../store/useAppStore';
@@ -43,9 +50,14 @@ export default function HomeScreen({ navigation }) {
   const { user, userProfile, startWorkout, activeWorkout, tier, bodyWeightUnits } = useAppStore(
     useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, tier: s.tier, bodyWeightUnits: s.bodyWeightUnits }))
   );
+  // Cloud-sync version bumps when pullFromCloud finishes; HomeScreen
+  // re-runs loadData so the empty state swaps for real data without
+  // the user navigating away and back.
+  const cloudSyncVersion = useAppStore(s => s.cloudSyncVersion);
   const bwu = bodyWeightUnits || 'st';
 
   const [weekStats, setWeekStats] = useState({ sessions: 0, sets: 0, volume: 0 });
+  const [weekStreak, setWeekStreak] = useState(0);
   const [activePlan, setActivePlanData] = useState(null);
   const [nextWorkout, setNextWorkout] = useState(null);
   const [exerciseCounts, setExerciseCounts] = useState({});
@@ -59,11 +71,23 @@ export default function HomeScreen({ navigation }) {
   const [lastSessionTonnage, setLastSessionTonnage] = useState(null);
   const [blockProgress, setBlockProgress] = useState([]);
   const [currentMesoWeek, setCurrentMesoWeek] = useState(null);
+  const [latestCoachOutput, setLatestCoachOutput] = useState(null);
+  // First-load flag — flipped false in loadData. While true, the
+  // home screen renders skeleton cards in place of the main cards so
+  // the user sees structure instantly on cold launch rather than a
+  // blank screen until SQLite reads complete.
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [coachBannerDismissed, setCoachBannerDismissed] = useState(false);
   const [todayWeight, setTodayWeight] = useState(null);       // logged weight for today
+  const [recentWeights, setRecentWeights] = useState([]);     // last 14 entries for sparkline
   const [weightInput, setWeightInput] = useState('');          // draft for kg/lbs mode
   const [weightInputSt, setWeightInputSt] = useState('');     // stone field (st mode)
   const [weightInputStLbs, setWeightInputStLbs] = useState(''); // lbs field (st mode)
   const [savingWeight, setSavingWeight] = useState(false);
+  // Hero narrative line at the top of Home: one-sentence story drawn
+  // from the user's recent data ("Last session beat your 4-week
+  // average by 14%"). Null when we don't have enough signal.
+  const [dailyNarrative, setDailyNarrative] = useState(null);
   const [showCoachingNudge, setShowCoachingNudge] = useState(false);
   const [totalSessions, setTotalSessions] = useState(0);
   const [showIntentPrompt, setShowIntentPrompt] = useState(false);
@@ -115,6 +139,30 @@ export default function HomeScreen({ navigation }) {
     }, [user?.id]),
   );
 
+  // Re-fetch when a cloud pull lands so the empty state replaces itself
+  // with the restored plan / history without the user needing to
+  // navigate away and back.
+  useEffect(() => {
+    if (cloudSyncVersion > 0 && user?.id) {
+      loadData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cloudSyncVersion]);
+
+  // Safety-net delayed refreshes after sign-in. The cloudSyncVersion
+  // effect above usually fires fast enough, but pull payloads can be
+  // large (450+ exercises, 100+ routines, hundreds of sets) and the
+  // version flips only after the WHOLE pull completes. Re-loading at
+  // +3s + +10s catches the case where some inserts land after the
+  // first effect ran. Cheap; only runs once per session per user.
+  useEffect(() => {
+    if (!user?.id) return;
+    const t1 = setTimeout(() => loadData().catch(() => {}), 3000);
+    const t2 = setTimeout(() => loadData().catch(() => {}), 10000);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
   async function loadData() {
     await Promise.all([
       loadWeekStats(),
@@ -125,8 +173,32 @@ export default function HomeScreen({ navigation }) {
       loadFatigueTrend(),
       loadScheduleContext(),
       loadBriefDismissal(),
-      ...(tier === 'pro' ? [loadTodayWeight()] : []),
+      loadDailyNarrative(),
+      ...(tier === 'pro' ? [loadTodayWeight(), loadLatestCoachOutput()] : []),
     ]);
+    setInitialLoading(false);
+  }
+
+  async function loadDailyNarrative() {
+    if (!user?.id) return;
+    try {
+      const narrative = await buildDailyNarrative(user.id);
+      setDailyNarrative(narrative);
+    } catch (_) { setDailyNarrative(null); }
+  }
+
+  async function loadLatestCoachOutput() {
+    try {
+      const out = await getLatestCoachOutput(user.id);
+      setLatestCoachOutput(out);
+      const dismissedKey = out ? `@volyume_coach_banner_dismissed_${out.weekStart}` : null;
+      if (dismissedKey) {
+        const v = await AsyncStorage.getItem(dismissedKey);
+        setCoachBannerDismissed(v === 'true');
+      } else {
+        setCoachBannerDismissed(false);
+      }
+    } catch (_) {}
   }
 
   async function loadBriefDismissal() {
@@ -243,6 +315,38 @@ export default function HomeScreen({ navigation }) {
     try {
       const entry = await getMorningWeightToday(user.id);
       setTodayWeight(entry?.weightKg ?? null);
+      // Recent weights for the inline sparkline above the card. Last 14
+      // entries gives a meaningful 2-week trend without making the
+      // sparkline too dense to read at thumbnail size.
+      try {
+        const recent14 = await getMorningWeights(user.id, 14);
+        setRecentWeights(recent14.map(w => w.weightKg).filter(Number.isFinite));
+      } catch (_) {}
+      // Prefill the log-weight inputs with the previously logged weight
+      // (most recent morning weight, falling back to onboarding weight).
+      // Blank inputs every day forced the user to retype the same number
+      // — annoying, and easy to typo.
+      if (!entry?.weightKg) {
+        let prefillKg = null;
+        try {
+          const recent = await getMorningWeights(user.id, 1);
+          if (recent.length > 0) prefillKg = recent[recent.length - 1]?.weightKg;
+        } catch (_) {}
+        if (!prefillKg && userProfile?.weightKg && userProfile.weightKg > 0) {
+          prefillKg = userProfile.weightKg;
+        }
+        if (prefillKg && prefillKg > 0) {
+          if (bwu === 'st') {
+            const { stoneStr, lbsStr } = kgToStoneLbsStrings(prefillKg);
+            setWeightInputSt(stoneStr);
+            setWeightInputStLbs(lbsStr);
+          } else if (bwu === 'lbs') {
+            setWeightInput(String(Math.round(kgToLbs(prefillKg))));
+          } else {
+            setWeightInput(String(Math.round(prefillKg * 10) / 10));
+          }
+        }
+      }
     } catch (_) {}
   }
 
@@ -255,14 +359,22 @@ export default function HomeScreen({ navigation }) {
       weightKg = parseBodyWeightToKg(weightInput, bwu);
     }
     if (!weightKg || isNaN(weightKg) || weightKg <= 0 || weightKg > 300) return;
+    // Optimistic: show the logged weight + clear inputs immediately.
+    // SQLite write happens in the background. On failure, revert.
+    const previousTodayWeight = todayWeight;
+    setTodayWeight(weightKg);
+    setWeightInput('');
+    setWeightInputSt('');
+    setWeightInputStLbs('');
     setSavingWeight(true);
     try {
       await logMorningWeight(user.id, { weightKg, loggedAt: Date.now() });
-      setTodayWeight(weightKg);
-      setWeightInput('');
-      setWeightInputSt('');
-      setWeightInputStLbs('');
-    } catch (_) {}
+    } catch (e) {
+      // Revert the optimistic update and surface the failure.
+      setTodayWeight(previousTodayWeight);
+      logError('HomeScreen.handleLogWeight', e, { userId: user?.id, weightKg });
+      Alert.alert('Couldn\'t save weight', e?.message ?? 'Please try again.');
+    }
     setSavingWeight(false);
   }
 
@@ -279,6 +391,28 @@ export default function HomeScreen({ navigation }) {
       const totalVol = weekSets.reduce((t, s) => t + (s.weight || 0) * (s.actualReps || 0), 0);
       setWeekStats({ sessions: thisWeek.length, sets: weekSets.length, volume: totalVol });
 
+      // Consecutive-week streak. Bucket every completed workout into
+      // the local Mon-start week it falls in, then count back from this
+      // week until we hit an empty week. Local-time-anchored so the
+      // streak doesn't break across DST.
+      const completedTs = allWorkouts.filter(w => w.isCompleted).map(w => w.startedAt);
+      function localWeekStartMs(ts) {
+        const d = new Date(ts);
+        const dow = d.getDay(); // 0=Sun ... 6=Sat
+        const daysBack = dow === 0 ? 6 : dow - 1; // Mon=0
+        const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - daysBack);
+        return monday.getTime();
+      }
+      const trainedWeeks = new Set(completedTs.map(localWeekStartMs));
+      let streak = 0;
+      const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+      let cursor = localWeekStartMs(Date.now());
+      while (trainedWeeks.has(cursor)) {
+        streak += 1;
+        cursor -= WEEK_MS;
+      }
+      setWeekStreak(streak);
+
       const completed = allWorkouts.filter(w => w.isCompleted).sort((a, b) => b.startedAt - a.startedAt);
       setLastSession(completed[0] || null);
       setTotalSessions(completed.length);
@@ -289,6 +423,8 @@ export default function HomeScreen({ navigation }) {
           if (val !== 'true') setShowCoachingNudge(true);
         });
       }
+
+
 
       // Compute tonnage for last session
       if (completed[0]) {
@@ -404,6 +540,22 @@ export default function HomeScreen({ navigation }) {
 
   async function handleRefresh() {
     setRefreshing(true);
+    // If there's an active cloud session, fire pullFromCloud first so a
+    // returning user on a fresh device can manually retry the restore
+    // by pulling down. Status surfaces via the banner; local re-load
+    // happens regardless so any new data already in SQLite shows.
+    try {
+      const sessionUser = useAppStore.getState().session?.user;
+      if (sessionUser?.id) {
+        const store = useAppStore.getState();
+        store.markCloudSyncing();
+        // eslint-disable-next-line global-require
+        const { pullFromCloud } = require('../lib/sync');
+        pullFromCloud(sessionUser.id)
+          .then(() => useAppStore.getState().markCloudSyncComplete())
+          .catch((err) => useAppStore.getState().markCloudSyncError(err?.message));
+      }
+    } catch (_) {}
     await loadData();
     setRefreshing(false);
   }
@@ -416,11 +568,16 @@ export default function HomeScreen({ navigation }) {
       const withExercises = await getRoutineExercisesWithDetails(routine.id);
       const initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
         exercise, routineExercise, sets: [],
+        // Hydrate plan-time superset pairings onto the workout entry so
+        // ActiveWorkoutScreen renders them as paired from the start.
+        supersetGroupId: routineExercise?.supersetGroupId ?? null,
       }));
       pendingStartRef.current = { routineId: routine.id, initialExercises };
       setShowIntentPrompt(true);
-    } catch (_) {
+    } catch (e) {
       setIsStartingWorkout(false);
+      logError('HomeScreen.handleStartNextWorkout', e, { userId: user?.id, routineId: target?.routine?.id });
+      Alert.alert('Couldn\'t load workout', e?.message ?? 'Please try again.');
     }
   }
 
@@ -433,43 +590,71 @@ export default function HomeScreen({ navigation }) {
       const workout = await createWorkout(user.id, pending.routineId, { intent });
       startWorkout(workout, pending.initialExercises);
       navigation.navigate('ActiveWorkout');
-    } catch (_) {
+    } catch (e) {
       setIsStartingWorkout(false);
+      logError('HomeScreen.confirmStart', e, { userId: user?.id, routineId: pending?.routineId, intent });
+      Alert.alert('Couldn\'t start workout', e?.message ?? 'Please try again.');
     }
     pendingStartRef.current = null;
+  }
+
+  // Blank session: no plan, no routine, no preloaded exercises. The
+  // previous flow just did navigation.navigate('ActiveWorkout', {
+  // blank: true }), but ActiveWorkoutScreen never read that param, so
+  // the screen rendered with workoutStartTime=null and the timer was
+  // frozen at 0:00 with non-responsive buttons. This helper does the
+  // same prep the planned-session flow does: create the workout row,
+  // mark it active in the store, then navigate. Used by both quick-
+  // start surfaces below.
+  async function startBlankSession() {
+    if (!user?.id) return;
+    try {
+      const workout = await createWorkout(user.id, null, { intent: null });
+      startWorkout(workout, []);
+      navigation.navigate('ActiveWorkout');
+    } catch (e) {
+      logError('HomeScreen.startBlankSession', e, { userId: user?.id });
+      Alert.alert("Couldn't start session", e?.message ?? 'Please try again.');
+    }
   }
 
   async function handleRepeatLastSession() {
     if (!lastSession) return;
     const routineId = lastSession.routineId || lastSession.routine_id || null;
 
-    let initialExercises;
-    if (routineId) {
-      // Load the FULL routine — not just what was done last time
-      const withExercises = await getRoutineExercisesWithDetails(routineId);
-      initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
-        exercise, routineExercise, sets: [],
-      }));
-    } else {
-      // No routine linked — fall back to exercises from the session's sets
-      const prevSets = await getWorkoutSetsForWorkout(lastSession.id);
-      const seenIds = [];
-      const orderedExerciseIds = [];
-      for (const s of prevSets) {
-        if (s.exerciseId && !seenIds.includes(s.exerciseId)) {
-          seenIds.push(s.exerciseId);
-          orderedExerciseIds.push(s.exerciseId);
+    try {
+      let initialExercises;
+      if (routineId) {
+        // Load the FULL routine — not just what was done last time
+        const withExercises = await getRoutineExercisesWithDetails(routineId);
+        initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
+          exercise, routineExercise, sets: [],
+          supersetGroupId: routineExercise?.supersetGroupId ?? null,
+        }));
+      } else {
+        // No routine linked — fall back to exercises from the session's sets
+        const prevSets = await getWorkoutSetsForWorkout(lastSession.id);
+        const seenIds = [];
+        const orderedExerciseIds = [];
+        for (const s of prevSets) {
+          if (s.exerciseId && !seenIds.includes(s.exerciseId)) {
+            seenIds.push(s.exerciseId);
+            orderedExerciseIds.push(s.exerciseId);
+          }
         }
+        initialExercises = (
+          await Promise.all(orderedExerciseIds.map(id => getExerciseById(id).catch(() => null)))
+        )
+          .filter(Boolean)
+          .map(exercise => ({ exercise, routineExercise: null, sets: [] }));
       }
-      initialExercises = (
-        await Promise.all(orderedExerciseIds.map(id => getExerciseById(id).catch(() => null)))
-      )
-        .filter(Boolean)
-        .map(exercise => ({ exercise, routineExercise: null, sets: [] }));
-    }
 
-    pendingStartRef.current = { routineId, initialExercises };
-    setShowIntentPrompt(true);
+      pendingStartRef.current = { routineId, initialExercises };
+      setShowIntentPrompt(true);
+    } catch (e) {
+      logError('HomeScreen.handleRepeatLastSession', e, { userId: user?.id, lastSessionId: lastSession?.id, routineId });
+      Alert.alert('Couldn\'t load last session', e?.message ?? 'Please try again.');
+    }
   }
 
   const hasActiveWorkout = !!activeWorkout && !isStartingWorkout;
@@ -507,18 +692,7 @@ export default function HomeScreen({ navigation }) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
       >
         {/* ── Branded header ── */}
-        <View style={styles.header}>
-          <View style={styles.headerText}>
-            <Text style={styles.pageTitle}>Train</Text>
-            <Text style={styles.greeting}>{getGreeting(userProfile?.firstName)}</Text>
-            {totalSessions >= 1 && (
-              <Text style={styles.trainingBrainHeaderText}>
-                {totalSessions.toLocaleString('en-GB')} {totalSessions === 1 ? 'session' : 'sessions'} recorded. This is your training brain.
-              </Text>
-            )}
-          </View>
-          <VolyumeMark size={38} color={colors.textMuted} />
-        </View>
+        <ScreenHeader title="Train" subtitle={getGreeting(userProfile?.firstName)} />
 
         {/* ── Training schedule context line ── */}
         {scheduleContext && (
@@ -534,12 +708,49 @@ export default function HomeScreen({ navigation }) {
           </Text>
         )}
 
+        {/* ── Daily narrative hero ─────────────────────────────────
+            One spoken-voice sentence drawn from this user's recent
+            data. The most important pixel on the screen when there's
+            a real signal to surface. */}
+        {dailyNarrative && (
+          <GradientCard
+            tone={dailyNarrative.tone || 'primary'}
+            style={styles.narrativeCard}
+            accessibilityLabel={dailyNarrative.headline}
+          >
+            <View style={styles.narrativeRow}>
+              <Ionicons
+                name={
+                  dailyNarrative.tone === 'gold' ? 'trophy-outline'
+                  : dailyNarrative.tone === 'warning' ? 'alert-circle-outline'
+                  : dailyNarrative.tone === 'success' ? 'trending-up-outline'
+                  : 'sparkles-outline'
+                }
+                size={16}
+                color={
+                  dailyNarrative.tone === 'gold' ? colors.gold
+                  : dailyNarrative.tone === 'warning' ? colors.warning
+                  : dailyNarrative.tone === 'success' ? colors.success
+                  : colors.primary
+                }
+              />
+              <Text style={styles.narrativeText}>{dailyNarrative.headline}</Text>
+            </View>
+          </GradientCard>
+        )}
+
+        {/* Cloud restore banner removed — the typical pull completes
+            in under a second on a healthy connection so the banner
+            flashed and vanished. Pull-to-refresh on Home still shows
+            the standard RefreshControl spinner if the user wants to
+            force a sync. */}
+
         {/* ── Nutrition phase sync banner ── */}
         {phaseMismatch && !phaseBannerDismissed && (
           <View style={styles.phaseBanner}>
             <Ionicons name="information-circle-outline" size={18} color={colors.primary} style={{ marginTop: 1 }} />
             <Text style={styles.phaseBannerText} numberOfLines={3}>
-              Your nutrition targets are set for {phaseMismatch.savedPhaseLabel} — update them in Athlete Hub to reflect your current plan.
+              Your nutrition targets are set for {phaseMismatch.savedPhaseLabel}. Update them in Athlete Hub to reflect your current plan.
             </Text>
             <TouchableOpacity
               style={styles.phaseBannerArrow}
@@ -558,6 +769,36 @@ export default function HomeScreen({ navigation }) {
               <Ionicons name="close" size={15} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
+        )}
+
+        {/* ── Fresh coach update banner ── */}
+        {tier === 'pro' && latestCoachOutput && !coachBannerDismissed && (Date.now() - (latestCoachOutput.weekStart ?? 0) < 7 * 86400000) && (
+          <TouchableOpacity
+            style={styles.coachBanner}
+            onPress={() => navigation.navigate('CoachOutput', { weekStart: latestCoachOutput.weekStart })}
+            activeOpacity={0.85}
+          >
+            <View style={styles.coachBannerLeft}>
+              <Ionicons name="sparkles" size={18} color={colors.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.coachBannerTitle}>Precision Coaching · this week's review</Text>
+                <Text style={styles.coachBannerBody}>
+                  {latestCoachOutput.adjustments?.calories?.applied
+                    ? `Calories adjusted to ${latestCoachOutput.adjustments.calories.newKcal} kcal. Tap to see why.`
+                    : 'Tap to see what changed and why.'}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              onPress={() => {
+                AsyncStorage.setItem(`@volyume_coach_banner_dismissed_${latestCoachOutput.weekStart}`, 'true').catch(() => {});
+                setCoachBannerDismissed(true);
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="close" size={16} color={colors.textMuted} />
+            </TouchableOpacity>
+          </TouchableOpacity>
         )}
 
         {/* ── Recovery week banner ── */}
@@ -582,6 +823,19 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         )}
 
+        {/* Skeleton placeholders shown during initial cold-load. As
+            soon as loadData completes, this block disappears and the
+            real content (which is largely below) renders. Without it,
+            the user sees a blank screen for the ~100-300ms it takes
+            SQLite reads to complete on a fresh app start. */}
+        {initialLoading && (
+          <View style={{ gap: spacing.md, marginBottom: spacing.md }}>
+            <SkeletonCard height={84} />
+            <SkeletonCard height={120} />
+            <SkeletonCard height={160} />
+          </View>
+        )}
+
         {/* ── Morning weight card ── */}
         {tier === 'pro' && (todayWeight != null ? (
           <View style={styles.weightCard}>
@@ -589,17 +843,35 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.weightCardText}>
               {formatBodyWeightShort(todayWeight, bwu)} logged today
             </Text>
-            <TouchableOpacity onPress={() => setTodayWeight(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            {recentWeights.length >= 3 && (
+              <Sparkline data={recentWeights} width={64} height={20} color={colors.primary} />
+            )}
+            <TouchableOpacity
+              onPress={() => {
+                // Prefill inputs with the value being edited so a typo
+                // correction doesn't require retyping the whole weight.
+                if (todayWeight && todayWeight > 0) {
+                  if (bwu === 'st') {
+                    const { stoneStr, lbsStr } = kgToStoneLbsStrings(todayWeight);
+                    setWeightInputSt(stoneStr);
+                    setWeightInputStLbs(lbsStr);
+                  } else if (bwu === 'lbs') {
+                    setWeightInput(String(Math.round(kgToLbs(todayWeight))));
+                  } else {
+                    setWeightInput(String(Math.round(todayWeight * 10) / 10));
+                  }
+                }
+                setTodayWeight(null);
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
               <Text style={styles.weightCardEdit}>Edit</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <View style={[styles.weightCard, styles.weightCardEmpty]}>
-            <Ionicons name="scale-outline" size={18} color={colors.primary} />
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={styles.weightCardPrompt}>Log morning weight</Text>
-              <Text style={styles.weightCardHint}>Helps your coach track trends and suggest adjustments each week</Text>
-            </View>
+            <Ionicons name="scale-outline" size={16} color={colors.primary} />
+            <Text style={styles.weightCardPrompt}>Morning weight</Text>
             {bwu === 'st' ? (
               <View style={{ flexDirection: 'row', gap: spacing.xs, alignItems: 'center' }}>
                 <TextInput
@@ -649,6 +921,12 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.weekCard}>
           <View style={styles.weekCardHeader}>
             <Text style={styles.weekLabel}>This week</Text>
+            {weekStreak > 1 && (
+              <View style={styles.streakChip}>
+                <Ionicons name="flame" size={11} color={colors.primary} />
+                <Text style={styles.streakChipText}>{weekStreak}-week streak</Text>
+              </View>
+            )}
           </View>
           <View style={styles.weekStats}>
             <WeekBar
@@ -675,9 +953,7 @@ export default function HomeScreen({ navigation }) {
         </View>
 
         {/* ── Training trend mini-graph ── */}
-        {fatigueSessions.length >= 2 && (
-          <FatigueTrendCard sessions={fatigueSessions} />
-        )}
+        {/* Training trend moved to Progress tab — sits with Mesocycle pulse there. */}
 
         {/* ── Pro teaser (free tier only, after 3+ sessions) ── */}
         {tier === 'free' && totalSessions >= 3 && (
@@ -698,7 +974,6 @@ export default function HomeScreen({ navigation }) {
                         ? `${totalSessions} sessions logged. Pro coaching uses all of it.`
                         : 'Add a coach that adjusts your plan each week.'}
                 </Text>
-                <Text style={styles.proTeaserSub}>Free during beta</Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
@@ -707,11 +982,9 @@ export default function HomeScreen({ navigation }) {
 
         {/* ── Primary workout area ── */}
         {hasActiveWorkout ? (
-          <TouchableOpacity
+          <PressableCard
             style={styles.continueCard}
             onPress={() => navigation.navigate('ActiveWorkout')}
-            activeOpacity={0.85}
-            accessibilityRole="button"
             accessibilityLabel="Continue active workout"
           >
             <View style={styles.continueInner}>
@@ -724,15 +997,12 @@ export default function HomeScreen({ navigation }) {
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.background + 'CC'} />
             </View>
-          </TouchableOpacity>
+          </PressableCard>
         ) : activePlan && nextWorkout ? (
           <View style={styles.heroCard}>
-            <View style={styles.heroTopRow}>
-              <View style={styles.planBadge}>
-                <Text style={styles.planBadgeText} numberOfLines={1}>{activePlan.name}</Text>
-              </View>
-              <Text style={styles.dayProgress}>{planProgress}</Text>
-            </View>
+            <Text style={styles.heroEyebrow} numberOfLines={1}>
+              {planProgress}
+            </Text>
             <Text style={styles.workoutName} numberOfLines={2}>
               {displayWorkout?.routine?.name}
             </Text>
@@ -741,12 +1011,34 @@ export default function HomeScreen({ navigation }) {
                 {exerciseCounts[displayWorkout.routine.id]} exercises
               </Text>
             ) : null}
+            {/* Mesocycle context chip: tells the user where they are in
+                the training block and what effort to bring today. Keeps
+                Volyume's coaching identity visible at the start of every
+                session, the way an RP-style plan would. Tooltip-free
+                because the row is glanceable on its own. */}
+            {currentMesoWeek && (
+              <View style={styles.mesoBriefChip}>
+                <Ionicons
+                  name={currentMesoWeek.isDeload ? 'bed-outline' : 'trending-up-outline'}
+                  size={12}
+                  color={currentMesoWeek.isDeload ? colors.success : colors.primary}
+                />
+                <Text style={styles.mesoBriefText}>
+                  {currentMesoWeek.isDeload
+                    ? `Deload week · pull effort back`
+                    : `Week ${currentMesoWeek.weekIndex} of ${currentMesoWeek.plannedWeeks ?? '-'}` +
+                      (currentMesoWeek.rirTarget != null
+                        ? ` · RIR ${currentMesoWeek.rirTarget}`
+                        : '')}
+                </Text>
+              </View>
+            )}
             {coachBrief && (
               <CoachBriefCard brief={coachBrief} onDismiss={dismissBrief} />
             )}
-            <View style={styles.heroActions}>
+            <View style={styles.startWorkoutRow}>
               <TouchableOpacity
-                style={[styles.primaryBtn, isStartingWorkout && { opacity: 0.6 }]}
+                style={[styles.primaryBtn, styles.startBtnSplit, isStartingWorkout && { opacity: 0.6 }]}
                 onPress={handleStartNextWorkout}
                 disabled={isStartingWorkout}
                 activeOpacity={0.85}
@@ -755,28 +1047,46 @@ export default function HomeScreen({ navigation }) {
               >
                 <Ionicons name="play" size={16} color={colors.background} />
                 <Text style={styles.primaryBtnText}>
-                  {isStartingWorkout ? 'Starting…' : 'Start Workout'}
+                  {isStartingWorkout ? 'Starting…' : 'Start workout'}
                 </Text>
               </TouchableOpacity>
+              {displayWorkout?.routine?.id ? (
+                <TouchableOpacity
+                  style={styles.viewWorkoutBtn}
+                  onPress={() => navigation.navigate('PlansTab', {
+                    screen: 'RoutineDetail',
+                    params: { routineId: displayWorkout.routine.id },
+                  })}
+                  activeOpacity={0.85}
+                  accessibilityRole="button"
+                  accessibilityLabel={`View ${displayWorkout?.routine?.name || 'workout'} before starting`}
+                >
+                  <Text style={styles.viewWorkoutBtnText}>View</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+            <View style={styles.heroSecondaryRow}>
               <TouchableOpacity
-                style={styles.changeBtn}
+                style={styles.heroSecondaryBtn}
                 onPress={() => setShowChangeWorkout(true)}
+                activeOpacity={0.85}
                 accessibilityRole="button"
                 accessibilityLabel="Change planned workout"
               >
-                <Ionicons name="swap-horizontal-outline" size={16} color={colors.primary} />
-                <Text style={styles.changeBtnText}>Change</Text>
+                <Ionicons name="swap-horizontal-outline" size={14} color={colors.textSecondary} />
+                <Text style={styles.heroSecondaryBtnText}>Change workout</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.heroSecondaryBtn}
+                onPress={() => navigation.navigate('BuildWorkout')}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel="Start a blank workout instead"
+              >
+                <Ionicons name="add-circle-outline" size={14} color={colors.textSecondary} />
+                <Text style={styles.heroSecondaryBtnText}>Blank session</Text>
               </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={styles.blankLink}
-              onPress={() => navigation.navigate('BuildWorkout')}
-              accessibilityRole="button"
-              accessibilityLabel="Start a blank workout instead"
-            >
-              <Ionicons name="add-circle-outline" size={14} color={colors.textMuted} />
-              <Text style={styles.blankLinkText}>Start Blank Workout instead</Text>
-            </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.noPlanSection}>
@@ -784,7 +1094,14 @@ export default function HomeScreen({ navigation }) {
               <View style={styles.noPlanIconWrap}>
                 <Ionicons name="barbell-outline" size={28} color={colors.primary} />
               </View>
-              {lastSession == null ? (
+              {tier === 'pro' ? (
+                <>
+                  <Text style={styles.noPlanTitle}>No active plan on this device</Text>
+                  <Text style={styles.noPlanSub}>
+                    If you just signed in we may still be pulling your data from the cloud, give it a moment. If nothing arrives, tap below to rebuild your plan from your profile.
+                  </Text>
+                </>
+              ) : lastSession == null ? (
                 <>
                   <Text style={styles.noPlanTitle}>Welcome. Let's get you started.</Text>
                   <Text style={styles.noPlanSub}>
@@ -800,6 +1117,24 @@ export default function HomeScreen({ navigation }) {
                 </>
               )}
             </View>
+
+            {tier === 'pro' && (
+              <TouchableOpacity
+                style={styles.proRecoverBtn}
+                onPress={async () => {
+                  const result = await generateAndSavePlan(user.id, userProfile);
+                  if (result.ok) {
+                    await loadData();
+                  } else {
+                    Alert.alert('Could not build plan', `${result.error}. Open Settings → Your goals to update your profile, then try again.`);
+                  }
+                }}
+                activeOpacity={0.88}
+              >
+                <Ionicons name="sparkles" size={18} color={colors.background} />
+                <Text style={styles.proRecoverBtnText}>Build my plan</Text>
+              </TouchableOpacity>
+            )}
 
             {/* Progress at a glance — shown when there's history but no plan */}
             {lastSession != null && (
@@ -821,10 +1156,10 @@ export default function HomeScreen({ navigation }) {
               </View>
             )}
 
-            <TouchableOpacity
+            <PressableCard
               style={styles.quickStartCard}
-              onPress={() => navigation.navigate('ActiveWorkout', { blank: true })}
-              activeOpacity={0.75}
+              onPress={() => startBlankSession()}
+              accessibilityLabel="Start your first session"
             >
               <View style={styles.quickStartIcon}>
                 <Ionicons name="barbell-outline" size={28} color={colors.primary} />
@@ -834,46 +1169,46 @@ export default function HomeScreen({ navigation }) {
                 <Text style={styles.quickStartSub}>Log sets as you go. No plan needed to begin. We will build your profile as you train.</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-            </TouchableOpacity>
+            </PressableCard>
 
-            <PlanBuilderCard
-              icon="sparkles"
-              title="Coach Builder"
-              desc="Answer 5 questions about your goals and time available. We'll build you a complete programme."
-              badge="Recommended"
-              onPress={() => navigation.navigate('PlansTab', { screen: 'CoachBuilder', initial: false })}
-            />
-            <PlanBuilderCard
-              icon="library-outline"
-              title="Plan Library"
-              desc="Browse ready-made programmes for every level, schedule, and goal."
-              onPress={() => navigation.navigate('PlansTab', { screen: 'PlanLibrary', initial: false })}
-            />
-            <PlanBuilderCard
-              icon="create-outline"
-              title="Build Your Own"
-              desc="Already know exactly what you want to train? Build a custom programme from scratch."
-              onPress={() => navigation.navigate('PlansTab', { screen: 'ManualBuilder', initial: false })}
-            />
+            {tier !== 'pro' && (
+              <>
+                <PlanBuilderCard
+                  icon="library-outline"
+                  title="Plan Library"
+                  desc="Browse ready-made programmes for every level, schedule, and goal."
+                  badge="Recommended"
+                  onPress={() => navigation.navigate('PlansTab', { screen: 'PlanLibrary', initial: false })}
+                />
+                <PlanBuilderCard
+                  icon="barbell-outline"
+                  title="Start a manual session"
+                  desc="Log sets as you go. No plan required. Volyume builds your profile as you train."
+                  onPress={() => startBlankSession()}
+                />
+              </>
+            )}
 
-            <TouchableOpacity
-              style={styles.blankSessionLink}
-              onPress={() => navigation.navigate('BuildWorkout')}
-              accessibilityRole="button"
-              accessibilityLabel="Start a blank session"
-            >
-              <Text style={styles.blankSessionLinkText}>Start a blank session instead</Text>
-              <Ionicons name="chevron-forward" size={13} color={colors.textMuted} />
-            </TouchableOpacity>
+            {tier !== 'pro' && (
+              <TouchableOpacity
+                style={styles.blankSessionLink}
+                onPress={() => navigation.navigate('BuildWorkout')}
+                accessibilityRole="button"
+                accessibilityLabel="Start a blank session"
+              >
+                <Text style={styles.blankSessionLinkText}>Start a blank session instead</Text>
+                <Ionicons name="chevron-forward" size={13} color={colors.textMuted} />
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
         {/* ── Last session ── */}
         {lastSession && (
-          <TouchableOpacity
+          <PressableCard
             style={styles.lastSessionCard}
             onPress={() => navigation.navigate('WorkoutHistory')}
-            activeOpacity={0.7}
+            accessibilityLabel="Open workout history"
           >
             <View style={styles.lastSessionTop}>
               <View style={{ gap: 2 }}>
@@ -924,55 +1259,11 @@ export default function HomeScreen({ navigation }) {
                 </View>
               ) : null}
             </View>
-          </TouchableOpacity>
+          </PressableCard>
         )}
 
-        {/* ── Training brain line ── */}
-        {totalSessions >= 10 && (
-          <TouchableOpacity
-            style={styles.trainingBrainRow}
-            onPress={() => navigation.navigate('WorkoutHistory')}
-            activeOpacity={0.75}
-            accessibilityRole="button"
-            accessibilityLabel="View your training history"
-          >
-            <Ionicons name="library-outline" size={14} color={colors.textMuted} />
-            <Text style={styles.trainingBrainText}>
-              {totalSessions.toLocaleString('en-GB')} sessions logged. This is your training brain.
-            </Text>
-            <Ionicons name="chevron-forward" size={13} color={colors.textMuted} />
-          </TouchableOpacity>
-        )}
 
-        {/* Block progress — planned vs actual this week */}
-          {blockProgress.length > 0 && (
-            <View style={styles.blockCard}>
-              <View style={styles.blockCardHeader}>
-                <Text style={styles.blockCardTitle}>This week's plan</Text>
-                {currentMesoWeek && (
-                  <Text style={styles.blockCardWeek}>
-                    Week {currentMesoWeek.weekIndex}/{currentMesoWeek.plannedWeeks}
-                    {currentMesoWeek.isDeload ? ' · Recovery week' : ` · Effort ${currentMesoWeek.rirTarget != null ? 5 - currentMesoWeek.rirTarget : '–'}`}
-                  </Text>
-                )}
-              </View>
-              {blockProgress.map(p => {
-                const pct = p.planned > 0 ? Math.min(1, p.actual / p.planned) : 0;
-                const barColor = pct >= 1 ? colors.primary : pct >= 0.7 ? colors.warning : 'rgba(245,158,11,0.25)';
-                return (
-                  <View key={p.muscle} style={styles.blockRow}>
-                    <Text style={styles.blockMuscle} numberOfLines={1}>{p.label}</Text>
-                    <View style={styles.blockBarBg}>
-                      <View style={[styles.blockBarFill, { width: `${Math.round(pct * 100)}%`, backgroundColor: barColor }]} />
-                    </View>
-                    <Text style={styles.blockSets}>
-                      {p.actual}/{p.planned}
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
-          )}
+        {/* "This week's plan" (block progress) moved to Progress tab. */}
 
         {/* ── Coaching discovery nudge (Pro, one-time) ── */}
         {showCoachingNudge && (
@@ -1141,7 +1432,7 @@ function buildCoachBrief({ fatigueHistory, weeklyVolume, deloadSuggestion, lastW
   if (deloadSuggestion) {
     return {
       headline: 'Recovery week',
-      body: 'Your body is signalling it needs a lighter week. Keep the movement, drop the weight — this is how you come back stronger.',
+      body: 'Your body is signalling it needs a lighter week. Keep the movement, drop the weight. This is how you come back stronger.',
       type: 'recover',
     };
   }
@@ -1163,18 +1454,24 @@ function buildCoachBrief({ fatigueHistory, weeklyVolume, deloadSuggestion, lastW
   if (lastWorkoutDaysAgo != null && lastWorkoutDaysAgo >= 5) {
     return {
       headline: 'Good to see you back',
-      body: "It's been a while since your last session. Ease in — don't try to catch up in one workout.",
+      body: "It's been a while since your last session. Ease in. Don't try to catch up in one workout.",
       type: 'go',
     };
   }
 
-  // Rule 4 — 2+ muscles below MEV this week
+  // Rule 4 — 2+ muscles below MEV this week (only meaningful if the user has
+  // actually been training). For brand-new users with zero workouts every
+  // muscle reads as below-MEV at 0 sets, so this rule used to fire on the
+  // very first launch with "Several muscle groups are below their weekly
+  // minimum" — which is technically true but useless advice. Require the
+  // user to have logged something so we're commenting on real adherence.
   if (blockProgress && blockProgress.length > 0) {
+    const totalSetsThisWeek = blockProgress.reduce((s, p) => s + (p.actual ?? 0), 0);
     const belowMev = blockProgress.filter(p => {
       const landmarks = VOLUME_LANDMARKS[p.muscle];
       return landmarks && landmarks.mev > 0 && p.actual < landmarks.mev;
     });
-    if (belowMev.length >= 2) {
+    if (totalSetsThisWeek > 0 && belowMev.length >= 2) {
       const muscleName = belowMev[0].label;
       return {
         headline: 'Muscle groups need attention',
@@ -1206,11 +1503,19 @@ function buildCoachBrief({ fatigueHistory, weeklyVolume, deloadSuggestion, lastW
 }
 
 function getRelativeDay(ts) {
-  const days = Math.floor((Date.now() - ts) / (24 * 60 * 60 * 1000));
-  if (days === 0) return 'Today';
-  if (days === 1) return 'Yesterday';
-  if (days < 7) return `${days} days ago`;
-  return format(new Date(ts), 'd MMM');
+  // Compare LOCAL calendar dates rather than epoch-ms deltas so a
+  // session logged at 23:50 doesn't read as "Yesterday" when the user
+  // opens the app at 00:10 (or vice versa across DST). The previous
+  // floor-based math also broke across DST jumps and for users
+  // outside UTC.
+  const now = new Date();
+  const then = new Date(ts);
+  const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const dayDiff = Math.round((startOfDay(now) - startOfDay(then)) / (24 * 60 * 60 * 1000));
+  if (dayDiff <= 0) return 'Today';
+  if (dayDiff === 1) return 'Yesterday';
+  if (dayDiff < 7) return `${dayDiff} days ago`;
+  return format(then, 'd MMM');
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -1230,7 +1535,7 @@ function WeekBar({ value, target, label, display }) {
 
 function PlanBuilderCard({ icon, title, desc, badge, onPress }) {
   return (
-    <TouchableOpacity style={styles.builderCard} onPress={onPress} activeOpacity={0.75}>
+    <PressableCard style={styles.builderCard} onPress={onPress} accessibilityLabel={title}>
       <View style={styles.builderIconWrap}>
         <Ionicons name={icon} size={20} color={colors.primary} />
       </View>
@@ -1246,7 +1551,7 @@ function PlanBuilderCard({ icon, title, desc, badge, onPress }) {
         <Text style={styles.builderDesc}>{desc}</Text>
       </View>
       <Ionicons name="chevron-forward" size={15} color={colors.textMuted} />
-    </TouchableOpacity>
+    </PressableCard>
   );
 }
 
@@ -1296,80 +1601,6 @@ function CoachBriefCard({ brief, onDismiss }) {
   );
 }
 
-// ── Fatigue Trend Card ────────────────────────────────────────────────────────
-
-const CHART_WIDTH = 200;
-const CHART_HEIGHT = 60;
-const BAR_WIDTH = 20;
-const BAR_GAP = 8;
-const DAY_ABBRS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-function fatigueBarColor(level) {
-  if (level <= 2) return colors.success;
-  if (level === 3) return colors.warning;
-  return colors.error;
-}
-
-function coachingLine(sessions) {
-  // Use average of the last 2 sessions (most recent = sessions[0])
-  const recent = sessions.slice(0, 2);
-  const avg = recent.reduce((s, r) => s + (r.fatigueLevel ?? r.fatigue_level ?? 0), 0) / recent.length;
-  if (avg <= 2) return 'Feeling fresh — volume is manageable.';
-  if (avg <= 3) return 'Tiredness building — consider lighter sessions.';
-  return 'High fatigue — take a rest day this week.';
-}
-
-function FatigueTrendCard({ sessions }) {
-  // sessions is newest-first; reverse so chart goes oldest → newest (left → right)
-  const ordered = [...sessions].reverse();
-  const count = ordered.length;
-
-  // Right-align bars: total chart width minus the space taken by bars + gaps
-  const totalBarSpace = count * BAR_WIDTH + (count - 1) * BAR_GAP;
-  const startX = CHART_WIDTH - totalBarSpace;
-
-  return (
-    <View style={styles.trendCard}>
-      <Text style={styles.trendTitle}>Training trend</Text>
-      <Svg width={CHART_WIDTH} height={CHART_HEIGHT + 16} style={{ marginTop: spacing.sm }}>
-        {ordered.map((session, i) => {
-          const level = session.fatigueLevel ?? session.fatigue_level ?? 1;
-          const barHeight = Math.max(8, (level / 4) * CHART_HEIGHT);
-          const x = startX + i * (BAR_WIDTH + BAR_GAP);
-          const y = CHART_HEIGHT - barHeight;
-          const barColor = fatigueBarColor(level);
-          const dayAbbr = session.startedAt
-            ? DAY_ABBRS[new Date(session.startedAt).getDay()]
-            : '';
-          return (
-            <React.Fragment key={i}>
-              <Rect
-                x={x}
-                y={y}
-                width={BAR_WIDTH}
-                height={barHeight}
-                rx={4}
-                fill={barColor}
-                opacity={0.9}
-              />
-              <SvgText
-                x={x + BAR_WIDTH / 2}
-                y={CHART_HEIGHT + 13}
-                fontSize={9}
-                fill={colors.textMuted}
-                textAnchor="middle"
-              >
-                {dayAbbr}
-              </SvgText>
-            </React.Fragment>
-          );
-        })}
-      </Svg>
-      <Text style={styles.trendCoachLine}>{coachingLine(sessions)}</Text>
-    </View>
-  );
-}
-
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
@@ -1385,9 +1616,9 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   weightCardEmpty: {
-    backgroundColor: colors.primaryBg,
-    borderColor: colors.primary + '35',
-    paddingVertical: spacing.md,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    paddingVertical: spacing.sm,
   },
   weightCardPrompt: {
     fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary,
@@ -1405,6 +1636,22 @@ const styles = StyleSheet.create({
   },
   weightCardText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary },
   weightCardEdit: { fontSize: fontSize.xs, color: colors.primary },
+  narrativeCard: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+  },
+  narrativeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  narrativeText: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+    lineHeight: 20,
+  },
   weightLogBtn: {
     backgroundColor: colors.primary, borderRadius: radius.sm,
     paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
@@ -1461,6 +1708,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  streakChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: spacing.sm, paddingVertical: 2,
+    borderRadius: radius.full,
+    backgroundColor: colors.primaryBg,
+  },
+  streakChipText: {
+    fontSize: fontSize.xs,
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
   },
   weekLabel: {
     fontSize: fontSize.xs,
@@ -1521,36 +1779,25 @@ const styles = StyleSheet.create({
   continueTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
   continueSub: { fontSize: fontSize.xs, color: colors.background + 'CC', marginTop: 2 },
 
-  // Hero plan card
+  // Hero plan card. Restrained: flat surface, one primary CTA, two
+  // discreet text links underneath. Stat goes in the eyebrow line so
+  // we don't waste a row on a coloured pill that fights the workout
+  // name for attention.
   heroCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    gap: spacing.md,
+    gap: spacing.sm,
   },
-  heroTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  planBadge: {
-    flex: 1,
-    backgroundColor: colors.primaryBg,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: colors.primary + '40',
-  },
-  planBadgeText: {
+  heroEyebrow: {
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
-    color: colors.primary,
+    color: colors.textMuted,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+    fontWeight: fontWeight.semibold,
   },
-  dayProgress: { fontSize: fontSize.xs, color: colors.textMuted, flexShrink: 0 },
   workoutName: {
     fontSize: fontSize.xxl,
     fontWeight: fontWeight.black,
@@ -1558,9 +1805,17 @@ const styles = StyleSheet.create({
     lineHeight: 30,
   },
   workoutMeta: { fontSize: fontSize.sm, color: colors.textSecondary },
-  heroActions: { flexDirection: 'row', gap: spacing.sm },
+  mesoBriefChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    alignSelf: 'flex-start',
+    marginTop: spacing.xs,
+    paddingHorizontal: spacing.sm, paddingVertical: 4,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface2,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  mesoBriefText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
   primaryBtn: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1568,28 +1823,68 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: radius.md,
     paddingVertical: spacing.md,
+    marginTop: spacing.xs,
   },
   primaryBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
-  changeBtn: {
+  // Two-button row: primary "Start workout" + secondary "View" so the
+  // user can preview the routine's exercises before committing. Mirrors
+  // the Start Next Workout + View Plan layout on PlansScreen for visual
+  // consistency.
+  startWorkoutRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  startBtnSplit: { flex: 1, marginTop: 0 },
+  viewWorkoutBtn: {
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderRadius: radius.md,
+    backgroundColor: colors.surface2,
     borderWidth: 1,
-    borderColor: colors.primary + '50',
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  changeBtnText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
-  blankLink: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
+  viewWorkoutBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textSecondary },
+  heroSecondaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingTop: spacing.md,
   },
-  blankLinkText: { fontSize: fontSize.sm, color: colors.textMuted, fontWeight: fontWeight.medium },
+  // Boxed secondary buttons matching the View / surface2 pill style
+  // used elsewhere on the screen — gives the Change workout / Blank
+  // session affordances proper tap targets and aligns visually with
+  // the History / Records / Volume tiles below.
+  heroSecondaryBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  heroSecondaryBtnText: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    fontWeight: fontWeight.semibold,
+  },
 
   // No plan — plan-first section
   noPlanSection: { gap: spacing.md },
+  proRecoverBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: colors.primary, borderRadius: 14, paddingVertical: 14, marginTop: 8,
+  },
+  proRecoverBtnText: {
+    fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background,
+  },
   noPlanHero: {
     alignItems: 'center',
     gap: spacing.sm,
@@ -1797,24 +2092,6 @@ const styles = StyleSheet.create({
   sheetCancelText: { fontSize: fontSize.md, color: colors.textSecondary },
 
   // Block progress card
-  blockCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border,
-    padding: spacing.lg, marginBottom: spacing.lg, gap: spacing.md,
-  },
-  blockCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  blockCardTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.5 },
-  blockCardWeek: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.medium },
-  blockRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  blockMuscle: { width: 80, fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
-  blockBarBg: {
-    flex: 1, height: 6, backgroundColor: colors.border,
-    borderRadius: radius.full, overflow: 'hidden',
-  },
-  blockBarFill: { height: '100%', borderRadius: radius.full },
-  blockSets: { width: 36, fontSize: fontSize.xs, color: colors.textMuted, textAlign: 'right' },
-  blockNote: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic', marginTop: spacing.xs },
-
   // Pro coaching discovery nudge
   coachingNudge: {
     flexDirection: 'row',
@@ -1950,13 +2227,22 @@ const styles = StyleSheet.create({
   },
 
   // Recovery week banner
+  coachBanner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: colors.primaryBg, borderRadius: 14,
+    borderWidth: 1, borderColor: colors.primary + '50',
+    padding: 14, marginBottom: 12, gap: 12,
+  },
+  coachBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
+  coachBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary, marginBottom: 2 },
+  coachBannerBody: { fontSize: 12, color: colors.textSecondary, lineHeight: 17 },
   deloadBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: 'rgba(245,158,11,0.12)', borderRadius: 10, padding: 14,
     borderWidth: 1, borderColor: 'rgba(245,158,11,0.35)', marginBottom: 12,
   },
   deloadBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
-  deloadBannerTitle: { fontSize: 13, fontWeight: '700', color: colors.warning, marginBottom: 2 },
+  deloadBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.warning, marginBottom: 2 },
   deloadBannerBody: { fontSize: 12, color: colors.textSecondary, lineHeight: 17 },
 
   // Nutrition phase sync banner
@@ -1979,27 +2265,6 @@ const styles = StyleSheet.create({
   },
   phaseBannerArrow: {
     paddingLeft: spacing.xs,
-  },
-
-  // Training trend card
-  trendCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-  },
-  trendTitle: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-    color: colors.textMuted,
-    letterSpacing: 0.2,
-  },
-  trendCoachLine: {
-    fontSize: fontSize.xs,
-    color: colors.textSecondary,
-    marginTop: spacing.sm,
-    lineHeight: 16,
   },
 
   // Pre-workout coaching brief card
@@ -2046,13 +2311,13 @@ const styles = StyleSheet.create({
   },
   quickStartTitle: {
     color: colors.textPrimary,
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
     marginBottom: 3,
   },
   quickStartSub: {
     color: colors.textSecondary,
-    fontSize: 13,
+    fontSize: fontSize.sm,
     lineHeight: 18,
   },
 });

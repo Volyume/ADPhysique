@@ -1,12 +1,34 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+/**
+ * Year of Lifts as a swipeable story
+ *
+ * Reads the same getYearOfLiftsData payload as before and turns it into
+ * a stack of full-screen story cards. Each card is one stat with a big
+ * hero number, an icon, and one line of context. The user advances by
+ * tapping the right side (like Instagram / Snap) or by horizontal
+ * swipe. Tap the left side to go back. A row of progress pips at the
+ * top mirrors current position.
+ *
+ * Cards that don't apply (e.g. no PRs yet) are filtered out at build
+ * time, so a brand-new user with two sessions doesn't get a stretched
+ * empty story.
+ *
+ * The classic "scroll through stats" view is gone — Spotify Wrapped
+ * proved that the swipe-story is the format people actually read.
+ */
+
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  View, Text, StyleSheet, FlatList, Pressable, TouchableOpacity, Dimensions, StatusBar,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { getYearOfLiftsData } from '../lib/database';
+import GradientCard from '../components/GradientCard';
 
-const MONTH_SHORT = ['J','F','M','A','M','J','J','A','S','O','N','D'];
+const { width: SCREEN_W } = Dimensions.get('window');
+
 const MONTH_NAMES = [
   'January','February','March','April','May','June',
   'July','August','September','October','November','December',
@@ -18,56 +40,169 @@ function fmtDate(ms) {
   return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-function StatCard({ icon, value, label }) {
-  return (
-    <View style={styles.statCard}>
-      <Ionicons name={icon} size={22} color={colors.primary} />
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
+/**
+ * Builds the story-card list from the year's data. Empty/zero-value
+ * cards are dropped so the deck stays tight.
+ */
+function buildCards(data, units) {
+  if (!data) return [];
+  const cards = [];
+
+  // 1. Intro: period framing
+  cards.push({
+    type: 'intro',
+    icon: 'sparkles',
+    tone: 'gold',
+    headline: 'Your year of lifts',
+    subline: `${fmtDate(data.yearStart)} to ${fmtDate(data.yearEnd)}`,
+  });
+
+  // 2. Sessions
+  if (data.totalSessions > 0) {
+    cards.push({
+      type: 'stat',
+      icon: 'barbell',
+      tone: 'primary',
+      value: data.totalSessions.toLocaleString('en-GB'),
+      unit: data.totalSessions === 1 ? 'session' : 'sessions',
+      caption: data.avgSessionsPerWeek >= 3
+        ? `Roughly ${data.avgSessionsPerWeek} a week. That's consistency.`
+        : `Roughly ${data.avgSessionsPerWeek} a week.`,
+    });
+  }
+
+  // 3. Volume
+  if (data.tonnage > 0) {
+    cards.push({
+      type: 'stat',
+      icon: 'trending-up',
+      tone: 'success',
+      value: data.tonnage.toLocaleString('en-GB'),
+      unit: 'kg moved',
+      caption: 'Every set you logged, stacked end to end.',
+    });
+  }
+
+  // 4. Sets
+  if (data.totalSets > 0) {
+    cards.push({
+      type: 'stat',
+      icon: 'layers',
+      tone: 'primary',
+      value: data.totalSets.toLocaleString('en-GB'),
+      unit: data.totalSets === 1 ? 'set' : 'sets',
+      caption: data.uniqueExercises > 0
+        ? `Across ${data.uniqueExercises} different exercises.`
+        : 'Logged, rep by rep.',
+    });
+  }
+
+  // 5. Busiest month
+  if (data.topMonth) {
+    cards.push({
+      type: 'stat',
+      icon: 'calendar',
+      tone: 'primary',
+      value: data.topMonth,
+      unit: 'busiest month',
+      caption: 'Your highest training density of the year.',
+    });
+  }
+
+  // 6. Top exercise
+  if (data.topExercises?.[0]) {
+    const top = data.topExercises[0];
+    cards.push({
+      type: 'list',
+      icon: 'flame',
+      tone: 'warning',
+      headline: 'Your top lifts',
+      subline: 'Most-trained exercises this year',
+      rows: data.topExercises.slice(0, 5).map(ex => ({
+        primary: ex.name,
+        secondary: `${ex.sets.toLocaleString('en-GB')} sets`,
+      })),
+    });
+  }
+
+  // 7. Top PR
+  if (data.topPRs?.length > 0) {
+    cards.push({
+      type: 'list',
+      icon: 'trophy',
+      tone: 'gold',
+      headline: 'Personal bests',
+      subline: 'Estimated max lifts logged this year',
+      rows: data.topPRs.slice(0, 5).map(pr => ({
+        primary: pr.exerciseName ?? pr.exercise_name,
+        secondary: `${parseFloat(pr.value).toFixed(1)}${units}`,
+      })),
+    });
+  }
+
+  // 8. Outro
+  cards.push({
+    type: 'outro',
+    icon: 'checkmark-circle',
+    tone: 'gold',
+    headline: 'Onwards.',
+    subline: 'Same hands. Same bar. New numbers.',
+  });
+
+  return cards;
 }
 
-function MonthlyChart({ monthlyBreakdown }) {
-  const maxSessions = Math.max(...monthlyBreakdown.map(m => m.sessions), 1);
-  const BAR_MAX_H = 40;
-  const currentMonth = new Date().getMonth();
-
+/**
+ * Single card. Layout varies by type (stat = big number, list = top-5,
+ * intro/outro = headline + subline only).
+ */
+function StoryCard({ card }) {
   return (
-    <View style={styles.chartCard}>
-      <Text style={styles.chartTitle}>Sessions by month</Text>
-      <View style={styles.chartBars}>
-        {monthlyBreakdown.map(({ month, sessions }) => {
-          const barH = sessions > 0 ? Math.max(4, Math.round((sessions / maxSessions) * BAR_MAX_H)) : 2;
-          const isCurrent = month === currentMonth;
-          return (
-            <View key={month} style={styles.chartBarCol}>
-              <View style={[
-                styles.chartBar,
-                { height: barH },
-                sessions === 0 && styles.chartBarEmpty,
-                isCurrent && sessions > 0 && styles.chartBarCurrent,
-              ]} />
-              <Text style={[styles.chartBarLabel, isCurrent && styles.chartBarLabelCurrent]}>
-                {MONTH_SHORT[month]}
-              </Text>
+    <View style={styles.cardWrap}>
+      <GradientCard
+        tone={card.tone || 'primary'}
+        intensity={0.28}
+        style={styles.card}
+      >
+        <View style={styles.iconWrap}>
+          <Ionicons name={card.icon} size={32} color={colors.textPrimary} />
+        </View>
+
+        {card.type === 'stat' && (
+          <>
+            <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>
+              {card.value}
+            </Text>
+            <Text style={styles.statUnit}>{card.unit}</Text>
+            <Text style={styles.statCaption}>{card.caption}</Text>
+          </>
+        )}
+
+        {(card.type === 'intro' || card.type === 'outro') && (
+          <>
+            <Text style={styles.heroHeadline}>{card.headline}</Text>
+            <Text style={styles.heroSubline}>{card.subline}</Text>
+          </>
+        )}
+
+        {card.type === 'list' && (
+          <View style={styles.listWrap}>
+            <Text style={styles.listHeadline}>{card.headline}</Text>
+            <Text style={styles.listSubline}>{card.subline}</Text>
+            <View style={styles.listRows}>
+              {card.rows.map((row, i) => (
+                <View key={i} style={styles.listRow}>
+                  <Text style={styles.listRank}>{i + 1}</Text>
+                  <Text style={styles.listPrimary} numberOfLines={1}>{row.primary}</Text>
+                  <Text style={styles.listSecondary}>{row.secondary}</Text>
+                </View>
+              ))}
             </View>
-          );
-        })}
-      </View>
+          </View>
+        )}
+      </GradientCard>
     </View>
   );
-}
-
-function buildHeadline(data) {
-  const { totalSessions, tonnage, topMonth, avgSessionsPerWeek } = data;
-  if (totalSessions === 0) return 'No sessions logged in this period yet.';
-  const parts = [];
-  parts.push(`${totalSessions} session${totalSessions !== 1 ? 's' : ''} logged.`);
-  if (tonnage > 0) parts.push(`${tonnage.toLocaleString('en-GB')} kg moved.`);
-  if (topMonth) parts.push(`${topMonth} was your busiest month.`);
-  if (avgSessionsPerWeek >= 3) parts.push("That's consistent work.");
-  return parts.join(' ');
 }
 
 export default function YearOfLiftsScreen({ navigation, route }) {
@@ -75,6 +210,8 @@ export default function YearOfLiftsScreen({ navigation, route }) {
   const { user, units } = useAppStore();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [index, setIndex] = useState(0);
+  const listRef = useRef(null);
 
   useEffect(() => {
     if (!user?.id) { setLoading(false); return; }
@@ -83,94 +220,106 @@ export default function YearOfLiftsScreen({ navigation, route }) {
       .catch(() => setLoading(false));
   }, []);
 
+  const cards = useMemo(() => buildCards(data, units), [data, units]);
+
+  function goTo(i) {
+    if (!listRef.current || i < 0 || i >= cards.length) return;
+    listRef.current.scrollToIndex({ index: i, animated: true });
+  }
+
+  function advance() {
+    if (index >= cards.length - 1) {
+      navigation.goBack();
+      return;
+    }
+    goTo(index + 1);
+  }
+  function rewind() {
+    if (index === 0) return;
+    goTo(index - 1);
+  }
+
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      <View style={styles.header}>
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
+      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+
+      {/* Progress pips at the top — one per card */}
+      <View style={styles.pipsRow}>
+        {cards.map((_, i) => (
+          <View
+            key={i}
+            style={[
+              styles.pip,
+              i < index && styles.pipDone,
+              i === index && styles.pipCurrent,
+            ]}
+          />
+        ))}
         <TouchableOpacity
-          style={styles.backBtn}
+          style={styles.closeBtn}
           onPress={() => navigation.goBack()}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityLabel="Close"
         >
-          <Ionicons name="chevron-back" size={24} color={colors.textSecondary} />
+          <Ionicons name="close" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Your year of lifts</Text>
-        <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {loading && <Text style={styles.loadingText}>Loading…</Text>}
+      {loading && (
+        <View style={styles.loadingWrap}>
+          <Text style={styles.loadingText}>Building your year…</Text>
+        </View>
+      )}
 
-        {!loading && data && (
-          <>
-            <View style={styles.periodRow}>
-              <Text style={styles.periodText}>
-                {fmtDate(data.yearStart)} – {fmtDate(data.yearEnd)}
-              </Text>
-            </View>
+      {!loading && cards.length === 0 && (
+        <View style={styles.loadingWrap}>
+          <Ionicons name="barbell-outline" size={36} color={colors.textMuted} />
+          <Text style={styles.emptyTitle}>No sessions yet</Text>
+          <Text style={styles.emptyBody}>
+            Come back here once you've logged a few sessions.
+          </Text>
+          <TouchableOpacity
+            style={styles.doneBtn}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.doneBtnText}>Done</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
-            {data.totalSessions === 0 ? (
-              <View style={styles.emptyCard}>
-                <Ionicons name="barbell-outline" size={36} color={colors.textMuted} />
-                <Text style={styles.emptyTitle}>No sessions yet</Text>
-                <Text style={styles.emptyBody}>
-                  Come back here after you've logged a year's worth of training.
-                </Text>
-              </View>
-            ) : (
-              <>
-                <View style={styles.headlineCard}>
-                  <Text style={styles.headlineText}>{buildHeadline(data)}</Text>
-                </View>
+      {!loading && cards.length > 0 && (
+        <>
+          <FlatList
+            ref={listRef}
+            data={cards}
+            keyExtractor={(_, i) => `s-${i}`}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={(e) => {
+              const next = Math.round(e.nativeEvent.contentOffset.x / SCREEN_W);
+              if (next !== index) setIndex(next);
+            }}
+            renderItem={({ item }) => <StoryCard card={item} />}
+            getItemLayout={(_, i) => ({ length: SCREEN_W, offset: SCREEN_W * i, index: i })}
+          />
 
-                {/* Monthly activity chart */}
-                {data.monthlyBreakdown && (
-                  <MonthlyChart monthlyBreakdown={data.monthlyBreakdown} />
-                )}
-
-                <View style={styles.statsGrid}>
-                  <StatCard icon="barbell-outline" value={String(data.totalSessions)} label="Sessions" />
-                  <StatCard icon="layers-outline" value={data.totalSets.toLocaleString('en-GB')} label="Sets" />
-                  <StatCard icon="trending-up-outline" value={`${data.tonnage.toLocaleString('en-GB')} kg`} label="Total volume" />
-                  <StatCard icon="calendar-outline" value={String(data.avgSessionsPerWeek)} label="Avg / week" />
-                  {data.uniqueExercises > 0 && (
-                    <StatCard icon="list-outline" value={String(data.uniqueExercises)} label="Exercises" />
-                  )}
-                </View>
-
-                {data.topPRs?.length > 0 && (
-                  <View style={styles.topCard}>
-                    <Text style={styles.topCardTitle}>Top records this year</Text>
-                    {data.topPRs.map((pr, i) => (
-                      <View key={i} style={styles.topRow}>
-                        <Text style={styles.topRank}>{i + 1}</Text>
-                        <Text style={styles.topName} numberOfLines={1}>{pr.exerciseName ?? pr.exercise_name}</Text>
-                        <Text style={styles.topSets}>{parseFloat(pr.value).toFixed(1)}{units} est. max</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-
-                {data.topExercises.length > 0 && (
-                  <View style={styles.topCard}>
-                    <Text style={styles.topCardTitle}>Most-trained exercises</Text>
-                    {data.topExercises.map((ex, i) => (
-                      <View key={i} style={styles.topRow}>
-                        <Text style={styles.topRank}>{i + 1}</Text>
-                        <Text style={styles.topName}>{ex.name}</Text>
-                        <Text style={styles.topSets}>{ex.sets.toLocaleString('en-GB')} sets</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-              </>
-            )}
-          </>
-        )}
-
-        <TouchableOpacity style={styles.doneBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-          <Text style={styles.doneBtnText}>Done</Text>
-        </TouchableOpacity>
-      </ScrollView>
+          {/* Tap zones live as a narrow band ABOVE the card content
+              (under the pips, above the hero). Previously they spanned
+              the entire screen which meant any tap on the card body
+              was consumed by the Pressables — and on Android a press-
+              start anywhere on screen blocked the FlatList from
+              starting a horizontal swipe. Net effect: the story
+              advanced once via tap, then refused to swipe further.
+              Now the swipe gesture has the full card area to itself;
+              tap-to-advance is still available via a narrow strip
+              under the pips. */}
+          <View style={styles.tapZones} pointerEvents="box-none">
+            <Pressable style={styles.tapLeft} onPress={rewind} />
+            <Pressable style={styles.tapRight} onPress={advance} />
+          </View>
+        </>
+      )}
     </SafeAreaView>
   );
 }
@@ -178,86 +327,152 @@ export default function YearOfLiftsScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
 
-  header: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
+  pipsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
   },
-  backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: {
-    flex: 1, textAlign: 'center',
-    fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary,
+  pip: {
+    flex: 1, height: 3, borderRadius: 2,
+    backgroundColor: colors.border,
   },
-  headerSpacer: { width: 36 },
-
-  content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxxl },
-
-  loadingText: { fontSize: fontSize.sm, color: colors.textMuted, textAlign: 'center', paddingTop: spacing.xl },
-
-  periodRow: { alignItems: 'center' },
-  periodText: { fontSize: fontSize.xs, color: colors.textMuted },
-
-  emptyCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
-    padding: spacing.xl, alignItems: 'center', gap: spacing.md,
+  pipDone: { backgroundColor: colors.textSecondary },
+  pipCurrent: { backgroundColor: colors.primary },
+  closeBtn: {
+    marginLeft: spacing.sm,
+    width: 30, height: 30,
+    alignItems: 'center', justifyContent: 'center',
   },
+
+  loadingWrap: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: spacing.xl, gap: spacing.md,
+  },
+  loadingText: { fontSize: fontSize.sm, color: colors.textMuted },
   emptyTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   emptyBody: { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', lineHeight: 20 },
 
-  headlineCard: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.xl, padding: spacing.xl,
+  // Cards
+  cardWrap: {
+    width: SCREEN_W,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
   },
-  headlineText: {
-    fontSize: fontSize.xl, fontWeight: fontWeight.bold,
-    color: colors.background, lineHeight: 30,
+  card: {
+    flex: 1,
+    minHeight: '100%',
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xxl + spacing.md,
+    paddingBottom: spacing.xxl,
+    gap: spacing.lg,
+    justifyContent: 'center',
+  },
+  iconWrap: {
+    width: 64, height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center', justifyContent: 'center',
+    alignSelf: 'flex-start',
   },
 
-  chartCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border,
-    padding: spacing.lg, gap: spacing.md,
+  // Stat layout
+  statValue: {
+    fontSize: 96,
+    lineHeight: 100,
+    fontWeight: fontWeight.black,
+    color: colors.textPrimary,
+    letterSpacing: -2,
   },
-  chartTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textMuted },
-  chartBars: { flexDirection: 'row', alignItems: 'flex-end', gap: 4, height: 56 },
-  chartBarCol: { flex: 1, alignItems: 'center', gap: 4, justifyContent: 'flex-end' },
-  chartBar: { width: '80%', borderRadius: 2, backgroundColor: colors.primary + '70' },
-  chartBarEmpty: { backgroundColor: colors.surface2 },
-  chartBarCurrent: { backgroundColor: colors.primary },
-  chartBarLabel: { fontSize: 9, color: colors.textMuted },
-  chartBarLabelCurrent: { color: colors.primary, fontWeight: fontWeight.semibold },
+  statUnit: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+  },
+  statCaption: {
+    fontSize: fontSize.md,
+    color: colors.textSecondary,
+    lineHeight: 24,
+    marginTop: spacing.sm,
+  },
 
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  statCard: {
-    flex: 1, minWidth: '45%',
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border,
-    padding: spacing.lg, gap: spacing.xs, alignItems: 'center',
+  // Intro / outro hero
+  heroHeadline: {
+    fontSize: 44,
+    lineHeight: 48,
+    fontWeight: fontWeight.black,
+    color: colors.textPrimary,
+    letterSpacing: -1,
   },
-  statValue: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary },
-  statLabel: { fontSize: fontSize.xs, color: colors.textMuted },
+  heroSubline: {
+    fontSize: fontSize.md,
+    color: colors.textSecondary,
+    lineHeight: 24,
+  },
 
-  topCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border,
-    padding: spacing.lg, gap: spacing.md,
+  // List layout
+  listWrap: { gap: spacing.md },
+  listHeadline: {
+    fontSize: fontSize.xxl,
+    fontWeight: fontWeight.black,
+    color: colors.textPrimary,
   },
-  topCardTitle: {
-    fontSize: fontSize.sm, fontWeight: fontWeight.semibold,
-    color: colors.textMuted, letterSpacing: 0.2, marginBottom: spacing.xs,
+  listSubline: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
   },
-  topRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  topRank: {
-    width: 24, fontSize: fontSize.lg, fontWeight: fontWeight.black,
-    color: colors.primary, textAlign: 'center',
+  listRows: { gap: spacing.md },
+  listRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
   },
-  topName: { flex: 1, fontSize: fontSize.md, color: colors.textPrimary, fontWeight: fontWeight.semibold },
-  topSets: { fontSize: fontSize.sm, color: colors.textMuted },
+  listRank: {
+    width: 24,
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.black,
+    color: colors.primary,
+    textAlign: 'center',
+  },
+  listPrimary: {
+    flex: 1,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+  },
+  listSecondary: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+  },
+
+  // Tap-zone band — narrow strip just under the pips, so the bulk of
+  // the card area is left clean for FlatList swipe gestures. Without
+  // this layout the previous full-screen overlay swallowed every
+  // horizontal drag on Android.
+  tapZones: {
+    position: 'absolute',
+    top: 50,
+    height: 56,
+    left: 0, right: 0,
+    flexDirection: 'row',
+  },
+  tapLeft: { flex: 1 },
+  tapRight: { flex: 2 },
 
   doneBtn: {
-    backgroundColor: colors.surface, borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     borderWidth: 1, borderColor: colors.border,
-    paddingVertical: spacing.lg, alignItems: 'center', marginTop: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    marginTop: spacing.md,
   },
-  doneBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  doneBtnText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.textPrimary,
+  },
 });

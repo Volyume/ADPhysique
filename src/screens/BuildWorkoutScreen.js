@@ -11,6 +11,7 @@ import { getAllExercises, createWorkout } from '../lib/database';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { generateTravelPlan } from '../lib/travelMode';
 import useAppStore from '../store/useAppStore';
+import { logError } from '../lib/errorLog';
 
 const DEFAULT_SETS = 3;
 const DEFAULT_REST = 90;
@@ -93,15 +94,23 @@ export default function BuildWorkoutScreen({ navigation }) {
       }));
       startWorkout(workout, initialExercises);
       navigation.replace('ActiveWorkout');
+    } catch (e) {
+      logError('BuildWorkoutScreen.handleStartTraining', e, { userId: user?.id, exerciseCount: exercises.length });
+      Alert.alert('Couldn\'t start workout', e?.message ?? 'Please try again.');
     } finally {
       setStarting(false);
     }
   }
 
   async function handleSkip() {
-    const workout = await createWorkout(user.id);
-    startWorkout(workout, []);
-    navigation.replace('ActiveWorkout');
+    try {
+      const workout = await createWorkout(user.id);
+      startWorkout(workout, []);
+      navigation.replace('ActiveWorkout');
+    } catch (e) {
+      logError('BuildWorkoutScreen.handleSkip', e, { userId: user?.id });
+      Alert.alert('Couldn\'t start workout', e?.message ?? 'Please try again.');
+    }
   }
 
   async function applyTravelMode() {

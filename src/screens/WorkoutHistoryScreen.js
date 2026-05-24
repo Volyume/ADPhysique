@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, Alert,
+  View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,9 +10,13 @@ import {
   addMonths, subMonths, isSameDay,
 } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { getAllWorkouts, getAllWorkoutSets, getAllExercises, createWorkout, getWorkoutSetsForWorkout } from '../lib/database';
+import PressableCard from '../components/PressableCard';
+import { EmptyWorkoutsIllustration } from '../components/Illustrations';
+import { getAllWorkouts, getAllWorkoutSets, getAllExercises, createWorkout, getWorkoutSetsForWorkout, getRoutineExercisesWithDetails } from '../lib/database';
+import { logError } from '../lib/errorLog';
 import { calculateTonnage } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
+import { SkeletonRow } from '../components/Skeleton';
 import { useShallow } from 'zustand/react/shallow';
 
 const FILTERS = [
@@ -29,6 +33,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
   const { user, startWorkout } = useAppStore(useShallow(s => ({ user: s.user, startWorkout: s.startWorkout })));
   const [workouts, setWorkouts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [expandedSets, setExpandedSets] = useState({}); // workoutId -> grouped exercise data
 
@@ -78,9 +83,28 @@ export default function WorkoutHistoryScreen({ navigation }) {
   }
 
   async function handleRepeatAsIs(workout) {
-    const newWorkout = await createWorkout(user.id, workout.routineId || null);
-    startWorkout(newWorkout);
-    navigation.getParent()?.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
+    try {
+      const newWorkout = await createWorkout(user.id, workout.routineId || null);
+      // Repeat-as-is should open with the same exercises as the original
+      // session, not a blank workout. Pull them from the routine if linked;
+      // otherwise pull from the session's logged sets so the user still
+      // sees the exercises they actually did.
+      let initialExercises = [];
+      if (workout.routineId) {
+        const withExercises = await getRoutineExercisesWithDetails(workout.routineId);
+        initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
+          exercise, routineExercise, sets: [],
+          supersetGroupId: routineExercise?.supersetGroupId ?? null,
+        }));
+      }
+      startWorkout(newWorkout, initialExercises);
+      navigation.getParent()?.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
+    } catch (e) {
+      logError('WorkoutHistoryScreen.handleRepeatAsIs', e, {
+        userId: user?.id, workoutId: workout?.id, routineId: workout?.routineId,
+      });
+      Alert.alert('Couldn\'t repeat session', e?.message ?? 'Please try again.');
+    }
   }
 
   function handleRepeatWorkout(workout) {
@@ -130,8 +154,10 @@ export default function WorkoutHistoryScreen({ navigation }) {
       const grouped = order.map(id => {
         const g = groups[id];
         const workingSets = g.sets.filter(s => s.setType !== 'warmup');
-        // Build a concise set summary: weight × reps list for working sets
-        const repsStr = workingSets.map(s => s.reps).join(', ');
+        // Build a concise set summary: weight × reps list for working sets.
+        // Rows come back camelCased so the field is `actualReps`; the
+        // previous read of `s.reps` produced empty strings in every summary.
+        const repsStr = workingSets.map(s => s.actualReps ?? s.reps ?? '').filter(Boolean).join(', ');
         const weights = [...new Set(workingSets.map(s => s.weight).filter(Boolean))];
         const weightStr = weights.length === 1 ? `${weights[0]}kg` : weights.map(w => `${w}kg`).join('/');
         const summary = workingSets.length > 0
@@ -231,10 +257,10 @@ export default function WorkoutHistoryScreen({ navigation }) {
     return (
       <View style={styles.card}>
         {/* Tappable header row — toggles expansion */}
-        <TouchableOpacity
+        <PressableCard
           onPress={() => handleToggleExpand(workout.id)}
-          activeOpacity={0.7}
           style={styles.cardHeaderTouchable}
+          accessibilityLabel={`Workout on ${format(date, 'd MMM yyyy')}`}
         >
           <View style={styles.cardHeader}>
             <View style={styles.cardHeaderLeft}>
@@ -260,7 +286,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
           <Text style={styles.exerciseList} numberOfLines={isExpanded ? undefined : 2}>
             {exerciseNames.join(', ') || 'No exercises logged'}
           </Text>
-        </TouchableOpacity>
+        </PressableCard>
 
         {/* Expanded detail */}
         {isExpanded && (
@@ -527,16 +553,37 @@ export default function WorkoutHistoryScreen({ navigation }) {
         renderItem={renderItem}
         contentContainerStyle={styles.list}
         ListHeaderComponent={listHeader}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={async () => {
+              setRefreshing(true);
+              try { await loadWorkouts(); } finally { setRefreshing(false); }
+            }}
+            tintColor={colors.textMuted}
+            colors={[colors.primary]}
+          />
+        }
         ListEmptyComponent={
-          !loading ? (
+          loading ? (
+            // Skeleton rows instead of a blank screen while SQLite reads.
+            // Local reads are fast but the placeholder makes the load
+            // window feel instant even on a fresh database.
+            <View style={{ gap: spacing.md }}>
+              <SkeletonRow />
+              <SkeletonRow />
+              <SkeletonRow />
+              <SkeletonRow />
+            </View>
+          ) : (
             <View style={styles.empty}>
-              <Ionicons name="calendar-outline" size={48} color={colors.textMuted} />
+              <EmptyWorkoutsIllustration size={140} />
               <Text style={styles.emptyTitle}>No sessions logged yet</Text>
               <Text style={styles.emptyText}>
                 Completed workouts appear here. Each session is saved automatically when you finish.
               </Text>
             </View>
-          ) : null
+          )
         }
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
       />

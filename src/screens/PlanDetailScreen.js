@@ -9,14 +9,18 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import {
   getProgrammeById, getRoutinesForPlan, getAllRoutineExerciseCounts,
-  setActivePlan, activatePlanWithBlock, archivePlan, duplicatePlan, copyPlanFromLibrary,
+  activatePlanWithBlock, archivePlan, duplicatePlan, copyPlanFromLibrary,
   createWorkout, getRoutineExercisesWithDetails, getActivePlan,
 } from '../lib/database';
 import useAppStore from '../store/useAppStore';
+import { logError } from '../lib/errorLog';
+import { useToast } from '../components/Toast';
+import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 
 export default function PlanDetailScreen({ navigation, route }) {
   const { planId, isLibrary = false } = route.params || {};
-  const { user, startWorkout } = useAppStore();
+  const { user, startWorkout, tier } = useAppStore();
+  const toast = useToast();
   const [plan, setPlan] = useState(null);
   const [workouts, setWorkouts] = useState([]);
   const [exerciseCounts, setExerciseCounts] = useState({});
@@ -29,17 +33,21 @@ export default function PlanDetailScreen({ navigation, route }) {
 
   async function loadData() {
     if (!planId) return;
-    const [p, routines, counts, active] = await Promise.all([
-      getProgrammeById(planId),
-      getRoutinesForPlan(planId),
-      getAllRoutineExerciseCounts(),
-      getActivePlan(user.id),
-    ]);
-    setPlan(p);
-    setWorkouts(routines);
-    setExerciseCounts(counts);
-    setActivePlanData(active);
-    if (p) navigation.setOptions({ title: p.name || 'Plan' });
+    try {
+      const [p, routines, counts, active] = await Promise.all([
+        getProgrammeById(planId),
+        getRoutinesForPlan(planId),
+        getAllRoutineExerciseCounts(),
+        user?.id ? getActivePlan(user.id) : Promise.resolve(null),
+      ]);
+      setPlan(p);
+      setWorkouts(routines);
+      setExerciseCounts(counts);
+      setActivePlanData(active);
+      if (p) navigation.setOptions({ title: p.name || 'Plan' });
+    } catch (e) {
+      logError('PlanDetailScreen.loadData', e, { planId, userId: user?.id });
+    }
   }
 
   async function handleRefresh() {
@@ -67,6 +75,8 @@ export default function PlanDetailScreen({ navigation, route }) {
                   {
                     text: 'Set Active',
                     onPress: async () => {
+                      const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: plan?.name });
+                      if (!ok) { navigation.goBack(); return; }
                       await activatePlanWithBlock(user.id, copy.id, plan?.name ?? 'Training Plan');
                       navigation.goBack();
                     },
@@ -74,7 +84,7 @@ export default function PlanDetailScreen({ navigation, route }) {
                 ],
               );
             } catch (e) {
-              Alert.alert('Error', 'Could not copy plan. Please try again.');
+              toast.show('Could not copy plan. Try again.', { variant: 'error' });
             }
           },
         },
@@ -83,36 +93,32 @@ export default function PlanDetailScreen({ navigation, route }) {
   }
 
   async function handleSetActive() {
-    await activatePlanWithBlock(user.id, planId, plan?.name ?? 'Training Plan');
-    await loadData();
-    Alert.alert('Plan Activated', `"${plan?.name}" is now your active plan. Train will show the next workout.`);
-  }
-
-  async function handleDeactivate() {
-    Alert.alert(
-      'Deactivate Plan?',
-      'Train will show no plan until another is set active.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Deactivate',
-          onPress: async () => {
-            await setActivePlan(user.id, null);
-            await loadData();
-          },
-        },
-      ],
-    );
+    try {
+      const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: plan?.name });
+      if (!ok) return;
+      await activatePlanWithBlock(user.id, planId, plan?.name ?? 'Training Plan');
+      await loadData();
+      toast.show(`"${plan?.name}" is now your active plan`, { variant: 'success' });
+    } catch (e) {
+      logError('PlanDetailScreen.handleSetActive', e, { userId: user?.id, planId });
+      Alert.alert('Couldn\'t activate plan', e?.message ?? 'Please try again.');
+    }
   }
 
   async function handleStartWorkout(routine) {
-    const workout = await createWorkout(user.id, routine.id);
-    const withExercises = await getRoutineExercisesWithDetails(routine.id);
-    const initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
-      exercise, routineExercise, sets: [],
-    }));
-    startWorkout(workout, initialExercises);
-    navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
+    try {
+      const workout = await createWorkout(user.id, routine.id);
+      const withExercises = await getRoutineExercisesWithDetails(routine.id);
+      const initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
+        exercise, routineExercise, sets: [],
+        supersetGroupId: routineExercise?.supersetGroupId ?? null,
+      }));
+      startWorkout(workout, initialExercises);
+      navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
+    } catch (e) {
+      logError('PlanDetailScreen.handleStartWorkout', e, { userId: user?.id, routineId: routine?.id });
+      Alert.alert('Couldn\'t start workout', e?.message ?? 'Please try again.');
+    }
   }
 
   async function handleArchive() {
@@ -125,8 +131,13 @@ export default function PlanDetailScreen({ navigation, route }) {
           text: 'Archive',
           style: 'destructive',
           onPress: async () => {
-            await archivePlan(planId);
-            navigation.goBack();
+            try {
+              await archivePlan(planId);
+              navigation.goBack();
+            } catch (e) {
+              logError('PlanDetailScreen.handleArchive', e, { planId });
+              Alert.alert('Couldn\'t archive plan', e?.message ?? 'Please try again.');
+            }
           },
         },
       ],
@@ -134,8 +145,13 @@ export default function PlanDetailScreen({ navigation, route }) {
   }
 
   async function handleDuplicate() {
-    const copy = await duplicatePlan(planId, user.id);
-    navigation.replace('PlanDetail', { planId: copy.id, isLibrary: false });
+    try {
+      const copy = await duplicatePlan(planId, user.id);
+      navigation.replace('PlanDetail', { planId: copy.id, isLibrary: false });
+    } catch (e) {
+      logError('PlanDetailScreen.handleDuplicate', e, { userId: user?.id, planId });
+      Alert.alert('Couldn\'t duplicate plan', e?.message ?? 'Please try again.');
+    }
   }
 
   const isActive = activePlan?.id === planId;
@@ -204,16 +220,12 @@ export default function PlanDetailScreen({ navigation, route }) {
             <Ionicons name="copy-outline" size={20} color={colors.background} />
             <Text style={styles.primaryBtnText}>Add to my plans</Text>
           </TouchableOpacity>
-        ) : isActive ? (
-          <TouchableOpacity style={styles.deactivateBtn} onPress={handleDeactivate}>
-            <Text style={styles.deactivateBtnText}>Deactivate</Text>
-          </TouchableOpacity>
-        ) : (
+        ) : !isActive ? (
           <TouchableOpacity style={styles.primaryBtn} onPress={handleSetActive}>
             <Ionicons name="checkmark-circle" size={20} color={colors.background} />
             <Text style={styles.primaryBtnText}>Set active</Text>
           </TouchableOpacity>
-        )}
+        ) : null}
 
         {/* Workouts list */}
         <View style={styles.section}>
@@ -245,12 +257,14 @@ export default function PlanDetailScreen({ navigation, route }) {
                     <TouchableOpacity
                       style={styles.editWorkoutBtn}
                       onPress={() => navigation.navigate('RoutineDetail', { routineId: routine.id })}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                     >
                       <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.startWorkoutBtn}
                       onPress={() => handleStartWorkout(routine)}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                     >
                       <Ionicons name="play" size={13} color={colors.background} />
                     </TouchableOpacity>
@@ -261,8 +275,9 @@ export default function PlanDetailScreen({ navigation, route }) {
           )}
         </View>
 
-        {/* Manage actions (user plans only) */}
-        {!isLibrary && (
+        {/* Manage actions — free tier only. Pro users manage their plan
+            through the goal-change wizard in Athlete Hub. */}
+        {!isLibrary && tier !== 'pro' && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Manage</Text>
             <View style={styles.manageCard}>
@@ -271,11 +286,13 @@ export default function PlanDetailScreen({ navigation, route }) {
                 <Text style={styles.manageRowText}>Duplicate Plan</Text>
                 <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.manageRow, styles.manageRowLast]} onPress={handleArchive}>
-                <Ionicons name="archive-outline" size={18} color={colors.error} />
-                <Text style={[styles.manageRowText, { color: colors.error }]}>Archive Plan</Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-              </TouchableOpacity>
+              {!isActive && (
+                <TouchableOpacity style={[styles.manageRow, styles.manageRowLast]} onPress={handleArchive}>
+                  <Ionicons name="archive-outline" size={18} color={colors.error} />
+                  <Text style={[styles.manageRowText, { color: colors.error }]}>Archive Plan</Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         )}
@@ -316,11 +333,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm, backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: spacing.lg,
   },
   primaryBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
-  deactivateBtn: {
-    alignItems: 'center', borderRadius: radius.lg, paddingVertical: spacing.md,
-    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border,
-  },
-  deactivateBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.textSecondary },
   section: { gap: spacing.md },
   sectionTitle: {
     fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary, letterSpacing: 0.2,

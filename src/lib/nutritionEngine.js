@@ -141,11 +141,14 @@ export function computeEWMA(weightData, alpha = EWMA_ALPHA) {
 // Compute weekly weight change rate from EWMA-smoothed data.
 // ewmaData: output of computeEWMA, sorted oldest-first.
 // Returns kg/week (positive = gaining, negative = losing).
+//
+// Requires at least 8 points so the window between recent (index -1) and
+// older (index -8) spans a full 7 days. With only 7 points the gap is 6
+// days and the rate would read ~17% optimistic.
 export function computeWeeklyWeightChange(ewmaData) {
-  if (!ewmaData || ewmaData.length < 7) return null;
+  if (!ewmaData || ewmaData.length < 8) return null;
   const recent = ewmaData[ewmaData.length - 1].ewma;
-  // Use point 7 days back, or oldest available
-  const older = ewmaData[Math.max(0, ewmaData.length - 8)].ewma;
+  const older = ewmaData[ewmaData.length - 8].ewma;
   return parseFloat((recent - older).toFixed(3));
 }
 
@@ -255,7 +258,17 @@ function calcConfidence(bodyFatSource) {
 
 // Returns { proteinG, basis, proteinRateUsed } where basis is 'lbm' or 'bodyweight'.
 function calcProtein(goal, weightKg, lbm, bodyFatSource, proteinApproach = 'optimised', customGPerKg = null) {
-  const approach = PROTEIN_APPROACHES[proteinApproach] ?? PROTEIN_APPROACHES.optimised;
+  // The 'custom' entry only carries metadata (label, floor); its lbm/bw
+  // tables are null because the rate comes from the user. If 'custom' is
+  // selected without a value, fall back to 'optimised' so the bw/lbm
+  // lookup below has tables to read. Without this fallback, the next
+  // line dereferences null and Hermes throws "Cannot convert null value
+  // to object".
+  const effectiveApproach =
+    proteinApproach === 'custom' && !(customGPerKg != null && customGPerKg > 0)
+      ? 'optimised'
+      : proteinApproach;
+  const approach = PROTEIN_APPROACHES[effectiveApproach] ?? PROTEIN_APPROACHES.optimised;
   const floorG = approach.floor * weightKg;
 
   // Custom override — apply rate directly to bodyweight (coaches typically specify g/kg BW).
@@ -299,12 +312,15 @@ function estimateWeeklyRate(targetKcal, maintenanceKcal, weightKg) {
 // Main export: calculateNutritionTargets
 // ---------------------------------------------------------------------------
 
-// Physique competitor and strength goals warrant the advanced protein approach
-// because coaches prescribe 2.4 g/kg BW for bulking phases in these categories.
+// Physique competitor categories warrant the advanced protein approach
+// because coaches prescribe 2.4 g/kg BW for bulking phases in these
+// categories. 'strength_hypertrophy' used to live here too, but that
+// concept moved to TRAINING_PHASES.strength_size — a phase emphasis,
+// not a physique. Strength-size users on general physique get the
+// standard 2.0 g/kg protein target, which is fine for them.
 export const ADVANCED_PROTEIN_GOALS = [
   'mens_physique', 'classic_physique', 'bodybuilding',
   'bikini', 'wellness', 'figure', 'womens_physique',
-  'strength_hypertrophy',
 ];
 
 // Experience-based surplus multipliers. Beginners utilise larger surpluses efficiently;

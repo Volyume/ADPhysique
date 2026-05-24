@@ -6,7 +6,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import ExerciseCard from '../components/ExerciseCard';
+import PeekMenu from '../components/PeekMenu';
 import { getAllExercises, getCompletedWorkoutSets, insertExercise, deleteExercise } from '../lib/database';
+import { logError } from '../lib/errorLog';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -31,6 +33,7 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
   const [showFilters, setShowFilters] = useState(false);
   const [recentSets, setRecentSets] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
+  const peekRef = useRef(null);
 
   // Create exercise form state
   const [newName, setNewName] = useState('');
@@ -60,11 +63,15 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
   }, []);
 
   async function loadExercises() {
-    const all = await getAllExercises();
-    setExercises(all);
-    if (user?.id) {
-      const sets = await getCompletedWorkoutSets(user.id);
-      setRecentSets(sets);
+    try {
+      const all = await getAllExercises();
+      setExercises(all);
+      if (user?.id) {
+        const sets = await getCompletedWorkoutSets(user.id);
+        setRecentSets(sets);
+      }
+    } catch (e) {
+      logError('ExerciseLibraryScreen.loadExercises', e, { userId: user?.id });
     }
   }
 
@@ -126,25 +133,36 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
 
   function handleLongPressExercise(item) {
     if (!item.isCustom) return;
-    Alert.alert(
-      `Delete '${item.name}'?`,
-      'This will remove it from your library. Sets already logged will be kept.',
-      [
-        { text: 'Cancel', style: 'cancel' },
+    peekRef.current?.open({
+      title: item.name,
+      subtitle: 'Custom exercise',
+      items: [
         {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteExercise(item.id);
-              await loadExercises();
-            } catch (_e) {
-              Alert.alert('Error', 'Could not delete exercise. Please try again.');
-            }
-          },
+          icon: 'trash-outline',
+          label: 'Delete',
+          destructive: true,
+          onPress: () => Alert.alert(
+            `Delete '${item.name}'?`,
+            'This will remove it from your library. Sets already logged will be kept.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: async () => {
+                  try {
+                    await deleteExercise(item.id);
+                    await loadExercises();
+                  } catch (_e) {
+                    Alert.alert('Error', 'Could not delete exercise. Please try again.');
+                  }
+                },
+              },
+            ],
+          ),
         },
       ],
-    );
+    });
   }
 
   const filtered = useMemo(() => {
@@ -453,6 +471,7 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
           </View>
         </View>
       </Modal>
+      <PeekMenu ref={peekRef} />
     </SafeAreaView>
   );
 }

@@ -261,9 +261,18 @@ export async function getBlockAdvice(userId, activeBlock, userProfile) {
 
   // ── Active block — check for early deload triggers ────────────────────────
 
-  // Strong deload trigger: ≥2 high signals OR sustained fatigue
+  // Masters lifters (age ≥40) recover more slowly from accumulated training
+  // stress (Sullivan & Baker; Rippetoe; Hayes et al. 2023 — older adults show
+  // longer strength-recovery timelines and lower productive-volume ceilings).
+  // Drop the deload trigger from 2 high signals to 1, and the heads-up from
+  // 2 medium signals to 1, so the same recovery state surfaces a week earlier.
+  const isMasters = (userProfile?.age ?? 0) >= 40;
+  const deloadHighThreshold  = isMasters ? 1 : 2;
+  const headsUpMediumThreshold = isMasters ? 1 : 2;
+
+  // Strong deload trigger: enough high signals OR sustained fatigue
   const hasSustainedFatigue = signals.some(s => s.type === 'sustained_fatigue');
-  if (highSignals.length >= 2 || hasSustainedFatigue) {
+  if (highSignals.length >= deloadHighThreshold || hasSustainedFatigue) {
     const nextBlock = buildNextBlockRecommendation(checkins, userProfile, signals);
     return {
       action: 'early_deload',
@@ -276,7 +285,7 @@ export async function getBlockAdvice(userId, activeBlock, userProfile) {
   }
 
   // Moderate: heads-up, signals building
-  if (highSignals.length === 1 || mediumSignals.length >= 2) {
+  if (highSignals.length >= 1 || mediumSignals.length >= headsUpMediumThreshold) {
     return {
       action: 'heads_up',
       headline: 'Keep an eye on recovery',

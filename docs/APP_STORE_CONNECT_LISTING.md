@@ -374,5 +374,5 @@ Before submitting for review, confirm each item:
 - [ ] Support URL confirmed live: https://volyume.app/support
 - [ ] Marketing URL confirmed live: https://volyume.app
 - [ ] Privacy Policy URL confirmed live: https://volyume.app/privacy
-- [ ] Build uploaded via Xcode or `eas submit --platform ios`
+- [ ] Build archived in Xcode and uploaded via Organizer → Distribute App (no iOS CI workflow exists yet; the Android-only GitHub Actions build does not produce an `.ipa`)
 - [ ] TestFlight internal testing confirmed before external submission

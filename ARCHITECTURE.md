@@ -4,6 +4,30 @@
 >
 > This document is self-contained. It describes the entire Volyume React Native app so that an AI assistant can understand the full architecture, data model, business logic, and screen inventory without seeing any source code. It supersedes v1.1.0.
 
+> **⚠ Updates since 2026-05-21 (beta polish pass) — see `INFRASTRUCTURE.md` for the live state.**
+>
+> Key changes not yet reflected in the sections below:
+> - `CoachBuilderScreen` (the 8-step plan-builder wizard) has been
+>   deleted. Pro users now run the 4-step `ProOnboardingScreen` via the
+>   Pro upgrade success CTA. Free users build via Plan Library or
+>   Manual Builder.
+> - `OnboardingQuizScreen` (template recommender) has been deleted.
+> - `FirstRunScreen` branch mode (Pro path-picker UI) has been deleted.
+>   Free users see name + units only.
+> - Pro upgrade now triggers `resetFirstRun()` which re-mounts
+>   `ProOnboardingStack` so the user goes through profile + training +
+>   recovery + plan/nutrition generation.
+> - Section 12 ("Plan Generation — CoachBuilder / planEngine") is
+>   stale w.r.t. the CoachBuilder entry point but the planEngine
+>   internals and goal-merge model are current.
+> - Six Pro sync tables (programmes, morning_weights, coach_outputs,
+>   user_body_profile, exercise_user_notes, weekly_checkins_v2) had
+>   missing RLS policies — fixed in `supabase/migrate_007_pro_rls_hardening.sql`.
+> - `delete_user_data` RPC was wiping only 11 of 20 user-keyed tables —
+>   fixed in `supabase/migrate_006_delete_rpc_v2.sql` (was causing
+>   `auth.admin.deleteUser` to fail with FK violation).
+> - Tier-lockdown trigger now covers `INSERT` as well as `UPDATE`.
+
 ---
 
 ## Table of Contents

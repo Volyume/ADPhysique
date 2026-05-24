@@ -6,56 +6,39 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { VolyumeMark } from '../components/BrandMark';
+import { VolyumeIcon } from '../components/BrandMark';
 import useAppStore from '../store/useAppStore';
 import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
-
-const WEEK_STEPS = [
-  {
-    icon: 'scale-outline',
-    title: 'Log your weight each morning',
-    body: 'Before food, after the bathroom. One number, 3 seconds. Your progress is tracked in the background.',
-  },
-  {
-    icon: 'barbell-outline',
-    title: 'Train your sessions',
-    body: 'Your plan is ready to go. Just open Train, start a session, and log each set as you go.',
-  },
-  {
-    icon: 'calendar-outline',
-    title: 'Check in once a week',
-    body: "At the end of your training week, review how it went. We'll adjust your plan based on how your body responded.",
-  },
-];
+import { getActivePlan, getRoutinesForPlan } from '../lib/database';
 
 export default function ProSetupCompleteScreen({ navigation }) {
-  const { userProfile, completeFirstRun, tier } = useAppStore();
+  const { user, userProfile, completeFirstRun } = useAppStore();
+  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   const firstName = userProfile?.firstName || 'there';
 
   const [nutritionSummary, setNutritionSummary] = useState(null);
+  const [planRoutines, setPlanRoutines] = useState([]);
+  const [planName, setPlanName] = useState(null);
+  const [planOpen, setPlanOpen] = useState(false);
 
-  const opacity = useRef(new Animated.Value(0)).current;
-  const slideY  = useRef(new Animated.Value(20)).current;
-  const checkScale = useRef(new Animated.Value(0)).current;
+  const opacity    = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+  const slideY     = useRef(new Animated.Value(reduceMotion ? 0 : 20)).current;
+  const checkScale = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
 
   useEffect(() => {
+    if (reduceMotion) return;
     Animated.sequence([
       Animated.spring(checkScale, {
-        toValue: 1,
-        tension: 60,
-        friction: 6,
-        useNativeDriver: true,
+        toValue: 1, tension: 60, friction: 6, useNativeDriver: true,
       }),
       Animated.parallel([
         Animated.timing(opacity, {
           toValue: 1, duration: 380,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
+          easing: Easing.out(Easing.cubic), useNativeDriver: true,
         }),
         Animated.timing(slideY, {
           toValue: 0, duration: 380,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
+          easing: Easing.out(Easing.cubic), useNativeDriver: true,
         }),
       ]),
     ]).start();
@@ -72,20 +55,31 @@ export default function ProSetupCompleteScreen({ navigation }) {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (!user?.id) return;
+    (async () => {
+      try {
+        const active = await getActivePlan(user.id);
+        if (active) {
+          setPlanName(active.name);
+          const routines = await getRoutinesForPlan(active.id);
+          setPlanRoutines(routines || []);
+        }
+      } catch (_) {}
+    })();
+  }, [user?.id]);
+
   async function handleStart() {
     await completeFirstRun();
-    // Navigation resolves automatically — RootNavigator re-renders on firstRunComplete
   }
 
   const goalLabel = GOAL_LABELS[userProfile?.trainingGoal] ?? 'Build Muscle';
   const phaseLabel = PHASE_LABELS[userProfile?.trainingPhase] ?? null;
-  const daysPerWeek = userProfile?.daysPerWeek ?? null;
+  const hasPlan = planRoutines.length > 0;
 
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-
-        {/* Check mark animation */}
         <Animated.View style={[styles.checkWrap, { transform: [{ scale: checkScale }] }]}>
           <View style={styles.checkCircle}>
             <Ionicons name="checkmark" size={40} color={colors.background} />
@@ -94,91 +88,172 @@ export default function ProSetupCompleteScreen({ navigation }) {
 
         <Animated.View style={[styles.mainBlock, { opacity, transform: [{ translateY: slideY }] }]}>
           <View style={styles.brandRow}>
-            <VolyumeMark size={20} color={colors.textPrimary} accent={colors.primary} />
-            {tier === 'pro' && (
-              <View style={styles.proBadge}>
-                <Text style={styles.proBadgeText}>PRO</Text>
-              </View>
-            )}
-          </View>
-
-          <Text style={styles.headline}>You're all set, {firstName}.</Text>
-          <Text style={styles.sub}>
-            {tier === 'pro'
-              ? 'Your Precision Coaching is ready. Your plan and targets are set. Here\'s the routine that keeps it working:'
-              : 'Your plan and targets are set. Here\'s the routine that keeps it working:'}
-          </Text>
-
-          {/* Setup summary card */}
-          <View style={styles.setupSummaryCard}>
-            <Text style={styles.setupSummaryTitle}>Your setup</Text>
-            <View style={styles.summaryGrid}>
-              {daysPerWeek && (
-                <View style={styles.summaryItem}>
-                  <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.summaryItemLabel}>Training days</Text>
-                    <Text style={styles.summaryItemValue}>{daysPerWeek} days / week</Text>
-                  </View>
-                </View>
-              )}
-              <View style={styles.summaryItem}>
-                <Ionicons name="trophy-outline" size={14} color={colors.textMuted} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.summaryItemLabel}>Goal</Text>
-                  <Text style={styles.summaryItemValue}>{goalLabel}</Text>
-                </View>
-              </View>
-              {phaseLabel && (
-                <View style={styles.summaryItem}>
-                  <Ionicons name="layers-outline" size={14} color={colors.textMuted} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.summaryItemLabel}>Phase</Text>
-                    <Text style={styles.summaryItemValue}>{phaseLabel}</Text>
-                  </View>
-                </View>
-              )}
-              {nutritionSummary?.targetKcal && (
-                <View style={styles.summaryItem}>
-                  <Ionicons name="flame-outline" size={14} color={colors.textMuted} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.summaryItemLabel}>Daily calories</Text>
-                    <Text style={styles.summaryItemValue}>{nutritionSummary.targetKcal} kcal</Text>
-                  </View>
-                </View>
-              )}
-              {nutritionSummary?.proteinG && (
-                <View style={styles.summaryItem}>
-                  <Ionicons name="fish-outline" size={14} color={colors.textMuted} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.summaryItemLabel}>Protein target</Text>
-                    <Text style={styles.summaryItemValue}>{nutritionSummary.proteinG}g / day</Text>
-                  </View>
-                </View>
-              )}
+            <VolyumeIcon size={20} />
+            <View style={styles.proBadge}>
+              <Text style={styles.proBadgeText}>PRO</Text>
             </View>
           </View>
 
-          <View style={styles.weekCard}>
-            <Text style={styles.weekCardTitle}>Your weekly rhythm</Text>
-            {WEEK_STEPS.map((item, i) => (
-              <View key={i} style={[styles.weekStep, i < WEEK_STEPS.length - 1 && styles.weekStepBorder]}>
-                <View style={styles.weekIconWrap}>
-                  <Ionicons name={item.icon} size={18} color={colors.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.weekStepTitle}>{item.title}</Text>
-                  <Text style={styles.weekStepBody}>{item.body}</Text>
-                </View>
+          <Text style={styles.headline}>You're all set, {firstName}.</Text>
+          <Text style={styles.sub}>Here's your daily routine.</Text>
+
+          {/* 1. Log your weight — first thing each morning */}
+          <View style={styles.routineCard}>
+            <View style={styles.routineHeader}>
+              <View style={styles.routineIconWrap}>
+                <Ionicons name="scale-outline" size={18} color={colors.primary} />
               </View>
-            ))}
+              <View style={{ flex: 1 }}>
+                <Text style={styles.routineTitle}>1 · Log your weight</Text>
+                <Text style={styles.routineBody}>
+                  Every morning before food, after the bathroom. Three seconds. Tracks your progress in the background.
+                </Text>
+              </View>
+            </View>
           </View>
 
-          <View style={styles.tipsCard}>
-            <Ionicons name="bulb-outline" size={15} color={colors.primary} />
-            <Text style={styles.tipsText}>
-              The more consistently you log, the more precisely we can coach you. Even a single workout a week is enough to start seeing your data work for you.
+          {/* 2. Hit your calorie + macro targets */}
+          {nutritionSummary?.targetKcal ? (
+            <View style={styles.routineCard}>
+              <View style={styles.routineHeader}>
+                <View style={styles.routineIconWrap}>
+                  <Ionicons name="flame-outline" size={18} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.routineTitle}>2 · Hit your daily targets</Text>
+                </View>
+              </View>
+              <View style={styles.calorieRow}>
+                <Text style={styles.calorieNum}>{nutritionSummary.targetKcal}</Text>
+                <Text style={styles.calorieUnit}>kcal / day</Text>
+              </View>
+              <View style={styles.macroRow}>
+                {nutritionSummary.proteinG ? (
+                  <View style={styles.macroItem}>
+                    <Text style={styles.macroValue}>{nutritionSummary.proteinG}g</Text>
+                    <Text style={styles.macroLabel}>Protein</Text>
+                  </View>
+                ) : null}
+                {nutritionSummary.carbsG ? (
+                  <View style={[styles.macroItem, styles.macroItemBorder]}>
+                    <Text style={styles.macroValue}>{nutritionSummary.carbsG}g</Text>
+                    <Text style={styles.macroLabel}>Carbs</Text>
+                  </View>
+                ) : null}
+                {nutritionSummary.fatG ? (
+                  <View style={[styles.macroItem, styles.macroItemBorder]}>
+                    <Text style={styles.macroValue}>{nutritionSummary.fatG}g</Text>
+                    <Text style={styles.macroLabel}>Fat</Text>
+                  </View>
+                ) : null}
+              </View>
+              <View style={styles.goalRow}>
+                <View style={styles.goalChip}>
+                  <Ionicons name="trophy-outline" size={11} color={colors.primary} />
+                  <Text style={styles.goalChipText}>{goalLabel}</Text>
+                </View>
+                {phaseLabel ? (
+                  <View style={styles.goalChip}>
+                    <Ionicons name="layers-outline" size={11} color={colors.textMuted} />
+                    <Text style={[styles.goalChipText, { color: colors.textMuted }]}>{phaseLabel}</Text>
+                  </View>
+                ) : null}
+              </View>
+              {/* First-time nutrition primer pointer. Most users seeing
+                  these numbers for the first time have never tracked
+                  macros, so this gives them a 5-min ramp before they need
+                  to actually use them. */}
+              <TouchableOpacity
+                style={styles.eduLearnRow}
+                onPress={() => navigation.navigate('NutritionEducation')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="book-outline" size={14} color={colors.primary} />
+                <Text style={styles.eduLearnText}>
+                  New to calories and macros? 5-minute guide
+                </Text>
+                <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
+          {/* 3. Training split — collapsible */}
+          <TouchableOpacity
+            style={[styles.routineCard, planOpen && styles.routineCardOpen]}
+            onPress={() => setPlanOpen(v => !v)}
+            activeOpacity={0.85}
+          >
+            <View style={styles.routineHeader}>
+              <View style={styles.routineIconWrap}>
+                <Ionicons name="barbell-outline" size={18} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.routineTitle}>3 · Train your split</Text>
+                {hasPlan ? (
+                  <Text style={styles.routineBody}>
+                    {planName ?? 'Your plan'} · {planRoutines.length} workout{planRoutines.length !== 1 ? 's' : ''} per week
+                  </Text>
+                ) : (
+                  <Text style={styles.routineBody}>
+                    Open Plans to build or pick a routine, then start a session from Train.
+                  </Text>
+                )}
+              </View>
+              {hasPlan && (
+                <Ionicons
+                  name={planOpen ? 'chevron-up' : 'chevron-down'}
+                  size={18}
+                  color={colors.textMuted}
+                />
+              )}
+            </View>
+            {hasPlan && planOpen && (
+              <View style={styles.splitList}>
+                {planRoutines.map((r, i) => (
+                  <View key={r.id} style={[styles.splitRow, i < planRoutines.length - 1 && styles.splitRowBorder]}>
+                    <View style={styles.splitBadge}>
+                      <Text style={styles.splitBadgeText}>{i + 1}</Text>
+                    </View>
+                    <Text style={styles.splitName}>{r.name}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* 4. Check in once a week */}
+          <View style={styles.routineCard}>
+            <View style={styles.routineHeader}>
+              <View style={styles.routineIconWrap}>
+                <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.routineTitle}>4 · Check in once a week</Text>
+                <Text style={styles.routineBody}>
+                  End of your training week, two minutes to review how it went. Precision Coaching adjusts your calories from your check-in data, automatically, with a written rationale.
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Founder note — appears once at the end of Pro setup. Per the
+              competitive-landscape research, visible founder attention is
+              one of the cheapest credibility signals in this category
+              (Gravitus, RepCount both get praised for it). Sits above the
+              Start button so it's the last thing the user reads before
+              entering the app. */}
+          <View style={styles.founderCard}>
+            <Text style={styles.founderLabel}>A NOTE FROM ALLAN</Text>
+            <Text style={styles.founderBody}>
+              I used a paper log book for years. It worked but it was slow, and it was hard to see real progress without flipping through pages.
             </Text>
+            <Text style={styles.founderBody}>
+              I tried other apps too. None of them quite fit how I wanted to train. And a good coach can be brilliant, but it's not always an option for everyone. It can be expensive, hard to find, or just not the right fit at the time.
+            </Text>
+            <Text style={styles.founderBody}>
+              I wanted something simple that helps you know what to do, see your progress, and keep getting better. So I built it for me. I hope it works for you too.
+            </Text>
+            <Text style={styles.founderSig}>Allan</Text>
           </View>
         </Animated.View>
 
@@ -197,120 +272,112 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   scroll: { flexGrow: 1, padding: spacing.xl, paddingBottom: spacing.xxxl },
 
-  checkWrap: {
-    alignSelf: 'center',
-    marginTop: spacing.xl,
-    marginBottom: spacing.xl,
-  },
+  checkWrap: { alignSelf: 'center', marginTop: spacing.xl, marginBottom: spacing.xl },
   checkCircle: {
     width: 80, height: 80, borderRadius: 40,
     backgroundColor: colors.primary,
     alignItems: 'center', justifyContent: 'center',
-    shadowColor: colors.primary,
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 12,
+    shadowColor: colors.primary, shadowOpacity: 0.4,
+    shadowRadius: 20, shadowOffset: { width: 0, height: 6 }, elevation: 12,
   },
 
-  mainBlock: { flex: 1, marginBottom: spacing.xl },
+  mainBlock: { flex: 1 },
 
   brandRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    marginBottom: spacing.lg,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.lg,
   },
   proBadge: {
-    backgroundColor: colors.primary, borderRadius: 4,
-    paddingHorizontal: 7, paddingVertical: 2,
+    backgroundColor: colors.primary, borderRadius: 4, paddingHorizontal: 7, paddingVertical: 2,
   },
-  proBadgeText: {
-    fontSize: 9, fontWeight: fontWeight.black,
-    color: colors.background, letterSpacing: 0.8,
-  },
+  proBadgeText: { fontSize: 9, fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.8 },
 
   headline: {
     fontSize: fontSize.xxxl, fontWeight: fontWeight.bold,
-    color: colors.textPrimary, marginBottom: spacing.md,
-    lineHeight: 38,
+    color: colors.textPrimary, marginBottom: spacing.sm, lineHeight: 38,
   },
   sub: {
-    fontSize: fontSize.md, color: colors.textSecondary,
-    lineHeight: 23, marginBottom: spacing.xl,
+    fontSize: fontSize.md, color: colors.textSecondary, lineHeight: 23, marginBottom: spacing.xl,
   },
 
-  // Setup summary card
-  setupSummaryCard: {
+  routineCard: {
     backgroundColor: colors.surface, borderRadius: radius.xl,
-    borderWidth: 1.5, borderColor: colors.primary + '40',
+    borderWidth: 1, borderColor: colors.border,
     padding: spacing.lg, marginBottom: spacing.md,
-    gap: spacing.md,
   },
-  setupSummaryTitle: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
-    color: colors.textMuted, letterSpacing: 0.3,
-  },
-  summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  summaryItem: {
-    flexDirection: 'row', alignItems: 'flex-start',
-    gap: spacing.xs, width: '47%',
-  },
-  summaryItemLabel: { fontSize: fontSize.xs, color: colors.textMuted },
-  summaryItemValue: {
-    fontSize: fontSize.sm, fontWeight: fontWeight.semibold,
-    color: colors.textPrimary,
-  },
-
-  weekCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.xl,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    marginBottom: spacing.md,
-    overflow: 'hidden',
-  },
-  weekCardTitle: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
-    color: colors.textMuted, letterSpacing: 0.3,
-    padding: spacing.lg, paddingBottom: spacing.md,
-  },
-  weekStep: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-  },
-  weekStepBorder: {
-    borderBottomWidth: 1, borderBottomColor: colors.border,
-  },
-  weekIconWrap: {
-    width: 36, height: 36, borderRadius: radius.md,
-    backgroundColor: colors.primaryBg,
+  routineCardOpen: { borderColor: colors.primary + '50' },
+  routineHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  routineIconWrap: {
+    width: 36, height: 36, borderRadius: radius.md, backgroundColor: colors.primaryBg,
     alignItems: 'center', justifyContent: 'center',
   },
-  weekStepTitle: {
-    fontSize: fontSize.sm, fontWeight: fontWeight.semibold,
-    color: colors.textPrimary, marginBottom: 3,
-  },
-  weekStepBody: {
-    fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17,
-  },
+  routineTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: 4 },
+  routineBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
 
-  tipsCard: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
-    backgroundColor: colors.primaryBg,
-    borderRadius: radius.md, borderWidth: 1, borderColor: colors.primary + '30',
-    padding: spacing.md,
-    marginBottom: spacing.lg,
+  calorieRow: {
+    flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm,
+    marginTop: spacing.md, marginBottom: spacing.md,
   },
-  tipsText: {
-    fontSize: fontSize.xs, color: colors.textSecondary, flex: 1, lineHeight: 18,
+  calorieNum: { fontSize: 38, fontWeight: fontWeight.black, color: colors.textPrimary, lineHeight: 42 },
+  calorieUnit: { fontSize: fontSize.sm, color: colors.textMuted },
+  macroRow: {
+    flexDirection: 'row', borderTopWidth: 1, borderTopColor: colors.border,
+    paddingTop: spacing.md, marginBottom: spacing.md,
+  },
+  macroItem: { flex: 1, alignItems: 'center', gap: 2 },
+  macroItemBorder: { borderLeftWidth: 1, borderLeftColor: colors.border },
+  macroValue: { fontSize: fontSize.lg, fontWeight: fontWeight.black, color: colors.textPrimary },
+  macroLabel: { fontSize: fontSize.xs, color: colors.textMuted },
+  goalRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
+  goalChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: colors.primaryBg, borderRadius: radius.full,
+    paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
+    borderWidth: 1, borderColor: colors.primary + '30',
+  },
+  goalChipText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
+  eduLearnRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
+  eduLearnText: { color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.medium, flex: 1 },
+
+  splitList: { marginTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm },
+  splitRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
+  splitRowBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
+  splitBadge: {
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: colors.border,
+  },
+  splitBadgeText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textSecondary },
+  splitName: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary, flex: 1 },
+
+  // Founder note card — sits at the bottom of Pro setup. Distinct visual
+  // language from the routine cards above so it reads as personal rather
+  // than UI: no icon header, subdued background, accent-coloured signature.
+  founderCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg, padding: spacing.lg,
+    borderWidth: 1, borderColor: colors.border,
+    marginTop: spacing.md,
+    gap: spacing.sm,
+  },
+  founderLabel: {
+    fontSize: 10, fontWeight: fontWeight.black,
+    color: colors.textMuted, letterSpacing: 1.5,
+    marginBottom: spacing.xs,
+  },
+  founderBody: {
+    fontSize: fontSize.sm, color: colors.textSecondary,
+    lineHeight: 21,
+  },
+  founderSig: {
+    fontSize: fontSize.md, fontWeight: fontWeight.bold,
+    color: colors.primary, marginTop: spacing.xs,
   },
 
   startBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.sm, backgroundColor: colors.primary,
     borderRadius: radius.lg, paddingVertical: spacing.lg + 2,
+    marginTop: spacing.md,
   },
-  startBtnText: {
-    fontSize: fontSize.lg, fontWeight: fontWeight.bold,
-    color: colors.background,
-  },
+  startBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.background },
 });

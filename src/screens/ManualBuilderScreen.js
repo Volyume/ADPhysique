@@ -13,6 +13,7 @@ import {
 } from '../lib/database';
 import { MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
+import { useToast } from '../components/Toast';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -24,7 +25,6 @@ const GOALS = [
   { key: 'recomp',      label: 'Lose Fat, Keep Muscle' },
 ];
 
-const DAYS_OPTIONS = [3, 4, 5, 6];
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -343,12 +343,13 @@ function PlanBalanceCard({ days }) {
 
 export default function ManualBuilderScreen({ navigation }) {
   const { user } = useAppStore();
+  const toast = useToast();
 
   // Page 1 state
   const [page, setPage]               = useState(1);
   const [planName, setPlanName]       = useState('');
   const [selectedGoal, setGoal]       = useState('hypertrophy');
-  const [daysPerWeek, setDays]        = useState(4);
+  const daysPerWeek                   = 4;
   const [creating, setCreating]       = useState(false);
 
   // Page 2 state
@@ -366,10 +367,15 @@ export default function ManualBuilderScreen({ navigation }) {
       Alert.alert('Plan name required', 'Please enter a name for your plan.');
       return;
     }
+    if (!user?.id) {
+      Alert.alert('One moment', 'Setting up your profile. Please try again in a second.');
+      return;
+    }
     setCreating(true);
     try {
       const goalLabel = GOALS.find(g => g.key === selectedGoal)?.label ?? selectedGoal;
       const prog = await createProgramme(user.id, planName.trim(), goalLabel, 0);
+      if (!prog?.id) throw new Error('Could not create plan.');
       setProgrammeId(prog.id);
       setEditableName(planName.trim());
       setDayList(
@@ -418,17 +424,35 @@ export default function ManualBuilderScreen({ navigation }) {
   }
 
   function handleLongPressExercise(dayIndex, exLocalId, exName) {
-    Alert.alert('Remove Exercise', `Remove "${exName}" from this day?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove', style: 'destructive',
-        onPress: () =>
+    // Undo pattern: remove immediately + toast with Undo for 8 seconds.
+    // No "Are you sure?" Alert — the safety net is the Undo button.
+    // Captures the removed exercise so Undo can put it back at its
+    // original index, not the end.
+    let removed = null;
+    let removedIndex = -1;
+    setDayList(prev => prev.map((d, i) => {
+      if (i !== dayIndex) return d;
+      const idx = d.exercises.findIndex(e => e.localId === exLocalId);
+      if (idx === -1) return d;
+      removed = d.exercises[idx];
+      removedIndex = idx;
+      return { ...d, exercises: d.exercises.filter(e => e.localId !== exLocalId) };
+    }));
+    if (!removed) return;
+    toast.show(`Removed ${exName}`, {
+      variant: 'undo',
+      action: {
+        label: 'Undo',
+        onPress: () => {
           setDayList(prev => prev.map((d, i) => {
             if (i !== dayIndex) return d;
-            return { ...d, exercises: d.exercises.filter(e => e.localId !== exLocalId) };
-          })),
+            const next = d.exercises.slice();
+            next.splice(removedIndex, 0, removed);
+            return { ...d, exercises: next };
+          }));
+        },
       },
-    ]);
+    });
   }
 
   function handleAddDay() {
@@ -554,24 +578,6 @@ export default function ManualBuilderScreen({ navigation }) {
                   >
                     <Text style={[styles.pillText, selectedGoal === g.key && styles.pillTextActive]}>
                       {g.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Days per week */}
-            <View style={styles.section}>
-              <Text style={styles.label}>Days per week</Text>
-              <View style={styles.pillRow}>
-                {DAYS_OPTIONS.map(d => (
-                  <TouchableOpacity
-                    key={d}
-                    style={[styles.dayPill, daysPerWeek === d && styles.pillActive]}
-                    onPress={() => setDays(d)}
-                  >
-                    <Text style={[styles.pillText, daysPerWeek === d && styles.pillTextActive]}>
-                      {d}
                     </Text>
                   </TouchableOpacity>
                 ))}

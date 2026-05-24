@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,18 +9,22 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { format, differenceInDays } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius, shadow } from '../styles/theme';
-import { VolyumeMark } from '../components/BrandMark';
+import ScreenHeader from '../components/ScreenHeader';
+import GradientCard from '../components/GradientCard';
+import PressableCard from '../components/PressableCard';
 import InfoTooltip from '../components/InfoTooltip';
 import { ProBadge } from '../components/ProGate';
+import { SkeletonCard } from '../components/Skeleton';
 import useAppStore from '../store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { formatBodyWeightShort } from '../lib/units';
 import {
   getAllWorkouts, getCompletedWorkoutSets, getBodyMetricLog, getNutritionTargets,
   getRecentAdaptationEvents, getAllExercises,
   getLatestCheckin, getMorningWeightsLast14Days, getRecentCheckins,
+  getLastTrainedPerMuscle, getLatestBodyWeight,
 } from '../lib/database';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
-import { getBetaBannerText } from '../lib/proGate';
 import { computeEWMA } from '../lib/weeklyCoach';
 import { LineChart } from 'react-native-gifted-charts';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
@@ -40,32 +44,6 @@ const MILESTONES = [
 
 function nextMilestone(total) {
   return MILESTONES.find(m => m.sessions > total) ?? null;
-}
-
-// Returns the Mon-aligned ISO calendar week index for a UTC timestamp.
-function mondayWeekIndex(ts) {
-  if (!ts) return -1;
-  const d = new Date(ts);
-  const daysFromMon = (d.getUTCDay() + 6) % 7; // Mon=0 … Sun=6
-  const mondayMidnight = ts - (ts % 86400000) - daysFromMon * 86400000;
-  return Math.floor(mondayMidnight / (7 * 86400000));
-}
-
-// Consecutive calendar weeks (Mon–Sun) with at least one completed session.
-function computeStreak(workouts) {
-  const trainedWeeks = new Set(
-    workouts
-      .filter(w => w.isCompleted ?? w.is_completed ?? false)
-      .map(w => mondayWeekIndex(w.startedAt ?? w.createdAt ?? 0)),
-  );
-  let streak = 0;
-  let week = mondayWeekIndex(Date.now());
-  if (!trainedWeeks.has(week)) week -= 1;
-  while (trainedWeeks.has(week)) {
-    streak++;
-    week--;
-  }
-  return streak;
 }
 
 // Detects exercises with 2+ consecutive weeks of declining average reps (≥2 rep drop each week).
@@ -169,12 +147,95 @@ function WeightSparkline({ data, units, bodyWeightUnits }) {
   );
 }
 
+function freshnessMeta(lastTrainedAt, now) {
+  if (!lastTrainedAt) return { label: 'Ready', color: colors.success, dot: colors.success };
+  const hoursAgo = (now - lastTrainedAt) / (1000 * 60 * 60);
+  if (hoursAgo < 24)  return { label: 'Just trained', color: colors.warning, dot: colors.warning };
+  if (hoursAgo < 48)  return { label: 'Recovering',   color: colors.warning, dot: colors.warning };
+  if (hoursAgo < 72)  return { label: 'Nearly ready',  color: colors.success, dot: colors.success + '99' };
+  return { label: 'Ready', color: colors.success, dot: colors.success };
+}
+
+function MuscleFreshnessCard({ muscleFreshness, now }) {
+  const entries = Object.entries(MUSCLE_DISPLAY_NAMES)
+    .filter(([key]) => muscleFreshness[key] !== undefined)
+    .map(([key, displayName]) => ({
+      key,
+      displayName,
+      ...freshnessMeta(muscleFreshness[key], now),
+    }))
+    .sort((a, b) => {
+      const order = { 'Just trained': 0, Recovering: 1, 'Nearly ready': 2, Ready: 3 };
+      return (order[a.label] ?? 4) - (order[b.label] ?? 4);
+    });
+
+  if (entries.length === 0) return null;
+
+  return (
+    <View style={mfStyles.card}>
+      <View style={mfStyles.headerRow}>
+        <View style={[mfStyles.iconWrap, { backgroundColor: colors.primaryBg }]}>
+          <Ionicons name="flash-outline" size={20} color={colors.primary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={mfStyles.title}>Muscle readiness</Text>
+          <Text style={mfStyles.sub}>How recovered your muscles are based on your recent training.</Text>
+        </View>
+      </View>
+      <View style={mfStyles.chipGrid}>
+        {entries.map(({ key, displayName, label, color, dot }) => (
+          <View key={key} style={[mfStyles.chip, { borderColor: color + '44', backgroundColor: color + '12' }]}>
+            <View style={[mfStyles.dot, { backgroundColor: dot }]} />
+            <Text style={[mfStyles.chipName, { color: colors.textPrimary }]}>{displayName}</Text>
+            <Text style={[mfStyles.chipLabel, { color }]}>{label}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+const mfStyles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  iconWrap: {
+    width: 40, height: 40, borderRadius: radius.md,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  title: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  sub: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16, marginTop: 2 },
+  chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  chip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
+    borderRadius: radius.full, borderWidth: 1,
+  },
+  dot: { width: 6, height: 6, borderRadius: 3, flexShrink: 0 },
+  chipName: { fontSize: fontSize.xs, fontWeight: fontWeight.medium },
+  chipLabel: { fontSize: 10, fontWeight: fontWeight.semibold },
+});
+
 export default function AthleteHubScreen({ navigation }) {
-  const { user, userProfile, units, bodyWeightUnits, tier } = useAppStore();
+  const { user, userProfile, units, bodyWeightUnits, tier } = useAppStore(useShallow(s => ({
+    user: s.user,
+    userProfile: s.userProfile,
+    units: s.units,
+    bodyWeightUnits: s.bodyWeightUnits,
+    tier: s.tier,
+  })));
   const [nutritionTargets, setNutritionTargets] = useState(null);
   const [latestMetric, setLatestMetric]         = useState(null);
+  const [refreshing, setRefreshing]             = useState(false);
+  const [initialLoading, setInitialLoading]     = useState(true);
   const [totalWorkouts, setTotalWorkouts]       = useState(0);
-  const [streak, setStreak]                     = useState(0);
   const [recovery, setRecovery]                 = useState({ soreness: null, fatigue: null, joint: null });
   const [weekVolume, setWeekVolume]             = useState(null);
   const [calm, setCalm]                         = useState(false);
@@ -185,6 +246,7 @@ export default function AthleteHubScreen({ navigation }) {
   const [morningWeightCount, setMorningWeightCount] = useState(0);
   const [weightTrend, setWeightTrend] = useState([]);
   const [recoveryTrendInsight, setRecoveryTrendInsight] = useState(null);
+  const [muscleFreshness, setMuscleFreshness] = useState({});
 
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
@@ -206,6 +268,28 @@ export default function AthleteHubScreen({ navigation }) {
     getWellbeingMode().then(m => setCalm(isCalm(m)));
   }, [user?.id]));
 
+  // Live refresh when sets are logged in the current workout. Subscribes
+  // to lastSetLoggedAt in the store; when it bumps (every logged set),
+  // re-run load() so the volume / freshness / recovery cards reflect
+  // the freshest data without waiting for the user to leave + return.
+  const lastSetLoggedAt = useAppStore(s => s.lastSetLoggedAt);
+  useEffect(() => {
+    if (!user?.id || !lastSetLoggedAt) return;
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastSetLoggedAt]);
+
+  // Same idea for cross-device cloud restore: when pullFromCloud lands
+  // a fresh batch of data (workouts, programmes, nutrition targets),
+  // re-run load() so the nutrition card and freshness numbers update
+  // without the user having to leave + return.
+  const cloudSyncVersion = useAppStore(s => s.cloudSyncVersion);
+  useEffect(() => {
+    if (!user?.id || cloudSyncVersion === 0) return;
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cloudSyncVersion]);
+
   async function load() {
     if (tier === 'pro') {
       try {
@@ -224,8 +308,9 @@ export default function AthleteHubScreen({ navigation }) {
 
     await Promise.all([
       loadWorkoutStats(),
-      ...(tier === 'pro' ? [loadBodyMetrics(), loadNutrition(), loadAdaptationHistory(), loadRecoveryTrend()] : []),
+      ...(tier === 'pro' ? [loadBodyMetrics(), loadNutrition(), loadAdaptationHistory(), loadRecoveryTrend(), loadMuscleFreshness()] : []),
     ]);
+    setInitialLoading(false);
   }
 
   async function loadRecoveryTrend() {
@@ -284,6 +369,14 @@ export default function AthleteHubScreen({ navigation }) {
     } catch (_e) {}
   }
 
+  async function loadMuscleFreshness() {
+    if (!user?.id) return;
+    try {
+      const data = await getLastTrainedPerMuscle(user.id);
+      setMuscleFreshness(data);
+    } catch (_e) {}
+  }
+
   async function loadWorkoutStats() {
     try {
       const [workouts, sets, exercises] = await Promise.all([
@@ -291,12 +384,22 @@ export default function AthleteHubScreen({ navigation }) {
         getCompletedWorkoutSets(user.id),
         getAllExercises(),
       ]);
-      const completed = workouts.filter(w =>
-        (w.isCompleted ?? w.is_completed ?? false) &&
-        (w.setCount ?? w.set_count ?? 0) > 0,
-      );
+      // Cloud-restored workouts can have set_count = NULL even when
+      // workout_sets is populated, so count live from the sets table.
+      const setsPerWorkout = new Map();
+      for (const s of sets ?? []) {
+        const wid = s.workoutId ?? s.workout_id;
+        if (!wid) continue;
+        setsPerWorkout.set(wid, (setsPerWorkout.get(wid) ?? 0) + 1);
+      }
+      const completed = workouts.filter(w => {
+        const isComplete = !!(w.isCompleted ?? w.is_completed);
+        if (!isComplete) return false;
+        const cachedCount = w.setCount ?? w.set_count;
+        const liveCount = setsPerWorkout.get(w.id) ?? 0;
+        return (cachedCount != null && cachedCount > 0) || liveCount > 0;
+      });
       setTotalWorkouts(completed.length);
-      setStreak(computeStreak(workouts));
 
       // Recovery EMAs
       const ema = computeRecoveryEMAs(completed);
@@ -317,15 +420,34 @@ export default function AthleteHubScreen({ navigation }) {
 
   async function loadBodyMetrics() {
     try {
+      // Prefer the full body_metric_log row (includes measurements / body fat).
       const rows = await getBodyMetricLog(user.id, 1);
-      setLatestMetric(rows[0] ?? null);
+      if (rows[0]) { setLatestMetric(rows[0]); return; }
+      // Daily weigh-ins go to a separate morning_weights table — fall back to
+      // whichever weight is most recent across both tables.
+      const latest = await getLatestBodyWeight(user.id);
+      if (latest?.weightKg != null) {
+        setLatestMetric({ weightKg: latest.weightKg, loggedAt: latest.loggedAt });
+        return;
+      }
+      if (userProfile?.weightKg) {
+        setLatestMetric({ weightKg: userProfile.weightKg, loggedAt: null });
+      }
     } catch (_e) {}
   }
 
   async function loadNutrition() {
     try {
       const t = await getNutritionTargets(user.id);
-      setNutritionTargets(t ?? null);
+      if (t?.targetKcal) { setNutritionTargets(t); return; }
+      // SQLite can be empty during the window between account creation and
+      // migrateLocalUserId completing. Fall back to AsyncStorage.
+      const raw = await AsyncStorage.getItem('@volyume_nutrition_targets');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.targetKcal) { setNutritionTargets(parsed); return; }
+      }
+      setNutritionTargets(null);
     } catch (_e) {}
   }
 
@@ -346,12 +468,41 @@ export default function AthleteHubScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Athlete Hub</Text>
-        <VolyumeMark size={38} color={colors.textMuted} />
+      {/* Header padding matches Train / Plans / Progress (spacing.lg top
+          + horizontal) so the title sits at the same Y across all four
+          tabs. Previously this used spacing.md which made the Hub
+          title sit ~4px higher than its siblings. */}
+      <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg }}>
+        <ScreenHeader title="Athlete Hub" />
       </View>
 
-      <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={async () => {
+              setRefreshing(true);
+              try { await load(); } finally { setRefreshing(false); }
+            }}
+            tintColor={colors.textMuted}
+            colors={[colors.primary]}
+          />
+        }
+      >
+
+        {/* Initial-load skeleton banner. Hides as soon as the first
+            load() promise.all resolves (typically 100-400ms on local
+            SQLite). Without it, cold launch shows a blank-looking
+            screen for that window. */}
+        {initialLoading && (
+          <View style={{ gap: spacing.md, marginBottom: spacing.md }}>
+            <SkeletonCard height={88} />
+            <SkeletonCard height={140} />
+            <SkeletonCard height={120} />
+          </View>
+        )}
 
         {/* ── Profile card ──────────────────────────────── */}
         <View style={styles.profileCard}>
@@ -459,9 +610,6 @@ export default function AthleteHubScreen({ navigation }) {
                 </Text>
               </View>
             )}
-            {getBetaBannerText() && (
-              <Text style={styles.betaBanner}>{getBetaBannerText()}</Text>
-            )}
           </TouchableOpacity>
         )}
 
@@ -502,6 +650,11 @@ export default function AthleteHubScreen({ navigation }) {
           </View>
         )}
 
+        {/* ── Muscle readiness ─────────────────────────── */}
+        {tier === 'pro' && Object.keys(muscleFreshness).length > 0 && (
+          <MuscleFreshnessCard muscleFreshness={muscleFreshness} now={Date.now()} />
+        )}
+
         {/* ── Nutrition ─────────────────────────────────── */}
         {tier === 'pro' && (
           <TouchableOpacity
@@ -535,6 +688,21 @@ export default function AthleteHubScreen({ navigation }) {
           </TouchableOpacity>
         )}
 
+        {/* Nutrition primer — link to the 5-min educational guide. Shown
+            below the targets card so users who want a refresher (or who
+            never read it during onboarding) can find it easily. */}
+        {tier === 'pro' && (
+          <TouchableOpacity
+            style={styles.eduLinkRow}
+            onPress={() => navigation.navigate('NutritionEducation')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="book-outline" size={14} color={colors.primary} />
+            <Text style={styles.eduLinkText}>How to read your calorie and macro targets</Text>
+            <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+          </TouchableOpacity>
+        )}
+
         {/* ── Body Metrics ──────────────────────────────── */}
         {tier === 'pro' && (
           <TouchableOpacity
@@ -559,9 +727,11 @@ export default function AthleteHubScreen({ navigation }) {
               </View>
               <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
             </View>
-            {latestMetric && (
+            {latestMetric && (latestMetric.bodyFatPercent != null || latestMetric.waistCm != null) && (
               <View style={styles.metricRow}>
-                {latestMetric.weightKg != null && <MetricChip label="Weight" value={formatBodyWeightShort(latestMetric.weightKg, bodyWeightUnits || 'st')} />}
+                {/* Weight is already in the subtitle above. Only show
+                    chips here for the *secondary* metrics so the row
+                    isn't a redundant restatement of the same number. */}
                 {latestMetric.bodyFatPercent != null && <MetricChip label="Body fat" value={`${latestMetric.bodyFatPercent}%`} />}
                 {latestMetric.waistCm != null && <MetricChip label="Waist" value={`${latestMetric.waistCm} cm`} />}
               </View>
@@ -632,21 +802,18 @@ export default function AthleteHubScreen({ navigation }) {
               </View>
             </TouchableOpacity>
 
-            {getBetaBannerText() && (
-              <Text style={styles.betaBannerStandalone}>{getBetaBannerText()}</Text>
-            )}
           </>
         )}
 
-        {/* ── Coaching tools ────────────────────────────── */}
+        {/* ── Coaching ────────────────────────────────────── */}
         <View style={styles.section}>
           {tier === 'pro' && (
             <>
               <Text style={styles.sectionLabel}>Coaching</Text>
               <NavRow
                 icon="flag-outline"
-                label="Update your goals"
-                sub="Change your physique goal or training phase. Your Precision Coaching updates at the next check-in."
+                label="Update your plan"
+                sub="Change your goal, phase, schedule, equipment or experience. We rebuild the plan and your nutrition targets around the new answers."
                 onPress={() => navigation.navigate('ProGoalSetup')}
               />
               <NavRow
@@ -732,6 +899,24 @@ export default function AthleteHubScreen({ navigation }) {
             </>
           )}
 
+        </View>
+
+        {/* ── Preferences ──────────────────────────────────
+            Settings and wellbeing don't belong under Coaching: one is
+            account-level (units, exports), the other is a calmness /
+            health screening that adjusts UX rather than the plan. Both
+            sit in their own section so the Coaching block reads as
+            actual coaching tools. */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Preferences</Text>
+          {tier === 'pro' && (
+            <NavRow
+              icon="shield-checkmark-outline"
+              label="Wellbeing check"
+              sub="Update your health screening answers. Shapes how your Precision Coaching is applied."
+              onPress={() => navigation.navigate('WellbeingCheck')}
+            />
+          )}
           <NavRow icon="settings-outline" label="Settings" sub="Units, data export, preferences" onPress={() => navigation.navigate('Settings')} />
         </View>
 
@@ -807,7 +992,7 @@ function MetricChip({ label, value }) {
 
 function NavRow({ icon, label, sub, onPress, tooltip }) {
   return (
-    <TouchableOpacity style={styles.navRow} onPress={onPress} activeOpacity={0.8}>
+    <PressableCard style={styles.navRow} onPress={onPress} accessibilityLabel={label}>
       <View style={styles.navRowIcon}>
         <Ionicons name={icon} size={18} color={colors.primary} />
       </View>
@@ -819,7 +1004,7 @@ function NavRow({ icon, label, sub, onPress, tooltip }) {
         {sub && <Text style={styles.navRowSub}>{sub}</Text>}
       </View>
       <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-    </TouchableOpacity>
+    </PressableCard>
   );
 }
 
@@ -920,15 +1105,8 @@ const styles = StyleSheet.create({
   lockBadgeText: {
     fontSize: 10, fontWeight: fontWeight.semibold, color: colors.textMuted,
   },
-  betaBannerStandalone: {
-    fontSize: fontSize.xs, color: colors.primaryDim, fontStyle: 'italic',
-    textAlign: 'center', paddingVertical: spacing.xs,
-  },
   checkinPrompt: { paddingTop: spacing.xs },
   checkinPromptText: { fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 18 },
-  betaBanner: {
-    fontSize: fontSize.xs, color: colors.primaryDim, fontStyle: 'italic', marginTop: spacing.xs,
-  },
   cardHeader:     { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   cardIconWrap:   {
     width: 40, height: 40, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center',
@@ -938,6 +1116,8 @@ const styles = StyleSheet.create({
   cardSubtitle:   { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2 },
   alert:          { color: colors.warning },
   macroStrip:     { flexDirection: 'row', gap: spacing.sm },
+  eduLinkRow:     { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, marginTop: -spacing.sm, marginBottom: spacing.sm },
+  eduLinkText:    { color: colors.primary, fontSize: fontSize.xs, fontWeight: fontWeight.medium, flex: 1 },
   macroPill:      {
     flex: 1, alignItems: 'center', backgroundColor: colors.surface2,
     borderRadius: radius.md, paddingVertical: spacing.sm, gap: 2,

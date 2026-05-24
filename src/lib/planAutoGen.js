@@ -1,0 +1,168 @@
+/**
+ * planAutoGen.js
+ * Generate and persist a Pro user's training plan from their profile inputs.
+ *
+ * Shared by:
+ *   - ProOnboardingScreen.advanceFrom4 (initial creation)
+ *   - HomeScreen Pro recovery CTA (if auto-gen failed during onboarding)
+ *   - AthleteHub re-plan flow (when the user changes their goal)
+ *
+ * Returns { ok: boolean, programmeId?: string, error?: string }.
+ * Pure orchestration — generatePlan stays pure, DB writes are idempotent
+ * per call (each call creates a NEW programme; existing ones are not
+ * touched).
+ */
+
+import {
+  createProgramme,
+  createRoutine,
+  addExerciseToRoutine,
+  getAllExercises,
+  activatePlanWithBlock,
+  getAllProgrammes,
+} from './database';
+import { generatePlan } from './planEngine';
+import { phaseToNutritionKey } from './coachingGoals';
+
+/**
+ * If the user already has a programme with this exact name, append a
+ * short date suffix (and time if needed) so the new one is visibly
+ * distinct in the Plans list. Otherwise return the name unchanged.
+ *
+ * Pure function modulo the DB read for the existing-names list.
+ */
+async function makeUniquePlanName(userId, baseName) {
+  let existingNames = [];
+  try {
+    const programmes = await getAllProgrammes(userId);
+    existingNames = (programmes ?? []).map(p => p?.name).filter(Boolean);
+  } catch (_) {
+    return baseName; // can't tell — return the base name
+  }
+  if (!existingNames.includes(baseName)) return baseName;
+
+  const now = new Date();
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const dateStr = `${now.getDate()} ${months[now.getMonth()]}`;
+  const withDate = `${baseName} — ${dateStr}`;
+  if (!existingNames.includes(withDate)) return withDate;
+
+  // Same name + same day already exists — append time too
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  return `${baseName} — ${dateStr} ${hh}:${mm}`;
+}
+
+const DEFAULT_DAYS_PER_WEEK = 4;
+
+/**
+ * Build the inputs `generatePlan` expects from a user profile.
+ * Returns null only when the user's goal/phase aren't set — without those
+ * we can't pick a plan template at all. Other fields fall back to sensible
+ * defaults so older profiles (or partially-populated ones) still get a
+ * plan regenerated when the user changes goals from the Hub.
+ *
+ * Exported so tests can verify the default-back-fill rules without
+ * touching the database.
+ */
+export function buildPlanInputs(profile) {
+  if (!profile?.trainingGoal) return null;
+  // Migrate legacy IDs (general_hypertrophy / strength_hypertrophy /
+  // weak_point_spec) so old profiles round-trip through the new two-axis
+  // model. migrateProfileGoals adds a sensible trainingPhase for the
+  // ones that imply a phase; for the rest, fall back to 'maintain' so
+  // legacy users can still regenerate without re-onboarding.
+  // eslint-disable-next-line global-require
+  const { migrateProfileGoals } = require('./coachingGoals');
+  const migrated = migrateProfileGoals(profile);
+  const phase = migrated.trainingPhase || 'maintain';
+  return {
+    experience: migrated.experience ?? 'intermediate',
+    daysPerWeek: migrated.daysPerWeek ?? DEFAULT_DAYS_PER_WEEK,
+    sessionLengthMinutes: migrated.sessionLengthMinutes ?? 60,
+    equipment: migrated.equipment ?? 'full_gym',
+    goal: migrated.trainingGoal,
+    // phase is now the load-bearing question post-merge: it drives nutrition,
+    // weak_point overlay, and strength_size's isolation reduction. Engine
+    // reads `phase` for the overlay decisions and `nutritionPhase` for the
+    // calorie/volume tuning math.
+    phase,
+    weakPoints: migrated.planWeakPoints ?? [],
+    recoveryRating: migrated.recoveryRating ?? 'average',
+    nutritionPhase: phaseToNutritionKey(phase),
+  };
+}
+
+/**
+ * Generate a plan and persist it. Activates it as the user's current
+ * mesocycle. Returns { ok, programmeId, error } so callers can react.
+ */
+export async function generateAndSavePlan(userId, profile) {
+  if (!userId) return { ok: false, error: 'No user' };
+  const inputs = buildPlanInputs(profile);
+  if (!inputs) return { ok: false, error: 'Profile incomplete' };
+
+  // eslint-disable-next-line global-require
+  try { require('./errorLog').logInfo('plan.generateAndSave.start', `goal=${inputs.goal} phase=${inputs.phase} days=${inputs.daysPerWeek}`); } catch (_) {}
+
+  let plan;
+  try {
+    plan = generatePlan(inputs);
+  } catch (e) {
+    // eslint-disable-next-line global-require
+    try { require('./errorLog').logError('plan.generateAndSave.engineFailed', e, { inputs }); } catch (_) {}
+    return { ok: false, error: `Plan engine failed: ${e?.message ?? 'unknown'}` };
+  }
+  if (!plan?.workouts?.length) return { ok: false, error: 'Plan engine returned no workouts' };
+
+  const baseName = plan.name ?? 'Your plan';
+  const planName = await makeUniquePlanName(userId, baseName);
+  try {
+    const prog = await createProgramme(userId, planName, plan.description ?? '', 0);
+    const allExercises = await getAllExercises();
+    const exerciseMap = {};
+    for (const ex of allExercises) exerciseMap[ex.name.toLowerCase()] = ex;
+
+    let totalWritten = 0;
+    let totalRequested = 0;
+    const missedNames = [];
+    for (const workout of plan.workouts) {
+      const routine = await createRoutine(
+        userId, workout.name, null, plan.splitType, 0, null, prog.id,
+      );
+      for (let i = 0; i < workout.exercises.length; i++) {
+        const ex = workout.exercises[i];
+        totalRequested++;
+        const dbEx = exerciseMap[ex.exerciseName?.toLowerCase()];
+        if (!dbEx) {
+          if (missedNames.length < 5 && ex.exerciseName) missedNames.push(ex.exerciseName);
+          continue;
+        }
+        await addExerciseToRoutine(
+          routine.id, dbEx.id, i, ex.repMin, ex.repMax, ex.notes ?? null, ex.sets,
+          null,                          // startingWeight — engine doesn't set this
+          ex.restSec ?? null,
+          ex.supersetGroupId ?? null,    // pairing from plan engine
+        );
+        totalWritten++;
+      }
+    }
+    if (totalWritten === 0) {
+      return { ok: false, programmeId: prog.id, error: 'Plan created but no exercises matched the library' };
+    }
+    // Soft warning when the engine wanted exercises we couldn't fulfil
+    // (typically a bodyweight-only user where the engine picked a barbell
+    // movement). The plan is still usable but visibly thinner than asked
+    // for, so we surface a flag for the caller to show in the UI.
+    if (totalWritten < totalRequested) {
+      try {
+        // eslint-disable-next-line global-require
+        require('./errorLog').logInfo('planAutoGen.partial', `${totalWritten}/${totalRequested} matched`, { missed: missedNames });
+      } catch (_) {}
+    }
+    await activatePlanWithBlock(userId, prog.id, planName);
+    return { ok: true, programmeId: prog.id };
+  } catch (e) {
+    return { ok: false, error: e?.message ?? 'DB write failed' };
+  }
+}
