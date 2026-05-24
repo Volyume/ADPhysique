@@ -21,7 +21,6 @@ import { getSupabaseClient } from '../lib/supabase';
 import { initDatabase, cleanupOrphanRoutineExercises } from '../lib/database';
 import { seedExercisesIfNeeded } from '../lib/seedExercises';
 import { configureNotificationHandler, restoreNotifications } from '../lib/notifications';
-import { traceStep } from '../lib/startupTrace';
 
 // Auth screens
 import LoginScreen from '../screens/LoginScreen';
@@ -398,20 +397,16 @@ export default function RootNavigator() {
 
   useEffect(() => {
     async function bootstrap() {
-      traceStep('nav.bootstrap.start');
       try {
         // Await the SQLite init so subsequent reads (checkFirstRun,
         // checkTier, getSession-driven hydrators) can't race against a
         // half-open database. Failure here is rare but catastrophic, so
         // surface it via the log layer.
         try {
-          traceStep('nav.db.init.start');
           await initDatabase();
-          traceStep('nav.db.init.done');
           seedExercisesIfNeeded().catch(console.warn);
           cleanupOrphanRoutineExercises().catch(console.warn);
         } catch (e) {
-          traceStep('nav.db.init.err', { msg: e?.message });
           // eslint-disable-next-line global-require
           try { require('../lib/errorLog').logError('RootNavigator.bootstrap.initDb', e); } catch (_) {}
         }
@@ -426,11 +421,9 @@ export default function RootNavigator() {
         await checkTier().catch(console.warn);
 
         try {
-          traceStep('nav.session.read.start');
           const client = getSupabaseClient();
           if (client) {
             const { data: { session } } = await client.auth.getSession();
-            traceStep('nav.session.read.done', { hasUser: !!session?.user });
             if (session?.user) {
               setSession(session);
               setUser(session.user);
@@ -523,7 +516,6 @@ export default function RootNavigator() {
       const client = getSupabaseClient();
       if (client) {
         const { data } = client.auth.onAuthStateChange(async (event, session) => {
-          traceStep('auth.event', { event, hasUser: !!session?.user });
           // CRITICAL: capture the local user id BEFORE setUser
           // replaces it with the cloud session user. Without this, the
           // migrateLocalUserId check below ("are these different?") is
@@ -643,10 +635,9 @@ export default function RootNavigator() {
             const { pullFromCloud } = require('../lib/sync');
             const store = useAppStore.getState();
             store.markCloudSyncing();
-            traceStep('auth.pullFromCloud.start');
             pullFromCloud(session.user.id)
-              .then(() => { traceStep('auth.pullFromCloud.done'); useAppStore.getState().markCloudSyncComplete(); })
-              .catch((err) => { traceStep('auth.pullFromCloud.err', { msg: err?.message }); useAppStore.getState().markCloudSyncError(err?.message); });
+              .then(() => useAppStore.getState().markCloudSyncComplete())
+              .catch((err) => useAppStore.getState().markCloudSyncError(err?.message));
           }
         });
         subscription = data.subscription;
@@ -678,8 +669,6 @@ export default function RootNavigator() {
   if (!splashReady || !firstRunChecked || !tierChecked) {
     return <SplashScreen />;
   }
-
-  traceStep('nav.render.postSplash', { hasUser: !!user, tier, firstRunComplete });
 
   // While a cloud restore is in flight (right after SIGNED_IN, before
   // we know whether the user has a profile in the cloud), park on

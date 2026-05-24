@@ -52,7 +52,6 @@ import {
 } from './database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logError, logWarn, logInfo } from './errorLog';
-import { traceStep } from './startupTrace';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1122,34 +1121,20 @@ function _waterToCloud(row) {
 
 async function _pushFoodChanges(sb, supabaseUserId, localUserId) {
   try {
-    traceStep('sync.pushFood.start');
     // eslint-disable-next-line global-require
     const food = require('./food/db');
-    traceStep('sync.pushFood.module.loaded');
     const key = FOOD_LAST_PUSHED_KEY(supabaseUserId);
     const sinceStr = await AsyncStorage.getItem(key);
     const sinceMs = sinceStr ? Number(sinceStr) : 0;
 
-    // Per-table fetches via individual try/catch so one missing
-    // table (e.g. migration 015 didn't run yet) doesn't sink the
-    // others. Defensive against partial schema state we couldn't
-    // reproduce in a previous launch-crash cycle.
-    const safe = async (label, fn) => {
-      try { return await fn(); }
-      catch (e) { traceStep('sync.pushFood.fetch.err', { table: label, msg: e?.message }); return []; }
-    };
     const [entries, customs, meals, recipesRows, favs, water] = await Promise.all([
-      safe('food_entries',  () => food.getAllFoodEntriesSince(localUserId, sinceMs)),
-      safe('custom_foods',  () => food.getAllCustomFoodsSince(localUserId, sinceMs)),
-      safe('saved_meals',   () => food.getAllSavedMealsSince(localUserId, sinceMs)),
-      safe('recipes',       () => food.getAllRecipesSince(localUserId, sinceMs)),
-      safe('food_favourites', () => food.getAllFavouritesSince(localUserId, sinceMs)),
-      safe('daily_water',   () => food.getAllWaterSince(localUserId, sinceMs)),
+      food.getAllFoodEntriesSince(localUserId, sinceMs),
+      food.getAllCustomFoodsSince(localUserId, sinceMs),
+      food.getAllSavedMealsSince(localUserId, sinceMs),
+      food.getAllRecipesSince(localUserId, sinceMs),
+      food.getAllFavouritesSince(localUserId, sinceMs),
+      food.getAllWaterSince(localUserId, sinceMs),
     ]);
-    traceStep('sync.pushFood.fetched', {
-      entries: entries.length, customs: customs.length, meals: meals.length,
-      recipes: recipesRows.length, favs: favs.length, water: water.length,
-    });
 
     const bucket = (rows, mapper) => {
       const out = { created: [], updated: [], deleted: [] };
@@ -1198,13 +1183,11 @@ async function _pushFoodChanges(sb, supabaseUserId, localUserId) {
       water: water.length,
     });
   } catch (e) {
-    traceStep('sync.pushFood.err', { msg: e?.message });
     logWarn('sync._pushFoodChanges', e?.message, { error: e?.message });
   }
 }
 
 async function _pullFoodChanges(sb, supabaseUserId) {
-  traceStep('sync.pullFood.start');
   const empty = {
     foodEntries: 0, customFoods: 0, savedMeals: 0,
     recipes: 0, favourites: 0, water: 0,
@@ -1265,10 +1248,8 @@ async function _pullFoodChanges(sb, supabaseUserId) {
     if (Number.isFinite(tsMs)) {
       try { await AsyncStorage.setItem(key, String(tsMs)); } catch (_) {}
     }
-    traceStep('sync.pullFood.done', counts);
     return counts;
   } catch (e) {
-    traceStep('sync.pullFood.err', { msg: e?.message });
     logWarn('sync._pullFoodChanges', e?.message);
     return empty;
   }

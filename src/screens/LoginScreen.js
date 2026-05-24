@@ -24,8 +24,6 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
 
-import { getPreviousStartupTrace, formatTrace } from '../lib/startupTrace';
-
 const CRASH_LOG_KEY = '@volyume_crash_log';
 
 export default function LoginScreen({ navigation, route }) {
@@ -50,17 +48,10 @@ export default function LoginScreen({ navigation, route }) {
   const [emailFocused, setEmailFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [crashLog, setCrashLog] = useState(null);
-  const [startupTrace, setStartupTrace] = useState('');
 
   React.useEffect(() => {
     AsyncStorage.getItem(CRASH_LOG_KEY).then(raw => {
       if (raw) { try { setCrashLog(JSON.parse(raw)); } catch (_) {} }
-    }).catch(() => {});
-    // Surface the previous launch's startup trace. Always loaded so
-    // the user can screenshot it even without a fatal crash record
-    // (an OOM kill or native crash never writes the JS crash log).
-    getPreviousStartupTrace().then(trace => {
-      if (trace?.length) setStartupTrace(formatTrace(trace));
     }).catch(() => {});
   }, []);
 
@@ -241,20 +232,6 @@ export default function LoginScreen({ navigation, route }) {
               <Text style={styles.crashMsg}>{crashLog.message}</Text>
               <Text style={styles.crashStack}>{crashLog.stack?.slice(0, 400)}</Text>
               <TouchableOpacity onPress={() => { AsyncStorage.removeItem(CRASH_LOG_KEY); setCrashLog(null); }}>
-                <Text style={styles.crashDismiss}>Dismiss</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Startup trace from the previous launch. Shows which boot
-              phase the last session reached, so a crash that doesn't
-              leave a JS stack (native OOM, ANR, hard reboot) still
-              tells us where it died. */}
-          {!!startupTrace && (
-            <View style={styles.crashBanner}>
-              <Text style={styles.crashTitle}>Previous launch trace. Screenshot this:</Text>
-              <Text selectable style={styles.crashStack}>{startupTrace}</Text>
-              <TouchableOpacity onPress={() => setStartupTrace('')}>
                 <Text style={styles.crashDismiss}>Dismiss</Text>
               </TouchableOpacity>
             </View>
