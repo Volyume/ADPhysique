@@ -18,7 +18,7 @@ function _scheduleSync() {
   } catch (_) { /* sync module unavailable — tolerate */ }
 }
 
-function uid() {
+export function uid() {
   // UUID v4 — required so rows sync cleanly to Supabase, whose primary-key
   // columns are typed UUID. The previous compact format (timestamp + random
   // suffix) silently FK-failed on every Supabase upsert.
