@@ -1,11 +1,11 @@
 # Latest CI Build Status
 
-- **Run number**: 650
-- **Run URL**: https://github.com/allansdouglas1983-cmyk/ADPhysique/actions/runs/26370284233
-- **Branch**: `claude/volyume-food-logging-app-B9JZv`
-- **Commit**: `c1a4f283260de9e5e9041e51c230f0410b2119fc`
-- **Triggered at**: 2026-05-24T19:25:25Z
-- **Job status at write time**: `cancelled`
+- **Run number**: 654
+- **Run URL**: https://github.com/allansdouglas1983-cmyk/ADPhysique/actions/runs/26371578148
+- **Branch**: `main`
+- **Commit**: `7a5d20c228fefbec0d52b61598d6d2976b906dee`
+- **Triggered at**: 2026-05-24T20:17:45Z
+- **Job status at write time**: `failure`
 
 ## Secret lengths (values not logged)
 
