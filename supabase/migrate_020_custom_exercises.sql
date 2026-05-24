@@ -97,7 +97,7 @@ SELECT
   fatigue_cost, stimulus_to_fatigue_ratio, subregion, exercise_category,
   increment_kg, notes,
   COALESCE(created_at::timestamptz, now()),
-  COALESCE(updated_at_v2::timestamptz, updated_at::timestamptz, now())
+  COALESCE(updated_at::timestamptz, now())
 FROM exercises
 WHERE user_id IS NOT NULL
 ON CONFLICT (user_id, id) DO NOTHING;
