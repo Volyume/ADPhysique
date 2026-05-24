@@ -176,14 +176,22 @@ export async function syncProfile(supabaseUserId, userProfile, _tier, { isBetaTe
  * Idempotent — onConflict: 'id' means re-running the push touches
  * existing rows' updated_at but creates no duplicates.
  */
-export async function syncExercises(supabaseUserId, { customOnly = false } = {}) {
+export async function syncExercises(supabaseUserId, _opts = {}) {
   const sb = getClient();
   if (!sb || !supabaseUserId) return;
   try {
+    // Migration 020 split per-user exercise rows out of the
+    // mixed-ownership `exercises` table into `custom_exercises`.
+    // Library rows live in cloud `exercises` server-side with
+    // user_id = NULL and must not be re-pushed -- the RLS UPDATE
+    // policy USING (auth.uid() = user_id) rejects any attempt to
+    // claim them (existing user_id NULL never matches the caller),
+    // raising 42501 per chunk. Only customs go up now, and they
+    // target custom_exercises with composite-PK conflict.
     const all = await getAllExercises();
-    const subset = customOnly ? all.filter(e => e.isCustom) : all;
-    if (!subset.length) return;
-    const rows = subset.map(e => ({
+    const customs = all.filter(e => e.isCustom);
+    if (!customs.length) return;
+    const rows = customs.map(e => ({
       id: e.id,
       user_id: supabaseUserId,
       name: e.name,
@@ -199,21 +207,12 @@ export async function syncExercises(supabaseUserId, { customOnly = false } = {})
       exercise_category: e.exerciseCategory ?? 'compound',
       increment_kg: e.incrementKg ?? 2.5,
       subregion: e.subregion ?? null,
-      is_custom: !!e.isCustom,
       notes: e.notes ?? null,
       updated_at: new Date().toISOString(),
     }));
-    // Chunk to avoid hitting Supabase's request size limit on the
-    // first full-canonical upload (~450 rows × a dozen columns).
     for (let i = 0; i < rows.length; i += 200) {
-      // exercises stays on onConflict: 'id' for now. The table is
-      // mixed ownership (shared library rows with user_id NULL plus
-      // per-user custom rows with user_id set), so composite (user_id,
-      // id) PK doesn't apply -- composite PK columns must all be NOT
-      // NULL. A follow-up will split library vs custom into separate
-      // tables, after which custom-exercises can move to composite PK.
-      const { error } = await sb.from('exercises').upsert(
-        rows.slice(i, i + 200), { onConflict: 'id', ignoreDuplicates: false },
+      const { error } = await sb.from('custom_exercises').upsert(
+        rows.slice(i, i + 200), { onConflict: 'user_id,id', ignoreDuplicates: false },
       );
       if (error) logPgErr('sync.syncExercises', error);
     }
