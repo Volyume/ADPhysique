@@ -247,6 +247,10 @@ export default function AthleteHubScreen({ navigation }) {
   const [weightTrend, setWeightTrend] = useState([]);
   const [recoveryTrendInsight, setRecoveryTrendInsight] = useState(null);
   const [muscleFreshness, setMuscleFreshness] = useState({});
+  // Day-of-week (0=Sun..6=Sat) the user chose during enrolment for
+  // their weekly check-in. Null until prefs load; the title falls back
+  // to the generic "Weekly check-in" while we don't know.
+  const [checkinDayNum, setCheckinDayNum] = useState(null);
 
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
@@ -300,6 +304,13 @@ export default function AthleteHubScreen({ navigation }) {
         setCheckinDoneThisWeek(!!ci);
         const weights = await getMorningWeightsLast14Days(user.id);
         setMorningWeightCount(weights.length);
+        try {
+          const rawPrefs = await AsyncStorage.getItem('@volyume_notification_prefs');
+          if (rawPrefs) {
+            const prefs = JSON.parse(rawPrefs);
+            if (Number.isInteger(prefs?.checkinDay)) setCheckinDayNum(prefs.checkinDay);
+          }
+        } catch (_) {}
         if (weights.length >= 3) {
           setWeightTrend(computeEWMA(weights, 0.2));
         }
@@ -587,8 +598,8 @@ export default function AthleteHubScreen({ navigation }) {
               </View>
               <View style={styles.cardHeaderText}>
                 <Text style={styles.cardTitle}>
-                  {new Date().toLocaleDateString('en-GB', { weekday: 'long' }) === 'Sunday'
-                    ? 'Sunday check-in'
+                  {Number.isInteger(checkinDayNum)
+                    ? `${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][checkinDayNum]} check-in`
                     : 'Weekly check-in'}
                 </Text>
                 <Text style={styles.cardSubtitle}>
