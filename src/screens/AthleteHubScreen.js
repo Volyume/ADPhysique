@@ -431,17 +431,34 @@ export default function AthleteHubScreen({ navigation }) {
 
   async function loadBodyMetrics() {
     try {
-      // Prefer the full body_metric_log row (includes measurements / body fat).
-      const rows = await getBodyMetricLog(user.id, 1);
-      if (rows[0]) { setLatestMetric(rows[0]); return; }
-      // Daily weigh-ins go to a separate morning_weights table — fall back to
-      // whichever weight is most recent across both tables.
-      const latest = await getLatestBodyWeight(user.id);
-      if (latest?.weightKg != null) {
-        setLatestMetric({ weightKg: latest.weightKg, loggedAt: latest.loggedAt });
-        return;
-      }
-      if (userProfile?.weightKg) {
+      // Compute the most-recent weight across BOTH body_metric_log
+      // (composition entries) and morning_weights (daily weigh-ins).
+      // getLatestBodyWeight handles the timestamp comparison, so the
+      // displayed value tracks whichever was logged most recently.
+      // Previously this preferred body_metric_log[0] unconditionally
+      // and the AthleteHub card stuck at the enrolment-day reading
+      // while morning weights piled up unseen.
+      const [rows, latest] = await Promise.all([
+        getBodyMetricLog(user.id, 1),
+        getLatestBodyWeight(user.id),
+      ]);
+      const bodyRow = rows?.[0] ?? null;
+      const bodyTs    = bodyRow?.loggedAt ?? 0;
+      const latestTs  = latest?.loggedAt ?? 0;
+      // Body-metric row wins when it's the more recent of the two
+      // (and brings its measurements + body fat with it). Otherwise
+      // surface the morning-weight reading but keep any composition
+      // measurements from the older body_metric row so they don't
+      // vanish from the card.
+      if (bodyRow && bodyTs >= latestTs) {
+        setLatestMetric(bodyRow);
+      } else if (latest?.weightKg != null) {
+        setLatestMetric({
+          ...(bodyRow || {}),
+          weightKg: latest.weightKg,
+          loggedAt: latest.loggedAt,
+        });
+      } else if (userProfile?.weightKg) {
         setLatestMetric({ weightKg: userProfile.weightKg, loggedAt: null });
       }
     } catch (_e) {}

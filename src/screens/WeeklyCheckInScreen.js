@@ -26,6 +26,7 @@ import {
   getWeeklyPRCount,
   getNutritionTargets,
 } from '../lib/database';
+import { getRollupsForRange } from '../lib/food/db';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { requestNotificationPermissions, getNotificationPermissionStatus, scheduleNextCheckinReminder } from '../lib/notifications';
 import { logError } from '../lib/errorLog';
@@ -59,6 +60,44 @@ function hasLoggedToday(weights) {
     const ts = w.loggedAt ?? w.logged_at ?? w.createdAt ?? w.created_at;
     return ts && new Date(ts).toISOString().slice(0, 10) === todayStr;
   });
+}
+
+// Earliest morning-weight timestamp in the user's history. Stand-in
+// for "when did this user actually start using the coaching flow",
+// preferable to user.created_at (which can be old for a Free user
+// upgrading to Pro) or proEnrolledAt (which we don't store yet).
+function earliestWeightTs(weights) {
+  if (!weights || weights.length === 0) return null;
+  return Math.min(...weights.map(w => w.loggedAt ?? w.logged_at ?? Infinity)
+    .filter(Number.isFinite));
+}
+
+const FIRST_CHECKIN_MIN_DAYS = 5;
+
+// Derive training performance from logged session data. Used to
+// pre-select the chip on step 3 so the user doesn't subjectively rate
+// what the engine already measured. Returns null when there's no
+// session data to derive from -- caller falls back to manual select.
+function deriveTrainingPerformance({ completed, planned, prs }) {
+  if (!planned || completed === 0) return null;
+  const ratio = completed / planned;
+  if (ratio >= 1.0 && prs > 0) return 'exceeded';
+  if (ratio >= 0.9) return 'hit';
+  if (ratio >= 0.5) return 'struggled';
+  return 'dropped';
+}
+
+// Derive calorie adherence from the week's food rollups. Requires
+// food data on at least 5 of the 7 days -- below that we return null
+// and the user falls back to manually picking. Threshold: within
+// 10% of target on the average daily intake counts as "hit".
+function deriveCalsAdherence({ rollups, targetKcal }) {
+  if (!targetKcal || !rollups || rollups.length === 0) return null;
+  const daysLogged = rollups.filter(r => (r.kcal_total ?? 0) > 0).length;
+  if (daysLogged < 5) return null;
+  const avg = rollups.reduce((a, r) => a + (r.kcal_total ?? 0), 0) / daysLogged;
+  const drift = Math.abs(avg - targetKcal) / targetKcal;
+  return drift <= 0.10 ? 'yes' : 'no';
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -146,8 +185,21 @@ export default function WeeklyCheckInScreen({ navigation }) {
   const [step, setStep] = useState(0); // 0–3
 
   // ─── Gate state ──────────────────────────────────────────────────────────────
-  // 'loading' | 'wrong_day' | 'need_weights' | 'open'
+  // 'loading' | 'wrong_day' | 'too_soon' | 'need_weights' | 'open'
   const [gateState, setGateState] = useState('loading');
+  // For 'too_soon': how many more days the user needs to wait + which
+  // chosen day that lands on. Both surfaced in the gate copy.
+  const [tooSoonCtx, setTooSoonCtx] = useState({ daysToWait: 0, nextDayLabel: null });
+  // Auto-derivation context: PR count, planned/completed sessions,
+  // and the food-rollup-derived calorie adherence verdict. Populated
+  // in the same load() that runs the gate evaluation so step 1 and
+  // step 3 can pre-select sensible defaults without a second fetch.
+  const [autoDerived, setAutoDerived] = useState({
+    trainingPerformance: null,
+    trainingMeta: null, // { completed, planned, prs }
+    calsAdherence: null,
+    calsMeta: null,     // { daysLogged, avgKcal, target, withinPct }
+  });
   const [checkinDayNum, setCheckinDayNum] = useState(0); // 0=Sunday
   const [weighInsThisWeek, setWeighInsThisWeek] = useState(0);
 
@@ -216,9 +268,74 @@ export default function WeeklyCheckInScreen({ navigation }) {
         setWeekWeights(thisWeek);
         setWeighInsThisWeek(thisWeek.length);
 
-        // Gate evaluation
+        // Compute days since the user first logged a morning weight.
+        // Stand-in for "days since they started using the coaching
+        // flow": fresh enrolment yields 0 days (enrolment now seeds
+        // a morning weight), a returning user who's been logging for
+        // months yields a large number. Used to gate the first
+        // check-in until at least FIRST_CHECKIN_MIN_DAYS have passed.
+        const earliestTs = earliestWeightTs(weights);
+        const daysSinceStart = earliestTs
+          ? Math.floor((Date.now() - earliestTs) / 86400000)
+          : 0;
+        const daysToWait = Math.max(0, FIRST_CHECKIN_MIN_DAYS - daysSinceStart);
+
+        // Auto-derive context. Loaded in parallel with the gate
+        // evaluation so the screen is fully populated when it lands.
+        const weekStart = getCurrentWeekStart();
+        const [sessions, prCount, targets] = await Promise.all([
+          getWeeklySessionStats(user.id, weekStart).catch(() => ({ completed: 0, planned: 0 })),
+          getWeeklyPRCount(user.id, weekStart).catch(() => 0),
+          getNutritionTargets(user.id).catch(() => null),
+        ]);
+        let rollups = [];
+        if (targets?.targetKcal) {
+          const startIso = new Date(weekStart).toISOString().slice(0, 10);
+          const endIso = new Date(weekStart + 6 * 86400000).toISOString().slice(0, 10);
+          rollups = await getRollupsForRange(user.id, startIso, endIso).catch(() => []);
+        }
+        const trainingPerf = deriveTrainingPerformance({
+          completed: sessions?.completed ?? 0,
+          planned: sessions?.planned ?? 0,
+          prs: prCount ?? 0,
+        });
+        const calsAdh = deriveCalsAdherence({
+          rollups,
+          targetKcal: targets?.targetKcal ?? null,
+        });
+        if (!cancelled) {
+          setAutoDerived({
+            trainingPerformance: trainingPerf,
+            trainingMeta: { completed: sessions?.completed ?? 0, planned: sessions?.planned ?? 0, prs: prCount ?? 0 },
+            calsAdherence: calsAdh,
+            calsMeta: targets?.targetKcal ? {
+              daysLogged: rollups.filter(r => (r.kcal_total ?? 0) > 0).length,
+              avgKcal: rollups.length ? Math.round(rollups.reduce((a, r) => a + (r.kcal_total ?? 0), 0) / Math.max(1, rollups.filter(r => (r.kcal_total ?? 0) > 0).length)) : 0,
+              target: targets.targetKcal,
+            } : null,
+          });
+          // Pre-select the derived values so the user only has to
+          // override when the data is wrong, not pick from scratch.
+          if (trainingPerf) setTrainingPerformance(trainingPerf);
+          if (calsAdh) setCalsAdherence(calsAdh);
+        }
+
+        // Gate evaluation. Order: wrong day -> first check-in too
+        // soon (< 5 days since first weight log) -> need more weight
+        // readings -> open. The too_soon gate sits between wrong_day
+        // and need_weights because a brand-new user without any
+        // weights still satisfies "today is chosen day" but hasn't
+        // earned enough rhythm to check in yet.
         if (todayDay !== scheduledDay) {
           setGateState('wrong_day');
+        } else if (daysToWait > 0) {
+          const nextDate = new Date(Date.now() + daysToWait * 86400000);
+          setTooSoonCtx({
+            daysToWait,
+            nextDayLabel: nextDate.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }),
+            scheduledDayName: DAYS_FULL[scheduledDay],
+          });
+          setGateState('too_soon');
         } else if (thisWeek.length < MIN_WEIGH_INS) {
           setGateState('need_weights');
         } else {
@@ -421,6 +538,11 @@ export default function WeeklyCheckInScreen({ navigation }) {
         {hasNutritionTarget ? (
           <View style={styles.section}>
             <SectionLabel>Calorie target: how did you get on?</SectionLabel>
+            {autoDerived.calsAdherence && autoDerived.calsMeta ? (
+              <Text style={styles.autoDerivedNote}>
+                Read from your diary: {autoDerived.calsMeta.daysLogged} days logged, average {autoDerived.calsMeta.avgKcal} kcal vs target {autoDerived.calsMeta.target}. Tap to override.
+              </Text>
+            ) : null}
             <OptionRow
               options={[
                 { value: 'yes', label: 'Hit it' },
@@ -547,10 +669,19 @@ export default function WeeklyCheckInScreen({ navigation }) {
     return (
       <>
         <Text style={styles.stepHeading}>Training performance</Text>
-        <Text style={styles.stepSubtitle}>How did your sessions go compared to what you expected?</Text>
+        <Text style={styles.stepSubtitle}>
+          {autoDerived.trainingPerformance
+            ? 'Pre-filled from your logged sessions. Tap a different option if it feels wrong.'
+            : 'How did your sessions go compared to what you expected?'}
+        </Text>
 
         <View style={styles.section}>
           <SectionLabel>This week's training felt like</SectionLabel>
+          {autoDerived.trainingPerformance && autoDerived.trainingMeta ? (
+            <Text style={styles.autoDerivedNote}>
+              Read from your sessions: {autoDerived.trainingMeta.completed}/{autoDerived.trainingMeta.planned} sessions, {autoDerived.trainingMeta.prs} PR{autoDerived.trainingMeta.prs === 1 ? '' : 's'} this week.
+            </Text>
+          ) : null}
           <View style={styles.perfGrid}>
             {[
               { value: 'exceeded', label: 'Beat my targets', icon: 'trending-up' },
@@ -625,6 +756,33 @@ export default function WeeklyCheckInScreen({ navigation }) {
             <Text style={styles.gateBtnText}>Got it</Text>
           </TouchableOpacity>
         </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  if (gateState === 'too_soon') {
+    const { daysToWait, nextDayLabel, scheduledDayName } = tooSoonCtx;
+    return (
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <View style={styles.gateHeader}>
+          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.gateCenter}>
+          <View style={styles.gateIconWrap}>
+            <Ionicons name="time-outline" size={32} color={colors.primary} />
+          </View>
+          <Text style={styles.gateTitle}>First check-in needs more data</Text>
+          <Text style={styles.gateBody}>
+            Precision Coaching needs at least {FIRST_CHECKIN_MIN_DAYS} days of data before the first weekly check-in. Right now there {daysToWait === 1 ? 'is 1 day' : `are ${daysToWait} days`} left.
+            {'\n\n'}
+            Coaching adjustments compare this week to last. With nothing to compare against yet, the weekly read would be guesswork. Log your morning weight each day and food data if you're on Diary, and the first check-in lands on {nextDayLabel} (your chosen day, {scheduledDayName}).
+          </Text>
+          <TouchableOpacity style={styles.gateBtn} onPress={() => navigation.goBack()} activeOpacity={0.85}>
+            <Text style={styles.gateBtnText}>Got it</Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     );
   }
@@ -930,6 +1088,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
     backgroundColor: colors.primaryBg, borderRadius: radius.md,
     borderWidth: 1, borderColor: colors.primary + '40',
+  },
+  autoDerivedNote: {
+    fontSize: fontSize.xs, color: colors.textSecondary,
+    paddingVertical: spacing.xs,
+    marginBottom: spacing.xs,
+    fontStyle: 'italic',
   },
 
   shortInput: {

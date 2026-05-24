@@ -24,7 +24,8 @@ const WEAK_POINT_MUSCLES = [
   'Core / Abs', 'Traps',
 ];
 import { calculateNutritionTargets, PROTEIN_APPROACHES, ADVANCED_PROTEIN_GOALS } from '../lib/nutritionEngine';
-import { saveNutritionTargets } from '../lib/database';
+import { saveNutritionTargets, getMorningWeightsLast14Days } from '../lib/database';
+import { computeEWMA } from '../lib/weeklyCoach';
 import { generateAndSavePlan } from '../lib/planAutoGen';
 
 const APPROACH_SHORT = {
@@ -179,10 +180,40 @@ export default function ProGoalSetupScreen({ navigation }) {
     // Nutrition widget on Athlete Hub showing stale values.
     const { userProfile: latestProfile } = useAppStore.getState();
     const wp = latestProfile || userProfile || {};
-    const safeWeightKg = (typeof wp.weightKg === 'number' && wp.weightKg > 0) ? wp.weightKg : 80;
+
+    // The profile's weightKg is the enrolment-day reading and never
+    // updates as the user logs morning weights. For nutrition target
+    // recalculation we want the LATEST reading (or the smoothed
+    // 7-day trend) so the calorie / protein targets track the user's
+    // actual current body weight. Fall back to the profile value if
+    // there's no morning-weight history.
+    let latestWeightKg = wp.weightKg;
+    try {
+      if (user?.id) {
+        const weights = await getMorningWeightsLast14Days(user.id);
+        if (weights?.length) {
+          const ewma = computeEWMA(weights);
+          latestWeightKg = ewma[ewma.length - 1]?.ewmaKg ?? weights[weights.length - 1]?.weightKg ?? wp.weightKg;
+        }
+      }
+    } catch (_) {}
+
+    const safeWeightKg = (typeof latestWeightKg === 'number' && latestWeightKg > 0) ? latestWeightKg : 80;
     const safeHeightCm = (typeof wp.heightCm === 'number' && wp.heightCm > 0) ? wp.heightCm : 175;
     const safeAge      = (typeof wp.age === 'number' && wp.age > 0) ? wp.age : 28;
     const safeSex      = wp.sex === 'female' ? 'female' : 'male';
+
+    // Also persist the latest weight back into the profile so other
+    // surfaces that read userProfile.weightKg (BodyMetrics summary,
+    // BMR readout, etc) see the current value instead of the stale
+    // enrolment-day reading.
+    if (latestWeightKg && latestWeightKg !== wp.weightKg) {
+      try {
+        if (user?.id && typeof saveLocalProfile === 'function') {
+          await saveLocalProfile(user.id, { ...wp, weightKg: latestWeightKg });
+        }
+      } catch (_) {}
+    }
 
     let nextTargets = null;
     try {
