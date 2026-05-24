@@ -1,27 +1,33 @@
 -- Migration 018: composite (user_id, id) primary keys
 --
 -- ============================================================
--- DO NOT APPLY YET.
+-- APPLY THIS MIGRATION NOW. Hold the new app build for later.
 --
--- Release policy locked 2026-05-24: the current Play Console
--- closed-testing build stays in place until the full app is built
--- out -- not half done. This migration ships as part of the
--- accumulated branch state; it applies to production cloud only at
--- the coordinated release the user decides to trigger.
+-- Release policy locked 2026-05-24:
+--   - This SQL applies to production cloud NOW, to support the
+--     continued build on the branch.
+--   - The current Play Console closed-testing build (pre-Eat
+--     component, "old app") stays in place. No new app version
+--     ships to closed testers until the entire branch is built
+--     out, not half done.
 --
--- When the user is ready to release, the sequence is:
---   1. Confirm every committed move + design fix on the branch is
---      ready (no pending blockers in HANDOFF.md).
---   2. Build the new app version from this branch and upload to
---      Play Console closed testing.
---   3. Wait until every tester device shows the new release
---      (Play Console > Releases > Active devices).
---   4. THEN apply this migration via Supabase Dashboard -> SQL Editor.
---   5. New code uses onConflict: 'user_id,id' from this point on.
+-- Why this is safe for the old app:
+--   - Reads (SELECT) work unchanged; column structure is intact.
+--   - Inserts of new rows succeed; old app already supplies user_id
+--     on parent tables. For routine_exercises and mesocycle_weeks
+--     (which the old app doesn't populate with user_id), triggers
+--     below auto-fill it from the parent row so those inserts also
+--     succeed.
+--   - Upserts with onConflict: 'id' FAIL after composite PK lands
+--     (no unique on id alone). That's a sync error in the log per
+--     the locked release-tolerance contract, not a crash. The old
+--     app continues to function locally; users can still log
+--     workouts, see history, etc. Cloud just doesn't accept their
+--     edit-style upserts. Acceptable.
 --
--- Until that day arrives, this file sits unapplied. The current
--- production cloud schema (no composite PK) continues to serve the
--- old app build without disruption.
+-- When the new app build is ready (whole project done), it ships
+-- via Play Console closed testing and the upsert errors disappear
+-- because the new code uses onConflict: 'user_id,id'.
 --
 -- ============================================================
 --
@@ -93,6 +99,50 @@ FROM mesocycles m
 WHERE mw.mesocycle_id = m.id AND mw.user_id IS NULL;
 DELETE FROM mesocycle_weeks WHERE user_id IS NULL;
 ALTER TABLE mesocycle_weeks ALTER COLUMN user_id SET NOT NULL;
+
+-- ─────────────────────────────────────────────────────────────────────
+-- Old-client safety triggers. The pre-Eat-component closed-testing
+-- build (still in production on Play Console) pushes routine_exercises
+-- and mesocycle_weeks WITHOUT a user_id field. The NOT NULL constraint
+-- above would reject those inserts and break sync for those tables
+-- entirely on the old app. The triggers below populate user_id from
+-- the parent row on insert so the old client's inserts succeed
+-- transparently. New app builds set user_id explicitly and the trigger
+-- becomes a no-op for those rows.
+--
+-- onConflict: 'id' upserts from old clients will still fail (no unique
+-- constraint on id alone after the composite PK swap below); that's
+-- a sync-error-in-log per the locked release-tolerance contract, not
+-- a functional break.
+-- ─────────────────────────────────────────────────────────────────────
+
+CREATE OR REPLACE FUNCTION routine_exercises_inherit_user_id()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.user_id IS NULL THEN
+    SELECT user_id INTO NEW.user_id FROM routines WHERE id = NEW.routine_id LIMIT 1;
+  END IF;
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS trg_routine_exercises_inherit_user_id ON routine_exercises;
+CREATE TRIGGER trg_routine_exercises_inherit_user_id
+BEFORE INSERT ON routine_exercises
+FOR EACH ROW EXECUTE FUNCTION routine_exercises_inherit_user_id();
+
+CREATE OR REPLACE FUNCTION mesocycle_weeks_inherit_user_id()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.user_id IS NULL THEN
+    SELECT user_id INTO NEW.user_id FROM mesocycles WHERE id = NEW.mesocycle_id LIMIT 1;
+  END IF;
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS trg_mesocycle_weeks_inherit_user_id ON mesocycle_weeks;
+CREATE TRIGGER trg_mesocycle_weeks_inherit_user_id
+BEFORE INSERT ON mesocycle_weeks
+FOR EACH ROW EXECUTE FUNCTION mesocycle_weeks_inherit_user_id();
 
 -- recipe_ingredients deliberately excluded: food tables retain their
 -- existing (id) primary keys for now. The food sync RPC (migration 016)

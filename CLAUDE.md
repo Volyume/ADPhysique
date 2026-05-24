@@ -94,13 +94,14 @@ fills the space", strip it back.
 - Branch policy is set per session in the system prompt. Follow it
   exactly. Never push to a branch the user hasn't named.
 - **Release policy (2026-05-24):** the current Play Console closed
-  testing build stays in place until the full app is built out.
-  Do NOT propose, schedule, or trigger a new closed-testing release.
-  Do NOT apply pending Supabase migrations to production. The
-  branch accumulates work; the user decides when it ships. If a
-  change LOOKS like it would force a release (a coordinated
-  migration + code change that breaks the old app), flag it
-  explicitly and wait for direction.
+  testing build stays in place until the WHOLE project is built
+  out -- not half done. Do NOT propose, schedule, or trigger a new
+  closed-testing release. Cloud migrations DO get applied now to
+  support continued building on the branch; the old app on closed
+  testing is required to remain functional against the new schema
+  (sync errors in log are acceptable; total break is not). Any
+  schema change must satisfy that contract for the existing build
+  or it can't ship to cloud either.
 - Never use `git --no-verify` or skip hooks.
 - **Identity and data ownership is locked in
   `docs/IDENTITY_AND_OWNERSHIP_LOCKED.md`.** Read it before touching

@@ -235,13 +235,14 @@ growth-strategy follow-through, and the next moves.
 
 > **Release policy (locked 2026-05-24):** The current Play Console
 > closed testing build (pre-Eat-component version) stays in place
-> until the full app is "totally cleaned and built out — not half
-> done". No new app version goes to closed testers, no Supabase
-> migration runs in production, until every committed move + every
-> pending design fix is shipped on the branch and reviewed. This
-> branch (`claude/volyume-food-logging-app-B9JZv`) accumulates
-> changes; the user explicitly controls when the accumulated work
-> graduates to a release.
+> until the WHOLE project is built out — not half done. No new app
+> version goes to closed testers until the user explicitly
+> approves. Cloud Supabase migrations DO apply now, to support
+> continued building on the branch; the old app on closed testing
+> is required to keep functioning against the new cloud schema
+> (sync errors in log are acceptable; total break is not). Every
+> new migration must satisfy that contract or it can't ship to
+> cloud either.
 
 0. **Identity + data ownership redesign** per
    `docs/IDENTITY_AND_OWNERSHIP_LOCKED.md`. A multi-account
