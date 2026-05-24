@@ -10,6 +10,7 @@
 
 import { getTrainingNote } from './coachingGoals';
 import { shouldSuggestDietBreak, computeFFMFloor } from './nutritionEngine';
+import { detectEdPatternFlag, hasEdPatternCleared } from './edPatternDetector';
 
 // ─── EWMA ────────────────────────────────────────────────────────────────────
 
@@ -36,6 +37,23 @@ export function computeEWMA(weights, alpha = 0.1) {
 export function getLatestEwma(weights, alpha = 0.1) {
   const series = computeEWMA(weights, alpha);
   return series.length ? series[series.length - 1].ewmaKg : null;
+}
+
+/**
+ * Signed weekly trend in % of body weight per week. -1.5 means the
+ * EWMA has dropped 1.5% in the last 7 days. Returns null when
+ * there aren't enough readings to compute a meaningful trend.
+ *
+ * Used by the ED-pattern detector for its rapid-loss signal.
+ */
+export function computeWeeklyTrendPct(morningWeights, currentBodyweightKg = null) {
+  if (!morningWeights || morningWeights.length < 4) return null;
+  const ewmaNow = getLatestEwma(morningWeights);
+  const ewmaPrior = getEwmaSevenDaysAgo(morningWeights);
+  if (ewmaNow == null || ewmaPrior == null) return null;
+  const reference = currentBodyweightKg || ewmaNow;
+  if (!reference) return null;
+  return ((ewmaNow - ewmaPrior) / reference) * 100;
 }
 
 /**
@@ -290,6 +308,16 @@ export function runWeeklyCoach(inputs) {
     sex = null,
     recentIntakeAvgKcal = null,
     recentIntakeDaysLogged = 0,
+    // ED-pattern detector context (Move #2). Optional: when not
+    // supplied the detector is skipped. recentWeeklyHistory is
+    // most-recent-first, each entry { energy, adherence, hasCheckin,
+    // hasFoodData }. goalLockAdvanced raises the firing threshold
+    // from 2 signals to 3. edPatternOpen is the current open flag
+    // state read from the DB (so we know whether to check for
+    // clearance instead of for a fresh raise).
+    recentWeeklyHistory = null,
+    goalLockAdvanced = false,
+    edPatternOpen = false,
   } = inputs;
 
   // ── DATA CONFIDENCE ───────────────────────────────────────────────────────
@@ -619,10 +647,61 @@ export function runWeeklyCoach(inputs) {
     }
   }
 
+  // ── ED-PATTERN DETECTOR (Move #2) ─────────────────────────────────────────
+  // Multi-signal harm-prevention check. Reads recent weight trend +
+  // weekly history and decides whether to raise an ED-pattern flag
+  // or, if one is already open, whether to clear it. The output is
+  // attached to the coach output so the caller (DB layer) can write
+  // the state machine transition. A raised flag also injects an
+  // ed_pattern_lockout held decision so the held-decisions card
+  // renders the locked copy with CTAs.
+  let edPatternResult = null;
+  let edPatternClearedThisWeek = false;
+  if (recentWeeklyHistory) {
+    const weightTrendPctPerWeek = computeWeeklyTrendPct(morningWeights, bodyweightKg);
+    if (edPatternOpen) {
+      const cleared = hasEdPatternCleared({ weightTrendPctPerWeek }, recentWeeklyHistory);
+      if (cleared) {
+        edPatternClearedThisWeek = true;
+      }
+    } else {
+      const result = detectEdPatternFlag(
+        { weightTrendPctPerWeek },
+        recentWeeklyHistory,
+        goalLockAdvanced,
+      );
+      if (result.fired) {
+        edPatternResult = result;
+      }
+    }
+  }
+
   // ── HELD DECISIONS ────────────────────────────────────────────────────────
   const heldDecisions = [];
 
-  // FFM-floor hold goes first because it's a safety hold that
+  // ED-pattern lockout takes the top slot: it's the strongest hold,
+  // and the held-decision card uses its type to switch to the rich
+  // locked-copy variant rather than the plain reason string. Same
+  // shape as the FFM floor: a downward calorie suggestion is wiped
+  // so the engine never pushes a deeper deficit while the flag is up.
+  if (edPatternResult?.fired || edPatternOpen) {
+    if (calorieAdjustment && calorieAdjustment.change < 0) {
+      calorieAdjustment = null;
+    }
+    heldDecisions.push({
+      type: 'ed_pattern_lockout',
+      reason: 'Calorie cut held. Multiple safety signals are active. See the held-decision card for details.',
+      signals: edPatternResult?.signals ?? null,
+      goalLockAdvanced: !!goalLockAdvanced,
+    });
+  } else if (edPatternClearedThisWeek) {
+    heldDecisions.push({
+      type: 'ed_pattern_cleared',
+      reason: 'Hold lifted. The signals that triggered the hold have settled for two weeks. Standard coaching resumes next week.',
+    });
+  }
+
+  // FFM-floor hold goes second because it's a safety hold that
   // supersedes the other calorie-hold reasons. The user needs to see
   // this one above any "still gathering data" or "trend is on target"
   // type messages.
@@ -737,6 +816,10 @@ export function runWeeklyCoach(inputs) {
     rapidWeightLossFlag,
     ffmFloorHeld,
     ffmFloorContext,
+    edPatternFired: !!edPatternResult?.fired,
+    edPatternSignals: edPatternResult?.signals ?? null,
+    edPatternClearedThisWeek,
+    goalLockAdvanced: !!goalLockAdvanced,
     adherenceNote: null,
     prsThisWeek,
     sessionsCompleted,

@@ -904,6 +904,43 @@ const SCHEMA_MIGRATIONS = [
   [
     'ALTER TABLE coach_outputs ADD COLUMN applied INTEGER DEFAULT 0',
   ],
+  // Move #2: ED-pattern detection + goal lock + engine telemetry.
+  // - ed_pattern_flags is the state machine: one open row per user
+  //   while the flag is raised, cleared_at populated on clearance.
+  // - goal_lock_advanced lives on user_body_profile and raises the
+  //   detector threshold from 2 signals to 3 for users who picked
+  //   physique_competition or advanced_recomp at onboarding AND
+  //   declared prior experience managing aggressive cuts.
+  // - engine_telemetry is the local mirror for Move #3 (cascade
+  //   telemetry) -- written here so the SQLite layer owns both
+  //   safety and instrumentation in the same migration block.
+  [
+    `CREATE TABLE IF NOT EXISTS ed_pattern_flags (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      flag_state TEXT NOT NULL,
+      reason TEXT,
+      signals_json TEXT,
+      raised_at INTEGER NOT NULL,
+      cleared_at INTEGER,
+      updated_at INTEGER NOT NULL,
+      deleted_at INTEGER
+    )`,
+    'CREATE INDEX IF NOT EXISTS idx_ed_pattern_flags_user ON ed_pattern_flags(user_id, raised_at)',
+    'CREATE INDEX IF NOT EXISTS idx_ed_pattern_flags_open ON ed_pattern_flags(user_id, cleared_at)',
+    'ALTER TABLE user_body_profile ADD COLUMN goal_lock_advanced INTEGER DEFAULT 0',
+    'ALTER TABLE user_body_profile ADD COLUMN goal_lock_set_at INTEGER',
+    `CREATE TABLE IF NOT EXISTS engine_telemetry (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      event TEXT NOT NULL,
+      payload_json TEXT,
+      occurred_at INTEGER NOT NULL,
+      pushed_at INTEGER
+    )`,
+    'CREATE INDEX IF NOT EXISTS idx_engine_telemetry_user ON engine_telemetry(user_id, occurred_at)',
+    'CREATE INDEX IF NOT EXISTS idx_engine_telemetry_pushed ON engine_telemetry(pushed_at)',
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
@@ -4544,4 +4581,116 @@ export async function getLastTrainedPerMuscle(userId) {
     if (row.primary_muscle) result[row.primary_muscle] = row.last_trained_at;
   }
   return result;
+}
+
+// ─── ED-pattern flag state machine (Move #2) ─────────────────────────────────
+
+export async function getOpenEdPatternFlag(userId) {
+  const d = await db();
+  return d.getFirstAsync(
+    `SELECT * FROM ed_pattern_flags
+     WHERE user_id = ? AND cleared_at IS NULL AND deleted_at IS NULL
+     ORDER BY raised_at DESC LIMIT 1`,
+    [userId],
+  );
+}
+
+export async function getRecentEdPatternFlags(userId, limit = 5) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT * FROM ed_pattern_flags
+     WHERE user_id = ? AND deleted_at IS NULL
+     ORDER BY raised_at DESC LIMIT ?`,
+    [userId, limit],
+  );
+  return rows;
+}
+
+export async function raiseEdPatternFlag(userId, { reason, signals }) {
+  const d = await db();
+  const now = Date.now();
+  const existing = await getOpenEdPatternFlag(userId);
+  if (existing) {
+    await d.runAsync(
+      `UPDATE ed_pattern_flags SET reason = ?, signals_json = ?, updated_at = ? WHERE id = ?`,
+      [reason, JSON.stringify(signals ?? {}), now, existing.id],
+    );
+    return existing.id;
+  }
+  const id = uid();
+  await d.runAsync(
+    `INSERT INTO ed_pattern_flags
+       (id, user_id, flag_state, reason, signals_json, raised_at, updated_at)
+     VALUES (?, ?, 'raised', ?, ?, ?, ?)`,
+    [id, userId, reason, JSON.stringify(signals ?? {}), now, now],
+  );
+  return id;
+}
+
+export async function clearEdPatternFlag(userId) {
+  const d = await db();
+  const now = Date.now();
+  await d.runAsync(
+    `UPDATE ed_pattern_flags
+     SET flag_state = 'cleared', cleared_at = ?, updated_at = ?
+     WHERE user_id = ? AND cleared_at IS NULL AND deleted_at IS NULL`,
+    [now, now, userId],
+  );
+}
+
+// ─── Goal lock (Move #2) ─────────────────────────────────────────────────────
+
+export async function setGoalLockAdvanced(userId, advanced) {
+  const d = await db();
+  const now = Date.now();
+  await d.runAsync(
+    `UPDATE user_body_profile
+     SET goal_lock_advanced = ?, goal_lock_set_at = ?, updated_at = ?
+     WHERE user_id = ?`,
+    [advanced ? 1 : 0, now, now, userId],
+  );
+}
+
+export async function getGoalLockAdvanced(userId) {
+  const d = await db();
+  const row = await d.getFirstAsync(
+    `SELECT goal_lock_advanced FROM user_body_profile WHERE user_id = ?`,
+    [userId],
+  );
+  return !!(row?.goal_lock_advanced);
+}
+
+// ─── Engine telemetry (Move #3) ──────────────────────────────────────────────
+
+export async function recordEngineTelemetry(userId, event, payload = null) {
+  if (!userId || !event) return null;
+  const d = await db();
+  const id = uid();
+  const now = Date.now();
+  await d.runAsync(
+    `INSERT INTO engine_telemetry (id, user_id, event, payload_json, occurred_at)
+     VALUES (?, ?, ?, ?, ?)`,
+    [id, userId, event, payload ? JSON.stringify(payload) : null, now],
+  );
+  return id;
+}
+
+export async function getUnpushedEngineTelemetry(limit = 200) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT * FROM engine_telemetry WHERE pushed_at IS NULL ORDER BY occurred_at ASC LIMIT ?`,
+    [limit],
+  );
+  return rows;
+}
+
+export async function markEngineTelemetryPushed(ids) {
+  if (!ids?.length) return;
+  const d = await db();
+  const now = Date.now();
+  const placeholders = ids.map(() => '?').join(',');
+  await d.runAsync(
+    `UPDATE engine_telemetry SET pushed_at = ? WHERE id IN (${placeholders})`,
+    [now, ...ids],
+  );
 }

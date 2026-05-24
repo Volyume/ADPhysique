@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,10 +19,19 @@ import {
   saveCoachOutput,
   getLatestCoachOutput,
   getCoachOutputHistory,
+  getOpenEdPatternFlag,
+  raiseEdPatternFlag,
+  clearEdPatternFlag,
 } from '../lib/database';
+import { track as trackEngineEvent } from '../lib/engineTelemetry';
 import { computeEWMA, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
 import { logError } from '../lib/errorLog';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import {
+  ED_PATTERN_LOCKOUT_COPY,
+  ED_PATTERN_CLEARED_COPY,
+  getEdSupportLink,
+} from '../lib/whyThisTemplates';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -310,19 +319,32 @@ function ConfidencePill({ confidence }) {
 
 function HeldDecisionsCard({ decisions, history }) {
   if (!decisions || decisions.length === 0) return null;
+  const edLockout = decisions.find(d => d.type === 'ed_pattern_lockout');
+  const edCleared = decisions.find(d => d.type === 'ed_pattern_cleared');
   // Filter history entries that have held decisions
   const historyWithHeld = (history ?? []).filter(
     h => h.heldDecisions && h.heldDecisions.length > 0
   );
+  // Other decisions render in the standard plain-reason rows; ED
+  // variants render in their own rich block above.
+  const standardDecisions = decisions.filter(
+    d => d.type !== 'ed_pattern_lockout' && d.type !== 'ed_pattern_cleared',
+  );
   return (
     <View style={styles.heldCard}>
-      <SectionHeader title="What we held this week" />
-      {decisions.map((d, i) => (
-        <View key={i} style={styles.heldRow}>
-          <Ionicons name="pause-circle-outline" size={16} color={colors.textMuted} style={{ marginTop: spacing.xxs }} />
-          <Text style={styles.heldText}>{d.reason}</Text>
-        </View>
-      ))}
+      {edLockout ? <EdPatternLockoutBlock decision={edLockout} /> : null}
+      {edCleared ? <EdPatternClearedBlock /> : null}
+      {standardDecisions.length > 0 ? (
+        <>
+          <SectionHeader title="What we held this week" />
+          {standardDecisions.map((d, i) => (
+            <View key={i} style={styles.heldRow}>
+              <Ionicons name="pause-circle-outline" size={16} color={colors.textMuted} style={{ marginTop: spacing.xxs }} />
+              <Text style={styles.heldText}>{d.reason}</Text>
+            </View>
+          ))}
+        </>
+      ) : null}
       {historyWithHeld.length > 0 ? (
         <View style={styles.heldHistoryShelf}>
           <Text style={styles.heldHistoryTitle}>PREVIOUS WEEKS</Text>
@@ -348,6 +370,59 @@ function HeldDecisionsCard({ decisions, history }) {
           </Text>
         </View>
       )}
+    </View>
+  );
+}
+
+function EdPatternLockoutBlock({ decision }) {
+  const [showReadMore, setShowReadMore] = useState(false);
+  const supportLink = getEdSupportLink(
+    // Best-effort locale: Intl.DateTimeFormat reports the device
+    // locale. On a phone without an i18n setup we still get a sane
+    // default from the helper's fallback chain.
+    (() => {
+      try { return Intl.DateTimeFormat().resolvedOptions().locale; } catch (_) { return null; }
+    })(),
+  );
+  async function openSupport() {
+    try { await Linking.openURL(supportLink.url); } catch (_) {}
+  }
+  return (
+    <View style={styles.edLockoutCard}>
+      <Text style={styles.edLockoutHeader}>{ED_PATTERN_LOCKOUT_COPY.header}</Text>
+      <Text style={styles.edLockoutTitle}>{ED_PATTERN_LOCKOUT_COPY.title}</Text>
+      <Text style={styles.edLockoutBody}>{ED_PATTERN_LOCKOUT_COPY.body}</Text>
+      {decision?.goalLockAdvanced ? (
+        <Text style={styles.edLockoutBody}>{ED_PATTERN_LOCKOUT_COPY.bodyGoalLockExtension}</Text>
+      ) : null}
+      {showReadMore ? (
+        <View style={styles.edLockoutReadMoreBox}>
+          <Text style={styles.edLockoutReadMoreText}>{ED_PATTERN_LOCKOUT_COPY.readMoreBody}</Text>
+        </View>
+      ) : null}
+      <View style={styles.edLockoutCtaRow}>
+        <TouchableOpacity onPress={openSupport} style={styles.edLockoutCtaPrimary}>
+          <Text style={styles.edLockoutCtaPrimaryText}>
+            {ED_PATTERN_LOCKOUT_COPY.ctaSupport} · {supportLink.name}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setShowReadMore(v => !v)} style={styles.edLockoutCtaGhost}>
+          <Text style={styles.edLockoutCtaGhostText}>
+            {showReadMore ? 'Hide' : ED_PATTERN_LOCKOUT_COPY.ctaReadMore}
+          </Text>
+        </TouchableOpacity>
+      </View>
+      <Text style={styles.edLockoutBottomNote}>{ED_PATTERN_LOCKOUT_COPY.bottomNote}</Text>
+    </View>
+  );
+}
+
+function EdPatternClearedBlock() {
+  return (
+    <View style={styles.edClearedCard}>
+      <Text style={styles.edClearedHeader}>{ED_PATTERN_CLEARED_COPY.header}</Text>
+      <Text style={styles.edClearedTitle}>{ED_PATTERN_CLEARED_COPY.title}</Text>
+      <Text style={styles.edClearedBody}>{ED_PATTERN_CLEARED_COPY.body}</Text>
     </View>
   );
 }
@@ -446,6 +521,22 @@ export default function CoachOutputScreen({ navigation, route }) {
         : null;
       const lastCalAdjustmentWeeksAgo = lastCalAdjustmentDirection ? 1 : 99;
 
+      // ED-pattern detector context (Move #2). Build the rolling
+      // weekly history from the recent check-ins we already loaded.
+      // Each entry: { energy, adherence, hasCheckin, hasFoodData }.
+      // Most-recent-first to match the detector's contract.
+      const recentWeeklyHistory = recentCheckins.map(ci => ({
+        energy: ci.energyScore ?? null,
+        adherence: ci.calsAdherence ?? null,
+        hasCheckin: true,
+        // Food data presence is best-judged at the check-in row:
+        // hasFoodData true when calsAdherence was tracked.
+        hasFoodData: ci.calsAdherence != null && ci.calsAdherence !== 'untracked',
+      }));
+      const goalLockAdvanced = !!userProfile?.goalLockAdvanced;
+      const openFlag = await getOpenEdPatternFlag(user.id).catch(() => null);
+      const edPatternOpen = !!openFlag;
+
       const result = runWeeklyCoach({
         checkin,
         morningWeights: weights,
@@ -465,7 +556,30 @@ export default function CoachOutputScreen({ navigation, route }) {
         bodyweightKg: userProfile?.weightKg ?? null,
         units,
         scoffPositive: (userProfile?.scoffScore ?? 0) >= 2,
+        recentWeeklyHistory,
+        goalLockAdvanced,
+        edPatternOpen,
       });
+
+      // Persist ED-pattern state machine transition + telemetry.
+      // Raise on first fire, clear on confirmed clearance.
+      try {
+        if (result.edPatternFired && !edPatternOpen) {
+          await raiseEdPatternFlag(user.id, {
+            reason: 'multi-signal harm check',
+            signals: result.edPatternSignals,
+          });
+          await trackEngineEvent(user.id, 'ed_pattern_flag_fired', {
+            signals: result.edPatternSignals,
+            goalLockAdvanced,
+          });
+        } else if (result.edPatternClearedThisWeek && edPatternOpen) {
+          await clearEdPatternFlag(user.id);
+          await trackEngineEvent(user.id, 'ed_pattern_flag_cleared', null);
+        }
+      } catch (e) {
+        logError('CoachOutputScreen.edPatternPersist', e);
+      }
 
       await saveCoachOutput(user.id, { weekStart, ...result });
 
@@ -1109,6 +1223,109 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: spacing.lg,
     gap: spacing.sm,
+  },
+  edLockoutCard: {
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.warning,
+    padding: spacing.lg,
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  edLockoutHeader: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.warning,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  edLockoutTitle: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+  },
+  edLockoutBody: {
+    fontSize: fontSize.sm,
+    color: colors.textPrimary,
+    lineHeight: 21,
+  },
+  edLockoutReadMoreBox: {
+    marginTop: spacing.xs,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  edLockoutReadMoreText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 21,
+  },
+  edLockoutCtaRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+    flexWrap: 'wrap',
+  },
+  edLockoutCtaPrimary: {
+    flex: 1,
+    minWidth: 140,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+  },
+  edLockoutCtaPrimaryText: {
+    color: '#000',
+    fontWeight: fontWeight.bold,
+    fontSize: fontSize.sm,
+  },
+  edLockoutCtaGhost: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  edLockoutCtaGhostText: {
+    color: colors.textSecondary,
+    fontWeight: fontWeight.medium,
+    fontSize: fontSize.sm,
+  },
+  edLockoutBottomNote: {
+    marginTop: spacing.xs,
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    fontStyle: 'italic',
+    lineHeight: 18,
+  },
+  edClearedCard: {
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.success,
+    padding: spacing.lg,
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  edClearedHeader: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: colors.success,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  edClearedTitle: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+  },
+  edClearedBody: {
+    fontSize: fontSize.sm,
+    color: colors.textPrimary,
+    lineHeight: 21,
   },
   heldRow: {
     flexDirection: 'row',

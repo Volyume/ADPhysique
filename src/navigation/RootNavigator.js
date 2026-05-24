@@ -54,6 +54,7 @@ import WeeklyCheckInScreen from '../screens/WeeklyCheckInScreen';
 import CoachOutputScreen from '../screens/CoachOutputScreen';
 import ProGoalSetupScreen from '../screens/ProGoalSetupScreen';
 import GoalChangeSummaryScreen from '../screens/GoalChangeSummaryScreen';
+import GoalLockConsentScreen from '../screens/GoalLockConsentScreen';
 import NotificationSettingsScreen from '../screens/NotificationSettingsScreen';
 import ImportScreen from '../screens/ImportScreen';
 import CoachingRemindersScreen from '../screens/CoachingRemindersScreen';
@@ -248,6 +249,7 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="BlockReflection" component={BlockReflectionScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ProGoalSetup" component={GatedProGoalSetup} options={{ headerShown: false }} />
       <Stack.Screen name="GoalChangeSummary" component={GoalChangeSummaryScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="GoalLockConsent" component={GoalLockConsentScreen} options={{ title: 'Goal lock' }} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ title: 'Notifications' }} />
       <Stack.Screen name="Import" component={ImportScreen} options={{ title: 'Import history' }} />
       <Stack.Screen name="CoachingReminders" component={GatedCoachingReminders} options={{ title: 'Coaching reminders' }} />
@@ -629,6 +631,15 @@ export default function RootNavigator() {
                 } catch (e) {
                   log.logError('SignIn.bulkUpload.fail', e, { uid: session.user.id });
                 }
+                // Drain any unpushed engine telemetry from the local
+                // queue (Move #3). Events written while offline or
+                // pre-sign-in land in SQLite via the track() helper;
+                // this is the first opportunity to ship them.
+                try {
+                  // eslint-disable-next-line global-require
+                  const { flushPendingTelemetry } = require('../lib/engineTelemetry');
+                  await flushPendingTelemetry();
+                } catch (_) {}
               } catch (_) {}
             })();
 

@@ -833,6 +833,12 @@ export default function AthleteHubScreen({ navigation }) {
                 sub="Every coaching decision, and why"
                 onPress={() => navigation.navigate('CoachHeldHistory')}
               />
+              <NavRow
+                icon="shield-checkmark-outline"
+                label="Goal lock"
+                sub="Tell Volyume whether you have prior experience with aggressive cuts. Affects how soon the safety check holds further deficit."
+                onPress={() => navigation.navigate('GoalLockConsent', { editMode: true })}
+              />
 
               {/* Engine Log — collapsible */}
               {(adaptationHistory.length > 0 || repWarnings.length > 0) && (

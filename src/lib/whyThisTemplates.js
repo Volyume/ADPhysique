@@ -336,6 +336,59 @@ export function getPosingConditioningMessage(type, minutesPerSession, weeksToCom
 }
 
 // ---------------------------------------------------------------------------
+// ED-pattern lockout copy (Move #2, locked verbatim in
+// MOVE_2_ED_PATTERN_DETECTION.md). Both variants render inside the
+// HeldDecisionsCard via a richer layout, not as a plain reason
+// string, so we expose structured copy fields rather than a single
+// sentence. Identical for free, pro, complete users.
+// ---------------------------------------------------------------------------
+
+export const ED_PATTERN_LOCKOUT_COPY = {
+  header: 'Held this week',
+  title: 'We\'ve held your calorie cut',
+  body:
+    "We've held your calorie cut. We've noticed a few signals together: your weight has been dropping faster than your intake suggests, your energy scores have been low, and your food log shows you eating less than your target for a few weeks running.\n\n" +
+    "Even when a cut is going well in numbers, sustained low energy is a safety signal. We'd rather pause than push.\n\n" +
+    "Once your fuelling and energy recover for two weeks, we'll suggest new targets.",
+  bodyGoalLockExtension:
+    "You set a goal lock for an aggressive cut, so we've held off until three signals stacked up instead of two. That happened this week.",
+  ctaSupport: 'Get support',
+  ctaReadMore: 'Read more about why',
+  bottomNote:
+    "You can keep using Volyume normally. Your weight log, food diary, training, and check-ins all continue. Only the calorie target stops shifting.",
+  // Tooltip body for the "Read more about why" InfoTooltip.
+  readMoreBody:
+    "Low energy that sticks around alongside fast weight loss is the body's signal that fuel intake is too low for what training is demanding. The condition has a name in sports medicine: relative energy deficiency. It shows up first as low energy, then in training quality, then in hormones and bone health.\n\n" +
+    "Volyume waits for two or more of these signals to stack before holding the cut. One signal on its own is normal: people have low-energy weeks. The pattern that worries us is the combination.\n\n" +
+    "The hold is not a punishment. It's a pause while your numbers settle. Once your energy scores recover and your intake catches up for two weeks, the engine starts adjusting again.",
+};
+
+export const ED_PATTERN_CLEARED_COPY = {
+  header: 'Hold lifted',
+  title: 'Your numbers are looking better',
+  body:
+    "The signals that triggered the hold have settled for two weeks. We're back to the standard coach output. New calorie targets land at the next weekly run.\n\n" +
+    "Take this gently. Energy recovery beats rushing back into a deep cut.",
+};
+
+// Locale-appropriate eating disorder support links (locked).
+export const ED_SUPPORT_LINKS = {
+  'en-GB': { name: 'Beat',       url: 'https://www.beateatingdisorders.org.uk' },
+  'en-US': { name: 'NEDA',       url: 'https://www.nationaleatingdisorders.org' },
+  'en-AU': { name: 'Butterfly',  url: 'https://butterfly.org.au' },
+  default: { name: 'Beat',       url: 'https://www.beateatingdisorders.org.uk' },
+};
+
+export function getEdSupportLink(locale) {
+  if (!locale) return ED_SUPPORT_LINKS.default;
+  if (ED_SUPPORT_LINKS[locale]) return ED_SUPPORT_LINKS[locale];
+  // Fallback by language prefix.
+  const lang = String(locale).split(/[-_]/)[0]?.toLowerCase();
+  if (lang === 'en') return ED_SUPPORT_LINKS.default;
+  return ED_SUPPORT_LINKS.default;
+}
+
+// ---------------------------------------------------------------------------
 // Jargon blocklist check (for testing — call on any string before display)
 // ---------------------------------------------------------------------------
 

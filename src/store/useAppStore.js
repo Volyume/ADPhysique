@@ -262,6 +262,18 @@ const useAppStore = create((set, get) => ({
         }
         // eslint-disable-next-line global-require
         require('../lib/errorLog').logWarn('useAppStore.setTier', `tier ${prev} → ${tier}`, { prev, next: tier, caller: trace });
+        // Engine telemetry (Move #3). Tier transition is one of the
+        // six events that feed the cohort dashboard. A downgrade at
+        // a paywall is also tracked separately as churn_at_gate, so
+        // analysis can distinguish "downgraded after trial" from
+        // "free-to-pro upgrade".
+        const userId = get().user?.id;
+        if (userId) {
+          // eslint-disable-next-line global-require
+          require('../lib/engineTelemetry').track(userId, 'tier_changed', {
+            prev, next: tier, caller: callerScope ?? 'untagged',
+          }).catch(() => {});
+        }
       } catch (_) {}
     }
     // Persist BEFORE setting in-memory state so a crash between the two
