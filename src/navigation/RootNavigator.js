@@ -51,7 +51,6 @@ import NutritionTargetsScreen from '../screens/NutritionTargetsScreen';
 import PlanLibraryScreen from '../screens/PlanLibraryScreen';
 import FirstRunScreen from '../screens/FirstRunScreen';
 import Article9ConsentScreen from '../screens/Article9ConsentScreen';
-import FoodLayerIntroScreen from '../screens/FoodLayerIntroScreen';
 import WeeklyCheckInScreen from '../screens/WeeklyCheckInScreen';
 import CoachOutputScreen from '../screens/CoachOutputScreen';
 import ProGoalSetupScreen from '../screens/ProGoalSetupScreen';
@@ -364,9 +363,6 @@ function ProOnboardingStack() {
           step 3 when the user picks a competition-tier goal. The
           onContinue route param chains back into the step machine. */}
       <Stack.Screen name="GoalLockConsent" component={GoalLockConsentScreen} options={{ headerShown: true, title: 'Goal lock' }} />
-      {/* Food layer intro -- fires after step 4 (recovery rating),
-          chains into ProSetupComplete via onComplete route param. */}
-      <Stack.Screen name="FoodLayerIntro" component={FoodLayerIntroScreen} />
     </Stack.Navigator>
   );
 }

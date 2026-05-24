@@ -26,12 +26,17 @@ otherwise keeps the existing structure intact.
 7. **SCOFF screener** (existing, unchanged position)
 8. **Activity level** (existing, unchanged)
 9. **Equipment + frequency** (existing, unchanged)
-10. **Food layer intro** (NEW, locked)
-11. **Notifications permission** (existing, unchanged)
-12. **First-run summary** (existing, slight extension)
+10. **Notifications permission** (existing, unchanged)
+11. **First-run summary** (existing, slight extension)
 
-Total screens: 12. The user reaches a useful Train tab + Diary tab
+Total screens: 11. The user reaches a useful Train tab + Diary tab
 within 2-3 minutes of first launch.
+
+The "Food layer intro" screen that originally sat between equipment
+and notifications was removed 2026-05-24. It was a marketing-style
+intro with a "try it now or set up later" choice that landed both
+paths in the same place. The Diary tab in the bottom nav is the
+real entry point.
 
 ## Screen-by-screen detail (NEW screens only)
 

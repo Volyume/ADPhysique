@@ -510,13 +510,7 @@ export default function ProOnboardingScreen({ navigation }) {
       return;
     }
     setBusy(false);
-    // Food layer intro per ONBOARDING_SEQUENCE_LOCKED.md screen 10.
-    // Shown once at the end of onboarding, before the setup-complete
-    // hand-off. onComplete chains into ProSetupComplete regardless of
-    // whether the user opted to add a food now or set it up later.
-    navigation.navigate('FoodLayerIntro', {
-      onComplete: () => navigation.replace('ProSetupComplete'),
-    });
+    navigation.replace('ProSetupComplete');
   }
 
   // ── Progress bar ─────────────────────────────────────────────────────────────
