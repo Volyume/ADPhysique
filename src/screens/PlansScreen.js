@@ -326,7 +326,7 @@ export default function PlansScreen({ navigation }) {
 
   const showBlockCard = blockAdvice && activePlan &&
     blockAdvice.action !== 'continue' &&
-    (blockAdvice.action === 'heads_up' || !blockSnoozed);
+    !blockSnoozed;
 
   const isProWithPlan = tier === 'pro' && !!activePlan;
   // Three audiences share this list:
@@ -428,6 +428,16 @@ export default function PlansScreen({ navigation }) {
                     ? 'Remind me after recovery week'
                     : 'Not quite ready. Remind me later.'}
                 </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Heads-up acknowledge: lets the user close the banner once
+                they've read it. Reuses the same 7-day snooze used by the
+                recovery states; the next weekly check-in (or fresh signals)
+                will surface the banner again if conditions still apply. */}
+            {blockAdvice.action === 'heads_up' && (
+              <TouchableOpacity onPress={handleSnoozeBlock} style={styles.blockSnooze}>
+                <Text style={styles.blockSnoozeText}>Got it</Text>
               </TouchableOpacity>
             )}
           </View>

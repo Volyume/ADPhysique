@@ -908,16 +908,19 @@ export default function HomeScreen({ navigation }) {
                 />
               </View>
             ) : (
-              <TextInput
-                style={styles.weightInputCompact}
-                value={weightInput}
-                onChangeText={setWeightInput}
-                placeholder={bwu}
-                placeholderTextColor={colors.textMuted}
-                keyboardType="decimal-pad"
-                returnKeyType="done"
-                onSubmitEditing={handleLogWeight}
-              />
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs }}>
+                <TextInput
+                  style={styles.weightInputCompact}
+                  value={weightInput}
+                  onChangeText={setWeightInput}
+                  placeholder={bwu}
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="decimal-pad"
+                  returnKeyType="done"
+                  onSubmitEditing={handleLogWeight}
+                />
+                <Text style={styles.weightInputUnit}>{bwu}</Text>
+              </View>
             )}
             <TouchableOpacity
               style={[styles.weightLogBtn, ((!weightInput && !weightInputSt) || savingWeight) && styles.weightLogBtnDisabled]}
@@ -1675,6 +1678,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm, color: colors.textPrimary,
     paddingVertical: spacing.xs, minWidth: 48, textAlign: 'right',
   },
+  weightInputUnit: { fontSize: fontSize.sm, color: colors.textSecondary },
   weightCardText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary },
   weightCardEdit: { fontSize: fontSize.xs, color: colors.primary },
   narrativeCard: {
