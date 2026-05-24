@@ -13,10 +13,16 @@
 -- nothing breaks if cloud rolls ahead of client.
 
 -- Migration 017 declared the function with `_occurred_at timestamptz
--- DEFAULT now()`. Postgres forbids removing a parameter default via
--- CREATE OR REPLACE FUNCTION (42P13), so we keep the default here.
--- The COALESCE below covers callers that pass NULL explicitly.
-CREATE OR REPLACE FUNCTION record_engine_telemetry(
+-- DEFAULT now()`, but cloud projects that pre-date that change (or
+-- that took an earlier in-flight variant of 017) may have a different
+-- default set on the row in pg_proc, which makes CREATE OR REPLACE
+-- raise 42P13 ("cannot remove parameter defaults from existing
+-- function"). Drop + recreate is the documented escape hatch and is
+-- atomic inside Supabase's SQL editor transaction, so callers never
+-- observe a missing function.
+DROP FUNCTION IF EXISTS record_engine_telemetry(text, jsonb, timestamptz);
+
+CREATE FUNCTION record_engine_telemetry(
   _event text,
   _payload jsonb,
   _occurred_at timestamptz DEFAULT now()
