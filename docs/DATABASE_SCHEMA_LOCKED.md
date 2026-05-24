@@ -1,25 +1,61 @@
 # Database schema (locked)
 
-> **Status (2026-05-24):**
+> **Status (2026-05-24, post audit):**
 > - Food domain (Move #1): SHIPPED in `migrate_015_food_logging.sql`
->   and `migrate_016_food_sync_rpcs.sql`. Applied to production.
+>   and `migrate_016_food_sync_rpcs.sql`. Applied to cloud.
 > - Engine domain (Move #2 + #3): SHIPPED in
 >   `migrate_017_ed_pattern_and_telemetry.sql`. Includes
 >   `ed_pattern_flags`, `engine_telemetry`, `engine_overrides`
->   (groundwork), `clear_goal_lock` RPC,
->   `record_engine_telemetry` RPC, `engine_telemetry_daily` view,
->   `user_body_profile.goal_lock_advanced` +
->   `user_body_profile.goal_lock_set_at` columns. **NOT YET APPLIED
->   to production — founder action pending.**
+>   (groundwork), `clear_goal_lock` RPC, `record_engine_telemetry`
+>   RPC, `engine_telemetry_daily` view, `users_profile.goal_lock_advanced`
+>   + `users_profile.goal_lock_set_at` columns. Applied to cloud.
+> - Identity + ownership refactor: SHIPPED in
+>   `migrate_018_composite_pks.sql`. Drops single-column PKs on every
+>   user-scoped non-food table and reinstalls them as
+>   `(user_id, id)`. Old-app safety triggers populate `user_id` on
+>   child tables (`routine_exercises`, `mesocycle_weeks`,
+>   `recipe_ingredients`) from the parent on INSERT so the
+>   closed-testing build continues to write. Applied to cloud.
+> - Article 9 health-data consent (Move #2 deferral): SHIPPED in
+>   `migrate_019_health_consent.sql`. Adds
+>   `users_profile.health_data_consent` (boolean) +
+>   `users_profile.health_data_consent_at` (timestamptz), creates
+>   `consent_log` append-only audit table, registers
+>   `record_health_consent` RPC. Applied to cloud.
+> - Custom exercises split (Move #2 follow-up): SHIPPED in
+>   `migrate_020_custom_exercises.sql`. Creates `custom_exercises`
+>   with composite PK, backfills any pre-existing user-customs out
+>   of the mixed-ownership `exercises` table. Applied to cloud.
+> - Food domain composite PKs (deferred from 018): SHIPPED in
+>   `migrate_021_food_composite_pks.sql`. Drops simple PKs on
+>   `custom_foods`, `food_entries`, `saved_meals`, `recipes`,
+>   `recipe_ingredients` and reinstalls them as `(user_id, id)`.
+>   Updates `food_sync_push` to `ON CONFLICT (user_id, id)`. Adds
+>   `user_id` + old-client trigger to `recipe_ingredients`. Applied
+>   to cloud.
+> - Move #1.5 food telemetry events (server allow-list): SHIPPED in
+>   `migrate_022_food_telemetry_events.sql`. Adds
+>   `food_lookup_barcode` and `ocr_writeback_attempted` to the
+>   `record_engine_telemetry` allow-list. Applied to cloud.
+> - Move #1.5 barcode persistence on custom foods: SHIPPED in
+>   `migrate_023_custom_foods_barcode.sql`. Adds
+>   `custom_foods.barcode_ean` (nullable) + partial index. Extends
+>   `food_sync_push` to write the column. Applied to cloud.
+> - consent_log composite PK rectification: SHIPPED in
+>   `migrate_024_consent_log_composite_pk.sql`. Brings the consent
+>   audit log into IDENTITY_AND_OWNERSHIP_LOCKED.md compliance.
+>   Applied to cloud.
 > - Tier and subscription domain (Move #5): NOT STARTED.
 
 Every new table, column, index, RLS policy, and RPC function needed to
-support moves #0 through #5. Locked 2026-05-23.
+support moves #0 through #5. Locked 2026-05-23, schema-lock updated
+2026-05-24 to reflect migrations 018–024.
 
-All tables use UUID primary keys (`uuid_generate_v4()` default) and
-include `created_at` / `updated_at` timestamptz columns with triggers
-populating them. RLS enabled on every user-scoped table. Service role
-bypasses RLS for sync and admin RPC.
+All tables use UUID primary keys with `gen_random_uuid()` default and
+include `created_at` / `updated_at` timestamptz columns. RLS enabled
+on every user-scoped table. Service role bypasses RLS for sync and
+admin RPC. Every user-scoped table uses composite `(user_id, id)` PKs
+per IDENTITY_AND_OWNERSHIP_LOCKED.md.
 
 ## Schema by domain
 
@@ -64,10 +100,11 @@ RLS: SELECT to authenticated. INSERT and UPDATE service-role only.
 
 #### `custom_foods`
 
-User-created food records (typed manually or saved from OCR).
+User-created food records (typed manually or saved from OCR, or from
+a barcode-miss followed by manual fill).
 
 ```
-id              uuid PK
+id              uuid NOT NULL DEFAULT gen_random_uuid()
 user_id         uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE
 name            text NOT NULL
 brand           text
@@ -80,16 +117,19 @@ fat_100g        numeric NOT NULL
 fibre_100g      numeric
 sodium_100g     numeric
 sugar_100g      numeric
+barcode_ean     text                            -- nullable; populated via Move #1.5 scan-miss flow
 photo_url       text                            -- nullable, Supabase Storage path
 notes           text
 deleted_at      timestamptz                     -- soft delete
 created_at      timestamptz DEFAULT now()
 updated_at      timestamptz DEFAULT now()
+PRIMARY KEY (user_id, id)
 ```
 
 Indexes:
 - `(user_id, deleted_at) WHERE deleted_at IS NULL`
 - `(user_id, lower(name))` (search)
+- `(user_id, barcode_ean) WHERE barcode_ean IS NOT NULL` (Move #1.5 scan-miss promotion)
 
 RLS: SELECT, INSERT, UPDATE, DELETE for `auth.uid() = user_id`.
 
@@ -98,7 +138,7 @@ RLS: SELECT, INSERT, UPDATE, DELETE for `auth.uid() = user_id`.
 The diary. Every food a user logs creates one row.
 
 ```
-id              uuid PK
+id              uuid NOT NULL DEFAULT gen_random_uuid()
 user_id         uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE
 entry_date      date NOT NULL                   -- the day the food is logged for
 meal_slot       text NOT NULL CHECK (meal_slot IN ('breakfast','lunch','dinner','snack'))
@@ -113,6 +153,7 @@ logged_at       timestamptz DEFAULT now()
 deleted_at      timestamptz                     -- soft delete
 created_at      timestamptz DEFAULT now()
 updated_at      timestamptz DEFAULT now()
+PRIMARY KEY (user_id, id)
 ```
 
 Indexes:
@@ -156,13 +197,14 @@ entry_date)`. Runs in the same transaction.
 User-created meal templates ("My breakfast", "Pre-workout snack").
 
 ```
-id              uuid PK
+id              uuid NOT NULL DEFAULT gen_random_uuid()
 user_id         uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE
 name            text NOT NULL
 items_json      jsonb NOT NULL                  -- [{food_ref, quantity_g, meal_slot_hint}]
 deleted_at      timestamptz
 created_at      timestamptz DEFAULT now()
 updated_at      timestamptz DEFAULT now()
+PRIMARY KEY (user_id, id)
 ```
 
 RLS: full CRUD for `auth.uid() = user_id`.
@@ -173,7 +215,7 @@ User recipes with per-ingredient breakdown.
 
 ```
 recipes
-  id              uuid PK
+  id              uuid NOT NULL DEFAULT gen_random_uuid()
   user_id         uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE
   name            text NOT NULL
   total_servings  numeric NOT NULL
@@ -181,19 +223,28 @@ recipes
   deleted_at      timestamptz
   created_at      timestamptz DEFAULT now()
   updated_at      timestamptz DEFAULT now()
+  PRIMARY KEY (user_id, id)
 
 recipe_ingredients
-  id              uuid PK
-  recipe_id       uuid NOT NULL REFERENCES recipes(id) ON DELETE CASCADE
+  id              uuid NOT NULL DEFAULT gen_random_uuid()
+  user_id         uuid NOT NULL                   -- inherited from parent via trigger for old-app pushes
+  recipe_id       uuid NOT NULL                   -- FK to recipes; relationship enforced at app + RLS level
   food_ref        text NOT NULL
   quantity_g      numeric NOT NULL
   order_index     int NOT NULL DEFAULT 0
   created_at      timestamptz DEFAULT now()
+  PRIMARY KEY (user_id, id)
 ```
 
 RLS on `recipes`: full CRUD for `auth.uid() = user_id`. RLS on
-`recipe_ingredients`: full CRUD where parent recipe `user_id` matches
-`auth.uid()`.
+`recipe_ingredients`: full CRUD for `auth.uid() = user_id`. The
+`recipe_id` FK was dropped in migration 021 to accommodate the
+composite-PK swap on `recipes`; integrity is preserved via the
+parent's user_id appearing on the child plus RLS.
+
+Old-app safety: a BEFORE INSERT trigger
+(`recipe_ingredients_inherit_user_id`) auto-fills `user_id` from the
+parent recipe when an old-build client pushes a row without it.
 
 #### `food_favourites`
 
@@ -217,6 +268,94 @@ PRIMARY KEY (user_id, entry_date)
 ```
 
 RLS: full CRUD for `auth.uid() = user_id`.
+
+### Identity and ownership
+
+The cross-domain refactor that locked composite PKs everywhere. Lives
+in `IDENTITY_AND_OWNERSHIP_LOCKED.md`; surfaces here as the migrations
+that enforce it (018, 020, 021, 024).
+
+#### `custom_exercises`
+
+Per-user exercise rows. Split out of the legacy `exercises` table in
+migration 020 because `exercises` is mixed-ownership (library rows
+have `user_id NULL`, user customs had `user_id` set), which blocks
+the composite-PK rule (PK columns must be NOT NULL).
+
+```
+id                       uuid NOT NULL DEFAULT gen_random_uuid()
+user_id                  uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE
+name                     text NOT NULL
+primary_muscle           text
+secondary_muscles        jsonb
+equipment                text
+movement_pattern         text
+compound_isolation       text
+default_rep_min          integer
+default_rep_max          integer
+fatigue_cost             integer
+stimulus_to_fatigue_ratio integer
+subregion                text
+exercise_category        text
+increment_kg             real
+notes                    text
+created_at               timestamptz NOT NULL DEFAULT now()
+updated_at               timestamptz NOT NULL DEFAULT now()
+deleted_at               timestamptz
+PRIMARY KEY (user_id, id)
+```
+
+Indexes:
+- `(user_id, updated_at DESC)`
+- `(id)` — bare-id lookups for sync conflict detection
+- `(user_id) WHERE deleted_at IS NULL` — active-record scans
+
+RLS: full CRUD for `auth.uid() = user_id`.
+
+Old user-custom rows that lived in `exercises` (i.e. `user_id IS NOT
+NULL`) were backfilled into this table in migration 020 with `ON
+CONFLICT DO NOTHING`; the originals stay in `exercises` so old-app
+references by id continue to resolve.
+
+### Consent and audit
+
+#### `users_profile` consent columns
+
+Migration 019 adds:
+
+```
+health_data_consent      boolean                  -- nullable; null = "has not seen consent screen"
+health_data_consent_at   timestamptz              -- when the current state was set
+```
+
+State is intentionally nullable so the existence of a value, rather
+than its truthiness, is the "user has been through the consent
+screen" signal. Revoking consent sets `false` and queues account
+deletion under Article 17.
+
+#### `consent_log`
+
+Append-only audit trail for every consent grant + revoke. No UPDATE
+or DELETE policies; rows leave only when the FK cascade fires on
+account delete.
+
+```
+id              uuid NOT NULL DEFAULT gen_random_uuid()
+user_id         uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE
+consent_type    text NOT NULL CHECK (consent_type IN ('health_data', 'marketing', 'analytics'))
+granted         boolean NOT NULL
+granted_at      timestamptz NOT NULL DEFAULT now()
+app_version     text
+platform        text
+PRIMARY KEY (user_id, id)
+```
+
+Indexes:
+- `(user_id, granted_at DESC)`
+- `(id)` (added in migration 024)
+
+RLS: SELECT for `auth.uid() = user_id`. INSERT for
+`auth.uid() = user_id` only via the RPC.
 
 ### Engine domain (moves #1, #2)
 
@@ -434,34 +573,94 @@ Sets `profiles.goal_lock_advanced = false`. ED-pattern detector
 returns to standard sensitivity at the next weekly run. Logs the
 clear event for telemetry.
 
-### `record_engine_telemetry(run_date date, metrics jsonb) RETURNS void`
+### `record_engine_telemetry(_event text, _payload jsonb, _occurred_at timestamptz DEFAULT now()) RETURNS uuid`
 
-Service-role only. Used by the scheduled engine runner to write daily
-aggregates to `engine_telemetry_daily`.
+Single entry point for engine telemetry writes from the client.
+Allow-listed events (extended in migrations 017 and 022):
+
+```
+ed_pattern_flag_fired
+ed_pattern_flag_cleared
+goal_lock_set
+goal_lock_cleared
+tier_changed
+cascade_started
+cascade_advanced
+cascade_skipped_ahead
+paid_converted
+churn_at_gate
+food_lookup_barcode          -- Move #1.5
+ocr_writeback_attempted      -- Move #1.5
+```
+
+Unknown events raise `Unknown engine telemetry event`. Migration 022
+drops and recreates the function to handle a pg_proc default-shape
+mismatch between migration 017's original and the in-flight variants;
+the signature with `_occurred_at DEFAULT now()` is canonical.
+
+### `record_health_consent(_granted boolean, _app_version text DEFAULT NULL, _platform text DEFAULT NULL) RETURNS void`
+
+Single entry point the client calls to record an Article 9 health-data
+consent grant or revoke. Updates `users_profile.health_data_consent`
++ `_at` and appends a row to `consent_log` in one transaction. The
+client must succeed locally first (AsyncStorage `consent_<uid>`
+flag); cloud failure logs the discrepancy but does not block the user
+from proceeding past the consent screen, since the local flag is the
+gating source of truth.
 
 ## Migration files
 
 The schema lands across these migrations, in order. Migration numbers
 015 onward because 001-014 are already taken in the live Supabase
-project. The locked plan originally said 005-008; the actual filenames
-are 015-018:
+project. The locked plan originally numbered the cluster 015-019;
+the actual shipping order diverged because the identity refactor
+landed mid-flight as 018 and pushed body composition + tier
+infrastructure to later slots.
 
-- `supabase/migrate_015_food_logging.sql`: foods, custom_foods,
+Shipped (in order, all applied to cloud):
+
+- `migrate_015_food_logging.sql` (Move #1): foods, custom_foods,
   food_entries, daily_intake_rollups (with trigger), saved_meals,
   recipes, recipe_ingredients, food_favourites, daily_water.
-- `supabase/migrate_016_food_sync_rpcs.sql`: food_sync_pull,
+- `migrate_016_food_sync_rpcs.sql` (Move #1): food_sync_pull,
   food_sync_push. Both scoped to auth.uid() and last-write-wins per
   record by updated_at.
-- `supabase/migrate_017_ed_pattern_and_engine_telemetry.sql` (Move #2):
-  ed_pattern_flags, engine_telemetry_daily, engine_overrides
-  (groundwork), record_engine_telemetry RPC, clear_goal_lock RPC.
-- `supabase/migrate_018_tier_infrastructure.sql` (Move #5):
-  tier_history, profiles column additions, upgrade_tier RPC,
-  tier-protect trigger update to whitelist upgrade_tier.
-- `supabase/migrate_019_body_composition.sql` (Complete tier surface):
-  body_composition_log only. `photo_progress` is client-side SQLite,
-  added in a SQLite migration
-  (`src/lib/db/migrations/v25_photo_progress.js`).
+- `migrate_017_ed_pattern_and_telemetry.sql` (Move #2): ed_pattern_flags,
+  engine_telemetry, engine_telemetry_daily view, engine_overrides
+  (groundwork), record_engine_telemetry RPC, clear_goal_lock RPC,
+  users_profile.goal_lock_advanced + goal_lock_set_at columns.
+- `migrate_018_composite_pks.sql` (Identity refactor): drops simple
+  PKs on every user-scoped non-food table and reinstalls them as
+  `(user_id, id)`. Adds user_id + old-client inheritance triggers to
+  child tables (routine_exercises, mesocycle_weeks).
+- `migrate_019_health_consent.sql` (Move #2 deferral, Article 9):
+  users_profile.health_data_consent + _at, consent_log table,
+  record_health_consent RPC.
+- `migrate_020_custom_exercises.sql` (Identity follow-up): splits
+  per-user exercise rows out of the mixed-ownership `exercises`
+  table; new `custom_exercises` table with composite PK; idempotent
+  backfill from exercises where user_id IS NOT NULL.
+- `migrate_021_food_composite_pks.sql` (Identity follow-up, food):
+  composite PKs on custom_foods, food_entries, saved_meals, recipes,
+  recipe_ingredients; food_sync_push RPC updated to ON CONFLICT
+  (user_id, id); recipe_ingredients.user_id + inheritance trigger.
+- `migrate_022_food_telemetry_events.sql` (Move #1.5): extends
+  record_engine_telemetry allow-list with food_lookup_barcode +
+  ocr_writeback_attempted. DROP + CREATE pattern to handle pg_proc
+  default mismatches.
+- `migrate_023_custom_foods_barcode.sql` (Move #1.5): adds
+  custom_foods.barcode_ean + partial index; food_sync_push updated
+  to write the column.
+- `migrate_024_consent_log_composite_pk.sql` (audit rectification):
+  brings consent_log into IDENTITY_AND_OWNERSHIP_LOCKED.md compliance
+  with composite PK.
+
+Not yet shipped (per move):
+
+- Tier infrastructure (Move #5): tier_history, profiles column
+  additions, upgrade_tier RPC, tier-protect trigger update.
+- Body composition (Complete tier surface): body_composition_log.
+  `photo_progress` is client-side SQLite only.
 
 `sync_queue` is client-side only; it lives in a SQLite migration
 (`src/lib/db/migrations/v24_sync_queue.js` or equivalent).

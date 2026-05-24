@@ -1,7 +1,7 @@
 # Volyume Complete: session handoff
 
-**Last updated:** 2026-05-24 (post Move #2 + Move #3 + food polish ship)
-**Last session ended at commit:** 98367c4 (Move #2 ED-pattern + Move #3 telemetry + WelcomeScreen disqualifier)
+**Last updated:** 2026-05-24 (post Move #1.5 + Article 9 consent + identity refactor + audit pass)
+**Last session ended at commit:** see `git log` head on the active branch. Recent landmarks: `63c2f18` (migration 022 DROP+CREATE fix), `a15017d` (migration 020 backfill fix), `29f92a6` (consent Continue unblocked), `4b5c3de` (Move #1.5 phase 3 OCR + write-back), `d72353c` (Move #1.5 phase 2 scan screen), `e62b22a` (Move #1.5 phase 1 OFF + USDA), `6caf5e2` (food composite PKs), `1304a4f` (custom_exercises), `1df96bb` (Article 9 consent), `be8e1cc` (identity refactor).
 **Active branch:** `claude/volyume-food-logging-app-B9JZv`
 
 If you're a Claude session picking this up cold, read this document
@@ -216,10 +216,11 @@ ED-pattern detector.
 | --- | --- |
 | Move #0 -- code corrections (jargon blocklist + SportRxiv citation fix) | SHIPPED |
 | Move #0.5 -- voice retrofit | SHIPPED PARTIAL. whyThisTemplates, weeklyCoach WHY_LIBRARY, HomeScreen mesocycle chip, SettingsScreen done. Deeper screen-by-screen surface audit (PRICE strings, onboarding screens) not yet done. |
-| Move #1 -- food foundation + FFM floor | SHIPPED FULL. Migrations, FFM floor function + wiring, food data layer, Diary screen with MacroRings (Skia), Add custom food, Diary tab, Today's intake card, food sync wired both directions to migration 016 RPCs, FoodSearchScreen with waterfall + recents + favourites + bottom-sheet picker, BodyMetrics 7-day intake line, FoodInsightsScreen with 7-day bar chart + macro adherence + CSV export, FoodDetailSheet handling both add and edit. All locked polish done. |
-| Move #1.5 -- barcode + OCR | NOT STARTED. Camera + MLKit + OCR + OFF write-back. |
-| Move #2 -- ED-pattern detection | SHIPPED FULL. edPatternDetector with 4 signals + thresholds, 23 unit/property tests, weeklyCoach integration, locked verbatim copy in HeldDecisionsCard with Get-support + Read-more CTAs, GoalLockConsentScreen registered in nav + reachable from AthleteHub, Supabase migration 017 (RPC + RLS). Article 9 consent screen still pending (separate from the ED-pattern slice and depends on the onboarding flow refactor). |
-| Move #3 -- cascade telemetry + upward gate compression | SHIPPED PARTIAL (telemetry done). engine_telemetry local table + Supabase mirror, record_engine_telemetry RPC, allow-listed event taxonomy, debounced push helper, sign-in drain. Hooks: tier_changed, ed_pattern_flag_fired/_cleared, goal_lock_set/_cleared. The upward-gate-compression scope (separate work stream per MOVE_3_UPWARD_GATE_COMPRESSION.md) is NOT STARTED. |
+| Move #1 -- food foundation + FFM floor | SHIPPED FULL. Migrations 015 + 016, FFM floor function + wiring, food data layer, Diary screen with MacroRings (Skia), Add custom food, Diary tab, Today's intake card, food sync wired both directions, FoodSearchScreen with waterfall + recents + favourites + bottom-sheet picker, BodyMetrics 7-day intake line, FoodInsightsScreen with 7-day bar chart + macro adherence + CSV export, FoodDetailSheet handling both add and edit. |
+| Move #1.5 -- barcode + OCR | SHIPPED FULL. Three phases: (1) live OFF + USDA waterfall sources, (2) camera barcode scan screen + Diary scan FAB, (3) OCR (vision-camera + MLKit), OFF write-back queue, custom_foods.barcode_ean persistence. Migrations 022 (telemetry allow-list extension) + 023 (barcode column + food_sync_push update). Bundled OFF snapshot + CoFID remain deferred per FOOD_DATA_STRATEGY_LOCKED.md (live paths cover the miss surface). |
+| Move #2 -- ED-pattern detection | SHIPPED FULL including Article 9 consent. edPatternDetector with 4 signals + thresholds, 23 unit/property tests, weeklyCoach integration, locked verbatim copy in HeldDecisionsCard with Get-support + Read-more CTAs, GoalLockConsentScreen registered in nav + reachable from AthleteHub, migration 017 (engine RPC + RLS). Article 9 health-data consent screen (Article9ConsentScreen, migration 019) shipped as the locked Move #2 deferral — onboarding screen 3 per ONBOARDING_SEQUENCE_LOCKED.md. |
+| Move #3 -- cascade telemetry + upward gate compression | SHIPPED PARTIAL (telemetry done). engine_telemetry local table + Supabase mirror, record_engine_telemetry RPC, allow-listed event taxonomy extended in migration 022 to include food_lookup_barcode + ocr_writeback_attempted, debounced push helper, sign-in drain. Hooks: tier_changed, ed_pattern_flag_fired/_cleared, goal_lock_set/_cleared. The upward-gate-compression scope (separate work stream per MOVE_3_UPWARD_GATE_COMPRESSION.md) is NOT STARTED. |
+| Identity + data ownership refactor | SHIPPED in migrations 018 + 020 + 021 + 024 and code commit `be8e1cc`. Composite `(user_id, id)` PKs on every user-scoped table; sign-out wipes local SQLite; no anonymous mode; custom_exercises split from mixed-ownership exercises; food_sync_push updated to composite-conflict pattern; old-client safety triggers on child tables (routine_exercises, mesocycle_weeks, recipe_ingredients); CI grep blocks `SET user_id` in src/. Step 7 of the locked sequence (existing-user data fix-up) runs automatically on the next sync cycle after the schema lands. |
 | Move #4 -- differential paywall | NOT STARTED. |
 | Move #5 -- tier infrastructure + RevenueCat | NOT STARTED. |
 
@@ -227,79 +228,66 @@ ED-pattern detector.
 
 ## 5. What's pending right now (resume points, in priority)
 
-Move #1, Move #2 (core), and Move #3 (telemetry slice) are
-shipped. The remaining work splits into post-Move-2 cleanup,
-growth-strategy follow-through, and the next moves.
+Moves #1, #1.5, #2 (full including Article 9 consent), #3 (telemetry
+slice), and the identity refactor are all shipped. Cloud migrations
+018–024 have all been applied. The remaining work splits into
+release prep, growth-strategy follow-through, and the next moves.
 
-**BLOCKER (must come before further feature work):**
+**Release policy (still locked 2026-05-24):**
 
-> **Release policy (locked 2026-05-24):** The current Play Console
-> closed testing build (pre-Eat-component version) stays in place
-> until the WHOLE project is built out — not half done. No new app
-> version goes to closed testers until the user explicitly
-> approves. Cloud Supabase migrations DO apply now, to support
-> continued building on the branch; the old app on closed testing
-> is required to keep functioning against the new cloud schema
-> (sync errors in log are acceptable; total break is not). Every
-> new migration must satisfy that contract or it can't ship to
-> cloud either.
-
-0. **Identity + data ownership redesign** per
-   `docs/IDENTITY_AND_OWNERSHIP_LOCKED.md`. A multi-account
-   device hit a 400-row 42501 cascade. Root cause: row `user_id`
-   was mutable, anonymous and account identities were conflated,
-   row IDs could collide across users in cloud. Four locked
-   decisions: no anonymous mode, sign-out wipes local SQLite,
-   composite `(user_id, id)` primary keys, no destructive data
-   cleanup (the schema fix automatically rescues the affected
-   user's data on the next sync cycle). The doc carries a 7-step
-   implementation sequence. Until it lands, sign-in flow remains
-   broken on devices with multi-account history.
+> The current Play Console closed testing build (pre-Eat-component
+> version) stays in place until the WHOLE project is built out — not
+> half done. No new app version goes to closed testers until the user
+> explicitly approves. Cloud Supabase migrations DO apply now, to
+> support continued building on the branch; the old app on closed
+> testing is required to keep functioning against the new cloud
+> schema (sync errors in log are acceptable; total break is not).
+> Every new migration must satisfy that contract or it can't ship
+> to cloud either.
 
 **Things needing user action outside the app:**
 
-1. **Apply Supabase migration 017** (`supabase/migrate_017_ed_pattern_and_telemetry.sql`).
-   Paste into Supabase Dashboard → SQL Editor → Run. Until this lands:
-   - engine_telemetry events queue locally but never reach the server
-   - ED-pattern flags do not round-trip across devices
-   - `record_engine_telemetry` / `clear_goal_lock` RPCs do not exist
-2. **Edit the WelcomeScreen disqualifier copy in place.** Currently
+1. **Edit the WelcomeScreen disqualifier copy in place.** Currently
    Claude-drafted per founder instruction; founder to revise.
+2. **Optional: re-build APK and re-test the consent + Move #1.5
+   flows on device.** The branch carries the unblocked-on-cloud-
+   failure consent fix (`29f92a6`), the migration 020 + 022 fixes,
+   and the full Move #1.5 surface (scan + OCR + write-back). The
+   founder paused new closed-testing releases under the locked
+   release policy; a personal sideload build is the way to verify
+   end-to-end before the project is fully built out.
 
-**Post Move #2 follow-through:**
+**Post Move #2 follow-through (housekeeping):**
 
-1. **Article 9 health-data consent screen.** Locked copy in
-   `PRIVACY_CONSENT_LOCKED.md`. ONBOARDING_SEQUENCE_LOCKED.md
-   Screen 3. Was bundled with Move #2 in the spec; deferred since
-   the goal-lock screen and ED-pattern detector were the
-   harm-prevention core. Belongs to the onboarding-flow refactor
-   that adds three new screens (Article 9, Goal lock conditional,
-   Food layer intro) per the locked sequence.
-2. **Onboarding navigator refactor.** Insert Article 9 → goal
+1. **Onboarding navigator refactor.** Insert Article 9 → goal
    selection → conditional goal lock → SCOFF → activity → equipment
-   → Food layer intro → notifications → summary, per the locked
-   sequence. Goal-lock screen already exists and is reachable from
-   AthleteHub; needs to be wired into the onboarding stack with the
-   conditional gate (physique_competition / advanced_recomp only).
-3. **Cohort dashboard (synthesis §9.3).** Server side is half done:
-   `engine_telemetry_daily` view ships in migration 017 and is
-   readable from Supabase Studio. Open question: do you want an
-   in-app coach-only dashboard surface, or is reading from Studio
-   sufficient for the founder weekly review? If the latter, this
-   item closes once migration 017 is applied.
-4. **Cascade events instrumentation.** The allow-list already
+   → Food layer intro → notifications → summary, per
+   ONBOARDING_SEQUENCE_LOCKED.md. The screens themselves all
+   exist (`Article9ConsentScreen`, `GoalLockConsentScreen`,
+   `FoodLayerIntroScreen`); the wiring is what's outstanding for
+   the new-user flow.
+2. **Cohort dashboard (synthesis §9.3).** `engine_telemetry_daily`
+   view lives in migration 017 and is readable from Supabase Studio.
+   Open question: do you want an in-app coach-only dashboard
+   surface, or is reading from Studio sufficient for the founder
+   weekly review?
+3. **Cascade events instrumentation.** The allow-list already
    includes `cascade_started`, `cascade_advanced`,
    `cascade_skipped_ahead`, `paid_converted`, `churn_at_gate`. No
    callers yet — these belong to Move #4 / Move #5 (the cascade
    mechanic and tier infrastructure) and have nowhere to fire from
    until those ship.
+4. **Bundled OFF snapshot + CoFID source.** Listed in
+   `FOOD_DATA_STRATEGY_LOCKED.md` as steps 2 + 3 of the waterfall.
+   Deferred because the live OFF + USDA + OCR write-back path
+   covers the miss surface at zero static-coverage cost. Revisit
+   when day-30 hit-rate plateaus below the locked target.
 
 **Next moves (in spec, not started):**
 
-- **Move #1.5** -- barcode scan + label OCR + OFF write-back.
 - **Move #3 (upward gate compression)** -- the separate work stream
   per MOVE_3_UPWARD_GATE_COMPRESSION.md, distinct from the
-  telemetry slice shipped this session.
+  telemetry slice shipped earlier.
 - **Move #4** -- differential paywall + cascade mechanic.
 - **Move #5** -- tier infrastructure + RevenueCat.
 

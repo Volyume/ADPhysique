@@ -3,6 +3,27 @@
 Adds barcode scanning, live OpenFoodFacts and USDA APIs, and the
 OCR write-back loop to OFF. Locked 2026-05-23.
 
+> **Status (2026-05-24): SHIPPED FULL.** Three commits cover the move
+> end-to-end on branch `claude/volyume-food-logging-app-B9JZv`:
+>
+> - Phase 1 `e62b22a` — live OFF + USDA waterfall sources
+>   (`src/lib/food/sources/liveOff.js`, `usda.js`,
+>   `normalisers/usdaToFood.js`). Steps 4 and 5 of the waterfall.
+> - Phase 2 `d72353c` — camera barcode scan screen
+>   (`ScanBarcodeScreen.js`) and the Diary scan FAB.
+> - Phase 3 `4b5c3de` — OCR (`ocr.js`, `ocrParser.js`,
+>   `ScanLabelScreen.js`), OFF write-back queue
+>   (`writeback.js`), barcode persistence on `custom_foods` via
+>   migration 023.
+>
+> Server-side allow-list extension shipped in migration 022.
+>
+> Steps 2 (bundled OFF snapshot) and 3 (CoFID) of the waterfall
+> remain deferred. The shipped waterfall is local cache → live OFF
+> → USDA → manual / OCR. Per `FOOD_DATA_STRATEGY_LOCKED.md` the
+> bundled snapshot + CoFID are static caches; they raise hit-rate
+> at zero runtime cost but the live API path covers them.
+
 ## Why this is a separate move
 
 Move #1 already bundles substantial work (schema + UI + FFM floor).

@@ -130,34 +130,52 @@ in main now; listing here so they don't get re-proposed.
 
 ## Must-fix design debt (blocks further work)
 
-Items tracked here are KNOWN design flaws that must be fixed before
-any feature work continues that touches the same surface. They are
-locked in their respective design docs; the implementation is the
-outstanding piece.
-
-| Item | Design doc | Status |
-|---|---|---|
-| **Identity + data ownership.** Row `user_id` mutation, anonymous-vs-account id conflation, cross-user id collision in cloud. Triggered a 400-row 42501 cascade on a multi-account device. Doc locks four decisions: no anonymous mode, sign-out wipes local, composite `(user_id, id)` PKs, no destructive cleanup (schema fix rescues existing data). | `IDENTITY_AND_OWNERSHIP_LOCKED.md` | Design locked 2026-05-24. 7-step implementation sequence in the doc. Step 7 (existing-user data fix-up) happens automatically on the next sync cycle after the schema migration ships. |
+No outstanding design debt as of 2026-05-24. The identity + data
+ownership refactor (the one item that lived here) shipped on
+2026-05-24 in migrations 018, 020, 021 and 024 (composite PKs), code
+commits `be8e1cc` + `1304a4f` + `6caf5e2` + `d80813a` (sign-out wipe,
+custom_exercises split, food composite-PK sync, old-client triggers).
+See HANDOFF.md "Move status" and `IDENTITY_AND_OWNERSHIP_LOCKED.md`.
 
 ## Shipped in May 2026 -- 2026-05-24 round
 
 Late-May ship covering the Volyume Complete food layer end-to-end, the
-harm-prevention safety check, and the first slice of cascade telemetry.
-Detail in HANDOFF.md.
+harm-prevention safety check, the first slice of cascade telemetry,
+Move #1.5 barcode + OCR, Article 9 health-data consent, and the
+identity + data ownership refactor. Detail in HANDOFF.md.
 
 - **Move #1 food foundation + FFM floor.** SHIPPED FULL including
   polish: MacroRings (Skia), FoodDetailSheet bottom sheet,
   tap-to-edit on diary entries, FoodSearch / Insights / CSV export.
+- **Move #1.5 barcode + OCR.** SHIPPED FULL across three phases.
+  Phase 1 added live OFF + USDA waterfall sources. Phase 2 added the
+  camera barcode scan screen + Diary scan FAB. Phase 3 added OCR
+  (vision-camera + MLKit), the OFF write-back queue, and barcode
+  persistence on `custom_foods`. Migrations 022 (telemetry events)
+  + 023 (custom_foods.barcode_ean). Bundled OFF snapshot + CoFID
+  remain deferred per `FOOD_DATA_STRATEGY_LOCKED.md`.
 - **Move #2 ED-pattern detection.** SHIPPED FULL. Multi-signal
   detector with 4 signals + 2/3 threshold on goal_lock_advanced.
   Locked verbatim copy in HeldDecisionsCard with Get-support and
   Read-more CTAs. GoalLockConsentScreen reachable from AthleteHub.
-  Supabase migration 017 (needs founder to apply).
+- **Article 9 health-data consent (Move #2 deferral).** SHIPPED.
+  Onboarding screen 3 per `ONBOARDING_SEQUENCE_LOCKED.md`,
+  `Article9ConsentScreen.js`, migration 019 (consent_log table +
+  users_profile columns + record_health_consent RPC). Cloud-failure
+  resilient: local AsyncStorage flag gates progression, cloud
+  reconciles when reachable.
 - **Move #3 cascade telemetry slice.** SHIPPED PARTIAL. Local-first
   event log, allow-listed event taxonomy, debounced push, sign-in
   drain. Hooks: tier_changed, ed_pattern_flag_fired/_cleared,
   goal_lock_set/_cleared. The upward-gate-compression scope is a
   separate work stream and remains not-started.
+- **Identity + data ownership refactor.** SHIPPED in migrations 018
+  + 020 + 021 + 024 and code commit `be8e1cc`. Composite `(user_id,
+  id)` PKs on every user-scoped table, sign-out wipe, no anonymous
+  mode, `custom_exercises` split out of the mixed-ownership
+  `exercises` table, `food_sync_push` updated to composite-conflict
+  pattern, old-client safety triggers on child tables, CI grep
+  blocking `SET user_id` in src/.
 - **WelcomeScreen disqualifier (Claude draft).** "Who Volyume is
   for" block above the tier cards, founder to edit.
 - **Plans archive system.** Auto-archive other plans on goal-reroll;

@@ -254,10 +254,28 @@ A single Privacy section in You tab, with:
 
 ## Implementation notes (for the engineer)
 
-- Article 9 consent state stored in `profiles.health_data_consent`
-  (boolean, default false). Migration ships in `migrate_005`.
-- Consent withdrawal is logged in a new `consent_log(user_id, action,
-  timestamp)` table for audit.
+- Article 9 consent state lives on `users_profile.health_data_consent`
+  (boolean, nullable) + `users_profile.health_data_consent_at`
+  (timestamptz). Null = "user has not seen the consent screen yet";
+  true = granted; false = revoked. Schema in migration 019.
+- Consent grants + revokes are audited in the append-only
+  `consent_log` table: `(id, user_id, consent_type, granted,
+  granted_at, app_version, platform)`. Composite PK `(user_id, id)`
+  per migration 024. No UPDATE or DELETE policies; rows leave only
+  via FK cascade on account delete.
+- Single entry point for writes: the `record_health_consent` RPC
+  (migration 019) updates `users_profile` + appends to `consent_log`
+  in one transaction.
+- The client gates progression on the local AsyncStorage flag
+  `consent_<uid>`, NOT on cloud success: if `record_health_consent`
+  fails (network out, RPC missing, RLS error), the user still
+  proceeds past the consent screen and the discrepancy is logged
+  with `cloudRecorded=false`. The sync layer reconciles when the
+  cloud is reachable. This avoids stranding new users on the
+  consent screen during transient cloud issues.
+- The consent screen is `src/screens/Article9ConsentScreen.js`,
+  registered as the third onboarding step per
+  `ONBOARDING_SEQUENCE_LOCKED.md`.
 - The privacy policy URL is hardcoded as `https://volyume.app/privacy`
   in `src/lib/links.js`. Update both the marketing site and the
   in-app link together if the URL changes.

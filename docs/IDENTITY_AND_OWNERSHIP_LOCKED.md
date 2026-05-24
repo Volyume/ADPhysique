@@ -10,6 +10,16 @@ sign-out, account delete, install, or any code path that writes a
 
 If code conflicts with this doc, the code is wrong.
 
+> **Shipped status (2026-05-24, post audit):** the seven-step
+> implementation sequence below is complete. Cloud migrations 018
+> (composite PKs on the legacy table set), 020 (custom_exercises
+> split out of mixed-ownership `exercises`), 021 (food-domain
+> composite PKs + food_sync_push update), and 024 (consent_log
+> rectification) have all been applied. Code commit `be8e1cc` is
+> the corresponding client-side land. Step 7 (existing-user data
+> fix-up) runs automatically on the next sync cycle after schema
+> lands; no manual SQL needed.
+
 ## Four locked decisions
 
 1. **No anonymous mode.** Tapping Free on Welcome routes to sign-up.
@@ -180,11 +190,19 @@ violates one must justify the deviation in writing.
 The refactor lands in this order. Each step is its own commit so any
 single step can be reverted cleanly.
 
-1. **Cloud schema (migration 018).** For each user-scoped table:
-   drop existing PK, add `PRIMARY KEY (user_id, id)`, expand FK
-   constraints to include `user_id`. Add `user_id` columns to
-   child tables that don't yet have one (e.g. `routine_exercises`).
-   Tested via Dashboard SQL Editor before code goes near it.
+1. **Cloud schema (migration 018 + the follow-ups).** For each
+   user-scoped table: drop existing PK, add `PRIMARY KEY (user_id,
+   id)`, expand FK constraints to include `user_id`. Add `user_id`
+   columns to child tables that don't yet have one (e.g.
+   `routine_exercises`). The base set landed in migration 018; the
+   food domain was deferred to migration 021 because the
+   `food_sync_push` RPC needed a coordinated update; `exercises`
+   was deferred to migration 020 because it's mixed-ownership and
+   needed splitting into `custom_exercises` first; the
+   `consent_log` audit table created in migration 019 was brought
+   into composite-PK compliance in migration 024 once the audit
+   pass identified the deviation. Tested via Dashboard SQL Editor
+   before code goes near it.
 2. **Local schema migration.** New entry in `SCHEMA_MIGRATIONS` that
    mirrors the cloud changes for SQLite. Adds `user_id` columns
    where missing; sets composite PKs.

@@ -236,25 +236,40 @@ sizes. Mitigations:
 
 ## Implementation files
 
+Shipped 2026-05-24 in Moves #1 and #1.5:
+
 ```
 src/lib/food/
-├── waterfall.js              -- orchestrator (steps 1-5 plus OCR fallback)
+├── waterfall.js              -- orchestrator: local cache → live OFF → USDA → OCR
 ├── sources/
-│   ├── localCache.js         -- step 1
-│   ├── bundledOff.js         -- step 2
-│   ├── cofid.js              -- step 3
-│   ├── liveOff.js            -- step 4
-│   └── usda.js               -- step 5
+│   ├── localCache.js         -- step 1 (shipped)
+│   ├── liveOff.js            -- step 4 (shipped)
+│   └── usda.js               -- step 5 (shipped)
 ├── normalisers/
-│   ├── offToFood.js
-│   ├── usdaToFood.js
-│   └── cofidToFood.js
-├── ocr.js                    -- move #1.5
-├── writeback.js              -- move #1.5, OFF contribution flow
-└── sanityChecks.js           -- macro and kcal sanity rules
+│   └── usdaToFood.js         -- shipped
+├── ocr.js                    -- shipped (Move #1.5 phase 3)
+├── ocrParser.js              -- shipped (Move #1.5 phase 3)
+├── writeback.js              -- shipped (OFF contribution flow)
+├── db.js                     -- shipped (food-domain SQLite helpers)
+├── csvExport.js              -- shipped (Move #1 polish)
+└── sanityChecks.js           -- shipped (macro and kcal sanity rules)
 ```
 
-Plus the seed scripts (CI / one-time):
+Deferred (not yet shipped — listed in the locked spec, still planned
+but not on the critical path because the live paths above cover the
+miss surface):
+
+```
+src/lib/food/
+├── sources/
+│   ├── bundledOff.js         -- step 2: UK snapshot, fast local hits
+│   └── cofid.js              -- step 3: Public Health England composition data
+└── normalisers/
+    ├── offToFood.js          -- OFF live response normaliser (currently inline)
+    └── cofidToFood.js        -- CoFID normaliser (lands with cofid.js)
+```
+
+Plus the seed scripts (CI / one-time, not yet built):
 
 ```
 scripts/seed/
