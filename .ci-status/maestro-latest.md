@@ -1,11 +1,11 @@
 # Latest Maestro E2E status
 
-- **Run number**: 3
-- **Run URL**: https://github.com/allansdouglas1983-cmyk/ADPhysique/actions/runs/26409249579
+- **Run number**: 4
+- **Run URL**: https://github.com/allansdouglas1983-cmyk/ADPhysique/actions/runs/26409561795
 - **Branch**: `claude/volyume-food-logging-app-k8wtU`
-- **Commit**: `ce6f0465779b19d55ff2df355c2c1d5d147e4e3c`
+- **Commit**: `7e905b90b20d8bbeee125c9137f7de688c4bf74d`
 - **Tag run**: `smoke`
-- **Triggered at**: 2026-05-25T16:08:45Z
+- **Triggered at**: 2026-05-25T16:16:37Z
 - **Job status**: `success`
 
 ## Step outcomes
@@ -42,106 +42,106 @@ Git status is dirty but the command will continue because the terminal is not in
 <details><summary>gradle-debug.log (last 100 lines)</summary>
 
 ```
-> Task :expo-sqlite:preDebugBuild UP-TO-DATE
-> Task :expo-store-review:preBuild UP-TO-DATE
-> Task :expo-store-review:preDebugBuild UP-TO-DATE
-> Task :expo-sharing:writeDebugAarMetadata
-> Task :expo-sqlite:writeDebugAarMetadata
-> Task :expo-store-review:writeDebugAarMetadata
-> Task :expo-structured-headers:preBuild UP-TO-DATE
-> Task :expo-structured-headers:preDebugBuild UP-TO-DATE
-> Task :expo-task-manager:preBuild UP-TO-DATE
-> Task :expo-task-manager:preDebugBuild UP-TO-DATE
-> Task :expo-structured-headers:writeDebugAarMetadata
-> Task :expo-updates:preBuild UP-TO-DATE
-> Task :expo-updates:preDebugBuild UP-TO-DATE
-> Task :expo-task-manager:writeDebugAarMetadata
-> Task :expo-updates-interface:preBuild UP-TO-DATE
-> Task :expo-updates:writeDebugAarMetadata
-> Task :expo-updates-interface:preDebugBuild UP-TO-DATE
-> Task :expo-updates-interface:writeDebugAarMetadata
-> Task :expo-web-browser:preBuild UP-TO-DATE
-> Task :expo-web-browser:preDebugBuild UP-TO-DATE
-> Task :react-native-async-storage_async-storage:preBuild UP-TO-DATE
-> Task :react-native-async-storage_async-storage:preDebugBuild UP-TO-DATE
-> Task :expo-web-browser:writeDebugAarMetadata
-> Task :react-native-gesture-handler:preBuild UP-TO-DATE
-> Task :react-native-async-storage_async-storage:writeDebugAarMetadata
-> Task :react-native-gesture-handler:preDebugBuild UP-TO-DATE
-> Task :react-native-iap:preBuild UP-TO-DATE
-> Task :react-native-gesture-handler:writeDebugAarMetadata
-> Task :react-native-iap:prePlayDebugBuild UP-TO-DATE
-> Task :react-native-iap:writePlayDebugAarMetadata
-> Task :react-native-ml-kit_text-recognition:preBuild UP-TO-DATE
-> Task :react-native-ml-kit_text-recognition:preDebugBuild UP-TO-DATE
-> Task :react-native-reanimated:assertLatestReactNativeWithNewArchitectureTask SKIPPED
-> Task :react-native-reanimated:assertMinimalReactNativeVersionTask SKIPPED
-> Task :react-native-ml-kit_text-recognition:writeDebugAarMetadata
-> Task :react-native-reanimated:prepareHeadersForPrefab
-> Task :react-native-reanimated:preBuild
-> Task :react-native-reanimated:preDebugBuild
-> Task :react-native-safe-area-context:preBuild UP-TO-DATE
-> Task :react-native-reanimated:writeDebugAarMetadata
-> Task :react-native-safe-area-context:preDebugBuild UP-TO-DATE
-> Task :react-native-screens:preBuild UP-TO-DATE
-> Task :react-native-screens:preDebugBuild UP-TO-DATE
-> Task :react-native-safe-area-context:writeDebugAarMetadata
-> Task :react-native-svg:preBuild UP-TO-DATE
-> Task :react-native-svg:preDebugBuild UP-TO-DATE
-> Task :react-native-screens:writeDebugAarMetadata
-> Task :react-native-svg:writeDebugAarMetadata
-> Task :react-native-vision-camera:prepareHeaders
-> Task :react-native-vision-camera:preBuild
-> Task :react-native-vision-camera:preDebugBuild
-> Task :react-native-webview:preBuild UP-TO-DATE
-> Task :react-native-webview:preDebugBuild UP-TO-DATE
-> Task :react-native-vision-camera:writeDebugAarMetadata
-> Task :rest-timer-live:preBuild UP-TO-DATE
-> Task :rest-timer-live:preDebugBuild UP-TO-DATE
-> Task :react-native-webview:writeDebugAarMetadata
-> Task :sentry_react-native:preBuild UP-TO-DATE
-> Task :sentry_react-native:preDebugBuild UP-TO-DATE
-> Task :rest-timer-live:writeDebugAarMetadata
-> Task :sentry_react-native:writeDebugAarMetadata
-> Task :shopify_react-native-skia:prepareHeaders
-> Task :shopify_react-native-skia:preBuild
-> Task :shopify_react-native-skia:preDebugBuild
-> Task :unimodules-app-loader:preBuild UP-TO-DATE
-> Task :unimodules-app-loader:preDebugBuild UP-TO-DATE
-> Task :shopify_react-native-skia:writeDebugAarMetadata
-> Task :unimodules-app-loader:writeDebugAarMetadata
-> Task :app:generateDebugResValues
+> Task :gradle-plugin:settings-plugin:compileKotlin
+> Task :gradle-plugin:settings-plugin:compileJava NO-SOURCE
+> Task :gradle-plugin:settings-plugin:classes
+> Task :gradle-plugin:settings-plugin:jar
+> Task :gradle-plugin:react-native-gradle-plugin:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-updates-gradle-plugin:checkKotlinGradlePluginConfigurationErrors
+> Task :expo-updates-gradle-plugin:pluginDescriptors
+> Task :expo-updates-gradle-plugin:processResources
+> Task :gradle-plugin:react-native-gradle-plugin:pluginDescriptors
+> Task :gradle-plugin:react-native-gradle-plugin:processResources
+> Task :gradle-plugin:react-native-gradle-plugin:compileKotlin
+> Task :gradle-plugin:react-native-gradle-plugin:compileJava NO-SOURCE
+> Task :gradle-plugin:react-native-gradle-plugin:classes
+> Task :gradle-plugin:react-native-gradle-plugin:jar
+> Task :expo-updates-gradle-plugin:compileKotlin
+> Task :expo-updates-gradle-plugin:compileJava NO-SOURCE
+> Task :expo-updates-gradle-plugin:classes
+> Task :expo-updates-gradle-plugin:jar
 
-> Task :app:checkDebugAarMetadata
-WARNING: [Processor] Library '/home/runner/.gradle/caches/modules-2/files-2.1/com.google.android.exoplayer/exoplayer-ui/2.18.1/eed81d49b8b0e9a365cbec260dafb222d6e5bc67/exoplayer-ui-2.18.1.aar' contains references to both AndroidX and old support library. This seems like the library is partially migrated. Jetifier will try to rewrite the library anyway.
- Example of androidX reference: 'androidx/core/app/NotificationCompat$Builder'
- Example of support library reference: 'android/support/v4/media/session/MediaSessionCompat$Token'
+> Configure project :app
+ ℹ️  [33mApplying gradle plugin[0m '[32mexpo-updates-gradle-plugin[0m' (expo-updates@0.25.28)
 
-> Task :app:checkDebugAarMetadata FAILED
+> Configure project :expo-av
+Checking the license for package NDK (Side by side) 26.1.10909125 in /usr/local/lib/android/sdk/licenses
+License for package NDK (Side by side) 26.1.10909125 accepted.
+Preparing "Install NDK (Side by side) 26.1.10909125 v.26.1.10909125".
+"Install NDK (Side by side) 26.1.10909125 v.26.1.10909125" ready.
+Installing NDK (Side by side) 26.1.10909125 in /usr/local/lib/android/sdk/ndk/26.1.10909125
+"Install NDK (Side by side) 26.1.10909125 v.26.1.10909125" complete.
+"Install NDK (Side by side) 26.1.10909125 v.26.1.10909125" finished.
+
+> Configure project :expo-sqlite
+Checking the license for package NDK (Side by side) 25.1.8937393 in /usr/local/lib/android/sdk/licenses
+License for package NDK (Side by side) 25.1.8937393 accepted.
+Preparing "Install NDK (Side by side) 25.1.8937393 v.25.1.8937393".
+"Install NDK (Side by side) 25.1.8937393 v.25.1.8937393" ready.
+Installing NDK (Side by side) 25.1.8937393 in /usr/local/lib/android/sdk/ndk/25.1.8937393
+"Install NDK (Side by side) 25.1.8937393 v.25.1.8937393" complete.
+"Install NDK (Side by side) 25.1.8937393 v.25.1.8937393" finished.
+
+> Configure project :expo
+
+Using expo modules
+  - [32mexpo-application[0m (5.9.1)
+  - [32mexpo-asset[0m (10.0.10)
+  - [32mexpo-av[0m (14.0.7)
+  - [32mexpo-background-fetch[0m (12.0.1)
+  - [32mexpo-constants[0m (16.0.2)
+  - [32mexpo-document-picker[0m (12.0.2)
+  - [32mexpo-eas-client[0m (0.12.0)
+  - [32mexpo-file-system[0m (17.0.1)
+  - [32mexpo-font[0m (12.0.10)
+  - [32mexpo-haptics[0m (13.0.1)
+  - [32mexpo-image[0m (1.13.0)
+  - [32mexpo-json-utils[0m (0.13.1)
+  - [32mexpo-keep-awake[0m (13.0.2)
+  - [32mexpo-linear-gradient[0m (13.0.2)
+  - [32mexpo-manifests[0m (0.14.3)
+  - [32mexpo-modules-core[0m (1.12.26)
+  - [32mexpo-notifications[0m (0.28.19)
+  - [32mexpo-print[0m (13.0.1)
+  - [32mexpo-secure-store[0m (13.0.2)
+  - [32mexpo-sensors[0m (13.0.9)
+  - [32mexpo-sharing[0m (12.0.1)
+  - [32mexpo-sqlite[0m (14.0.6)
+  - [32mexpo-store-review[0m (7.0.2)
+  - [32mexpo-structured-headers[0m (3.8.0)
+  - [32mexpo-task-manager[0m (11.8.2)
+  - [32mexpo-updates[0m (0.25.28)
+  - [32mexpo-web-browser[0m (13.0.3)
+  - [32mrest-timer-live[0m (0.1.0)
+  - [32munimodules-app-loader[0m (4.6.0)
+
+The Daemon will expire after the build after running out of JVM heap space.
+The project memory settings are likely not configured or are configured to an insufficient value.
+The daemon will restart for the next build, which may increase subsequent build times.
+These settings can be adjusted by setting 'org.gradle.jvmargs' in 'gradle.properties'.
+The currently configured max heap space is '512 MiB' and the configured max metaspace is '384 MiB'.
+For more information on how to set these values, please refer to https://docs.gradle.org/8.9/userguide/build_environment.html#sec:configuring_jvm_memory in the Gradle documentation.
+To disable this warning, set 'org.gradle.daemon.performance.disable-logging=true'.
+Daemon will be stopped at the end of the build after running out of JVM heap space
+The Daemon will expire immediately since the JVM garbage collector is thrashing.
+The project memory settings are likely not configured or are configured to an insufficient value.
+The memory settings for this project must be adjusted to avoid this failure.
+These settings can be adjusted by setting 'org.gradle.jvmargs' in 'gradle.properties'.
+The currently configured max heap space is '512 MiB' and the configured max metaspace is '384 MiB'.
+For more information on how to set these values, please refer to https://docs.gradle.org/8.9/userguide/build_environment.html#sec:configuring_jvm_memory in the Gradle documentation.
+To disable this warning, set 'org.gradle.daemon.performance.disable-logging=true'.
+Daemon is stopping immediately since the JVM garbage collector is thrashing
 
 FAILURE: Build failed with an exception.
 
 * What went wrong:
-Execution failed for task ':app:checkDebugAarMetadata'.
-> Could not resolve all files for configuration ':app:debugRuntimeClasspath'.
-   > Failed to transform react-android-0.74.5-debug.aar (com.facebook.react:react-android:0.74.5) to match attributes {artifactType=android-aar-metadata, com.android.build.api.attributes.BuildTypeAttr=debug, org.gradle.category=library, org.gradle.dependency.bundling=external, org.gradle.libraryelements=aar, org.gradle.status=release, org.gradle.usage=java-runtime}.
-      > Execution failed for JetifyTransform: /home/runner/.gradle/caches/modules-2/files-2.1/com.facebook.react/react-android/0.74.5/c80a0b28c8c97d879209b811418fd98efa8959ce/react-android-0.74.5-debug.aar.
-         > Java heap space
+Gradle build daemon has been stopped: since the JVM garbage collector is thrashing
 
 * Try:
 > Run with --stacktrace option to get the stack trace.
 > Run with --info or --debug option to get more log output.
 > Run with --scan to get full insights.
 > Get more help at https://help.gradle.org.
-
-Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
-
-You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
-
-For more on this, please refer to https://docs.gradle.org/8.9/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
-
-BUILD FAILED in 4m 24s
-68 actionable tasks: 68 executed
 ```
 
 </details>
