@@ -61,6 +61,12 @@ const ALLOWED_EVENTS = new Set([
   'ffm_floor_hold_fired',
   'food_logged',
   'food_search_attempt',
+  // Migration 032 (Move #4): differential paywall surfaces. The
+  // shown event captures the impression; tapped_cta captures the
+  // decision (pay / dismiss). Together they drive the Panel 5
+  // cascade-and-conversion dashboards.
+  'paywall_shown',
+  'paywall_tapped_cta',
 ]);
 
 let _flushTimer = null;

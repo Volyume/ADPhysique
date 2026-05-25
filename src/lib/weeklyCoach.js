@@ -11,6 +11,7 @@
 import { getTrainingNote } from './coachingGoals';
 import { shouldSuggestDietBreak, computeFFMFloor } from './nutritionEngine';
 import { detectEdPatternFlag, hasEdPatternCleared } from './edPatternDetector';
+import { detectDifferentialTrigger } from './differentialPaywall';
 
 // ─── EWMA ────────────────────────────────────────────────────────────────────
 
@@ -321,6 +322,20 @@ export function runWeeklyCoach(inputs) {
     recentWeeklyHistory = null,
     goalLockAdvanced = false,
     edPatternOpen = false,
+    // Move #4 differential paywall context. Trigger only fires for
+    // free-tier users; paid tiers carry the
+    // 'differential_paywall_disabled' feature flag per
+    // COMPLETE_TIER_SCOPE_LOCKED.md. hasUsedTrial selects the CTA
+    // (try_pro_14d vs buy_pro). weeksLiftStalled and missingTdeeSignal
+    // are caller-computed: weeksLiftStalled from insightsEngine's
+    // stalled_lift signal duration; missingTdeeSignal true when
+    // reported calorie adherence and observed weight movement
+    // contradict (caller does the comparison).
+    userTier = 'complete',     // default to complete keeps closed-test users out
+    hasUsedTrial = false,
+    weeksLiftStalled = null,
+    missingTdeeSignal = false,
+    blockEnded = false,
   } = inputs;
 
   // ── DATA CONFIDENCE ───────────────────────────────────────────────────────
@@ -840,6 +855,22 @@ export function runWeeklyCoach(inputs) {
 
   const whyThisWeek = pickWhy(whyKeys, weekSeed);
 
+  // ── DIFFERENTIAL PAYWALL (Move #4) ────────────────────────────────────────
+  // Pure detector. Returns { shown:false } for paid users, when the
+  // adherence 2-of-3 gate fails, or when no context signal matches.
+  const differential_output = detectDifferentialTrigger({
+    userTier,
+    hasUsedTrial,
+    calsAdherence,
+    recentWeeklyHistory,
+    energyScore,
+    sorenessScore,
+    deloadSuggested,
+    blockEnded,
+    weeksLiftStalled,
+    missingTdeeSignal,
+  });
+
   // ── ASSEMBLE OUTPUT ───────────────────────────────────────────────────────
   return {
     hasEnoughData: true,
@@ -883,6 +914,7 @@ export function runWeeklyCoach(inputs) {
     loadSignal,
     recoveryFlag,
     goalPhase,
+    differential_output,
   };
 }
 

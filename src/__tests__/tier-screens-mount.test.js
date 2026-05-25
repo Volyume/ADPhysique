@@ -45,6 +45,10 @@ jest.mock('../lib/payments/restore', () => ({
   restorePurchases: jest.fn(async () => ({ ok: true, tier: null, alreadyCurrent: false })),
 }));
 
+jest.mock('../lib/engineTelemetry', () => ({
+  track: jest.fn(async () => null),
+}));
+
 jest.mock('../lib/errorLog', () => ({
   logError: jest.fn(),
   logWarn: jest.fn(),
@@ -139,6 +143,72 @@ describe('SubscriptionScreen mount', () => {
   test('renders for a complete_trial_active user', async () => {
     const Screen = require('../screens/SubscriptionScreen').default;
     const r = await mount(Screen, { navigation: noopNav });
+    expect(r.toJSON()).toBeTruthy();
+  });
+});
+
+describe('DifferentialBadge mount', () => {
+  test('shown=false renders nothing', async () => {
+    const Badge = require('../components/DifferentialBadge').default;
+    const r = await mount(Badge, {
+      differential: { shown: false },
+    });
+    expect(r.toJSON()).toBeNull();
+  });
+
+  test('try_pro_14d CTA renders the trial-mode label', async () => {
+    const Badge = require('../components/DifferentialBadge').default;
+    const r = await mount(Badge, {
+      differential: {
+        shown: true,
+        trigger: 'deload',
+        with_food_data_message: "We're holding a deload this week. With food data, we'd know if your fuel is the cause. Pro shows you, free for 14 days.",
+        paywall_cta: 'try_pro_14d',
+      },
+      pricingWindow: 'open_beta',
+      onTapCta: jest.fn(),
+    });
+    expect(r.toJSON()).toBeTruthy();
+  });
+
+  test('buy_pro CTA uses the buy-mode label', async () => {
+    const Badge = require('../components/DifferentialBadge').default;
+    const r = await mount(Badge, {
+      differential: {
+        shown: true,
+        trigger: 'energy_crash',
+        with_food_data_message: 'Your energy scores have dropped two weeks running. Food data usually shows why.',
+        paywall_cta: 'buy_pro',
+      },
+      pricingPriceText: '£2.99/month',
+      onTapCta: jest.fn(),
+    });
+    expect(r.toJSON()).toBeTruthy();
+  });
+});
+
+describe('PaywallScreen mount', () => {
+  test('try_pro_14d variant renders without throwing', async () => {
+    const Screen = require('../screens/PaywallScreen').default;
+    const r = await mount(Screen, {
+      navigation: noopNav,
+      route: { params: { trigger: 'deload', ctaMode: 'try_pro_14d', pricingWindow: 'open_beta' } },
+    });
+    expect(r.toJSON()).toBeTruthy();
+  });
+
+  test('buy_pro variant renders without throwing', async () => {
+    const Screen = require('../screens/PaywallScreen').default;
+    const r = await mount(Screen, {
+      navigation: noopNav,
+      route: { params: { trigger: 'stalled_lift', ctaMode: 'buy_pro', pricingWindow: 'standard' } },
+    });
+    expect(r.toJSON()).toBeTruthy();
+  });
+
+  test('missing params renders the default variant safely', async () => {
+    const Screen = require('../screens/PaywallScreen').default;
+    const r = await mount(Screen, { navigation: noopNav, route: {} });
     expect(r.toJSON()).toBeTruthy();
   });
 });

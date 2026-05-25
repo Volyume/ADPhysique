@@ -24,6 +24,7 @@ import {
   clearEdPatternFlag,
 } from '../lib/database';
 import { track as trackEngineEvent } from '../lib/engineTelemetry';
+import DifferentialBadge from '../components/DifferentialBadge';
 import { computeEWMA, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
 import { logError } from '../lib/errorLog';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
@@ -585,6 +586,13 @@ export default function CoachOutputScreen({ navigation, route }) {
         recentWeeklyHistory,
         goalLockAdvanced,
         edPatternOpen,
+        // Move #4 differential paywall inputs. Tier comes from
+        // proGate so paid users (or beta users) skip the trigger.
+        // hasUsedTrial is inverted from cascade.canStillTrial; if
+        // they still have entitlement, the CTA is "Try free for 14
+        // days" rather than the buy-now variant.
+        userTier: require('../lib/proGate').isPaidTier(userProfile),
+        hasUsedTrial: !require('../lib/payments/cascade').canStillTrial(userProfile),
       });
 
       // Persist ED-pattern state machine transition + telemetry.
@@ -889,6 +897,37 @@ export default function CoachOutputScreen({ navigation, route }) {
         {/* Recent decisions — quieter, at the bottom */}
         {heldDecisions && heldDecisions.length > 0 && (
           <HeldDecisionsCard decisions={heldDecisions} history={coachHistory} />
+        )}
+
+        {/* Move #4 differential paywall — only renders for free-tier
+            users where 2-of-3 adherence is off-target AND one of the
+            six locked triggers fires. Paid users never see it. */}
+        {output?.differential_output?.shown && (
+          <DifferentialBadge
+            differential={output.differential_output}
+            pricingWindow={userProfile?.lockedInPriceTier ?? 'open_beta'}
+            pricingPriceText={null}
+            onTapCta={(action) => {
+              if (action === 'shown') {
+                trackEngineEvent(user?.id, 'paywall_shown', {
+                  surface: `differential_${output.differential_output.trigger}`,
+                  trigger: output.differential_output.trigger,
+                  user_pricing_window: userProfile?.lockedInPriceTier ?? 'open_beta',
+                }).catch(() => {});
+              } else if (action === 'pay') {
+                navigation.navigate('Paywall', {
+                  trigger: output.differential_output.trigger,
+                  ctaMode: output.differential_output.paywall_cta,
+                  pricingWindow: userProfile?.lockedInPriceTier ?? 'open_beta',
+                });
+              } else if (action === 'dismiss') {
+                trackEngineEvent(user?.id, 'paywall_tapped_cta', {
+                  surface: `differential_${output.differential_output.trigger}`,
+                  cta: 'dismiss',
+                }).catch(() => {});
+              }
+            }}
+          />
         )}
 
         {/* Done button */}
