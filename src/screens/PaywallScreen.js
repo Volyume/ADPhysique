@@ -32,6 +32,7 @@ import { track as trackEvent } from '../lib/engineTelemetry';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { logError, logInfo } from '../lib/errorLog';
+import { audit } from '../lib/observability';
 
 export default function PaywallScreen({ navigation, route }) {
   const trigger = route?.params?.trigger ?? 'unknown';
@@ -52,6 +53,7 @@ export default function PaywallScreen({ navigation, route }) {
   }, [navigation, userId, surface]);
 
   const handlePay = useCallback(async () => {
+    audit('paywall.upgrade.tap', { surface, target: 'pro' });
     setBusy(true);
     const sku = skuFor('pro', pricingWindow);
     if (!sku) {

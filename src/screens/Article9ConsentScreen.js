@@ -10,6 +10,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { getSupabaseClient } from '../lib/supabase';
 import { logError, logInfo } from '../lib/errorLog';
+import { audit } from '../lib/observability';
 
 /**
  * Article 9 health-data consent screen.
@@ -37,6 +38,7 @@ export default function Article9ConsentScreen() {
 
   async function handleContinue() {
     if (!agreed || busy) return;
+    audit('consent.article9.continue.tap');
     setBusy(true);
     try {
       const sb = getSupabaseClient();

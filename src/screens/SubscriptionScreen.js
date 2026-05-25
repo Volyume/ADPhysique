@@ -26,6 +26,7 @@ import * as cascade from '../lib/payments/cascade';
 import { restorePurchases } from '../lib/payments/restore';
 import { skuFor } from '../lib/payments/catalogue';
 import { logError, logInfo } from '../lib/errorLog';
+import { audit } from '../lib/observability';
 
 const STAGE_LABEL = {
   unstarted:       'Not started',
@@ -82,6 +83,7 @@ export default function SubscriptionScreen({ navigation }) {
   }, []);
 
   const handleRestore = useCallback(async () => {
+    audit('subscription.restore.tap');
     setBusy(true);
     try {
       const result = await restorePurchases({
@@ -108,6 +110,7 @@ export default function SubscriptionScreen({ navigation }) {
   }, [userProfile]);
 
   const handleUpgrade = useCallback(() => {
+    audit('subscription.upgrade.tap', { from: 'subscription_screen' });
     navigation?.navigate?.('CascadeGate', { variant: 'day21', pricingWindow: lockedWindow ?? 'open_beta' });
   }, [navigation, lockedWindow]);
 

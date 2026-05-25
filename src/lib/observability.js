@@ -321,6 +321,32 @@ export const track = {
   },
 };
 
+/**
+ * Shorthand for `track.userAction`. Use this at every user-action
+ * boundary (button tap, form submit, gesture confirm, etc.). Lands
+ * as a Sentry `user`-category breadcrumb that gets attached to the
+ * next error in this session, plus a row in the on-device debug
+ * ring buffer.
+ *
+ * Naming convention: `<area>.<action>` dot-delimited. Examples:
+ *   audit('workout.start',         { routineId })
+ *   audit('workout.set.logged',    { exerciseId, setType, isWorking })
+ *   audit('food.add',              { source, mealSlot })
+ *   audit('auth.signin.attempt',   { method })
+ *   audit('paywall.upgrade.tap',   { surface, tier })
+ *   audit('account.delete.confirm')
+ *
+ * PII (weight, kcal, body fat, email, etc.) is stripped by the
+ * existing redactPII layer before the breadcrumb leaves the device.
+ * Don't pass tokens / passwords / raw user input.
+ *
+ * Cost: free unless an error fires. Sentry buffers breadcrumbs
+ * client-side and only ships them with errors.
+ */
+export function audit(name, props = {}) {
+  track.userAction(name, props);
+}
+
 // ─── Auto-instrumentation: zustand ───────────────────────────────────────
 
 /**

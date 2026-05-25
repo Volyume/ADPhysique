@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { insertCustomFood, logFoodEntry } from '../lib/food/db';
 import { checkFoodSanity } from '../lib/food/sanityChecks';
+import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -89,6 +90,10 @@ export default function AddCustomFoodScreen({ navigation, route }) {
       }
 
       const customId = await insertCustomFood(userId, food);
+      audit('food.custom.create', {
+        source: route?.params?.from ?? 'manual',
+        hasFibre: food.fibre100g != null,
+      });
       // Funnel telemetry: custom_food_created fires once per save.
       // The follow-on logFoodEntry below also fires food_logged from
       // inside food/db.js, so each custom-food save produces two

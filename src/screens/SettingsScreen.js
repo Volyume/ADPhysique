@@ -16,6 +16,7 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { clearWorkoutHistory, buildWorkoutCSV, wipeAllUserData, getOrphanedRoutines, deleteOrphanedRoutines } from '../lib/database';
 import { logError } from '../lib/errorLog';
+import { audit } from '../lib/observability';
 import { exportBackup, importBackup } from '../lib/dataBackup';
 import { useFeedback } from '../components/FeedbackSheet';
 import { getWellbeingMode, setWellbeingMode } from '../lib/wellbeing';
@@ -222,6 +223,7 @@ export default function SettingsScreen({ navigation }) {
   }
 
   async function handleSignOut() {
+    audit('auth.signout.tap');
     // Block sign-out mid-workout. The workout row stays in SQLite, but the
     // in-memory active state is cleared and the user lands on Login mid-set,
     // which reads as data loss even though nothing is lost.
@@ -287,6 +289,7 @@ export default function SettingsScreen({ navigation }) {
   }
 
   async function handleDeleteAccount() {
+    audit('account.delete.tap', { isLocal: !!user?.isLocal });
     // Two-step confirmation so a thumb-tap can't nuke an account.
     Alert.alert(
       'Delete account?',
@@ -310,7 +313,10 @@ export default function SettingsScreen({ navigation }) {
                 {
                   text: 'Delete forever',
                   style: 'destructive',
-                  onPress: () => performDeleteAccount(),
+                  onPress: () => {
+                    audit('account.delete.confirm', { isLocal: !!user?.isLocal });
+                    performDeleteAccount();
+                  },
                 },
               ],
             );

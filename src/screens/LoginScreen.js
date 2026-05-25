@@ -19,6 +19,7 @@ import { signInWithEmail, signUpWithEmail, resetPassword, signInWithGoogle, sign
 import { syncProfile, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
 import { wipeAllUserData, migrateLocalUserId } from '../lib/database';
 import { logError } from '../lib/errorLog';
+import { audit } from '../lib/observability';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -60,6 +61,9 @@ export default function LoginScreen({ navigation, route }) {
       Alert.alert('Missing fields', 'Please enter your email and password.');
       return;
     }
+    audit(mode === 'signup' ? 'auth.signup.attempt' : 'auth.signin.attempt', {
+      method: 'email',
+    });
     setLoading(true);
     try {
       const fn = mode === 'signup' ? signUpWithEmail : signInWithEmail;
@@ -173,6 +177,7 @@ export default function LoginScreen({ navigation, route }) {
   }
 
   async function handleOAuth(provider) {
+    audit('auth.signin.attempt', { method: provider });
     // Disable both buttons while the OAuth dialog is up. The actual sign-in
     // completion is handled by RootNavigator's onAuthStateChange listener
     // once the deep-link redirect comes back into App.js.

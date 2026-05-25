@@ -32,6 +32,7 @@ import * as cascade from '../lib/payments/cascade';
 import * as playBilling from '../lib/payments/playBilling';
 import { skuFor } from '../lib/payments/catalogue';
 import { logError, logInfo } from '../lib/errorLog';
+import { audit } from '../lib/observability';
 
 // 2-tier model (founder override 2026-05-25): one gate at day 21,
 // plus the payment-failure overlay. The legacy 'day14' variant from
@@ -82,6 +83,7 @@ export default function CascadeGateScreen({ navigation, route }) {
   }, [navigation]);
 
   const handlePay = useCallback(async (targetTier) => {
+    audit('cascade.pay.tap', { targetTier, gateDay: state?.dayInCascade ?? null });
     setBusy(targetTier);
     const sku = skuFor(targetTier, pricingWindow);
     if (!sku) {
@@ -122,6 +124,7 @@ export default function CascadeGateScreen({ navigation, route }) {
   }, [pricingWindow, content?.surface, dismiss]);
 
   const handleSkip = useCallback(async (targetTier) => {
+    audit('cascade.skip.tap', { targetTier, gateDay: state?.dayInCascade ?? null });
     setBusy(targetTier ?? 'skip');
     try {
       if (targetTier === 'free') {

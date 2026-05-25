@@ -29,6 +29,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, insertExercise, getCurrentMesocycleWeek, getPlannedMuscleVolume, getWeek1SetsForExercise, getLastNWorkoutSets, saveExerciseUserNote, getExerciseUserNote, getNextTimeNotes, markNoteShown, updateWorkoutSetPostRating } from '../lib/database';
 import { logError } from '../lib/errorLog';
+import { audit } from '../lib/observability';
 import {
   detectPR,
   getProgressionSuggestion,
@@ -192,6 +193,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
   function handleNextExercise() {
     if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
+    audit('workout.exercise.next', {
+      fromIndex: currentExerciseIndex,
+      toIndex: currentExerciseIndex + 1,
+    });
     setCurrentExerciseIndex(currentExerciseIndex + 1);
     setTimeout(() => scrollRef.current?.scrollTo({ y: 0, animated: true }), 50);
   }
@@ -703,6 +708,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       const newLoggedSets = [...loggedSets, setData];
       setLoggedSets(newLoggedSets);
       addSetToCurrentExercise(setData);
+      audit('workout.set.logged', {
+        exerciseId: exercise.id,
+        setType: setData.setType,
+        isWorking: setData.setType !== 'warmup',
+        setIndex: newLoggedSets.length,
+      });
 
       // Visual ack — flash the SetEntry card border amber for ~700 ms so the
       // user sees their tap landed. Tracked timeout so back-to-back logs
@@ -898,6 +909,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (!activeWorkout) { navigation.goBack(); return; }
     if (finishingRef.current) return; // double-tap guard
     finishingRef.current = true;
+    audit('workout.finish.tap', {
+      workoutId: activeWorkout?.id ?? null,
+      loggedSetCount: loggedSets.length,
+    });
     Alert.alert(
       'Finish Workout?',
       `You've logged ${workoutExercises.reduce((sum, e) => sum + (e.sets?.length ?? 0), 0)} sets across ${workoutExercises.length} exercises.`,
