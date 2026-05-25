@@ -921,15 +921,20 @@ The founder pasted a debug log from a successfully-running APK build on his Andr
 - [x] Move #3 shipped (upward gate compression + telemetry slice)
 - [x] Move #4 shipped (differential paywall)
 - [ ] Move #5 partial (cascade + RTDN webhook need founder deploy + Play Console SKUs + sandbox test)
-- [x] 1348/1348 tests green
+- [x] 1370/1370 tests green
 - [x] All 12 locked simulator scenarios shipped
 - [x] Sentry scrub audit (110 tests)
-- [x] Article 9 consent UI + audit trail
+- [x] Article 9 consent UI + audit trail (grant + withdraw)
 - [x] Account deletion audit (account_deletions_log)
-- [x] Telemetry catalogue comprehensive (32 events live, gaps documented)
-- [~] Maestro E2E framework + 12 critical-path flows — **Phase 1 shipped:** harness (`.maestro/config.yaml`), 12 spec'd flow scaffolds + smoke launch check in `e2e/`, structural linter wired into Jest, opt-in CI workflow at `.github/workflows/maestro-e2e.yml`. Founder runs the smoke bundle against a debug build to validate selectors; CI then flips from `workflow_dispatch` to `pull_request` gate.
+- [x] Telemetry catalogue comprehensive (36 events allow-listed, gaps documented)
+- [x] User-action breadcrumbs in Sentry trail (22 audit() call sites) — when a bug surfaces in Sentry, the trail of what the user did to reach it is attached to the issue
+- [x] Skeleton loaders covering 8 screens (HomeScreen, WorkoutHistory, AthleteHub, CoachReview, WeeklyCheckIn, CoachHeldHistory, BlockReflection, CoachOutput)
+- [x] Privacy management UI in Settings (consent withdrawal via record_health_consent(false))
+- [x] Web favicon + privacy page auto-deployed to GitHub Pages
+- [~] Maestro E2E framework + 12 critical-path flows — **Phase 1 shipped:** harness (`.maestro/config.yaml`), 12 spec'd flow scaffolds + smoke launch check in `e2e/`, structural linter wired into Jest, CI workflow at `.github/workflows/maestro-e2e.yml` with status writeback to `.ci-status/maestro-latest.md`. Smoke bundle not yet green on the CI emulator — iteration ongoing.
+- [ ] Move #5 partial (cascade + RTDN webhook need founder deploy + Play Console SKUs + sandbox test)
 - [ ] k6 load tests (1000-user sync, 100-user purchase, 10k weekly_coach)
-- [ ] Privacy policy deployed to volyume.app/privacy
+- [ ] Privacy policy at custom volyume.app/privacy (DNS CNAME only — GH Pages already serves it)
 - [ ] Android upload keystore generated + Play App Signing configured
 - [ ] play-billing-rtdn Edge Function deployed + Pub/Sub configured
 - [ ] Sandbox purchase end-to-end test passed
@@ -1060,14 +1065,50 @@ Each is a tracked Phase A code work item per `CURRENT_STATUS.md` section 7.
 
 These are the Phase A code-work items still open. Pick one when restarting work.
 
-1. ~~**Notifications module split (~1 day).**~~ **Shipped.** See section 4.10.
-2. ~~**Maestro E2E framework (~2-3 days), Phase 1.**~~ **Shipped.** Harness + 12 flow scaffolds + Jest-wired structural linter + opt-in CI. Founder validates smoke bundle on a real device next.
-3. **Maestro E2E Phase 2: tighten selectors after first-run** (~half day per round). Once the founder runs the smoke bundle, fold the failures back into the YAML. Promote 4 `blocked` flows once the test-hook deep links are wired into a debug build.
-4. **Sync module split (~3-4 days).** Largest single-file refactor (~85 KB) with real risk. Build the spec'd `src/lib/sync/` directory (index, registry, runner, queue, conflict, transport, telemetry). Unblocks `sync_conflict_resolved` telemetry.
-5. **Privacy management section in SettingsScreen.** Unblocks `article9_consent_withdrawn`. UI work + RPC wiring (RPC already exists). ~half day.
-6. **Maestro test-hook deep links** (~half day). Add a `volyume://test/...` handler behind `__DEV__` so the four blocked flows (barcode/OCR/cascade/restore) can drive deterministic fixtures.
-7. **k6 load tests.** Server load testing per `TESTING_STRATEGY_LOCKED.md` lines 183-193. Standalone, doesn't touch app code.
-8. **Privacy policy deploy.** Founder hosts `public/privacy.html` at volyume.app/privacy. Setup advice only from Claude side.
+**Shipped this session (2026-05-25 late evening):**
+1. ~~**Notifications module split**~~ Shipped — section 4.10.
+2. ~~**Maestro E2E framework Phase 1**~~ Shipped — section 21.0 follow-up below.
+3. ~~**Privacy management section in SettingsScreen**~~ Shipped — Settings → Privacy section with consent withdrawal + migration 041.
+4. ~~**audit() helper + breadcrumbs**~~ Shipped — 22 call sites across workout/food/auth/privacy/payments.
+5. ~~**Skeleton loaders**~~ Shipped to 8 screens.
+6. ~~**Web favicon + privacy hosting**~~ Shipped — auto-deploys to GitHub Pages.
+7. ~~**Cyber-security review**~~ Ran via `/security-review`; no findings.
+
+**Open (in priority order for tomorrow):**
+
+1. **Sync module split (~3-4 days, HIGH RISK).** `src/lib/sync.js`
+   is 1924 lines, 13 exports across 13 topic sections (helpers,
+   profile, exercises, single workout, body metrics, debounced
+   trigger, morning weight / check-in / body metric writers, bulk
+   upload, per-table push, push for previously-local-only tables,
+   food domain push/pull, AsyncStorage prefs, pull from cloud,
+   per-table pull). Spec target per `SYNC_ARCHITECTURE_LOCKED.md`:
+   `src/lib/sync/` directory with `index`, `registry`, `runner`,
+   `queue`, `conflict`, `transport`, `telemetry`. Unblocks
+   `sync_conflict_resolved` telemetry. Recommend phased approach:
+   one commit per topic-area-extracted-into-registry-entry, run
+   tests at every step, never break the public API. **Worth
+   getting a Codex second-opinion on the design before diving in.**
+2. **Maestro CI smoke green** (~unknown, iteration). Last failure
+   was JetifyTransform OOM despite gradle heap bumps. Pick up
+   from latest `.ci-status/maestro-latest.md` and iterate. Pull-
+   rebase + retry pattern is in place. Run #9 was pending at end
+   of session.
+3. **Maestro E2E Phase 2: tighten selectors** (~half day per
+   round). Once smoke runs end-to-end on the emulator, fold any
+   selector misses back into the YAML and promote the four
+   `blocked` flows once the test-hook deep links land.
+4. **Maestro test-hook deep links** (~half day). Add a
+   `volyume://test/...` handler behind `__DEV__` so the four
+   blocked flows (barcode happy-path, barcode-miss-OCR, cascade
+   day-14 pay, subscription-restore) can drive deterministic
+   fixtures.
+5. **k6 load tests.** Server load testing per
+   `TESTING_STRATEGY_LOCKED.md` lines 183-193. Standalone,
+   doesn't touch app code.
+6. **Maestro CI flip to `pull_request` gate.** After smoke is
+   green for at least 3 consecutive runs, change the workflow's
+   `on:` block from `push` to `pull_request` so merges are gated.
 
 ---
 

@@ -3,7 +3,7 @@
 What's wired, where the data lands, and how to act on it without
 manual collection. This is the doc you read once and then ignore.
 
-**See also:** `HANDOFF.md` section 4.8 (engine telemetry catalogue, 32 wired events) and section 7 (event-to-panel mapping for all 8 dashboard panels). This doc covers the Sentry + feedback layer; the engine telemetry layer is a separate cohort-dashboard pipeline at `src/lib/engineTelemetry.js` + Supabase `engine_telemetry` table.
+**See also:** `HANDOFF.md` section 4.8 (engine telemetry catalogue, 36 events allow-listed, 33 currently emitting) and section 7 (event-to-panel mapping for all 8 dashboard panels). This doc covers the Sentry + feedback layer; the engine telemetry layer is a separate cohort-dashboard pipeline at `src/lib/engineTelemetry.js` + Supabase `engine_telemetry` table.
 
 ---
 
@@ -89,8 +89,17 @@ already covered:
 To add **manual** breadcrumbs / events at custom points:
 
 ```js
-import { track } from '../lib/observability';
+import { audit, track } from '../lib/observability';
 
+// User-action breadcrumb (the common case). Shorthand for
+// track.userAction. Lands as a `user`-category breadcrumb in
+// Sentry and a row in the on-device debug log. PII-scrubbed by
+// the existing redactPII layer.
+audit('workout.set.logged', { exerciseId, setType, isWorking });
+audit('food.add',           { source, mealSlot });
+audit('paywall.upgrade.tap',{ surface, target: 'pro' });
+
+// Lower-level helpers — only when audit() doesn't fit:
 track.breadcrumb('plan.generated', 'coach', { goal: 'lean_gain' });
 track.event('plan.activated', { planId });
 track.error(err, 'sync.something', { extra });
@@ -103,6 +112,24 @@ finish();   // logs duration
 
 All four methods auto-enrich with session id, build version, screen,
 user id. PII redaction is automatic — see redactPII for the key list.
+
+### `audit()` call-site inventory (as of 2026-05-25)
+
+22 call sites wired across the highest-value boundaries:
+
+| Area | Events |
+|---|---|
+| Workout | `workout.set.logged`, `workout.exercise.next`, `workout.start.tap`, `workout.finish.tap` |
+| Food | `food.add`, `food.delete`, `food.barcode.scan`, `food.barcode.resolved`, `food.custom.create` |
+| Auth | `auth.signin.attempt` (email + OAuth), `auth.signup.attempt`, `auth.signout.tap` |
+| Privacy / account | `consent.article9.continue.tap`, `consent.article9.withdraw.tap`, `account.delete.tap`, `account.delete.confirm` |
+| Payments / cascade | `paywall.upgrade.tap`, `paywall.dismiss.tap`, `cascade.pay.tap`, `cascade.skip.tap`, `subscription.upgrade.tap`, `subscription.restore.tap` |
+| Engagement | `checkin.weekly.submit` |
+
+Naming convention: `<area>.<action>` dot-delimited. Don't pass
+tokens, passwords, raw email, weight values, or kcal — the
+redactPII layer would strip them anyway but it's better to not
+include them in the first place.
 
 ---
 

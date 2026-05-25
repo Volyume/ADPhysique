@@ -134,21 +134,61 @@ in main now; listing here so they don't get re-proposed.
 
 ## Must-fix design debt (blocks further work)
 
-Open items at end of 2026-05-25 session:
+Open items at end of 2026-05-25 (late evening) session:
 
 | Item | Status | Owner | Next step |
 |---|---|---|---|
-| Migrations 037 + 038 + 039 apply | Pending Dashboard run. 037 = app lifecycle telemetry, 038 = payments/cascade telemetry, 039 = account_deletions_log audit table + RPCs. | Founder | Paste each into Supabase Dashboard → SQL Editor → Run. |
-| Delete Account end-to-end re-test | Edge Function now writes pre/post audit rows to account_deletions_log via service-role RPCs (mig 039). Whole flow has not been tested on device since the bracket was added. | Founder | Sign into a test account, tap Delete Account, verify a row lands in account_deletions_log with completed_at set. If completed_at is null after a few minutes, the auth.admin.deleteUser leg failed silently. |
+| Migrations 037, 038, 039, 040, 041 apply | All pending Dashboard run. 037 = app lifecycle telemetry; 038 = payments/cascade telemetry; 039 = `account_deletions_log` audit table + RPCs; 040 = notification telemetry (`_sent` / `_tapped` / `_failed`); 041 = `article9_consent_withdrawn` (paired with the new Settings → Privacy section). All five are additive, all backwards-compatible with the existing closed-test build. | Founder | Paste each in order into Supabase Dashboard → SQL Editor → Run. |
+| Delete Account end-to-end re-test | Edge Function now writes pre/post audit rows to `account_deletions_log` via service-role RPCs (mig 039). Whole flow has not been tested on device since the bracket was added. | Founder | Sign into a test account, tap Delete Account, verify a row lands in `account_deletions_log` with `completed_at` set. If `completed_at` is null after a few minutes, the `auth.admin.deleteUser` leg failed silently. |
+| Withdraw-consent end-to-end test | New Settings → Privacy section ships in next APK. Calls `record_health_consent(false)` → appends to `consent_log` → flips `users_profile.health_data_consent` → fires `article9_consent_withdrawn` (mig 041 must be applied first). | Founder | After applying mig 041 + sideloading the next APK: Settings → Privacy → Withdraw → confirm. Verify a new row in `consent_log` with `granted = false` and an `article9_consent_withdrawn` row in `engine_telemetry`. |
 | Deploy play-billing-rtdn Edge Function | Edge Function code shipped at `supabase/functions/play-billing-rtdn/index.ts` but not deployed. | Founder | Deploy + configure Pub/Sub topic + service account env vars when ready for Phase A exit sandbox purchase. |
 | Generate Android upload keystore | No keystore exists. `build-android.yml` has signing config that's never been exercised in production. Blocks any new AAB replacing the Closed Testing build. | Founder + Claude | Claude writes the commands when founder is ready for Phase A exit prep. |
-| `public/privacy.html` deploy to volyume.app | 12-section privacy policy with verbatim FTC HBNR language exists at `public/privacy.html`. Hosting is unconfigured. | Founder | Set up volyume.app hosting; copy in privacy.html. |
+| ~~`public/privacy.html` deploy to volyume.app~~ | **Auto-deployed.** `deploy-pages.yml` ships `public/` to GitHub Pages on every push. Live at `https://allansdouglas1983-cmyk.github.io/ADPhysique/privacy.html` with the new favicon. Only outstanding piece: optional DNS CNAME from `volyume.app/privacy` to the GH Pages URL. | Founder (DNS only) | Add CNAME at the DNS provider when volyume.app is wired up; Claude can then add a `public/CNAME` file. |
+| Maestro CI smoke bundle green | Iteration commits visible in `.ci-status/maestro-latest.md`. Last known failure (run #6): JetifyTransform OOM despite gradle heap bumps. Run #9 still pending writeback at session end. Not blocking any visible APK work. | Claude (next session) | Read latest `.ci-status/maestro-latest.md`, fix the next failure, push, repeat. Pull-rebase + retry pattern is in place so concurrent pushes no longer race-fail. |
 
 The identity + data ownership refactor (the one item that lived
 here as design debt) shipped on 2026-05-24 in migrations 018, 020,
 021 and 024 (composite PKs), code commits `be8e1cc` + `1304a4f` +
 `6caf5e2` + `d80813a` (sign-out wipe, custom_exercises split, food
 composite-PK sync, old-client triggers).
+
+## Shipped in May 2026 -- 2026-05-25 (late evening) round
+
+- **Notifications module split** per `NOTIFICATIONS_LOCKED.md`.
+  `src/lib/notifications/` with 7 modules (categories, quietHours,
+  permissions, handler, scheduler, telemetry, index). Quiet-hours
+  (22:00 → 07:00, wrap-aware, AsyncStorage-persisted). Migration
+  040 wires `notification_sent` / `_tapped` / `_failed` telemetry.
+  21 new tests; existing imports unchanged.
+- **Maestro E2E scaffold** per `TESTING_STRATEGY_LOCKED.md` lines
+  114-141. `e2e/` with all 12 spec'd flows + smoke flow + Jest-
+  wired structural linter + opt-in CI workflow with status
+  writeback to `.ci-status/maestro-latest.md`. 4 flows tagged
+  `blocked` until IAP-sandbox / fixture-deep-link hooks land. CI
+  iteration ongoing (smoke not yet green).
+- **`audit()` helper + 22 user-action breadcrumbs**. Shorthand
+  over `track.userAction` in `src/lib/observability.js`. Wired
+  across workout (set logged, exercise next, start, finish), food
+  (search submit, add, delete, barcode scan / resolved, custom
+  create), auth (sign in / sign up / sign out, email + OAuth),
+  privacy (consent continue / withdraw, account delete tap /
+  confirm), and payments (paywall upgrade / dismiss, cascade pay /
+  skip, subscription restore / upgrade). PII scrub still applies
+  via the existing `redactPII` layer.
+- **Skeleton loaders on 5 more screens**: CoachReview,
+  WeeklyCheckIn, CoachHeldHistory, BlockReflection, CoachOutput.
+  Brings total coverage to 8 screens. Replaces full-screen
+  spinners with structured placeholders.
+- **Web favicon + privacy auto-deploy**. `<link rel="icon">` +
+  apple-touch-icon + theme-color in both `public/*.html` files.
+  `public/favicon.png` copied so GH Pages serves it. Privacy page
+  live at the GH Pages URL with proper branding.
+- **Privacy management UI in Settings**. New Privacy section,
+  health-data-consent row, destructive-confirm withdrawal flow,
+  cloud RPC call, local mirror update, telemetry fire. Migration
+  041 wires the `article9_consent_withdrawn` event.
+- **Cyber-security review** via `/security-review` skill across
+  the branch diff: no high-confidence vulnerabilities.
 
 ## Shipped in May 2026 -- 2026-05-24 round
 
