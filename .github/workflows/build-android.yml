@@ -139,6 +139,49 @@ jobs:
           sed -i 's|org.gradle.configurationcache.extensions.serviceOf|org.gradle.kotlin.dsl.support.serviceOf|' "$FILE"
           grep -n 'serviceOf' "$FILE" || echo "✗ Patch did not apply"
 
+      # react-native-iap publishes two Android variants — `playRelease`
+      # (Google Play Billing) and `amazonRelease` (Amazon Appstore).
+      # Gradle can't pick one automatically; without the
+      # missingDimensionStrategy below, the build fails at
+      # configuration time with:
+      #   "Cannot choose between the following variants of project
+      #    :react-native-iap: amazonReleaseApiElements,
+      #    playReleaseApiElements"
+      # We're Google-Play-direct (founder override 2026-05-25, see
+      # docs/CURRENT_STATUS.md) so we always want the 'play' flavor.
+      # Patch the generated app/build.gradle to add the strategy
+      # inside defaultConfig{}. Idempotent: skips if already present.
+      - name: Patch app/build.gradle for react-native-iap store flavor
+        run: |
+          FILE=android/app/build.gradle
+          if grep -q 'missingDimensionStrategy.*store.*play' "$FILE"; then
+            echo "✓ missingDimensionStrategy already present, skipping"
+          else
+            # Insert just inside defaultConfig {.
+            python3 - <<'PYEOF'
+          import pathlib, re, sys
+          p = pathlib.Path('android/app/build.gradle')
+          src = p.read_text()
+          if "missingDimensionStrategy" in src and "'store'" in src and "'play'" in src:
+              print("Already patched, skipping")
+              sys.exit(0)
+          # Insert after the first `defaultConfig {` line. Indent with
+          # 8 spaces to match the surrounding block.
+          new_src, count = re.subn(
+              r'(defaultConfig\s*\{)',
+              r"\1\n        missingDimensionStrategy 'store', 'play'",
+              src,
+              count=1,
+          )
+          if count == 0:
+              print('::error::Could not find defaultConfig { in app/build.gradle to patch')
+              sys.exit(1)
+          p.write_text(new_src)
+          print('✓ Patched defaultConfig with missingDimensionStrategy store=play')
+          PYEOF
+          fi
+          grep -n 'missingDimensionStrategy' android/app/build.gradle || true
+
       # Decode the upload keystore from the ANDROID_KEYSTORE_BASE64 secret
       # and wire it into the release signing config. When the secret is
       # absent the build falls back to Expo's prebuild default (debug
