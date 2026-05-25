@@ -101,59 +101,61 @@
   </header>
 
   <h1>Volyume Privacy Policy</h1>
-  <p class="muted"><strong>Effective date:</strong> 22 May 2026<br>
-  <strong>Last updated:</strong> 22 May 2026</p>
+  <p class="muted"><strong>Effective date:</strong> 25 May 2026<br>
+  <strong>Last updated:</strong> 25 May 2026</p>
 
-  <p>This policy explains what Volyume collects, why, and how to delete it. Volyume is a training logbook and self-coaching tool. We are private by design: no social feed, no community, no targeted advertising, no selling of your data.</p>
+  <p>This policy explains what Volyume collects, why, and how to delete it. Volyume is a training and nutrition self-coaching tool. We are private by design: no social feed, no community, no targeted advertising, no sale of your data.</p>
 
   <h2>1. Who we are</h2>
-  <p>Volyume is operated by the developer of the Volyume mobile app (iPhone and Android). Contact for privacy queries:</p>
+  <p>Volyume is operated by the developer of the Volyume mobile app (Android, with iOS planned). Contact for privacy queries:</p>
   <ul>
-    <li><strong>Email:</strong> <a href="mailto:allansdouglas1983@gmail.com">allansdouglas1983@gmail.com</a></li>
+    <li><strong>Email:</strong> <a href="mailto:support@volyume.app">support@volyume.app</a></li>
   </ul>
-  <p>This policy applies to the Volyume mobile app (<code>app.volyume</code>). Volyume does not offer a web version.</p>
+  <p>This policy applies to the Volyume mobile app (<code>app.volyume</code>) and the marketing site at <code>volyume.app</code>.</p>
 
-  <h2>2. Data we collect</h2>
+  <h2>2. What data we collect</h2>
 
-  <h3>Account data (cloud-stored, signed-in users only)</h3>
+  <h3>Account essentials</h3>
   <ul>
-    <li>Email address (Supabase Auth)</li>
+    <li>Email address and password hash (managed by Supabase Auth)</li>
     <li>A randomly-generated user ID (Supabase Auth)</li>
-    <li>First name (if you choose to enter one)</li>
+    <li>First name if you choose to enter one</li>
+    <li>Sign-in metadata (provider, last-seen device, session timestamps)</li>
     <li>Authentication tokens (encrypted in device secure storage)</li>
   </ul>
 
-  <h3>Profile data (cloud-stored, signed-in users only)</h3>
+  <h3>Special-category health and nutrition data (UK GDPR Article 9)</h3>
+  <p>The categories below are subject to <strong>explicit consent</strong> via the in-app Article 9 consent screen at onboarding (see Section 3). Without that consent the engine cannot run; the app cannot function without these categories. You can withdraw consent at any time, which triggers account deletion.</p>
   <ul>
-    <li>Biological sex, age, height, body weight, body fat percentage</li>
-    <li>Training preferences (experience level, goal, equipment available, days per week, session length)</li>
-    <li>Phase and goal selections for coaching</li>
+    <li>Body weight and how it changes over time</li>
+    <li>Body fat percentage, fat-free mass, fat mass when you enter them</li>
+    <li>Everything you log to your food diary (food entries, calories, macros, fibre, sodium, sugar, water)</li>
+    <li>Energy and recovery scores from weekly check-ins</li>
+    <li>Adherence to calorie targets (under, hit, over)</li>
+    <li>Eating-disorder pattern detection signals and flag state</li>
+    <li>SCOFF screener responses at onboarding</li>
+    <li>Menstrual cycle phase, if and when you enter it (future)</li>
   </ul>
 
-  <h3>Training data (cloud-stored, signed-in users only)</h3>
+  <h3>Training data</h3>
   <ul>
     <li>Workouts, exercises, sets, reps, weight lifted, rest times, dates</li>
     <li>Training notes you choose to add to specific exercises or sessions</li>
     <li>Personal records, volume by muscle, training-block progress</li>
-    <li>Weekly check-in answers (energy, soreness, sleep, adherence)</li>
-    <li>Calorie and macro <strong>targets</strong> (we don't track meals or food)</li>
-    <li>Morning body weight if you choose to log it</li>
-    <li>Body measurements (waist, chest, etc.) if you choose to log them</li>
   </ul>
 
-  <h3>Local-only data (never leaves your device)</h3>
+  <h3>On-device only (never leaves your device)</h3>
   <ul>
-    <li>App preferences (units, dark/light, accessibility)</li>
-    <li>A local error ring buffer used for crash diagnostics. The buffer redacts known-sensitive fields (emails, tokens, body weights, notes) before storing them. You can view the buffer in Settings &rarr; Debug Logs and export or clear it at any time.</li>
+    <li>App preferences (units, accessibility settings)</li>
+    <li>Progress photos you take in the camera flow (never synced to cloud at any version)</li>
+    <li>An error ring buffer used for crash diagnostics, redacted before storage. You can view, export, or clear it via Settings &rarr; Debug Logs.</li>
   </ul>
 
   <h3>Crash and performance telemetry</h3>
-  <ul>
-    <li>Crash stack traces and error events sent to Sentry, used to fix bugs. Sensitive fields (emails, tokens, body weights, notes, names) are redacted before transmission. We do not use Sentry for product analytics or behavioural tracking.</li>
-  </ul>
+  <p>Crash stack traces and error events sent to Sentry, used to fix bugs. Sensitive fields (weight, intake, body fat percent, fat-free mass, eating-disorder flag state, photos, all field names matching the protected database tables) are redacted before transmission by a server-side audit-tested scrubber. We do not use Sentry for product analytics or behavioural tracking.</p>
 
   <h3>Camera and photo library</h3>
-  <p>We access the camera or photo library only when you explicitly take a progress photo or save a workout share card. These permissions are requested at the moment of use, not at app startup. Progress photos remain on your device unless you explicitly export them.</p>
+  <p>We access the camera or photo library only when you explicitly scan a barcode, scan a nutrition label, or save a workout share card. These permissions are requested at the moment of use. Photos you take remain on your device.</p>
 
   <h3>Health data (iOS HealthKit / Android Health Connect)</h3>
   <p>If you opt in via Settings &rarr; Health, Volyume can:</p>
@@ -161,13 +163,19 @@
     <li><strong>Read</strong> your most recent body weight so the morning-weight card picks up entries from your smart scale or wearable</li>
     <li><strong>Write</strong> completed workouts so the Health app shows your training alongside other activity</li>
   </ul>
-  <p>We do not read heart rate, sleep, HRV, or step data (step-count read is gated behind a separate explicit opt-in). All health-app access is opt-in and revocable from the OS Settings app at any time.</p>
+  <p>We do not read heart rate, sleep, HRV, or step data. All health-app access is opt-in and revocable from the OS Settings app at any time.</p>
 
-  <h3>Data we do NOT collect</h3>
+  <h3>Subscription and payment data</h3>
   <ul>
-    <li>Meals or food (Volyume is not a diet tracker)</li>
+    <li>Receipt and transaction tokens from Google Play (and, when iOS launches, Apple App Store)</li>
+    <li>Current tier, trial state, locked-in price, and tier change history</li>
+  </ul>
+  <p>We do not handle card details. The store handles payment.</p>
+
+  <h3>Data we do not collect</h3>
+  <ul>
     <li>Heart rate, HRV, sleep stages</li>
-    <li>Precise location (we don't use GPS)</li>
+    <li>Precise location (we do not use GPS)</li>
     <li>Browsing history outside the app</li>
     <li>Contacts or address book</li>
     <li>Social-graph data (no friends, followers, leaderboards)</li>
@@ -179,69 +187,87 @@
       <tr><th>Purpose</th><th>Data used</th><th>Lawful basis (UK/EU GDPR)</th></tr>
     </thead>
     <tbody>
-      <tr><td>Run the app and sync between your devices</td><td>account, profile, training data</td><td>Performance of contract (Art. 6(1)(b))</td></tr>
-      <tr><td>Personalised coaching adjustments</td><td>training data, check-ins, body weight</td><td>Performance of contract</td></tr>
-      <tr><td>Crash diagnostics</td><td>redacted error events</td><td>Legitimate interest (Art. 6(1)(f)), keeping the app working</td></tr>
+      <tr><td>Run the app and sync between your devices</td><td>account essentials, training, profile</td><td>Performance of contract (Art. 6(1)(b))</td></tr>
+      <tr><td>Personalised coaching, food logging, safety guardrails</td><td>special-category health and nutrition data</td><td>Explicit consent (Art. 9(2)(a))</td></tr>
+      <tr><td>Crash diagnostics</td><td>redacted error events</td><td>Legitimate interest (Art. 6(1)(f))</td></tr>
       <tr><td>Optional Health-app integration</td><td>weight read / workout write</td><td>Explicit consent (Art. 6(1)(a)), revocable in OS Settings</td></tr>
-      <tr><td>Storing your data while signed-in</td><td>all of the above</td><td>Performance of contract</td></tr>
+      <tr><td>Subscription billing and entitlement</td><td>store receipts, tier state</td><td>Performance of contract</td></tr>
     </tbody>
   </table>
   <p>We do not use your data for advertising, profiling, or sale to third parties. We do not run behavioural analytics.</p>
 
-  <h2>4. Third parties we share data with</h2>
-  <p>We process data through these services. Each has its own privacy policy.</p>
+  <h2>4. Where data is stored</h2>
+  <ul>
+    <li><strong>Cloud data:</strong> Supabase (EU region), a named sub-processor in Section 6. Hosted in the EU; never leaves the UK/EU at v1.</li>
+    <li><strong>Local data:</strong> on your device in encrypted secure storage (EncryptedSharedPreferences on Android, Keychain on iOS) for tokens, and SQLite for training history, food diary, and rollups.</li>
+  </ul>
+
+  <h2>5. Who can see it</h2>
+  <p>Only:</p>
+  <ul>
+    <li>You, on your devices, and from any other device signed in to the same account</li>
+    <li>The Volyume support team, under strict access controls, only when investigating a support ticket you have raised, and never the raw eating-disorder pattern flag data</li>
+    <li>The authorised sub-processors named in Section 6, each with a contractual obligation to process the data only for the purpose described</li>
+  </ul>
+
+  <h2>6. Sub-processors</h2>
   <table>
     <thead>
-      <tr><th>Service</th><th>What's shared</th><th>Why</th><th>Their privacy policy</th></tr>
+      <tr><th>Service</th><th>Purpose</th><th>Data</th><th>Their privacy policy</th></tr>
     </thead>
     <tbody>
-      <tr><td>Supabase</td><td>account, training and profile data</td><td>Cloud database and authentication</td><td><a href="https://supabase.com/privacy">supabase.com/privacy</a></td></tr>
-      <tr><td>Sentry</td><td>redacted error events</td><td>Crash diagnostics</td><td><a href="https://sentry.io/privacy">sentry.io/privacy</a></td></tr>
-      <tr><td>Apple / Google (HealthKit / Health Connect)</td><td>weight read / workout write (opt-in only)</td><td>OS-level health integration</td><td><a href="https://www.apple.com/legal/privacy">apple.com/legal/privacy</a> / <a href="https://policies.google.com/privacy">policies.google.com/privacy</a></td></tr>
+      <tr><td>Supabase (EU region)</td><td>Database, authentication, storage</td><td>Everything except progress photos</td><td><a href="https://supabase.com/privacy">supabase.com/privacy</a></td></tr>
+      <tr><td>Sentry</td><td>Crash and error reporting</td><td>Scrubbed events (no weight, intake, body fat percent, photos, eating-disorder flags)</td><td><a href="https://sentry.io/privacy">sentry.io/privacy</a></td></tr>
+      <tr><td>Google Play (Play Billing)</td><td>Android in-app purchases</td><td>Receipt and transaction tokens</td><td><a href="https://policies.google.com/privacy">policies.google.com/privacy</a></td></tr>
+      <tr><td>Apple App Store (future)</td><td>iOS in-app purchases (when iOS launches)</td><td>Receipt and transaction tokens</td><td><a href="https://www.apple.com/legal/privacy">apple.com/legal/privacy</a></td></tr>
     </tbody>
   </table>
-  <p>We do not pass data to advertising networks, analytics providers, or any third party not listed above.</p>
+  <p>Adding a new sub-processor requires updating this policy with 30 days' notice via in-app push.</p>
 
-  <h2>5. Where data is stored</h2>
+  <h2>7. How long we keep your data</h2>
   <ul>
-    <li><strong>Cloud data</strong> (account, training, profile) is stored in Supabase, which uses AWS data centres. The region depends on the Supabase project configuration; for the Volyume production project it is in the EU.</li>
-    <li><strong>Local data</strong> is stored on your device in encrypted secure storage (Keychain on iOS, EncryptedSharedPreferences on Android) for tokens, and in SQLite for training history.</li>
+    <li><strong>Active accounts:</strong> indefinitely while your account remains active.</li>
+    <li><strong>Deleted accounts:</strong> all cloud-stored personal data is wiped within 30 days of your deletion request. Local data is wiped immediately on the device that initiated the deletion.</li>
+    <li><strong>Anonymised engine metrics</strong> (no link back to you) are kept indefinitely for product improvement.</li>
+    <li><strong>Crash and error logs:</strong> 90 days in Sentry, then aged out.</li>
+    <li><strong>Notification logs:</strong> 30 days, then aged out.</li>
   </ul>
 
-  <h2>6. How long we keep your data</h2>
-  <ul>
-    <li>While your account is active: indefinitely</li>
-    <li>If you delete your account (Settings &rarr; Delete account): all cloud-stored data is removed within 24 hours; auth record is removed immediately. Local device data is wiped at the same time.</li>
-    <li>If you uninstall the app without deleting your account: cloud data is retained so you can sign back in on a new device.</li>
-    <li>Crash and error logs: 90 days in Sentry, then aged out.</li>
-  </ul>
-
-  <h2>7. Your rights</h2>
+  <h2>8. Your rights</h2>
   <p>Under UK and EU GDPR you have the right to:</p>
   <ul>
     <li><strong>Access</strong> the personal data we hold on you</li>
-    <li><strong>Correct</strong> inaccurate or incomplete data</li>
-    <li><strong>Delete</strong> your account and all associated data</li>
-    <li><strong>Export</strong> your data in a portable format (Settings &rarr; Export data)</li>
-    <li><strong>Withdraw consent</strong> for optional features (Health integration, etc.)</li>
-    <li><strong>Lodge a complaint</strong> with the UK Information Commissioner's Office (<a href="https://ico.org.uk/">ico.org.uk</a>) or your local EU supervisory authority</li>
+    <li><strong>Rectify</strong> inaccurate or incomplete data</li>
+    <li><strong>Erase</strong> your account and all associated data (Settings &rarr; Account &rarr; Delete account)</li>
+    <li><strong>Port</strong> your data in a machine-readable format (Settings &rarr; Privacy &rarr; Download my data, emails you a CSV bundle)</li>
+    <li><strong>Restrict</strong> processing, or <strong>object</strong> to particular processing activities</li>
+    <li><strong>Withdraw consent</strong> for the Article 9 health and nutrition processing at any time, which deletes your account because the engine cannot run without that data</li>
+    <li><strong>Lodge a complaint</strong> with the UK Information Commissioner's Office at <a href="https://ico.org.uk/">ico.org.uk</a> or your local EU supervisory authority</li>
   </ul>
-  <p>To exercise any of these rights, email <a href="mailto:allansdouglas1983@gmail.com">allansdouglas1983@gmail.com</a> or use Settings &rarr; Delete account. We respond to verifiable requests within 30 days.</p>
+  <p>To exercise any of these rights, email <a href="mailto:support@volyume.app">support@volyume.app</a>. We respond to verifiable requests within 30 days.</p>
 
-  <h2>8. Children's privacy</h2>
-  <p>Volyume is not directed at children under 13 and we do not knowingly collect data from anyone under 13. If you believe a child has created an account, contact <a href="mailto:allansdouglas1983@gmail.com">allansdouglas1983@gmail.com</a> and we will delete the account on receipt.</p>
+  <h2>9. International transfers</h2>
+  <p>At v1, your data does not leave the UK or EU. Supabase hosts the Volyume database in an EU region. If we ever need to add a sub-processor outside the UK/EU we will update this policy and notify users.</p>
 
-  <h2>9. Changes to this policy</h2>
-  <p>If we change this policy materially we will update the "Last updated" date at the top and notify signed-in users via an in-app banner. Minor clarifications may be made without notice. The current version is always available in the app under Settings &rarr; Privacy policy, and will move to <code>https://volyume.app/privacy</code> once that domain is live.</p>
+  <h2>10. Children</h2>
+  <p>Volyume is for users 16 and over. We do not knowingly serve accounts under 16.</p>
+  <p>If you are under 16 and want something like Volyume, we recommend chatting with a parent and a GP about how to track training and food in a way that's right for you.</p>
+  <p>If we discover an account belongs to someone under 16, we delete the account and refund any active subscription.</p>
 
-  <h2>10. Contact</h2>
+  <h2>11. Breach notification</h2>
+  <p>If Volyume discovers a breach of unsecured health information affecting 500 or more people, we will notify affected individuals and the U.S. Federal Trade Commission at the same time, without unreasonable delay and no later than 60 calendar days after discovery. We will also notify the UK ICO under the UK GDPR timeline (72 hours) where applicable. The most sensitive table in our system is the eating-disorder pattern flags; any incident affecting that table is treated as highest priority.</p>
+
+  <h2>12. Changes to this policy</h2>
+  <p>If we change this policy materially we will update the "Last updated" date at the top and notify signed-in users via in-app push. Email notification is added at v1.1. Minor clarifications may be made without notice. The current version is always available in the app under Settings &rarr; Privacy and at <code>volyume.app/privacy</code>.</p>
+
+  <h2>Contact</h2>
   <ul>
-    <li><strong>Email:</strong> <a href="mailto:allansdouglas1983@gmail.com">allansdouglas1983@gmail.com</a></li>
+    <li><strong>Email:</strong> <a href="mailto:support@volyume.app">support@volyume.app</a></li>
   </ul>
   <p>For complaints about how we handle your data you can also contact the UK Information Commissioner's Office at <a href="https://ico.org.uk/">ico.org.uk</a>.</p>
 
   <footer>
-    Volyume is a training logbook and self-coaching tool for iPhone and Android.
+    Volyume is a training and nutrition coaching tool. Article 9 health and nutrition data is processed under explicit consent recorded at onboarding and in the consent audit log.
   </footer>
 </div>
 </body>
