@@ -121,6 +121,12 @@ const ALLOWED_EVENTS = new Set([
   'notification_sent',
   'notification_tapped',
   'notification_failed',
+  // Migration 041: article9_consent_withdrawn closes the Article 9
+  // consent funnel. Fires from SettingsScreen's withdraw flow once
+  // the cloud RPC record_health_consent(false) succeeds. The
+  // consent_log table is the legal audit trail; this event powers
+  // Panel 8's withdrawal rate dashboard.
+  'article9_consent_withdrawn',
 ]);
 
 let _flushTimer = null;

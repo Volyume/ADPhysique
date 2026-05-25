@@ -30,6 +30,7 @@ import { getRollupsForRange } from '../lib/food/db';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { requestNotificationPermissions, getNotificationPermissionStatus, scheduleNextCheckinReminder } from '../lib/notifications';
 import { logError } from '../lib/errorLog';
+import { audit } from '../lib/observability';
 import { SkeletonCard } from '../components/Skeleton';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
@@ -375,6 +376,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
   const handleSubmit = useCallback(async () => {
     if (busy) return;
+    audit('checkin.weekly.submit');
     setBusy(true);
     try {
       const userId = user?.id;

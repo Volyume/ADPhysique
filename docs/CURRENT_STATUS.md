@@ -129,6 +129,7 @@ Per `DATABASE_SCHEMA_LOCKED.md` + grep against `supabase/migrate_*.sql`.
 | 038 | cascade_state_transition + purchase_* + subscription_cancelled + restore_purchases_attempted allow-list | **Pending founder apply** |
 | 039 | account_deletions_log table + record_account_deletion_started/completed RPCs (non-cascading audit trail) | **Pending founder apply** |
 | 040 | notification_sent + notification_tapped + notification_failed allow-list | **Pending founder apply** |
+| 041 | article9_consent_withdrawn allow-list (paired with SettingsScreen Privacy withdrawal UI) | **Pending founder apply** |
 
 ---
 
@@ -152,7 +153,7 @@ Per `DATABASE_SCHEMA_LOCKED.md` + grep against `supabase/migrate_*.sql`.
 | held_decision_created / held_decision_cleared | Skipped | Per-type events (ed_pattern_flag_fired, ffm_floor_hold_fired, rapid_loss_compression_triggered) already populate Panel 2 split-by-type. The umbrella event would duplicate rows without adding signal. |
 | sync_conflict_resolved | Blocked by sync architecture | The single-file `src/lib/sync.js` doesn't have a structured conflict-resolution code path yet. Wire when the spec'd 7-file `src/lib/sync/` directory gets built (drift item in section 6 below). |
 | account_deleted | Blocked by schema design | `engine_telemetry.user_id` has `ON DELETE CASCADE` so events fire and immediately die with the auth.users row at account-delete time. Needs a separate non-cascading `account_deletions_log` table (Panel 8 still has the deletion queue depth alert from a different source). |
-| article9_consent_withdrawn | Blocked by UI | No withdrawal screen exists. Wire when SettingsScreen gets the privacy management section. Withdrawal IS still legally available via the `record_health_consent(false)` RPC if a user contacts support directly; only the in-app UI is missing. |
+| article9_consent_withdrawn | **Shipped this session** | SettingsScreen → Privacy section now has a "Health-data consent" row that shows current state and (when granted) lets the user withdraw via a destructive confirm. Flow calls `record_health_consent(false)`, updates `consent_log`, flips local mirror, fires `article9_consent_withdrawn` telemetry. Migration 041 adds the event to the allow-list. |
 
 **Newly wired (migration 040, this session):**
 

@@ -24,6 +24,7 @@ import {
 } from '../lib/food/db';
 import { resolveFoodRef } from '../lib/food/sources/localCache';
 import { getNutritionTargets } from '../lib/database';
+import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import MacroRings from '../components/food/MacroRings';
@@ -186,6 +187,7 @@ export default function DiaryScreen({ navigation }) {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
+            audit('food.delete', { mealSlot: entry?.mealSlot ?? 'unknown' });
             try {
               await deleteFoodEntry(entry.id, userId);
               await load();

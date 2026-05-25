@@ -93,7 +93,7 @@ function SectionHeader({ title }) {
 export default function SettingsScreen({ navigation }) {
   const toast = useToast();
   const feedback = useFeedback();
-  const { user, setUser, setSession, clearAuthStateForSignOut, userProfile, saveLocalProfile, tier, setTier, accessibility, setAccessibilityPref, loadAccessibility, accessibilityLoaded } =
+  const { user, setUser, setSession, clearAuthStateForSignOut, userProfile, saveLocalProfile, tier, setTier, accessibility, setAccessibilityPref, loadAccessibility, accessibilityLoaded, healthConsent, setHealthConsent } =
     useAppStore(useShallow(s => ({
       user: s.user, setUser: s.setUser, setSession: s.setSession,
       clearAuthStateForSignOut: s.clearAuthStateForSignOut,
@@ -103,6 +103,8 @@ export default function SettingsScreen({ navigation }) {
       setAccessibilityPref: s.setAccessibilityPref,
       loadAccessibility: s.loadAccessibility,
       accessibilityLoaded: s.accessibilityLoaded,
+      healthConsent: s.healthConsent,
+      setHealthConsent: s.setHealthConsent,
     })));
 
   // Hydrate accessibility prefs once on mount so the toggles reflect the
@@ -220,6 +222,70 @@ export default function SettingsScreen({ navigation }) {
     } finally {
       setHealthSyncing(false);
     }
+  }
+
+  // ─── Health-data consent withdrawal (UK GDPR Article 9) ─────────────────
+  // The cloud-side record_health_consent(false) RPC appends a new row to
+  // consent_log AND flips users_profile.health_data_consent to false. The
+  // grant + revoke trail is immutable. Local mirror updated on success
+  // so gating UI flips immediately without waiting for the next session.
+  const [withdrawing, setWithdrawing] = useState(false);
+  async function handleWithdrawConsent() {
+    if (withdrawing) return;
+    Alert.alert(
+      'Withdraw health-data consent?',
+      "We'll stop processing your weight, food, and body composition data. " +
+        "Coach output, the food layer, body metrics, and Pro insights will all become read-only " +
+        "until you grant consent again. Your existing data isn't deleted -- use 'Delete account' " +
+        "if you want it removed entirely.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Withdraw',
+          style: 'destructive',
+          onPress: async () => {
+            audit('consent.article9.withdraw.tap');
+            setWithdrawing(true);
+            try {
+              const sb = getSupabaseClient();
+              if (!sb) throw new Error('Cloud client unavailable');
+              const { error } = await sb.rpc('record_health_consent', {
+                _granted: false,
+                _app_version: null,
+                _platform: Platform.OS,
+              });
+              if (error) {
+                logError('SettingsScreen.withdrawConsent.rpc', error, { uid: user?.id });
+                Alert.alert(
+                  "Couldn't withdraw",
+                  "We couldn't reach the server. Check your connection and try again.",
+                );
+                return;
+              }
+              setHealthConsent(false, true);
+              try {
+                // eslint-disable-next-line global-require
+                const { track } = require('../lib/engineTelemetry');
+                if (user?.id) {
+                  track(user.id, 'article9_consent_withdrawn', {
+                    surface: 'settings',
+                  }).catch(() => {});
+                }
+              } catch (_) {}
+              Alert.alert(
+                'Consent withdrawn',
+                "We've recorded your withdrawal. Health-data features are now read-only.",
+              );
+            } catch (e) {
+              logError('SettingsScreen.withdrawConsent', e, { uid: user?.id });
+              Alert.alert("Couldn't withdraw", e?.message ?? 'Unknown error.');
+            } finally {
+              setWithdrawing(false);
+            }
+          },
+        },
+      ],
+    );
   }
 
   async function handleSignOut() {
@@ -924,6 +990,23 @@ export default function SettingsScreen({ navigation }) {
             label={deletingAccount ? 'Deleting account…' : 'Delete account'}
             destructive
             onPress={deletingAccount ? undefined : handleDeleteAccount}
+          />
+        </View>
+
+        {/* Privacy */}
+        <SectionHeader title="Privacy" />
+        <View style={styles.section}>
+          <SettingRow
+            icon="shield-checkmark-outline"
+            label="Health-data consent"
+            sub={healthConsent === true
+              ? 'Granted. Tap to withdraw at any time.'
+              : healthConsent === false
+                ? 'Withdrawn. Some features are read-only.'
+                : 'Not recorded yet.'}
+            value={healthConsent === true ? 'On' : healthConsent === false ? 'Off' : '—'}
+            onPress={healthConsent === true && !withdrawing ? handleWithdrawConsent : undefined}
+            showArrow={healthConsent === true}
           />
         </View>
 

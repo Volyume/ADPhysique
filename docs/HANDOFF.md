@@ -422,6 +422,7 @@ Per `TELEMETRY_DASHBOARDS_LOCKED.md`:
 - `migrate_038_payments_cascade_telemetry.sql` — cascade_state_transition + purchase_* + subscription_cancelled + restore_purchases_attempted
 - `migrate_039_account_deletions_log.sql` — non-cascading audit-trail table + record_account_deletion_started/completed RPCs (Panel 8)
 - `migrate_040_notification_telemetry.sql` — notification_sent + notification_tapped + notification_failed (Panel 6)
+- `migrate_041_consent_withdrawal_telemetry.sql` — article9_consent_withdrawn (Panel 8)
 
 **Daily rollup view** (`engine_telemetry_daily` from migration 017) aggregates per day; cohort dashboards read from it.
 
@@ -658,7 +659,7 @@ Per `TELEMETRY_DASHBOARDS_LOCKED.md` event catalogue.
 | `held_decision_created` / `_cleared` | Per-type events (ed_pattern_flag_fired, ffm_floor_hold_fired, rapid_loss_compression_triggered) already populate Panel 2 split-by-type. Umbrella event would duplicate rows. | Skip unless dashboard explicitly needs the umbrella shape; revisit if Panel 2 query becomes painful. |
 | `sync_conflict_resolved` | Single-file `sync.js` doesn't have a structured conflict-resolution code path. | Build `src/lib/sync/` directory split per `SYNC_ARCHITECTURE_LOCKED.md` (drift item; ~3-4 days). |
 | `account_deleted` | Cascade-self-deleting: engine_telemetry.user_id has ON DELETE CASCADE so the row dies with the auth.users row. | **Resolved via `account_deletions_log` table (migration 039).** The Edge Function writes pre-and-post auth.admin.deleteUser. |
-| `article9_consent_withdrawn` | No withdrawal UI exists. | Build SettingsScreen → Privacy management section. Underlying `record_health_consent(false)` RPC already supports it. |
+| `article9_consent_withdrawn` | **Shipped.** SettingsScreen → Privacy section + migration 041. | — |
 
 ---
 

@@ -29,6 +29,7 @@ import {
 } from '../lib/food/db';
 import { searchFoods } from '../lib/food/waterfall';
 import { resolveFoodRef } from '../lib/food/sources/localCache';
+import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import FoodDetailSheet from '../components/food/FoodDetailSheet';
@@ -142,6 +143,11 @@ export default function FoodSearchScreen({ navigation, route }) {
   async function confirmLog({ quantityG, mealSlot: chosenSlot, entryDate: chosenDate }) {
     if (!picker?.food) return;
     const food = picker.food;
+    audit('food.add', {
+      source: food.source ?? 'unknown',
+      mealSlot: chosenSlot,
+      fromScan: !!scannedFood,
+    });
     const factor = quantityG / 100;
     await logFoodEntry(userId, {
       entryDate: chosenDate,

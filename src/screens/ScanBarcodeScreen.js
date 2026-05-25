@@ -38,6 +38,7 @@ import * as Haptics from 'expo-haptics';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { resolveBarcode } from '../lib/food/waterfall';
 import { logError, logInfo } from '../lib/errorLog';
+import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -98,11 +99,13 @@ export default function ScanBarcodeScreen({ navigation, route }) {
     if (!value) return;
     scanLock.current = true;
     setResolving(true);
+    audit('food.barcode.scan', { codeType: codes[0]?.type ?? 'unknown' });
     logInfo('ScanBarcode.detect', `data=${value} type=${codes[0]?.type}`);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     try {
       const food = await resolveBarcode(value, userId);
       if (food) {
+        audit('food.barcode.resolved', { source: food.source ?? 'unknown' });
         logInfo('ScanBarcode.hit', `data=${value} food_ref=${food.food_ref}`);
         navigation.replace('FoodSearch', {
           mealSlot, entryDate, scannedFood: food,
