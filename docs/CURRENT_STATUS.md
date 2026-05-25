@@ -258,6 +258,8 @@ In suggested execution order:
 
 ### EXPLICITLY OUT OF SCOPE FOR NOW
 
+Founder direction 2026-05-25: **cloud infrastructure migration (Azure/AWS) is deferred until the app is stable in production.** The current Supabase + Sentry + RevenueCat stack stays for v1 launch. Revisit only if (a) telemetry proves Supabase's free tier or paid tier is genuinely insufficient, or (b) a compliance / enterprise requirement appears that requires AWS/Azure-only infrastructure. Estimate at the time of asking: ~£15-50/month recurring + 8-12 weeks of engineering to migrate, with no functional gain pre-launch.
+
 Locked deferrals from `BUDGET_POSTURE_LOCKED.md`, `MASTER_VISION_AND_PLAN.md` Section 19, and `COMPLETE_TIER_SCOPE_LOCKED.md`:
 
 - **iOS / Apple Developer / App Store Connect / iOS SKUs** — Android-only Phase B (founder decision)
