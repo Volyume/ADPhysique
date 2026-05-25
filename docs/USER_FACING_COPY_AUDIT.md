@@ -2,6 +2,15 @@
 
 _Last updated: 2026-05-16. Covers build as of branch `claude/build-volyume-app-srY9C`._
 
+> **Stale relative to current state.** The food layer, cascade UI,
+> paywall surfaces, and Article 9 consent screen all postdate this
+> audit. Voice compliance is now guarded by snapshot tests
+> (`weeklyCoach.voice.snapshot.test.js`, `whyThisTemplates.snapshot.test.js`,
+> `jargonBlocklist.test.js`). The voice rules in `CLAUDE.md` and
+> `COACHING_VOICE_SYNTHESIS_LOCKED.md` are the canonical reference for
+> new copy; this doc is preserved for the per-screen historical
+> review.
+
 This document lists every piece of user-visible text by screen, flags terminology violations, and notes where copy is confusing, inconsistent, or wrong.
 
 ---

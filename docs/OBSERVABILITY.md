@@ -3,6 +3,8 @@
 What's wired, where the data lands, and how to act on it without
 manual collection. This is the doc you read once and then ignore.
 
+**See also:** `HANDOFF.md` section 4.8 (engine telemetry catalogue, 29 wired events) and section 7 (event-to-panel mapping for all 8 dashboard panels). This doc covers the Sentry + feedback layer; the engine telemetry layer is a separate cohort-dashboard pipeline at `src/lib/engineTelemetry.js` + Supabase `engine_telemetry` table.
+
 ---
 
 ## Where data goes
@@ -13,6 +15,8 @@ manual collection. This is the doc you read once and then ignore.
 | Warnings (recoverable issues, "this shouldn't happen but we coped") | Sentry (warning level) + ring buffer | Sentry "Issues" with level:warning |
 | Breadcrumbs (store actions, navigation, Supabase queries, screen views) | Sentry (attached to next event) + ring buffer | Sentry issue detail → Breadcrumbs panel |
 | Performance traces (slow paths) | Sentry (sampled 10% prod / 100% dev) | Sentry → Performance tab |
+| Engine telemetry events (sign_in, weekly_coach_run, paywall_shown, etc.) | Supabase `engine_telemetry` table + daily rollup view | Supabase Studio → SQL queries against `engine_telemetry_daily` (per `TELEMETRY_DASHBOARDS_LOCKED.md` Panels 1-8) |
+| Account deletion audit | Supabase `account_deletions_log` table | Same. NON-cascading; survives auth.users delete. Drives Panel 8 queue-depth alert. |
 | User feedback (sentiment + optional message) | Supabase `user_feedback` table | Supabase SQL Editor + two views |
 
 ---
@@ -104,16 +108,21 @@ user id. PII redaction is automatic — see redactPII for the key list.
 
 ## What gets stripped before leaving the device
 
-`src/lib/observability.js` and `src/lib/sentry.js` both run a redaction
-pass over every outbound event. Keys redacted (recursively, at any
-depth):
+`src/lib/observability/sentryScrub.js` is the authoritative scrub
+module (per `PRIVACY_CONSENT_LOCKED.md` line 282). 110 audit tests
+assert the scrub list matches the schema. `src/lib/sentry.js` calls
+`scrubSentryEvent` from the `beforeSend` hook so every outbound event
+passes the same filter.
+
+Keys redacted (recursively, at any depth):
 
 `email`, `firstName`, `lastName`, `fullName`, `dateOfBirth`,
 `weightKg`, `bodyWeight`, `heightCm`, `bodyFatPercent`, `phone`,
 `address`, every body-measurement key (`waistCm`, `chestCm`,
 `hipsCm`, `thighCm`, `quads`, `hamCm`, `hamstrings`, `calfCm`,
 `calves`, `armCm`, `arms`, `shouldersCm`, `shoulders`, `forearmCm`,
-`forearms`).
+`forearms`), plus per-table fields the schema audit derives from
+`DATABASE_SCHEMA_LOCKED.md`.
 
 The shape is preserved — a redacted email shows as `"[redacted]"`
 not as a missing key — so log readers can tell "the email field was

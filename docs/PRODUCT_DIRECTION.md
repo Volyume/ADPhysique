@@ -2,6 +2,15 @@
 
 This document records deferred features and their intended design. It is the authoritative source for how deferred capabilities should be built when they are eventually implemented.
 
+> **Status 2026-05-25:** "deferred" categories here predate the Volyume
+> Complete strategy (2026-05-23) and the 2-tier consolidation override
+> (2026-05-25). Food logging is no longer deferred (shipped as Move #1
+> + #1.5). The Complete tier is no longer planned (override 3, 2-tier
+> model). For the canonical current scope, see `CURRENT_STATUS.md`
+> section 7 and `BACKLOG.md`. This doc still applies to the truly
+> still-deferred features (recipe URL importer, body composition deep
+> charts, share-pack PDF, etc.).
+
 ---
 
 ## Phase 1.5 Scope Summary

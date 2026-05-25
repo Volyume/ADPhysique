@@ -2,16 +2,16 @@
 
 _Last updated: 2026-05-16. Covers build as of branch `claude/build-volyume-app-srY9C`._
 
-> **Note (2026-05-24, audit pass):** this inventory is stale relative
-> to the shipped app. The Volyume Complete + Move #1.5 + identity
-> work added a Diary tab and a stack of food/coaching/onboarding
-> screens that aren't catalogued below:
->
-> Food + coaching: `DiaryScreen`, `FoodSearchScreen`,
-> `FoodInsightsScreen`, `AddCustomFoodScreen`, `AthleteHubScreen`,
-> `PlansScreen`, `CoachOutputScreen`, `CoachReviewScreen`,
-> `CoachHeldHistoryScreen`, `NutritionTargetsScreen`,
-> `WellbeingCheckScreen`.
+> **Note (2026-05-25 evening, comprehensive doc refresh):** this
+> inventory has been superseded by `HANDOFF.md` section 11, which
+> lists all 56 currently shipped screens with one-line purposes. The
+> sections below capture per-screen component breakdown from
+> 2026-05-16 and remain useful as the structural reference for the
+> screens that existed then. New screens added since (Move #1, #1.5,
+> #2, #3, #4, #5 cascade UI, Article 9 consent, Goal Lock consent,
+> Wellbeing check, Credits, Cascade gate, Subscription, Paywall) are
+> only in `HANDOFF.md`. Refresh as a follow-up pass when one of the
+> rooms here gets restructured.
 >
 > Onboarding + consent: `Article9ConsentScreen` (Move #2 deferral,
 > Article 9 health-data consent), `GoalLockConsentScreen` (Move #2),

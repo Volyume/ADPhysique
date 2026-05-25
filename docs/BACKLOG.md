@@ -2,16 +2,19 @@
 
 Features listed here are explicitly deferred. None should be implemented without the user explicitly reopening the item and confirming scope.
 
-_Last updated: 2026-05-24. Recent additions in this beta-prep branch are noted in the section "Shipped in May 2026 beta-prep" near the bottom._
+_Last updated: 2026-05-25 (evening). Recent additions in this beta-prep branch are noted in the section "Shipped in May 2026 beta-prep" near the bottom._
 
-> **Note (2026-05-24): the "food / meal logging" hard exclusion below was
-> reversed under the Volyume Complete strategy (locked
-> 2026-05-23). Food logging ships as part of Move #1 + #1.5 with
-> the FFM-aware safety floor as the unlock condition. The line below
-> remains for historical context; the active behaviour is the
-> three-tier ladder in COMPLETE_TIER_SCOPE_LOCKED.md. Coach / client
-> mode similarly reversed under Volyume Complete's coach handoff
-> path; locked phase 2.**
+> **Note (2026-05-25): tier overrides applied.** The "food / meal
+> logging" hard exclusion below was reversed under the Volyume
+> Complete strategy (locked 2026-05-23) and ships as Move #1 + #1.5.
+> The three-tier ladder was then consolidated to a 2-tier model
+> (Free + Pro) per founder override 2026-05-25: Complete tier
+> removed, Peak Week module removed entirely ("needs a human eye,
+> not numbers"). Coach / client mode stays reversed under the
+> coach-handoff path (locked phase 2, now positioned at the Pro
+> tier rather than Complete since Complete no longer exists). See
+> `CURRENT_STATUS.md` section "Founder overrides locked 2026-05-25"
+> and `HANDOFF.md` section 2.
 
 ---
 
@@ -25,7 +28,7 @@ These are product decisions, not technical deferrals. Do not add them even if re
 | **Social feed / community** | Volyume is private by design. No public profiles, leaderboards, or activity feeds. |
 | **Gamification** | No XP, badges, achievements, or virtual rewards. Progress is real or it is nothing. **Carve-out (2026-05-22):** a single "week-streak" chip on the HomeScreen "This week" card was added to surface training consistency without ranking, levelling, or rewarding. If this drifts into stickers / XP / leaderboards, pull it back. |
 | **Wearable / Health API integration** | No Apple Watch, Garmin, or Fitbit integration. **Carve-out:** `src/lib/health.js` wraps HealthKit (iOS) + Health Connect (Android) for one-way reads of morning weight + step count, and for writing completed workouts to the platform Health app. This is opt-in, surfaced in Settings only. Heart rate, sleep, HRV remain out of scope. |
-| ~~**Coach / client mode**~~ | **REVERSED 2026-05-23 under Volyume Complete strategy (phase 2).** Coach handoff is a first-class workflow at the Complete tier. Coach pays, client gets Complete free. Schema groundwork (`engine_overrides`, `coach_id` columns) ships in Move #5; the coach-facing surface itself is phase 2. See `B2B_COACH_PHASE_2_SCOPED.md`, `COMPLETE_TIER_SCOPE_LOCKED.md`. |
+| ~~**Coach / client mode**~~ | **REVERSED 2026-05-23 under the Volyume Complete strategy and re-positioned 2026-05-25 under the 2-tier override.** Coach handoff is a phase 2 workflow at the Pro tier (was Complete; Complete tier no longer exists). Coach pays, client gets Pro free. Schema groundwork (`engine_overrides`, `coach_id` columns) ships in Move #5; the coach-facing surface itself is phase 2. See `B2B_COACH_PHASE_2_SCOPED.md`. |
 
 ---
 
@@ -74,8 +77,9 @@ These are product decisions, not technical deferrals. Do not add them even if re
 
 | Feature | Notes |
 |---|---|
-| **Supabase cloud sync** | Local SQLite is the single source of truth. Supabase client is wired but sync is not implemented. Cloud backup/restore deferred to post-launch. |
-| **Multi-device / web app** | Offline-first SQLite does not sync across devices without Supabase sync. Web app deferred. |
+| ~~**Supabase cloud sync**~~ | **DONE.** Local SQLite remains the single source of truth on-device; cloud sync runs in both directions (bulkUploadLocalData + pullFromCloud) via `src/lib/sync.js` + `src/lib/syncQueue.js`. Per-op retry with exponential backoff. Foreground/background AppState listener in App.js fires `maybeSync` at 60s minimum interval. |
+| **Multi-device / web app** | Cross-device sync ships above; web app stays deferred to never at v1 per `MASTER_VISION_AND_PLAN.md`. |
+| **Cloud infrastructure migration (Azure/AWS)** | Founder override 2026-05-25: deferred until app is stable in production. Supabase + Sentry stack stays for v1 launch. |
 | ~~**Push notifications**~~ | **DONE** (local notifications). Rest timer fires a sticky/ongoing notification with the exercise name and end time, plus an end-of-rest alert with sound. Remote push (server-driven) still deferred. |
 | ~~**Data export (CSV / JSON)**~~ | **DONE**. Settings → Export → writes a CSV of workout history via `expo-file-system` + `expo-sharing`. Full JSON backup/restore also implemented. |
 | ~~**EAS Update (OTA)**~~ | **DONE**. App checks for updates on launch (production builds only) and prompts "Restart now" / "Later" via Alert when an update is downloaded. |
@@ -130,14 +134,15 @@ in main now; listing here so they don't get re-proposed.
 
 ## Must-fix design debt (blocks further work)
 
-Open items at end of 2026-05-24 session (verification debt, not
-design debt):
+Open items at end of 2026-05-25 session:
 
 | Item | Status | Owner | Next step |
 |---|---|---|---|
-| Delete Account end-to-end | Migration 025 pushed + applied; founder hasn't re-tested since. Earlier attempts 500'd at `auth.admin.deleteUser` ("Database error deleting user"). | Founder | Sign into a test account, tap Delete Account, capture the Edge Function response. If 500 still: read the new `fnErrorBody` to find what FK is still blocking. |
-| `sync.syncExercises 42501` warns on `exercises` | Source fix in `c49e596` (only push customs to `custom_exercises`, no writes to `exercises`). Needs APK build that includes this commit. | Build pipeline | After next build is installed, verify the warns are gone on fresh signup. |
-| Orphan account `a7379dc8` | One-shot SQL written in `supabase/nuke_uid_a7379dc8.sql`. Founder unclear whether it was run. | Founder | Run the SQL or confirm it's already done. |
+| Migrations 037 + 038 + 039 apply | Pending Dashboard run. 037 = app lifecycle telemetry, 038 = payments/cascade telemetry, 039 = account_deletions_log audit table + RPCs. | Founder | Paste each into Supabase Dashboard → SQL Editor → Run. |
+| Delete Account end-to-end re-test | Edge Function now writes pre/post audit rows to account_deletions_log via service-role RPCs (mig 039). Whole flow has not been tested on device since the bracket was added. | Founder | Sign into a test account, tap Delete Account, verify a row lands in account_deletions_log with completed_at set. If completed_at is null after a few minutes, the auth.admin.deleteUser leg failed silently. |
+| Deploy play-billing-rtdn Edge Function | Edge Function code shipped at `supabase/functions/play-billing-rtdn/index.ts` but not deployed. | Founder | Deploy + configure Pub/Sub topic + service account env vars when ready for Phase A exit sandbox purchase. |
+| Generate Android upload keystore | No keystore exists. `build-android.yml` has signing config that's never been exercised in production. Blocks any new AAB replacing the Closed Testing build. | Founder + Claude | Claude writes the commands when founder is ready for Phase A exit prep. |
+| `public/privacy.html` deploy to volyume.app | 12-section privacy policy with verbatim FTC HBNR language exists at `public/privacy.html`. Hosting is unconfigured. | Founder | Set up volyume.app hosting; copy in privacy.html. |
 
 The identity + data ownership refactor (the one item that lived
 here as design debt) shipped on 2026-05-24 in migrations 018, 020,

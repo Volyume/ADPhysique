@@ -1,5 +1,14 @@
 # Volyume QA Test Plan — Phase 1.5
 
+> **Status 2026-05-25:** this doc captures the Phase 1.5 manual QA
+> checklist. For canonical state of what's been tested and what's
+> still outstanding for Phase A exit, see `CURRENT_STATUS.md`
+> section 7 and `HANDOFF.md` section 15.
+>
+> Recent device-test bug findings (sideloaded APK, 2026-05-25): see
+> `KNOWN_ISSUES_FROM_QA.md` for the food.seed transaction nesting
+> fix and the engine_telemetry payload_json column-name fix.
+
 ## Phase 1.5 Verdict
 **PENDING** — awaiting APK build from this branch.
 

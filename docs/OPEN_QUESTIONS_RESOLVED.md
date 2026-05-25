@@ -3,6 +3,14 @@
 Three open questions left over from Claude's third-pass adjudication
 (`BRIEF_C_CLAUDE_ADJUDICATION.md`, Section E). Resolved 2026-05-23.
 
+> **Update 2026-05-25:** the Complete tier and Peak Week module
+> referenced below have since been removed under founder override
+> 2026-05-25 (2-tier consolidation: Free + Pro only; Peak Week needs
+> a human eye, not numbers). The Q&A below remains as the historical
+> record of the resolution from 2026-05-23; the active behaviour is
+> the 2-tier model documented in `CURRENT_STATUS.md` and `HANDOFF.md`
+> section 2.
+
 ## Q1: ED-pattern false-positive override path
 
 **Context.** Move #2 introduces an ED-pattern detection state

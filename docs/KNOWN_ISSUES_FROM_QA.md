@@ -1,9 +1,22 @@
 # Volyume — Known Issues from QA
 
-_Last updated: 2026-05-24. Founder-reported issues from device
-testing this session reconciled below. Earlier multi-agent audits
-2026-05-20, 2026-05-21, and 2026-05-22 still apply for the older
-items._
+_Last updated: 2026-05-25 (evening). Founder-reported issues from
+device-log testing this session reconciled below. Earlier multi-agent
+audits 2026-05-20, 2026-05-21, 2026-05-22, and 2026-05-24 device pass
+still apply for the older items._
+
+## 2026-05-25 (evening) — sideloaded APK device-log pass
+
+The founder built and sideloaded a fresh debug APK after the build
+patches landed. Two real bugs surfaced in the device log; both fixed
+and pushed to main.
+
+| Issue | Severity | Status | Resolved in |
+|---|---|---|---|
+| `ERROR food.seed.off.chunk: cannot start a transaction within a transaction` followed by `cannot commit - no transaction is active`. OFF + CoFID importers fired concurrently from RootNavigator bootstrap; both ran BEGIN/COMMIT on the same SQLite connection. Despite the error spam, OFF import still landed 25,765 rows because INSERT OR IGNORE worked outside the transaction wrapper. | **High** (log noise + slow path) | **Fixed** | `a955f33` — module-level promise-chain mutex (`_withTxLock`) in `src/lib/food/seed.js`. Every per-chunk transaction now queues behind the previous one. |
+| `WARN engineTelemetry.flush.rpc: column "payload" of relation "engine_telemetry" does not exist` for `food_search_attempt` and post-029 events. Local SQLite row landed fine; cloud row was rejected. Root cause: migrations 029 + 032 typoed the column name (017 created it as `payload_json`). | **High** (telemetry pipeline broken) | **Fixed** | `a955f33` + migration 034 — `record_engine_telemetry` re-created with the correct column name and the full allow-list. Subsequent 035–038 use `payload_json` correctly. |
+
+Same APK build confirmed `INFO payments.playBilling.providerInjected real provider installed` — the `react-native-iap` Gradle `missingDimensionStrategy` patch fixed the previous 3 build failures.
 
 ## 2026-05-24 — founder device-testing pass
 

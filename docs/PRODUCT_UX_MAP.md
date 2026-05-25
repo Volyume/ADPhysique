@@ -2,6 +2,13 @@
 
 _Last updated: 2026-05-16. Covers build as of branch `claude/build-volyume-app-srY9C`._
 
+> **Stale relative to current state.** Active branch is now `main`
+> (founder override 2026-05-25). For the live screen inventory, see
+> `HANDOFF.md` section 11 (56 screens). For shipped UI surfaces, see
+> `HANDOFF.md` section 4. This doc is preserved for the structural
+> diagrams + historical UX rationale; refresh as a follow-up when a
+> major surface is reworked.
+
 ---
 
 ## 1. Tab Structure

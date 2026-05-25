@@ -1,5 +1,11 @@
 # Volyume — App Store Connect Listing
 
+> **Status 2026-05-25: OUT OF SCOPE for v1.** Founder confirmed there
+> is no Apple Developer account, no App Store Connect entity, no iOS
+> bundle registered. iOS is deferred indefinitely under the Android-only
+> Phase B decision. This doc is preserved as the prepared listing copy
+> for if/when iOS lands at a later phase; it is NOT current work.
+
 _Production-ready. Paste each field directly into App Store Connect._
 _All character counts verified against Apple's limits._
 

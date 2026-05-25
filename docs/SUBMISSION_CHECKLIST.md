@@ -2,6 +2,17 @@
 
 _Last updated 2026-05-22. Complete every item before triggering the first Internal Testing release._
 
+> **Status 2026-05-25:** Closed Testing track is FROZEN per founder
+> override 4 (`CLAUDE.md` release policy + `HANDOFF.md` section 2):
+> the current AAB at v1.1.0+4 stays in place until the WHOLE project
+> is built out. Do NOT trigger a new closed-testing release until the
+> Phase A exit checklist in `HANDOFF.md` section 15 is green. The
+> founder is sideloading debug APKs from CI to test current work; no
+> AAB promotion happens until Phase A exit.
+>
+> Items below are still valid Phase A exit prep, just not "do these
+> now" until that gate.
+
 This checklist reflects the **actual** build setup: GitHub Actions builds the AAB on every push using a stable upload keystore stored as GitHub secrets. EAS Build is not configured; do not run `eas build` until `extra.eas.projectId` in `app.json` is set via `eas init`.
 
 ---
