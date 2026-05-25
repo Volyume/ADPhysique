@@ -309,7 +309,21 @@ jobs:
             exit 0
           fi
           git commit -m "ci(maestro): status report for run #${{ github.run_number }} [skip ci]"
-          git push origin HEAD:${{ github.ref_name }}
+          # Pull-rebase + retry. Run #5 lost its status this way: Claude
+          # pushed a new commit while the run was in flight, so when the
+          # final step tried to push it failed non-fast-forward. Mirror
+          # the build-android.yml pattern: rebase + push, retry once,
+          # then warn rather than fail the whole job over a status doc.
+          for attempt in 1 2 3; do
+            git pull --rebase origin "${{ github.ref_name }}" || true
+            if git push origin HEAD:${{ github.ref_name }}; then
+              echo "Status pushed on attempt $attempt"
+              exit 0
+            fi
+            echo "Push attempt $attempt failed, retrying..."
+            sleep 5
+          done
+          echo "::warning::Status push failed after 3 attempts (status doc kept as artefact)"
 
       - name: Upload Maestro artefacts
         if: always()
