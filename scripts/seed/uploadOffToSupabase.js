@@ -2,7 +2,7 @@
 /**
  * uploadOffToSupabase.js
  *
- * Reads assets/seed/off_uk_snapshot.json (produced by
+ * Reads assets/seed/off_uk_snapshot.dat (produced by
  * buildOffSnapshot.js) and upserts every row into the Supabase
  * cloud `foods` table via service-role REST API. The cloud table
  * is the source of truth for the client-side delta puller
@@ -24,7 +24,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const SNAPSHOT_PATH = path.resolve(__dirname, '..', '..', 'assets', 'seed', 'off_uk_snapshot.json');
+const SNAPSHOT_PATH = path.resolve(__dirname, '..', '..', 'assets', 'seed', 'off_uk_snapshot.dat');
 const CHUNK_SIZE = 1000;
 const REQUEST_DELAY_MS = 100;
 

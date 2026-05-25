@@ -2,7 +2,7 @@
 /**
  * buildOffSnapshot.js
  *
- * Generates assets/seed/off_uk_snapshot.json from the OpenFoodFacts
+ * Generates assets/seed/off_uk_snapshot.dat from the OpenFoodFacts
  * daily JSONL dump. Streams the gzipped dump (~10 GB compressed,
  * ~40 GB uncompressed JSONL) line by line, decodes each product
  * record, keeps the ones tagged country=united-kingdom with usable
@@ -33,7 +33,7 @@ const os = require('node:os');
 const DUMP_URL = 'https://static.openfoodfacts.org/data/openfoodfacts-products.jsonl.gz';
 const USER_AGENT = 'Volyume-Snapshot-Builder/2.0 (https://volyume.app)';
 const UK_TAG = 'en:united-kingdom';
-const OUT_PATH = path.resolve(__dirname, '..', '..', 'assets', 'seed', 'off_uk_snapshot.json');
+const OUT_PATH = path.resolve(__dirname, '..', '..', 'assets', 'seed', 'off_uk_snapshot.dat');
 const TMP_GZ_PATH = path.join(os.tmpdir(), 'off-products.jsonl.gz');
 const PROGRESS_EVERY_LINES = 100_000;
 
@@ -230,7 +230,7 @@ async function streamFilter(gzPath) {
   const bytes = fs.statSync(OUT_PATH).size;
   const mb = (bytes / 1024 / 1024).toFixed(2);
   log(`wrote ${stats.rows.length.toLocaleString()} rows (${mb} MB) in ${ms}ms`);
-  log('done. commit assets/seed/off_uk_snapshot.json + push.');
+  log('done. commit assets/seed/off_uk_snapshot.dat + push.');
 })().catch((e) => {
   err('fatal:', e.message);
   err(e.stack);
