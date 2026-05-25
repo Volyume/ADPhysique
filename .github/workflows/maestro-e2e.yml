@@ -73,6 +73,69 @@ jobs:
           curl -Ls "https://get.maestro.mobile.dev" | bash
           echo "$HOME/.maestro/bin" >> $GITHUB_PATH
 
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-maestro-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle.properties') }}
+          restore-keys: gradle-maestro-${{ runner.os }}-
+
+      - name: Expo prebuild
+        id: prebuild
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          set -e
+          npx expo prebuild --platform android --no-install --clean 2>&1 | tee prebuild.log
+          chmod +x android/gradlew
+
+      # The next four steps mirror the patches in build-android.yml. They
+      # are non-optional with the current Expo SDK 51 + AGP 8.2.1 + Gradle
+      # 8.9 combination, which several deps (expo-notifications, react-
+      # native-reanimated, @shopify/react-native-skia, react-native-iap)
+      # don't fully agree with out of the box.
+      - name: Pin Gradle wrapper to 8.9
+        run: |
+          PROPS=android/gradle/wrapper/gradle-wrapper.properties
+          sed -i 's|distributionUrl=.*|distributionUrl=https\\://services.gradle.org/distributions/gradle-8.9-all.zip|' "$PROPS"
+          grep distributionUrl "$PROPS"
+
+      - name: Patch expo-modules-core for AGP 8.4+ compatibility
+        run: |
+          FILE=node_modules/expo-modules-core/android/ExpoModulesCorePlugin.gradle
+          sed -i '/from components\.release/d' "$FILE"
+
+      - name: Patch @react-native/gradle-plugin for Gradle 8.7+ compatibility
+        run: |
+          FILE=node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts
+          sed -i 's|org.gradle.configurationcache.extensions.serviceOf|org.gradle.kotlin.dsl.support.serviceOf|' "$FILE"
+
+      - name: Patch app/build.gradle for react-native-iap store flavor (play)
+        run: |
+          FILE=android/app/build.gradle
+          if grep -q 'missingDimensionStrategy.*store.*play' "$FILE"; then
+            echo "missingDimensionStrategy already present, skipping"
+          else
+            python3 - <<'PYEOF'
+          import pathlib, re, sys
+          p = pathlib.Path('android/app/build.gradle')
+          src = p.read_text()
+          new_src, count = re.subn(
+              r'(defaultConfig\s*\{)',
+              r"\1\n        missingDimensionStrategy 'store', 'play'",
+              src,
+              count=1,
+          )
+          if count == 0:
+              print('::error::Could not find defaultConfig { in app/build.gradle')
+              sys.exit(1)
+          p.write_text(new_src)
+          PYEOF
+          fi
+
       - name: Build debug APK
         id: build_apk
         env:
@@ -80,7 +143,6 @@ jobs:
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
         run: |
           set -e
-          npx expo prebuild --platform android --no-install 2>&1 | tee prebuild.log
           cd android
           ./gradlew assembleDebug 2>&1 | tee ../gradle-debug.log
 
