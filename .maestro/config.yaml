@@ -14,5 +14,7 @@ tags:
     - smoke
 
 # Wait long enough for first-launch SQLite seed (exercises + OFF + CoFID).
-# Real cold launch on a mid-range Android takes ~6-8s. Headroom for CI.
-launchTimeoutMs: 30000
+# Real cold launch on a mid-range Android takes ~6-8s. CI cold-boot
+# headroom = much more (emulator + 30k+ row seed import). Bumped to
+# 60s so the smoke flow doesn't false-fail on a slow first launch.
+launchTimeoutMs: 60000
