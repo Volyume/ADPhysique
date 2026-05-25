@@ -1,10 +1,21 @@
 name: Maestro E2E (Android emulator)
 
-# Opt-in only at first. Founder triggers manually from the Actions
-# tab once the smoke bundle has been validated against a real
-# emulator run. After that, change `on:` to include `pull_request`
-# (with a paths filter on app code) so the bundle gates merges.
+# Runs the smoke bundle on every push to the working branch so
+# Claude can drive validation directly. workflow_dispatch is kept
+# so a wider tag can be requested on demand.
 on:
+  push:
+    branches:
+      - 'claude/**'
+    paths:
+      - 'e2e/**'
+      - '.maestro/**'
+      - 'src/**'
+      - 'App.js'
+      - 'app.json'
+      - 'package.json'
+      - 'android/**'
+      - '.github/workflows/maestro-e2e.yml'
   workflow_dispatch:
     inputs:
       tag:
