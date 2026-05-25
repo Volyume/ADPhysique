@@ -111,6 +111,16 @@ const ALLOWED_EVENTS = new Set([
   'purchase_failed',
   'subscription_cancelled',
   'restore_purchases_attempted',
+  // Migration 040: notification surface closure (Panel 6). The
+  // expo-notifications received-listener fires notification_sent at
+  // OS delivery time (with category + delivered_at in payload). The
+  // response-listener fires notification_tapped when the user opens
+  // a delivered notification. notification_failed fires when a
+  // schedule call throws locally; cross-device deliverability
+  // reporting is owned by Expo Push and not surfaced here.
+  'notification_sent',
+  'notification_tapped',
+  'notification_failed',
 ]);
 
 let _flushTimer = null;

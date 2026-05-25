@@ -185,9 +185,16 @@ iOS modules are kept buildable but iOS is deferred indefinitely (no Apple Develo
 │   │   ├── phaseEngine.js
 │   │   ├── recoveryEMA.js
 │   │   ├── swapEngine.js
-│   │   ├── notifications.js        Scattered notifications (drift vs spec'd module dir)
-│   │   ├── restNotifications.js
-│   │   ├── trainingReminders.js
+│   │   ├── notifications/          7-file module per NOTIFICATIONS_LOCKED.md
+│   │   │   ├── index.js
+│   │   │   ├── categories.js       Category enum + channel routing
+│   │   │   ├── quietHours.js       22:00→07:00 default time-shift rule
+│   │   │   ├── permissions.js      Request / status helpers
+│   │   │   ├── handler.js          Foreground delivery + smart suppression
+│   │   │   ├── scheduler.js        Cron-like schedule + cancel helpers
+│   │   │   └── telemetry.js        notification_sent / _tapped / _failed
+│   │   ├── restNotifications.js    (sibling, pending pull-in)
+│   │   ├── trainingReminders.js    (sibling, pending pull-in)
 │   │   ├── coachingGoals.js
 │   │   ├── coachExport.js
 │   │   ├── whyThisTemplates.js     Locked Move #0.5 templates
@@ -413,10 +420,12 @@ Per `TELEMETRY_DASHBOARDS_LOCKED.md`:
 - `migrate_036_signup_funnel_telemetry.sql` — account_created / custom_food_created
 - `migrate_037_lifecycle_sync_telemetry.sql` — app_cold_start / app_foregrounded / app_backgrounded / sync_run
 - `migrate_038_payments_cascade_telemetry.sql` — cascade_state_transition + purchase_* + subscription_cancelled + restore_purchases_attempted
+- `migrate_039_account_deletions_log.sql` — non-cascading audit-trail table + record_account_deletion_started/completed RPCs (Panel 8)
+- `migrate_040_notification_telemetry.sql` — notification_sent + notification_tapped + notification_failed (Panel 6)
 
 **Daily rollup view** (`engine_telemetry_daily` from migration 017) aggregates per day; cohort dashboards read from it.
 
-**Event count: 33 allow-listed; 29 currently emitting from real call sites.** Full event-to-panel mapping in section 8.
+**Event count: 36 allow-listed; 32 currently emitting from real call sites.** Full event-to-panel mapping in section 8.
 
 ### 4.9 Sync
 
@@ -437,14 +446,28 @@ Per `TELEMETRY_DASHBOARDS_LOCKED.md`:
 
 ### 4.10 Notifications
 
-`src/lib/notifications.js` + scattered code:
-- Rest-timer notifications (`restNotifications.js` + `rest-timer-live` module)
-- Training reminders (`trainingReminders.js`)
-- Coaching reminders (`CoachingRemindersScreen`)
-- Year of Lifts unlock notification
-- Active workout notification
+`src/lib/notifications/` directory (built this session per `NOTIFICATIONS_LOCKED.md`):
+- `categories.js` — category enum + per-category channel routing (push / in-app / email). ED-pattern + FFM-floor + sync-error are in-app-only by policy.
+- `quietHours.js` — 22:00 → 07:00 local default, wrap-window aware, AsyncStorage-persisted via `@volyume_quiet_hours_v1`. Exposes `shiftHourMinuteOutOfQuietHours` + `shiftDateOutOfQuietHours`; the schedulers consult it before pinning every trigger.
+- `permissions.js` — `requestNotificationPermissions` + `getNotificationPermissionStatus` (web → 'denied'; iOS sound disabled by default).
+- `handler.js` — `configureNotificationHandler` with foreground smart-suppression (don't surface "log your weight" 30 min after the user logged it; don't surface "weekly check-in" once it's done; same for training reminders).
+- `scheduler.js` — `scheduleMorningWeightNotification`, `scheduleCheckinReminder`, `scheduleNextCheckinReminder`, the cancel helpers, `restoreNotifications`, `checkYearOfLiftsUnlock`. Every helper catches scheduling errors and emits `notification_failed`.
+- `telemetry.js` — `trackNotificationSent` / `trackNotificationTapped` / `trackNotificationFailed`. All three look the user up lazily from the Zustand store; no userId threading needed at call sites. Helpers no-op when nobody is signed in (cold-start tap on a signed-out app).
+- `index.js` — single re-export surface. Existing imports `from '../lib/notifications'` keep working unchanged.
 
-**Outstanding (Phase A code work):** Build the spec'd `src/lib/notifications/` directory split (per `NOTIFICATIONS_LOCKED.md`). Wire `notification_sent`, `notification_tapped`, `notification_failed` telemetry.
+Sibling files still alongside the directory (follow-up work to pull into it):
+- `restNotifications.js` — rest-timer channel + permission helpers + the (currently disabled) live-countdown Live Activity path. Native module `rest-timer-live`.
+- `trainingReminders.js` — per-training-day weekly reminders backed by AsyncStorage prefs. Telemetry-wired in this session's catch path.
+- `activeWorkoutNotification.js` — persistent workout-in-progress notification (currently disabled pending manifest fix for Android 14 `FOREGROUND_SERVICE_TYPE_HEALTH`).
+
+**Telemetry wired (migration 040, this session):**
+- `notification_sent` from `RootNavigator.addNotificationReceivedListener`. Carries category + scheduled_for + delivered_at. Cold-start deliveries unobservable; tap event covers those.
+- `notification_tapped` from `RootNavigator.addNotificationResponseReceivedListener` (plus cold-start `getLastNotificationResponseAsync`). Carries category + tapped_at + data_type.
+- `notification_failed` from every scheduler.js catch path + the trainingReminders.js catch path.
+
+**Tests:** `src/lib/__tests__/notifications.quietHours.test.js` (16 tests covering the wrap window, the locked spec's "23:00 shifts to 07:00 next day" acceptance case, custom windows, and the disabled-rule pass-through). `src/lib/__tests__/notifications.categories.test.js` (5 tests covering the category enum / channel map consistency + `isPushCategory` policy + `categoryForDataType` mapping).
+
+**Outstanding follow-ups:** Pull the three sibling files into `src/lib/notifications/`. Add `cascade_gate` + `subscription_payment_failure` + `weekly_coach_ready` scheduler helpers when those surfaces ship.
 
 ### 4.11 Observability
 
@@ -622,8 +645,11 @@ Per `TELEMETRY_DASHBOARDS_LOCKED.md` event catalogue.
 | `app_cold_start` | App.js maybeSync first signed-in resolve | Panel 1 |
 | `app_foregrounded` | App.js AppState 'active' after cold-start | Panel 1 |
 | `app_backgrounded` | App.js AppState 'background' (not 'inactive') | Panel 1 |
+| `notification_sent` | RootNavigator addNotificationReceivedListener | Panel 6 |
+| `notification_tapped` | RootNavigator addNotificationResponseReceivedListener (incl. cold-start) | Panel 6 |
+| `notification_failed` | scheduler.js catch paths + trainingReminders.js catch path | Panel 6 |
 
-(Counts as ~33 because account_created/paywall_shown/purchase_completed/etc. each map to multiple panels; 29 unique call sites.)
+(Counts as ~36 because account_created/paywall_shown/purchase_completed/etc. each map to multiple panels; 32 unique call sites.)
 
 ### 7.2 Not wired, with explicit rationale
 
@@ -633,7 +659,6 @@ Per `TELEMETRY_DASHBOARDS_LOCKED.md` event catalogue.
 | `sync_conflict_resolved` | Single-file `sync.js` doesn't have a structured conflict-resolution code path. | Build `src/lib/sync/` directory split per `SYNC_ARCHITECTURE_LOCKED.md` (drift item; ~3-4 days). |
 | `account_deleted` | Cascade-self-deleting: engine_telemetry.user_id has ON DELETE CASCADE so the row dies with the auth.users row. | **Resolved via `account_deletions_log` table (migration 039).** The Edge Function writes pre-and-post auth.admin.deleteUser. |
 | `article9_consent_withdrawn` | No withdrawal UI exists. | Build SettingsScreen → Privacy management section. Underlying `record_health_consent(false)` RPC already supports it. |
-| `notification_sent` / `_tapped` / `_failed` | Existing notifications code is scattered across screens; no structured instrumentation hook. | Build `src/lib/notifications/` directory split per `NOTIFICATIONS_LOCKED.md` (drift item; ~2 days). |
 
 ---
 
@@ -648,7 +673,7 @@ Panel readiness inferred from event coverage.
 | **3: Food layer health** | Full | food_logged + food_search_attempt + food_lookup_barcode + custom_food_created + ocr_writeback_attempted. Source breakdown from food_logged payload. |
 | **4: Sync health** | Partial | sync_run fires. Sync conflict resolution not wired (blocker: sync.js single-file). p50/p95 duration not captured in payload yet. |
 | **5: Cascade and conversion** | Full | Full purchase funnel + cascade transitions + paywall events + tier_changed + subscription_cancelled. |
-| **6: Notifications** | None | Blocked on notifications/ module split. |
+| **6: Notifications** | Partial | `notification_sent` / `_tapped` / `_failed` wired this session; payloads carry the category and timestamps. Categories without an active schedule (cascade gate, payment failure, weekly-coach-ready) will appear once their scheduler helpers land. |
 | **7: Crash and error health** | Full | Sentry feeds this; not Supabase telemetry. Crash-free session rate + top issues + new issues today. |
 | **8: Privacy and consent** | Full | article9_consent_recorded fires; account_deletions_log captures deletion queue depth + stuck deletions. Consent withdrawal still needs UI to fire withdrawn event (legal path exists). |
 

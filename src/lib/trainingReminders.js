@@ -161,7 +161,18 @@ export async function scheduleTrainingReminders() {
         }).catch(() => {});
       })
     );
-  } catch {
-    // Fail silently — notification scheduling is non-critical
+  } catch (e) {
+    // Fail silently — notification scheduling is non-critical. Fire
+    // notification_failed telemetry so Panel 6 sees scheduling
+    // outages even though the user surface stays quiet.
+    try {
+      // eslint-disable-next-line global-require
+      const { trackNotificationFailed, CATEGORY } = require('./notifications');
+      trackNotificationFailed({
+        category: CATEGORY.TRAINING_REMINDER,
+        reason: 'schedule_threw',
+        payload: { message: e?.message ?? 'unknown' },
+      });
+    } catch (_) { /* telemetry layer unavailable -- accepted */ }
   }
 }

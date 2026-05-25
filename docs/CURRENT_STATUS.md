@@ -127,6 +127,8 @@ Per `DATABASE_SCHEMA_LOCKED.md` + grep against `supabase/migrate_*.sql`.
 | 036 | account_created + custom_food_created allow-list | **Applied** |
 | 037 | app_cold_start + foregrounded/backgrounded + sync_run allow-list | **Pending founder apply** |
 | 038 | cascade_state_transition + purchase_* + subscription_cancelled + restore_purchases_attempted allow-list | **Pending founder apply** |
+| 039 | account_deletions_log table + record_account_deletion_started/completed RPCs (non-cascading audit trail) | **Pending founder apply** |
+| 040 | notification_sent + notification_tapped + notification_failed allow-list | **Pending founder apply** |
 
 ---
 
@@ -151,7 +153,14 @@ Per `DATABASE_SCHEMA_LOCKED.md` + grep against `supabase/migrate_*.sql`.
 | sync_conflict_resolved | Blocked by sync architecture | The single-file `src/lib/sync.js` doesn't have a structured conflict-resolution code path yet. Wire when the spec'd 7-file `src/lib/sync/` directory gets built (drift item in section 6 below). |
 | account_deleted | Blocked by schema design | `engine_telemetry.user_id` has `ON DELETE CASCADE` so events fire and immediately die with the auth.users row at account-delete time. Needs a separate non-cascading `account_deletions_log` table (Panel 8 still has the deletion queue depth alert from a different source). |
 | article9_consent_withdrawn | Blocked by UI | No withdrawal screen exists. Wire when SettingsScreen gets the privacy management section. Withdrawal IS still legally available via the `record_health_consent(false)` RPC if a user contacts support directly; only the in-app UI is missing. |
-| notification_sent / _tapped / _failed | Blocked by infra | Existing notifications code is scattered across screens. Needs the spec'd `src/lib/notifications/` module first (drift item in section 6). |
+
+**Newly wired (migration 040, this session):**
+
+| Event | Source | Notes |
+|---|---|---|
+| notification_sent | `RootNavigator` `addNotificationReceivedListener` | Fires at OS delivery time while the app process is alive. Payload carries category + `delivered_at`. Cold-start deliveries (process not running) are unobservable in JS and show up only via the tap event. |
+| notification_tapped | `RootNavigator` `addNotificationResponseReceivedListener` (incl. cold-start `getLastNotificationResponseAsync`) | Fires on user tap. Payload carries category + `tapped_at` + data_type. |
+| notification_failed | `src/lib/notifications/scheduler.js` + `src/lib/trainingReminders.js` catch paths | Fires when a schedule call throws locally. Cross-device deliverability is owned by Expo Push and is not surfaced here. |
 
 ---
 
@@ -195,7 +204,7 @@ Phase A; flagged so future PRs can decide whether to align or accept.
 | Locked spec | Reality | Effect |
 |---|---|---|
 | `src/lib/sync/` directory with 7 files (index, registry, runner, queue, conflict, transport, telemetry) per `SYNC_ARCHITECTURE_LOCKED.md` | Single `src/lib/sync.js` (~85 KB) | Functional; no registry to extend; conflict-resolution path doesn't exist so `sync_conflict_resolved` can't fire |
-| `src/lib/notifications/` directory with 5 files per `NOTIFICATIONS_LOCKED.md` | Notifications code scattered across screens + ad-hoc setup | Functional for what's there but the structured module pattern + categories + `notification_*` telemetry hooks aren't there |
+| `src/lib/notifications/` directory with 5 files per `NOTIFICATIONS_LOCKED.md` | **Exists** (`categories.js`, `quietHours.js`, `permissions.js`, `handler.js`, `scheduler.js`, `telemetry.js`, `index.js`) with `notification_*` telemetry wired + quiet-hours rule | Resolved this session. `trainingReminders.js` + `restNotifications.js` + `activeWorkoutNotification.js` still sit alongside as sibling files; pulling them into the directory is a follow-up. |
 | `src/lib/telemetry/` directory with 4 files per `TELEMETRY_DASHBOARDS_LOCKED.md` | Single `src/lib/engineTelemetry.js` | Functional; allow-list + push live there |
 | `src/screens/onboarding/` directory per `ONBOARDING_SEQUENCE_LOCKED.md` | Onboarding screens flat in `src/screens/` | Cosmetic |
 | `src/components/food/` with 9 components per `UI_FLOWS_LOCKED.md` | Only MacroRings.js + FoodDetailSheet.js exist; others inline in screens | Reuse-harder |
@@ -241,12 +250,11 @@ Grouped by phase per `RELEASE_PLAN_LOCKED.md`.
 
 | # | Item | Spec | Effort | Owner |
 |---|---|---|---|---|
-| 1 | Apply migration 037 + 038 in Supabase Dashboard | this doc § 3 | 5 min | Founder |
+| 1 | Apply migrations 037, 038, 039, 040 in Supabase Dashboard | this doc § 3 | 5 min | Founder |
 | 2 | Deploy `public/privacy.html` to volyume.app/privacy | `PRIVACY_CONSENT_LOCKED.md` lines 75-112 | M (hosting setup) | Founder + Claude |
 | 3 | Build `src/lib/sync/` directory split + wire `sync_conflict_resolved` | `SYNC_ARCHITECTURE_LOCKED.md` | M (~2 days) | Claude |
-| 4 | Build `src/lib/notifications/` directory + wire `notification_*` events | `NOTIFICATIONS_LOCKED.md` | M (~2 days) | Claude |
-| 5 | Add `account_deletions_log` table + wire `account_deleted` event from a non-cascading source | spec gap; new design | S (~3 h) | Claude |
-| 6 | Maestro E2E framework + 12 critical-path flows | `TESTING_STRATEGY_LOCKED.md` lines 114-141 | M-L (~1 week) | Claude |
+| 4 | ~~Build `src/lib/notifications/` directory + wire `notification_*` events~~ **Shipped this session** (mig 040 + 7-file module + quiet-hours + 21 new tests). Follow-up: pull `trainingReminders.js` + `restNotifications.js` + `activeWorkoutNotification.js` into the directory. | `NOTIFICATIONS_LOCKED.md` | done | Claude |
+| 5 | Maestro E2E framework + 12 critical-path flows | `TESTING_STRATEGY_LOCKED.md` lines 114-141 | M-L (~1 week) | Claude |
 
 ### LATER (Phase A exit prep)
 

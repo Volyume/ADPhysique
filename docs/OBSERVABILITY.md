@@ -3,7 +3,7 @@
 What's wired, where the data lands, and how to act on it without
 manual collection. This is the doc you read once and then ignore.
 
-**See also:** `HANDOFF.md` section 4.8 (engine telemetry catalogue, 29 wired events) and section 7 (event-to-panel mapping for all 8 dashboard panels). This doc covers the Sentry + feedback layer; the engine telemetry layer is a separate cohort-dashboard pipeline at `src/lib/engineTelemetry.js` + Supabase `engine_telemetry` table.
+**See also:** `HANDOFF.md` section 4.8 (engine telemetry catalogue, 32 wired events) and section 7 (event-to-panel mapping for all 8 dashboard panels). This doc covers the Sentry + feedback layer; the engine telemetry layer is a separate cohort-dashboard pipeline at `src/lib/engineTelemetry.js` + Supabase `engine_telemetry` table.
 
 ---
 

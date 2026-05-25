@@ -415,6 +415,19 @@ export default function RootNavigator() {
   useEffect(() => {
     function handleNotificationResponse(response) {
       const type = response?.notification?.request?.content?.data?.type;
+
+      // Fire notification_tapped telemetry. The helper reads userId
+      // from the store internally and silently no-ops when nobody is
+      // signed in (cold-start tap on a signed-out app).
+      try {
+        // eslint-disable-next-line global-require
+        const { trackNotificationTapped } = require('../lib/notifications');
+        trackNotificationTapped({
+          notification: response?.notification,
+          payload: { data_type: type ?? 'unknown' },
+        });
+      } catch (_) { /* telemetry must never break the tap handler */ }
+
       const routeFor = (t) => {
         if (t === 'weekly_checkin') return ['ProfileTab', 'WeeklyCheckIn'];
         if (t === 'year_of_lifts_unlock') return ['ProgressTab', 'YearOfLifts'];
@@ -433,13 +446,38 @@ export default function RootNavigator() {
       }
     }
 
+    function handleNotificationReceived(notification) {
+      // Fire notification_sent telemetry. The OS only invokes this
+      // listener while the app process is alive, so this captures
+      // foreground + recently-backgrounded deliveries. Cold-start
+      // deliveries (app not running, system tray populated by APNs/
+      // FCM) are not observable in JS and will show up only via the
+      // tap event instead.
+      try {
+        // eslint-disable-next-line global-require
+        const { trackNotificationSent } = require('../lib/notifications');
+        const trigger = notification?.request?.trigger;
+        const scheduledFor = trigger?.date
+          ? new Date(trigger.date).toISOString()
+          : null;
+        trackNotificationSent({
+          notification,
+          scheduledFor,
+        });
+      } catch (_) { /* telemetry must never break delivery */ }
+    }
+
     const sub = Notifications.addNotificationResponseReceivedListener(handleNotificationResponse);
+    const recvSub = Notifications.addNotificationReceivedListener(handleNotificationReceived);
     // Handle cold-start tap (app launched via notification)
     Notifications.getLastNotificationResponseAsync()
       .then(r => { if (r) handleNotificationResponse(r); })
       .catch(() => {});
 
-    return () => sub.remove();
+    return () => {
+      sub.remove();
+      recvSub.remove();
+    };
   }, []);
 
   useEffect(() => {
