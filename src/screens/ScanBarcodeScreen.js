@@ -79,6 +79,19 @@ export default function ScanBarcodeScreen({ navigation, route }) {
     setPermission(next);
   }, []);
 
+  // First-time arrivals get an in-app OS permission prompt
+  // automatically. Previously the screen sat on a spinner forever
+  // while in 'not-determined' state, forcing users into Settings
+  // even though the OS would happily prompt the first time. The
+  // requestCameraPermission call below triggers the native dialog;
+  // the user's choice updates `permission` and the right branch
+  // below renders.
+  useEffect(() => {
+    if (permission === 'not-determined') {
+      requestPermission().catch(() => {});
+    }
+  }, [permission, requestPermission]);
+
   const onCodeScanned = useCallback(async (codes) => {
     if (scanLock.current) return;
     const value = codes?.[0]?.value;

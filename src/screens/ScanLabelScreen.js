@@ -69,6 +69,15 @@ export default function ScanLabelScreen({ navigation, route }) {
     setPermission(next);
   }, []);
 
+  // First-time arrivals get the OS permission dialog automatically
+  // instead of being stranded on a spinner. Mirrors the same fix in
+  // ScanBarcodeScreen.
+  useEffect(() => {
+    if (permission === 'not-determined') {
+      requestPermission().catch(() => {});
+    }
+  }, [permission, requestPermission]);
+
   const onCapture = useCallback(async () => {
     if (busy || !cameraRef.current) return;
     setBusy(true);
