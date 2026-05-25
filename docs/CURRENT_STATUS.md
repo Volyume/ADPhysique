@@ -103,8 +103,9 @@ Per `DATABASE_SCHEMA_LOCKED.md` status block + grep against `supabase/migrate_*.
 | 025 | delete_user_data completeness | ✅ Applied |
 | 027 | rapid_loss_compression_triggered allow-list | **❓ Founder to confirm applied** |
 | 028 | food_library_pull RPC (delta sync) | **❓ Founder to confirm applied** |
-| 029 (not yet written) | Tier infrastructure (`tier_history` + `profiles.trial_state` + 4 cols + `upgrade_tier` RPC + tier-protect trigger) | ❌ Not written |
-| 030 (not yet written) | `body_composition_log` table (Complete tier) | ❌ Not written |
+| 029 | Telemetry allow-list extension (weekly_coach_run + 3 others) | **❓ Founder to apply** (written 2026-05-25) |
+| 030 | Tier infrastructure (`tier_history` + `users_profile.trial_state` + 5 cols + `upgrade_tier` RPC + `start_cascade` RPC + `current_pricing_window` + `pricing_config` table) | **❓ Founder to apply** (written 2026-05-25) |
+| 031 (not yet written) | `body_composition_log` table (Complete tier) | ❌ Not written |
 
 ---
 
@@ -215,7 +216,7 @@ In suggested execution order:
 | 3 | Wire `rapid_loss_compression_triggered` caller in `weeklyCoach.js` | `MOVE_3_UPWARD_GATE_COMPRESSION.md` | S (~1 h) | Claude |
 | 4 | Add `food.waterfall.test.js` integration test (mocked sources, full chain) | `MOVE_1_5_BARCODE_AND_OCR.md` + `TESTING_STRATEGY_LOCKED.md` | S (~1 h) | Claude |
 | 5 | Extend `engineTelemetry.js` allow-list + wire callers for missing core events: `weekly_coach_run`, `ffm_floor_hold_fired`, `food_logged`, `food_search_attempt`, `sync_run`, `article9_consent_recorded` | `TELEMETRY_DASHBOARDS_LOCKED.md` | M (~3 h) | Claude |
-| 6 | Write migration 029: `tier_history` table + `profiles` columns (`trial_state`, `trial_started_at`, `complete_trial_ends_at`, `pro_trial_ends_at`, `locked_in_price_tier`, `revenuecat_app_user_id`) + `upgrade_tier` RPC + tier-protect trigger | `DATABASE_SCHEMA_LOCKED.md` lines 432-481 + `SUBSCRIPTION_AND_PAYMENT_LOCKED.md` | M (~2 h Claude) + 5 min apply (founder) | Claude writes, Founder applies |
+| 6 | ✅ Migration 030 written: `tier_history` + `users_profile.trial_state` + 5 cols + `pricing_config` + `current_pricing_window` + `_tier_for_trial_state` + `start_cascade` RPC + `upgrade_tier` RPC. Bypasses existing `protect_users_profile_tier` trigger via `session_replication_role`. Backfills existing pro users to `trial_state='paid_pro'`. | `DATABASE_SCHEMA_LOCKED.md` lines 432-481 + `SUBSCRIPTION_AND_PAYMENT_LOCKED.md` | Founder action remaining: paste into Supabase Dashboard → SQL Editor → Run | Claude wrote, Founder applies |
 | 7 | Build `src/lib/payments/` module skeleton: `revenuecat.js` (stub provider interface), `catalogue.js` (6 SKUs), `cascade.js` (state machine implementing all 17 transitions), `restore.js` | `SUBSCRIPTION_AND_PAYMENT_LOCKED.md` lines 87-202 + `MOVE_5_TIER_INFRASTRUCTURE.md` lines 78-89 | L (~1 week) | Claude |
 | 8 | Extend `proGate.js` with `isPaidTier()`, `hasFeature()`, `hasGoalUnlock()` + FEATURE_MAP from `MOVE_5_TIER_INFRASTRUCTURE.md` lines 40-76 | `COMPLETE_TIER_SCOPE_LOCKED.md` lines 119-128 | S (~2 h) | Claude |
 | 9 | Build `CascadeGateScreen.js` + `SubscriptionScreen.js` + `TierComparisonStrip.js` | `UI_FLOWS_LOCKED.md` lines 229-246 + `SUBSCRIPTION_AND_PAYMENT_LOCKED.md` lines 305-326 | M (~3-4 days) | Claude |
