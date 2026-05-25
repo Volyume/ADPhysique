@@ -165,23 +165,46 @@ jobs:
           PYEOF
           fi
 
+      # Diagnostic dump before the build. Captures everything Gradle
+      # could possibly be reading heap settings from, so the next run
+      # tells us WHY the previous run's -Xmx didn't take effect rather
+      # than letting us keep guessing.
+      - name: Diagnose Gradle environment
+        run: |
+          {
+            echo "=== android/gradle.properties (post-patches) ==="
+            cat android/gradle.properties || echo "(file missing)"
+            echo
+            echo "=== ~/.gradle/gradle.properties (if any) ==="
+            cat ~/.gradle/gradle.properties 2>/dev/null || echo "(none)"
+            echo
+            echo "=== Relevant env vars ==="
+            for v in JAVA_TOOL_OPTIONS _JAVA_OPTIONS JAVA_OPTS GRADLE_OPTS GRADLE_USER_HOME JAVA_HOME; do
+              echo "$v=${!v:-<unset>}"
+            done
+            echo
+            echo "=== android/local.properties ==="
+            cat android/local.properties 2>/dev/null || echo "(none)"
+            echo
+            echo "=== gradle properties via gradlew (filtered) ==="
+            cd android && ./gradlew --no-daemon properties 2>&1 | grep -Ei "jvmargs|maxworkers|workers.max|memory|heap" | head -30
+          } | tee ../gradle-diagnose.log
+
       - name: Build debug APK
         id: build_apk
         env:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
-          # Belt-and-braces for the JetifyTransform OOM. The
-          # gradle.properties bump should win, but a leftover heap
-          # config from elsewhere has bitten us once already. -Xmx via
-          # GRADLE_OPTS reaches the daemon launcher; -D below feeds
-          # into the build's effective properties.
-          GRADLE_OPTS: "-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8"
         run: |
           set -e
+          # If the runner image set JAVA_TOOL_OPTIONS or _JAVA_OPTIONS
+          # those win OVER gradle.properties for the JVM. Clear them
+          # so our heap config is what Gradle uses. (Will be re-set on
+          # the next step, this only affects gradlew.)
+          unset JAVA_TOOL_OPTIONS
+          unset _JAVA_OPTIONS
           cd android
-          ./gradlew assembleDebug \
-            -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8" \
-            --no-daemon 2>&1 | tee ../gradle-debug.log
+          ./gradlew assembleDebug --no-daemon 2>&1 | tee ../gradle-debug.log
 
       - name: Run Maestro flows on emulator
         id: maestro_run
@@ -262,6 +285,8 @@ jobs:
             echo "| Run Maestro flows    | \`$MAESTRO_OUTCOME\` |"
             echo
             echo "## Logs"
+            echo
+            tail_log gradle-diagnose.log 80
             echo
             tail_log prebuild.log 60
             echo
