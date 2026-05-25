@@ -27,7 +27,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const OFF_BASE = 'https://world.openfoodfacts.org';
-const USER_AGENT = 'Volyume-Snapshot-Builder/1.1 (https://volyume.app)';
+const USER_AGENT = 'Volyume-Snapshot-Builder/1.2 (https://volyume.app)';
 const PAGE_SIZE = 1000;
 const MAX_PAGES = 30;            // OFF's pagination practically caps around this for large queries
 const REQUEST_DELAY_MS = 800;    // Be polite. 1 req/sec is well within OFF's guideline.
