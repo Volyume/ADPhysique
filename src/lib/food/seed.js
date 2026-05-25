@@ -43,6 +43,19 @@ const CHUNK_SIZE = 200;
 
 const _inFlight = new Map();
 
+// SQLite gives us one connection shared across the app. Two importers
+// firing from RootNavigator bootstrap will both try to BEGIN on it
+// concurrently, which expo-sqlite rejects ("cannot start a transaction
+// within a transaction"). Serialise every transaction-scoped block
+// through this mutex so the second importer's chunks queue cleanly
+// behind the first.
+let _txMutex = Promise.resolve();
+function _withTxLock(fn) {
+  const next = _txMutex.then(() => fn(), () => fn());
+  _txMutex = next.then(() => {}, () => {});
+  return next;
+}
+
 /**
  * OFF UK snapshot importer (branded products, ~100k+ rows).
  */
@@ -148,50 +161,63 @@ async function _run({ scopeKey, flagKey, sourceLabel, loadModule }) {
 
   for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
     const chunk = rows.slice(i, i + CHUNK_SIZE);
-    try {
-      await d.execAsync('BEGIN');
-      for (const row of chunk) {
-        if (!_isUsableRow(row)) {
-          skippedRows++;
-          continue;
+    const result = await _withTxLock(async () => {
+      let inTx = false;
+      try {
+        await d.execAsync('BEGIN');
+        inTx = true;
+        let imp = 0;
+        let skp = 0;
+        for (const row of chunk) {
+          if (!_isUsableRow(row)) {
+            skp++;
+            continue;
+          }
+          try {
+            // CoFID rows reuse the `ean` field for the food code
+            // ("13-145"); they have no real barcode, so barcode_ean
+            // stays null and only source_id carries the identifier.
+            const sourceId = row.ean ?? null;
+            const barcodeEan = sourceLabel === 'off' ? (row.ean ?? null) : null;
+            await d.runAsync(
+              `INSERT OR IGNORE INTO foods
+                (id, source, source_id, barcode_ean, name, brand,
+                 serving_g, serving_label,
+                 kcal_100g, protein_100g, carbs_100g, fat_100g, fibre_100g,
+                 sodium_100g, sugar_100g,
+                 verified, fetched_at, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [
+                uid(), sourceLabel, sourceId, barcodeEan,
+                row.name ?? 'Unknown', row.brand ?? null,
+                _num(row.serving_g) ?? 100, row.serving_label ?? null,
+                _num(row.kcal_100g), _num(row.protein_100g),
+                _num(row.carbs_100g), _num(row.fat_100g),
+                _num(row.fibre_100g), _num(row.sodium_100g), _num(row.sugar_100g),
+                0, now, now, now,
+              ]
+            );
+            imp++;
+          } catch (rowErr) {
+            skp++;
+          }
         }
-        try {
-          // CoFID rows reuse the `ean` field for the food code
-          // ("13-145"); they have no real barcode, so barcode_ean
-          // stays null and only source_id carries the identifier.
-          const sourceId = row.ean ?? null;
-          const barcodeEan = sourceLabel === 'off' ? (row.ean ?? null) : null;
-          await d.runAsync(
-            `INSERT OR IGNORE INTO foods
-              (id, source, source_id, barcode_ean, name, brand,
-               serving_g, serving_label,
-               kcal_100g, protein_100g, carbs_100g, fat_100g, fibre_100g,
-               sodium_100g, sugar_100g,
-               verified, fetched_at, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-              uid(), sourceLabel, sourceId, barcodeEan,
-              row.name ?? 'Unknown', row.brand ?? null,
-              _num(row.serving_g) ?? 100, row.serving_label ?? null,
-              _num(row.kcal_100g), _num(row.protein_100g),
-              _num(row.carbs_100g), _num(row.fat_100g),
-              _num(row.fibre_100g), _num(row.sodium_100g), _num(row.sugar_100g),
-              0, now, now, now,
-            ]
-          );
-          importedRows++;
-        } catch (rowErr) {
-          skippedRows++;
+        await d.execAsync('COMMIT');
+        inTx = false;
+        return { imp, skp };
+      } catch (chunkErr) {
+        if (inTx) {
+          try { await d.execAsync('ROLLBACK'); } catch (_) { /* tolerate */ }
         }
+        logError(`food.seed.${scopeKey}.chunk`, chunkErr, {
+          chunkStart: i, chunkSize: chunk.length,
+          message: chunkErr?.message,
+        });
+        return { imp: 0, skp: 0 };
       }
-      await d.execAsync('COMMIT');
-    } catch (chunkErr) {
-      try { await d.execAsync('ROLLBACK'); } catch (_) { /* tolerate */ }
-      logError(`food.seed.${scopeKey}.chunk`, chunkErr, {
-        chunkStart: i, chunkSize: chunk.length,
-        message: chunkErr?.message,
-      });
-    }
+    });
+    importedRows += result.imp;
+    skippedRows += result.skp;
   }
 
   // ── 4. Persist the version flag ───────────────────────────────────
