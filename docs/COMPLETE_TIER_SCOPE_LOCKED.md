@@ -1,7 +1,137 @@
-# Complete tier scope (locked)
+# Tier scope (locked)
+
+> **Founder override 2026-05-25:** Volyume ships as **two tiers**
+> (Free, Pro), not three. The Complete tier and the 28-day Complete→Pro
+> cascade are removed. Pro becomes "the whole app". Peak Week
+> support is dropped entirely (per founder: peak week needs a human
+> eye, not an algorithm). Trial is a **single 21-day Pro trial**
+> giving the user three full weekly check-ins before the decision
+> point. Pricing tweaked to balance "build a user base" against
+> partial recovery of the lost Complete-tier ARPU.
+>
+> Implementation notes are below the original section; the original
+> 3-tier locked text is preserved for historical context but does
+> NOT govern. The new model governs.
 
 Resolves open question #2 from Claude's third-pass adjudication
-(`BRIEF_C_CLAUDE_ADJUDICATION.md`). Locked 2026-05-23.
+(`BRIEF_C_CLAUDE_ADJUDICATION.md`). Originally locked 2026-05-23 as
+3 tiers + cascade. Re-locked 2026-05-25 as 2 tiers + single trial.
+
+## The 2-tier model (current)
+
+### What separates the tiers
+
+| Feature | Free | Pro |
+|---|---|---|
+| Adaptive engine, food logging, FFM floor, ED-pattern lockout, rapid-loss safety | Yes | Yes |
+| History window | 30 days | Unlimited |
+| Protein tier ceiling | Standard (2.2 to 2.6 g/kg BM) | Optimised (2.5 to 3.0); Advanced (2.8 to 3.3) when goal supports |
+| Refeed prescription | No | Any cut, with automated timing |
+| Block planning beyond current block | No | Yes |
+| Photo progress timeline (on-device only) | No | Yes |
+| Body composition trend (BF%, FFM) | No | Full charts plus export |
+| Coach link (B2B, phase two) | No | Yes |
+| Share-pack export for coach handover | CSV only | PDF, CSV, and photos |
+| Priority support | No | Yes |
+
+Peak Week is **not** in either tier. Removed 2026-05-25 per founder
+direction: peak-week management (contest prep tapering, last-week
+sodium/carb manipulation, stage-day timing) needs human-coach
+judgement, not engine output. The coach handoff path (phase 2) is
+where peak-week support lives — via the linked coach, not the app.
+
+### Safety logic is tier-blind (unchanged)
+
+The FFM floor, ED-pattern detection, rapid-loss flag, adaptive
+TDEE accuracy, held decisions, and any future harm-prevention
+guardrail fire for every user on every tier, including Free.
+Paywalling safety is indefensible and creates UK GDPR Article 9
+exposure.
+
+### Goal-based unlocks (independent of tier)
+
+- **Advanced protein tier (2.8 to 3.3 g/kg BM):** requires explicit
+  physique competition or recomp goal selection. Available to Pro
+  users on that goal.
+- **Refeed prescription:** requires `aggressive_cut` flag plus an
+  energy score history showing accumulated low-energy weeks.
+  Available to Pro users on those flags.
+
+### Trial: single 21-day Pro trial
+
+New signups at general availability enter a 21-day Pro trial:
+
+1. **Days 1 to 21: Pro free.** Full Pro feature set. No payment
+   captured at signup, just consent to the trial rules.
+2. **Day 21 gate: "Your Pro trial is winding down" prompt.** User
+   can pay (founders price if eligible, standard otherwise), skip
+   to Free now, or do nothing and auto-downgrade to Free at day 22.
+3. **Day 22 onward: Free.** Engine still runs with the safety
+   guardrails. Pro-tier surfaces lock. Differential-output paywall
+   triggers become active.
+
+Rules:
+
+- A user who pays at any stage stops the trial at Pro.
+- A user who skips ahead (Pro to Free before day 21) cannot
+  re-enter the trial later. Trial is a one-time entitlement per
+  account.
+- Trial state is server-side. `trial_state` enum (legacy values
+  retained for schema compatibility but unused in the 2-tier model):
+  `unstarted`, `pro_trial_active`, `paid_pro`, `free`,
+  `cascade_expired`.
+- The `tier_history` table records every transition with timestamp,
+  reason (`auto_downgrade`, `user_skip`, `user_paid`,
+  `user_cancelled`), and source surface.
+- Notifications fire at day 19 (Pro winding down) and day 21
+  (downgraded to Free). The locked day-12/14/26/28 schedule from
+  the 3-tier era is collapsed to day-19/21.
+
+### Pricing windows
+
+| Window | Pro price | Notes |
+|---|---|---|
+| Open beta (first 4 weeks post-GA) | **£0.99/month** | Unchanged from the locked open-beta Pro price |
+| Founders (weeks 5-16) | **£1.99/month** | Up from £1.49 (3-tier Pro) |
+| Standard (week 17+) | **£3.99/month** | Up from £2.99 (3-tier Pro), well below the old Complete £6.99 |
+
+Users who upgrade during a window lock that price for the life of
+the subscription as long as it remains active without lapse.
+
+Pricing strategy: prioritise building a user base over short-term
+ARPU. The 99p entry stays. Modest founders / standard uplift
+captures part of the lost Complete-tier ARPU without choking
+acquisition.
+
+### Engine code implications
+
+`src/lib/proGate.js` has the three helpers:
+
+- `isPaidTier(user)` returns `'free' | 'pro'`.
+- `hasFeature(user, feature)` returns boolean against the per-tier
+  feature flag map.
+- `hasGoalUnlock(user, feature)` returns boolean against the user's
+  current goal state, independent of tier.
+
+`weeklyCoach.js` and `nutritionEngine.js` MUST NOT consult `proGate`
+when computing safety floors, lockouts, or guardrails. They consult
+it only when deciding which output surfaces to populate.
+
+### Closed testing entitlement (unchanged)
+
+Closed testing on the Play Store is an internal testing group, not
+an end-user beta cohort. No special tier entitlement applies.
+Internal testers run on whichever tier matches their development
+account, and the 21-day trial applies normally at general
+availability.
+
+---
+
+## Historical context (3-tier, superseded)
+
+The text below is preserved for traceability with prior LOCKED
+documents that referenced this file. It does NOT govern the
+implementation. The 2-tier model above is the current spec.
 
 ## Principle
 

@@ -29,7 +29,6 @@ import { logError, logInfo } from '../lib/errorLog';
 
 const STAGE_LABEL = {
   unstarted:       'Not started',
-  complete_trial:  'Complete trial',
   pro_trial:       'Pro trial',
   paid:            'Paid',
   free:            'Free',
@@ -51,8 +50,8 @@ export default function SubscriptionScreen({ navigation }) {
   const daysLeft = cascade.daysRemaining(userProfile);
   const lockedWindow = userProfile?.lockedInPriceTier ?? userProfile?.locked_in_price_tier ?? null;
 
-  const currentSku = (tier === 'pro' || tier === 'complete') && lockedWindow
-    ? skuFor(tier, lockedWindow)
+  const currentSku = tier === 'pro' && lockedWindow
+    ? skuFor('pro', lockedWindow)
     : null;
 
   const [busy, setBusy] = useState(false);
@@ -109,7 +108,7 @@ export default function SubscriptionScreen({ navigation }) {
   }, [userProfile]);
 
   const handleUpgrade = useCallback(() => {
-    navigation?.navigate?.('CascadeGate', { variant: 'day14', pricingWindow: lockedWindow ?? 'open_beta' });
+    navigation?.navigate?.('CascadeGate', { variant: 'day21', pricingWindow: lockedWindow ?? 'open_beta' });
   }, [navigation, lockedWindow]);
 
   return (
@@ -128,7 +127,7 @@ export default function SubscriptionScreen({ navigation }) {
         <View style={styles.card}>
           <Text style={styles.cardLabel}>Your plan</Text>
           <Text style={styles.cardValue}>
-            {tier === 'complete' ? 'Complete' : tier === 'pro' ? 'Pro' : 'Free'}
+            {tier === 'pro' ? 'Pro' : 'Free'}
           </Text>
           <Text style={styles.cardSub}>
             {STAGE_LABEL[stage] ?? '—'}
@@ -156,7 +155,7 @@ export default function SubscriptionScreen({ navigation }) {
               accessibilityRole="button"
             >
               <Text style={styles.primaryBtnText}>
-                {tier === 'free' ? 'Upgrade' : 'Stay on Complete'}
+                {tier === 'free' ? 'Upgrade' : 'Stay on Pro'}
               </Text>
             </TouchableOpacity>
           ) : null}
@@ -174,7 +173,7 @@ export default function SubscriptionScreen({ navigation }) {
             )}
           </TouchableOpacity>
 
-          {tier === 'pro' || tier === 'complete' ? (
+          {tier === 'pro' ? (
             <TouchableOpacity
               style={styles.tertiaryBtn}
               onPress={handleCancel}

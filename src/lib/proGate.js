@@ -23,8 +23,14 @@ export const PRO_BETA_ACTIVE = true;
 export const BETA_END_DATE = null;
 
 // ────────────────────────────────────────────────────────────────────
-// Feature flag map (locked in MOVE_5_TIER_INFRASTRUCTURE.md lines 40-76)
-// Each tier inherits everything from the tier below.
+// Feature flag map (2-tier model, founder override 2026-05-25)
+//
+// Volyume shipped originally as 3 tiers (Free, Pro, Complete) with
+// Peak Week, block planning, photos, etc. gated to Complete. Founder
+// direction 2026-05-25 collapsed Complete into Pro and dropped Peak
+// Week entirely (peak-week prep needs a human coach, not algorithm
+// output). See COMPLETE_TIER_SCOPE_LOCKED.md for the new locked
+// scope.
 // ────────────────────────────────────────────────────────────────────
 
 const FREE_FEATURES = Object.freeze([
@@ -38,37 +44,32 @@ const FREE_FEATURES = Object.freeze([
 
 const PRO_FEATURES = Object.freeze([
   ...FREE_FEATURES,
+  // Engine and food (was Pro in 3-tier)
   'food_logging_full',
   'adaptive_engine',
   'macro_rings',
-  'history_90_days',
   'differential_paywall_disabled',
   'refeed_aggressive_cut_or_contest_prep',
-]);
-
-const COMPLETE_FEATURES = Object.freeze([
-  ...PRO_FEATURES,
+  // Folded in from Complete (2026-05-25 consolidation)
   'history_unlimited',
-  'peak_week_module',
   'block_planning_extended',
   'photo_progress_local',
   'body_composition_summary',
   'coach_link_eligible',
   'share_pack_csv',
   'priority_support',
-  // The four below are spec'd at Complete tier but deferred to v1.1
-  // per BUDGET_POSTURE_LOCKED.md. They appear in the flag map so the
-  // gating call sites can land now; the UI for each is implemented
-  // when the feature ships.
+  // v1.1 deferrals (spec'd at Pro but ship later)
   'refeed_automated_any_cut',
   'body_composition_deep',
   'share_pack_pdf',
 ]);
+// Peak Week explicitly removed 2026-05-25. Peak-week management
+// needs a human-coach eye, not engine output. Coach handoff (phase
+// 2) is where peak-week support lives.
 
 export const FEATURE_MAP = Object.freeze({
   free: FREE_FEATURES,
   pro: PRO_FEATURES,
-  complete: COMPLETE_FEATURES,
 });
 
 // Goal-based unlocks per COMPLETE_TIER_SCOPE_LOCKED.md lines 33-44.
@@ -87,15 +88,20 @@ const GOAL_UNLOCK_MAP = Object.freeze({
 /**
  * Pure tier resolver. Exported as `_resolveTier` so tests can drive
  * the post-beta branches without globally mocking PRO_BETA_ACTIVE.
+ *
+ * 2-tier model (founder override 2026-05-25). Legacy
+ * complete-trial_active / paid_complete states are mapped to 'pro'
+ * because in the consolidated model anyone on a Complete trial has
+ * exactly the same entitlement as paid_pro. Schema retains those
+ * values for compatibility with already-applied migration 030.
  */
 export function _resolveTier(trialState, betaActive) {
-  if (betaActive) return 'complete';
+  if (betaActive) return 'pro';
   switch (trialState) {
-    case 'paid_complete':
-    case 'complete_trial_active':
-      return 'complete';
     case 'paid_pro':
     case 'pro_trial_active':
+    case 'paid_complete':        // legacy → mapped to pro
+    case 'complete_trial_active': // legacy → mapped to pro
       return 'pro';
     case 'free':
     case 'cascade_expired':
@@ -108,11 +114,11 @@ export function _resolveTier(trialState, betaActive) {
 /**
  * Resolve the user's current effective tier.
  *
- * Returns 'free' | 'pro' | 'complete'.
+ * Returns 'free' | 'pro'. (2-tier model per 2026-05-25 override.)
  *
  * During the closed-testing beta (PRO_BETA_ACTIVE) every signed-in
- * user gets 'complete' so the feature set is exercised end-to-end
- * before payments wire up. Post-beta, reads from userProfile.trialState
+ * user gets 'pro' so the feature set is exercised end-to-end before
+ * payments wire up. Post-beta, reads from userProfile.trialState
  * which mirrors users_profile.trial_state (kept in sync via the
  * registry).
  */

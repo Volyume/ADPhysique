@@ -66,7 +66,8 @@ export async function payAt(targetTier, paymentRef, sourceSurface = null) {
   if (!paymentRef) {
     return { ok: false, error: 'payment_ref_required' };
   }
-  if (!['pro', 'complete'].includes(targetTier)) {
+  // 2-tier model: only 'pro' is purchaseable.
+  if (targetTier !== 'pro') {
     return { ok: false, error: 'invalid_target_tier' };
   }
   return _call('upgrade_tier', {
@@ -86,17 +87,21 @@ export async function skipToFree(sourceSurface = null) {
   });
 }
 
-export async function skipToPro(sourceSurface = null) {
-  return _call('upgrade_tier', {
-    _target_tier: 'pro',
-    _reason: 'user_skip',
-    _source_surface: sourceSurface,
-    _payment_ref: null,
-  });
+/**
+ * Removed in the 2-tier consolidation (2026-05-25). The previous
+ * 3-tier model had a day-14 Complete→Pro skip path; in the 2-tier
+ * model there's nothing between the Pro trial and Free. Function
+ * stub left for any caller that hasn't yet been updated; returns
+ * an error rather than throwing.
+ */
+export async function skipToPro(_sourceSurface = null) {
+  return { ok: false, error: 'skip_to_pro_removed_in_2_tier_model' };
 }
 
 export async function autoDowngrade(targetTier, sourceSurface = null) {
-  if (!['pro', 'free'].includes(targetTier)) {
+  // 2-tier model: only the day-21 trial expiry transitions to free.
+  // The 3-tier Complete→Pro auto-downgrade no longer exists.
+  if (targetTier !== 'free') {
     return { ok: false, error: 'invalid_auto_downgrade_target' };
   }
   return _call('upgrade_tier', {
@@ -140,18 +145,19 @@ export async function refunded(sourceSurface = 'play_billing_rtdn') {
 // ────────────────────────────────────────────────────────────────────
 
 /**
- * Coarse cascade stage label for surface code. Maps the seven
- * trial_state values down to the five user-facing concepts the UI
- * needs to differentiate.
+ * Coarse stage label for surface code. Maps the trial_state values
+ * to the four user-facing concepts the UI needs to differentiate.
+ * Legacy complete_* states map to their Pro equivalents because in
+ * the 2-tier model they grant the same entitlement.
  */
 export function stageOf(profile) {
   const ts = profile?.trialState ?? profile?.trial_state ?? 'unstarted';
   switch (ts) {
     case 'unstarted':             return 'unstarted';
-    case 'complete_trial_active': return 'complete_trial';
     case 'pro_trial_active':      return 'pro_trial';
-    case 'paid_complete':
+    case 'complete_trial_active': return 'pro_trial';   // legacy
     case 'paid_pro':              return 'paid';
+    case 'paid_complete':         return 'paid';        // legacy
     case 'free':
     case 'cascade_expired':       return 'free';
     default:                      return 'unstarted';
@@ -176,10 +182,10 @@ export function canStillTrial(profile) {
 export function daysRemaining(profile, nowMs = Date.now()) {
   const ts = profile?.trialState ?? profile?.trial_state ?? 'unstarted';
   let endsAt = null;
-  if (ts === 'complete_trial_active') {
-    endsAt = profile?.completeTrialEndsAt ?? profile?.complete_trial_ends_at ?? null;
-  } else if (ts === 'pro_trial_active') {
-    endsAt = profile?.proTrialEndsAt ?? profile?.pro_trial_ends_at ?? null;
+  if (ts === 'pro_trial_active' || ts === 'complete_trial_active' /* legacy */) {
+    endsAt = profile?.proTrialEndsAt ?? profile?.pro_trial_ends_at
+      ?? profile?.completeTrialEndsAt ?? profile?.complete_trial_ends_at
+      ?? null;
   }
   if (!endsAt) return null;
   const endMs = typeof endsAt === 'number' ? endsAt : Date.parse(endsAt);

@@ -54,13 +54,13 @@ describe('startCascade', () => {
 });
 
 describe('payAt', () => {
-  test('user paying for complete calls upgrade_tier correctly', async () => {
-    mockRpc.mockResolvedValue({ data: { trial_state: 'paid_complete' }, error: null });
-    const r = await cascade.payAt('complete', 'txn_123', 'cascade_day14_gate');
+  test('user paying for pro calls upgrade_tier correctly', async () => {
+    mockRpc.mockResolvedValue({ data: { trial_state: 'paid_pro' }, error: null });
+    const r = await cascade.payAt('pro', 'txn_123', 'cascade_day21_gate');
     expect(mockRpc).toHaveBeenCalledWith('upgrade_tier', {
-      _target_tier: 'complete',
+      _target_tier: 'pro',
       _reason: 'user_paid',
-      _source_surface: 'cascade_day14_gate',
+      _source_surface: 'cascade_day21_gate',
       _payment_ref: 'txn_123',
     });
     expect(r.ok).toBe(true);
@@ -70,6 +70,12 @@ describe('payAt', () => {
     const r = await cascade.payAt('pro', null, 'paywall');
     expect(mockRpc).not.toHaveBeenCalled();
     expect(r).toEqual({ ok: false, error: 'payment_ref_required' });
+  });
+
+  test('rejects legacy complete tier (2-tier model rejects everything but pro)', async () => {
+    const r = await cascade.payAt('complete', 'txn_1', 'paywall');
+    expect(mockRpc).not.toHaveBeenCalled();
+    expect(r).toEqual({ ok: false, error: 'invalid_target_tier' });
   });
 
   test('rejects invalid target tier before any RPC call', async () => {
@@ -82,45 +88,39 @@ describe('payAt', () => {
 describe('skipToFree / skipToPro', () => {
   test('skipToFree sends user_skip → free', async () => {
     mockRpc.mockResolvedValue({ data: { trial_state: 'free' }, error: null });
-    await cascade.skipToFree('cascade_day14_gate');
+    await cascade.skipToFree('cascade_day21_gate');
     expect(mockRpc).toHaveBeenCalledWith('upgrade_tier', {
       _target_tier: 'free',
       _reason: 'user_skip',
-      _source_surface: 'cascade_day14_gate',
+      _source_surface: 'cascade_day21_gate',
       _payment_ref: null,
     });
   });
 
-  test('skipToPro sends user_skip → pro', async () => {
-    mockRpc.mockResolvedValue({ data: { trial_state: 'pro_trial_active' }, error: null });
-    await cascade.skipToPro('cascade_day14_gate');
-    expect(mockRpc).toHaveBeenCalledWith('upgrade_tier', expect.objectContaining({
-      _target_tier: 'pro',
-      _reason: 'user_skip',
-    }));
+  test('skipToPro is a no-op stub in the 2-tier model', async () => {
+    const r = await cascade.skipToPro('legacy');
+    expect(mockRpc).not.toHaveBeenCalled();
+    expect(r).toEqual({ ok: false, error: 'skip_to_pro_removed_in_2_tier_model' });
   });
 });
 
 describe('autoDowngrade', () => {
-  test('day-14 worker: complete → pro auto downgrade', async () => {
-    mockRpc.mockResolvedValue({ data: { trial_state: 'pro_trial_active' }, error: null });
-    await cascade.autoDowngrade('pro', 'cascade_day14_worker');
-    expect(mockRpc).toHaveBeenCalledWith('upgrade_tier', expect.objectContaining({
-      _target_tier: 'pro',
-      _reason: 'auto_downgrade',
-    }));
-  });
-
-  test('day-28 worker: pro → free auto downgrade', async () => {
+  test('day-21 worker: pro_trial → free auto downgrade', async () => {
     mockRpc.mockResolvedValue({ data: { trial_state: 'cascade_expired' }, error: null });
-    await cascade.autoDowngrade('free', 'cascade_day28_worker');
+    await cascade.autoDowngrade('free', 'cascade_day21_worker');
     expect(mockRpc).toHaveBeenCalledWith('upgrade_tier', expect.objectContaining({
       _target_tier: 'free',
       _reason: 'auto_downgrade',
     }));
   });
 
-  test('rejects invalid target (only pro/free permitted)', async () => {
+  test('rejects legacy day-14 complete→pro downgrade (only free permitted now)', async () => {
+    const r = await cascade.autoDowngrade('pro', 'cascade_day14_worker');
+    expect(mockRpc).not.toHaveBeenCalled();
+    expect(r.ok).toBe(false);
+  });
+
+  test('rejects invalid target', async () => {
     const r = await cascade.autoDowngrade('complete', 'cascade_day14_worker');
     expect(mockRpc).not.toHaveBeenCalled();
     expect(r.ok).toBe(false);
@@ -148,7 +148,8 @@ describe('cancel / graceLapsed / refunded', () => {
 describe('stageOf', () => {
   test.each([
     [{ trialState: 'unstarted' },             'unstarted'],
-    [{ trialState: 'complete_trial_active' }, 'complete_trial'],
+    // 2-tier model: legacy complete states map to pro_trial / paid
+    [{ trialState: 'complete_trial_active' }, 'pro_trial'],
     [{ trialState: 'pro_trial_active' },      'pro_trial'],
     [{ trialState: 'paid_complete' },         'paid'],
     [{ trialState: 'paid_pro' },              'paid'],

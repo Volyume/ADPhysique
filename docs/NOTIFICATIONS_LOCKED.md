@@ -30,7 +30,7 @@ Push, in-app, and email (where applicable) at v1. Locked 2026-05-23.
 | --- | --- | --- | --- |
 | Daily check-in reminder | Push | On | Yes |
 | Weekly check-in reminder | Push | On | Yes |
-| Cascade gate (day 12, 14, 26, 28) | Push + in-app | On | Push only |
+| Cascade gate (day 19, 21) | Push + in-app | On | Push only |
 | Subscription payment failure | Push + in-app | On | Push only |
 | Subscription about to expire | Push + in-app | On | Push only |
 | Sync error (persistent) | In-app only | On | No |
@@ -46,10 +46,8 @@ Push, in-app, and email (where applicable) at v1. Locked 2026-05-23.
 | Daily check-in reminder | 19:00 local | Yes |
 | Weekly check-in reminder | Sunday 18:00 local | Yes (day + time) |
 | Weekly coach output ready | Monday 09:00 local | Time only |
-| Cascade day 12 | 10:00 local | No |
-| Cascade day 14 | 10:00 local | No |
-| Cascade day 26 | 10:00 local | No |
-| Cascade day 28 | 10:00 local | No |
+| Cascade day 19 (Pro winding down) | 10:00 local | No |
+| Cascade day 21 (auto-downgrade fired) | 10:00 local | No |
 
 Quiet hours always win. If a scheduled push falls inside quiet
 hours, it shifts to the next available minute after quiet hours
@@ -72,26 +70,13 @@ Title: Sunday check-in
 Body:  Two minutes. Then your week's coach output lands tomorrow.
 ```
 
-### Cascade day 12
+### Cascade day 19
 ```
-Title: Your Complete trial ends in 2 days
+Title: Your Pro trial ends in 2 days
 Body:  Tap to choose what's next.
 ```
 
-### Cascade day 14 (auto-downgrade fired)
-```
-Title: You're now on Pro
-Body:  Same engine, same food log. Some Complete features are paused.
-       Tap to switch back any time.
-```
-
-### Cascade day 26
-```
-Title: Your Pro trial ends in 2 days
-Body:  Tap to keep going or move to Free.
-```
-
-### Cascade day 28 (auto-downgrade fired)
+### Cascade day 21 (auto-downgrade fired)
 ```
 Title: You're now on Free
 Body:  Your data stays. Some features are read-only. Upgrade any time.

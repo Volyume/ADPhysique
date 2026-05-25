@@ -102,20 +102,20 @@ describe('TierComparisonStrip', () => {
 });
 
 describe('CascadeGateScreen mount', () => {
-  test('day14 variant renders without throwing', async () => {
+  test('day21 variant (2-tier gate) renders without throwing', async () => {
     const Screen = require('../screens/CascadeGateScreen').default;
     const r = await mount(Screen, {
       navigation: noopNav,
-      route: { params: { variant: 'day14', pricingWindow: 'open_beta' } },
+      route: { params: { variant: 'day21', pricingWindow: 'open_beta' } },
     });
     expect(r.toJSON()).toBeTruthy();
   });
 
-  test('day28 variant renders without throwing', async () => {
+  test('legacy day14 variant still renders (mapped to day21 surface)', async () => {
     const Screen = require('../screens/CascadeGateScreen').default;
     const r = await mount(Screen, {
       navigation: noopNav,
-      route: { params: { variant: 'day28', pricingWindow: 'founders' } },
+      route: { params: { variant: 'day14', pricingWindow: 'founders' } },
     });
     expect(r.toJSON()).toBeTruthy();
   });
@@ -180,7 +180,7 @@ describe('DifferentialBadge mount', () => {
         with_food_data_message: 'Your energy scores have dropped two weeks running. Food data usually shows why.',
         paywall_cta: 'buy_pro',
       },
-      pricingPriceText: '£2.99/month',
+      pricingPriceText: '£3.99/month',
       onTapCta: jest.fn(),
     });
     expect(r.toJSON()).toBeTruthy();

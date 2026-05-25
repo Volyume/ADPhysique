@@ -11,16 +11,22 @@ const realProGate = require('../proGate');
 
 describe('proGate (PRO_BETA_ACTIVE = true, current beta phase)', () => {
   test('isPaidTier returns complete during beta regardless of profile', () => {
-    expect(realProGate.isPaidTier(null)).toBe('complete');
-    expect(realProGate.isPaidTier({ trialState: 'free' })).toBe('complete');
-    expect(realProGate.isPaidTier({ trialState: 'unstarted' })).toBe('complete');
-    expect(realProGate.isPaidTier({})).toBe('complete');
+    expect(realProGate.isPaidTier(null)).toBe('pro');
+    expect(realProGate.isPaidTier({ trialState: 'free' })).toBe('pro');
+    expect(realProGate.isPaidTier({ trialState: 'unstarted' })).toBe('pro');
+    expect(realProGate.isPaidTier({})).toBe('pro');
   });
 
-  test('hasFeature grants Complete-tier features during beta', () => {
+  test('hasFeature grants Pro-tier features during beta (2-tier model)', () => {
     expect(realProGate.hasFeature(null, 'engine_safety_guardrails')).toBe(true);
     expect(realProGate.hasFeature(null, 'history_unlimited')).toBe(true);
-    expect(realProGate.hasFeature(null, 'peak_week_module')).toBe(true);
+    expect(realProGate.hasFeature(null, 'block_planning_extended')).toBe(true);
+    expect(realProGate.hasFeature(null, 'photo_progress_local')).toBe(true);
+  });
+
+  test('peak_week_module is removed from the feature set entirely', () => {
+    expect(realProGate.hasFeature(null, 'peak_week_module')).toBe(false);
+    expect(Object.values(realProGate.FEATURE_MAP).flat()).not.toContain('peak_week_module');
   });
 
   test('hasFeature returns false for unknown features even during beta', () => {
@@ -95,8 +101,10 @@ describe('_resolveTier (post-beta state machine, beta=false)', () => {
   const r = (state) => realProGate._resolveTier(state, false);
 
   test.each([
-    ['paid_complete',         'complete'],
-    ['complete_trial_active', 'complete'],
+    // 2-tier model: complete_* states map to 'pro' (legacy schema
+    // values still resolve to the equivalent entitlement).
+    ['paid_complete',         'pro'],
+    ['complete_trial_active', 'pro'],
     ['paid_pro',              'pro'],
     ['pro_trial_active',      'pro'],
     ['free',                  'free'],
@@ -109,10 +117,10 @@ describe('_resolveTier (post-beta state machine, beta=false)', () => {
     expect(r(state)).toBe(expected);
   });
 
-  test('beta=true overrides everything to complete', () => {
-    expect(realProGate._resolveTier('free', true)).toBe('complete');
-    expect(realProGate._resolveTier(null, true)).toBe('complete');
-    expect(realProGate._resolveTier('paid_pro', true)).toBe('complete');
+  test('beta=true overrides everything to pro', () => {
+    expect(realProGate._resolveTier('free', true)).toBe('pro');
+    expect(realProGate._resolveTier(null, true)).toBe('pro');
+    expect(realProGate._resolveTier('paid_pro', true)).toBe('pro');
   });
 });
 
@@ -125,31 +133,29 @@ describe('FEATURE_MAP tier inheritance (no beta override)', () => {
     expect(realProGate.FEATURE_MAP.free).toContain('food_logging_basic');
     expect(realProGate.FEATURE_MAP.free).toContain('history_30_days');
     expect(realProGate.FEATURE_MAP.free).toContain('csv_export');
-    expect(realProGate.FEATURE_MAP.free).not.toContain('history_90_days');
+    expect(realProGate.FEATURE_MAP.free).not.toContain('history_unlimited');
     expect(realProGate.FEATURE_MAP.free).not.toContain('peak_week_module');
   });
 
-  test('pro inherits all free features + adds adaptive engine', () => {
+  test('pro is the whole app in the 2-tier model', () => {
     expect(realProGate.FEATURE_MAP.pro).toEqual(
       expect.arrayContaining(realProGate.FEATURE_MAP.free),
     );
     expect(realProGate.FEATURE_MAP.pro).toContain('adaptive_engine');
-    expect(realProGate.FEATURE_MAP.pro).toContain('history_90_days');
+    expect(realProGate.FEATURE_MAP.pro).toContain('history_unlimited');
+    expect(realProGate.FEATURE_MAP.pro).toContain('block_planning_extended');
+    expect(realProGate.FEATURE_MAP.pro).toContain('photo_progress_local');
+    expect(realProGate.FEATURE_MAP.pro).toContain('coach_link_eligible');
+    expect(realProGate.FEATURE_MAP.pro).toContain('share_pack_csv');
+  });
+
+  test('peak_week_module is removed from FEATURE_MAP entirely', () => {
     expect(realProGate.FEATURE_MAP.pro).not.toContain('peak_week_module');
-    expect(realProGate.FEATURE_MAP.pro).not.toContain('history_unlimited');
+    expect(realProGate.FEATURE_MAP.free).not.toContain('peak_week_module');
   });
 
-  test('complete inherits all pro features + adds peak week, unlimited history', () => {
-    expect(realProGate.FEATURE_MAP.complete).toEqual(
-      expect.arrayContaining(realProGate.FEATURE_MAP.pro),
-    );
-    expect(realProGate.FEATURE_MAP.complete).toContain('peak_week_module');
-    expect(realProGate.FEATURE_MAP.complete).toContain('history_unlimited');
-    expect(realProGate.FEATURE_MAP.complete).toContain('coach_link_eligible');
-  });
-
-  test('FEATURE_MAP exposes the three named tiers', () => {
-    expect(Object.keys(realProGate.FEATURE_MAP).sort()).toEqual(['complete', 'free', 'pro']);
+  test('FEATURE_MAP exposes the two named tiers (no Complete)', () => {
+    expect(Object.keys(realProGate.FEATURE_MAP).sort()).toEqual(['free', 'pro']);
   });
 });
 

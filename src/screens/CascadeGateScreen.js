@@ -28,32 +28,21 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, fontSize, fontWeight, hitSlop } from '../styles/theme';
-import TierComparisonStrip from '../components/TierComparisonStrip';
 import * as cascade from '../lib/payments/cascade';
 import * as playBilling from '../lib/payments/playBilling';
 import { skuFor } from '../lib/payments/catalogue';
 import { logError, logInfo } from '../lib/errorLog';
 
-// Locked verbatim copy per OPEN_QUESTIONS_RESOLVED.md Q3 Variant B
-// ("outcome-led, default for cascade hold gates"). Lines under 25
-// words, British English, no jargon-blocklist terms.
-const SUBTITLE_COMPLETE = "Complete is for when you're serious. Deeper planning, longer history, photos, body composition tracking, and a share pack for your coach.";
+// 2-tier model (founder override 2026-05-25): one gate at day 21,
+// plus the payment-failure overlay. The legacy 'day14' variant from
+// the 3-tier cascade is accepted as a synonym of 'day21' so any
+// stale navigation calls don't crash; both render the same surface.
 
 function _variantContent(variant) {
   switch (variant) {
-    case 'day14':
-      return {
-        title: 'Your trial is winding down',
-        subtitle: SUBTITLE_COMPLETE,
-        primaryCta: 'Stay on Complete',
-        primaryTarget: 'complete',
-        secondaryCta: 'Switch to Pro',
-        secondaryTarget: 'pro',
-        tertiaryCta: 'Drop to Free',
-        tertiaryTarget: 'free',
-        surface: 'cascade_day14_gate',
-      };
-    case 'day28':
+    case 'day21':
+    case 'day14':   // legacy synonym
+    case 'day28':   // legacy synonym
       return {
         title: 'Your Pro trial is winding down',
         subtitle: "Pro keeps the engine and the food log. Free keeps your data and safety guardrails; some surfaces become read-only.",
@@ -63,12 +52,12 @@ function _variantContent(variant) {
         secondaryTarget: null,
         tertiaryCta: 'Drop to Free',
         tertiaryTarget: 'free',
-        surface: 'cascade_day28_gate',
+        surface: 'cascade_day21_gate',
       };
     case 'payment_failure':
       return {
         title: "We couldn't take your payment",
-        subtitle: "Update your billing in the App Store or Google Play within 3 days to keep your current features. After that you'll drop to Free.",
+        subtitle: "Update your billing in Google Play within 3 days to keep your current features. After that you'll drop to Free.",
         primaryCta: 'Open billing settings',
         primaryTarget: 'billing',
         secondaryCta: null,
@@ -192,14 +181,9 @@ export default function CascadeGateScreen({ navigation, route }) {
         <Text style={styles.title}>{content.title}</Text>
         <Text style={styles.subtitle}>{content.subtitle}</Text>
 
-        {variant === 'day14' ? (
-          <View style={styles.stripWrap}>
-            <TierComparisonStrip
-              pricingWindow={pricingWindow}
-              highlighted="complete"
-            />
-          </View>
-        ) : null}
+        {/* TierComparisonStrip was a 3-tier Pro-vs-Complete strip;
+            in the 2-tier model the gate is a single Pro / Free
+            decision and the strip is dropped from this surface. */}
 
         <View style={styles.ctaStack}>
           {content.primaryTarget === 'billing' ? (

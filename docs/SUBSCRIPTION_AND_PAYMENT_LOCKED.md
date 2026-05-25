@@ -1,8 +1,358 @@
 # Subscription and payment (locked)
 
-The cascade state machine, the payment integration, and the rules
-that keep tier state consistent across platforms and devices. Locked
-2026-05-23.
+> **Founder override 2026-05-25:** Three structural changes since
+> the original 2026-05-23 lock:
+>
+> 1. **2-tier model** (Free, Pro). Complete tier dropped. See
+>    `COMPLETE_TIER_SCOPE_LOCKED.md` for the new tier scope.
+> 2. **Single 21-day Pro trial**, not a 28-day cascade. No day-14
+>    Complete→Pro step. Day-21 gate replaces day-28.
+> 3. **Google Play Billing direct**, not RevenueCat. Saves the 1%
+>    above £2.5k MRR; one fewer third-party dependency. iOS deferred
+>    indefinitely; cross-platform identity that RevenueCat solved
+>    is moot on Android-only.
+>
+> Updated values are in the sections below. Historical 3-tier text
+> with the cascade state machine is preserved at the bottom for
+> traceability but does NOT govern.
+
+The state machine, the payment integration, and the rules that keep
+tier state consistent. Originally locked 2026-05-23; re-locked
+2026-05-25 with the changes above.
+
+## Sign-in providers (unchanged)
+
+Locked at native SDKs on mobile, not web OAuth flows.
+
+### Android: Google Sign-In via native SDK
+
+- Library: `@react-native-google-signin/google-signin`.
+- Google Cloud Console: OAuth client (Android type) configured with
+  the app's package name and SHA-1 signing cert.
+- Flow: native Google picker → Google ID token → Supabase
+  `signInWithIdToken({ provider: 'google', token })`.
+
+### iOS: deferred indefinitely
+
+iOS is not in scope at Phase B per the Android-only locked decision.
+Apple Sign-In wiring stays out until iOS lands.
+
+### Email magic link (fallback)
+
+Existing Supabase email magic link flow. Used as a fallback when
+native sign-in fails or for users who prefer email.
+
+## Provider
+
+**Google Play Billing direct.** Founder override 2026-05-25
+replacing the original locked RevenueCat choice; rationale recorded
+in `docs/CURRENT_STATUS.md`. The IAP SDK (`react-native-iap` or
+`expo-in-app-purchases`) wraps Play Billing; receipt validation
+runs server-side via a Supabase Edge Function calling Google's
+Play Developer API verifyPurchase endpoint. Real-Time Developer
+Notifications (RTDN) Pub/Sub topic delivers renewal / cancel /
+refund events to the same Edge Function.
+
+Cost posture (see `BUDGET_POSTURE_LOCKED.md`): zero recurring third-
+party fee. Google takes their 15% (small business programme) at the
+store layer; that's unavoidable and baked into pricing.
+
+## The product catalogue
+
+**Three SKUs at launch**, all Pro:
+
+| SKU ID | Pricing window | UK price |
+|---|---|---|
+| `pro_monthly_open_beta` | Open beta (first 4 weeks post-GA) | £0.99/month |
+| `pro_monthly_founders` | Founders (weeks 5-16) | £1.99/month |
+| `pro_monthly_standard` | Standard (week 17+) | £3.99/month |
+
+When a user signs up they see only the SKU matching the current
+pricing window. Once subscribed, they stay on that SKU for life
+unless cancelled (lapse = lose the locked price; resubscribe at
+the then-current price).
+
+Coach tier SKUs (phase 2) remain a separate set (see historical
+section), purchased via Stripe from the coach web dashboard.
+
+## The trial state machine
+
+Locked in `COMPLETE_TIER_SCOPE_LOCKED.md`. Re-stating with explicit
+transitions for the 2-tier model.
+
+States:
+
+- `unstarted`: fresh account, hasn't passed Article 9 consent yet
+- `pro_trial_active`: days 1-21 of the Pro trial
+- `paid_pro`: user paid for Pro (any pricing window)
+- `free`: trial expired without payment, or user skipped to Free
+- `cascade_expired`: equivalent to `free`; kept distinct for telemetry
+
+(Legacy values `complete_trial_active` and `paid_complete` remain
+in the schema CHECK constraint for compatibility with already-
+applied migration 030, but they are NEVER set by code in the
+2-tier model.)
+
+Transitions:
+
+| From | Trigger | To |
+|---|---|---|
+| `unstarted` | Article 9 consent confirmed | `pro_trial_active` |
+| `pro_trial_active` | Day 21 + no action | `cascade_expired` |
+| `pro_trial_active` | User pays Pro | `paid_pro` |
+| `pro_trial_active` | User skips to Free | `free` |
+| `paid_pro` | Play Billing reports cancellation | `free` (after grace period) |
+| `paid_pro` | User cancels and renewal cycle ends | `free` |
+| `free` | User pays Pro | `paid_pro` |
+| Any | Account deleted | (no state, row gone) |
+
+## Grace period
+
+When Google Play reports a payment failure (declined card, expired
+card, billing retry exhausted), the user does NOT lose tier
+immediately. Grace: **3 days from payment failure to tier
+downgrade.**
+
+Behaviour unchanged from the original spec, just narrower in
+target tiers (only Pro now). During grace:
+
+- User retains full Pro benefits.
+- In-app banner: "We couldn't take your payment. Update your
+  billing in Google Play within 3 days to keep your Pro features."
+- One reminder push at 24h and 48h.
+- After 72h, tier downgrades to `free` and a "Your subscription
+  has ended" banner appears with a re-upgrade CTA.
+
+Google's own retry window (typically 16 days under their
+account-hold policy) operates on top of ours: if Google is still
+retrying past day 3 we keep showing the "couldn't take payment"
+banner and only flip to `free` if Google eventually gives up.
+
+## Cancellation
+
+### User cancels from inside Volyume
+
+You → Subscription → Cancel. Single tap to confirmation:
+
+> **Cancel your Volyume subscription?**
+>
+> You'll keep your Pro features until your current billing period
+> ends on [date]. After that, you'll drop to Free. Your training
+> history, food log, and check-ins all stay; some Pro-tier features
+> become read-only.
+>
+> [ Keep my subscription ]   [ Cancel anyway ]
+
+"Cancel anyway" deep-links into Google Play's subscription
+management page; Google requires their own UI for actual
+cancellation.
+
+### User cancels from Google Play
+
+Play Billing webhook fires. We update `profiles.trial_state` to
+reflect: subscription remains active until expiry date, then
+auto-transitions to `free`.
+
+## Refund handling
+
+Refunds happen entirely through Google Play. We do not handle
+refunds directly.
+
+When Play Billing reports a refund (RTDN `SUBSCRIPTION_REVOKED`):
+
+- Tier immediately downgrades to `free`.
+- `tier_history` row records the refund with reason `refunded`.
+- No notification to user (they initiated the refund and know it
+  happened).
+- ED-pattern flag state is preserved (refund doesn't clear safety
+  history).
+
+## Receipt validation
+
+The Supabase Edge Function (`/functions/v1/play-billing-rtdn`)
+validates purchase tokens against Google's Play Developer API
+verifyPurchase endpoint server-side. The client never trusts a
+raw IAP success callback alone.
+
+The flow:
+
+1. User taps "Upgrade to Pro".
+2. App initiates IAP via the chosen SDK
+   (`Purchases.requestSubscription(skuId)` for `react-native-iap`).
+3. Google Play completes the purchase.
+4. App posts the purchase token to our Edge Function.
+5. Edge Function calls Google's Play Developer API to verify the
+   token and read subscription state.
+6. On verified-purchase, the Edge Function calls `upgrade_tier(
+   target_tier, payment_ref)` RPC.
+7. RPC writes `tier_history` row and updates `profiles.trial_state`.
+8. App refreshes `profiles` row via the sync layer.
+
+## Cross-platform subscription state
+
+Android-only at v1. When iOS lands (phase later), the same Edge
+Function pattern will validate Apple receipts via App Store
+Connect's verifyReceipt endpoint; a single user account with
+purchases on both platforms gets a single entitlement (tier
+follows the user, not the device).
+
+## Founding-price lock-in
+
+Locked-in pricing is enforced platform-side via the SKU the user
+originally purchased.
+
+- User signs up during open beta, buys `pro_monthly_open_beta` at
+  £0.99/mo. Google charges them £0.99/mo at every renewal as long
+  as the subscription stays continuously active.
+- If they cancel and resubscribe later, they buy whatever SKU is
+  current (Founders or Standard).
+- We don't manipulate price ourselves; we rely on Google Play's
+  subscription continuity rule to keep them on the original SKU.
+
+## Tier transitions in `profiles`
+
+The `profiles` table (`users_profile` in our schema) tracks current
+state. Schema additions (already applied in migration 030):
+
+```
+trial_state             text NOT NULL DEFAULT 'unstarted'
+trial_started_at        timestamptz
+complete_trial_ends_at  timestamptz       -- legacy, unused in 2-tier
+pro_trial_ends_at       timestamptz       -- the 21-day end timestamp
+locked_in_price_tier    text   -- 'open_beta','founders','standard'
+revenuecat_app_user_id  text   -- legacy column name; stores auth.uid()
+```
+
+Every transition writes a `tier_history` row.
+
+## The `upgrade_tier` RPC
+
+Locked signature:
+
+```sql
+upgrade_tier(
+  _target_tier    text,           -- 'pro','free'
+  _reason         text,            -- 'user_paid','user_skip','user_cancelled','grace_lapsed','admin','refunded','auto_downgrade'
+  _source_surface text DEFAULT NULL,
+  _payment_ref    text DEFAULT NULL
+) RETURNS jsonb
+```
+
+Whitelisted (via session_replication_role) to bypass the existing
+`protect_users_profile_tier` trigger.
+
+Behaviour:
+- `user_paid` requires `_payment_ref` (Play Billing purchase token).
+- `admin` requires service-role JWT.
+- All transitions write `tier_history`.
+- Sets `locked_in_price_tier` based on current pricing window at
+  first paid transition (and never changes after).
+- Returns `{trial_state, tier, locked_in_price_tier,
+  pro_trial_ends_at, payment_ref}`.
+
+The legacy 3-tier transitions to `paid_complete` / from
+`complete_trial_active` are kept compileable but never executed in
+the 2-tier model (cleaner not to delete dead code paths until next
+schema cleanup).
+
+## Webhook contract
+
+Google Play Real-Time Developer Notifications (RTDN) → Supabase
+Edge Function (`/functions/v1/play-billing-rtdn`).
+
+Events handled:
+
+| RTDN notificationType | Our response |
+|---|---|
+| `SUBSCRIPTION_PURCHASED` | `upgrade_tier('pro', 'user_paid', payment_ref)` |
+| `SUBSCRIPTION_RENEWED` | No-op (subscription continues) |
+| `SUBSCRIPTION_CANCELED` | Set `cancellation_scheduled_for`; no tier change yet |
+| `SUBSCRIPTION_EXPIRED` | `upgrade_tier('free', 'user_cancelled')` |
+| `SUBSCRIPTION_ON_HOLD` | Set `payment_failed_at`; start the 3-day grace clock |
+| `SUBSCRIPTION_REVOKED` | `upgrade_tier('free', 'refunded')` |
+| `SUBSCRIPTION_PAUSED` | Pause Pro features; resume on `SUBSCRIPTION_RESTARTED` |
+| `SUBSCRIPTION_RESTARTED` | Re-enable Pro |
+| `SUBSCRIPTION_PRICE_CHANGE_CONFIRMED` | Update locked-in price |
+| `SUBSCRIPTION_DEFERRED` | Update next-renewal timestamp |
+
+Webhook auth: Google's Pub/Sub OIDC token verification on the
+Edge Function. Reject any request with bad signature with 401.
+
+## In-app purchase surfaces
+
+Two places a user encounters payment:
+
+### Day-21 trial gate
+
+Modal with:
+- The Free vs Pro feature strip.
+- "Continue at Pro" CTA → purchases the current Pro SKU.
+- "Drop to Free" → fires `upgrade_tier('free', 'user_skip')`.
+
+### Differential paywall trigger (move #4)
+
+Inline card in the relevant insight surface (Stalled Lift, Energy
+Crash, etc.) per the conversion copy locked in
+`MOVE_4_DIFFERENTIAL_PAYWALL.md`.
+- Single CTA: "Try Pro free for 21 days."
+- Tapping a free user who has already completed their trial
+  surfaces a different copy: "Get Pro for £[current price]/month."
+
+## Restore purchases
+
+You → Subscription → Restore. Calls the IAP SDK's
+`getAvailablePurchases()` / equivalent. Returns the user's
+entitlements; we sync `profiles.trial_state` accordingly. No-op if
+nothing to restore.
+
+## Implementation files
+
+```
+src/lib/payments/
+├── playBilling.js        -- IAP SDK initialisation and wrappers
+├── catalogue.js          -- the three consumer SKUs + lookup helpers
+├── cascade.js            -- the trial state machine (transitions, gate)
+└── restore.js            -- restore purchases flow
+
+src/screens/
+├── CascadeGateScreen.js  -- the day-21 modal
+└── SubscriptionScreen.js -- You-tab subscription management
+```
+
+Edge function lives in `supabase/functions/play-billing-rtdn/`.
+
+## Testing
+
+- Sandbox tester accounts on Google Play Console for every
+  transition.
+- Play Billing test purchases used to verify our Edge Function
+  handler.
+- A scripted test cycles through every transition above in a Play
+  Billing sandbox before Phase A exit.
+- Grace period test: revoke a sandbox subscription, observe the
+  3-day banner, verify auto-downgrade at 72h.
+
+## Acceptance check
+
+- State machine passes all transitions in test (see
+  `payments.cascade.test.js`).
+- A sandbox purchase of `pro_monthly_open_beta` results in
+  `paid_pro` state + `locked_in_price_tier = 'open_beta'`.
+- Cancelling on Play Billing sandbox triggers `SUBSCRIPTION_CANCELED`
+  webhook → banner appears → `SUBSCRIPTION_EXPIRED` fires at period
+  end → tier becomes `free`.
+- Refunding via Play Billing sandbox immediately downgrades tier.
+- Restore purchases on a clean install correctly restores tier.
+
+---
+
+## Historical context (3-tier + RevenueCat, superseded 2026-05-25)
+
+The original 2026-05-23 spec used three tiers (Free, Pro, Complete)
+with a 28-day cascade (14 Complete → 14 Pro → Free) and RevenueCat
+as the IAP provider. That spec is preserved below for traceability
+with prior LOCKED docs. The current 2-tier + Play Billing model
+above governs the implementation.
 
 ## Sign-in providers
 
