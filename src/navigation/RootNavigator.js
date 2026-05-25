@@ -527,6 +527,18 @@ export default function RootNavigator() {
               // During beta this guards against spurious pro → free
               // demotion (see useAppStore.refreshTierFromCloud).
               refreshTierFromCloud(client, session.user.id).catch(() => {});
+
+              // Initialise Google Play Billing with the user's auth uid
+              // as the obfuscated account ID. No-op if the native
+              // module isn't linked in this build; the stub provider
+              // stays in place and purchase taps surface a clean
+              // "provider not injected" error rather than crashing.
+              try {
+                // eslint-disable-next-line global-require
+                const playBilling = require('../lib/payments/playBilling');
+                playBilling.initialise({ appUserID: session.user.id }).catch(() => {});
+              } catch (_) { /* lib not loadable in this env */ }
+
               setAuthLoading(false);
               return;
             }

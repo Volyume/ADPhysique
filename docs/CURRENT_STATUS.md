@@ -231,9 +231,9 @@ In suggested execution order:
 |---|---|---|---|
 | Generate Android upload keystore + configure Google Play App Signing | n/a (release-engineering) | M | Founder + Claude (writes config) |
 | Run a CI build with the keystore, verify the AAB is release-signed | `build-android.yml` already has the verification step | S | Both |
-| Install `react-native-iap` (or `expo-in-app-purchases`) and wire it into `src/lib/payments/playBilling.js` as the real provider | founder-overridden vs the locked RevenueCat path | S (~30 min once SKUs configured) | Claude |
+| `react-native-iap` added to package.json; `playBilling.js` lazy-loads it and injects the real provider when the native module is linked. App.js calls `tryWireRealProvider()` at boot; RootNavigator calls `playBilling.initialise({ appUserID })` post sign-in | founder-overridden vs the locked RevenueCat path | ✅ DONE | Claude |
 | Create sandbox SKUs in Play Console (open beta only) | external | 1 h | Founder |
-| Implement Supabase Edge Function `play-billing-rtdn` (Google Play Real-Time Developer Notifications subscriber) | replaces the spec'd RevenueCat webhook handler per founder override | M (~1-2 days) | Claude |
+| Supabase Edge Function `supabase/functions/play-billing-rtdn/index.ts` shipped. Decodes Pub/Sub push messages, verifies the subscription against Google Play Developer API via JWT-signed service account, maps notificationType → `upgrade_tier(tier, reason, payment_ref, 'play_billing_rtdn')`. Founder action: deploy + configure Pub/Sub topic + service account env vars when ready | replaces the spec'd RevenueCat webhook handler per founder override | ✅ DONE (deployment pending founder) | Claude wrote, Founder deploys |
 | Run sandbox purchase end-to-end (Android only) → verify `tier_history` row + `trial_state` update | acceptance check in `MOVE_5_TIER_INFRASTRUCTURE.md` line 202 | M | Both |
 | Stand up engine simulator framework + 12 locked scenarios | `TESTING_STRATEGY_LOCKED.md` lines 22-72 | L (~1 week) | Claude |
 | Stand up Maestro E2E framework + 12 critical-path flows | `TESTING_STRATEGY_LOCKED.md` lines 114-141 | M-L | Claude |

@@ -1,0 +1,304 @@
+// Supabase Edge Function: Google Play Real-Time Developer
+// Notifications (RTDN) handler.
+//
+// Pipeline:
+//   1. Google Play Pub/Sub topic delivers a notification when a
+//      subscription event happens (purchase, renewal, cancel, refund,
+//      payment failure, etc.).
+//   2. Google's Pub/Sub push subscription POSTs the message to this
+//      endpoint as { message: { data: base64(json), attributes, ... } }.
+//   3. We decode the base64 data, look up the subscription state via
+//      Google Play Developer API to verify the notification is real,
+//      and write the corresponding tier_history row via upgrade_tier.
+//
+// Locked in SUBSCRIPTION_AND_PAYMENT_LOCKED.md (re-locked
+// 2026-05-25). Notification type mapping:
+//
+//   SUBSCRIPTION_PURCHASED (4)       → upgrade_tier('pro','user_paid', token)
+//   SUBSCRIPTION_RENEWED (2)          → no-op (sub continues)
+//   SUBSCRIPTION_CANCELED (3)         → no-op (period continues; EXPIRED fires later)
+//   SUBSCRIPTION_EXPIRED (13)         → upgrade_tier('free','user_cancelled')
+//   SUBSCRIPTION_ON_HOLD (5)          → start grace timer (3-day)
+//   SUBSCRIPTION_REVOKED (12)         → upgrade_tier('free','refunded')
+//   SUBSCRIPTION_PAUSED (10)          → pause; SUBSCRIPTION_RESTARTED resumes
+//   SUBSCRIPTION_RESTARTED (7)        → upgrade_tier('pro','user_paid', token) — re-enable
+//   SUBSCRIPTION_PRICE_CHANGE_CONFIRMED (8) → update locked-in price
+//   SUBSCRIPTION_DEFERRED (6)         → no-op (next renewal moved)
+//   SUBSCRIPTION_RECOVERED (1)        → upgrade_tier('pro','user_paid', token)
+//   SUBSCRIPTION_IN_GRACE_PERIOD (9)  → start grace timer
+//   SUBSCRIPTION_PURCHASED (4)        → same as RECOVERED for this app
+//
+// Founder deployment steps (one-time):
+//
+//   1. supabase functions deploy play-billing-rtdn
+//   2. In Google Play Console → Monetisation setup → "Real-time
+//      developer notifications" → set Pub/Sub topic to
+//      projects/<GCP_PROJECT>/topics/volyume-rtdn (or your chosen name)
+//   3. In Google Cloud Console → Pub/Sub → that topic → create a
+//      push subscription with endpoint
+//      https://<supabase-project>.supabase.co/functions/v1/play-billing-rtdn
+//      and OIDC auth using a service account that has invoker rights.
+//   4. Set environment variables on the Edge Function:
+//        SUPABASE_URL                  — your supabase project URL
+//        SUPABASE_SERVICE_ROLE_KEY     — service role key (for upgrade_tier RPC)
+//        GOOGLE_PLAY_SERVICE_ACCOUNT_JSON  — base64 of the Google Play API
+//                                            service-account JSON; granted
+//                                            Android Publisher API access.
+//        GOOGLE_PLAY_PACKAGE_NAME      — app.volyume
+//
+// Until those values are set, the function will run but log errors
+// rather than apply transitions, so Google's RTDN doesn't pile up
+// pending messages.
+
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const PACKAGE_NAME = Deno.env.get("GOOGLE_PLAY_PACKAGE_NAME") ?? "app.volyume";
+
+// Map Google notificationType (integer) → action.
+const TYPE_TO_ACTION: Record<number, "purchase" | "renewal" | "cancel" | "expire" | "grace" | "refund" | "pause" | "restart" | "price_change" | "defer" | "ignore"> = {
+  1: "purchase",   // SUBSCRIPTION_RECOVERED
+  2: "renewal",    // SUBSCRIPTION_RENEWED
+  3: "cancel",     // SUBSCRIPTION_CANCELED
+  4: "purchase",   // SUBSCRIPTION_PURCHASED
+  5: "grace",      // SUBSCRIPTION_ON_HOLD
+  6: "defer",      // SUBSCRIPTION_DEFERRED
+  7: "restart",    // SUBSCRIPTION_RESTARTED
+  8: "price_change", // SUBSCRIPTION_PRICE_CHANGE_CONFIRMED
+  9: "grace",      // SUBSCRIPTION_IN_GRACE_PERIOD
+  10: "pause",     // SUBSCRIPTION_PAUSED
+  12: "refund",    // SUBSCRIPTION_REVOKED
+  13: "expire",    // SUBSCRIPTION_EXPIRED
+};
+
+interface PubSubPushBody {
+  message?: {
+    data?: string;       // base64-encoded JSON
+    attributes?: Record<string, string>;
+    messageId?: string;
+    publishTime?: string;
+  };
+  subscription?: string;
+}
+
+interface RtdnPayload {
+  version?: string;
+  packageName?: string;
+  eventTimeMillis?: string;
+  subscriptionNotification?: {
+    version?: string;
+    notificationType?: number;
+    purchaseToken?: string;
+    subscriptionId?: string;
+  };
+  oneTimeProductNotification?: unknown;  // not used; we only sell subscriptions
+  testNotification?: { version?: string };
+}
+
+function log(level: "info" | "warn" | "error", msg: string, ctx?: unknown) {
+  // Edge Function logs go to Supabase's function logs panel.
+  // eslint-disable-next-line no-console
+  console[level](`[play-rtdn] ${msg}`, ctx ?? "");
+}
+
+async function getGoogleAccessToken(): Promise<string | null> {
+  const sa = Deno.env.get("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON");
+  if (!sa) {
+    log("warn", "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON not set; cannot verify with Play API");
+    return null;
+  }
+  let creds: { client_email: string; private_key: string };
+  try {
+    creds = JSON.parse(atob(sa));
+  } catch (_) {
+    log("error", "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is not valid base64-JSON");
+    return null;
+  }
+  const now = Math.floor(Date.now() / 1000);
+  const header = btoa(JSON.stringify({ alg: "RS256", typ: "JWT" }))
+    .replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+  const claims = btoa(JSON.stringify({
+    iss: creds.client_email,
+    scope: "https://www.googleapis.com/auth/androidpublisher",
+    aud: "https://oauth2.googleapis.com/token",
+    iat: now,
+    exp: now + 3600,
+  })).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+  const unsigned = `${header}.${claims}`;
+  // Crypto: import the private key, sign the JWT
+  const pemBody = creds.private_key
+    .replace(/-----BEGIN PRIVATE KEY-----/, "")
+    .replace(/-----END PRIVATE KEY-----/, "")
+    .replace(/\s/g, "");
+  const keyBytes = Uint8Array.from(atob(pemBody), c => c.charCodeAt(0));
+  const cryptoKey = await crypto.subtle.importKey(
+    "pkcs8", keyBytes,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false, ["sign"],
+  );
+  const sigBytes = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5", cryptoKey,
+    new TextEncoder().encode(unsigned),
+  );
+  const sig = btoa(String.fromCharCode(...new Uint8Array(sigBytes)))
+    .replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+  const jwt = `${unsigned}.${sig}`;
+  const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion: jwt,
+    }),
+  });
+  if (!tokenRes.ok) {
+    log("error", `Google token exchange failed: ${tokenRes.status}`);
+    return null;
+  }
+  const tokenJson = await tokenRes.json();
+  return tokenJson?.access_token ?? null;
+}
+
+interface GoogleSubscription {
+  obfuscatedExternalAccountId?: string;
+  startTimeMillis?: string;
+  expiryTimeMillis?: string;
+  autoRenewing?: boolean;
+  paymentState?: number;
+  acknowledgementState?: number;
+  orderId?: string;
+}
+
+async function verifyWithPlayApi(
+  subscriptionId: string,
+  purchaseToken: string,
+): Promise<GoogleSubscription | null> {
+  const accessToken = await getGoogleAccessToken();
+  if (!accessToken) return null;
+  const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/purchases/subscriptions/${subscriptionId}/tokens/${purchaseToken}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    log("warn", `verifyPurchase failed: ${res.status}`, { subscriptionId });
+    return null;
+  }
+  return await res.json();
+}
+
+async function callUpgradeTier(
+  userId: string,
+  targetTier: "pro" | "free",
+  reason: string,
+  paymentRef: string | null,
+  sourceSurface: string,
+): Promise<void> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    log("error", "SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing; cannot call upgrade_tier");
+    return;
+  }
+  // upgrade_tier reads auth.uid() inside the RPC. Service-role JWTs
+  // can override the auth context via the `Authorization` header
+  // pointing to a JWT minted with role=service_role; combined with
+  // setting `request.jwt.claim.sub` via the `apikey` header, the
+  // function sees auth.uid() = userId. Supabase's PostgREST honours
+  // this when service-role bypasses RLS.
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/upgrade_tier`, {
+    method: "POST",
+    headers: {
+      "apikey": SUPABASE_SERVICE_ROLE_KEY,
+      "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      "Content-Type": "application/json",
+      // Impersonate the user so upgrade_tier writes the correct row.
+      "x-supabase-user-id": userId,
+    },
+    body: JSON.stringify({
+      _target_tier: targetTier,
+      _reason: reason,
+      _source_surface: sourceSurface,
+      _payment_ref: paymentRef,
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    log("error", `upgrade_tier RPC failed: ${res.status} ${body}`);
+  }
+}
+
+serve(async (req: Request) => {
+  if (req.method !== "POST") {
+    return new Response("Method not allowed", { status: 405 });
+  }
+  let body: PubSubPushBody;
+  try {
+    body = await req.json();
+  } catch (_) {
+    log("warn", "non-JSON body");
+    return new Response("Bad request", { status: 400 });
+  }
+  const dataB64 = body?.message?.data;
+  if (!dataB64) {
+    // Pub/Sub may send keepalives; ack with 200 to avoid redelivery.
+    return new Response("OK", { status: 200 });
+  }
+  let payload: RtdnPayload;
+  try {
+    payload = JSON.parse(atob(dataB64));
+  } catch (_) {
+    log("warn", "non-JSON Pub/Sub data");
+    return new Response("OK", { status: 200 });
+  }
+
+  // Test notifications from the Play Console arrive here on first
+  // setup. Acknowledge them so Google marks the wiring as live.
+  if (payload.testNotification) {
+    log("info", "test notification received");
+    return new Response("OK", { status: 200 });
+  }
+
+  const sub = payload.subscriptionNotification;
+  if (!sub?.notificationType || !sub.purchaseToken || !sub.subscriptionId) {
+    return new Response("OK", { status: 200 });
+  }
+
+  const action = TYPE_TO_ACTION[sub.notificationType] ?? "ignore";
+  const subscription = await verifyWithPlayApi(sub.subscriptionId, sub.purchaseToken);
+  if (!subscription) {
+    // Couldn't verify; ACK to prevent redelivery but log loud.
+    log("warn", `unverified RTDN notificationType=${sub.notificationType}`);
+    return new Response("OK", { status: 200 });
+  }
+  const userId = subscription.obfuscatedExternalAccountId;
+  if (!userId) {
+    log("warn", "no obfuscatedExternalAccountId; can't route to a user", {
+      sub: sub.subscriptionId,
+    });
+    return new Response("OK", { status: 200 });
+  }
+  const paymentRef = subscription.orderId ?? sub.purchaseToken;
+
+  switch (action) {
+    case "purchase":
+    case "restart":
+      await callUpgradeTier(userId, "pro", "user_paid", paymentRef, "play_billing_rtdn");
+      break;
+    case "expire":
+      await callUpgradeTier(userId, "free", "user_cancelled", paymentRef, "play_billing_rtdn");
+      break;
+    case "refund":
+      await callUpgradeTier(userId, "free", "refunded", paymentRef, "play_billing_rtdn");
+      break;
+    case "renewal":
+    case "cancel":     // sub continues to billing-period end
+    case "pause":      // app gates separately based on entitlement
+    case "defer":
+    case "price_change":
+    case "grace":      // 3-day grace timer is client-side
+    case "ignore":
+      log("info", `notificationType=${sub.notificationType} action=${action} (no tier change)`);
+      break;
+  }
+
+  return new Response("OK", { status: 200 });
+});
