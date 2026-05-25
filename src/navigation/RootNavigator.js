@@ -57,6 +57,8 @@ import ProGoalSetupScreen from '../screens/ProGoalSetupScreen';
 import GoalChangeSummaryScreen from '../screens/GoalChangeSummaryScreen';
 import GoalLockConsentScreen from '../screens/GoalLockConsentScreen';
 import NotificationSettingsScreen from '../screens/NotificationSettingsScreen';
+import SubscriptionScreen from '../screens/SubscriptionScreen';
+import CascadeGateScreen from '../screens/CascadeGateScreen';
 import ImportScreen from '../screens/ImportScreen';
 import CoachingRemindersScreen from '../screens/CoachingRemindersScreen';
 import ProOnboardingScreen from '../screens/ProOnboardingScreen';
@@ -270,6 +272,8 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ headerShown: false }} />
       <Stack.Screen name="DebugLog" component={DebugLogScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SubscriptionPolicy" component={SubscriptionPolicyScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Subscription" component={SubscriptionScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="CascadeGate" component={CascadeGateScreen} options={{ headerShown: false, presentation: 'modal' }} />
       <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
     </Stack.Navigator>
   );

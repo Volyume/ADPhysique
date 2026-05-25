@@ -649,6 +649,12 @@ export default function SettingsScreen({ navigation }) {
             sub="Training reminders"
             onPress={() => navigation.navigate('NotificationSettings')}
           />
+          <SettingRow
+            icon="card-outline"
+            label="Subscription"
+            sub="Plan, billing, restore purchases"
+            onPress={() => navigation.navigate('Subscription')}
+          />
         </View>
 
         {/* Accessibility */}

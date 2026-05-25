@@ -1,0 +1,326 @@
+/**
+ * CascadeGateScreen
+ *
+ * Modal surface a user sees at the cascade decision points:
+ *   * Day 14: complete trial winding down ("Stay on Complete" vs Pro vs Free)
+ *   * Day 28: pro trial winding down ("Stay on Pro" vs Free)
+ *   * Payment failure: 3-day grace banner overlay (Stay vs Drop)
+ *
+ * Layout locked in UI_FLOWS_LOCKED.md lines 229-246 +
+ * SUBSCRIPTION_AND_PAYMENT_LOCKED.md lines 305-326.
+ *
+ * Copy variants pulled from OPEN_QUESTIONS_RESOLVED.md Q3.
+ *
+ * Navigation params:
+ *   variant: 'day14' | 'day28' | 'payment_failure'   (required)
+ *   pricingWindow: 'open_beta'|'founders'|'standard'  (defaults via
+ *     getCurrentPricingWindow; may be passed for SSR / preview)
+ *
+ * Returns control to the previous screen on any decision tap. Closing
+ * via the X surfaces a "Decide later" no-op (user remains in their
+ * current trial state; the next gate fires the same screen again).
+ */
+import React, { useState, useCallback } from 'react';
+import {
+  View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
+  ScrollView, Alert,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, spacing, radius, fontSize, fontWeight, hitSlop } from '../styles/theme';
+import TierComparisonStrip from '../components/TierComparisonStrip';
+import * as cascade from '../lib/payments/cascade';
+import * as revenuecat from '../lib/payments/revenuecat';
+import { skuFor } from '../lib/payments/catalogue';
+import { logError, logInfo } from '../lib/errorLog';
+
+// Locked verbatim copy per OPEN_QUESTIONS_RESOLVED.md Q3 Variant B
+// ("outcome-led, default for cascade hold gates"). Lines under 25
+// words, British English, no jargon-blocklist terms.
+const SUBTITLE_COMPLETE = "Complete is for when you're serious. Deeper planning, longer history, photos, body composition tracking, and a share pack for your coach.";
+
+function _variantContent(variant) {
+  switch (variant) {
+    case 'day14':
+      return {
+        title: 'Your trial is winding down',
+        subtitle: SUBTITLE_COMPLETE,
+        primaryCta: 'Stay on Complete',
+        primaryTarget: 'complete',
+        secondaryCta: 'Switch to Pro',
+        secondaryTarget: 'pro',
+        tertiaryCta: 'Drop to Free',
+        tertiaryTarget: 'free',
+        surface: 'cascade_day14_gate',
+      };
+    case 'day28':
+      return {
+        title: 'Your Pro trial is winding down',
+        subtitle: "Pro keeps the engine and the food log. Free keeps your data and safety guardrails; some surfaces become read-only.",
+        primaryCta: 'Stay on Pro',
+        primaryTarget: 'pro',
+        secondaryCta: null,
+        secondaryTarget: null,
+        tertiaryCta: 'Drop to Free',
+        tertiaryTarget: 'free',
+        surface: 'cascade_day28_gate',
+      };
+    case 'payment_failure':
+      return {
+        title: "We couldn't take your payment",
+        subtitle: "Update your billing in the App Store or Google Play within 3 days to keep your current features. After that you'll drop to Free.",
+        primaryCta: 'Open billing settings',
+        primaryTarget: 'billing',
+        secondaryCta: null,
+        secondaryTarget: null,
+        tertiaryCta: 'Decide later',
+        tertiaryTarget: null,
+        surface: 'payment_failure_gate',
+      };
+    default:
+      return null;
+  }
+}
+
+export default function CascadeGateScreen({ navigation, route }) {
+  const variant = route?.params?.variant ?? 'day14';
+  const pricingWindow = route?.params?.pricingWindow ?? 'open_beta';
+  const content = _variantContent(variant);
+  const [busy, setBusy] = useState(null);  // which CTA is in-flight
+
+  const dismiss = useCallback(() => {
+    if (navigation?.canGoBack?.()) navigation.goBack();
+  }, [navigation]);
+
+  const handlePay = useCallback(async (targetTier) => {
+    setBusy(targetTier);
+    const sku = skuFor(targetTier, pricingWindow);
+    if (!sku) {
+      logError('CascadeGate.skuMissing', new Error('sku not found'), {
+        targetTier, pricingWindow,
+      });
+      Alert.alert('Subscription unavailable', 'Could not load the subscription option. Try again later.');
+      setBusy(null);
+      return;
+    }
+    try {
+      // Initiate purchase. The webhook posts back the tier change;
+      // we also call cascade.payAt optimistically so the local state
+      // updates immediately (idempotent — webhook will reconcile).
+      const purchaseResult = await revenuecat.purchasePackage(sku.id);
+      const ref = purchaseResult?.transactionId ?? `client_${Date.now()}`;
+      const cascadeResult = await cascade.payAt(targetTier, ref, content.surface);
+      if (!cascadeResult.ok) {
+        logError('CascadeGate.payAt.failed',
+          new Error(cascadeResult.error ?? 'unknown'),
+          { targetTier });
+      }
+      logInfo('CascadeGate.paid', `tier=${targetTier} sku=${sku.id}`);
+      dismiss();
+    } catch (e) {
+      // Purchase cancelled by user OR genuine failure. Distinguish
+      // by message if possible; surface a generic friendly note.
+      const msg = e?.message ?? '';
+      if (/cancel|abort/i.test(msg)) {
+        logInfo('CascadeGate.purchaseCancelled', `tier=${targetTier}`);
+      } else {
+        logError('CascadeGate.purchaseFailed', e, { targetTier });
+        Alert.alert('Purchase did not complete', 'Try again or pick a different option.');
+      }
+    } finally {
+      setBusy(null);
+    }
+  }, [pricingWindow, content?.surface, dismiss]);
+
+  const handleSkip = useCallback(async (targetTier) => {
+    setBusy(targetTier ?? 'skip');
+    try {
+      if (targetTier === 'free') {
+        await cascade.skipToFree(content.surface);
+      } else if (targetTier === 'pro') {
+        // Day-14 "Switch to Pro" — choosing Pro now skips the
+        // automatic complete→pro downgrade, with locked-in pricing.
+        // For day14 we use skipToPro (user_skip → pro_trial_active).
+        // For day28 there is no "Switch to Pro" option (already on
+        // pro trial).
+        await cascade.skipToPro(content.surface);
+      }
+      dismiss();
+    } catch (e) {
+      logError('CascadeGate.skip.threw', e, { targetTier });
+    } finally {
+      setBusy(null);
+    }
+  }, [content?.surface, dismiss]);
+
+  const handleBilling = useCallback(() => {
+    // Deep link to platform-managed subscription page. Apple / Google
+    // both require their own UI for billing updates.
+    // expo Linking can open the iOS / Android subscription URLs.
+    // eslint-disable-next-line global-require
+    const { Linking, Platform } = require('react-native');
+    const url = Platform.OS === 'ios'
+      ? 'itms-apps://apps.apple.com/account/subscriptions'
+      : 'https://play.google.com/store/account/subscriptions';
+    Linking.openURL(url).catch((e) => {
+      logError('CascadeGate.openBilling', e);
+      Alert.alert('Could not open billing settings');
+    });
+  }, []);
+
+  if (!content) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.center}>
+          <Text style={styles.errorText}>Unknown cascade variant: {variant}</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <View style={styles.header}>
+        <View style={{ width: 24 }} />
+        <Text style={styles.headerTitle}>Subscription</Text>
+        <TouchableOpacity onPress={dismiss} hitSlop={hitSlop} accessibilityLabel="Close">
+          <Ionicons name="close" size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scroll}>
+        <Text style={styles.title}>{content.title}</Text>
+        <Text style={styles.subtitle}>{content.subtitle}</Text>
+
+        {variant === 'day14' ? (
+          <View style={styles.stripWrap}>
+            <TierComparisonStrip
+              pricingWindow={pricingWindow}
+              highlighted="complete"
+            />
+          </View>
+        ) : null}
+
+        <View style={styles.ctaStack}>
+          {content.primaryTarget === 'billing' ? (
+            <TouchableOpacity
+              style={styles.primaryBtn}
+              onPress={handleBilling}
+              disabled={busy !== null}
+              accessibilityRole="button"
+            >
+              <Text style={styles.primaryBtnText}>{content.primaryCta}</Text>
+            </TouchableOpacity>
+          ) : content.primaryTarget ? (
+            <TouchableOpacity
+              style={styles.primaryBtn}
+              onPress={() => handlePay(content.primaryTarget)}
+              disabled={busy !== null}
+              accessibilityRole="button"
+            >
+              {busy === content.primaryTarget ? (
+                <ActivityIndicator color={colors.background} />
+              ) : (
+                <Text style={styles.primaryBtnText}>{content.primaryCta}</Text>
+              )}
+            </TouchableOpacity>
+          ) : null}
+
+          {content.secondaryCta && content.secondaryTarget === 'pro' ? (
+            <TouchableOpacity
+              style={styles.secondaryBtn}
+              onPress={() => handlePay('pro')}
+              disabled={busy !== null}
+              accessibilityRole="button"
+            >
+              {busy === 'pro' ? (
+                <ActivityIndicator color={colors.textPrimary} />
+              ) : (
+                <Text style={styles.secondaryBtnText}>{content.secondaryCta}</Text>
+              )}
+            </TouchableOpacity>
+          ) : null}
+
+          {content.tertiaryCta ? (
+            <TouchableOpacity
+              style={styles.tertiaryBtn}
+              onPress={() => {
+                if (content.tertiaryTarget === 'free') handleSkip('free');
+                else dismiss();
+              }}
+              disabled={busy !== null}
+              accessibilityRole="button"
+            >
+              <Text style={styles.tertiaryBtnText}>{content.tertiaryCta}</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.background },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    borderBottomWidth: 1, borderBottomColor: colors.tabBarBorder,
+  },
+  headerTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold },
+  scroll: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xxl,
+  },
+  title: {
+    color: colors.textPrimary,
+    fontSize: fontSize.xxl,
+    fontWeight: fontWeight.semibold,
+    marginBottom: spacing.md,
+  },
+  subtitle: {
+    color: colors.textSecondary,
+    fontSize: fontSize.md,
+    lineHeight: 22,
+    marginBottom: spacing.xl,
+  },
+  stripWrap: {
+    marginBottom: spacing.xl,
+  },
+  ctaStack: {
+    gap: spacing.md,
+  },
+  primaryBtn: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.lg,
+    borderRadius: radius.md,
+    alignItems: 'center',
+  },
+  primaryBtnText: {
+    color: colors.background,
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.semibold,
+  },
+  secondaryBtn: {
+    backgroundColor: colors.surface2,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    alignItems: 'center',
+  },
+  secondaryBtnText: {
+    color: colors.textPrimary,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.medium,
+  },
+  tertiaryBtn: {
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+  },
+  tertiaryBtnText: {
+    color: colors.textMuted,
+    fontSize: fontSize.md,
+  },
+  errorText: { color: colors.error },
+});
