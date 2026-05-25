@@ -644,6 +644,19 @@ export default function RootNavigator() {
           const isAuthEnter =
             (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') &&
             session?.user?.id;
+          if (event === 'SIGNED_IN' && session?.user?.id) {
+            // Funnel telemetry: sign_in fires only on a real sign-in,
+            // not on INITIAL_SESSION (which is a session restore on
+            // cold launch). Fire-and-forget; the local row is in the
+            // engine_telemetry queue and the flush below pushes it.
+            try {
+              // eslint-disable-next-line global-require
+              const { track } = require('../lib/engineTelemetry');
+              track(session.user.id, 'sign_in', {
+                provider: session.user.app_metadata?.provider ?? 'unknown',
+              }).catch(() => {});
+            } catch (_) {}
+          }
           if (isAuthEnter) {
             // Optimistic sign-in: kick off the cloud restore but DON'T
             // await it. restoreSessionFromCloud makes its routing

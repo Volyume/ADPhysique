@@ -167,6 +167,18 @@ const useAppStore = create((set, get) => ({
     const prevUid = get().user?.id ?? null;
     try { log.logInfo('clearAuthStateForSignOut', 'start', { prevTier: get().tier, prevUid }); } catch (_) {}
 
+    // Funnel telemetry: sign_out at the top of the flow, before the
+    // wipe runs. The local row lands in engine_telemetry; the
+    // flushPendingTelemetry call below (bundled with bulkUpload)
+    // pushes it before wipeAllUserData clears the local copy.
+    if (prevUid) {
+      try {
+        // eslint-disable-next-line global-require
+        const { track } = require('../lib/engineTelemetry');
+        await track(prevUid, 'sign_out', { prevTier: get().tier }).catch(() => {});
+      } catch (_) {}
+    }
+
     // Cancel the debounced sync timer so it doesn't fire mid-wipe.
     try {
       // eslint-disable-next-line global-require

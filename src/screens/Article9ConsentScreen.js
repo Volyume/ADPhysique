@@ -61,6 +61,21 @@ export default function Article9ConsentScreen() {
       logInfo('Article9.consent.granted', `uid=${user?.id ?? 'unknown'}`, {
         cloudRecorded: !error,
       });
+      // Funnel telemetry: the legal evidence row lives in consent_log
+      // via record_health_consent; this event is the dashboard
+      // counterpart so the consent rate can be tracked over time.
+      if (user?.id) {
+        try {
+          // eslint-disable-next-line global-require
+          const { track } = require('../lib/engineTelemetry');
+          track(user.id, 'article9_consent_recorded', {
+            granted: true,
+            cloudRecorded: !error,
+            appVersion: Application.nativeApplicationVersion ?? null,
+            platform: Platform.OS,
+          }).catch(() => {});
+        } catch (_) {}
+      }
       // Trial cascade starts at Article 9 consent per
       // SUBSCRIPTION_AND_PAYMENT_LOCKED.md line 106. RPC is
       // idempotent (no-ops for already-started users) and tolerates

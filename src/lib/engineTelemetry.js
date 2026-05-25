@@ -67,6 +67,16 @@ const ALLOWED_EVENTS = new Set([
   // cascade-and-conversion dashboards.
   'paywall_shown',
   'paywall_tapped_cta',
+  // Migration 035: auth + consent funnel coverage. sign_in fires on
+  // an actual SIGNED_IN auth event (not INITIAL_SESSION restore).
+  // sign_out fires at the top of clearAuthStateForSignOut so the
+  // event is in the queue before the local wipe runs.
+  // article9_consent_recorded is the UK GDPR Article 9 explicit-
+  // consent evidence trail; the consent_log table holds the
+  // legal record, this event powers the consent rate dashboard.
+  'sign_in',
+  'sign_out',
+  'article9_consent_recorded',
 ]);
 
 let _flushTimer = null;
