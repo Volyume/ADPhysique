@@ -25,6 +25,7 @@ import {
 } from '../lib/database';
 import { track as trackEngineEvent } from '../lib/engineTelemetry';
 import DifferentialBadge from '../components/DifferentialBadge';
+import { SkeletonCard } from '../components/Skeleton';
 import { computeEWMA, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
 import { logError } from '../lib/errorLog';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
@@ -471,10 +472,12 @@ function AmberAlertCard({ title, body, footnote }) {
 
 function LoadingView() {
   return (
-    <View style={styles.centred}>
-      <ActivityIndicator size="large" color={colors.primary} />
-      <Text style={styles.loadingText}>Pulling together your Precision Coaching…</Text>
-    </View>
+    <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
+      <SkeletonCard height={72} />
+      <SkeletonCard height={140} />
+      <SkeletonCard height={180} />
+      <SkeletonCard height={120} />
+    </ScrollView>
   );
 }
 
