@@ -48,6 +48,25 @@ let _currentAppUserID = null;
 let _purchaseListener = null;
 let _errorListener = null;
 
+// Funnel telemetry for the IAP dialog. Reads user from the store
+// lazily so the payments module stays free of store imports at
+// evaluation time. Falls back to _currentAppUserID (set during
+// initialise) when the store hasn't seeded the user yet.
+function _trackPurchase(event, payload) {
+  try {
+    let uid = _currentAppUserID;
+    if (!uid) {
+      // eslint-disable-next-line global-require
+      const useAppStore = require('../../store/useAppStore').default;
+      uid = useAppStore.getState().user?.id ?? null;
+    }
+    if (!uid) return;
+    // eslint-disable-next-line global-require
+    const { track } = require('../engineTelemetry');
+    track(uid, event, payload ?? {}).catch(() => {});
+  } catch (_) { /* tolerate */ }
+}
+
 // Lazy-require react-native-iap so the JS bundle still parses on
 // environments where the native module isn't linked (Jest, dev
 // without prebuild). Returns null if the module isn't available.
@@ -116,6 +135,12 @@ function _buildRealProvider() {
           }
           logInfo('payments.playBilling.purchaseUpdated',
             `sku=${purchase?.productId} token=${purchase?.purchaseToken?.slice(0, 12)}…`);
+          _trackPurchase('purchase_completed', {
+            sku: purchase?.productId ?? null,
+            transaction_id: purchase?.transactionId
+              ?? purchase?.purchaseToken?.slice(0, 24)
+              ?? null,
+          });
         } catch (e) {
           logWarn('payments.playBilling.finishTransaction', e?.message ?? 'unknown', {});
         }
@@ -126,6 +151,10 @@ function _buildRealProvider() {
         if (code === 'E_USER_CANCELLED') return;
         logWarn('payments.playBilling.purchaseError',
           err?.message ?? 'unknown', { code });
+        _trackPurchase('purchase_failed', {
+          error_code: code || 'unknown',
+          error_message: err?.message ?? 'unknown',
+        });
       });
       if (appUserID) {
         // Stamp the obfuscated account ID so RTDN events come back
@@ -143,6 +172,7 @@ function _buildRealProvider() {
     },
 
     async purchasePackage(skuId) {
+      _trackPurchase('purchase_initiated', { sku: skuId });
       // requestSubscription returns a Promise resolving to the
       // purchase object once Google has confirmed. The purchase
       // listener also fires; we wait for the Promise here so the
@@ -159,6 +189,7 @@ function _buildRealProvider() {
     },
 
     async restorePurchases() {
+      _trackPurchase('restore_purchases_attempted', {});
       const purchases = await RNIap.getAvailablePurchases();
       return _purchasesToCustomerInfo(purchases);
     },

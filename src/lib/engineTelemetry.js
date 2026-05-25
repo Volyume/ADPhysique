@@ -96,6 +96,21 @@ const ALLOWED_EVENTS = new Set([
   'app_foregrounded',
   'app_backgrounded',
   'sync_run',
+  // Migration 038: payments + cascade closure. cascade_state_transition
+  // is the generic umbrella with { reason, source_surface, target_tier }
+  // payload. The granular variants (cascade_started, cascade_advanced,
+  // cascade_skipped_ahead, paid_converted, churn_at_gate,
+  // subscription_cancelled) fire alongside where they map cleanly so
+  // existing per-event dashboards keep working. The purchase_* trio
+  // wraps the Google Play Billing IAP dialog from inside playBilling.
+  // restore_purchases_attempted fires once per restore tap from
+  // SubscriptionScreen.
+  'cascade_state_transition',
+  'purchase_initiated',
+  'purchase_completed',
+  'purchase_failed',
+  'subscription_cancelled',
+  'restore_purchases_attempted',
 ]);
 
 let _flushTimer = null;

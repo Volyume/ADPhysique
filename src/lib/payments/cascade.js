@@ -58,8 +58,53 @@ async function _call(rpcName, args) {
   }
 }
 
+// Telemetry fan-out for every successful cascade transition. Fires
+// the generic cascade_state_transition (Panel 5 sankey) plus any
+// granular variants from the locked catalogue that map cleanly to
+// the reason. Read user from the store lazily so the cascade module
+// stays free of store imports at evaluation time.
+function _trackTransition({ reason, sourceSurface, targetTier, paymentRef }) {
+  try {
+    // eslint-disable-next-line global-require
+    const useAppStore = require('../../store/useAppStore').default;
+    const uid = useAppStore.getState().user?.id;
+    if (!uid) return;
+    // eslint-disable-next-line global-require
+    const { track } = require('../engineTelemetry');
+    const base = {
+      reason,
+      source_surface: sourceSurface ?? null,
+      target_tier: targetTier ?? null,
+    };
+    track(uid, 'cascade_state_transition', base).catch(() => {});
+    if (reason === 'cascade_started') {
+      track(uid, 'cascade_started', { source_surface: sourceSurface ?? null }).catch(() => {});
+    } else if (reason === 'user_paid') {
+      track(uid, 'paid_converted', {
+        source_surface: sourceSurface ?? null,
+        tier: targetTier ?? null,
+        payment_ref: paymentRef ? String(paymentRef).slice(0, 12) : null,
+      }).catch(() => {});
+      track(uid, 'cascade_advanced', {
+        source_surface: sourceSurface ?? null,
+        tier: targetTier ?? null,
+      }).catch(() => {});
+    } else if (reason === 'user_skip') {
+      track(uid, 'churn_at_gate', { source_surface: sourceSurface ?? null }).catch(() => {});
+      track(uid, 'cascade_skipped_ahead', { source_surface: sourceSurface ?? null }).catch(() => {});
+    } else if (reason === 'user_cancelled' || reason === 'grace_lapsed' || reason === 'refunded') {
+      track(uid, 'subscription_cancelled', {
+        reason,
+        source_surface: sourceSurface ?? null,
+      }).catch(() => {});
+    }
+  } catch (_) { /* tolerate */ }
+}
+
 export async function startCascade() {
-  return _call('start_cascade', {});
+  const r = await _call('start_cascade', {});
+  if (r.ok) _trackTransition({ reason: 'cascade_started', sourceSurface: 'article9_consent', targetTier: 'pro_trial' });
+  return r;
 }
 
 export async function payAt(targetTier, paymentRef, sourceSurface = null) {
@@ -70,21 +115,25 @@ export async function payAt(targetTier, paymentRef, sourceSurface = null) {
   if (targetTier !== 'pro') {
     return { ok: false, error: 'invalid_target_tier' };
   }
-  return _call('upgrade_tier', {
+  const r = await _call('upgrade_tier', {
     _target_tier: targetTier,
     _reason: 'user_paid',
     _source_surface: sourceSurface,
     _payment_ref: paymentRef,
   });
+  if (r.ok) _trackTransition({ reason: 'user_paid', sourceSurface, targetTier, paymentRef });
+  return r;
 }
 
 export async function skipToFree(sourceSurface = null) {
-  return _call('upgrade_tier', {
+  const r = await _call('upgrade_tier', {
     _target_tier: 'free',
     _reason: 'user_skip',
     _source_surface: sourceSurface,
     _payment_ref: null,
   });
+  if (r.ok) _trackTransition({ reason: 'user_skip', sourceSurface, targetTier: 'free' });
+  return r;
 }
 
 /**
@@ -104,39 +153,47 @@ export async function autoDowngrade(targetTier, sourceSurface = null) {
   if (targetTier !== 'free') {
     return { ok: false, error: 'invalid_auto_downgrade_target' };
   }
-  return _call('upgrade_tier', {
+  const r = await _call('upgrade_tier', {
     _target_tier: targetTier,
     _reason: 'auto_downgrade',
     _source_surface: sourceSurface,
     _payment_ref: null,
   });
+  if (r.ok) _trackTransition({ reason: 'auto_downgrade', sourceSurface, targetTier });
+  return r;
 }
 
 export async function cancel(sourceSurface = 'play_billing_rtdn') {
-  return _call('upgrade_tier', {
+  const r = await _call('upgrade_tier', {
     _target_tier: 'free',
     _reason: 'user_cancelled',
     _source_surface: sourceSurface,
     _payment_ref: null,
   });
+  if (r.ok) _trackTransition({ reason: 'user_cancelled', sourceSurface, targetTier: 'free' });
+  return r;
 }
 
 export async function graceLapsed(sourceSurface = 'grace_timer') {
-  return _call('upgrade_tier', {
+  const r = await _call('upgrade_tier', {
     _target_tier: 'free',
     _reason: 'grace_lapsed',
     _source_surface: sourceSurface,
     _payment_ref: null,
   });
+  if (r.ok) _trackTransition({ reason: 'grace_lapsed', sourceSurface, targetTier: 'free' });
+  return r;
 }
 
 export async function refunded(sourceSurface = 'play_billing_rtdn') {
-  return _call('upgrade_tier', {
+  const r = await _call('upgrade_tier', {
     _target_tier: 'free',
     _reason: 'refunded',
     _source_surface: sourceSurface,
     _payment_ref: null,
   });
+  if (r.ok) _trackTransition({ reason: 'refunded', sourceSurface, targetTier: 'free' });
+  return r;
 }
 
 // ────────────────────────────────────────────────────────────────────
