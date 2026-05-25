@@ -113,6 +113,20 @@ jobs:
           FILE=node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts
           sed -i 's|org.gradle.configurationcache.extensions.serviceOf|org.gradle.kotlin.dsl.support.serviceOf|' "$FILE"
 
+      # Bump Gradle's JVM heap. The default expo prebuild ships
+      # gradle.properties with -Xmx2048m, which is OK for an
+      # incremental local build but tips JetifyTransform (run on
+      # com.facebook.react:react-android-0.74.5-debug.aar) into a
+      # Java-heap OOM on a GitHub-hosted runner with cold caches.
+      # Run #3 died on exactly this. Bump to 4 GB.
+      - name: Bump Gradle heap to 4 GB
+        run: |
+          PROPS=android/gradle.properties
+          # Strip any existing org.gradle.jvmargs line, then append ours.
+          sed -i '/^org\.gradle\.jvmargs/d' "$PROPS"
+          echo 'org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8' >> "$PROPS"
+          grep 'org.gradle.jvmargs' "$PROPS"
+
       - name: Patch app/build.gradle for react-native-iap store flavor (play)
         run: |
           FILE=android/app/build.gradle
