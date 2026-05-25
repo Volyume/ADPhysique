@@ -129,9 +129,9 @@ describe('autoDowngrade', () => {
 
 describe('cancel / graceLapsed / refunded', () => {
   test.each([
-    ['cancel',      'user_cancelled', 'revenuecat_webhook'],
+    ['cancel',      'user_cancelled', 'play_billing_rtdn'],
     ['graceLapsed', 'grace_lapsed',   'grace_timer'],
-    ['refunded',    'refunded',       'revenuecat_webhook'],
+    ['refunded',    'refunded',       'play_billing_rtdn'],
   ])('%s fires upgrade_tier with %s reason and default surface %s', async (verb, reason, defaultSurface) => {
     mockRpc.mockResolvedValue({ data: { trial_state: 'free' }, error: null });
     await cascade[verb]();

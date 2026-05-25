@@ -70,7 +70,7 @@ Verified by direct code inspection against each Move plan doc.
 | **#2** ED-pattern detection | `MOVE_2_ED_PATTERN_DETECTION.md` | ✅ `edPatternDetector.js` (4 signals + threshold flip), migration 017 (ed_pattern_flags table + RPC), HeldDecisionsCard variant, GoalLockConsentScreen, Article9ConsentScreen + migration 019 | ✅ 23 tests in `edPatternDetector.test.js` | ⚠️ Missing: simulator scenarios `aggressive_cut_supervised`, `aggressive_cut_unsupervised`, `red_s_trajectory` (simulator framework itself not built) |
 | **#3** Upward gate compression + telemetry slice | `MOVE_3_UPWARD_GATE_COMPRESSION.md` | ✅ `rapidLossOverride` in `computeAdaptiveTDEEAdjustment`, `engineTelemetry.js` (123 lines), rapid_loss_corrected held-decision card, migration 027 (rapid_loss_compression_triggered allow-list) | ✅ 15 tests in `upwardGateCompression.test.js` | ⚠️ `rapid_loss_compression_triggered` event allow-listed but no caller wired in code. Simulator scenario `rapid_loss_correction` not built. |
 | **#4** Differential paywall | `MOVE_4_DIFFERENTIAL_PAYWALL.md` | ❌ **NOT STARTED.** No `DifferentialBadge`, no `PaywallScreen`, no `differential_output` field in weeklyCoach. | n/a | n/a |
-| **#5** Tier infrastructure + RevenueCat | `MOVE_5_TIER_INFRASTRUCTURE.md` | ❌ **NOT STARTED.** No `src/lib/payments/` dir, no `tier_history` table, no `upgrade_tier` RPC, no cascade state machine, no RevenueCat SDK in package.json, `proGate.js` missing `isPaidTier`/`hasFeature`/`hasGoalUnlock`. | n/a | n/a |
+| **#5** Tier infrastructure + Google Play Billing (founder override; was RevenueCat) | `MOVE_5_TIER_INFRASTRUCTURE.md` | 🟡 **IN PROGRESS.** Migrations 030 + 031 applied (`tier_history`, `users_profile.trial_state` + cols, `upgrade_tier` RPC, `start_cascade` RPC, cascade workers via pg_cron). `src/lib/payments/` module built (`playBilling.js`, `catalogue.js`, `cascade.js`, `restore.js`). proGate has `isPaidTier`/`hasFeature`/`hasGoalUnlock` + FEATURE_MAP. CascadeGateScreen + SubscriptionScreen shipped. **Outstanding:** real IAP SDK wiring + Play RTDN Edge Function + sandbox purchase test (at Phase A exit). | n/a | n/a |
 
 **Test totals (verified via Jest run reported by audit):** 1086 tests in 41 suites, 0 fail, 0 skip.
 
@@ -218,7 +218,7 @@ In suggested execution order:
 | 4 | Add `food.waterfall.test.js` integration test (mocked sources, full chain) | `MOVE_1_5_BARCODE_AND_OCR.md` + `TESTING_STRATEGY_LOCKED.md` | S (~1 h) | Claude |
 | 5 | Extend `engineTelemetry.js` allow-list + wire callers for missing core events: `weekly_coach_run`, `ffm_floor_hold_fired`, `food_logged`, `food_search_attempt`, `sync_run`, `article9_consent_recorded` | `TELEMETRY_DASHBOARDS_LOCKED.md` | M (~3 h) | Claude |
 | 6 | ✅ Migration 030 written: `tier_history` + `users_profile.trial_state` + 5 cols + `pricing_config` + `current_pricing_window` + `_tier_for_trial_state` + `start_cascade` RPC + `upgrade_tier` RPC. Bypasses existing `protect_users_profile_tier` trigger via `session_replication_role`. Backfills existing pro users to `trial_state='paid_pro'`. | `DATABASE_SCHEMA_LOCKED.md` lines 432-481 + `SUBSCRIPTION_AND_PAYMENT_LOCKED.md` | Founder action remaining: paste into Supabase Dashboard → SQL Editor → Run | Claude wrote, Founder applies |
-| 7 | Build `src/lib/payments/` module skeleton: `revenuecat.js` (stub provider interface), `catalogue.js` (6 SKUs), `cascade.js` (state machine implementing all 17 transitions), `restore.js` | `SUBSCRIPTION_AND_PAYMENT_LOCKED.md` lines 87-202 + `MOVE_5_TIER_INFRASTRUCTURE.md` lines 78-89 | L (~1 week) | Claude |
+| 7 | ✅ Built `src/lib/payments/` module: `playBilling.js` (provider stub, swappable), `catalogue.js` (6 SKUs), `cascade.js` (state machine implementing all 17 transitions), `restore.js`, `index.js`. Provider renamed from `revenuecat.js` per 2026-05-25 founder override (Google Play direct). | `SUBSCRIPTION_AND_PAYMENT_LOCKED.md` lines 87-202 + `MOVE_5_TIER_INFRASTRUCTURE.md` lines 78-89 | DONE | Claude |
 | 8 | Extend `proGate.js` with `isPaidTier()`, `hasFeature()`, `hasGoalUnlock()` + FEATURE_MAP from `MOVE_5_TIER_INFRASTRUCTURE.md` lines 40-76 | `COMPLETE_TIER_SCOPE_LOCKED.md` lines 119-128 | S (~2 h) | Claude |
 | 9 | Build `CascadeGateScreen.js` + `SubscriptionScreen.js` + `TierComparisonStrip.js` | `UI_FLOWS_LOCKED.md` lines 229-246 + `SUBSCRIPTION_AND_PAYMENT_LOCKED.md` lines 305-326 | M (~3-4 days) | Claude |
 | 10 | Implement Move #4: extend `weeklyCoach.js` with `differential_output` field, build `DifferentialBadge.js` + `PaywallScreen.js`, snapshot tests for 6 locked copy variants | `MOVE_4_DIFFERENTIAL_PAYWALL.md` | M (~1 week) | Claude |
@@ -231,10 +231,9 @@ In suggested execution order:
 |---|---|---|---|
 | Generate Android upload keystore + configure Google Play App Signing | n/a (release-engineering) | M | Founder + Claude (writes config) |
 | Run a CI build with the keystore, verify the AAB is release-signed | `build-android.yml` already has the verification step | S | Both |
-| Create RevenueCat account, configure Android app, generate SDK key | external | 2-3 h | Founder |
-| Wire real RevenueCat into the stubbed provider from item 7 | `SUBSCRIPTION_AND_PAYMENT_LOCKED.md` | M | Claude |
+| Install `react-native-iap` (or `expo-in-app-purchases`) and wire it into `src/lib/payments/playBilling.js` as the real provider | founder-overridden vs the locked RevenueCat path | S (~30 min once SKUs configured) | Claude |
 | Create sandbox SKUs in Play Console (open beta only) | external | 1 h | Founder |
-| Implement Supabase Edge Function `revenuecat-webhook` | `SUBSCRIPTION_AND_PAYMENT_LOCKED.md` lines 285-301 | M | Claude |
+| Implement Supabase Edge Function `play-billing-rtdn` (Google Play Real-Time Developer Notifications subscriber) | replaces the spec'd RevenueCat webhook handler per founder override | M (~1-2 days) | Claude |
 | Run sandbox purchase end-to-end (Android only) → verify `tier_history` row + `trial_state` update | acceptance check in `MOVE_5_TIER_INFRASTRUCTURE.md` line 202 | M | Both |
 | Stand up engine simulator framework + 12 locked scenarios | `TESTING_STRATEGY_LOCKED.md` lines 22-72 | L (~1 week) | Claude |
 | Stand up Maestro E2E framework + 12 critical-path flows | `TESTING_STRATEGY_LOCKED.md` lines 114-141 | M-L | Claude |
@@ -260,7 +259,9 @@ In suggested execution order:
 
 ### EXPLICITLY OUT OF SCOPE FOR NOW
 
-Founder direction 2026-05-25: **cloud infrastructure migration (Azure/AWS) is deferred until the app is stable in production.** The current Supabase + Sentry + RevenueCat stack stays for v1 launch. Revisit only if (a) telemetry proves Supabase's free tier or paid tier is genuinely insufficient, or (b) a compliance / enterprise requirement appears that requires AWS/Azure-only infrastructure. Estimate at the time of asking: ~£15-50/month recurring + 8-12 weeks of engineering to migrate, with no functional gain pre-launch.
+Founder direction 2026-05-25: **cloud infrastructure migration (Azure/AWS) is deferred until the app is stable in production.** The current Supabase + Sentry stack stays for v1 launch. Revisit only if (a) telemetry proves Supabase's free tier or paid tier is genuinely insufficient, or (b) a compliance / enterprise requirement appears that requires AWS/Azure-only infrastructure. Estimate at the time of asking: ~£15-50/month recurring + 8-12 weeks of engineering to migrate, with no functional gain pre-launch.
+
+Founder override 2026-05-25: **Google Play Billing direct, not RevenueCat.** The original locked spec (`SUBSCRIPTION_AND_PAYMENT_LOCKED.md` line 49) chose RevenueCat as the IAP abstraction layer for cross-platform identity. With iOS deferred indefinitely under the Android-only Phase B decision, RevenueCat's main differentiator is moot. Going direct against Google Play Billing removes the 1%-above-£2.5k-MRR fee and one third-party dependency. The `src/lib/payments/playBilling.js` provider abstraction stays in place so the underlying SDK (`react-native-iap` or `expo-in-app-purchases`) can swap without touching the cascade module, UI, or RPC layer. If iOS lands at a later phase, switching back to RevenueCat or adding a sibling Apple StoreKit provider is one-file work.
 
 Locked deferrals from `BUDGET_POSTURE_LOCKED.md`, `MASTER_VISION_AND_PLAN.md` Section 19, and `COMPLETE_TIER_SCOPE_LOCKED.md`:
 
@@ -292,7 +293,7 @@ Locked deferrals from `BUDGET_POSTURE_LOCKED.md`, `MASTER_VISION_AND_PLAN.md` Se
 ### When Claude says "Phase A code work complete, ready for Phase A exit prep"
 
 3. Generate Android upload keystore. I'll write the commands.
-4. Create RevenueCat account, give me the SDK key (via secret, not chat).
+4. (No RevenueCat account needed — direct Google Play Billing per 2026-05-25 override.) Set up Google Cloud Pub/Sub topic for Real-Time Developer Notifications when ready for Phase A exit; I'll write the subscriber Edge Function.
 5. Create the 6 SKU products in Play Console (open beta visible, founders/standard hidden).
 6. Set up sandbox testers in Play Console for end-to-end purchase test.
 

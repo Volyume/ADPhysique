@@ -1,27 +1,27 @@
 /**
- * RevenueCat provider wrapper.
+ * Google Play Billing provider wrapper.
  *
- * Locked in SUBSCRIPTION_AND_PAYMENT_LOCKED.md line 49: RevenueCat on
- * top of Apple StoreKit 2 + Google Play Billing.
- *
- * At Phase A (current) the real RevenueCat SDK is not yet wired:
- *   * No Apple Developer account → no iOS app entity
- *   * No SDK key issued yet
- *   * No SKUs created in Play Console yet
+ * Founder override 2026-05-25: the original locked spec
+ * (SUBSCRIPTION_AND_PAYMENT_LOCKED.md line 49) chose RevenueCat as
+ * the abstraction layer. With iOS deferred indefinitely per the
+ * Android-only Phase B decision, RevenueCat's main value
+ * (cross-platform identity) is moot. Going direct against Google
+ * Play Billing removes the 1%-above-£2.5k-MRR fee and one third-party
+ * dependency. Logged in CURRENT_STATUS.md.
  *
  * This module exposes the API surface the cascade module and UI
- * will call against, with a default "stub provider" that returns
- * safe no-op results. At Phase A exit we swap in the real provider
- * (`react-native-purchases`) by calling `injectProvider()` once at
- * app boot. Tests inject their own mock.
+ * call against, with a default stub provider that returns safe no-op
+ * results. At Phase A exit we swap in the real provider, which wraps
+ * `react-native-iap` (or `expo-in-app-purchases`) and talks directly
+ * to Google Play Billing.
  *
- * Provider contract:
+ * Provider contract (identical regardless of underlying SDK):
  *   {
- *     initialise({ apiKey, appUserID }) -> Promise<void>
- *     getCustomerInfo()                 -> Promise<CustomerInfo>
- *     purchasePackage(skuId)            -> Promise<{ transactionId, sku, customerInfo }>
- *     restorePurchases()                -> Promise<CustomerInfo>
- *     logOut()                          -> Promise<void>
+ *     initialise({ appUserID }) -> Promise<void>
+ *     getCustomerInfo()         -> Promise<CustomerInfo>
+ *     purchasePackage(skuId)    -> Promise<{ transactionId, sku, customerInfo }>
+ *     restorePurchases()        -> Promise<CustomerInfo>
+ *     logOut()                  -> Promise<void>
  *   }
  *
  * CustomerInfo shape we care about:
@@ -30,6 +30,13 @@
  *     latestTransactionId: string | null,
  *     activeSku: string | null,
  *   }
+ *
+ * Receipt validation lives server-side in the Supabase Edge Function
+ * (supabase/functions/google-iap-rtdn/). The client passes the
+ * purchase token; the function calls Google Play Developer API's
+ * verifyPurchase endpoint, then fires `upgrade_tier` with the verified
+ * transaction. Same flow shape as if RevenueCat had been chosen, just
+ * fewer middlemen.
  */
 
 import { logInfo, logWarn } from '../errorLog';
@@ -48,7 +55,7 @@ const _stubProvider = Object.freeze({
   async initialise() { /* no-op */ },
   async getCustomerInfo() { return { ...STUB_CUSTOMER_INFO }; },
   async purchasePackage() {
-    throw new Error('RevenueCat provider not injected (Phase A stub)');
+    throw new Error('Play Billing provider not injected (Phase A stub)');
   },
   async restorePurchases() { return { ...STUB_CUSTOMER_INFO }; },
   async logOut() { /* no-op */ },
@@ -66,7 +73,7 @@ export function injectProvider(provider) {
   _provider = provider;
   _initialised = false;
   _currentAppUserID = null;
-  logInfo('payments.revenuecat.providerInjected', 'real provider installed');
+  logInfo('payments.playBilling.providerInjected', 'real provider installed');
 }
 
 export function _resetForTests() {
@@ -92,16 +99,17 @@ export function currentAppUserID() {
 }
 
 /**
- * Initialise the SDK with the user's Volyume auth.uid() as the
- * RevenueCat appUserID. Locked in SUBSCRIPTION_AND_PAYMENT_LOCKED.md
- * lines 211-212: appUserID is our Supabase auth.uid().
+ * Initialise the underlying IAP SDK with the user's Volyume
+ * auth.uid() as the SDK-side userID. The locked spec used appUserID
+ * for cross-platform reconciliation; on Play-only that's our local
+ * key for tying purchaseTokens back to the right Supabase user.
  *
  * Safe to call repeatedly; re-init with the same appUserID is a
  * no-op. Switching users requires logOut() first.
  */
 export async function initialise({ apiKey, appUserID }) {
   if (!appUserID) {
-    logWarn('payments.revenuecat.init', 'missing appUserID; skipping');
+    logWarn('payments.playBilling.init', 'missing appUserID; skipping');
     return false;
   }
   if (_initialised && _currentAppUserID === appUserID) return true;
@@ -111,7 +119,7 @@ export async function initialise({ apiKey, appUserID }) {
     _currentAppUserID = appUserID;
     return true;
   } catch (e) {
-    logWarn('payments.revenuecat.init.failed', e?.message ?? 'unknown', {});
+    logWarn('payments.playBilling.init.failed', e?.message ?? 'unknown', {});
     return false;
   }
 }
@@ -123,9 +131,11 @@ export async function getCustomerInfo() {
 /**
  * Initiate a purchase. The cascade module wraps this with the
  * Volyume-side tier_history write via the upgrade_tier RPC after
- * the platform confirms the purchase. RevenueCat's webhook is the
- * authoritative source-of-truth side; this client-side call gives
- * the user immediate feedback.
+ * the platform confirms the purchase. Google Play Billing's
+ * Real-Time Developer Notification (RTDN) Pub/Sub topic, processed
+ * by our Supabase Edge Function, is the authoritative source of
+ * truth for renewals / cancellations / refunds; this client-side
+ * call gives the user immediate feedback at purchase time.
  */
 export async function purchasePackage(skuId) {
   return _active().purchasePackage(skuId);
@@ -136,8 +146,8 @@ export async function restorePurchases() {
 }
 
 /**
- * Sign-out hook. Called from the Volyume sign-out flow so RevenueCat
- * doesn't keep the previous user's entitlements associated with the
+ * Sign-out hook. Called from the Volyume sign-out flow so the IAP
+ * SDK doesn't keep the previous user's entitlements associated with the
  * device.
  */
 export async function logOut() {
@@ -145,7 +155,7 @@ export async function logOut() {
   try {
     await _active().logOut();
   } catch (e) {
-    logWarn('payments.revenuecat.logOut.failed', e?.message ?? 'unknown', {});
+    logWarn('payments.playBilling.logOut.failed', e?.message ?? 'unknown', {});
   } finally {
     _initialised = false;
     _currentAppUserID = null;

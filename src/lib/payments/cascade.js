@@ -9,7 +9,7 @@
  * with the verbs the UI + workers actually call:
  *
  *   startCascade()              -- Article 9 consent → complete_trial_active
- *   payAt(tier, ref, surface)   -- 'user_paid' (after RevenueCat success)
+ *   payAt(tier, ref, surface)   -- 'user_paid' (after Play Billing success)
  *   skipToFree(surface)         -- 'user_skip' → free
  *   skipToPro(surface)          -- 'user_skip' → pro_trial_active
  *   autoDowngrade(tier, surface)-- 'auto_downgrade' (day 14 / 28 worker)
@@ -107,7 +107,7 @@ export async function autoDowngrade(targetTier, sourceSurface = null) {
   });
 }
 
-export async function cancel(sourceSurface = 'revenuecat_webhook') {
+export async function cancel(sourceSurface = 'play_billing_rtdn') {
   return _call('upgrade_tier', {
     _target_tier: 'free',
     _reason: 'user_cancelled',
@@ -125,7 +125,7 @@ export async function graceLapsed(sourceSurface = 'grace_timer') {
   });
 }
 
-export async function refunded(sourceSurface = 'revenuecat_webhook') {
+export async function refunded(sourceSurface = 'play_billing_rtdn') {
   return _call('upgrade_tier', {
     _target_tier: 'free',
     _reason: 'refunded',

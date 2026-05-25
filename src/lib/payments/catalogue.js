@@ -86,8 +86,8 @@ export function priceTextFor(tier, pricingWindow) {
 
 /**
  * Look up SKU by its ID (the string that App Store / Play Console
- * uses). Useful in the RevenueCat webhook handler when correlating
- * incoming events.
+ * uses). Useful in the Play Billing RTDN webhook handler when
+ * correlating incoming notifications back to a known SKU.
  */
 export function skuById(id) {
   for (const tier of TIERS) {
@@ -100,8 +100,8 @@ export function skuById(id) {
 }
 
 /**
- * Flat list of all six SKU IDs. Used by the RevenueCat init step to
- * declare every product the app knows about.
+ * Flat list of all six SKU IDs. Used by the Play Billing init step
+ * to declare every product the app knows about.
  */
 export function allSkuIds() {
   const ids = [];

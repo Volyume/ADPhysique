@@ -30,7 +30,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, fontSize, fontWeight, hitSlop } from '../styles/theme';
 import TierComparisonStrip from '../components/TierComparisonStrip';
 import * as cascade from '../lib/payments/cascade';
-import * as revenuecat from '../lib/payments/revenuecat';
+import * as playBilling from '../lib/payments/playBilling';
 import { skuFor } from '../lib/payments/catalogue';
 import { logError, logInfo } from '../lib/errorLog';
 
@@ -107,7 +107,7 @@ export default function CascadeGateScreen({ navigation, route }) {
       // Initiate purchase. The webhook posts back the tier change;
       // we also call cascade.payAt optimistically so the local state
       // updates immediately (idempotent — webhook will reconcile).
-      const purchaseResult = await revenuecat.purchasePackage(sku.id);
+      const purchaseResult = await playBilling.purchasePackage(sku.id);
       const ref = purchaseResult?.transactionId ?? `client_${Date.now()}`;
       const cascadeResult = await cascade.payAt(targetTier, ref, content.surface);
       if (!cascadeResult.ok) {

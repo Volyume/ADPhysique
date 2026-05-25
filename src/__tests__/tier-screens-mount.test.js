@@ -37,7 +37,7 @@ jest.mock('../lib/payments/cascade', () => ({
   daysRemaining: () => 7,
 }));
 
-jest.mock('../lib/payments/revenuecat', () => ({
+jest.mock('../lib/payments/playBilling', () => ({
   purchasePackage: jest.fn(async () => ({ transactionId: 'txn_test', sku: 'pro_monthly_open_beta' })),
 }));
 
