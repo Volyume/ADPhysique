@@ -3,47 +3,73 @@
  * buildOffSnapshot.js
  *
  * Generates assets/seed/off_uk_snapshot.dat from OpenFoodFacts.
- * The output file is bundled into the APK and imported into the
- * local foods cache by src/lib/food/seed.js on first launch.
+ * Bundled into the APK; imported into the local foods cache by
+ * src/lib/food/seed.js on first launch.
  *
- * Why the search API and not the full dump:
- *   The OFF JSONL dump has every UK product entry (~180k) but only
- *   ~1% have usable macros — most are barcode+name only. The search
- *   API pre-filters for products with nutriments, so ~97 of every
- *   100 returned are usable. 300 pages × 100 = ~30k usable UK rows,
- *   which beats ~1.8k usable from the 11 GB dump.
+ * Strategy: multi-axis paginated search.
  *
- *   .dat extension keeps Metro treating the file as a binary asset
- *   rather than inlining the parsed JSON into the JS bundle. See
- *   metro.config.js.
+ *   The OFF search.pl API caps responses at 100 rows per page AND
+ *   30 pages per query. A single "country=UK" query therefore tops
+ *   out at ~3,000 rows. To get full UK coverage we run the same
+ *   30-page query against multiple stacked filters and dedupe by
+ *   EAN across the runs:
  *
- * Run this BEFORE each EAS build (or let the weekly GitHub Actions
- * workflow do it):
+ *     - UK alone (catches uncategorised entries)
+ *     - UK × each of ~30 major OFF categories
+ *     - UK × each of ~10 major UK supermarket / own-brand brands
  *
- *   node scripts/seed/buildOffSnapshot.js
+ *   Each axis returns up to 3,000 products. With heavy overlap, the
+ *   unique-after-dedup count typically lands ~50-120k UK foods with
+ *   full macros. ~15-25 min on GitHub Actions ubuntu-latest.
  *
- * Polite: identifies via User-Agent, paginates with a small delay,
- * retries transient 5xx / 429 with backoff, tolerates a few
- * consecutive page failures before bailing.
+ *   The dump-based approach was tried (see git history) and produced
+ *   only ~1-5% of UK products with usable macros; the dump is mostly
+ *   barcode+name placeholders. The search API pre-filters for rows
+ *   with nutriments, so the pages we pull are mostly usable.
  *
- * Source: openfoodfacts.org search API filtered to
- * country=united-kingdom with non-null macros. ODbL 1.0.
+ * .dat extension keeps Metro treating the file as a binary asset
+ * (numeric registry id for Asset.fromModule) rather than inlining
+ * the parsed JSON into the JS bundle. See metro.config.js.
+ *
+ * Source: openfoodfacts.org search API, ODbL 1.0.
  */
 const fs = require('node:fs');
 const path = require('node:path');
 
 const OFF_BASE = 'https://world.openfoodfacts.org';
-const USER_AGENT = 'Volyume-Snapshot-Builder/2.1 (https://volyume.app)';
-const PAGE_SIZE = 1000;
-const MAX_PAGES = 300;
-const REQUEST_DELAY_MS = 800;
-const MAX_CONSECUTIVE_FAILURES = 5;
+const USER_AGENT = 'Volyume-Snapshot-Builder/3.0 (https://volyume.app)';
+const PAGE_SIZE = 100;
+const MAX_PAGES_PER_AXIS = 30;
+const REQUEST_DELAY_MS = 500;
+const MAX_CONSECUTIVE_FAILURES_PER_AXIS = 4;
 const OUT_PATH = path.resolve(__dirname, '..', '..', 'assets', 'seed', 'off_uk_snapshot.dat');
+
+// OFF's major categories. Stacking each with country=united-kingdom
+// pulls a different slice of the UK catalogue. Order doesn't matter;
+// dedupe-by-EAN handles overlap.
+const CATEGORIES = [
+  'beverages', 'dairies', 'plant-based-foods-and-beverages', 'snacks',
+  'breakfasts', 'cereals-and-potatoes', 'meats-and-their-products', 'fish-and-seafood',
+  'breads', 'cereals', 'fruits', 'vegetables', 'fats',
+  'sugary-snacks', 'salty-snacks', 'condiments', 'sauces', 'soups',
+  'meals', 'frozen-foods', 'chocolates', 'biscuits-and-cakes',
+  'yogurts', 'cheeses', 'eggs', 'pastas', 'rice',
+  'ice-creams', 'fruit-juices', 'waters',
+  'alcoholic-beverages', 'spreads', 'nuts', 'legumes',
+  'desserts', 'baby-foods', 'sandwiches', 'pizzas-pies-and-quiches',
+];
+
+// Major UK supermarket / own-brand tags. Different OFF brand tags
+// catch products that aren't well-categorised.
+const BRANDS = [
+  'tesco', 'sainsbury-s', 'asda', 'morrisons', 'waitrose',
+  'marks-spencer', 'lidl', 'aldi', 'the-co-operative', 'iceland',
+  'cadbury', 'walkers', 'mcvitie-s', 'nestle', 'kellogg-s',
+];
 
 function log(...args) { console.log('[off-snapshot]', ...args); }
 function warn(...args) { console.warn('[off-snapshot]', ...args); }
 function err(...args) { console.error('[off-snapshot]', ...args); }
-
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
 function num(v) {
@@ -56,8 +82,8 @@ function toRow(product) {
   if (!product) return null;
   const n = product.nutriments || {};
   // Try _100g first (normalised). Fall back to _value when the
-  // product is tagged nutrition_data_per='100g'. Last resort: derive
-  // kcal from macros via the Atwater approximation.
+  // product is tagged nutrition_data_per='100g'. Derive kcal via
+  // Atwater (4P + 4C + 9F) if macros present but kcal missing.
   const per100 = product.nutrition_data_per === '100g' || !product.nutrition_data_per;
   const valueOf = (key100, keyValue) => num(n[key100]) ?? (per100 ? num(n[keyValue]) : null);
   const protein = valueOf('proteins_100g', 'proteins_value');
@@ -69,7 +95,6 @@ function toRow(product) {
     if (kj != null) kcal = kj / 4.184;
   }
   if (kcal == null && protein != null && carbs != null && fat != null) {
-    // Atwater approximation: 4 kcal/g protein + 4 kcal/g carb + 9 kcal/g fat.
     kcal = (protein * 4) + (carbs * 4) + (fat * 9);
   }
   const row = {
@@ -94,13 +119,20 @@ function toRow(product) {
   return row;
 }
 
-async function fetchPage(page) {
-  const url = `${OFF_BASE}/cgi/search.pl`
-    + `?action=process&json=1`
-    + `&tagtype_0=countries&tag_contains_0=contains&tag_0=united-kingdom`
-    + `&page=${page}&page_size=${PAGE_SIZE}`
+// Build a search URL with stacked tag filters. Each axis is a
+// (tagtype, tag) pair; OFF accepts up to 9 axes per query.
+function buildUrl({ axes, page }) {
+  let qs = `action=process&json=1&page=${page}&page_size=${PAGE_SIZE}`
     + `&fields=code,product_name,product_name_en,generic_name,brands,`
     + `serving_quantity,serving_size,nutrition_data_per,nutriments`;
+  axes.forEach(([type, tag], i) => {
+    qs += `&tagtype_${i}=${type}&tag_contains_${i}=contains`
+       +  `&tag_${i}=${encodeURIComponent(tag)}`;
+  });
+  return `${OFF_BASE}/cgi/search.pl?${qs}`;
+}
+
+async function fetchPage(url, label) {
   const MAX_ATTEMPTS = 4;
   let lastErr = null;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
@@ -110,9 +142,9 @@ async function fetchPage(page) {
         headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' },
       });
       if (res.status >= 500 || res.status === 429) {
-        lastErr = new Error(`OFF page ${page} returned ${res.status}`);
+        lastErr = new Error(`${label} returned ${res.status}`);
       } else if (!res.ok) {
-        throw new Error(`OFF page ${page} returned ${res.status}`);
+        throw new Error(`${label} returned ${res.status}`);
       } else {
         return res.json();
       }
@@ -121,71 +153,95 @@ async function fetchPage(page) {
     }
     if (attempt < MAX_ATTEMPTS) {
       const backoffMs = 1500 * Math.pow(2, attempt - 1);
-      warn(`page ${page} attempt ${attempt} failed (${lastErr.message}); retrying in ${backoffMs}ms`);
       await sleep(backoffMs);
     }
   }
-  throw lastErr ?? new Error(`OFF page ${page} unknown failure`);
+  throw lastErr ?? new Error(`${label} unknown failure`);
 }
 
-(async function main() {
+async function runAxis({ axes, label, seenEan, rows }) {
   const t0 = Date.now();
-  log('starting UK snapshot build (search API)');
-  log(`output: ${OUT_PATH}`);
-
-  const seenEan = new Set();
-  const rows = [];
-  let totalFetched = 0;
-  let totalSkipped = 0;
   let consecutiveFailures = 0;
-
-  for (let page = 1; page <= MAX_PAGES; page++) {
+  let pagesFetched = 0;
+  let newRowsThisAxis = 0;
+  let skippedThisAxis = 0;
+  for (let page = 1; page <= MAX_PAGES_PER_AXIS; page++) {
     let payload;
     try {
-      payload = await fetchPage(page);
+      payload = await fetchPage(buildUrl({ axes, page }), `${label} p${page}`);
       consecutiveFailures = 0;
+      pagesFetched++;
     } catch (e) {
-      err(`page ${page} fetch failed: ${e.message}`);
       consecutiveFailures++;
-      if (rows.length === 0 && page === 1) throw e;
-      if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-        warn(`${MAX_CONSECUTIVE_FAILURES} consecutive page failures; stopping at page ${page}`);
+      if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES_PER_AXIS) {
+        warn(`${label}: ${MAX_CONSECUTIVE_FAILURES_PER_AXIS} consecutive failures, abandoning axis at p${page}`);
         break;
       }
       await sleep(REQUEST_DELAY_MS);
       continue;
     }
     const products = Array.isArray(payload?.products) ? payload.products : [];
-    totalFetched += products.length;
-    if (products.length === 0) {
-      log(`page ${page}: empty, stopping pagination`);
-      break;
-    }
+    if (products.length === 0) break;
     for (const p of products) {
       const row = toRow(p);
-      if (!row) { totalSkipped++; continue; }
-      if (seenEan.has(row.ean)) { totalSkipped++; continue; }
+      if (!row) { skippedThisAxis++; continue; }
+      if (seenEan.has(row.ean)) { skippedThisAxis++; continue; }
       seenEan.add(row.ean);
       rows.push(row);
+      newRowsThisAxis++;
     }
-    if (page % 10 === 0 || page <= 5) {
-      log(`page ${page}: kept ${rows.length} so far (this page +${products.length} raw)`);
-    }
+    if (products.length < PAGE_SIZE) break;
     await sleep(REQUEST_DELAY_MS);
+  }
+  const ms = Date.now() - t0;
+  log(`${label}: +${newRowsThisAxis} (${pagesFetched}p, skipped ${skippedThisAxis}, ${(ms/1000).toFixed(1)}s, total=${rows.length})`);
+}
+
+(async function main() {
+  const t0 = Date.now();
+  log('starting multi-axis UK snapshot build');
+  log(`axes: 1 country-only + ${CATEGORIES.length} category + ${BRANDS.length} brand = ${1 + CATEGORIES.length + BRANDS.length} runs`);
+  log(`output: ${OUT_PATH}`);
+
+  const seenEan = new Set();
+  const rows = [];
+
+  // Axis 0: country only. Catches uncategorised entries.
+  await runAxis({
+    axes: [['countries', 'united-kingdom']],
+    label: 'UK',
+    seenEan, rows,
+  });
+
+  // Axes 1..N: country × category.
+  for (const cat of CATEGORIES) {
+    await runAxis({
+      axes: [['countries', 'united-kingdom'], ['categories', cat]],
+      label: `UK×${cat}`,
+      seenEan, rows,
+    });
+  }
+
+  // Axes N..M: country × brand.
+  for (const brand of BRANDS) {
+    await runAxis({
+      axes: [['countries', 'united-kingdom'], ['brands', brand]],
+      label: `UK×${brand}`,
+      seenEan, rows,
+    });
   }
 
   const ms = Date.now() - t0;
   const out = {
     _meta: {
       format: 'off-uk-snapshot',
-      version: 2,
+      version: 3,
       generatedAt: new Date().toISOString(),
       rowCount: rows.length,
-      source: 'openfoodfacts.org search API, country=united-kingdom',
+      source: 'openfoodfacts.org search API, multi-axis UK + category + brand',
       sourceLicense: 'Open Database License (ODbL) 1.0',
       buildMs: ms,
-      totalFetched,
-      totalSkipped,
+      axesRun: 1 + CATEGORIES.length + BRANDS.length,
     },
     rows,
   };
@@ -194,8 +250,7 @@ async function fetchPage(page) {
   fs.writeFileSync(OUT_PATH, JSON.stringify(out));
   const bytes = fs.statSync(OUT_PATH).size;
   const mb = (bytes / 1024 / 1024).toFixed(2);
-  log(`wrote ${rows.length.toLocaleString()} rows (${mb} MB) in ${ms}ms`);
-  log(`skipped ${totalSkipped} (missing fields or duplicate)`);
+  log(`wrote ${rows.length.toLocaleString()} unique rows (${mb} MB) in ${(ms/1000).toFixed(1)}s`);
   log('done. commit assets/seed/off_uk_snapshot.dat + push.');
 })().catch((e) => {
   err('fatal:', e.message);
