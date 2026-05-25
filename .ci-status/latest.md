@@ -1,10 +1,10 @@
 # Latest CI Build Status
 
-- **Run number**: 680
-- **Run URL**: https://github.com/allansdouglas1983-cmyk/ADPhysique/actions/runs/26394744809
+- **Run number**: 681
+- **Run URL**: https://github.com/allansdouglas1983-cmyk/ADPhysique/actions/runs/26394950016
 - **Branch**: `main`
-- **Commit**: `ba072e064586ac064321e46b1330226d9b222129`
-- **Triggered at**: 2026-05-25T10:03:22Z
+- **Commit**: `e5e6df7ae56d30bcd5732db8c749987e84567bd7`
+- **Triggered at**: 2026-05-25T10:08:27Z
 - **Job status at write time**: `failure`
 
 ## Secret lengths (values not logged)
