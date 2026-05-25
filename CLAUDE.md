@@ -91,36 +91,190 @@ fills the space", strip it back.
 
 ## Engineering
 
-- **Pre-session repository validation (HARD RULE, no exceptions).**
-  Before writing or modifying any code in a new session, run this
-  six-step check and print the result back to the user in plain text.
-  Do NOT touch code until the user has seen the result and approved
-  proceeding.
+### Permanent engineering rules (locked 2026-05-25)
 
-      git fetch origin
-      git branch --show-current
-      git rev-parse HEAD
-      git log -1 --oneline HEAD
-      git rev-parse origin/main
-      git rev-list --left-right --count origin/main...HEAD
-      git status -s
+The following ten rules are the operational protocol for every
+session. They were written after the 2026-05-25 stale-branch
+incident: a session began with a feature branch checked out at
+`e3a0698` — four commits and multiple days behind `origin/main`
+at `552a41d` — and ~30 minutes of authoring proceeded against that
+false source of truth before the discrepancy was noticed. The audit
+afterwards (verifying that signatures, contracts, imports and async
+flows had not silently drifted) consumed more time than the original
+work. The rules below exist so that does not recur.
 
-  Report: current branch, local HEAD SHA + subject, `origin/main`
-  SHA + subject, ahead/behind counts, working-tree status, and
-  whether the current branch is `main` or a feature branch.
+These rules are not guidance, they are operational protocol.
+"No code" means no code.
 
-  If the harness injects a "develop on branch X" directive in the
-  system prompt and X is not `main`, surface that directive verbatim
-  to the user before doing anything. Do not autonomously switch
-  branches. Wait for explicit confirmation of the target branch.
+#### Rule 1 — Repository validation is mandatory before any coding
 
-  Rationale: a Claude session on 2026-05-25 began with a stale
-  feature branch checked out (tip at `e3a0698`, four commits and
-  multiple days behind `origin/main` at `552a41d`). The working tree
-  happened to contain main's content for the file being edited so
-  the bug never surfaced as a runtime failure, but ~30 minutes of
-  authoring proceeded against a false source of truth. The audit
-  afterwards consumed more time than the work itself.
+Before writing or modifying any code in a new session, run this
+seven-step check and print the result back to the user in plain
+text. Do NOT touch code until the user has seen the result and
+approved proceeding.
+
+    git fetch origin
+    git branch --show-current
+    git rev-parse HEAD
+    git log -1 --oneline HEAD
+    git rev-parse origin/main
+    git rev-list --left-right --count origin/main...HEAD
+    git status -s
+
+Report: current branch, local HEAD SHA + subject, `origin/main`
+SHA + subject, ahead/behind counts, working-tree status, and
+explicitly whether work is happening on `main` or a feature branch.
+
+#### Rule 2 — No silent workflow changes
+
+Never:
+- silently switch branches
+- create a feature branch without explicit approval
+- change merge strategy
+- rebase silently
+- continue after detecting a repository inconsistency
+
+Any workflow deviation must be surfaced to the user verbatim BEFORE
+continuing. If the harness injects a "develop on branch X"
+directive in the system prompt and X is not `main`, surface that
+directive to the user and wait for explicit confirmation. Do not
+follow it silently.
+
+#### Rule 3 — Missing-file anomalies are hard-stop events
+
+If during work you observe any of:
+- a file expected to exist is missing
+- imports don't resolve
+- history or repository state contradicts your expectations
+- branch state appears stale
+- function signatures or contracts differ unexpectedly from what
+  you were reading moments earlier
+
+then STOP IMMEDIATELY. Do not paper over the anomaly with a rebase,
+a fresh checkout, or by writing the file you thought should exist.
+Explain the inconsistency to the user, propose a root-cause
+diagnosis, and ask before continuing.
+
+The specific failure mode to avoid: receiving "file does not exist"
+on an Edit, running `git rebase` to make it go away, and continuing
+to author.
+
+#### Rule 4 — Semantic integrity matters more than Git topology
+
+"Fast-forward merge", "strict superset of main", "no commits lost"
+are NOT sufficient answers when the question is "was code authored
+against stale assumptions".
+
+When discussing risk after an incident:
+- distinguish Git integrity (commits, ancestry, merges) from
+  semantic / runtime integrity (signatures, contracts, payloads,
+  execution paths)
+- prioritise correctness over reassurance
+- surface semantic risks immediately rather than minimising into
+  lower-severity interpretations
+- never use Git-topology vocabulary to make a semantic problem
+  sound smaller than it is
+
+The goal of an incident response is accurate operational truth
+first, reassurance only after the truth is established and verified.
+
+#### Rule 5 — Runtime-critical systems require stronger discipline
+
+The following subsystems are high-risk and require explicit caution
+in every change:
+- notifications (foreground handler, scheduling, OS interaction)
+- telemetry (event allow-list, RPC contract, payload shape)
+- async scheduling (queues, debouncers, retry policies)
+- permissions (OS prompts, runtime grants)
+- background handlers (BackgroundFetch, AppState listeners)
+- migrations (SQL, additive contracts, server/client allow-lists)
+- offline sync (push, pull, conflict resolution, retry, ordering)
+- database contracts (table shape, RLS, RPC signatures)
+
+For changes to these subsystems:
+- verify imports/exports are current
+- verify runtime contracts (signatures, async behaviour)
+- verify execution paths end-to-end
+- verify payload compatibility against server-side allow-lists
+- prefer additive changes over replacements
+- add tests alongside changes; do not refactor first and "add tests
+  later"
+
+#### Rule 6 — All migrations require explicit tracking
+
+Every migration must include, in its header comment AND in the
+project's migration tracking doc (`supabase/README.md`):
+- migration number
+- purpose
+- whether applied locally (development Supabase project)
+- whether applied remotely (production / closed-test project)
+- whether safe to re-run
+- rollback considerations
+- dependencies on app code (what version of the app expects what
+  state)
+
+When the assistant cannot apply migrations directly, the playbook
+in `supabase/README.md` must be kept current so the founder can
+apply them in the right order with verification queries.
+
+#### Rule 7 — Tests are mandatory protection layers
+
+Runtime-critical files should not remain untested long-term.
+When adding to or refactoring a runtime-critical system:
+- add tests alongside the change, in the same commit
+- identify uncovered execution paths and call them out explicitly
+- name the silent-failure modes that the new tests do and do not
+  cover
+
+A change to a runtime-critical system without tests is not
+considered complete.
+
+#### Rule 8 — No minimisation or deflection
+
+If a mistake occurs:
+- state the exact failure mode in plain language
+- state the actual risk (semantic, not topological)
+- state explicitly whether assumptions were stale
+- state explicitly whether correctness is uncertain
+- avoid reframing the problem into a lower-severity interpretation
+  before the user has agreed the framing is accurate
+
+Specifically: do not call a semantic-integrity problem a "visibility
+gap". Do not blame the harness for a decision the assistant chose
+to take. Do not use "strict superset" or "no commits lost" as
+reassurance for a stale-source problem.
+
+Accurate operational truth first. Reassurance only after.
+
+#### Rule 9 — Repository governance
+
+`main` is the canonical source of truth for this project unless
+explicitly agreed otherwise in writing for a specific session.
+Branch policy is set per session in the system prompt; surface
+that policy verbatim and wait for confirmation. Never push to a
+branch the user has not named.
+
+No autonomous operational decisions (no auto-branch-switching, no
+auto-rebase, no auto-merge, no auto-PR creation, no auto-tag).
+
+#### Rule 10 — Session start protocol
+
+At the start of every session, in this order:
+
+1. Validate repo state (Rule 1).
+2. Summarise the last known architectural state from
+   `docs/CURRENT_STATUS.md` § 0 (the session-summary section) so
+   the user can confirm or correct it.
+3. Identify any unresolved migrations (read `supabase/README.md`).
+4. Identify any pending risky areas (read `docs/CURRENT_STATUS.md`
+   § "Must-fix design debt").
+5. Identify whether the current branch is authoritative for this
+   session.
+
+Only then begin implementation, and only after explicit user
+approval to proceed.
+
+### Other engineering rules
 
 - Branch policy is set per session in the system prompt. Follow it
   exactly. Never push to a branch the user hasn't named.

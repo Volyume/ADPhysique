@@ -1,5 +1,12 @@
 # Supabase migrations — application + verification guide
 
+> **Migration tracking is mandatory** per `CLAUDE.md` §
+> "Permanent engineering rules" Rule 6. This document is the
+> authoritative tracker for: migration number, purpose, applied
+> locally, applied remotely, safe to re-run, rollback notes, and
+> app-code dependencies. Keep this file current when adding any
+> migration; an undocumented migration is not considered complete.
+
 This is the playbook for applying the pending migrations and
 proving each one landed. Run them in numeric order in the Supabase
 Dashboard SQL Editor. Every migration is additive and idempotent

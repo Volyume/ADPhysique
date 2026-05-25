@@ -10,6 +10,15 @@ session that materially changes shipped state, not appended to.
 
 ---
 
+> **Operational protocol (locked 2026-05-25):** every session must
+> follow the 10 permanent engineering rules in `CLAUDE.md` §
+> "Permanent engineering rules". Repository validation before
+> code, no silent workflow changes, missing-file anomalies are
+> hard stops, semantic integrity over Git topology, runtime-
+> critical discipline, migration tracking, mandatory tests, no
+> minimisation, main is canonical, session-start protocol. The
+> rules were added after the 2026-05-25 stale-branch incident.
+
 ## 0. Late-2026-05-25 session summary (read first)
 
 Active branch: `claude/volyume-food-logging-app-k8wtU`. Material
