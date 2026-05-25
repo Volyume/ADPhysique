@@ -91,6 +91,37 @@ fills the space", strip it back.
 
 ## Engineering
 
+- **Pre-session repository validation (HARD RULE, no exceptions).**
+  Before writing or modifying any code in a new session, run this
+  six-step check and print the result back to the user in plain text.
+  Do NOT touch code until the user has seen the result and approved
+  proceeding.
+
+      git fetch origin
+      git branch --show-current
+      git rev-parse HEAD
+      git log -1 --oneline HEAD
+      git rev-parse origin/main
+      git rev-list --left-right --count origin/main...HEAD
+      git status -s
+
+  Report: current branch, local HEAD SHA + subject, `origin/main`
+  SHA + subject, ahead/behind counts, working-tree status, and
+  whether the current branch is `main` or a feature branch.
+
+  If the harness injects a "develop on branch X" directive in the
+  system prompt and X is not `main`, surface that directive verbatim
+  to the user before doing anything. Do not autonomously switch
+  branches. Wait for explicit confirmation of the target branch.
+
+  Rationale: a Claude session on 2026-05-25 began with a stale
+  feature branch checked out (tip at `e3a0698`, four commits and
+  multiple days behind `origin/main` at `552a41d`). The working tree
+  happened to contain main's content for the file being edited so
+  the bug never surfaced as a runtime failure, but ~30 minutes of
+  authoring proceeded against a false source of truth. The audit
+  afterwards consumed more time than the work itself.
+
 - Branch policy is set per session in the system prompt. Follow it
   exactly. Never push to a branch the user hasn't named.
 - **Release policy (2026-05-24):** the current Play Console closed
