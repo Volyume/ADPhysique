@@ -3,6 +3,11 @@ name: Maestro E2E (Android emulator)
 # Runs the smoke bundle on every push to the working branch so
 # Claude can drive validation directly. workflow_dispatch is kept
 # so a wider tag can be requested on demand.
+#
+# Final step writes a status report to .ci-status/maestro-latest.md
+# and commits it back to the branch with [skip ci]. Lets Claude
+# read the result via `git pull` without needing PR / Actions API
+# access.
 on:
   push:
     branches:
@@ -24,17 +29,20 @@ on:
         default: "smoke"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   e2e:
     name: Run Maestro flows on Android emulator
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # fetch enough history to push the status commit back cleanly
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -56,23 +64,32 @@ jobs:
           sudo udevadm trigger --name-match=kvm
 
       - name: Install dependencies
+        id: deps
         run: npm install --legacy-peer-deps
 
       - name: Install Maestro CLI
+        id: install_maestro
         run: |
           curl -Ls "https://get.maestro.mobile.dev" | bash
           echo "$HOME/.maestro/bin" >> $GITHUB_PATH
 
       - name: Build debug APK
+        id: build_apk
         env:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
         run: |
-          npx expo prebuild --platform android --no-install
+          set -e
+          npx expo prebuild --platform android --no-install 2>&1 | tee prebuild.log
           cd android
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug 2>&1 | tee ../gradle-debug.log
 
-      - name: Run Maestro flows
+      - name: Run Maestro flows on emulator
+        id: maestro_run
+        # `continue-on-error: true` so the post-step that writes the
+        # status report still runs when Maestro fails. The status
+        # report itself captures the failure mode.
+        continue-on-error: true
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 33
@@ -83,18 +100,107 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: |
-            adb install -r android/app/build/outputs/apk/debug/app-debug.apk
-            maestro test --include-tags=${{ github.event.inputs.tag || 'smoke' }} \
-                         --format junit \
-                         --output maestro-results.xml \
-                         e2e/
+            set +e
+            adb install -r android/app/build/outputs/apk/debug/app-debug.apk 2>&1 | tee adb-install.log
+            mkdir -p maestro-output
+            maestro test \
+              --include-tags=${{ github.event.inputs.tag || 'smoke' }} \
+              --format junit \
+              --output maestro-output/results.xml \
+              --debug-output maestro-output/debug \
+              e2e/ 2>&1 | tee maestro-output/run.log
+            echo "MAESTRO_EXIT=$?" >> $GITHUB_ENV
 
-      - name: Upload Maestro report
+      - name: Write status report
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+          MAESTRO_OUTCOME: ${{ steps.maestro_run.outcome }}
+          BUILD_OUTCOME: ${{ steps.build_apk.outcome }}
+          DEPS_OUTCOME: ${{ steps.deps.outcome }}
+          INSTALL_OUTCOME: ${{ steps.install_maestro.outcome }}
+          TAG: ${{ github.event.inputs.tag || 'smoke' }}
+        run: |
+          set -e
+          mkdir -p .ci-status
+
+          # Tail the relevant logs so the status doc is self-contained
+          # for a quick diagnose without downloading artefacts.
+          tail_log () {
+            local f="$1"
+            local n="${2:-80}"
+            if [ -f "$f" ]; then
+              echo "<details><summary>$f (last $n lines)</summary>"
+              echo
+              echo '```'
+              tail -n "$n" "$f"
+              echo '```'
+              echo
+              echo '</details>'
+            else
+              echo "_$f not produced_"
+            fi
+          }
+
+          {
+            echo "# Latest Maestro E2E status"
+            echo
+            echo "- **Run number**: ${{ github.run_number }}"
+            echo "- **Run URL**: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "- **Branch**: \`${{ github.ref_name }}\`"
+            echo "- **Commit**: \`${{ github.sha }}\`"
+            echo "- **Tag run**: \`$TAG\`"
+            echo "- **Triggered at**: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "- **Job status**: \`$JOB_STATUS\`"
+            echo
+            echo "## Step outcomes"
+            echo
+            echo "| Step | Outcome |"
+            echo "|---|---|"
+            echo "| Install dependencies | \`$DEPS_OUTCOME\` |"
+            echo "| Install Maestro CLI  | \`$INSTALL_OUTCOME\` |"
+            echo "| Build debug APK      | \`$BUILD_OUTCOME\` |"
+            echo "| Run Maestro flows    | \`$MAESTRO_OUTCOME\` |"
+            echo
+            echo "## Logs"
+            echo
+            tail_log prebuild.log 60
+            echo
+            tail_log gradle-debug.log 100
+            echo
+            tail_log adb-install.log 40
+            echo
+            tail_log maestro-output/run.log 200
+          } > .ci-status/maestro-latest.md
+
+      - name: Commit status report
+        if: always()
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .ci-status/maestro-latest.md
+          if git diff --staged --quiet; then
+            echo "No status change to commit."
+            exit 0
+          fi
+          git commit -m "ci(maestro): status report for run #${{ github.run_number }} [skip ci]"
+          git push origin HEAD:${{ github.ref_name }}
+
+      - name: Upload Maestro artefacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: maestro-results
           path: |
-            maestro-results.xml
-            ~/.maestro/tests/**
+            maestro-output/**
+            prebuild.log
+            gradle-debug.log
+            adb-install.log
           if-no-files-found: warn
+
+      - name: Fail job if Maestro failed
+        if: always() && steps.maestro_run.outcome == 'failure'
+        run: |
+          echo "Maestro step reported failure. See .ci-status/maestro-latest.md on this branch."
+          exit 1
