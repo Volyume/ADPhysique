@@ -452,6 +452,12 @@ export default function RootNavigator() {
           // eslint-disable-next-line global-require
           require('../lib/food/seed').importOffSnapshotIfNeeded()
             .catch((err) => console.warn('[seed] off snapshot import threw:', err?.message));
+          // CoFID UK generic foods (~3k rows). Static dataset, runs
+          // once per snapshot version. Fills the gap OFF leaves on
+          // raw/unbranded items (chicken breast raw, plain oats, etc.).
+          // eslint-disable-next-line global-require
+          require('../lib/food/seed').importCofidSnapshotIfNeeded()
+            .catch((err) => console.warn('[seed] cofid snapshot import threw:', err?.message));
           // Food library delta pull (step 3): refresh local foods
           // cache against cloud foods that were updated since the
           // last pull. Throttled to once per 6 hours by default;
