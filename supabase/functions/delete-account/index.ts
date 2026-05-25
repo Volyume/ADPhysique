@@ -87,16 +87,70 @@ serve(async (req) => {
     }
     console.log('[delete-account] public data wiped')
 
-    // 3. Delete the auth.users row with a service-role admin client.
+    // 3. Service-role admin client for the steps that need to bypass
+    //    RLS and reach auth.users / the non-cascading deletion log.
     const adminClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
+
+    // 4. Record the deletion in the non-cascading audit log BEFORE
+    //    auth.admin.deleteUser fires. The engine_telemetry table
+    //    cascade-deletes with the auth.users row, so any
+    //    account_deleted event written there would die instantly.
+    //    account_deletions_log has no FK to auth.users so the row
+    //    survives, driving Panel 8 of the locked dashboard.
+    const body = await req.json().catch(() => ({}))
+    const reason = typeof body?.reason === 'string' ? body.reason : null
+    const appVersion = typeof body?.app_version === 'string' ? body.app_version : null
+    const platform = typeof body?.platform === 'string' ? body.platform : null
+    let deletionLogId: string | null = null
+    try {
+      const { data: logId, error: logErr } = await adminClient.rpc(
+        'record_account_deletion_started',
+        {
+          _user_id: user.id,
+          _user_email: user.email ?? null,
+          _reason: reason,
+          _source: 'in_app',
+          _app_version: appVersion,
+          _platform: platform,
+        },
+      )
+      if (logErr) {
+        console.error('[delete-account] record_account_deletion_started failed', logErr)
+      } else {
+        deletionLogId = logId as string
+      }
+    } catch (e) {
+      // Audit row failures must not block the deletion itself.
+      console.error('[delete-account] record_account_deletion_started threw', e)
+    }
+
+    // 5. Delete the auth.users row with the service-role client.
     const { error: adminErr } = await adminClient.auth.admin.deleteUser(user.id)
     if (adminErr) {
       console.error('[delete-account] auth.admin.deleteUser failed', adminErr)
       return jsonResponse({ error: `Auth deletion failed: ${adminErr.message}` }, 500)
     }
     console.log('[delete-account] auth user deleted')
+
+    // 6. Mark the deletion row complete so the queue-depth dashboard
+    //    drops back to zero. Failures here only mean the alerting
+    //    will fire a "stuck deletion" alert until the row is reaped
+    //    by hand; the user-facing delete already succeeded.
+    if (deletionLogId) {
+      try {
+        const { error: completeErr } = await adminClient.rpc(
+          'record_account_deletion_completed',
+          { _row_id: deletionLogId },
+        )
+        if (completeErr) {
+          console.error('[delete-account] record_account_deletion_completed failed', completeErr)
+        }
+      } catch (e) {
+        console.error('[delete-account] record_account_deletion_completed threw', e)
+      }
+    }
 
     return jsonResponse({ ok: true }, 200)
   } catch (e) {

@@ -340,7 +340,25 @@ export default function SettingsScreen({ navigation }) {
           let fnBody = null;
           let fnErrorBody = null;
           try {
-            const result = await sb.functions.invoke('delete-account');
+            // Pass deletion metadata so the Edge Function can write
+            // a rich row to account_deletions_log. reason is 'in_app'
+            // by default; the consent-withdrawal flow (when SettingsScreen
+            // ships the privacy management section) will pass
+            // 'consent_withdrawal' so Panel 8 can compute the
+            // withdrawal-to-deletion ratio.
+            let appVersion = null;
+            try {
+              // eslint-disable-next-line global-require
+              const Application = require('expo-application');
+              appVersion = Application.nativeApplicationVersion ?? null;
+            } catch (_) { /* tolerate */ }
+            const result = await sb.functions.invoke('delete-account', {
+              body: {
+                reason: 'user_requested',
+                app_version: appVersion,
+                platform: Platform.OS,
+              },
+            });
             if (result.error) invokeErr = result.error;
             fnBody = result.data;
           } catch (e) {
