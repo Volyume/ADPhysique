@@ -10,6 +10,61 @@ session that materially changes shipped state, not appended to.
 
 ---
 
+## 0. Late-2026-05-25 session summary (read first)
+
+Active branch: `claude/volyume-food-logging-app-k8wtU`. Material
+changes shipped this session, in order:
+
+1. **Notifications module split** per `NOTIFICATIONS_LOCKED.md`.
+   `src/lib/notifications/` directory with 7 files (categories,
+   quietHours, permissions, handler, scheduler, telemetry, index).
+   Quiet-hours rule (22:00 → 07:00 default, wrap-aware). Migration
+   040 adds `notification_sent` + `_tapped` + `_failed` to the
+   server allow-list. 21 new tests.
+2. **Maestro E2E scaffold** per `TESTING_STRATEGY_LOCKED.md` lines
+   114-141. `e2e/` directory with all 12 spec'd flows + smoke flow
+   + structural linter wired into Jest. Opt-in CI workflow
+   (`.github/workflows/maestro-e2e.yml`) iterating against an
+   Android emulator. CI status writes back to
+   `.ci-status/maestro-latest.md` on every run.
+3. **`audit()` user-action breadcrumbs** (`src/lib/observability.js`
+   shorthand on top of `track.userAction`). 21 call sites wired
+   across workout, food, auth, paywall, cascade, settings,
+   privacy, scan. Lands in Sentry breadcrumbs (PII-scrubbed) and
+   the on-device debug log ring buffer.
+4. **Skeleton loaders on 5 more screens**: CoachReview, WeeklyCheckIn,
+   CoachHeldHistory, BlockReflection, CoachOutput. Replaces full-
+   screen ActivityIndicator spinners with structured placeholders
+   matching the real content shape.
+5. **Web favicon + privacy hosting**. `<link rel="icon">` + apple-
+   touch-icon + theme-color added to `public/index.html` and
+   `public/privacy.html`. `public/favicon.png` copied from
+   `assets/favicon.png`. GitHub Pages auto-deploys `public/` on
+   every push; privacy page now live at
+   `https://allansdouglas1983-cmyk.github.io/ADPhysique/privacy.html`
+   with the proper favicon.
+6. **Privacy management UI in Settings**. New Privacy section above
+   Legal. Surfaces health-data consent state; tapping (when granted)
+   opens a destructive confirm and on accept calls
+   `record_health_consent(false)`, updates local mirror, fires
+   `article9_consent_withdrawn` telemetry. Migration 041 adds the
+   event to the allow-list.
+7. **Cyber-security review** via `/security-review` skill across
+   the branch diff. No high-confidence vulnerabilities found.
+
+**Founder action queue grows by**:
+- Apply `supabase/migrate_040_notification_telemetry.sql`
+- Apply `supabase/migrate_041_consent_withdrawal_telemetry.sql`
+
+**Test count**: 1370/1370 passing across 63 suites.
+
+**Pending Maestro CI iteration**: smoke bundle hasn't gone green
+yet on a real emulator; iteration commits are in
+`.ci-status/maestro-latest.md`. Not on the critical path for
+shipping any visible APK change.
+
+---
+
 ## 1. Where we are right now
 
 ### Release phase

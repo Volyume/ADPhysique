@@ -46,6 +46,7 @@ export default function PaywallScreen({ navigation, route }) {
   const [busy, setBusy] = useState(false);
 
   const dismiss = useCallback(() => {
+    audit('paywall.dismiss.tap', { surface });
     if (userId) {
       trackEvent(userId, 'paywall_tapped_cta', { surface, cta: 'dismiss' }).catch(() => {});
     }

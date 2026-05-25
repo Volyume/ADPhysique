@@ -14,6 +14,7 @@ import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getExerciseWhyThis } from '../lib/whyThisTemplates';
 import { rankSwaps } from '../lib/swapEngine';
 import { logError } from '../lib/errorLog';
+import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
 
 // Compute muscle coverage: { [muscleKey]: count } sorted by count descending
@@ -239,6 +240,10 @@ export default function RoutineDetailScreen({ navigation, route }) {
   }
 
   async function handleStartWorkout() {
+    audit('workout.start.tap', {
+      routineId,
+      exerciseCount: exercises.length,
+    });
     if (exercises.length === 0) {
       Alert.alert(
         'No exercises',
