@@ -75,7 +75,24 @@ export default function DiaryScreen({ navigation }) {
       getWater(userId, selectedDate),
       getNutritionTargets(userId),
     ]);
-    setEntries(es);
+    // Resolve each entry's actual food name + brand from the foods /
+    // custom_foods tables. food_entries denormalises macros at log
+    // time but NOT the name, so without this enrichment the row
+    // falls through to a generic "Food" label. SQLite local reads,
+    // fast even for 10-20 entries.
+    const enriched = await Promise.all((es ?? []).map(async (entry) => {
+      try {
+        const food = await resolveFoodRef(userId, entry.food_ref);
+        return {
+          ...entry,
+          _name: food?.name ?? null,
+          _brand: food?.brand ?? null,
+        };
+      } catch (_) {
+        return { ...entry, _name: null, _brand: null };
+      }
+    }));
+    setEntries(enriched);
     setRollup(r);
     setWaterMl(w);
     setTargets(t);
@@ -264,7 +281,11 @@ function MealSection({ slot, entries, onAdd, onEdit }) {
 }
 
 function friendlyFoodName(entry) {
-  return entry.food_ref?.startsWith('custom:') ? 'Custom food' : 'Food';
+  // Prefer the resolved name attached by DiaryScreen.load(). Fall
+  // back to the generic label only when the lookup miss-ed (e.g. the
+  // foods table hasn't yet sync'd the row, or the row was deleted).
+  if (entry?._name && typeof entry._name === 'string') return entry._name;
+  return entry?.food_ref?.startsWith('custom:') ? 'Custom food' : 'Food';
 }
 
 function EntryRow({ entry, onEdit }) {
@@ -272,14 +293,17 @@ function EntryRow({ entry, onEdit }) {
   const p = Math.round(entry.protein_g ?? 0);
   const c = Math.round(entry.carbs_g ?? 0);
   const f = Math.round(entry.fat_g ?? 0);
+  const name = friendlyFoodName(entry);
+  const brand = entry?._brand ?? null;
   return (
     <TouchableOpacity
       style={styles.entryRow}
       onPress={onEdit}
-      accessibilityLabel={`${friendlyFoodName(entry)}, ${kcal} kcal. Tap to edit.`}
+      accessibilityLabel={`${name}, ${kcal} kcal. Tap to edit.`}
     >
       <View style={styles.entryMain}>
-        <Text style={styles.entryName}>{entry.food_ref?.split(':')[0] === 'custom' ? 'Custom food' : 'Food'}</Text>
+        <Text style={styles.entryName} numberOfLines={1}>{name}</Text>
+        {brand ? <Text style={styles.entryBrand} numberOfLines={1}>{brand}</Text> : null}
         <Text style={styles.entryQuantity}>{Math.round(entry.quantity_g)}g</Text>
       </View>
       <View style={styles.entryMacros}>
@@ -362,6 +386,7 @@ const styles = StyleSheet.create({
   },
   entryMain: { flex: 1 },
   entryName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.medium },
+  entryBrand: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: 1 },
   entryQuantity: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: 2 },
   entryMacros: { alignItems: 'flex-end' },
   entryKcal: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
