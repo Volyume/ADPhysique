@@ -925,8 +925,8 @@ The founder pasted a debug log from a successfully-running APK build on his Andr
 - [x] Sentry scrub audit (110 tests)
 - [x] Article 9 consent UI + audit trail
 - [x] Account deletion audit (account_deletions_log)
-- [x] Telemetry catalogue comprehensive (29 events live, gaps documented)
-- [ ] Maestro E2E framework + 12 critical-path flows
+- [x] Telemetry catalogue comprehensive (32 events live, gaps documented)
+- [~] Maestro E2E framework + 12 critical-path flows — **Phase 1 shipped:** harness (`.maestro/config.yaml`), 12 spec'd flow scaffolds + smoke launch check in `e2e/`, structural linter wired into Jest, opt-in CI workflow at `.github/workflows/maestro-e2e.yml`. Founder runs the smoke bundle against a debug build to validate selectors; CI then flips from `workflow_dispatch` to `pull_request` gate.
 - [ ] k6 load tests (1000-user sync, 100-user purchase, 10k weekly_coach)
 - [ ] Privacy policy deployed to volyume.app/privacy
 - [ ] Android upload keystore generated + Play App Signing configured
@@ -1059,12 +1059,14 @@ Each is a tracked Phase A code work item per `CURRENT_STATUS.md` section 7.
 
 These are the Phase A code-work items still open. Pick one when restarting work.
 
-1. **Notifications module split (~1 day).** Refactor scattered notifications code into `src/lib/notifications/` per `NOTIFICATIONS_LOCKED.md`. Wire `notification_sent` / `_tapped` / `_failed` telemetry. Add quiet-hours support. Unblocks Panel 6.
-2. **Maestro E2E framework (~2-3 days).** Install Maestro CLI in CI. Write 12 critical-path YAML flows per `TESTING_STRATEGY_LOCKED.md` lines 114-141. Foundation work that pays off across all future PRs.
-3. **Sync module split (~3-4 days).** Largest single-file refactor (~85 KB) with real risk. Build the spec'd `src/lib/sync/` directory (index, registry, runner, queue, conflict, transport, telemetry). Unblocks `sync_conflict_resolved` telemetry.
-4. **Privacy management section in SettingsScreen.** Unblocks `article9_consent_withdrawn`. UI work + RPC wiring (RPC already exists). ~half day.
-5. **k6 load tests.** Server load testing per `TESTING_STRATEGY_LOCKED.md` lines 183-193. Standalone, doesn't touch app code.
-6. **Privacy policy deploy.** Founder hosts `public/privacy.html` at volyume.app/privacy. Setup advice only from Claude side.
+1. ~~**Notifications module split (~1 day).**~~ **Shipped.** See section 4.10.
+2. ~~**Maestro E2E framework (~2-3 days), Phase 1.**~~ **Shipped.** Harness + 12 flow scaffolds + Jest-wired structural linter + opt-in CI. Founder validates smoke bundle on a real device next.
+3. **Maestro E2E Phase 2: tighten selectors after first-run** (~half day per round). Once the founder runs the smoke bundle, fold the failures back into the YAML. Promote 4 `blocked` flows once the test-hook deep links are wired into a debug build.
+4. **Sync module split (~3-4 days).** Largest single-file refactor (~85 KB) with real risk. Build the spec'd `src/lib/sync/` directory (index, registry, runner, queue, conflict, transport, telemetry). Unblocks `sync_conflict_resolved` telemetry.
+5. **Privacy management section in SettingsScreen.** Unblocks `article9_consent_withdrawn`. UI work + RPC wiring (RPC already exists). ~half day.
+6. **Maestro test-hook deep links** (~half day). Add a `volyume://test/...` handler behind `__DEV__` so the four blocked flows (barcode/OCR/cascade/restore) can drive deterministic fixtures.
+7. **k6 load tests.** Server load testing per `TESTING_STRATEGY_LOCKED.md` lines 183-193. Standalone, doesn't touch app code.
+8. **Privacy policy deploy.** Founder hosts `public/privacy.html` at volyume.app/privacy. Setup advice only from Claude side.
 
 ---
 

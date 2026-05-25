@@ -1,0 +1,50 @@
+# Scan barcode happy path: open scanner -> resolve barcode -> add food.
+#
+# Spec: TESTING_STRATEGY_LOCKED.md § E2E line 127
+# "scan_barcode_happy_path.yaml -- (move #1.5) scan -> add"
+#
+# Status: BLOCKED. Needs a barcode-fixture mechanism so Maestro
+# can drive the vision camera deterministically. Two options:
+#   1. Build-time test hook that lets a flow inject a fake barcode
+#      via deep link (volyume://test/barcode/<ean>).
+#   2. Maestro's image-injection mode (paid tier).
+#
+# Until either lands, this flow stays guarded by an assertion that
+# never matches so it's skipped by every tag run. The selector
+# scaffolding below is correct in shape so the founder can
+# pattern-match against the real UI when the hook lands.
+
+appId: app.volyume
+tags:
+  - full
+  - food
+  - blocked
+---
+- launchApp:
+    clearState: false
+
+# Blocker sentinel -- removes once the test hook is wired.
+- assertVisible:
+    text: "__MAESTRO_TEST_HOOK_BARCODE_FIXTURE_AVAILABLE__"
+    timeout: 1
+    optional: false
+
+# Below this line is the real flow, kept ready for promotion.
+
+- tapOn: "Diary"
+- tapOn: "Scan"
+- assertVisible:
+    text: "Point at the barcode"
+    timeout: 6000
+
+# Test hook: deep-link injects fixture EAN 5000168001234 (UK oats).
+- openLink: "volyume://test/barcode/5000168001234"
+
+- assertVisible:
+    text: ".*oats.*"
+    timeout: 6000
+
+- tapOn: "Add"
+- tapOn: "Diary"
+- assertVisible:
+    text: ".*oats.*"

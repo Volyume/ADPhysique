@@ -1,0 +1,54 @@
+# Cascade day-14 gate: user pays at the gate.
+#
+# Spec: TESTING_STRATEGY_LOCKED.md § E2E line 129
+# "cascade_day14_gate_pay.yaml -- (move #5) pay at day 14"
+#
+# Status: BLOCKED. Needs the Google Play sandbox harness so the
+# IAP dialog returns a deterministic success. Three things have to
+# be in place:
+#   1. Real Play Console SKUs (founder action; see
+#      CURRENT_STATUS.md § Founder action queue).
+#   2. A test account whitelisted as a Play tester so the sandbox
+#      returns "purchased" without a real charge.
+#   3. A debug-build hook to fast-forward the cascade clock so the
+#      day-14 gate fires inside a flow's runtime.
+#
+# Until those land, the flow stays guarded by an assertion that
+# never matches.
+
+appId: app.volyume
+tags:
+  - full
+  - payments
+  - blocked
+---
+- launchApp:
+    clearState: false
+
+- assertVisible:
+    text: "__MAESTRO_TEST_HOOK_CASCADE_FAST_FORWARD_AVAILABLE__"
+    timeout: 1
+    optional: false
+
+# Below this line is the real flow, kept ready for promotion.
+
+# Fast-forward the cascade to day 14 via test hook.
+- openLink: "volyume://test/cascade/day/14"
+
+- assertVisible:
+    text: "Your Pro trial ends"
+    timeout: 6000
+
+- tapOn: "Continue with Pro"
+
+# Play sandbox dialog. Sandbox returns success.
+- tapOn:
+    text: "Subscribe"
+    optional: true
+- tapOn:
+    text: "1 button"
+    optional: true
+
+- assertVisible:
+    text: ".*Pro.*"
+    timeout: 15000

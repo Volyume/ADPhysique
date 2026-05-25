@@ -1,0 +1,43 @@
+# Cascade day-14 gate: user skips to Free.
+#
+# Spec: TESTING_STRATEGY_LOCKED.md § E2E line 130
+# "cascade_day14_gate_skip.yaml -- (move #5) skip to Pro at day 14"
+#
+# (The spec line says "skip to Pro" but the founder override on
+# 2026-05-23 collapsed Complete -> Pro, so "skip" now means stay
+# on Free. The flow exercises the churn-at-gate state transition.)
+#
+# Status: SCAFFOLD. Doesn't need the IAP sandbox -- skipping is a
+# pure local-state transition. It does need the cascade fast-
+# forward hook to reach day 14 inside a flow runtime.
+
+appId: app.volyume
+tags:
+  - full
+  - payments
+---
+- launchApp:
+    clearState: false
+
+# Fast-forward via test hook. If the hook isn't available the flow
+# fails fast with a clear marker rather than hanging on the wrong
+# screen.
+- openLink: "volyume://test/cascade/day/14"
+
+- assertVisible:
+    text: "Your Pro trial ends"
+    timeout: 10000
+
+# Skip path. Confirm the secondary CTA copy from
+# SUBSCRIPTION_AND_PAYMENT_LOCKED.md.
+- tapOn: "Continue on Free"
+
+# Confirm modal -- "Continue on Free" steps the user down a tier.
+- tapOn:
+    text: "Confirm"
+    optional: true
+
+# Land back on the main tab, tier indicator should say Free.
+- assertVisible:
+    text: "Free"
+    timeout: 8000

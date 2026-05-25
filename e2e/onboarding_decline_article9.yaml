@@ -1,0 +1,66 @@
+# Declining Article 9 consent deletes the account.
+#
+# Spec: TESTING_STRATEGY_LOCKED.md § E2E line 124
+# "onboarding_decline_article9.yaml -- declining consent deletes account"
+#
+# This is the UK GDPR Article 9 explicit-consent fail path. Per
+# PRIVACY_CONSENT_LOCKED.md, refusing consent at this screen MUST
+# trigger an immediate account deletion (no health data was ever
+# collected; the auth.users row goes away). The flow asserts the
+# user lands back on Welcome, not Train.
+
+appId: app.volyume
+tags:
+  - full
+  - onboarding
+  - privacy
+---
+- launchApp:
+    clearState: true
+
+- assertVisible: "Less thinking. More lifting."
+- tapOn: "Sign in"
+
+- tapOn:
+    text: "Sign up"
+    index: 1
+
+- tapOn:
+    id: "email"
+    optional: true
+- inputText: "maestro-decline+${output.timestamp}@volyume.test"
+
+- tapOn:
+    id: "password"
+    optional: true
+- inputText: "MaestroTestPwd!1"
+
+- tapOn: "Sign up"
+
+- repeat:
+    times: 12
+    commands:
+      - tapOn:
+          text: "Continue"
+          optional: true
+      - tapOn:
+          text: "Next"
+          optional: true
+
+- assertVisible: "Health and nutrition data consent"
+
+# Decline path. The screen may surface a confirm modal first
+# (PRIVACY_CONSENT_LOCKED.md leaves the exact copy to the design
+# pass); we tap through both.
+- tapOn: "Decline"
+- tapOn:
+    text: "Decline"
+    optional: true
+- tapOn:
+    text: "Delete account"
+    optional: true
+
+# Expect to land back on Welcome with the account gone.
+- assertVisible:
+    text: "Less thinking. More lifting."
+    timeout: 20000

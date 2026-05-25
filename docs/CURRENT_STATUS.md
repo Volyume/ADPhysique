@@ -211,7 +211,8 @@ Phase A; flagged so future PRs can decide whether to align or accept.
 | `src/lib/observability/sentryScrub.js` per `PRIVACY_CONSENT_LOCKED.md` | **Exists** (`src/lib/observability/sentryScrub.js` plus 110 audit tests) | Privacy-critical; resolved |
 | `src/lib/links.js` (single URL source) per `PRIVACY_CONSENT_LOCKED.md` line 280 | Doesn't exist | URLs inline; multi-file edit if URL changes |
 | `tests/simulator/` per `TESTING_STRATEGY_LOCKED.md` | **Exists** at `tests/simulator/scenarios/` with all 12 locked scenarios | Resolved |
-| `tests/engine/`, `tests/snapshots/`, `e2e/`, `tests/sync/`, `tests/payments/`, `tests/load/` | All tests in `src/__tests__/` + `src/lib/__tests__/` plus `tests/simulator/` | Maestro E2E + k6 load harnesses not stood up |
+| `e2e/` per `TESTING_STRATEGY_LOCKED.md` § E2E lines 114-141 | **Exists** with all 12 spec'd flows + a smoke launch check; `.maestro/config.yaml`; structural linter wired into Jest (1370/1370 green); opt-in `maestro-e2e.yml` CI workflow | Phase 1 scaffold landed this session. 5 flows scaffolded (smoke + 4 founder-runnable); 4 await IAP/barcode/OCR fixtures (tagged `blocked`); 4 are scaffolded but selectors need first-run validation against a real device. |
+| `tests/engine/`, `tests/snapshots/`, `tests/sync/`, `tests/payments/`, `tests/load/` | Engine + snapshot tests live in `src/__tests__/` + `src/lib/__tests__/`; sync/payments/load harnesses not stood up | Maestro Cloud (100 runs/mo free tier) reserved for pre-release validation; k6 load harness still deferred |
 
 ---
 
@@ -254,7 +255,7 @@ Grouped by phase per `RELEASE_PLAN_LOCKED.md`.
 | 2 | Deploy `public/privacy.html` to volyume.app/privacy | `PRIVACY_CONSENT_LOCKED.md` lines 75-112 | M (hosting setup) | Founder + Claude |
 | 3 | Build `src/lib/sync/` directory split + wire `sync_conflict_resolved` | `SYNC_ARCHITECTURE_LOCKED.md` | M (~2 days) | Claude |
 | 4 | ~~Build `src/lib/notifications/` directory + wire `notification_*` events~~ **Shipped this session** (mig 040 + 7-file module + quiet-hours + 21 new tests). Follow-up: pull `trainingReminders.js` + `restNotifications.js` + `activeWorkoutNotification.js` into the directory. | `NOTIFICATIONS_LOCKED.md` | done | Claude |
-| 5 | Maestro E2E framework + 12 critical-path flows | `TESTING_STRATEGY_LOCKED.md` lines 114-141 | M-L (~1 week) | Claude |
+| 5 | Maestro E2E framework + 12 critical-path flows | `TESTING_STRATEGY_LOCKED.md` lines 114-141 | M-L (~1 week) | Claude (**Phase 1 shipped this session**: harness + all 12 flow scaffolds + opt-in CI + Jest-wired structural linter. Founder validates smoke bundle against a real device; selectors get tightened from there.) |
 
 ### LATER (Phase A exit prep)
 

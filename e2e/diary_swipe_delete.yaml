@@ -1,0 +1,36 @@
+# Diary swipe-to-delete: delete an entry, confirm it's gone.
+#
+# Spec: TESTING_STRATEGY_LOCKED.md § E2E line 126
+# "diary_swipe_delete.yaml -- delete an entry"
+#
+# Builds on diary_log_first_meal.yaml -- assumes a logged "oats"
+# entry exists. If running standalone, the founder logs an entry
+# first, then runs this flow.
+
+appId: app.volyume
+tags:
+  - full
+  - food
+---
+- launchApp:
+    clearState: false
+
+- tapOn: "Diary"
+- assertVisible:
+    text: ".*oats.*"
+    timeout: 8000
+
+# Maestro's swipe is direction-based against an element. Left-swipe
+# the row to reveal the delete affordance.
+- swipe:
+    from:
+      text: ".*oats.*"
+    direction: LEFT
+
+# The reveal shows a Delete CTA. Tap it.
+- assertVisible: "Delete"
+- tapOn: "Delete"
+
+# Confirm the row no longer appears in today's diary.
+- assertNotVisible:
+    text: ".*oats.*"
