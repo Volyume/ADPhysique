@@ -66,7 +66,24 @@ jobs:
           git add assets/seed/off_uk_snapshot.dat
           if git diff --cached --quiet; then
             echo "No changes to commit"
-          else
-            git commit -m "data(off): refresh UK snapshot $(date -u +%Y-%m-%d)"
-            git push
+            exit 0
           fi
+          git commit -m "data(off): refresh UK snapshot $(date -u +%Y-%m-%d)"
+          # Concurrent commits to main can land while the workflow
+          # runs. Rebase + retry handles that without losing the
+          # generated snapshot. Up to 5 attempts with linear backoff.
+          for attempt in 1 2 3 4 5; do
+            if git push origin "HEAD:${{ github.ref_name }}"; then
+              echo "push succeeded on attempt $attempt"
+              exit 0
+            fi
+            echo "push attempt $attempt rejected (likely concurrent commit). Rebasing and retrying."
+            git pull --rebase origin "${{ github.ref_name }}" || {
+              echo "::warning::rebase failed on attempt $attempt"
+              sleep $((attempt * 3))
+              continue
+            }
+            sleep $((attempt * 3))
+          done
+          echo "::error::could not push refreshed snapshot after 5 attempts"
+          exit 1
