@@ -104,8 +104,9 @@ Per `DATABASE_SCHEMA_LOCKED.md` status block + grep against `supabase/migrate_*.
 | 027 | rapid_loss_compression_triggered allow-list | **❓ Founder to confirm applied** |
 | 028 | food_library_pull RPC (delta sync) | **❓ Founder to confirm applied** |
 | 029 | Telemetry allow-list extension (weekly_coach_run + 3 others) | **❓ Founder to apply** (written 2026-05-25) |
-| 030 | Tier infrastructure (`tier_history` + `users_profile.trial_state` + 5 cols + `upgrade_tier` RPC + `start_cascade` RPC + `current_pricing_window` + `pricing_config` table) | **❓ Founder to apply** (written 2026-05-25) |
-| 031 (not yet written) | `body_composition_log` table (Complete tier) | ❌ Not written |
+| 030 | Tier infrastructure (`tier_history` + `users_profile.trial_state` + 5 cols + `upgrade_tier` RPC + `start_cascade` RPC + `current_pricing_window` + `pricing_config` table) | ✅ **Applied** 2026-05-25 |
+| 031 | Cascade workers (`cascade_advance_due_users` + pg_cron schedule every 15 min) | **❓ Founder to apply** (written 2026-05-25) |
+| 032 (not yet written) | `body_composition_log` table (Complete tier) | ❌ Not written |
 
 ---
 
@@ -221,7 +222,7 @@ In suggested execution order:
 | 8 | Extend `proGate.js` with `isPaidTier()`, `hasFeature()`, `hasGoalUnlock()` + FEATURE_MAP from `MOVE_5_TIER_INFRASTRUCTURE.md` lines 40-76 | `COMPLETE_TIER_SCOPE_LOCKED.md` lines 119-128 | S (~2 h) | Claude |
 | 9 | Build `CascadeGateScreen.js` + `SubscriptionScreen.js` + `TierComparisonStrip.js` | `UI_FLOWS_LOCKED.md` lines 229-246 + `SUBSCRIPTION_AND_PAYMENT_LOCKED.md` lines 305-326 | M (~3-4 days) | Claude |
 | 10 | Implement Move #4: extend `weeklyCoach.js` with `differential_output` field, build `DifferentialBadge.js` + `PaywallScreen.js`, snapshot tests for 6 locked copy variants | `MOVE_4_DIFFERENTIAL_PAYWALL.md` | M (~1 week) | Claude |
-| 11 | Cascade workers (Supabase `pg_cron` jobs for day-14 / day-28 transitions) | `MOVE_5_TIER_INFRASTRUCTURE.md` lines 127-130 | M (~2 days) | Claude |
+| 11 | ✅ Cascade workers shipped: migration 031 adds `cascade_advance_due_users()` + pg_cron schedule running every 15 min. Article 9 consent now fires `cascade.startCascade()` so new signups enter the cascade automatically. | `MOVE_5_TIER_INFRASTRUCTURE.md` lines 127-130 + `SUBSCRIPTION_AND_PAYMENT_LOCKED.md` line 106 | Founder action remaining: paste migration 031 into Supabase Dashboard → SQL Editor → Run (and enable `pg_cron` extension if not already enabled) | Claude wrote, Founder applies |
 | 12 | UI polish: swipe-delete on diary entries, long-press multi-select, "Copy yesterday" FAB, water tracker, You-tab Subscription / Credits rows, sync status indicator | `UI_FLOWS_LOCKED.md` various | M-L (~1 week) | Claude |
 
 ### LATER (Phase A exit prep, after all above are done and tested)

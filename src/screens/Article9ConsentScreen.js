@@ -61,6 +61,20 @@ export default function Article9ConsentScreen() {
       logInfo('Article9.consent.granted', `uid=${user?.id ?? 'unknown'}`, {
         cloudRecorded: !error,
       });
+      // Trial cascade starts at Article 9 consent per
+      // SUBSCRIPTION_AND_PAYMENT_LOCKED.md line 106. RPC is
+      // idempotent (no-ops for already-started users) and tolerates
+      // network failure. Fire-and-forget; cascade catches up on next
+      // sync if this one round-trip fails.
+      try {
+        // eslint-disable-next-line global-require
+        const { cascade } = require('../lib/payments');
+        cascade.startCascade().catch((e) => {
+          logError('Article9.consent.startCascade', e, { uid: user?.id });
+        });
+      } catch (e) {
+        logError('Article9.consent.startCascade.require', e);
+      }
       healthConsentGranted?.();
     } catch (e) {
       logError('Article9.consent.failed', e, { uid: user?.id });
