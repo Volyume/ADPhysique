@@ -28,9 +28,10 @@ const path = require('node:path');
 
 const OFF_BASE = 'https://world.openfoodfacts.org';
 const USER_AGENT = 'Volyume-Snapshot-Builder/1.2 (https://volyume.app)';
-const PAGE_SIZE = 1000;
-const MAX_PAGES = 30;            // OFF's pagination practically caps around this for large queries
+const PAGE_SIZE = 1000;          // Asked for; OFF effectively caps responses at ~100/page.
+const MAX_PAGES = 300;           // ~100 rows per page in practice → ~30k row ceiling.
 const REQUEST_DELAY_MS = 800;    // Be polite. 1 req/sec is well within OFF's guideline.
+const MAX_CONSECUTIVE_FAILURES = 5;
 const OUT_PATH = path.resolve(__dirname, '..', '..', 'assets', 'seed', 'off_uk_snapshot.json');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -138,18 +139,23 @@ async function fetchPage(page) {
   const rows = [];
   let totalFetched = 0;
   let totalSkipped = 0;
+  let consecutiveFailures = 0;
 
   for (let page = 1; page <= MAX_PAGES; page++) {
     let payload;
     try {
       payload = await fetchPage(page);
+      consecutiveFailures = 0;
     } catch (e) {
       err(`page ${page} fetch failed: ${e.message}`);
-      // Two consecutive fetch failures would be unusual; one failure
-      // we tolerate by skipping the page. If pagination genuinely
-      // dies, we stop with what we have.
-      if (rows.length === 0) throw e;
-      break;
+      consecutiveFailures++;
+      if (rows.length === 0 && page === 1) throw e;
+      if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+        warn(`${MAX_CONSECUTIVE_FAILURES} consecutive page failures; stopping pagination at page ${page}`);
+        break;
+      }
+      await sleep(REQUEST_DELAY_MS);
+      continue;
     }
     const products = Array.isArray(payload?.products) ? payload.products : [];
     totalFetched += products.length;
