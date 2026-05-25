@@ -52,6 +52,15 @@ const ALLOWED_EVENTS = new Set([
   // straight away. Cohort dashboard reads it as a count of how often
   // the safety override actually engages in the wild.
   'rapid_loss_compression_triggered',
+  // Migration 029 (TELEMETRY_DASHBOARDS_LOCKED.md catalogue):
+  // shipped-Move coverage gaps. weekly_coach_run powers the engine
+  // health panel; ffm_floor_hold_fired powers the FFM-floor hold
+  // rate alert; food_logged + food_search_attempt power the food
+  // layer health panel and search latency monitoring.
+  'weekly_coach_run',
+  'ffm_floor_hold_fired',
+  'food_logged',
+  'food_search_attempt',
 ]);
 
 let _flushTimer = null;

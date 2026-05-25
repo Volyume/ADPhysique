@@ -98,21 +98,38 @@ async function _promoteAll(rows) {
 export async function searchFoods(userId, query, { limit = 25 } = {}) {
   const q = (query || '').trim();
   if (q.length < MIN_QUERY_LEN) return [];
+  const t0 = Date.now();
 
   const local = await searchLocalByName(userId, q, limit);
-  if (local.length > 0) return local;
+  if (local.length > 0) {
+    if (userId) trackEvent(userId, 'food_search_attempt', {
+      source_hit: 'local', query_len: q.length, ms: Date.now() - t0,
+    });
+    return local;
+  }
 
   // Network fan-out: try OFF first (broader UK coverage). If empty,
   // fall through to USDA. Both are gated by request timeouts inside
   // the source modules so this never blocks the UI for long.
   const off = await searchOff(q, NETWORK_SEARCH_FANOUT_LIMIT);
   if (off.length > 0) {
-    return _promoteAll(off);
+    const promoted = await _promoteAll(off);
+    if (userId) trackEvent(userId, 'food_search_attempt', {
+      source_hit: 'off_live', query_len: q.length, ms: Date.now() - t0,
+    });
+    return promoted;
   }
   const usda = await searchUsda(q, NETWORK_SEARCH_FANOUT_LIMIT);
   if (usda.length > 0) {
-    return _promoteAll(usda);
+    const promoted = await _promoteAll(usda);
+    if (userId) trackEvent(userId, 'food_search_attempt', {
+      source_hit: 'usda', query_len: q.length, ms: Date.now() - t0,
+    });
+    return promoted;
   }
+  if (userId) trackEvent(userId, 'food_search_attempt', {
+    source_hit: 'miss', query_len: q.length, ms: Date.now() - t0,
+  });
   return [];
 }
 

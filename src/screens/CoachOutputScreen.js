@@ -629,6 +629,27 @@ export default function CoachOutputScreen({ navigation, route }) {
         logError('CoachOutputScreen.rapidLossTelemetry', e);
       }
 
+      // Per TELEMETRY_DASHBOARDS_LOCKED.md engine events catalogue.
+      // weekly_coach_run powers the engine health panel; ffm_floor_hold_fired
+      // powers the FFM-floor hold rate alert. Fire-and-forget.
+      try {
+        trackEngineEvent(user.id, 'weekly_coach_run', {
+          held_decisions_count: (result.heldDecisions ?? []).length,
+          flags_fired: result.edPatternFired ? ['ed_pattern'] : [],
+          ffm_floor_held: !!result.ffmFloorHeld,
+          rapid_loss_compression: !!result.rapidLossCorrectionApplied,
+          adjustment_magnitude_kcal: result.adjustments?.calories?.change ?? 0,
+        }).catch(() => {});
+        if (result.ffmFloorHeld) {
+          trackEngineEvent(user.id, 'ffm_floor_hold_fired', {
+            ffm_floor_kcal: result.ffmFloorContext?.floorKcal ?? null,
+            current_intake_avg_kcal: result.ffmFloorContext?.recentIntakeAvgKcal ?? null,
+          }).catch(() => {});
+        }
+      } catch (e) {
+        logError('CoachOutputScreen.engineTelemetry', e);
+      }
+
       await saveCoachOutput(user.id, { weekStart, ...result });
 
       // Auto-apply calorie adjustment. Protein stays the same (priority macro);

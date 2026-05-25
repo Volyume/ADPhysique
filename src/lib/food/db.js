@@ -55,6 +55,20 @@ export async function logFoodEntry(userId, entry) {
     ]
   );
   await recomputeRollup(userId, entry.entryDate);
+  // Per TELEMETRY_DASHBOARDS_LOCKED.md Panel 3 (food layer health).
+  // Fire-and-forget; the track() call writes locally first so a
+  // network outage does not block the user's diary entry.
+  // Lazy-required so test environments that mock ./database can
+  // skip pulling in the full supabase client.
+  try {
+    // eslint-disable-next-line global-require
+    const { track } = require('../engineTelemetry');
+    track(userId, 'food_logged', {
+      food_ref_source: entry.foodRef?.startsWith('custom:') ? 'custom' : 'global',
+      meal_slot: entry.mealSlot,
+      quantity_g: entry.quantityG,
+    }).catch(() => {});
+  } catch (_) { /* tolerate test env without telemetry */ }
   _scheduleSync();
   return id;
 }
