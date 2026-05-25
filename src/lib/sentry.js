@@ -15,6 +15,8 @@
 // no-ops means the JS bundle keeps loading and the app keeps running
 // during the transition between "no Sentry" and "Sentry installed".
 
+import { scrubEvent, scrubBreadcrumb } from './observability/sentryScrub';
+
 let SentryNative = null;
 let initialised = false;
 
@@ -84,11 +86,11 @@ export function initSentry({ release, environment } = {}) {
       //   2. Drop events tagged "drop" by the caller (used to
       //      suppress duplicate or noisy patterns).
       beforeSend: (event) => {
-        try { return _redactSentryEvent(event); }
+        try { return scrubEvent(event); }
         catch (_) { return event; }
       },
       beforeBreadcrumb: (crumb) => {
-        try { return _redactBreadcrumb(crumb); }
+        try { return scrubBreadcrumb(crumb); }
         catch (_) { return crumb; }
       },
     });
@@ -183,63 +185,8 @@ export function addBreadcrumb(message, ctx = {}) {
   } catch (_) {}
 }
 
-// ─── PII redaction (Sentry side belt-and-braces) ────────────────────────
-//
-// observability.redactPII handles caller-side redaction. These hooks
-// catch anything that reaches Sentry through other paths (direct
-// Sentry SDK calls, native crash data, third-party libraries that
-// register breadcrumbs). Same key list as observability.js — kept
-// in sync because the two run independently.
-
-const PII_KEYS = new Set([
-  'email', 'firstName', 'lastName', 'fullName',
-  'dateOfBirth', 'date_of_birth', 'birthDate',
-  'weightKg', 'weight_kg', 'bodyWeight', 'body_weight',
-  'heightCm', 'height_cm', 'bodyFatPercent', 'body_fat_percent',
-  'phone', 'phoneNumber', 'address',
-  'waistCm', 'waist_cm', 'chestCm', 'chest_cm',
-  'hipsCm', 'hips_cm', 'thighCm', 'quads',
-  'hamCm', 'hamstrings', 'calfCm', 'calves',
-  'armCm', 'arms', 'shouldersCm', 'shoulders',
-  'forearmCm', 'forearms',
-]);
-
-function _redactObject(obj, depth = 0) {
-  if (obj == null || depth > 5) return obj;
-  if (typeof obj !== 'object') return obj;
-  if (Array.isArray(obj)) return obj.map(v => _redactObject(v, depth + 1));
-  const out = {};
-  for (const [k, v] of Object.entries(obj)) {
-    if (PII_KEYS.has(k)) out[k] = v == null ? null : '[redacted]';
-    else out[k] = _redactObject(v, depth + 1);
-  }
-  return out;
-}
-
-function _redactSentryEvent(event) {
-  if (!event) return event;
-  if (event.extra) event.extra = _redactObject(event.extra);
-  if (event.contexts) event.contexts = _redactObject(event.contexts);
-  if (event.tags) event.tags = _redactObject(event.tags);
-  // User identity: keep id (low-risk, opaque uuid) but redact email.
-  // The Sentry "user" panel shows the id alone; email is what we
-  // don't want shipped at all even though Sentry has its own PII
-  // controls.
-  if (event.user) {
-    const { id } = event.user;
-    event.user = { id };
-  }
-  // Breadcrumbs nested inside the event payload also need
-  // recursing — they sometimes carry context the observability
-  // layer didn't redact (e.g. console messages with raw values).
-  if (Array.isArray(event.breadcrumbs)) {
-    event.breadcrumbs = event.breadcrumbs.map(_redactBreadcrumb);
-  }
-  return event;
-}
-
-function _redactBreadcrumb(crumb) {
-  if (!crumb) return crumb;
-  if (crumb.data) crumb.data = _redactObject(crumb.data);
-  return crumb;
-}
+// PII / sensitive-data redaction lives in src/lib/observability/sentryScrub.js
+// per PRIVACY_CONSENT_LOCKED.md line 282. This file imports `scrubEvent`
+// and `scrubBreadcrumb` and wires them into Sentry's beforeSend +
+// beforeBreadcrumb hooks above. Audit tests live in
+// src/lib/__tests__/sentryScrub.test.js.
