@@ -1,11 +1,11 @@
 # Latest Maestro E2E status
 
-- **Run number**: 2
-- **Run URL**: https://github.com/allansdouglas1983-cmyk/ADPhysique/actions/runs/26408914204
+- **Run number**: 3
+- **Run URL**: https://github.com/allansdouglas1983-cmyk/ADPhysique/actions/runs/26409249579
 - **Branch**: `claude/volyume-food-logging-app-k8wtU`
-- **Commit**: `d456f21ff193ca4919c1ff51ab14211cf3eb2d51`
+- **Commit**: `ce6f0465779b19d55ff2df355c2c1d5d147e4e3c`
 - **Tag run**: `smoke`
-- **Triggered at**: 2026-05-25T15:59:30Z
+- **Triggered at**: 2026-05-25T16:08:45Z
 - **Job status**: `success`
 
 ## Step outcomes
@@ -22,6 +22,11 @@
 <details><summary>prebuild.log (last 60 lines)</summary>
 
 ```
+Warning! Your git working tree is dirty.
+It's recommended to commit all your changes before proceeding, so you can revert the changes made by this command if necessary.
+Git status is dirty but the command will continue because the terminal is not interactive.
+- Clearing android
+✔ Cleared android code
 - Creating native directory (./android)
 ✔ Created native directory
 - Updating package.json
@@ -37,93 +42,93 @@
 <details><summary>gradle-debug.log (last 100 lines)</summary>
 
 ```
-Installing NDK (Side by side) 25.1.8937393 in /usr/local/lib/android/sdk/ndk/25.1.8937393
-"Install NDK (Side by side) 25.1.8937393 v.25.1.8937393" complete.
-"Install NDK (Side by side) 25.1.8937393 v.25.1.8937393" finished.
+> Task :expo-sqlite:preDebugBuild UP-TO-DATE
+> Task :expo-store-review:preBuild UP-TO-DATE
+> Task :expo-store-review:preDebugBuild UP-TO-DATE
+> Task :expo-sharing:writeDebugAarMetadata
+> Task :expo-sqlite:writeDebugAarMetadata
+> Task :expo-store-review:writeDebugAarMetadata
+> Task :expo-structured-headers:preBuild UP-TO-DATE
+> Task :expo-structured-headers:preDebugBuild UP-TO-DATE
+> Task :expo-task-manager:preBuild UP-TO-DATE
+> Task :expo-task-manager:preDebugBuild UP-TO-DATE
+> Task :expo-structured-headers:writeDebugAarMetadata
+> Task :expo-updates:preBuild UP-TO-DATE
+> Task :expo-updates:preDebugBuild UP-TO-DATE
+> Task :expo-task-manager:writeDebugAarMetadata
+> Task :expo-updates-interface:preBuild UP-TO-DATE
+> Task :expo-updates:writeDebugAarMetadata
+> Task :expo-updates-interface:preDebugBuild UP-TO-DATE
+> Task :expo-updates-interface:writeDebugAarMetadata
+> Task :expo-web-browser:preBuild UP-TO-DATE
+> Task :expo-web-browser:preDebugBuild UP-TO-DATE
+> Task :react-native-async-storage_async-storage:preBuild UP-TO-DATE
+> Task :react-native-async-storage_async-storage:preDebugBuild UP-TO-DATE
+> Task :expo-web-browser:writeDebugAarMetadata
+> Task :react-native-gesture-handler:preBuild UP-TO-DATE
+> Task :react-native-async-storage_async-storage:writeDebugAarMetadata
+> Task :react-native-gesture-handler:preDebugBuild UP-TO-DATE
+> Task :react-native-iap:preBuild UP-TO-DATE
+> Task :react-native-gesture-handler:writeDebugAarMetadata
+> Task :react-native-iap:prePlayDebugBuild UP-TO-DATE
+> Task :react-native-iap:writePlayDebugAarMetadata
+> Task :react-native-ml-kit_text-recognition:preBuild UP-TO-DATE
+> Task :react-native-ml-kit_text-recognition:preDebugBuild UP-TO-DATE
+> Task :react-native-reanimated:assertLatestReactNativeWithNewArchitectureTask SKIPPED
+> Task :react-native-reanimated:assertMinimalReactNativeVersionTask SKIPPED
+> Task :react-native-ml-kit_text-recognition:writeDebugAarMetadata
+> Task :react-native-reanimated:prepareHeadersForPrefab
+> Task :react-native-reanimated:preBuild
+> Task :react-native-reanimated:preDebugBuild
+> Task :react-native-safe-area-context:preBuild UP-TO-DATE
+> Task :react-native-reanimated:writeDebugAarMetadata
+> Task :react-native-safe-area-context:preDebugBuild UP-TO-DATE
+> Task :react-native-screens:preBuild UP-TO-DATE
+> Task :react-native-screens:preDebugBuild UP-TO-DATE
+> Task :react-native-safe-area-context:writeDebugAarMetadata
+> Task :react-native-svg:preBuild UP-TO-DATE
+> Task :react-native-svg:preDebugBuild UP-TO-DATE
+> Task :react-native-screens:writeDebugAarMetadata
+> Task :react-native-svg:writeDebugAarMetadata
+> Task :react-native-vision-camera:prepareHeaders
+> Task :react-native-vision-camera:preBuild
+> Task :react-native-vision-camera:preDebugBuild
+> Task :react-native-webview:preBuild UP-TO-DATE
+> Task :react-native-webview:preDebugBuild UP-TO-DATE
+> Task :react-native-vision-camera:writeDebugAarMetadata
+> Task :rest-timer-live:preBuild UP-TO-DATE
+> Task :rest-timer-live:preDebugBuild UP-TO-DATE
+> Task :react-native-webview:writeDebugAarMetadata
+> Task :sentry_react-native:preBuild UP-TO-DATE
+> Task :sentry_react-native:preDebugBuild UP-TO-DATE
+> Task :rest-timer-live:writeDebugAarMetadata
+> Task :sentry_react-native:writeDebugAarMetadata
+> Task :shopify_react-native-skia:prepareHeaders
+> Task :shopify_react-native-skia:preBuild
+> Task :shopify_react-native-skia:preDebugBuild
+> Task :unimodules-app-loader:preBuild UP-TO-DATE
+> Task :unimodules-app-loader:preDebugBuild UP-TO-DATE
+> Task :shopify_react-native-skia:writeDebugAarMetadata
+> Task :unimodules-app-loader:writeDebugAarMetadata
+> Task :app:generateDebugResValues
 
-> Configure project :expo
+> Task :app:checkDebugAarMetadata
+WARNING: [Processor] Library '/home/runner/.gradle/caches/modules-2/files-2.1/com.google.android.exoplayer/exoplayer-ui/2.18.1/eed81d49b8b0e9a365cbec260dafb222d6e5bc67/exoplayer-ui-2.18.1.aar' contains references to both AndroidX and old support library. This seems like the library is partially migrated. Jetifier will try to rewrite the library anyway.
+ Example of androidX reference: 'androidx/core/app/NotificationCompat$Builder'
+ Example of support library reference: 'android/support/v4/media/session/MediaSessionCompat$Token'
 
-Using expo modules
-  - [32mexpo-application[0m (5.9.1)
-  - [32mexpo-asset[0m (10.0.10)
-  - [32mexpo-av[0m (14.0.7)
-  - [32mexpo-background-fetch[0m (12.0.1)
-  - [32mexpo-constants[0m (16.0.2)
-  - [32mexpo-document-picker[0m (12.0.2)
-  - [32mexpo-eas-client[0m (0.12.0)
-  - [32mexpo-file-system[0m (17.0.1)
-  - [32mexpo-font[0m (12.0.10)
-  - [32mexpo-haptics[0m (13.0.1)
-  - [32mexpo-image[0m (1.13.0)
-  - [32mexpo-json-utils[0m (0.13.1)
-  - [32mexpo-keep-awake[0m (13.0.2)
-  - [32mexpo-linear-gradient[0m (13.0.2)
-  - [32mexpo-manifests[0m (0.14.3)
-  - [32mexpo-modules-core[0m (1.12.26)
-  - [32mexpo-notifications[0m (0.28.19)
-  - [32mexpo-print[0m (13.0.1)
-  - [32mexpo-secure-store[0m (13.0.2)
-  - [32mexpo-sensors[0m (13.0.9)
-  - [32mexpo-sharing[0m (12.0.1)
-  - [32mexpo-sqlite[0m (14.0.6)
-  - [32mexpo-store-review[0m (7.0.2)
-  - [32mexpo-structured-headers[0m (3.8.0)
-  - [32mexpo-task-manager[0m (11.8.2)
-  - [32mexpo-updates[0m (0.25.28)
-  - [32mexpo-web-browser[0m (13.0.3)
-  - [32mrest-timer-live[0m (0.1.0)
-  - [32munimodules-app-loader[0m (4.6.0)
-
-
-> Configure project :react-native-reanimated
-Android gradle plugin: 8.2.1
-Gradle: 8.8
-
-> Configure project :react-native-vision-camera
-[VisionCamera] Thank you for using VisionCamera ❤️
-[VisionCamera] If you enjoy using VisionCamera, please consider sponsoring this project: https://github.com/sponsors/mrousavy
-[VisionCamera] node_modules found at /home/runner/work/ADPhysique/ADPhysique/node_modules
-[VisionCamera] VisionCamera_enableFrameProcessors is set to true!
-[VisionCamera] react-native-worklets-core not found, Frame Processors are disabled!
-[VisionCamera] VisionCamera_enableCodeScanner is set to true!
-
-> Configure project :shopify_react-native-skia
-react-native-skia: node_modules/ found at: /home/runner/work/ADPhysique/ADPhysique/node_modules
-react-native-skia: RN Version: 74 / 0.74.5
-react-native-skia: isSourceBuild: false
-react-native-skia: PrebuiltDir: /home/runner/work/ADPhysique/ADPhysique/node_modules/@shopify/react-native-skia/android/build/react-native-0*/jni
-react-native-skia: buildType: debug
-react-native-skia: buildDir: /home/runner/work/ADPhysique/ADPhysique/node_modules/@shopify/react-native-skia/android/build
-react-native-skia: node_modules: /home/runner/work/ADPhysique/ADPhysique/node_modules
-react-native-skia: Enable Prefab: true
-react-native-skia: aar state post 70, do nothing
+> Task :app:checkDebugAarMetadata FAILED
 
 FAILURE: Build failed with an exception.
 
 * What went wrong:
-Could not determine the dependencies of task ':app:compileDebugJavaWithJavac'.
-> Could not resolve all dependencies for configuration ':app:debugCompileClasspath'.
-   > Could not resolve project :react-native-iap.
-     Required by:
-         project :app
-      > The consumer was configured to find a library for use during compile-time, preferably optimized for Android, as well as attribute 'com.android.build.api.attributes.AgpVersionAttr' with value '8.2.1', attribute 'com.android.build.api.attributes.BuildTypeAttr' with value 'debug', attribute 'org.jetbrains.kotlin.platform.type' with value 'androidJvm'. However we cannot choose between the following variants of project :react-native-iap:
-          - amazonDebugApiElements
-          - playDebugApiElements
-        All of them match the consumer attributes:
-          - Variant 'amazonDebugApiElements' capability Volyume:react-native-iap:unspecified declares a library for use during compile-time, preferably optimized for Android, as well as attribute 'com.android.build.api.attributes.AgpVersionAttr' with value '8.2.1', attribute 'com.android.build.api.attributes.BuildTypeAttr' with value 'debug', attribute 'org.jetbrains.kotlin.platform.type' with value 'androidJvm':
-              - Unmatched attributes:
-                  - Provides attribute 'com.android.build.api.attributes.ProductFlavor:store' with value 'amazon' but the consumer didn't ask for it
-                  - Provides attribute 'com.android.build.gradle.internal.attributes.VariantAttr' with value 'amazonDebug' but the consumer didn't ask for it
-                  - Provides attribute 'store' with value 'amazon' but the consumer didn't ask for it
-          - Variant 'playDebugApiElements' capability Volyume:react-native-iap:unspecified declares a library for use during compile-time, preferably optimized for Android, as well as attribute 'com.android.build.api.attributes.AgpVersionAttr' with value '8.2.1', attribute 'com.android.build.api.attributes.BuildTypeAttr' with value 'debug', attribute 'org.jetbrains.kotlin.platform.type' with value 'androidJvm':
-              - Unmatched attributes:
-                  - Provides attribute 'com.android.build.api.attributes.ProductFlavor:store' with value 'play' but the consumer didn't ask for it
-                  - Provides attribute 'com.android.build.gradle.internal.attributes.VariantAttr' with value 'playDebug' but the consumer didn't ask for it
-                  - Provides attribute 'store' with value 'play' but the consumer didn't ask for it
+Execution failed for task ':app:checkDebugAarMetadata'.
+> Could not resolve all files for configuration ':app:debugRuntimeClasspath'.
+   > Failed to transform react-android-0.74.5-debug.aar (com.facebook.react:react-android:0.74.5) to match attributes {artifactType=android-aar-metadata, com.android.build.api.attributes.BuildTypeAttr=debug, org.gradle.category=library, org.gradle.dependency.bundling=external, org.gradle.libraryelements=aar, org.gradle.status=release, org.gradle.usage=java-runtime}.
+      > Execution failed for JetifyTransform: /home/runner/.gradle/caches/modules-2/files-2.1/com.facebook.react/react-android/0.74.5/c80a0b28c8c97d879209b811418fd98efa8959ce/react-android-0.74.5-debug.aar.
+         > Java heap space
 
 * Try:
-> Ambiguity errors are explained in more detail at https://docs.gradle.org/8.8/userguide/variant_model.html#sub:variant-ambiguity.
-> Review the variant matching algorithm at https://docs.gradle.org/8.8/userguide/variant_attributes.html#sec:abm_algorithm.
 > Run with --stacktrace option to get the stack trace.
 > Run with --info or --debug option to get more log output.
 > Run with --scan to get full insights.
@@ -133,10 +138,10 @@ Deprecated Gradle features were used in this build, making it incompatible with 
 
 You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
 
-For more on this, please refer to https://docs.gradle.org/8.8/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+For more on this, please refer to https://docs.gradle.org/8.9/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD FAILED in 3m 51s
-15 actionable tasks: 15 executed
+BUILD FAILED in 4m 24s
+68 actionable tasks: 68 executed
 ```
 
 </details>
