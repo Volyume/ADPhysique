@@ -85,6 +85,17 @@ const ALLOWED_EVENTS = new Set([
   // fires after insertCustomFood succeeds in AddCustomFoodScreen.
   'account_created',
   'custom_food_created',
+  // Migration 037: app lifecycle + sync cadence. app_cold_start
+  // fires once per process the first time maybeSync resolves a
+  // signed-in user. app_foregrounded / app_backgrounded cover
+  // subsequent AppState 'active' / 'background' transitions (not
+  // 'inactive', which is the iOS transient control-centre state).
+  // sync_run fires at the end of each successful maybeSync round,
+  // throttled to once per 60s by the upstream MIN_SYNC_INTERVAL_MS.
+  'app_cold_start',
+  'app_foregrounded',
+  'app_backgrounded',
+  'sync_run',
 ]);
 
 let _flushTimer = null;

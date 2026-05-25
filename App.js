@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, Alert, AppState } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, Alert, AppState, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';
@@ -407,6 +407,7 @@ export default function App() {
   // foreground/background toggle doesn't hammer the API.
   useEffect(() => {
     let lastSyncAt = 0;
+    let coldStartFired = false;
     const MIN_SYNC_INTERVAL_MS = 60_000; // at most once a minute
     async function maybeSync() {
       const now = Date.now();
@@ -417,6 +418,22 @@ export default function App() {
         const { data: { session: s } } = await sb.auth.getSession();
         const supabaseUserId = s?.user?.id;
         const localUserId = useAppStore.getState().user?.id;
+        // Lifecycle telemetry: app_cold_start fires once per process,
+        // the first time maybeSync resolves a signed-in user. After
+        // that the AppState listener covers foreground / background
+        // transitions. sync_run fires at the end of each successful
+        // maybeSync round so the dashboard can monitor sync cadence
+        // and surface accounts that haven't synced in days.
+        if (supabaseUserId && !coldStartFired) {
+          coldStartFired = true;
+          try {
+            // eslint-disable-next-line global-require
+            const { track } = require('./src/lib/engineTelemetry');
+            track(supabaseUserId, 'app_cold_start', {
+              platform: Platform.OS,
+            }).catch(() => {});
+          } catch (_) {}
+        }
         lastSyncAt = now;
         if (supabaseUserId && localUserId) {
           // eslint-disable-next-line global-require
@@ -480,9 +497,42 @@ export default function App() {
             }).catch(() => {});
           } catch (_) { /* tolerate — feature is a "nice to have" */ }
         }
+        // sync_run telemetry. Fires at the end of a round that
+        // successfully resolved a signed-in user. The 60s throttle
+        // upstream means the dashboard sees at most one event per
+        // minute of active app time, plenty to catch staleness
+        // without flooding the table.
+        if (supabaseUserId) {
+          try {
+            // eslint-disable-next-line global-require
+            const { track } = require('./src/lib/engineTelemetry');
+            track(supabaseUserId, 'sync_run', {
+              had_local_uid: !!localUserId,
+            }).catch(() => {});
+          } catch (_) {}
+        }
       } catch (_) { /* offline / no session — try again next foreground */ }
     }
     const sub = AppState.addEventListener('change', state => {
+      // Lifecycle telemetry: app_foregrounded fires only AFTER the
+      // cold-start event has fired (otherwise the first 'active'
+      // transition on mount would double-count with app_cold_start).
+      // app_backgrounded fires on 'background' but not 'inactive'
+      // (the iOS "phone call" / control-center pull-down state),
+      // which would otherwise overstate sessions.
+      if (coldStartFired && (state === 'active' || state === 'background')) {
+        try {
+          const sb = getSupabaseClient();
+          sb?.auth.getSession().then(({ data: { session: s } = {} } = {}) => {
+            const uid = s?.user?.id;
+            if (!uid) return;
+            // eslint-disable-next-line global-require
+            const { track } = require('./src/lib/engineTelemetry');
+            const event = state === 'active' ? 'app_foregrounded' : 'app_backgrounded';
+            track(uid, event, { platform: Platform.OS }).catch(() => {});
+          }).catch(() => {});
+        } catch (_) {}
+      }
       // Fire on BOTH foreground (active) and backgrounding
       // (inactive/background). Foreground sync catches up cloud
       // changes from other devices; background sync flushes
