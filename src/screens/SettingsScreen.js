@@ -655,6 +655,12 @@ export default function SettingsScreen({ navigation }) {
             sub="Plan, billing, restore purchases"
             onPress={() => navigation.navigate('Subscription')}
           />
+          <SettingRow
+            icon="information-circle-outline"
+            label="Credits"
+            sub="OpenFoodFacts, CoFID, USDA attribution"
+            onPress={() => navigation.navigate('Credits')}
+          />
         </View>
 
         {/* Accessibility */}

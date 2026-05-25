@@ -8,10 +8,12 @@
  * entry CTA, swipe-delete, copy yesterday. Search-based add lands
  * once the bundled OFF snapshot ingestion is wired (Move #1.5).
  */
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
+  Alert,
 } from 'react-native';
+import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -171,6 +173,72 @@ export default function DiaryScreen({ navigation }) {
     setWaterMl(next);
   }
 
+  // Swipe-to-delete handler used by EntryRow. Confirms before
+  // destroying the row; the swipeable's ref is closed if the user
+  // cancels so the row snaps back.
+  const requestDelete = useCallback((entry, closeSwipe) => {
+    Alert.alert(
+      'Delete entry?',
+      `${friendlyFoodName(entry)} (${Math.round(entry.kcal ?? 0)} kcal)`,
+      [
+        { text: 'Cancel', style: 'cancel', onPress: () => closeSwipe?.() },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteFoodEntry(entry.id, userId);
+              await load();
+            } catch (_) {
+              closeSwipe?.();
+            }
+          },
+        },
+      ],
+    );
+  }, [userId, load]);
+
+  // "Copy yesterday" FAB: replays yesterday's entries into today.
+  // Re-uses logFoodEntry under the hood (via the food-domain layer)
+  // so the rollup trigger and sync queue stay consistent.
+  const copyYesterday = useCallback(async () => {
+    if (!userId) return;
+    const yesterday = shiftDate(selectedDate, -1);
+    const yEntries = await getFoodEntriesForDay(userId, yesterday).catch(() => []);
+    if (!yEntries || yEntries.length === 0) {
+      Alert.alert('Nothing to copy', `No entries logged on ${yesterday}.`);
+      return;
+    }
+    Alert.alert(
+      `Copy ${yEntries.length} ${yEntries.length === 1 ? 'entry' : 'entries'} from yesterday?`,
+      'They\'ll land in today\'s diary at the same meal slots.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Copy',
+          onPress: async () => {
+            // eslint-disable-next-line global-require
+            const { logFoodEntry } = require('../lib/food/db');
+            for (const e of yEntries) {
+              await logFoodEntry(userId, {
+                entryDate: selectedDate,
+                mealSlot: e.meal_slot,
+                foodRef: e.food_ref,
+                quantityG: e.quantity_g,
+                kcal: e.kcal,
+                proteinG: e.protein_g,
+                carbsG: e.carbs_g,
+                fatG: e.fat_g,
+                fibreG: e.fibre_g ?? null,
+              }).catch(() => {});
+            }
+            await load();
+          },
+        },
+      ],
+    );
+  }, [userId, selectedDate, load]);
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView
@@ -223,6 +291,7 @@ export default function DiaryScreen({ navigation }) {
             entries={entriesBySlot[slot.key]}
             onAdd={() => addFood(slot.key)}
             onEdit={openEditSheet}
+            onDelete={requestDelete}
           />
         ))}
 
@@ -254,14 +323,33 @@ export default function DiaryScreen({ navigation }) {
         style={styles.scanFab}
         onPress={() => navigation.navigate('ScanBarcode', { entryDate: selectedDate })}
         activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel="Scan barcode"
       >
         <Ionicons name="barcode-outline" size={26} color="#000" />
       </TouchableOpacity>
+
+      {/* Copy-yesterday FAB stacks above the scan FAB. Hidden when
+          the diary already has entries for today, since the action
+          appends rather than replaces and copying yesterday's set on
+          top of today's would surprise the user. */}
+      {entries.length === 0 ? (
+        <TouchableOpacity
+          style={styles.copyYesterdayFab}
+          onPress={copyYesterday}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Copy yesterday's entries"
+        >
+          <Ionicons name="copy-outline" size={18} color={colors.textPrimary} />
+          <Text style={styles.copyYesterdayLabel}>Copy yesterday</Text>
+        </TouchableOpacity>
+      ) : null}
     </SafeAreaView>
   );
 }
 
-function MealSection({ slot, entries, onAdd, onEdit }) {
+function MealSection({ slot, entries, onAdd, onEdit, onDelete }) {
   const slotKcal = Math.round(entries.reduce((a, e) => a + (e.kcal ?? 0), 0));
   return (
     <View style={styles.section}>
@@ -270,13 +358,38 @@ function MealSection({ slot, entries, onAdd, onEdit }) {
         <Text style={styles.sectionTotal}>{slotKcal} kcal</Text>
       </View>
       {entries.map((e) => (
-        <EntryRow key={e.id} entry={e} onEdit={() => onEdit(e)} />
+        <SwipeableEntryRow key={e.id} entry={e} onEdit={() => onEdit(e)} onDelete={onDelete} />
       ))}
       <TouchableOpacity style={styles.addRow} onPress={onAdd} accessibilityLabel={`Add food to ${slot.label}`}>
         <Ionicons name="add" size={18} color={colors.primary} />
         <Text style={styles.addLabel}>Add food</Text>
       </TouchableOpacity>
     </View>
+  );
+}
+
+function SwipeableEntryRow({ entry, onEdit, onDelete }) {
+  const ref = useRef(null);
+  const renderRightActions = useCallback(() => (
+    <TouchableOpacity
+      style={styles.swipeDelete}
+      accessibilityRole="button"
+      accessibilityLabel="Delete entry"
+      onPress={() => onDelete?.(entry, () => ref.current?.close?.())}
+    >
+      <Ionicons name="trash-outline" size={20} color={colors.textPrimary} />
+      <Text style={styles.swipeDeleteText}>Delete</Text>
+    </TouchableOpacity>
+  ), [entry, onDelete]);
+  return (
+    <Swipeable
+      ref={ref}
+      renderRightActions={renderRightActions}
+      overshootRight={false}
+      rightThreshold={48}
+    >
+      <EntryRow entry={entry} onEdit={onEdit} />
+    </Swipeable>
   );
 }
 
@@ -343,6 +456,41 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     elevation: 6,
     shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 4 },
+  },
+  copyYesterdayFab: {
+    position: 'absolute',
+    right: spacing.lg,
+    bottom: spacing.xl + 56 + spacing.sm, // stack above scanFab
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.surface2,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    elevation: 4,
+    shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 6, shadowOffset: { width: 0, height: 3 },
+  },
+  copyYesterdayLabel: {
+    color: colors.textPrimary,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+  },
+  swipeDelete: {
+    backgroundColor: colors.error,
+    width: 90,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: radius.md,
+    marginVertical: spacing.xs,
+    gap: spacing.xxs,
+  },
+  swipeDeleteText: {
+    color: colors.textPrimary,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
   },
   safe: { flex: 1, backgroundColor: colors.background },
   dayPagerRow: {
