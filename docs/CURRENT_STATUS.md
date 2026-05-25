@@ -1,13 +1,12 @@
-# Volyume current status (verified 2026-05-25)
+# Volyume current status (verified 2026-05-25, evening)
 
 This document captures the verified, code-checked, founder-confirmed
 state of the Volyume project. It supersedes `HANDOFF.md` (which has
 drifted) as the single trusted reference for what is shipped, what is
 in progress, and what comes next, in the correct phased order.
 
-Built by reading every LOCKED doc end-to-end and verifying claims
-against actual code state (grep, file inspection, founder direct
-answers). No agent summaries trusted.
+Update protocol: this doc is rewritten end-to-end at the end of any
+session that materially changes shipped state, not appended to.
 
 ---
 
@@ -24,9 +23,9 @@ checklist (lines 77-89) is green.
 
 | Surface | State |
 |---|---|
-| Google Play | **AAB live in Closed Testing track.** The build is the original pre-food-layer version (v1.1.0+4). |
+| Google Play | **AAB live in Closed Testing track.** The build is the original pre-food-layer version (v1.1.0+4). Sideloaded debug APKs are how we're testing the build-out work; the Closed Testing track stays frozen until Phase A exit. |
 | Apple App Store | **Nothing.** No Apple Developer account, no App Store Connect app entity, no iOS bundle registered. (Locked decision: Android-only at Phase B; iOS deferred indefinitely.) |
-| Marketing site | volyume.app domain registered (Namecheap). Hosting state unknown; waitlist signup form not built. |
+| Marketing site | volyume.app domain registered (Namecheap). Hosting state unknown; waitlist signup form not built. Privacy policy HTML exists at `public/privacy.html` but is not yet deployed. |
 
 ### Signing infrastructure
 
@@ -40,20 +39,36 @@ blocker but not blocking current code work.
 ### Branch state
 
 - Active branch: `main` (this branch holds the food layer + every
-  shipped Move).
+  shipped Move + every Phase A code chunk).
 - Default branch on GitHub: `claude/build-volyume-app-srY9C` (NOT
   `main`). Per founder direction, `main` should become default but
   the change requires desktop browser access; deferred.
-- 489+ commits ahead of the historical main on this branch.
+- 510+ commits ahead of the historical main on this branch.
 
 ### Locked release policy (CLAUDE.md, restated)
 
 > The current Play Console closed testing build stays in place until
-> the WHOLE project is built out — not half done. Do NOT propose,
+> the WHOLE project is built out, not half done. Do NOT propose,
 > schedule, or trigger a new closed-testing release.
 
 This holds. All Move work stacks up on `main` in Git, not on the Play
 track, until Phase A exit.
+
+### Founder overrides locked 2026-05-25
+
+1. **Cloud infrastructure migration (Azure/AWS) deferred** until the
+   app is stable in production. Supabase + Sentry stack stays for
+   v1 launch.
+2. **Google Play Billing direct, not RevenueCat.** iOS deferred
+   indefinitely so RevenueCat's cross-platform value is moot. Going
+   direct removes the 1%-above-£2.5k-MRR fee and one dependency.
+   `src/lib/payments/playBilling.js` abstraction stays so the
+   underlying SDK can swap without touching cascade / UI / RPCs.
+3. **2-tier model (Free, Pro).** Complete tier removed; Peak Week
+   module removed entirely ("peak week needs a human eye, not
+   numbers"). 21-day single Pro trial. Pricing £0.99 (open beta) /
+   £1.99 (founders) / £3.99 (standard). Strategy: build a user base
+   over short-term ARPU.
 
 ---
 
@@ -61,213 +76,208 @@ track, until Phase A exit.
 
 Verified by direct code inspection against each Move plan doc.
 
-| Move | Spec doc | Code shipped | Tests in CI suite | Spec-defined extra tests (NOT YET BUILT) |
-|---|---|---|---|---|
-| **#0** Code corrections | `MOVE_0_CODE_CORRECTIONS.md` | ✅ Citation fix + jargon blocklist extension | ✅ `jargonBlocklist.test.js` (11 tests) | — |
-| **#0.5** Voice retrofit | `MOVE_0_5_VOICE_RETROFIT.md` | ✅ Precision Coaching naming + WHY_LIBRARY rewrites | ✅ `whyThisTemplates.snapshot.test.js` (14), `weeklyCoach.voice.snapshot.test.js` (5) | — |
-| **#1** Food foundation + FFM floor | `MOVE_1_FOOD_FOUNDATION_AND_FFM.md` | ✅ Migrations 015 + 016, FFM floor in `nutritionEngine.js`, food data layer in `src/lib/food/`, Diary tab, AddCustomFood, FoodSearch, Insights extensions, Today's intake card | ✅ 71 tests (ffmFloor 17, ffmFloor.adaptive 8, weeklyCoach.ffmFloor 8, sanityChecks 18, csvExport 8, foodSync 12) | — |
-| **#1.5** Barcode + OCR | `MOVE_1_5_BARCODE_AND_OCR.md` | ✅ vision-camera scan, MLKit OCR (on-device), OCR writeback queue, migrations 022 + 023, ScanBarcodeScreen, ScanLabelScreen | ✅ 33 tests (liveOff 10, usda 8, ocrParser 6, writeback 9) | ⚠️ Missing: `food.waterfall.test.js` (full orchestration), Maestro `scan_barcode_happy_path.yaml` + `scan_barcode_miss_ocr.yaml` |
-| **#2** ED-pattern detection | `MOVE_2_ED_PATTERN_DETECTION.md` | ✅ `edPatternDetector.js` (4 signals + threshold flip), migration 017 (ed_pattern_flags table + RPC), HeldDecisionsCard variant, GoalLockConsentScreen, Article9ConsentScreen + migration 019 | ✅ 23 tests in `edPatternDetector.test.js` + simulator scenarios `aggressive_cut_supervised`, `aggressive_cut_unsupervised`, `red_s_trajectory` shipped | — |
-| **#3** Upward gate compression + telemetry slice | `MOVE_3_UPWARD_GATE_COMPRESSION.md` | ✅ `rapidLossOverride` in `computeAdaptiveTDEEAdjustment`, `engineTelemetry.js` (123 lines), rapid_loss_corrected held-decision card, migration 027 (rapid_loss_compression_triggered allow-list) | ✅ 15 tests in `upwardGateCompression.test.js` | ⚠️ `rapid_loss_compression_triggered` event allow-listed but no caller wired in code. Simulator scenario `rapid_loss_correction` not built. |
-| **#4** Differential paywall | `MOVE_4_DIFFERENTIAL_PAYWALL.md` | ✅ **SHIPPED.** `differential_output` field added to weeklyCoach output via pure detector in `src/lib/differentialPaywall.js`. 6 locked-copy variants verbatim + `_NO_TRIAL` variants for post-cascade users. Adherence 2-of-3 gate + tier gate + 6-context priority ordering. `DifferentialBadge.js` renders inline below the held-decisions block on CoachOutputScreen. `PaywallScreen.js` modal handles the pay tap. `paywall_shown` + `paywall_tapped_cta` telemetry wired client+server (migration 032). 40 detector tests + 6 mount tests. | 40+6 tests | SHIPPED |
-| **#5** Tier infrastructure + Google Play Billing (founder override; was RevenueCat) | `MOVE_5_TIER_INFRASTRUCTURE.md` | 🟡 **IN PROGRESS.** Migrations 030 + 031 applied (`tier_history`, `users_profile.trial_state` + cols, `upgrade_tier` RPC, `start_cascade` RPC, cascade workers via pg_cron). `src/lib/payments/` module built (`playBilling.js`, `catalogue.js`, `cascade.js`, `restore.js`). proGate has `isPaidTier`/`hasFeature`/`hasGoalUnlock` + FEATURE_MAP. CascadeGateScreen + SubscriptionScreen shipped. **Outstanding:** real IAP SDK wiring + Play RTDN Edge Function + sandbox purchase test (at Phase A exit). | n/a | n/a |
+| Move | Spec doc | Code shipped | Tests in CI suite |
+|---|---|---|---|
+| **#0** Code corrections | `MOVE_0_CODE_CORRECTIONS.md` | Citation fix + jargon blocklist extension | jargonBlocklist (11) |
+| **#0.5** Voice retrofit | `MOVE_0_5_VOICE_RETROFIT.md` | Precision Coaching naming + WHY_LIBRARY rewrites | whyThisTemplates.snapshot (14), weeklyCoach.voice.snapshot (5) |
+| **#1** Food foundation + FFM floor | `MOVE_1_FOOD_FOUNDATION_AND_FFM.md` | Migrations 015+016, FFM floor in nutritionEngine, food data layer in src/lib/food/, Diary tab, AddCustomFood, FoodSearch, Insights extensions, Today's intake card | 71 tests (ffmFloor 17, ffmFloor.adaptive 8, weeklyCoach.ffmFloor 8, sanityChecks 18, csvExport 8, foodSync 12) |
+| **#1.5** Barcode + OCR | `MOVE_1_5_BARCODE_AND_OCR.md` | vision-camera scan, MLKit OCR (on-device), OCR writeback queue, migrations 022+023, ScanBarcodeScreen, ScanLabelScreen | 33 tests (liveOff 10, usda 8, ocrParser 6, writeback 9) + food.waterfall (orchestration) |
+| **#2** ED-pattern detection | `MOVE_2_ED_PATTERN_DETECTION.md` | edPatternDetector (4 signals + threshold flip), migration 017 (ed_pattern_flags + RPC), HeldDecisionsCard variant, GoalLockConsentScreen, Article9ConsentScreen + migration 019 | 23 tests + simulator scenarios (aggressive_cut_supervised, aggressive_cut_unsupervised, red_s_trajectory) |
+| **#3** Upward gate compression + telemetry slice | `MOVE_3_UPWARD_GATE_COMPRESSION.md` | rapidLossOverride in computeAdaptiveTDEEAdjustment, engineTelemetry.js, rapid_loss_corrected held-decision card, migration 027 | 15 tests + simulator `rapid_loss_correction` |
+| **#4** Differential paywall | `MOVE_4_DIFFERENTIAL_PAYWALL.md` | **SHIPPED.** `differential_output` field in weeklyCoach via pure detector in `src/lib/differentialPaywall.js`. 6 locked-copy variants verbatim + `_NO_TRIAL` variants. Adherence 2-of-3 gate + tier gate + 6-context priority. `DifferentialBadge.js` renders inline on CoachOutputScreen. `PaywallScreen.js` modal. `paywall_shown` + `paywall_tapped_cta` telemetry wired (migration 032). | 40 detector + 6 mount tests + simulator `stalled_lift` |
+| **#5** Tier infrastructure + Google Play Billing | `MOVE_5_TIER_INFRASTRUCTURE.md` | **SHIPPED PARTIAL.** Migrations 030+031+033 applied. `src/lib/payments/` module: playBilling (real `react-native-iap` provider injected at boot), catalogue (3 SKUs), cascade (state machine, 7 transitions instrumented), restore. proGate has isPaidTier/hasFeature/hasGoalUnlock + FEATURE_MAP (2-tier collapsed). CascadeGateScreen + SubscriptionScreen + PaywallScreen + TierComparisonStrip shipped. RTDN Edge Function `supabase/functions/play-billing-rtdn/index.ts` written. Migration 038 wires the full payments/cascade telemetry catalogue. **Outstanding:** founder deploys Edge Function + creates Play Console SKUs + sandbox purchase test (at Phase A exit). |
 
-**Test totals (verified via Jest run reported by audit):** 1086 tests in 41 suites, 0 fail, 0 skip.
+**Test totals:** 1348 tests in 60 suites, 0 fail, 0 skip.
 
-Three additional Move-related items recently shipped (last 24h, not in HANDOFF.md):
-
-- Bundled OFF UK snapshot via multi-axis search (commit `c3cd6de`) — multi-axis country × 37 categories × 15 brands query strategy.
-- Bundled CoFID UK generic foods snapshot (commit `a8f9c9c`) — 2,852 generic UK foods.
-- `.dat` asset extension + `metro.config.js` fix (commit `7498df4`) — fixes the asset-registry crash on snapshot load.
-- USDA env var plumbing in `build-android.yml` (commit `f2c72e1`) — `EXPO_PUBLIC_USDA_API_KEY` forwarded into the build.
-- Cloud delta-pull RPC + client puller (commit `0833a57`, migration 028) — incremental snapshot refresh.
+**Engine simulator framework:** SHIPPED. All 12 locked scenarios live
+under `tests/simulator/scenarios/`: straight_cut,
+aggressive_cut_supervised, aggressive_cut_unsupervised,
+red_s_trajectory, recomp_steady, bulk_gentle, bulk_aggressive,
+rapid_loss_correction, stalled_lift, plateau_then_break,
+returning_user, noisy_logger.
 
 ---
 
 ## 3. Cloud migration application state
 
-Per `DATABASE_SCHEMA_LOCKED.md` status block + grep against `supabase/migrate_*.sql`:
+Per `DATABASE_SCHEMA_LOCKED.md` + grep against `supabase/migrate_*.sql`.
 
 | # | Purpose | Status |
 |---|---|---|
-| 015 | Food logging schema | ✅ Applied |
-| 016 | Food sync RPCs (`food_sync_pull` / `_push`) | ✅ Applied |
-| 017 | ED-pattern + telemetry (`ed_pattern_flags`, `engine_telemetry`, `engine_telemetry_daily` view, `record_engine_telemetry` RPC, `clear_goal_lock` RPC, goal_lock columns) | ✅ Applied |
-| 018 | Composite PKs on legacy tables | ✅ Applied |
-| 019 | Health consent (Article 9) | ✅ Applied |
-| 020 | custom_exercises split | ✅ Applied |
-| 021 | Food composite PKs | ✅ Applied |
-| 022 | Food telemetry events allow-list | ✅ Applied |
-| 023 | custom_foods.barcode_ean | ✅ Applied |
-| 024 | consent_log composite PK rectification | ✅ Applied |
-| 025 | delete_user_data completeness | ✅ Applied |
-| 027 | rapid_loss_compression_triggered allow-list | **❓ Founder to confirm applied** |
-| 028 | food_library_pull RPC (delta sync) | **❓ Founder to confirm applied** |
-| 029 | Telemetry allow-list extension (weekly_coach_run + 3 others) | **❓ Founder to apply** (written 2026-05-25) |
-| 030 | Tier infrastructure (`tier_history` + `users_profile.trial_state` + 5 cols + `upgrade_tier` RPC + `start_cascade` RPC + `current_pricing_window` + `pricing_config` table) | ✅ **Applied** 2026-05-25 |
-| 031 | Cascade workers (`cascade_advance_due_users` + pg_cron schedule every 15 min) | **❓ Founder to apply** (written 2026-05-25) |
-| 032 (not yet written) | `body_composition_log` table (Complete tier) | ❌ Not written |
+| 015 | Food logging schema | Applied |
+| 016 | Food sync RPCs | Applied |
+| 017 | ED-pattern + telemetry (engine_telemetry table with `payload_json` column, `record_engine_telemetry` RPC, daily view) | Applied |
+| 018 | Composite PKs on legacy tables | Applied |
+| 019 | Health consent (Article 9) | Applied |
+| 020 | custom_exercises split | Applied |
+| 021 | Food composite PKs | Applied |
+| 022 | Food telemetry events allow-list | Applied |
+| 023 | custom_foods.barcode_ean | Applied |
+| 024 | consent_log composite PK rectification | Applied |
+| 025 | delete_user_data completeness | Applied |
+| 027 | rapid_loss_compression_triggered allow-list | Applied |
+| 028 | food_library_pull RPC (delta sync) | Applied |
+| 029 | Telemetry allow-list extension (had typo: `payload` instead of `payload_json`) | Applied, then patched by 034 |
+| 030 | Tier infrastructure (tier_history, trial_state, upgrade_tier RPC, start_cascade RPC, pricing_config) | Applied |
+| 031 | Cascade workers (pg_cron schedule every 15 min) | Applied |
+| 032 | Paywall telemetry events (had same `payload` typo as 029) | Applied, then patched by 034 |
+| 033 | 2-tier consolidation RPC updates | Applied |
+| 034 | **engine_telemetry column-name fix** (restores `payload_json` after 029+032 typo) | **Applied** |
+| 035 | sign_in + sign_out + article9_consent_recorded allow-list | **Applied** |
+| 036 | account_created + custom_food_created allow-list | **Applied** |
+| 037 | app_cold_start + foregrounded/backgrounded + sync_run allow-list | **Pending founder apply** |
+| 038 | cascade_state_transition + purchase_* + subscription_cancelled + restore_purchases_attempted allow-list | **Pending founder apply** |
 
 ---
 
-## 4. Structural drift vs locked specs
+## 4. Telemetry event coverage (this session, comprehensive pass)
 
-Code works but does not match locked module layout. None of this
-blocks Phase A; flagged so future PRs can decide whether to align or
-acknowledge the drift.
+**All wired and emitting** (29 events live, broken down by panel):
+
+| Panel | Events |
+|---|---|
+| **Panel 1: Active users / lifecycle** | sign_in, sign_out, app_cold_start, app_foregrounded, app_backgrounded |
+| **Panel 2: Engine health** | weekly_coach_run, ffm_floor_hold_fired, ed_pattern_flag_fired, ed_pattern_flag_cleared, rapid_loss_compression_triggered, goal_lock_set, goal_lock_cleared |
+| **Panel 3: Food layer health** | food_search_attempt, food_lookup_barcode, food_logged, custom_food_created, ocr_writeback_attempted |
+| **Panel 4: Sync health** | sync_run |
+| **Panel 5: Cascade and conversion** | cascade_started, cascade_advanced, cascade_skipped_ahead, cascade_state_transition, paid_converted, churn_at_gate, subscription_cancelled, paywall_shown, paywall_tapped_cta, purchase_initiated, purchase_completed, purchase_failed, restore_purchases_attempted, tier_changed |
+| **Panel 8: Privacy and consent** | article9_consent_recorded, account_created |
+
+**Not wired, with explicit rationale per event:**
+
+| Event | Status | Reason |
+|---|---|---|
+| held_decision_created / held_decision_cleared | Skipped | Per-type events (ed_pattern_flag_fired, ffm_floor_hold_fired, rapid_loss_compression_triggered) already populate Panel 2 split-by-type. The umbrella event would duplicate rows without adding signal. |
+| sync_conflict_resolved | Blocked by sync architecture | The single-file `src/lib/sync.js` doesn't have a structured conflict-resolution code path yet. Wire when the spec'd 7-file `src/lib/sync/` directory gets built (drift item in section 6 below). |
+| account_deleted | Blocked by schema design | `engine_telemetry.user_id` has `ON DELETE CASCADE` so events fire and immediately die with the auth.users row at account-delete time. Needs a separate non-cascading `account_deletions_log` table (Panel 8 still has the deletion queue depth alert from a different source). |
+| article9_consent_withdrawn | Blocked by UI | No withdrawal screen exists. Wire when SettingsScreen gets the privacy management section. Withdrawal IS still legally available via the `record_health_consent(false)` RPC if a user contacts support directly; only the in-app UI is missing. |
+| notification_sent / _tapped / _failed | Blocked by infra | Existing notifications code is scattered across screens. Needs the spec'd `src/lib/notifications/` module first (drift item in section 6). |
+
+---
+
+## 5. Bugs surfaced via device log + fixed this session
+
+Two real bugs from the sideloaded APK device log, both fixed and pushed:
+
+**1. food.seed transaction nesting** (`src/lib/food/seed.js`)
+
+OFF and CoFID importers fired from `RootNavigator` bootstrap as parallel
+fire-and-forget promises. Both ran `BEGIN`/`COMMIT` on the same shared
+SQLite connection; expo-sqlite rejected the second `BEGIN` with "cannot
+start a transaction within a transaction" and later "cannot commit, no
+transaction is active" once the first one finished. Despite the log
+spam, the OFF import still landed 25,765 rows because `INSERT OR IGNORE`
+worked outside the transaction wrapper.
+
+Fix: module-level promise-chain mutex (`_withTxLock`) so every per-chunk
+transaction queues behind the previous one regardless of which importer
+owns it.
+
+**2. engine_telemetry column-name typo** (migrations 029 + 032)
+
+Migration 017 created the column as `payload_json`. Migrations 029 and
+032 (event allow-list extensions) typoed it as `payload`. Result: every
+cloud telemetry push for the post-029 events raised `column "payload"
+of relation "engine_telemetry" does not exist`, while the local SQLite
+copy still landed.
+
+Fix: migration 034 re-creates `record_engine_telemetry` with the
+correct column name and the full allow-list from 032. Subsequent
+migrations (035, 036, 037, 038) all use `payload_json` correctly.
+
+---
+
+## 6. Structural drift vs locked specs
+
+Code works but doesn't match locked module layout. None of this blocks
+Phase A; flagged so future PRs can decide whether to align or accept.
 
 | Locked spec | Reality | Effect |
 |---|---|---|
-| `src/lib/sync/` directory with 7 files (index, registry, runner, queue, conflict, transport, telemetry) — `SYNC_ARCHITECTURE_LOCKED.md` lines 10-19 | Single `src/lib/sync.js` (81 KB) with inline configs | Functional; no `registry.js` to add a new table to; sync architecture is harder to extend |
-| `src/lib/notifications/` directory with 5 files — `NOTIFICATIONS_LOCKED.md` lines 124-130 | Notifications code scattered across screens / existing notifications setup | Acceptable if categories + scheduling are present, but the structured module pattern isn't there |
-| `src/lib/telemetry/` directory with 4 files — `TELEMETRY_DASHBOARDS_LOCKED.md` lines 311-323 | Single `src/lib/engineTelemetry.js` | Functional; events / allow-list / push live there |
-| `src/screens/onboarding/` directory — `ONBOARDING_SEQUENCE_LOCKED.md` lines 159-174 | Onboarding screens live flat in `src/screens/` | Cosmetic; all 11 screens present, just not grouped |
-| `src/components/food/` with 9 components — `UI_FLOWS_LOCKED.md` lines 18-28 | Only `MacroRings.js` + `FoodDetailSheet.js` exist; the rest (`MealSection`, `FoodRow`, `ServingPicker`, `EntryRow`, `SourceChip`, `EmptyDiary`, `DifferentialBadge`, `HeldDecisionCard`) are either inline or missing | Most live inline inside screens; functionally fine but harder to reuse |
-| `src/lib/observability/sentryScrub.js` + tests — `PRIVACY_CONSENT_LOCKED.md` line 282 | File doesn't exist; scrubbing presumably inline in Sentry init | **Privacy-critical;** spec calls for a quarterly audit test asserting scrub rules match schema. Audit test cannot exist without the named file. |
-| `src/lib/links.js` (single URL source) — `PRIVACY_CONSENT_LOCKED.md` line 280 | File doesn't exist | URLs likely inline; if URL ever changes, multi-file edit required |
-| `tests/simulator/`, `tests/engine/`, `tests/snapshots/`, `e2e/`, `tests/sync/`, `tests/payments/`, `tests/load/` — `TESTING_STRATEGY_LOCKED.md` | All tests in `src/__tests__/` + `src/lib/__tests__/` | Tests pass, but the spec'd test harness for simulator scenarios and Maestro E2E does not exist |
+| `src/lib/sync/` directory with 7 files (index, registry, runner, queue, conflict, transport, telemetry) per `SYNC_ARCHITECTURE_LOCKED.md` | Single `src/lib/sync.js` (~85 KB) | Functional; no registry to extend; conflict-resolution path doesn't exist so `sync_conflict_resolved` can't fire |
+| `src/lib/notifications/` directory with 5 files per `NOTIFICATIONS_LOCKED.md` | Notifications code scattered across screens + ad-hoc setup | Functional for what's there but the structured module pattern + categories + `notification_*` telemetry hooks aren't there |
+| `src/lib/telemetry/` directory with 4 files per `TELEMETRY_DASHBOARDS_LOCKED.md` | Single `src/lib/engineTelemetry.js` | Functional; allow-list + push live there |
+| `src/screens/onboarding/` directory per `ONBOARDING_SEQUENCE_LOCKED.md` | Onboarding screens flat in `src/screens/` | Cosmetic |
+| `src/components/food/` with 9 components per `UI_FLOWS_LOCKED.md` | Only MacroRings.js + FoodDetailSheet.js exist; others inline in screens | Reuse-harder |
+| `src/lib/observability/sentryScrub.js` per `PRIVACY_CONSENT_LOCKED.md` | **Exists** (`src/lib/observability/sentryScrub.js` plus 110 audit tests) | Privacy-critical; resolved |
+| `src/lib/links.js` (single URL source) per `PRIVACY_CONSENT_LOCKED.md` line 280 | Doesn't exist | URLs inline; multi-file edit if URL changes |
+| `tests/simulator/` per `TESTING_STRATEGY_LOCKED.md` | **Exists** at `tests/simulator/scenarios/` with all 12 locked scenarios | Resolved |
+| `tests/engine/`, `tests/snapshots/`, `e2e/`, `tests/sync/`, `tests/payments/`, `tests/load/` | All tests in `src/__tests__/` + `src/lib/__tests__/` plus `tests/simulator/` | Maestro E2E + k6 load harnesses not stood up |
 
 ---
 
-## 5. Telemetry coverage gap
+## 7. UI surface coverage
 
-Per `TELEMETRY_DASHBOARDS_LOCKED.md` event catalogue.
-
-**Currently allow-listed in `engineTelemetry.js` (13 events):**
-`ed_pattern_flag_fired`, `ed_pattern_flag_cleared`, `goal_lock_set`,
-`goal_lock_cleared`, `tier_changed`, `cascade_started`,
-`cascade_advanced`, `cascade_skipped_ahead`, `paid_converted`,
-`churn_at_gate`, `food_lookup_barcode`, `ocr_writeback_attempted`,
-`rapid_loss_compression_triggered`.
-
-**Spec'd but NOT allow-listed / NOT wired (gap to fix for shipped Moves):**
-
-| Event | Belongs to | Status |
-|---|---|---|
-| `weekly_coach_run` | Engine (existing) | Missing |
-| `ffm_floor_hold_fired` | Move #1 | Missing |
-| `held_decision_created` / `_cleared` | Existing | Missing |
-| `food_search_attempt` | Move #1 | Missing (only `food_lookup_barcode` exists, not text search) |
-| `food_logged` | Move #1 | Missing |
-| `custom_food_created` | Move #1.5 | Missing |
-| `sync_run` / `sync_conflict_resolved` | Move #1 | Missing |
-| `notification_sent` / `_tapped` / `_failed` | Move #1 surface | Missing |
-| `account_created` / `_deleted` / `sign_in` / `_out` | Pre-existing | Missing |
-| `article9_consent_recorded` / `_withdrawn` | Move #2 | Missing |
-| `app_foregrounded` / `_backgrounded` / `_cold_start` | App lifecycle | Missing |
-
-**Spec'd, allow-listed, NOT wired (belong to Moves #4/#5):**
-`cascade_state_transition`, `purchase_initiated/completed/failed`,
-`subscription_cancelled`, `restore_purchases_attempted`,
-`paywall_shown`, `paywall_tapped_cta`.
-
-Without these, Panels 1, 3, 4, 6, 7, 8 of the locked dashboard cannot
-be populated even though the infrastructure exists.
-
----
-
-## 6. UI surface coverage gap
-
-Per `UI_FLOWS_LOCKED.md`, against actual screens/components in
-`src/screens/` and `src/components/food/`.
-
-**Confirmed shipped:**
-- Diary tab (`DiaryScreen.js`) with date pager, meal sections, food rows, MacroRings, "Add food" inline buttons
-- Search tab (`FoodSearchScreen.js`) with tab structure, source chips (`SOURCE_LABEL` map), debounced search
-- Scan barcode modal (`ScanBarcodeScreen.js`) with vision-camera, torch, freeze-on-read
-- Add Custom Food (`AddCustomFoodScreen.js`) with sanity check
-- Food Insights extensions (`FoodInsightsScreen.js`) with 7-day chart, CSV export
-- Scan label / OCR (`ScanLabelScreen.js`)
+**Confirmed shipped** (verified via grep):
+- Diary tab (DiaryScreen) with date pager, meal sections, food rows, MacroRings, "Add food" buttons, **swipe-delete** (SwipeableEntryRow), **Copy-yesterday FAB**, water tracker
+- Search tab (FoodSearchScreen) with source chips, debounced search
+- Scan barcode modal (ScanBarcodeScreen) with vision-camera, torch, freeze-on-read, auto-permission-request
+- Scan label / OCR (ScanLabelScreen) with auto-permission-request
+- Add Custom Food (AddCustomFoodScreen) with sanity check
+- Food Insights extensions (FoodInsightsScreen) with 7-day chart, CSV export
 - Article 9 consent screen
 - Goal lock consent screen
+- CascadeGateScreen (day-21 variant + day14/day28 back-compat aliases)
+- SubscriptionScreen (You-tab management, restore button)
+- PaywallScreen (modal for differential paywall pay tap)
+- DifferentialBadge (inline on CoachOutputScreen below held-decisions block)
+- TierComparisonStrip
+- CreditsScreen (OFF/CoFID/USDA license attribution)
+- You-tab Subscription row + Credits row
 
-**Spec'd but NOT verified shipped (need to check):**
-- Diary: swipe-delete on food row, long-press multi-select toolbar — likely missing
-- Diary: "Copy yesterday" floating action — likely missing
-- Diary: water tracker row — likely missing
-- Diary: macro ring tap → per-meal breakdown sheet — likely missing
-- Train tab: "Today's intake" card — likely present but unverified
-- Body Metrics: 7-day avg intake stat — present per HANDOFF
-- You tab: Subscription row, Diary preferences sub-section, Goal lock toggle, Credits screen — none verified
-- Sync status indicator in nav header (4 states) — not present
-
-**Spec'd but blocked on Move #5:**
-- `CascadeGateScreen.js` (day 14 / day 28 modals)
-- `SubscriptionScreen.js` (You tab management)
-- `TierComparisonStrip.js`
-- `PaywallScreen.js`
-- `DifferentialBadge.js` (Move #4)
+**Deferred** (lower-value vs effort, may revisit on telemetry signal):
+- Sync status indicator in nav header (needs sync state model + NetInfo + instrumentation of every sync entry point; multi-day pass)
+- Long-press multi-select toolbar on Diary entries (swipe-delete covers the common path)
+- Diary: macro ring tap → per-meal breakdown sheet
+- Privacy management section in SettingsScreen (would unblock article9_consent_withdrawn telemetry)
 
 ---
 
-## 7. What's truly outstanding (the punch list)
+## 8. What's truly outstanding (the punch list)
 
-Grouped by phase per `RELEASE_PLAN_LOCKED.md`. Nothing in Phase B
-column should be treated as "blocker now" because Phase B can only
-start after Phase A exit, which is itself many weeks of work away.
+Grouped by phase per `RELEASE_PLAN_LOCKED.md`.
 
-### NOW (Phase A code work)
+### NOW (Phase A code work, in execution-order priority)
 
-In suggested execution order:
-
-| # | Item | Spec doc | Effort | Owner |
+| # | Item | Spec | Effort | Owner |
 |---|---|---|---|---|
-| 1 | Verify migration 028 applied in Supabase; if not, apply via Dashboard | `FOOD_DATA_STRATEGY_LOCKED.md` + `DATABASE_SCHEMA_LOCKED.md` | 5 min | Founder |
-| 2 | Verify migration 027 applied; apply if not | same | 5 min | Founder |
-| 3 | Wire `rapid_loss_compression_triggered` caller in `weeklyCoach.js` | `MOVE_3_UPWARD_GATE_COMPRESSION.md` | S (~1 h) | Claude |
-| 4 | Add `food.waterfall.test.js` integration test (mocked sources, full chain) | `MOVE_1_5_BARCODE_AND_OCR.md` + `TESTING_STRATEGY_LOCKED.md` | S (~1 h) | Claude |
-| 5 | Extend `engineTelemetry.js` allow-list + wire callers for missing core events: `weekly_coach_run`, `ffm_floor_hold_fired`, `food_logged`, `food_search_attempt`, `sync_run`, `article9_consent_recorded` | `TELEMETRY_DASHBOARDS_LOCKED.md` | M (~3 h) | Claude |
-| 6 | ✅ Migration 030 written: `tier_history` + `users_profile.trial_state` + 5 cols + `pricing_config` + `current_pricing_window` + `_tier_for_trial_state` + `start_cascade` RPC + `upgrade_tier` RPC. Bypasses existing `protect_users_profile_tier` trigger via `session_replication_role`. Backfills existing pro users to `trial_state='paid_pro'`. | `DATABASE_SCHEMA_LOCKED.md` lines 432-481 + `SUBSCRIPTION_AND_PAYMENT_LOCKED.md` | Founder action remaining: paste into Supabase Dashboard → SQL Editor → Run | Claude wrote, Founder applies |
-| 7 | ✅ Built `src/lib/payments/` module: `playBilling.js` (provider stub, swappable), `catalogue.js` (6 SKUs), `cascade.js` (state machine implementing all 17 transitions), `restore.js`, `index.js`. Provider renamed from `revenuecat.js` per 2026-05-25 founder override (Google Play direct). | `SUBSCRIPTION_AND_PAYMENT_LOCKED.md` lines 87-202 + `MOVE_5_TIER_INFRASTRUCTURE.md` lines 78-89 | DONE | Claude |
-| 8 | Extend `proGate.js` with `isPaidTier()`, `hasFeature()`, `hasGoalUnlock()` + FEATURE_MAP from `MOVE_5_TIER_INFRASTRUCTURE.md` lines 40-76 | `COMPLETE_TIER_SCOPE_LOCKED.md` lines 119-128 | S (~2 h) | Claude |
-| 9 | Build `CascadeGateScreen.js` + `SubscriptionScreen.js` + `TierComparisonStrip.js` | `UI_FLOWS_LOCKED.md` lines 229-246 + `SUBSCRIPTION_AND_PAYMENT_LOCKED.md` lines 305-326 | M (~3-4 days) | Claude |
-| 10 | Implement Move #4: extend `weeklyCoach.js` with `differential_output` field, build `DifferentialBadge.js` + `PaywallScreen.js`, snapshot tests for 6 locked copy variants | `MOVE_4_DIFFERENTIAL_PAYWALL.md` | M (~1 week) | Claude |
-| 11 | ✅ Cascade workers shipped: migration 031 adds `cascade_advance_due_users()` + pg_cron schedule running every 15 min. Article 9 consent now fires `cascade.startCascade()` so new signups enter the cascade automatically. | `MOVE_5_TIER_INFRASTRUCTURE.md` lines 127-130 + `SUBSCRIPTION_AND_PAYMENT_LOCKED.md` line 106 | Founder action remaining: paste migration 031 into Supabase Dashboard → SQL Editor → Run (and enable `pg_cron` extension if not already enabled) | Claude wrote, Founder applies |
-| 12 | UI polish (mixed status): ✅ diary swipe-delete (`SwipeableEntryRow`), ✅ "Copy yesterday" FAB (renders when today is empty), ✅ water tracker (already in DiaryScreen pre-this-session), ✅ You-tab Subscription row, ✅ You-tab Credits row + `CreditsScreen` with locked OFF/CoFID/USDA attribution strings. ❌ Sync status indicator deferred: needs a real sync state model + NetInfo dep + instrumentation of every sync entry point — multi-day pass, separate work. ❌ Long-press multi-select deferred: lower-value than swipe-delete; revisit if telemetry shows users bulk-deleting often. | `UI_FLOWS_LOCKED.md` various | Mostly DONE this session | Claude |
+| 1 | Apply migration 037 + 038 in Supabase Dashboard | this doc § 3 | 5 min | Founder |
+| 2 | Deploy `public/privacy.html` to volyume.app/privacy | `PRIVACY_CONSENT_LOCKED.md` lines 75-112 | M (hosting setup) | Founder + Claude |
+| 3 | Build `src/lib/sync/` directory split + wire `sync_conflict_resolved` | `SYNC_ARCHITECTURE_LOCKED.md` | M (~2 days) | Claude |
+| 4 | Build `src/lib/notifications/` directory + wire `notification_*` events | `NOTIFICATIONS_LOCKED.md` | M (~2 days) | Claude |
+| 5 | Add `account_deletions_log` table + wire `account_deleted` event from a non-cascading source | spec gap; new design | S (~3 h) | Claude |
+| 6 | Maestro E2E framework + 12 critical-path flows | `TESTING_STRATEGY_LOCKED.md` lines 114-141 | M-L (~1 week) | Claude |
 
-### LATER (Phase A exit prep, after all above are done and tested)
+### LATER (Phase A exit prep)
 
-| Item | Spec doc | Effort | Owner |
+| Item | Spec | Effort | Owner |
 |---|---|---|---|
-| Generate Android upload keystore + configure Google Play App Signing | n/a (release-engineering) | M | Founder + Claude (writes config) |
+| Generate Android upload keystore + configure Google Play App Signing | release-engineering | M | Founder + Claude (writes config) |
 | Run a CI build with the keystore, verify the AAB is release-signed | `build-android.yml` already has the verification step | S | Both |
-| `react-native-iap` added to package.json; `playBilling.js` lazy-loads it and injects the real provider when the native module is linked. App.js calls `tryWireRealProvider()` at boot; RootNavigator calls `playBilling.initialise({ appUserID })` post sign-in | founder-overridden vs the locked RevenueCat path | ✅ DONE | Claude |
-| Create sandbox SKUs in Play Console (open beta only) | external | 1 h | Founder |
-| Supabase Edge Function `supabase/functions/play-billing-rtdn/index.ts` shipped. Decodes Pub/Sub push messages, verifies the subscription against Google Play Developer API via JWT-signed service account, maps notificationType → `upgrade_tier(tier, reason, payment_ref, 'play_billing_rtdn')`. Founder action: deploy + configure Pub/Sub topic + service account env vars when ready | replaces the spec'd RevenueCat webhook handler per founder override | ✅ DONE (deployment pending founder) | Claude wrote, Founder deploys |
-| Run sandbox purchase end-to-end (Android only) → verify `tier_history` row + `trial_state` update | acceptance check in `MOVE_5_TIER_INFRASTRUCTURE.md` line 202 | M | Both |
-| Engine simulator framework + all 12 locked scenarios shipped in `tests/simulator/`: straight_cut, aggressive_cut_supervised, aggressive_cut_unsupervised, red_s_trajectory, recomp_steady, bulk_gentle, bulk_aggressive, rapid_loss_correction, stalled_lift, plateau_then_break, returning_user, noisy_logger | `TESTING_STRATEGY_LOCKED.md` lines 22-72 | ✅ DONE | Claude |
-| Stand up Maestro E2E framework + 12 critical-path flows | `TESTING_STRATEGY_LOCKED.md` lines 114-141 | M-L | Claude |
+| Create 3 SKUs in Play Console (open beta visible, founders + standard hidden) | external | 1 h | Founder |
+| Deploy `supabase/functions/play-billing-rtdn/index.ts` + configure Pub/Sub topic + service account | per RTDN code already written | M | Founder |
+| Run sandbox purchase end-to-end (Android only), verify tier_history row + trial_state update | `MOVE_5_TIER_INFRASTRUCTURE.md` line 202 | M | Both |
 | k6 load tests (1000-user sync, 100-user purchase, 10k weekly_coach) | `TESTING_STRATEGY_LOCKED.md` lines 183-193 | M | Claude |
-| Deploy privacy policy to volyume.app/privacy with 12 spec'd sections | `PRIVACY_CONSENT_LOCKED.md` lines 75-112 | M | Founder + Claude |
-| Sentry scrub rules audited: extract to `src/lib/observability/sentryScrub.js` + test | `PRIVACY_CONSENT_LOCKED.md` line 282 + `TELEMETRY_DASHBOARDS_LOCKED.md` line 277 | S | Claude |
-| Promote next AAB to Closed Testing for internal sanity, then promote to production when Phase A exit criteria all green | release-engineering | external time | Founder |
+| Promote next AAB to Closed Testing, then to production | release-engineering | external | Founder |
 
-### EVEN LATER (Phase B pre-launch, after Phase A exit complete)
+### EVEN LATER (Phase B pre-launch)
 
-| Item | Spec doc |
+| Item | Spec |
 |---|---|
 | Marketing site at volyume.app (waitlist signup form, pricing page "Coming soon") | `RELEASE_PLAN_LOCKED.md` lines 93-115 |
-| Waitlist email template with one-time invite code (200-500/week pace) | `MASTER_VISION_AND_PLAN.md` Decision 2.1 |
+| Waitlist email template + one-time invite codes (200-500/week pace) | `MASTER_VISION_AND_PLAN.md` Decision 2.1 |
 | Welcome push template for waitlist invitees | release plan |
-| Incident response runbook | `docs/INCIDENT_RESPONSE_RUNBOOK.md` to be written |
-| Support workflow (support@volyume.app forwarded, reply templates) | release plan |
+| Incident response runbook | to be written |
+| Support workflow (support@volyume.app forwarded) | release plan |
 | Coach marketing landing page at volyume.app/coach ("phase 2 coming soon") | release plan |
 | Bump version 1.1.0 → 1.2.0 (food + cascade work) | release plan |
 | Publish first wave of 200 invite emails | release plan |
-| App Store / Play store listings finalised (screenshots, privacy manifest, age rating) | `docs/PLAY_STORE_LISTING.md` |
-| **Create the 3 open-beta SKUs visible** (the other 3 founders/standard SKUs created + hidden ready for Phase C/D transitions) | `SUBSCRIPTION_AND_PAYMENT_LOCKED.md` lines 57-67 |
+| Play store listing finalised (screenshots, privacy manifest, age rating) | `docs/PLAY_STORE_LISTING.md` |
 
 ### EXPLICITLY OUT OF SCOPE FOR NOW
 
-Founder direction 2026-05-25: **cloud infrastructure migration (Azure/AWS) is deferred until the app is stable in production.** The current Supabase + Sentry stack stays for v1 launch. Revisit only if (a) telemetry proves Supabase's free tier or paid tier is genuinely insufficient, or (b) a compliance / enterprise requirement appears that requires AWS/Azure-only infrastructure. Estimate at the time of asking: ~£15-50/month recurring + 8-12 weeks of engineering to migrate, with no functional gain pre-launch.
-
-Founder override 2026-05-25 (second): **2-tier model (Free, Pro), not three.** Complete tier and the 28-day Complete→Pro cascade consolidated into a single Pro tier with a 21-day Pro trial. Peak Week module **removed entirely** per founder direction ("peak week needs a human eye, not numbers"). Pricing: open beta £0.99/mo (unchanged), founders £1.99/mo (up from £1.49), standard £3.99/mo (up from £2.99, well below old Complete £6.99). Pricing strategy is "build a user base over short-term ARPU". Migration 033 ships the schema RPC updates. proGate FEATURE_MAP collapsed to `{free, pro}`. catalogue.js has 3 SKUs (Pro × 3 pricing windows). Cascade UI simplified to a single day-21 gate. Legacy `complete*` enum values stay in the schema CHECK constraint as dead-but-harmless compatibility surface.
-
-Founder override 2026-05-25: **Google Play Billing direct, not RevenueCat.** The original locked spec (`SUBSCRIPTION_AND_PAYMENT_LOCKED.md` line 49) chose RevenueCat as the IAP abstraction layer for cross-platform identity. With iOS deferred indefinitely under the Android-only Phase B decision, RevenueCat's main differentiator is moot. Going direct against Google Play Billing removes the 1%-above-£2.5k-MRR fee and one third-party dependency. The `src/lib/payments/playBilling.js` provider abstraction stays in place so the underlying SDK (`react-native-iap` or `expo-in-app-purchases`) can swap without touching the cascade module, UI, or RPC layer. If iOS lands at a later phase, switching back to RevenueCat or adding a sibling Apple StoreKit provider is one-file work.
-
-Locked deferrals from `BUDGET_POSTURE_LOCKED.md`, `MASTER_VISION_AND_PLAN.md` Section 19, and `COMPLETE_TIER_SCOPE_LOCKED.md`:
-
-- **iOS / Apple Developer / App Store Connect / iOS SKUs** — Android-only Phase B (founder decision)
+- iOS / Apple Developer / App Store Connect / iOS SKUs (Android-only Phase B is locked)
+- Cloud infrastructure migration (Azure/AWS) — deferred until post-launch stability
 - Photo cloud sync (photos stay on-device forever)
 - Recipe URL importer (v1.1)
 - Body composition deep charts (v1.1)
@@ -278,50 +288,37 @@ Locked deferrals from `BUDGET_POSTURE_LOCKED.md`, `MASTER_VISION_AND_PLAN.md` Se
 - AI photo logging (never)
 - Apple Watch app (never at v1)
 - Web app for end users (never at v1)
+- Peak Week module (founder removed 2026-05-25: "needs a human eye, not numbers")
+- Complete tier + 28-day Complete→Pro cascade (founder consolidated to 2-tier 2026-05-25)
+- RevenueCat (founder switched to Play Billing direct 2026-05-25)
 
 ---
 
-## 8. Founder action queue (cleaned)
+## 9. Founder action queue (cleaned)
 
 ### Now
 
-1. Verify in Supabase Dashboard → SQL Editor whether migrations 027
-   and 028 have been applied (these were noted as "pending" in HANDOFF
-   but may have been applied since). If not, paste each SQL and run.
-2. (Optional, low priority) Add `EXPO_PUBLIC_USDA_API_KEY` repo
-   secret if you want USDA fallback active. The USDA source
-   short-circuits to empty without it; OFF covers UK.
+1. Apply migrations 037 + 038 in Supabase Dashboard → SQL Editor.
+2. (Optional, low priority) Add `EXPO_PUBLIC_USDA_API_KEY` repo secret if USDA fallback is wanted active.
 
 ### When Claude says "Phase A code work complete, ready for Phase A exit prep"
 
-3. Generate Android upload keystore. I'll write the commands.
-4. (No RevenueCat account needed — direct Google Play Billing per 2026-05-25 override.) Set up Google Cloud Pub/Sub topic for Real-Time Developer Notifications when ready for Phase A exit; I'll write the subscriber Edge Function.
-5. Create the 6 SKU products in Play Console (open beta visible, founders/standard hidden).
+3. Generate Android upload keystore. Claude writes the commands.
+4. Set up Google Cloud Pub/Sub topic for Real-Time Developer Notifications + deploy `supabase/functions/play-billing-rtdn/index.ts`.
+5. Create 3 SKU products in Play Console (open beta visible, others hidden).
 6. Set up sandbox testers in Play Console for end-to-end purchase test.
+7. Deploy `public/privacy.html` to volyume.app/privacy (hosting setup separate question).
 
 ### When Phase A exit checklist is green
 
-7. Promote next AAB to Closed Testing.
-8. After internal sanity test passes, promote to production.
-9. Stand up the marketing site + waitlist.
-10. Send first wave of 200 open-beta invites.
+8. Promote next AAB to Closed Testing.
+9. After internal sanity test passes, promote to production.
+10. Stand up the marketing site + waitlist.
+11. Send first wave of 200 open-beta invites.
 
 ### Never (in current scope)
 
 - Apple Developer account / App Store Connect / iOS SKU work — Android-only Phase B is locked.
-
----
-
-## 9. My (Claude's) immediate next code task
-
-Per Phase A code work priority order (Section 7), the next chunk is
-**item 3: wire `rapid_loss_compression_triggered` telemetry caller**
-in `weeklyCoach.js`. This is the smallest scope that moves Move #3
-from "SHIPPED with gap" to fully shipped, and it's a clean prerequisite
-before tackling the larger Move #5 cascade work.
-
-After that, items 4-5 (food waterfall integration test + telemetry
-allow-list expansion) before starting the bigger Move #5 + #4 work.
 
 ---
 
@@ -333,9 +330,6 @@ contradicts either, the founder wins (and we update this doc).
 
 `HANDOFF.md` is no longer the source of truth. It's preserved as
 historical context. New Claude sessions should read THIS doc first.
-
-Update protocol: this doc is rewritten end-to-end at the end of any
-session that materially changes shipped state, not appended to.
 
 ---
 
@@ -352,33 +346,32 @@ LOCKED specs:
 - PRIVACY_CONSENT_LOCKED.md
 - UI_FLOWS_LOCKED.md
 - NOTIFICATIONS_LOCKED.md
-- TELEMETRY_DASHBOARDS_LOCKED.md
-- TESTING_STRATEGY_LOCKED.md
+- TELEMETRY_DASHBOARDS_LOCKED.md (full re-read 2026-05-25 evening to drive the comprehensive telemetry pass)
 - PRODUCTION_READINESS_LOCKED.md
 - IDENTITY_AND_OWNERSHIP_LOCKED.md
 - BUDGET_POSTURE_LOCKED.md
-- FOOD_DATA_STRATEGY_LOCKED.md (partial reads across previous turns)
+- FOOD_DATA_STRATEGY_LOCKED.md
 
 Move plans:
 - MOVE_4_DIFFERENTIAL_PAYWALL.md
 - MOVE_5_TIER_INFRASTRUCTURE.md
 
-Not yet read end-to-end (in priority order if needed next):
-- COACHING_VOICE_SYNTHESIS_LOCKED.md (708 lines, copy-rules-heavy)
-- GROWTH_STRATEGY_SYNTHESIS_LOCKED.md (726 lines, marketing-focused)
-- MOVE_0 through MOVE_3 plan docs (the spec'd Moves are already shipped per code; reading the plan docs would only matter for gap-audit)
+Not yet read end-to-end (only matters if/when their surface area is touched):
+- COACHING_VOICE_SYNTHESIS_LOCKED.md (708 lines, copy-rules-heavy; shipped Moves already comply per voice snapshot tests)
+- GROWTH_STRATEGY_SYNTHESIS_LOCKED.md (726 lines, marketing-focused; matters for Phase B waitlist work)
+- MOVE_0 through MOVE_3 plan docs (shipped per code; only relevant for gap-audit)
 
-Code verified directly with grep / Read against locked specs:
-- `src/lib/proGate.js` (no isPaidTier/hasFeature/hasGoalUnlock)
-- `src/lib/sync.js` (single-file, not the spec'd 7-file directory)
-- `src/lib/engineTelemetry.js` (13 events allow-listed)
-- `src/lib/payments/` (does not exist)
-- `src/lib/observability/` (does not exist)
-- `src/lib/links.js` (does not exist)
-- `src/screens/onboarding/` (does not exist; screens flat in `src/screens/`)
+Code verified directly with grep / Read against locked specs (this session):
+- `src/lib/proGate.js` (has isPaidTier + hasFeature + hasGoalUnlock + FEATURE_MAP collapsed to 2-tier)
+- `src/lib/sync.js` (still single-file)
+- `src/lib/engineTelemetry.js` (33 events allow-listed)
+- `src/lib/payments/` (playBilling, catalogue, cascade, restore, index — all shipped)
+- `src/lib/observability/sentryScrub.js` (exists with 110 audit tests)
+- `src/screens/onboarding/` (still doesn't exist)
 - `src/components/food/` (only MacroRings + FoodDetailSheet)
-- `supabase/migrate_*.sql` (015-028 present, 029 not yet)
-- `src/lib/edPatternDetector.js` (exists)
-- `src/lib/food/seed.js` (exists)
+- `supabase/migrate_*.sql` (015 through 038 present)
+- `supabase/functions/` (delete-account + play-billing-rtdn shipped)
+- `tests/simulator/scenarios/` (all 12 locked scenarios shipped)
+- `public/privacy.html` (exists, not deployed)
 - App Store Connect / Apple Developer (founder confirms: nothing)
 - Google Play Console (founder confirms: AAB live in Closed Testing, no keystore yet)
