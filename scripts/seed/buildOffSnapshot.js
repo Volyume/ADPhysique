@@ -2,63 +2,55 @@
 /**
  * buildOffSnapshot.js
  *
- * Generates assets/seed/off_uk_snapshot.json from OpenFoodFacts.
+ * Generates assets/seed/off_uk_snapshot.json from the OpenFoodFacts
+ * daily JSONL dump. Streams the gzipped dump (~10 GB compressed,
+ * ~40 GB uncompressed JSONL) line by line, decodes each product
+ * record, keeps the ones tagged country=united-kingdom with usable
+ * macros, and writes them to the bundled snapshot file.
+ *
  * The output file is bundled into the APK and imported into the
  * local foods cache by src/lib/food/seed.js on first launch.
  *
- * Run this BEFORE each EAS build to refresh the bundled snapshot:
+ * Run this BEFORE each EAS build (or let the weekly GitHub Actions
+ * workflow do it):
  *
  *   node scripts/seed/buildOffSnapshot.js
  *
- * No API key needed. Polite: identifies via User-Agent, paginates
- * with a small delay, respects OFF's request rate guideline.
+ * Memory: streaming parse, constant ~50 MB regardless of dump size.
+ * Disk: ~10 GB scratch for the .gz; deleted at end of run.
+ * Runtime: ~10-20 minutes on GitHub Actions ubuntu-latest.
  *
- * Source: OFF Search API filtered to country=united-kingdom with
- * non-null macros. The full OFF dump is ~7GB; using the search API
- * with pagination gets us the products that actually have usable
- * data, without the dump download. Caps at whatever OFF's
- * pagination tolerates (currently ~25 pages = ~25k products on
- * 1000-per-page queries).
- *
- * Free / on-device per BUDGET_POSTURE_LOCKED.md and
- * FOOD_DATA_STRATEGY_LOCKED.md.
+ * Source: OpenFoodFacts daily dump, JSONL.gz format, ODbL 1.0.
+ *   https://static.openfoodfacts.org/data/openfoodfacts-products.jsonl.gz
  */
 const fs = require('node:fs');
 const path = require('node:path');
+const https = require('node:https');
+const zlib = require('node:zlib');
+const readline = require('node:readline');
+const os = require('node:os');
 
-const OFF_BASE = 'https://world.openfoodfacts.org';
-const USER_AGENT = 'Volyume-Snapshot-Builder/1.2 (https://volyume.app)';
-const PAGE_SIZE = 1000;          // Asked for; OFF effectively caps responses at ~100/page.
-const MAX_PAGES = 300;           // ~100 rows per page in practice → ~30k row ceiling.
-const REQUEST_DELAY_MS = 800;    // Be polite. 1 req/sec is well within OFF's guideline.
-const MAX_CONSECUTIVE_FAILURES = 5;
+const DUMP_URL = 'https://static.openfoodfacts.org/data/openfoodfacts-products.jsonl.gz';
+const USER_AGENT = 'Volyume-Snapshot-Builder/2.0 (https://volyume.app)';
+const UK_TAG = 'en:united-kingdom';
 const OUT_PATH = path.resolve(__dirname, '..', '..', 'assets', 'seed', 'off_uk_snapshot.json');
+const TMP_GZ_PATH = path.join(os.tmpdir(), 'off-products.jsonl.gz');
+const PROGRESS_EVERY_LINES = 100_000;
 
-// ─── Helpers ──────────────────────────────────────────────────────────────
-
-function log(...args) {
-  // eslint-disable-next-line no-console
-  console.log('[off-snapshot]', ...args);
-}
-
-function warn(...args) {
-  // eslint-disable-next-line no-console
-  console.warn('[off-snapshot]', ...args);
-}
-
-function err(...args) {
-  // eslint-disable-next-line no-console
-  console.error('[off-snapshot]', ...args);
-}
-
-function sleep(ms) {
-  return new Promise((r) => setTimeout(r, ms));
-}
+function log(...args) { console.log('[off-snapshot]', ...args); }
+function warn(...args) { console.warn('[off-snapshot]', ...args); }
+function err(...args) { console.error('[off-snapshot]', ...args); }
 
 function num(v) {
   if (v == null) return null;
   const n = typeof v === 'string' ? parseFloat(v) : v;
   return Number.isFinite(n) ? n : null;
+}
+
+function isUkProduct(product) {
+  const tags = product?.countries_tags;
+  if (!Array.isArray(tags) || tags.length === 0) return false;
+  return tags.includes(UK_TAG);
 }
 
 function toRow(product) {
@@ -88,116 +80,159 @@ function toRow(product) {
   return row;
 }
 
-async function fetchPage(page) {
-  const url = `${OFF_BASE}/cgi/search.pl`
-    + `?action=process&json=1`
-    + `&tagtype_0=countries&tag_contains_0=contains&tag_0=united-kingdom`
-    + `&page=${page}&page_size=${PAGE_SIZE}`
-    + `&fields=code,product_name,product_name_en,generic_name,brands,`
-    + `serving_quantity,serving_size,nutriments`;
-  // Retry transient failures (5xx, network errors, timeouts) with
-  // exponential backoff. OFF's CDN occasionally throws a 503 even
-  // for legitimate paginated requests; the script should ride that
-  // out rather than fatal on first failure.
-  const MAX_ATTEMPTS = 4;
-  let lastErr = null;
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    try {
-      const res = await fetch(url, {
-        method: 'GET',
-        headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' },
-      });
-      if (res.status >= 500 || res.status === 429) {
-        // Transient: retry.
-        lastErr = new Error(`OFF page ${page} returned ${res.status}`);
-      } else if (!res.ok) {
-        // 4xx other than 429: bail, no retry will help.
-        throw new Error(`OFF page ${page} returned ${res.status}`);
-      } else {
-        return res.json();
+function downloadDump(url, destPath) {
+  return new Promise((resolve, reject) => {
+    log(`downloading ${url}`);
+    log(`destination: ${destPath}`);
+    const t0 = Date.now();
+    let bytes = 0;
+    let lastProgressBytes = 0;
+
+    const file = fs.createWriteStream(destPath);
+    const req = https.get(url, {
+      headers: { 'User-Agent': USER_AGENT, 'Accept-Encoding': 'identity' },
+    }, (res) => {
+      if (res.statusCode === 301 || res.statusCode === 302) {
+        file.close();
+        fs.unlinkSync(destPath);
+        return downloadDump(res.headers.location, destPath).then(resolve, reject);
       }
-    } catch (e) {
-      lastErr = e;
-    }
-    if (attempt < MAX_ATTEMPTS) {
-      const backoffMs = 1500 * Math.pow(2, attempt - 1);   // 1.5s, 3s, 6s
-      warn(`page ${page} attempt ${attempt} failed (${lastErr.message}); retrying in ${backoffMs}ms`);
-      await sleep(backoffMs);
-    }
-  }
-  throw lastErr ?? new Error(`OFF page ${page} unknown failure`);
+      if (res.statusCode !== 200) {
+        file.close();
+        fs.unlinkSync(destPath);
+        return reject(new Error(`dump download returned HTTP ${res.statusCode}`));
+      }
+      const totalLen = parseInt(res.headers['content-length'], 10) || 0;
+      res.on('data', (chunk) => {
+        bytes += chunk.length;
+        if (bytes - lastProgressBytes >= 500 * 1024 * 1024) {
+          const mb = (bytes / 1024 / 1024).toFixed(0);
+          const totalMb = totalLen ? (totalLen / 1024 / 1024).toFixed(0) : '?';
+          log(`downloaded ${mb} MB / ${totalMb} MB`);
+          lastProgressBytes = bytes;
+        }
+      });
+      res.pipe(file);
+      file.on('finish', () => {
+        file.close((closeErr) => {
+          if (closeErr) return reject(closeErr);
+          const ms = Date.now() - t0;
+          const mb = (bytes / 1024 / 1024).toFixed(1);
+          log(`download complete: ${mb} MB in ${(ms / 1000).toFixed(1)}s`);
+          resolve();
+        });
+      });
+    });
+    req.on('error', (e) => {
+      file.close();
+      try { fs.unlinkSync(destPath); } catch (_) { /* tolerate */ }
+      reject(e);
+    });
+    req.setTimeout(15 * 60 * 1000, () => {
+      req.destroy(new Error('download timed out after 15 minutes'));
+    });
+  });
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────
+async function streamFilter(gzPath) {
+  const t0 = Date.now();
+  const seenEan = new Set();
+  const rows = [];
+  let lines = 0;
+  let parsed = 0;
+  let ukMatched = 0;
+  let kept = 0;
+  let parseErrors = 0;
+
+  const gz = fs.createReadStream(gzPath);
+  const gunzip = zlib.createGunzip();
+  const rl = readline.createInterface({
+    input: gz.pipe(gunzip),
+    crlfDelay: Infinity,
+  });
+
+  for await (const line of rl) {
+    lines++;
+    if (lines % PROGRESS_EVERY_LINES === 0) {
+      log(`lines=${lines.toLocaleString()} ukMatched=${ukMatched.toLocaleString()} kept=${kept.toLocaleString()}`);
+    }
+    if (!line) continue;
+    let product;
+    try {
+      product = JSON.parse(line);
+      parsed++;
+    } catch (_) {
+      parseErrors++;
+      continue;
+    }
+    if (!isUkProduct(product)) continue;
+    ukMatched++;
+    const row = toRow(product);
+    if (!row) continue;
+    if (seenEan.has(row.ean)) continue;
+    seenEan.add(row.ean);
+    rows.push(row);
+    kept++;
+  }
+
+  const ms = Date.now() - t0;
+  log(`stream complete: lines=${lines.toLocaleString()} parsed=${parsed.toLocaleString()} ukMatched=${ukMatched.toLocaleString()} kept=${kept.toLocaleString()} parseErrors=${parseErrors} ms=${ms}`);
+  return { rows, lines, parsed, ukMatched, parseErrors, streamMs: ms };
+}
 
 (async function main() {
   const t0 = Date.now();
-  log('starting UK snapshot build');
+  log('starting full-dump UK snapshot build');
   log(`output: ${OUT_PATH}`);
 
-  const seenEan = new Set();
-  const rows = [];
-  let totalFetched = 0;
-  let totalSkipped = 0;
-  let consecutiveFailures = 0;
-
-  for (let page = 1; page <= MAX_PAGES; page++) {
-    let payload;
+  let downloadAttempt = 0;
+  const MAX_DOWNLOAD_ATTEMPTS = 3;
+  while (true) {
+    downloadAttempt++;
     try {
-      payload = await fetchPage(page);
-      consecutiveFailures = 0;
-    } catch (e) {
-      err(`page ${page} fetch failed: ${e.message}`);
-      consecutiveFailures++;
-      if (rows.length === 0 && page === 1) throw e;
-      if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-        warn(`${MAX_CONSECUTIVE_FAILURES} consecutive page failures; stopping pagination at page ${page}`);
-        break;
-      }
-      await sleep(REQUEST_DELAY_MS);
-      continue;
-    }
-    const products = Array.isArray(payload?.products) ? payload.products : [];
-    totalFetched += products.length;
-    if (products.length === 0) {
-      log(`page ${page}: empty, stopping pagination`);
+      await downloadDump(DUMP_URL, TMP_GZ_PATH);
       break;
+    } catch (e) {
+      warn(`download attempt ${downloadAttempt} failed: ${e.message}`);
+      if (downloadAttempt >= MAX_DOWNLOAD_ATTEMPTS) {
+        err('all download attempts exhausted');
+        process.exit(1);
+      }
+      const backoff = 10_000 * downloadAttempt;
+      log(`retrying in ${backoff / 1000}s`);
+      await new Promise((r) => setTimeout(r, backoff));
     }
-    for (const p of products) {
-      const row = toRow(p);
-      if (!row) { totalSkipped++; continue; }
-      if (seenEan.has(row.ean)) { totalSkipped++; continue; }
-      seenEan.add(row.ean);
-      rows.push(row);
-    }
-    log(`page ${page}: kept ${rows.length} so far (this page +${products.length} raw)`);
-    await sleep(REQUEST_DELAY_MS);
   }
+
+  const stats = await streamFilter(TMP_GZ_PATH);
+
+  try { fs.unlinkSync(TMP_GZ_PATH); } catch (_) { /* tolerate */ }
 
   const ms = Date.now() - t0;
   const out = {
     _meta: {
       format: 'off-uk-snapshot',
-      version: 1,
+      version: 2,
       generatedAt: new Date().toISOString(),
-      rowCount: rows.length,
-      source: 'openfoodfacts.org search API, country=united-kingdom',
+      rowCount: stats.rows.length,
+      source: 'openfoodfacts.org full JSONL dump, filtered to countries_tags contains en:united-kingdom',
       sourceLicense: 'Open Database License (ODbL) 1.0',
       buildMs: ms,
-      totalFetched,
-      totalSkipped,
+      linesScanned: stats.lines,
+      ukMatched: stats.ukMatched,
+      parseErrors: stats.parseErrors,
     },
-    rows,
+    rows: stats.rows,
   };
 
   fs.mkdirSync(path.dirname(OUT_PATH), { recursive: true });
   fs.writeFileSync(OUT_PATH, JSON.stringify(out));
   const bytes = fs.statSync(OUT_PATH).size;
   const mb = (bytes / 1024 / 1024).toFixed(2);
-  log(`wrote ${rows.length} rows (${mb}MB) in ${ms}ms`);
-  log(`skipped ${totalSkipped} (missing fields or duplicate)`);
+  log(`wrote ${stats.rows.length.toLocaleString()} rows (${mb} MB) in ${ms}ms`);
   log('done. commit assets/seed/off_uk_snapshot.json + push.');
 })().catch((e) => {
   err('fatal:', e.message);
+  err(e.stack);
   process.exit(1);
 });

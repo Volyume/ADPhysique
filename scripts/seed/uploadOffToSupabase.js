@@ -25,8 +25,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const SNAPSHOT_PATH = path.resolve(__dirname, '..', '..', 'assets', 'seed', 'off_uk_snapshot.json');
-const CHUNK_SIZE = 500;
-const REQUEST_DELAY_MS = 200;
+const CHUNK_SIZE = 1000;
+const REQUEST_DELAY_MS = 100;
 
 function log(...args) {
   // eslint-disable-next-line no-console
@@ -94,32 +94,41 @@ async function upsertChunk(supabaseUrl, serviceRoleKey, rows) {
     return;
   }
 
-  const now = new Date().toISOString();
+  // Stagger updated_at by 1 ms per row so the food_library_pull RPC,
+  // which paginates with `WHERE updated_at > _since ORDER BY updated_at
+  // ASC LIMIT 5000`, can walk past a single bulk run. If every row
+  // shared the same updated_at, the second page would query
+  // updated_at > T and return 0, silently capping the client at 5000
+  // of however many we uploaded.
+  const baseMs = Date.now();
   const cloudRows = rows
     .filter(r => r && r.ean && r.name
       && r.kcal_100g != null && r.protein_100g != null
       && r.carbs_100g != null && r.fat_100g != null)
-    .map(r => ({
-      id: cryptoUuid(),
-      source: 'off',
-      source_id: r.ean,
-      barcode_ean: r.ean,
-      name: r.name,
-      brand: r.brand ?? null,
-      serving_g: r.serving_g ?? 100,
-      serving_label: r.serving_label ?? null,
-      kcal_100g: r.kcal_100g,
-      protein_100g: r.protein_100g,
-      carbs_100g: r.carbs_100g,
-      fat_100g: r.fat_100g,
-      fibre_100g: r.fibre_100g ?? null,
-      sodium_100g: r.sodium_100g ?? null,
-      sugar_100g: r.sugar_100g ?? null,
-      verified: false,
-      fetched_at: now,
-      created_at: now,
-      updated_at: now,
-    }));
+    .map((r, i) => {
+      const stamp = new Date(baseMs + i).toISOString();
+      return {
+        id: cryptoUuid(),
+        source: 'off',
+        source_id: r.ean,
+        barcode_ean: r.ean,
+        name: r.name,
+        brand: r.brand ?? null,
+        serving_g: r.serving_g ?? 100,
+        serving_label: r.serving_label ?? null,
+        kcal_100g: r.kcal_100g,
+        protein_100g: r.protein_100g,
+        carbs_100g: r.carbs_100g,
+        fat_100g: r.fat_100g,
+        fibre_100g: r.fibre_100g ?? null,
+        sodium_100g: r.sodium_100g ?? null,
+        sugar_100g: r.sugar_100g ?? null,
+        verified: false,
+        fetched_at: stamp,
+        created_at: stamp,
+        updated_at: stamp,
+      };
+    });
 
   log(`uploading ${cloudRows.length} rows in chunks of ${CHUNK_SIZE}`);
 
