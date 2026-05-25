@@ -647,14 +647,25 @@ export default function RootNavigator() {
           if (event === 'SIGNED_IN' && session?.user?.id) {
             // Funnel telemetry: sign_in fires only on a real sign-in,
             // not on INITIAL_SESSION (which is a session restore on
-            // cold launch). Fire-and-forget; the local row is in the
-            // engine_telemetry queue and the flush below pushes it.
+            // cold launch). account_created piggybacks on the same
+            // event when session.user.created_at is within the last
+            // 5 minutes (universal across email-auto-confirm + OAuth
+            // signup; misses email-confirm-later sign-ins where the
+            // user takes more than 5 min to follow the confirm link,
+            // which is acceptable noise for funnel ratios). Fire-and-
+            // forget; the local rows are in the queue and the flush
+            // below pushes them.
             try {
               // eslint-disable-next-line global-require
               const { track } = require('../lib/engineTelemetry');
-              track(session.user.id, 'sign_in', {
-                provider: session.user.app_metadata?.provider ?? 'unknown',
-              }).catch(() => {});
+              const provider = session.user.app_metadata?.provider ?? 'unknown';
+              track(session.user.id, 'sign_in', { provider }).catch(() => {});
+              const createdAtMs = session.user.created_at
+                ? new Date(session.user.created_at).getTime()
+                : NaN;
+              if (Number.isFinite(createdAtMs) && (Date.now() - createdAtMs) < 5 * 60 * 1000) {
+                track(session.user.id, 'account_created', { provider }).catch(() => {});
+              }
             } catch (_) {}
           }
           if (isAuthEnter) {

@@ -77,6 +77,14 @@ const ALLOWED_EVENTS = new Set([
   'sign_in',
   'sign_out',
   'article9_consent_recorded',
+  // Migration 036: signup funnel closure. account_created fires on
+  // SIGNED_IN when session.user.created_at is within the last 5
+  // minutes (covers email-auto-confirm + OAuth signup; misses
+  // email-confirm-later sign-ins more than 5 min after the confirm
+  // link, which is fine for funnel ratios). custom_food_created
+  // fires after insertCustomFood succeeds in AddCustomFoodScreen.
+  'account_created',
+  'custom_food_created',
 ]);
 
 let _flushTimer = null;

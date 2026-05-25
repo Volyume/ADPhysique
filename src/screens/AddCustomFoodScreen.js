@@ -89,6 +89,20 @@ export default function AddCustomFoodScreen({ navigation, route }) {
       }
 
       const customId = await insertCustomFood(userId, food);
+      // Funnel telemetry: custom_food_created fires once per save.
+      // The follow-on logFoodEntry below also fires food_logged from
+      // inside food/db.js, so each custom-food save produces two
+      // events: the create + the first log.
+      if (userId) {
+        try {
+          // eslint-disable-next-line global-require
+          const { track } = require('../lib/engineTelemetry');
+          track(userId, 'custom_food_created', {
+            source: route?.params?.from ?? 'manual',
+            has_fibre: food.fibre100g != null,
+          }).catch(() => {});
+        } catch (_) {}
+      }
       const qty = Number(quantityG) || food.servingG;
       // Macros for the logged entry are scaled from per-100g to the
       // actual quantity logged. This denormalises at log time so
