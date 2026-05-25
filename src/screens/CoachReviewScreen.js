@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { startOfWeek, endOfWeek, format, isWithinInterval } from 'date-fns';
 import { colors, spacing, fontSize } from '../styles/theme';
 import { getAllWorkouts, getCompletedWorkoutSets, getAllExercises, getRecentCheckins } from '../lib/database';
 import { calculateWeeklyVolume, getVolumeStatus, shouldDeload, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS, detectLaggingMuscles } from '../lib/algorithms';
+import { SkeletonCard } from '../components/Skeleton';
 import useAppStore from '../store/useAppStore';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -389,10 +390,13 @@ export default function CoachReviewScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe}>
-        <View style={styles.loadingWrap}>
-          <ActivityIndicator color={colors.primary} size="large" />
-        </View>
+      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+        <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
+          <SkeletonCard height={96} />
+          <SkeletonCard height={180} />
+          <SkeletonCard height={140} />
+          <SkeletonCard height={140} />
+        </ScrollView>
       </SafeAreaView>
     );
   }

@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { getCoachOutputHistory } from '../lib/database';
+import { SkeletonCard } from '../components/Skeleton';
 
 const MONTH_NAMES = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -117,7 +118,11 @@ export default function CoachHeldHistoryScreen({ navigation }) {
         </Text>
 
         {loading && (
-          <Text style={styles.emptyText}>Loading…</Text>
+          <View style={{ gap: spacing.md, marginTop: spacing.md }}>
+            <SkeletonCard height={110} />
+            <SkeletonCard height={110} />
+            <SkeletonCard height={110} />
+          </View>
         )}
 
         {isEmpty && (

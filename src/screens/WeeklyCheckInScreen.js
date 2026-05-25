@@ -30,6 +30,7 @@ import { getRollupsForRange } from '../lib/food/db';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { requestNotificationPermissions, getNotificationPermissionStatus, scheduleNextCheckinReminder } from '../lib/notifications';
 import { logError } from '../lib/errorLog';
+import { SkeletonCard } from '../components/Skeleton';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 const DAYS_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -720,9 +721,11 @@ export default function WeeklyCheckInScreen({ navigation }) {
   if (loading || gateState === 'loading') {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <View style={styles.gateCenter}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
+        <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
+          <SkeletonCard height={72} />
+          <SkeletonCard height={160} />
+          <SkeletonCard height={120} />
+        </ScrollView>
       </SafeAreaView>
     );
   }

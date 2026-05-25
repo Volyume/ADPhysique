@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { getBlockReflectionData } from '../lib/database';
+import { SkeletonCard } from '../components/Skeleton';
 
 const MONTH_NAMES = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -102,7 +103,13 @@ export default function BlockReflectionScreen({ navigation, route }) {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {loading && <Text style={styles.loadingText}>Loading…</Text>}
+        {loading && (
+          <View style={{ gap: spacing.md }}>
+            <SkeletonCard height={100} />
+            <SkeletonCard height={160} />
+            <SkeletonCard height={140} />
+          </View>
+        )}
 
         {!loading && !data && (
           <View style={styles.emptyCard}>
