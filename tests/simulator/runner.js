@@ -52,7 +52,7 @@ function _defaultUser() {
   };
 }
 
-function _morningWeightsAtWeek(weeklyWeights, weekIndex, initialWeight) {
+function _morningWeightsAtWeek(weeklyWeights, weekIndex, initialWeight, skipWeights) {
   // Build the morning-weights array for an engine call at week
   // `weekIndex`. All timestamps anchor to Date.now() so the latest
   // reading is "today" and earlier readings extend backward day by
@@ -64,12 +64,22 @@ function _morningWeightsAtWeek(weeklyWeights, weekIndex, initialWeight) {
   // within a week linearly interpolate from the previous week's end
   // to this week's. Daily granularity (7 per week) gives the EWMA
   // (alpha=0.1) enough datapoints to converge to the true rate.
+  //
+  // skipWeights: optional Set<number> of week indices to OMIT
+  // entirely (no daily readings generated for that week). Used by
+  // the returning_user scenario to model a logging gap. The next
+  // week's interpolation resumes from the last actual reading.
   const out = [];
   const tinyJitter = (d) => ((d % 2 === 0 ? 1 : -1) * 0.03);
   let lastEnd = initialWeight;
   const nowMs = Date.now();
   for (let w = 0; w <= weekIndex; w++) {
     const thisEnd = weeklyWeights[w];
+    if (skipWeights && skipWeights.has(w)) {
+      // No readings for this week. Last-end stays where it was so
+      // the next non-skipped week interpolates from there.
+      continue;
+    }
     for (let d = 0; d < 7; d++) {
       const daysBack = (weekIndex - w) * 7 + (6 - d);
       const frac = (d + 1) / 7;
@@ -156,12 +166,21 @@ export function simulate({ user: userOverrides = {}, weeks = 12, weeklyInputs = 
     (inp, i) => inp?.weight_kg ?? user.weight_kg,
   );
 
+  // Set of week indices the user did NOT log weight in. Used by
+  // the returning_user scenario; harmless when no inputs set the
+  // flag.
+  const skipWeights = new Set(
+    weeklyInputs
+      .map((inp, i) => (inp?.skipWeight ? i : null))
+      .filter(i => i !== null),
+  );
+
   const weekByWeek = [];
 
   for (let w = 0; w < weeks; w++) {
     const input = weeklyInputs[w] ?? {};
     state.weeksInPhase++;
-    const morningWeights = _morningWeightsAtWeek(weeklyWeights, w, user.weight_kg);
+    const morningWeights = _morningWeightsAtWeek(weeklyWeights, w, user.weight_kg, skipWeights);
 
     const checkin = {
       energyScore: input.energy ?? 3,
