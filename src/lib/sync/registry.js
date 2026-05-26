@@ -73,7 +73,7 @@ export const SYNC_REGISTRY = [
     pk: 'id',
     conflictStrategy: 'last_write_wins',
     serverAuthoritative: false,
-    softDelete: false,
+    softDelete: true,
     direction: 'bidirectional',
   },
   {

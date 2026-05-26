@@ -35,6 +35,9 @@ jest.mock('../../database', () => ({
   insertBodyMetricFromCloud: jest.fn(),
   getNutritionTargets: jest.fn(),
   insertNutritionTargetsFromCloud: jest.fn(),
+  getAllRecipeIngredientsForUser: jest.fn(),
+  upsertRecipeIngredientFromCloud: jest.fn(),
+  getRecipeIngredientUpdatedAt: jest.fn(),
 }));
 
 jest.mock('../telemetry', () => ({
@@ -772,5 +775,122 @@ describe('registry contract drift fixed: nutrition_targets', () => {
     expect(entry.direction).toBe('bidirectional');
     expect(entry.serverAuthoritative).toBe(false);
     expect(entry.conflictStrategy).toBe('last_write_wins');
+  });
+});
+
+describe('recipe_ingredients push (soft-delete)', () => {
+  function makeRiPushSb({ upsertError = null } = {}) {
+    const calls = { upserts: [] };
+    return {
+      _calls: calls,
+      from: jest.fn(() => ({
+        upsert: jest.fn(async (rows, opts) => {
+          calls.upserts.push({ rows, opts });
+          return { error: upsertError };
+        }),
+      })),
+    };
+  }
+
+  test('ships live + tombstoned rows together; deleted_at populated for tombstones', async () => {
+    dbModule.getAllRecipeIngredientsForUser.mockResolvedValue([
+      { id: 'ri-1', recipeId: 'r-1', foodRef: 'off:1', quantityG: 100, orderIndex: 0, createdAt: 1, updatedAt: 1, deletedAt: null },
+      { id: 'ri-2', recipeId: 'r-1', foodRef: 'off:2', quantityG: 50,  orderIndex: 1, createdAt: 1, updatedAt: 9, deletedAt: 9 },
+    ]);
+    const sb = makeRiPushSb();
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await pushTable('recipe_ingredients', { userId: 'u1', localUserId: 'u1' });
+
+    expect(result).toEqual({ count: 2, errors: 0 });
+    const upserted = sb._calls.upserts[0].rows;
+    expect(upserted).toHaveLength(2);
+    expect(upserted[0]).toMatchObject({ id: 'ri-1', deleted_at: null });
+    expect(upserted[1]).toMatchObject({ id: 'ri-2' });
+    expect(upserted[1].deleted_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  test('updated_at falls back to created_at for legacy rows missing the new column', async () => {
+    dbModule.getAllRecipeIngredientsForUser.mockResolvedValue([
+      { id: 'ri-legacy', recipeId: 'r-1', foodRef: 'off:1', quantityG: 100, orderIndex: 0, createdAt: 123456, updatedAt: null, deletedAt: null },
+    ]);
+    const sb = makeRiPushSb();
+    getSupabaseClient.mockReturnValue(sb);
+
+    await pushTable('recipe_ingredients', { userId: 'u1', localUserId: 'u1' });
+
+    const upserted = sb._calls.upserts[0].rows[0];
+    expect(upserted.created_at).toBe(upserted.updated_at);
+  });
+});
+
+describe('recipe_ingredients pull (LWW)', () => {
+  function makeRiPullSb({ data = [], error = null } = {}) {
+    return {
+      from: jest.fn(() => ({
+        select: jest.fn(() => ({
+          eq: jest.fn(async () => ({ data, error })),
+        })),
+      })),
+    };
+  }
+
+  test('skips cloud rows whose updated_at is older than the local copy', async () => {
+    const sb = makeRiPullSb({
+      data: [
+        { id: 'ri-stale',  recipe_id: 'r-1', food_ref: 'off:1', quantity_g: 100, order_index: 0, created_at: new Date(1).toISOString(), updated_at: new Date(1000).toISOString() },
+        { id: 'ri-newer',  recipe_id: 'r-1', food_ref: 'off:2', quantity_g: 200, order_index: 1, created_at: new Date(1).toISOString(), updated_at: new Date(5000).toISOString() },
+      ],
+    });
+    getSupabaseClient.mockReturnValue(sb);
+    // local has a strictly newer copy of ri-stale; no local copy of ri-newer
+    dbModule.getRecipeIngredientUpdatedAt.mockImplementation(async (_userId, id) => {
+      if (id === 'ri-stale') return 9999; // local is newer than cloud
+      return null;
+    });
+    dbModule.upsertRecipeIngredientFromCloud.mockResolvedValue(undefined);
+
+    const result = await pullTable('recipe_ingredients', { userId: 'u1' });
+
+    expect(result).toEqual({ count: 1, errors: 0, skipped: 1 });
+    expect(dbModule.upsertRecipeIngredientFromCloud).toHaveBeenCalledTimes(1);
+    expect(dbModule.upsertRecipeIngredientFromCloud).toHaveBeenCalledWith('u1', expect.objectContaining({ id: 'ri-newer' }));
+  });
+
+  test('tombstones (deleted_at set) flow through pull unchanged', async () => {
+    const sb = makeRiPullSb({
+      data: [
+        { id: 'ri-tomb', recipe_id: 'r-1', food_ref: 'off:1', quantity_g: 100, order_index: 0, created_at: new Date(1).toISOString(), updated_at: new Date(9999).toISOString(), deleted_at: new Date(9999).toISOString() },
+      ],
+    });
+    getSupabaseClient.mockReturnValue(sb);
+    dbModule.getRecipeIngredientUpdatedAt.mockResolvedValue(null);
+    dbModule.upsertRecipeIngredientFromCloud.mockResolvedValue(undefined);
+
+    const result = await pullTable('recipe_ingredients', { userId: 'u1' });
+
+    expect(result).toEqual({ count: 1, errors: 0 });
+    const arg = dbModule.upsertRecipeIngredientFromCloud.mock.calls[0][1];
+    expect(arg.deleted_at).toBeTruthy();
+  });
+
+  test('errors:1 when select fails', async () => {
+    const sb = makeRiPullSb({ data: null, error: new Error('rls') });
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await pullTable('recipe_ingredients', { userId: 'u1' });
+
+    expect(result).toEqual({ count: 0, errors: 1 });
+  });
+});
+
+describe('registry contract: recipe_ingredients', () => {
+  test('softDelete is true now that the schema has deleted_at', () => {
+    // eslint-disable-next-line global-require
+    const { getRegistryEntry } = require('../registry');
+    const entry = getRegistryEntry('recipe_ingredients');
+    expect(entry.softDelete).toBe(true);
+    expect(entry.conflictStrategy).toBe('last_write_wins');
+    expect(entry.direction).toBe('bidirectional');
   });
 });

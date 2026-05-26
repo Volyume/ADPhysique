@@ -1038,6 +1038,23 @@ const SCHEMA_MIGRATIONS = [
     'ALTER TABLE custom_foods ADD COLUMN barcode_ean TEXT',
     'CREATE INDEX IF NOT EXISTS idx_custom_foods_barcode ON custom_foods(barcode_ean) WHERE barcode_ean IS NOT NULL',
   ],
+  // recipe_ingredients soft-delete + LWW columns. Closes the
+  // gap flagged in 12808b3: the table was the only food child
+  // without a deleted_at + updated_at, so cross-device deletes
+  // and conflict resolution had no signals to operate on. With
+  // these columns the registry's softDelete:true + LWW contract
+  // is honourable. Cloud schema for these columns landed
+  // founder-side. Idempotent on re-apply via the additive
+  // migration error allow-list.
+  [
+    'ALTER TABLE recipe_ingredients ADD COLUMN deleted_at INTEGER',
+    'ALTER TABLE recipe_ingredients ADD COLUMN updated_at INTEGER',
+    // Backfill updated_at from created_at for existing rows so
+    // the LWW comparison has something to chew on rather than
+    // treating every legacy row as forever-stale.
+    'UPDATE recipe_ingredients SET updated_at = created_at WHERE updated_at IS NULL',
+    'CREATE INDEX IF NOT EXISTS idx_recipe_ingredients_live ON recipe_ingredients(user_id, recipe_id) WHERE deleted_at IS NULL',
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
@@ -4461,11 +4478,11 @@ export async function insertOrUpdatePlannedMuscleVolumeFromCloud(userId, row) {
  * upsert path inside the engine, not through this helper.
  */
 /**
- * recipe_ingredients all-rows reader. Per SYNC_REGISTRY the table
- * is bidirectional with last_write_wins; the schema has no
- * updated_at so LWW is effectively "last push wins". user_id was
- * added in migration 014; older rows have user_id back-filled
- * from their parent recipe.
+ * recipe_ingredients all-rows reader for SYNC. Includes
+ * tombstones (deleted_at IS NOT NULL) so the per-table push in
+ * src/lib/sync/tables/recipeIngredients.js can ship the delete
+ * to the cloud. UI consumers should call
+ * getLiveRecipeIngredientsForRecipe instead.
  */
 export async function getAllRecipeIngredientsForUser(userId) {
   const d = await db();
@@ -4477,16 +4494,54 @@ export async function getAllRecipeIngredientsForUser(userId) {
 }
 
 /**
- * recipe_ingredients from cloud. INSERT OR REPLACE so the cloud
- * copy wins per the registry's last_write_wins semantics.
+ * Live (non-deleted) ingredients for one recipe. The recipe-
+ * builder UI reads through this so tombstoned rows never appear
+ * even though they still live in SQLite for sync.
+ */
+export async function getLiveRecipeIngredientsForRecipe(userId, recipeId) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT * FROM recipe_ingredients
+     WHERE user_id = ? AND recipe_id = ? AND deleted_at IS NULL
+     ORDER BY order_index`,
+    [userId, recipeId],
+  );
+  return rows.map(rowToCamel);
+}
+
+/**
+ * Soft-delete an ingredient. Sets deleted_at + updated_at; the
+ * row survives in SQLite so the next sync round ships the
+ * tombstone to the cloud. Cloud-side then either tombstones
+ * (if newer) or revives it (if cloud is newer per LWW).
+ */
+export async function softDeleteRecipeIngredient(userId, id) {
+  if (!id) return;
+  const d = await db();
+  const now = Date.now();
+  await d.runAsync(
+    `UPDATE recipe_ingredients
+     SET deleted_at = ?, updated_at = ?
+     WHERE id = ? AND user_id = ?`,
+    [now, now, id, userId],
+  );
+}
+
+/**
+ * recipe_ingredients from cloud. Last-write-wins on updated_at;
+ * tombstones (deleted_at IS NOT NULL on the cloud row) flow
+ * through unchanged. SQLite's INSERT OR REPLACE keeps the local
+ * write minimal; the LWW gate is applied by the caller in
+ * src/lib/sync/tables/recipeIngredients.js.
  */
 export async function upsertRecipeIngredientFromCloud(userId, row) {
   if (!row?.id) return;
   const d = await db();
   await d.runAsync(
     `INSERT OR REPLACE INTO recipe_ingredients
-       (id, recipe_id, food_ref, quantity_g, order_index, created_at, user_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+       (id, recipe_id, food_ref, quantity_g, order_index, created_at,
+        updated_at, deleted_at, user_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       row.id,
       row.recipe_id ?? null,
@@ -4494,9 +4549,27 @@ export async function upsertRecipeIngredientFromCloud(userId, row) {
       Number(row.quantity_g) || 0,
       Number(row.order_index) || 0,
       _tsToMs(row.created_at) ?? Date.now(),
+      _tsToMs(row.updated_at) ?? Date.now(),
+      row.deleted_at ? _tsToMs(row.deleted_at) : null,
       userId,
     ],
   );
+}
+
+/**
+ * Existing local updated_at for one ingredient. Used by the
+ * per-table pull handler to decide whether a cloud row beats
+ * what we have locally per the LWW contract. Returns null when
+ * the local row doesn't exist (cloud row wins by default).
+ */
+export async function getRecipeIngredientUpdatedAt(userId, id) {
+  if (!id) return null;
+  const d = await db();
+  const row = await d.getFirstAsync(
+    'SELECT updated_at FROM recipe_ingredients WHERE id = ? AND user_id = ?',
+    [id, userId],
+  );
+  return row?.updated_at ?? null;
 }
 
 /**
