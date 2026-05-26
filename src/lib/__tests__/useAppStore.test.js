@@ -121,17 +121,7 @@ describe('PR celebration queue', () => {
   });
 });
 
-describe('initLocalUser', () => {
-  test('sets isAuthLoading to false after resolving (even when it starts true)', async () => {
-    // eslint-disable-next-line global-require
-    const useAppStore = require('../../store/useAppStore').default;
-    // Splash gate no longer reads isAuthLoading, but initLocalUser must
-    // still clear the flag for any consumer that relies on it (crash
-    // recovery, debug overlay, etc.). Simulate the legacy "true" entry
-    // state to verify it still gets cleared.
-    useAppStore.setState({ isAuthLoading: true });
-    await useAppStore.getState().initLocalUser();
-    expect(useAppStore.getState().isAuthLoading).toBe(false);
-    expect(useAppStore.getState().user?.id).toBeTruthy();
-  });
-});
+// initLocalUser describe deleted per IDENTITY_AND_OWNERSHIP_LOCKED.md
+// rule 1 / 5 / anti-patterns. The store action no longer exists; the
+// regression guard at src/lib/__tests__/identityGate.proOnboarding.test.js
+// asserts it does not return.

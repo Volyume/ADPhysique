@@ -34,7 +34,7 @@ function pushPrefSoon(supabaseUid, key, value) {
   }, 0);
 }
 
-function generateUUID() {
+export function generateUUID() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
     const r = (Math.random() * 16) | 0;
     return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
@@ -69,55 +69,11 @@ const useAppStore = create((set, get) => ({
   setUserProfile: (userProfile) => set({ userProfile }),
   setAuthLoading: (isAuthLoading) => set({ isAuthLoading }),
 
-  // Creates or restores a local (offline) user from AsyncStorage, then loads
-  // their saved profile. CRITICAL: must always release isAuthLoading even on
-  // failure — otherwise the splash screen hangs forever for any user whose
-  // stored profile JSON is corrupt.
-  initLocalUser: async () => {
-    let userId = null;
-    let profile = null;
-    try {
-      userId = await AsyncStorage.getItem(LOCAL_USER_KEY);
-      if (!userId) {
-        userId = generateUUID();
-        await AsyncStorage.setItem(LOCAL_USER_KEY, userId);
-      }
-      const raw = await AsyncStorage.getItem(PROFILE_KEY_PFX + userId).catch(() => null);
-      if (raw) {
-        try {
-          profile = JSON.parse(raw);
-          // Migrate legacy trainingGoal values (general_hypertrophy /
-          // strength_hypertrophy / weak_point_spec) to the post-merge
-          // split (general + phase). No-op for clean profiles.
-          // eslint-disable-next-line global-require
-          const { migrateProfileGoals } = require('../lib/coachingGoals');
-          profile = migrateProfileGoals(profile);
-        }
-        catch (e) {
-          // Corrupt profile — keep going with null profile; the user can
-          // re-onboard. Don't swallow this entirely — surface to debug log.
-          // eslint-disable-next-line global-require
-          try { require('../lib/errorLog').logWarn('useAppStore.initLocalUser', 'corrupt profile JSON', { userId, raw: raw.slice(0, 200) }); } catch (_) {}
-          profile = null;
-        }
-      }
-    } catch (e) {
-      // eslint-disable-next-line global-require
-      try { require('../lib/errorLog').logError('useAppStore.initLocalUser', e); } catch (_) {}
-      // userId may have been resolved partially. Fall through to set
-      // isAuthLoading=false so the app doesn't hang on the splash.
-    }
-    const localUser = userId ? { id: userId, email: 'local@device', isLocal: true } : null;
-    set({
-      user: localUser,
-      userProfile: profile,
-      units: profile?.units || 'kg',
-      bodyWeightUnits: profile?.bodyWeightUnits || 'st',
-      barWeight: profile?.barWeight || 20,
-      isAuthLoading: false,
-    });
-    return localUser;
-  },
+  // initLocalUser deleted per IDENTITY_AND_OWNERSHIP_LOCKED.md
+  // rule 1 ("No anonymous mode") + anti-patterns ("Anonymous local
+  // mode of any kind"). Every user must sign up to a real account
+  // via WelcomeScreen → LoginScreen; the bootstrap path in
+  // RootNavigator no longer auto-restores a local-only user.
 
   // Persists userProfile to AsyncStorage so it survives app restarts for local
   // users AND pushes the change to Supabase if there's an authenticated

@@ -17,7 +17,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { VolyumeMark } from '../components/BrandMark';
 import { signInWithEmail, signUpWithEmail, resetPassword, signInWithGoogle, signInWithApple } from '../lib/supabase';
 import { syncProfile, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
-import { wipeAllUserData, migrateLocalUserId } from '../lib/database';
+import { wipeAllUserData } from '../lib/database';
 import { logError } from '../lib/errorLog';
 import { audit } from '../lib/observability';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -28,8 +28,12 @@ import { useToast } from '../components/Toast';
 const CRASH_LOG_KEY = '@volyume_crash_log';
 
 export default function LoginScreen({ navigation, route }) {
-  const { initLocalUser, user: localUser, userProfile, tier, setTier } = useAppStore(useShallow(s => ({
-    initLocalUser: s.initLocalUser,
+  // No anonymous-mode action: per IDENTITY_AND_OWNERSHIP_LOCKED.md
+  // rule 1 ("No anonymous mode") + rule 5 (no migrateLocalUserId) +
+  // the anti-patterns list, the only path into the app is a real
+  // signup or sign-in. `initLocalUser` and `handleContinueLocally`
+  // were the entry points; both removed.
+  const { user: localUser, userProfile, tier, setTier } = useAppStore(useShallow(s => ({
     user: s.user,
     userProfile: s.userProfile,
     tier: s.tier,
@@ -45,7 +49,6 @@ export default function LoginScreen({ navigation, route }) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [localLoading, setLocalLoading] = useState(false);
   const [emailFocused, setEmailFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [crashLog, setCrashLog] = useState(null);
@@ -132,19 +135,16 @@ export default function LoginScreen({ navigation, route }) {
         }
         await AsyncStorage.setItem('@volyume_last_supabase_user_id', supabaseUserId).catch(() => {});
 
-        // Anonymous-to-account migration: only on SIGN-UP, never on
-        // SIGN-IN. Per IDENTITY_AND_OWNERSHIP_LOCKED.md the only
-        // legitimate user_id mutation is moving rows from an
-        // anonymous local UUID to a fresh real account at the
-        // moment of sign-up. Sign-in with a previous real account
-        // already cached locally is the path that caused the 42501
-        // cascade; that path is now handled by the cross-user wipe
-        // in RootNavigator.onAuthStateChange + the sign-out wipe in
+        // No anonymous-to-account migration: per
+        // IDENTITY_AND_OWNERSHIP_LOCKED.md rule 5 ("Sign-in path
+        // does not call migrateLocalUserId. That function is
+        // deleted from database.js in this refactor."). The
+        // anonymous-mode entry point is removed (rule 1 +
+        // anti-patterns), so by spec the local SQLite at this
+        // moment carries no rows that would need re-keying.
+        // Cross-user contamination is prevented by the wipe in
+        // RootNavigator.onAuthStateChange + the sign-out wipe in
         // useAppStore.clearAuthStateForSignOut.
-        if (mode === 'signup' && localUserId && localUserId !== supabaseUserId) {
-          try { await migrateLocalUserId(localUserId, supabaseUserId); }
-          catch (e) { logError('LoginScreen.handleEmailAuth.migrateLocalUserId', e); }
-        }
 
         // Fire-and-forget but capture failures so silent network drops
         // during sign-in stop swallowing data loss.
@@ -212,12 +212,6 @@ export default function LoginScreen({ navigation, route }) {
     setLoading(false);
     if (error) { toast.show(error.message, { variant: 'error' }); }
     else { toast.show('Check your inbox for the reset link', { variant: 'success' }); }
-  }
-
-  async function handleContinueLocally() {
-    setLocalLoading(true);
-    await initLocalUser();
-    setLocalLoading(false);
   }
 
   const isSignIn = mode === 'signin';

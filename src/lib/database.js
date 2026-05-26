@@ -4129,58 +4129,15 @@ export async function insertMesocycleWeekFromCloud(w) {
   );
 }
 
-// Re-stamps all local data from localUserId → supabaseUserId so the app
-// reads it correctly after account creation during onboarding.
-// Tables listed here MUST have a user_id column — adaptation_events keys off
-// mesocycle_week_id so it doesn't need re-stamping, and personal_records
-// doesn't exist locally at all (PRs are computed on the fly from sets).
-export async function migrateLocalUserId(localUserId, supabaseUserId) {
-  if (!localUserId || !supabaseUserId || localUserId === supabaseUserId) return;
-  const d = await db();
-  const tables = [
-    'workouts', 'workout_sets', 'routines', 'programmes',
-    'nutrition_targets', 'body_metric_log', 'morning_weights',
-    'weekly_checkins', 'coach_outputs', 'mesocycles', 'user_body_profile',
-    'user_insights', 'peak_week_plans', 'exercise_user_notes',
-    'exercise_goals', // missed in the original migrate list — these are user-keyed
-    // custom_exercises (locked split per IDENTITY_AND_OWNERSHIP_LOCKED.md).
-    // Local rows created pre-account under the anonymous UUID need to
-    // re-key onto the new supabase uid on signup.
-    'custom_exercises',
-    // Sync-mirror tables from migration v19. user_id column is
-    // present on all three; re-key them so the pre-signin local
-    // sample data lands under the cloud uid for the push.
-    'workout_notes_v2', 'planned_muscle_volume_sync', 'adaptation_events_sync',
-    // Queued sync ops written while signed-out are keyed by the local
-    // UUID. Without re-keying, the drainer would push them under the
-    // wrong user and they'd fail RLS on the cloud, then get marked as
-    // permanently failed and dropped.
-    'pending_sync_ops',
-    // Food domain tables (migration 015). Same rule: rows written
-    // while signed-out are keyed under the anonymous localUserId and
-    // need re-stamping before food_sync_push so RLS accepts them.
-    // foods is a shared lookup cache and has no user_id column.
-    'custom_foods', 'food_entries', 'daily_intake_rollups',
-    'saved_meals', 'recipes', 'food_favourites', 'daily_water',
-  ];
-  for (const table of tables) {
-    try {
-      // LOCKED-OK: the anonymous-to-account migration is the one
-      // legitimate user_id mutation per IDENTITY_AND_OWNERSHIP_LOCKED.md
-      // decision 1 + scenario A's note. Caller (LoginScreen) gates
-      // this to mode==='signup' only; the cross-user sign-in path
-      // that used to call this is now removed in favour of
-      // wipeAllUserData via clearAuthStateForSignOut + the
-      // RootNavigator cross-user safety net.
-      await d.runAsync(
-        `UPDATE ${table} SET user_id = ? WHERE user_id = ?`,
-        [supabaseUserId, localUserId],
-      );
-    } catch (e) {
-      logError('database.migrateLocalUserId', e, { table });
-    }
-  }
-}
+// migrateLocalUserId deleted per IDENTITY_AND_OWNERSHIP_LOCKED.md
+// rule 5 ("Sign-in path does not call migrateLocalUserId. That
+// function is deleted from database.js in this refactor.") and
+// anti-patterns section ("migrateLocalUserId or any function that
+// updates user_id on existing rows"). Anonymous mode has been
+// removed (rule 1), so by spec local SQLite is empty at signup
+// time and there is no row that requires re-keying. Cross-user
+// contamination on the same device is prevented by the wipe in
+// useAppStore.clearAuthStateForSignOut + RootNavigator.
 
 export async function getProgressionTeaser(userId, lastWorkoutId, prevWorkoutId) {
   if (!lastWorkoutId || !prevWorkoutId) return null;

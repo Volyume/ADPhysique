@@ -11,7 +11,7 @@ import { VolyumeIcon } from '../components/BrandMark';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import {
-  logBodyMetric, logMorningWeight, saveNutritionTargets, saveUserBodyProfile, migrateLocalUserId,
+  logBodyMetric, logMorningWeight, saveNutritionTargets, saveUserBodyProfile,
 } from '../lib/database';
 import { stoneLbsToKg, ftInToCm, parseBodyWeightToKg } from '../lib/units';
 import { signUpWithEmail, signInWithEmail, signInWithGoogle, signInWithApple } from '../lib/supabase';
@@ -292,18 +292,11 @@ export default function ProOnboardingScreen({ navigation }) {
         const supabaseUserId = data.session.user.id;
         const localUserId = user?.id;
         const { logError } = require('../lib/errorLog');
-        // Anonymous-to-account migration: only on SIGN-UP, never on
-        // SIGN-IN. Per IDENTITY_AND_OWNERSHIP_LOCKED.md the only
-        // legitimate user_id mutation is moving rows from an
-        // anonymous local UUID to a fresh real account at the moment
-        // of sign-up. Sign-in must NOT re-key local rows: that is
-        // what triggered the 42501 cascade and is now handled by the
-        // cross-user wipe in RootNavigator.onAuthStateChange. Mirror
-        // of the LoginScreen.js gate.
-        if (authMode === 'signup' && localUserId && localUserId !== supabaseUserId) {
-          try { await migrateLocalUserId(localUserId, supabaseUserId); }
-          catch (e) { logError('ProOnboarding.migrateLocalUserId', e); }
-        }
+        // No anonymous-to-account migration: per
+        // IDENTITY_AND_OWNERSHIP_LOCKED.md rule 5 the function is
+        // deleted. Anonymous mode entry point is removed (rule 1
+        // + anti-patterns) so by spec there is no anonymous local
+        // row set to re-key here.
         syncProfile(supabaseUserId, userProfile, 'pro', { isBetaTester: true })
           .catch(e => logError('ProOnboarding.syncProfile', e, { supabaseUserId }));
         if (authMode === 'signup') {

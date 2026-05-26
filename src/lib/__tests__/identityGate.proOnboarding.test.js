@@ -1,42 +1,78 @@
 /**
- * Regression guard for the 2026-05-26 ProOnboardingScreen identity
- * bug surfaced in the external main-branch audit.
+ * Regression guard for the IDENTITY_AND_OWNERSHIP_LOCKED.md
+ * anti-patterns: anonymous mode of any kind, migrateLocalUserId,
+ * "Continue locally" sign-in-skip path, initLocalUser bootstrap.
  *
- * The bug: ProOnboardingScreen called migrateLocalUserId() on every
- * successful auth, including sign-in. Per
- * IDENTITY_AND_OWNERSHIP_LOCKED.md the anonymous-to-account migration
- * is the ONE legitimate user_id mutation and is only legal on
- * signup. LoginScreen has always had the gate; ProOnboardingScreen
- * had to be retrofitted.
- *
- * This test asserts the source file structure stays correct so a
- * future edit cannot silently re-introduce the bug. It complements
- * scripts/check-identity-invariant.sh, which only watches SQL-level
- * 'SET user_id' mutations.
+ * Replaces the earlier identityGate.proOnboarding.test.js which
+ * locked the signup-only GATE on a function the locked spec said
+ * to delete. With migrateLocalUserId removed (rule 5), the right
+ * guard is "these symbols never come back".
  */
 import fs from 'fs';
 import path from 'path';
 
-const PRO_ONBOARDING = fs.readFileSync(
-  path.resolve(__dirname, '../../screens/ProOnboardingScreen.js'),
-  'utf8',
-);
+function read(rel) {
+  return fs.readFileSync(path.resolve(__dirname, '../../..', rel), 'utf8');
+}
 
-describe('ProOnboardingScreen identity gate', () => {
-  test('calls migrateLocalUserId inside an authMode === "signup" branch', () => {
-    const lines = PRO_ONBOARDING.split('\n');
-    const callLineIdx = lines.findIndex(l => /migrateLocalUserId\s*\(/.test(l));
-    expect(callLineIdx).toBeGreaterThan(-1);
-    // The gate must appear in the 6 lines preceding the call.
-    const window = lines.slice(Math.max(0, callLineIdx - 6), callLineIdx).join('\n');
-    expect(window).toMatch(/authMode\s*===\s*['"]signup['"]/);
+describe('IDENTITY_AND_OWNERSHIP_LOCKED.md anti-patterns', () => {
+  test('database.js has no migrateLocalUserId export', () => {
+    const src = read('src/lib/database.js');
+    expect(src).not.toMatch(/export\s+(async\s+)?function\s+migrateLocalUserId\b/);
   });
 
-  test('bulkUploadLocalData is also gated to authMode === "signup"', () => {
-    const lines = PRO_ONBOARDING.split('\n');
-    const callLineIdx = lines.findIndex(l => /bulkUploadLocalData\s*\(/.test(l));
-    expect(callLineIdx).toBeGreaterThan(-1);
-    const window = lines.slice(Math.max(0, callLineIdx - 6), callLineIdx).join('\n');
-    expect(window).toMatch(/authMode\s*===\s*['"]signup['"]/);
+  test('database.js has no runtime UPDATE ... SET user_id call without LOCKED-OK annotation', () => {
+    // scripts/check-identity-invariant.sh enforces this at CI; this
+    // test additionally asserts no NEW unannotated SET user_id has
+    // crept in since the last grep.
+    const src = read('src/lib/database.js');
+    const lines = src.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      if (/SET\s+user_id/.test(lines[i])) {
+        const window = lines.slice(Math.max(0, i - 10), i).join('\n');
+        expect(window).toMatch(/LOCKED-OK/);
+      }
+    }
+  });
+
+  test('useAppStore.js has no initLocalUser action', () => {
+    const src = read('src/store/useAppStore.js');
+    expect(src).not.toMatch(/^\s*initLocalUser\s*:\s*async/m);
+  });
+
+  test('LoginScreen.js has no handleContinueLocally', () => {
+    const src = read('src/screens/LoginScreen.js');
+    expect(src).not.toMatch(/function\s+handleContinueLocally\b/);
+    expect(src).not.toMatch(/Continue locally/);
+  });
+
+  test('LoginScreen.js does not import or call migrateLocalUserId', () => {
+    const src = read('src/screens/LoginScreen.js');
+    // Comments referencing the deleted symbol (for context) are fine.
+    // Reject import/require/function-call shapes.
+    expect(src).not.toMatch(/import\s+\{[^}]*migrateLocalUserId[^}]*\}/);
+    expect(src).not.toMatch(/require\([^)]*migrateLocalUserId/);
+    expect(src).not.toMatch(/(^|[^\w.])migrateLocalUserId\s*\(/m);
+  });
+
+  test('ProOnboardingScreen.js does not import or call migrateLocalUserId', () => {
+    const src = read('src/screens/ProOnboardingScreen.js');
+    expect(src).not.toMatch(/import\s+\{[^}]*migrateLocalUserId[^}]*\}/);
+    expect(src).not.toMatch(/require\([^)]*migrateLocalUserId/);
+    expect(src).not.toMatch(/(^|[^\w.])migrateLocalUserId\s*\(/m);
+  });
+
+  test('RootNavigator.js bootstrap does not call initLocalUser', () => {
+    const src = read('src/navigation/RootNavigator.js');
+    expect(src).not.toMatch(/initLocalUser\s*\(/);
+  });
+
+  test('WelcomeScreen.js routes both Free and Pro to Login', () => {
+    // Spec scenario A: "User taps Free or Pro on Welcome. Both
+    // route to sign-up."
+    const src = read('src/screens/WelcomeScreen.js');
+    expect(src).toMatch(/navigation\.navigate\(\s*['"]Login['"]/);
+    // Sanity: neither CTA still calls initLocalUser.
+    expect(src).not.toMatch(/initLocalUser/);
   });
 });

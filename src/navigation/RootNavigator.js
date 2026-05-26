@@ -397,7 +397,6 @@ export default function RootNavigator() {
   const setUser = useAppStore(s => s.setUser);
   const setSession = useAppStore(s => s.setSession);
   const setAuthLoading = useAppStore(s => s.setAuthLoading);
-  const initLocalUser = useAppStore(s => s.initLocalUser);
   const checkFirstRun = useAppStore(s => s.checkFirstRun);
   const checkTier = useAppStore(s => s.checkTier);
   const refreshTierFromCloud = useAppStore(s => s.refreshTierFromCloud);
@@ -599,18 +598,15 @@ export default function RootNavigator() {
           }
         } catch (_e) {}
 
-        // Only RESTORE a previously-established local user. Never
-        // auto-create one in the bootstrap path. A fresh install (no
-        // LOCAL_USER_KEY in AsyncStorage) must route through Welcome
-        // first, where tapping Free explicitly calls initLocalUser.
-        // This prevents a phantom local user appearing on every cold
-        // launch and silently logging the user in as Free.
-        const existingLocalId = await AsyncStorage.getItem('@volyume_local_user_id');
-        if (existingLocalId) {
-          await initLocalUser();
-        } else {
-          setAuthLoading(false);
-        }
+        // No anonymous mode per IDENTITY_AND_OWNERSHIP_LOCKED.md
+        // rule 1 + anti-patterns: no LOCAL_USER_KEY restore, no
+        // initLocalUser bootstrap. Any legacy `@volyume_local_user_id`
+        // value sitting in AsyncStorage from an older build is
+        // ignored; the user lands on Welcome and must sign in or
+        // sign up against a real account. This is what the locked
+        // spec's scenario A ('Fresh install, signs up') and scenario
+        // F ('Uninstall, reinstall') both depend on.
+        setAuthLoading(false);
         try {
           const raw = await AsyncStorage.getItem('@volyume_notification_prefs');
           if (raw) {
@@ -621,8 +617,8 @@ export default function RootNavigator() {
       } catch (err) {
         console.error('bootstrap failed:', err);
         // Failsafe: release auth loading so the splash doesn't hang.
-        // Don't fall back to initLocalUser — fresh installs should land
-        // on Welcome, not be auto-created into a Free user.
+        // No anonymous-mode fallback (spec rule 1) — the user lands
+        // on Welcome and signs in/up against a real account.
         setAuthLoading(false);
       }
     }

@@ -130,14 +130,14 @@ describe('clearAuthStateForSignOut', () => {
 
 describe('uid() — UUID v4 format', () => {
   test('produces valid UUID v4 strings', () => {
-    // We can't import database.js directly (expo-sqlite native), but the
-    // generateUUID helper from useAppStore uses the same pattern.
-    const useAppStore = require('../../store/useAppStore').default;
-    // generateUUID is private — but we can verify the user id format
-    // matches by initialising a local user and reading the resulting id.
-    return useAppStore.getState().initLocalUser().then(() => {
-      const id = useAppStore.getState().user?.id;
-      expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
-    });
+    // Verifies the UUID helper format directly. The earlier shape of
+    // this test routed through initLocalUser to get a uid; that
+    // action was deleted per IDENTITY_AND_OWNERSHIP_LOCKED.md rule
+    // 1 / 5 / anti-patterns. Calling generateUUID via the store
+    // exposed helper instead.
+    // eslint-disable-next-line global-require
+    const { generateUUID } = require('../../store/useAppStore');
+    const id = generateUUID();
+    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
   });
 });

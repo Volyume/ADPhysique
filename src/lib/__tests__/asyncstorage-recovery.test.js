@@ -18,54 +18,11 @@ beforeEach(() => {
   return AsyncStorage.clear();
 });
 
-describe('useAppStore.initLocalUser', () => {
-  test('returns and clears isAuthLoading even when the profile JSON is corrupt', async () => {
-    // Pre-seed storage BEFORE requiring the store module. With jest.resetModules
-    // the store's AsyncStorage handle is freshly resolved on the require below,
-    // and the mock implementation persists across that re-require, so the
-    // pre-seeded values are visible.
-    // eslint-disable-next-line global-require
-    const Store = require('@react-native-async-storage/async-storage');
-    // The mock exports default at .default in some versions and at the
-    // top-level setItem/getItem in others. Resolve whichever is present.
-    const setItem = Store.default?.setItem ?? Store.setItem;
-    await setItem.call(Store.default ?? Store, '@volyume_local_user_id', 'fake-user-id');
-    await setItem.call(Store.default ?? Store, '@volyume_user_profile_fake-user-id', '{not valid json');
-
-    // eslint-disable-next-line global-require
-    const useAppStore = require('../../store/useAppStore').default;
-    await useAppStore.getState().initLocalUser();
-
-    const state = useAppStore.getState();
-    expect(state.isAuthLoading).toBe(false);
-    expect(state.user?.id).toBe('fake-user-id');
-    // profile is null, not the bad string
-    expect(state.userProfile).toBeNull();
-  });
-
-  test('handles AsyncStorage.getItem throwing without hanging the splash', async () => {
-    const original = AsyncStorage.getItem;
-    AsyncStorage.getItem = jest.fn().mockRejectedValue(new Error('IO failure'));
-    try {
-      // eslint-disable-next-line global-require
-      const useAppStore = require('../../store/useAppStore').default;
-      await useAppStore.getState().initLocalUser();
-      const state = useAppStore.getState();
-      expect(state.isAuthLoading).toBe(false);
-    } finally {
-      AsyncStorage.getItem = original;
-    }
-  });
-
-  test('generates a new user id when one is not stored', async () => {
-    // eslint-disable-next-line global-require
-    const useAppStore = require('../../store/useAppStore').default;
-    await useAppStore.getState().initLocalUser();
-    const state = useAppStore.getState();
-    expect(state.user?.id).toBeTruthy();
-    expect(state.isAuthLoading).toBe(false);
-  });
-});
+// useAppStore.initLocalUser describe deleted per
+// IDENTITY_AND_OWNERSHIP_LOCKED.md rule 1 / 5 / anti-patterns. The
+// store action no longer exists. The asyncstorage-corruption
+// resilience contract is now scoped to errorLog (below) and to the
+// auth state restorer in RootNavigator.onAuthStateChange.
 
 describe('errorLog handles AsyncStorage corruption', () => {
   test('loadBuffer recovers from non-JSON storage', async () => {
