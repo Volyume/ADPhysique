@@ -15,7 +15,7 @@ import {
 } from '../lib/database';
 import { stoneLbsToKg, ftInToCm, parseBodyWeightToKg } from '../lib/units';
 import { signUpWithEmail, signInWithEmail, signInWithGoogle, signInWithApple } from '../lib/supabase';
-import { bulkUploadLocalData, syncProfile } from '../lib/sync';
+import { bulkUploadLocalData, syncProfile, pullFromCloud } from '../lib/sync';
 import { generateAndSavePlan } from '../lib/planAutoGen';
 import {
   requestNotificationPermissions,
@@ -291,10 +291,32 @@ export default function ProOnboardingScreen({ navigation }) {
       if (data.session) {
         const supabaseUserId = data.session.user.id;
         const localUserId = user?.id;
-        await migrateLocalUserId(localUserId, supabaseUserId).catch(() => {});
-        syncProfile(supabaseUserId, userProfile, 'pro', { isBetaTester: true }).catch(() => {});
+        const { logError } = require('../lib/errorLog');
+        // Anonymous-to-account migration: only on SIGN-UP, never on
+        // SIGN-IN. Per IDENTITY_AND_OWNERSHIP_LOCKED.md the only
+        // legitimate user_id mutation is moving rows from an
+        // anonymous local UUID to a fresh real account at the moment
+        // of sign-up. Sign-in must NOT re-key local rows: that is
+        // what triggered the 42501 cascade and is now handled by the
+        // cross-user wipe in RootNavigator.onAuthStateChange. Mirror
+        // of the LoginScreen.js gate.
+        if (authMode === 'signup' && localUserId && localUserId !== supabaseUserId) {
+          try { await migrateLocalUserId(localUserId, supabaseUserId); }
+          catch (e) { logError('ProOnboarding.migrateLocalUserId', e); }
+        }
+        syncProfile(supabaseUserId, userProfile, 'pro', { isBetaTester: true })
+          .catch(e => logError('ProOnboarding.syncProfile', e, { supabaseUserId }));
         if (authMode === 'signup') {
-          bulkUploadLocalData(supabaseUserId, localUserId).catch(() => {});
+          // New account: push local pre-signup history up.
+          bulkUploadLocalData(supabaseUserId, localUserId)
+            .catch(e => logError('ProOnboarding.bulkUploadLocalData.signup', e, { supabaseUserId }));
+        } else {
+          // Existing account signing in via Pro onboarding: pull cloud
+          // state down. Local pre-signin data stays untouched (the
+          // sign-out wipe + cross-user safety net already guarantee
+          // it belongs to this account).
+          pullFromCloud(supabaseUserId)
+            .catch(e => logError('ProOnboarding.pullFromCloud', e, { supabaseUserId }));
         }
         setAccountCreated(true);
         setBusy(false);
