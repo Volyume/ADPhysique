@@ -1,11 +1,11 @@
 # Latest Maestro E2E status
 
-- **Run number**: 4
-- **Run URL**: https://github.com/allansdouglas1983-cmyk/ADPhysique/actions/runs/26409561795
-- **Branch**: `claude/volyume-food-logging-app-k8wtU`
-- **Commit**: `7e905b90b20d8bbeee125c9137f7de688c4bf74d`
+- **Run number**: 12
+- **Run URL**: https://github.com/allansdouglas1983-cmyk/ADPhysique/actions/runs/26436303595
+- **Branch**: `main`
+- **Commit**: `b41f77d1885fb94748161bfe63d4d439106bc40d`
 - **Tag run**: `smoke`
-- **Triggered at**: 2026-05-25T16:16:37Z
+- **Triggered at**: 2026-05-26T06:49:20Z
 - **Job status**: `success`
 
 ## Step outcomes
@@ -18,6 +18,8 @@
 | Run Maestro flows    | `failure` |
 
 ## Logs
+
+_gradle-diagnose.log not produced_
 
 <details><summary>prebuild.log (last 60 lines)</summary>
 
@@ -42,106 +44,106 @@ Git status is dirty but the command will continue because the terminal is not in
 <details><summary>gradle-debug.log (last 100 lines)</summary>
 
 ```
-> Task :gradle-plugin:settings-plugin:compileKotlin
-> Task :gradle-plugin:settings-plugin:compileJava NO-SOURCE
-> Task :gradle-plugin:settings-plugin:classes
-> Task :gradle-plugin:settings-plugin:jar
-> Task :gradle-plugin:react-native-gradle-plugin:checkKotlinGradlePluginConfigurationErrors
-> Task :expo-updates-gradle-plugin:checkKotlinGradlePluginConfigurationErrors
-> Task :expo-updates-gradle-plugin:pluginDescriptors
-> Task :expo-updates-gradle-plugin:processResources
-> Task :gradle-plugin:react-native-gradle-plugin:pluginDescriptors
-> Task :gradle-plugin:react-native-gradle-plugin:processResources
-> Task :gradle-plugin:react-native-gradle-plugin:compileKotlin
-> Task :gradle-plugin:react-native-gradle-plugin:compileJava NO-SOURCE
-> Task :gradle-plugin:react-native-gradle-plugin:classes
-> Task :gradle-plugin:react-native-gradle-plugin:jar
-> Task :expo-updates-gradle-plugin:compileKotlin
-> Task :expo-updates-gradle-plugin:compileJava NO-SOURCE
-> Task :expo-updates-gradle-plugin:classes
-> Task :expo-updates-gradle-plugin:jar
+> Task :react-native-screens:assembleDebug
+> Task :react-native-svg:extractDebugAnnotations
+> Task :react-native-svg:extractDeepLinksForAarDebug
+> Task :react-native-svg:mergeDebugGeneratedProguardFiles
+> Task :react-native-svg:mergeDebugConsumerProguardFiles
+> Task :react-native-svg:prepareDebugArtProfile
+> Task :react-native-svg:prepareLintJarForPublish
+> Task :react-native-svg:mergeDebugJavaResource
+> Task :react-native-vision-camera:stripDebugDebugSymbols
+> Task :react-native-svg:syncDebugLibJars
+> Task :react-native-svg:bundleDebugAar
+> Task :react-native-svg:assembleDebug
+> Task :react-native-vision-camera:extractDebugAnnotations
+> Task :react-native-vision-camera:extractDeepLinksForAarDebug
+> Task :react-native-vision-camera:mergeDebugGeneratedProguardFiles
+> Task :react-native-vision-camera:mergeDebugConsumerProguardFiles
+> Task :react-native-vision-camera:copyDebugJniLibsProjectAndLocalJars
+> Task :react-native-vision-camera:externalNativeBuildDebug
+> Task :react-native-vision-camera:generateJsonModelDebug
+> Task :react-native-vision-camera:prefabDebugConfigurePackage
+> Task :react-native-vision-camera:prefabDebugPackage
+> Task :react-native-vision-camera:prepareDebugArtProfile
+> Task :react-native-vision-camera:prepareLintJarForPublish
+> Task :react-native-webview:stripDebugDebugSymbols NO-SOURCE
+> Task :react-native-webview:copyDebugJniLibsProjectAndLocalJars
+> Task :react-native-vision-camera:mergeDebugJavaResource
+> Task :react-native-webview:extractDebugAnnotations
+> Task :react-native-vision-camera:syncDebugLibJars
+> Task :react-native-vision-camera:bundleDebugAar
+> Task :react-native-vision-camera:assembleDebug
+> Task :react-native-webview:extractDeepLinksForAarDebug
+> Task :react-native-webview:mergeDebugGeneratedProguardFiles
+> Task :react-native-webview:mergeDebugConsumerProguardFiles
+> Task :react-native-webview:prepareDebugArtProfile
+> Task :react-native-webview:prepareLintJarForPublish
+> Task :rest-timer-live:stripDebugDebugSymbols NO-SOURCE
+> Task :react-native-webview:mergeDebugJavaResource
+> Task :rest-timer-live:copyDebugJniLibsProjectAndLocalJars
+> Task :react-native-webview:syncDebugLibJars
+> Task :react-native-webview:bundleDebugAar
+> Task :react-native-webview:assembleDebug
+> Task :rest-timer-live:extractDebugAnnotations
+> Task :rest-timer-live:extractDeepLinksForAarDebug
+> Task :rest-timer-live:mergeDebugGeneratedProguardFiles
+> Task :rest-timer-live:mergeDebugConsumerProguardFiles
+> Task :rest-timer-live:prepareDebugArtProfile
+> Task :rest-timer-live:prepareLintJarForPublish
+> Task :sentry_react-native:stripDebugDebugSymbols NO-SOURCE
+> Task :sentry_react-native:copyDebugJniLibsProjectAndLocalJars
+> Task :rest-timer-live:mergeDebugJavaResource
+> Task :sentry_react-native:extractDebugAnnotations
+> Task :rest-timer-live:syncDebugLibJars
+> Task :rest-timer-live:bundleDebugAar
+> Task :rest-timer-live:assembleDebug
+> Task :sentry_react-native:extractDeepLinksForAarDebug
+> Task :sentry_react-native:mergeDebugGeneratedProguardFiles
+> Task :sentry_react-native:mergeDebugConsumerProguardFiles
+> Task :sentry_react-native:prepareDebugArtProfile
+> Task :sentry_react-native:prepareLintJarForPublish
+> Task :sentry_react-native:mergeDebugJavaResource
+> Task :shopify_react-native-skia:extractDebugAnnotations
+> Task :sentry_react-native:syncDebugLibJars
+> Task :sentry_react-native:bundleDebugAar
+> Task :sentry_react-native:assembleDebug
+> Task :shopify_react-native-skia:extractDeepLinksForAarDebug
+> Task :shopify_react-native-skia:mergeDebugGeneratedProguardFiles
+> Task :shopify_react-native-skia:mergeDebugConsumerProguardFiles
+> Task :shopify_react-native-skia:stripDebugDebugSymbols
+> Task :shopify_react-native-skia:externalNativeBuildDebug
+> Task :shopify_react-native-skia:generateJsonModelDebug
+> Task :shopify_react-native-skia:prefabDebugConfigurePackage
+> Task :shopify_react-native-skia:copyDebugJniLibsProjectAndLocalJars
+> Task :shopify_react-native-skia:prefabDebugPackage
+> Task :shopify_react-native-skia:prepareDebugArtProfile
+> Task :shopify_react-native-skia:prepareLintJarForPublish
+> Task :unimodules-app-loader:stripDebugDebugSymbols NO-SOURCE
+> Task :shopify_react-native-skia:mergeDebugJavaResource
+> Task :unimodules-app-loader:copyDebugJniLibsProjectAndLocalJars
+> Task :shopify_react-native-skia:syncDebugLibJars
+> Task :shopify_react-native-skia:bundleDebugAar
+> Task :shopify_react-native-skia:assembleDebug
+> Task :unimodules-app-loader:extractDebugAnnotations
+> Task :unimodules-app-loader:extractDeepLinksForAarDebug
+> Task :unimodules-app-loader:mergeDebugGeneratedProguardFiles
+> Task :unimodules-app-loader:mergeDebugConsumerProguardFiles
+> Task :unimodules-app-loader:prepareDebugArtProfile
+> Task :unimodules-app-loader:prepareLintJarForPublish
+> Task :unimodules-app-loader:mergeDebugJavaResource
+> Task :unimodules-app-loader:syncDebugLibJars
+> Task :unimodules-app-loader:bundleDebugAar
+> Task :unimodules-app-loader:assembleDebug
 
-> Configure project :app
- ℹ️  [33mApplying gradle plugin[0m '[32mexpo-updates-gradle-plugin[0m' (expo-updates@0.25.28)
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
 
-> Configure project :expo-av
-Checking the license for package NDK (Side by side) 26.1.10909125 in /usr/local/lib/android/sdk/licenses
-License for package NDK (Side by side) 26.1.10909125 accepted.
-Preparing "Install NDK (Side by side) 26.1.10909125 v.26.1.10909125".
-"Install NDK (Side by side) 26.1.10909125 v.26.1.10909125" ready.
-Installing NDK (Side by side) 26.1.10909125 in /usr/local/lib/android/sdk/ndk/26.1.10909125
-"Install NDK (Side by side) 26.1.10909125 v.26.1.10909125" complete.
-"Install NDK (Side by side) 26.1.10909125 v.26.1.10909125" finished.
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
 
-> Configure project :expo-sqlite
-Checking the license for package NDK (Side by side) 25.1.8937393 in /usr/local/lib/android/sdk/licenses
-License for package NDK (Side by side) 25.1.8937393 accepted.
-Preparing "Install NDK (Side by side) 25.1.8937393 v.25.1.8937393".
-"Install NDK (Side by side) 25.1.8937393 v.25.1.8937393" ready.
-Installing NDK (Side by side) 25.1.8937393 in /usr/local/lib/android/sdk/ndk/25.1.8937393
-"Install NDK (Side by side) 25.1.8937393 v.25.1.8937393" complete.
-"Install NDK (Side by side) 25.1.8937393 v.25.1.8937393" finished.
+For more on this, please refer to https://docs.gradle.org/8.9/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-> Configure project :expo
-
-Using expo modules
-  - [32mexpo-application[0m (5.9.1)
-  - [32mexpo-asset[0m (10.0.10)
-  - [32mexpo-av[0m (14.0.7)
-  - [32mexpo-background-fetch[0m (12.0.1)
-  - [32mexpo-constants[0m (16.0.2)
-  - [32mexpo-document-picker[0m (12.0.2)
-  - [32mexpo-eas-client[0m (0.12.0)
-  - [32mexpo-file-system[0m (17.0.1)
-  - [32mexpo-font[0m (12.0.10)
-  - [32mexpo-haptics[0m (13.0.1)
-  - [32mexpo-image[0m (1.13.0)
-  - [32mexpo-json-utils[0m (0.13.1)
-  - [32mexpo-keep-awake[0m (13.0.2)
-  - [32mexpo-linear-gradient[0m (13.0.2)
-  - [32mexpo-manifests[0m (0.14.3)
-  - [32mexpo-modules-core[0m (1.12.26)
-  - [32mexpo-notifications[0m (0.28.19)
-  - [32mexpo-print[0m (13.0.1)
-  - [32mexpo-secure-store[0m (13.0.2)
-  - [32mexpo-sensors[0m (13.0.9)
-  - [32mexpo-sharing[0m (12.0.1)
-  - [32mexpo-sqlite[0m (14.0.6)
-  - [32mexpo-store-review[0m (7.0.2)
-  - [32mexpo-structured-headers[0m (3.8.0)
-  - [32mexpo-task-manager[0m (11.8.2)
-  - [32mexpo-updates[0m (0.25.28)
-  - [32mexpo-web-browser[0m (13.0.3)
-  - [32mrest-timer-live[0m (0.1.0)
-  - [32munimodules-app-loader[0m (4.6.0)
-
-The Daemon will expire after the build after running out of JVM heap space.
-The project memory settings are likely not configured or are configured to an insufficient value.
-The daemon will restart for the next build, which may increase subsequent build times.
-These settings can be adjusted by setting 'org.gradle.jvmargs' in 'gradle.properties'.
-The currently configured max heap space is '512 MiB' and the configured max metaspace is '384 MiB'.
-For more information on how to set these values, please refer to https://docs.gradle.org/8.9/userguide/build_environment.html#sec:configuring_jvm_memory in the Gradle documentation.
-To disable this warning, set 'org.gradle.daemon.performance.disable-logging=true'.
-Daemon will be stopped at the end of the build after running out of JVM heap space
-The Daemon will expire immediately since the JVM garbage collector is thrashing.
-The project memory settings are likely not configured or are configured to an insufficient value.
-The memory settings for this project must be adjusted to avoid this failure.
-These settings can be adjusted by setting 'org.gradle.jvmargs' in 'gradle.properties'.
-The currently configured max heap space is '512 MiB' and the configured max metaspace is '384 MiB'.
-For more information on how to set these values, please refer to https://docs.gradle.org/8.9/userguide/build_environment.html#sec:configuring_jvm_memory in the Gradle documentation.
-To disable this warning, set 'org.gradle.daemon.performance.disable-logging=true'.
-Daemon is stopping immediately since the JVM garbage collector is thrashing
-
-FAILURE: Build failed with an exception.
-
-* What went wrong:
-Gradle build daemon has been stopped: since the JVM garbage collector is thrashing
-
-* Try:
-> Run with --stacktrace option to get the stack trace.
-> Run with --info or --debug option to get more log output.
-> Run with --scan to get full insights.
-> Get more help at https://help.gradle.org.
+BUILD SUCCESSFUL in 10m 56s
+1480 actionable tasks: 1468 executed, 12 up-to-date
 ```
 
 </details>
@@ -150,7 +152,7 @@ Gradle build daemon has been stopped: since the JVM garbage collector is thrashi
 
 ```
 Performing Streamed Install
-adb: failed to stat android/app/build/outputs/apk/debug/app-debug.apk: No such file or directory
+Success
 ```
 
 </details>
