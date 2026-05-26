@@ -370,15 +370,16 @@ jobs:
           path: android/app/build/outputs/bundle/release/app-release.aab
           retention-days: 30
 
-      # Always-runs status writer. Dumps a small markdown file with
-      # diagnostic info (run number, commit, job status, secret lengths)
-      # to .ci-status/latest.md and pushes it back to the same branch
-      # with [skip ci] so it doesn't trigger another run. This lets the
-      # assistant fetch the file via the GitHub API (read-only access to
-      # workflow run logs isn't exposed by the MCP server in use) to
-      # self-diagnose build outcomes without the user having to paste
-      # log lines.
-      - name: Publish build status to repo
+      # Status report written as a workflow artifact instead of a
+      # git push back to the branch. The previous design committed
+      # .ci-status/latest.md as github-actions[bot] with a [skip ci]
+      # marker on every run; run #714 (2026-05-26) hit a status push
+      # failure ("Status push failed (continuing)") and from that
+      # point onward GitHub stopped delivering push webhook events
+      # to the Actions trigger system for this repo. The fix removes
+      # the workflow's outbound git push entirely; the status file
+      # is still produced and is downloadable from the run page.
+      - name: Write build status
         if: always()
         env:
           URL_LEN: ${{ steps.verify.outputs.url_len }}
@@ -414,17 +415,10 @@ jobs:
 
           EOF
 
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git config user.name "github-actions[bot]"
-          git add .ci-status/latest.md
-          # If nothing changed (e.g. a re-run produced identical content), exit cleanly.
-          if git diff --cached --quiet; then
-            echo "No status changes to commit"
-            exit 0
-          fi
-          git commit -m "ci: build status update [skip ci]"
-          # Pull-rebase in case another job pushed in the meantime, then push.
-          # If push fails (concurrent run, permission issue), don't fail the
-          # whole build over a status update.
-          git pull --rebase origin "${{ github.ref_name }}" || true
-          git push origin "HEAD:${{ github.ref_name }}" || echo "::warning::Status push failed (continuing)"
+      - name: Upload build status artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-status-${{ github.run_number }}
+          path: .ci-status/latest.md
+          retention-days: 30
