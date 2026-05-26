@@ -72,20 +72,51 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
       // explicit removes the bundler-dependent ambiguity.
       // eslint-disable-next-line global-require
       const sync = require('../sync.js');
+      // Lazy require the observability layer so the runner stays
+      // testable in isolation (Jest mocks the sync surface; we don't
+      // want to drag observability into every sync test). When the
+      // helper isn't available (test env, missing layer), the
+      // breadcrumb call is a no-op.
+      function syncCrumb(scope, message, extra) {
+        try {
+          // eslint-disable-next-line global-require
+          const obs = require('../observability');
+          if (obs?.track?.warn) obs.track.warn(message, scope, extra);
+        } catch (_) { /* tolerate */ }
+      }
+
       try {
         // 1. Per-table push for migrated tables.
         for (const tableName of MIGRATED_TABLES) {
           const result = await pushTable(tableName, { userId, localUserId }).catch((e) => {
             erroredCount += 1;
+            syncCrumb(`sync.push.${tableName}`, `sync.push.${tableName}.threw`, {
+              error: String(e?.message ?? e).slice(0, 200),
+            });
             return { count: 0, errors: 1, _err: e };
           });
           pushCountPerTable[tableName] = result?.count ?? 0;
-          if (result?.errors) erroredCount += result.errors;
+          if (result?.errors) {
+            erroredCount += result.errors;
+            // Emit a breadcrumb-level warn so the next real error in
+            // the session carries "table X pushed with N errors" on
+            // its Sentry trail. Without this the failure only lived
+            // in the individual handler's logSyncError and never
+            // joined a parent error's context.
+            syncCrumb(`sync.push.${tableName}`, `sync.push.${tableName}.errors`, {
+              errors: result.errors,
+              count: result.count ?? 0,
+              skipped: result.skipped ?? null,
+            });
+          }
         }
         // 2. Legacy bulk push for everything else.
         if (typeof sync.bulkUploadLocalData === 'function' && localUserId) {
           const upload = await sync.bulkUploadLocalData(userId, localUserId).catch(e => {
             erroredCount += 1;
+            syncCrumb('sync.push.legacy', 'sync.push.legacy.threw', {
+              error: String(e?.message ?? e).slice(0, 200),
+            });
             return { _err: e };
           });
           if (upload && typeof upload === 'object' && upload.pushCountPerTable) {
@@ -96,15 +127,28 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
         for (const tableName of MIGRATED_TABLES) {
           const result = await pullTable(tableName, { userId }).catch((e) => {
             erroredCount += 1;
+            syncCrumb(`sync.pull.${tableName}`, `sync.pull.${tableName}.threw`, {
+              error: String(e?.message ?? e).slice(0, 200),
+            });
             return { count: 0, errors: 1, _err: e };
           });
           pullCountPerTable[tableName] = result?.count ?? 0;
-          if (result?.errors) erroredCount += result.errors;
+          if (result?.errors) {
+            erroredCount += result.errors;
+            syncCrumb(`sync.pull.${tableName}`, `sync.pull.${tableName}.errors`, {
+              errors: result.errors,
+              count: result.count ?? 0,
+              skipped: result.skipped ?? null,
+            });
+          }
         }
         // 4. Legacy bulk pull for everything else.
         if (typeof sync.pullFromCloud === 'function') {
           const pull = await sync.pullFromCloud(userId).catch(e => {
             erroredCount += 1;
+            syncCrumb('sync.pull.legacy', 'sync.pull.legacy.threw', {
+              error: String(e?.message ?? e).slice(0, 200),
+            });
             return { _err: e };
           });
           if (pull && typeof pull === 'object' && pull.pullCountPerTable) {

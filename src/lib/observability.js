@@ -471,6 +471,43 @@ export function instrumentNavigation(navigationRef) {
 export function instrumentSupabase(client) {
   if (!client || client.__volyumeInstrumented) return client;
   const QUERY_OPS = ['select', 'insert', 'update', 'upsert', 'delete'];
+
+  function recordOutcome(op, table, startedAt, value, didThrow) {
+    const durationMs = Date.now() - startedAt;
+    // Pull out the PostgREST error if present. value.error is the
+    // common shape for supabase-js; { code, message, hint, details }.
+    // Sentry will autoscrub message/details if they contain emails
+    // or tokens (per sentryScrub.js); we deliberately don't include
+    // raw rows, just metadata.
+    const err = value?.error;
+    if (didThrow || err) {
+      const extra = {
+        durationMs,
+        op,
+        table,
+        threw: !!didThrow,
+        errorCode: err?.code ?? (didThrow ? 'thrown' : null),
+        errorMessage: typeof err?.message === 'string'
+          ? err.message.slice(0, 200)
+          : (didThrow?.message?.slice?.(0, 200) ?? null),
+      };
+      // logWarn (not error) so this lands as a Sentry warning + ring-
+      // buffer entry + sentry-bridge breadcrumb without creating a
+      // separate Sentry issue. The bigger picture (which table failed,
+      // what error code, how long the call took) is what we want on
+      // the trail to the NEXT real error.
+      track.warn(`db.${op}.failed`, `supabase.${table}`, extra);
+      return;
+    }
+    // Happy path: cheap breadcrumb only. Include row count when the
+    // result data is an array so a missing-RLS issue (data: [],
+    // error: null) is visible in the trail.
+    track.breadcrumb(`db.${op}`, `supabase.${table}`, {
+      durationMs,
+      rowCount: Array.isArray(value?.data) ? value.data.length : null,
+    });
+  }
+
   const proxiedFrom = (...fromArgs) => {
     const table = fromArgs[0];
     const builder = client.from.apply(client, fromArgs);
@@ -483,18 +520,22 @@ export function instrumentSupabase(client) {
       builder[op] = function instrumentedOp(...args) {
         const startedAt = Date.now();
         const result = orig.apply(this, args);
-        // Many ops return a thenable PostgrestQueryBuilder; wrap .then.
+        // Many ops return a thenable PostgrestQueryBuilder; wrap .then
+        // AND propagate rejections through to the warn path so a
+        // network-level failure (not just a PostgREST error envelope)
+        // also lands a breadcrumb.
         if (result && typeof result.then === 'function') {
           const origThen = result.then.bind(result);
           result.then = (onFulfilled, onRejected) => origThen(
             (value) => {
-              track.breadcrumb(`db.${op}`, `supabase.${table}`, {
-                durationMs: Date.now() - startedAt,
-                hasError: !!value?.error,
-              });
+              recordOutcome(op, table, startedAt, value, false);
               return onFulfilled ? onFulfilled(value) : value;
             },
-            onRejected,
+            (err) => {
+              recordOutcome(op, table, startedAt, null, err ?? new Error('rejected'));
+              if (onRejected) return onRejected(err);
+              throw err;
+            },
           );
         }
         return result;
@@ -502,14 +543,141 @@ export function instrumentSupabase(client) {
     }
     return builder;
   };
+
+  // Wrap .rpc(name, args) too. The food-domain coordinator calls
+  // food_sync_push / food_sync_pull through this path; without
+  // instrumentation those round-trips were invisible to the
+  // breadcrumb trail.
+  const proxiedRpc = function instrumentedRpc(name, args, opts) {
+    const startedAt = Date.now();
+    const result = client.rpc.call(client, name, args, opts);
+    if (result && typeof result.then === 'function') {
+      const origThen = result.then.bind(result);
+      result.then = (onFulfilled, onRejected) => origThen(
+        (value) => {
+          recordOutcome('rpc', name, startedAt, value, false);
+          return onFulfilled ? onFulfilled(value) : value;
+        },
+        (err) => {
+          recordOutcome('rpc', name, startedAt, null, err ?? new Error('rejected'));
+          if (onRejected) return onRejected(err);
+          throw err;
+        },
+      );
+    }
+    return result;
+  };
+
   const proxy = new Proxy(client, {
     get(target, prop) {
       if (prop === 'from') return proxiedFrom;
+      if (prop === 'rpc') return proxiedRpc;
       if (prop === '__volyumeInstrumented') return true;
       return Reflect.get(target, prop);
     },
   });
   return proxy;
+}
+
+// ─── Auto-instrumentation: AppState ──────────────────────────────────────
+
+/**
+ * Breadcrumb every AppState transition (active / inactive / background)
+ * with the duration spent in the previous state. Independent of the
+ * existing installShutdownHandler — that one writes a flag to
+ * AsyncStorage so the NEXT launch can detect a crash; this one feeds
+ * the SAME-session breadcrumb trail so an error fired right after a
+ * foreground resume carries "user came back from background 200ms ago"
+ * as context.
+ *
+ * Returns the unsubscribe function (or a no-op) so tests / hot
+ * reload can detach cleanly.
+ */
+let _appStateSub = null;
+let _appStateLastChangedAt = Date.now();
+let _appStateLastState = null;
+
+export function instrumentAppState() {
+  if (_appStateSub) return () => uninstrumentAppState();
+  try {
+    _appStateLastState = AppState.currentState ?? 'active';
+    _appStateLastChangedAt = Date.now();
+    _appStateSub = AppState.addEventListener('change', (state) => {
+      const now = Date.now();
+      track.breadcrumb('appState.change', 'lifecycle', {
+        from: _appStateLastState,
+        to: state,
+        durationInPrevMs: now - _appStateLastChangedAt,
+      });
+      _appStateLastState = state;
+      _appStateLastChangedAt = now;
+    });
+    return () => uninstrumentAppState();
+  } catch (_) {
+    return () => {};
+  }
+}
+
+export function uninstrumentAppState() {
+  try { _appStateSub?.remove(); } catch (_) {}
+  _appStateSub = null;
+}
+
+// ─── Auto-instrumentation: NetInfo ───────────────────────────────────────
+
+/**
+ * Breadcrumb every connectivity transition (online ↔ offline,
+ * connection-type change). Independent of App.js's sync NetInfo
+ * subscription — that one triggers syncAll on reconnect; this one
+ * adds the transition itself to the breadcrumb trail so a sync
+ * error or RLS rejection that fires while offline carries that
+ * context.
+ *
+ * Lazy-requires the NetInfo module so the layer is a no-op in test
+ * environments / Expo Go builds where the native module isn't
+ * linked. Returns the unsubscribe function.
+ */
+let _netInfoUnsub = null;
+let _netInfoLastConnected = null;
+
+export function instrumentNetInfo() {
+  if (_netInfoUnsub) return () => uninstrumentNetInfo();
+  let NetInfo;
+  try {
+    // eslint-disable-next-line global-require
+    NetInfo = require('@react-native-community/netinfo').default;
+  } catch (_) {
+    return () => {};
+  }
+  if (!NetInfo || typeof NetInfo.addEventListener !== 'function') return () => {};
+  try {
+    _netInfoUnsub = NetInfo.addEventListener((state) => {
+      const connected = !!state?.isConnected;
+      const type = state?.type ?? 'unknown';
+      // First call after subscribe always fires; only breadcrumb
+      // when the connected flag actually changes (or the type does)
+      // so we don't spam every poll.
+      if (_netInfoLastConnected !== null
+          && _netInfoLastConnected.isConnected === connected
+          && _netInfoLastConnected.type === type) {
+        return;
+      }
+      track.breadcrumb('netInfo.change', 'lifecycle', {
+        from: _netInfoLastConnected,
+        to: { isConnected: connected, type },
+      });
+      _netInfoLastConnected = { isConnected: connected, type };
+    });
+    return () => uninstrumentNetInfo();
+  } catch (_) {
+    return () => {};
+  }
+}
+
+export function uninstrumentNetInfo() {
+  try { _netInfoUnsub?.(); } catch (_) {}
+  _netInfoUnsub = null;
+  _netInfoLastConnected = null;
 }
 
 // ─── Boot helper ─────────────────────────────────────────────────────────
@@ -528,6 +696,12 @@ export function instrumentSupabase(client) {
 export async function bootObservability() {
   const wasCrashed = await detectCrashedLastSession();
   installShutdownHandler();
+  // Wire the same-session breadcrumb trail. App.js used to leave
+  // these unwired so AppState transitions and offline / online
+  // changes never appeared in Sentry issue trails. Both helpers are
+  // idempotent and safe to call here at every boot.
+  const unsubAppState = instrumentAppState();
+  const unsubNetInfo = instrumentNetInfo();
   if (wasCrashed) {
     // Fire a one-off Sentry event so the previous session's crash
     // surfaces in the dashboard even when the JS error handler
@@ -543,5 +717,5 @@ export async function bootObservability() {
   try {
     Sentry?.setSentryUser({ id: null }); // clears stale id until sign-in re-sets
   } catch (_) {}
-  return { wasCrashed };
+  return { wasCrashed, unsubAppState, unsubNetInfo };
 }
