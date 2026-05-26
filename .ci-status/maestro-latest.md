@@ -1,11 +1,11 @@
 # Latest Maestro E2E status
 
-- **Run number**: 12
-- **Run URL**: https://github.com/allansdouglas1983-cmyk/ADPhysique/actions/runs/26436303595
+- **Run number**: 14
+- **Run URL**: https://github.com/allansdouglas1983-cmyk/ADPhysique/actions/runs/26443573723
 - **Branch**: `main`
-- **Commit**: `b41f77d1885fb94748161bfe63d4d439106bc40d`
+- **Commit**: `0e817baed83b2c9505d5f46a0bc8138aa8442e1e`
 - **Tag run**: `smoke`
-- **Triggered at**: 2026-05-26T06:49:20Z
+- **Triggered at**: 2026-05-26T09:36:11Z
 - **Job status**: `success`
 
 ## Step outcomes
@@ -19,14 +19,99 @@
 
 ## Logs
 
-_gradle-diagnose.log not produced_
+<details><summary>gradle-diagnose.log (last 80 lines)</summary>
+
+```
+# IDE (e.g. Android Studio) users:
+# Gradle settings configured through the IDE *will override*
+# any settings specified in this file.
+
+# For more details on how to configure your build environment visit
+# http://www.gradle.org/docs/current/userguide/build_environment.html
+
+# Specifies the JVM arguments used for the daemon process.
+# The setting is particularly useful for tweaking memory settings.
+# Default value: -Xmx512m -XX:MaxMetaspaceSize=256m
+
+# When configured, Gradle will run in incubating parallel mode.
+# This option should only be used with decoupled projects. More details, visit
+# http://www.gradle.org/docs/current/userguide/multi_project_builds.html#sec:decoupled_projects
+# org.gradle.parallel=true
+
+# AndroidX package structure to make it clearer which packages are bundled with the
+# Android operating system, and which are packaged with your app's APK
+# https://developer.android.com/topic/libraries/support-library/androidx-rn
+android.useAndroidX=true
+
+# Automatically convert third-party libraries to use AndroidX
+android.enableJetifier=true
+
+# Enable AAPT2 PNG crunching
+android.enablePngCrunchInReleaseBuilds=true
+
+# Use this property to specify which architecture you want to build.
+# You can also override it from the CLI using
+# ./gradlew <task> -PreactNativeArchitectures=x86_64
+reactNativeArchitectures=armeabi-v7a,arm64-v8a,x86,x86_64
+
+# Use this property to enable support to the new architecture.
+# This will allow you to use TurboModules and the Fabric render in
+# your application. You should enable this flag either if you want
+# to write custom TurboModules/Fabric components OR use libraries that
+# are providing them.
+newArchEnabled=false
+
+# Use this property to enable or disable the Hermes JS engine.
+# If set to false, you will be using JSC instead.
+hermesEnabled=true
+
+# Enable GIF support in React Native images (~200 B increase)
+expo.gif.enabled=true
+# Enable webp support in React Native images (~85 KB increase)
+expo.webp.enabled=true
+# Enable animated webp support (~3.4 MB increase)
+# Disabled by default because iOS doesn't support animated webp
+expo.webp.animated=false
+
+# Enable network inspector
+EX_DEV_CLIENT_NETWORK_INSPECTOR=true
+
+# Use legacy packaging to compress native libraries in the resulting APK.
+expo.useLegacyPackaging=false
+
+android.minSdkVersion=24
+android.compileSdkVersion=34
+android.targetSdkVersion=35
+android.extraMavenRepos=[]
+VisionCamera_enableCodeScanner=trueorg.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8
+
+=== ~/.gradle/gradle.properties (if any) ===
+org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8
+
+=== Relevant env vars ===
+JAVA_TOOL_OPTIONS=<unset>
+_JAVA_OPTIONS=<unset>
+JAVA_OPTS=<unset>
+GRADLE_OPTS=<unset>
+GRADLE_USER_HOME=<unset>
+JAVA_HOME=/opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.19-10/x64
+
+=== android/local.properties ===
+(none)
+
+=== gradle properties via gradlew (filtered) ===
+VisionCamera_enableCodeScanner: trueorg.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8
+org.gradle.jvmargs: -Xmx4096m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8
+```
+
+</details>
 
 <details><summary>prebuild.log (last 60 lines)</summary>
 
 ```
-Warning! Your git working tree is dirty.
-It's recommended to commit all your changes before proceeding, so you can revert the changes made by this command if necessary.
-Git status is dirty but the command will continue because the terminal is not interactive.
+Your git working tree is clean
+To revert the changes after this command completes, you can run the following:
+  git clean --force && git reset --hard
 - Clearing android
 ✔ Cleared android code
 - Creating native directory (./android)
@@ -44,16 +129,16 @@ Git status is dirty but the command will continue because the terminal is not in
 <details><summary>gradle-debug.log (last 100 lines)</summary>
 
 ```
+> Task :react-native-screens:bundleDebugAar
 > Task :react-native-screens:assembleDebug
-> Task :react-native-svg:extractDebugAnnotations
 > Task :react-native-svg:extractDeepLinksForAarDebug
 > Task :react-native-svg:mergeDebugGeneratedProguardFiles
 > Task :react-native-svg:mergeDebugConsumerProguardFiles
 > Task :react-native-svg:prepareDebugArtProfile
 > Task :react-native-svg:prepareLintJarForPublish
 > Task :react-native-svg:mergeDebugJavaResource
-> Task :react-native-vision-camera:stripDebugDebugSymbols
 > Task :react-native-svg:syncDebugLibJars
+> Task :react-native-vision-camera:stripDebugDebugSymbols
 > Task :react-native-svg:bundleDebugAar
 > Task :react-native-svg:assembleDebug
 > Task :react-native-vision-camera:extractDebugAnnotations
@@ -80,12 +165,12 @@ Git status is dirty but the command will continue because the terminal is not in
 > Task :react-native-webview:prepareDebugArtProfile
 > Task :react-native-webview:prepareLintJarForPublish
 > Task :rest-timer-live:stripDebugDebugSymbols NO-SOURCE
-> Task :react-native-webview:mergeDebugJavaResource
 > Task :rest-timer-live:copyDebugJniLibsProjectAndLocalJars
+> Task :react-native-webview:mergeDebugJavaResource
+> Task :rest-timer-live:extractDebugAnnotations
 > Task :react-native-webview:syncDebugLibJars
 > Task :react-native-webview:bundleDebugAar
 > Task :react-native-webview:assembleDebug
-> Task :rest-timer-live:extractDebugAnnotations
 > Task :rest-timer-live:extractDeepLinksForAarDebug
 > Task :rest-timer-live:mergeDebugGeneratedProguardFiles
 > Task :rest-timer-live:mergeDebugConsumerProguardFiles
@@ -142,8 +227,8 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/8.9/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD SUCCESSFUL in 10m 56s
-1480 actionable tasks: 1468 executed, 12 up-to-date
+BUILD SUCCESSFUL in 11m 12s
+1508 actionable tasks: 1496 executed, 12 up-to-date
 ```
 
 </details>
