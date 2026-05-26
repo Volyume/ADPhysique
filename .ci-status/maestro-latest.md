@@ -1,11 +1,11 @@
 # Latest Maestro E2E status
 
-- **Run number**: 14
-- **Run URL**: https://github.com/allansdouglas1983-cmyk/ADPhysique/actions/runs/26443573723
+- **Run number**: 15
+- **Run URL**: https://github.com/allansdouglas1983-cmyk/ADPhysique/actions/runs/26444497096
 - **Branch**: `main`
-- **Commit**: `0e817baed83b2c9505d5f46a0bc8138aa8442e1e`
+- **Commit**: `88ce80b639128c81233e0a28bd298c852d5533c9`
 - **Tag run**: `smoke`
-- **Triggered at**: 2026-05-26T09:36:11Z
+- **Triggered at**: 2026-05-26T09:55:46Z
 - **Job status**: `success`
 
 ## Step outcomes
@@ -137,11 +137,11 @@ To revert the changes after this command completes, you can run the following:
 > Task :react-native-svg:prepareDebugArtProfile
 > Task :react-native-svg:prepareLintJarForPublish
 > Task :react-native-svg:mergeDebugJavaResource
+> Task :react-native-vision-camera:extractDebugAnnotations
 > Task :react-native-svg:syncDebugLibJars
 > Task :react-native-vision-camera:stripDebugDebugSymbols
 > Task :react-native-svg:bundleDebugAar
 > Task :react-native-svg:assembleDebug
-> Task :react-native-vision-camera:extractDebugAnnotations
 > Task :react-native-vision-camera:extractDeepLinksForAarDebug
 > Task :react-native-vision-camera:mergeDebugGeneratedProguardFiles
 > Task :react-native-vision-camera:mergeDebugConsumerProguardFiles
@@ -227,7 +227,7 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/8.9/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD SUCCESSFUL in 11m 12s
+BUILD SUCCESSFUL in 11m 23s
 1508 actionable tasks: 1496 executed, 12 up-to-date
 ```
 
