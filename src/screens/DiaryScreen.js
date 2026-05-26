@@ -29,6 +29,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import MacroRings from '../components/food/MacroRings';
 import FoodDetailSheet from '../components/food/FoodDetailSheet';
+import EmptyDiary from '../components/food/EmptyDiary';
 import ScreenHeader from '../components/ScreenHeader';
 
 const MEAL_SLOTS = [
@@ -299,14 +300,7 @@ export default function DiaryScreen({ navigation }) {
 
         <WaterRow ml={waterMl} onAdd={() => logWaterDelta(250)} onSub={() => logWaterDelta(-250)} />
 
-        {entries.length === 0 && (
-          <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>Nothing logged yet.</Text>
-            <Text style={styles.emptyBody}>
-              Tap a meal slot above to add a food. Precision Coaching uses your seven-day average to set targets.
-            </Text>
-          </View>
-        )}
+        {entries.length === 0 && <EmptyDiary />}
       </ScrollView>
 
       <FoodDetailSheet
