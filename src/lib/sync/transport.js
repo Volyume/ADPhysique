@@ -39,6 +39,21 @@ import {
   pullNutritionTargets,
 } from './tables/nutritionTargets';
 import { pullEdPatternFlags } from './tables/edPatternFlags';
+import { pullTierHistory } from './tables/tierHistory';
+import {
+  pushRecipeIngredients,
+  pullRecipeIngredients,
+} from './tables/recipeIngredients';
+import { pushWeightLog, pullWeightLog } from './tables/weightLog';
+import { pushProfiles, pullProfiles } from './tables/profiles';
+import {
+  FOOD_DOMAIN_TABLES,
+  foodPushFor,
+  foodPullFor,
+  beginRun as beginFoodRun,
+} from './tables/foodDomain';
+
+export { beginFoodRun };
 
 // Lazy require so the supabase client module (which pulls in
 // react-native-url-polyfill at top-level) is not loaded merely by
@@ -57,29 +72,63 @@ function _getSupabaseClient() {
  * under tables/, (b) remove its call from the legacy bulk helpers,
  * and (c) extend the regression tests under __tests__/.
  */
+// All 16 locked tables now flow through transport. The seven
+// food-domain tables share one bulk RPC pair via
+// src/lib/sync/tables/foodDomain.js; the others have dedicated
+// handlers under tables/.
 export const MIGRATED_TABLES = Object.freeze([
   'notification_preferences',
   'weekly_checkins_v2',
   'body_composition_log',
+  'weight_log',
   'nutrition_targets',
+  'profiles',
   'ed_pattern_flags',
+  'tier_history',
+  'recipe_ingredients',
+  ...FOOD_DOMAIN_TABLES,
 ]);
 
 const PUSH_HANDLERS = {
   notification_preferences: pushNotificationPreferences,
   weekly_checkins_v2: pushWeeklyCheckins,
   body_composition_log: pushBodyComposition,
+  weight_log: pushWeightLog,
   nutrition_targets: pushNutritionTargets,
-  // ed_pattern_flags is pull_only per the registry; pushTable will
-  // intercept and return skipped:'pull_only' before reaching here.
+  profiles: pushProfiles,
+  recipe_ingredients: pushRecipeIngredients,
+  // Pull-only tables intentionally absent — pushTable returns
+  // skipped:'pull_only' before reaching this map:
+  //   ed_pattern_flags, tier_history, daily_intake_rollups.
+  // Food-domain bidirectional tables share the coordinator:
+  food_entries: foodPushFor('food_entries'),
+  custom_foods: foodPushFor('custom_foods'),
+  saved_meals: foodPushFor('saved_meals'),
+  recipes: foodPushFor('recipes'),
+  food_favourites: foodPushFor('food_favourites'),
+  daily_water: foodPushFor('daily_water'),
 };
 
 const PULL_HANDLERS = {
   notification_preferences: pullNotificationPreferences,
   weekly_checkins_v2: pullWeeklyCheckins,
   body_composition_log: pullBodyComposition,
+  weight_log: pullWeightLog,
   nutrition_targets: pullNutritionTargets,
+  profiles: pullProfiles,
   ed_pattern_flags: pullEdPatternFlags,
+  tier_history: pullTierHistory,
+  recipe_ingredients: pullRecipeIngredients,
+  // Food-domain tables share the coordinator (incl. pull-only
+  // daily_intake_rollups which is reported as a count of dates
+  // whose rollups were locally recomputed):
+  food_entries: foodPullFor('food_entries'),
+  custom_foods: foodPullFor('custom_foods'),
+  saved_meals: foodPullFor('saved_meals'),
+  recipes: foodPullFor('recipes'),
+  food_favourites: foodPullFor('food_favourites'),
+  daily_water: foodPullFor('daily_water'),
+  daily_intake_rollups: foodPullFor('daily_intake_rollups'),
 };
 
 /**

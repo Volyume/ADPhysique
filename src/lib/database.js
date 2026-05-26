@@ -928,6 +928,21 @@ const SCHEMA_MIGRATIONS = [
     )`,
     'CREATE INDEX IF NOT EXISTS idx_ed_pattern_flags_user ON ed_pattern_flags(user_id, raised_at)',
     'CREATE INDEX IF NOT EXISTS idx_ed_pattern_flags_open ON ed_pattern_flags(user_id, cleared_at)',
+    // tier_history local mirror so the per-table pull in
+    // src/lib/sync/tables/tierHistory.js has somewhere to land.
+    // Server-authoritative + pull_only per SYNC_REGISTRY; rows
+    // arrive via the upsert helper in this file.
+    `CREATE TABLE IF NOT EXISTS tier_history (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      from_tier TEXT,
+      to_tier TEXT,
+      event_type TEXT,
+      occurred_at INTEGER NOT NULL,
+      payload_json TEXT,
+      created_at INTEGER NOT NULL
+    )`,
+    'CREATE INDEX IF NOT EXISTS idx_tier_history_user ON tier_history(user_id, occurred_at)',
     'ALTER TABLE user_body_profile ADD COLUMN goal_lock_advanced INTEGER DEFAULT 0',
     'ALTER TABLE user_body_profile ADD COLUMN goal_lock_set_at INTEGER',
     `CREATE TABLE IF NOT EXISTS engine_telemetry (
@@ -4445,6 +4460,72 @@ export async function insertOrUpdatePlannedMuscleVolumeFromCloud(userId, row) {
  * raise/clear; they reach the cloud via the existing supabase
  * upsert path inside the engine, not through this helper.
  */
+/**
+ * recipe_ingredients all-rows reader. Per SYNC_REGISTRY the table
+ * is bidirectional with last_write_wins; the schema has no
+ * updated_at so LWW is effectively "last push wins". user_id was
+ * added in migration 014; older rows have user_id back-filled
+ * from their parent recipe.
+ */
+export async function getAllRecipeIngredientsForUser(userId) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    'SELECT * FROM recipe_ingredients WHERE user_id = ? ORDER BY recipe_id, order_index',
+    [userId],
+  );
+  return rows.map(rowToCamel);
+}
+
+/**
+ * recipe_ingredients from cloud. INSERT OR REPLACE so the cloud
+ * copy wins per the registry's last_write_wins semantics.
+ */
+export async function upsertRecipeIngredientFromCloud(userId, row) {
+  if (!row?.id) return;
+  const d = await db();
+  await d.runAsync(
+    `INSERT OR REPLACE INTO recipe_ingredients
+       (id, recipe_id, food_ref, quantity_g, order_index, created_at, user_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      row.id,
+      row.recipe_id ?? null,
+      row.food_ref ?? null,
+      Number(row.quantity_g) || 0,
+      Number(row.order_index) || 0,
+      _tsToMs(row.created_at) ?? Date.now(),
+      userId,
+    ],
+  );
+}
+
+/**
+ * tier_history cloud rows mirrored to local SQLite. Server-
+ * authoritative per the registry (conflictStrategy=server_wins).
+ * The local table is an append-only audit log; the cloud is the
+ * source of truth.
+ */
+export async function upsertTierHistoryFromCloud(userId, row) {
+  if (!row?.id) return;
+  const d = await db();
+  await d.runAsync(
+    `INSERT OR REPLACE INTO tier_history
+       (id, user_id, from_tier, to_tier, event_type, occurred_at, payload_json, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      row.id, userId,
+      row.from_tier ?? null,
+      row.to_tier ?? null,
+      row.event_type ?? null,
+      _tsToMs(row.occurred_at) ?? Date.now(),
+      typeof row.payload_json === 'string'
+        ? row.payload_json
+        : (row.payload_json ? JSON.stringify(row.payload_json) : null),
+      _tsToMs(row.created_at) ?? Date.now(),
+    ],
+  );
+}
+
 export async function upsertEdPatternFlagFromCloud(userId, row) {
   if (!row?.id) return;
   const d = await db();

@@ -17,7 +17,7 @@
 import { ensureSyncQueueTable, getQueueDepth } from './queue';
 import { trackSyncRun } from './telemetry';
 import { listSyncableTables } from './registry';
-import { MIGRATED_TABLES, pushTable, pullTable } from './transport';
+import { MIGRATED_TABLES, pushTable, pullTable, beginFoodRun } from './transport';
 
 let _runLock = false;
 let _lastStatus = 'unknown'; // 'synced' | 'pending' | 'offline' | 'error' | 'unknown'
@@ -49,6 +49,9 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
 
   try {
     await ensureSyncQueueTable();
+    // Reset the food-domain coordinator cache so this cycle's
+    // first food-table push/pull call drives a fresh bulk RPC.
+    beginFoodRun();
     queueBefore = await getQueueDepth();
 
     if (!userId) {

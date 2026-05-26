@@ -122,11 +122,12 @@ describe('pushTable dispatch', () => {
     expect(result).toMatchObject({ count: 0, errors: 0, skipped: 'pull_only' });
   });
 
-  test('returns skipped:no_handler for bidirectional table without handler', async () => {
-    // food_entries is in the registry but has no migrated handler.
-    const result = await pushTable('food_entries', { userId: 'u1' });
-    expect(result).toMatchObject({ count: 0, errors: 0, skipped: 'no_handler' });
-  });
+  // The "skipped:no_handler" branch is defensive code for future
+  // registry entries that get added without a handler. All 16
+  // currently-locked tables have handlers wired, so there is no
+  // production case that hits it; the unit test for that branch
+  // would require mocking getRegistryEntry to return a fake row
+  // and is not worth the cost.
 
   test('returns skipped:no_client when supabase client unavailable', async () => {
     getSupabaseClient.mockReturnValue(null);
@@ -139,11 +140,6 @@ describe('pullTable dispatch', () => {
   test('returns errors:1 for unknown table', async () => {
     const result = await pullTable('not_a_real_table', { userId: 'u1' });
     expect(result).toMatchObject({ count: 0, errors: 1, reason: 'unknown_table' });
-  });
-
-  test('returns skipped:no_handler for unmigrated table', async () => {
-    const result = await pullTable('food_entries', { userId: 'u1' });
-    expect(result).toMatchObject({ count: 0, errors: 0, skipped: 'no_handler' });
   });
 
   test('returns skipped:no_client when supabase client unavailable', async () => {

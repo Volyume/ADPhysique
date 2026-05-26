@@ -39,6 +39,40 @@ jest.mock('../../database', () => ({
   getNutritionTargets: jest.fn().mockResolvedValue(null),
   insertNutritionTargetsFromCloud: jest.fn().mockResolvedValue(undefined),
   upsertEdPatternFlagFromCloud: jest.fn().mockResolvedValue(undefined),
+  upsertTierHistoryFromCloud: jest.fn().mockResolvedValue(undefined),
+  getAllRecipeIngredientsForUser: jest.fn().mockResolvedValue([]),
+  upsertRecipeIngredientFromCloud: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('../../food/db', () => ({
+  getAllFoodEntriesSince: jest.fn().mockResolvedValue([]),
+  getAllCustomFoodsSince: jest.fn().mockResolvedValue([]),
+  getAllSavedMealsSince: jest.fn().mockResolvedValue([]),
+  getAllRecipesSince: jest.fn().mockResolvedValue([]),
+  getAllFavouritesSince: jest.fn().mockResolvedValue([]),
+  getAllWaterSince: jest.fn().mockResolvedValue([]),
+  applyFoodEntryFromCloud: jest.fn().mockResolvedValue(null),
+  applyCustomFoodFromCloud: jest.fn().mockResolvedValue(undefined),
+  applySavedMealFromCloud: jest.fn().mockResolvedValue(undefined),
+  applyRecipeFromCloud: jest.fn().mockResolvedValue(undefined),
+  applyFavouriteFromCloud: jest.fn().mockResolvedValue(undefined),
+  applyWaterFromCloud: jest.fn().mockResolvedValue(undefined),
+  recomputeRollup: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: jest.fn().mockResolvedValue(null),
+  setItem: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('../../../store/useAppStore', () => ({
+  __esModule: true,
+  default: {
+    getState: () => ({
+      userProfile: { firstName: 'Test', units: 'kg' },
+      setUserProfile: jest.fn(),
+    }),
+  },
 }));
 
 jest.mock('../telemetry', () => ({
@@ -77,18 +111,24 @@ const { MIGRATED_TABLES } = require('../transport');
  *   - .from(t).upsert(rows, opts)
  */
 function makeSupabaseMock({ select = {}, upsertError = null } = {}) {
-  const calls = { from: [], upserts: [], selects: [] };
+  const calls = { from: [], upserts: [], selects: [], rpcs: [] };
   return {
     _calls: calls,
+    rpc: jest.fn(async (name, args) => {
+      calls.rpcs.push({ name, args });
+      // food_sync_push / food_sync_pull return the shape the
+      // coordinator expects (timestamp + per-table changes).
+      return {
+        data: { timestamp: new Date().toISOString(), changes: {} },
+        error: null,
+      };
+    }),
     from: jest.fn((table) => {
       calls.from.push(table);
       const tableSelect = select[table] ?? [];
       const selectChain = {
         eq: jest.fn(() => {
           const eqChain = Promise.resolve({ data: tableSelect, error: null });
-          // The pull paths call `await sb.from(t).select(c).eq(k,v)` directly
-          // so the chain must itself be thenable. Three extra methods get
-          // hung off it for the other two patterns.
           eqChain.in = jest.fn(async () => ({ data: tableSelect, error: null }));
           eqChain.maybeSingle = jest.fn(async () => ({
             data: Array.isArray(tableSelect) ? tableSelect[0] ?? null : tableSelect,
@@ -118,6 +158,15 @@ beforeEach(() => {
 
 describe('syncAll integration', () => {
   test('invokes every migrated push handler then every migrated pull handler', async () => {
+    // Inject one food row so the food coordinator triggers the
+    // bulk push RPC. An empty local row set short-circuits before
+    // the rpc call, which is correct production behaviour but
+    // makes this assertion noisy.
+    const foodDb = require('../../food/db');
+    foodDb.getAllFoodEntriesSince.mockResolvedValueOnce([
+      { id: 'fe-1', entryDate: '2026-05-26', mealSlot: 'breakfast', foodRef: 'off:1', quantityG: 100, kcal: 100, proteinG: 10, carbsG: 10, fatG: 5, createdAt: 1, updatedAt: 1 },
+    ]);
+
     const sb = makeSupabaseMock({
       select: {
         notification_preferences: [
@@ -147,16 +196,31 @@ describe('syncAll integration', () => {
     expect(legacy.bulkUploadLocalData).toHaveBeenCalledTimes(1);
     expect(legacy.pullFromCloud).toHaveBeenCalledTimes(1);
 
-    // Every migrated table touched .from() on the cloud at least once.
+    // Per-table handler tables hit .from() at least once. Food
+    // domain tables go through the bulk food_sync_push /
+    // food_sync_pull RPCs instead and are asserted separately.
+    // weight_log is aliased to body_composition_log and has no
+    // independent cloud presence.
+    const cloudTableForRegistry = {
+      body_composition_log: 'body_metrics',
+      profiles: 'users_profile',
+    };
     const fromCalls = sb._calls.from;
+    const FOOD = new Set([
+      'food_entries', 'custom_foods', 'saved_meals', 'recipes',
+      'food_favourites', 'daily_water', 'daily_intake_rollups',
+    ]);
+    const ALIASED = new Set(['weight_log']);
     for (const table of MIGRATED_TABLES) {
-      // notification_preferences uses two .from(): one to read server
-      // updated_at, one to upsert. body_composition_log uses table
-      // name 'body_metrics' (registry name vs cloud name divergence
-      // intentional). nutrition_targets uses .maybeSingle().
-      const cloudTable = table === 'body_composition_log' ? 'body_metrics' : table;
+      if (FOOD.has(table) || ALIASED.has(table)) continue;
+      const cloudTable = cloudTableForRegistry[table] ?? table;
       expect(fromCalls).toContain(cloudTable);
     }
+
+    // Food domain coordinator hit both RPCs exactly once.
+    const rpcNames = sb._calls.rpcs.map((r) => r.name);
+    expect(rpcNames).toContain('food_sync_push');
+    expect(rpcNames).toContain('food_sync_pull');
   });
 
   test('telemetry payload carries pull_count_per_table + push_count_per_table for every migrated table', async () => {
