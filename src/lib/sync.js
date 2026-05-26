@@ -1556,6 +1556,13 @@ export async function pullFromCloud(supabaseUserId) {
     const adaptCount = await _pullAdaptationEvents(sb, supabaseUserId);
     const customExerciseCount = await _pullCustomExercises(sb, supabaseUserId);
     const prefCount = await _pullUserPrefs(sb, supabaseUserId);
+    // notification_preferences pull per NOTIFICATIONS_LOCKED.md
+    // lines 117-119 + SYNC_REGISTRY entry. Cross-device restore
+    // brings the per-category rows back into the local SQLite
+    // mirror so NotificationSettingsScreen reads the user's
+    // preferences without round-tripping to the cloud on every
+    // open. Codex re-audit 2026-05-26 F6.
+    const notifPrefCount = await _pullNotificationPreferences(sb, supabaseUserId);
     // Food-domain pull via the food_sync_pull RPC. Returns a count map
     // per table so the success log shows exactly what landed.
     const foodCounts = await _pullFoodChanges(sb, supabaseUserId);
@@ -1586,6 +1593,7 @@ export async function pullFromCloud(supabaseUserId) {
       plannedVolume: plannedVolCount,
       adaptationEvents: adaptCount,
       prefs: prefCount,
+      notificationPrefs: notifPrefCount,
       foodEntries: foodCounts.foodEntries,
       customFoods: foodCounts.customFoods,
       savedMeals: foodCounts.savedMeals,
@@ -1791,6 +1799,43 @@ async function _pullAdaptationEvents(sb, supabaseUserId) {
   } catch (e) { logWarn('sync._pullAdaptationEvents', e?.message); return 0; }
 }
 
+/**
+ * notification_preferences pull.
+ *
+ * Reads every row owned by the user from the cloud
+ * `notification_preferences` table (migration 044) and applies it
+ * to the local SQLite mirror via setPreference. Last-write-wins
+ * resolution: setPreference is an UPSERT that overwrites the
+ * existing row regardless of timestamp because the cloud value
+ * IS the canonical post-pull state for that (user_id, category).
+ * If a local write happens concurrently, the next push round
+ * carries it back up.
+ */
+async function _pullNotificationPreferences(sb, supabaseUserId) {
+  try {
+    const { data, error } = await sb.from('notification_preferences')
+      .select('user_id, category, enabled, time_pref, updated_at')
+      .eq('user_id', supabaseUserId);
+    if (error) { logPgErr('sync._pullNotificationPreferences', error); return 0; }
+    if (!data?.length) return 0;
+    // eslint-disable-next-line global-require
+    const { setPreference } = require('./notifications/preferences');
+    let applied = 0;
+    for (const row of data) {
+      try {
+        await setPreference(supabaseUserId, row.category, {
+          enabled: !!row.enabled,
+          time_pref: row.time_pref ?? null,
+        });
+        applied += 1;
+      } catch (e) {
+        logWarn('sync._pullNotificationPreferences.row', e?.message, { category: row.category });
+      }
+    }
+    return applied;
+  } catch (e) { logWarn('sync._pullNotificationPreferences', e?.message); return 0; }
+}
+
 async function _pullUserPrefs(sb, supabaseUserId) {
   try {
     const { data, error } = await sb.from('user_prefs')
@@ -1990,3 +2035,42 @@ async function _pullNutritionTargets(sb, supabaseUserId) {
     catch (e) { logWarn('sync._pullNutritionTargets', 'insert failed', { error: e?.message }); return false; }
   } catch (e) { logWarn('sync._pullNutritionTargets', e?.message); return false; }
 }
+
+
+// ─── Public sync surface (re-exports from src/lib/sync/) ─────────────────
+//
+// Callers like App.js + SyncStatusBadge import from '../lib/sync', which
+// under Node's CommonJS resolver picks this file (sync.js) over the
+// sibling sync/ directory. The spec'd public API (syncAll / syncTable /
+// getStatus) lives in src/lib/sync/index.js. Without these re-exports
+// the App.js trigger wiring + SyncStatusBadge import silently get
+// `undefined` and the calls become no-ops.
+//
+// Codex re-audit 2026-05-26 F5: this bug was silently introduced by
+// commit 5235bb1 (sync triggers) because the test that "verified" it
+// imports from '../runner' directly and the App.js source-grep guard
+// only asserts the source text contains callSyncAll, not that the
+// import resolves to a real function. The new test at
+// src/lib/sync/__tests__/sync.publicApi.test.js requires through the
+// same path App.js uses and asserts every re-exported member is a
+// function.
+export {
+  syncAll,
+  syncTable,
+  getStatus,
+  SYNC_REGISTRY,
+  getRegistryEntry,
+  listSyncableTables,
+  listBidirectionalTables,
+  listPullOnlyTables,
+  ensureSyncQueueTable,
+  enqueue,
+  listPending,
+  getQueueDepth,
+  markSucceeded,
+  markFailed,
+  clearQueue,
+  resolveConflict,
+  trackSyncRun,
+  trackSyncConflictResolved,
+} from './sync/index';

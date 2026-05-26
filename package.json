@@ -86,5 +86,12 @@
   "overrides": {
     "@babel/runtime": "^7.29.7"
   },
+  "expo": {
+    "install": {
+      "exclude": [
+        "@sentry/react-native"
+      ]
+    }
+  },
   "private": true
 }

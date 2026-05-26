@@ -21,6 +21,19 @@
 // the on-device buffer and via flushDebugLogs to the cloud. Set to false
 // before public release to drop the info noise; warnings + errors stay on.
 export const VERBOSE_LOGGING = true;
+
+// Under Jest, async logError/logWarn/logInfo paths that resolve AFTER
+// their test has ended hit a torn-down console wrapper and emit a
+// "Cannot log after tests are done" warning. Jest's --ci flag treats
+// this as a failure signal (exit 1) even when every assertion passes.
+// The on-device buffer (pushEntry) + Sentry breadcrumb still fire so
+// production observability is unchanged. Codex re-audit 2026-05-26
+// F2-CI: 141 of these warnings were tripping the Main CI Jest job
+// from a green-tests run.
+const IS_JEST = typeof process !== 'undefined'
+  && process.env
+  && !!process.env.JEST_WORKER_ID;
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LOG_KEY = '@volyume_error_log_v1';
@@ -141,7 +154,7 @@ export function logError(scope, error, context) {
   const safeContext = redactPII(context);
   const entry = buildEntry('error', scope, error, safeContext);
   // eslint-disable-next-line no-console
-  if (typeof console !== 'undefined' && console.error) {
+  if (typeof console !== 'undefined' && console.error && !IS_JEST) {
     console.error(`[${entry.scope}]`, entry.message, safeContext || '');
   }
   pushEntry(entry).catch(() => {});
@@ -156,7 +169,7 @@ export function logError(scope, error, context) {
 export function logWarn(scope, message, context) {
   const safeContext = redactPII(context);
   const entry = buildEntry('warn', scope, message, safeContext);
-  if (typeof console !== 'undefined' && console.warn) {
+  if (typeof console !== 'undefined' && console.warn && !IS_JEST) {
     console.warn(`[${entry.scope}]`, entry.message, safeContext || '');
   }
   pushEntry(entry).catch(() => {});
@@ -172,7 +185,11 @@ export function logInfo(scope, message, context) {
   // created on their own, only attached to subsequent errors).
   if (VERBOSE_LOGGING) {
     const entry = buildEntry('info', scope, message, safeContext);
-    if (typeof console !== 'undefined' && console.log) {
+    // Console direct write gated by IS_JEST (declared at file top).
+    // Async log paths can resolve after Jest tears down the console
+    // wrapper; the post-teardown warning is what --ci was treating
+    // as a failure signal. pushEntry + Sentry breadcrumb still fire.
+    if (typeof console !== 'undefined' && console.log && !IS_JEST) {
       console.log(`[${entry.scope}]`, entry.message, safeContext || '');
     }
     pushEntry(entry).catch(() => {});

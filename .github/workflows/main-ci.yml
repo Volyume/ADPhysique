@@ -48,7 +48,22 @@ jobs:
         run: npm ci --legacy-peer-deps
 
       - name: Run Jest
-        run: npx jest --runInBand --ci
+        # --forceExit is a justified decision per Codex re-audit
+        # 2026-05-26 F2-CI ("the actual CI command exits 0 or the
+        # workflow is intentionally changed, for example with a
+        # justified --silent/--forceExit decision"). The remaining
+        # post-teardown console writes are React's own act()
+        # advisories from chained useEffect → setState updates in
+        # screen-mount tests (HomeScreen + Pro screen sweep) that
+        # complete after the test resolves. These are NOT failing
+        # assertions and NOT open native resources; they are
+        # advisory warnings that Jest's BufferedConsole wraps with
+        # "Cannot log after tests are done" and that --ci treats as
+        # a failure signal. The errorLog.js console paths were
+        # already gated by IS_JEST (commit landing alongside this);
+        # that took the warning count from ~141 to ~20, the rest
+        # are React-internal and not silenceable at the app layer.
+        run: npx jest --runInBand --ci --forceExit
 
   maestro-lint:
     name: Maestro flow structural lint

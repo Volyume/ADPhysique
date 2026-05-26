@@ -220,6 +220,18 @@ export default function NotificationSettingsScreen({ navigation }) {
           if (prefs.checkinDay !== undefined) setCheckinDay(prefs.checkinDay);
           if (prefs.checkinHour !== undefined) setCheckinHour(prefs.checkinHour);
           if (prefs.checkinMinute !== undefined) setCheckinMinute(prefs.checkinMinute);
+          // One-shot back-fill into the SQLite mirror so existing
+          // installs that pre-date migration 044 get their prefs
+          // into the per-category rows the sync push expects. Safe
+          // to call on every mount: setPreference is an UPSERT and
+          // migrateFromLegacyBlob skips rows that already exist in
+          // SQLite, so a more-recent SQLite write is never stamped
+          // with the older AsyncStorage value. Codex re-audit
+          // 2026-05-26 F6.
+          try {
+            const userId = useAppStore.getState().user?.id;
+            if (userId) await migrateFromLegacyBlob(userId, prefs);
+          } catch (_) { /* tolerate; AsyncStorage read still succeeded */ }
         }
       } catch (_) {}
 
