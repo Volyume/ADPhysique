@@ -155,19 +155,22 @@ catalogue events with a `deferralReason` (`account_deleted`,
     $ ./scripts/check-identity-invariant.sh
     Identity invariant clean: all 'SET user_id' callsites are annotated.
 
-**Founder action queue, end-of-day:**
+**Founder action queue, end-of-day: EMPTY.**
 
-1. Apply `supabase/migrate_045_users_profile_column_updates_at.sql`
-   in Supabase Dashboard. Without it the profiles handler upsert
-   lands as PGRST204 ("column 'column_updates_at' of relation
-   'users_profile' does not exist").
-2. The cloud schema change for `recipe_ingredients.deleted_at` +
-   `recipe_ingredients.updated_at` (mentioned in bc117a1) needs
-   to be matched on the server. The local SQLite schema already
-   has both columns via the additive migration in this session;
-   if the cloud table doesn't have them yet, push will raise
-   PGRST204 on those two columns specifically. Confirm + apply
-   the matching cloud schema change.
+Migrations 045 (users_profile.column_updates_at) and 046
+(recipe_ingredients soft-delete) both applied successfully late
+2026-05-26 in the same session. Profile push and
+recipe_ingredients push now have the cloud columns they need; no
+PGRST204 errors expected on the next sideloaded build.
+
+046 took two attempts: first apply hit `ERROR 42703: column
+"created_at" does not exist` because the live cloud schema for
+recipe_ingredients has diverged from migration 015 (created_at
+isn't there despite the CREATE TABLE declaring it). Commit
+6aa79ca dropped the created_at backfill from 046; second apply
+succeeded. The schema divergence is logged as a follow-up
+("audit which other tables' live cloud schemas don't match their
+migration files"), tracked but not blocking.
 
 **What is NOT done (honest accounting):**
 
@@ -684,8 +687,8 @@ Per `DATABASE_SCHEMA_LOCKED.md` + grep against `supabase/migrate_*.sql`.
 | 042 | `upgrade_tier_for_user(_user_id, ...)` service-role-only RPC for the Play Billing RTDN webhook | **Applied** |
 | 043 | `sync_conflict_resolved` event added to `record_engine_telemetry` allow-list. Fires from `src/lib/sync/conflict.js`. | **Applied** |
 | 044 | `notification_preferences` table + RLS + updated_at trigger. Backs NOTIFICATIONS_LOCKED.md lines 117-119. SYNC_REGISTRY entry. | **Applied** (notification_preferences PGRST205 warnings in device log cleared after this) |
-| 045 | `users_profile.column_updates_at jsonb` + safe-merge trigger. Powers the registry-locked `profiles.merge` conflict strategy via `column_updates_at` populated on push from `userProfileFieldUpdatedAt` and consumed on pull via `conflict.resolve(merge)`. | **Pending founder apply** |
-| 046 | `recipe_ingredients.updated_at + deleted_at` columns + BEFORE UPDATE touch trigger + partial live index. Required for the per-table push handler (which already ships both columns) — without 046 the push raises PGRST204 on every sync. Local SQLite already has both columns via the additive migration in commit bc117a1. | **Pending founder apply** |
+| 045 | `users_profile.column_updates_at jsonb` + safe-merge trigger. Powers the registry-locked `profiles.merge` conflict strategy via `column_updates_at` populated on push from `userProfileFieldUpdatedAt` and consumed on pull via `conflict.resolve(merge)`. | **Applied** end-of-day 2026-05-26 |
+| 046 | `recipe_ingredients.updated_at + deleted_at` columns + BEFORE UPDATE touch trigger + partial live index. Required for the per-table push handler (which already ships both columns) — without 046 the push raises PGRST204 on every sync. Local SQLite already has both columns via the additive migration in commit bc117a1. First-apply attempt errored on a removed-from-cloud `created_at` reference in a backfill block; commit 6aa79ca dropped the backfill, second-apply attempt succeeded. | **Applied** end-of-day 2026-05-26 |
 
 ---
 
@@ -814,7 +817,7 @@ Grouped by phase per `RELEASE_PLAN_LOCKED.md`.
 
 | # | Item | Spec | Effort | Owner |
 |---|---|---|---|---|
-| 1 | ~~Apply migrations 037, 038, 039, 040, 041, 042, 043, 044~~ **Applied** end-of-day 2026-05-26. Apply migrations **045** (profiles merge `column_updates_at`) and **046** (recipe_ingredients soft-delete `updated_at` + `deleted_at`) in that order. Both are idempotent and have verification queries in `supabase/README.md`. | this doc § 3 | 5 min | Founder |
+| 1 | ~~Apply migrations 037 → 046~~ **All Applied** end-of-day 2026-05-26. Founder action queue is empty for migrations. | this doc § 3 | done | Founder |
 | 2 | Deploy `public/privacy.html` to volyume.app/privacy | `PRIVACY_CONSENT_LOCKED.md` lines 75-112 | M (hosting setup) | Founder + Claude |
 | 3 | ~~Build `src/lib/sync/` directory + per-table transport for all 16 tables~~ **Shipped** end-of-day 2026-05-26. All 16 registry tables on transport via 10 per-table handler files + food-domain coordinator; ~580 lines removed from legacy sync.js. Follow-up: sync regression matrix (8 × 16 = 128 paired tests per `TESTING_STRATEGY_LOCKED.md` lines 144-160). | `SYNC_ARCHITECTURE_LOCKED.md` | done | Claude |
 | 4 | ~~Build `src/lib/notifications/` directory + wire `notification_*` events~~ **Shipped**. Follow-up: pull `trainingReminders.js` + `restNotifications.js` + `activeWorkoutNotification.js` into the directory. | `NOTIFICATIONS_LOCKED.md` | done | Claude |
@@ -872,8 +875,8 @@ Grouped by phase per `RELEASE_PLAN_LOCKED.md`.
 
 ### Now
 
-1. Apply migration **045** (`supabase/migrate_045_users_profile_column_updates_at.sql`) in Supabase Dashboard → SQL Editor. Without it every profile push raises PGRST204 on `column_updates_at`. Verification queries in `supabase/README.md` § Verify `users_profile.column_updates_at`.
-2. Apply migration **046** (`supabase/migrate_046_recipe_ingredients_soft_delete.sql`). Without it every recipe_ingredients push raises PGRST204 on `updated_at` / `deleted_at`. Verification queries in `supabase/README.md` § Verify `recipe_ingredients` soft-delete.
+1. ~~Apply migration 045~~ **Applied** end-of-day 2026-05-26.
+2. ~~Apply migration 046~~ **Applied** end-of-day 2026-05-26.
 3. (Optional, low priority) Add `EXPO_PUBLIC_USDA_API_KEY` repo secret if USDA fallback is wanted active.
 
 ### When Claude says "Phase A code work complete, ready for Phase A exit prep"
