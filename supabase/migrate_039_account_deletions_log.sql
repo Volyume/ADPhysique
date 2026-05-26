@@ -86,10 +86,14 @@ BEGIN
 END $$;
 
 -- Service role only. No GRANT to authenticated; the Edge Function
--- runs with the service role for this step.
+-- runs with the service role for this step. The explicit GRANT to
+-- service_role is required: REVOKE FROM PUBLIC strips the default
+-- grant chain, and service_role does not inherit EXECUTE on
+-- SECURITY DEFINER functions automatically.
 REVOKE EXECUTE ON FUNCTION record_account_deletion_started(uuid, text, text, text, text, text) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION record_account_deletion_started(uuid, text, text, text, text, text) FROM authenticated;
 REVOKE EXECUTE ON FUNCTION record_account_deletion_started(uuid, text, text, text, text, text) FROM anon;
+GRANT EXECUTE ON FUNCTION record_account_deletion_started(uuid, text, text, text, text, text) TO service_role;
 
 -- ─────────────────────────────────────────────────────────────────────
 -- record_account_deletion_completed: called immediately after
@@ -117,3 +121,4 @@ END $$;
 REVOKE EXECUTE ON FUNCTION record_account_deletion_completed(uuid) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION record_account_deletion_completed(uuid) FROM authenticated;
 REVOKE EXECUTE ON FUNCTION record_account_deletion_completed(uuid) FROM anon;
+GRANT EXECUTE ON FUNCTION record_account_deletion_completed(uuid) TO service_role;

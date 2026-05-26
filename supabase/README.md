@@ -88,9 +88,9 @@ ORDER BY ordinal_position;
 ```
 
 Expected columns: `id (uuid)`, `user_id (uuid)`, `user_email (text)`,
-`reason (text)`, `app_version (text)`, `platform (text)`,
-`started_at (timestamptz)`, `completed_at (timestamptz)`,
-`error_message (text)`.
+`initiated_at (timestamptz)`, `completed_at (timestamptz)`,
+`reason (text)`, `source (text)`, `app_version (text)`,
+`platform (text)`.
 
 ```sql
 -- RLS is enabled
