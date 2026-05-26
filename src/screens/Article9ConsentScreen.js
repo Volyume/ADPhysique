@@ -11,6 +11,7 @@ import useAppStore from '../store/useAppStore';
 import { getSupabaseClient } from '../lib/supabase';
 import { logError, logInfo } from '../lib/errorLog';
 import { audit } from '../lib/observability';
+import { LINKS } from '../lib/links';
 
 /**
  * Article 9 health-data consent screen.
@@ -104,7 +105,7 @@ export default function Article9ConsentScreen() {
   }
 
   function openPrivacyPolicy() {
-    Linking.openURL('https://volyume.app/privacy').catch(() => {});
+    Linking.openURL(LINKS.privacyPolicy).catch(() => {});
   }
 
   return (

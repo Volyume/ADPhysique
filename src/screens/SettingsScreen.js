@@ -225,63 +225,93 @@ export default function SettingsScreen({ navigation }) {
   }
 
   // ─── Health-data consent withdrawal (UK GDPR Article 9) ─────────────────
-  // The cloud-side record_health_consent(false) RPC appends a new row to
-  // consent_log AND flips users_profile.health_data_consent to false. The
-  // grant + revoke trail is immutable. Local mirror updated on success
-  // so gating UI flips immediately without waiting for the next session.
+  // Per PRIVACY_CONSENT_LOCKED.md lines 71-72 and 251: withdrawing
+  // Article 9 consent is the legal end of our lawful basis to process
+  // the user's special-category data, so it must queue account
+  // deletion (not merely flip a flag). The earlier behaviour
+  // (record_health_consent(false) + UI gate) left the data on our
+  // servers without a lawful basis, which is itself a UK GDPR
+  // breach. This flow now records the withdrawal in consent_log
+  // (the immutable audit trail) THEN drives the standard delete-
+  // account pipeline so SQLite, Supabase rows, and auth.users are
+  // all wiped within the 30-day window the policy promises.
   const [withdrawing, setWithdrawing] = useState(false);
   async function handleWithdrawConsent() {
-    if (withdrawing) return;
+    if (withdrawing || deletingAccount) return;
     Alert.alert(
       'Withdraw health-data consent?',
-      "We'll stop processing your weight, food, and body composition data. " +
-        "Coach output, the food layer, body metrics, and Pro insights will all become read-only " +
-        "until you grant consent again. Your existing data isn't deleted -- use 'Delete account' " +
-        "if you want it removed entirely.",
+      "Withdrawing consent means we lose the legal basis to keep " +
+        "your weight, food, body composition, and check-in data. " +
+        "Your account will be deleted and your data wiped from our " +
+        "servers within 30 days. This cannot be undone.",
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Withdraw',
+          text: 'Continue',
           style: 'destructive',
-          onPress: async () => {
-            audit('consent.article9.withdraw.tap');
-            setWithdrawing(true);
-            try {
-              const sb = getSupabaseClient();
-              if (!sb) throw new Error('Cloud client unavailable');
-              const { error } = await sb.rpc('record_health_consent', {
-                _granted: false,
-                _app_version: null,
-                _platform: Platform.OS,
-              });
-              if (error) {
-                logError('SettingsScreen.withdrawConsent.rpc', error, { uid: user?.id });
-                Alert.alert(
-                  "Couldn't withdraw",
-                  "We couldn't reach the server. Check your connection and try again.",
-                );
-                return;
-              }
-              setHealthConsent(false, true);
-              try {
-                // eslint-disable-next-line global-require
-                const { track } = require('../lib/engineTelemetry');
-                if (user?.id) {
-                  track(user.id, 'article9_consent_withdrawn', {
-                    surface: 'settings',
-                  }).catch(() => {});
-                }
-              } catch (_) {}
-              Alert.alert(
-                'Consent withdrawn',
-                "We've recorded your withdrawal. Health-data features are now read-only.",
-              );
-            } catch (e) {
-              logError('SettingsScreen.withdrawConsent', e, { uid: user?.id });
-              Alert.alert("Couldn't withdraw", e?.message ?? 'Unknown error.');
-            } finally {
-              setWithdrawing(false);
-            }
+          onPress: () => {
+            Alert.alert(
+              'Are you sure?',
+              "There's no undo. All your workouts, plans, check-ins, " +
+                "food log, and progress are wiped from every device " +
+                "within 30 days.",
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Withdraw and delete',
+                  style: 'destructive',
+                  onPress: async () => {
+                    audit('consent.article9.withdraw.tap');
+                    setWithdrawing(true);
+                    try {
+                      // Record the withdrawal in consent_log before we
+                      // tear the account down. The Edge Function's
+                      // delete sequence wipes consent_log via FK
+                      // cascade, but Panel 8's withdrawal-rate
+                      // dashboard reads via the engine_telemetry
+                      // event below (account_deletions_log is the
+                      // non-cascading audit trail that survives).
+                      const sb = getSupabaseClient();
+                      if (sb) {
+                        const { error: rpcErr } = await sb.rpc('record_health_consent', {
+                          _granted: false,
+                          _app_version: null,
+                          _platform: Platform.OS,
+                        });
+                        if (rpcErr) {
+                          logError('SettingsScreen.withdrawConsent.rpc', rpcErr, { uid: user?.id });
+                          // Soft-fail: we still proceed with the
+                          // delete. The user's intent is clear and
+                          // delaying for a server hiccup would be
+                          // worse than a missing audit row.
+                        }
+                      }
+                      setHealthConsent(false, true);
+                      try {
+                        // eslint-disable-next-line global-require
+                        const { track } = require('../lib/engineTelemetry');
+                        if (user?.id) {
+                          track(user.id, 'article9_consent_withdrawn', {
+                            surface: 'settings',
+                          }).catch(() => {});
+                        }
+                      } catch (_) {}
+                      // Now drive the standard delete-account flow
+                      // with reason='consent_withdrawal' so Panel 8
+                      // can compute the withdrawal-to-deletion
+                      // ratio against the engine_telemetry event.
+                      audit('account.delete.confirm', { isLocal: !!user?.isLocal, source: 'consent_withdrawal' });
+                      await performDeleteAccount('consent_withdrawal');
+                    } catch (e) {
+                      logError('SettingsScreen.withdrawConsent', e, { uid: user?.id });
+                      Alert.alert("Couldn't withdraw", e?.message ?? 'Unknown error.');
+                    } finally {
+                      setWithdrawing(false);
+                    }
+                  },
+                },
+              ],
+            );
           },
         },
       ],
@@ -392,7 +422,7 @@ export default function SettingsScreen({ navigation }) {
     );
   }
 
-  async function performDeleteAccount() {
+  async function performDeleteAccount(reason = 'user_requested') {
     if (!user?.id) return;
     setDeletingAccount(true);
     const userId = user.id;
@@ -426,7 +456,7 @@ export default function SettingsScreen({ navigation }) {
             } catch (_) { /* tolerate */ }
             const result = await sb.functions.invoke('delete-account', {
               body: {
-                reason: 'user_requested',
+                reason,
                 app_version: appVersion,
                 platform: Platform.OS,
               },

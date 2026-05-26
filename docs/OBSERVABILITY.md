@@ -113,9 +113,9 @@ finish();   // logs duration
 All four methods auto-enrich with session id, build version, screen,
 user id. PII redaction is automatic — see redactPII for the key list.
 
-### `audit()` call-site inventory (as of 2026-05-25)
+### `audit()` call-site inventory (as of 2026-05-26)
 
-22 call sites wired across the highest-value boundaries:
+23 call sites wired across the highest-value boundaries:
 
 | Area | Events |
 |---|---|

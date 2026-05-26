@@ -11,6 +11,7 @@ name: Maestro E2E (Android emulator)
 on:
   push:
     branches:
+      - main
       - 'claude/**'
     paths:
       - 'e2e/**'
