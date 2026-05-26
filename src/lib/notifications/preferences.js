@@ -50,14 +50,21 @@ export async function ensureTable() {
 }
 
 /**
- * Upsert a single preference. Bumps updated_at so the sync layer
- * recognises the row as outgoing.
+ * Upsert a single preference from a USER action (toggle, time
+ * picker, etc.). Bumps updated_at to now and enqueues into
+ * sync_queue so the registry-driven push picks it up.
+ *
+ * For applying rows pulled from the cloud, use
+ * applyPreferenceFromPull() instead — it preserves the server
+ * updated_at so a pulled row does not echo back to the cloud as
+ * a fresh local write.
  */
 export async function setPreference(userId, category, { enabled, time_pref }) {
   if (!userId || !category) return;
   await ensureTable();
   const d = await getDb();
   if (!d) return;
+  const updatedAt = Date.now();
   await d.runAsync(
     `INSERT INTO ${TABLE} (user_id, category, enabled, time_pref, updated_at)
      VALUES (?, ?, ?, ?, ?)
@@ -70,9 +77,75 @@ export async function setPreference(userId, category, { enabled, time_pref }) {
       String(category),
       enabled ? 1 : 0,
       time_pref == null ? null : String(time_pref),
-      Date.now(),
+      updatedAt,
     ],
   );
+  // Enqueue into sync_queue so the registry-driven push path
+  // (src/lib/sync/queue + runner) has a per-row record. The
+  // bulk_upload helper also ships the whole table on sign-in.
+  // record_id is "user_id::category" because sync_queue uses a
+  // single string per row.
+  try {
+    // eslint-disable-next-line global-require
+    const { enqueue, ensureSyncQueueTable } = require('../sync/queue');
+    await ensureSyncQueueTable();
+    await enqueue({
+      table: 'notification_preferences',
+      operation: 'update',
+      recordId: `${userId}::${category}`,
+      payload: {
+        user_id: String(userId),
+        category: String(category),
+        enabled: !!enabled,
+        time_pref: time_pref == null ? null : String(time_pref),
+        updated_at: updatedAt,
+      },
+    });
+  } catch (_) { /* tolerate; setPreference already wrote SQLite */ }
+}
+
+/**
+ * Apply a row pulled from the cloud. Preserves the server
+ * `updated_at` so the row does not look like a fresh local write
+ * on the next push round. Does NOT enqueue into sync_queue.
+ *
+ * Last-write-wins: only overwrites the local row when the
+ * incoming server updated_at is strictly newer. This prevents a
+ * stale cloud snapshot from clobbering a more-recent local edit
+ * that hasn't yet been pushed.
+ *
+ * Codex re-audit 2026-05-26 finding #4: the previous
+ * implementation called setPreference() on pulled rows, which
+ * stamped updated_at = Date.now() and could echo back as a fresh
+ * write or clobber newer cloud changes.
+ */
+export async function applyPreferenceFromPull(userId, category, { enabled, time_pref, updated_at }) {
+  if (!userId || !category) return false;
+  const serverUpdatedAt = Number(updated_at);
+  if (!Number.isFinite(serverUpdatedAt) || serverUpdatedAt <= 0) return false;
+  await ensureTable();
+  const d = await getDb();
+  if (!d) return false;
+  // Only overwrite when the server row is strictly newer than
+  // what we already have. SQLite ON CONFLICT WHERE clause does
+  // this conditionally without a read-modify-write race.
+  const result = await d.runAsync(
+    `INSERT INTO ${TABLE} (user_id, category, enabled, time_pref, updated_at)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(user_id, category) DO UPDATE SET
+       enabled    = excluded.enabled,
+       time_pref  = excluded.time_pref,
+       updated_at = excluded.updated_at
+     WHERE excluded.updated_at > ${TABLE}.updated_at`,
+    [
+      String(userId),
+      String(category),
+      enabled ? 1 : 0,
+      time_pref == null ? null : String(time_pref),
+      serverUpdatedAt,
+    ],
+  );
+  return result?.changes > 0;
 }
 
 /**

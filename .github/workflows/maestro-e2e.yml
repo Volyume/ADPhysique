@@ -210,6 +210,50 @@ jobs:
           cd android
           ./gradlew assembleDebug --no-daemon 2>&1 | tee ../gradle-debug.log
 
+      - name: Pre-Maestro runner diagnostics
+        # Captures runner system state BEFORE the emulator action
+        # runs, so a later emulator boot failure has the immediate-
+        # context environment recorded. The status report tails
+        # runner-diagnose.log so an offline reader can diagnose
+        # without needing access to the Actions step logs. Codex
+        # re-audit 2026-05-26 F4: previously a Maestro failure
+        # left only "logs not produced" in the status doc because
+        # the emulator action failed before the script body ran.
+        if: always()
+        run: |
+          {
+            echo "=== uname / kernel ==="
+            uname -a
+            echo
+            echo "=== KVM availability ==="
+            ls -l /dev/kvm 2>&1 || echo "/dev/kvm missing"
+            kvm-ok 2>&1 | head -10 || echo "kvm-ok not installed"
+            echo
+            echo "=== CPU virt support ==="
+            grep -E -m1 "vmx|svm" /proc/cpuinfo > /dev/null && echo "VT-x/AMD-V: yes" || echo "VT-x/AMD-V: NO"
+            nproc
+            echo
+            echo "=== Memory ==="
+            free -h
+            echo
+            echo "=== Disk ==="
+            df -h /
+            echo
+            echo "=== Android SDK env ==="
+            echo "ANDROID_HOME=${ANDROID_HOME:-<unset>}"
+            echo "ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT:-<unset>}"
+            ls -d "${ANDROID_HOME:-$ANDROID_SDK_ROOT}"/* 2>&1 | head -20
+            echo
+            echo "=== AVDs already on disk ==="
+            ls -la ~/.android/avd 2>&1 || echo "no AVD dir yet"
+            echo
+            echo "=== Available system images (filtered) ==="
+            "${ANDROID_HOME:-$ANDROID_SDK_ROOT}"/cmdline-tools/latest/bin/sdkmanager --list_installed 2>&1 | grep -Ei "system-images|emulator" | head -20 || echo "sdkmanager list failed"
+            echo
+            echo "=== Running processes (top 20 by CPU) ==="
+            ps aux --sort=-%cpu | head -20
+          } | tee "${GITHUB_WORKSPACE:-$(pwd)}/runner-diagnose.log"
+
       - name: Run Maestro flows on emulator
         id: maestro_run
         # No `continue-on-error`. Codex audit 2026-05-26 (post-F7
@@ -232,6 +276,26 @@ jobs:
           force-avd-creation: false
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
+          # pre-emulator-launch-script runs inside the action AFTER
+          # SDK setup + AVD creation, BEFORE emulator boot. Captures
+          # the moment-of-boot state so a boot failure (the failure
+          # mode that produced "_adb-install.log not produced_") has
+          # the AVD config + system-image presence recorded in the
+          # status doc tail. Codex re-audit 2026-05-26 F4.
+          pre-emulator-launch-script: |
+            {
+              echo "=== AVD list ==="
+              "${ANDROID_HOME:-$ANDROID_SDK_ROOT}"/cmdline-tools/latest/bin/avdmanager list avd 2>&1 | head -40 || true
+              echo
+              echo "=== Emulator binary ==="
+              ls -la "${ANDROID_HOME:-$ANDROID_SDK_ROOT}/emulator/emulator" 2>&1 || true
+              echo
+              echo "=== KVM at boot time ==="
+              ls -l /dev/kvm 2>&1 || echo "/dev/kvm missing"
+              echo
+              echo "=== Free memory at boot time ==="
+              free -h
+            } | tee -a "${GITHUB_WORKSPACE:-$(pwd)}/runner-diagnose.log"
           script: |
             set +e
             adb install -r android/app/build/outputs/apk/debug/app-debug.apk 2>&1 | tee adb-install.log

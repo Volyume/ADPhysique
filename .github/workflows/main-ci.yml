@@ -48,21 +48,38 @@ jobs:
         run: npm ci --legacy-peer-deps
 
       - name: Run Jest
-        # --forceExit is a justified decision per Codex re-audit
-        # 2026-05-26 F2-CI ("the actual CI command exits 0 or the
-        # workflow is intentionally changed, for example with a
-        # justified --silent/--forceExit decision"). The remaining
-        # post-teardown console writes are React's own act()
-        # advisories from chained useEffect → setState updates in
-        # screen-mount tests (HomeScreen + Pro screen sweep) that
-        # complete after the test resolves. These are NOT failing
-        # assertions and NOT open native resources; they are
-        # advisory warnings that Jest's BufferedConsole wraps with
-        # "Cannot log after tests are done" and that --ci treats as
-        # a failure signal. The errorLog.js console paths were
-        # already gated by IS_JEST (commit landing alongside this);
-        # that took the warning count from ~141 to ~20, the rest
-        # are React-internal and not silenceable at the app layer.
+        # TECHNICAL DEBT — --forceExit is explicitly TEMPORARY.
+        #
+        # Root cause: HomeScreen + a handful of other Pro screens
+        # use @react-navigation/native's useFocusEffect +
+        # navigation.getParent()?.addListener('tabPress', ...) at
+        # mount. The test harness's makeNav() in
+        # src/__tests__/screen-mount.test.js provides a flat
+        # jest.fn() mock for navigation; useFocusEffect's behaviour
+        # without a real NavigationContainer fires its callback
+        # asynchronously and a setState in that callback lands AFTER
+        # the test's await chain ends. React emits an act() warning,
+        # Jest's BufferedConsole wraps it as "Cannot log after tests
+        # are done", and --ci treats that as a failure signal even
+        # though every assertion passed.
+        #
+        # The PROPER fix is to wrap mountScreen in a
+        # NavigationContainer (with a mocked navigator state) so
+        # useFocusEffect resolves synchronously and addListener has
+        # a real subscriber surface. That is a substantial harness
+        # rewrite touching the entire screen-mount.test.js file +
+        # the make-Nav helper + every test that passes a screen
+        # navigation prop. Not in scope for the current audit
+        # response.
+        #
+        # Codex re-audit 2026-05-26 explicitly named
+        # --silent/--forceExit as an acceptable temporary path
+        # provided it is documented as such. Tracked here as a
+        # FOLLOW-UP, not closed:
+        #   TODO(codex-f2ci-followup): wrap mountScreen in a
+        #   NavigationContainer so useFocusEffect resolves
+        #   synchronously, then remove --forceExit and verify
+        #   warning count is 0.
         run: npx jest --runInBand --ci --forceExit
 
   maestro-lint:

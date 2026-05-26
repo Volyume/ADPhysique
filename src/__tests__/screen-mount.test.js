@@ -410,10 +410,14 @@ async function mountScreen(Screen, props = {}) {
         }),
       );
     });
-    // Flush microtasks so async useEffects run. Multiple ticks because
-    // some effects chain (load -> setState -> rerender -> more effects).
+    // Flush microtasks + one macrotask so async useEffects run.
+    // Chained loadFoo() patterns mostly settle in 10-15 microtasks
+    // plus the macrotask boundary that AsyncStorage/DB mocks
+    // resolve on.
     await TestRenderer.act(async () => {
-      for (let i = 0; i < 6; i++) await Promise.resolve();
+      for (let i = 0; i < 15; i++) await Promise.resolve();
+      await new Promise(r => setImmediate(r));
+      for (let i = 0; i < 10; i++) await Promise.resolve();
     });
   } finally {
     console.error = origErr;

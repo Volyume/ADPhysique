@@ -311,6 +311,8 @@ export default function LoginScreen({ navigation, route }) {
               <Text style={styles.fieldLabel}>Email</Text>
               <View style={[styles.fieldWrap, emailFocused && styles.fieldWrapFocused]}>
                 <TextInput
+                  testID="email"
+                  accessibilityLabel="Email"
                   style={styles.fieldInput}
                   value={email}
                   onChangeText={setEmail}
@@ -331,6 +333,8 @@ export default function LoginScreen({ navigation, route }) {
               <Text style={styles.fieldLabel}>Password</Text>
               <View style={[styles.fieldWrap, passwordFocused && styles.fieldWrapFocused]}>
                 <TextInput
+                  testID="password"
+                  accessibilityLabel="Password"
                   style={[styles.fieldInput, styles.fieldInputPassword]}
                   value={password}
                   onChangeText={setPassword}
@@ -367,6 +371,8 @@ export default function LoginScreen({ navigation, route }) {
 
           {/* ── Primary CTA ── */}
           <TouchableOpacity
+            testID={isSignIn ? 'submit-signin' : 'submit-signup'}
+            accessibilityLabel={isSignIn ? 'Sign in' : 'Create account'}
             style={[styles.primaryBtn, loading && styles.btnDisabled]}
             onPress={handleEmailAuth}
             disabled={loading}
@@ -383,6 +389,8 @@ export default function LoginScreen({ navigation, route }) {
 
           {/* Mode switch */}
           <TouchableOpacity
+            testID="auth-mode-switch"
+            accessibilityLabel={isSignIn ? 'Switch to create account' : 'Switch to sign in'}
             style={styles.modeSwitch}
             onPress={() => setMode(isSignIn ? 'signup' : 'signin')}
           >

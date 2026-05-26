@@ -8,6 +8,12 @@
 
 const mockState = { rows: [] };
 
+const mockEnqueue = jest.fn(async () => {});
+jest.mock('../../sync/queue', () => ({
+  ensureSyncQueueTable: jest.fn(async () => {}),
+  enqueue: mockEnqueue,
+}));
+
 jest.mock('../../database', () => ({
   db: jest.fn(async () => ({
     async execAsync() {},
@@ -66,6 +72,7 @@ import {
 
 beforeEach(() => {
   mockState.rows = [];
+  mockEnqueue.mockClear();
 });
 
 describe('setPreference + getPreference', () => {
@@ -149,6 +156,35 @@ describe('migrateFromLegacyBlob', () => {
     expect(after.enabled).toBe(false);
     expect(after.time_pref).toBe('12:00');
     expect(after.updated_at).toBe(before.updated_at);
+  });
+});
+
+describe('setPreference enqueues into sync_queue', () => {
+  // Codex re-audit 2026-05-26 F4 follow-up: every per-row write
+  // must enqueue into sync_queue so the registry-driven push has a
+  // record per write, not only the bulk-upload pass.
+  test('enqueue is called with table=notification_preferences, op=update', async () => {
+    await setPreference('u1', 'morning_weight', { enabled: true, time_pref: '08:00' });
+    expect(mockEnqueue).toHaveBeenCalledTimes(1);
+    const call = mockEnqueue.mock.calls[0][0];
+    expect(call).toMatchObject({
+      table: 'notification_preferences',
+      operation: 'update',
+      recordId: 'u1::morning_weight',
+    });
+    expect(call.payload).toMatchObject({
+      user_id: 'u1',
+      category: 'morning_weight',
+      enabled: true,
+      time_pref: '08:00',
+    });
+    expect(call.payload.updated_at).toBeGreaterThan(0);
+  });
+
+  test('every setPreference call enqueues independently', async () => {
+    await setPreference('u1', 'morning_weight', { enabled: true });
+    await setPreference('u1', 'weekly_checkin_reminder', { enabled: true });
+    expect(mockEnqueue).toHaveBeenCalledTimes(2);
   });
 });
 

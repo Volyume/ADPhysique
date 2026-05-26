@@ -1,13 +1,11 @@
 [
   {
-    "relation": [
-      "delegate_permission/common.handle_all_urls"
-    ],
+    "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
       "package_name": "app.volyume",
       "sha256_cert_fingerprints": [
-        "YOUR_ANDROID_SHA256_CERT_FINGERPRINT"
+        "REPLACE_WITH_SHA256_OF_UPLOAD_KEY_CERT"
       ]
     }
   }

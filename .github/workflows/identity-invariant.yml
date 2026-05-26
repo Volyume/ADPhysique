@@ -17,6 +17,13 @@ on:
     branches:
       - main
 
+# Explicit minimal permissions per Codex re-audit 2026-05-26 finding
+# #5: run #12 failed at actions/checkout with HTTP 403. The default
+# permissions in some org / branch-protection setups deny contents
+# read; declaring the minimum required surface avoids the 403.
+permissions:
+  contents: read
+
 jobs:
   check:
     name: Check identity invariant

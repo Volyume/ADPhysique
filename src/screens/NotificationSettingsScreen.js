@@ -116,6 +116,20 @@ async function applyNotifications(prefs, permissionStatus) {
         enabled: !!prefs.checkinEnabled,
         time_pref: `${dow}_${checkinTime}`,
       });
+      // training_reminder mirror per Codex re-audit 2026-05-26
+      // finding #2: migration 044 includes the category but the
+      // screen wasn't mirroring it. The per-day schedule lives in
+      // AsyncStorage under REMINDER_TIME_KEY / SCHEDULE_KEY (read
+      // by trainingReminders.js); the cloud row tracks the
+      // enabled flag + default time so cross-device restore
+      // honours the user's intent.
+      const trainingTime =
+        (prefs.trainingHour ?? 8).toString().padStart(2, '0')
+        + ':' + (prefs.trainingMinute ?? 0).toString().padStart(2, '0');
+      await setPrefRow(userId, 'training_reminder', {
+        enabled: !!prefs.trainingEnabled,
+        time_pref: trainingTime,
+      });
     }
   } catch (_) { /* tolerate; AsyncStorage write already succeeded */ }
 }
@@ -206,20 +220,76 @@ export default function NotificationSettingsScreen({ navigation }) {
 
   const debounceTimer = useRef(null);
 
-  // Load saved prefs on mount and request permissions
+  // Load saved prefs on mount and request permissions.
+  //
+  // Read order: SQLite mirror first (synced cross-device via
+  // notification_preferences migration 044), then fall back to the
+  // legacy AsyncStorage blob if SQLite is empty (fresh install or
+  // install that pre-dates migration 044). When the legacy blob is
+  // the source, migrateFromLegacyBlob seeds the SQLite mirror so the
+  // next sync push has rows to ship. Codex re-audit 2026-05-26
+  // finding #2: fresh devices that pulled cloud prefs into SQLite
+  // were still rendering AsyncStorage defaults.
   useEffect(() => {
     async function init() {
+      const userId = useAppStore.getState().user?.id;
+      // Try SQLite mirror first
+      let sqliteHit = false;
+      if (userId) {
+        try {
+          // eslint-disable-next-line global-require
+          const { getAllPreferences } = require('../lib/notifications/preferences');
+          const rows = await getAllPreferences(userId);
+          if (rows.length > 0) {
+            sqliteHit = true;
+            for (const r of rows) {
+              if (r.category === 'morning_weight') {
+                setMorningEnabled(!!r.enabled);
+                if (typeof r.time_pref === 'string' && r.time_pref.includes(':')) {
+                  const [h, m] = r.time_pref.split(':').map(n => parseInt(n, 10));
+                  if (Number.isFinite(h)) setMorningHour(h);
+                  if (Number.isFinite(m)) setMorningMinute(m);
+                }
+              } else if (r.category === 'weekly_checkin_reminder') {
+                setCheckinEnabled(!!r.enabled);
+                if (typeof r.time_pref === 'string' && r.time_pref.includes('_')) {
+                  const [dow, hm] = r.time_pref.split('_');
+                  const dowIdx = ['sun','mon','tue','wed','thu','fri','sat'].indexOf(dow);
+                  if (dowIdx >= 0) setCheckinDay(dowIdx);
+                  if (hm && hm.includes(':')) {
+                    const [h, m] = hm.split(':').map(n => parseInt(n, 10));
+                    if (Number.isFinite(h)) setCheckinHour(h);
+                    if (Number.isFinite(m)) setCheckinMinute(m);
+                  }
+                }
+              } else if (r.category === 'training_reminder') {
+                setTrainingEnabled(!!r.enabled);
+                if (typeof r.time_pref === 'string' && r.time_pref.includes(':')) {
+                  const [h, m] = r.time_pref.split(':').map(n => parseInt(n, 10));
+                  if (Number.isFinite(h)) setTrainingHour(h);
+                  if (Number.isFinite(m)) setTrainingMinute(m);
+                }
+              }
+            }
+          }
+        } catch (_) { /* fall through to AsyncStorage */ }
+      }
+
       try {
         const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
         if (raw) {
           const prefs = JSON.parse(raw);
-          if (prefs.morningEnabled !== undefined) setMorningEnabled(prefs.morningEnabled);
-          if (prefs.morningHour !== undefined) setMorningHour(prefs.morningHour);
-          if (prefs.morningMinute !== undefined) setMorningMinute(prefs.morningMinute);
-          if (prefs.checkinEnabled !== undefined) setCheckinEnabled(prefs.checkinEnabled);
-          if (prefs.checkinDay !== undefined) setCheckinDay(prefs.checkinDay);
-          if (prefs.checkinHour !== undefined) setCheckinHour(prefs.checkinHour);
-          if (prefs.checkinMinute !== undefined) setCheckinMinute(prefs.checkinMinute);
+          // Apply legacy AsyncStorage values only when SQLite was
+          // empty. Otherwise SQLite wins (it is the synced source).
+          if (!sqliteHit) {
+            if (prefs.morningEnabled !== undefined) setMorningEnabled(prefs.morningEnabled);
+            if (prefs.morningHour !== undefined) setMorningHour(prefs.morningHour);
+            if (prefs.morningMinute !== undefined) setMorningMinute(prefs.morningMinute);
+            if (prefs.checkinEnabled !== undefined) setCheckinEnabled(prefs.checkinEnabled);
+            if (prefs.checkinDay !== undefined) setCheckinDay(prefs.checkinDay);
+            if (prefs.checkinHour !== undefined) setCheckinHour(prefs.checkinHour);
+            if (prefs.checkinMinute !== undefined) setCheckinMinute(prefs.checkinMinute);
+          }
           // One-shot back-fill into the SQLite mirror so existing
           // installs that pre-date migration 044 get their prefs
           // into the per-category rows the sync push expects. Safe
@@ -305,6 +375,9 @@ export default function NotificationSettingsScreen({ navigation }) {
     cd = checkinDay,
     ch = checkinHour,
     cmin = checkinMinute,
+    te = trainingEnabled,
+    th = trainingHour,
+    tm = trainingMinute,
   } = {}) {
     return {
       morningEnabled: me,
@@ -314,6 +387,9 @@ export default function NotificationSettingsScreen({ navigation }) {
       checkinDay: cd,
       checkinHour: ch,
       checkinMinute: cmin,
+      trainingEnabled: te,
+      trainingHour: th,
+      trainingMinute: tm,
       lastCheckinMs,
     };
   }

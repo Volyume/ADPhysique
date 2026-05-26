@@ -2954,6 +2954,16 @@ export async function wipeAllUserData(userId) {
     // this device inherits orphan rows tagged with the deleted
     // user's id.
     'workout_notes_v2', 'planned_muscle_volume_sync', 'adaptation_events_sync',
+    // notification_preferences (SQLite mirror of cloud migration
+    // 044). Codex re-audit 2026-05-26 finding #3: previously
+    // listed by deletePreferencesForUser but never invoked from
+    // wipeAllUserData, so a sign-out / account delete left
+    // notification prefs visible to the next user on the same
+    // device. Wipe via the direct DELETE pattern (the table is
+    // CREATE TABLE IF NOT EXISTS at first access; the DELETE is
+    // tolerant of the table not yet existing because we wrap
+    // each in try/catch downstream).
+    'notification_preferences',
   ];
 
   // Tables that DON'T have user_id and must be wiped through a parent FK.

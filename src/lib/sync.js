@@ -1818,16 +1818,26 @@ async function _pullNotificationPreferences(sb, supabaseUserId) {
       .eq('user_id', supabaseUserId);
     if (error) { logPgErr('sync._pullNotificationPreferences', error); return 0; }
     if (!data?.length) return 0;
+    // Use applyPreferenceFromPull which preserves the server
+    // updated_at and only overwrites when the cloud row is
+    // strictly newer. Codex re-audit 2026-05-26 finding #4: the
+    // earlier setPreference path stamped updated_at = Date.now()
+    // so pulled rows echoed back as fresh local writes and could
+    // clobber newer cloud changes on the next sync round.
     // eslint-disable-next-line global-require
-    const { setPreference } = require('./notifications/preferences');
+    const { applyPreferenceFromPull } = require('./notifications/preferences');
     let applied = 0;
     for (const row of data) {
       try {
-        await setPreference(supabaseUserId, row.category, {
+        const updatedAtMs = typeof row.updated_at === 'string'
+          ? Date.parse(row.updated_at)
+          : Number(row.updated_at);
+        const did = await applyPreferenceFromPull(supabaseUserId, row.category, {
           enabled: !!row.enabled,
           time_pref: row.time_pref ?? null,
+          updated_at: updatedAtMs,
         });
-        applied += 1;
+        if (did) applied += 1;
       } catch (e) {
         logWarn('sync._pullNotificationPreferences.row', e?.message, { category: row.category });
       }
