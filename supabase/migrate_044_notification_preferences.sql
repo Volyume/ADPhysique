@@ -27,6 +27,28 @@
 --
 -- Additive only. RLS scoped to auth.uid().
 --
+-- Tracking (CLAUDE.md Rule 6):
+--   - Migration number:        044
+--   - Purpose:                 notification_preferences table +
+--                              composite PK + RLS + updated_at trigger
+--   - Applied locally:         no (no local dev Supabase project at v1)
+--   - Applied remotely:        pending founder apply
+--   - Safe to re-run:          yes (CREATE TABLE IF NOT EXISTS +
+--                              CREATE OR REPLACE FUNCTION + DROP/CREATE
+--                              policies + DROP/CREATE trigger)
+--   - Rollback:                DROP TABLE notification_preferences
+--                              CASCADE (also removes the trigger and
+--                              policies). No app code depends on the
+--                              cloud row existing; local SQLite mirror
+--                              is the source of truth at v1.
+--   - App-code dependencies:   src/lib/notifications/preferences.js
+--                              reads + writes the local SQLite copy;
+--                              src/lib/sync.js bulkUploadLocalData
+--                              pushes the rows to this table. Added
+--                              to SYNC_REGISTRY as the 16th entry.
+--                              Old AAB is unaffected: it has no writer
+--                              for this table.
+--
 -- Apply via Supabase Dashboard -> SQL Editor -> Run.
 
 CREATE TABLE IF NOT EXISTS notification_preferences (

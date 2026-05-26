@@ -10,9 +10,13 @@ const path = require('path');
 
 test('e2e/*.yaml flows pass the structural lint', () => {
   const script = path.resolve(__dirname, '..', 'lint-maestro-flows.js');
-  // Throws (non-zero exit) on lint failure; the thrown error
-  // includes the captured stderr so the test report is readable.
+  // Use process.execPath rather than the literal 'node' string.
+  // On Windows, execFileSync('node', ...) can fail with
+  // `spawnSync node EPERM` when PATH resolution lands on a
+  // Windows Store stub or another shim. process.execPath is the
+  // absolute path to the running Node binary and is portable
+  // across Linux / macOS / Windows / CI runners.
   expect(() => {
-    execFileSync('node', [script], { stdio: 'pipe' });
+    execFileSync(process.execPath, [script], { stdio: 'pipe' });
   }).not.toThrow();
 });

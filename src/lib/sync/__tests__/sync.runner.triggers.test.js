@@ -25,10 +25,13 @@ jest.mock('../../sync', () => ({
 
 import { syncAll, _resetRunnerForTests } from '../runner';
 import { trackSyncRun } from '../telemetry';
+import { bulkUploadLocalData, pullFromCloud } from '../../sync';
 
 beforeEach(() => {
   _resetRunnerForTests();
   trackSyncRun.mockClear();
+  bulkUploadLocalData.mockClear();
+  pullFromCloud.mockClear();
 });
 
 describe('runner accepts every spec\'d triggeredBy', () => {
@@ -39,6 +42,32 @@ describe('runner accepts every spec\'d triggeredBy', () => {
       expect(trackSyncRun).toHaveBeenCalledWith('u1', expect.objectContaining({ triggered_by: triggeredBy }));
     }
   );
+});
+
+describe('runner delegation: legacy sync.js helpers actually fire', () => {
+  // Codex audit F2: prove the require('../sync.js') in runner.js
+  // resolves to the legacy file (not the directory's index.js) so
+  // bulkUploadLocalData + pullFromCloud are genuinely invoked when
+  // syncAll runs. If a future bundler change re-introduced the
+  // circular self-import, both call counts would be 0 and this
+  // test would fail.
+  test('bulkUploadLocalData is invoked when userId + localUserId present', async () => {
+    await syncAll({ userId: 'u1', localUserId: 'u1', triggeredBy: 'manual' });
+    expect(bulkUploadLocalData).toHaveBeenCalledTimes(1);
+    expect(bulkUploadLocalData).toHaveBeenCalledWith('u1', 'u1');
+  });
+
+  test('pullFromCloud is invoked when userId present', async () => {
+    await syncAll({ userId: 'u1', localUserId: 'u1', triggeredBy: 'foreground' });
+    expect(pullFromCloud).toHaveBeenCalledTimes(1);
+    expect(pullFromCloud).toHaveBeenCalledWith('u1');
+  });
+
+  test('neither legacy helper is called when userId is null', async () => {
+    await syncAll({ userId: null, localUserId: null, triggeredBy: 'manual' });
+    expect(bulkUploadLocalData).not.toHaveBeenCalled();
+    expect(pullFromCloud).not.toHaveBeenCalled();
+  });
 });
 
 describe('runner concurrent calls dedupe', () => {

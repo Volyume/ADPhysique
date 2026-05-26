@@ -25,6 +25,10 @@ import {
   REMINDER_PREF_KEY,
   REMINDER_TIME_KEY,
 } from '../lib/notifications/trainingReminders';
+import {
+  setPreference as setPrefRow,
+  migrateFromLegacyBlob,
+} from '../lib/notifications/preferences';
 import useAppStore from '../store/useAppStore';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
@@ -88,6 +92,32 @@ async function applyNotifications(prefs, permissionStatus) {
     );
   }
   await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(prefs));
+
+  // Mirror into per-category SQLite rows so the registry-driven
+  // sync push has something to send to the cloud
+  // notification_preferences table (migration 044). The AsyncStorage
+  // blob remains the screen's primary store for now; SQLite is the
+  // sync source of truth.
+  try {
+    const userId = useAppStore.getState().user?.id;
+    if (userId) {
+      const morningTime =
+        (prefs.morningHour ?? 8).toString().padStart(2, '0')
+        + ':' + (prefs.morningMinute ?? 0).toString().padStart(2, '0');
+      const dow = ['sun','mon','tue','wed','thu','fri','sat'][prefs.checkinDay ?? 0];
+      const checkinTime =
+        (prefs.checkinHour ?? 18).toString().padStart(2, '0')
+        + ':' + (prefs.checkinMinute ?? 0).toString().padStart(2, '0');
+      await setPrefRow(userId, 'morning_weight', {
+        enabled: !!prefs.morningEnabled,
+        time_pref: morningTime,
+      });
+      await setPrefRow(userId, 'weekly_checkin_reminder', {
+        enabled: !!prefs.checkinEnabled,
+        time_pref: `${dow}_${checkinTime}`,
+      });
+    }
+  } catch (_) { /* tolerate; AsyncStorage write already succeeded */ }
 }
 
 function HourChips({ hours, selected, onSelect, disabled }) {

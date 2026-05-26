@@ -29,7 +29,7 @@ unless the file header says otherwise.
 
 1. Open the Supabase Dashboard → SQL Editor → New query.
 2. Open one migration file at a time from this folder (numeric
-   order: 037, 038, 039, 040, 041).
+   order: 037, 038, 039, 040, 041, 042, 043, 044).
 3. Paste the full contents into the SQL Editor.
 4. Click **Run**. The migrations are wrapped in `CREATE OR REPLACE
    FUNCTION` / `CREATE TABLE IF NOT EXISTS`, so re-running an
@@ -40,7 +40,7 @@ unless the file header says otherwise.
 
 ## Verifications
 
-### Verify allow-list extension (works for migrations 037, 038, 040, 041)
+### Verify allow-list extension (works for migrations 037, 038, 040, 041, 043)
 
 After applying each allow-list migration, this query lists every
 event the RPC currently accepts. You should see every event the
@@ -75,10 +75,11 @@ app_cold_start, app_foregrounded, app_backgrounded, sync_run,
 cascade_state_transition, purchase_initiated, purchase_completed,
 purchase_failed, subscription_cancelled, restore_purchases_attempted,
 notification_sent, notification_tapped, notification_failed,
-article9_consent_withdrawn
+article9_consent_withdrawn,
+sync_conflict_resolved
 ```
 
-38 events total.
+39 events total.
 
 ### Verify `account_deletions_log` (migration 039)
 
@@ -182,8 +183,17 @@ Smoke-test from the live app build:
    produce a new row in `consent_log` with `granted = false` AND a
    row in `engine_telemetry` with `event = 'article9_consent_withdrawn'`.
 4. Sign in, tap Delete Account, type DELETE, confirm. After ~30s
-   check `account_deletions_log` for a row with both `started_at`
+   check `account_deletions_log` for a row with both `initiated_at`
    and `completed_at` populated.
+5. Trigger a sync conflict (edit the same row on two devices, sync
+   both). Should produce a row in `engine_telemetry` with
+   `event = 'sync_conflict_resolved'` carrying `table`, `record_id`,
+   `strategy`, `winner` in the payload.
+6. Toggle a category in You → Notifications. Should produce or
+   update a row in `notification_preferences` for that
+   `(user_id, category)` pair with `enabled = false` / new
+   `time_pref`, and the sync indicator should briefly show
+   `pending` before going back to `synced`.
 
 If `completed_at` is null after a few minutes for step 4, the
 `auth.admin.deleteUser` leg in the Edge Function failed silently

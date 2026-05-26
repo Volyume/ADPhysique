@@ -57,8 +57,16 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
       // proven push + pull paths the closed-test build runs
       // against. Future PRs replace them with registry-driven
       // transport.js calls table-by-table.
+      //
+      // Explicit '.js' extension on the require: without it, some
+      // bundlers (notably ones that prefer directory resolution
+      // over file resolution) could pick up './index.js' inside
+      // this directory and produce a circular import that silently
+      // drops bulkUploadLocalData + pullFromCloud. Node's standard
+      // CommonJS resolution picks the file first, but being
+      // explicit removes the bundler-dependent ambiguity.
       // eslint-disable-next-line global-require
-      const sync = require('../sync');
+      const sync = require('../sync.js');
       try {
         if (typeof sync.bulkUploadLocalData === 'function' && localUserId) {
           const upload = await sync.bulkUploadLocalData(userId, localUserId).catch(e => {

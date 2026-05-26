@@ -34,7 +34,10 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
+        # npm ci so future package-lock.json drift fails CI loudly
+        # instead of being silently papered over by 'npm install'.
+        # Codex audit 2026-05-26 F11.
+        run: npm ci --legacy-peer-deps
 
       # Fail loudly if backend credentials aren't set. Without these, Metro
       # bundles empty strings and the app crashes at first launch with

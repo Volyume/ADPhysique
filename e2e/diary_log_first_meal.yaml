@@ -7,9 +7,12 @@
 # through the Search tab -> picks a result -> goes back to Diary
 # and asserts the food row appears.
 
+# Removed from `smoke` tag (Codex audit 2026-05-26 F6): this flow
+# assumes a signed-in, onboarded user, which a clean-emulator smoke
+# bundle cannot satisfy without a deterministic test-login hook.
+# Stays under `full` for runs that follow a sign-in flow.
 appId: app.volyume
 tags:
-  - smoke
   - full
   - food
 ---

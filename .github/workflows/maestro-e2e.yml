@@ -66,7 +66,10 @@ jobs:
 
       - name: Install dependencies
         id: deps
-        run: npm install --legacy-peer-deps
+        # npm ci so future package-lock.json drift fails CI loudly
+        # instead of being silently papered over by 'npm install'.
+        # Codex audit 2026-05-26 F11.
+        run: npm ci --legacy-peer-deps
 
       - name: Install Maestro CLI
         id: install_maestro
@@ -188,8 +191,8 @@ jobs:
             cat android/local.properties 2>/dev/null || echo "(none)"
             echo
             echo "=== gradle properties via gradlew (filtered) ==="
-            cd android && ./gradlew --no-daemon properties 2>&1 | grep -Ei "jvmargs|maxworkers|workers.max|memory|heap" | head -30
-          } | tee ../gradle-diagnose.log
+            (cd android && ./gradlew --no-daemon properties) 2>&1 | grep -Ei "jvmargs|maxworkers|workers.max|memory|heap" | head -30
+          } | tee "${GITHUB_WORKSPACE:-$(pwd)}/gradle-diagnose.log"
 
       - name: Build debug APK
         id: build_apk
@@ -232,7 +235,14 @@ jobs:
               --output maestro-output/results.xml \
               --debug-output maestro-output/debug \
               e2e/ 2>&1 | tee maestro-output/run.log
-            echo "MAESTRO_EXIT=$?" >> $GITHUB_ENV
+            # PIPESTATUS[0] is maestro's exit code, not tee's (which is
+            # always 0). Without this, the step outcome was 'success'
+            # even when maestro failed, which propagated through to
+            # job.status seen by the status report step and to the
+            # downstream fail-job gate. Codex audit 2026-05-26 F7.
+            MAESTRO_EXIT=${PIPESTATUS[0]}
+            echo "MAESTRO_EXIT=$MAESTRO_EXIT" >> $GITHUB_ENV
+            exit $MAESTRO_EXIT
 
       - name: Write status report
         if: always()
@@ -335,6 +345,7 @@ jobs:
             maestro-output/**
             prebuild.log
             gradle-debug.log
+            gradle-diagnose.log
             adb-install.log
           if-no-files-found: warn
 

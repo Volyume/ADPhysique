@@ -21,6 +21,26 @@
 -- existing closed-test build (it doesn't emit this event yet because
 -- the new sync runner ships unwired in this iteration).
 --
+-- Tracking (CLAUDE.md Rule 6):
+--   - Migration number:        043
+--   - Purpose:                 extend record_engine_telemetry allow-list
+--                              with sync_conflict_resolved
+--   - Applied locally:         no (no local dev Supabase project at v1)
+--   - Applied remotely:        pending founder apply
+--   - Safe to re-run:          yes (CREATE OR REPLACE FUNCTION); each
+--                              re-run replaces the function definition
+--                              wholesale, so the IN-list always
+--                              represents the most recent migration.
+--   - Rollback:                re-run migration 041 to restore the
+--                              previous allow-list. The event itself
+--                              is harmless once allow-listed; the only
+--                              rollback path is the previous IN-list.
+--   - App-code dependencies:   src/lib/sync/conflict.js emits the
+--                              event via src/lib/sync/telemetry.js +
+--                              src/lib/engineTelemetry.js. Old AAB
+--                              has no emitter so nothing breaks for
+--                              the closed-test build.
+--
 -- Apply via Supabase Dashboard -> SQL Editor -> Run.
 
 CREATE OR REPLACE FUNCTION record_engine_telemetry(

@@ -9,9 +9,13 @@
 # - Article 9 consent is mandatory: the flow taps Continue, not the
 #   "Decline" path (covered in onboarding_decline_article9.yaml).
 
+# Removed from `smoke` tag (Codex audit 2026-05-26 F6): a clean
+# emulator cannot complete email signup because Supabase email
+# confirmation is required and the test runner has no mailbox. This
+# flow runs under `full` once a deterministic test-login deep-link
+# hook or a seeded sandbox account exists.
 appId: app.volyume
 tags:
-  - smoke
   - full
   - onboarding
 ---

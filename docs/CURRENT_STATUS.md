@@ -21,6 +21,69 @@ session that materially changes shipped state, not appended to.
 
 ## 0. 2026-05-26 session summary (read first)
 
+> **Codex audit response 2026-05-26 (second pass):**
+> A second Codex audit ran against commit `b41f77d`. Verification
+> against the current HEAD produced this categorisation:
+> - F1 (anonymous-to-account migration incomplete in
+>   email-confirm / OAuth / ProUpgrade): FALSE POSITIVE vs.
+>   LOCKED IDENTITY_AND_OWNERSHIP_LOCKED.md rule 1 + 5 +
+>   anti-patterns. Commit `c2efd15` deleted the function and
+>   the anonymous-mode entry points entirely; per scenario A
+>   in the locked spec, "Local SQLite is empty" at signup so
+>   there is nothing to migrate.
+> - F2 (sync runner self-import + no app calls): partial-fix.
+>   `require('../sync')` resolves to the legacy file under
+>   Node's standard resolver (proven by `Module.createRequire`
+>   in this session), so the circular concern is bundler-
+>   dependent. Made the require explicit (`../sync.js`) and
+>   strengthened the runner test to assert
+>   `bulkUploadLocalData` + `pullFromCloud` are actually
+>   invoked. The "no app calls" half was true at the audit
+>   point and is fixed by commit `5235bb1`.
+> - F3 (sync_conflict_resolved client allow-list): ALREADY
+>   FIXED — line 134 of `engineTelemetry.js` (commit
+>   `d8e5eb5`).
+> - F4 (notification_preferences only cloud): YES, fixed this
+>   pass. New `src/lib/notifications/preferences.js` is the
+>   SQLite mirror; NotificationSettingsScreen now writes
+>   AsyncStorage AND the per-category SQLite rows;
+>   `_pushNotificationPreferences` added to
+>   `bulkUploadLocalData` in `sync.js`. 9 new tests.
+> - F5 (lint-maestro-flows test EPERM on Windows): fixed by
+>   switching to `process.execPath`.
+> - F6 (smoke flows that need a signed-in user): fixed —
+>   stripped `smoke` tag from `diary_log_first_meal.yaml` and
+>   `onboarding_happy_path.yaml`; only
+>   `_smoke_app_launches.yaml` remains under `smoke`.
+> - F7 (Maestro workflow status reporting): fixed three
+>   sub-bugs — `gradle-diagnose.log` now writes to
+>   `$GITHUB_WORKSPACE` (was `../`); the Maestro step now
+>   captures `PIPESTATUS[0]` and `exit $MAESTRO_EXIT` so its
+>   outcome reflects reality; `gradle-diagnose.log` added to
+>   artefact upload paths.
+> - F8 (migration tracking violates Rule 6): fixed — 042 /
+>   043 / 044 now carry the full Rule 6 fields; supabase
+>   README's "How to apply" updated to 037-044; allow-list
+>   verification heading updated; the "started_at" reference
+>   was already historical and was rewritten to `initiated_at`
+>   plus the smoke-test now also covers
+>   `sync_conflict_resolved` and `notification_preferences`.
+> - F9 (docs stale): fixed in this section + below.
+> - F10 (volyume.app/privacy doesn't resolve): partial —
+>   `public/CNAME` added (FIX NOW); DNS A/CNAME, GitHub Pages
+>   custom-domain config, and `.well-known/assetlinks.json`
+>   hosting are FOUNDER EXTERNAL ACTION.
+> - F11 (build-android.yml + maestro-e2e.yml still use
+>   `npm install`): fixed — both now use `npm ci
+>   --legacy-peer-deps`.
+> - F12 (33 prod npm audit advisories): BLOCKED by CLAUDE.md
+>   release policy 2026-05-24 ("closed-test build stays in
+>   place until WHOLE project is built out") +
+>   KNOWN_ISSUES_FROM_QA.md line 82 explicit deferral
+>   ("Accepted risk for beta; fix path is breaking upgrade to
+>   newer Expo SDK"). The Expo SDK upgrade window opens at
+>   Phase A exit prep.
+>
 > **Correction of prior overclaims (per founder instruction
 > 2026-05-26):**
 > - Earlier in this session I marked the SYNC_ARCHITECTURE
@@ -120,7 +183,27 @@ Material changes, in order:
 
 The remaining 037 + 038 + 040 + 041 from the previous queue still
 need applying in order. Apply order: 037 → 038 → 039 → 040 → 041
-→ 042 → 043 → 044.
+→ 042 → 043 → 044. All four new migrations (042, 043, 044) now
+carry the full CLAUDE.md Rule 6 header tracking fields.
+
+**Domain / hosting founder external actions added by Codex audit
+2026-05-26 F10:**
+- Configure DNS A / CNAME for `volyume.app` → GitHub Pages
+  (`public/CNAME` now contains the apex domain).
+- Enable Custom Domain on the Pages site in repo Settings →
+  Pages.
+- Host `.well-known/assetlinks.json` (Android App Links) at
+  `volyume.app` so the deep-link verification in `app.json`
+  resolves.
+
+**Workflow fixes Codex audit 2026-05-26 F11 + F7:**
+- `build-android.yml` + `maestro-e2e.yml` now use
+  `npm ci --legacy-peer-deps` so future lock drift fails CI
+  loudly instead of being silently absorbed.
+- Maestro workflow's `gradle-diagnose.log` path corrected to
+  `$GITHUB_WORKSPACE`; step exit code now propagates via
+  `PIPESTATUS[0]` so `job.status` is honest at status-report
+  generation time.
 
 **Additional LOCKED-spec compliance pass (later this session,
 per founder direction to follow all docs end-to-end):**
@@ -307,7 +390,10 @@ Verified by direct code inspection against each Move plan doc.
 | **#4** Differential paywall | `MOVE_4_DIFFERENTIAL_PAYWALL.md` | **SHIPPED.** `differential_output` field in weeklyCoach via pure detector in `src/lib/differentialPaywall.js`. 6 locked-copy variants verbatim + `_NO_TRIAL` variants. Adherence 2-of-3 gate + tier gate + 6-context priority. `DifferentialBadge.js` renders inline on CoachOutputScreen. `PaywallScreen.js` modal. `paywall_shown` + `paywall_tapped_cta` telemetry wired (migration 032). | 40 detector + 6 mount tests + simulator `stalled_lift` |
 | **#5** Tier infrastructure + Google Play Billing | `MOVE_5_TIER_INFRASTRUCTURE.md` | **SHIPPED PARTIAL.** Migrations 030+031+033 applied. `src/lib/payments/` module: playBilling (real `react-native-iap` provider injected at boot), catalogue (3 SKUs), cascade (state machine, 7 transitions instrumented), restore. proGate has isPaidTier/hasFeature/hasGoalUnlock + FEATURE_MAP (2-tier collapsed). CascadeGateScreen + SubscriptionScreen + PaywallScreen + TierComparisonStrip shipped. RTDN Edge Function `supabase/functions/play-billing-rtdn/index.ts` written. Migration 038 wires the full payments/cascade telemetry catalogue. **Outstanding:** founder deploys Edge Function + creates Play Console SKUs + sandbox purchase test (at Phase A exit). |
 
-**Test totals:** 1348 tests in 60 suites, 0 fail, 0 skip.
+**Test totals (§ 2 historical row, kept for trend; current totals
+in § 0 above):** original 1348 tests in 60 suites; current
+1547 passed + 3 deferred-skipped across 78 suites per the
+`jest --silent` output in § 0.
 
 **Engine simulator framework:** SHIPPED. All 12 locked scenarios live
 under `tests/simulator/scenarios/`: straight_cut,
@@ -433,7 +519,7 @@ Phase A; flagged so future PRs can decide whether to align or accept.
 | `src/screens/onboarding/` directory per `ONBOARDING_SEQUENCE_LOCKED.md` | Onboarding screens flat in `src/screens/` | Cosmetic |
 | `src/components/food/` with 9 components per `UI_FLOWS_LOCKED.md` | Only MacroRings.js + FoodDetailSheet.js exist; others inline in screens | Reuse-harder |
 | `src/lib/observability/sentryScrub.js` per `PRIVACY_CONSENT_LOCKED.md` | **Exists** (`src/lib/observability/sentryScrub.js` plus 110 audit tests) | Privacy-critical; resolved |
-| `src/lib/links.js` (single URL source) per `PRIVACY_CONSENT_LOCKED.md` line 280 | Doesn't exist | URLs inline; multi-file edit if URL changes |
+| `src/lib/links.js` (single URL source) per `PRIVACY_CONSENT_LOCKED.md` line 280 | **Exists** (`src/lib/links.js`); `Article9ConsentScreen` imports `LINKS.privacyPolicy` | Resolved (commit `5055692`) |
 | `tests/simulator/` per `TESTING_STRATEGY_LOCKED.md` | **Exists** at `tests/simulator/scenarios/` with all 12 locked scenarios | Resolved |
 | `e2e/` per `TESTING_STRATEGY_LOCKED.md` § E2E lines 114-141 | **Exists** with all 12 spec'd flows + a smoke launch check; `.maestro/config.yaml`; structural linter wired into Jest (1370/1370 green); opt-in `maestro-e2e.yml` CI workflow | Phase 1 scaffold landed this session. 5 flows scaffolded (smoke + 4 founder-runnable); 4 await IAP/barcode/OCR fixtures (tagged `blocked`); 4 are scaffolded but selectors need first-run validation against a real device. |
 | `tests/engine/`, `tests/snapshots/`, `tests/sync/`, `tests/payments/`, `tests/load/` | Engine + snapshot tests live in `src/__tests__/` + `src/lib/__tests__/`; sync/payments/load harnesses not stood up | Maestro Cloud (100 runs/mo free tier) reserved for pre-release validation; k6 load harness still deferred |
@@ -460,10 +546,16 @@ Phase A; flagged so future PRs can decide whether to align or accept.
 - You-tab Subscription row + Credits row
 
 **Deferred** (lower-value vs effort, may revisit on telemetry signal):
-- Sync status indicator in nav header (needs sync state model + NetInfo + instrumentation of every sync entry point; multi-day pass)
+- ~~Sync status indicator in nav header~~ **SHIPPED 2026-05-26** —
+  `SyncStatusBadge` mounted via `stackOptions.headerRight` (commit
+  `5235bb1`); NetInfo + AppState + 15-min periodic triggers wired
+  through `syncAll({triggeredBy})`.
 - Long-press multi-select toolbar on Diary entries (swipe-delete covers the common path)
 - Diary: macro ring tap → per-meal breakdown sheet
-- Privacy management section in SettingsScreen (would unblock article9_consent_withdrawn telemetry)
+- ~~Privacy management section in SettingsScreen~~ **SHIPPED
+  2026-05-25** — Privacy section in You tab + Article 9
+  withdrawal flow that queues account deletion per
+  PRIVACY_CONSENT_LOCKED.md lines 71-72 + 251.
 
 ---
 

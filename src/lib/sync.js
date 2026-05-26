@@ -618,6 +618,9 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
     // Pushed AFTER the structured tables so a sign-in catch-up
     // doesn't block on the larger writes.
     await _pushAllUserPrefs(sb, supabaseUserId);
+    // notification_preferences per NOTIFICATIONS_LOCKED.md lines
+    // 117-119 ("Synced via the registry") + migration 044.
+    await _pushNotificationPreferences(sb, supabaseUserId, localUserId);
 
     console.log('[sync] bulk upload complete');
   } catch (e) {
@@ -1390,6 +1393,60 @@ export async function syncUserPref(supabaseUserId, key, value) {
  * sign-in so a returning user's settings are fully captured even if
  * they predate the per-key sync hook.
  */
+/**
+ * notification_preferences push.
+ *
+ * Locked in NOTIFICATIONS_LOCKED.md lines 117-119: per-category
+ * preferences sync via the registry. Reads every local
+ * notification_preferences row for the user from the SQLite mirror
+ * (src/lib/notifications/preferences.js) and upserts them into
+ * the cloud table by composite PK (user_id, category). Cloud table
+ * was created in migration 044; rows reach it once the founder
+ * applies the migration.
+ *
+ * Includes a localUserId argument so any pre-signup rows keyed
+ * under the local UUID are mapped onto the cloud UUID before push.
+ * Per IDENTITY_AND_OWNERSHIP_LOCKED.md rule 1 + 5, anonymous mode
+ * is removed and localUserId should equal supabaseUserId in
+ * practice; the parameter is kept defensively in case a legacy
+ * install still carries one.
+ */
+async function _pushNotificationPreferences(sb, supabaseUserId, localUserId) {
+  try {
+    // eslint-disable-next-line global-require
+    const { getAllPreferences } = require('./notifications/preferences');
+    const localRows = [];
+    if (localUserId) {
+      const a = await getAllPreferences(localUserId);
+      for (const r of a) localRows.push(r);
+    }
+    if (supabaseUserId && supabaseUserId !== localUserId) {
+      const a = await getAllPreferences(supabaseUserId);
+      for (const r of a) localRows.push(r);
+    }
+    if (localRows.length === 0) return;
+    const rows = localRows.map(r => ({
+      user_id: supabaseUserId,
+      category: r.category,
+      enabled: !!r.enabled,
+      time_pref: r.time_pref,
+      updated_at: msToISO(r.updated_at),
+    }));
+    const { error } = await sb
+      .from('notification_preferences')
+      .upsert(rows, { onConflict: 'user_id,category' });
+    if (error) {
+      logPgErr('sync._pushNotificationPreferences', error);
+    } else {
+      logInfo('sync._pushNotificationPreferences', `pushed ${rows.length} preferences`, {
+        count: rows.length,
+      });
+    }
+  } catch (e) {
+    logWarn('sync._pushNotificationPreferences', e?.message, { error: e?.message });
+  }
+}
+
 async function _pushAllUserPrefs(sb, supabaseUserId) {
   try {
     const allKeys = await AsyncStorage.getAllKeys();
