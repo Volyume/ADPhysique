@@ -1,8 +1,8 @@
 # Volyume: comprehensive session handoff
 
-**Last updated:** 2026-05-25 (evening, post comprehensive telemetry pass + Move #4 ship + Move #5 partial ship + 2-tier consolidation + device-log bug fixes + account_deletions_log + status doc refresh)
+**Last updated:** 2026-05-26 (end-of-day, post Codex re-audit response + CI trigger fix + food component extraction + full sync transport migration + migration 045 + recipe_ingredients soft-delete).
 
-**Last session ended at commit:** `7e0959e` (account_deletions_log + Edge Function audit). Active branch: `main` (founder force-push override 2026-05-25).
+**Last session ended at commit:** `71aa4fc` on `main` (migration 045 + profiles merge end-to-end). Active branch: `main`. All 16 SYNC_REGISTRY tables now flow through `transport.pushTable` / `pullTable`; `src/lib/sync.js` lost ~580 lines of legacy bulk helpers in the process. Read `docs/CURRENT_STATUS.md` § 0 for the day's session summary and § 3 for the founder action queue (migration 045 + the `recipe_ingredients.deleted_at` + `recipe_ingredients.updated_at` cloud schema change are still pending founder apply).
 
 **Doc hierarchy when new sessions read in:**
 1. `CLAUDE.md` (project root) — voice rules, founder overrides, branch policy, identity contract

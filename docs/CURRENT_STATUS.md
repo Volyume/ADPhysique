@@ -1,4 +1,4 @@
-# Volyume current status (verified 2026-05-26, post external audit)
+# Volyume current status (verified 2026-05-26, end-of-day, post sync-migration)
 
 This document captures the verified, code-checked, founder-confirmed
 state of the Volyume project. It supersedes `HANDOFF.md` (which has
@@ -20,6 +20,182 @@ session that materially changes shipped state, not appended to.
 > rules were added after the 2026-05-25 stale-branch incident.
 
 ## 0. 2026-05-26 session summary (read first)
+
+**End-of-day handoff.** Single session spanning the Codex
+re-audit response (commits c324f99 / d861949 / 41b210f / 7b7cc0f
+/ 8b67465 — see "earlier in this session" further below) and
+then 13 more commits closing CI, food refactor, and the full
+sync transport migration. Branch + main are at 71aa4fc.
+
+Material changes shipped on main this session, in order:
+
+1. **CI trigger gap fixed (commit 6375674).** Build Android run
+   #714's "Publish build status to repo" step failed at
+   git push from inside the workflow; GitHub then stopped
+   delivering push webhook events to Actions for this repo.
+   Removed the workflow's outbound git push entirely from
+   build-android.yml + maestro-e2e.yml; status report is now an
+   uploaded artefact (`build-status-<run>`) rather than a
+   commit. From this commit onward push events fire workflow
+   runs normally; Build Android #715, #716, #717 (and onward)
+   confirm restoration. Diagnostic captured in
+   `docs/CI_TRIGGER_DIAGNOSTIC_2026-05-26.md`.
+
+2. **Food components extracted (commit 0f93f20).** The last 3 of
+   the 9 `src/components/food/` components spec'd in
+   `UI_FLOWS_LOCKED.md` lines 18-28: `MealSection`, `EntryRow`
+   (with `SwipeableEntryRow` + `friendlyFoodName`), `FoodRow`
+   (with `SOURCE_LABEL` + `kcalForServing`). Pulled out of
+   inline definitions inside `DiaryScreen` (~75 lines + ~35
+   lines of styles) and `FoodSearchScreen` (~25 lines + 10
+   lines of styles + the local `SOURCE_LABEL` map). 30 new
+   tests in `src/components/food/__tests__/foodComponents.test.js`.
+
+3. **All 16 SYNC_REGISTRY tables on per-table transport**
+   (commits 7581d7f → 71aa4fc, 7 commits). Closes
+   `SYNC_ARCHITECTURE_LOCKED.md` lines 156-238 ("registry-driven
+   transport"). The runner (`src/lib/sync/runner.js`) now drives
+   every table through `transport.pushTable` / `pullTable`
+   rather than the monolithic legacy `bulkUploadLocalData` /
+   `pullFromCloud`. Per-table handlers live in
+   `src/lib/sync/tables/` (10 new files). `sync.js` shrank by
+   ~580 lines (7 dead helpers + 6 dead imports + the entire
+   food-domain section + the duplicate notification_preferences /
+   weekly_checkins / body_metrics / nutrition_targets calls).
+
+   Migration architecture per table:
+
+   - **notification_preferences** — LWW fold, skip-when-server-newer
+     on push, applyPreferenceFromPull on pull (preserves
+     Codex F4 fix).
+   - **weekly_checkins_v2** — 200-row batch push, INSERT OR
+     IGNORE pull via insertWeeklyCheckinFromCloud.
+   - **body_composition_log** — registry key vs cloud table
+     name divergence preserved (`body_metrics` cloud-side).
+     camelCase → snake_case incl. thigh→quads / ham→hamstrings.
+   - **nutrition_targets** — push + pull via per-user single
+     row. Registry contract drift fixed in the same commit:
+     was `pull_only` + `serverAuthoritative=true`; corrected to
+     `bidirectional` + `false` + `last_write_wins`. Public
+     syncNutritionTargets on-save shim retained for
+     database.js callers, now delegates to pushTable.
+   - **ed_pattern_flags** — pull-only, server-authoritative.
+     New `upsertEdPatternFlagFromCloud` helper (INSERT OR
+     REPLACE) — closes a real gap where the client never
+     pulled back its own engine-raised flags.
+   - **tier_history** — pull-only, server-authoritative. New
+     SQLite table (id, user_id, from_tier, to_tier, event_type,
+     occurred_at, payload_json, created_at) so the per-table
+     pull has somewhere to land. SubscriptionScreen + paywall
+     analytics can read history without round-tripping.
+   - **recipe_ingredients** — bidirectional + LWW + soft-delete.
+     Closed the gap where this child table was missing from
+     the food bulk RPC. Added `deleted_at` + `updated_at`
+     columns to local SQLite via additive migration; new
+     `softDeleteRecipeIngredient` + `getLiveRecipeIngredientsForRecipe`
+     helpers. Per-row LWW gate on pull (skip cloud rows older
+     than local). Registry `softDelete: false → true`.
+   - **profiles** — bidirectional + merge. Per-field write
+     timestamps tracked in useAppStore
+     (`userProfileFieldUpdatedAt`, persisted under
+     `PROFILE_TIMESTAMPS_KEY_PFX`). Push builds
+     `column_updates_at` from the per-field map; pull runs
+     `conflict.resolve(merge)` which routes through
+     `mergeColumns` in `conflict.js`. tier excluded from push
+     (server-owned). **Requires migration 045 applied
+     server-side (see § 3 + § 9 below).**
+   - **weight_log** — aliased to body_composition_log; handlers
+     return `skipped:'aliased_to_body_composition_log'`.
+   - **Food domain (7 tables)** — coordinator pattern in
+     `src/lib/sync/tables/foodDomain.js`. The 6 bidirectional
+     tables (food_entries, custom_foods, saved_meals, recipes,
+     food_favourites, daily_water) plus pull-only
+     daily_intake_rollups share one bulk RPC pair
+     (food_sync_push / food_sync_pull). `foodPushFor(name)` /
+     `foodPullFor(name)` factories produce thin handlers that
+     trigger the bulk RPC once per syncAll cycle and cache
+     per-table counts. `beginRun()` called by the runner each
+     cycle resets the cache. 7x RPC savings vs splitting the
+     bulk into per-table calls; the closed-test build contract
+     for food_sync_push stays intact.
+
+   Per-table tests cover every handler in
+   `src/lib/sync/__tests__/sync.transport.test.js` (43 assertions);
+   runner integration test in
+   `src/lib/sync/__tests__/sync.runner.integration.test.js`
+   exercises syncAll end-to-end through all handlers with
+   supabase + AsyncStorage + food/db + useAppStore mocked at
+   the boundary; focused profile merge tests in
+   `sync.profiles.test.js`.
+
+4. **Migration 045 written**
+   (`supabase/migrate_045_users_profile_column_updates_at.sql`).
+   Adds `users_profile.column_updates_at jsonb NOT NULL DEFAULT
+   '{}'` plus a safe-merge BEFORE UPDATE trigger so two
+   clients touching different fields don't clobber each other's
+   per-column timestamps. Required for the profiles merge path.
+   Pending founder apply per § 3.
+
+5. **Migrations 037-044 applied by founder mid-session.** The
+   notification_preferences PGRST205 errors visible in the
+   sideloaded debug build's Debug logs (warnings only, sync
+   continued) cleared after 044 landed.
+
+**Final test totals (proof):**
+
+    $ ./node_modules/.bin/jest --runInBand --ci --forceExit
+    Test Suites: 82 passed, 82 total
+    Tests:       3 skipped, 1639 passed, 1642 total
+    Snapshots:   25 passed, 25 total
+
+The 3 skipped tests are explicit `test.skip` calls for
+catalogue events with a `deferralReason` (`account_deleted`,
+`held_decision_created`, `held_decision_cleared`).
+
+    $ ./scripts/check-identity-invariant.sh
+    Identity invariant clean: all 'SET user_id' callsites are annotated.
+
+**Founder action queue, end-of-day:**
+
+1. Apply `supabase/migrate_045_users_profile_column_updates_at.sql`
+   in Supabase Dashboard. Without it the profiles handler upsert
+   lands as PGRST204 ("column 'column_updates_at' of relation
+   'users_profile' does not exist").
+2. The cloud schema change for `recipe_ingredients.deleted_at` +
+   `recipe_ingredients.updated_at` (mentioned in bc117a1) needs
+   to be matched on the server. The local SQLite schema already
+   has both columns via the additive migration in this session;
+   if the cloud table doesn't have them yet, push will raise
+   PGRST204 on those two columns specifically. Confirm + apply
+   the matching cloud schema change.
+
+**What is NOT done (honest accounting):**
+
+- npm audit: still 29 advisories (15 high), all in the Expo SDK
+  51 dep chain. Fix path remains the SDK 51 → 56 staged
+  migration; tracked in
+  `docs/DEPENDENCY_AUDIT_2026-05-26.md`. Not in scope.
+- Sync regression matrix per `TESTING_STRATEGY_LOCKED.md` lines
+  144-160 + 156-160 (8 paired tests per table × 16 tables = 128
+  assertions). Per-table unit tests + runner integration test
+  cover the wiring; the systematic matrix is the next layer.
+- Maestro #16 emulator boot diagnosis (F4 from earlier in the
+  session) — runner-diagnose.log is now produced by the
+  workflow updates in 41b210f and tier_history is now pulled by
+  the migrated handler, but the actual boot-failure root cause
+  is still open and waiting on a Maestro re-run that hits the
+  failure. Not blocking.
+- The "Download my data" email path still file-shares via the
+  Sharing API; the email path needs an Edge Function +
+  provider sign-up (founder side).
+- Worker-exit warning under screen-mount.test.js: --forceExit
+  still in use in main-ci.yml; the proper fix (wrap mountScreen
+  in NavigationContainer) is a substantial test-harness
+  rewrite, tracked as TECH DEBT in main-ci.yml.
+
+---
+
+## Earlier in this session (Codex audit responses, kept for context)
 
 > **Codex audit response 2026-05-26 (third pass, post-4f3f26f):**
 > The user ran a quick re-audit after the second-pass commits.
@@ -500,14 +676,16 @@ Per `DATABASE_SCHEMA_LOCKED.md` + grep against `supabase/migrate_*.sql`.
 | 034 | **engine_telemetry column-name fix** (restores `payload_json` after 029+032 typo) | **Applied** |
 | 035 | sign_in + sign_out + article9_consent_recorded allow-list | **Applied** |
 | 036 | account_created + custom_food_created allow-list | **Applied** |
-| 037 | app_cold_start + foregrounded/backgrounded + sync_run allow-list | **Pending founder apply** |
-| 038 | cascade_state_transition + purchase_* + subscription_cancelled + restore_purchases_attempted allow-list | **Pending founder apply** |
-| 039 | account_deletions_log table + record_account_deletion_started/completed RPCs (non-cascading audit trail) | **Pending founder apply** |
-| 040 | notification_sent + notification_tapped + notification_failed allow-list | **Pending founder apply** |
-| 041 | article9_consent_withdrawn allow-list (paired with SettingsScreen Privacy withdrawal UI) | **Pending founder apply** |
-| 042 | `upgrade_tier_for_user(_user_id, ...)` service-role-only RPC for the Play Billing RTDN webhook (audit fix 2026-05-26) | **Pending founder apply** |
-| 043 | `sync_conflict_resolved` event added to `record_engine_telemetry` allow-list. Fires from the new `src/lib/sync/conflict.js`. | **Pending founder apply** |
-| 044 | `notification_preferences` table + RLS + updated_at trigger. Backs NOTIFICATIONS_LOCKED.md lines 117-119. Added to SYNC_REGISTRY. | **Pending founder apply** |
+| 037 | app_cold_start + foregrounded/backgrounded + sync_run allow-list | **Applied** |
+| 038 | cascade_state_transition + purchase_* + subscription_cancelled + restore_purchases_attempted allow-list | **Applied** |
+| 039 | account_deletions_log table + record_account_deletion_started/completed RPCs (non-cascading audit trail) | **Applied** |
+| 040 | notification_sent + notification_tapped + notification_failed allow-list | **Applied** |
+| 041 | article9_consent_withdrawn allow-list (paired with SettingsScreen Privacy withdrawal UI) | **Applied** |
+| 042 | `upgrade_tier_for_user(_user_id, ...)` service-role-only RPC for the Play Billing RTDN webhook | **Applied** |
+| 043 | `sync_conflict_resolved` event added to `record_engine_telemetry` allow-list. Fires from `src/lib/sync/conflict.js`. | **Applied** |
+| 044 | `notification_preferences` table + RLS + updated_at trigger. Backs NOTIFICATIONS_LOCKED.md lines 117-119. SYNC_REGISTRY entry. | **Applied** (notification_preferences PGRST205 warnings in device log cleared after this) |
+| 045 | `users_profile.column_updates_at jsonb` + safe-merge trigger. Powers the registry-locked `profiles.merge` conflict strategy via `column_updates_at` populated on push from `userProfileFieldUpdatedAt` and consumed on pull via `conflict.resolve(merge)`. | **Pending founder apply** |
+| (cloud schema) | `recipe_ingredients.deleted_at + updated_at` columns. Local SQLite already has both via additive migration in this session (bc117a1); cloud schema needs matching ALTER TABLE before the per-table push works. | **Pending founder verification / apply** |
 
 ---
 
@@ -582,11 +760,11 @@ Phase A; flagged so future PRs can decide whether to align or accept.
 
 | Locked spec | Reality | Effect |
 |---|---|---|
-| `src/lib/sync/` directory with 7 files (index, registry, runner, queue, conflict, transport, telemetry) per `SYNC_ARCHITECTURE_LOCKED.md` | **Built 2026-05-26** as the spec'd 7-file module (registry with all 15 tables, sync_queue CRUD + compaction + backoff, conflict dispatcher with `sync_conflict_resolved` event wired via migration 043, runner with lock + structured telemetry, transport shell, public API). The legacy `src/lib/sync.js` stays as a back-compat file so existing callers keep resolving; future PRs migrate per-table push/pull logic from sync.js into transport.js. 24 new tests. | Resolved (foundation). Per-table transport migration is incremental from here. |
+| `src/lib/sync/` directory with 7 files (index, registry, runner, queue, conflict, transport, telemetry) per `SYNC_ARCHITECTURE_LOCKED.md` | **Fully built + all 16 registry tables migrated** (end-of-day 2026-05-26). The 7-file module plus 10 per-table handler files under `src/lib/sync/tables/` (`notificationPreferences`, `weeklyCheckins`, `bodyComposition`, `nutritionTargets`, `edPatternFlags`, `tierHistory`, `recipeIngredients`, `profiles`, `weightLog`, `foodDomain`). The food-domain coordinator handles the 7 tables that share food_sync_push / food_sync_pull RPCs via a single bulk call per syncAll, cached and reported per-table. The legacy `src/lib/sync.js` lost the food-domain section + per-table push/pull helpers (~580 lines removed); it now only holds the still-on-legacy bulk uploaders for exercises / routines / workout sets / mesocycles / morning_weights / coach_outputs / user_prefs / engine_telemetry queue. | Resolved. |
 | `src/lib/notifications/` directory with 5 files per `NOTIFICATIONS_LOCKED.md` | **Exists** (`categories.js`, `quietHours.js`, `permissions.js`, `handler.js`, `scheduler.js`, `telemetry.js`, `index.js`) with `notification_*` telemetry wired + quiet-hours rule | Resolved this session. `trainingReminders.js` + `restNotifications.js` + `activeWorkoutNotification.js` still sit alongside as sibling files; pulling them into the directory is a follow-up. |
 | `src/lib/telemetry/` directory with 4 files per `TELEMETRY_DASHBOARDS_LOCKED.md` | Single `src/lib/engineTelemetry.js` | Functional; allow-list + push live there |
 | `src/screens/onboarding/` directory per `ONBOARDING_SEQUENCE_LOCKED.md` | Onboarding screens flat in `src/screens/` | Cosmetic |
-| `src/components/food/` with 9 components per `UI_FLOWS_LOCKED.md` | Only MacroRings.js + FoodDetailSheet.js exist; others inline in screens | Reuse-harder |
+| `src/components/food/` with 9 components per `UI_FLOWS_LOCKED.md` | **All 9 present** — `MacroRings`, `FoodDetailSheet`, `EmptyDiary`, `SourceChip`, `HeldDecisionCard`, `ServingPicker`, `MealSection`, `EntryRow` (incl. `SwipeableEntryRow` + `friendlyFoodName`), `FoodRow` (incl. `SOURCE_LABEL` + `kcalForServing`). | Resolved (end-of-day 2026-05-26). |
 | `src/lib/observability/sentryScrub.js` per `PRIVACY_CONSENT_LOCKED.md` | **Exists** (`src/lib/observability/sentryScrub.js` plus 110 audit tests) | Privacy-critical; resolved |
 | `src/lib/links.js` (single URL source) per `PRIVACY_CONSENT_LOCKED.md` line 280 | **Exists** (`src/lib/links.js`); `Article9ConsentScreen` imports `LINKS.privacyPolicy` | Resolved (commit `5055692`) |
 | `tests/simulator/` per `TESTING_STRATEGY_LOCKED.md` | **Exists** at `tests/simulator/scenarios/` with all 12 locked scenarios | Resolved |
@@ -636,11 +814,13 @@ Grouped by phase per `RELEASE_PLAN_LOCKED.md`.
 
 | # | Item | Spec | Effort | Owner |
 |---|---|---|---|---|
-| 1 | Apply migrations 037, 038, 039, 040 in Supabase Dashboard | this doc § 3 | 5 min | Founder |
+| 1 | ~~Apply migrations 037, 038, 039, 040, 041, 042, 043, 044~~ **Applied** end-of-day 2026-05-26. Apply migration **045** (`column_updates_at` for profiles merge) + the `recipe_ingredients.deleted_at/updated_at` cloud schema change. | this doc § 3 | 5 min | Founder |
 | 2 | Deploy `public/privacy.html` to volyume.app/privacy | `PRIVACY_CONSENT_LOCKED.md` lines 75-112 | M (hosting setup) | Founder + Claude |
-| 3 | Build `src/lib/sync/` directory split + wire `sync_conflict_resolved` | `SYNC_ARCHITECTURE_LOCKED.md` | M (~2 days) | Claude |
-| 4 | ~~Build `src/lib/notifications/` directory + wire `notification_*` events~~ **Shipped this session** (mig 040 + 7-file module + quiet-hours + 21 new tests). Follow-up: pull `trainingReminders.js` + `restNotifications.js` + `activeWorkoutNotification.js` into the directory. | `NOTIFICATIONS_LOCKED.md` | done | Claude |
-| 5 | Maestro E2E framework + 12 critical-path flows | `TESTING_STRATEGY_LOCKED.md` lines 114-141 | M-L (~1 week) | Claude (**Phase 1 shipped this session**: harness + all 12 flow scaffolds + opt-in CI + Jest-wired structural linter. Founder validates smoke bundle against a real device; selectors get tightened from there.) |
+| 3 | ~~Build `src/lib/sync/` directory + per-table transport for all 16 tables~~ **Shipped** end-of-day 2026-05-26. All 16 registry tables on transport via 10 per-table handler files + food-domain coordinator; ~580 lines removed from legacy sync.js. Follow-up: sync regression matrix (8 × 16 = 128 paired tests per `TESTING_STRATEGY_LOCKED.md` lines 144-160). | `SYNC_ARCHITECTURE_LOCKED.md` | done | Claude |
+| 4 | ~~Build `src/lib/notifications/` directory + wire `notification_*` events~~ **Shipped**. Follow-up: pull `trainingReminders.js` + `restNotifications.js` + `activeWorkoutNotification.js` into the directory. | `NOTIFICATIONS_LOCKED.md` | done | Claude |
+| 5 | Maestro E2E framework + 12 critical-path flows | `TESTING_STRATEGY_LOCKED.md` lines 114-141 | M-L (~1 week) | Claude (Phase 1 shipped earlier this session). Follow-up: founder validates smoke bundle against a real device; selectors get tightened from there. F4 (Maestro #16 emulator boot diagnosis) still open. |
+| 6 | ~~Extract `MealSection` / `EntryRow` / `FoodRow` into `src/components/food/`~~ **Shipped** end-of-day 2026-05-26. All 9 components from `UI_FLOWS_LOCKED.md` lines 18-28 now present. | `UI_FLOWS_LOCKED.md` | done | Claude |
+| 7 | ~~CI trigger gap (workflows stopped firing on push after run #714)~~ **Fixed** end-of-day 2026-05-26 by removing the workflow's self-push step. Push events now fire workflow runs normally; status reports moved to artefacts. | `docs/CI_TRIGGER_DIAGNOSTIC_2026-05-26.md` | done | Claude |
 
 ### LATER (Phase A exit prep)
 
@@ -692,8 +872,9 @@ Grouped by phase per `RELEASE_PLAN_LOCKED.md`.
 
 ### Now
 
-1. Apply migrations 037 + 038 in Supabase Dashboard → SQL Editor.
-2. (Optional, low priority) Add `EXPO_PUBLIC_USDA_API_KEY` repo secret if USDA fallback is wanted active.
+1. Apply migration **045** (`supabase/migrate_045_users_profile_column_updates_at.sql`) in Supabase Dashboard → SQL Editor. Without it, every profile push raises PGRST204 on `column_updates_at`. Verification queries in `supabase/README.md` § Verify `users_profile.column_updates_at`.
+2. Confirm + apply the cloud schema change for `recipe_ingredients.deleted_at` + `recipe_ingredients.updated_at`. Local SQLite already has both via the additive migration in commit bc117a1; cloud needs `ALTER TABLE recipe_ingredients ADD COLUMN deleted_at timestamptz; ALTER TABLE recipe_ingredients ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();` or equivalent.
+3. (Optional, low priority) Add `EXPO_PUBLIC_USDA_API_KEY` repo secret if USDA fallback is wanted active.
 
 ### When Claude says "Phase A code work complete, ready for Phase A exit prep"
 

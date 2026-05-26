@@ -1,5 +1,18 @@
 # CI trigger gap — diagnostic 2026-05-26
 
+> **RESOLVED end-of-day 2026-05-26 in commit `6375674`.** Root
+> cause was the workflow's own `git push` step (the "Publish build
+> status to repo" step in `build-android.yml` and "Commit status
+> report" in `maestro-e2e.yml`). Run #714's push failed and from
+> that moment GitHub stopped delivering push webhook events to
+> the Actions trigger system for this repo. The fix removed the
+> workflow's outbound git push entirely; status reports moved to
+> `actions/upload-artifact@v4` (artefact name
+> `build-status-<run>`). Build Android #715, #716, #717 confirm
+> the trigger system recovered immediately on the next push.
+> This doc is kept as the post-mortem; see § "What was actually
+> wrong" at the bottom.
+
 ## Symptom
 
 The Build Android (APK + AAB, signed) workflow has not been
@@ -55,3 +68,57 @@ Run history scraped from the public Actions tab on 2026-05-26.
 1. Founder manually triggers Build Android via Actions → "Build Android (APK + AAB, signed)" → "Run workflow" → branch `main` → green button. `workflow_dispatch` is documented to fire even from `GITHUB_TOKEN` events, so this is the unconditional workaround.
 2. If the contents-API push (this commit) triggers a workflow, future automated pushes from this session should prefer that path until the `git push` proxy path is fixed.
 3. If neither this commit nor the previous two trigger anything, open a GitHub support ticket with the SHA list above.
+
+## What was actually wrong (post-mortem)
+
+Neither of the original two hypotheses. The cause was the
+workflow's OWN `git push` step.
+
+`build-android.yml` ended with a "Publish build status to repo"
+step that committed `.ci-status/latest.md` back to the branch as
+`github-actions[bot]` with `[skip ci]` in the message; same
+pattern in `maestro-e2e.yml` for `.ci-status/maestro-latest.md`.
+The `[skip ci]` marker on those commits is intended to prevent a
+loop. It works.
+
+Run #714 (the last successful build, on commit `c324f99`)
+reached the publish step and the git push failed
+("Status push failed (continuing)" appears in the run log).
+From that moment GitHub's Actions trigger service stopped
+delivering push webhook events to this repo. Subsequent commits
+landed on the branch normally — git push succeeded for human +
+Claude / Codex pushers — but Actions saw no events.
+
+The cause of the trigger-service degradation is GitHub-side and
+not visible from outside; what mattered was removing the
+self-push step so the failure mode couldn't recur.
+
+### The fix
+
+Commit `6375674` removed the workflow's outbound git push
+entirely from both workflows. The status markdown is still
+produced on every run; instead of being committed back to the
+branch it is uploaded as an `actions/upload-artifact@v4`
+artefact (`build-status-<run>` for build-android, included in
+the existing `maestro-results` artefact for maestro). Sessions
+can no longer `git pull` the status from the tree; they have
+to download the artefact from the Actions run page.
+
+Confirmation: Build Android #715 (commit `6375674`, takeover
+branch), #716 (commit `6375674`, main after merge) and #717
+(commit `7581d7f`, the sync transport commit) all fired on push
+within seconds. Trigger system fully restored.
+
+### Lessons
+
+- Don't have a workflow `git push` back to its own watched
+  branch. Use artefacts. Status pushes are cheap to lose; trigger
+  service degradation is not.
+- "GitHub setting can't have changed" — sometimes the setting
+  isn't what changed, it's the trigger service's state machine
+  reacting to a push your workflow made. The two are easy to
+  conflate.
+- A clear timestamped break point in the workflow run history
+  is the highest-value diagnostic. The "Status push failed
+  (continuing)" warning was the smoking gun and was visible at
+  the bottom of run #714 the whole time.
