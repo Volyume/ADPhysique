@@ -1,0 +1,89 @@
+name: Main CI (tests + lint + Expo Doctor)
+
+# Real protection layer for main. Per the 2026-05-26 audit, the
+# Android build workflow does not run Jest, Maestro lint, or
+# Expo Doctor, so code that compiles can still ship with broken
+# tests or malformed e2e flows. This workflow closes that gap.
+#
+# Uses 'npm ci' so any future package-lock.json drift fails CI
+# loudly instead of being silently papered over by 'npm install'.
+# CLAUDE.md release policy 2026-05-24 is unchanged: this is
+# pre-merge protection, not a release pipeline.
+
+on:
+  push:
+    branches:
+      - main
+      - 'claude/**'
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+      - '.gitignore'
+      - 'LICENSE'
+      - '.ci-status/**'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: main-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Jest unit + integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Run Jest
+        run: npx jest --runInBand --ci
+
+  maestro-lint:
+    name: Maestro flow structural lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Lint Maestro flows
+        run: node scripts/lint-maestro-flows.js
+
+  expo-doctor:
+    name: Expo Doctor
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Run Expo Doctor
+        run: npx expo-doctor
