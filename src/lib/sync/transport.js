@@ -34,6 +34,10 @@ import {
   pushBodyComposition,
   pullBodyComposition,
 } from './tables/bodyComposition';
+import {
+  pushNutritionTargets,
+  pullNutritionTargets,
+} from './tables/nutritionTargets';
 
 // Lazy require so the supabase client module (which pulls in
 // react-native-url-polyfill at top-level) is not loaded merely by
@@ -56,18 +60,21 @@ export const MIGRATED_TABLES = Object.freeze([
   'notification_preferences',
   'weekly_checkins_v2',
   'body_composition_log',
+  'nutrition_targets',
 ]);
 
 const PUSH_HANDLERS = {
   notification_preferences: pushNotificationPreferences,
   weekly_checkins_v2: pushWeeklyCheckins,
   body_composition_log: pushBodyComposition,
+  nutrition_targets: pushNutritionTargets,
 };
 
 const PULL_HANDLERS = {
   notification_preferences: pullNotificationPreferences,
   weekly_checkins_v2: pullWeeklyCheckins,
   body_composition_log: pullBodyComposition,
+  nutrition_targets: pullNutritionTargets,
 };
 
 /**

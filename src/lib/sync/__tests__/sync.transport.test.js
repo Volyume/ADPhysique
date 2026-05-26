@@ -33,6 +33,8 @@ jest.mock('../../database', () => ({
   insertWeeklyCheckinFromCloud: jest.fn(),
   getBodyMetricLog: jest.fn(),
   insertBodyMetricFromCloud: jest.fn(),
+  getNutritionTargets: jest.fn(),
+  insertNutritionTargetsFromCloud: jest.fn(),
 }));
 
 jest.mock('../telemetry', () => ({
@@ -94,6 +96,10 @@ describe('MIGRATED_TABLES', () => {
 
   test('lists body_composition_log', () => {
     expect(MIGRATED_TABLES).toContain('body_composition_log');
+  });
+
+  test('lists nutrition_targets', () => {
+    expect(MIGRATED_TABLES).toContain('nutrition_targets');
   });
 
   test('is frozen so callers can iterate but not mutate', () => {
@@ -628,3 +634,143 @@ describe('body_composition_log pull', () => {
   });
 });
 
+
+describe('nutrition_targets push', () => {
+  function makeNtPushSb({ upsertError = null } = {}) {
+    const calls = { upserts: [] };
+    return {
+      _calls: calls,
+      from: jest.fn(() => ({
+        upsert: jest.fn(async (row, opts) => {
+          calls.upserts.push({ row, opts });
+          return { error: upsertError };
+        }),
+      })),
+    };
+  }
+
+  test('maps camelCase nutrition targets to snake_case row and upserts on user_id', async () => {
+    dbModule.getNutritionTargets.mockResolvedValue({
+      bmr: 1800,
+      tdee: 2400,
+      targetKcal: 2000,
+      proteinG: 180,
+      carbsG: 200,
+      fatG: 60,
+      phase: 'cut',
+      bmrMethod: 'mifflin',
+      activityLevel: 'moderate',
+      confidence: 'high',
+      warnings: null,
+      gdprConsented: 1,
+    });
+    const sb = makeNtPushSb();
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await pushTable('nutrition_targets', { userId: 'u1', localUserId: 'u1' });
+
+    expect(result).toEqual({ count: 1, errors: 0 });
+    const upsert = sb._calls.upserts[0];
+    expect(upsert.opts).toEqual({ onConflict: 'user_id' });
+    expect(upsert.row).toMatchObject({
+      user_id: 'u1',
+      bmr: 1800,
+      tdee: 2400,
+      target_kcal: 2000,
+      protein_g: 180,
+      phase: 'cut',
+      bmr_method: 'mifflin',
+      activity_level: 'moderate',
+      gdpr_consented: true,
+    });
+    expect(upsert.row.updated_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  test('returns count:0 errors:0 when local has no targets row', async () => {
+    dbModule.getNutritionTargets.mockResolvedValue(null);
+    const sb = makeNtPushSb();
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await pushTable('nutrition_targets', { userId: 'u1', localUserId: 'u1' });
+
+    expect(result).toEqual({ count: 0, errors: 0 });
+    expect(sb._calls.upserts).toHaveLength(0);
+  });
+
+  test('errors:1 when upsert fails', async () => {
+    dbModule.getNutritionTargets.mockResolvedValue({ targetKcal: 2000 });
+    const sb = makeNtPushSb({ upsertError: new Error('rls') });
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await pushTable('nutrition_targets', { userId: 'u1', localUserId: 'u1' });
+
+    expect(result).toEqual({ count: 0, errors: 1 });
+  });
+});
+
+describe('nutrition_targets pull', () => {
+  function makeNtPullSb({ data = null, error = null } = {}) {
+    return {
+      from: jest.fn(() => ({
+        select: jest.fn(() => ({
+          eq: jest.fn(() => ({
+            maybeSingle: jest.fn(async () => ({ data, error })),
+          })),
+        })),
+      })),
+    };
+  }
+
+  test('routes the single cloud row through insertNutritionTargetsFromCloud', async () => {
+    const sb = makeNtPullSb({
+      data: { user_id: 'u1', bmr: 1800, tdee: 2400, target_kcal: 2000 },
+    });
+    getSupabaseClient.mockReturnValue(sb);
+    dbModule.insertNutritionTargetsFromCloud.mockResolvedValue(undefined);
+
+    const result = await pullTable('nutrition_targets', { userId: 'u1' });
+
+    expect(result).toEqual({ count: 1, errors: 0 });
+    expect(dbModule.insertNutritionTargetsFromCloud).toHaveBeenCalledWith('u1', expect.objectContaining({ bmr: 1800 }));
+  });
+
+  test('count:0 when cloud has no row', async () => {
+    const sb = makeNtPullSb({ data: null });
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await pullTable('nutrition_targets', { userId: 'u1' });
+
+    expect(result).toEqual({ count: 0, errors: 0 });
+    expect(dbModule.insertNutritionTargetsFromCloud).not.toHaveBeenCalled();
+  });
+
+  test('errors:1 when select fails', async () => {
+    const sb = makeNtPullSb({ data: null, error: new Error('rls') });
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await pullTable('nutrition_targets', { userId: 'u1' });
+
+    expect(result).toEqual({ count: 0, errors: 1 });
+  });
+
+  test('errors:1 when local insert helper throws', async () => {
+    const sb = makeNtPullSb({ data: { user_id: 'u1', target_kcal: 2000 } });
+    getSupabaseClient.mockReturnValue(sb);
+    dbModule.insertNutritionTargetsFromCloud.mockRejectedValue(new Error('constraint'));
+
+    const result = await pullTable('nutrition_targets', { userId: 'u1' });
+
+    expect(result).toEqual({ count: 0, errors: 1 });
+  });
+});
+
+describe('registry contract drift fixed: nutrition_targets', () => {
+  test('is bidirectional, not server-authoritative', () => {
+    // eslint-disable-next-line global-require
+    const { getRegistryEntry } = require('../registry');
+    const entry = getRegistryEntry('nutrition_targets');
+    expect(entry.direction).toBe('bidirectional');
+    expect(entry.serverAuthoritative).toBe(false);
+    expect(entry.conflictStrategy).toBe('last_write_wins');
+  });
+});

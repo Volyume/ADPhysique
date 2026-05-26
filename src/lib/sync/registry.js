@@ -125,12 +125,22 @@ export const SYNC_REGISTRY = [
     direction: 'bidirectional',
   },
   {
+    // nutrition_targets are computed locally by the nutrition engine
+    // (BMR / TDEE / target_kcal / macros derived deterministically
+    // from height, weight, activity, phase, goal). The cloud copy
+    // exists for cross-device restore, not for server-side
+    // computation, so serverAuthoritative is false and the row is
+    // bidirectional. Legacy registry entry had this as
+    // pull_only + serverAuthoritative=true which contradicted the
+    // shipping code (sync.js _pushNutritionTargets has always run
+    // on every saveNutritionTargets). Corrected alongside the
+    // per-table transport migration.
     table: 'nutrition_targets',
     pk: 'user_id',
-    conflictStrategy: 'server_wins',
-    serverAuthoritative: true,
+    conflictStrategy: 'last_write_wins',
+    serverAuthoritative: false,
     softDelete: false,
-    direction: 'pull_only',
+    direction: 'bidirectional',
   },
   {
     table: 'profiles',

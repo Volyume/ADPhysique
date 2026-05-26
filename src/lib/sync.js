@@ -574,7 +574,10 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
     // weekly_checkins_v2 moved to src/lib/sync/transport.js
     // (registry-driven per-table push). See MIGRATED_TABLES.
     await _pushCoachOutputs(sb, supabaseUserId, localUserId);
-    await _pushNutritionTargets(sb, supabaseUserId, localUserId);
+    // nutrition_targets moved to src/lib/sync/transport.js
+    // (registry-driven per-table push). See MIGRATED_TABLES.
+    // The public syncNutritionTargets on-save shim above now also
+    // routes through transport so both call sites share the code.
     // Tables that previously stayed local-only. Each is safe to call
     // for free-tier users — they return zero rows and the helper
     // exits cleanly. No new dependencies between them.
@@ -1555,7 +1558,8 @@ export async function pullFromCloud(supabaseUserId) {
     // weekly_checkins_v2 moved to src/lib/sync/transport.js
     // (registry-driven per-table pull). See MIGRATED_TABLES.
     const coachCount = await _pullCoachOutputs(sb, supabaseUserId);
-    const nutritionFound = await _pullNutritionTargets(sb, supabaseUserId);
+    // nutrition_targets moved to src/lib/sync/transport.js
+    // (registry-driven per-table pull). See MIGRATED_TABLES.
     // body_composition_log moved to src/lib/sync/transport.js
     // (registry-driven per-table pull). See MIGRATED_TABLES.
     // New tables that previously stayed local-only on every cross-
@@ -1592,10 +1596,11 @@ export async function pullFromCloud(supabaseUserId) {
       routines: routineCount,
       mesocycles: mesoCount,
       morningWeights: weightCount,
-      checkins: checkinCount,
       coachOutputs: coachCount,
-      nutritionTargets: nutritionFound ? 1 : 0,
-      bodyMetrics: bodyMetricCount,
+      // checkins / nutritionTargets / bodyMetrics now counted in
+      // src/lib/sync/runner.js under pullCountPerTable from the
+      // per-table transport. This map is the legacy bulk pull
+      // report and only tracks tables still owned by pullFromCloud.
       bodyProfile: bodyProfileFound ? 1 : 0,
       insights: insightCount,
       exerciseNotes: exerciseNoteCount,
@@ -2010,12 +2015,19 @@ async function _pullBodyMetrics(sb, supabaseUserId) {
 }
 
 // Public-facing push for nutrition targets. Call this any time
-// saveNutritionTargets is invoked so the cloud copy stays in step with
-// the local one. Safe no-op when there's no cloud session.
+// saveNutritionTargets is invoked so the cloud copy stays in step
+// with the local one. Safe no-op when there's no cloud session.
+// Delegates to the registry-driven transport so the on-save path
+// and the periodic sync path use the same code; tests cover the
+// transport handler in src/lib/sync/__tests__/sync.transport.test.js.
 export async function syncNutritionTargets(supabaseUserId, localUserId) {
-  const sb = getClient();
-  if (!sb || !supabaseUserId) return;
-  await _pushNutritionTargets(sb, supabaseUserId, localUserId ?? supabaseUserId);
+  if (!supabaseUserId) return;
+  // eslint-disable-next-line global-require
+  const { pushTable } = require('./sync/transport');
+  await pushTable('nutrition_targets', {
+    userId: supabaseUserId,
+    localUserId: localUserId ?? supabaseUserId,
+  });
 }
 
 async function _pushNutritionTargets(sb, supabaseUserId, localUserId) {
