@@ -16,6 +16,7 @@ const SPLASH_W = Math.round(Dimensions.get('window').width * 0.7);
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { colors, fontWeight, spacing } from '../styles/theme';
+import SyncStatusBadge from '../components/SyncStatusBadge';
 import useAppStore from '../store/useAppStore';
 import { getSupabaseClient } from '../lib/supabase';
 import { initDatabase, cleanupOrphanRoutineExercises } from '../lib/database';
@@ -100,6 +101,11 @@ const stackOptions = {
   headerTintColor: colors.textPrimary,
   headerTitleStyle: { fontWeight: '700', color: colors.textPrimary },
   cardStyle: { backgroundColor: colors.background },
+  // Persistent sync status indicator per SYNC_ARCHITECTURE_LOCKED.md
+  // lines 266-276 and PRODUCTION_READINESS_LOCKED.md § 1. Renders
+  // synced / pending / offline / error with a tap-for-details
+  // sheet. Lives in the header right slot on every stack screen.
+  headerRight: () => <SyncStatusBadge />,
 };
 
 // Hero-zoom transition for screens that "expand" out of a card on the

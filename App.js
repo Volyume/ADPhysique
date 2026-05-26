@@ -550,6 +550,67 @@ export default function App() {
     return () => sub.remove();
   }, []);
 
+  // SYNC_ARCHITECTURE_LOCKED.md lines 161-169: four sync triggers
+  // routed through the same syncAll() entry point. The runner has
+  // its own in-memory lock so concurrent calls dedupe.
+  //   - foreground:        AppState 'active'
+  //   - network reconnect: NetInfo isConnected: true after offline
+  //   - write (debounced): src/lib/sync.scheduleSync (existing)
+  //   - periodic:          15-minute interval while app is open
+  useEffect(() => {
+    let cancelled = false;
+    let prevConnected = null;
+    let intervalHandle = null;
+    let appStateSub = null;
+    let netInfoUnsub = null;
+
+    async function callSyncAll(triggeredBy) {
+      if (cancelled) return;
+      try {
+        const sb = getSupabaseClient();
+        if (!sb) return;
+        const { data: { session: s } = {} } = await sb.auth.getSession();
+        const supabaseUserId = s?.user?.id ?? null;
+        const localUserId = useAppStore.getState().user?.id ?? null;
+        if (!supabaseUserId) return;
+        // eslint-disable-next-line global-require
+        const { syncAll } = require('./src/lib/sync');
+        await syncAll({ userId: supabaseUserId, localUserId, triggeredBy });
+      } catch (_) { /* tolerate */ }
+    }
+
+    // 1. Foreground trigger.
+    appStateSub = AppState.addEventListener('change', state => {
+      if (state === 'active') callSyncAll('foreground');
+    });
+
+    // 2. Network reconnect trigger.
+    try {
+      // eslint-disable-next-line global-require
+      const NetInfo = require('@react-native-community/netinfo').default;
+      netInfoUnsub = NetInfo.addEventListener(state => {
+        const connected = !!state?.isConnected;
+        if (prevConnected === false && connected === true) {
+          callSyncAll('network');
+        }
+        prevConnected = connected;
+      });
+    } catch (_) {
+      // NetInfo missing (e.g. tests, Expo Go without the native
+      // module). The other three triggers still cover the surface.
+    }
+
+    // 3. Periodic 15-minute trigger.
+    intervalHandle = setInterval(() => callSyncAll('periodic'), 15 * 60 * 1000);
+
+    return () => {
+      cancelled = true;
+      if (appStateSub?.remove) appStateSub.remove();
+      if (netInfoUnsub) netInfoUnsub();
+      if (intervalHandle) clearInterval(intervalHandle);
+    };
+  }, []);
+
   if (!themeReady) {
     // Minimal pre-theme placeholder. No theme tokens here on purpose — uses
     // hard-coded background that matches the splash so the transition is
