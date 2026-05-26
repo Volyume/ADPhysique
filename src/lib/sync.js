@@ -603,7 +603,8 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
     await _pushRoutinesAndExercises(sb, supabaseUserId, localUserId);
     await _pushMesocycles(sb, supabaseUserId, localUserId);
     await _pushMorningWeights(sb, supabaseUserId, localUserId);
-    await _pushWeeklyCheckins(sb, supabaseUserId, localUserId);
+    // weekly_checkins_v2 moved to src/lib/sync/transport.js
+    // (registry-driven per-table push). See MIGRATED_TABLES.
     await _pushCoachOutputs(sb, supabaseUserId, localUserId);
     await _pushNutritionTargets(sb, supabaseUserId, localUserId);
     // Tables that previously stayed local-only. Each is safe to call
@@ -1583,7 +1584,8 @@ export async function pullFromCloud(supabaseUserId) {
     const routineCount = await _pullRoutinesAndExercises(sb, supabaseUserId);
     const mesoCount = await _pullMesocycles(sb, supabaseUserId);
     const weightCount = await _pullMorningWeights(sb, supabaseUserId);
-    const checkinCount = await _pullWeeklyCheckins(sb, supabaseUserId);
+    // weekly_checkins_v2 moved to src/lib/sync/transport.js
+    // (registry-driven per-table pull). See MIGRATED_TABLES.
     const coachCount = await _pullCoachOutputs(sb, supabaseUserId);
     const nutritionFound = await _pullNutritionTargets(sb, supabaseUserId);
     const bodyMetricCount = await _pullBodyMetrics(sb, supabaseUserId);

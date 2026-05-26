@@ -28,6 +28,11 @@ jest.mock('../../notifications/preferences', () => ({
   applyPreferenceFromPull: jest.fn(),
 }));
 
+jest.mock('../../database', () => ({
+  getAllWeeklyCheckinsForUser: jest.fn(),
+  insertWeeklyCheckinFromCloud: jest.fn(),
+}));
+
 jest.mock('../telemetry', () => ({
   trackSyncRun: jest.fn().mockResolvedValue(undefined),
   trackSyncConflictResolved: jest.fn().mockResolvedValue(undefined),
@@ -36,6 +41,7 @@ jest.mock('../telemetry', () => ({
 
 const { getSupabaseClient } = require('../../supabase');
 const prefsModule = require('../../notifications/preferences');
+const dbModule = require('../../database');
 const {
   MIGRATED_TABLES,
   pushTable,
@@ -76,8 +82,12 @@ beforeEach(() => {
 });
 
 describe('MIGRATED_TABLES', () => {
-  test('lists notification_preferences first', () => {
+  test('lists notification_preferences', () => {
     expect(MIGRATED_TABLES).toContain('notification_preferences');
+  });
+
+  test('lists weekly_checkins_v2', () => {
+    expect(MIGRATED_TABLES).toContain('weekly_checkins_v2');
   });
 
   test('is frozen so callers can iterate but not mutate', () => {
@@ -272,6 +282,168 @@ describe('notification_preferences pull', () => {
     getSupabaseClient.mockReturnValue(sb);
 
     const result = await pullTable('notification_preferences', { userId: 'u1' });
+
+    expect(result).toEqual({ count: 0, errors: 0 });
+  });
+});
+
+describe('weekly_checkins_v2 push', () => {
+  function makeWcPushSb({ upsertError = null } = {}) {
+    const calls = { upserts: [] };
+    return {
+      _calls: calls,
+      from: jest.fn(() => ({
+        upsert: jest.fn(async (rows, opts) => {
+          calls.upserts.push({ rows, opts });
+          return { error: upsertError };
+        }),
+      })),
+    };
+  }
+
+  test('maps camelCase SQLite rows to snake_case v2 schema with stable PK', async () => {
+    dbModule.getAllWeeklyCheckinsForUser.mockResolvedValue([
+      {
+        id: 'wc-1',
+        weekStart: 1700000000000,
+        energyScore: 7,
+        sorenessScore: 4,
+        stressScore: 3,
+        sleepHours: 7.5,
+        calsAdherence: 'high',
+        stepsAdherence: 'medium',
+        trainingPerformance: 'good',
+        jointPain: 1,
+        soreMuscles: 'quads',
+        cycleOverride: 0,
+        notes: 'fine',
+      },
+    ]);
+    const sb = makeWcPushSb();
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await pushTable('weekly_checkins_v2', { userId: 'u1', localUserId: 'u1' });
+
+    expect(result).toEqual({ count: 1, errors: 0 });
+    const upsert = sb._calls.upserts[0];
+    expect(upsert.opts).toEqual({ onConflict: 'user_id,id' });
+    expect(upsert.rows[0]).toMatchObject({
+      id: 'wc-1',
+      user_id: 'u1',
+      week_start: 1700000000000,
+      energy_score: 7,
+      sleep_hours: 7.5,
+      joint_pain: true,
+      cycle_override: false,
+      notes: 'fine',
+    });
+  });
+
+  test('batches at 200 rows per upsert call', async () => {
+    const rows = Array.from({ length: 450 }, (_, i) => ({
+      id: `wc-${i}`,
+      weekStart: 1700000000000 + i * 86400000,
+    }));
+    dbModule.getAllWeeklyCheckinsForUser.mockResolvedValue(rows);
+    const sb = makeWcPushSb();
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await pushTable('weekly_checkins_v2', { userId: 'u1', localUserId: 'u1' });
+
+    expect(result).toEqual({ count: 450, errors: 0 });
+    expect(sb._calls.upserts).toHaveLength(3); // 200 + 200 + 50
+    expect(sb._calls.upserts[0].rows).toHaveLength(200);
+    expect(sb._calls.upserts[1].rows).toHaveLength(200);
+    expect(sb._calls.upserts[2].rows).toHaveLength(50);
+  });
+
+  test('returns count:0 errors:0 when no local rows', async () => {
+    dbModule.getAllWeeklyCheckinsForUser.mockResolvedValue([]);
+    const sb = makeWcPushSb();
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await pushTable('weekly_checkins_v2', { userId: 'u1', localUserId: 'u1' });
+
+    expect(result).toEqual({ count: 0, errors: 0 });
+    expect(sb._calls.upserts).toHaveLength(0);
+  });
+
+  test('counts batch errors without halting', async () => {
+    dbModule.getAllWeeklyCheckinsForUser.mockResolvedValue([
+      { id: 'wc-1', weekStart: 1 },
+    ]);
+    const sb = makeWcPushSb({ upsertError: new Error('rls denied') });
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await pushTable('weekly_checkins_v2', { userId: 'u1', localUserId: 'u1' });
+
+    expect(result.errors).toBe(1);
+    expect(result.count).toBe(0);
+  });
+});
+
+describe('weekly_checkins_v2 pull', () => {
+  function makeWcPullSb({ data = [], error = null } = {}) {
+    return {
+      from: jest.fn(() => ({
+        select: jest.fn(() => ({
+          eq: jest.fn(async () => ({ data, error })),
+        })),
+      })),
+    };
+  }
+
+  test('inserts each cloud row via INSERT OR IGNORE helper', async () => {
+    const sb = makeWcPullSb({
+      data: [
+        { id: 'wc-1', user_id: 'u1', week_start: 1, energy_score: 7 },
+        { id: 'wc-2', user_id: 'u1', week_start: 2, energy_score: 6 },
+      ],
+    });
+    getSupabaseClient.mockReturnValue(sb);
+    dbModule.insertWeeklyCheckinFromCloud.mockResolvedValue(undefined);
+
+    const result = await pullTable('weekly_checkins_v2', { userId: 'u1' });
+
+    expect(result).toEqual({ count: 2, errors: 0 });
+    expect(dbModule.insertWeeklyCheckinFromCloud).toHaveBeenCalledTimes(2);
+    expect(dbModule.insertWeeklyCheckinFromCloud).toHaveBeenCalledWith('u1', expect.objectContaining({ id: 'wc-1' }));
+  });
+
+  test('counts row-level errors without halting', async () => {
+    const sb = makeWcPullSb({
+      data: [
+        { id: 'wc-1' },
+        { id: 'wc-2' },
+        { id: 'wc-3' },
+      ],
+    });
+    getSupabaseClient.mockReturnValue(sb);
+    dbModule.insertWeeklyCheckinFromCloud
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('constraint'))
+      .mockResolvedValueOnce(undefined);
+
+    const result = await pullTable('weekly_checkins_v2', { userId: 'u1' });
+
+    expect(result).toEqual({ count: 2, errors: 1 });
+  });
+
+  test('errors:1 when select fails', async () => {
+    const sb = makeWcPullSb({ data: null, error: new Error('rls') });
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await pullTable('weekly_checkins_v2', { userId: 'u1' });
+
+    expect(result).toEqual({ count: 0, errors: 1 });
+    expect(dbModule.insertWeeklyCheckinFromCloud).not.toHaveBeenCalled();
+  });
+
+  test('count 0 when cloud has nothing', async () => {
+    const sb = makeWcPullSb({ data: [] });
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await pullTable('weekly_checkins_v2', { userId: 'u1' });
 
     expect(result).toEqual({ count: 0, errors: 0 });
   });

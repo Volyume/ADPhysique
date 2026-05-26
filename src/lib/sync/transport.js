@@ -26,6 +26,10 @@ import {
   pushNotificationPreferences,
   pullNotificationPreferences,
 } from './tables/notificationPreferences';
+import {
+  pushWeeklyCheckins,
+  pullWeeklyCheckins,
+} from './tables/weeklyCheckins';
 
 // Lazy require so the supabase client module (which pulls in
 // react-native-url-polyfill at top-level) is not loaded merely by
@@ -46,14 +50,17 @@ function _getSupabaseClient() {
  */
 export const MIGRATED_TABLES = Object.freeze([
   'notification_preferences',
+  'weekly_checkins_v2',
 ]);
 
 const PUSH_HANDLERS = {
   notification_preferences: pushNotificationPreferences,
+  weekly_checkins_v2: pushWeeklyCheckins,
 };
 
 const PULL_HANDLERS = {
   notification_preferences: pullNotificationPreferences,
+  weekly_checkins_v2: pullWeeklyCheckins,
 };
 
 /**
