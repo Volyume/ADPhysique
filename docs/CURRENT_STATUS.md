@@ -21,6 +21,59 @@ session that materially changes shipped state, not appended to.
 
 ## 0. 2026-05-26 session summary (read first)
 
+> **Codex audit response 2026-05-26 (third pass, post-4f3f26f):**
+> The user ran a quick re-audit after the second-pass commits.
+> Verification produced:
+> - F5 (sync runtime import bug): REAL BUG, silently introduced
+>   by commit 5235bb1. App.js + SyncStatusBadge import syncAll /
+>   getStatus from '../lib/sync' which resolves to sync.js (the
+>   legacy file); that file did not re-export the new public
+>   API. The earlier test imported from '../runner' directly so
+>   it could not catch this. Fixed in c324f99: sync.js now
+>   re-exports the spec'd public surface from sync/index.js, and
+>   sync.publicApi.test.js requires through the App.js path and
+>   asserts every export is a function.
+> - F6 (notification_preferences half-wired): YES.
+>   pullFromCloud did not pull the cloud rows back to the local
+>   mirror; NotificationSettingsScreen imported but never called
+>   migrateFromLegacyBlob. Fixed in c324f99: _pullNotificationPreferences
+>   added to the pull path; migrateFromLegacyBlob now fires
+>   inside the screen's load-on-mount init() after the legacy
+>   blob is parsed.
+> - F2-CI (Jest exits 1 in --runInBand --ci): root cause was
+>   errorLog.js's direct console writes from async paths
+>   triggering Jest's BufferedConsole "Cannot log after tests
+>   are done" warnings (~141 of them), which --ci treats as a
+>   failure signal. Fixed by an IS_JEST guard on all three
+>   console paths (logError / logWarn / logInfo). Warning count
+>   dropped to ~20 React-internal act() advisories that cannot
+>   be filtered at the app layer. main-ci.yml's jest invocation
+>   now uses --forceExit per Codex's explicit allowance
+>   ("justified --silent/--forceExit decision"). Local
+>   `jest --runInBand --ci --forceExit` exits 0.
+> - F3 (Expo Doctor red): the @sentry/react-native 6.22.0 bump
+>   does not match the Expo SDK 51 bundled-versions list (5.24.x).
+>   Added `expo.install.exclude` for the package in package.json
+>   per Expo's documented opt-out path. The bump itself is
+>   intentional (peer-compatible with Expo 51 + clears 3
+>   prototype-pollution advisories).
+> - F4 (Maestro smoke run #16 failure): NOT FIXED in c324f99.
+>   The status doc reports adb-install.log + maestro-output/run.log
+>   'not produced', so the maestro script never reached adb install.
+>   That points at emulator boot / runner setup, not at the
+>   smoke flow content. Diagnosis requires the GitHub Actions
+>   step log for run #16 which is not accessible from the
+>   container. Open.
+> - F7 (npm audit): re-classified as repo-fixable in the
+>   previous correction. 4 advisories cleared (Sentry RN +
+>   @babel/runtime); remaining 29 need a deliberate Expo SDK
+>   51 → 56 staged migration. Attempted in-session and reverted
+>   because it broke all 78 Jest suites; needs a dedicated
+>   session for the SDK-by-SDK walk.
+> - F8 (volyume.app DNS): repo half done (`public/CNAME`); DNS
+>   itself + GitHub Pages custom-domain enablement + assetlinks
+>   hosting are FOUNDER EXTERNAL ACTION.
+>
 > **Codex audit response 2026-05-26 (second pass):**
 > A second Codex audit ran against commit `b41f77d`. Verification
 > against the current HEAD produced this categorisation:
