@@ -1,0 +1,29 @@
+name: Identity invariant
+
+# Enforces the IDENTITY_AND_OWNERSHIP_LOCKED.md hard rule: no code may
+# mutate a row's user_id at runtime. The only legal exceptions are
+# the one-shot column backfills in database.js (annotated LOCKED-OK).
+#
+# scripts/check-identity-invariant.sh exits 1 on any unannotated
+# `SET user_id` in src/. This workflow is the CI half referenced by
+# CLAUDE.md ("CI grep enforces this").
+
+on:
+  push:
+    branches:
+      - main
+      - 'claude/**'
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  check:
+    name: Check identity invariant
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run identity invariant check
+        run: ./scripts/check-identity-invariant.sh
