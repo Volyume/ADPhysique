@@ -17,6 +17,7 @@
 import { ensureSyncQueueTable, getQueueDepth } from './queue';
 import { trackSyncRun } from './telemetry';
 import { listSyncableTables } from './registry';
+import { MIGRATED_TABLES, pushTable, pullTable } from './transport';
 
 let _runLock = false;
 let _lastStatus = 'unknown'; // 'synced' | 'pending' | 'offline' | 'error' | 'unknown'
@@ -53,10 +54,11 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
     if (!userId) {
       status = 'success';
     } else {
-      // Delegate to the existing helpers for now. These are the
-      // proven push + pull paths the closed-test build runs
-      // against. Future PRs replace them with registry-driven
-      // transport.js calls table-by-table.
+      // Two-track push/pull. The registry-driven transport.js owns
+      // every table listed in MIGRATED_TABLES; everything else still
+      // lives inside bulkUploadLocalData / pullFromCloud in
+      // src/lib/sync.js. As more tables migrate, MIGRATED_TABLES
+      // grows and the legacy helpers shrink.
       //
       // Explicit '.js' extension on the require: without it, some
       // bundlers (notably ones that prefer directory resolution
@@ -68,22 +70,42 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
       // eslint-disable-next-line global-require
       const sync = require('../sync.js');
       try {
+        // 1. Per-table push for migrated tables.
+        for (const tableName of MIGRATED_TABLES) {
+          const result = await pushTable(tableName, { userId, localUserId }).catch((e) => {
+            erroredCount += 1;
+            return { count: 0, errors: 1, _err: e };
+          });
+          pushCountPerTable[tableName] = result?.count ?? 0;
+          if (result?.errors) erroredCount += result.errors;
+        }
+        // 2. Legacy bulk push for everything else.
         if (typeof sync.bulkUploadLocalData === 'function' && localUserId) {
           const upload = await sync.bulkUploadLocalData(userId, localUserId).catch(e => {
             erroredCount += 1;
             return { _err: e };
           });
-          if (upload && typeof upload === 'object') {
-            pushCountPerTable = upload.pushCountPerTable ?? pushCountPerTable;
+          if (upload && typeof upload === 'object' && upload.pushCountPerTable) {
+            pushCountPerTable = { ...pushCountPerTable, ...upload.pushCountPerTable };
           }
         }
+        // 3. Per-table pull for migrated tables.
+        for (const tableName of MIGRATED_TABLES) {
+          const result = await pullTable(tableName, { userId }).catch((e) => {
+            erroredCount += 1;
+            return { count: 0, errors: 1, _err: e };
+          });
+          pullCountPerTable[tableName] = result?.count ?? 0;
+          if (result?.errors) erroredCount += result.errors;
+        }
+        // 4. Legacy bulk pull for everything else.
         if (typeof sync.pullFromCloud === 'function') {
           const pull = await sync.pullFromCloud(userId).catch(e => {
             erroredCount += 1;
             return { _err: e };
           });
-          if (pull && typeof pull === 'object') {
-            pullCountPerTable = pull.pullCountPerTable ?? pullCountPerTable;
+          if (pull && typeof pull === 'object' && pull.pullCountPerTable) {
+            pullCountPerTable = { ...pullCountPerTable, ...pull.pullCountPerTable };
           }
         }
       } catch (e) {

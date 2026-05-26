@@ -625,9 +625,10 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
     // Pushed AFTER the structured tables so a sign-in catch-up
     // doesn't block on the larger writes.
     await _pushAllUserPrefs(sb, supabaseUserId);
-    // notification_preferences per NOTIFICATIONS_LOCKED.md lines
-    // 117-119 ("Synced via the registry") + migration 044.
-    await _pushNotificationPreferences(sb, supabaseUserId, localUserId);
+    // notification_preferences moved to src/lib/sync/transport.js
+    // (registry-driven per-table push). MIGRATED_TABLES in
+    // transport.js is the source of truth for what no longer flows
+    // through here.
 
     console.log('[sync] bulk upload complete');
   } catch (e) {
@@ -1599,13 +1600,11 @@ export async function pullFromCloud(supabaseUserId) {
     const adaptCount = await _pullAdaptationEvents(sb, supabaseUserId);
     const customExerciseCount = await _pullCustomExercises(sb, supabaseUserId);
     const prefCount = await _pullUserPrefs(sb, supabaseUserId);
-    // notification_preferences pull per NOTIFICATIONS_LOCKED.md
-    // lines 117-119 + SYNC_REGISTRY entry. Cross-device restore
-    // brings the per-category rows back into the local SQLite
-    // mirror so NotificationSettingsScreen reads the user's
-    // preferences without round-tripping to the cloud on every
-    // open. Codex re-audit 2026-05-26 F6.
-    const notifPrefCount = await _pullNotificationPreferences(sb, supabaseUserId);
+    // notification_preferences moved to src/lib/sync/transport.js
+    // (registry-driven per-table pull). The runner now calls
+    // transport.pullTable('notification_preferences', ...) directly
+    // before this legacy bulk pull. Codex re-audit 2026-05-26 F6
+    // is preserved in the new path (applyPreferenceFromPull).
     // Food-domain pull via the food_sync_pull RPC. Returns a count map
     // per table so the success log shows exactly what landed.
     const foodCounts = await _pullFoodChanges(sb, supabaseUserId);
