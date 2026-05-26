@@ -25,12 +25,13 @@ unless the file header says otherwise.
 | 043 | `migrate_043_sync_conflict_telemetry.sql` | Adds `sync_conflict_resolved` to the allow-list. Fires from `src/lib/sync/conflict.js`. | See § Verify allow-list extension |
 | 044 | `migrate_044_notification_preferences.sql` | Creates `notification_preferences(user_id, category, enabled, time_pref)` with RLS + updated_at trigger. Backs NOTIFICATIONS_LOCKED.md lines 117-119. | See § Verify notification_preferences |
 | 045 | `migrate_045_users_profile_column_updates_at.sql` | Adds `column_updates_at jsonb` to `users_profile` + safe-merge trigger so the per-column merge conflict strategy can decide field-by-field which side wrote a profile field most recently. Backs SYNC_REGISTRY profiles.merge contract. | See § Verify users_profile.column_updates_at |
+| 046 | `migrate_046_recipe_ingredients_soft_delete.sql` | Adds `updated_at` + `deleted_at` columns to `recipe_ingredients`, plus a BEFORE UPDATE touch trigger and a partial index over live rows. Required for the registry's softDelete:true + LWW contract on recipe_ingredients; without it the per-table push raises PGRST204 on every sync. | See § Verify recipe_ingredients soft-delete |
 
 ## How to apply
 
 1. Open the Supabase Dashboard → SQL Editor → New query.
 2. Open one migration file at a time from this folder (numeric
-   order: 037, 038, 039, 040, 041, 042, 043, 044, 045).
+   order: 037, 038, 039, 040, 041, 042, 043, 044, 045, 046).
 3. Paste the full contents into the SQL Editor.
 4. Click **Run**. The migrations are wrapped in `CREATE OR REPLACE
    FUNCTION` / `CREATE TABLE IF NOT EXISTS`, so re-running an
@@ -259,3 +260,46 @@ If `column_updates_at` does not appear, the migration did not run.
 If trigger row is missing, the merge function did not install.
 If existing rows still show NULL, the DEFAULT did not back-fill —
 re-run the migration (idempotent) and re-check.
+
+### Verify `recipe_ingredients` soft-delete (migration 046)
+
+```sql
+-- Both columns present, with the expected types and defaults
+SELECT column_name, data_type, is_nullable, column_default
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name = 'recipe_ingredients'
+  AND column_name IN ('updated_at', 'deleted_at')
+ORDER BY column_name;
+-- Expected:
+--   deleted_at | timestamp with time zone | YES | (null)
+--   updated_at | timestamp with time zone | NO  | now()
+
+-- Touch trigger is installed
+SELECT trigger_name
+FROM information_schema.triggers
+WHERE event_object_table = 'recipe_ingredients'
+  AND trigger_name = 'recipe_ingredients_touch_updated_at';
+-- Expected: one row
+
+-- Partial live index is installed
+SELECT indexname
+FROM pg_indexes
+WHERE schemaname = 'public'
+  AND tablename = 'recipe_ingredients'
+  AND indexname = 'idx_recipe_ingredients_live';
+-- Expected: one row
+
+-- Existing rows all have a non-NULL updated_at (the DEFAULT
+-- caught them on column creation; the backfill UPDATE corrects
+-- the small subset that landed during the migration window).
+SELECT count(*) FILTER (WHERE updated_at IS NULL) AS null_rows,
+       count(*) AS total_rows
+FROM recipe_ingredients;
+-- Expected: null_rows = 0
+```
+
+If `updated_at` does not appear, the migration did not run. If
+trigger row is missing, the touch function did not install. If
+any rows show NULL updated_at, the DEFAULT or the backfill did
+not land — re-run the migration (idempotent) and re-check.

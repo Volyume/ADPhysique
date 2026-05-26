@@ -685,7 +685,7 @@ Per `DATABASE_SCHEMA_LOCKED.md` + grep against `supabase/migrate_*.sql`.
 | 043 | `sync_conflict_resolved` event added to `record_engine_telemetry` allow-list. Fires from `src/lib/sync/conflict.js`. | **Applied** |
 | 044 | `notification_preferences` table + RLS + updated_at trigger. Backs NOTIFICATIONS_LOCKED.md lines 117-119. SYNC_REGISTRY entry. | **Applied** (notification_preferences PGRST205 warnings in device log cleared after this) |
 | 045 | `users_profile.column_updates_at jsonb` + safe-merge trigger. Powers the registry-locked `profiles.merge` conflict strategy via `column_updates_at` populated on push from `userProfileFieldUpdatedAt` and consumed on pull via `conflict.resolve(merge)`. | **Pending founder apply** |
-| (cloud schema) | `recipe_ingredients.deleted_at + updated_at` columns. Local SQLite already has both via additive migration in this session (bc117a1); cloud schema needs matching ALTER TABLE before the per-table push works. | **Pending founder verification / apply** |
+| 046 | `recipe_ingredients.updated_at + deleted_at` columns + BEFORE UPDATE touch trigger + partial live index. Required for the per-table push handler (which already ships both columns) — without 046 the push raises PGRST204 on every sync. Local SQLite already has both columns via the additive migration in commit bc117a1. | **Pending founder apply** |
 
 ---
 
@@ -814,7 +814,7 @@ Grouped by phase per `RELEASE_PLAN_LOCKED.md`.
 
 | # | Item | Spec | Effort | Owner |
 |---|---|---|---|---|
-| 1 | ~~Apply migrations 037, 038, 039, 040, 041, 042, 043, 044~~ **Applied** end-of-day 2026-05-26. Apply migration **045** (`column_updates_at` for profiles merge) + the `recipe_ingredients.deleted_at/updated_at` cloud schema change. | this doc § 3 | 5 min | Founder |
+| 1 | ~~Apply migrations 037, 038, 039, 040, 041, 042, 043, 044~~ **Applied** end-of-day 2026-05-26. Apply migrations **045** (profiles merge `column_updates_at`) and **046** (recipe_ingredients soft-delete `updated_at` + `deleted_at`) in that order. Both are idempotent and have verification queries in `supabase/README.md`. | this doc § 3 | 5 min | Founder |
 | 2 | Deploy `public/privacy.html` to volyume.app/privacy | `PRIVACY_CONSENT_LOCKED.md` lines 75-112 | M (hosting setup) | Founder + Claude |
 | 3 | ~~Build `src/lib/sync/` directory + per-table transport for all 16 tables~~ **Shipped** end-of-day 2026-05-26. All 16 registry tables on transport via 10 per-table handler files + food-domain coordinator; ~580 lines removed from legacy sync.js. Follow-up: sync regression matrix (8 × 16 = 128 paired tests per `TESTING_STRATEGY_LOCKED.md` lines 144-160). | `SYNC_ARCHITECTURE_LOCKED.md` | done | Claude |
 | 4 | ~~Build `src/lib/notifications/` directory + wire `notification_*` events~~ **Shipped**. Follow-up: pull `trainingReminders.js` + `restNotifications.js` + `activeWorkoutNotification.js` into the directory. | `NOTIFICATIONS_LOCKED.md` | done | Claude |
@@ -872,8 +872,8 @@ Grouped by phase per `RELEASE_PLAN_LOCKED.md`.
 
 ### Now
 
-1. Apply migration **045** (`supabase/migrate_045_users_profile_column_updates_at.sql`) in Supabase Dashboard → SQL Editor. Without it, every profile push raises PGRST204 on `column_updates_at`. Verification queries in `supabase/README.md` § Verify `users_profile.column_updates_at`.
-2. Confirm + apply the cloud schema change for `recipe_ingredients.deleted_at` + `recipe_ingredients.updated_at`. Local SQLite already has both via the additive migration in commit bc117a1; cloud needs `ALTER TABLE recipe_ingredients ADD COLUMN deleted_at timestamptz; ALTER TABLE recipe_ingredients ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();` or equivalent.
+1. Apply migration **045** (`supabase/migrate_045_users_profile_column_updates_at.sql`) in Supabase Dashboard → SQL Editor. Without it every profile push raises PGRST204 on `column_updates_at`. Verification queries in `supabase/README.md` § Verify `users_profile.column_updates_at`.
+2. Apply migration **046** (`supabase/migrate_046_recipe_ingredients_soft_delete.sql`). Without it every recipe_ingredients push raises PGRST204 on `updated_at` / `deleted_at`. Verification queries in `supabase/README.md` § Verify `recipe_ingredients` soft-delete.
 3. (Optional, low priority) Add `EXPO_PUBLIC_USDA_API_KEY` repo secret if USDA fallback is wanted active.
 
 ### When Claude says "Phase A code work complete, ready for Phase A exit prep"
