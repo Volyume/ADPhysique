@@ -9,7 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';
 import * as BackgroundFetch from 'expo-background-fetch';
-import { ensureNotifChannels } from './src/lib/restNotifications';
+import { ensureNotifChannels } from './src/lib/notifications/channels';
 import { installGlobalHandlers, logError } from './src/lib/errorLog';
 
 // Install verbose error logging — ring buffer in AsyncStorage, viewable from

@@ -279,7 +279,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (totalSets === 0) {
       store.endWorkout();
       // eslint-disable-next-line global-require
-      try { require('../lib/activeWorkoutNotification').dismissActiveWorkoutNotification(); } catch (_) {}
+      try { require('../lib/notifications/activeWorkout').dismissActiveWorkoutNotification(); } catch (_) {}
       navigation.goBack();
     } else {
       setShowDiscardModal(true);
@@ -411,7 +411,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (!workoutStartTime || !activeWorkout) return;
     lastNotifUpdateRef.current = Date.now();
     // eslint-disable-next-line global-require
-    const { showActiveWorkoutNotification } = require('../lib/activeWorkoutNotification');
+    const { showActiveWorkoutNotification } = require('../lib/notifications/activeWorkout');
     showActiveWorkoutNotification({
       workoutName: activeWorkout?.name,
       elapsedSeconds,
@@ -436,7 +436,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (now - lastNotifUpdateRef.current < 15_000) return;
     lastNotifUpdateRef.current = now;
     // eslint-disable-next-line global-require
-    const { showActiveWorkoutNotification } = require('../lib/activeWorkoutNotification');
+    const { showActiveWorkoutNotification } = require('../lib/notifications/activeWorkout');
     showActiveWorkoutNotification({
       workoutName: activeWorkout?.name,
       elapsedSeconds,
@@ -455,7 +455,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // but the unmount cleanup catches navigation-away cases.
   useEffect(() => () => {
     // eslint-disable-next-line global-require
-    const { dismissActiveWorkoutNotification } = require('../lib/activeWorkoutNotification');
+    const { dismissActiveWorkoutNotification } = require('../lib/notifications/activeWorkout');
     dismissActiveWorkoutNotification().catch(() => {});
   }, []);
 
@@ -958,7 +958,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               } catch (_) { /* tolerate */ }
               endWorkout();
               // eslint-disable-next-line global-require
-              try { require('../lib/activeWorkoutNotification').dismissActiveWorkoutNotification(); } catch (_) {}
+              try { require('../lib/notifications/activeWorkout').dismissActiveWorkoutNotification(); } catch (_) {}
               navigation.replace('WorkoutSummary', {
                 workoutId: activeWorkout.id,
                 routineId: activeWorkout.routineId || null,

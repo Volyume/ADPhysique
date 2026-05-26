@@ -7,7 +7,7 @@
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import { colors } from '../styles/theme';
+import { colors } from '../../styles/theme';
 
 export const SCHEDULE_KEY = '@volyume_schedule_v1';
 export const REMINDER_PREF_KEY = '@volyume_reminder_enabled_v1';
@@ -167,7 +167,7 @@ export async function scheduleTrainingReminders() {
     // outages even though the user surface stays quiet.
     try {
       // eslint-disable-next-line global-require
-      const { trackNotificationFailed, CATEGORY } = require('./notifications');
+      const { trackNotificationFailed, CATEGORY } = require('./index');
       trackNotificationFailed({
         category: CATEGORY.TRAINING_REMINDER,
         reason: 'schedule_threw',

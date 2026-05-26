@@ -24,7 +24,7 @@ import {
   cancelTrainingReminders,
   REMINDER_PREF_KEY,
   REMINDER_TIME_KEY,
-} from '../lib/trainingReminders';
+} from '../lib/notifications/trainingReminders';
 import useAppStore from '../store/useAppStore';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
