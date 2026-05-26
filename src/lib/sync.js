@@ -63,6 +63,13 @@ function msToISO(ms) {
   try { return new Date(ms).toISOString(); } catch { return null; }
 }
 
+function timeToMs(value) {
+  if (!value) return 0;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 function msToDate(ms) {
   if (!ms) return null;
   try { return new Date(ms).toISOString().split('T')[0]; } catch { return null; }
@@ -1425,21 +1432,57 @@ async function _pushNotificationPreferences(sb, supabaseUserId, localUserId) {
       for (const r of a) localRows.push(r);
     }
     if (localRows.length === 0) return;
-    const rows = localRows.map(r => ({
+
+    const latestByCategory = new Map();
+    for (const r of localRows) {
+      const existing = latestByCategory.get(r.category);
+      if (!existing || timeToMs(r.updated_at) > timeToMs(existing.updated_at)) {
+        latestByCategory.set(r.category, r);
+      }
+    }
+
+    const rows = Array.from(latestByCategory.values()).map(r => ({
       user_id: supabaseUserId,
       category: r.category,
       enabled: !!r.enabled,
       time_pref: r.time_pref,
       updated_at: msToISO(r.updated_at),
     }));
+    const categories = rows.map(r => r.category);
+    const { data: serverRows, error: readError } = await sb
+      .from('notification_preferences')
+      .select('category, updated_at')
+      .eq('user_id', supabaseUserId)
+      .in('category', categories);
+    if (readError) {
+      logPgErr('sync._pushNotificationPreferences.read', readError);
+      return;
+    }
+
+    const serverUpdatedByCategory = new Map(
+      (serverRows ?? []).map(r => [r.category, timeToMs(r.updated_at)]),
+    );
+    const rowsToPush = rows.filter((r) => {
+      const localMs = timeToMs(r.updated_at);
+      const serverMs = serverUpdatedByCategory.get(r.category) ?? 0;
+      return localMs > serverMs;
+    });
+    if (rowsToPush.length === 0) {
+      logInfo('sync._pushNotificationPreferences', 'skipped stale local preferences', {
+        count: rows.length,
+      });
+      return;
+    }
+
     const { error } = await sb
       .from('notification_preferences')
-      .upsert(rows, { onConflict: 'user_id,category' });
+      .upsert(rowsToPush, { onConflict: 'user_id,category' });
     if (error) {
       logPgErr('sync._pushNotificationPreferences', error);
     } else {
-      logInfo('sync._pushNotificationPreferences', `pushed ${rows.length} preferences`, {
-        count: rows.length,
+      logInfo('sync._pushNotificationPreferences', `pushed ${rowsToPush.length} preferences`, {
+        count: rowsToPush.length,
+        skipped: rows.length - rowsToPush.length,
       });
     }
   } catch (e) {
@@ -1804,12 +1847,9 @@ async function _pullAdaptationEvents(sb, supabaseUserId) {
  *
  * Reads every row owned by the user from the cloud
  * `notification_preferences` table (migration 044) and applies it
- * to the local SQLite mirror via setPreference. Last-write-wins
- * resolution: setPreference is an UPSERT that overwrites the
- * existing row regardless of timestamp because the cloud value
- * IS the canonical post-pull state for that (user_id, category).
- * If a local write happens concurrently, the next push round
- * carries it back up.
+ * to the local SQLite mirror via applyPreferenceFromPull. Last-
+ * write-wins resolution only applies the cloud row when its
+ * updated_at is strictly newer than the local row.
  */
 async function _pullNotificationPreferences(sb, supabaseUserId) {
   try {

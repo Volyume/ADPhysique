@@ -102,13 +102,23 @@ CREATE POLICY "notification_preferences_delete" ON notification_preferences
   USING (auth.uid() = user_id);
 
 -- Keep updated_at fresh on every UPDATE so the sync layer's
--- last-write-wins resolver has a reliable comparison.
+-- last-write-wins resolver has a reliable comparison. Client sync
+-- writes may carry an explicit updated_at from SQLite; preserve it
+-- when it is newer, and refuse stale writes so an older device cannot
+-- clobber a newer cloud value.
 CREATE OR REPLACE FUNCTION _notification_preferences_touch_updated_at()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
-  NEW.updated_at := now();
+  IF NEW.updated_at < OLD.updated_at THEN
+    RETURN OLD;
+  END IF;
+
+  IF NEW.updated_at IS NULL OR NEW.updated_at = OLD.updated_at THEN
+    NEW.updated_at := now();
+  END IF;
+
   RETURN NEW;
 END $$;
 

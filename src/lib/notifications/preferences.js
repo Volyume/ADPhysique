@@ -250,6 +250,11 @@ export async function migrateFromLegacyBlob(userId, legacyBlob) {
       + ':' + (legacyBlob.checkinMinute ?? 0).toString().padStart(2, '0');
     ops.push(['weekly_checkin_reminder', !!legacyBlob.checkinEnabled, `${dow}_${t}`]);
   }
+  if (legacyBlob.trainingEnabled !== undefined) {
+    const t = (legacyBlob.trainingHour ?? 8).toString().padStart(2, '0')
+      + ':' + (legacyBlob.trainingMinute ?? 0).toString().padStart(2, '0');
+    ops.push(['training_reminder', !!legacyBlob.trainingEnabled, t]);
+  }
   for (const [category, enabled, time_pref] of ops) {
     const existing = await getPreference(userId, category);
     // Only seed the row if the per-category SQLite copy is missing;

@@ -94,6 +94,25 @@ function safeStringify(v) {
   catch (_) { return String(v).slice(0, MAX_MSG); }
 }
 
+function stripAnsi(s) {
+  return String(s || '').replace(/\u001b\[[0-9;]*m/g, '');
+}
+
+function sanitizeStack(stack) {
+  if (!stack) return '';
+  const out = [];
+  for (const line of String(stack).split('\n')) {
+    const clean = stripAnsi(line);
+    // Jest/Babel can inject source-frame lines into Error.stack. Those
+    // lines may include literal test/user values, so keep call frames
+    // but drop code excerpts before the debug log becomes exportable.
+    if (/^\s*>?\s*\d+\s*\|/.test(clean)) continue;
+    if (/^\s*\|/.test(clean)) continue;
+    out.push(line);
+  }
+  return out.join('\n').slice(0, MAX_STACK);
+}
+
 function buildEntry(level, scope, errOrMsg, context) {
   const isError = errOrMsg && typeof errOrMsg === 'object' && (errOrMsg.stack || errOrMsg.message);
   return {
@@ -103,7 +122,7 @@ function buildEntry(level, scope, errOrMsg, context) {
     message: isError
       ? String(errOrMsg.message || errOrMsg).slice(0, MAX_MSG)
       : safeStringify(errOrMsg),
-    stack: isError && errOrMsg.stack ? String(errOrMsg.stack).slice(0, MAX_STACK) : '',
+    stack: isError && errOrMsg.stack ? sanitizeStack(errOrMsg.stack) : '',
     context: context ? safeStringify(context) : '',
   };
 }

@@ -25,13 +25,17 @@ jest.mock('../../database', () => ({
         const [user_id, category, enabled, time_pref, updated_at] = params;
         const existing = mockState.rows.find(r => r.user_id === user_id && r.category === category);
         if (existing) {
+          if (/WHERE excluded\.updated_at > notification_preferences\.updated_at/i.test(t)
+            && updated_at <= existing.updated_at) {
+            return { changes: 0 };
+          }
           existing.enabled = enabled;
           existing.time_pref = time_pref;
           existing.updated_at = updated_at;
         } else {
           mockState.rows.push({ user_id, category, enabled, time_pref, updated_at });
         }
-        return;
+        return { changes: 1 };
       }
       if (/^UPDATE notification_preferences/i.test(t)) {
         const [updated_at, user_id, category] = params;
@@ -66,6 +70,7 @@ import {
   getPreference,
   getAllPreferences,
   getPreferencesUpdatedSince,
+  applyPreferenceFromPull,
   migrateFromLegacyBlob,
   deletePreferencesForUser,
 } from '../preferences';
@@ -132,18 +137,57 @@ describe('getPreferencesUpdatedSince', () => {
   });
 });
 
+describe('applyPreferenceFromPull', () => {
+  test('applies newer cloud rows without enqueueing', async () => {
+    await setPreference('u1', 'morning_weight', { enabled: true, time_pref: '08:00' });
+    const before = await getPreference('u1', 'morning_weight');
+    mockEnqueue.mockClear();
+    const did = await applyPreferenceFromPull('u1', 'morning_weight', {
+      enabled: false,
+      time_pref: '09:00',
+      updated_at: before.updated_at + 1000,
+    });
+    expect(did).toBe(true);
+    const after = await getPreference('u1', 'morning_weight');
+    expect(after.enabled).toBe(false);
+    expect(after.time_pref).toBe('09:00');
+    expect(after.updated_at).toBe(before.updated_at + 1000);
+    expect(mockEnqueue).not.toHaveBeenCalled();
+  });
+
+  test('ignores stale cloud rows', async () => {
+    await setPreference('u1', 'morning_weight', { enabled: true, time_pref: '08:00' });
+    const before = await getPreference('u1', 'morning_weight');
+    const did = await applyPreferenceFromPull('u1', 'morning_weight', {
+      enabled: false,
+      time_pref: '09:00',
+      updated_at: before.updated_at - 1000,
+    });
+    expect(did).toBe(false);
+    const after = await getPreference('u1', 'morning_weight');
+    expect(after).toEqual(before);
+  });
+});
+
 describe('migrateFromLegacyBlob', () => {
   test('seeds morning + checkin rows when SQLite is empty', async () => {
     await migrateFromLegacyBlob('u1', {
       morningEnabled: true, morningHour: 8, morningMinute: 30,
       checkinEnabled: true, checkinDay: 0, checkinHour: 18, checkinMinute: 0,
+      trainingEnabled: true, trainingHour: 7, trainingMinute: 15,
     });
     const rows = await getAllPreferences('u1');
-    expect(rows.map(r => r.category).sort()).toEqual(['morning_weight', 'weekly_checkin_reminder']);
+    expect(rows.map(r => r.category).sort()).toEqual([
+      'morning_weight',
+      'training_reminder',
+      'weekly_checkin_reminder',
+    ]);
     const checkin = rows.find(r => r.category === 'weekly_checkin_reminder');
     expect(checkin.time_pref).toBe('sun_18:00');
     const morning = rows.find(r => r.category === 'morning_weight');
     expect(morning.time_pref).toBe('08:30');
+    const training = rows.find(r => r.category === 'training_reminder');
+    expect(training.time_pref).toBe('07:15');
   });
 
   test('does not overwrite existing rows', async () => {

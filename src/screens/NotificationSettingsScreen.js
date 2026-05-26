@@ -95,9 +95,8 @@ async function applyNotifications(prefs, permissionStatus) {
 
   // Mirror into per-category SQLite rows so the registry-driven
   // sync push has something to send to the cloud
-  // notification_preferences table (migration 044). The AsyncStorage
-  // blob remains the screen's primary store for now; SQLite is the
-  // sync source of truth.
+  // notification_preferences table (migration 044). SQLite is read
+  // first on mount; the AsyncStorage blob is kept as legacy fallback.
   try {
     const userId = useAppStore.getState().user?.id;
     if (userId) {
@@ -234,15 +233,19 @@ export default function NotificationSettingsScreen({ navigation }) {
     async function init() {
       const userId = useAppStore.getState().user?.id;
       // Try SQLite mirror first
-      let sqliteHit = false;
+      const sqliteCategories = new Set();
+      let fallbackTrainingEnabled = null;
+      let fallbackTrainingHour = 8;
+      let fallbackTrainingMinute = 0;
+      let hasFallbackTraining = false;
       if (userId) {
         try {
           // eslint-disable-next-line global-require
           const { getAllPreferences } = require('../lib/notifications/preferences');
           const rows = await getAllPreferences(userId);
           if (rows.length > 0) {
-            sqliteHit = true;
             for (const r of rows) {
+              sqliteCategories.add(r.category);
               if (r.category === 'morning_weight') {
                 setMorningEnabled(!!r.enabled);
                 if (typeof r.time_pref === 'string' && r.time_pref.includes(':')) {
@@ -280,15 +283,35 @@ export default function NotificationSettingsScreen({ navigation }) {
         if (raw) {
           const prefs = JSON.parse(raw);
           // Apply legacy AsyncStorage values only when SQLite was
-          // empty. Otherwise SQLite wins (it is the synced source).
-          if (!sqliteHit) {
+          // missing that category. Otherwise SQLite wins (it is the
+          // synced source).
+          if (!sqliteCategories.has('morning_weight')) {
             if (prefs.morningEnabled !== undefined) setMorningEnabled(prefs.morningEnabled);
             if (prefs.morningHour !== undefined) setMorningHour(prefs.morningHour);
             if (prefs.morningMinute !== undefined) setMorningMinute(prefs.morningMinute);
+          }
+          if (!sqliteCategories.has('weekly_checkin_reminder')) {
             if (prefs.checkinEnabled !== undefined) setCheckinEnabled(prefs.checkinEnabled);
             if (prefs.checkinDay !== undefined) setCheckinDay(prefs.checkinDay);
             if (prefs.checkinHour !== undefined) setCheckinHour(prefs.checkinHour);
             if (prefs.checkinMinute !== undefined) setCheckinMinute(prefs.checkinMinute);
+          }
+          if (!sqliteCategories.has('training_reminder')) {
+            if (prefs.trainingEnabled !== undefined) {
+              fallbackTrainingEnabled = !!prefs.trainingEnabled;
+              hasFallbackTraining = true;
+              setTrainingEnabled(prefs.trainingEnabled);
+            }
+            if (prefs.trainingHour !== undefined) {
+              fallbackTrainingHour = prefs.trainingHour;
+              hasFallbackTraining = true;
+              setTrainingHour(prefs.trainingHour);
+            }
+            if (prefs.trainingMinute !== undefined) {
+              fallbackTrainingMinute = prefs.trainingMinute;
+              hasFallbackTraining = true;
+              setTrainingMinute(prefs.trainingMinute);
+            }
           }
           // One-shot back-fill into the SQLite mirror so existing
           // installs that pre-date migration 044 get their prefs
@@ -305,10 +328,47 @@ export default function NotificationSettingsScreen({ navigation }) {
         }
       } catch (_) {}
 
-      try {
-        const trainingEnabledRaw = await AsyncStorage.getItem(REMINDER_PREF_KEY);
-        if (trainingEnabledRaw !== null) setTrainingEnabled(trainingEnabledRaw === 'true');
-      } catch (_) {}
+      if (!sqliteCategories.has('training_reminder')) {
+        let legacyTrainingEnabled = fallbackTrainingEnabled;
+        let legacyTrainingHour = fallbackTrainingHour;
+        let legacyTrainingMinute = fallbackTrainingMinute;
+        let hasLegacyTraining = hasFallbackTraining;
+
+        try {
+          const trainingEnabledRaw = await AsyncStorage.getItem(REMINDER_PREF_KEY);
+          if (trainingEnabledRaw !== null) {
+            legacyTrainingEnabled = trainingEnabledRaw === 'true';
+            hasLegacyTraining = true;
+            setTrainingEnabled(legacyTrainingEnabled);
+          }
+        } catch (_) {}
+
+        try {
+          const trainingTimeRaw = await AsyncStorage.getItem(REMINDER_TIME_KEY);
+          if (trainingTimeRaw) {
+            const { hour, minute } = JSON.parse(trainingTimeRaw);
+            if (typeof hour === 'number') {
+              legacyTrainingHour = hour;
+              hasLegacyTraining = true;
+              setTrainingHour(hour);
+            }
+            if (typeof minute === 'number') {
+              legacyTrainingMinute = minute;
+              hasLegacyTraining = true;
+              setTrainingMinute(minute);
+            }
+          }
+        } catch (_) {}
+
+        if (userId && hasLegacyTraining) {
+          try {
+            await setPrefRow(userId, 'training_reminder', {
+              enabled: legacyTrainingEnabled ?? false,
+              time_pref: `${String(legacyTrainingHour).padStart(2, '0')}:${String(legacyTrainingMinute).padStart(2, '0')}`,
+            });
+          } catch (_) {}
+        }
+      }
 
       // Load the user's last check-in so we can enforce the 7-day minimum
       // gap when they change their check-in day, and so the UI can show
@@ -322,15 +382,6 @@ export default function NotificationSettingsScreen({ navigation }) {
         if (userId) {
           const latest = await getLatestCheckin(userId);
           if (latest?.weekStart) setLastCheckinMs(latest.weekStart);
-        }
-      } catch (_) {}
-
-      try {
-        const trainingTimeRaw = await AsyncStorage.getItem(REMINDER_TIME_KEY);
-        if (trainingTimeRaw) {
-          const { hour, minute } = JSON.parse(trainingTimeRaw);
-          if (typeof hour === 'number') setTrainingHour(hour);
-          if (typeof minute === 'number') setTrainingMinute(minute);
         }
       } catch (_) {}
 
@@ -394,6 +445,22 @@ export default function NotificationSettingsScreen({ navigation }) {
     };
   }
 
+  async function persistTrainingPreference(nextPrefs) {
+    try {
+      await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(nextPrefs));
+      const userId = useAppStore.getState().user?.id;
+      if (userId) {
+        const trainingTime =
+          (nextPrefs.trainingHour ?? 8).toString().padStart(2, '0')
+          + ':' + (nextPrefs.trainingMinute ?? 0).toString().padStart(2, '0');
+        await setPrefRow(userId, 'training_reminder', {
+          enabled: !!nextPrefs.trainingEnabled,
+          time_pref: trainingTime,
+        });
+      }
+    } catch (_) {}
+  }
+
   function handleMorningToggle(value) {
     if (value && permissionStatus !== 'granted') {
       Alert.alert(
@@ -441,9 +508,11 @@ export default function NotificationSettingsScreen({ navigation }) {
       );
       return;
     }
+    const nextPrefs = getPrefs({ te: value });
     setTrainingEnabled(value);
     try {
       await AsyncStorage.setItem(REMINDER_PREF_KEY, value ? 'true' : 'false');
+      await persistTrainingPreference(nextPrefs);
       if (value) {
         await scheduleTrainingReminders();
       } else {
@@ -461,10 +530,12 @@ export default function NotificationSettingsScreen({ navigation }) {
         text: label,
         onPress: async () => {
           const [h, m] = label.split(':').map(Number);
+          const nextPrefs = getPrefs({ th: h, tm: m });
           setTrainingHour(h);
           setTrainingMinute(m);
           try {
             await AsyncStorage.setItem(REMINDER_TIME_KEY, JSON.stringify({ hour: h, minute: m }));
+            await persistTrainingPreference(nextPrefs);
             if (trainingEnabled) {
               await scheduleTrainingReminders();
             }
