@@ -22,7 +22,7 @@ const NOW = Date.UTC(2026, 4, 20);
 
 describe('getCurrentMesoWeek', () => {
   test('returns 1 for a brand-new block', () => {
-    expect(getCurrentMesoWeek(NOW - 1 * DAY)).toBe(1);
+    expect(getCurrentMesoWeek(NOW - 1 * DAY, 'intermediate', NOW)).toBe(1);
   });
 
   test('increments roughly each calendar week', () => {

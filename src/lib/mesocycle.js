@@ -41,9 +41,11 @@ const MESO_SCHEDULE = {
  *
  * @param {string|number} startDateMs - epoch ms (or ISO string) of mesocycle start
  * @param {'beginner'|'intermediate'|'advanced'|'competitive'} experience
+ * @param {number} [nowMs] - epoch ms to treat as "now"; defaults to Date.now().
+ *   Injectable so tests can pin the clock without monkey-patching Date.
  * @returns {number} 1-based week number
  */
-export function getCurrentMesoWeek(startDateMs, experience = 'intermediate') {
+export function getCurrentMesoWeek(startDateMs, experience = 'intermediate', nowMs = Date.now()) {
   const schedule = getMesoSchedule(experience);
   const start = typeof startDateMs === 'string' ? new Date(startDateMs).getTime() : startDateMs;
   // Compare local calendar days rather than raw ms deltas so a DST
@@ -52,7 +54,7 @@ export function getCurrentMesoWeek(startDateMs, experience = 'intermediate') {
   // each side and count whole calendar days, which is what the user's
   // calendar shows them anyway.
   const startDayMs = (() => { const d = new Date(start); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); })();
-  const nowDayMs   = (() => { const d = new Date();      return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); })();
+  const nowDayMs   = (() => { const d = new Date(nowMs); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); })();
   const daysElapsed = Math.max(0, Math.round((nowDayMs - startDayMs) / (1000 * 60 * 60 * 24)));
   const weeksElapsed = Math.floor(daysElapsed / 7);
   return (weeksElapsed % schedule.length) + 1;
@@ -443,9 +445,9 @@ export function checkDoubleProgressionReady(sessionHistory = []) {
  *   complete  — recovery week just finished (0–13 days overdue)
  *   overdue   — block finished 2+ weeks ago, strongly prompt transition
  */
-export function getBlockStatus(startDateMs, plannedWeeks = 5) {
-  const start = typeof startDateMs === 'string' ? new Date(startDateMs).getTime() : (startDateMs ?? Date.now());
-  const daysElapsed = Math.max(0, Math.floor((Date.now() - start) / (1000 * 60 * 60 * 24)));
+export function getBlockStatus(startDateMs, plannedWeeks = 5, nowMs = Date.now()) {
+  const start = typeof startDateMs === 'string' ? new Date(startDateMs).getTime() : (startDateMs ?? nowMs);
+  const daysElapsed = Math.max(0, Math.floor((nowMs - start) / (1000 * 60 * 60 * 24)));
   const currentWeek = Math.floor(daysElapsed / 7) + 1;
   const recoveryWeek = plannedWeeks; // last week is always recovery
 
