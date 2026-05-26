@@ -69,7 +69,8 @@ jest.mock('../../../store/useAppStore', () => ({
   __esModule: true,
   default: {
     getState: () => ({
-      userProfile: { firstName: 'Test', units: 'kg' },
+      userProfile: { firstName: 'Test', units: 'kg', barWeight: 20 },
+      userProfileFieldUpdatedAt: { firstName: 1, units: 1, barWeight: 1 },
       setUserProfile: jest.fn(),
     }),
   },

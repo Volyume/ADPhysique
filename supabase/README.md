@@ -24,12 +24,13 @@ unless the file header says otherwise.
 | 042 | `migrate_042_upgrade_tier_for_user.sql` | Service-role-only `upgrade_tier_for_user(_user_id, ...)` RPC for the Play Billing RTDN webhook. | See § Verify upgrade_tier_for_user |
 | 043 | `migrate_043_sync_conflict_telemetry.sql` | Adds `sync_conflict_resolved` to the allow-list. Fires from `src/lib/sync/conflict.js`. | See § Verify allow-list extension |
 | 044 | `migrate_044_notification_preferences.sql` | Creates `notification_preferences(user_id, category, enabled, time_pref)` with RLS + updated_at trigger. Backs NOTIFICATIONS_LOCKED.md lines 117-119. | See § Verify notification_preferences |
+| 045 | `migrate_045_users_profile_column_updates_at.sql` | Adds `column_updates_at jsonb` to `users_profile` + safe-merge trigger so the per-column merge conflict strategy can decide field-by-field which side wrote a profile field most recently. Backs SYNC_REGISTRY profiles.merge contract. | See § Verify users_profile.column_updates_at |
 
 ## How to apply
 
 1. Open the Supabase Dashboard → SQL Editor → New query.
 2. Open one migration file at a time from this folder (numeric
-   order: 037, 038, 039, 040, 041, 042, 043, 044).
+   order: 037, 038, 039, 040, 041, 042, 043, 044, 045).
 3. Paste the full contents into the SQL Editor.
 4. Click **Run**. The migrations are wrapped in `CREATE OR REPLACE
    FUNCTION` / `CREATE TABLE IF NOT EXISTS`, so re-running an
@@ -214,3 +215,47 @@ If you apply them out of order, the last allow-list migration you
 run determines the final allow-list. Apply them in order anyway —
 the documentation in each file references the previous ones for
 context.
+
+### Verify `users_profile.column_updates_at` (migration 045)
+
+```sql
+-- Column exists, jsonb, NOT NULL, default '{}'
+SELECT column_name, data_type, is_nullable, column_default
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name = 'users_profile'
+  AND column_name = 'column_updates_at';
+-- Expected: column_updates_at | jsonb | NO | '{}'::jsonb
+
+-- Safe-merge trigger is installed
+SELECT trigger_name
+FROM information_schema.triggers
+WHERE event_object_table = 'users_profile'
+  AND trigger_name = 'users_profile_merge_column_updates_at';
+-- Expected: one row
+
+-- Existing rows defaulted to empty maps (not NULL)
+SELECT count(*) FILTER (WHERE column_updates_at IS NULL) AS null_rows,
+       count(*) AS total_rows
+FROM users_profile;
+-- Expected: null_rows = 0
+```
+
+Then sanity-check the trigger does the right thing on a touch:
+
+```sql
+-- Pick a real user id from auth.users for this. Replace <UID>.
+UPDATE users_profile
+SET first_name = first_name,
+    column_updates_at = '{"first_name": "2026-05-27T00:00:00Z"}'::jsonb
+WHERE id = '<UID>';
+
+SELECT column_updates_at FROM users_profile WHERE id = '<UID>';
+-- Expected: { "first_name": "2026-05-27T00:00:00Z" } merged with whatever
+-- was there before (other keys preserved).
+```
+
+If `column_updates_at` does not appear, the migration did not run.
+If trigger row is missing, the merge function did not install.
+If existing rows still show NULL, the DEFAULT did not back-fill —
+re-run the migration (idempotent) and re-check.

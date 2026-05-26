@@ -13,7 +13,54 @@ const LOCAL_USER_KEY   = '@volyume_local_user_id';
 const FIRST_RUN_KEY    = '@volyume_first_run_complete';
 const FIRST_RUN_KEY_PFX = '@volyume_first_run_complete_'; // per-uid: + supabase user.id
 const PROFILE_KEY_PFX  = '@volyume_user_profile_';
+const PROFILE_TIMESTAMPS_KEY_PFX = '@volyume_user_profile_ts_';
 const TIER_KEY         = '@volyume_tier';
+
+// users_profile columns that are user-editable + tracked for the
+// per-column merge conflict strategy (migration 045 +
+// src/lib/sync/tables/profiles.js). camelCase here to match the
+// store; the transport handler maps to snake_case on push.
+const PROFILE_FIELDS_TRACKED = [
+  'firstName',
+  'units',
+  'trainingFocus',
+  'trainingAgeYears',
+  'primaryEquipment',
+  'barWeight',
+  'bodyWeightUnits',
+];
+
+// Persist the per-field profile write timestamps to AsyncStorage.
+// Survives app restarts so a user that edits a field and
+// kills the app before the next sync still ships the per-field
+// timestamp on the next push. Used by setUserProfile + the per-
+// field setters above.
+async function _persistProfileTimestamps(userId, map) {
+  if (!userId || !map) return;
+  try {
+    await AsyncStorage.setItem(
+      PROFILE_TIMESTAMPS_KEY_PFX + userId,
+      JSON.stringify(map),
+    );
+  } catch (_) {
+    /* offline-friendly: tolerate */
+  }
+}
+
+// Hydrate the per-field timestamp map at sign-in. Called by
+// initLocalUser / sign-in code so the map is in memory before the
+// first profiles push runs. Missing key → empty map (legacy
+// install treats every field as "server wins" until next write).
+async function _hydrateProfileTimestamps(userId) {
+  if (!userId) return {};
+  try {
+    const raw = await AsyncStorage.getItem(PROFILE_TIMESTAMPS_KEY_PFX + userId);
+    if (!raw) return {};
+    return JSON.parse(raw) || {};
+  } catch (_) {
+    return {};
+  }
+}
 
 // Fire-and-forget push of a single AsyncStorage pref to the cloud.
 // Called from store setters whenever a synced preference changes so
@@ -66,7 +113,42 @@ const useAppStore = create((set, get) => ({
 
   setUser: (user) => set({ user }),
   setSession: (session) => set({ session }),
-  setUserProfile: (userProfile) => set({ userProfile }),
+  setUserProfile: (userProfile) => {
+    // Stamp every editable field in the incoming profile with
+    // "now" so the per-field map matches the bulk write. Per-
+    // field setters (setUnits, setBarWeight, etc.) stamp only
+    // their own field via _stampProfileFields below.
+    const now = Date.now();
+    const stamped = {};
+    if (userProfile && typeof userProfile === 'object') {
+      for (const k of PROFILE_FIELDS_TRACKED) {
+        if (k in userProfile) stamped[k] = now;
+      }
+    }
+    set((s) => ({
+      userProfile,
+      userProfileFieldUpdatedAt: { ...(s.userProfileFieldUpdatedAt || {}), ...stamped },
+    }));
+  },
+
+  // Per-column write timestamps used by the profiles transport
+  // handler to build column_updates_at for the merge conflict
+  // resolver. Keyed by users_profile snake_case column name.
+  // Persisted alongside userProfile via PROFILE_TIMESTAMPS_KEY_PFX
+  // so app restarts don't lose the per-field write history.
+  // Migration 045 ships the corresponding cloud column.
+  userProfileFieldUpdatedAt: {},
+  _stampProfileFields: (touchedFields) => {
+    const now = Date.now();
+    const stamped = {};
+    for (const f of touchedFields) {
+      if (PROFILE_FIELDS_TRACKED.includes(f)) stamped[f] = now;
+    }
+    if (Object.keys(stamped).length === 0) return;
+    set((s) => ({
+      userProfileFieldUpdatedAt: { ...(s.userProfileFieldUpdatedAt || {}), ...stamped },
+    }));
+  },
   setAuthLoading: (isAuthLoading) => set({ isAuthLoading }),
 
   // initLocalUser deleted per IDENTITY_AND_OWNERSHIP_LOCKED.md
@@ -453,10 +535,12 @@ const useAppStore = create((set, get) => ({
         barWeight: cloudData.bar_weight ?? 20,
       };
       try { await AsyncStorage.setItem(PROFILE_KEY_PFX + supabaseUserId, JSON.stringify(profile)); } catch (_) {}
+      const hydratedTimestamps = await _hydrateProfileTimestamps(supabaseUserId);
       set({
         userProfile: profile,
         units: profile.units,
         barWeight: profile.barWeight,
+        userProfileFieldUpdatedAt: hydratedTimestamps,
       });
     }
 
@@ -701,13 +785,15 @@ const useAppStore = create((set, get) => ({
   units: 'kg',
   setUnits: async (units) => {
     set({ units });
-    const { user, userProfile } = get();
+    const { user, userProfile, _stampProfileFields } = get();
     if (user?.id) {
       const updated = { ...(userProfile || {}), units };
       const key = PROFILE_KEY_PFX + user.id;
       const value = JSON.stringify(updated);
       try { await AsyncStorage.setItem(key, value); } catch (_) {}
       set({ userProfile: updated });
+      _stampProfileFields(['units']);
+      await _persistProfileTimestamps(user.id, get().userProfileFieldUpdatedAt);
       pushPrefSoon(user.id, key, value);
     }
   },
@@ -716,13 +802,15 @@ const useAppStore = create((set, get) => ({
   bodyWeightUnits: 'st',
   setBodyWeightUnits: async (bwu) => {
     set({ bodyWeightUnits: bwu });
-    const { user, userProfile } = get();
+    const { user, userProfile, _stampProfileFields } = get();
     if (user?.id) {
       const updated = { ...(userProfile || {}), bodyWeightUnits: bwu };
       const key = PROFILE_KEY_PFX + user.id;
       const value = JSON.stringify(updated);
       try { await AsyncStorage.setItem(key, value); } catch (_) {}
       set({ userProfile: updated });
+      _stampProfileFields(['bodyWeightUnits']);
+      await _persistProfileTimestamps(user.id, get().userProfileFieldUpdatedAt);
       pushPrefSoon(user.id, key, value);
     }
   },
@@ -731,13 +819,15 @@ const useAppStore = create((set, get) => ({
   barWeight: 20,
   setBarWeight: async (w) => {
     set({ barWeight: w });
-    const { user, userProfile } = get();
+    const { user, userProfile, _stampProfileFields } = get();
     if (user?.id) {
       const updated = { ...(userProfile || {}), barWeight: w };
       const key = PROFILE_KEY_PFX + user.id;
       const value = JSON.stringify(updated);
       try { await AsyncStorage.setItem(key, value); } catch (_) {}
       set({ userProfile: updated });
+      _stampProfileFields(['barWeight']);
+      await _persistProfileTimestamps(user.id, get().userProfileFieldUpdatedAt);
       pushPrefSoon(user.id, key, value);
     }
   },
