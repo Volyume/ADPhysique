@@ -290,9 +290,8 @@ WHERE schemaname = 'public'
   AND indexname = 'idx_recipe_ingredients_live';
 -- Expected: one row
 
--- Existing rows all have a non-NULL updated_at (the DEFAULT
--- caught them on column creation; the backfill UPDATE corrects
--- the small subset that landed during the migration window).
+-- Every row has a non-NULL updated_at thanks to the DEFAULT now()
+-- on column creation.
 SELECT count(*) FILTER (WHERE updated_at IS NULL) AS null_rows,
        count(*) AS total_rows
 FROM recipe_ingredients;
@@ -301,5 +300,5 @@ FROM recipe_ingredients;
 
 If `updated_at` does not appear, the migration did not run. If
 trigger row is missing, the touch function did not install. If
-any rows show NULL updated_at, the DEFAULT or the backfill did
-not land — re-run the migration (idempotent) and re-check.
+any rows show NULL updated_at, the DEFAULT did not land — re-run
+the migration (idempotent) and re-check.

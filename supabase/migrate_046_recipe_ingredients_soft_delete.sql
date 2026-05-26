@@ -70,22 +70,21 @@ ALTER TABLE recipe_ingredients
 ALTER TABLE recipe_ingredients
   ADD COLUMN IF NOT EXISTS deleted_at timestamptz;
 
--- Backfill updated_at from created_at for rows that landed before
--- this migration ran. WHERE updated_at = its INSERT default
--- (now()) is unreliable on a long-running table so we just
--- explicitly copy created_at where it's older than updated_at.
--- Idempotent: re-running does nothing on a row that's been
--- touched since.
-UPDATE recipe_ingredients
-SET updated_at = created_at
-WHERE created_at IS NOT NULL
-  AND updated_at IS NOT NULL
-  AND created_at < updated_at
-  AND updated_at - created_at < interval '5 seconds';
--- The 5-second window is a conservative "if updated_at looks
--- like the migration-time default, copy created_at over it"
--- heuristic. Real client writes will be seconds-to-days after
--- created_at so they survive.
+-- No explicit backfill from created_at. The first version of
+-- this migration tried to do that and exploded with
+--   ERROR 42703: column "created_at" does not exist
+-- because the live cloud schema for recipe_ingredients diverged
+-- from migration 015's CREATE TABLE somewhere along the way
+-- (the canonical CREATE includes `created_at timestamptz DEFAULT
+-- now()` but the running instance does not have it). Rather than
+-- speculate about which migration dropped it, the safer move is
+-- to skip the backfill entirely: the DEFAULT now() on the new
+-- updated_at column already lands a non-null timestamp on every
+-- pre-existing row at column-creation time. That's "row was
+-- migrated at" rather than "row was created at" but the LWW gate
+-- only cares about monotonic progression — any subsequent client
+-- write bumps updated_at past the migration-time default and
+-- the comparison stays correct.
 
 CREATE INDEX IF NOT EXISTS idx_recipe_ingredients_live
   ON recipe_ingredients(user_id, recipe_id)
