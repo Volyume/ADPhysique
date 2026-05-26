@@ -125,11 +125,6 @@
       "icon": "./assets/notification-icon.png",
       "color": "#F59E0B",
       "androidMode": "default"
-    },
-    "extra": {
-      "eas": {
-        "projectId": "your-eas-project-id"
-      }
     }
   }
 }

@@ -1,0 +1,33 @@
+# Enforce LF line endings for text files so the Maestro flow linter
+# and other Unix tooling do not trip over CRLF on Windows checkouts.
+# Without this, contributors on Windows can commit CRLF that breaks
+# YAML parsing and shell scripts.
+
+* text=auto eol=lf
+
+*.js   text eol=lf
+*.jsx  text eol=lf
+*.ts   text eol=lf
+*.tsx  text eol=lf
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml  text eol=lf
+*.sh   text eol=lf
+*.md   text eol=lf
+*.sql  text eol=lf
+*.html text eol=lf
+
+# Binary assets that must never be auto-converted.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.ttf  binary
+*.otf  binary
+*.mp3  binary
+*.mp4  binary
+*.wav  binary
+*.aab  binary
+*.apk  binary
+*.keystore binary

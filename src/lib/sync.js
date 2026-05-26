@@ -360,6 +360,17 @@ let _syncDebounceTimer = null;
 const _SYNC_DEBOUNCE_MS = 2_000;
 
 export function scheduleSync() {
+  // No-op under Jest. Most database write paths call scheduleSync(),
+  // so every test that touches the DB would otherwise leave a 2s
+  // timer pending and trigger Jest's "open handles / worker did not
+  // exit gracefully" warning, plus a late require of useAppStore
+  // after the module registry has been torn down. Production code
+  // paths are unaffected: JEST_WORKER_ID is only set inside Jest
+  // workers. Tests that need to assert sync behaviour should call
+  // bulkUploadLocalData / pullFromCloud directly.
+  if (typeof process !== 'undefined' && process.env && process.env.JEST_WORKER_ID) {
+    return;
+  }
   if (_syncDebounceTimer) clearTimeout(_syncDebounceTimer);
   _syncDebounceTimer = setTimeout(() => {
     _syncDebounceTimer = null;

@@ -9,9 +9,6 @@
       "distribution": "internal",
       "env": {
         "APP_VARIANT": "development"
-      },
-      "ios": {
-        "simulator": true
       }
     },
     "development-device": {
@@ -38,9 +35,6 @@
       },
       "android": {
         "buildType": "app-bundle"
-      },
-      "ios": {
-        "autoIncrement": true
       }
     }
   },
@@ -49,11 +43,6 @@
       "android": {
         "serviceAccountKeyPath": "./google-play-service-account.json",
         "track": "internal"
-      },
-      "ios": {
-        "appleId": "your-apple-id@example.com",
-        "ascAppId": "your-asc-app-id",
-        "appleTeamId": "your-apple-team-id"
       }
     }
   }
