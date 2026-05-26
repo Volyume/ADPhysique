@@ -212,10 +212,17 @@ jobs:
 
       - name: Run Maestro flows on emulator
         id: maestro_run
-        # `continue-on-error: true` so the post-step that writes the
-        # status report still runs when Maestro fails. The status
-        # report itself captures the failure mode.
-        continue-on-error: true
+        # No `continue-on-error`. Codex audit 2026-05-26 (post-F7
+        # follow-up): when continue-on-error was true, the step's
+        # `conclusion` was masked to 'success' even though
+        # `outcome` was 'failure', `job.status` followed
+        # `conclusion`, and the status doc read `job.status`. The
+        # net effect: the status doc said "success" while a later
+        # fail-job step still triggered failure, exactly the
+        # contradiction the founder hit. Removing continue-on-error
+        # makes conclusion + outcome + job.status all agree.
+        # The status report step below uses `if: always()` so it
+        # still runs when this step fails.
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 33
@@ -349,8 +356,10 @@ jobs:
             adb-install.log
           if-no-files-found: warn
 
-      - name: Fail job if Maestro failed
-        if: always() && steps.maestro_run.outcome == 'failure'
-        run: |
-          echo "Maestro step reported failure. See .ci-status/maestro-latest.md on this branch."
-          exit 1
+      # The explicit "Fail job if Maestro failed" step was removed.
+      # With continue-on-error dropped from the maestro_run step, a
+      # maestro failure now fails the step + the job directly, so
+      # the explicit gate became a redundant second failure source
+      # that read a different field (outcome) than the status doc
+      # read (job.status), which is what produced the contradictory
+      # "step success / fail-job triggered" picture.

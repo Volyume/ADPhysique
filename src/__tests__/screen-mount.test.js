@@ -17,6 +17,18 @@
  * - Real DB / network paths (everything is stubbed)
  */
 
+// Bump the per-test timeout for this suite. screen-mount runs ~400
+// mount/interaction cases that share a single worker under
+// --runInBand; the very last tests in the file accumulate enough
+// JS heap + scheduled timers from earlier renders that the
+// NutritionTargetsScreen mount can take >5s on a CI runner even
+// though it takes ~4s in isolation. Codex audit 2026-05-26 follow-
+// up: NutritionTargetsScreen timed out on Main CI run #N.
+// 15s gives 3x headroom over the default 5s without masking a
+// genuine hang (test still fails if a real infinite-loop / never-
+// resolving promise lands).
+jest.setTimeout(15_000);
+
 jest.mock('react-native-url-polyfill/auto', () => ({}), { virtual: true });
 
 jest.mock('@supabase/supabase-js', () => ({
@@ -513,16 +525,24 @@ describe('Pro screens mount without error', () => {
   test('NutritionTargetsScreen mounts on a fresh account', async () => {
     const Screen = require('../screens/NutritionTargetsScreen').default;
     const { tree, errors } = await mountScreen(Screen);
-    expect(tree).not.toBeNull();
-    expect(errors).toEqual([]);
+    try {
+      expect(tree).not.toBeNull();
+      expect(errors).toEqual([]);
+    } finally {
+      unmountTree(tree);
+    }
   });
 
   test('NutritionTargetsScreen — every tappable fires without throwing', async () => {
     const Screen = require('../screens/NutritionTargetsScreen').default;
     const { tree } = await mountScreen(Screen);
-    const { count, failures } = await bashTappables(tree);
-    expect(count).toBeGreaterThan(0);
-    expect(failures).toEqual([]);
+    try {
+      const { count, failures } = await bashTappables(tree);
+      expect(count).toBeGreaterThan(0);
+      expect(failures).toEqual([]);
+    } finally {
+      unmountTree(tree);
+    }
   });
 
   test('NutritionTargetsScreen mounts with previously-saved targets in the DB', async () => {
@@ -549,12 +569,15 @@ describe('Pro screens mount without error', () => {
     database.getUserBodyProfile = () => Promise.resolve({
       sex: 'male', heightCm: 178, dateOfBirth: '1990-01-01',
     });
+    let tree;
     try {
       const Screen = require('../screens/NutritionTargetsScreen').default;
-      const { tree, errors } = await mountScreen(Screen);
+      const result = await mountScreen(Screen);
+      tree = result.tree;
       expect(tree).not.toBeNull();
-      expect(errors).toEqual([]);
+      expect(result.errors).toEqual([]);
     } finally {
+      unmountTree(tree);
       database.getNutritionTargets = origGet;
       database.getUserBodyProfile = origGetBody;
     }
