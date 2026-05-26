@@ -1,0 +1,165 @@
+/**
+ * Sync runner. SYNC_ARCHITECTURE_LOCKED.md lines 156-238.
+ *
+ * - All four sync triggers (foreground, network, write, periodic)
+ *   route through syncAll(). A single in-memory lock deduplicates
+ *   concurrent calls so a periodic + write trigger fired in the
+ *   same instant produce one round.
+ * - getStatus() exposes synced / pending / offline / error for the
+ *   status indicator in the nav header.
+ * - This phase delegates the actual pull/push work to the existing
+ *   src/lib/sync.js helpers (bulkUploadLocalData + pullFromCloud).
+ *   Future iterations migrate that logic into transport.js
+ *   table-by-table, each guarded by the sync regression matrix
+ *   from TESTING_STRATEGY_LOCKED.md lines 144-160.
+ */
+
+import { ensureSyncQueueTable, getQueueDepth } from './queue';
+import { trackSyncRun } from './telemetry';
+import { listSyncableTables } from './registry';
+
+let _runLock = false;
+let _lastStatus = 'unknown'; // 'synced' | 'pending' | 'offline' | 'error' | 'unknown'
+let _lastRunAt = 0;
+let _lastError = null;
+
+/**
+ * Run a full sync cycle. Returns the structured result the
+ * sync_run telemetry event uses.
+ *
+ * @param {Object} opts
+ * @param {string} opts.userId            - Supabase user id
+ * @param {string} opts.localUserId       - Local SQLite user id
+ * @param {'foreground'|'network'|'write'|'periodic'|'manual'} opts.triggeredBy
+ */
+export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = {}) {
+  if (_runLock) {
+    return { status: 'skipped', reason: 'already_running' };
+  }
+  _runLock = true;
+  const startMs = Date.now();
+  let status = 'success';
+  let queueBefore = 0;
+  let queueAfter = 0;
+  let erroredCount = 0;
+  let rejectedCount = 0;
+  let pullCountPerTable = {};
+  let pushCountPerTable = {};
+
+  try {
+    await ensureSyncQueueTable();
+    queueBefore = await getQueueDepth();
+
+    if (!userId) {
+      status = 'success';
+    } else {
+      // Delegate to the existing helpers for now. These are the
+      // proven push + pull paths the closed-test build runs
+      // against. Future PRs replace them with registry-driven
+      // transport.js calls table-by-table.
+      // eslint-disable-next-line global-require
+      const sync = require('../sync');
+      try {
+        if (typeof sync.bulkUploadLocalData === 'function' && localUserId) {
+          const upload = await sync.bulkUploadLocalData(userId, localUserId).catch(e => {
+            erroredCount += 1;
+            return { _err: e };
+          });
+          if (upload && typeof upload === 'object') {
+            pushCountPerTable = upload.pushCountPerTable ?? pushCountPerTable;
+          }
+        }
+        if (typeof sync.pullFromCloud === 'function') {
+          const pull = await sync.pullFromCloud(userId).catch(e => {
+            erroredCount += 1;
+            return { _err: e };
+          });
+          if (pull && typeof pull === 'object') {
+            pullCountPerTable = pull.pullCountPerTable ?? pullCountPerTable;
+          }
+        }
+      } catch (e) {
+        status = 'failure';
+        erroredCount += 1;
+        _lastError = String(e?.message ?? e);
+      }
+    }
+
+    queueAfter = await getQueueDepth();
+    if (erroredCount > 0) status = queueAfter < queueBefore ? 'partial' : 'failure';
+  } finally {
+    const durationMs = Date.now() - startMs;
+    _lastRunAt = Date.now();
+    _lastStatus = status === 'failure' ? 'error'
+      : queueAfter > 0 ? 'pending'
+      : 'synced';
+    _runLock = false;
+
+    trackSyncRun(userId, {
+      status,
+      duration_ms: durationMs,
+      triggered_by: triggeredBy,
+      pull_count_per_table: pullCountPerTable,
+      push_count_per_table: pushCountPerTable,
+      rejected_count: rejectedCount,
+      errored_count: erroredCount,
+      queue_depth_before: queueBefore,
+      queue_depth_after: queueAfter,
+    }).catch(() => {});
+  }
+
+  return {
+    status: _lastStatus,
+    duration_ms: Date.now() - startMs,
+    queue_depth: queueAfter,
+  };
+}
+
+/**
+ * Single-table sync. Currently a thin wrapper that runs the full
+ * cycle and reports the per-table counts; will become a true
+ * per-table call as transport.js gains per-table push/pull paths.
+ */
+export async function syncTable(name, { userId, localUserId, triggeredBy = 'manual' } = {}) {
+  if (!listSyncableTables().includes(name)) {
+    throw new Error(`syncTable: unknown table '${name}' (not in SYNC_REGISTRY)`);
+  }
+  return syncAll({ userId, localUserId, triggeredBy });
+}
+
+/**
+ * Snapshot of sync state for the UI indicator. SYNC_ARCHITECTURE_LOCKED.md
+ * lines 266-276.
+ *
+ * Returns:
+ *   {
+ *     status: 'synced' | 'pending' | 'offline' | 'error' | 'unknown',
+ *     queue_depth,
+ *     last_run_at,
+ *     last_error,
+ *   }
+ */
+export async function getStatus() {
+  let queueDepth = 0;
+  try {
+    await ensureSyncQueueTable();
+    queueDepth = await getQueueDepth();
+  } catch (_) { /* tolerate */ }
+  return {
+    status: _lastStatus,
+    queue_depth: queueDepth,
+    last_run_at: _lastRunAt,
+    last_error: _lastError,
+  };
+}
+
+/**
+ * Test helper: reset the internal run lock + status snapshot. Not
+ * exported via index.js.
+ */
+export function _resetRunnerForTests() {
+  _runLock = false;
+  _lastStatus = 'unknown';
+  _lastRunAt = 0;
+  _lastError = null;
+}

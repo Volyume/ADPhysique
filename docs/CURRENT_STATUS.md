@@ -238,6 +238,7 @@ Per `DATABASE_SCHEMA_LOCKED.md` + grep against `supabase/migrate_*.sql`.
 | 040 | notification_sent + notification_tapped + notification_failed allow-list | **Pending founder apply** |
 | 041 | article9_consent_withdrawn allow-list (paired with SettingsScreen Privacy withdrawal UI) | **Pending founder apply** |
 | 042 | `upgrade_tier_for_user(_user_id, ...)` service-role-only RPC for the Play Billing RTDN webhook (audit fix 2026-05-26) | **Pending founder apply** |
+| 043 | `sync_conflict_resolved` event added to `record_engine_telemetry` allow-list. Fires from the new `src/lib/sync/conflict.js`. | **Pending founder apply** |
 
 ---
 
@@ -312,7 +313,7 @@ Phase A; flagged so future PRs can decide whether to align or accept.
 
 | Locked spec | Reality | Effect |
 |---|---|---|
-| `src/lib/sync/` directory with 7 files (index, registry, runner, queue, conflict, transport, telemetry) per `SYNC_ARCHITECTURE_LOCKED.md` | Single `src/lib/sync.js` (~85 KB) | Functional; no registry to extend; conflict-resolution path doesn't exist so `sync_conflict_resolved` can't fire |
+| `src/lib/sync/` directory with 7 files (index, registry, runner, queue, conflict, transport, telemetry) per `SYNC_ARCHITECTURE_LOCKED.md` | **Built 2026-05-26** as the spec'd 7-file module (registry with all 15 tables, sync_queue CRUD + compaction + backoff, conflict dispatcher with `sync_conflict_resolved` event wired via migration 043, runner with lock + structured telemetry, transport shell, public API). The legacy `src/lib/sync.js` stays as a back-compat file so existing callers keep resolving; future PRs migrate per-table push/pull logic from sync.js into transport.js. 24 new tests. | Resolved (foundation). Per-table transport migration is incremental from here. |
 | `src/lib/notifications/` directory with 5 files per `NOTIFICATIONS_LOCKED.md` | **Exists** (`categories.js`, `quietHours.js`, `permissions.js`, `handler.js`, `scheduler.js`, `telemetry.js`, `index.js`) with `notification_*` telemetry wired + quiet-hours rule | Resolved this session. `trainingReminders.js` + `restNotifications.js` + `activeWorkoutNotification.js` still sit alongside as sibling files; pulling them into the directory is a follow-up. |
 | `src/lib/telemetry/` directory with 4 files per `TELEMETRY_DASHBOARDS_LOCKED.md` | Single `src/lib/engineTelemetry.js` | Functional; allow-list + push live there |
 | `src/screens/onboarding/` directory per `ONBOARDING_SEQUENCE_LOCKED.md` | Onboarding screens flat in `src/screens/` | Cosmetic |
