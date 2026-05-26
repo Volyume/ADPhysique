@@ -76,13 +76,29 @@ session that materially changes shipped state, not appended to.
 > - F11 (build-android.yml + maestro-e2e.yml still use
 >   `npm install`): fixed — both now use `npm ci
 >   --legacy-peer-deps`.
-> - F12 (33 prod npm audit advisories): BLOCKED by CLAUDE.md
->   release policy 2026-05-24 ("closed-test build stays in
->   place until WHOLE project is built out") +
->   KNOWN_ISSUES_FROM_QA.md line 82 explicit deferral
->   ("Accepted risk for beta; fix path is breaking upgrade to
->   newer Expo SDK"). The Expo SDK upgrade window opens at
->   Phase A exit prep.
+> - F12 (33 prod npm audit advisories): CORRECTION — initially
+>   marked BLOCKED citing CLAUDE.md release policy. The founder
+>   challenged that framing 2026-05-26: the deployed AAB on
+>   Play Console does not auto-update from source changes;
+>   client-side dep bumps cannot break it. Only DB / RPC /
+>   allow-list contract changes can. F12 is therefore
+>   repo-fixable in source. Re-attempted this session:
+>     - @sentry/react-native 5.24.3 → 6.22.0 cleared 3
+>       advisories (commit `8e18793`).
+>     - @babel/runtime forced to ^7.29.7 via npm `overrides`
+>       cleared 1 (commit `79ce787`).
+>     - Total: 33 → 29 (4 cleared).
+>     - Expo SDK 51 → 56 jump attempted via
+>       `npm install expo@^56`: broke all 78 Jest suites at JS
+>       load (incompatible peers across react-native /
+>       expo-modules-core / jest-expo / babel preset).
+>       Reverted; current state 1547/1550 passing.
+>     - Remaining 29 advisories are all in the SDK 51 build
+>       chain. Clearing them requires a per-SDK 51 → 52 → 53
+>       → 54 → 55 → 56 migration with native-module breakage
+>       handling at each step plus device smoke-test, which is
+>       a dedicated 1-2 day session, not a single command.
+>       This is genuine open work, not a tracked-not-lost item.
 >
 > **Correction of prior overclaims (per founder instruction
 > 2026-05-26):**
