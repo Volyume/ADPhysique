@@ -31,6 +31,8 @@ jest.mock('../../notifications/preferences', () => ({
 jest.mock('../../database', () => ({
   getAllWeeklyCheckinsForUser: jest.fn(),
   insertWeeklyCheckinFromCloud: jest.fn(),
+  getBodyMetricLog: jest.fn(),
+  insertBodyMetricFromCloud: jest.fn(),
 }));
 
 jest.mock('../telemetry', () => ({
@@ -88,6 +90,10 @@ describe('MIGRATED_TABLES', () => {
 
   test('lists weekly_checkins_v2', () => {
     expect(MIGRATED_TABLES).toContain('weekly_checkins_v2');
+  });
+
+  test('lists body_composition_log', () => {
+    expect(MIGRATED_TABLES).toContain('body_composition_log');
   });
 
   test('is frozen so callers can iterate but not mutate', () => {
@@ -448,3 +454,177 @@ describe('weekly_checkins_v2 pull', () => {
     expect(result).toEqual({ count: 0, errors: 0 });
   });
 });
+
+describe('body_composition_log push', () => {
+  function makeBcPushSb({ upsertError = null } = {}) {
+    const calls = { upserts: [] };
+    return {
+      _calls: calls,
+      from: jest.fn(() => ({
+        upsert: jest.fn(async (rows, opts) => {
+          calls.upserts.push({ rows, opts });
+          return { error: upsertError };
+        }),
+      })),
+    };
+  }
+
+  test('maps camelCase SQLite rows to body_metrics snake_case schema', async () => {
+    dbModule.getBodyMetricLog.mockResolvedValue([
+      {
+        id: 'bm-1',
+        loggedAt: Date.UTC(2026, 4, 26),
+        weightKg: 82.4,
+        waistCm: 84,
+        chestCm: 102,
+        hipsCm: 96,
+        thighCm: 60,
+        armCm: 38,
+        shouldersCm: 124,
+        forearmCm: 30,
+        hamCm: 58,
+        calfCm: 38,
+        bodyFatPercent: 17.5,
+        bodyFatSource: 'caliper',
+        notes: 'morning',
+      },
+    ]);
+    const sb = makeBcPushSb();
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await pushTable('body_composition_log', { userId: 'u1', localUserId: 'u1' });
+
+    expect(result).toEqual({ count: 1, errors: 0 });
+    const upsert = sb._calls.upserts[0];
+    expect(upsert.opts).toEqual({ onConflict: 'user_id,id' });
+    expect(upsert.rows[0]).toMatchObject({
+      id: 'bm-1',
+      user_id: 'u1',
+      metric_date: '2026-05-26',
+      body_weight: 82.4,
+      quads: 60,         // thighCm
+      hamstrings: 58,    // hamCm
+      body_fat_percent: 17.5,
+      body_fat_source: 'caliper',
+      notes: 'morning',
+    });
+  });
+
+  test('drops rows where metric_date cannot be derived', async () => {
+    dbModule.getBodyMetricLog.mockResolvedValue([
+      { id: 'a', loggedAt: 0 },          // falsy → null date → dropped
+      { id: 'b', loggedAt: Date.UTC(2026, 0, 1) },
+    ]);
+    const sb = makeBcPushSb();
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await pushTable('body_composition_log', { userId: 'u1', localUserId: 'u1' });
+
+    expect(result).toEqual({ count: 1, errors: 0 });
+    expect(sb._calls.upserts[0].rows).toHaveLength(1);
+    expect(sb._calls.upserts[0].rows[0].id).toBe('b');
+  });
+
+  test('batches at 200 rows per upsert', async () => {
+    const rows = Array.from({ length: 250 }, (_, i) => ({
+      id: 'bm-' + i,
+      loggedAt: Date.UTC(2026, 0, 1) + i * 86400000,
+    }));
+    dbModule.getBodyMetricLog.mockResolvedValue(rows);
+    const sb = makeBcPushSb();
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await pushTable('body_composition_log', { userId: 'u1', localUserId: 'u1' });
+
+    expect(result).toEqual({ count: 250, errors: 0 });
+    expect(sb._calls.upserts).toHaveLength(2);
+    expect(sb._calls.upserts[0].rows).toHaveLength(200);
+    expect(sb._calls.upserts[1].rows).toHaveLength(50);
+  });
+
+  test('returns count:0 errors:0 when no local rows', async () => {
+    dbModule.getBodyMetricLog.mockResolvedValue([]);
+    const sb = makeBcPushSb();
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await pushTable('body_composition_log', { userId: 'u1', localUserId: 'u1' });
+
+    expect(result).toEqual({ count: 0, errors: 0 });
+    expect(sb._calls.upserts).toHaveLength(0);
+  });
+
+  test('counts batch errors', async () => {
+    dbModule.getBodyMetricLog.mockResolvedValue([
+      { id: 'a', loggedAt: Date.UTC(2026, 0, 1) },
+    ]);
+    const sb = makeBcPushSb({ upsertError: new Error('rls') });
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await pushTable('body_composition_log', { userId: 'u1', localUserId: 'u1' });
+
+    expect(result.errors).toBe(1);
+    expect(result.count).toBe(0);
+  });
+});
+
+describe('body_composition_log pull', () => {
+  function makeBcPullSb({ data = [], error = null } = {}) {
+    return {
+      from: jest.fn(() => ({
+        select: jest.fn(() => ({
+          eq: jest.fn(async () => ({ data, error })),
+        })),
+      })),
+    };
+  }
+
+  test('inserts every cloud row via INSERT OR IGNORE helper', async () => {
+    const sb = makeBcPullSb({
+      data: [
+        { id: 'bm-1', user_id: 'u1', metric_date: '2026-05-01' },
+        { id: 'bm-2', user_id: 'u1', metric_date: '2026-05-26' },
+      ],
+    });
+    getSupabaseClient.mockReturnValue(sb);
+    dbModule.insertBodyMetricFromCloud.mockResolvedValue(undefined);
+
+    const result = await pullTable('body_composition_log', { userId: 'u1' });
+
+    expect(result).toEqual({ count: 2, errors: 0 });
+    expect(dbModule.insertBodyMetricFromCloud).toHaveBeenCalledTimes(2);
+    expect(dbModule.insertBodyMetricFromCloud).toHaveBeenCalledWith('u1', expect.objectContaining({ id: 'bm-1' }));
+  });
+
+  test('counts row-level errors without halting', async () => {
+    const sb = makeBcPullSb({ data: [{ id: 'a' }, { id: 'b' }, { id: 'c' }] });
+    getSupabaseClient.mockReturnValue(sb);
+    dbModule.insertBodyMetricFromCloud
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('constraint'))
+      .mockResolvedValueOnce(undefined);
+
+    const result = await pullTable('body_composition_log', { userId: 'u1' });
+
+    expect(result).toEqual({ count: 2, errors: 1 });
+  });
+
+  test('errors:1 when select fails', async () => {
+    const sb = makeBcPullSb({ data: null, error: new Error('rls') });
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await pullTable('body_composition_log', { userId: 'u1' });
+
+    expect(result).toEqual({ count: 0, errors: 1 });
+    expect(dbModule.insertBodyMetricFromCloud).not.toHaveBeenCalled();
+  });
+
+  test('count 0 when cloud has nothing', async () => {
+    const sb = makeBcPullSb({ data: [] });
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await pullTable('body_composition_log', { userId: 'u1' });
+
+    expect(result).toEqual({ count: 0, errors: 0 });
+  });
+});
+

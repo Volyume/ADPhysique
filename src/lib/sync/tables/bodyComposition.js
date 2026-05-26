@@ -1,0 +1,124 @@
+/**
+ * body_composition_log per-table push + pull.
+ *
+ * Registry key is `body_composition_log` (locked in
+ * SYNC_REGISTRY); the cloud table is `body_metrics` and the local
+ * SQLite table is `body_metric_log`. Names diverged historically
+ * and the registry-key-vs-table-name split is preserved here so
+ * the dispatch contract matches the locked spec while the SQL
+ * stays compatible with the existing schema.
+ *
+ * Moved out of the monolithic sync.js bulkUploadLocalData /
+ * pullFromCloud helpers per SYNC_ARCHITECTURE_LOCKED.md
+ * lines 156-238.
+ *
+ * Behavioural contract preserved verbatim from sync.js:
+ *
+ *   Push: getBodyMetricLog(localUserId, 365), map to the
+ *         body_metrics cloud schema (thigh→quads, ham→hamstrings,
+ *         body_fat_*), filter rows that produce a null
+ *         metric_date, upsert in 200-row batches on
+ *         (user_id, id).
+ *
+ *   Pull: select all from body_metrics for the user, route each
+ *         row through insertBodyMetricFromCloud (INSERT OR
+ *         IGNORE).
+ *
+ * The registry says conflictStrategy=last_write_wins and
+ * softDelete=true; the legacy code didn't honour either (push
+ * always re-uploads, pull is INSERT-only). Same LWW/soft-delete
+ * gap as weekly_checkins_v2; tracked as a follow-up.
+ */
+
+import { logSyncError } from '../telemetry';
+
+const PUSH_BATCH_SIZE = 200;
+const PUSH_WINDOW_DAYS = 365;
+
+function msToDate(ms) {
+  if (!ms) return null;
+  try { return new Date(ms).toISOString().split('T')[0]; } catch (_) { return null; }
+}
+
+export async function pushBodyComposition(sb, { userId, localUserId } = {}) {
+  if (!sb || !userId) return { count: 0, errors: 0 };
+  try {
+    // eslint-disable-next-line global-require
+    const { getBodyMetricLog } = require('../../database');
+    const metrics = await getBodyMetricLog(localUserId, PUSH_WINDOW_DAYS);
+    if (!metrics?.length) return { count: 0, errors: 0 };
+
+    const rows = metrics.map((m) => ({
+      id: m.id,
+      user_id: userId,
+      metric_date: msToDate(m.loggedAt),
+      body_weight: m.weightKg ?? null,
+      waist: m.waistCm ?? null,
+      chest: m.chestCm ?? null,
+      hips: m.hipsCm ?? null,
+      quads: m.thighCm ?? null,
+      arms: m.armCm ?? null,
+      shoulders: m.shouldersCm ?? null,
+      forearms: m.forearmCm ?? null,
+      hamstrings: m.hamCm ?? null,
+      calves: m.calfCm ?? null,
+      body_fat_percent: m.bodyFatPercent ?? null,
+      body_fat_source: m.bodyFatSource ?? null,
+      notes: m.notes ?? null,
+    })).filter((r) => r.metric_date);
+
+    if (!rows.length) return { count: 0, errors: 0 };
+
+    let pushed = 0;
+    let errors = 0;
+    for (let i = 0; i < rows.length; i += PUSH_BATCH_SIZE) {
+      const batch = rows.slice(i, i + PUSH_BATCH_SIZE);
+      const { error } = await sb
+        .from('body_metrics')
+        .upsert(batch, { onConflict: 'user_id,id' });
+      if (error) {
+        errors += 1;
+        logSyncError('sync.tables.bodyComposition.pushUpsert', error);
+      } else {
+        pushed += batch.length;
+      }
+    }
+    return { count: pushed, errors };
+  } catch (e) {
+    logSyncError('sync.tables.bodyComposition.push', e);
+    return { count: 0, errors: 1 };
+  }
+}
+
+export async function pullBodyComposition(sb, { userId } = {}) {
+  if (!sb || !userId) return { count: 0, errors: 0 };
+  try {
+    const { data, error } = await sb
+      .from('body_metrics')
+      .select('*')
+      .eq('user_id', userId);
+    if (error) {
+      logSyncError('sync.tables.bodyComposition.pull', error);
+      return { count: 0, errors: 1 };
+    }
+    if (!data?.length) return { count: 0, errors: 0 };
+
+    // eslint-disable-next-line global-require
+    const { insertBodyMetricFromCloud } = require('../../database');
+    let applied = 0;
+    let errors = 0;
+    for (const m of data) {
+      try {
+        await insertBodyMetricFromCloud(userId, m);
+        applied += 1;
+      } catch (e) {
+        errors += 1;
+        logSyncError('sync.tables.bodyComposition.pullRow', e);
+      }
+    }
+    return { count: applied, errors };
+  } catch (e) {
+    logSyncError('sync.tables.bodyComposition.pull', e);
+    return { count: 0, errors: 1 };
+  }
+}

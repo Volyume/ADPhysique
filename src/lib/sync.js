@@ -558,41 +558,9 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
       logWarn('sync.bulkUploadLocalData', `${failures} of ${completed.length} workouts failed to upload`, { supabaseUserId });
     }
 
-    // Body metrics — see syncBodyMetric for the column-name rationale.
-    // thigh→quads, ham→hamstrings, plus body_fat_* columns added in
-    // migrate_010. Pre-migration this upsert had been silently rejected
-    // for every metric in the user's history.
-    try {
-      const metrics = await getBodyMetricLog(localUserId, 365);
-      if (metrics?.length) {
-        const rows = metrics.map(m => ({
-          id: m.id,
-          user_id: supabaseUserId,
-          metric_date: msToDate(m.loggedAt),
-          body_weight: m.weightKg ?? null,
-          waist: m.waistCm ?? null,
-          chest: m.chestCm ?? null,
-          hips: m.hipsCm ?? null,
-          quads: m.thighCm ?? null,
-          arms: m.armCm ?? null,
-          shoulders: m.shouldersCm ?? null,
-          forearms: m.forearmCm ?? null,
-          hamstrings: m.hamCm ?? null,
-          calves: m.calfCm ?? null,
-          body_fat_percent: m.bodyFatPercent ?? null,
-          body_fat_source: m.bodyFatSource ?? null,
-          notes: m.notes ?? null,
-        })).filter(r => r.metric_date);
-        for (let i = 0; i < rows.length; i += 200) {
-          const { error } = await sb.from('body_metrics').upsert(
-            rows.slice(i, i + 200), { onConflict: 'user_id,id' },
-          );
-          if (error) logPgErr('sync.bulkUploadLocalData.body_metrics', error);
-        }
-      }
-    } catch (e) {
-      logWarn('sync.bulkUploadLocalData', 'body metrics upload failed', { error: e?.message });
-    }
+    // body_composition_log (cloud table body_metrics) moved to
+    // src/lib/sync/transport.js (registry-driven per-table push).
+    // See MIGRATED_TABLES.
 
     // ─── New Pro-state tables ─────────────────────────────────────────────
     // Each block is independently fault-tolerant: failures on one table
@@ -1588,7 +1556,8 @@ export async function pullFromCloud(supabaseUserId) {
     // (registry-driven per-table pull). See MIGRATED_TABLES.
     const coachCount = await _pullCoachOutputs(sb, supabaseUserId);
     const nutritionFound = await _pullNutritionTargets(sb, supabaseUserId);
-    const bodyMetricCount = await _pullBodyMetrics(sb, supabaseUserId);
+    // body_composition_log moved to src/lib/sync/transport.js
+    // (registry-driven per-table pull). See MIGRATED_TABLES.
     // New tables that previously stayed local-only on every cross-
     // device sign-in. Each is fault-tolerant — a missing cloud table
     // logs and returns 0 rather than crashing the whole pull.
