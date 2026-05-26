@@ -140,6 +140,14 @@ export const SYNC_REGISTRY = [
     softDelete: false,
     direction: 'bidirectional',
   },
+  {
+    table: 'notification_preferences',
+    pk: ['user_id', 'category'],
+    conflictStrategy: 'last_write_wins',
+    serverAuthoritative: false,
+    softDelete: false,
+    direction: 'bidirectional',
+  },
 ];
 
 export function getRegistryEntry(tableName) {

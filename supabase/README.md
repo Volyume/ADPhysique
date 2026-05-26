@@ -23,6 +23,7 @@ unless the file header says otherwise.
 | 041 | `migrate_041_consent_withdrawal_telemetry.sql` | Adds `article9_consent_withdrawn` to the allow-list. | Same |
 | 042 | `migrate_042_upgrade_tier_for_user.sql` | Service-role-only `upgrade_tier_for_user(_user_id, ...)` RPC for the Play Billing RTDN webhook. | See § Verify upgrade_tier_for_user |
 | 043 | `migrate_043_sync_conflict_telemetry.sql` | Adds `sync_conflict_resolved` to the allow-list. Fires from `src/lib/sync/conflict.js`. | See § Verify allow-list extension |
+| 044 | `migrate_044_notification_preferences.sql` | Creates `notification_preferences(user_id, category, enabled, time_pref)` with RLS + updated_at trigger. Backs NOTIFICATIONS_LOCKED.md lines 117-119. | See § Verify notification_preferences |
 
 ## How to apply
 
@@ -137,7 +138,38 @@ WHERE n.nspname = 'public' AND p.proname = 'upgrade_tier_for_user';
 -- Expected: auth_can_call = f, anon_can_call = f, service_can_call = t
 ```
 
-## After all six are applied
+### Verify `notification_preferences` (migration 044)
+
+```sql
+-- Table exists with the expected columns + composite PK
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_schema = 'public' AND table_name = 'notification_preferences'
+ORDER BY ordinal_position;
+-- Expected: user_id (uuid, NO), category (text, NO), enabled (boolean, NO),
+--           time_pref (text, YES), created_at (timestamptz, NO), updated_at (timestamptz, NO)
+```
+
+```sql
+-- Composite PK on (user_id, category)
+SELECT a.attname AS column_name
+FROM pg_index i
+JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+WHERE i.indrelid = 'notification_preferences'::regclass AND i.indisprimary
+ORDER BY array_position(i.indkey, a.attnum);
+-- Expected: user_id, category
+```
+
+```sql
+-- RLS enabled + four per-operation policies
+SELECT relrowsecurity FROM pg_class
+WHERE relname = 'notification_preferences' AND relnamespace = (
+  SELECT oid FROM pg_namespace WHERE nspname = 'public'
+);
+-- Expected: t
+```
+
+## After all eight are applied
 
 Smoke-test from the live app build:
 

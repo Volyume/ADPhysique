@@ -239,6 +239,7 @@ Per `DATABASE_SCHEMA_LOCKED.md` + grep against `supabase/migrate_*.sql`.
 | 041 | article9_consent_withdrawn allow-list (paired with SettingsScreen Privacy withdrawal UI) | **Pending founder apply** |
 | 042 | `upgrade_tier_for_user(_user_id, ...)` service-role-only RPC for the Play Billing RTDN webhook (audit fix 2026-05-26) | **Pending founder apply** |
 | 043 | `sync_conflict_resolved` event added to `record_engine_telemetry` allow-list. Fires from the new `src/lib/sync/conflict.js`. | **Pending founder apply** |
+| 044 | `notification_preferences` table + RLS + updated_at trigger. Backs NOTIFICATIONS_LOCKED.md lines 117-119. Added to SYNC_REGISTRY. | **Pending founder apply** |
 
 ---
 

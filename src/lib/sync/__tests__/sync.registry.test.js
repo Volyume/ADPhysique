@@ -28,6 +28,7 @@ const EXPECTED_TABLES = [
   'body_composition_log',
   'nutrition_targets',
   'profiles',
+  'notification_preferences',
 ];
 
 describe('SYNC_REGISTRY shape', () => {
@@ -76,7 +77,7 @@ describe('SYNC_REGISTRY shape', () => {
     expect(getRegistryEntry('does_not_exist')).toBeNull();
   });
 
-  test('listSyncableTables returns all 15 tables', () => {
+  test('listSyncableTables returns all locked tables', () => {
     expect(listSyncableTables()).toHaveLength(EXPECTED_TABLES.length);
   });
 
