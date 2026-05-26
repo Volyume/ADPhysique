@@ -1,15 +1,22 @@
 # Volyume — Complete App Map
 
 > Auto-generated reference. Last updated: 2026-05-18.
-> Branch: `claude/build-volyume-app-srY9C`
+> Branch: `main` (default branch as of 2026-05-26; this file was
+> originally generated against `claude/build-volyume-app-srY9C` which
+> has since been retired).
 
-> **⚠ Partially stale as of 2026-05-21.** Several screens listed below
-> have since been removed (CoachBuilderScreen, OnboardingQuizScreen) and
-> the auth / onboarding / Pro upgrade flows have been reworked. The
-> canonical current-state reference is now `INFRASTRUCTURE.md` at the
-> repo root. This file is kept for historical context and the screen
+> **⚠ Stale as of 2026-05-21 and superseded 2026-05-25.** Many screens
+> listed below have since been removed (CoachBuilderScreen,
+> OnboardingQuizScreen) and the auth / onboarding / Pro upgrade flows
+> have been reworked. The Move #1 food layer, Move #2 ED-pattern
+> detection, Move #3 upward-gate compression, Move #4 differential
+> paywall, and Move #5 cascade/payments work all postdate this map.
+> **For the canonical current-state reference, read
+> `docs/CURRENT_STATUS.md` first, then `docs/HANDOFF.md` section 11
+> (the 56-screen inventory).** This file is kept for the screen
 > deep-dives that haven't changed; treat anything to do with plan
-> creation flow or first-run paths as historical, not current.
+> creation flow, first-run paths, tier structure, or the build
+> trigger as historical, not current.
 
 ---
 
@@ -433,7 +440,7 @@ Schema version tracked via `PRAGMA user_version` (currently v2).
 
 ## APK Build
 
-Trigger: push to `claude/build-volyume-app-srY9C` → GitHub Actions (`build-android.yml`).
+Trigger: push to `main` or any `claude/**` branch → GitHub Actions (`build-android.yml`). (Historically the trigger pointed at `claude/build-volyume-app-srY9C`; that branch has been retired and `main` is now the canonical build source.)
 
 ```
 npx expo prebuild --platform android --clean

@@ -1,6 +1,6 @@
 # Volyume — Screen & Component Inventory
 
-_Last updated: 2026-05-16. Covers build as of branch `claude/build-volyume-app-srY9C`._
+_Last updated: 2026-05-16. Covers the build as it existed in May 2026 on the now-retired `claude/build-volyume-app-srY9C` branch. Active branch is now `main` (also the GitHub default as of 2026-05-26)._
 
 > **Note (2026-05-25 evening, comprehensive doc refresh):** this
 > inventory has been superseded by `HANDOFF.md` section 11, which

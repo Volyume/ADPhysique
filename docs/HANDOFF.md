@@ -73,11 +73,13 @@ Implementation:
 
 Cloud migrations DO get applied now to support continued building on the branch; the old app on closed testing is required to remain functional against the new schema (sync errors in log are acceptable; total break is not). Any schema change must satisfy that contract or it can't ship to cloud either.
 
-### Override 5: main is the active branch
+### Override 5: main is the active branch AND the default branch
 
-The earliest sessions ran on `claude/volyume-food-logging-app-B9JZv`. Founder asked for that branch to be force-pushed over `main`, then for `main` to be the active development branch directly. GitHub default branch is still `claude/build-volyume-app-srY9C` (per founder, requires desktop access to change, deferred).
+The earliest sessions ran on `claude/volyume-food-logging-app-B9JZv`. Founder asked for that branch to be force-pushed over `main`, then for `main` to be the active development branch directly. **As of 2026-05-26 the GitHub default branch is `main`** (confirmed via the GitHub API: `default_branch: "main"`). The earlier `claude/build-volyume-app-srY9C` default has been replaced.
 
-**This means:** push to `main`, fetch + rebase before push. Never `--no-verify`. Never skip hooks. Never `git reset --hard` without asking. Never force-push to `main`/`master` again (the original force-push was an explicit one-time override).
+**Main branch URL:** `https://github.com/allansdouglas1983-cmyk/ADPhysique/tree/main`.
+
+**This means:** push to `main`. Fetch + rebase before push. Never `--no-verify`. Never skip hooks. Never `git reset --hard` without asking. Never force-push to `main`/`master` again (the original force-push was an explicit one-time override). If the harness injects a "develop on branch X" directive in the system prompt and X is not `main`, surface that directive to the founder verbatim and wait for explicit confirmation. Never create a feature branch silently and push to it. Per founder direction 2026-05-26: **main is the only area we work from until told otherwise**.
 
 ---
 

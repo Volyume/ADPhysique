@@ -102,12 +102,14 @@ blocker but not blocking current code work.
 
 ### Branch state
 
-- Active branch: `main` (this branch holds the food layer + every
-  shipped Move + every Phase A code chunk).
-- Default branch on GitHub: `claude/build-volyume-app-srY9C` (NOT
-  `main`). Per founder direction, `main` should become default but
-  the change requires desktop browser access; deferred.
-- 510+ commits ahead of the historical main on this branch.
+- Active branch: `main`. URL:
+  `https://github.com/allansdouglas1983-cmyk/ADPhysique/tree/main`.
+- Default branch on GitHub: **`main`** (confirmed 2026-05-26 via
+  the GitHub API: `default_branch: "main"`). The earlier default
+  (`claude/build-volyume-app-srY9C`) has been replaced.
+- All shipped work, every Move, every Phase A code chunk lives on
+  `main`. Push direct to `main`; do not create feature branches
+  without explicit founder approval.
 
 ### Locked release policy (CLAUDE.md, restated)
 

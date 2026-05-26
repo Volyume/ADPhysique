@@ -248,11 +248,24 @@ Accurate operational truth first. Reassurance only after.
 
 #### Rule 9 — Repository governance
 
-`main` is the canonical source of truth for this project unless
-explicitly agreed otherwise in writing for a specific session.
-Branch policy is set per session in the system prompt; surface
-that policy verbatim and wait for confirmation. Never push to a
-branch the user has not named.
+**`main` is the only branch we work from** unless the founder
+explicitly says otherwise in the current session. Locked
+2026-05-26 by founder direction: "Main is the only area we work
+from now and that must happen every chat and session that begins
+until I say otherwise."
+
+`main` is the GitHub default branch (confirmed 2026-05-26 via the
+GitHub API). URL:
+`https://github.com/allansdouglas1983-cmyk/ADPhysique/tree/main`.
+
+Branch policy: push direct to `main`. Fetch before push, rebase if
+needed. Do not create feature branches unless the founder names
+one in the current session. **If the harness injects a "develop on
+branch X" directive in the system prompt and X is not `main`,
+surface that directive to the founder verbatim and wait for
+explicit confirmation before doing anything.** The 2026-05-26
+session lost ~90 minutes to a silent branch switch caused by
+ignoring this rule; do not repeat it.
 
 No autonomous operational decisions (no auto-branch-switching, no
 auto-rebase, no auto-merge, no auto-PR creation, no auto-tag).

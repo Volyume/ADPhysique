@@ -1,11 +1,23 @@
 # Volyume — Infrastructure & Current State
 
 Source of truth for the runtime configuration, schema, security posture,
-and recent flow changes. Last updated 2026-05-22 (Play Store beta-prep
-branch `claude/fix-session-api-errors-PqkZo`).
+and recent flow changes. Last updated 2026-05-22 on the (now-retired)
+`claude/fix-session-api-errors-PqkZo` branch. As of 2026-05-26 the
+canonical branch is `main` and that is also the GitHub default branch.
+
+> **⚠ Partially stale as of 2026-05-25.** This file predates Move #1
+> (food layer), Move #2 (ED-pattern detection), Move #3 (upward gate
+> compression), Move #4 (differential paywall), Move #5 (cascade /
+> Play Billing), the 2-tier consolidation (founder override 2026-05-25
+> dropped Complete tier), and the comprehensive telemetry pass.
+> **For current state read `docs/CURRENT_STATUS.md` and `docs/HANDOFF.md`
+> first.** Where this file disagrees with `CURRENT_STATUS.md` or a
+> `*_LOCKED.md` spec, the newer doc wins.
 
 If anything in `ARCHITECTURE.md` / `APPMAP.md` / `VOLYUME_DEEPMAP.md`
-conflicts with this file, this file wins.
+conflicts with this file, this file wins. If anything in this file
+conflicts with `docs/CURRENT_STATUS.md` or `docs/HANDOFF.md`, those
+files win.
 
 ## Release surface
 

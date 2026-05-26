@@ -1,15 +1,16 @@
 # Volyume — App Data Flow Audit
 
-_Last updated: 2026-05-16. Covers build as of branch `claude/build-volyume-app-srY9C`._
+_Last updated: 2026-05-16. Covers the build as it existed in May 2026
+on the now-retired `claude/build-volyume-app-srY9C` branch._
 
 > **Stale relative to current state.** Active branch is now `main`
-> (founder override 2026-05-25). The food data layer, the FFM floor,
-> Move #2 ED-pattern detection, Move #3 upward gate compression, Move
-> #4 differential paywall, and the cascade/payment surface all postdate
-> this audit. For the canonical map of shipped surfaces, see
-> `HANDOFF.md` section 4 (functionality by area) and section 11
-> (screens). Refresh as a follow-up pass when the next big surface
-> rework happens.
+> (also the GitHub default branch as of 2026-05-26). The food data
+> layer, the FFM floor, Move #2 ED-pattern detection, Move #3 upward
+> gate compression, Move #4 differential paywall, and the cascade /
+> payment surface all postdate this audit. For the canonical map of
+> shipped surfaces, see `HANDOFF.md` section 4 (functionality by area)
+> and section 11 (56-screen inventory). Refresh as a follow-up pass
+> when the next big surface rework happens.
 
 This document maps every visible metric and data display to its source: which function computes it, which table(s) it reads, what filters are applied, and whether the logic is correct.
 

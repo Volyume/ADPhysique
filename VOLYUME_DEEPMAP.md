@@ -1,16 +1,24 @@
 # Volyume — Full Architectural Map & Feature Inventory
-> Branch: `claude/build-volyume-app-srY9C`  
-> Last updated: 2026-05-19  
-> Purpose: Deep-research reference. Everything that exists, how it connects, and what is planned next.
+> Branch: `main` (default branch as of 2026-05-26; this map was
+> originally generated against `claude/build-volyume-app-srY9C` which
+> has since been retired).
+> Last updated: 2026-05-19
+> Purpose: Deep-research reference. Everything that exists, how it
+> connects, and what is planned next.
 
-> **⚠ Partially stale as of 2026-05-21.** This file references screens
-> and flows that have since been removed or restructured. See
-> `INFRASTRUCTURE.md` at the repo root for the current state of:
-> auth flows, Pro upgrade enrollment, tier handling, migrations,
-> Edge Functions, and the removed surfaces (CoachBuilderScreen,
-> OnboardingQuizScreen). Treat any reference to "CoachBuilder",
-> "OnboardingQuiz", or "FirstRunScreen branch mode" in this doc as
-> historical, not current.
+> **⚠ Stale as of 2026-05-21 and heavily superseded 2026-05-25.** This
+> file references screens and flows that have since been removed or
+> restructured, and predates the entire Volyume Complete food layer.
+> **Canonical current-state references:**
+> - `docs/CURRENT_STATUS.md` (latest shipped state, rewritten end-to-end on every material change)
+> - `docs/HANDOFF.md` (full architectural reference, 56-screen inventory, all migrations, all telemetry events)
+> - `INFRASTRUCTURE.md` at the repo root (legacy current-state reference, last updated 2026-05-22; partially stale itself)
+>
+> Treat any reference here to "CoachBuilder", "OnboardingQuiz",
+> "FirstRunScreen branch mode", `PRO_BETA_ACTIVE`, three-tier
+> Free/Pro/Complete model, or 28-day cascade as historical, not
+> current. The shipped product is 2-tier (Free + Pro) with a 21-day
+> Pro trial, per founder override 2026-05-25.
 
 ---
 
@@ -998,4 +1006,4 @@ A once-a-week coaching moment that ties together all app data streams:
 
 ---
 
-*Document generated from source. All information reflects the current state of branch `claude/build-volyume-app-srY9C` as of 2026-05-19.*
+*Document generated from source. All information reflects the state of the codebase as of 2026-05-19 (originally on the now-retired `claude/build-volyume-app-srY9C` branch; that work has since been force-pushed onto `main`, which is now the default branch).*
