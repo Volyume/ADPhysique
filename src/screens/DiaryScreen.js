@@ -8,12 +8,11 @@
  * entry CTA, swipe-delete, copy yesterday. Search-based add lands
  * once the bundled OFF snapshot ingestion is wired (Move #1.5).
  */
-import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
   Alert,
 } from 'react-native';
-import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -30,6 +29,8 @@ import { useShallow } from 'zustand/react/shallow';
 import MacroRings from '../components/food/MacroRings';
 import FoodDetailSheet from '../components/food/FoodDetailSheet';
 import EmptyDiary from '../components/food/EmptyDiary';
+import MealSection from '../components/food/MealSection';
+import { friendlyFoodName } from '../components/food/EntryRow';
 import ScreenHeader from '../components/ScreenHeader';
 
 const MEAL_SLOTS = [
@@ -345,84 +346,6 @@ export default function DiaryScreen({ navigation }) {
   );
 }
 
-function MealSection({ slot, entries, onAdd, onEdit, onDelete }) {
-  const slotKcal = Math.round(entries.reduce((a, e) => a + (e.kcal ?? 0), 0));
-  return (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionLabel}>{slot.label.toUpperCase()}</Text>
-        <Text style={styles.sectionTotal}>{slotKcal} kcal</Text>
-      </View>
-      {entries.map((e) => (
-        <SwipeableEntryRow key={e.id} entry={e} onEdit={() => onEdit(e)} onDelete={onDelete} />
-      ))}
-      <TouchableOpacity style={styles.addRow} onPress={onAdd} accessibilityLabel={`Add food to ${slot.label}`}>
-        <Ionicons name="add" size={18} color={colors.primary} />
-        <Text style={styles.addLabel}>Add food</Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
-
-function SwipeableEntryRow({ entry, onEdit, onDelete }) {
-  const ref = useRef(null);
-  const renderRightActions = useCallback(() => (
-    <TouchableOpacity
-      style={styles.swipeDelete}
-      accessibilityRole="button"
-      accessibilityLabel="Delete entry"
-      onPress={() => onDelete?.(entry, () => ref.current?.close?.())}
-    >
-      <Ionicons name="trash-outline" size={20} color={colors.textPrimary} />
-      <Text style={styles.swipeDeleteText}>Delete</Text>
-    </TouchableOpacity>
-  ), [entry, onDelete]);
-  return (
-    <Swipeable
-      ref={ref}
-      renderRightActions={renderRightActions}
-      overshootRight={false}
-      rightThreshold={48}
-    >
-      <EntryRow entry={entry} onEdit={onEdit} />
-    </Swipeable>
-  );
-}
-
-function friendlyFoodName(entry) {
-  // Prefer the resolved name attached by DiaryScreen.load(). Fall
-  // back to the generic label only when the lookup miss-ed (e.g. the
-  // foods table hasn't yet sync'd the row, or the row was deleted).
-  if (entry?._name && typeof entry._name === 'string') return entry._name;
-  return entry?.food_ref?.startsWith('custom:') ? 'Custom food' : 'Food';
-}
-
-function EntryRow({ entry, onEdit }) {
-  const kcal = Math.round(entry.kcal ?? 0);
-  const p = Math.round(entry.protein_g ?? 0);
-  const c = Math.round(entry.carbs_g ?? 0);
-  const f = Math.round(entry.fat_g ?? 0);
-  const name = friendlyFoodName(entry);
-  const brand = entry?._brand ?? null;
-  return (
-    <TouchableOpacity
-      style={styles.entryRow}
-      onPress={onEdit}
-      accessibilityLabel={`${name}, ${kcal} kcal. Tap to edit.`}
-    >
-      <View style={styles.entryMain}>
-        <Text style={styles.entryName} numberOfLines={1}>{name}</Text>
-        {brand ? <Text style={styles.entryBrand} numberOfLines={1}>{brand}</Text> : null}
-        <Text style={styles.entryQuantity}>{Math.round(entry.quantity_g)}g</Text>
-      </View>
-      <View style={styles.entryMacros}>
-        <Text style={styles.entryKcal}>{kcal} kcal</Text>
-        <Text style={styles.entryMacroLine}>{p}P {c}C {f}F</Text>
-      </View>
-    </TouchableOpacity>
-  );
-}
-
 function WaterRow({ ml, onAdd, onSub }) {
   const glasses = Math.round(ml / 250);
   return (
@@ -474,20 +397,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontWeight: fontWeight.medium,
   },
-  swipeDelete: {
-    backgroundColor: colors.error,
-    width: 90,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: radius.md,
-    marginVertical: spacing.xs,
-    gap: spacing.xxs,
-  },
-  swipeDeleteText: {
-    color: colors.textPrimary,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-  },
   safe: { flex: 1, backgroundColor: colors.background },
   dayPagerRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -511,39 +420,6 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxxl },
   macroRingsWrap: { marginBottom: spacing.lg },
-  section: { marginBottom: spacing.lg },
-  sectionHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  sectionLabel: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.bold, letterSpacing: 1 },
-  sectionTotal: { color: colors.textMuted, fontSize: fontSize.sm },
-
-  entryRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: colors.surface,
-    paddingVertical: spacing.md, paddingHorizontal: spacing.lg,
-    borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
-    marginBottom: spacing.sm,
-    minHeight: 48,
-  },
-  entryMain: { flex: 1 },
-  entryName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.medium },
-  entryBrand: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: 1 },
-  entryQuantity: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: 2 },
-  entryMacros: { alignItems: 'flex-end' },
-  entryKcal: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
-  entryMacroLine: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: 2 },
-
-  addRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed',
-    minHeight: 48,
-  },
-  addLabel: { color: colors.primary, fontSize: fontSize.md, fontWeight: fontWeight.semibold, marginLeft: spacing.xs },
 
   waterRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

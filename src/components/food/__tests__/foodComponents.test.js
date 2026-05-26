@@ -1,10 +1,9 @@
 /**
- * Mount + snapshot tests for the four new src/components/food/
- * components added per UI_FLOWS_LOCKED.md lines 18-28:
- *   - EmptyDiary
- *   - SourceChip
- *   - HeldDecisionCard
- *   - ServingPicker
+ * Mount + snapshot tests for the src/components/food/ component set
+ * per UI_FLOWS_LOCKED.md lines 18-28. Covers the four added in the
+ * prior batch (EmptyDiary, SourceChip, HeldDecisionCard, ServingPicker)
+ * plus the three extracted from inline DiaryScreen / FoodSearchScreen
+ * (MealSection, EntryRow, FoodRow).
  *
  * Also locks the EmptyDiary copy to the exact spec string
  * (UI_FLOWS_LOCKED.md line 275) so any future drift breaks here.
@@ -12,10 +11,20 @@
 import React from 'react';
 import { create } from 'react-test-renderer';
 
+jest.mock('react-native-gesture-handler/Swipeable', () => {
+  const React = require('react');
+  return function MockSwipeable(props) {
+    return React.createElement('Swipeable', props, props.children);
+  };
+});
+
 import EmptyDiary, { EMPTY_DIARY_COPY } from '../EmptyDiary';
 import SourceChip from '../SourceChip';
 import HeldDecisionCard from '../HeldDecisionCard';
 import ServingPicker from '../ServingPicker';
+import MealSection from '../MealSection';
+import { EntryRow, friendlyFoodName } from '../EntryRow';
+import FoodRow, { SOURCE_LABEL, kcalForServing } from '../FoodRow';
 
 describe('EmptyDiary', () => {
   test('renders the spec copy verbatim', () => {
@@ -87,5 +96,166 @@ describe('ServingPicker', () => {
     const txt = JSON.stringify(tree);
     expect(txt).toContain('slice');
     expect(txt).toContain('cup');
+  });
+});
+
+describe('friendlyFoodName', () => {
+  test('uses resolved _name when present', () => {
+    expect(friendlyFoodName({ _name: 'Greek yoghurt' })).toBe('Greek yoghurt');
+  });
+  test('falls back to "Custom food" for custom: refs', () => {
+    expect(friendlyFoodName({ food_ref: 'custom:abc' })).toBe('Custom food');
+  });
+  test('falls back to "Food" for everything else', () => {
+    expect(friendlyFoodName({ food_ref: 'off:12345' })).toBe('Food');
+    expect(friendlyFoodName({})).toBe('Food');
+    expect(friendlyFoodName(null)).toBe('Food');
+  });
+});
+
+describe('EntryRow', () => {
+  const baseEntry = {
+    id: 'e1',
+    _name: 'Greek yoghurt',
+    _brand: 'Fage',
+    kcal: 142.7,
+    protein_g: 10.4,
+    carbs_g: 4.1,
+    fat_g: 9.8,
+    quantity_g: 170,
+    food_ref: 'off:abc',
+  };
+
+  test('rounds kcal + macros to integers', () => {
+    const tree = create(<EntryRow entry={baseEntry} onEdit={() => {}} />).toJSON();
+    const txt = JSON.stringify(tree);
+    expect(txt).toContain('"143"');
+    expect(txt).toContain('"170"');
+    expect(txt).toContain('"10"');
+    expect(txt).toContain('"4"');
+  });
+
+  test('renders resolved name and brand', () => {
+    const tree = create(<EntryRow entry={baseEntry} onEdit={() => {}} />).toJSON();
+    const txt = JSON.stringify(tree);
+    expect(txt).toContain('Greek yoghurt');
+    expect(txt).toContain('Fage');
+  });
+
+  test('omits brand when missing', () => {
+    const tree = create(
+      <EntryRow entry={{ ...baseEntry, _brand: null }} onEdit={() => {}} />
+    ).toJSON();
+    expect(JSON.stringify(tree)).not.toContain('Fage');
+  });
+
+  test('accessibilityLabel includes name and rounded kcal', () => {
+    const tree = create(<EntryRow entry={baseEntry} onEdit={() => {}} />).toJSON();
+    const txt = JSON.stringify(tree);
+    expect(txt).toContain('Greek yoghurt, 143 kcal. Tap to edit.');
+  });
+});
+
+describe('MealSection', () => {
+  const slot = { key: 'breakfast', label: 'Breakfast' };
+  const entries = [
+    { id: 'a', _name: 'Oats', kcal: 200, protein_g: 7, carbs_g: 30, fat_g: 4, quantity_g: 50, food_ref: 'off:1' },
+    { id: 'b', _name: 'Banana', kcal: 105, protein_g: 1, carbs_g: 27, fat_g: 0, quantity_g: 120, food_ref: 'off:2' },
+  ];
+
+  test('renders uppercase label + summed kcal', () => {
+    const tree = create(
+      <MealSection slot={slot} entries={entries} onAdd={() => {}} onEdit={() => {}} onDelete={() => {}} />
+    ).toJSON();
+    const txt = JSON.stringify(tree);
+    expect(txt).toContain('BREAKFAST');
+    expect(txt).toContain('"305"');
+  });
+
+  test('handles empty entries', () => {
+    const tree = create(
+      <MealSection slot={slot} entries={[]} onAdd={() => {}} onEdit={() => {}} onDelete={() => {}} />
+    ).toJSON();
+    const txt = JSON.stringify(tree);
+    expect(txt).toContain('"0"');
+    expect(txt).toContain('Add food');
+  });
+
+  test('Add food button carries the slot label in its a11y label', () => {
+    const tree = create(
+      <MealSection slot={slot} entries={[]} onAdd={() => {}} onEdit={() => {}} onDelete={() => {}} />
+    ).toJSON();
+    expect(JSON.stringify(tree)).toContain('Add food to Breakfast');
+  });
+});
+
+describe('FoodRow', () => {
+  const baseFood = {
+    food_ref: 'off:abc',
+    name: 'Wholemeal bread',
+    brand: 'Hovis',
+    serving_g: 36,
+    serving_label: '1 slice',
+    kcal_100g: 247,
+    source: 'off',
+  };
+
+  test('renders name, brand, serving and source label', () => {
+    const tree = create(<FoodRow food={baseFood} isFav={false} onPress={() => {}} />).toJSON();
+    const txt = JSON.stringify(tree);
+    expect(txt).toContain('Wholemeal bread');
+    expect(txt).toContain('Hovis');
+    expect(txt).toContain('1 slice');
+    expect(txt).toContain('OFF');
+  });
+
+  test('appends star when isFav', () => {
+    const tree = create(<FoodRow food={baseFood} isFav={true} onPress={() => {}} />).toJSON();
+    expect(JSON.stringify(tree)).toContain('★');
+  });
+
+  test('omits star when not isFav', () => {
+    const tree = create(<FoodRow food={baseFood} isFav={false} onPress={() => {}} />).toJSON();
+    expect(JSON.stringify(tree)).not.toContain('★');
+  });
+
+  test('falls back to "<serving_g>g" when no serving_label', () => {
+    const tree = create(
+      <FoodRow food={{ ...baseFood, serving_label: null }} isFav={false} onPress={() => {}} />
+    ).toJSON();
+    expect(JSON.stringify(tree)).toContain('36g');
+  });
+
+  test('shows computed kcal-per-serving', () => {
+    // 247 kcal/100g * 36g / 100 = 88.92 → rounded 89
+    const tree = create(<FoodRow food={baseFood} isFav={false} onPress={() => {}} />).toJSON();
+    const txt = JSON.stringify(tree);
+    expect(txt).toContain('89 kcal');
+  });
+});
+
+describe('kcalForServing', () => {
+  test('rounds (kcal_100g * serving_g) / 100', () => {
+    expect(kcalForServing({ kcal_100g: 247, serving_g: 36 })).toBe(89);
+    expect(kcalForServing({ kcal_100g: 100, serving_g: 50 })).toBe(50);
+  });
+  test('returns null when no serving_g', () => {
+    expect(kcalForServing({ kcal_100g: 100 })).toBe(null);
+    expect(kcalForServing({ kcal_100g: 100, serving_g: 0 })).toBe(null);
+  });
+  test('handles missing food', () => {
+    expect(kcalForServing(null)).toBe(null);
+  });
+});
+
+describe('SOURCE_LABEL', () => {
+  test('matches the locked five sources', () => {
+    expect(SOURCE_LABEL).toEqual({
+      off: 'OFF',
+      usda: 'USDA',
+      cofid: 'CoFID',
+      user_ocr: 'Snapped',
+      custom: 'You',
+    });
   });
 });

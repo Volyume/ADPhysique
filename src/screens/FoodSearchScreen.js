@@ -33,20 +33,13 @@ import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import FoodDetailSheet from '../components/food/FoodDetailSheet';
+import FoodRow from '../components/food/FoodRow';
 
 const MEAL_LABELS = {
   breakfast: 'Breakfast',
   lunch: 'Lunch',
   dinner: 'Dinner',
   snack: 'Snacks',
-};
-
-const SOURCE_LABEL = {
-  off: 'OFF',
-  usda: 'USDA',
-  cofid: 'CoFID',
-  user_ocr: 'Snapped',
-  custom: 'You',
 };
 
 export default function FoodSearchScreen({ navigation, route }) {
@@ -204,31 +197,13 @@ export default function FoodSearchScreen({ navigation, route }) {
     if (item.type === 'header') return <Text style={styles.sectionHeader}>{item.label}</Text>;
     const food = item.food;
     const isFav = favouriteRefs.has(food.food_ref);
-    const sourceTag = SOURCE_LABEL[food.source] ?? null;
-    const kcalPerServing = food.serving_g
-      ? Math.round((food.kcal_100g ?? 0) * food.serving_g / 100)
-      : null;
     return (
-      <TouchableOpacity
-        style={styles.row}
+      <FoodRow
+        food={food}
+        isFav={isFav}
         onPress={() => openPicker(food)}
         onLongPress={() => onLongPress(food)}
-        accessibilityLabel={`${food.name}, ${kcalPerServing ?? '?'} kcal per serving. Long-press to favourite.`}
-      >
-        <View style={{ flex: 1 }}>
-          <Text style={styles.rowName} numberOfLines={1}>
-            {food.name}
-            {isFav ? '  ★' : ''}
-          </Text>
-          <Text style={styles.rowMeta} numberOfLines={1}>
-            {food.brand ? `${food.brand} · ` : ''}
-            {food.serving_label || `${food.serving_g}g`}
-            {kcalPerServing != null ? ` · ${kcalPerServing} kcal` : ''}
-            {sourceTag ? `  ${sourceTag}` : ''}
-          </Text>
-        </View>
-        <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
-      </TouchableOpacity>
+      />
     );
   }
 
@@ -332,15 +307,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg, paddingBottom: spacing.sm,
   },
-
-  row: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
-    minHeight: 56,
-  },
-  rowName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
-  rowMeta: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: 2 },
 
   noResults: {
     paddingHorizontal: spacing.lg, paddingVertical: spacing.xl,
