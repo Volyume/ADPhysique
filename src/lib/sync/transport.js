@@ -38,6 +38,7 @@ import {
   pushNutritionTargets,
   pullNutritionTargets,
 } from './tables/nutritionTargets';
+import { pullEdPatternFlags } from './tables/edPatternFlags';
 
 // Lazy require so the supabase client module (which pulls in
 // react-native-url-polyfill at top-level) is not loaded merely by
@@ -61,6 +62,7 @@ export const MIGRATED_TABLES = Object.freeze([
   'weekly_checkins_v2',
   'body_composition_log',
   'nutrition_targets',
+  'ed_pattern_flags',
 ]);
 
 const PUSH_HANDLERS = {
@@ -68,6 +70,8 @@ const PUSH_HANDLERS = {
   weekly_checkins_v2: pushWeeklyCheckins,
   body_composition_log: pushBodyComposition,
   nutrition_targets: pushNutritionTargets,
+  // ed_pattern_flags is pull_only per the registry; pushTable will
+  // intercept and return skipped:'pull_only' before reaching here.
 };
 
 const PULL_HANDLERS = {
@@ -75,6 +79,7 @@ const PULL_HANDLERS = {
   weekly_checkins_v2: pullWeeklyCheckins,
   body_composition_log: pullBodyComposition,
   nutrition_targets: pullNutritionTargets,
+  ed_pattern_flags: pullEdPatternFlags,
 };
 
 /**

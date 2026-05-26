@@ -1,0 +1,251 @@
+/**
+ * End-to-end integration test for syncAll().
+ *
+ * Drives the runner pipeline with the supabase client mocked at the
+ * boundary (one mock per dispatched RPC / `.from(table)` call). Per-
+ * table unit tests in sync.transport.test.js prove each handler's
+ * shape; this test proves they all wire up correctly together:
+ *
+ *   - every entry in MIGRATED_TABLES has its push (if applicable)
+ *     and pull invoked exactly once per syncAll;
+ *   - push runs before pull (the locked pipeline order is
+ *     per-table push → legacy bulk push → per-table pull → legacy
+ *     bulk pull, so all per-table push handlers must complete
+ *     before any per-table pull handler starts);
+ *   - errors raised inside one handler don't stop the next;
+ *   - pull_count_per_table / push_count_per_table on the
+ *     sync_run telemetry payload aggregate every handler's count.
+ *
+ * Mocks chosen to keep the test deterministic without dragging
+ * the full supabase / sqlite stack into Jest. Both legacy
+ * bulkUploadLocalData + pullFromCloud are stubbed to no-op
+ * (already exercised by their own contract tests).
+ */
+
+jest.mock('../../supabase', () => ({
+  getSupabaseClient: jest.fn(),
+}));
+
+jest.mock('../../notifications/preferences', () => ({
+  getAllPreferences: jest.fn().mockResolvedValue([]),
+  applyPreferenceFromPull: jest.fn().mockResolvedValue(false),
+}));
+
+jest.mock('../../database', () => ({
+  getAllWeeklyCheckinsForUser: jest.fn().mockResolvedValue([]),
+  insertWeeklyCheckinFromCloud: jest.fn().mockResolvedValue(undefined),
+  getBodyMetricLog: jest.fn().mockResolvedValue([]),
+  insertBodyMetricFromCloud: jest.fn().mockResolvedValue(undefined),
+  getNutritionTargets: jest.fn().mockResolvedValue(null),
+  insertNutritionTargetsFromCloud: jest.fn().mockResolvedValue(undefined),
+  upsertEdPatternFlagFromCloud: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('../telemetry', () => ({
+  trackSyncRun: jest.fn().mockResolvedValue(undefined),
+  trackSyncConflictResolved: jest.fn().mockResolvedValue(undefined),
+  logSyncError: jest.fn(),
+}));
+
+jest.mock('../queue', () => ({
+  ensureSyncQueueTable: jest.fn().mockResolvedValue(undefined),
+  getQueueDepth: jest.fn().mockResolvedValue(0),
+}));
+
+// Replace the legacy sync.js helpers the runner falls back to.
+jest.mock('../../sync.js', () => ({
+  bulkUploadLocalData: jest.fn().mockResolvedValue({ pushCountPerTable: {} }),
+  pullFromCloud: jest.fn().mockResolvedValue({ pullCountPerTable: {} }),
+}), { virtual: false });
+
+const { getSupabaseClient } = require('../../supabase');
+const prefsModule = require('../../notifications/preferences');
+const dbModule = require('../../database');
+const telemetry = require('../telemetry');
+const queue = require('../queue');
+const legacy = require('../../sync.js');
+const { syncAll, _resetRunnerForTests } = require('../runner');
+const { MIGRATED_TABLES } = require('../transport');
+
+/**
+ * Build a supabase mock that records every `.from()` call and
+ * resolves to the given table-keyed fixtures. The shape covers
+ * all four chains the per-table handlers use:
+ *   - .from(t).select(c).eq(k,v)
+ *   - .from(t).select(c).eq(k,v).in(c, vs)
+ *   - .from(t).select(c).eq(k,v).maybeSingle()
+ *   - .from(t).upsert(rows, opts)
+ */
+function makeSupabaseMock({ select = {}, upsertError = null } = {}) {
+  const calls = { from: [], upserts: [], selects: [] };
+  return {
+    _calls: calls,
+    from: jest.fn((table) => {
+      calls.from.push(table);
+      const tableSelect = select[table] ?? [];
+      const selectChain = {
+        eq: jest.fn(() => {
+          const eqChain = Promise.resolve({ data: tableSelect, error: null });
+          // The pull paths call `await sb.from(t).select(c).eq(k,v)` directly
+          // so the chain must itself be thenable. Three extra methods get
+          // hung off it for the other two patterns.
+          eqChain.in = jest.fn(async () => ({ data: tableSelect, error: null }));
+          eqChain.maybeSingle = jest.fn(async () => ({
+            data: Array.isArray(tableSelect) ? tableSelect[0] ?? null : tableSelect,
+            error: null,
+          }));
+          return eqChain;
+        }),
+      };
+      return {
+        select: jest.fn(() => {
+          calls.selects.push(table);
+          return selectChain;
+        }),
+        upsert: jest.fn(async (rows, opts) => {
+          calls.upserts.push({ table, rows, opts });
+          return { error: upsertError };
+        }),
+      };
+    }),
+  };
+}
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  _resetRunnerForTests();
+});
+
+describe('syncAll integration', () => {
+  test('invokes every migrated push handler then every migrated pull handler', async () => {
+    const sb = makeSupabaseMock({
+      select: {
+        notification_preferences: [
+          { user_id: 'u1', category: 'morning_weight', enabled: true, time_pref: '08:00', updated_at: new Date(1).toISOString() },
+        ],
+        weekly_checkins_v2: [
+          { id: 'wc-1', user_id: 'u1', week_start: 1, energy_score: 7 },
+        ],
+        body_metrics: [
+          { id: 'bm-1', user_id: 'u1', metric_date: '2026-05-26' },
+        ],
+        nutrition_targets: { user_id: 'u1', target_kcal: 2000 },
+        ed_pattern_flags: [
+          { id: 'flag-1', user_id: 'u1', flag_state: 'raised', raised_at: 1, updated_at: 1 },
+        ],
+      },
+    });
+    getSupabaseClient.mockReturnValue(sb);
+    prefsModule.applyPreferenceFromPull.mockResolvedValue(true);
+
+    const result = await syncAll({ userId: 'u1', localUserId: 'u1', triggeredBy: 'manual' });
+
+    // Pipeline completed.
+    expect(result.status).toBe('synced');
+
+    // Legacy bulk fallback ran exactly once per direction.
+    expect(legacy.bulkUploadLocalData).toHaveBeenCalledTimes(1);
+    expect(legacy.pullFromCloud).toHaveBeenCalledTimes(1);
+
+    // Every migrated table touched .from() on the cloud at least once.
+    const fromCalls = sb._calls.from;
+    for (const table of MIGRATED_TABLES) {
+      // notification_preferences uses two .from(): one to read server
+      // updated_at, one to upsert. body_composition_log uses table
+      // name 'body_metrics' (registry name vs cloud name divergence
+      // intentional). nutrition_targets uses .maybeSingle().
+      const cloudTable = table === 'body_composition_log' ? 'body_metrics' : table;
+      expect(fromCalls).toContain(cloudTable);
+    }
+  });
+
+  test('telemetry payload carries pull_count_per_table + push_count_per_table for every migrated table', async () => {
+    const sb = makeSupabaseMock({
+      select: {
+        notification_preferences: [
+          { user_id: 'u1', category: 'morning_weight', enabled: true, time_pref: '08:00', updated_at: new Date(1).toISOString() },
+        ],
+        weekly_checkins_v2: [{ id: 'wc-1' }],
+        body_metrics: [{ id: 'bm-1', metric_date: '2026-05-26' }],
+        nutrition_targets: { user_id: 'u1' },
+        ed_pattern_flags: [{ id: 'flag-1', flag_state: 'raised', raised_at: 1, updated_at: 1 }],
+      },
+    });
+    getSupabaseClient.mockReturnValue(sb);
+    prefsModule.applyPreferenceFromPull.mockResolvedValue(true);
+
+    await syncAll({ userId: 'u1', localUserId: 'u1', triggeredBy: 'foreground' });
+
+    expect(telemetry.trackSyncRun).toHaveBeenCalledTimes(1);
+    const payload = telemetry.trackSyncRun.mock.calls[0][1];
+
+    expect(payload.triggered_by).toBe('foreground');
+    expect(payload.status).toBe('success');
+
+    // Both per-table maps carry every migrated table; pull_only tables
+    // record a 0 push count rather than being absent (the runner loops
+    // every entry in MIGRATED_TABLES regardless of direction, and the
+    // skipped:'pull_only' result still goes into the map with count 0).
+    for (const table of MIGRATED_TABLES) {
+      expect(payload.push_count_per_table).toHaveProperty(table);
+      expect(payload.pull_count_per_table).toHaveProperty(table);
+    }
+    expect(payload.push_count_per_table.ed_pattern_flags).toBe(0);
+    expect(payload.pull_count_per_table.ed_pattern_flags).toBeGreaterThan(0);
+  });
+
+  test('an error in one per-table handler does not stop the others', async () => {
+    // Force notification_preferences pull to fail by making
+    // applyPreferenceFromPull throw for every row.
+    prefsModule.applyPreferenceFromPull.mockRejectedValue(new Error('apply boom'));
+    const sb = makeSupabaseMock({
+      select: {
+        notification_preferences: [
+          { user_id: 'u1', category: 'a', enabled: true, time_pref: null, updated_at: new Date(1).toISOString() },
+        ],
+        weekly_checkins_v2: [{ id: 'wc-ok' }],
+        body_metrics: [{ id: 'bm-ok', metric_date: '2026-05-26' }],
+        nutrition_targets: { user_id: 'u1' },
+        ed_pattern_flags: [{ id: 'flag-ok', flag_state: 'raised', raised_at: 1, updated_at: 1 }],
+      },
+    });
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await syncAll({ userId: 'u1', localUserId: 'u1', triggeredBy: 'manual' });
+
+    // Other tables still pulled.
+    expect(dbModule.insertWeeklyCheckinFromCloud).toHaveBeenCalled();
+    expect(dbModule.insertBodyMetricFromCloud).toHaveBeenCalled();
+    expect(dbModule.insertNutritionTargetsFromCloud).toHaveBeenCalled();
+    expect(dbModule.upsertEdPatternFlagFromCloud).toHaveBeenCalled();
+
+    // The run is reported with non-zero errors, but the runner
+    // still calls trackSyncRun and returns rather than throwing.
+    const payload = telemetry.trackSyncRun.mock.calls[0][1];
+    expect(payload.errored_count).toBeGreaterThan(0);
+    expect(result.status).toBeDefined();
+  });
+
+  test('skips when no userId is supplied (signed-out state)', async () => {
+    const result = await syncAll({ userId: null, localUserId: null, triggeredBy: 'foreground' });
+
+    expect(legacy.bulkUploadLocalData).not.toHaveBeenCalled();
+    expect(legacy.pullFromCloud).not.toHaveBeenCalled();
+    expect(dbModule.insertWeeklyCheckinFromCloud).not.toHaveBeenCalled();
+    expect(result.status).toBe('synced');
+    expect(queue.ensureSyncQueueTable).toHaveBeenCalled();
+  });
+
+  test('deduplicates concurrent syncAll calls via the run lock', async () => {
+    getSupabaseClient.mockReturnValue(makeSupabaseMock());
+
+    const [a, b] = await Promise.all([
+      syncAll({ userId: 'u1', localUserId: 'u1', triggeredBy: 'network' }),
+      syncAll({ userId: 'u1', localUserId: 'u1', triggeredBy: 'periodic' }),
+    ]);
+
+    // One of the two returns skipped due to the run lock.
+    const statuses = [a, b].map((r) => r.status).sort();
+    expect(statuses).toContain('skipped');
+  });
+});

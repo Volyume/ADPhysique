@@ -102,6 +102,10 @@ describe('MIGRATED_TABLES', () => {
     expect(MIGRATED_TABLES).toContain('nutrition_targets');
   });
 
+  test('lists ed_pattern_flags (pull-only)', () => {
+    expect(MIGRATED_TABLES).toContain('ed_pattern_flags');
+  });
+
   test('is frozen so callers can iterate but not mutate', () => {
     expect(() => { MIGRATED_TABLES.push('food_entries'); }).toThrow();
   });

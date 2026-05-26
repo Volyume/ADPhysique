@@ -16,7 +16,6 @@ import {
   getWorkoutById,
   getWorkoutSetsForWorkout,
   getAllExercises,
-  getBodyMetricLog,
   insertWorkoutFromCloud,
   insertWorkoutSetFromCloud,
   // Bulk read helpers
@@ -26,9 +25,7 @@ import {
   getAllMesocyclesForUser,
   getAllMesocycleWeeksForUser,
   getAllMorningWeightsForUser,
-  getAllWeeklyCheckinsForUser,
   getAllCoachOutputsForUser,
-  getAllBodyMetricsForUser,
   getAllExerciseUserNotesForUser,
   getAllCustomExercisesSince,
   insertOrUpdateCustomExerciseFromCloud,
@@ -45,13 +42,14 @@ import {
   insertProgrammeFromCloud,
   insertRoutineExerciseFromCloud,
   insertMorningWeightFromCloud,
-  insertWeeklyCheckinFromCloud,
   insertCoachOutputFromCloud,
-  insertNutritionTargetsFromCloud,
   insertMesocycleFromCloud,
   insertMesocycleWeekFromCloud,
-  getNutritionTargets,
   cleanupOrphanRoutineExercises,
+  // getAllWeeklyCheckinsForUser, getBodyMetricLog, getAllBodyMetricsForUser,
+  // getNutritionTargets, insertWeeklyCheckinFromCloud,
+  // insertBodyMetricFromCloud, insertNutritionTargetsFromCloud: moved to
+  // src/lib/sync/tables/<table>.js per MIGRATED_TABLES.
 } from './database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logError, logWarn, logInfo } from './errorLog';
@@ -777,37 +775,6 @@ async function _pushMorningWeights(sb, supabaseUserId, localUserId) {
   } catch (e) { logWarn('sync._pushMorningWeights', e?.message, { error: e?.message }); }
 }
 
-async function _pushWeeklyCheckins(sb, supabaseUserId, localUserId) {
-  try {
-    const checkins = await getAllWeeklyCheckinsForUser(localUserId);
-    if (!checkins?.length) return;
-    // Writes to weekly_checkins_v2 (created in setup_complete.sql) so the
-    // shape matches what runWeeklyCoach reads. The original v1 weekly_checkins
-    // table has a different schema for a separate UX that's not in scope.
-    const rows = checkins.map(c => ({
-      id: c.id, user_id: supabaseUserId,
-      week_start: c.weekStart,
-      energy_score: c.energyScore ?? null,
-      soreness_score: c.sorenessScore ?? null,
-      stress_score: c.stressScore ?? null,
-      sleep_hours: c.sleepHours ?? null,
-      cals_adherence: c.calsAdherence ?? null,
-      steps_adherence: c.stepsAdherence ?? null,
-      training_performance: c.trainingPerformance ?? null,
-      joint_pain: !!c.jointPain,
-      sore_muscles: c.soreMuscles ?? null,
-      cycle_override: !!c.cycleOverride,
-      notes: c.notes ?? null,
-    }));
-    for (let i = 0; i < rows.length; i += 200) {
-      const { error } = await sb.from('weekly_checkins_v2').upsert(
-        rows.slice(i, i + 200), { onConflict: 'user_id,id' },
-      );
-      if (error) logPgErr('sync._pushWeeklyCheckins', error);
-    }
-  } catch (e) { logWarn('sync._pushWeeklyCheckins', e?.message, { error: e?.message }); }
-}
-
 async function _pushCoachOutputs(sb, supabaseUserId, localUserId) {
   try {
     const outputs = await getAllCoachOutputsForUser(localUserId);
@@ -1368,100 +1335,6 @@ export async function syncUserPref(supabaseUserId, key, value) {
   } catch (e) { logWarn('sync.syncUserPref', e?.message, { key }); }
 }
 
-/**
- * Push every synced preference. Called from bulkUploadLocalData on
- * sign-in so a returning user's settings are fully captured even if
- * they predate the per-key sync hook.
- */
-/**
- * notification_preferences push.
- *
- * Locked in NOTIFICATIONS_LOCKED.md lines 117-119: per-category
- * preferences sync via the registry. Reads every local
- * notification_preferences row for the user from the SQLite mirror
- * (src/lib/notifications/preferences.js) and upserts them into
- * the cloud table by composite PK (user_id, category). Cloud table
- * was created in migration 044; rows reach it once the founder
- * applies the migration.
- *
- * Includes a localUserId argument so any pre-signup rows keyed
- * under the local UUID are mapped onto the cloud UUID before push.
- * Per IDENTITY_AND_OWNERSHIP_LOCKED.md rule 1 + 5, anonymous mode
- * is removed and localUserId should equal supabaseUserId in
- * practice; the parameter is kept defensively in case a legacy
- * install still carries one.
- */
-async function _pushNotificationPreferences(sb, supabaseUserId, localUserId) {
-  try {
-    // eslint-disable-next-line global-require
-    const { getAllPreferences } = require('./notifications/preferences');
-    const localRows = [];
-    if (localUserId) {
-      const a = await getAllPreferences(localUserId);
-      for (const r of a) localRows.push(r);
-    }
-    if (supabaseUserId && supabaseUserId !== localUserId) {
-      const a = await getAllPreferences(supabaseUserId);
-      for (const r of a) localRows.push(r);
-    }
-    if (localRows.length === 0) return;
-
-    const latestByCategory = new Map();
-    for (const r of localRows) {
-      const existing = latestByCategory.get(r.category);
-      if (!existing || timeToMs(r.updated_at) > timeToMs(existing.updated_at)) {
-        latestByCategory.set(r.category, r);
-      }
-    }
-
-    const rows = Array.from(latestByCategory.values()).map(r => ({
-      user_id: supabaseUserId,
-      category: r.category,
-      enabled: !!r.enabled,
-      time_pref: r.time_pref,
-      updated_at: msToISO(r.updated_at),
-    }));
-    const categories = rows.map(r => r.category);
-    const { data: serverRows, error: readError } = await sb
-      .from('notification_preferences')
-      .select('category, updated_at')
-      .eq('user_id', supabaseUserId)
-      .in('category', categories);
-    if (readError) {
-      logPgErr('sync._pushNotificationPreferences.read', readError);
-      return;
-    }
-
-    const serverUpdatedByCategory = new Map(
-      (serverRows ?? []).map(r => [r.category, timeToMs(r.updated_at)]),
-    );
-    const rowsToPush = rows.filter((r) => {
-      const localMs = timeToMs(r.updated_at);
-      const serverMs = serverUpdatedByCategory.get(r.category) ?? 0;
-      return localMs > serverMs;
-    });
-    if (rowsToPush.length === 0) {
-      logInfo('sync._pushNotificationPreferences', 'skipped stale local preferences', {
-        count: rows.length,
-      });
-      return;
-    }
-
-    const { error } = await sb
-      .from('notification_preferences')
-      .upsert(rowsToPush, { onConflict: 'user_id,category' });
-    if (error) {
-      logPgErr('sync._pushNotificationPreferences', error);
-    } else {
-      logInfo('sync._pushNotificationPreferences', `pushed ${rowsToPush.length} preferences`, {
-        count: rowsToPush.length,
-        skipped: rows.length - rowsToPush.length,
-      });
-    }
-  } catch (e) {
-    logWarn('sync._pushNotificationPreferences', e?.message, { error: e?.message });
-  }
-}
 
 async function _pushAllUserPrefs(sb, supabaseUserId) {
   try {
@@ -1826,41 +1699,6 @@ async function _pullAdaptationEvents(sb, supabaseUserId) {
  * write-wins resolution only applies the cloud row when its
  * updated_at is strictly newer than the local row.
  */
-async function _pullNotificationPreferences(sb, supabaseUserId) {
-  try {
-    const { data, error } = await sb.from('notification_preferences')
-      .select('user_id, category, enabled, time_pref, updated_at')
-      .eq('user_id', supabaseUserId);
-    if (error) { logPgErr('sync._pullNotificationPreferences', error); return 0; }
-    if (!data?.length) return 0;
-    // Use applyPreferenceFromPull which preserves the server
-    // updated_at and only overwrites when the cloud row is
-    // strictly newer. Codex re-audit 2026-05-26 finding #4: the
-    // earlier setPreference path stamped updated_at = Date.now()
-    // so pulled rows echoed back as fresh local writes and could
-    // clobber newer cloud changes on the next sync round.
-    // eslint-disable-next-line global-require
-    const { applyPreferenceFromPull } = require('./notifications/preferences');
-    let applied = 0;
-    for (const row of data) {
-      try {
-        const updatedAtMs = typeof row.updated_at === 'string'
-          ? Date.parse(row.updated_at)
-          : Number(row.updated_at);
-        const did = await applyPreferenceFromPull(supabaseUserId, row.category, {
-          enabled: !!row.enabled,
-          time_pref: row.time_pref ?? null,
-          updated_at: updatedAtMs,
-        });
-        if (did) applied += 1;
-      } catch (e) {
-        logWarn('sync._pullNotificationPreferences.row', e?.message, { category: row.category });
-      }
-    }
-    return applied;
-  } catch (e) { logWarn('sync._pullNotificationPreferences', e?.message); return 0; }
-}
-
 async function _pullUserPrefs(sb, supabaseUserId) {
   try {
     const { data, error } = await sb.from('user_prefs')
@@ -1971,19 +1809,6 @@ async function _pullMorningWeights(sb, supabaseUserId) {
   } catch (e) { logWarn('sync._pullMorningWeights', e?.message); return 0; }
 }
 
-async function _pullWeeklyCheckins(sb, supabaseUserId) {
-  try {
-    const { data, error } = await sb.from('weekly_checkins_v2').select('*').eq('user_id', supabaseUserId);
-    if (error) { logWarn('sync._pullWeeklyCheckins', error.message); return 0; }
-    let n = 0;
-    for (const c of data ?? []) {
-      try { await insertWeeklyCheckinFromCloud(supabaseUserId, c); n++; }
-      catch (e) { logWarn('sync._pullWeeklyCheckins', 'insert failed', { id: c.id, error: e?.message }); }
-    }
-    return n;
-  } catch (e) { logWarn('sync._pullWeeklyCheckins', e?.message); return 0; }
-}
-
 async function _pullCoachOutputs(sb, supabaseUserId) {
   try {
     const { data, error } = await sb.from('coach_outputs').select('*').eq('user_id', supabaseUserId);
@@ -1997,22 +1822,6 @@ async function _pullCoachOutputs(sb, supabaseUserId) {
   } catch (e) { logWarn('sync._pullCoachOutputs', e?.message); return 0; }
 }
 
-async function _pullBodyMetrics(sb, supabaseUserId) {
-  try {
-    const { data, error } = await sb.from('body_metrics').select('*').eq('user_id', supabaseUserId);
-    if (error) { logWarn('sync._pullBodyMetrics', error.message); return 0; }
-    let n = 0;
-    for (const m of data ?? []) {
-      try {
-        // eslint-disable-next-line global-require
-        const { insertBodyMetricFromCloud } = require('./database');
-        await insertBodyMetricFromCloud(supabaseUserId, m);
-        n++;
-      } catch (e) { logWarn('sync._pullBodyMetrics', 'insert failed', { id: m.id, error: e?.message }); }
-    }
-    return n;
-  } catch (e) { logWarn('sync._pullBodyMetrics', e?.message); return 0; }
-}
 
 // Public-facing push for nutrition targets. Call this any time
 // saveNutritionTargets is invoked so the cloud copy stays in step
@@ -2029,45 +1838,6 @@ export async function syncNutritionTargets(supabaseUserId, localUserId) {
     localUserId: localUserId ?? supabaseUserId,
   });
 }
-
-async function _pushNutritionTargets(sb, supabaseUserId, localUserId) {
-  try {
-    const targets = await getNutritionTargets(localUserId);
-    if (!targets) return;
-    const row = {
-      user_id: supabaseUserId,
-      bmr: targets.bmr ?? null,
-      tdee: targets.tdee ?? null,
-      target_kcal: targets.targetKcal ?? null,
-      protein_g: targets.proteinG ?? null,
-      carbs_g: targets.carbsG ?? null,
-      fat_g: targets.fatG ?? null,
-      phase: targets.phase ?? null,
-      bmr_method: targets.bmrMethod ?? null,
-      activity_level: targets.activityLevel ?? null,
-      confidence: targets.confidence ?? null,
-      warnings: targets.warnings ?? null,
-      gdpr_consented: !!targets.gdprConsented,
-      updated_at: new Date().toISOString(),
-    };
-    // Unique index on user_id makes onConflict: 'user_id' the right
-    // upsert key. If the migration hasn't been applied yet, the table
-    // doesn't exist and we'll log + carry on.
-    await sb.from('nutrition_targets').upsert(row, { onConflict: 'user_id' });
-  } catch (e) { logWarn('sync._pushNutritionTargets', e?.message, { error: e?.message }); }
-}
-
-async function _pullNutritionTargets(sb, supabaseUserId) {
-  try {
-    const { data, error } = await sb
-      .from('nutrition_targets').select('*').eq('user_id', supabaseUserId).maybeSingle();
-    if (error) { logWarn('sync._pullNutritionTargets', error.message); return false; }
-    if (!data) return false;
-    try { await insertNutritionTargetsFromCloud(supabaseUserId, data); return true; }
-    catch (e) { logWarn('sync._pullNutritionTargets', 'insert failed', { error: e?.message }); return false; }
-  } catch (e) { logWarn('sync._pullNutritionTargets', e?.message); return false; }
-}
-
 
 // ─── Public sync surface (re-exports from src/lib/sync/) ─────────────────
 //

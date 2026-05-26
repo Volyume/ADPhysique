@@ -4437,6 +4437,37 @@ export async function insertOrUpdatePlannedMuscleVolumeFromCloud(userId, row) {
   );
 }
 
+/**
+ * ed_pattern_flags from cloud. Server is authoritative per
+ * SYNC_REGISTRY (conflictStrategy=server_wins), so INSERT OR
+ * REPLACE: any local edits to the row are stomped by the cloud
+ * copy on the next pull. Local writes still go through
+ * raise/clear; they reach the cloud via the existing supabase
+ * upsert path inside the engine, not through this helper.
+ */
+export async function upsertEdPatternFlagFromCloud(userId, row) {
+  if (!row?.id) return;
+  const d = await db();
+  await d.runAsync(
+    `INSERT OR REPLACE INTO ed_pattern_flags
+       (id, user_id, flag_state, reason, signals_json,
+        raised_at, cleared_at, updated_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      row.id, userId,
+      row.flag_state ?? 'raised',
+      row.reason ?? null,
+      typeof row.signals_json === 'string'
+        ? row.signals_json
+        : (row.signals_json ? JSON.stringify(row.signals_json) : null),
+      _tsToMs(row.raised_at) ?? Date.now(),
+      row.cleared_at ? _tsToMs(row.cleared_at) : null,
+      _tsToMs(row.updated_at) ?? Date.now(),
+      row.deleted_at ? _tsToMs(row.deleted_at) : null,
+    ],
+  );
+}
+
 export async function insertOrUpdateAdaptationEventFromCloud(userId, row) {
   if (!row?.id) return;
   const d = await db();
