@@ -21,9 +21,33 @@ session that materially changes shipped state, not appended to.
 
 ## 0. 2026-05-26 session summary (read first)
 
+> **Correction of prior overclaims (per founder instruction
+> 2026-05-26):**
+> - Earlier in this session I marked the SYNC_ARCHITECTURE
+>   drift as "Resolved (foundation)". That was overstated.
+>   The 7-file directory + queue + telemetry exist (commit
+>   `dc95b3b`); per-table registry-driven push/pull in
+>   `transport.js` still delegates to the legacy `sync.js`
+>   helpers. The new entry below ("8b. Sync work remaining")
+>   captures what is genuinely outstanding.
+> - The earlier "1430/1430 across 67 suites" test count was
+>   re-verified from a clean install; the current count
+>   following today's identity-mode deletion, telemetry split,
+>   sync triggers, status badge, and food components is
+>   1535/1538 across 77 suites (3 deferred per the catalogue's
+>   explicit deferralReason). Command output proving this is
+>   at the bottom of this section.
+> - The "tracked, not lost" framing for the Jest worker-exit
+>   warning was inappropriate. It is a real diagnostic gap;
+>   `scheduleSync` was confirmed as one source (commit
+>   `531d420`), and the next layer is RN-side timers in
+>   mounted screens. Not blocked, not done.
+
 Active branch: `main` (per Rule 9 lock 2026-05-26). This session
-responded to an external main-branch audit and shipped a stack of
-runtime-critical fixes, CI infrastructure, and config cleanup.
+responded to an external main-branch audit and a follow-up
+LOCKED-doc compliance pass and shipped a stack of
+runtime-critical fixes, structural rebuilds per locked spec,
+CI infrastructure, and config cleanup.
 Material changes, in order:
 
 1. **Stale package-lock.json regenerated**. `react-native-iap@^12.16.1`
@@ -91,27 +115,116 @@ Material changes, in order:
 - Apply `supabase/migrate_039_account_deletions_log.sql` (now
   includes the service_role GRANT fix)
 - Apply `supabase/migrate_042_upgrade_tier_for_user.sql`
+- Apply `supabase/migrate_043_sync_conflict_telemetry.sql`
+- Apply `supabase/migrate_044_notification_preferences.sql`
 
 The remaining 037 + 038 + 040 + 041 from the previous queue still
-need applying in order.
+need applying in order. Apply order: 037 → 038 → 039 → 040 → 041
+→ 042 → 043 → 044.
 
-**Test count**: 1435/1435 passing across 69 suites (added two
-regression-guard suites for the audit-critical fixes).
+**Additional LOCKED-spec compliance pass (later this session,
+per founder direction to follow all docs end-to-end):**
 
-**Audit items NOT addressed in this session (tracked, not lost)**:
-- npm audit reports 33 vulnerabilities (15 high). Most need
-  Expo / Sentry major upgrades that risk app stability.
-  Triage deferred to Phase A exit prep.
-- Worker-exit warning still surfaces intermittently from
-  `screen-mount.test.js`. scheduleSync was one source;
-  RN-side timers in mounted screens are the next layer.
-- `volyume.app/privacy` DNS / hosting still not pointing to the
-  GitHub Pages copy. Founder action (Namecheap → CNAME).
-- `.ci-status/maestro-latest.md` still stale because Maestro
-  workflow runs on `claude/**` only. Out of scope for this
-  session; can be unlocked by adding `main` to its triggers.
-- Full Jest teardown chase (audit's open-handle finding).
-  scheduleSync fix removed one source; other RN timers remain.
+12. **Anonymous mode + `migrateLocalUserId` removed** per
+    `IDENTITY_AND_OWNERSHIP_LOCKED.md` rule 1 / rule 5 /
+    anti-patterns. The function was still in `database.js`,
+    `handleContinueLocally` was still in `LoginScreen`,
+    `initLocalUser` was still in the store + RootNavigator
+    bootstrap. All deleted; regression test
+    `identityGate.proOnboarding.test.js` rewritten as an
+    anti-pattern guard for the 8 symbols / patterns that must
+    not return. Commit `c2efd15`.
+13. **`src/lib/telemetry/` 4-file split** per
+    `TELEMETRY_DASHBOARDS_LOCKED.md` lines 310-315. New
+    `events.js` (canonical catalogue of 41 events: 38
+    emittable + 3 deferred-with-reasons), `transport.js`
+    (allow-list-checked posting), `sentryBridge.js`
+    (breadcrumb mirror), `index.js` (public API).
+    `engineTelemetry.js` retained as the queue + push
+    implementation under transport; future PRs fold it in
+    directly. Catalogue source-scan test asserts every
+    non-deferred event has at least one `track()` call site;
+    all 38 pass. Commit `d8e5eb5`.
+14. **Sync triggers wired** (foreground / network reconnect /
+    periodic 15-min) per `SYNC_ARCHITECTURE_LOCKED.md`
+    lines 161-169. Added `@react-native-community/netinfo`
+    dep; AppState 'active' listener, NetInfo isConnected
+    edge listener, 15-minute setInterval all route to
+    `syncAll({triggeredBy})`. Runner's `_runLock` dedupes
+    concurrent calls (tested). Commit `5235bb1`.
+15. **SyncStatusBadge in nav header** per
+    `SYNC_ARCHITECTURE_LOCKED.md` lines 266-276 +
+    `PRODUCTION_READINESS_LOCKED.md` § 1. Coloured dot +
+    label (Synced / Pending / Offline / Sync error) with
+    queue count when pending. Tap opens a 280px sheet with
+    status, queue depth, last sync age, last error, and
+    "Sync now" button. Polls `getStatus()` every 5s; wired
+    via `stackOptions.headerRight` in `RootNavigator`. Mount
+    test covers all 4 status states. Same commit `5235bb1`.
+16. **4 of 7 missing food components** per
+    `UI_FLOWS_LOCKED.md` lines 18-28: `EmptyDiary` (with
+    spec copy verbatim, replacing the inline "Nothing logged
+    yet" block in DiaryScreen), `SourceChip`,
+    `HeldDecisionCard`, `ServingPicker`. Snapshot + behaviour
+    tests for each. The 3 remaining (`MealSection`,
+    `FoodRow`, `EntryRow`) are still inline in their host
+    screens; behaviour is functionally present, extraction
+    is pure refactor that needs careful prop-threading to
+    avoid DiaryScreen / FoodSearchScreen regression. Tracked
+    in § 6 below, not under "tracked, not lost". Commit
+    `9ca3d00`.
+
+**Test count (proof):**
+
+    $ ./node_modules/.bin/jest --silent
+    Test Suites: 77 passed, 77 total
+    Tests:       3 skipped, 1535 passed, 1538 total
+    Snapshots:   25 passed, 25 total
+
+The 3 skipped tests are explicit `test.skip` calls for
+catalogue events with a `deferralReason` (`account_deleted`,
+`held_decision_created`, `held_decision_cleared`).
+
+    $ ./scripts/check-identity-invariant.sh
+    Identity invariant clean: all 'SET user_id' callsites are annotated.
+
+**Honest accounting of what is NOT done:**
+- Per-table registry-driven push/pull in `src/lib/sync/transport.js`.
+  Still delegates to legacy `src/lib/sync.js` helpers
+  (`bulkUploadLocalData` + `pullFromCloud`). Foundation is
+  laid (registry, queue, conflict resolver, runner, status
+  surface); the next layer is migrating each of the 16
+  registry tables onto registry-driven dispatch. This is
+  multi-day per-table work and is not done.
+- Sync regression matrix per
+  `TESTING_STRATEGY_LOCKED.md` lines 144-160 + 156-160 (8
+  paired tests per table × 16 tables). The foundation that
+  enables these tests (registry, queue, conflict resolver)
+  is in place; the matrix itself is not built.
+- 3 food components (`MealSection`, `FoodRow`, `EntryRow`)
+  are spec'd in `UI_FLOWS_LOCKED.md` but remain inline in
+  DiaryScreen / FoodSearchScreen. Extracting them is
+  refactor only, not a semantic gap.
+- npm audit: 33 vulnerabilities (15 high). Per
+  `docs/DEPENDENCY_AUDIT_2026-05-26.md` (this session) +
+  `KNOWN_ISSUES_FROM_QA.md` line 82 ("Accepted risk for
+  beta; fix path is breaking upgrade to newer Expo SDK;
+  defer until post-beta major-version bump"), the fix is
+  the Expo SDK upgrade at Phase A exit prep. The LOCKED
+  release policy (CLAUDE.md 2026-05-24) bars a new AAB ship
+  in this window so the upgrade has nowhere to land yet.
+  This is the one item where the LOCKED policy and the
+  audit fix are in active tension; the LOCKED policy wins
+  per the operating hierarchy.
+- "Download my data" emails a CSV (PRIVACY_CONSENT_LOCKED.md
+  line 251). Current implementation file-shares via Sharing
+  API. Email path requires a Supabase Edge Function +
+  email-sending provider (Resend / SendGrid free tier). NOT
+  done in repo; requires founder-side provider sign-up.
+- Worker-exit warning under `screen-mount.test.js`. The
+  scheduleSync fix removed one source; RN-side timers
+  inside mounted screens (animations, expo-notifications,
+  etc.) are the next layer. Not done.
 
 ---
 
