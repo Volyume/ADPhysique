@@ -195,6 +195,18 @@ migration files"), tracked but not blocking.
   still in use in main-ci.yml; the proper fix (wrap mountScreen
   in NavigationContainer) is a substantial test-harness
   rewrite, tracked as TECH DEBT in main-ci.yml.
+- **Cloud schema / migration-file divergence audit.** Migration
+  046's first apply attempt failed because the live cloud
+  `recipe_ingredients` table is missing `created_at`, despite
+  migration 015's `CREATE TABLE` declaring it. Probable causes:
+  a manual schema edit via the Supabase dashboard at some
+  point, or an undocumented migration applied directly to
+  cloud without being checked in here. Worth running a column-
+  by-column diff between every `CREATE TABLE` in `supabase/*.sql`
+  and the live `information_schema.columns` before any future
+  schema work — the next session that ships a migration touching
+  one of the legacy tables could hit the same trap. Tracked as
+  Phase A exit prep item under § 8 LATER.
 
 ---
 
@@ -836,6 +848,7 @@ Grouped by phase per `RELEASE_PLAN_LOCKED.md`.
 | Run sandbox purchase end-to-end (Android only), verify tier_history row + trial_state update | `MOVE_5_TIER_INFRASTRUCTURE.md` line 202 | M | Both |
 | k6 load tests (1000-user sync, 100-user purchase, 10k weekly_coach) | `TESTING_STRATEGY_LOCKED.md` lines 183-193 | M | Claude |
 | Promote next AAB to Closed Testing, then to production | release-engineering | external | Founder |
+| **Cloud schema / migration-file divergence audit.** Run a column-by-column diff between every `CREATE TABLE` in `supabase/*.sql` and the live `information_schema.columns` to catch other cases like recipe_ingredients (canonical `CREATE TABLE` in migration 015 declares `created_at`; live cloud table does not). Surfaced 2026-05-26 when migration 046's `created_at` backfill failed with PGRST 42703. Untracked drift = the next schema-touching migration risks the same trap. Write the diff query, run it, capture drift, decide per-table whether to add the missing columns or update the canonical CREATE comments to match reality. | none yet | M (~1 day) | Claude (writes the diff + fixes); Founder runs against the live DB |
 
 ### EVEN LATER (Phase B pre-launch)
 
