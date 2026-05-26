@@ -75,7 +75,7 @@ notification_sent, notification_tapped, notification_failed,
 article9_consent_withdrawn
 ```
 
-37 events total.
+38 events total.
 
 ### Verify `account_deletions_log` (migration 039)
 

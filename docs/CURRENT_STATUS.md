@@ -37,7 +37,7 @@ changes shipped this session, in order:
    Android emulator. CI status writes back to
    `.ci-status/maestro-latest.md` on every run.
 3. **`audit()` user-action breadcrumbs** (`src/lib/observability.js`
-   shorthand on top of `track.userAction`). 21 call sites wired
+   shorthand on top of `track.userAction`). 23 call sites wired
    across workout, food, auth, paywall, cascade, settings,
    privacy, scan. Lands in Sentry breadcrumbs (PII-scrubbed) and
    the on-device debug log ring buffer.
@@ -65,7 +65,9 @@ changes shipped this session, in order:
 - Apply `supabase/migrate_040_notification_telemetry.sql`
 - Apply `supabase/migrate_041_consent_withdrawal_telemetry.sql`
 
-**Test count**: 1370/1370 passing across 63 suites.
+**Test count**: 1430/1430 passing across 67 suites (re-verified
+2026-05-26 on a clean install; the previous 1370/63 figure was
+stale).
 
 **Pending Maestro CI iteration**: smoke bundle hasn't gone green
 yet on a real emulator; iteration commits are in
