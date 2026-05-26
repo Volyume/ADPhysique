@@ -1,0 +1,110 @@
+/**
+ * Canonical event names per TELEMETRY_DASHBOARDS_LOCKED.md
+ * Event catalogue. Source of truth for both the client-side
+ * allow-list and the server-side record_engine_telemetry
+ * CHECK list. Adding a new event here is the only step needed;
+ * the transport.js push picks it up automatically.
+ *
+ * Keep this file FLAT (no imports beyond core) so static analysis
+ * can read it without evaluating side-effect code.
+ *
+ * The TELEMETRY_EVENTS array drives:
+ *   1. the client-side allow-list in transport.js
+ *   2. the source-scan acceptance test
+ *      (TELEMETRY_DASHBOARDS_LOCKED.md "Acceptance check": every
+ *       event in the catalogue has a corresponding track() call
+ *       in the codebase, verified by a test scanning the source)
+ *
+ * Events with `deferred: true` are catalogued for future work but
+ * have no current emitter; the source-scan test allows them. Move
+ * to `deferred: false` once a track() call site lands.
+ */
+
+export const TELEMETRY_EVENTS = Object.freeze([
+  // Panel 2: engine health
+  { name: 'ed_pattern_flag_fired',           deferred: false, panel: 2 },
+  { name: 'ed_pattern_flag_cleared',         deferred: false, panel: 2 },
+  { name: 'goal_lock_set',                   deferred: false, panel: 2 },
+  { name: 'goal_lock_cleared',               deferred: false, panel: 2 },
+  { name: 'weekly_coach_run',                deferred: false, panel: 2 },
+  { name: 'ffm_floor_hold_fired',            deferred: false, panel: 2 },
+  { name: 'rapid_loss_compression_triggered',deferred: false, panel: 2 },
+
+  // Panel 3: food layer
+  { name: 'food_lookup_barcode',             deferred: false, panel: 3 },
+  { name: 'ocr_writeback_attempted',         deferred: false, panel: 3 },
+  { name: 'food_logged',                     deferred: false, panel: 3 },
+  { name: 'food_search_attempt',             deferred: false, panel: 3 },
+  { name: 'custom_food_created',             deferred: false, panel: 3 },
+
+  // Panel 4: sync health
+  { name: 'sync_run',                        deferred: false, panel: 4 },
+  { name: 'sync_conflict_resolved',          deferred: false, panel: 4 },
+
+  // Panel 5: cascade + conversion
+  { name: 'tier_changed',                    deferred: false, panel: 5 },
+  { name: 'cascade_started',                 deferred: false, panel: 5 },
+  { name: 'cascade_advanced',                deferred: false, panel: 5 },
+  { name: 'cascade_skipped_ahead',           deferred: false, panel: 5 },
+  { name: 'cascade_state_transition',        deferred: false, panel: 5 },
+  { name: 'paid_converted',                  deferred: false, panel: 5 },
+  { name: 'churn_at_gate',                   deferred: false, panel: 5 },
+  { name: 'subscription_cancelled',          deferred: false, panel: 5 },
+  { name: 'paywall_shown',                   deferred: false, panel: 5 },
+  { name: 'paywall_tapped_cta',              deferred: false, panel: 5 },
+  { name: 'purchase_initiated',              deferred: false, panel: 5 },
+  { name: 'purchase_completed',              deferred: false, panel: 5 },
+  { name: 'purchase_failed',                 deferred: false, panel: 5 },
+  { name: 'restore_purchases_attempted',     deferred: false, panel: 5 },
+
+  // Panel 6: notifications
+  { name: 'notification_sent',               deferred: false, panel: 6 },
+  { name: 'notification_tapped',             deferred: false, panel: 6 },
+  { name: 'notification_failed',             deferred: false, panel: 6 },
+
+  // Panel 8: privacy + consent
+  { name: 'article9_consent_recorded',       deferred: false, panel: 8 },
+  { name: 'article9_consent_withdrawn',      deferred: false, panel: 8 },
+  { name: 'account_created',                 deferred: false, panel: 8 },
+  // account_deleted: cannot fire from the client because
+  // engine_telemetry.user_id has ON DELETE CASCADE; the
+  // non-cascading account_deletions_log table (migration 039) is
+  // the surviving audit trail. The locked catalogue lists the
+  // event so the dashboard mapping is recorded; no track() call.
+  { name: 'account_deleted',                 deferred: true,  panel: 8,
+    deferralReason: 'cascade-deleted with auth.users; replaced by account_deletions_log per CURRENT_STATUS.md § 4' },
+
+  // Panel 1: lifecycle
+  { name: 'sign_in',                         deferred: false, panel: 1 },
+  { name: 'sign_out',                        deferred: false, panel: 1 },
+  { name: 'app_cold_start',                  deferred: false, panel: 1 },
+  { name: 'app_foregrounded',                deferred: false, panel: 1 },
+  { name: 'app_backgrounded',                deferred: false, panel: 1 },
+
+  // Held-decision umbrella per spec but unused: the per-type events
+  // (ed_pattern_flag_fired, ffm_floor_hold_fired,
+  // rapid_loss_compression_triggered) already populate Panel 2
+  // split-by-type. CURRENT_STATUS.md § 4 confirms the umbrella adds
+  // no signal.
+  { name: 'held_decision_created',           deferred: true, panel: 2,
+    deferralReason: 'per-type events already cover Panel 2; umbrella duplicates without adding signal' },
+  { name: 'held_decision_cleared',           deferred: true, panel: 2,
+    deferralReason: 'same as held_decision_created' },
+]);
+
+/**
+ * Set of event names that are currently emittable (deferred=false).
+ * Used by transport.js as the runtime allow-list.
+ */
+export const ALLOWED_EVENTS = new Set(
+  TELEMETRY_EVENTS.filter(e => !e.deferred).map(e => e.name),
+);
+
+/**
+ * Names a deferred event explicitly so the source-scan test knows
+ * not to demand a track() call site.
+ */
+export function isDeferred(eventName) {
+  const e = TELEMETRY_EVENTS.find(x => x.name === eventName);
+  return e ? !!e.deferred : false;
+}

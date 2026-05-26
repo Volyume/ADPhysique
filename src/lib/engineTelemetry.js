@@ -127,6 +127,11 @@ const ALLOWED_EVENTS = new Set([
   // consent_log table is the legal audit trail; this event powers
   // Panel 8's withdrawal rate dashboard.
   'article9_consent_withdrawn',
+  // Migration 043: sync_conflict_resolved fires from
+  // src/lib/sync/conflict.js whenever a row is contested between
+  // local SQLite and the cloud copy. Powers Panel 4's conflict
+  // resolution slice with { table, record_id, strategy, winner }.
+  'sync_conflict_resolved',
 ]);
 
 let _flushTimer = null;
