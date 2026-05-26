@@ -12,7 +12,7 @@ proving each one landed. Run them in numeric order in the Supabase
 Dashboard SQL Editor. Every migration is additive and idempotent
 unless the file header says otherwise.
 
-## Pending application order (as of 2026-05-25)
+## Pending application order (as of 2026-05-26)
 
 | # | File | What it adds | Verification query |
 |---|---|---|---|
@@ -21,6 +21,7 @@ unless the file header says otherwise.
 | 039 | `migrate_039_account_deletions_log.sql` | Creates `account_deletions_log` table + `record_account_deletion_started` / `record_account_deletion_completed` RPCs. Service-role only. | See § Verify account_deletions_log |
 | 040 | `migrate_040_notification_telemetry.sql` | Adds `notification_sent`, `notification_tapped`, `notification_failed` to the allow-list. | See § Verify allow-list extension |
 | 041 | `migrate_041_consent_withdrawal_telemetry.sql` | Adds `article9_consent_withdrawn` to the allow-list. | Same |
+| 042 | `migrate_042_upgrade_tier_for_user.sql` | Service-role-only `upgrade_tier_for_user(_user_id, ...)` RPC for the Play Billing RTDN webhook. | See § Verify upgrade_tier_for_user |
 
 ## How to apply
 
@@ -113,7 +114,29 @@ WHERE n.nspname = 'public'
 -- Expected: auth_can_call = f, service_can_call = t
 ```
 
-## After all five are applied
+### Verify `upgrade_tier_for_user` (migration 042)
+
+```sql
+-- Function exists with the expected signature
+SELECT pg_get_function_identity_arguments(p.oid) AS args
+FROM pg_proc p
+JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'public' AND p.proname = 'upgrade_tier_for_user';
+-- Expected: _user_id uuid, _target_tier text, _reason text, _source_surface text, _payment_ref text
+```
+
+```sql
+-- Service-role only (no GRANT to authenticated/anon)
+SELECT has_function_privilege('authenticated', p.oid, 'EXECUTE') AS auth_can_call,
+       has_function_privilege('anon',          p.oid, 'EXECUTE') AS anon_can_call,
+       has_function_privilege('service_role',  p.oid, 'EXECUTE') AS service_can_call
+FROM pg_proc p
+JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'public' AND p.proname = 'upgrade_tier_for_user';
+-- Expected: auth_can_call = f, anon_can_call = f, service_can_call = t
+```
+
+## After all six are applied
 
 Smoke-test from the live app build:
 

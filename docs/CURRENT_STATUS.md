@@ -198,6 +198,7 @@ Per `DATABASE_SCHEMA_LOCKED.md` + grep against `supabase/migrate_*.sql`.
 | 039 | account_deletions_log table + record_account_deletion_started/completed RPCs (non-cascading audit trail) | **Pending founder apply** |
 | 040 | notification_sent + notification_tapped + notification_failed allow-list | **Pending founder apply** |
 | 041 | article9_consent_withdrawn allow-list (paired with SettingsScreen Privacy withdrawal UI) | **Pending founder apply** |
+| 042 | `upgrade_tier_for_user(_user_id, ...)` service-role-only RPC for the Play Billing RTDN webhook (audit fix 2026-05-26) | **Pending founder apply** |
 
 ---
 

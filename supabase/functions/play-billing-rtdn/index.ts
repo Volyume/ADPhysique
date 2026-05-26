@@ -195,25 +195,26 @@ async function callUpgradeTier(
   sourceSurface: string,
 ): Promise<void> {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    log("error", "SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing; cannot call upgrade_tier");
+    log("error", "SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing; cannot call upgrade_tier_for_user");
     return;
   }
-  // upgrade_tier reads auth.uid() inside the RPC. Service-role JWTs
-  // can override the auth context via the `Authorization` header
-  // pointing to a JWT minted with role=service_role; combined with
-  // setting `request.jwt.claim.sub` via the `apikey` header, the
-  // function sees auth.uid() = userId. Supabase's PostgREST honours
-  // this when service-role bypasses RLS.
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/upgrade_tier`, {
+  // Calls the service-role-only upgrade_tier_for_user RPC
+  // (migration 042) which takes the user_id as an explicit
+  // parameter. The user-facing upgrade_tier reads auth.uid() and
+  // cannot be impersonated via headers from a service-role JWT:
+  // an earlier x-supabase-user-id workaround silently failed
+  // because PostgREST does not honour that header. The new RPC
+  // is GRANTed to service_role only so a leaked anon/auth JWT
+  // cannot abuse it to write tier rows on other users.
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/upgrade_tier_for_user`, {
     method: "POST",
     headers: {
       "apikey": SUPABASE_SERVICE_ROLE_KEY,
       "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
       "Content-Type": "application/json",
-      // Impersonate the user so upgrade_tier writes the correct row.
-      "x-supabase-user-id": userId,
     },
     body: JSON.stringify({
+      _user_id: userId,
       _target_tier: targetTier,
       _reason: reason,
       _source_surface: sourceSurface,
@@ -222,7 +223,7 @@ async function callUpgradeTier(
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    log("error", `upgrade_tier RPC failed: ${res.status} ${body}`);
+    log("error", `upgrade_tier_for_user RPC failed: ${res.status} ${body}`);
   }
 }
 
