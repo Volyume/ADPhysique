@@ -1,12 +1,12 @@
 # Latest Maestro E2E status
 
-- **Run number**: 15
-- **Run URL**: https://github.com/allansdouglas1983-cmyk/ADPhysique/actions/runs/26444497096
+- **Run number**: 16
+- **Run URL**: https://github.com/allansdouglas1983-cmyk/ADPhysique/actions/runs/26445792285
 - **Branch**: `main`
-- **Commit**: `88ce80b639128c81233e0a28bd298c852d5533c9`
+- **Commit**: `4f3f26fe70680635c52c363d723df2fb1998eadc`
 - **Tag run**: `smoke`
-- **Triggered at**: 2026-05-26T09:55:46Z
-- **Job status**: `success`
+- **Triggered at**: 2026-05-26T10:20:33Z
+- **Job status**: `failure`
 
 ## Step outcomes
 
@@ -138,8 +138,8 @@ To revert the changes after this command completes, you can run the following:
 > Task :react-native-svg:prepareLintJarForPublish
 > Task :react-native-svg:mergeDebugJavaResource
 > Task :react-native-vision-camera:extractDebugAnnotations
-> Task :react-native-svg:syncDebugLibJars
 > Task :react-native-vision-camera:stripDebugDebugSymbols
+> Task :react-native-svg:syncDebugLibJars
 > Task :react-native-svg:bundleDebugAar
 > Task :react-native-svg:assembleDebug
 > Task :react-native-vision-camera:extractDeepLinksForAarDebug
@@ -165,12 +165,12 @@ To revert the changes after this command completes, you can run the following:
 > Task :react-native-webview:prepareDebugArtProfile
 > Task :react-native-webview:prepareLintJarForPublish
 > Task :rest-timer-live:stripDebugDebugSymbols NO-SOURCE
-> Task :rest-timer-live:copyDebugJniLibsProjectAndLocalJars
 > Task :react-native-webview:mergeDebugJavaResource
-> Task :rest-timer-live:extractDebugAnnotations
+> Task :rest-timer-live:copyDebugJniLibsProjectAndLocalJars
 > Task :react-native-webview:syncDebugLibJars
 > Task :react-native-webview:bundleDebugAar
 > Task :react-native-webview:assembleDebug
+> Task :rest-timer-live:extractDebugAnnotations
 > Task :rest-timer-live:extractDeepLinksForAarDebug
 > Task :rest-timer-live:mergeDebugGeneratedProguardFiles
 > Task :rest-timer-live:mergeDebugConsumerProguardFiles
@@ -227,19 +227,12 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/8.9/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD SUCCESSFUL in 11m 23s
+BUILD SUCCESSFUL in 11m 22s
 1508 actionable tasks: 1496 executed, 12 up-to-date
 ```
 
 </details>
 
-<details><summary>adb-install.log (last 40 lines)</summary>
-
-```
-Performing Streamed Install
-Success
-```
-
-</details>
+_adb-install.log not produced_
 
 _maestro-output/run.log not produced_
