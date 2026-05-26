@@ -10,6 +10,7 @@ on:
       - '**/*.md'
       - '.gitignore'
       - 'LICENSE'
+      - '.ci-status/**'
   workflow_dispatch:
 
 # Needed so the "Publish build status" step can push a small status
