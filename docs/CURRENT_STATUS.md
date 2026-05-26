@@ -1,4 +1,4 @@
-# Volyume current status (verified 2026-05-25, evening)
+# Volyume current status (verified 2026-05-26, post external audit)
 
 This document captures the verified, code-checked, founder-confirmed
 state of the Volyume project. It supersedes `HANDOFF.md` (which has
@@ -19,60 +19,99 @@ session that materially changes shipped state, not appended to.
 > minimisation, main is canonical, session-start protocol. The
 > rules were added after the 2026-05-25 stale-branch incident.
 
-## 0. Late-2026-05-25 session summary (read first)
+## 0. 2026-05-26 session summary (read first)
 
-Active branch: `claude/volyume-food-logging-app-k8wtU`. Material
-changes shipped this session, in order:
+Active branch: `main` (per Rule 9 lock 2026-05-26). This session
+responded to an external main-branch audit and shipped a stack of
+runtime-critical fixes, CI infrastructure, and config cleanup.
+Material changes, in order:
 
-1. **Notifications module split** per `NOTIFICATIONS_LOCKED.md`.
-   `src/lib/notifications/` directory with 7 files (categories,
-   quietHours, permissions, handler, scheduler, telemetry, index).
-   Quiet-hours rule (22:00 → 07:00 default, wrap-aware). Migration
-   040 adds `notification_sent` + `_tapped` + `_failed` to the
-   server allow-list. 21 new tests.
-2. **Maestro E2E scaffold** per `TESTING_STRATEGY_LOCKED.md` lines
-   114-141. `e2e/` directory with all 12 spec'd flows + smoke flow
-   + structural linter wired into Jest. Opt-in CI workflow
-   (`.github/workflows/maestro-e2e.yml`) iterating against an
-   Android emulator. CI status writes back to
-   `.ci-status/maestro-latest.md` on every run.
-3. **`audit()` user-action breadcrumbs** (`src/lib/observability.js`
-   shorthand on top of `track.userAction`). 23 call sites wired
-   across workout, food, auth, paywall, cascade, settings,
-   privacy, scan. Lands in Sentry breadcrumbs (PII-scrubbed) and
-   the on-device debug log ring buffer.
-4. **Skeleton loaders on 5 more screens**: CoachReview, WeeklyCheckIn,
-   CoachHeldHistory, BlockReflection, CoachOutput. Replaces full-
-   screen ActivityIndicator spinners with structured placeholders
-   matching the real content shape.
-5. **Web favicon + privacy hosting**. `<link rel="icon">` + apple-
-   touch-icon + theme-color added to `public/index.html` and
-   `public/privacy.html`. `public/favicon.png` copied from
-   `assets/favicon.png`. GitHub Pages auto-deploys `public/` on
-   every push; privacy page now live at
-   `https://allansdouglas1983-cmyk.github.io/ADPhysique/privacy.html`
-   with the proper favicon.
-6. **Privacy management UI in Settings**. New Privacy section above
-   Legal. Surfaces health-data consent state; tapping (when granted)
-   opens a destructive confirm and on accept calls
-   `record_health_consent(false)`, updates local mirror, fires
-   `article9_consent_withdrawn` telemetry. Migration 041 adds the
-   event to the allow-list.
-7. **Cyber-security review** via `/security-review` skill across
-   the branch diff. No high-confidence vulnerabilities found.
+1. **Stale package-lock.json regenerated**. `react-native-iap@^12.16.1`
+   landed in `package.json` at commit `ba072e0` without a lockfile
+   bump, so `npm ci` had been failing in every clean container
+   since then. The "1370/1370 passing" claim could not have been
+   re-verified anywhere clean until today.
+2. **Mesocycle clock-injection fix**. `getCurrentMesoWeek` and
+   `getBlockStatus` now accept an optional `nowMs` parameter
+   (defaults to `Date.now()`). Mesocycle tests had a hardcoded
+   `NOW = 2026-05-20` and the "brand-new block" test on line 25
+   was missing the third argument; the test failed on 2026-05-26
+   when wall-clock drifted 6 days past `NOW`. Two adjacent tests
+   were passing by coincidence and would have aged out too.
+3. **Identity-invariant CI workflow wired**. `scripts/check-identity-invariant.sh`
+   existed but no workflow ran it, so CLAUDE.md's "CI grep enforces
+   this" was a no-op. New `identity-invariant.yml` runs it on every
+   push to main / claude branches and on PRs.
+4. **ProOnboardingScreen identity migration bug fixed** (audit
+   critical #1). `migrateLocalUserId` was called on every
+   successful auth, including sign-in; per
+   `IDENTITY_AND_OWNERSHIP_LOCKED.md` it is signup-only.
+   ProOnboardingScreen now mirrors the LoginScreen gate. Adds
+   `identityGate.proOnboarding.test.js` as a source-grep
+   regression guard.
+5. **Migration 039 service_role GRANT added** (audit critical #2).
+   `record_account_deletion_started/completed` REVOKEd EXECUTE
+   from PUBLIC/authenticated/anon but never GRANTed to
+   service_role; the delete-account Edge Function would have
+   silently failed to write audit rows. 039 is still pending
+   apply, so the edit landed in place.
+6. **Migration 042 + RTDN webhook fix** (audit critical #3). New
+   `upgrade_tier_for_user(_user_id, ...)` service-role-only RPC.
+   The webhook previously POSTed `x-supabase-user-id` as a fake
+   impersonation header that PostgREST does not honour, so every
+   Play Billing renewal / cancellation / refund / expiry /
+   restart was server-side broken. Webhook now passes `_user_id`
+   in the JSON body to the new RPC. Adds
+   `rtdnWebhook.contract.test.js` as a contract regression guard.
+7. **`.gitattributes` added**. Enforces LF for js/ts/yaml/sh/sql/md
+   so Maestro flow lint and Unix tooling don't trip on CRLF in
+   Windows checkouts.
+8. **Config placeholders removed**. `app.json` no longer carries
+   `extra.eas.projectId = "your-eas-project-id"`; `eas.json` no
+   longer carries the iOS `appleId / ascAppId / appleTeamId`
+   placeholders. iOS is locked-deferred per 2026-05-25 founder
+   override.
+9. **scheduleSync Jest-aware**. Most DB write paths fire the 2s
+   debounced sync; every test that touched the DB was leaking
+   that timer and tripping Jest's worker-exit warning + late
+   require of `useAppStore` after teardown. scheduleSync now
+   no-ops under `JEST_WORKER_ID`. Production unchanged.
+10. **Main-branch CI workflow added**. New `main-ci.yml` runs
+    Jest + Maestro lint + Expo Doctor in parallel jobs on every
+    push to main / claude and on PRs to main. Uses
+    `npm ci --legacy-peer-deps` so future lock drift fails CI
+    instead of silently being papered over by `npm install`.
+11. **Doc reconciliation pass**. `supabase/README.md` columns for
+    `account_deletions_log` corrected (`initiated_at` + `source`,
+    not `started_at` + `error_message`). Allow-list event count
+    corrected (38, was 37). `CURRENT_STATUS.md` audit-site count
+    corrected (23, was 21). Migration tracker now lists 042.
 
 **Founder action queue grows by**:
-- Apply `supabase/migrate_040_notification_telemetry.sql`
-- Apply `supabase/migrate_041_consent_withdrawal_telemetry.sql`
+- Apply `supabase/migrate_039_account_deletions_log.sql` (now
+  includes the service_role GRANT fix)
+- Apply `supabase/migrate_042_upgrade_tier_for_user.sql`
 
-**Test count**: 1430/1430 passing across 67 suites (re-verified
-2026-05-26 on a clean install; the previous 1370/63 figure was
-stale).
+The remaining 037 + 038 + 040 + 041 from the previous queue still
+need applying in order.
 
-**Pending Maestro CI iteration**: smoke bundle hasn't gone green
-yet on a real emulator; iteration commits are in
-`.ci-status/maestro-latest.md`. Not on the critical path for
-shipping any visible APK change.
+**Test count**: 1435/1435 passing across 69 suites (added two
+regression-guard suites for the audit-critical fixes).
+
+**Audit items NOT addressed in this session (tracked, not lost)**:
+- npm audit reports 33 vulnerabilities (15 high). Most need
+  Expo / Sentry major upgrades that risk app stability.
+  Triage deferred to Phase A exit prep.
+- Worker-exit warning still surfaces intermittently from
+  `screen-mount.test.js`. scheduleSync was one source;
+  RN-side timers in mounted screens are the next layer.
+- `volyume.app/privacy` DNS / hosting still not pointing to the
+  GitHub Pages copy. Founder action (Namecheap → CNAME).
+- `.ci-status/maestro-latest.md` still stale because Maestro
+  workflow runs on `claude/**` only. Out of scope for this
+  session; can be unlocked by adding `main` to its triggers.
+- Full Jest teardown chase (audit's open-handle finding).
+  scheduleSync fix removed one source; other RN timers remain.
 
 ---
 
