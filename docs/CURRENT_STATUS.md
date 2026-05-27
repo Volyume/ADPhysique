@@ -701,7 +701,7 @@ Per `DATABASE_SCHEMA_LOCKED.md` + grep against `supabase/migrate_*.sql`.
 | 044 | `notification_preferences` table + RLS + updated_at trigger. Backs NOTIFICATIONS_LOCKED.md lines 117-119. SYNC_REGISTRY entry. | **Applied** (notification_preferences PGRST205 warnings in device log cleared after this) |
 | 045 | `users_profile.column_updates_at jsonb` + safe-merge trigger. Powers the registry-locked `profiles.merge` conflict strategy via `column_updates_at` populated on push from `userProfileFieldUpdatedAt` and consumed on pull via `conflict.resolve(merge)`. | **Applied** end-of-day 2026-05-26 |
 | 046 | `recipe_ingredients.updated_at + deleted_at` columns + BEFORE UPDATE touch trigger + partial live index. Required for the per-table push handler (which already ships both columns) — without 046 the push raises PGRST204 on every sync. Local SQLite already has both columns via the additive migration in commit bc117a1. First-apply attempt errored on a removed-from-cloud `created_at` reference in a backfill block; commit 6aa79ca dropped the backfill, second-apply attempt succeeded. | **Applied** end-of-day 2026-05-26 |
-| 047 | `body_metrics.updated_at + deleted_at` + `weekly_checkins_v2.updated_at` + BEFORE UPDATE touch triggers refusing stale writes + partial live index over `body_metrics(user_id, metric_date) WHERE deleted_at IS NULL`. Closes the locked LWW + soft-delete gaps for the `body_composition_log` and `weekly_checkins_v2` registry entries; per-table handlers now ship updated_at on push and gate pulls with LWW. | **Pending founder apply** (see `supabase/README.md` § Verify body_metrics + weekly_checkins_v2 LWW) |
+| 047 | `body_metrics.updated_at + deleted_at` + `weekly_checkins_v2.updated_at` + BEFORE UPDATE touch triggers refusing stale writes + partial live index over `body_metrics(user_id, metric_date) WHERE deleted_at IS NULL`. Closes the locked LWW + soft-delete gaps for the `body_composition_log` and `weekly_checkins_v2` registry entries; per-table handlers now ship updated_at on push and gate pulls with LWW. | **Applied** 2026-05-27 |
 
 ---
 
@@ -891,7 +891,7 @@ Grouped by phase per `RELEASE_PLAN_LOCKED.md`.
 
 1. ~~Apply migration 045~~ **Applied** end-of-day 2026-05-26.
 2. ~~Apply migration 046~~ **Applied** end-of-day 2026-05-26.
-3. **Apply migration 047** (`supabase/migrate_047_body_metrics_weekly_checkins_lww.sql`). Closes the LWW + soft-delete gaps on `body_composition_log` and `weekly_checkins_v2`. Additive, idempotent; old AAB stays compatible (server-side DEFAULT now() fills the new updated_at column when the legacy client does not ship it). Verification queries in `supabase/README.md` § Verify body_metrics + weekly_checkins_v2 LWW.
+3. ~~Apply migration 047~~ **Applied** 2026-05-27.
 4. (Optional, low priority) Add `EXPO_PUBLIC_USDA_API_KEY` repo secret if USDA fallback is wanted active.
 
 ### When Claude says "Phase A code work complete, ready for Phase A exit prep"
