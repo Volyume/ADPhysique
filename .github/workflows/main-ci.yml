@@ -26,6 +26,10 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pull-requests: write
+
 concurrency:
   group: main-ci-${{ github.ref }}
   cancel-in-progress: true
@@ -143,6 +147,57 @@ jobs:
           name: jest-log
           path: jest.log
           if-no-files-found: warn
+
+      - name: Post Jest failure comment to PR
+        # Reads jest.log on failure and posts the relevant chunk as
+        # a PR comment via GITHUB_TOKEN. The comment is readable
+        # via the GitHub MCP server's pull_request_read /
+        # get_comments method, so a CI failure is diagnosable from
+        # chat with no manual log paste required. Only fires on
+        # pull_request events so push-to-main runs don't try to
+        # post against a non-existent PR.
+        if: failure() && steps.jest.conclusion == 'failure' && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let log = '';
+            try { log = fs.readFileSync('jest.log', 'utf8'); }
+            catch (e) { log = '(jest.log missing — Jest may have crashed before tee opened the file)'; }
+            const lines = log.split('\n');
+            const tail = lines.slice(-220).join('\n');
+            // Collect every line that looks like a Jest failure marker.
+            const failMarkers = lines
+              .filter((l) => /^FAIL |^  ● |^  expect\(|^    expect\(|^Tests:|^Test Suites:/.test(l))
+              .slice(0, 150)
+              .join('\n');
+            const body = [
+              '## Jest failure detail (auto-posted by main-ci.yml)',
+              '',
+              `Run: ${context.payload.pull_request.html_url}/checks`,
+              '',
+              '<details><summary>Failure markers</summary>',
+              '',
+              '```',
+              failMarkers || '(no FAIL markers matched the regex)',
+              '```',
+              '',
+              '</details>',
+              '',
+              '<details><summary>Last 220 lines of jest.log</summary>',
+              '',
+              '```',
+              tail,
+              '```',
+              '',
+              '</details>',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body,
+            });
 
   maestro-lint:
     name: Maestro flow structural lint
