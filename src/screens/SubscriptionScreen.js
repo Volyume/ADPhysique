@@ -133,7 +133,7 @@ export default function SubscriptionScreen({ navigation }) {
             {tier === 'pro' ? 'Pro' : 'Free'}
           </Text>
           <Text style={styles.cardSub}>
-            {STAGE_LABEL[stage] ?? '—'}
+            {STAGE_LABEL[stage] ?? '-'}
             {daysLeft != null ? ` · ${daysLeft} day${daysLeft === 1 ? '' : 's'} remaining` : ''}
           </Text>
         </View>

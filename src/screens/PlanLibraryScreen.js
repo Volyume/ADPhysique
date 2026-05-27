@@ -164,7 +164,7 @@ function DivisionGrid({ selectedDivision, onSelectDivision }) {
   return (
     <View style={styles.divisionSection}>
       <Text style={styles.divisionIntroDesc}>
-        These programmes are built around the specific visual priorities of each judged division. Designed for competitors, or anyone who trains with a division in mind.
+        These plans are built around the specific visual priorities of each judged division. Designed for competitors, or anyone who trains with a division in mind.
       </Text>
       <Text style={styles.divisionGroupLabel}>Men's divisions</Text>
       <View style={styles.divisionChips}>

@@ -846,7 +846,7 @@ export default function BodyMetricsScreen({ navigation }) {
               const measuredKeys = MEASUREMENTS.filter(m => entry[m.key] != null);
               return (
                 <View key={entry.id} style={styles.historyRow}>
-                  <Text style={styles.historyDate}>{safeFormatDate(entry.metric_date, 'MMM d, yyyy') || '—'}</Text>
+                  <Text style={styles.historyDate}>{safeFormatDate(entry.metric_date, 'MMM d, yyyy') || '-'}</Text>
                   <View style={styles.historyValues}>
                     {entry.body_weight ? (
                       <Text style={styles.historyWeight}>{formatBodyWeightShort(entry.body_weight, bwu)}</Text>

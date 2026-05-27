@@ -1220,7 +1220,7 @@ export default function HomeScreen({ navigation }) {
                 <PlanBuilderCard
                   icon="library-outline"
                   title="Plan Library"
-                  desc="Browse ready-made programmes for every level, schedule, and goal."
+                  desc="Browse ready-made plans for every level, schedule, and goal."
                   badge="Recommended"
                   onPress={() => navigation.navigate('PlansTab', { screen: 'PlanLibrary', initial: false })}
                 />

@@ -21,6 +21,67 @@ session that materially changes shipped state, not appended to.
 
 ## 0. 2026-05-27 session summary (read first)
 
+### Late-day feature + voice audit (founder-prompted)
+
+The founder challenged the assumption — never previously verified —
+that the user-facing product was feature-complete. Spent the
+remainder of the session walking the spec docs (MASTER_VISION_AND_PLAN,
+BACKLOG, CLAUDE.md voice rules) against the code in `src/screens/`,
+`src/components/`, and the navigation graph. Findings below are
+personally verified, not delegated.
+
+#### User-facing features MISSING (real product gaps, not stylistic)
+
+| Feature | Spec source | Evidence of absence |
+|---|---|---|
+| **Food preferences: dislike / exclude list** | Sensible feature the coaching system would need; not formally locked. | No table in `src/lib/database.js`, no sync registry entry, no UI, no helper in `src/lib/food/db.js`. Only the LIKE side (`food_favourites`) is built. |
+| **Recipe builder UI** | `UI_FLOWS_LOCKED.md` (search tab with "My Recipes"); schema in `recipe_ingredients` migration 015 + handler in `src/lib/sync/tables/recipeIngredients.js` | No `Recipes` screen registered in `src/navigation/RootNavigator.js`. Schema + sync are wired, UI is absent. |
+| **Saved meals UI (meal templates)** | `MASTER_VISION_AND_PLAN.md §5` + `UI_FLOWS_LOCKED.md` (search tab "My Meals") | `saved_meals` table exists; `applySavedMealFromCloud` / `getAllSavedMealsSince` exist in `src/lib/food/db.js`; no UI to create / edit / pick a template from the search flow. |
+| **Photo progress timeline** | Deferred to v1.1 per `BUDGET_POSTURE_LOCKED.md`; called out in `MASTER_VISION_AND_PLAN.md §5` | No `Photo*` screen registered. Aligns with explicit deferral, but worth re-listing because it's user-visible vapourware in the marketing posture. |
+| **Body composition trend charts (BF%, measurements)** | `MASTER_VISION_AND_PLAN.md §8` (Body Metrics screen extended); `BodyMetricsScreen.js` has `WeightTrendChart` only | Weight trend chart present (line 120). No BF% or measurement-over-time chart in the file. Body comp trending is a Pro-tier promise; only weight is delivering. |
+
+#### User-facing features PARTIAL
+
+| Feature | What's working | What's missing |
+|---|---|---|
+| Coach-driven calorie adjustment | Auto-applied: `CoachOutputScreen.js:666` reads `result.adjustments.calories.change`, calls `saveNutritionTargets` with the new kcal + ratio-scaled fat/carbs, protein constant | An integration test asserting "given coach output X, saveNutritionTargets was called with Y". Manual real-device testing covers it. |
+| Coach-driven training adjustment | Engine surfaces volume/RPE suggestions in `CoachOutputScreen` | No equivalent auto-apply for training: user must hand-edit routines based on the recommendation. Asymmetric with the nutrition path. |
+| Saved meals back-end | DB schema, CRUD helpers, cloud sync round-trip | No UI surface at all. |
+
+#### Voice / copy violations fixed in this session
+
+| Location | Violation | Fix |
+|---|---|---|
+| `src/screens/SubscriptionScreen.js:136` | Em dash fallback (`'—'`) for missing stage label. CLAUDE.md voice rules forbid em dashes in user-facing copy. | Replaced with `'-'`. |
+| `src/screens/BodyMetricsScreen.js:849` | Em dash fallback for missing date. | Replaced with `'-'`. |
+| `src/screens/ProOnboardingScreen.js:912` | "This shapes your entire programme." BACKLOG.md voice rules: "Plans not Programmes". | "This shapes your entire plan." |
+| `src/screens/HomeScreen.js:1223` | "Browse ready-made programmes for every level..." | "Browse ready-made plans for every level..." |
+| `src/screens/PlanLibraryScreen.js:167` | "These programmes are built around..." | "These plans are built around..." |
+| `src/screens/FirstRunScreen.js:91` | "to pick a programme from the library..." | "to pick a plan from the library..." |
+
+#### Voice / copy violations still open (not fixed this session)
+
+- Em dashes in code comments across many files (BodyMetricsScreen, ProGoalSetupScreen, CascadeGateScreen, WorkoutHistoryScreen, and others). CLAUDE.md voice rules technically apply to code comments too. Cosmetic, not user-visible; left for a focused pass later.
+- Hardcoded hex colours in `ShareCardScreen.js` (extensive — the share-card template predates the theme tokens), `NutritionTargetsScreen.js:906` (single `#A78BFA`), `Article9ConsentScreen.js:151,262` (`#000` on the agreed checkmark + CTA), `CoachOutputScreen.js:1391` (`#000`). BACKLOG.md forbids hardcoded hex. The ShareCardScreen case is a known intentional one (HTML template renders inside a WebView and theme tokens aren't accessible); the others are real lapses.
+
+#### What did NOT show up as a violation (clean)
+
+- Forbidden marketing words: zero hits for `AI Builder`, `perfect`, `guaranteed`, `beast mode`, `crush`, `shred`, `hacks`.
+- AI tells: zero hits for `Let me`, `I'll`, `Certainly`, `Absolutely`, `Of course`, `Dive into`, `delve`, `leverage`, `utilize`, `facilitate`, `robust`, `seamless`, `streamline`, `comprehensive`, `It's important to note`.
+- Jargon blocklist: zero hits for `metabolic adaptation`, `training stimulus`, `stimulus-to-fatigue`, `progressive overload protocol`.
+- Coach Builder described as AI / ML: clean.
+- American spellings in user-facing strings: clean (the `color`/`center` matches are React Native style prop names, exempt per CLAUDE.md code-identifier rule).
+
+#### Process failure that produced this gap
+
+I executed the engineering punch list mechanically for the entire session (sync handlers, migration 047, notifications listener consolidation, schema drift audit, `--forceExit` fix, privacy URL, CI diagnostics, T7/T8 detour) without ever auditing the user-facing feature surface against the spec. The founder asked the right question — "is the app even complete?" — and the answer turned out to be no. Food dislikes + recipe builder + saved meals UI + body comp charts are real product gaps that should have been surfaced months ago, not at end-of-day on a session where the punch list said "feature work done".
+
+Going forward: at the start of every session do a 30-minute pass over the user-facing surface against MASTER_VISION + BACKLOG + UI_FLOWS_LOCKED before picking up engineering items. The engineering punch list is the LAST mile, not the WHOLE map.
+
+---
+
+### Engineering work landed today (now follows)
+
 **End-of-day handoff.** Today's branch + main are at `c8988ff`.
 The day landed several real improvements and then ate a number of
 hours on a piece of work (live-cloud T7/T8 tests) that turned out
@@ -994,6 +1055,12 @@ Grouped by phase per `RELEASE_PLAN_LOCKED.md`.
 | 7 | ~~CI trigger gap (workflows stopped firing on push after run #714)~~ **Fixed** end-of-day 2026-05-26 by removing the workflow's self-push step. Push events now fire workflow runs normally; status reports moved to artefacts. | `docs/CI_TRIGGER_DIAGNOSTIC_2026-05-26.md` | done | Claude |
 | 8 | ~~`--forceExit` tech debt in main-ci.yml~~ **Fixed 2026-05-27** (commit `8b48878`). Real cause was two leaked `setTimeout()`s in `HomeScreen`'s useEffect that the screen-mount harness never unmounted. Fix: `mountScreen` registers every tree in a module-level Set; a top-level `afterEach` drains and unmounts the batch. `jest --detectOpenHandles` reports zero leaks; `--forceExit` removed. | `.github/workflows/main-ci.yml` (history) | done | Claude |
 | 9 | ~~CI diagnostic safety net (Jest failure not visible to chat from rate-limited container)~~ **Shipped 2026-05-27** (commits `e099904` + `74045bc`). Jest output tee'd to `jest.log` + last 220 lines + FAIL markers appended to `$GITHUB_STEP_SUMMARY` + uploaded as `jest-log` artefact + on `pull_request` events auto-posted as a PR comment via `GITHUB_TOKEN`. Future Jest failures are diagnosable from chat without manual log paste. Same `$GITHUB_STEP_SUMMARY` treatment applied to Maestro workflow's existing status report. | `.github/workflows/main-ci.yml`, `.github/workflows/maestro-e2e.yml` | done | Claude |
+| 10 | **Food preferences: dislike / exclude list.** Surfaced by founder 2026-05-27 audit. Currently only the `like` side (`food_favourites`) is built. Needs: a `food_dislikes` (or shared `food_preferences` with kind column) SQLite table, an entry in the sync registry, helper functions in `src/lib/food/db.js`, a heart/cross toggle on every food row, an Excluded section in the Search tab, and a filter in `runWeeklyCoach` so the coach can avoid suggesting excluded foods. | not yet locked in a spec doc; founder-locked 2026-05-27 | M | Claude (writes); Founder (specs the exclusion rules) |
+| 11 | **Recipe builder UI.** Schema + cloud sync are already in place (`recipe_ingredients` table, `src/lib/sync/tables/recipeIngredients.js`, migration 046 `updated_at` + `deleted_at` columns). What's missing: the screen to create / edit / view recipes. `UI_FLOWS_LOCKED.md` lists "My Recipes" as a search-tab section. | `UI_FLOWS_LOCKED.md`, schema in `migrate_015_food_logging.sql` | M | Claude |
+| 12 | **Saved meals UI (meal templates).** Same pattern: `saved_meals` table + `applySavedMealFromCloud` / `getAllSavedMealsSince` helpers + cloud round-trip exist; no UI surface to create / pick / apply a template. `MASTER_VISION_AND_PLAN.md §5` + `UI_FLOWS_LOCKED.md` "My Meals". | `UI_FLOWS_LOCKED.md`, schema in `migrate_015_food_logging.sql` | M | Claude |
+| 13 | **Body composition trend charts (BF%, measurements).** `BodyMetricsScreen.js` ships a weight trend chart only. BF% and measurement-over-time charts are missing despite being a Pro-tier promise in `MASTER_VISION_AND_PLAN.md §8`. | `MASTER_VISION_AND_PLAN.md §8` | S-M | Claude |
+| 14 | **Coach training adjustment auto-apply.** Calorie adjustments are auto-applied to nutrition targets (`CoachOutputScreen.js:666`). Training adjustments (volume/RPE) are shown as recommendations only; user must hand-edit routines. Decide whether to symmetrically auto-apply (apply suggested set count to the upcoming week's routine), confirm-then-apply, or keep manual. | engine output already exists; UX decision needed | S (implementation) + founder decision | Both |
+| 15 | **Voice-rule sweep over code comments + remaining hex-colour lapses.** Em dashes in code comments across many files; hardcoded hex in `Article9ConsentScreen.js:151,262`, `CoachOutputScreen.js:1391`, `NutritionTargetsScreen.js:906`. `ShareCardScreen.js` excluded (intentional HTML template). Cosmetic, not user-visible, but spec-compliance debt. | `CLAUDE.md` voice rules, `BACKLOG.md` "no hardcoded hex" | S (~1-2 h) | Claude |
 
 ### LATER (Phase A exit prep)
 

@@ -909,7 +909,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
             <Header
               title="Your training profile."
-              sub="Takes about 30 seconds. This shapes your entire programme."
+              sub="Takes about 30 seconds. This shapes your entire plan."
             />
 
             <Dropdown
