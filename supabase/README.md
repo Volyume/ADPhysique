@@ -358,3 +358,30 @@ SELECT
 If either column does not appear, the migration did not run on
 that table. If trigger rows are missing, the touch functions did
 not install. Re-run (idempotent) and re-check.
+
+## Cloud schema drift audit
+
+`supabase/audit_cloud_schema_drift.sql` is a read-only audit query.
+Run it any time you suspect the live cloud has diverged from what
+the sync handlers expect (the recipe_ingredients.created_at gap
+that broke migration 046's first apply was this kind of drift).
+
+How to use:
+
+1. Supabase Dashboard -> SQL Editor -> paste the whole file -> Run.
+2. The first result set lists every (table, column) the per-table
+   sync handlers depend on, with `status = OK` when present in
+   the live cloud and `status = MISSING` when not. MISSING rows
+   sort to the top; any MISSING row is a drift that needs a
+   migration (or a handler fix if the column was renamed
+   client-side).
+3. The second result set lists every public table on the cloud
+   that is neither in the SYNC_REGISTRY nor on the audit's
+   intentional exclusion list (service-role only, telemetry,
+   legacy schema). New tables added server-side without a
+   client-side handler surface here.
+
+The expected column set is hand-maintained inside the audit file;
+when you add a column to a sync handler, add a row to the
+matching VALUES section in the audit. CI does not catch this
+omission yet; tracked as a follow-up in CURRENT_STATUS § 8 LATER.
