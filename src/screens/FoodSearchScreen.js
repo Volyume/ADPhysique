@@ -25,7 +25,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import {
-  logFoodEntry, getRecentFoodEntries, toggleFavourite, getFavourites,
+  logFoodEntry, getRecentFoodEntries, getFavourites,
+  getDislikes, cycleFoodPreference, getFoodPreference,
 } from '../lib/food/db';
 import { searchFoods } from '../lib/food/waterfall';
 import { resolveFoodRef } from '../lib/food/sources/localCache';
@@ -54,19 +55,24 @@ export default function FoodSearchScreen({ navigation, route }) {
   const [recents, setRecents] = useState([]);
   const [favouriteRefs, setFavouriteRefs] = useState(new Set());
   const [favouriteRows, setFavouriteRows] = useState([]);
+  const [dislikeRefs, setDislikeRefs] = useState(new Set());
+  const [dislikeRows, setDislikeRows] = useState([]);
+  const [showExcluded, setShowExcluded] = useState(false);
   const [searching, setSearching] = useState(false);
   const [picker, setPicker] = useState(null);
 
   const debounceRef = useRef(null);
 
-  // Load recents + favourites on focus so coming back from a log
-  // shows the fresh ordering.
+  // Load recents + favourites + dislikes on focus so coming back
+  // from a log shows the fresh ordering and any toggle landed
+  // since last visit.
   const loadRecentsAndFavs = useCallback(async () => {
     if (!userId) return;
     try {
-      const [recentRows, favRows] = await Promise.all([
+      const [recentRows, favRows, disRows] = await Promise.all([
         getRecentFoodEntries(userId, 15),
         getFavourites(userId),
+        getDislikes(userId),
       ]);
       const seen = new Set();
       const recentResolved = [];
@@ -86,6 +92,14 @@ export default function FoodSearchScreen({ navigation, route }) {
         if (food) favResolved.push(food);
       }
       setFavouriteRows(favResolved);
+      const disSet = new Set(disRows.map(d => d.food_ref));
+      setDislikeRefs(disSet);
+      const disResolved = [];
+      for (const d of disRows.slice(0, 20)) {
+        const food = await resolveFoodRef(userId, d.food_ref);
+        if (food) disResolved.push(food);
+      }
+      setDislikeRows(disResolved);
     } catch (_) { /* tolerate */ }
   }, [userId]);
 
@@ -158,11 +172,20 @@ export default function FoodSearchScreen({ navigation, route }) {
 
   async function onLongPress(food) {
     try {
-      const nowFav = await toggleFavourite(userId, food.food_ref);
+      const next = await cycleFoodPreference(userId, food.food_ref);
+      // Optimistic update of the two ref sets so the row icon
+      // flips before the full reload finishes.
       setFavouriteRefs(prev => {
-        const next = new Set(prev);
-        if (nowFav) next.add(food.food_ref); else next.delete(food.food_ref);
-        return next;
+        const set = new Set(prev);
+        if (next === 'fav') set.add(food.food_ref);
+        else set.delete(food.food_ref);
+        return set;
+      });
+      setDislikeRefs(prev => {
+        const set = new Set(prev);
+        if (next === 'dislike') set.add(food.food_ref);
+        else set.delete(food.food_ref);
+        return set;
       });
       loadRecentsAndFavs();
     } catch (_) {}
@@ -180,27 +203,57 @@ export default function FoodSearchScreen({ navigation, route }) {
     const out = [];
     if (favouriteRows.length) out.push({ key: 'favs', label: 'Favourites', rows: favouriteRows });
     if (recents.length) out.push({ key: 'recents', label: 'Recent', rows: recents });
+    if (dislikeRows.length) {
+      out.push({
+        key: 'excluded',
+        label: showExcluded
+          ? `Excluded · ${dislikeRows.length} (tap to hide)`
+          : `Excluded · ${dislikeRows.length} (tap to show)`,
+        rows: showExcluded ? dislikeRows : [],
+        toggleable: true,
+      });
+    }
     return out;
-  }, [query, results, searching, favouriteRows, recents]);
+  }, [query, results, searching, favouriteRows, recents, dislikeRows, showExcluded]);
 
   const flat = useMemo(() => {
     const out = [];
     for (const s of sections) {
-      if (s.rows.length === 0) continue;
-      out.push({ type: 'header', key: `h-${s.key}`, label: s.label });
+      // Always render the Excluded header so the user can expand
+      // it even when its rows are collapsed; skip other empty
+      // sections.
+      if (s.rows.length === 0 && !s.toggleable) continue;
+      out.push({
+        type: 'header',
+        key: `h-${s.key}`,
+        label: s.label,
+        toggleable: !!s.toggleable,
+        sectionKey: s.key,
+      });
       for (const r of s.rows) out.push({ type: 'row', key: `${s.key}-${r.food_ref}`, food: r });
     }
     return out;
   }, [sections]);
 
   function renderItem({ item }) {
-    if (item.type === 'header') return <Text style={styles.sectionHeader}>{item.label}</Text>;
+    if (item.type === 'header') {
+      if (item.toggleable && item.sectionKey === 'excluded') {
+        return (
+          <TouchableOpacity onPress={() => setShowExcluded(v => !v)}>
+            <Text style={styles.sectionHeader}>{item.label}</Text>
+          </TouchableOpacity>
+        );
+      }
+      return <Text style={styles.sectionHeader}>{item.label}</Text>;
+    }
     const food = item.food;
-    const isFav = favouriteRefs.has(food.food_ref);
+    const preference = favouriteRefs.has(food.food_ref) ? 'fav'
+      : dislikeRefs.has(food.food_ref) ? 'dislike'
+      : null;
     return (
       <FoodRow
         food={food}
-        isFav={isFav}
+        preference={preference}
         onPress={() => openPicker(food)}
         onLongPress={() => onLongPress(food)}
       />

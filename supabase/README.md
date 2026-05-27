@@ -27,12 +27,13 @@ unless the file header says otherwise.
 | 045 | `migrate_045_users_profile_column_updates_at.sql` | Adds `column_updates_at jsonb` to `users_profile` + safe-merge trigger so the per-column merge conflict strategy can decide field-by-field which side wrote a profile field most recently. Backs SYNC_REGISTRY profiles.merge contract. | See § Verify users_profile.column_updates_at |
 | 046 | `migrate_046_recipe_ingredients_soft_delete.sql` | Adds `updated_at` + `deleted_at` columns to `recipe_ingredients`, plus a BEFORE UPDATE touch trigger and a partial index over live rows. Required for the registry's softDelete:true + LWW contract on recipe_ingredients; without it the per-table push raises PGRST204 on every sync. | See § Verify recipe_ingredients soft-delete |
 | 047 | `migrate_047_body_metrics_weekly_checkins_lww.sql` | Adds `updated_at` to both `body_metrics` and `weekly_checkins_v2` (+ touch triggers refusing stale writes), plus `deleted_at` and a partial live index to `body_metrics`. Closes the locked LWW + soft-delete gaps for `body_composition_log` and `weekly_checkins_v2` registry entries. | See § Verify body_metrics + weekly_checkins_v2 LWW |
+| 048 | `migrate_048_food_preferences_kind.sql` | Adds `kind text NOT NULL DEFAULT 'fav'` + a CHECK constraint to `food_favourites` so the same table holds both "user likes this" (fav) and "user excluded this" (dislike). Backs the food-dislike feature added 2026-05-27. Old AAB sends rows without `kind`; DEFAULT covers them. | See § Verify food_favourites.kind |
 
 ## How to apply
 
 1. Open the Supabase Dashboard → SQL Editor → New query.
 2. Open one migration file at a time from this folder (numeric
-   order: 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047).
+   order: 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048).
 3. Paste the full contents into the SQL Editor.
 4. Click **Run**. The migrations are wrapped in `CREATE OR REPLACE
    FUNCTION` / `CREATE TABLE IF NOT EXISTS`, so re-running an
@@ -358,6 +359,35 @@ SELECT
 If either column does not appear, the migration did not run on
 that table. If trigger rows are missing, the touch functions did
 not install. Re-run (idempotent) and re-check.
+
+### Verify `food_favourites.kind` (migration 048)
+
+```sql
+-- Column present with the right type + default
+SELECT column_name, data_type, column_default, is_nullable
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name = 'food_favourites'
+  AND column_name = 'kind';
+-- Expected:
+--   kind | text | 'fav'::text | NO
+
+-- CHECK constraint installed
+SELECT conname, pg_get_constraintdef(oid)
+FROM pg_constraint
+WHERE conname = 'food_favourites_kind_check';
+-- Expected: one row with definition CHECK ((kind = ANY (ARRAY['fav','dislike'])))
+
+-- Every existing row has kind populated (DEFAULT applied)
+SELECT count(*) FILTER (WHERE kind IS NULL) AS null_kind_rows,
+       count(*) AS total_rows
+FROM food_favourites;
+-- Expected: null_kind_rows = 0.
+```
+
+If the column doesn't appear, the ADD COLUMN didn't run. If the
+constraint is missing, the DO block fell through; re-run the
+migration (idempotent) and re-check.
 
 ## Cloud schema drift audit
 

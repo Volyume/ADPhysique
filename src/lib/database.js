@@ -1055,6 +1055,12 @@ const SCHEMA_MIGRATIONS = [
     'UPDATE recipe_ingredients SET updated_at = created_at WHERE updated_at IS NULL',
     'CREATE INDEX IF NOT EXISTS idx_recipe_ingredients_live ON recipe_ingredients(user_id, recipe_id) WHERE deleted_at IS NULL',
   ],
+  // v?: food preferences = favourites + dislikes (same table, kind column).
+  // Mirrors cloud migration 048. Default 'fav' keeps every legacy row
+  // behaving exactly as before.
+  [
+    "ALTER TABLE food_favourites ADD COLUMN kind TEXT NOT NULL DEFAULT 'fav'",
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on

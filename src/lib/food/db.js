@@ -276,27 +276,95 @@ export async function getRecentIntakeSummary(userId, asOfDate = null) {
   };
 }
 
-// ─── food_favourites ─────────────────────────────────────────────────────
+// ─── food_favourites (likes) + food_dislikes ─────────────────────────────
+//
+// One table, one column (`kind`). A food can be:
+//   - not in the table at all  -> 'none' (neutral; default state)
+//   - kind = 'fav'             -> user likes it; surfaces in Favourites
+//                                  section, suggested by future meal
+//                                  suggester / recipe builder
+//   - kind = 'dislike'         -> user explicitly excludes it; coach
+//                                  + future suggesters skip it; user
+//                                  can still log it deliberately
+// Composite PK (user_id, food_ref) means each food is one state at
+// a time. Toggling from 'fav' -> 'dislike' just updates the row
+// rather than inserting a duplicate.
 
-export async function toggleFavourite(userId, foodRef) {
+const VALID_KINDS = new Set(['fav', 'dislike']);
+
+/**
+ * Set or clear a food preference.
+ *   setFoodPreference(uid, ref, 'fav')      -> insert/update to fav
+ *   setFoodPreference(uid, ref, 'dislike')  -> insert/update to dislike
+ *   setFoodPreference(uid, ref, null)       -> delete the row (back to neutral)
+ *
+ * Returns the new state: 'fav' | 'dislike' | null.
+ */
+export async function setFoodPreference(userId, foodRef, kind) {
+  if (kind != null && !VALID_KINDS.has(kind)) {
+    throw new Error(`setFoodPreference: invalid kind '${kind}'`);
+  }
   const d = await db();
-  const existing = await d.getFirstAsync(
-    `SELECT food_ref FROM food_favourites WHERE user_id = ? AND food_ref = ?`,
-    [userId, foodRef]
-  );
-  if (existing) {
+  if (kind === null) {
     await d.runAsync(
       `DELETE FROM food_favourites WHERE user_id = ? AND food_ref = ?`,
       [userId, foodRef]
     );
     _scheduleSync();
-    return false;
+    return null;
   }
   await d.runAsync(
-    `INSERT INTO food_favourites (user_id, food_ref, last_used_at) VALUES (?, ?, ?)`,
-    [userId, foodRef, Date.now()]
+    `INSERT INTO food_favourites (user_id, food_ref, last_used_at, kind)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(user_id, food_ref) DO UPDATE SET
+       kind = excluded.kind,
+       last_used_at = excluded.last_used_at`,
+    [userId, foodRef, Date.now(), kind]
   );
   _scheduleSync();
+  return kind;
+}
+
+/**
+ * Current preference for one food, or null when neutral.
+ */
+export async function getFoodPreference(userId, foodRef) {
+  const d = await db();
+  const row = await d.getFirstAsync(
+    `SELECT kind FROM food_favourites WHERE user_id = ? AND food_ref = ?`,
+    [userId, foodRef]
+  );
+  return row?.kind ?? null;
+}
+
+/**
+ * Cycle a food's preference: none -> fav -> dislike -> none. Used by
+ * the long-press toggle on every food row in FoodSearchScreen.
+ * Returns the new state.
+ */
+export async function cycleFoodPreference(userId, foodRef) {
+  const current = await getFoodPreference(userId, foodRef);
+  const next = current === null ? 'fav'
+    : current === 'fav' ? 'dislike'
+    : null;
+  return setFoodPreference(userId, foodRef, next);
+}
+
+/**
+ * Backwards-compatible wrapper that toggles ONLY between 'fav' and
+ * neutral. Existing callers (older code paths) keep working
+ * unchanged; new code should use setFoodPreference or
+ * cycleFoodPreference. Returns true when the row is now a fav,
+ * false when it was removed.
+ */
+export async function toggleFavourite(userId, foodRef) {
+  const current = await getFoodPreference(userId, foodRef);
+  if (current === 'fav') {
+    await setFoodPreference(userId, foodRef, null);
+    return false;
+  }
+  // 'dislike' or null both flip to 'fav' under the legacy toggle.
+  await setFoodPreference(userId, foodRef, 'fav');
   return true;
 }
 
@@ -304,7 +372,18 @@ export async function getFavourites(userId) {
   const d = await db();
   return d.getAllAsync(
     `SELECT food_ref, last_used_at FROM food_favourites
-     WHERE user_id = ? ORDER BY last_used_at DESC`,
+     WHERE user_id = ? AND kind = 'fav'
+     ORDER BY last_used_at DESC`,
+    [userId]
+  );
+}
+
+export async function getDislikes(userId) {
+  const d = await db();
+  return d.getAllAsync(
+    `SELECT food_ref, last_used_at FROM food_favourites
+     WHERE user_id = ? AND kind = 'dislike'
+     ORDER BY last_used_at DESC`,
     [userId]
   );
 }
@@ -482,12 +561,18 @@ export async function applyFavouriteFromCloud(userId, row) {
   if (!row?.food_ref) return;
   const d = await db();
   const lastUsedAt = _isoToMs(row.last_used_at) ?? Date.now();
+  // Cloud rows that pre-date mig 048 don't have `kind`; default to
+  // 'fav' so they keep behaving exactly as before. Reject anything
+  // outside the validated set so a malformed row can't poison local
+  // state.
+  const kind = row.kind === 'dislike' ? 'dislike' : 'fav';
   await d.runAsync(
-    `INSERT INTO food_favourites (user_id, food_ref, last_used_at)
-     VALUES (?, ?, ?)
+    `INSERT INTO food_favourites (user_id, food_ref, last_used_at, kind)
+     VALUES (?, ?, ?, ?)
      ON CONFLICT(user_id, food_ref) DO UPDATE SET
-       last_used_at = MAX(food_favourites.last_used_at, excluded.last_used_at)`,
-    [userId, row.food_ref, lastUsedAt]
+       last_used_at = MAX(food_favourites.last_used_at, excluded.last_used_at),
+       kind = excluded.kind`,
+    [userId, row.food_ref, lastUsedAt, kind]
   );
 }
 

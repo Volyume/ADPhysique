@@ -222,3 +222,125 @@ describe('Sync row fetchers issue updated_at-bounded queries', () => {
     );
   });
 });
+
+// ─── Mig-048 food preference cycle (fav / dislike / none) ─────────────────
+
+describe('food preference cycle (migration 048)', () => {
+  test('setFoodPreference(fav) inserts/updates with kind=fav', async () => {
+    const { setFoodPreference } = require('../food/db');
+    await setFoodPreference(UID, 'off:123', 'fav');
+    expect(writes).toHaveLength(1);
+    expect(writes[0].sql).toMatch(/INSERT INTO food_favourites/);
+    expect(writes[0].sql).toMatch(/ON CONFLICT\(user_id, food_ref\) DO UPDATE SET\s+kind = excluded\.kind/);
+    expect(writes[0].params[0]).toBe(UID);
+    expect(writes[0].params[1]).toBe('off:123');
+    expect(writes[0].params[3]).toBe('fav');
+  });
+
+  test('setFoodPreference(dislike) writes kind=dislike', async () => {
+    const { setFoodPreference } = require('../food/db');
+    await setFoodPreference(UID, 'off:456', 'dislike');
+    expect(writes[0].params[3]).toBe('dislike');
+  });
+
+  test('setFoodPreference(null) deletes the row', async () => {
+    const { setFoodPreference } = require('../food/db');
+    await setFoodPreference(UID, 'off:789', null);
+    expect(writes[0].sql).toMatch(/^DELETE FROM food_favourites/);
+  });
+
+  test('setFoodPreference rejects an unknown kind', async () => {
+    const { setFoodPreference } = require('../food/db');
+    await expect(setFoodPreference(UID, 'off:1', 'unknown'))
+      .rejects.toThrow(/invalid kind/);
+  });
+
+  test('cycleFoodPreference: none -> fav', async () => {
+    mockGetFirstAsync.mockResolvedValueOnce(null);
+    const { cycleFoodPreference } = require('../food/db');
+    const next = await cycleFoodPreference(UID, 'off:11');
+    expect(next).toBe('fav');
+    expect(writes.at(-1).params[3]).toBe('fav');
+  });
+
+  test('cycleFoodPreference: fav -> dislike', async () => {
+    mockGetFirstAsync.mockResolvedValueOnce({ kind: 'fav' });
+    const { cycleFoodPreference } = require('../food/db');
+    const next = await cycleFoodPreference(UID, 'off:22');
+    expect(next).toBe('dislike');
+    expect(writes.at(-1).params[3]).toBe('dislike');
+  });
+
+  test('cycleFoodPreference: dislike -> none (deletes the row)', async () => {
+    mockGetFirstAsync.mockResolvedValueOnce({ kind: 'dislike' });
+    const { cycleFoodPreference } = require('../food/db');
+    const next = await cycleFoodPreference(UID, 'off:33');
+    expect(next).toBe(null);
+    expect(writes.at(-1).sql).toMatch(/^DELETE FROM food_favourites/);
+  });
+
+  test('toggleFavourite back-compat: dislike flips straight to fav', async () => {
+    mockGetFirstAsync.mockResolvedValueOnce({ kind: 'dislike' });
+    const { toggleFavourite } = require('../food/db');
+    const nowFav = await toggleFavourite(UID, 'off:44');
+    expect(nowFav).toBe(true);
+    expect(writes.at(-1).params[3]).toBe('fav');
+  });
+
+  test('toggleFavourite back-compat: fav clears (delete)', async () => {
+    mockGetFirstAsync.mockResolvedValueOnce({ kind: 'fav' });
+    const { toggleFavourite } = require('../food/db');
+    const nowFav = await toggleFavourite(UID, 'off:55');
+    expect(nowFav).toBe(false);
+    expect(writes.at(-1).sql).toMatch(/^DELETE FROM food_favourites/);
+  });
+
+  test('getFavourites filters to kind=fav only', async () => {
+    const { getFavourites } = require('../food/db');
+    await getFavourites(UID);
+    expect(mockGetAllAsync).toHaveBeenLastCalledWith(
+      expect.stringMatching(/WHERE user_id = \? AND kind = 'fav'/),
+      [UID],
+    );
+  });
+
+  test('getDislikes filters to kind=dislike only', async () => {
+    const { getDislikes } = require('../food/db');
+    await getDislikes(UID);
+    expect(mockGetAllAsync).toHaveBeenLastCalledWith(
+      expect.stringMatching(/WHERE user_id = \? AND kind = 'dislike'/),
+      [UID],
+    );
+  });
+
+  test('applyFavouriteFromCloud preserves kind=dislike on pull', async () => {
+    const { applyFavouriteFromCloud } = require('../food/db');
+    await applyFavouriteFromCloud(UID, {
+      food_ref: 'off:99',
+      last_used_at: '2026-05-27T08:00:00Z',
+      kind: 'dislike',
+    });
+    expect(writes[0].sql).toMatch(/kind = excluded\.kind/);
+    expect(writes[0].params[3]).toBe('dislike');
+  });
+
+  test('applyFavouriteFromCloud defaults pre-mig-048 rows to kind=fav', async () => {
+    const { applyFavouriteFromCloud } = require('../food/db');
+    await applyFavouriteFromCloud(UID, {
+      food_ref: 'off:legacy',
+      last_used_at: '2026-05-20T08:00:00Z',
+      // kind absent — pre-mig-048 cloud row
+    });
+    expect(writes[0].params[3]).toBe('fav');
+  });
+
+  test('applyFavouriteFromCloud rejects malformed kind values (falls back to fav)', async () => {
+    const { applyFavouriteFromCloud } = require('../food/db');
+    await applyFavouriteFromCloud(UID, {
+      food_ref: 'off:bad',
+      last_used_at: '2026-05-20T08:00:00Z',
+      kind: 'malformed',
+    });
+    expect(writes[0].params[3]).toBe('fav');
+  });
+});

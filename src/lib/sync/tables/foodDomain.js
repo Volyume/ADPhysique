@@ -164,10 +164,17 @@ function _recipeToCloud(row, userId) {
 }
 
 function _favouriteToCloud(row, userId) {
+  // The local table column is `last_used_at`, not `updated_at`.
+  // Pre-mig-048 code shipped `updated_at: null` which PostgREST
+  // silently dropped, so the cloud row's `last_used_at` stayed
+  // at DEFAULT now() on every push (wrong sort order on cross-
+  // device restore). Ship the real value.
+  // `kind` defaults to 'fav' for legacy rows that pre-date mig 048.
   return {
     user_id: userId,
     food_ref: row.food_ref,
-    updated_at: _msToISOorNull(row.updated_at),
+    last_used_at: _msToISOorNull(row.last_used_at),
+    kind: row.kind ?? 'fav',
   };
 }
 

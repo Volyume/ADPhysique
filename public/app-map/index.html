@@ -292,9 +292,9 @@ The Plans tab is feature-complete. Auto-generation (<code>planAutoGen.js</code>)
 <p>The <code>saved_meals</code> table exists. Helpers (<code>getAllSavedMealsSince</code>, <code>applySavedMealFromCloud</code>) exist in <code>src/lib/food/db.js</code>. Cloud round-trip works. No UI to save a meal as a template or apply one. The Search tab's "My Meals" section per the spec is absent.</p>
 </div>
 
-<div class="gap">
-<h4>Food dislikes / exclusions <span class="pill bad">Missing</span></h4>
-<p>"Like" is implemented as <code>food_favourites</code> (heart on every row). "Dislike" / "don't suggest this" has no table, no UI, no helper. The coach can't avoid suggesting foods the user has explicitly said they won't eat.</p>
+<div class="note">
+<strong>Food dislikes / exclusions</strong> <span class="pill good">Built 2026-05-27</span>
+<p>Long-press any food row to cycle <em>none → fav → dislike → none</em>. Disliked foods render with struck-through name + cross-circle and surface in a collapsible "Excluded" section above search. Shared <code>kind</code> column on <code>food_favourites</code> (cloud migration 048) carries both states in one table. Coach-side meal-suggester filter is future-wired; inert until a meal suggester ships.</p>
 </div>
 
 </section>
@@ -725,7 +725,7 @@ flowchart LR
   <tbody>
     <tr><td>Food logging (manual entry)</td><td><span class="pill good">Built</span></td><td><code>DiaryScreen</code> + <code>FoodSearchScreen</code> + <code>FoodDetailSheet</code></td></tr>
     <tr><td>Food favourites (like)</td><td><span class="pill good">Built</span></td><td><code>food_favourites</code> table + heart toggle on every row</td></tr>
-    <tr><td>Food dislikes (exclude / "don't suggest")</td><td><span class="pill bad">Missing</span></td><td>No table, no UI, no helper. Coach can't avoid disliked foods.</td></tr>
+    <tr><td>Food dislikes (exclude / "don't suggest")</td><td><span class="pill good">Built</span></td><td>2026-05-27. <code>food_favourites.kind</code> column (mig 048), long-press cycle on every row, Excluded section in Search. Coach-side filter future-wired.</td></tr>
     <tr><td>Barcode scan</td><td><span class="pill good">Built</span></td><td><code>ScanBarcodeScreen</code>, vision-camera CodeScanner, OFF + USDA waterfall</td></tr>
     <tr><td>OCR nutrition label scan</td><td><span class="pill good">Built</span></td><td><code>ScanLabelScreen</code> with ML Kit text recognition</td></tr>
     <tr><td>Custom food (per 100 g + per serving)</td><td><span class="pill good">Built</span></td><td><code>AddCustomFoodScreen</code> + <code>custom_foods</code> table with <code>barcode_ean</code></td></tr>
@@ -835,10 +835,9 @@ flowchart LR
 
 <p>These are user-facing feature gaps that the engineering punch list did not catch because the punch list was tracking sync / migrations / telemetry / CI, not feature completeness. Surfaced by founder challenge 2026-05-27.</p>
 
-<div class="gap">
-<h4>1. Food dislikes / exclusion list <span class="pill bad">Missing</span></h4>
-<p><strong>Impact:</strong> The coach can't avoid suggesting foods the user has said they won't eat. "Like" is implemented; "dislike" isn't.</p>
-<p><strong>What's needed:</strong> A <code>food_dislikes</code> SQLite table (or shared <code>food_preferences</code> with a <code>kind</code> column), an entry in the sync registry, helpers in <code>src/lib/food/db.js</code>, a cross / mute toggle on every food row, an "Excluded" section in the Search tab, and a filter in <code>runWeeklyCoach</code> so the coach can avoid suggesting excluded foods.</p>
+<div class="note">
+<strong>1. Food dislikes / exclusion list</strong> <span class="pill good">Built 2026-05-27</span>
+<p><strong>Shipped.</strong> Shared <code>kind</code> column on <code>food_favourites</code> (cloud migration 048). Long-press cycles <em>none → fav → dislike → none</em>. Excluded section in Search. <code>getDislikes</code> helper available for the future meal suggester.</p>
 </div>
 
 <div class="gap">
