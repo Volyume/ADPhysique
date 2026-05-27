@@ -81,6 +81,15 @@ const HAS_ENV = !!(
 
 const TEST_RUN_ID = `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+// body_metrics.id and recipe_ingredients.id are UUID columns
+// (cloud schema), while weekly_checkins_v2.id is TEXT. We can use
+// a readable per-run prefix only on the TEXT table; UUID tables
+// have to use a real UUID format or Postgres rejects the insert
+// with "invalid input syntax for type uuid". Tracking per-table
+// in insertedByTable still lets afterAll clean up by id.
+const { randomUUID } = require('crypto');
+const UUID_TABLES = new Set(['body_metrics', 'recipe_ingredients']);
+
 // Per-table per-device row stores. mockActiveDevice toggles which
 // side of each pair the next helper call reads / writes.
 const mockState = {
@@ -212,10 +221,20 @@ if (!HAS_ENV) {
     };
 
     function newRowId(table, suffix) {
-      const id = `${TEST_RUN_ID}-${suffix}`;
+      const id = UUID_TABLES.has(table)
+        ? randomUUID()
+        : `${TEST_RUN_ID}-${suffix}`;
       insertedByTable[table].push(id);
       return id;
     }
+
+    // Parent recipe row for the recipe_ingredients tests.
+    // recipe_ingredients.recipe_id is a UUID FK to recipes(id)
+    // with ON DELETE CASCADE, so we create one parent in
+    // beforeAll, share it across all recipe_ingredients tests,
+    // and the cleanup of the parent in afterAll wipes any
+    // ingredient rows the test inserts as a side effect.
+    let testRecipeId = null;
 
     beforeAll(async () => {
       const { createClient } = require('@supabase/supabase-js');
@@ -245,6 +264,21 @@ if (!HAS_ENV) {
         password: process.env.SUPABASE_TEST_USER_PASSWORD,
       });
       if (errB) throw new Error(`Device B sign-in failed: ${errB.message}`);
+
+      // Seed the parent recipe for the recipe_ingredients tests.
+      // ON DELETE CASCADE in migration 015 means deleting this row
+      // in afterAll also wipes any ingredient rows the tests
+      // inserted.
+      testRecipeId = randomUUID();
+      const seed = await sbA.from('recipes').insert({
+        id: testRecipeId,
+        user_id: userId,
+        name: `e2e-${TEST_RUN_ID}-recipe`,
+        total_servings: 1,
+      });
+      if (seed.error) {
+        throw new Error(`Could not seed parent recipe: ${seed.error.message}`);
+      }
     }, 30_000);
 
     beforeEach(() => {
@@ -261,6 +295,12 @@ if (!HAS_ENV) {
       for (const [table, ids] of Object.entries(insertedByTable)) {
         if (!ids.length) continue;
         try { await sbA.from(table).delete().in('id', ids); } catch (_) { /* best effort */ }
+      }
+      // Drop the parent recipe LAST. ON DELETE CASCADE then wipes
+      // any ingredient rows the explicit delete above missed
+      // (e.g. tombstoned-then-resurrected ids).
+      if (testRecipeId) {
+        try { await sbA.from('recipes').delete().eq('id', testRecipeId); } catch (_) { /* best effort */ }
       }
       try { await sbA.auth.signOut(); } catch (_) { /* tolerate */ }
       try { await sbB.auth.signOut(); } catch (_) { /* tolerate */ }
@@ -407,7 +447,7 @@ if (!HAS_ENV) {
         mockActiveDevice = 'A';
         mockState.recipe_ingredients.A.push({
           id,
-          recipeId: `${TEST_RUN_ID}-recipe`,
+          recipeId: testRecipeId,
           foodRef: 'off:000',
           quantityG: 100,
           orderIndex: 0,
@@ -431,7 +471,7 @@ if (!HAS_ENV) {
         mockActiveDevice = 'A';
         mockState.recipe_ingredients.A.push({
           id,
-          recipeId: `${TEST_RUN_ID}-recipe-tomb`,
+          recipeId: testRecipeId,
           foodRef: 'off:001',
           quantityG: 50,
           orderIndex: 0,
@@ -465,7 +505,7 @@ if (!HAS_ENV) {
         mockActiveDevice = 'A';
         mockState.recipe_ingredients.A.push({
           id: idA,
-          recipeId: `${TEST_RUN_ID}-recipe-a`,
+          recipeId: testRecipeId,
           foodRef: 'off:00a',
           quantityG: 100,
           orderIndex: 0,
@@ -476,7 +516,7 @@ if (!HAS_ENV) {
         mockActiveDevice = 'B';
         mockState.recipe_ingredients.B.push({
           id: idB,
-          recipeId: `${TEST_RUN_ID}-recipe-b`,
+          recipeId: testRecipeId,
           foodRef: 'off:00b',
           quantityG: 200,
           orderIndex: 0,
