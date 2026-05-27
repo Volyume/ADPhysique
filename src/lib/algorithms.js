@@ -691,7 +691,15 @@ export function calculatePlates(targetWeight, barWeight = 20, availablePlates = 
   return { plates, totalWeight, sideWeight: plates.reduce((s, p) => s + p, 0) };
 }
 
-// Strength standards (ratio of 1RM to bodyweight)
+// Strength standards (ratio of 1RM to bodyweight).
+//
+// Older / simpler variant. `lib/strengthStandards.js` is the newer
+// implementation: 5 lifts (bench, squat, deadlift, OHP, row), regex
+// name-matching, an Untrained band, and a next-target output. New code
+// should prefer `strengthStandards.getStrengthLevel`. This export and
+// `getStrengthStandard` below remain because `PRWallScreen.js` still
+// computes a bulk summary against the lift-key map at load time;
+// migrating that path is a future cleanup.
 export const STRENGTH_STANDARDS = {
   bench: [
     { ratio: 0.5,  label: 'Beginner' },

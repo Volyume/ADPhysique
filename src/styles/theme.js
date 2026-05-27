@@ -45,6 +45,13 @@ const baseColors = {
   silver: '#C0C0C0',
   bronze: '#CD7F32',
 
+  // Brand-locked OAuth button colours per Apple's Sign in with Apple
+  // guidelines. Not part of the visual system; required for store
+  // approval. Use these instead of inline hex literals so the "no
+  // hardcoded hex" rule stays absolute.
+  appleBtnBg: '#000000',
+  appleBtnText: '#FFFFFF',
+
   // Chart tokens
   chartLine: '#F59E0B',
   chartFill: 'rgba(245, 158, 11, 0.08)',

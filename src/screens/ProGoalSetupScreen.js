@@ -10,19 +10,9 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import {
   PHYSIQUE_GOALS, PHYSIQUE_GOAL_GROUPS,
   TRAINING_PHASES,
-  GOALS_WITH_WEAK_POINTS,
+  GOALS_WITH_WEAK_POINTS, WEAK_POINT_MUSCLES,
   phaseToCoachingKey, phaseToNutritionKey, daysToActivityLevel,
 } from '../lib/coachingGoals';
-
-// Weak-point options. Matches the list used elsewhere so plan generation
-// receives names it recognises.
-const WEAK_POINT_MUSCLES = [
-  'Chest', 'Upper Chest', 'Lats / Back Width', 'Back Thickness',
-  'Side Delts', 'Rear Delts', 'Front Delts',
-  'Biceps', 'Triceps',
-  'Quads', 'Hamstrings', 'Glutes', 'Calves',
-  'Core / Abs', 'Traps',
-];
 import { calculateNutritionTargets, PROTEIN_APPROACHES, ADVANCED_PROTEIN_GOALS } from '../lib/nutritionEngine';
 import { saveNutritionTargets, getMorningWeightsLast14Days } from '../lib/database';
 import { computeEWMA } from '../lib/weeklyCoach';

@@ -10,17 +10,10 @@
  * in a client call surfaces as a thrown PostgrestError on push (not
  * silently dropped).
  *
- * Events instrumented (locked):
- *   ed_pattern_flag_fired   — engine raised an ED-pattern flag
- *   ed_pattern_flag_cleared — engine cleared an open flag
- *   goal_lock_set           — user opted into advanced goal lock
- *   goal_lock_cleared       — user opted out / never opted in
- *   tier_changed            — tier changed (free / pro / complete)
- *   cascade_started         — first paid trial day began
- *   cascade_advanced        — moved to the next cascade phase
- *   cascade_skipped_ahead   — user fast-forwarded through cascade
- *   paid_converted          — first non-trial payment landed
- *   churn_at_gate           — user downgraded at a gate
+ * Canonical event allow-list lives at `lib/telemetry/events.js`. This
+ * file is the queue + push implementation that `lib/telemetry/transport.js`
+ * delegates to; future cleanup is to fold the queue logic directly
+ * into the telemetry/ module per its index.js header note.
  */
 
 import { getSupabaseClient } from './supabase';
@@ -30,109 +23,7 @@ import {
   markEngineTelemetryPushed,
 } from './database';
 import { logWarn } from './errorLog';
-
-const ALLOWED_EVENTS = new Set([
-  'ed_pattern_flag_fired',
-  'ed_pattern_flag_cleared',
-  'goal_lock_set',
-  'goal_lock_cleared',
-  'tier_changed',
-  'cascade_started',
-  'cascade_advanced',
-  'cascade_skipped_ahead',
-  'paid_converted',
-  'churn_at_gate',
-  // Move #1.5: food source observability. Lets us see how often
-  // the network fall-through actually fires and which API resolves
-  // it, so the bundled snapshot strategy stays evidence-based.
-  'food_lookup_barcode',
-  'ocr_writeback_attempted',
-  // Move #3: upward-only gate compression fires when the rapid-loss
-  // safety condition skips the two-week cooldown and adds calories
-  // straight away. Cohort dashboard reads it as a count of how often
-  // the safety override actually engages in the wild.
-  'rapid_loss_compression_triggered',
-  // Migration 029 (TELEMETRY_DASHBOARDS_LOCKED.md catalogue):
-  // shipped-Move coverage gaps. weekly_coach_run powers the engine
-  // health panel; ffm_floor_hold_fired powers the FFM-floor hold
-  // rate alert; food_logged + food_search_attempt power the food
-  // layer health panel and search latency monitoring.
-  'weekly_coach_run',
-  'ffm_floor_hold_fired',
-  'food_logged',
-  'food_search_attempt',
-  // Migration 032 (Move #4): differential paywall surfaces. The
-  // shown event captures the impression; tapped_cta captures the
-  // decision (pay / dismiss). Together they drive the Panel 5
-  // cascade-and-conversion dashboards.
-  'paywall_shown',
-  'paywall_tapped_cta',
-  // Migration 035: auth + consent funnel coverage. sign_in fires on
-  // an actual SIGNED_IN auth event (not INITIAL_SESSION restore).
-  // sign_out fires at the top of clearAuthStateForSignOut so the
-  // event is in the queue before the local wipe runs.
-  // article9_consent_recorded is the UK GDPR Article 9 explicit-
-  // consent evidence trail; the consent_log table holds the
-  // legal record, this event powers the consent rate dashboard.
-  'sign_in',
-  'sign_out',
-  'article9_consent_recorded',
-  // Migration 036: signup funnel closure. account_created fires on
-  // SIGNED_IN when session.user.created_at is within the last 5
-  // minutes (covers email-auto-confirm + OAuth signup; misses
-  // email-confirm-later sign-ins more than 5 min after the confirm
-  // link, which is fine for funnel ratios). custom_food_created
-  // fires after insertCustomFood succeeds in AddCustomFoodScreen.
-  'account_created',
-  'custom_food_created',
-  // Migration 037: app lifecycle + sync cadence. app_cold_start
-  // fires once per process the first time maybeSync resolves a
-  // signed-in user. app_foregrounded / app_backgrounded cover
-  // subsequent AppState 'active' / 'background' transitions (not
-  // 'inactive', which is the iOS transient control-centre state).
-  // sync_run fires at the end of each successful maybeSync round,
-  // throttled to once per 60s by the upstream MIN_SYNC_INTERVAL_MS.
-  'app_cold_start',
-  'app_foregrounded',
-  'app_backgrounded',
-  'sync_run',
-  // Migration 038: payments + cascade closure. cascade_state_transition
-  // is the generic umbrella with { reason, source_surface, target_tier }
-  // payload. The granular variants (cascade_started, cascade_advanced,
-  // cascade_skipped_ahead, paid_converted, churn_at_gate,
-  // subscription_cancelled) fire alongside where they map cleanly so
-  // existing per-event dashboards keep working. The purchase_* trio
-  // wraps the Google Play Billing IAP dialog from inside playBilling.
-  // restore_purchases_attempted fires once per restore tap from
-  // SubscriptionScreen.
-  'cascade_state_transition',
-  'purchase_initiated',
-  'purchase_completed',
-  'purchase_failed',
-  'subscription_cancelled',
-  'restore_purchases_attempted',
-  // Migration 040: notification surface closure (Panel 6). The
-  // expo-notifications received-listener fires notification_sent at
-  // OS delivery time (with category + delivered_at in payload). The
-  // response-listener fires notification_tapped when the user opens
-  // a delivered notification. notification_failed fires when a
-  // schedule call throws locally; cross-device deliverability
-  // reporting is owned by Expo Push and not surfaced here.
-  'notification_sent',
-  'notification_tapped',
-  'notification_failed',
-  // Migration 041: article9_consent_withdrawn closes the Article 9
-  // consent funnel. Fires from SettingsScreen's withdraw flow once
-  // the cloud RPC record_health_consent(false) succeeds. The
-  // consent_log table is the legal audit trail; this event powers
-  // Panel 8's withdrawal rate dashboard.
-  'article9_consent_withdrawn',
-  // Migration 043: sync_conflict_resolved fires from
-  // src/lib/sync/conflict.js whenever a row is contested between
-  // local SQLite and the cloud copy. Powers Panel 4's conflict
-  // resolution slice with { table, record_id, strategy, winner }.
-  'sync_conflict_resolved',
-]);
+import { ALLOWED_EVENTS } from './telemetry/events';
 
 let _flushTimer = null;
 const FLUSH_DEBOUNCE_MS = 5000;

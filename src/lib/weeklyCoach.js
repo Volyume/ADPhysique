@@ -19,6 +19,12 @@ import { detectDifferentialTrigger } from './differentialPaywall';
  * Exponential weighted moving average over an array of { weightKg, loggedAt } entries.
  * alpha = 0.1 ≈ 10-day memory; alpha = 0.05 ≈ 20-day memory.
  * Returns an array of { loggedAt, rawKg, ewmaKg } aligned to input.
+ *
+ * Distinct from nutritionEngine.computeEWMA. This one uses a slow alpha
+ * (~10-day memory) for the weekly-coach trend signal. The faster variant
+ * in nutritionEngine uses alpha 0.28 (~3.5-day memory) for diet-planning
+ * surfaces. Output shapes differ deliberately so callers can't mix them
+ * up by accident.
  */
 export function computeEWMA(weights, alpha = 0.1) {
   if (!weights || weights.length === 0) return [];

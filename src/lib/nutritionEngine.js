@@ -143,11 +143,19 @@ const FAT_TARGETS_GKG = {
 // Adaptive TDEE — EWMA weight trend and calorie correction
 // ---------------------------------------------------------------------------
 
-const EWMA_ALPHA = 0.28; // smoothing factor — MacroFactor uses ~0.3
+const EWMA_ALPHA = 0.28; // smoothing factor : MacroFactor uses ~0.3
 
 // Compute exponentially-weighted moving average of daily weights.
 // weightData: array of { weightKg, date } sorted oldest-first.
 // Returns smoothed weight for each point, same length as input.
+//
+// Distinct from weeklyCoach.computeEWMA. This one uses an aggressive
+// alpha (0.28, ~3.5-day memory) for diet-planning surfaces (BodyMetrics,
+// CoachOutput nutrition trend). The slow variant in weeklyCoach uses
+// alpha 0.1 (~10-day memory) for the weekly-coach trend signal. Output
+// shapes differ deliberately ({ ...point, ewma } here vs
+// { loggedAt, rawKg, ewmaKg } there) so callers can't accidentally use
+// the wrong one and have the wrong field names compile.
 export function computeEWMA(weightData, alpha = EWMA_ALPHA) {
   if (!weightData || weightData.length === 0) return [];
   const result = [];

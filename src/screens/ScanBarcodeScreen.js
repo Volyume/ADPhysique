@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   headerTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold },
-  cameraWrap: { flex: 1, backgroundColor: '#000' },
+  cameraWrap: { flex: 1, backgroundColor: colors.background },
   overlay: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   reticle: {
     width: 240, height: 160, borderWidth: 2, borderColor: colors.primary,

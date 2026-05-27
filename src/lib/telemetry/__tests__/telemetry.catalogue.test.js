@@ -17,6 +17,7 @@ import fs from 'fs';
 import path from 'path';
 
 const SRC = path.resolve(__dirname, '../../..');
+const REPO_ROOT = path.resolve(SRC, '..');
 const { TELEMETRY_EVENTS, isDeferred } = require('../events');
 
 function walk(dir, acc = []) {
@@ -33,7 +34,14 @@ function walk(dir, acc = []) {
 let _corpus = null;
 function corpus() {
   if (_corpus) return _corpus;
-  const files = walk(SRC);
+  // App.js + index.js live at repo root, outside src/, but contain
+  // emitters for the app-lifecycle events (cold_start, foregrounded,
+  // backgrounded). Include them in the corpus or the test misses
+  // those call sites entirely.
+  const rootFiles = ['App.js', 'index.js']
+    .map(f => path.join(REPO_ROOT, f))
+    .filter(f => fs.existsSync(f));
+  const files = walk(SRC).concat(rootFiles);
   _corpus = files.map(f => fs.readFileSync(f, 'utf8')).join('\n\n/* FILE BOUNDARY */\n\n');
   return _corpus;
 }

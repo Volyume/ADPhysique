@@ -110,6 +110,18 @@ export const GOALS_WITH_WEAK_POINTS = PHYSIQUE_GOALS
   .filter(g => g.weakPointsEnabled)
   .map(g => g.value);
 
+// Weak-point muscle list. Single source of truth so plan generation,
+// validation, and the UI selector all agree on the canonical names.
+// Used by ProGoalSetupScreen (chip grid) and consumed by plan-generation
+// paths when the user has selected one or more.
+export const WEAK_POINT_MUSCLES = Object.freeze([
+  'Chest', 'Upper Chest', 'Lats / Back Width', 'Back Thickness',
+  'Side Delts', 'Rear Delts', 'Front Delts',
+  'Biceps', 'Triceps',
+  'Quads', 'Hamstrings', 'Glutes', 'Calves',
+  'Core / Abs', 'Traps',
+]);
+
 // Goals that trigger the Article 9 / safety-check goal-lock prompt
 // during onboarding. Per ONBOARDING_SEQUENCE_LOCKED.md screen 6:
 // shown to users picking physique competition divisions (where

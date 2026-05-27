@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
   intro: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
   warningBox: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
-    backgroundColor: colors.warningBg ?? '#3a2a1a', borderRadius: radius.md,
+    backgroundColor: colors.warningBg, borderRadius: radius.md,
     padding: spacing.md, borderWidth: 1, borderColor: colors.warning,
   },
   warningText: { flex: 1, fontSize: fontSize.xs, color: colors.warning, lineHeight: 17 },
