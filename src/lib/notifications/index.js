@@ -30,6 +30,8 @@ export {
 
 export { configureNotificationHandler } from './handler';
 
+export { installNotificationListeners } from './listeners';
+
 export {
   scheduleMorningWeightNotification,
   scheduleCheckinReminder,

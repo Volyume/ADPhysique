@@ -3,8 +3,6 @@ import { NavigationContainer, createNavigationContainerRef } from '@react-naviga
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { StackActions } from '@react-navigation/native';
-import * as Notifications from 'expo-notifications';
-
 export const navigationRef = createNavigationContainerRef();
 import { View, Text, Image, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,7 +19,11 @@ import useAppStore from '../store/useAppStore';
 import { getSupabaseClient } from '../lib/supabase';
 import { initDatabase, cleanupOrphanRoutineExercises } from '../lib/database';
 import { seedExercisesIfNeeded } from '../lib/seedExercises';
-import { configureNotificationHandler, restoreNotifications } from '../lib/notifications';
+import {
+  configureNotificationHandler,
+  installNotificationListeners,
+  restoreNotifications,
+} from '../lib/notifications';
 
 // Auth screens
 import LoginScreen from '../screens/LoginScreen';
@@ -418,71 +420,30 @@ export default function RootNavigator() {
   }, []);
 
   useEffect(() => {
-    function handleNotificationResponse(response) {
+    // Routing for a tapped notification. The listeners module owns
+    // the expo wiring and the telemetry firings; the navigator owns
+    // only the data_type -> screen mapping.
+    function routeFor(type) {
+      if (type === 'weekly_checkin') return ['ProfileTab', 'WeeklyCheckIn'];
+      if (type === 'year_of_lifts_unlock') return ['ProgressTab', 'YearOfLifts'];
+      return null;
+    }
+
+    function onTap(response) {
       const type = response?.notification?.request?.content?.data?.type;
-
-      // Fire notification_tapped telemetry. The helper reads userId
-      // from the store internally and silently no-ops when nobody is
-      // signed in (cold-start tap on a signed-out app).
-      try {
-        // eslint-disable-next-line global-require
-        const { trackNotificationTapped } = require('../lib/notifications');
-        trackNotificationTapped({
-          notification: response?.notification,
-          payload: { data_type: type ?? 'unknown' },
-        });
-      } catch (_) { /* telemetry must never break the tap handler */ }
-
-      const routeFor = (t) => {
-        if (t === 'weekly_checkin') return ['ProfileTab', 'WeeklyCheckIn'];
-        if (t === 'year_of_lifts_unlock') return ['ProgressTab', 'YearOfLifts'];
-        return null;
-      };
       const target = routeFor(type);
-      if (target) {
-        const tryNavigate = (attempts = 0) => {
-          if (navigationRef.isReady()) {
-            navigationRef.navigate(target[0], { screen: target[1] });
-          } else if (attempts < 20) {
-            setTimeout(() => tryNavigate(attempts + 1), 150);
-          }
-        };
-        tryNavigate();
-      }
+      if (!target) return;
+      const tryNavigate = (attempts = 0) => {
+        if (navigationRef.isReady()) {
+          navigationRef.navigate(target[0], { screen: target[1] });
+        } else if (attempts < 20) {
+          setTimeout(() => tryNavigate(attempts + 1), 150);
+        }
+      };
+      tryNavigate();
     }
 
-    function handleNotificationReceived(notification) {
-      // Fire notification_sent telemetry. The OS only invokes this
-      // listener while the app process is alive, so this captures
-      // foreground + recently-backgrounded deliveries. Cold-start
-      // deliveries (app not running, system tray populated by APNs/
-      // FCM) are not observable in JS and will show up only via the
-      // tap event instead.
-      try {
-        // eslint-disable-next-line global-require
-        const { trackNotificationSent } = require('../lib/notifications');
-        const trigger = notification?.request?.trigger;
-        const scheduledFor = trigger?.date
-          ? new Date(trigger.date).toISOString()
-          : null;
-        trackNotificationSent({
-          notification,
-          scheduledFor,
-        });
-      } catch (_) { /* telemetry must never break delivery */ }
-    }
-
-    const sub = Notifications.addNotificationResponseReceivedListener(handleNotificationResponse);
-    const recvSub = Notifications.addNotificationReceivedListener(handleNotificationReceived);
-    // Handle cold-start tap (app launched via notification)
-    Notifications.getLastNotificationResponseAsync()
-      .then(r => { if (r) handleNotificationResponse(r); })
-      .catch(() => {});
-
-    return () => {
-      sub.remove();
-      recvSub.remove();
-    };
+    return installNotificationListeners({ onTap });
   }, []);
 
   useEffect(() => {
