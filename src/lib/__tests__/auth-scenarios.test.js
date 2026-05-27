@@ -36,6 +36,13 @@ jest.mock('../sync', () => ({
   // and the state-clear assertions all fail.
   bulkUploadLocalData: jest.fn().mockResolvedValue(undefined),
   cancelScheduledSync: jest.fn(),
+}));
+
+// flushPendingTelemetry moved to lib/engineTelemetry (was previously
+// being destructured off lib/sync in error). The store now requires it
+// from the right place; the test follows.
+jest.mock('../engineTelemetry', () => ({
+  track: jest.fn().mockResolvedValue(undefined),
   flushPendingTelemetry: jest.fn().mockResolvedValue(undefined),
 }));
 

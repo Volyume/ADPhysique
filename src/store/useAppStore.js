@@ -230,7 +230,9 @@ const useAppStore = create((set, get) => ({
     if (prevUid && !get().user?.isLocal) {
       try {
         // eslint-disable-next-line global-require
-        const { bulkUploadLocalData, flushPendingTelemetry } = require('../lib/sync');
+        const { bulkUploadLocalData } = require('../lib/sync');
+        // eslint-disable-next-line global-require
+        const { flushPendingTelemetry } = require('../lib/engineTelemetry');
         await bulkUploadLocalData(prevUid, prevUid);
         try { await flushPendingTelemetry(); } catch (_) {}
       } catch (e) {
