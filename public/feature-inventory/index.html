@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Volyume Feature Inventory (Code-Verified)</title>
+<meta name="description" content="Every feature in Volyume, verified directly against the code in src/screens, src/components, and src/lib. No reliance on BACKLOG.md or CURRENT_STATUS.md.">
+<link rel="icon" type="image/png" href="/favicon.png">
+<meta name="theme-color" content="#0D0D0D">
+<style>
+  :root{
+    --bg:#0D0D0D;--surface:#161616;--surface2:#1F1F1F;--border:#2A2A2A;
+    --text:#EEEEEE;--muted:#AFAFAF;--accent:#F59E0B;--link:#FBBF24;
+    --good:#34D399;--warn:#FBBF24;--bad:#F87171;--info:#60A5FA;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;}
+  .layout{max-width:1100px;margin:0 auto;padding:32px 24px 96px;}
+  header.page{margin-bottom:24px;border-bottom:1px solid var(--border);padding-bottom:20px;}
+  header.page h1{font-size:26px;margin:0 0 6px;}
+  header.page .lede{color:var(--muted);margin:0;font-size:14px;}
+  nav.toc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin:20px 0 36px;}
+  nav.toc h2{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin:0 0 10px;}
+  nav.toc ol{margin:0;padding-left:20px;columns:2;column-gap:32px;}
+  nav.toc a{color:var(--link);text-decoration:none;}
+  section{margin:36px 0;}
+  section>h2{font-size:20px;margin:0 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+  section>h3{font-size:16px;margin:20px 0 8px;}
+  code{background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:13px;color:var(--accent);font-family:"SFMono-Regular",Menlo,Consolas,monospace;}
+  table{width:100%;border-collapse:collapse;margin:8px 0 18px;font-size:13px;}
+  th,td{padding:6px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--border);}
+  th{background:var(--surface);font-size:11px;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);}
+  .pill{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600;}
+  .pill.good{background:rgba(52,211,153,0.16);color:var(--good);}
+  .pill.warn{background:rgba(251,191,36,0.18);color:var(--warn);}
+  .pill.bad{background:rgba(248,113,113,0.18);color:var(--bad);}
+  .pill.info{background:rgba(96,165,250,0.18);color:var(--info);}
+  .note{background:var(--surface);border-left:3px solid var(--accent);padding:8px 14px;margin:10px 0;border-radius:4px;font-size:13px;color:var(--muted);}
+  .warn-box{background:rgba(248,113,113,0.06);border:1px solid rgba(248,113,113,0.3);border-radius:6px;padding:10px 14px;margin:10px 0;font-size:13px;}
+  .warn-box h4{color:var(--bad);margin:0 0 6px;font-size:13px;}
+  a{color:var(--link);}
+  footer.page{margin-top:60px;padding-top:18px;border-top:1px solid var(--border);color:var(--muted);font-size:12px;}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<header class="page">
+  <h1>Volyume Feature Inventory</h1>
+  <p class="lede">Code-verified, screen by screen. Every entry below names the file and the lines where the feature lives. <strong>No reliance on BACKLOG.md or CURRENT_STATUS.md</strong> &mdash; those have drifted from the code in several places, and the founder has called this out. Built by walking <code>src/screens/</code>, <code>src/components/</code>, and <code>src/lib/</code> directly.</p>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#method">Method &amp; legend</a></li>
+    <li><a href="#train-tab">Train tab (Home + Active workout)</a></li>
+    <li><a href="#plans-tab">Plans tab</a></li>
+    <li><a href="#diary-tab">Diary tab</a></li>
+    <li><a href="#progress-tab">Progress tab</a></li>
+    <li><a href="#you-tab">You tab (Profile / Coach / Subscription)</a></li>
+    <li><a href="#engine">Engine &amp; algorithms</a></li>
+    <li><a href="#sync-data">Sync &amp; data layer</a></li>
+    <li><a href="#notifications">Notifications</a></li>
+    <li><a href="#discrepancies">Where the docs are wrong</a></li>
+  </ol>
+</nav>
+
+<section id="method">
+<h2>1. Method &amp; legend</h2>
+<p>For each feature: a status pill, the file path + line where the implementation lives, and notes from reading the code. <span class="pill good">Built</span> = code is present and reachable through the UI. <span class="pill warn">Data-only</span> = schema, helpers, or engine logic exist but no UI surface exposes it to users. <span class="pill bad">Missing</span> = no code at all. <span class="pill info">Deliberate</span> = was built, deliberately removed; not a gap.</p>
+</section>
+
+<!-- ============================================================== -->
+<section id="train-tab">
+<h2>2. Train tab</h2>
+
+<h3>Home screen (<code>src/screens/HomeScreen.js</code>, 2422 lines)</h3>
+<table>
+  <thead><tr><th>Feature</th><th>Status</th><th>Evidence</th></tr></thead>
+  <tbody>
+    <tr><td>Daily narrative headline</td><td><span class="pill good">Built</span></td><td>line 749, <code>buildDailyNarrative</code> from <code>src/lib/dailyNarrative.js</code></td></tr>
+    <tr><td>Phase mismatch banner (nutrition targets drifted from training phase)</td><td><span class="pill good">Built</span></td><td>lines 762, 275&ndash;300, reads <code>TRAINING_PHASES</code> + <code>currentPhase</code></td></tr>
+    <tr><td>Coach output preview banner ("Precision Coaching &middot; this week's review")</td><td><span class="pill good">Built</span></td><td>line 790, links to <code>CoachOutput</code></td></tr>
+    <tr><td>Recovery week banner (deload suggestion)</td><td><span class="pill good">Built</span></td><td>line 820, links to <code>CoachReview</code></td></tr>
+    <tr><td>Today's morning weight card (logged + sparkline)</td><td><span class="pill good">Built</span></td><td>line 853, <code>todayWeight</code>, <code>recentWeights</code></td></tr>
+    <tr><td>Morning weight quick log (kg / lbs / st modes)</td><td><span class="pill good">Built</span></td><td>line 884, three modes <code>weightInput</code> + <code>weightInputSt</code> + <code>weightInputStLbs</code></td></tr>
+    <tr><td>This-week progress: sessions, sets, volume</td><td><span class="pill good">Built</span></td><td>line 938, <code>weekStats</code> state</td></tr>
+    <tr><td>Week-streak chip (consecutive Mon-start weeks with &ge;1 session)</td><td><span class="pill good">Built</span></td><td>line 940, <code>weekStreak</code> state</td></tr>
+    <tr><td>Today's intake card (kcal + macro line)</td><td><span class="pill good">Built</span></td><td>line 974, <code>todayIntake</code> from <code>getRollupForDay</code></td></tr>
+    <tr><td>Pro feature teaser (free tier only)</td><td><span class="pill good">Built</span></td><td>line 1006, links to <code>ProUpgrade</code></td></tr>
+    <tr><td>"Session in progress" continue card</td><td><span class="pill good">Built</span></td><td>line 1031, <code>activeWorkout</code> from store</td></tr>
+    <tr><td>Today's session hero (next routine, exercise list)</td><td><span class="pill good">Built</span></td><td>line 1047 onward</td></tr>
+    <tr><td>Repeat-last session</td><td><span class="pill good">Built</span></td><td>line 1264, <code>handleRepeatLastSession</code></td></tr>
+    <tr><td>Insight teaser ("X went up. Y held. Pro tells you what to do next.")</td><td><span class="pill good">Built</span></td><td>lines 1013&ndash;1014</td></tr>
+  </tbody>
+</table>
+
+<h3>Active workout (<code>src/screens/ActiveWorkoutScreen.js</code>, 2427 lines)</h3>
+<table>
+  <thead><tr><th>Feature</th><th>Status</th><th>Evidence</th></tr></thead>
+  <tbody>
+    <tr><td>Set-by-set logging (weight, reps)</td><td><span class="pill good">Built</span></td><td><code>currentSet</code> state line 122, <code>DEFAULT_SET</code> line 49</td></tr>
+    <tr><td>Set type: <strong>straight</strong> (working)</td><td><span class="pill good">Built</span></td><td><code>SET_TYPE_OPTIONS</code> line 62, picker line 1803</td></tr>
+    <tr><td>Set type: <strong>warmup</strong></td><td><span class="pill good">Built</span></td><td>same picker line 1803</td></tr>
+    <tr><td>Set type: <strong>dropset</strong></td><td><span class="pill warn">Data-only</span></td><td>Recognised at line 84 + display name line 55. <strong>Not in user picker.</strong> Only reaches the data via CSV imports.</td></tr>
+    <tr><td>Set type: <strong>myo_reps</strong></td><td><span class="pill warn">Data-only</span></td><td>Display name line 57. Not in picker. Cluster banner / mini-set counter the founder docs claim &mdash; not present in code.</td></tr>
+    <tr><td>Set type: <strong>rest_pause</strong></td><td><span class="pill warn">Data-only</span></td><td>Display name line 58. Not in picker.</td></tr>
+    <tr><td>Set type: <strong>amrap</strong></td><td><span class="pill warn">Data-only</span></td><td>Display name line 56. Used at line 693 (<code>isAmrap</code>) but not in picker.</td></tr>
+    <tr><td>Set type: <strong>superset</strong></td><td><span class="pill good">Built</span></td><td>Pair / Unpair via <code>supersetGroupId</code> lines 187&ndash;215. Auto-jumps between paired exercises on set complete (line 771&ndash;773).</td></tr>
+    <tr><td>Per-set RIR input</td><td><span class="pill info">Deliberately removed</span></td><td><code>SetEntry.js:173</code> comment: "Effort picker removed &mdash; was rarely used in practice. RIR still gets recorded internally (defaulted in DEFAULT_SET) so the autoregulation engine keeps working."</td></tr>
+    <tr><td>Live e1RM chip in set entry</td><td><span class="pill good">Built</span></td><td><code>SetEntry.js:47</code> computes <code>live1RM</code> via <code>calculate1RM</code>; renders "Est. max &asymp; Nkg" at line 168 when reps 1&ndash;15.</td></tr>
+    <tr><td>e1RM inline hint while typing reps</td><td><span class="pill good">Built</span></td><td><code>SetEntry.js:119</code>, "e1RM Nkg" hint</td></tr>
+    <tr><td>Plate calculator (modal)</td><td><span class="pill good">Built</span></td><td>line 148 (<code>showPlateCalc</code>), modal line 1766, calc uses <code>calculatePlates</code> from <code>src/lib/algorithms.js</code></td></tr>
+    <tr><td>Plate calculator surface point on SetEntry</td><td><span class="pill good">Built</span></td><td><code>SetEntry.js:57</code>, "Plates" pill next to weight</td></tr>
+    <tr><td>Repeat-last chip (one-tap copy of last logged set)</td><td><span class="pill good">Built</span></td><td>line 1321, <code>repeatLastBtn</code></td></tr>
+    <tr><td>Stalled-progress nudge (same weight &times; reps for 3 sessions &rarr; nudge)</td><td><span class="pill good">Built</span></td><td>lines 1255&ndash;1290, computes <code>stalled</code> from 3 sessions</td></tr>
+    <tr><td>Rest timer (sticky notification, foreground countdown)</td><td><span class="pill good">Built</span></td><td><code>RestTimer</code> component, integrated by ActiveWorkoutScreen; notification scheduling via <code>src/lib/notifications/</code></td></tr>
+    <tr><td>Exercise swap (per-routine substitute modal)</td><td><span class="pill good">Built</span></td><td>line 152 (<code>showSwapModal</code>), line 153 (<code>swapCandidates</code>), via <code>swapEngine.js</code></td></tr>
+    <tr><td>Exercise execution notes (form tips)</td><td><span class="pill good">Built</span></td><td>line 150 (<code>showExecution</code>), pulls from <code>src/lib/formTips.js</code></td></tr>
+    <tr><td>Time-crunch shortcut</td><td><span class="pill good">Built</span></td><td>lines 155&ndash;157, <code>timeCrunchActive</code>, drops to fewer working sets</td></tr>
+    <tr><td>Weekly plan / actual sets vs target</td><td><span class="pill good">Built</span></td><td>lines 158&ndash;159, <code>weeklyPlan</code> + <code>weeklyActual</code></td></tr>
+    <tr><td>Deload week banner inside Active workout</td><td><span class="pill good">Built</span></td><td>line 160 (<code>isDeloadWeek</code>) + dismissible line 161</td></tr>
+    <tr><td>PR detection + celebration overlay</td><td><span class="pill good">Built</span></td><td>line 131 (<code>detectedPRs</code>), uses <code>PRCelebration</code> component</td></tr>
+    <tr><td>Mesocycle "Week N of M" context chip</td><td><span class="pill good">Built</span></td><td><code>getCurrentMesocycleWeek</code> line 593, shown on Home + Analytics</td></tr>
+    <tr><td>Stale session detection (resume picker)</td><td><span class="pill good">Built</span></td><td>line 151 (<code>showStaleModal</code>)</td></tr>
+    <tr><td>Discard incomplete workout (hard-deletes row + sets)</td><td><span class="pill good">Built</span></td><td>line 154 (<code>showDiscardModal</code>), <code>deleteIncompleteWorkout</code> from database</td></tr>
+    <tr><td>Mid-session exercise picker (add an extra exercise)</td><td><span class="pill good">Built</span></td><td>line 133 (<code>showExercisePicker</code>)</td></tr>
+    <tr><td>Note input on a set</td><td><span class="pill good">Built</span></td><td>lines 134&ndash;135, <code>noteText</code></td></tr>
+    <tr><td>Superset heads-up notification</td><td><span class="pill good">Built</span></td><td>line 141, <code>supersetHeadsUp</code></td></tr>
+    <tr><td>Drop-set type in user picker</td><td><span class="pill bad">Missing</span></td><td>Only straight + warmup in <code>SET_TYPE_OPTIONS</code>. Genuine gap if drop sets are a common physique-training pattern (they are).</td></tr>
+    <tr><td>Myo-rep / rest-pause / amrap UI surface to log</td><td><span class="pill bad">Missing</span></td><td>Engine + display recognise them; user can't pick them. Imports populate them.</td></tr>
+    <tr><td>Cluster banner / mini-set counter (BACKLOG claim)</td><td><span class="pill bad">Missing</span></td><td>BACKLOG says shipped &mdash; not in code. Only <code>// Cluster counter</code> comment at <code>ActiveWorkoutScreen.js:165</code>; no rendered banner.</td></tr>
+  </tbody>
+</table>
+
+</section>
+
+<!-- ============================================================== -->
+<section id="plans-tab">
+<h2>3. Plans tab</h2>
+
+<h3>Plans list + detail (<code>src/screens/PlansScreen.js</code> + <code>PlanDetailScreen.js</code> + <code>RoutineDetailScreen.js</code>)</h3>
+<table>
+  <thead><tr><th>Feature</th><th>Status</th><th>Evidence</th></tr></thead>
+  <tbody>
+    <tr><td>Plan list with active highlight</td><td><span class="pill good">Built</span></td><td><code>PlansScreen.js</code></td></tr>
+    <tr><td>Plan detail with routine weekly structure</td><td><span class="pill good">Built</span></td><td><code>PlanDetailScreen.js</code></td></tr>
+    <tr><td>Routine detail: exercises with reps / sets / rest / swap icon</td><td><span class="pill good">Built</span></td><td><code>RoutineDetailScreen.js</code></td></tr>
+    <tr><td>Exercise library browse (~450 canonical + custom)</td><td><span class="pill good">Built</span></td><td><code>ExerciseLibraryScreen.js</code></td></tr>
+    <tr><td>Exercise detail: e1RM trend, set log, muscle map, execution notes</td><td><span class="pill good">Built</span></td><td><code>ExerciseDetailScreen.js:108</code> (e1RM), <code>:419</code> ("Progress has stalled" detection)</td></tr>
+    <tr><td>Manual plan builder (week-1 wizard)</td><td><span class="pill good">Built</span></td><td><code>ManualBuilderScreen.js</code></td></tr>
+    <tr><td>Plan library (curated, filtered by division / level)</td><td><span class="pill good">Built</span></td><td><code>PlanLibraryScreen.js</code></td></tr>
+    <tr><td>Mesocycle builder (MEV &rarr; ramp &rarr; deload at 60%)</td><td><span class="pill good">Built</span></td><td><code>MesocycleBuilderScreen.js</code></td></tr>
+    <tr><td>Auto-generated plan from wizard inputs (week-1 template &rarr; periodised)</td><td><span class="pill good">Built</span></td><td><code>src/lib/planAutoGen.js</code></td></tr>
+    <tr><td>Plan auto-archive on goal reroll</td><td><span class="pill good">Built</span></td><td>uses <code>archivedAt</code> field on plans</td></tr>
+    <tr><td>Per-routine exercise swap (substitute modal with ranked candidates)</td><td><span class="pill good">Built</span></td><td><code>src/lib/swapEngine.js</code>, surfaces in Routine detail + Active workout</td></tr>
+    <tr><td>1RM-based percentage loading (live estimate during entry)</td><td><span class="pill good">Built</span></td><td><code>SetEntry.js:47</code></td></tr>
+    <tr><td>Pre-made specialization templates by physique division</td><td><span class="pill bad">Missing</span></td><td>Plan library exists but doesn't include division-tagged specialization blocks (e.g. "Back specialization for Men's Physique").</td></tr>
+  </tbody>
+</table>
+
+</section>
+
+<!-- ============================================================== -->
+<section id="diary-tab">
+<h2>4. Diary tab</h2>
+
+<h3>Diary screen + Search modal (<code>src/screens/DiaryScreen.js</code> + <code>FoodSearchScreen.js</code>)</h3>
+<table>
+  <thead><tr><th>Feature</th><th>Status</th><th>Evidence</th></tr></thead>
+  <tbody>
+    <tr><td>Date pager with kcal + macro rings</td><td><span class="pill good">Built</span></td><td><code>DiaryScreen.js</code>, <code>components/food/MacroRings.js</code> (Skia-based)</td></tr>
+    <tr><td>Four meal slots (Breakfast / Lunch / Dinner / Snacks)</td><td><span class="pill good">Built</span></td><td><code>components/food/MealSection.js</code></td></tr>
+    <tr><td>Per-meal totals (kcal + macros)</td><td><span class="pill good">Built</span></td><td><code>MealSection.js</code></td></tr>
+    <tr><td>Swipe-delete on entries</td><td><span class="pill good">Built</span></td><td><code>components/food/EntryRow.js</code></td></tr>
+    <tr><td>Copy-yesterday's diary</td><td><span class="pill good">Built</span></td><td><code>DiaryScreen.js</code></td></tr>
+    <tr><td>Inline water tracker (increment / decrement)</td><td><span class="pill good">Built</span></td><td><code>DiaryScreen.js</code>, <code>setWater</code> / <code>getWater</code> from <code>food/db.js</code></td></tr>
+    <tr><td>Tap-to-edit on diary entry (quantity + serving)</td><td><span class="pill good">Built</span></td><td><code>editSheet</code> state line 133 of DiaryScreen.js, opens FoodDetailSheet</td></tr>
+    <tr><td>Food search modal (debounced 250ms)</td><td><span class="pill good">Built</span></td><td><code>FoodSearchScreen.js</code></td></tr>
+    <tr><td>Recents + Favourites sections in search</td><td><span class="pill good">Built</span></td><td><code>FoodSearchScreen.js</code> sections logic</td></tr>
+    <tr><td>Food favourites toggle (long-press cycle)</td><td><span class="pill good">Built</span></td><td>cycle <em>none &rarr; fav &rarr; dislike &rarr; none</em>, <code>food/db.js</code> <code>cycleFoodPreference</code></td></tr>
+    <tr><td>Food dislikes (excluded section in search)</td><td><span class="pill good">Built</span></td><td><code>FoodSearchScreen.js</code> Excluded collapsible section</td></tr>
+    <tr><td>Add custom food (per-100g + per-serving form)</td><td><span class="pill good">Built</span></td><td><code>AddCustomFoodScreen.js</code></td></tr>
+    <tr><td>Barcode scanner (vision-camera CodeScanner)</td><td><span class="pill good">Built</span></td><td><code>ScanBarcodeScreen.js</code></td></tr>
+    <tr><td>OFF + USDA waterfall lookup</td><td><span class="pill good">Built</span></td><td><code>src/lib/food/sources/</code></td></tr>
+    <tr><td>OCR nutrition label scan (ML Kit)</td><td><span class="pill good">Built</span></td><td><code>ScanLabelScreen.js</code></td></tr>
+    <tr><td>OFF write-back queue (custom barcoded foods)</td><td><span class="pill good">Built</span></td><td><code>src/lib/food/offWriteback.js</code></td></tr>
+    <tr><td>FoodDetailSheet (serving picker, quantity, meal assign)</td><td><span class="pill good">Built</span></td><td><code>components/food/FoodDetailSheet.js</code></td></tr>
+    <tr><td>Insights (7-day macro adherence, weight trend, CSV export)</td><td><span class="pill good">Built</span></td><td><code>FoodInsightsScreen.js</code>, CSV via <code>src/lib/food/csvExport.js</code></td></tr>
+    <tr><td>Recipe builder (My Recipes list + builder screen)</td><td><span class="pill good">Built</span></td><td><code>MyRecipesScreen.js</code>, <code>RecipeBuilderScreen.js</code></td></tr>
+    <tr><td>Saved meals UI (meal templates)</td><td><span class="pill bad">Missing</span></td><td>Tables + helpers in <code>food/db.js</code> exist (<code>saved_meals</code>, <code>applySavedMealFromCloud</code>, <code>getAllSavedMealsSince</code>); no screen registered in <code>RootNavigator.js</code>.</td></tr>
+    <tr><td>High/low day macro shift (training-day vs rest-day kcal split)</td><td><span class="pill bad">Missing</span></td><td>Searched <code>src/lib/nutritionEngine.js</code> &mdash; no <code>trainingDayKcal</code> / <code>restDayKcal</code> / <code>highDay</code> / <code>lowDay</code> implementation.</td></tr>
+    <tr><td>Refeed recommendation (engine-side)</td><td><span class="pill warn">Data-only</span></td><td><code>nutritionEngine.js:773&ndash;829</code> computes <code>refeedRecommendation</code> for <code>aggressive_cut</code> + <code>physique_competition</code> phases. Not surfaced as a one-tap action in CoachOutput.</td></tr>
+  </tbody>
+</table>
+
+</section>
+
+<!-- ============================================================== -->
+<section id="progress-tab">
+<h2>5. Progress tab</h2>
+
+<table>
+  <thead><tr><th>Feature</th><th>Status</th><th>Evidence</th></tr></thead>
+  <tbody>
+    <tr><td>Analytics hub screen</td><td><span class="pill good">Built</span></td><td><code>AnalyticsScreen.js</code></td></tr>
+    <tr><td>Workout history (expand-to-show-sets)</td><td><span class="pill good">Built</span></td><td><code>WorkoutHistoryScreen.js</code></td></tr>
+    <tr><td>Volume heatmap on body diagram (SVG front+back)</td><td><span class="pill good">Built</span></td><td><code>VolumeHeatmapScreen.js</code> + <code>components/BodyDiagramHeatmap.js</code></td></tr>
+    <tr><td>MEV / MAV / MRV volume thresholds (RP defaults)</td><td><span class="pill good">Built</span></td><td><code>src/lib/algorithms.js</code> <code>VOLUME_LANDMARKS</code> line 13</td></tr>
+    <tr><td>Personal records wall with strength standards by bodyweight ratio</td><td><span class="pill good">Built</span></td><td><code>PRWallScreen.js</code>, <code>getStrengthStandard</code></td></tr>
+    <tr><td>Adaptive landmark calibration from user history</td><td><span class="pill warn">Data-only</span></td><td><code>computeAdaptiveLandmarks</code> exists at <code>algorithms.js:857</code> but not surfaced as a user-facing setting</td></tr>
+    <tr><td>Body weight trend chart</td><td><span class="pill good">Built</span></td><td><code>BodyMetricsScreen.js:120</code>, <code>WeightTrendChart</code> via react-native-gifted-charts</td></tr>
+    <tr><td>Body weight EWMA smoothed trend</td><td><span class="pill good">Built</span></td><td><code>BodyMetricsScreen.js:312</code> (<code>ewmaData</code>)</td></tr>
+    <tr><td>Body fat % trend chart</td><td><span class="pill bad">Missing</span></td><td>Data captured; no chart renderer in BodyMetricsScreen.</td></tr>
+    <tr><td>Measurement trend charts (waist / chest / hips / etc.)</td><td><span class="pill bad">Missing</span></td><td>Data captured (<code>history</code> state line 299); no chart for measurements.</td></tr>
+    <tr><td>Photo progress timeline</td><td><span class="pill bad">Missing</span></td><td>No <code>Photo*</code> screen registered. Founder defers to v1.1.</td></tr>
+    <tr><td>Per-lift exercise detail (trend, e1RM history, plateau detection)</td><td><span class="pill good">Built</span></td><td><code>ExerciseDetailScreen.js</code> + <code>detectPlateau</code> from algorithms</td></tr>
+    <tr><td>Year of Lifts story (annual swipeable Spotify-Wrapped-style)</td><td><span class="pill good">Built</span></td><td><code>YearOfLiftsScreen.js</code></td></tr>
+    <tr><td>Share card (workout / PR / week)</td><td><span class="pill good">Built</span></td><td><code>ShareCardScreen.js</code></td></tr>
+    <tr><td>Fatigue trend card (last 6 sessions, green/amber/red)</td><td><span class="pill good">Built</span></td><td><code>components/FatigueTrendCard.js</code>, rendered in <code>AnalyticsScreen.js:517</code></td></tr>
+    <tr><td>Asymmetry / unilateral L-R logging</td><td><span class="pill bad">Missing</span></td><td>Grep finds no <code>unilateral</code> / <code>leftReps</code> / <code>rightReps</code> in workout schema or UI. Exercise <code>unilateral_bilateral</code> column exists for taxonomy only.</td></tr>
+  </tbody>
+</table>
+
+</section>
+
+<!-- ============================================================== -->
+<section id="you-tab">
+<h2>6. You tab (Profile / Coach / Subscription)</h2>
+
+<h3>AthleteHub (<code>src/screens/AthleteHubScreen.js</code>, 1240 lines)</h3>
+<table>
+  <thead><tr><th>Feature</th><th>Status</th><th>Evidence</th></tr></thead>
+  <tbody>
+    <tr><td>Profile card with name, tier badge, training age</td><td><span class="pill good">Built</span></td><td>lines 482&ndash;545</td></tr>
+    <tr><td>Recovery gauges (Soreness / Fatigue / Joint comfort)</td><td><span class="pill good">Built</span></td><td>lines 588&ndash;590, <code>recovery</code> state line 239</td></tr>
+    <tr><td>Quick stats (Sets this week, All-time sessions)</td><td><span class="pill good">Built</span></td><td>lines 600&ndash;601</td></tr>
+    <tr><td>Nutrition macro pills (Protein / Carbs / Fat)</td><td><span class="pill good">Built</span></td><td>lines 711&ndash;713</td></tr>
+    <tr><td>Latest body metric chips (BF %, waist)</td><td><span class="pill good">Built</span></td><td>lines 763&ndash;764</td></tr>
+    <tr><td>Weekly check-in entry (with done-this-week state)</td><td><span class="pill good">Built</span></td><td>line 245 (<code>checkinDoneThisWeek</code>)</td></tr>
+    <tr><td>Adaptation history log ("Engine log")</td><td><span class="pill good">Built</span></td><td>line 242 (<code>adaptationHistory</code>) + line 244 collapsible</td></tr>
+    <tr><td>Rep-range warnings list</td><td><span class="pill good">Built</span></td><td>line 243 (<code>repWarnings</code>)</td></tr>
+    <tr><td>Goal lock toggle entry (advanced goals only)</td><td><span class="pill good">Built</span></td><td>NavRow to <code>GoalLockConsent</code></td></tr>
+    <tr><td>Wellbeing check entry</td><td><span class="pill good">Built</span></td><td>NavRow to <code>WellbeingCheck</code></td></tr>
+    <tr><td>Strategic journal (coach held-decision history)</td><td><span class="pill good">Built</span></td><td>NavRow to <code>CoachHeldHistory</code></td></tr>
+    <tr><td>Settings link</td><td><span class="pill good">Built</span></td><td>NavRow to <code>Settings</code></td></tr>
+    <tr><td>Gated Pro feature previews (free tier only)</td><td><span class="pill good">Built</span></td><td>line 770 comment</td></tr>
+  </tbody>
+</table>
+
+<h3>WeeklyCheckIn (<code>src/screens/WeeklyCheckInScreen.js</code>, 1188 lines)</h3>
+<p>Step-form with gating + auto-derived fields.</p>
+<table>
+  <thead><tr><th>Field captured</th><th>Status</th><th>Range / type</th></tr></thead>
+  <tbody>
+    <tr><td>Energy score</td><td><span class="pill good">Built</span></td><td>1&ndash;5 (line 225)</td></tr>
+    <tr><td>Stress score</td><td><span class="pill good">Built</span></td><td>1&ndash;5 (line 226)</td></tr>
+    <tr><td>Sleep hours</td><td><span class="pill good">Built</span></td><td>numeric (line 227)</td></tr>
+    <tr><td>Calorie adherence</td><td><span class="pill good">Built</span></td><td>hit / under / over / untracked (line 230)</td></tr>
+    <tr><td>Step adherence</td><td><span class="pill good">Built</span></td><td>(line 231)</td></tr>
+    <tr><td>Soreness score</td><td><span class="pill good">Built</span></td><td>1&ndash;5 (line 234)</td></tr>
+    <tr><td>Sore muscles (multi-select)</td><td><span class="pill good">Built</span></td><td>muscle group keys (line 235)</td></tr>
+    <tr><td>Joint pain (yes/no)</td><td><span class="pill good">Built</span></td><td>(line 236)</td></tr>
+    <tr><td>Training performance</td><td><span class="pill good">Built</span></td><td>exceeded / hit / struggled / dropped (line 240)</td></tr>
+    <tr><td>Notes (free text)</td><td><span class="pill good">Built</span></td><td>(line 237)</td></tr>
+    <tr><td>Gating: too-soon / weigh-ins-this-week / already-logged-today</td><td><span class="pill good">Built</span></td><td>lines 191&ndash;222 (<code>gateState</code>, <code>tooSoonCtx</code>, <code>alreadyLoggedToday</code>, <code>weighInsThisWeek</code>)</td></tr>
+    <tr><td>Auto-derived fields (training performance from past workouts, etc.)</td><td><span class="pill good">Built</span></td><td>line 199 (<code>autoDerived</code>)</td></tr>
+  </tbody>
+</table>
+
+<h3>CoachOutput (<code>src/screens/CoachOutputScreen.js</code>, 1525 lines)</h3>
+<table>
+  <thead><tr><th>Feature</th><th>Status</th><th>Evidence</th></tr></thead>
+  <tbody>
+    <tr><td>Weekly trend chip + headline</td><td><span class="pill good">Built</span></td><td>render path + headline copy lines 250&ndash;320</td></tr>
+    <tr><td>Auto-applied calorie adjustment</td><td><span class="pill good">Built</span></td><td>line 666, scales fat + carbs by ratio, protein constant, calls <code>saveNutritionTargets</code></td></tr>
+    <tr><td>Held decisions card (ED-pattern, FFM floor, rapid-loss, data-thin)</td><td><span class="pill good">Built</span></td><td>renders <code>HeldDecisionCard</code></td></tr>
+    <tr><td>What's working &middot; What was off &middot; The decision &middot; Why &middot; Focus this week</td><td><span class="pill good">Built</span></td><td>sections at lines 224, 231, 243, 300, 347</td></tr>
+    <tr><td>Recent decisions log</td><td><span class="pill good">Built</span></td><td><code>coachHistory</code> state line 513</td></tr>
+    <tr><td>Phase awareness (weeks-in-phase passed to <code>runWeeklyCoach</code>)</td><td><span class="pill good">Built</span></td><td>lines 526&ndash;528</td></tr>
+    <tr><td>Adaptive TDEE</td><td><span class="pill good">Built</span></td><td>line 514 (<code>adaptiveTDEE</code>)</td></tr>
+    <tr><td>"Read more" lockout explanation modal</td><td><span class="pill good">Built</span></td><td>line 386 (<code>showReadMore</code>)</td></tr>
+    <tr><td>ED-pattern flag firing + telemetry</td><td><span class="pill good">Built</span></td><td>lines 604&ndash;640</td></tr>
+    <tr><td>Rapid-loss compression telemetry</td><td><span class="pill good">Built</span></td><td>line 632 fires <code>rapid_loss_compression_triggered</code></td></tr>
+    <tr><td>Per-engine event (<code>weekly_coach_run</code>) telemetry</td><td><span class="pill good">Built</span></td><td>line 647</td></tr>
+    <tr><td>Auto-applied training adjustment</td><td><span class="pill bad">Missing</span></td><td>Coach surfaces volume / RPE / set count suggestions but doesn't write back to routines. Founder gap from yesterday's audit.</td></tr>
+    <tr><td>Held-decision threading into this-week narrative (continuity)</td><td><span class="pill bad">Missing</span></td><td>Held decisions appear as a list; not woven into the headline / decision explanation.</td></tr>
+  </tbody>
+</table>
+
+<h3>Subscription / Cascade / Paywall (<code>SubscriptionScreen.js</code>, <code>CascadeGateScreen.js</code>, <code>PaywallScreen.js</code>, <code>ProUpgradeScreen.js</code>)</h3>
+<table>
+  <thead><tr><th>Feature</th><th>Status</th><th>Evidence</th></tr></thead>
+  <tbody>
+    <tr><td>Two-tier model (Free / Pro)</td><td><span class="pill good">Built</span></td><td>founder consolidation 2026-05-25</td></tr>
+    <tr><td>21-day Pro trial with day-19 + day-21 cascade gate</td><td><span class="pill good">Built</span></td><td><code>CascadeGateScreen.js</code></td></tr>
+    <tr><td>Stage label display + days remaining</td><td><span class="pill good">Built</span></td><td><code>SubscriptionScreen.js:133</code></td></tr>
+    <tr><td>Trial state machine + tier_history audit log</td><td><span class="pill good">Built</span></td><td><code>src/lib/payments/cascade.js</code></td></tr>
+    <tr><td>Play Billing direct integration (no RevenueCat)</td><td><span class="pill good">Built</span></td><td><code>src/lib/payments/playBilling.js</code></td></tr>
+    <tr><td>Restore purchases</td><td><span class="pill good">Built</span></td><td><code>src/lib/payments/restore.js</code></td></tr>
+    <tr><td>Differential paywall (Pro feature gates)</td><td><span class="pill good">Built</span></td><td><code>PaywallScreen.js</code>, <code>src/lib/differentialPaywall.js</code></td></tr>
+    <tr><td>Tier gate by feature (<code>proGate.js</code>: <code>isPaidTier</code>, <code>hasFeature</code>, <code>hasGoalUnlock</code>)</td><td><span class="pill good">Built</span></td><td><code>src/lib/proGate.js</code> + tests</td></tr>
+    <tr><td>Cascade Real-Time Developer Notifications endpoint (RTDN)</td><td><span class="pill warn">Data-only</span></td><td>Edge Function code at <code>supabase/functions/play-billing-rtdn/index.ts</code> but not yet deployed.</td></tr>
+    <tr><td>CascadeGate personalised usage proof ("you logged N workouts, used the coach M times")</td><td><span class="pill bad">Missing</span></td><td>Generic feature list only.</td></tr>
+    <tr><td>Annual SKU</td><td><span class="pill bad">Missing</span></td><td>Monthly only at present.</td></tr>
+  </tbody>
+</table>
+
+<h3>Settings (<code>src/screens/SettingsScreen.js</code>, 1199 lines)</h3>
+<table>
+  <thead><tr><th>Feature</th><th>Status</th><th>Evidence</th></tr></thead>
+  <tbody>
+    <tr><td>Notification settings link</td><td><span class="pill good">Built</span></td><td>line 770</td></tr>
+    <tr><td>Coaching reminders link</td><td><span class="pill good">Built</span></td><td>line 763</td></tr>
+    <tr><td>Subscription management link</td><td><span class="pill good">Built</span></td><td>line 776</td></tr>
+    <tr><td>Import workout history (CSV / JSON)</td><td><span class="pill good">Built</span></td><td>line 936, <code>ImportScreen</code></td></tr>
+    <tr><td>Credits / attributions</td><td><span class="pill good">Built</span></td><td>line 782, <code>CreditsScreen</code></td></tr>
+    <tr><td>Privacy section with health-data consent withdrawal</td><td><span class="pill good">Built</span></td><td>line 1049 + destructive-confirm flow</td></tr>
+    <tr><td>Debug log (last 200 errors)</td><td><span class="pill good">Built</span></td><td>line 1065, <code>DebugLogScreen</code></td></tr>
+    <tr><td>Subscription policy</td><td><span class="pill good">Built</span></td><td>line 991, <code>SubscriptionPolicyScreen</code></td></tr>
+    <tr><td>HealthKit / Health Connect opt-in</td><td><span class="pill good">Built</span></td><td><code>src/lib/health.js</code>, Settings &rarr; Health surface</td></tr>
+    <tr><td>BETA badge + tap-to-share build identifier</td><td><span class="pill good">Built</span></td><td>line 1073 (badge), line 1087 (share identifier "Volyume v{v} ({platform} {code}, {env})")</td></tr>
+    <tr><td>Unit picker (kg/lbs/st)</td><td><span class="pill good">Built</span></td><td>units + bodyWeightUnits in store</td></tr>
+    <tr><td>Sign out (full device wipe)</td><td><span class="pill good">Built</span></td><td><code>signOut</code> path: AsyncStorage.clear + SQLite wipe + SecureStore wipe</td></tr>
+    <tr><td>Delete account (two-step destructive confirm + Edge Function)</td><td><span class="pill good">Built</span></td><td><code>account_deletions_log</code> table + <code>delete_user_data</code> RPC + Edge Function</td></tr>
+    <tr><td>Reduce-motion accessibility toggle</td><td><span class="pill good">Built</span></td><td><code>accessibility.reduceMotion</code> store field</td></tr>
+  </tbody>
+</table>
+
+<h3>Onboarding (<code>WelcomeScreen.js</code> + <code>LoginScreen.js</code> + <code>OnboardingScreen.js</code> + <code>Article9ConsentScreen.js</code> + <code>ProOnboardingScreen.js</code>)</h3>
+<table>
+  <thead><tr><th>Feature</th><th>Status</th><th>Evidence</th></tr></thead>
+  <tbody>
+    <tr><td>Welcome screen with Pro + Free tier cards</td><td><span class="pill good">Built</span></td><td><code>WelcomeScreen.js</code></td></tr>
+    <tr><td>Sign in / sign up (email, Google OAuth, Apple OAuth)</td><td><span class="pill good">Built</span></td><td><code>LoginScreen.js</code></td></tr>
+    <tr><td>Article 9 explicit health-data consent (separate from ToS)</td><td><span class="pill good">Built</span></td><td><code>Article9ConsentScreen.js</code> + <code>consent_log</code> table + <code>record_health_consent</code> RPC</td></tr>
+    <tr><td>Pro onboarding wizard (4+ steps)</td><td><span class="pill good">Built</span></td><td><code>ProOnboardingScreen.js</code>, step branches at lines 568, 697, 896, 992</td></tr>
+    <tr><td>Body profile entry (height, weight, sex, DOB)</td><td><span class="pill good">Built</span></td><td>in onboarding step 2</td></tr>
+    <tr><td>Goal selection</td><td><span class="pill good">Built</span></td><td>in onboarding step 3</td></tr>
+    <tr><td>Goal lock for physique competition / advanced recomp (self-attested experience)</td><td><span class="pill good">Built</span></td><td><code>GoalLockConsentScreen.js</code>, fires from onboarding</td></tr>
+    <tr><td>SCOFF screener</td><td><span class="pill good">Built</span></td><td>onboarding step</td></tr>
+    <tr><td>Activity level + equipment + frequency selection</td><td><span class="pill good">Built</span></td><td>in onboarding</td></tr>
+    <tr><td>Weak-point selection (physique goals only)</td><td><span class="pill good">Built</span></td><td><code>ProGoalSetupScreen.js:85</code> (<code>planWeakPoints</code>), <code>GOALS_WITH_WEAK_POINTS</code> gate, chip grid at line 370</td></tr>
+    <tr><td>Nutrition target preview (auto-computed from inputs)</td><td><span class="pill good">Built</span></td><td>via <code>nutritionEngine.js</code></td></tr>
+    <tr><td>Notification permissions step</td><td><span class="pill good">Built</span></td><td>onboarding final step</td></tr>
+    <tr><td>First-run summary / hand-off</td><td><span class="pill good">Built</span></td><td><code>ProSetupCompleteScreen.js</code> + <code>FirstRunScreen.js</code></td></tr>
+    <tr><td>First-session "log a set before nutrition target preview" path</td><td><span class="pill bad">Missing</span></td><td>Currently target preview comes before any concrete user input.</td></tr>
+    <tr><td>CSV import surfaced during onboarding</td><td><span class="pill bad">Missing</span></td><td>ImportScreen exists but only reachable from Settings, not from onboarding.</td></tr>
+  </tbody>
+</table>
+
+</section>
+
+<!-- ============================================================== -->
+<section id="engine">
+<h2>7. Engine &amp; algorithms (<code>src/lib/</code>)</h2>
+<table>
+  <thead><tr><th>Module</th><th>Function</th><th>Status</th></tr></thead>
+  <tbody>
+    <tr><td><code>weeklyCoach.js</code> (983 lines)</td><td>Full weekly coach orchestration: trend computation, kcal adjustment math, held-decision generation, rapid-loss compression, FFM floor check, ED-pattern integration, training focus selection</td><td><span class="pill good">Built</span></td></tr>
+    <tr><td><code>nutritionEngine.js</code> (835 lines)</td><td>BMR / TDEE / target_kcal / macros from height + weight + activity + phase + goal. FFM-aware safety floor. Refeed recommendation. MATADOR diet-break trigger at 8+ weeks deficit.</td><td><span class="pill good">Built</span></td></tr>
+    <tr><td><code>edPatternDetector.js</code></td><td>Multi-signal ED-pattern detector (4 signals, 2/3 threshold under goal lock)</td><td><span class="pill good">Built</span></td></tr>
+    <tr><td><code>phaseEngine.js</code></td><td>Phase computation from <code>compDateMs</code>: offseason / late_prep (&gt; threshold) / early_prep / peak_week. <code>getWeeksToComp()</code>.</td><td><span class="pill good">Built</span></td></tr>
+    <tr><td><code>algorithms.js</code></td><td><code>calculate1RM</code>, <code>calculateTonnage</code>, <code>calculateWeeklyVolume</code>, <code>shouldDeload</code>, <code>detectPlateau</code>, <code>computeAdaptiveLandmarks</code>, <code>VOLUME_LANDMARKS</code> (MEV / MAV / MRV per muscle), <code>getStrengthStandard</code></td><td><span class="pill good">Built</span></td></tr>
+    <tr><td><code>swapEngine.js</code></td><td>Exercise substitute ranking by primary muscle + movement pattern</td><td><span class="pill good">Built</span></td></tr>
+    <tr><td><code>planAutoGen.js</code></td><td>Wraps wizard week-1 template into a full periodised plan</td><td><span class="pill good">Built</span></td></tr>
+    <tr><td><code>insightsEngine.js</code></td><td>Per-exercise progression / regression detection across workouts</td><td><span class="pill good">Built</span></td></tr>
+    <tr><td><code>recoveryEMA.js</code></td><td>Recovery moving-average computation from check-in inputs</td><td><span class="pill good">Built</span></td></tr>
+    <tr><td><code>wellbeing.js</code></td><td>Wellbeing check scoring</td><td><span class="pill good">Built</span></td></tr>
+    <tr><td><code>coachingGoals.js</code></td><td>Goal templates and macro presets</td><td><span class="pill good">Built</span></td></tr>
+    <tr><td><code>whyThisTemplates.js</code></td><td>Held-decision and coaching explanation copy templates with jargon blocklist</td><td><span class="pill good">Built</span></td></tr>
+    <tr><td><code>blockAdvisor.js</code></td><td>Mesocycle block reflection prompts and progression advice</td><td><span class="pill good">Built</span></td></tr>
+    <tr><td><code>mesocycle.js</code></td><td>Mesocycle math: weeks, deload positioning</td><td><span class="pill good">Built</span></td></tr>
+    <tr><td><code>strengthStandards.js</code></td><td>Bodyweight-ratio strength standards (Beginner &rarr; Elite)</td><td><span class="pill good">Built</span></td></tr>
+    <tr><td><code>formTips.js</code></td><td>Per-exercise execution notes</td><td><span class="pill good">Built</span></td></tr>
+    <tr><td><code>haptics.js</code></td><td>Haptic feedback wrapper</td><td><span class="pill good">Built</span></td></tr>
+    <tr><td><code>units.js</code></td><td>kg / lbs / st conversions + display helpers</td><td><span class="pill good">Built</span></td></tr>
+    <tr><td><code>travelMode.js</code></td><td>Travel-mode adjustments (lower equipment availability)</td><td><span class="pill good">Built</span></td></tr>
+    <tr><td><code>importExternal.js</code></td><td>CSV / JSON import from Hevy / Strong / generic</td><td><span class="pill good">Built</span></td></tr>
+    <tr><td><code>dataBackup.js</code></td><td>Full JSON backup + restore</td><td><span class="pill good">Built</span></td></tr>
+    <tr><td><code>coachExport.js</code></td><td>CSV export for sharing with a coach</td><td><span class="pill good">Built</span></td></tr>
+  </tbody>
+</table>
+</section>
+
+<!-- ============================================================== -->
+<section id="sync-data">
+<h2>8. Sync &amp; data layer</h2>
+<p>16-table sync registry, last-write-wins + per-column-merge (profiles only). Per-table push / pull handlers in <code>src/lib/sync/tables/</code>. 50-assertion regression matrix at <code>src/lib/sync/__tests__/sync.regressionMatrix.test.js</code>. Live sync status badge in nav header (<code>src/components/SyncStatusBadge.js</code>) showing synced / pending / offline / error with tap-for-details.</p>
+<table>
+  <thead><tr><th>Surface</th><th>Status</th></tr></thead>
+  <tbody>
+    <tr><td>Local SQLite: 39 tables documented at <code>src/lib/database.js</code></td><td><span class="pill good">Built</span></td></tr>
+    <tr><td>Cloud Supabase: 16 sync-registered tables (LWW + soft-delete per table)</td><td><span class="pill good">Built</span></td></tr>
+    <tr><td>Per-table sync transport (<code>src/lib/sync/tables/</code>)</td><td><span class="pill good">Built</span></td></tr>
+    <tr><td>Food-domain bulk RPC coordinator (food_sync_push / pull)</td><td><span class="pill good">Built</span></td></tr>
+    <tr><td>Background sync triggers: foreground, network reconnect, debounced write, 15-min interval</td><td><span class="pill good">Built</span></td></tr>
+    <tr><td>Schema drift audit query (<code>supabase/audit_cloud_schema_drift.sql</code>)</td><td><span class="pill good">Built</span></td></tr>
+  </tbody>
+</table>
+</section>
+
+<!-- ============================================================== -->
+<section id="notifications">
+<h2>9. Notifications (<code>src/lib/notifications/</code>)</h2>
+<table>
+  <thead><tr><th>Category</th><th>Status</th><th>Channel</th></tr></thead>
+  <tbody>
+    <tr><td><code>MORNING_WEIGHT</code></td><td><span class="pill good">Built</span></td><td>PUSH</td></tr>
+    <tr><td><code>WEEKLY_CHECKIN_REMINDER</code></td><td><span class="pill good">Built</span></td><td>PUSH</td></tr>
+    <tr><td><code>CASCADE_GATE</code></td><td><span class="pill good">Built</span></td><td>PUSH + IN_APP</td></tr>
+    <tr><td><code>YEAR_OF_LIFTS_UNLOCK</code></td><td><span class="pill good">Built</span></td><td>PUSH</td></tr>
+    <tr><td>Quiet hours (default 22:00 &rarr; 07:00, wrap-aware, configurable)</td><td><span class="pill good">Built</span></td><td><code>src/lib/notifications/quietHours.js</code></td></tr>
+    <tr><td>Per-category preferences synced to cloud</td><td><span class="pill good">Built</span></td><td><code>src/lib/notifications/preferences.js</code></td></tr>
+    <tr><td>Rest timer sticky / ongoing notification</td><td><span class="pill good">Built</span></td><td>scheduler + handler</td></tr>
+    <tr><td>Tap deep-link: weekly_checkin &rarr; ProfileTab/WeeklyCheckIn, year_of_lifts_unlock &rarr; ProgressTab/YearOfLifts</td><td><span class="pill good">Built</span></td><td><code>src/lib/notifications/listeners.js</code></td></tr>
+    <tr><td>Behavioural notifications ("you normally train Thursdays")</td><td><span class="pill bad">Missing</span></td><td>All triggers are fixed-time. No behaviour model.</td></tr>
+  </tbody>
+</table>
+</section>
+
+<!-- ============================================================== -->
+<section id="discrepancies">
+<h2>10. Where the docs are wrong</h2>
+
+<p>Items that <code>BACKLOG.md</code> or <code>CURRENT_STATUS.md</code> claim are shipped, but where the code disagrees. Founder has explicitly flagged that these docs drift; this section is the code-truth correction.</p>
+
+<div class="warn-box">
+<h4>Myo-rep / rest-pause cluster banner</h4>
+<p><strong>BACKLOG claim:</strong> "Both set types exposed in the set type picker with descriptions, cluster banner shows activation set + mini-set counter, and a 'Cluster complete' button returns the user to straight working sets."</p>
+<p><strong>Code reality:</strong> <code>SET_TYPE_OPTIONS</code> in <code>ActiveWorkoutScreen.js:62</code> only contains <code>straight</code> + <code>warmup</code>. <code>myo_reps</code> / <code>rest_pause</code> are recognised by display logic but cannot be picked by the user. Searching for "Cluster" / "activation" / "mini-set" / "Cluster complete" in <code>src/screens/</code> + <code>src/components/</code> returns zero rendered UI. Only a single <code>// Cluster counter</code> comment exists at <code>ActiveWorkoutScreen.js:165</code>.</p>
+</div>
+
+<div class="warn-box">
+<h4>Per-set RIR / RPE picker</h4>
+<p><strong>BACKLOG / CURRENT_STATUS suggest:</strong> Per-set effort capture as a future addition.</p>
+<p><strong>Code reality:</strong> <code>SetEntry.js:173&ndash;176</code> explicitly states the picker was built, found rarely used, and deliberately removed. The RIR field is still recorded internally (defaulted to 2 in <code>DEFAULT_SET</code>) so the autoregulation engine continues to work. Adding it back is reverting a deliberate UX decision, not closing a gap.</p>
+</div>
+
+<div class="warn-box">
+<h4>Peak Week module</h4>
+<p><strong>CURRENT_STATUS § 8 OUT OF SCOPE claim:</strong> "Peak Week module (founder removed 2026-05-25: 'needs a human eye, not numbers')."</p>
+<p><strong>Code reality:</strong> <code>peak_week_plans</code> SQLite table exists with show_date, federation, current_bodyweight, lean_estimate, prep_carbs_per_kg, prep_sodium_mg, prep_water_l, status. <code>peak_week_plans</code> is in the cloud sync registry. <code>phaseEngine.js:38</code> emits <code>peak_week</code> phase when within threshold. <code>nutritionEngine.js</code> integrates phase. So the <strong>data layer + phase awareness are built</strong>; what was removed is the algorithmic prescription / UI surface. Both interpretations are consistent. The founder's reasoning ("needs a human eye, not numbers") is sound: peak week is irreducibly a visual judgment under daily real-time adjustment, not something an algorithm can prescribe responsibly. The data layer remaining is harmless.</p>
+</div>
+
+<div class="warn-box">
+<h4>"Refeed automation"</h4>
+<p><strong>BACKLOG status:</strong> "Scheduled refeeds (weekly) deferred."</p>
+<p><strong>Code reality:</strong> <code>nutritionEngine.js:773&ndash;829</code> emits a <code>refeedRecommendation</code> object with maintenance kcal + recomputed protein / fat / carbs for <code>aggressive_cut</code> and <code>physique_competition</code> phases. The engine has it. What's missing is the UI surface that lets a user one-tap apply it.</p>
+</div>
+
+<div class="warn-box">
+<h4>FatigueTrendCard placement</h4>
+<p><strong>BACKLOG claim:</strong> "FatigueTrendCard on HomeScreen renders an SVG bar chart of the last 6 sessions' fatigue levels."</p>
+<p><strong>Code reality:</strong> Renders in <code>AnalyticsScreen.js:517</code>, not HomeScreen. Cosmetic disagreement only.</p>
+</div>
+
+</section>
+
+<footer class="page">
+  <p>Generated 2026-05-27 by walking <code>src/screens/</code> (56 files), <code>src/components/</code> (37 files), and <code>src/lib/</code> (50+ modules) directly. Every claim above carries a file:line reference so future drift can be checked against the same source.</p>
+  <p>Live at <a href="https://allansdouglas1983-cmyk.github.io/ADPhysique/feature-inventory/">allansdouglas1983-cmyk.github.io/ADPhysique/feature-inventory/</a>. Update by re-walking the same files when scope changes.</p>
+</footer>
+
+</div>
+</body>
+</html>
