@@ -110,7 +110,7 @@ All claims carry file:line evidence. Verified against `src/`, `supabase/`, and `
 | Exercise detail with 1RM trend chart | `ExerciseDetailScreen.js` + victory-native | ✅ |
 | Plateau detection per exercise | `algorithms.detectPlateau` | ✅ |
 | Per-exercise weight goals (target weight + date) | `database.saveExerciseGoal`, `markGoalAchieved`, `deleteExerciseGoal` | ✅ |
-| Strength standards labels (Beginner → Elite) | `strengthStandards.getStrengthLevel` + `algorithms.getStrengthStandard` (duplicated, drift) | ⚠️ |
+| Strength standards labels (Beginner → Elite) | `strengthStandards.getStrengthLevel` + `algorithms.getStrengthStandard` (older + simpler; cross-referenced) | ⚠️ Migration to single source pending PRWallScreen refactor |
 | Browse plan library | `PlanLibraryScreen.js` | ✅ |
 | Plan library guided quiz | `PlanLibraryScreen.js:526-732` | ✅ |
 | Copy plan from library to user account | `database.copyPlanFromLibrary` | ✅ |
@@ -145,7 +145,7 @@ All claims carry file:line evidence. Verified against `src/`, `supabase/`, and `
 | Muscle freshness card (recovery state per muscle) | `AthleteHubScreen.MuscleFreshnessCard` | ✅ |
 | Fatigue trend card (last 6 sessions) | `FatigueTrendCard.js` on Home | ✅ |
 | Block progress card (planned vs actual per muscle) | `BlockProgressCard.js` on Analytics | ✅ |
-| Rep regression detection (2+ weeks dropping reps) | `AnalyticsScreen.detectRepRegressions` (duplicated in AthleteHub) | ⚠️ |
+| Rep regression detection (2+ weeks dropping reps) | `AthleteHubScreen.js:50 detectRepRegressions` (single definition, earlier survey claim of duplication was wrong) | ✅ |
 | Lagging muscle detection | `algorithms.detectLaggingMuscles` | ✅ |
 | Year of Lifts unlock at 365-day mark | `YearOfLiftsScreen.js` + `database.getYearOfLiftsData` | ✅ |
 | Acute / chronic workload ratio | `database.getAcuteChronicWorkload` | ✅ |
@@ -260,9 +260,10 @@ All claims carry file:line evidence. Verified against `src/`, `supabase/`, and `
 | 7-day EWMA weight trend chart | `BodyMetricsScreen.js` + `nutritionEngine.computeEWMA` | ✅ |
 | Body fat % log | `database.logBodyMetric` accepts BF% | ✅ |
 | Lean mass log | same | ✅ |
-| Body measurements (chest, waist, thighs, etc.) | `database` supports it (verify field shape) | ⚠️ Confirm UI |
-| BF% trend chart over time | not built | ❌ |
-| Measurement trend chart over time | not built | ❌ |
+| Body measurements (chest, shoulders, arms, forearms, waist, hips, quads, hamstrings, calves) | `BodyMetricsScreen.js:76-86 MEASUREMENTS`, form state at line 306-307, `FIELD_MAP` at line 44-55 | ✅ |
+| BF% input + log | **No input UI anywhere** despite `body_metric_log.body_fat_percent` column existing and `nutritionEngine.computeFFMFloor` consuming it for the FFM safety floor. Without input, the floor falls back to sex-based defaults. | ❌ |
+| BF% trend chart over time | not built (no input either) | ❌ |
+| Measurement trend chart over time | `BodyMetricsScreen.MeasurementTrendChart` line 190, used at line 830 | ✅ |
 | Health Connect / HealthKit weight import | `health.importNewWeights` from Settings | ✅ |
 | Health Connect / HealthKit step read | `health.readStepsToday` | ✅ |
 | Health Connect / HealthKit workout write | `health.writeWorkoutToHealth` | ✅ |
@@ -454,7 +455,7 @@ Pulled from the ❌ and ⚠️ rows above. These are the real product gaps.
 | Rank | Item | Effort | Owner | Blocking |
 |---|---|---|---|---|
 | 1 | Saved meals UI (My Meals templates) | M | Claude | feature parity with spec |
-| 2 | Body composition trend charts (BF%, measurements) | S-M | Claude | Pro-tier promise |
+| 2 | BF% input + trend chart in BodyMetrics (measurements charts already shipped at line 190). Required for accurate FFM-aware floor; currently engine falls back to sex defaults. | S-M | Claude | Pro-tier promise + engine accuracy |
 | 3 | Decide on coach training auto-apply (volumeDelta writes next-week sets vs stay advisory) | founder decision + S impl | Both | engine surface asymmetry |
 | 4 | Decide on coach steps / cardio / deload / diet-break auto-apply | same pattern | Both | same |
 | 5 | High-day / low-day macro shift in coach (engine-derived, not user click) | M | Claude after founder confirms design | coach completeness |
@@ -464,18 +465,18 @@ Pulled from the ❌ and ⚠️ rows above. These are the real product gaps.
 | 9 | Subscription payment failure push | S | Claude | spec'd, not shipped |
 | 10 | Weekly coach output ready push | S | Claude | spec'd, not shipped |
 | 11 | Resolve two-sync-layer drift (legacy `sync.js` vs `lib/sync/`) | M | Claude | maintenance trap |
-| 12 | Resolve two-telemetry-module drift (`engineTelemetry.js` vs `lib/telemetry/`) | S | Claude | same |
-| 13 | Deduplicate `computeEWMA`, `STRENGTH_STANDARDS`, `detectRepRegressions` | S | Claude | drift |
+| 12 | ~~Step 1 of two-telemetry-module drift~~ **Partial 2026-05-27.** `engineTelemetry.ALLOWED_EVENTS` now imports from canonical `telemetry/events.js` instead of a duplicated hardcoded list. Full fold-in of the queue + push logic into `telemetry/transport.js` still pending. | S (remaining fold-in) | Claude | same |
+| 13 | `STRENGTH_STANDARDS` dedup (PRWallScreen refactor to use only `strengthStandards.getStrengthLevel` and drop the bulk-compute path against `algorithms.STRENGTH_STANDARDS`). `computeEWMA` confirmed intentional separation (two smoothing windows, different output shapes), now annotated. `detectRepRegressions` confirmed single definition. | S-M | Claude | drift |
 | 14 | Resolve dead-input `cycleOverride` (build UI or remove) | S | founder decision | dead input |
-| 15 | Confirm / remove dead lib files (`phaseEngine`, `coachExport`, `sentry`, `seedExercises`) | S | Claude | code hygiene |
-| 16 | Move `WEAK_POINT_MUSCLES` list from screen to `coachingGoals.js` | S | Claude | drift |
-| 17 | Drop `peak_week_plans` table + `workout_notes` v1 in a migration | S | Both | schema hygiene |
+| 15 | Delete `phaseEngine.js` + `coachExport.js` (confirmed: only consumers are their own tests/JSDoc; `sentry.js` and `seedExercises.js` are live). Founder decision: delete or keep as scaffolding for phase 2 coach handoff. | S | Founder decision + S impl | code hygiene |
+| 16 | ~~Move `WEAK_POINT_MUSCLES` list from screen to `coachingGoals.js`~~ **Done 2026-05-27.** Exported from `coachingGoals.js`; `ProGoalSetupScreen` imports it. | done | Claude | drift |
+| 17 | Drop `peak_week_plans` table. Migration 049 drafted at `supabase/migrate_049_drop_peak_week_plans.sql` (do not apply yet; client-side cleanup listed in the header). `workout_notes` v1 is NOT legacy: it's the between-session coaching notes table; `workout_notes_v2` is per-workout notes. Both stay. | S | Both | schema hygiene |
 | 18 | Decide on drop-set / myo-rep / rest-pause picker exposure | founder decision | Both | UX policy |
 | 19 | Per-side L/R reps (unilateral logging) | M | Claude after founder confirms scope | requested in earlier session |
-| 20 | Voice-rule sweep over code comments + remaining hex lapses | S | Claude | spec compliance |
-| 21 | Confirm Microsoft OAuth UI surface | S | Claude | unverified path |
-| 22 | Confirm body measurement (chest/waist/etc.) UI in BodyMetrics | S | Claude | unverified field |
-| 23 | Verify FTC HBNR language in `public/privacy/index.html` | S | Claude | claim in HANDOFF |
+| 20 | ~~Voice-rule sweep over remaining hex lapses~~ **Done 2026-05-27.** ScanBarcode `#000` → `colors.background`; CoachingReminders dead `'#3a2a1a'` fallback removed; Apple OAuth `#000000`/`#FFFFFF` (LoginScreen + ProOnboarding) moved to new `colors.appleBtnBg`/`appleBtnText` tokens. Em-dash sweep over code comments still pending. | S (em-dash sweep remaining) | Claude | spec compliance |
+| 21 | ~~Confirm Microsoft OAuth UI surface~~ **Confirmed unwired 2026-05-27.** `signInWithMicrosoft` exported from `supabase.js:171`; no consumers in any screen. Either wire UI or remove the export. | founder decision | Both | unverified path |
+| 22 | ~~Confirm body measurement UI in BodyMetrics~~ **Confirmed shipped 2026-05-27.** 9 measurements (chest/shoulders/arms/forearms/waist/hips/quads/hamstrings/calves) with input form + per-measurement trend chart at `BodyMetricsScreen.js:190 MeasurementTrendChart`. | done | Claude | unverified field |
+| 23 | ~~Verify FTC HBNR language in `public/privacy/index.html`~~ **Confirmed present 2026-05-27** at section 11, line 261. 500-person threshold, 60-day FTC deadline, UK ICO 72-hour timeline. | done | Claude | claim in HANDOFF |
 | 24 | Decide on 3 v1.1 features in PRO_FEATURES (`refeed_automated_any_cut`, `body_composition_deep`, `share_pack_pdf`): ship or move to deferred list | founder decision | Both | entitlement signal |
 | 25 | Long-press multi-select toolbar on Diary | S-M | Claude after founder | per BACKLOG deferred |
 | 26 | Per-meal macro breakdown sheet on macro ring tap | S | Claude after founder | per BACKLOG deferred |
