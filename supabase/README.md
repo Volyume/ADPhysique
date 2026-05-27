@@ -26,12 +26,13 @@ unless the file header says otherwise.
 | 044 | `migrate_044_notification_preferences.sql` | Creates `notification_preferences(user_id, category, enabled, time_pref)` with RLS + updated_at trigger. Backs NOTIFICATIONS_LOCKED.md lines 117-119. | See § Verify notification_preferences |
 | 045 | `migrate_045_users_profile_column_updates_at.sql` | Adds `column_updates_at jsonb` to `users_profile` + safe-merge trigger so the per-column merge conflict strategy can decide field-by-field which side wrote a profile field most recently. Backs SYNC_REGISTRY profiles.merge contract. | See § Verify users_profile.column_updates_at |
 | 046 | `migrate_046_recipe_ingredients_soft_delete.sql` | Adds `updated_at` + `deleted_at` columns to `recipe_ingredients`, plus a BEFORE UPDATE touch trigger and a partial index over live rows. Required for the registry's softDelete:true + LWW contract on recipe_ingredients; without it the per-table push raises PGRST204 on every sync. | See § Verify recipe_ingredients soft-delete |
+| 047 | `migrate_047_body_metrics_weekly_checkins_lww.sql` | Adds `updated_at` to both `body_metrics` and `weekly_checkins_v2` (+ touch triggers refusing stale writes), plus `deleted_at` and a partial live index to `body_metrics`. Closes the locked LWW + soft-delete gaps for `body_composition_log` and `weekly_checkins_v2` registry entries. | See § Verify body_metrics + weekly_checkins_v2 LWW |
 
 ## How to apply
 
 1. Open the Supabase Dashboard → SQL Editor → New query.
 2. Open one migration file at a time from this folder (numeric
-   order: 037, 038, 039, 040, 041, 042, 043, 044, 045, 046).
+   order: 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047).
 3. Paste the full contents into the SQL Editor.
 4. Click **Run**. The migrations are wrapped in `CREATE OR REPLACE
    FUNCTION` / `CREATE TABLE IF NOT EXISTS`, so re-running an
@@ -300,5 +301,60 @@ FROM recipe_ingredients;
 
 If `updated_at` does not appear, the migration did not run. If
 trigger row is missing, the touch function did not install. If
-any rows show NULL updated_at, the DEFAULT did not land — re-run
+any rows show NULL updated_at, the DEFAULT did not land. Re-run
 the migration (idempotent) and re-check.
+
+### Verify `body_metrics` + `weekly_checkins_v2` LWW (migration 047)
+
+```sql
+-- body_metrics: updated_at + deleted_at present, with expected
+-- types + defaults.
+SELECT column_name, data_type, is_nullable, column_default
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name = 'body_metrics'
+  AND column_name IN ('updated_at', 'deleted_at')
+ORDER BY column_name;
+-- Expected:
+--   deleted_at | timestamp with time zone | YES | (null)
+--   updated_at | timestamp with time zone | NO  | now()
+
+-- weekly_checkins_v2: updated_at only (registry says
+-- softDelete:false, so no deleted_at).
+SELECT column_name, data_type, is_nullable, column_default
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name = 'weekly_checkins_v2'
+  AND column_name = 'updated_at';
+-- Expected:
+--   updated_at | timestamp with time zone | NO  | now()
+
+-- Touch triggers installed on both tables.
+SELECT event_object_table, trigger_name
+FROM information_schema.triggers
+WHERE event_object_table IN ('body_metrics', 'weekly_checkins_v2')
+  AND trigger_name IN (
+    'body_metrics_touch_updated_at',
+    'weekly_checkins_v2_touch_updated_at'
+  )
+ORDER BY event_object_table;
+-- Expected: two rows, one per table.
+
+-- Partial live index on body_metrics for Athlete Hub reads.
+SELECT indexname
+FROM pg_indexes
+WHERE schemaname = 'public'
+  AND tablename = 'body_metrics'
+  AND indexname = 'idx_body_metrics_live';
+-- Expected: one row.
+
+-- Every existing row carries the migration-time DEFAULT now().
+SELECT
+  (SELECT count(*) FILTER (WHERE updated_at IS NULL) FROM body_metrics)       AS body_metrics_null_updated_at,
+  (SELECT count(*) FILTER (WHERE updated_at IS NULL) FROM weekly_checkins_v2) AS weekly_checkins_v2_null_updated_at;
+-- Expected: both 0.
+```
+
+If either column does not appear, the migration did not run on
+that table. If trigger rows are missing, the touch functions did
+not install. Re-run (idempotent) and re-check.

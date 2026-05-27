@@ -12,22 +12,24 @@
  * pullFromCloud helpers per SYNC_ARCHITECTURE_LOCKED.md
  * lines 156-238.
  *
- * Behavioural contract preserved verbatim from sync.js:
+ * Contract (after migration 047 closed the cloud-schema gap):
  *
  *   Push: getBodyMetricLog(localUserId, 365), map to the
- *         body_metrics cloud schema (thigh→quads, ham→hamstrings,
- *         body_fat_*), filter rows that produce a null
- *         metric_date, upsert in 200-row batches on
- *         (user_id, id).
+ *         body_metrics cloud schema (thigh -> quads, ham ->
+ *         hamstrings, body_fat_*), filter rows that produce a
+ *         null metric_date, stamp updated_at + (optional)
+ *         deleted_at ISO strings, upsert in 200-row batches on
+ *         (user_id, id). Server-side BEFORE UPDATE trigger
+ *         refuses stale writes (NEW.updated_at < OLD.updated_at)
+ *         so the round trip is symmetric with the LWW gate on
+ *         pull below.
  *
- *   Pull: select all from body_metrics for the user, route each
- *         row through insertBodyMetricFromCloud (INSERT OR
- *         IGNORE).
- *
- * The registry says conflictStrategy=last_write_wins and
- * softDelete=true; the legacy code didn't honour either (push
- * always re-uploads, pull is INSERT-only). Same LWW/soft-delete
- * gap as weekly_checkins_v2; tracked as a follow-up.
+ *   Pull: select all rows from body_metrics for the user
+ *         including tombstones (deleted_at not null). For each
+ *         row, compare local updated_at against cloud
+ *         updated_at; only invoke insertBodyMetricFromCloud when
+ *         the cloud row is strictly newer than the local copy.
+ *         Mirrors the recipe_ingredients pattern.
  */
 
 import { logSyncError } from '../telemetry';
@@ -40,6 +42,19 @@ function msToDate(ms) {
   try { return new Date(ms).toISOString().split('T')[0]; } catch (_) { return null; }
 }
 
+function _toIso(ms) {
+  if (!ms) return null;
+  if (typeof ms === 'string') return ms;
+  return new Date(Number(ms)).toISOString();
+}
+
+function _toMs(t) {
+  if (t == null) return 0;
+  if (typeof t === 'number') return t;
+  if (typeof t === 'string') return Date.parse(t) || 0;
+  return 0;
+}
+
 export async function pushBodyComposition(sb, { userId, localUserId } = {}) {
   if (!sb || !userId) return { count: 0, errors: 0 };
   try {
@@ -48,6 +63,7 @@ export async function pushBodyComposition(sb, { userId, localUserId } = {}) {
     const metrics = await getBodyMetricLog(localUserId, PUSH_WINDOW_DAYS);
     if (!metrics?.length) return { count: 0, errors: 0 };
 
+    const nowIso = new Date().toISOString();
     const rows = metrics.map((m) => ({
       id: m.id,
       user_id: userId,
@@ -65,6 +81,8 @@ export async function pushBodyComposition(sb, { userId, localUserId } = {}) {
       body_fat_percent: m.bodyFatPercent ?? null,
       body_fat_source: m.bodyFatSource ?? null,
       notes: m.notes ?? null,
+      updated_at: _toIso(m.updatedAt) ?? nowIso,
+      deleted_at: m.deletedAt ? _toIso(m.deletedAt) : null,
     })).filter((r) => r.metric_date);
 
     if (!rows.length) return { count: 0, errors: 0 };
@@ -104,11 +122,21 @@ export async function pullBodyComposition(sb, { userId } = {}) {
     if (!data?.length) return { count: 0, errors: 0 };
 
     // eslint-disable-next-line global-require
-    const { insertBodyMetricFromCloud } = require('../../database');
+    const {
+      insertBodyMetricFromCloud,
+      getBodyMetricUpdatedAt,
+    } = require('../../database');
     let applied = 0;
+    let skipped = 0;
     let errors = 0;
     for (const m of data) {
       try {
+        const localUpdatedAt = await getBodyMetricUpdatedAt(userId, m.id);
+        const cloudUpdatedAt = _toMs(m.updated_at);
+        if (localUpdatedAt && cloudUpdatedAt && localUpdatedAt >= cloudUpdatedAt) {
+          skipped += 1;
+          continue;
+        }
         await insertBodyMetricFromCloud(userId, m);
         applied += 1;
       } catch (e) {
@@ -116,7 +144,7 @@ export async function pullBodyComposition(sb, { userId } = {}) {
         logSyncError('sync.tables.bodyComposition.pullRow', e);
       }
     }
-    return { count: applied, errors };
+    return { count: applied, errors, ...(skipped ? { skipped } : {}) };
   } catch (e) {
     logSyncError('sync.tables.bodyComposition.pull', e);
     return { count: 0, errors: 1 };

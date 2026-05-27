@@ -34,8 +34,10 @@ jest.mock('../../notifications/preferences', () => ({
 jest.mock('../../database', () => ({
   getAllWeeklyCheckinsForUser: jest.fn().mockResolvedValue([]),
   insertWeeklyCheckinFromCloud: jest.fn().mockResolvedValue(undefined),
+  getWeeklyCheckinUpdatedAt: jest.fn().mockResolvedValue(null),
   getBodyMetricLog: jest.fn().mockResolvedValue([]),
   insertBodyMetricFromCloud: jest.fn().mockResolvedValue(undefined),
+  getBodyMetricUpdatedAt: jest.fn().mockResolvedValue(null),
   getNutritionTargets: jest.fn().mockResolvedValue(null),
   insertNutritionTargetsFromCloud: jest.fn().mockResolvedValue(undefined),
   upsertEdPatternFlagFromCloud: jest.fn().mockResolvedValue(undefined),

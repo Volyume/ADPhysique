@@ -31,8 +31,10 @@ jest.mock('../../notifications/preferences', () => ({
 jest.mock('../../database', () => ({
   getAllWeeklyCheckinsForUser: jest.fn(),
   insertWeeklyCheckinFromCloud: jest.fn(),
+  getWeeklyCheckinUpdatedAt: jest.fn(),
   getBodyMetricLog: jest.fn(),
   insertBodyMetricFromCloud: jest.fn(),
+  getBodyMetricUpdatedAt: jest.fn(),
   getNutritionTargets: jest.fn(),
   insertNutritionTargetsFromCloud: jest.fn(),
   getAllRecipeIngredientsForUser: jest.fn(),

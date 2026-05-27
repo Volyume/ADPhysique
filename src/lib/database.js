@@ -3954,7 +3954,10 @@ export async function insertMorningWeightFromCloud(userId, w) {
 // then showed "Body metrics: No entries yet" even though the user had
 // dutifully logged dozens of weigh-ins.
 //
-// INSERT OR IGNORE so repeated cloud syncs are idempotent.
+// INSERT OR REPLACE so the per-table sync handler's LWW gate
+// (src/lib/sync/tables/bodyComposition.js) gets the overwrite it
+// expects when the cloud row beats local. Without the REPLACE the
+// pull would never actually update an existing row.
 export async function insertBodyMetricFromCloud(userId, m) {
   const d = await db();
   const dateToMs = (s) => {
@@ -3968,11 +3971,11 @@ export async function insertBodyMetricFromCloud(userId, m) {
   };
   const tsToMs = (v) => v == null ? null : (typeof v === 'string' ? new Date(v).getTime() : v);
   await d.runAsync(
-    `INSERT OR IGNORE INTO body_metric_log
+    `INSERT OR REPLACE INTO body_metric_log
       (id, user_id, logged_at, weight_kg, body_fat_percent, body_fat_source,
        waist_cm, chest_cm, hips_cm, thigh_cm, arm_cm, shoulders_cm,
-       forearm_cm, ham_cm, calf_cm, notes, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       forearm_cm, ham_cm, calf_cm, notes, created_at, updated_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       m.id, userId,
       dateToMs(m.metric_date) ?? tsToMs(m.logged_at),
@@ -3990,14 +3993,21 @@ export async function insertBodyMetricFromCloud(userId, m) {
       m.calves ?? null,
       m.notes ?? null,
       tsToMs(m.created_at) ?? Date.now(),
+      tsToMs(m.updated_at) ?? Date.now(),
+      m.deleted_at ? tsToMs(m.deleted_at) : null,
     ],
   );
 }
 
+// INSERT OR REPLACE — the per-table sync handler at
+// src/lib/sync/tables/weeklyCheckins.js applies the LWW gate
+// before calling this. Without the REPLACE a cloud edit to an
+// already-synced row would never land locally.
 export async function insertWeeklyCheckinFromCloud(userId, c) {
   const d = await db();
+  const tsToMs = (v) => v == null ? null : (typeof v === 'string' ? new Date(v).getTime() : v);
   await d.runAsync(
-    `INSERT OR IGNORE INTO weekly_checkins
+    `INSERT OR REPLACE INTO weekly_checkins
       (id, user_id, week_start, energy_score, soreness_score, stress_score, sleep_hours,
        cals_adherence, steps_adherence, cycle_override, notes,
        training_performance, joint_pain, sore_muscles, sleep_quality, created_at, updated_at)
@@ -4011,7 +4021,8 @@ export async function insertWeeklyCheckinFromCloud(userId, c) {
       c.joint_pain ? 1 : 0,
       c.sore_muscles ?? null,
       c.sleep_quality ?? null,
-      Date.now(), Date.now(),
+      Date.now(),
+      tsToMs(c.updated_at) ?? Date.now(),
     ],
   );
 }
@@ -4567,6 +4578,39 @@ export async function getRecipeIngredientUpdatedAt(userId, id) {
   const d = await db();
   const row = await d.getFirstAsync(
     'SELECT updated_at FROM recipe_ingredients WHERE id = ? AND user_id = ?',
+    [id, userId],
+  );
+  return row?.updated_at ?? null;
+}
+
+/**
+ * Existing local updated_at for one body metric row. Used by
+ * src/lib/sync/tables/bodyComposition.js pull handler as the LWW
+ * gate: cloud rows older than the local copy are skipped on pull
+ * (matches the registry contract conflictStrategy='last_write_wins').
+ * Returns null when the local row doesn't exist (cloud wins by
+ * default).
+ */
+export async function getBodyMetricUpdatedAt(userId, id) {
+  if (!id) return null;
+  const d = await db();
+  const row = await d.getFirstAsync(
+    'SELECT updated_at FROM body_metric_log WHERE id = ? AND user_id = ?',
+    [id, userId],
+  );
+  return row?.updated_at ?? null;
+}
+
+/**
+ * Existing local updated_at for one weekly check-in row. Used by
+ * src/lib/sync/tables/weeklyCheckins.js pull handler for the same
+ * LWW gate as body metrics. Null when the local row doesn't exist.
+ */
+export async function getWeeklyCheckinUpdatedAt(userId, id) {
+  if (!id) return null;
+  const d = await db();
+  const row = await d.getFirstAsync(
+    'SELECT updated_at FROM weekly_checkins WHERE id = ? AND user_id = ?',
     [id, userId],
   );
   return row?.updated_at ?? null;

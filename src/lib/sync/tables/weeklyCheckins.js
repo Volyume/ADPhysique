@@ -5,30 +5,46 @@
  * pullFromCloud helpers per SYNC_ARCHITECTURE_LOCKED.md
  * lines 156-238 (registry-driven transport, table-by-table).
  *
- * Behavioural contract preserved verbatim from sync.js:
+ * Contract (after migration 047 closed the cloud-schema gap):
  *
  *   Push: read all weekly_checkins for the local user via
  *         getAllWeeklyCheckinsForUser, map to the v2 schema,
- *         upsert in batches of 200 on (user_id, id). No
- *         client-side updated_at; the server-side default fills
- *         it on upsert.
+ *         stamp updated_at as an ISO string from the local
+ *         updated_at column (DEFAULT now() server-side if NULL),
+ *         upsert in batches of 200 on (user_id, id). Server-side
+ *         BEFORE UPDATE trigger refuses stale writes so the
+ *         pull-side LWW gate has a reliable monotonic clock to
+ *         compare against.
  *
- *   Pull: select all rows from weekly_checkins_v2 for the user,
- *         call insertWeeklyCheckinFromCloud which does
- *         INSERT OR IGNORE. Cloud-side edits to a row that
- *         already exists locally are NOT applied (existing
- *         contract; LWW upgrade is a follow-up).
+ *   Pull: select all rows from weekly_checkins_v2 for the user.
+ *         Compare local updated_at against cloud updated_at;
+ *         only invoke insertWeeklyCheckinFromCloud when the
+ *         cloud row is strictly newer than the local copy.
+ *         Local writes that have not synced yet are NOT
+ *         clobbered.
  *
- * The registry entry says conflictStrategy=last_write_wins; the
- * code does not currently enforce that. Tracked as a follow-up:
- * the push payload needs a client-supplied updated_at and the
- * pull side needs INSERT ... ON CONFLICT UPDATE WHERE clauses.
- * Not in scope for the migration; this commit is a pure lift.
+ * Registry says softDelete:false; rows are hard-deleted on the
+ * cloud. The local SQLite table does carry a deleted_at column
+ * (legacy, additive block in src/lib/database.js) but it is not
+ * synced.
  */
 
 import { logSyncError } from '../telemetry';
 
 const PUSH_BATCH_SIZE = 200;
+
+function _toIso(ms) {
+  if (!ms) return null;
+  if (typeof ms === 'string') return ms;
+  return new Date(Number(ms)).toISOString();
+}
+
+function _toMs(t) {
+  if (t == null) return 0;
+  if (typeof t === 'number') return t;
+  if (typeof t === 'string') return Date.parse(t) || 0;
+  return 0;
+}
 
 export async function pushWeeklyCheckins(sb, { userId, localUserId } = {}) {
   if (!sb || !userId) return { count: 0, errors: 0 };
@@ -38,6 +54,7 @@ export async function pushWeeklyCheckins(sb, { userId, localUserId } = {}) {
     const checkins = await getAllWeeklyCheckinsForUser(localUserId);
     if (!checkins?.length) return { count: 0, errors: 0 };
 
+    const nowIso = new Date().toISOString();
     const rows = checkins.map((c) => ({
       id: c.id,
       user_id: userId,
@@ -53,6 +70,7 @@ export async function pushWeeklyCheckins(sb, { userId, localUserId } = {}) {
       sore_muscles: c.soreMuscles ?? null,
       cycle_override: !!c.cycleOverride,
       notes: c.notes ?? null,
+      updated_at: _toIso(c.updatedAt) ?? nowIso,
     }));
 
     let pushed = 0;
@@ -90,11 +108,21 @@ export async function pullWeeklyCheckins(sb, { userId } = {}) {
     if (!data?.length) return { count: 0, errors: 0 };
 
     // eslint-disable-next-line global-require
-    const { insertWeeklyCheckinFromCloud } = require('../../database');
+    const {
+      insertWeeklyCheckinFromCloud,
+      getWeeklyCheckinUpdatedAt,
+    } = require('../../database');
     let applied = 0;
+    let skipped = 0;
     let errors = 0;
     for (const c of data) {
       try {
+        const localUpdatedAt = await getWeeklyCheckinUpdatedAt(userId, c.id);
+        const cloudUpdatedAt = _toMs(c.updated_at);
+        if (localUpdatedAt && cloudUpdatedAt && localUpdatedAt >= cloudUpdatedAt) {
+          skipped += 1;
+          continue;
+        }
         await insertWeeklyCheckinFromCloud(userId, c);
         applied += 1;
       } catch (e) {
@@ -102,7 +130,7 @@ export async function pullWeeklyCheckins(sb, { userId } = {}) {
         logSyncError('sync.tables.weeklyCheckins.pullRow', e);
       }
     }
-    return { count: applied, errors };
+    return { count: applied, errors, ...(skipped ? { skipped } : {}) };
   } catch (e) {
     logSyncError('sync.tables.weeklyCheckins.pull', e);
     return { count: 0, errors: 1 };

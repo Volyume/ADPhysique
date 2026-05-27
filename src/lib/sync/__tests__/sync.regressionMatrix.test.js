@@ -54,8 +54,10 @@ jest.mock('../../notifications/preferences', () => ({
 jest.mock('../../database', () => ({
   getAllWeeklyCheckinsForUser: jest.fn(),
   insertWeeklyCheckinFromCloud: jest.fn(),
+  getWeeklyCheckinUpdatedAt: jest.fn(),
   getBodyMetricLog: jest.fn(),
   insertBodyMetricFromCloud: jest.fn(),
+  getBodyMetricUpdatedAt: jest.fn(),
   getNutritionTargets: jest.fn(),
   insertNutritionTargetsFromCloud: jest.fn(),
   upsertEdPatternFlagFromCloud: jest.fn(),
@@ -339,14 +341,23 @@ describe('weekly_checkins_v2', () => {
     expect(db.insertWeeklyCheckinFromCloud).toHaveBeenCalledWith('u1', expect.objectContaining({ id: 'wc-cloud' }));
   });
 
-  test('T5 conflict (LWW): pull is INSERT OR IGNORE — local writes survive', async () => {
-    // The handler currently uses INSERT OR IGNORE rather than a
-    // strict LWW gate. This test locks the actual behaviour so the
-    // documented gap in the handler comment matches the test.
-    const sb = makePullSb({ data: [{ id: 'wc-cloud', week_start: 1 }] });
+  test('T5 conflict (LWW): pull skips cloud row older than local updated_at', async () => {
+    const sb = makePullSb({
+      data: [
+        { id: 'wc-stale', week_start: 1, updated_at: new Date(100).toISOString() },
+        { id: 'wc-fresh', week_start: 2, updated_at: new Date(99999).toISOString() },
+      ],
+    });
     getSupabaseClient.mockReturnValue(sb);
+    db.getWeeklyCheckinUpdatedAt.mockImplementation(async (_u, id) =>
+      id === 'wc-stale' ? 999999 : null
+    );
     db.insertWeeklyCheckinFromCloud.mockResolvedValue(undefined);
-    await pullTable('weekly_checkins_v2', { userId: 'u1' });
+
+    const result = await pullTable('weekly_checkins_v2', { userId: 'u1' });
+
+    expect(result.count).toBe(1);
+    expect(result.skipped).toBe(1);
     expect(db.insertWeeklyCheckinFromCloud).toHaveBeenCalledTimes(1);
   });
 
@@ -390,11 +401,7 @@ describe('body_composition_log', () => {
     expect(sb._calls.upserts[0].rows[0]).toMatchObject({ quads: 60, hamstrings: 58 });
   });
 
-  // T3 — softDelete:true per registry, but the handler does not
-  // currently ship `deleted_at` (carried by the same LWW gap noted
-  // in src/lib/sync/tables/bodyComposition.js header comment). The
-  // assertion locks that behaviour:
-  test('T3 soft-delete: handler ships row without deleted_at column today (locked gap)', async () => {
+  test('T3 soft-delete push: tombstone row carries deleted_at ISO string', async () => {
     db.getBodyMetricLog.mockResolvedValue([
       { id: 'bm-1', loggedAt: Date.UTC(2026, 0, 1), deletedAt: Date.UTC(2026, 5, 1) },
     ]);
@@ -403,7 +410,7 @@ describe('body_composition_log', () => {
 
     await pushTable('body_composition_log', { userId: 'u1', localUserId: 'u1' });
 
-    expect('deleted_at' in sb._calls.upserts[0].rows[0]).toBe(false);
+    expect(sb._calls.upserts[0].rows[0].deleted_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 
   test('T4 remote insert pull: cloud row → insertBodyMetricFromCloud called', async () => {
@@ -417,11 +424,23 @@ describe('body_composition_log', () => {
     expect(db.insertBodyMetricFromCloud).toHaveBeenCalledWith('u1', expect.objectContaining({ id: 'bm-cloud' }));
   });
 
-  test('T5 conflict (LWW): pull is INSERT OR IGNORE same as weekly_checkins (locked gap)', async () => {
-    const sb = makePullSb({ data: [{ id: 'bm-cloud', metric_date: '2026-05-01' }] });
+  test('T5 conflict (LWW): pull skips cloud row older than local updated_at', async () => {
+    const sb = makePullSb({
+      data: [
+        { id: 'bm-stale', metric_date: '2026-05-01', updated_at: new Date(100).toISOString() },
+        { id: 'bm-fresh', metric_date: '2026-05-02', updated_at: new Date(99999).toISOString() },
+      ],
+    });
     getSupabaseClient.mockReturnValue(sb);
+    db.getBodyMetricUpdatedAt.mockImplementation(async (_u, id) =>
+      id === 'bm-stale' ? 999999 : null
+    );
     db.insertBodyMetricFromCloud.mockResolvedValue(undefined);
-    await pullTable('body_composition_log', { userId: 'u1' });
+
+    const result = await pullTable('body_composition_log', { userId: 'u1' });
+
+    expect(result.count).toBe(1);
+    expect(result.skipped).toBe(1);
     expect(db.insertBodyMetricFromCloud).toHaveBeenCalledTimes(1);
   });
 
