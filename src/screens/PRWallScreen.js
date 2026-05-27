@@ -9,7 +9,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { LineChart } from 'react-native-gifted-charts';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { getCompletedWorkoutSets, getAllExercises, getLatestBodyWeight } from '../lib/database';
-import { calculate1RM, getStrengthStandard } from '../lib/algorithms';
+import { calculate1RM } from '../lib/algorithms';
 import { EmptyPRsIllustration } from '../components/Illustrations';
 import PeekMenu from '../components/PeekMenu';
 import { getStrengthLevel } from '../lib/strengthStandards';
@@ -18,21 +18,6 @@ import InfoTooltip from '../components/InfoTooltip';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const CHART_W = SCREEN_W - 80;
-
-const STRENGTH_LIFT_MAP = [
-  { match: /bench press/i,                                     lift: 'bench' },
-  { match: /\b(back|front|safety bar)?\s*squat\b/i,           lift: 'squat' },
-  { match: /deadlift/i,                                        lift: 'deadlift' },
-  { match: /overhead press|ohp|shoulder press|military press/i, lift: 'ohp' },
-  { match: /barbell row|pendlay|bent.?over row|yates row/i,    lift: 'row' },
-];
-
-function liftKeyFor(name) {
-  for (const { match, lift } of STRENGTH_LIFT_MAP) {
-    if (match.test(name)) return lift;
-  }
-  return null;
-}
 
 function getLevelColor(label) {
   const map = {
@@ -50,7 +35,7 @@ export default function PRWallScreen({ navigation }) {
   const [grouped, setGrouped] = useState({});
   const [exerciseHistory, setExerciseHistory] = useState({});
   const [bodyWeight, setBodyWeight] = useState(null);
-  const [strengthStandards, setStrengthStandards] = useState({});
+  const [strengthLevels, setStrengthLevels] = useState({});
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState('all');
   const [expandedExercise, setExpandedExercise] = useState(null);
@@ -142,18 +127,18 @@ export default function PRWallScreen({ navigation }) {
       if (bw?.weightKg) {
         const bwValue = Math.round(bw.weightKg * 10) / 10;
         setBodyWeight(bwValue);
-        const standards = {};
+        const levels = {};
         for (const [name, types] of Object.entries(newGrouped)) {
-          const lift = liftKeyFor(name);
           const est1RM = types['1rm_estimate']?.value;
-          if (lift && est1RM) {
-            standards[name] = getStrengthStandard(lift, est1RM, bwValue);
+          if (est1RM) {
+            const lvl = getStrengthLevel(name, est1RM, bwValue);
+            if (lvl) levels[name] = lvl;
           }
         }
-        setStrengthStandards(standards);
+        setStrengthLevels(levels);
       } else {
         setBodyWeight(null);
-        setStrengthStandards({});
+        setStrengthLevels({});
       }
     } catch (e) {
       console.error('PRWallScreen loadData:', e);
@@ -205,7 +190,7 @@ export default function PRWallScreen({ navigation }) {
         }
         contentContainerStyle={styles.list}
         ListHeaderComponent={
-          bodyWeight && Object.keys(strengthStandards).length > 0 ? (
+          bodyWeight && Object.keys(strengthLevels).length > 0 ? (
             <View style={styles.relativeStrengthCard}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
                 <Text style={styles.sectionLabel}>Relative strength</Text>
@@ -215,21 +200,21 @@ export default function PRWallScreen({ navigation }) {
                 />
               </View>
               <Text style={styles.sectionSub}>Based on {bodyWeight} {units} bodyweight</Text>
-              {Object.entries(strengthStandards).map(([name, std]) => std ? (
+              {Object.entries(strengthLevels).map(([name, lvl]) => (
                 <View key={name} style={styles.strengthRow}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.strengthName} numberOfLines={1}>{name}</Text>
                     <Text style={styles.strengthNarrative}>
-                      {parseFloat(std.ratio) >= 1
-                        ? `${std.ratio}× your bodyweight`
-                        : `${Math.round(parseFloat(std.ratio) * 100)}% of your bodyweight`}
+                      {lvl.ratio >= 1
+                        ? `${lvl.ratio.toFixed(2)}× your bodyweight`
+                        : `${Math.round(lvl.ratio * 100)}% of your bodyweight`}
                     </Text>
                   </View>
-                  <View style={[styles.levelBadge, { backgroundColor: getLevelColor(std.label) + '22' }]}>
-                    <Text style={[styles.levelBadgeText, { color: getLevelColor(std.label) }]}>{std.label}</Text>
+                  <View style={[styles.levelBadge, { backgroundColor: getLevelColor(lvl.label) + '22' }]}>
+                    <Text style={[styles.levelBadgeText, { color: getLevelColor(lvl.label) }]}>{lvl.label}</Text>
                   </View>
                 </View>
-              ) : null)}
+              ))}
             </View>
           ) : (!bodyWeight && filteredNames.length > 0) ? (
             // Only ask for body weight when there's at least one PR that
@@ -255,10 +240,7 @@ export default function PRWallScreen({ navigation }) {
           const types = grouped[name];
           const best1RM = types['1rm_estimate'];
           const heaviest = types['heaviest_weight'];
-          const standard = strengthStandards[name];
-          const level = best1RM && bodyWeight
-            ? getStrengthLevel(name, best1RM.value, bodyWeight)
-            : null;
+          const level = strengthLevels[name] || null;
           const history = exerciseHistory[name];
           const isExpanded = expandedExercise === name;
 
@@ -296,28 +278,23 @@ export default function PRWallScreen({ navigation }) {
                   <Text style={styles.prDate}>{format(new Date(heaviest.achieved_date), 'MMM d')}</Text>
                 </View>
               )}
-              {standard && (
+              {level && (
                 <View style={styles.standardInCard}>
                   <Text style={styles.standardInCardText}>
-                    {parseFloat(standard.ratio) >= 1
-                      ? `${standard.ratio}× bodyweight`
-                      : `${Math.round(parseFloat(standard.ratio) * 100)}% of bodyweight`}
+                    {level.ratio >= 1
+                      ? `${level.ratio.toFixed(2)}× bodyweight`
+                      : `${Math.round(level.ratio * 100)}% of bodyweight`}
                     {' · '}
-                    <Text style={{ color: getLevelColor(standard.label) }}>{standard.label}</Text>
+                    <Text style={{ color: getLevelColor(level.label), fontWeight: fontWeight.semibold }}>
+                      {level.label}
+                    </Text>
                   </Text>
-                </View>
-              )}
-              {level && (
-                <>
-                  <View style={styles.strengthLevelChip}>
-                    <Text style={styles.strengthLevelText}>{level.label}</Text>
-                  </View>
                   {level.nextTarget && level.nextLabel && (
                     <Text style={styles.strengthLevelNext}>
-                      Next milestone: {Math.round(level.nextTarget * 10) / 10}{units} for {level.nextLabel}
+                      Next: {Math.round(level.nextTarget * 10) / 10}{units} for {level.nextLabel}
                     </Text>
                   )}
-                </>
+                </View>
               )}
               {isExpanded && history && history.length > 0 && (
                 <View style={styles.chartWrap}>
@@ -501,21 +478,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   standardInCardText: { fontSize: fontSize.xs, color: colors.textSecondary },
-  strengthLevelChip: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
-    borderRadius: radius.sm,
-    alignSelf: 'flex-start',
-    backgroundColor: colors.primaryBg,
-    borderWidth: 1,
-    borderColor: colors.primary + '40',
-    marginTop: spacing.xs,
-  },
-  strengthLevelText: {
-    fontSize: fontSize.xs,
-    color: colors.primary,
-    fontWeight: fontWeight.semibold,
-  },
   strengthLevelNext: {
     fontSize: fontSize.xs,
     color: colors.textMuted,

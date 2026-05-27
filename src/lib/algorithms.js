@@ -691,52 +691,6 @@ export function calculatePlates(targetWeight, barWeight = 20, availablePlates = 
   return { plates, totalWeight, sideWeight: plates.reduce((s, p) => s + p, 0) };
 }
 
-// Strength standards (ratio of 1RM to bodyweight).
-//
-// Older / simpler variant. `lib/strengthStandards.js` is the newer
-// implementation: 5 lifts (bench, squat, deadlift, OHP, row), regex
-// name-matching, an Untrained band, and a next-target output. New code
-// should prefer `strengthStandards.getStrengthLevel`. This export and
-// `getStrengthStandard` below remain because `PRWallScreen.js` still
-// computes a bulk summary against the lift-key map at load time;
-// migrating that path is a future cleanup.
-export const STRENGTH_STANDARDS = {
-  bench: [
-    { ratio: 0.5,  label: 'Beginner' },
-    { ratio: 1.0,  label: 'Novice' },
-    { ratio: 1.25, label: 'Intermediate' },
-    { ratio: 1.5,  label: 'Advanced' },
-    { ratio: 2.0,  label: 'Elite' },
-  ],
-  squat: [
-    { ratio: 0.75, label: 'Beginner' },
-    { ratio: 1.25, label: 'Novice' },
-    { ratio: 1.5,  label: 'Intermediate' },
-    { ratio: 2.0,  label: 'Advanced' },
-    { ratio: 2.5,  label: 'Elite' },
-  ],
-  deadlift: [
-    { ratio: 1.0,  label: 'Beginner' },
-    { ratio: 1.5,  label: 'Novice' },
-    { ratio: 2.0,  label: 'Intermediate' },
-    { ratio: 2.5,  label: 'Advanced' },
-    { ratio: 3.0,  label: 'Elite' },
-  ],
-};
-
-export function getStrengthStandard(lift, estimated1RM, bodyWeight) {
-  if (!bodyWeight || bodyWeight <= 0) return null;
-  const standards = STRENGTH_STANDARDS[lift];
-  if (!standards) return null;
-
-  const ratio = estimated1RM / bodyWeight;
-  let label = 'Beginner';
-  for (const standard of standards) {
-    if (ratio >= standard.ratio) label = standard.label;
-  }
-  return { ratio: ratio.toFixed(2), label };
-}
-
 // RP-style soreness × performance → volume decision
 // Inputs use numeric scales:
 //   soreness:    1=none  2=healed_early  3=healed_on_time  4=still_sore

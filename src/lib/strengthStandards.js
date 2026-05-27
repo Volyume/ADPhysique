@@ -18,10 +18,7 @@ export const STRENGTH_STANDARDS = {
     levels: [0.50, 0.75, 1.00, 1.25, 1.50],
   },
   squat: {
-    // Matches "Squat", "Back Squat", "Front Squat" — but not e.g. "Goblet Squat"
-    // which is not a barbell back/front squat. We keep it broad and rely on
-    // the user logging the standard barbell variants.
-    match: /\b(back|front)?\s*squat\b/i,
+    match: /\b(back|front|safety bar)?\s*squat\b/i,
     levels: [0.75, 1.00, 1.50, 2.00, 2.50],
   },
   deadlift: {
@@ -29,11 +26,11 @@ export const STRENGTH_STANDARDS = {
     levels: [1.00, 1.25, 1.75, 2.25, 2.75],
   },
   ohp: {
-    match: /overhead press/i,
+    match: /overhead press|\bohp\b|shoulder press|military press/i,
     levels: [0.35, 0.55, 0.75, 1.00, 1.25],
   },
   row: {
-    match: /barbell row|pendlay row|bent.?over row/i,
+    match: /barbell row|pendlay row|pendlay|bent.?over row|yates row/i,
     levels: [0.50, 0.75, 1.00, 1.25, 1.50],
   },
 };
