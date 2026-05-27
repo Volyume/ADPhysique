@@ -200,5 +200,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ctaDisabled: { opacity: 0.5 },
-  ctaText: { color: '#000', fontWeight: fontWeight.bold, fontSize: fontSize.md },
+  ctaText: { color: colors.background, fontWeight: fontWeight.bold, fontSize: fontSize.md },
 });

@@ -81,7 +81,7 @@ function ExercisePickerModal({ visible, onClose, onSelect }) {
       onSelect(newEx);
       onClose();
     } catch (_e) {
-      Alert.alert('Error', 'Could not save exercise. Please try again.');
+      Alert.alert("Couldn't save exercise", 'Try again.');
     } finally {
       setCreating(false);
     }

@@ -126,7 +126,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
       });
       navigation.goBack();
     } catch (err) {
-      Alert.alert('Couldn\'t save', 'Try again. If it keeps happening, restart the app and the entry will be queued for sync.');
+      Alert.alert("Couldn't save", 'Try again.');
     } finally {
       setSaving(false);
     }

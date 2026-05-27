@@ -800,15 +800,15 @@ function VolumeSnapshotGrid({ volume }) {
       })}
       <View style={styles.volLegend}>
         <View style={styles.volLegendItem}>
-          <View style={[styles.volLegendDot, { backgroundColor: '#F97316' }]} />
+          <View style={[styles.volLegendDot, { backgroundColor: colors.warning }]} />
           <Text style={styles.volLegendText}>Below target</Text>
         </View>
         <View style={styles.volLegendItem}>
-          <View style={[styles.volLegendDot, { backgroundColor: '#22C55E' }]} />
+          <View style={[styles.volLegendDot, { backgroundColor: colors.success }]} />
           <Text style={styles.volLegendText}>Good</Text>
         </View>
         <View style={styles.volLegendItem}>
-          <View style={[styles.volLegendDot, { backgroundColor: '#EF4444' }]} />
+          <View style={[styles.volLegendDot, { backgroundColor: colors.error }]} />
           <Text style={styles.volLegendText}>Over max</Text>
         </View>
       </View>

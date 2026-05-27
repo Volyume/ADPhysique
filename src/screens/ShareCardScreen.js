@@ -654,7 +654,7 @@ export default function ShareCardScreen({ navigation, route }) {
         dialogTitle: isSession ? 'Share Session Card' : 'Share PR Card',
       });
     } catch (_e) {
-      Alert.alert('Error', 'Could not generate card. Please try again.');
+      Alert.alert("Couldn't generate card", 'Try again.');
     } finally {
       setSharing(false);
     }

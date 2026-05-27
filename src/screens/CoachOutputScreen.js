@@ -1388,7 +1388,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   edLockoutCtaPrimaryText: {
-    color: '#000',
+    color: colors.background,
     fontWeight: fontWeight.bold,
     fontSize: fontSize.sm,
   },

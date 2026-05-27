@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md, borderRadius: radius.md,
   },
-  primaryBtnText: { color: '#000', fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  primaryBtnText: { color: colors.background, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
   secondaryBtn: {
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md, marginTop: spacing.md,
   },

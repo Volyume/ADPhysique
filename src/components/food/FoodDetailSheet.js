@@ -320,5 +320,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     alignItems: 'center',
   },
-  saveText: { color: '#000', fontSize: fontSize.md, fontWeight: fontWeight.bold },
+  saveText: { color: colors.background, fontSize: fontSize.md, fontWeight: fontWeight.bold },
 });

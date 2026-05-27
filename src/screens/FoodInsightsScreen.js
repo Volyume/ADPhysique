@@ -108,7 +108,7 @@ export default function FoodInsightsScreen({ navigation }) {
         Alert.alert('Exported', `${result.rowCount} ${result.rowCount === 1 ? 'entry' : 'entries'} written to CSV.`);
       }
     } catch (e) {
-      Alert.alert("Export failed", 'Try again. If it keeps failing, restart the app.');
+      Alert.alert("Export failed", 'Try again.');
     } finally {
       setExporting(false);
     }

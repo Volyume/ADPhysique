@@ -173,20 +173,10 @@ export default function NutritionEducationScreen({ navigation }) {
           </KeyPoint>
         </Section>
 
-        {/* Diet builder teaser */}
-        <View style={styles.teaser}>
-          <View style={styles.teaserIconWrap}>
-            <Ionicons name="construct-outline" size={20} color={colors.primary} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.teaserTitle}>Coming soon</Text>
-            <Text style={styles.teaserBody}>
-              A guided diet builder that turns your targets into example meals
-              and a daily eating plan. Until then, plug your numbers into any
-              tracking app and you're set.
-            </Text>
-          </View>
-        </View>
+        {/* "Coming soon" teaser removed 2026-05-27 per CLAUDE.md design
+            rule: "Coming soon placeholders or greyed-out future features.
+            Ship what's there or hide it." The teaser was promising a diet
+            builder that doesn't exist. */}
 
         <Text style={styles.footer}>
           Volyume's starting numbers are estimates. The 2–4 week trend is what

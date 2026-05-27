@@ -903,7 +903,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                         <WhySection icon="flame-outline" color={colors.warning} title={`Calories: ${(results.targetKcal ?? 0).toLocaleString()} kcal`} body={calorieWhy} />
                         <WhySection icon="barbell-outline" color={colors.primary} title={`Protein: ${results.proteinG}g`} body={proteinWhy} />
                         <WhySection icon="water-outline" color={colors.success} title={`Fat: ${results.fatG}g`} body={fatWhy} />
-                        <WhySection icon="leaf-outline" color="#A78BFA" title={`Carbs: ${results.carbsG}g`} body={carbWhy} />
+                        <WhySection icon="leaf-outline" color={colors.primary} title={`Carbs: ${results.carbsG}g`} body={carbWhy} />
                       </View>
                     )}
                   </View>

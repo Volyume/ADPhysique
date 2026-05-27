@@ -125,7 +125,7 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
       setShowAddModal(false);
       resetForm();
     } catch (_e) {
-      Alert.alert('Error', 'Could not save exercise. Please try again.');
+      Alert.alert("Couldn't save exercise", 'Try again.');
     } finally {
       setSavingNew(false);
     }
@@ -154,7 +154,7 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
                     await deleteExercise(item.id);
                     await loadExercises();
                   } catch (_e) {
-                    Alert.alert('Error', 'Could not delete exercise. Please try again.');
+                    Alert.alert("Couldn't delete exercise", 'Try again.');
                   }
                 },
               },

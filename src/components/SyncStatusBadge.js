@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: fontSize.xs,
-    color: '#DC2626',
+    color: colors.error,
   },
   syncButton: {
     marginTop: spacing.md,
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   syncButtonText: {
-    color: '#0D0D0D',
+    color: colors.background,
     fontWeight: '700',
     fontSize: fontSize.sm,
   },

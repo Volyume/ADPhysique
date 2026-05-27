@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
   plateText: {
     fontSize: 8,
     fontWeight: fontWeight.black,
-    color: '#000',
+    color: colors.background,
     transform: [{ rotate: '90deg' }],
   },
   plateTextLarge: {
