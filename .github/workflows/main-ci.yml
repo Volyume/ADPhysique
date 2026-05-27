@@ -81,6 +81,19 @@ jobs:
         #   synchronously, then remove --forceExit and verify
         #   warning count is 0.
         run: npx jest --runInBand --ci --forceExit
+        env:
+          # Live-cloud E2E (T7 + T8) opt-in. When all four are set,
+          # src/lib/sync/__tests__/sync.e2e.liveCloud.test.js signs
+          # in to the throwaway Supabase test project and runs the
+          # two-device propagation + offline collision scenarios.
+          # When ANY is missing, the suite registers a single
+          # visible skipped test instead. Repo secrets — never paste
+          # production values here. Setup walkthrough in
+          # supabase/README.md § Live-cloud E2E test project.
+          SUPABASE_TEST_URL:           ${{ secrets.SUPABASE_TEST_URL }}
+          SUPABASE_TEST_ANON_KEY:      ${{ secrets.SUPABASE_TEST_ANON_KEY }}
+          SUPABASE_TEST_USER_EMAIL:    ${{ secrets.SUPABASE_TEST_USER_EMAIL }}
+          SUPABASE_TEST_USER_PASSWORD: ${{ secrets.SUPABASE_TEST_USER_PASSWORD }}
 
   maestro-lint:
     name: Maestro flow structural lint

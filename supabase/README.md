@@ -400,41 +400,79 @@ project. They insert + delete real rows in `weekly_checkins_v2`
 and would pollute production telemetry, RLS evaluation, and the
 founder's own data.
 
-### What the founder sets up once
+### Four steps that only the project owner can do
 
-1. Create a separate Supabase project (free tier is fine).
-   Recommend a name like `volyume-e2e-test` so it cannot be
-   confused with production.
-2. Apply every migration in this folder (037 through 047 at
-   time of writing) to the test project in numeric order. The
-   verification queries in this README work against the test
-   project too.
-3. Create one test user account in the test project's
-   Authentication panel (Authentication -> Users -> Add user).
-   Example email: `e2e+volyume@example.com`. Use a long
-   randomly generated password. Disable email confirmation in
-   the project's Authentication settings, otherwise the test
-   sign-in will fail with `email not confirmed`.
-4. Save the four values as GitHub repo secrets (Settings ->
-   Secrets and variables -> Actions):
-     `SUPABASE_TEST_URL`            REST URL from project Settings
-     `SUPABASE_TEST_ANON_KEY`       anon key from project Settings
-     `SUPABASE_TEST_USER_EMAIL`     the test account email
-     `SUPABASE_TEST_USER_PASSWORD`  the test account password
+These four require dashboard access (Supabase + GitHub). The rest
+of the setup is already in the repo and runs itself.
 
-### What CI then does
+**1. Create a throwaway Supabase project.**
+Supabase Dashboard -> New Project. Name it `volyume-e2e-test` so
+nobody confuses it with production. Free tier is fine. Pick the
+same region as production for parity. Save the database password
+in a password manager; you will not need it for the tests.
 
-Once the secrets are in place, add them to the Build Android
-workflow's `env:` block so Jest sees them. The E2E suite picks
-them up and runs the two scenarios end-to-end on every CI run.
-Without the secrets, the suite remains a single skipped test
-and CI stays green.
+**2. Disable email confirmation, then create one test user.**
+Authentication -> Providers -> Email -> turn OFF "Confirm email"
+and Save. Then Authentication -> Users -> Add user -> Create new
+user. Email: `e2e+volyume@example.com` (or any address; it is
+never emailed). Password: generate a long random one and save it.
+"Auto Confirm User" should be checked.
 
-### Local development
+If you skip the "Confirm email" toggle, the test will sign-in
+fail with `email not confirmed`. The verify script below tells
+you that explicitly.
 
-To run locally, export the four vars in your shell before
-`npx jest src/lib/sync/__tests__/sync.e2e.liveCloud.test.js`.
-Do NOT commit them to the repo or to `.env`.
+**3. Run the test-project bootstrap SQL.**
+Open the test project's SQL Editor -> New query. Paste the entire
+contents of `supabase/test_project_bootstrap.sql` (a single
+auto-generated bundle of setup_complete.sql + every migration
+006..047 in numeric order, ~6900 lines). Run once.
+
+The bundle is idempotent; if a single block errors, the error
+message will name the source `migrate_NNN_*.sql` file. Report
+back with the error.
+
+After the bundle runs clean, paste
+`supabase/audit_cloud_schema_drift.sql` and run. Every column the
+sync handlers depend on should show `status:OK`. Any MISSING row
+means the bundle is incomplete.
+
+**4. Add four GitHub repo secrets.**
+GitHub -> repo -> Settings -> Secrets and variables -> Actions ->
+New repository secret. Add all four:
+
+  `SUPABASE_TEST_URL`            -> Test project Settings -> API -> Project URL
+  `SUPABASE_TEST_ANON_KEY`       -> Test project Settings -> API -> Project API keys -> anon public
+  `SUPABASE_TEST_USER_EMAIL`     -> the email from step 2
+  `SUPABASE_TEST_USER_PASSWORD`  -> the password from step 2
+
+That's it. The Main CI workflow already routes the four secrets
+into the Jest step's env block (`.github/workflows/main-ci.yml`);
+the next CI run picks them up and unskips T7 + T8 automatically.
+
+### Verify the setup before relying on CI
+
+`scripts/verify-e2e-setup.js` runs a five-step probe (env vars,
+client build, sign-in, migration 047 column probe, RLS round-trip
+insert/delete). Run it locally with the four env vars set:
+
+```bash
+export SUPABASE_TEST_URL=https://xxx.supabase.co
+export SUPABASE_TEST_ANON_KEY=eyJ...
+export SUPABASE_TEST_USER_EMAIL=e2e+volyume@example.com
+export SUPABASE_TEST_USER_PASSWORD='...'
+node scripts/verify-e2e-setup.js
+```
+
+Each step prints `OK` or `FAIL` with a precise pointer at what to
+fix. When all five pass, the CI run will too.
+
+To run the E2E suite locally with the same env exported:
+```bash
+npx jest src/lib/sync/__tests__/sync.e2e.liveCloud.test.js
+```
+
+Do NOT commit the env vars to the repo or to `.env`.
 
 ### Cleanup
 
