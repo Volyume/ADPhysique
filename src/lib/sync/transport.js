@@ -1,5 +1,5 @@
 /**
- * Sync transport — Supabase RPC wrappers and per-table dispatch.
+ * Sync transport, Supabase RPC wrappers and per-table dispatch.
  *
  * Two surfaces:
  *
@@ -57,7 +57,7 @@ export { beginFoodRun };
 
 // Lazy require so the supabase client module (which pulls in
 // react-native-url-polyfill at top-level) is not loaded merely by
-// importing transport.js — that broke sync.runner.triggers.test.js,
+// importing transport.js, that broke sync.runner.triggers.test.js,
 // which expects to load the runner without dragging in the full
 // supabase stack. Production callers still resolve the same module.
 function _getSupabaseClient() {
@@ -97,7 +97,7 @@ const PUSH_HANDLERS = {
   nutrition_targets: pushNutritionTargets,
   profiles: pushProfiles,
   recipe_ingredients: pushRecipeIngredients,
-  // Pull-only tables intentionally absent — pushTable returns
+  // Pull-only tables intentionally absent, pushTable returns
   // skipped:'pull_only' before reaching this map:
   //   ed_pattern_flags, tier_history, daily_intake_rollups.
   // Food-domain bidirectional tables share the coordinator:

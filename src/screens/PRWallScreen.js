@@ -219,7 +219,7 @@ export default function PRWallScreen({ navigation }) {
           ) : (!bodyWeight && filteredNames.length > 0) ? (
             // Only ask for body weight when there's at least one PR that
             // could be compared. Showing this prompt with zero PRs would
-            // be noise — the user has nothing to relate the number to yet.
+            // be noise, the user has nothing to relate the number to yet.
             <TouchableOpacity
               style={styles.bwPromptCard}
               onPress={() => navigation.navigate('BodyMetrics')}

@@ -1,7 +1,7 @@
 /**
  * weeklyCoach.js
  * Core algorithm for Volyume Pro weekly coaching output.
- * Pure functions only — no side effects, no DB calls, no I/O.
+ * Pure functions only, no side effects, no DB calls, no I/O.
  *
  * Translates check-in data + weight trend + training data into a
  * unified coaching card: trend summary, what's working, adjustments,
@@ -79,7 +79,7 @@ export function getEwmaSevenDaysAgo(weights, alpha = 0.1) {
 
 /**
  * Returns a confidence level for the current check-in data set.
- * Used to gate calorie/training adjustments — we hold the plan when data is thin.
+ * Used to gate calorie/training adjustments, we hold the plan when data is thin.
  *
  * level: 'high' | 'medium' | 'low' | 'data_hold'
  * reasons: array of plain-English strings explaining the level
@@ -385,7 +385,7 @@ export function runWeeklyCoach(inputs) {
   // same calendar week always yields the same seed regardless of whether the
   // caller stored weekStart as a Sunday-anchored or Monday-anchored timestamp.
   // (The notifications module uses Monday; some older check-in rows stored
-  // Sunday — without this normalisation the same week could produce different
+  // Sunday, without this normalisation the same week could produce different
   // copy variants depending on the write path.)
   const weekSeed = (() => {
     if (!checkin?.weekStart) return 0;
@@ -530,7 +530,7 @@ export function runWeeklyCoach(inputs) {
       change = calsAdherence === 'hit' ? -150 : -100;
       calNote = "Weight is coming down slower than the target rate.";
     } else if (phase.isCut && offTargetDirection < 0) {
-      // Losing too fast — protect muscle (standard, non-compressed)
+      // Losing too fast, protect muscle (standard, non-compressed)
       change = +125;
       calNote = "Weight is dropping faster than the target rate. Slowing it down protects muscle.";
     } else if (phase.isBulk && offTargetDirection < 0) {
@@ -599,7 +599,7 @@ export function runWeeklyCoach(inputs) {
   const band = stepsBand(goalPhase, bwRef);
 
   if (phase.isCut && !onTarget && offTargetDirection > 0 && !poorRecovery) {
-    // Losing too slowly — bump steps if room
+    // Losing too slowly, bump steps if room
     const newTarget = Math.min(currentStepsTarget + 1000, band.upper);
     if (newTarget > currentStepsTarget) {
       stepsAdjustment = {
@@ -833,7 +833,7 @@ export function runWeeklyCoach(inputs) {
     whatWorking.push(`Weight trend on target (${rateLabel}).`);
   }
 
-  // Fallback — only when literally nothing to say
+  // Fallback, only when literally nothing to say
   if (whatWorking.length === 0) {
     whatWorking.push('Data logged.');
   }

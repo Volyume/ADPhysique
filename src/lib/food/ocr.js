@@ -1,5 +1,5 @@
 /**
- * OCR adapter — on-device MLKit text recognition.
+ * OCR adapter, on-device MLKit text recognition.
  *
  * Per MOVE_1_5_BARCODE_AND_OCR.md (locked spec): free, on-device,
  * no per-call cost. Uses @react-native-ml-kit/text-recognition which

@@ -223,7 +223,7 @@ describe('whyThisTemplates: voice rules compliance', () => {
     for (const out of allOutputs) {
       const check = checkJargon(out);
       if (!check.clean) {
-        throw new Error(`Jargon detected in: "${out}" — violations: ${check.violations.join(', ')}`);
+        throw new Error(`Jargon detected in: "${out}", violations: ${check.violations.join(', ')}`);
       }
     }
   });

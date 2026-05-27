@@ -1,5 +1,5 @@
 /**
- * Navigation integrity test — verifies every `navigation.navigate('X')` and
+ * Navigation integrity test, verifies every `navigation.navigate('X')` and
  * `navigation.replace('X')` call in the codebase resolves to a screen that
  * is actually registered in RootNavigator. Catches "button tap → nothing
  * happens" bugs before they ship.
@@ -89,10 +89,10 @@ describe('navigation integrity', () => {
     }
   });
 
-  // Soft check — surfaces potentially dead routes but doesn't fail the build
+  // Soft check, surfaces potentially dead routes but doesn't fail the build
   test('flag screens that are registered but never navigated to', () => {
     const referenced = new Set(refs.map(r => r.target));
-    // Some registered names are tab roots or first screens — they're
+    // Some registered names are tab roots or first screens, they're
     // entered by tab press / initial route, not via navigate(). Exempt
     // a small allowlist.
     const exempt = new Set([
@@ -106,7 +106,7 @@ describe('navigation integrity', () => {
       if (exempt.has(name)) continue;
       orphans.push(name);
     }
-    // Soft assertion — log but don't fail unless extreme
+    // Soft assertion, log but don't fail unless extreme
     if (orphans.length > 0) {
       // eslint-disable-next-line no-console
       console.log('[nav-integrity] registered but never navigated to:', orphans.join(', '));

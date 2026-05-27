@@ -125,7 +125,7 @@ describe('_resolveTier (post-beta state machine, beta=false)', () => {
 });
 
 describe('FEATURE_MAP tier inheritance (no beta override)', () => {
-  // Direct against FEATURE_MAP — the data structure is the truth
+  // Direct against FEATURE_MAP, the data structure is the truth
   // regardless of how isPaidTier resolves the current user.
 
   test('free has the six base features', () => {

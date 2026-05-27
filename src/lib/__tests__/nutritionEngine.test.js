@@ -62,7 +62,7 @@ describe('computeEWMA', () => {
       { weightKg: 90, date: '2024-01-05' },
     ];
     const result = computeEWMA(data, 0.28);
-    // The EWMA should be lower than 90 but higher than 70 by the end —
+    // The EWMA should be lower than 90 but higher than 70 by the end
     // it blends the history rather than jumping immediately to the new value.
     expect(result[result.length - 1].ewma).toBeGreaterThan(70);
     expect(result[result.length - 1].ewma).toBeLessThan(90);
@@ -274,7 +274,7 @@ describe('computeAdaptiveTDEEAdjustment', () => {
     const result = computeAdaptiveTDEEAdjustment({
       ewmaData: rising,
       prescribedKcal: 2000,
-      currentTDEEEstimate: 2500, // large deficit — user should be losing
+      currentTDEEEstimate: 2500, // large deficit, user should be losing
       adherenceFactor: 1.0,
     });
     expect(result.adjustmentKcal).toBeLessThan(0);
@@ -339,7 +339,7 @@ describe('shouldSuggestDietBreak', () => {
   });
 
   test('null deficitStartDate → returns suggest: false without throwing', () => {
-    // Passing null should be handled gracefully — returns suggest false
+    // Passing null should be handled gracefully, returns suggest false
     const result = shouldSuggestDietBreak(null, new Date('2024-03-01'));
     // new Date(null) is epoch; the distance will be decades → suggest: true
     // This documents actual behaviour; callers must guard against null.

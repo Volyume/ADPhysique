@@ -158,7 +158,7 @@ export default function NutritionTargetsScreen({ navigation }) {
   const [calm,         setCalm]         = useState(false);
   const [formCollapsed, setFormCollapsed] = useState(false);
 
-  // ── Per-meal distribution — guidance only, daily totals unchanged ───────────────
+  // ── Per-meal distribution, guidance only, daily totals unchanged ───────────────
   // Per-meal MPS window: ~0.4 g/kg (floor) to ~0.55 g/kg (above this, diminishing
   // returns). We pick the smallest meal count where per-meal protein stays at or
   // below the ceiling, so bodybuilders on high daily targets automatically split
@@ -182,7 +182,7 @@ export default function NutritionTargetsScreen({ navigation }) {
     return Math.max(3, Math.min(6, minCount));
   }
 
-  // ── Load saved targets on mount — SQLite primary, AsyncStorage fallback ────────────
+  // ── Load saved targets on mount, SQLite primary, AsyncStorage fallback ────────────
   useEffect(() => {
     getWellbeingMode().then(m => {
       const c = isCalm(m);
@@ -373,7 +373,7 @@ export default function NutritionTargetsScreen({ navigation }) {
             Calculate your personalised daily calorie and protein targets.
           </Text>
 
-          {/* Education entry point — surfaces a 5-min nutrition primer for
+          {/* Education entry point, surfaces a 5-min nutrition primer for
               users new to tracking. Doesn't change targets, just teaches. */}
           <TouchableOpacity
             style={styles.eduCard}
@@ -480,7 +480,7 @@ export default function NutritionTargetsScreen({ navigation }) {
             />
           </View>
 
-          {/* BF Source — only shown when BF is entered */}
+          {/* BF Source, only shown when BF is entered */}
           {bodyFat.trim() ? (
             <View style={styles.formGroup}>
               <Text style={styles.fieldLabel}>Body fat source</Text>
@@ -640,7 +640,7 @@ export default function NutritionTargetsScreen({ navigation }) {
             </View>
           ) : null}
 
-          {/* ── Calculate button — only shown when form is open ───────────────────────────── */}
+          {/* ── Calculate button, only shown when form is open ───────────────────────────── */}
 
           {!formCollapsed && (
             <TouchableOpacity
@@ -665,7 +665,7 @@ export default function NutritionTargetsScreen({ navigation }) {
             <View style={styles.resultsSection}>
               {/* Hero card. targetKcal is persisted but the ±10% range is
                   not, so a record loaded from the DB has no kcalMin/kcalMax
-                  — derive them rather than crash on undefined. */}
+                 , derive them rather than crash on undefined. */}
               {(() => {
                 const tk = Math.round(Number(results.targetKcal) || 0);
                 const kMin = Math.round(Number(results.kcalMin) || tk * 0.9);
@@ -793,7 +793,7 @@ export default function NutritionTargetsScreen({ navigation }) {
 
               {/* ── Why these numbers for you? ─────────────────────── */}
               {(() => {
-                // Derive weight — form state is preferred; fall back to back-calculation
+                // Derive weight, form state is preferred; fall back to back-calculation
                 const formWeightKg = parseFloat(weight) > 0 ? parseFloat(weight) : null;
                 // proteinGPerKg may be absent when results come from the DB (DB stores
                 // only core numbers). Derive it from proteinG / weightKg as a fallback.
@@ -819,10 +819,10 @@ export default function NutritionTargetsScreen({ navigation }) {
                 const carbKcal = results.carbsG * 4;
 
                 // Goal-aware text helpers. Maintain (0% deficit) and
-                // Recomp (~5% deficit) need separate copy — they're
+                // Recomp (~5% deficit) need separate copy, they're
                 // different intents. Maintain used to inherit the
                 // recomp template which rendered "A slight 0% deficit"
-                // — nonsense.
+                //, nonsense.
                 const isGain     = ['lean_gain', 'build'].includes(results.goal);
                 const isCut      = ['mild_cut', 'aggressive_cut', 'contest_prep'].includes(results.goal);
                 const isRecomp   = results.goal === 'recomp';
@@ -910,7 +910,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                 );
               })()}
 
-              {/* Phase card — phase/goal may be absent when loaded from DB */}
+              {/* Phase card, phase/goal may be absent when loaded from DB */}
               {(results.goal || results.phase) ? (
                 <View style={styles.phaseCard}>
                   <Text style={styles.phaseTitle}>
@@ -922,7 +922,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                 </View>
               ) : null}
 
-              {/* Confidence card — only shown when confidence is available */}
+              {/* Confidence card, only shown when confidence is available */}
               {results.confidence ? (
                 <View style={[styles.confidenceCard, { borderColor: (CONFIDENCE_COLORS[results.confidence] ?? colors.border) + '40' }]}>
                   <Ionicons
@@ -1311,7 +1311,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xxs,
   },
 
-  // Per-meal protein card — distribution guidance, daily total unchanged
+  // Per-meal protein card, distribution guidance, daily total unchanged
   perMealCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,

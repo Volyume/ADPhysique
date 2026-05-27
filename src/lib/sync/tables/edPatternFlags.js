@@ -1,5 +1,5 @@
 /**
- * ed_pattern_flags per-table pull (no push — pull_only).
+ * ed_pattern_flags per-table pull (no push, pull_only).
  *
  * Registry entry: pull_only + server_wins + serverAuthoritative.
  * The server-side ed_pattern_flags table is written by the engine
@@ -10,7 +10,7 @@
  *
  * Pull: select all rows for the user, route each through
  *       upsertEdPatternFlagFromCloud which does INSERT OR REPLACE
- *       (server_wins semantics — any local edits are stomped
+ *       (server_wins semantics, any local edits are stomped
  *       by the cloud copy on the next pull).
  */
 

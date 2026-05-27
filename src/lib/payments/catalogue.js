@@ -2,7 +2,7 @@
  * The three consumer SKUs locked in SUBSCRIPTION_AND_PAYMENT_LOCKED.md
  * lines 71-77 (re-locked 2026-05-25 to the 2-tier model). One tier
  * (Pro), three pricing windows. Coach SKUs (phase 2) live separately
- * — purchased via the coach web dashboard, not IAP.
+ *, purchased via the coach web dashboard, not IAP.
  *
  * SKU IDs match what gets created in Google Play Console at Phase B
  * pre-launch.
@@ -45,7 +45,7 @@ export const SKU_CATALOGUE = Object.freeze({
 
 /**
  * Return the SKU record for (tier, pricingWindow). Returns null on
- * unknown combinations rather than throwing — call sites are render
+ * unknown combinations rather than throwing, call sites are render
  * paths where a missing SKU shouldn't crash the UI.
  *
  * Tier argument retained for API compatibility with the 3-tier era;

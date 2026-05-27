@@ -2,10 +2,10 @@
  * Public telemetry API per TELEMETRY_DASHBOARDS_LOCKED.md lines
  * 310-315. The spec'd 4-file split:
  *
- *   index.js        — public API (this file)
- *   events.js       — canonical event names + deferral metadata
- *   transport.js    — validates + posts to Supabase
- *   sentryBridge.js — mirrors as Sentry breadcrumbs
+ *   index.js       , public API (this file)
+ *   events.js      , canonical event names + deferral metadata
+ *   transport.js   , validates + posts to Supabase
+ *   sentryBridge.js, mirrors as Sentry breadcrumbs
  *
  * The legacy single-file src/lib/engineTelemetry.js stays in place
  * as the actual queue + push implementation; transport.js delegates

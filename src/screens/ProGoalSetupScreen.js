@@ -24,7 +24,7 @@ const APPROACH_SHORT = {
   advanced:  'Upper end for competitive athletes and harder cuts.',
 };
 
-// Training setup options — mirror the lists in ProOnboardingScreen so
+// Training setup options, mirror the lists in ProOnboardingScreen so
 // re-running this screen produces the same plan structure as a fresh
 // wizard run with identical answers.
 const EXPERIENCE_OPTIONS = [
@@ -70,10 +70,10 @@ export default function ProGoalSetupScreen({ navigation }) {
     userProfile?.proteinApproach
     ?? (ADVANCED_PROTEIN_GOALS.includes(userProfile?.trainingGoal) ? 'advanced' : 'optimised')
   );
-  // Weak points — only meaningful for goals that bias volume toward priority
+  // Weak points, only meaningful for goals that bias volume toward priority
   // muscles. Hidden in the UI otherwise but the value is preserved across edits.
   const [planWeakPoints, setPlanWeakPoints] = useState(userProfile?.planWeakPoints ?? []);
-  // Training setup — prefilled from the user's existing profile so they
+  // Training setup, prefilled from the user's existing profile so they
   // can review and tweak. Changing any of these rerolls the plan around
   // the new values (different days, equipment, experience all affect
   // exercise selection + volume).
@@ -102,7 +102,7 @@ export default function ProGoalSetupScreen({ navigation }) {
     ? PHYSIQUE_GOALS
     : PHYSIQUE_GOALS.filter(g => g.group === goalFilterGroup);
 
-  // Phases that represent a calorie deficit — used to track when the deficit began.
+  // Phases that represent a calorie deficit, used to track when the deficit began.
   const DEFICIT_PHASES = ['cut'];
 
   async function handleSave() {
@@ -128,15 +128,15 @@ export default function ProGoalSetupScreen({ navigation }) {
 
     let goalStartDate = userProfile?.goalStartDate ?? null;
     if (isNowInDeficit && !wasInDeficit) {
-      // Entering a deficit phase — record the start date.
+      // Entering a deficit phase, record the start date.
       goalStartDate = new Date().toISOString();
     } else if (!isNowInDeficit) {
-      // Leaving a deficit phase (bulk, maintain, recomp) — clear the date.
+      // Leaving a deficit phase (bulk, maintain, recomp), clear the date.
       goalStartDate = null;
     }
     // If staying in a deficit phase, preserve the existing start date.
 
-    // Only keep weak points if the new goal supports them — switching to a
+    // Only keep weak points if the new goal supports them, switching to a
     // non-applicable goal clears them so the plan generator doesn't keep
     // biasing toward muscles the user no longer wants prioritised.
     const nextWeakPoints = GOALS_WITH_WEAK_POINTS.includes(selectedGoal)
@@ -151,7 +151,7 @@ export default function ProGoalSetupScreen({ navigation }) {
       proteinApproach,
       goalStartDate,
       planWeakPoints: nextWeakPoints,
-      // Training setup fields — picking up changes the user made to
+      // Training setup fields, picking up changes the user made to
       // experience / schedule / equipment / recovery. generateAndSavePlan
       // reads these from the profile to drive plan generation.
       experience,
@@ -165,7 +165,7 @@ export default function ProGoalSetupScreen({ navigation }) {
     // pick up any changes (e.g. weight logged from BodyMetrics) since this
     // screen mounted. Uses sensible fallbacks for any missing field so a
     // partially-set profile still gets its kcal / protein targets refreshed
-    // on goal change — the previous behaviour silently skipped recalc when
+    // on goal change, the previous behaviour silently skipped recalc when
     // any of weightKg/heightCm/age/sex was missing, which left the
     // Nutrition widget on Athlete Hub showing stale values.
     const { userProfile: latestProfile } = useAppStore.getState();
@@ -233,7 +233,7 @@ export default function ProGoalSetupScreen({ navigation }) {
 
     await saveLocalProfile(user.id, updatedProfile);
 
-    // Pro users keep an always-active plan — a goal change resets the
+    // Pro users keep an always-active plan, a goal change resets the
     // mesocycle to week 1 of a freshly-generated plan that reflects the
     // new goal/phase. The previous plan is deactivated by
     // activatePlanWithBlock; session history stays intact.
@@ -244,7 +244,7 @@ export default function ProGoalSetupScreen({ navigation }) {
       planResult = { ok: false, error: e?.message ?? 'unknown' };
     }
     if (!planResult.ok) {
-      // Don't block navigation — the goal is saved, nutrition updated. Just
+      // Don't block navigation, the goal is saved, nutrition updated. Just
       // tell the user the plan side didn't reroll so they can retry from Home.
       Alert.alert(
         'Plan didn\'t update',

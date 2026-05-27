@@ -1,5 +1,5 @@
 /**
- * Telemetry transport — owns persist + push.
+ * Telemetry transport, owns persist + push.
  *
  * Validates against the canonical allow-list in events.js, writes the
  * event to the local SQLite engine_telemetry table, and pushes the

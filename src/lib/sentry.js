@@ -1,4 +1,4 @@
-// Sentry wrapper — lazy-loaded so the app keeps building and running
+// Sentry wrapper, lazy-loaded so the app keeps building and running
 // even before @sentry/react-native is installed. Once you've added
 // the package and set EXPO_PUBLIC_SENTRY_DSN, initSentry() does the
 // real wiring; until then every call is a no-op.
@@ -24,7 +24,7 @@ try {
   // eslint-disable-next-line global-require, import/no-unresolved
   SentryNative = require('@sentry/react-native');
 } catch (_) {
-  // Package not installed yet — that's fine. All calls below no-op.
+  // Package not installed yet, that's fine. All calls below no-op.
 }
 
 export function isSentryAvailable() {
@@ -32,7 +32,7 @@ export function isSentryAvailable() {
 }
 
 /**
- * Initialise the Sentry SDK. Safe to call multiple times — guards
+ * Initialise the Sentry SDK. Safe to call multiple times, guards
  * against double-init. No-op if the package isn't installed or the
  * DSN env var is missing.
  *
@@ -67,12 +67,12 @@ export function initSentry({ release, environment } = {}) {
       dsn: trimmed,
       release: release ?? undefined,
       environment: environment ?? (__DEV__ ? 'development' : 'production'),
-      // 10% performance trace sampling in production — enough to
+      // 10% performance trace sampling in production, enough to
       // surface slow paths (sync, screen mount, large DB scans)
       // without burning quota at scale. In dev we sample 100% so
       // local profiling is always visible.
       tracesSampleRate: __DEV__ ? 1.0 : 0.1,
-      // Sentry's own session tracking — counts crash-free sessions
+      // Sentry's own session tracking, counts crash-free sessions
       // and users per release. Required for the release-health
       // dashboard view to populate.
       enableAutoSessionTracking: true,
@@ -117,7 +117,7 @@ export function setSentryUser(user) {
     SentryNative.setUser({
       id: user.id,
       email: user.email,
-      // Don't add username / ip — keeps PII surface small.
+      // Don't add username / ip, keeps PII surface small.
     });
   } catch (_) {}
 }

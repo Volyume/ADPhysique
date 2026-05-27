@@ -863,7 +863,7 @@ const LIBRARY_PLANS = [
     ],
   },
 
-  // ── 21. Dumbbell Only — Full Body ─────────────────────────────────────────
+  // ── 21. Dumbbell Only, Full Body ─────────────────────────────────────────
   {
     name: 'Dumbbell Only: Full Body',
     description: 'A three-day full-body programme that requires nothing but a set of dumbbells. Every major muscle group is trained each session using dumbbell-friendly movement patterns: squat, hinge, press, and row. Great for home training, travel, or gyms with limited equipment. Progress by adding reps first. Once you hit the top of the rep range, move up to the next dumbbell weight.',
@@ -904,7 +904,7 @@ const LIBRARY_PLANS = [
     ],
   },
 
-  // ── 22. Home — No Equipment ───────────────────────────────────────────────
+  // ── 22. Home, No Equipment ───────────────────────────────────────────────
   {
     name: 'Home: No Equipment',
     description: 'Three sessions per week using only your bodyweight. Designed to build genuine strength and control across the whole body without needing a gym or any equipment. Progressions are built in. As movements become too easy, there are harder variations to move towards. A good starting point if you are completely new to training, or to maintain fitness when you cannot get to a gym.',
@@ -944,7 +944,7 @@ const LIBRARY_PLANS = [
     ],
   },
 
-  // ── 23. Men's Physique — Off-Season ──────────────────────────────────────
+  // ── 23. Men's Physique, Off-Season ──────────────────────────────────────
   {
     name: "Men's Physique",
     description: "Five-day programme built around the Men's Physique division. Judged from the waist up in board shorts, the division rewards a broad back, capped shoulders, full chest, and defined arms over a lean midsection. Legs are trained once per week to maintain health and proportion. The programme runs for 8 to 12 weeks, prioritising shoulder width, upper-chest development, lat width, and rear-delt health. Progress conservatively. This is a muscle-building phase, not a strength-testing phase.",
@@ -1005,7 +1005,7 @@ const LIBRARY_PLANS = [
     ],
   },
 
-  // ── 24. Bikini — Off-Season ───────────────────────────────────────────────
+  // ── 24. Bikini, Off-Season ───────────────────────────────────────────────
   {
     name: 'Bikini',
     description: "Four-day programme built around the Bikini division. Bikini rewards a lean, athletic physique with developed glutes, balanced shoulders, and a soft overall appearance, not extreme muscle mass. This programme trains glutes and hamstrings twice per week with a mix of heavy compound work and detail isolation, while upper body sessions build proportional shoulder width and a strong back. Progress on the compound movements week to week. The focus is building muscle and strength.",
@@ -1055,7 +1055,7 @@ const LIBRARY_PLANS = [
     ],
   },
 
-  // ── 25. Wellness — Off-Season ─────────────────────────────────────────────
+  // ── 25. Wellness, Off-Season ─────────────────────────────────────────────
   {
     name: 'Wellness',
     description: "Four to five days per week built around the Wellness division, the most lower-body-forward division in women's physique sport. Wellness rewards a heavily developed lower body (glutes, quads, and hamstrings) relative to a smaller, more moderate upper body. This programme trains the lower body four times per week with two different emphasis days, and upper body twice with a lower set count to keep it proportional. Progress on lower-body compounds is the priority.",
@@ -1115,7 +1115,7 @@ const LIBRARY_PLANS = [
     ],
   },
 
-  // ── 26. Classic Physique — Off-Season ─────────────────────────────────────
+  // ── 26. Classic Physique, Off-Season ─────────────────────────────────────
   {
     name: 'Classic Physique',
     description: "Five-day programme for the Classic Physique division. Classic Physique is judged on balanced, symmetrical development: a wide back, capped shoulders, full chest, narrow waist, well-developed legs, and a V-taper reminiscent of the golden era of bodybuilding. Unlike Men's Physique, legs are displayed and are a significant judging criterion. This programme gives equal attention to both upper and lower body with a slight emphasis on the key visual areas: back width, shoulder caps, and upper-chest fullness.",
@@ -1177,7 +1177,7 @@ const LIBRARY_PLANS = [
     ],
   },
 
-  // ── 27. Figure — Off-Season ───────────────────────────────────────────────
+  // ── 27. Figure, Off-Season ───────────────────────────────────────────────
   {
     name: 'Figure',
     description: "Five-day programme for the Figure division. Figure sits between Bikini and Women's Physique in muscularity: athletic and muscular with visible shoulders, a strong and wide back, and proportional leg development. Shoulders and back are the priority visual features judged in Figure. This programme dedicates significant sets to back width, rear-delt development, and shoulder capping while maintaining balanced lower-body strength.",
@@ -1237,7 +1237,7 @@ const LIBRARY_PLANS = [
     ],
   },
 
-  // ── 28. Women's Physique — Off-Season ────────────────────────────────────────
+  // ── 28. Women's Physique, Off-Season ────────────────────────────────────────
   {
     name: "Women's Physique",
     description: "A five-day programme for Women's Physique competitors, built around the division's aesthetic priorities: broad, capped shoulders, a detailed and wide back, proportionate arms, and a lean lower body without extreme size. Day 1 develops shoulder width and rear-delt health; Day 2 builds back thickness and lat spread; Day 3 trains lower body with glute and quad emphasis; Day 4 develops chest and triceps with upper-chest focus; Day 5 adds arm detail and a second rear-delt session to complete the week. Stop 1 to 2 reps before failure on most sets. Progress by adding reps first, then weight once the top of the range is reached on all sets.",
@@ -1299,7 +1299,7 @@ const LIBRARY_PLANS = [
     ],
   },
 
-  // ── 29. Women's Bodybuilding — Off-Season ────────────────────────────────────
+  // ── 29. Women's Bodybuilding, Off-Season ────────────────────────────────────
   {
     name: "Women's Bodybuilding",
     description: "A five-day programme for Women's Bodybuilding competitors, built around maximum muscular development across every group. This is the most demanding of the women's divisions and requires serious, focused training across every major muscle group. Day 1 prioritises quads and calves; Day 2 builds back width and thickness; Day 3 develops chest, shoulders, and triceps; Day 4 targets hamstrings, glutes, and calves; Day 5 finishes the week with arms and shoulder detail. Eat in a moderate surplus throughout the muscle-building phase. Stop 1 to 2 reps before failure on most sets. Progress by adding reps first, then weight.",
@@ -1365,7 +1365,7 @@ const LIBRARY_PLANS = [
     ],
   },
 
-  // ── 30. Men's Bodybuilding — Off-Season ──────────────────────────────────────
+  // ── 30. Men's Bodybuilding, Off-Season ──────────────────────────────────────
   {
     name: "Men's Bodybuilding",
     description: "A five-day programme for Men's Bodybuilding competitors, built around maximum muscular size and complete development across every group. This is the plan with the most sets per week in the library and suits experienced lifters with at least three years of consistent training. Day 1 builds chest and triceps; Day 2 develops back width and thickness; Day 3 builds legs with quad emphasis; Day 4 targets shoulders and arms; Day 5 finishes the week with hamstrings, glutes, and posterior-chain detail. Eat in a moderate calorie surplus throughout the muscle-building phase. Stop 1 to 2 reps before failure on compound movements. On isolation exercises, push to 1 rep from failure on the final set of each exercise.",
@@ -1481,13 +1481,13 @@ export async function seedRoutinesIfNeeded(userId) {
     // Self-healing check: if the marker is set but the database actually has
     // no library plans (e.g. a prior seed crashed mid-way, or the DB was
     // wiped via Clear data), clear the marker and proceed with a fresh seed.
-    // If the marker is set AND plans exist, we're done — skip seeding.
+    // If the marker is set AND plans exist, we're done, skip seeding.
     if (alreadySeeded) {
       const existingLibrary = await getLibraryPlans().catch(() => []);
       if (existingLibrary.length > 0) {
         return; // healthy state, nothing to do
       }
-      // Marker set but DB empty — clear marker so the seed below actually runs.
+      // Marker set but DB empty, clear marker so the seed below actually runs.
       await AsyncStorage.removeItem(SEED_KEY).catch(() => {});
       console.warn(`[Seed] Marker was set but no library plans found. Re-seeding.`);
     }

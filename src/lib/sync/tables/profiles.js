@@ -13,7 +13,7 @@
  * handler maps both to snake_case on push and feeds the cloud's
  * column_updates_at into conflict.resolve(merge) on pull.
  *
- * tier is excluded from the push payload — the server owns tier
+ * tier is excluded from the push payload, the server owns tier
  * exclusively via the upgrade_tier RPC + play-billing-rtdn
  * webhook, and migrate_005's trigger rolls back any client UPDATE
  * to it.

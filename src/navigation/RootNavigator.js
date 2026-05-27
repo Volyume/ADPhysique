@@ -401,7 +401,7 @@ export default function RootNavigator() {
   // Subscribe only to the fields whose change should reroute. Without a
   // selector this re-rendered the entire navigator on every store
   // mutation (rest timer ticks, PR celebrations, set saves, profile
-  // tweaks, etc.) — a slow leak that compounded throughout a workout.
+  // tweaks, etc.), a slow leak that compounded throughout a workout.
   const user = useAppStore(s => s.user);
   const isAuthLoading = useAppStore(s => s.isAuthLoading);
   const firstRunComplete = useAppStore(s => s.firstRunComplete);
@@ -410,7 +410,7 @@ export default function RootNavigator() {
   const healthConsentChecked = useAppStore(s => s.healthConsentChecked);
   const tier = useAppStore(s => s.tier);
   const tierChecked = useAppStore(s => s.tierChecked);
-  // restoringSession removed — restoreSessionFromCloud is now
+  // restoringSession removed, restoreSessionFromCloud is now
   // optimistic (routes on local cues, syncs cloud in background).
   // Actions are stable references in zustand so destructuring them once
   // outside the render is safe and doesn't cause re-renders.
@@ -516,7 +516,7 @@ export default function RootNavigator() {
               // AsyncStorage so name, units, plate weight all survive an
               // app restart for cloud-signed-in users. Previously the
               // bootstrap path skipped this entirely if a cloud session
-              // existed — the result was firstName disappearing and the
+              // existed, the result was firstName disappearing and the
               // user seeing their email everywhere instead. The
               // restoreSessionFromCloud handler only fires on the
               // SIGNED_IN event (fresh sign-in), not on session-restore.
@@ -535,11 +535,11 @@ export default function RootNavigator() {
                   });
                 }
               } catch (_) {
-                // Corrupt or missing — fall through; user can re-onboard
+                // Corrupt or missing, fall through; user can re-onboard
                 // or the cloud restore will fill it in on next SIGNED_IN.
               }
 
-              // Server-authoritative tier — enforcement point after beta.
+              // Server-authoritative tier, enforcement point after beta.
               // During beta this guards against spurious pro → free
               // demotion (see useAppStore.refreshTierFromCloud).
               refreshTierFromCloud(client, session.user.id).catch(() => {});
@@ -596,7 +596,7 @@ export default function RootNavigator() {
       } catch (err) {
         console.error('bootstrap failed:', err);
         // Failsafe: release auth loading so the splash doesn't hang.
-        // No anonymous-mode fallback (spec rule 1) — the user lands
+        // No anonymous-mode fallback (spec rule 1), the user lands
         // on Welcome and signs in/up against a real account.
         setAuthLoading(false);
       }
@@ -836,7 +836,7 @@ export default function RootNavigator() {
     if (!user && isAuthLoading) setAuthLoading(false);
   }, [user, tierChecked, firstRunChecked, isAuthLoading, checkTier, checkFirstRun, setAuthLoading]);
 
-  // Splash gate fires ONLY during initial bootstrap — before splashReady,
+  // Splash gate fires ONLY during initial bootstrap, before splashReady,
   // firstRunChecked, and tierChecked have completed their first pass.
   // Deliberately not gated on isAuthLoading: that flag flips true during
   // every SIGNED_IN event, and showing the splash mid-flow unmounts the
@@ -851,12 +851,12 @@ export default function RootNavigator() {
   // While a cloud restore is in flight (right after SIGNED_IN, before
   // we know whether the user has a profile in the cloud), park on
   // the splash. Without this, the navigator routes on stale local
-  // state — tier='pro' is set instantly by the beta override but
+  // state, tier='pro' is set instantly by the beta override but
   // firstRunComplete is still false from clearAuthStateForSignOut,
   // which mounts ProOnboardingStack briefly until the cloud read
   // confirms firstRunComplete=true. That gap was the "I started the
   // wizard and got booted out" bug.
-  // No blocking splash for sign-in any more — optimistic routing
+  // No blocking splash for sign-in any more, optimistic routing
   // means the navigator already has firstRunComplete + tier set
   // correctly by the time control reaches here. Cloud sync runs in
   // the background, populating empty states on each screen as data
@@ -889,7 +889,7 @@ export default function RootNavigator() {
       onReady={() => {
         // Wire the observability layer's screen-tracking. Emits a
         // breadcrumb on every navigation so any error fired later
-        // in the session carries the user's path. Idempotent —
+        // in the session carries the user's path. Idempotent
         // re-mounting the navigator (e.g. signing out and back in)
         // re-subscribes cleanly.
         try {
@@ -1003,7 +1003,7 @@ function SplashScreen() {
   );
 }
 
-// SigningInSplash removed — restoreSessionFromCloud is now optimistic
+// SigningInSplash removed, restoreSessionFromCloud is now optimistic
 // (routes immediately based on local cues, syncs cloud in background)
 // so no sign-in splash is needed. The brand splash (SplashScreen) is
 // still used for cold-launch bootstrap before tierChecked /

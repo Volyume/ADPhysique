@@ -118,7 +118,7 @@ export default function SyncStatusBadge() {
             </View>
             <View style={styles.row}>
               <Text style={styles.rowKey}>Last sync</Text>
-              <Text style={styles.rowVal}>{lastRunMins == null ? '—' : `${lastRunMins} min ago`}</Text>
+              <Text style={styles.rowVal}>{lastRunMins == null ? '-' : `${lastRunMins} min ago`}</Text>
             </View>
             {snapshot.last_error ? (
               <View style={styles.row}>

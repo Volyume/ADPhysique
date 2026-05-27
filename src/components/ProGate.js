@@ -10,7 +10,7 @@ import { PRO_BETA_ACTIVE } from '../lib/proGate';
 
 /**
  * ProGate wraps any content that requires a Pro tier.
- * Free users see the content with a lock overlay — tapping it opens a
+ * Free users see the content with a lock overlay, tapping it opens a
  * one-tap upgrade sheet. During beta, upgrading is instant (no payment).
  *
  * Usage:
@@ -19,7 +19,7 @@ import { PRO_BETA_ACTIVE } from '../lib/proGate';
  *   </ProGate>
  */
 export default function ProGate({ children, feature = 'This feature', style }) {
-  // Only subscribe to tier — the unselected destructure re-rendered every
+  // Only subscribe to tier, the unselected destructure re-rendered every
   // ProGated subtree on every store mutation (including each rest-timer
   // tick).
   const tier = useAppStore(s => s.tier);
@@ -27,7 +27,7 @@ export default function ProGate({ children, feature = 'This feature', style }) {
   const [modalVisible, setModalVisible] = useState(false);
 
   // Pro users see the content. Free users must sign up and go through the
-  // upgrade flow — going Pro is never a silent one-tap switch.
+  // upgrade flow, going Pro is never a silent one-tap switch.
   if (tier === 'pro') return <>{children}</>;
 
   function upgrade() {
@@ -144,7 +144,7 @@ export function withProGuard(Component, feature) {
 }
 
 /**
- * ProBadge — inline badge to show next to Pro-only labels/headings.
+ * ProBadge, inline badge to show next to Pro-only labels/headings.
  */
 export function ProBadge({ size = 'sm' }) {
   const isSmall = size === 'sm';

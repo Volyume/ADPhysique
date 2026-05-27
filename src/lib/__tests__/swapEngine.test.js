@@ -1,5 +1,5 @@
 /**
- * Tests for swapEngine — the exercise-substitution scorer used by both the
+ * Tests for swapEngine, the exercise-substitution scorer used by both the
  * ad-hoc "swap this exercise" UI and the joint-discomfort auto-swap.
  *
  * Validates: scoring monotonicity, sort stability with missing names,
@@ -45,7 +45,7 @@ describe('rankSwaps', () => {
 
   test('sort tie-break uses name and never crashes on missing names', () => {
     const original = ex({ id: 'a', name: 'Bench Press' });
-    // Both candidates equally identical to original — tie-break should be
+    // Both candidates equally identical to original, tie-break should be
     // by name and the missing-name one should not crash.
     const candidates = [
       ex({ id: 'b', name: undefined, primary_muscle: 'chest' }),

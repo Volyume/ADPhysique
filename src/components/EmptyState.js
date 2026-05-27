@@ -5,7 +5,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 
 /**
  * Shared empty-state component used across screens.
- * Adherence-neutral, no shame copy — purely directional ("here's what to do next").
+ * Adherence-neutral, no shame copy, purely directional ("here's what to do next").
  *
  * Props:
  *   icon       - Ionicons name (default 'sparkles-outline')

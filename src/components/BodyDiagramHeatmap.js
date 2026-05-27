@@ -57,7 +57,7 @@ export default function BodyDiagramHeatmap({ volumeByMuscle = {}, onMuscleTap })
       >
         {/* ============== FRONT VIEW ============== */}
         <G x={0} y={0}>
-          {/* Silhouette outline — head, neck, torso, arms, legs */}
+          {/* Silhouette outline, head, neck, torso, arms, legs */}
           {/* Head */}
           <Ellipse cx={80} cy={26} rx={18} ry={22} fill={silhouetteFill} {...stroke} />
           {/* Body silhouette path: shoulders → arms → waist → legs */}
@@ -97,7 +97,7 @@ export default function BodyDiagramHeatmap({ volumeByMuscle = {}, onMuscleTap })
             {...stroke}
           />
 
-          {/* Neck — neutral, non-interactive (no separate landmark) */}
+          {/* Neck, neutral, non-interactive (no separate landmark) */}
           <Ellipse
             cx={80}
             cy={50}
@@ -112,7 +112,7 @@ export default function BodyDiagramHeatmap({ volumeByMuscle = {}, onMuscleTap })
           <Ellipse cx={54} cy={62} rx={11} ry={9} {...region('front_delts')} />
           <Ellipse cx={106} cy={62} rx={11} ry={9} {...region('front_delts')} />
 
-          {/* Chest — two pecs */}
+          {/* Chest, two pecs */}
           <Ellipse cx={66} cy={82} rx={14} ry={11} {...region('chest')} />
           <Ellipse cx={94} cy={82} rx={14} ry={11} {...region('chest')} />
 
@@ -124,7 +124,7 @@ export default function BodyDiagramHeatmap({ volumeByMuscle = {}, onMuscleTap })
           <Ellipse cx={36} cy={130} rx={7} ry={18} {...region('forearms')} />
           <Ellipse cx={124} cy={130} rx={7} ry={18} {...region('forearms')} />
 
-          {/* Abs — central column divided into 3 sections */}
+          {/* Abs, central column divided into 3 sections */}
           <Rect
             x={70}
             y={96}
@@ -143,7 +143,7 @@ export default function BodyDiagramHeatmap({ volumeByMuscle = {}, onMuscleTap })
           <Ellipse cx={68} cy={196} rx={12} ry={32} {...region('quads')} />
           <Ellipse cx={92} cy={196} rx={12} ry={32} {...region('quads')} />
 
-          {/* Calves (front, smaller — front-of-shin region) */}
+          {/* Calves (front, smaller, front-of-shin region) */}
           <Ellipse cx={68} cy={266} rx={9} ry={22} {...region('calves')} />
           <Ellipse cx={92} cy={266} rx={9} ry={22} {...region('calves')} />
 
@@ -191,7 +191,7 @@ export default function BodyDiagramHeatmap({ volumeByMuscle = {}, onMuscleTap })
             {...stroke}
           />
 
-          {/* Traps — upper-back triangle (between shoulders, framing the neck) */}
+          {/* Traps, upper-back triangle (between shoulders, framing the neck) */}
           <Path
             d="M 66 52 L 94 52 L 100 72 L 80 80 L 60 72 Z"
             {...region('traps')}
@@ -201,7 +201,7 @@ export default function BodyDiagramHeatmap({ volumeByMuscle = {}, onMuscleTap })
           <Ellipse cx={52} cy={64} rx={11} ry={9} {...region('rear_delts')} />
           <Ellipse cx={108} cy={64} rx={11} ry={9} {...region('rear_delts')} />
 
-          {/* Back / Lats — broad shape */}
+          {/* Back / Lats, broad shape */}
           <Path
             d="
               M 60 76
@@ -222,7 +222,7 @@ export default function BodyDiagramHeatmap({ volumeByMuscle = {}, onMuscleTap })
           <Ellipse cx={36} cy={130} rx={7} ry={18} {...region('forearms')} />
           <Ellipse cx={124} cy={130} rx={7} ry={18} {...region('forearms')} />
 
-          {/* Glutes — two rounded rects */}
+          {/* Glutes, two rounded rects */}
           <Rect x={56} y={150} width={22} height={26} rx={10} ry={10} {...region('glutes')} />
           <Rect x={82} y={150} width={22} height={26} rx={10} ry={10} {...region('glutes')} />
 

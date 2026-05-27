@@ -1,4 +1,4 @@
-// Sparkline — tiny inline chart for at-a-glance trend display.
+// Sparkline, tiny inline chart for at-a-glance trend display.
 //
 // Wraps react-native-gifted-charts' LineChart with zero axes / labels /
 // grid / interaction. Just the curve. Perfect for inside cards where
@@ -25,14 +25,14 @@ export default function Sparkline({
   showDots = false,
 }) {
   // Filter + map to gifted-charts shape. Returns null if there isn't
-  // enough data to draw a line — caller renders the empty equivalent.
+  // enough data to draw a line, caller renders the empty equivalent.
   const points = useMemo(() => (data || [])
     .filter(v => Number.isFinite(v))
     .map(v => ({ value: v })),
     [data]);
 
   if (points.length < 2) {
-    // Not enough data — render a flat placeholder line at the midpoint
+    // Not enough data, render a flat placeholder line at the midpoint
     // so the card layout doesn't jump when more data arrives.
     return (
       <View style={{
@@ -66,7 +66,7 @@ export default function Sparkline({
         // Tight padding so the curve fills the box
         adjustToWidth
         disableScroll
-        // No animation by default — sparklines are at-a-glance reads,
+        // No animation by default, sparklines are at-a-glance reads,
         // not animated reveals.
         isAnimated={false}
       />

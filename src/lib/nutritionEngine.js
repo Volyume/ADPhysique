@@ -1,7 +1,7 @@
 /**
  * nutritionEngine.js
  * Pure-function nutrition target calculator for the Volyume app.
- * No side effects, no DB calls, no imports — just math.
+ * No side effects, no DB calls, no imports, just math.
  * Adaptive TDEE: computeEWMA, computeWeeklyWeightChange, computeAdaptiveTDEEAdjustment
  */
 
@@ -20,8 +20,8 @@ const ACTIVITY_MULTIPLIERS = {
   sedentary: 1.2,
   light: 1.375,
   moderate: 1.55,
-  active: 1.65,       // 5 gym sessions/week — was 1.725, reduced for gym-only population
-  very_active: 1.725, // 6+ gym sessions/week — was 1.9, reduced for gym-only population
+  active: 1.65,       // 5 gym sessions/week, was 1.725, reduced for gym-only population
+  very_active: 1.725, // 6+ gym sessions/week, was 1.9, reduced for gym-only population
 };
 
 const PHASE_ADJUSTMENTS = {
@@ -44,13 +44,13 @@ const PHASE_LABELS = {
   contest_prep: 'Contest preparation',
 };
 
-// Three protein approaches — user selects which fits their preference.
+// Three protein approaches, user selects which fits their preference.
 //
-// standard  — mainstream sports nutrition guidelines. Adequate for muscle
+// standard , mainstream sports nutrition guidelines. Adequate for muscle
 //             growth and easy to sustain day-to-day.
-// optimised — midpoint of current hypertrophy research (gains plateau ~1.62 g/kg BW;
+// optimised, midpoint of current hypertrophy research (gains plateau ~1.62 g/kg BW;
 //             2.0–2.3 g/kg LBM gives a practical buffer above that). DEFAULT.
-// advanced  — higher-end competitive protocol. Rates rise aggressively in
+// advanced , higher-end competitive protocol. Rates rise aggressively in
 //             deficits to maximise lean mass retention. Based on published
 //             contest-prep research (2.3–3.1 g/kg LBM range).
 //
@@ -121,7 +121,7 @@ const FFM_FALLBACK_FRACTION = {
   female: 0.72, // ~28% BF (conservative for typical female trainee)
 };
 
-// Morton et al. (2018) meta-analysis upper CI — no benefit beyond 2.2 g/kg BW when
+// Morton et al. (2018) meta-analysis upper CI, no benefit beyond 2.2 g/kg BW when
 // body fat % is unknown (lean mass-based calculation already handles the known-BF% case).
 export const PROTEIN_MAX_GKGBW = 2.2;
 
@@ -140,7 +140,7 @@ const FAT_TARGETS_GKG = {
 };
 
 // ---------------------------------------------------------------------------
-// Adaptive TDEE — EWMA weight trend and calorie correction
+// Adaptive TDEE, EWMA weight trend and calorie correction
 // ---------------------------------------------------------------------------
 
 const EWMA_ALPHA = 0.28; // smoothing factor : MacroFactor uses ~0.3
@@ -187,9 +187,9 @@ const KCAL_PER_KG = 7700; // energy in 1 kg of body tissue (mixed lean + fat)
 // Requires at least 3 weeks (21 data points) before producing a reliable correction.
 //
 // params:
-//   ewmaData        — output of computeEWMA, sorted oldest-first
-//   prescribedKcal  — the calorie target the app has been recommending
-//   adherenceFactor — 0.0–1.0 (from check-in: 1.0 = fully on target, 0.7 = mostly)
+//   ewmaData       , output of computeEWMA, sorted oldest-first
+//   prescribedKcal , the calorie target the app has been recommending
+//   adherenceFactor, 0.0–1.0 (from check-in: 1.0 = fully on target, 0.7 = mostly)
 //
 // Returns:
 //   { adjustmentKcal, adjustedTDEE, actualKgPerWeek, expectedKgPerWeek,
@@ -255,9 +255,9 @@ export function computeAdaptiveTDEEAdjustment({
   if (absAdj < 50) {
     insight = `Your weight is tracking exactly as planned. No change needed.`;
   } else if (adjustmentKcal < 0) {
-    insight = `Your weight has risen ${Math.abs(actualKgPerWeek).toFixed(2)} kg/week — slightly faster than planned. Trimming ${absAdj} kcal/day to keep pace on track.`;
+    insight = `Your weight has risen ${Math.abs(actualKgPerWeek).toFixed(2)} kg/week, slightly faster than planned. Trimming ${absAdj} kcal/day to keep pace on track.`;
   } else {
-    insight = `Your weight has moved ${Math.abs(actualKgPerWeek).toFixed(2)} kg/week — slower than planned. Adding ${absAdj} kcal/day to match your true energy needs.`;
+    insight = `Your weight has moved ${Math.abs(actualKgPerWeek).toFixed(2)} kg/week, slower than planned. Adding ${absAdj} kcal/day to match your true energy needs.`;
   }
 
   // FFM-floor safety check. Runs only when the caller supplied an
@@ -409,7 +409,7 @@ function calcProtein(goal, weightKg, lbm, bodyFatSource, proteinApproach = 'opti
   const approach = PROTEIN_APPROACHES[effectiveApproach] ?? PROTEIN_APPROACHES.optimised;
   const floorG = approach.floor * weightKg;
 
-  // Custom override — apply rate directly to bodyweight (coaches typically specify g/kg BW).
+  // Custom override, apply rate directly to bodyweight (coaches typically specify g/kg BW).
   if (proteinApproach === 'custom' && customGPerKg != null && customGPerKg > 0) {
     const proteinG = Math.max(customGPerKg * weightKg, floorG);
     return { proteinG, basis: 'bodyweight', proteinRateUsed: customGPerKg };
@@ -453,7 +453,7 @@ function estimateWeeklyRate(targetKcal, maintenanceKcal, weightKg) {
 // Physique competitor categories warrant the advanced protein approach
 // because coaches prescribe 2.4 g/kg BW for bulking phases in these
 // categories. 'strength_hypertrophy' used to live here too, but that
-// concept moved to TRAINING_PHASES.strength_size — a phase emphasis,
+// concept moved to TRAINING_PHASES.strength_size, a phase emphasis,
 // not a physique. Strength-size users on general physique get the
 // standard 2.0 g/kg protein target, which is fine for them.
 export const ADVANCED_PROTEIN_GOALS = [
@@ -498,7 +498,7 @@ export function calculateNutritionTargets(inputs) {
     experienceLevel = 'intermediate', // 'beginner' | 'intermediate' | 'advanced' | 'competitive'
   } = inputs;
 
-  // Clamp inputs to physiologically safe ranges — guards against typos and invalid onboarding data.
+  // Clamp inputs to physiologically safe ranges, guards against typos and invalid onboarding data.
   const safeAge    = Math.min(Math.max(Math.round(ageYears  ?? 28), 13), 100);
   const safeHeight = Math.min(Math.max(heightCm ?? 170, 100), 250);
   const safeWeight = Math.min(Math.max(weightKg ?? 75, 30), 350);
@@ -651,8 +651,8 @@ export function calculateNutritionTargets(inputs) {
 // Based on MATADOR trial finding: intermittent energy restriction with 2-week
 // breaks every 8–12 weeks preserves metabolic rate better than continuous restriction.
 //
-// deficitStartDate — Date (or date-parseable value) when the deficit began
-// currentDate      — defaults to now; override in tests
+// deficitStartDate, Date (or date-parseable value) when the deficit began
+// currentDate     , defaults to now; override in tests
 export function shouldSuggestDietBreak(deficitStartDate, currentDate = new Date()) {
   const weeksInDeficit = Math.floor(
     (currentDate - new Date(deficitStartDate)) / (7 * 24 * 60 * 60 * 1000),
@@ -682,7 +682,7 @@ export function getPlanNutritionContext(targets, { bodyMetricsData = [], adheren
   // Protein cap: when bodyweight is known but body fat % is NOT known, cap protein at
   // 2.2 g/kg BW per day. When BF% is known, the lean-mass-based calculation already
   // handles the upper bound correctly.
-  // Morton et al. (2018) meta-analysis upper CI — no benefit beyond 2.2 g/kg without BF% data
+  // Morton et al. (2018) meta-analysis upper CI, no benefit beyond 2.2 g/kg without BF% data
   let { proteinG } = targets;
   if (
     bodyweightKg != null &&
@@ -713,7 +713,7 @@ export function getPlanNutritionContext(targets, { bodyMetricsData = [], adheren
   } else if (phaseType === 'maintenance' || goal === 'recomp') {
     recoveryModifier = 1.0;
   } else {
-    // deficit — scale by how deep the cut is
+    // deficit, scale by how deep the cut is
     const deficitFraction = (maintenanceKcal - targetKcal) / maintenanceKcal;
     if (deficitFraction <= 0.13) {
       recoveryModifier = 0.95; // mild_cut
@@ -774,7 +774,7 @@ export function getPlanNutritionContext(targets, { bodyMetricsData = [], adheren
   const explanation = explanations[goal] ?? 'Nutrition context applied based on current phase.';
 
   // --- Refeed and diet break recommendations ---
-  // Evidence: MATADOR study (2017, Int J Obesity) — 2-week diet breaks produced 50% more fat
+  // Evidence: MATADOR study (2017, Int J Obesity), 2-week diet breaks produced 50% more fat
   // loss than continuous restriction at equal total deficit time. Refeeds (1-2 days at
   // maintenance via carbs) partially restore leptin and preserve RMR.
   // Source: PMC7739314 (2020); multiple RCTs on intermittent energy restriction.

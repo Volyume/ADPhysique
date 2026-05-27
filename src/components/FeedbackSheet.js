@@ -5,7 +5,7 @@
  * from the bottom, asks one question (sentiment chip), accepts an
  * optional line of text, and submits.
  *
- * Visual pattern mirrors PeekMenu — backdrop + slide-up sheet with
+ * Visual pattern mirrors PeekMenu, backdrop + slide-up sheet with
  * a handle pill. Auto-dismisses after 12 s of inactivity if the
  * user hasn't engaged so we never linger.
  *
@@ -20,7 +20,7 @@
  *
  * Honour the contract: NEVER auto-pop without an explicit
  * shouldPrompt() check first. This component will gladly show
- * itself every time .open() is called — suppression lives at
+ * itself every time .open() is called, suppression lives at
  * the caller via the feedback.js helpers.
  */
 
@@ -76,7 +76,7 @@ export function FeedbackProvider({ children }) {
     // Explicit web bypass: expo-sensors on web has historically thrown
     // during Accelerometer.setUpdateInterval (no Web Sensor API on
     // most browsers). Codex caught this as a real web startup crash
-    // — gate it here so the rest of the lazy chain doesn't even run.
+    //, gate it here so the rest of the lazy chain doesn't even run.
     if (Platform.OS === 'web') return;
     let Accelerometer;
     try {
@@ -85,7 +85,7 @@ export function FeedbackProvider({ children }) {
       Accelerometer = sensors.Accelerometer;
     } catch (_) { return; }
     if (!Accelerometer?.addListener) return;
-    // Sample at ~5 Hz — high enough to detect a shake, low enough
+    // Sample at ~5 Hz, high enough to detect a shake, low enough
     // to be invisible to battery. Threshold tuned so a phone in a
     // gym bag bouncing about doesn't trigger.
     Accelerometer.setUpdateInterval(200);
@@ -219,7 +219,7 @@ const FeedbackSheet = forwardRef(function FeedbackSheet(_, ref) {
       // Stay on the success state briefly, then dismiss.
       setTimeout(() => animateOut(), 1400);
     } catch (_) {
-      // submitFeedback never throws — but be defensive.
+      // submitFeedback never throws, but be defensive.
       setSubmitting(false);
     }
   }

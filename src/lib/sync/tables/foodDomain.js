@@ -8,7 +8,7 @@
  *   recipes
  *   food_favourites
  *   daily_water
- *   daily_intake_rollups  (pull-only — server-computed)
+ *   daily_intake_rollups  (pull-only, server-computed)
  *
  * Per-table dispatch via transport.pushTable / pullTable still
  * works: every food table registers a thin handler that calls
@@ -338,7 +338,7 @@ export function foodPushFor(tableName) {
 
 /**
  * Per-table pull handler factory. Same caching model as
- * foodPushFor — the first food-pull call per run drives the bulk
+ * foodPushFor, the first food-pull call per run drives the bulk
  * pull; the rest read their per-table count from the cache.
  */
 export function foodPullFor(tableName) {

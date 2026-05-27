@@ -59,7 +59,7 @@ export function Skeleton({ width = '100%', height = 14, style, radius: r = 6 }) 
   );
 }
 
-// Common compositions — use these where you have a known layout you're
+// Common compositions, use these where you have a known layout you're
 // loading into, so the placeholder matches the real shape.
 export function SkeletonCard({ height = 92, style }) {
   return (

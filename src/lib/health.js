@@ -440,7 +440,7 @@ export async function importNewWeights(userId) {
   const samples = await readWeightsSince(sinceMs);
   if (!samples?.length) return { imported: 0, latestMs: sinceMs };
 
-  // Local import — keep this lazy so health.js isn't a hard dep of
+  // Local import, keep this lazy so health.js isn't a hard dep of
   // database.js at module load.
   let logMorningWeight = null;
   try {

@@ -8,7 +8,7 @@ import { diagnoseSyncConflicts } from '../lib/database';
 import useAppStore from '../store/useAppStore';
 
 // Errors auto-ship to Sentry (configured in App.js). This screen is the
-// on-device viewer for the last 200 buffered events — useful when a
+// on-device viewer for the last 200 buffered events, useful when a
 // tester wants to see what just happened locally or copy a session
 // snippet to share. Cloud upload of the buffer is removed.
 

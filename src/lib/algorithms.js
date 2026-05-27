@@ -1,6 +1,6 @@
-// All 10 hypertrophy algorithms — pure functions, no side effects
+// All 10 hypertrophy algorithms, pure functions, no side effects
 
-// Weekly set landmarks per muscle group. Single source of truth — imported by planEngine too.
+// Weekly set landmarks per muscle group. Single source of truth, imported by planEngine too.
 //
 // mv  = maintenance volume: minimum to prevent detraining between blocks
 // mev = minimum effective volume: minimum to make meaningful progress
@@ -9,7 +9,7 @@
 //
 // These are population starting points, not precise prescriptions.
 // computeAdaptiveLandmarks() personalises them from session feedback after 3+ data points.
-// Label them as "starting range" in user-facing copy — not as objective fact.
+// Label them as "starting range" in user-facing copy, not as objective fact.
 export const VOLUME_LANDMARKS = {
   chest:       { mv: 4,  mev: 6,  mav: 14, mrv: 22 },
   back:        { mv: 8,  mev: 10, mav: 16, mrv: 25 },
@@ -137,7 +137,7 @@ export function getVolumeStatus(workingSets, muscle, customLandmarks = null) {
   const { mev, mav, mrv } = landmarks;
 
   // Zero work is always 'below', regardless of mev. Without this short-circuit,
-  // muscles with mev=0 (front_delts — get plenty of indirect work from
+  // muscles with mev=0 (front_delts, get plenty of indirect work from
   // pressing) read as 'optimal' green on the body heatmap before the user
   // has logged a single set, which makes the diagram look wrong.
   if (workingSets <= 0) {
@@ -217,7 +217,7 @@ export function computeSetTargets(prevSets, repMin, repMax, units = 'kg', option
   const {
     exerciseCategory = 'compound',
     incrementKg = null,
-    prevPrevSets = [],  // sets from the workout before last — for consecutive-miss detection
+    prevPrevSets = [],  // sets from the workout before last, for consecutive-miss detection
     layoffMultiplier = 1.0, // < 1 when returning from a training break
   } = options;
 
@@ -247,7 +247,7 @@ export function computeSetTargets(prevSets, repMin, repMax, units = 'kg', option
     let action = 'maintain';
 
     if (prevReps >= max) {
-      // Hit top of band — only increase load if RIR was logged AND ≥ 1.
+      // Hit top of band, only increase load if RIR was logged AND ≥ 1.
       // Null RIR → hold weight. Novice lifters systematically underestimate their
       // RIR by 2-4 reps; optimistically increasing load when RIR is unlogged drives
       // premature overload. Log RIR to unlock progression suggestions.
@@ -262,7 +262,7 @@ export function computeSetTargets(prevSets, repMin, repMax, units = 'kg', option
         targetWeight = prevWeight + Math.max(0.25, rounded);
         action = 'increase';
       } else {
-        // Grinded it out with RIR 0 — same weight, push for +1 rep is not valid
+        // Grinded it out with RIR 0, same weight, push for +1 rep is not valid
         // so just hold and let RIR recover
         targetMin = min;
         action = 'maintain';
@@ -284,7 +284,7 @@ export function computeSetTargets(prevSets, repMin, repMax, units = 'kg', option
         action = 'maintain';
       }
     } else {
-      // In range — same weight, +1 rep
+      // In range, same weight, +1 rep
       targetMin = Math.min(prevReps + 1, max);
       action = 'add_rep';
     }
@@ -531,7 +531,7 @@ export function shouldDeload(last4WeeksData) {
   const reasons = [];
   let score = 0; // 0–100; deload triggers at ≥ 50
 
-  // — Performance (50% weight) —
+  // Performance (50% weight).
   const recentReps = last4WeeksData[last4WeeksData.length - 1]?.avgReps || 0;
   const earlierReps = last4WeeksData[0]?.avgReps || 0;
   if (earlierReps > 0 && recentReps < earlierReps - 2) {
@@ -539,7 +539,7 @@ export function shouldDeload(last4WeeksData) {
     reasons.push('Rep performance has dropped significantly over the last 4 weeks');
   }
 
-  // — Wellness composite (30% weight, split across joint + volume signals) —
+  // Wellness composite (30% weight, split across joint + volume signals).
   const weeksSinceDeload = last4WeeksData[last4WeeksData.length - 1]?.weeksSinceLastDeload || 99;
   const avgJointDiscomfort =
     last4WeeksData.reduce((sum, w) => sum + (w.avgJointDiscomfort || 0), 0) /
@@ -554,7 +554,7 @@ export function shouldDeload(last4WeeksData) {
     reasons.push('Exceeded your productive volume range for 2 or more weeks');
   }
 
-  // — Soreness (20% weight — down-weighted; unreliable in trained populations) —
+  // Soreness (20% weight, down-weighted; unreliable in trained populations).
   // Require 3+ weeks at high soreness AND time since last deload ≥ 4 weeks
   const highSorenessWeeks = last4WeeksData.filter(w => (w.avgSoreness || 0) >= 2.5).length;
   if (highSorenessWeeks >= 3 && weeksSinceDeload >= 4) {
@@ -565,7 +565,7 @@ export function shouldDeload(last4WeeksData) {
   return { deload: score >= 50, reasons };
 }
 
-// Stretch position score — Maeo et al. (2023), Pedrosa et al. (2022), Wolf et al. (2023)
+// Stretch position score, Maeo et al. (2023), Pedrosa et al. (2022), Wolf et al. (2023)
 // confirm that exercises training the target muscle at long length produce measurably
 // greater hypertrophy per set. Prefer high-stretch alternatives when substituting.
 const STRETCH_SCORE = { high: 2, medium: 1, low: 0 };
@@ -699,7 +699,7 @@ export function calculatePlates(targetWeight, barWeight = 20, availablePlates = 
 //   joint:       0=none  1=low  2=moderate  3=high
 // Returns: { decision, delta, reasonCode, reasonText }
 export function computeAdaptiveDecision({ soreness = 2, performance = 2, pump = 3, joint = 0 } = {}) {
-  // Joint pain overrides everything — rotate the exercise
+  // Joint pain overrides everything, rotate the exercise
   if (joint >= 3) {
     return {
       decision: 'rotate_exercise',
@@ -709,7 +709,7 @@ export function computeAdaptiveDecision({ soreness = 2, performance = 2, pump = 
     };
   }
 
-  // Systemic MRV breach — deload trigger
+  // Systemic MRV breach, deload trigger
   if (performance === 4 && soreness >= 3) {
     return {
       decision: 'deload_trigger',
@@ -729,7 +729,7 @@ export function computeAdaptiveDecision({ soreness = 2, performance = 2, pump = 
     };
   }
 
-  // Joint discomfort (moderate) — hold volume, no increase
+  // Joint discomfort (moderate), hold volume, no increase
   if (joint >= 2) {
     return {
       decision: 'hold',
@@ -751,7 +751,7 @@ export function computeAdaptiveDecision({ soreness = 2, performance = 2, pump = 
       };
     }
     if (pump === 4 && soreness === 2) {
-      // Great pump, healed early — still productive but recovering fine
+      // Great pump, healed early, still productive but recovering fine
       return {
         decision: 'hold',
         delta: 0,
@@ -767,7 +767,7 @@ export function computeAdaptiveDecision({ soreness = 2, performance = 2, pump = 
     };
   }
 
-  // Struggling or failed but still recovering — hold
+  // Struggling or failed but still recovering, hold
   if (performance >= 3 && soreness <= 3) {
     return {
       decision: 'hold',
@@ -813,7 +813,7 @@ export function runAdaptiveEngine(weekFeedback = {}) {
   return results;
 }
 
-// Adaptive volume landmarks — adjusts MEV/MAV/MRV per muscle based on user's feedback signals
+// Adaptive volume landmarks, adjusts MEV/MAV/MRV per muscle based on user's feedback signals
 // history: array of { muscle, pumpScore, sorenessScore, jointDiscomfort, performanceTrend, prFrequency, missedReps, weeklyVolume }
 // Each entry = one logged session/week for that muscle
 export function computeAdaptiveLandmarks(history = [], baseDefaults = VOLUME_LANDMARKS) {
@@ -832,7 +832,7 @@ export function computeAdaptiveLandmarks(history = [], baseDefaults = VOLUME_LAN
     const entries = byMuscle[muscle] || [];
 
     if (entries.length < 3) {
-      // Not enough data — use defaults
+      // Not enough data, use defaults
       adapted[muscle] = { ...base, dataPoints: entries.length, isAdapted: false };
       continue;
     }
@@ -897,12 +897,12 @@ export function computeAdaptiveLandmarks(history = [], baseDefaults = VOLUME_LAN
   return adapted;
 }
 
-// Effective set weighting by RIR proximity — continuous curve per Robinson et al. (2024,
+// Effective set weighting by RIR proximity, continuous curve per Robinson et al. (2024,
 // Sports Medicine 54:2209–2231). The dose-response is monotonic with no discontinuity at
 // RIR 2: "marginal slopes for estimated RIR were negative and their confidence intervals did
 // not contain a null point estimate." RIR 0–2 are functionally equivalent (full credit);
 // credit decreases continuously above RIR 2 down to zero at RIR 8+.
-// Null RIR: treated as RIR ~2 (conservative — novices routinely over-estimate headroom).
+// Null RIR: treated as RIR ~2 (conservative, novices routinely over-estimate headroom).
 export function getSetEffectivenessWeight(rir) {
   if (rir === null || rir === undefined) return 0.9;
   if (rir <= 2) return 1.0;
@@ -910,10 +910,10 @@ export function getSetEffectivenessWeight(rir) {
   if (rir === 4) return 0.70;
   if (rir === 5) return 0.50;
   if (rir <= 7) return 0.25;
-  return 0.0; // RIR 8+ — insufficient stimulus
+  return 0.0; // RIR 8+, insufficient stimulus
 }
 
-// Weighted effective sets per muscle — accounts for proximity to failure.
+// Weighted effective sets per muscle, accounts for proximity to failure.
 // Returns { [muscle]: { workingSets, effectiveSets, reps, tonnage } }
 export function calculateEffectiveSets(sets, exerciseMap = {}) {
   const volumeByMuscle = {};
@@ -994,7 +994,7 @@ export function detectPlateau(exerciseSessions = [], repMin = 6, repMax = 12) {
   };
 }
 
-// Volume confidence — how much to trust the adaptive landmark estimate for a muscle.
+// Volume confidence, how much to trust the adaptive landmark estimate for a muscle.
 // Based on number of feedback data points collected.
 export function getVolumeConfidence(dataPoints) {
   if (dataPoints < 3)  return { level: 'low',    label: 'Estimated', description: 'Starting range. Not yet personalised to you.' };

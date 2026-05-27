@@ -20,7 +20,7 @@ const SEEDED_KEY = '@volyume_exercises_seeded_v7';
 // in the cloud with IDs the next device's seed will produce
 // independently, and the JOIN resolves naturally.
 //
-// Custom exercises are unaffected — they keep their random uid() and
+// Custom exercises are unaffected, they keep their random uid() and
 // already round-trip via syncCustomExercises.
 //
 // The hash is a 128-bit MurmurHash-style mixer split across four
@@ -64,10 +64,10 @@ export function canonicalExerciseId(name) {
   return `${seg1}-${seg2}-${seg3}-${seg4}-${seg5}`;
 }
 
-// Anatomical subregion tags — used by planEngine v2 to enforce balanced muscle coverage.
+// Anatomical subregion tags, used by planEngine v2 to enforce balanced muscle coverage.
 // Muscles not listed here (e.g. biceps, forearms) do not have enforced subregion requirements.
 const SUBREGION_MAP = {
-  // Back — vertical pull vs horizontal row
+  // Back, vertical pull vs horizontal row
   'Lat Pulldown (Wide Grip)':        'vertical_pull',
   'Lat Pulldown (Close Grip)':       'vertical_pull',
   'Lat Pulldown (Neutral Grip)':     'vertical_pull',
@@ -111,14 +111,14 @@ const SUBREGION_MAP = {
   'Stiff-Leg Deadlift (Dumbbell)':   'lower_lat',
   'Back Extension (Weighted)':       'lower_lat',
 
-  // Back — additional rows
+  // Back, additional rows
   'Cable Row (Wide Grip)':           'horizontal_row',
   'Single-Arm Dumbbell Row (Supported)': 'horizontal_row',
   'Banded Row':                      'horizontal_row',
   'Machine Row (Hammer Strength)':   'horizontal_row',
   'TRX Row':                         'horizontal_row',
 
-  // Chest — incline vs flat vs decline
+  // Chest, incline vs flat vs decline
   'Barbell Bench Press':             'flat',
   'Dumbbell Bench Press':            'flat',
   'Machine Chest Press':             'flat',
@@ -153,7 +153,7 @@ const SUBREGION_MAP = {
   'Dumbbell Squeeze Press':          'flat',
   'Cable Fly (Low to High) (Alt)':   'incline',
 
-  // Delts — overhead press (front) vs lateral raise (side) vs face pull / fly (rear)
+  // Delts, overhead press (front) vs lateral raise (side) vs face pull / fly (rear)
   'Barbell Overhead Press':          'overhead_press',
   'Dumbbell Shoulder Press':         'overhead_press',
   'Arnold Press':                    'overhead_press',
@@ -191,7 +191,7 @@ const SUBREGION_MAP = {
   'Bent-Over Cable Rear Delt Fly':   'horiz_abduction',
   'Cable Face Pull (Rope)':          'face_pull',
 
-  // Hamstrings — hip extension vs knee flexion
+  // Hamstrings, hip extension vs knee flexion
   'Romanian Deadlift':               'hip_extension',
   'Stiff-Leg Deadlift':              'hip_extension',
   'Good Morning':                    'hip_extension',
@@ -210,7 +210,7 @@ const SUBREGION_MAP = {
   'Glute Ham Raise':                 'knee_flexion',
   'Leg Curl (Cable)':                'knee_flexion',
 
-  // Triceps — overhead (long head) vs pushdown
+  // Triceps, overhead (long head) vs pushdown
   'EZ Bar Skull Crusher':            'overhead',
   'Dumbbell Skull Crusher':          'overhead',
   'Decline Skull Crusher':           'overhead',
@@ -236,7 +236,7 @@ const SUBREGION_MAP = {
   'Weighted Dips (Triceps)':         'pushdown',
   'Lying Tricep Extension':          'overhead',
 
-  // Calves — gastrocnemius vs soleus
+  // Calves, gastrocnemius vs soleus
   'Standing Calf Raise (Machine)':   'gastro',
   'Standing Calf Raise (Barbell)':   'gastro',
   'Leg Press Calf Raise':            'gastro',
@@ -249,13 +249,13 @@ const SUBREGION_MAP = {
   'Seated Machine Calf Raise':       'soleus',
   'Seated Dumbbell Calf Raise':      'soleus',
 
-  // Calves — additional gastro entries
+  // Calves, additional gastro entries
   'Single-Leg Calf Raise (Dumbbell)':  'gastro',
   'Calf Raise on Leg Press Sled':      'gastro',
   'Standing Calf Raise (Bodyweight)':  'gastro',
   'Jump Rope':                         'gastro',
 
-  // Abs — flexion vs anti-extension vs rotation
+  // Abs, flexion vs anti-extension vs rotation
   'Cable Crunch':                    'flexion',
   'Decline Crunch':                  'flexion',
   'Machine Crunch':                  'flexion',
@@ -811,7 +811,7 @@ export async function seedExercisesIfNeeded() {
     for (const row of RAW) {
       const [name, primaryMuscle, secondaryMuscles, equipment, movementPattern, isCompound, min, max, fatigue, sfr] = row;
       // Deterministic ID derived from the canonical name. Same name on
-      // any device produces the same UUID — so a routine pushed from
+      // any device produces the same UUID, so a routine pushed from
       // device A with exercise_id = canonicalExerciseId('Bench Press')
       // resolves on device B's fresh seed without any name lookup.
       const id = canonicalExerciseId(name);

@@ -309,7 +309,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
                   exercise,
                 });
                 // Show all exercises as candidates rather than the
-                // recovery-narrow list — we don't know what muscle the
+                // recovery-narrow list, we don't know what muscle the
                 // original was so we can't filter intelligently.
                 setSwapCandidates(allExercises.map(e => ({ exercise: e })));
                 return;

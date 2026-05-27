@@ -1,5 +1,5 @@
 /**
- * Public sync surface — imports through the same '../lib/sync' path
+ * Public sync surface, imports through the same '../lib/sync' path
  * that App.js + SyncStatusBadge use, and asserts every spec'd export
  * resolves to a real callable.
  *
@@ -18,7 +18,7 @@ jest.mock('../../database', () => ({
 }));
 
 // Don't import via path-resolved '../sync' inside the test file
-// directly — Jest's resolver may behave differently. Use require with
+// directly, Jest's resolver may behave differently. Use require with
 // a literal path that mirrors what App.js does relative to its own
 // location (`./src/lib/sync` from App.js = `../../lib/sync` from this
 // test = `'../../sync'`).

@@ -1,5 +1,5 @@
 /**
- * Schema-drift smoke test — scans src/lib/database.js for SQL fragments that
+ * Schema-drift smoke test, scans src/lib/database.js for SQL fragments that
  * reference table columns by qualified name and confirms each column actually
  * exists in a CREATE TABLE statement (initial schema OR a later migration).
  *
@@ -8,7 +8,7 @@
  * referenced a column that didn't exist (real column was `primary_muscle`),
  * silently caught with a try/catch and the screen returned blank.
  *
- * Conservative — only checks `<alias>.<column>` patterns where `<alias>` was
+ * Conservative, only checks `<alias>.<column>` patterns where `<alias>` was
  * declared with `FROM <table> <alias>` or `JOIN <table> <alias>` in the same
  * query string. Doesn't try to parse arbitrary SQL.
  */
@@ -58,7 +58,7 @@ function buildTableSchema(source) {
 }
 
 function findAliasReferences(sqlBlock) {
-  // sqlBlock is a string inside backticks/quotes — a SQL fragment.
+  // sqlBlock is a string inside backticks/quotes, a SQL fragment.
   // Find FROM/JOIN <table> <alias> and then any <alias>.<column> references.
   const aliasToTable = {};
   const aliasRe = /\b(?:FROM|JOIN)\s+(\w+)\s+(\w+)\b/gi;

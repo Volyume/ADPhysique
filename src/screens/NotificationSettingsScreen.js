@@ -205,7 +205,7 @@ export default function NotificationSettingsScreen({ navigation }) {
   const [checkinDay, setCheckinDay] = useState(0);
   const [checkinHour, setCheckinHour] = useState(18);
   const [checkinMinute, setCheckinMinute] = useState(0);
-  // Last check-in timestamp in ms — used to enforce the 7-day minimum gap
+  // Last check-in timestamp in ms, used to enforce the 7-day minimum gap
   // when the user switches their check-in day, so the next reminder
   // doesn't fire only 2-3 days after the previous check-in.
   const [lastCheckinMs, setLastCheckinMs] = useState(0);
@@ -547,7 +547,7 @@ export default function NotificationSettingsScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
-      {/* Subtitle only — the stack header (set in RootNavigator with
+      {/* Subtitle only, the stack header (set in RootNavigator with
           options={{ title: 'Notifications' }}) already shows the back
           arrow + title at the top of the screen. */}
       <View style={styles.subtitleWrap}>
@@ -597,7 +597,7 @@ export default function NotificationSettingsScreen({ navigation }) {
         )}
 
 
-        {/* Section 3 — Training reminders (available to all tiers) */}
+        {/* Section 3, Training reminders (available to all tiers) */}
         <Text style={styles.sectionLabel}>Training reminders</Text>
         <View style={styles.card}>
           {/* Toggle row */}

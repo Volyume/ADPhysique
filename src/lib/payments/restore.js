@@ -51,7 +51,7 @@ export async function restorePurchases({ currentTrialState = null } = {}) {
     return { ok: true, tier: restoredTier, alreadyCurrent: true };
   }
 
-  // Sync server-side. Use 'admin' reason — restore is not a fresh
+  // Sync server-side. Use 'admin' reason, restore is not a fresh
   // purchase, it's a tier-state reconciliation against an existing
   // entitlement. payment_ref carries the latest Play Billing purchase
   // token (or transaction ID) so the audit row points at the right

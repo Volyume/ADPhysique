@@ -1,5 +1,5 @@
 /**
- * tier_history per-table pull (no push — pull_only,
+ * tier_history per-table pull (no push, pull_only,
  * server-authoritative).
  *
  * The cloud tier_history table is the audit log of every tier

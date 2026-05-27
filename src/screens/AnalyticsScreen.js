@@ -147,7 +147,7 @@ export default function AnalyticsScreen({ navigation }) {
       const exMap = Object.fromEntries(exercises.map(e => [e.id, e]));
       setAllSets(sets);
       setExerciseMap(exMap);
-      // Earliest completed workout — drives Year of Lifts unlock.
+      // Earliest completed workout, drives Year of Lifts unlock.
       // Comparing started_at across workouts is fine since values
       // are ms-epoch integers.
       const completed = (workouts || []).filter(w => w.isCompleted && w.startedAt);
@@ -513,10 +513,10 @@ export default function AnalyticsScreen({ navigation }) {
             onBuild={() => navigation.getParent()?.navigate('PlansTab', { screen: 'PlanLibrary', initial: false })}
           />
 
-          {/* Training trend (last 6 sessions' fatigue) — moved from Train tab */}
+          {/* Training trend (last 6 sessions' fatigue), moved from Train tab */}
           <FatigueTrendCard sessions={fatigueSessions} />
 
-          {/* This week's planned vs actual volume per muscle — moved from Train tab */}
+          {/* This week's planned vs actual volume per muscle, moved from Train tab */}
           <BlockProgressCard
             blockProgress={blockProgress}
             currentMesoWeek={currentMesoWeek}
@@ -731,7 +731,7 @@ function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, onPress,
         <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
       </View>
 
-      {/* Progress bar — only for mesocycles with a known duration */}
+      {/* Progress bar, only for mesocycles with a known duration */}
       {!isPlan && meso.durationWeeks > 0 && (
         <>
           <View style={styles.mesoProgressTrack}>
@@ -741,7 +741,7 @@ function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, onPress,
         </>
       )}
 
-      {/* Tonnage sparkline — shared SvgBarSparkline style across the app */}
+      {/* Tonnage sparkline, shared SvgBarSparkline style across the app */}
       {tonnageBars.some(b => b.value > 0) && (
         <View style={styles.sparkWrap}>
           <View style={styles.sparkLabelRow}>
@@ -1236,7 +1236,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
     color: colors.textSecondary, textAlign: 'center',
   },
-  // Locked tile variant — used while accumulating training data needed
+  // Locked tile variant, used while accumulating training data needed
   // for a feature (e.g. Year of Lifts requires 365 days of history).
   navTileLocked: { opacity: 0.55 },
   navTileLabelLocked: { color: colors.textMuted },

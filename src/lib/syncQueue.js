@@ -6,14 +6,14 @@
 // pending op, advancing retries + next_attempt_at on failure.
 //
 // Without this, dropped syncs were silent data loss until the next
-// sign-in cycle triggered a full bulkUploadLocalData catch-up — which
+// sign-in cycle triggered a full bulkUploadLocalData catch-up, which
 // the user discovered hours later on a different device.
 //
 // API surface:
 //   enqueueSyncOp(opType, entityId, userId, payload)
-//   drainSyncQueue(supabaseClient)        — called from AppState foreground
-//   getQueueStats(userId)                 — for UI badge
-//   clearQueueForUser(userId)             — used by Settings → Delete account
+//   drainSyncQueue(supabaseClient)       , called from AppState foreground
+//   getQueueStats(userId)                , for UI badge
+//   clearQueueForUser(userId)            , used by Settings → Delete account
 //
 // Backoff schedule (ms): 0 (immediate), 1min, 5min, 30min, 2h, 8h
 // After MAX_RETRIES (6 attempts) the op stays in the table with the
@@ -34,12 +34,12 @@ function uid() {
 
 /**
  * Enqueue an op for cloud sync. Caller has already written to local
- * SQLite — this is the retry-on-failure fallback for the cloud push.
+ * SQLite, this is the retry-on-failure fallback for the cloud push.
  *
  * @param {string} opType    one of 'workout' | 'body_metric' | 'morning_weight' | 'check_in'
  * @param {string} entityId  the local SQLite row id we want to ship
  * @param {string} userId    supabase user.id
- * @param {object} payload   optional — extra data the worker needs (most ops
+ * @param {object} payload   optional, extra data the worker needs (most ops
  *                           re-read from local SQLite by entityId so payload
  *                           can be null)
  */
@@ -153,7 +153,7 @@ async function _runOp(supabaseClient, row) {
       return true;
     case 'body_metric': {
       const payload = row.payload ? JSON.parse(row.payload) : null;
-      if (!payload) return true; // payload missing — treat as drained
+      if (!payload) return true; // payload missing, treat as drained
       await safeCall(sync.syncBodyMetric, row.user_id, payload);
       return true;
     }
@@ -178,7 +178,7 @@ async function _runOp(supabaseClient, row) {
     }
     default:
       logWarn('syncQueue.unknownOp', `unknown op_type=${row.op_type}`, { id: row.id });
-      return true; // unknown op — drop it rather than retry forever
+      return true; // unknown op, drop it rather than retry forever
   }
 }
 

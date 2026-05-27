@@ -14,7 +14,7 @@
 import { runWeeklyCoach } from '../weeklyCoach';
 
 const DAY = 86_400_000;
-const NOW = Date.UTC(2026, 4, 20, 0, 0, 0); // 2026-05-20 — matches the test phone clock
+const NOW = Date.UTC(2026, 4, 20, 0, 0, 0); // 2026-05-20, matches the test phone clock
 
 /**
  * 14 days of weights linearly interpolated from startKg to startKg+kgPerWeek*2,
@@ -262,7 +262,7 @@ describe('cardio prescription', () => {
       consecutivePoorRecoveryWeeks: 0,
       checkin: checkin({ energyScore: 4, sorenessScore: 2 }),
     }));
-    // Either steady or boost — both have prescribed: true
+    // Either steady or boost, both have prescribed: true
     if (out.adjustments.cardio) {
       expect(typeof out.adjustments.cardio.prescribed).toBe('boolean');
     }

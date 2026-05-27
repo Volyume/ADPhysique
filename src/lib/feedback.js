@@ -63,7 +63,7 @@ export async function shouldPrompt(triggerKey) {
 /**
  * Record that the prompt was shown so the suppression window starts.
  * Called by FeedbackSheet on mount (not on submit) so dismissals
- * count too — we don't want to badger.
+ * count too, we don't want to badger.
  */
 export async function markPromptShown(triggerKey) {
   if (!triggerKey) return;
@@ -84,7 +84,7 @@ export async function markPromptShown(triggerKey) {
  * Returns { ok: true } on success or { ok: false, error } on
  * failure. Failure paths: no Supabase client (anonymous local-only
  * install), network error, RLS rejection. None of these crash the
- * caller — feedback is fire-and-forget UX-wise.
+ * caller, feedback is fire-and-forget UX-wise.
  */
 export async function submitFeedback({
   trigger, sentiment, message,
@@ -92,7 +92,7 @@ export async function submitFeedback({
 }) {
   const sb = getSupabaseClient();
   if (!sb) {
-    // Local-only install — record the submission locally so the
+    // Local-only install, record the submission locally so the
     // user's intent isn't lost, and ship on next foreground when
     // we have a session.
     try {
@@ -105,7 +105,7 @@ export async function submitFeedback({
       });
       await AsyncStorage.setItem('@volyume_feedback_pending_v1', JSON.stringify(list.slice(0, 20)));
     } catch (_) {}
-    return { ok: false, error: { message: 'No cloud session — feedback queued locally.' } };
+    return { ok: false, error: { message: 'No cloud session, feedback queued locally.' } };
   }
 
   try {
@@ -119,7 +119,7 @@ export async function submitFeedback({
     };
     const { error } = await sb.from('user_feedback').insert(payload);
     if (error) {
-      // Don't surface raw PostgREST errors to the user — just log.
+      // Don't surface raw PostgREST errors to the user, just log.
       track.warn('feedback.submit.failed', 'feedback', { code: error.code, details: error.details });
       return { ok: false, error };
     }
@@ -208,7 +208,7 @@ export async function flushPendingFeedback(userId) {
     if (!list.length) return 0;
     // Track which specific items failed so we keep them, not "the last N
     // of the queue". Previously this kept list.slice(shipped) which
-    // only works if successes are a prefix — an interleaved failure
+    // only works if successes are a prefix, an interleaved failure
     // (item 1 fails, item 2 succeeds) would drop the failed item and
     // keep the successful one for retry.
     const stillPending = [];

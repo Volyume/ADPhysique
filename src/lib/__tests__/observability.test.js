@@ -1,6 +1,6 @@
 /**
  * Tests for the new auto-instrumentation surfaces in
- * src/lib/observability.js — instrumentAppState, instrumentNetInfo,
+ * src/lib/observability.js, instrumentAppState, instrumentNetInfo,
  * and the enhanced instrumentSupabase (rpc + error + rejection
  * coverage).
  *

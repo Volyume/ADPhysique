@@ -30,7 +30,7 @@ function createParticle(index) {
 }
 
 export default function PRCelebration({ pr, onDismiss, subdued = false }) {
-  // Allocate particles only when we'll render them — subdued mode skips
+  // Allocate particles only when we'll render them, subdued mode skips
   // particles entirely. Each particle's pre-translated offsets are baked
   // into translate constants instead of allocating new Animated.Values
   // every render (was a slow memory leak on long PR streaks).
@@ -92,7 +92,7 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Defensive null guard — App.js gates this but a transient null during
+  // Defensive null guard, App.js gates this but a transient null during
   // the queue-pop tick would otherwise crash on `pr.type`.
   if (!pr) return null;
 

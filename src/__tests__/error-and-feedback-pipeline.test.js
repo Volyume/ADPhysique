@@ -272,7 +272,7 @@ describe('Feedback submission pipeline', () => {
       expect(p.trigger).toBe('crash_recovery');
       expect(p.sentiment).toBe('love');
       // Auto-attached fields. Some may be null in the test env (no Sentry,
-      // no observability boot) — the shape must still exist.
+      // no observability boot), the shape must still exist.
       expect(p).toHaveProperty('session_id');
       expect(p).toHaveProperty('app_version');
       expect(p).toHaveProperty('platform');
@@ -487,7 +487,7 @@ describe('Feedback submission pipeline', () => {
     try {
       res = await submitFeedback({ trigger: 'shake', sentiment: 'meh', message: 'x' });
     } catch (e) {
-      throw new Error('submitFeedback threw — it must always resolve');
+      throw new Error('submitFeedback threw, it must always resolve');
     }
     expect(res.ok).toBe(false);
     expect(res.error).toBeDefined();

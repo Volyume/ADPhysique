@@ -1,5 +1,5 @@
 /**
- * Tests for coachingGoals — pure mappings and small helpers consumed by
+ * Tests for coachingGoals, pure mappings and small helpers consumed by
  * planAutoGen, weeklyCoach, and the Pro onboarding wizard.
  */
 import {
@@ -57,7 +57,7 @@ describe('TRAINING_PHASES catalogue', () => {
     expect(values).toContain('bulk');
     expect(values).toContain('lean_gain');
     expect(values).toContain('recomp');
-    // Post-merge — these absorbed the misplaced "physique goals":
+    // Post-merge, these absorbed the misplaced "physique goals":
     expect(values).toContain('strength_size');
     expect(values).toContain('weak_point');
   });

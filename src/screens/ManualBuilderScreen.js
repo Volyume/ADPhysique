@@ -245,7 +245,7 @@ function computePlanVolume(days) {
 function muscleStatus(muscle, totalSets) {
   const lm = VOLUME_LANDMARKS[muscle];
   if (!lm) return null;
-  // Muscles with a 0 minimum (e.g. glutes) grow from compound work alone —
+  // Muscles with a 0 minimum (e.g. glutes) grow from compound work alone
   // zero direct sets is acceptable, so don't flag them as missing.
   if (totalSets === 0)      return lm.mev === 0 ? 'good' : 'none';
   if (totalSets < lm.mev)   return 'low';
@@ -425,7 +425,7 @@ export default function ManualBuilderScreen({ navigation }) {
 
   function handleLongPressExercise(dayIndex, exLocalId, exName) {
     // Undo pattern: remove immediately + toast with Undo for 8 seconds.
-    // No "Are you sure?" Alert — the safety net is the Undo button.
+    // No "Are you sure?" Alert, the safety net is the Undo button.
     // Captures the removed exercise so Undo can put it back at its
     // original index, not the end.
     let removed = null;

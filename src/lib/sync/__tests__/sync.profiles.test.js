@@ -1,5 +1,5 @@
 /**
- * Focused tests for src/lib/sync/tables/profiles.js — the merge
+ * Focused tests for src/lib/sync/tables/profiles.js, the merge
  * conflict path landing alongside migration 045
  * (users_profile.column_updates_at jsonb).
  *

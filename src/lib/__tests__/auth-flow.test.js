@@ -34,7 +34,7 @@ beforeEach(() => {
 });
 
 describe('clearAuthStateForSignOut', () => {
-  test('wipes every AsyncStorage key — sign-out leaves nothing on the device', async () => {
+  test('wipes every AsyncStorage key, sign-out leaves nothing on the device', async () => {
     // Policy 2026-05-24 (founder direction): sign-out wipes
     // everything from the device for this user. Same hammer as
     // delete-account. No carve-outs for accessibility prefs, crash
@@ -99,7 +99,7 @@ describe('clearAuthStateForSignOut', () => {
     expect(s.tier).toBeNull();
     // tierChecked / firstRunChecked MUST stay true after sign-out so the
     // splash screen doesn't hang waiting for a re-check that never runs.
-    // The "checked" flag means we've verified the value — clearing it
+    // The "checked" flag means we've verified the value, clearing it
     // would be incorrect (we just SET it to null, that IS the verified
     // result). See bug fix in wave 25.
     expect(s.tierChecked).toBe(true);
@@ -135,7 +135,7 @@ describe('clearAuthStateForSignOut', () => {
   });
 });
 
-describe('uid() — UUID v4 format', () => {
+describe('uid(), UUID v4 format', () => {
   test('produces valid UUID v4 strings', () => {
     // Verifies the UUID helper format directly. The earlier shape of
     // this test routed through initLocalUser to get a uid; that

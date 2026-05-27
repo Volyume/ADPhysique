@@ -8,7 +8,7 @@ import {
 
 // ─── VOLUME_LANDMARKS shape ────────────────────────────────────────────────────
 
-describe('VOLUME_LANDMARKS — delt split', () => {
+describe('VOLUME_LANDMARKS, delt split', () => {
   test('shoulders key is removed', () => {
     expect(VOLUME_LANDMARKS.shoulders).toBeUndefined();
   });
@@ -28,7 +28,7 @@ describe('VOLUME_LANDMARKS — delt split', () => {
 
 // ─── MUSCLE_DISPLAY_NAMES ─────────────────────────────────────────────────────
 
-describe('MUSCLE_DISPLAY_NAMES — delt labels (en-GB)', () => {
+describe('MUSCLE_DISPLAY_NAMES, delt labels (en-GB)', () => {
   test('front_delts label', () => {
     expect(MUSCLE_DISPLAY_NAMES.front_delts).toBe('Front delts');
   });
@@ -46,9 +46,9 @@ describe('MUSCLE_DISPLAY_NAMES — delt labels (en-GB)', () => {
   });
 });
 
-// ─── getVolumeStatus — acceptance criteria ────────────────────────────────────
+// ─── getVolumeStatus, acceptance criteria ────────────────────────────────────
 
-describe('getVolumeStatus — delt heads', () => {
+describe('getVolumeStatus, delt heads', () => {
   test('4 sets lateral raises → side_delts below min (textMuted)', () => {
     const result = getVolumeStatus(4, 'side_delts');
     expect(result.status).toBe('below');
@@ -64,7 +64,7 @@ describe('getVolumeStatus — delt heads', () => {
     expect(result.status).toBe('over_mrv');
   });
 
-  test('getVolumeStatus("rear_delt", 14) — acceptance criteria: optimal', () => {
+  test('getVolumeStatus("rear_delt", 14), acceptance criteria: optimal', () => {
     // rear_delts mev:4, mav:16 → 14 sets is within optimal range
     const result = getVolumeStatus(14, 'rear_delts');
     expect(result.status).toBe('optimal');
@@ -83,7 +83,7 @@ describe('getVolumeStatus — delt heads', () => {
 
   test('0 sets front_delts → below (zero-work short-circuit overrides mev=0)', () => {
     // front_delts.mev is 0 because pressing movements provide plenty of
-    // indirect volume — but zero LOGGED sets shouldn't render green on
+    // indirect volume, but zero LOGGED sets shouldn't render green on
     // the heatmap. The zero-work short-circuit in getVolumeStatus catches
     // this case before the mev comparison.
     const result = getVolumeStatus(0, 'front_delts');
@@ -91,9 +91,9 @@ describe('getVolumeStatus — delt heads', () => {
   });
 });
 
-// ─── calculateWeeklyVolume — legacy 'shoulders' normalisation ─────────────────
+// ─── calculateWeeklyVolume, legacy 'shoulders' normalisation ─────────────────
 
-describe('calculateWeeklyVolume — legacy normalisation', () => {
+describe('calculateWeeklyVolume, legacy normalisation', () => {
   const makeSet = (exerciseId) => ({
     exerciseId,
     set_type: 'straight',
@@ -152,17 +152,17 @@ describe('calculateWeeklyVolume — legacy normalisation', () => {
   });
 });
 
-// ─── calculateEffectiveSets — RIR/RPE math ─────────────────────────────────
+// ─── calculateEffectiveSets, RIR/RPE math ─────────────────────────────────
 //
 // Locks in the operator-precedence fix on line 965 (was 950 before edit).
 // The old code was:
 //   getSetEffectivenessWeight(set.rir ?? set.rpe != null ? 10 - set.rpe : null)
-// which parsed as (set.rir ?? (set.rpe != null)) ? 10 - set.rpe : null —
+// which parsed as (set.rir ?? (set.rpe != null)) ? 10 - set.rpe : null
 // any non-null rir>0 evaluated 10 - rpe (NaN when rpe was null), rir===0
 // returned null, and effective-volume was silently corrupted.
 
-describe('calculateEffectiveSets — RIR/RPE precedence fix', () => {
-  // Need access to the function — import it.
+describe('calculateEffectiveSets, RIR/RPE precedence fix', () => {
+  // Need access to the function, import it.
   // eslint-disable-next-line global-require
   const { calculateEffectiveSets, getSetEffectivenessWeight } = require('../algorithms');
 
@@ -226,9 +226,9 @@ describe('calculateEffectiveSets — RIR/RPE precedence fix', () => {
   });
 });
 
-// Defensive parse — the algorithm should survive bad JSON in
+// Defensive parse, the algorithm should survive bad JSON in
 // exercise.secondary_muscles instead of aborting the whole calc.
-describe('calculateWeeklyVolume — malformed secondary_muscles', () => {
+describe('calculateWeeklyVolume, malformed secondary_muscles', () => {
   const makeSet = (id) => ({
     exerciseId: id,
     set_type: 'straight',

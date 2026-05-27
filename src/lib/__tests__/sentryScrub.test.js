@@ -231,7 +231,7 @@ describe('string-value scrubbing', () => {
   test('photo content:// URI is redacted', () => {
     expect(scrubValue('content://media/external/images/media/123')).toBe('content://media/external/images/media/123');
     // Note: scheme alone doesn't match; needs the .ext. This is by
-    // design — we don't want to redact every content URI, only ones
+    // design, we don't want to redact every content URI, only ones
     // we can confirm are images.
     expect(scrubValue('content://com.app/files/img.heic')).toBe('[redacted]');
   });

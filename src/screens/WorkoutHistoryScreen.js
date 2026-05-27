@@ -168,7 +168,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
 
       setExpandedSets(prev => ({ ...prev, [workoutId]: grouped }));
     } catch (_) {
-      // silently fail — expanded view just won't show exercise breakdown
+      // silently fail, expanded view just won't show exercise breakdown
     }
   }, [expandedId, expandedSets]);
 
@@ -256,7 +256,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
 
     return (
       <View style={styles.card}>
-        {/* Tappable header row — toggles expansion */}
+        {/* Tappable header row, toggles expansion */}
         <PressableCard
           onPress={() => handleToggleExpand(workout.id)}
           style={styles.cardHeaderTouchable}

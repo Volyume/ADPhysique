@@ -97,7 +97,7 @@ export default function CascadeGateScreen({ navigation, route }) {
     try {
       // Initiate purchase. The webhook posts back the tier change;
       // we also call cascade.payAt optimistically so the local state
-      // updates immediately (idempotent — webhook will reconcile).
+      // updates immediately (idempotent, webhook will reconcile).
       const purchaseResult = await playBilling.purchasePackage(sku.id);
       const ref = purchaseResult?.transactionId ?? `client_${Date.now()}`;
       const cascadeResult = await cascade.payAt(targetTier, ref, content.surface);
@@ -130,7 +130,7 @@ export default function CascadeGateScreen({ navigation, route }) {
       if (targetTier === 'free') {
         await cascade.skipToFree(content.surface);
       } else if (targetTier === 'pro') {
-        // Day-14 "Switch to Pro" — choosing Pro now skips the
+        // Day-14 "Switch to Pro", choosing Pro now skips the
         // automatic complete→pro downgrade, with locked-in pricing.
         // For day14 we use skipToPro (user_skip → pro_trial_active).
         // For day28 there is no "Switch to Pro" option (already on

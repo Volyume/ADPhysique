@@ -716,7 +716,7 @@ export default function AthleteHubScreen({ navigation }) {
           </TouchableOpacity>
         )}
 
-        {/* Nutrition primer — link to the 5-min educational guide. Shown
+        {/* Nutrition primer, link to the 5-min educational guide. Shown
             below the targets card so users who want a refresher (or who
             never read it during onboarding) can find it easily. */}
         {tier === 'pro' && (
@@ -857,7 +857,7 @@ export default function AthleteHubScreen({ navigation }) {
                 onPress={() => navigation.navigate('GoalLockConsent', { editMode: true })}
               />
 
-              {/* Engine Log — collapsible */}
+              {/* Engine Log, collapsible */}
               {(adaptationHistory.length > 0 || repWarnings.length > 0) && (
                 <View style={styles.adaptHistCard}>
                   <TouchableOpacity

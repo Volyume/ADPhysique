@@ -15,11 +15,11 @@ function _scheduleSync() {
   try {
     // eslint-disable-next-line global-require
     require('./sync').scheduleSync();
-  } catch (_) { /* sync module unavailable — tolerate */ }
+  } catch (_) { /* sync module unavailable, tolerate */ }
 }
 
 export function uid() {
-  // UUID v4 — required so rows sync cleanly to Supabase, whose primary-key
+  // UUID v4, required so rows sync cleanly to Supabase, whose primary-key
   // columns are typed UUID. The previous compact format (timestamp + random
   // suffix) silently FK-failed on every Supabase upsert.
   // Math.random is fine here; ids are not security-sensitive.
@@ -269,13 +269,13 @@ async function _doInit() {
 // Each entry in SCHEMA_MIGRATIONS is one schema version: an ordered list of
 // SQL statements. The applied version is tracked in SQLite's own
 // `PRAGMA user_version`, so every migration runs exactly once and future
-// schema changes only need a new array entry appended here — existing user
+// schema changes only need a new array entry appended here, existing user
 // data is never wiped or re-migrated.
 //
 // IMPORTANT: never edit or reorder an existing migration once shipped. Only
 // append new ones. To change the schema, add a new sub-array.
 const SCHEMA_MIGRATIONS = [
-  // v1 — additive columns + the programmes table. These predate version
+  // v1, additive columns + the programmes table. These predate version
   // tracking, so on installs upgrading from the old swallow-all loop the
   // columns may already exist; "duplicate column" is tolerated below.
   [
@@ -312,7 +312,7 @@ const SCHEMA_MIGRATIONS = [
     'ALTER TABLE body_metric_log ADD COLUMN calf_cm REAL',
     'ALTER TABLE workout_sets ADD COLUMN missed_reps INTEGER',
   ],
-  // v2 — remap exercises.primary_muscle from generic 'shoulders' to the
+  // v2, remap exercises.primary_muscle from generic 'shoulders' to the
   // correct delt head. Idempotent: no-ops once rows are updated.
   [
     `UPDATE exercises SET primary_muscle = 'front_delts'
@@ -332,7 +332,7 @@ const SCHEMA_MIGRATIONS = [
     `UPDATE exercises SET primary_muscle = 'side_delts'
      WHERE primary_muscle = 'shoulders'`,
   ],
-  // v3 — mesocycle week scaffold: week table, planned volume, adaptation events,
+  // v3, mesocycle week scaffold: week table, planned volume, adaptation events,
   // plus additive columns on mesocycles / workouts / exercises / workout_sets.
   [
     `ALTER TABLE mesocycles ADD COLUMN block_type TEXT DEFAULT 'offseason_hypertrophy'`,
@@ -381,15 +381,15 @@ const SCHEMA_MIGRATIONS = [
     `ALTER TABLE workout_sets ADD COLUMN rir INTEGER`,
     `ALTER TABLE workout_sets ADD COLUMN rpe REAL`,
   ],
-  // v4 — add joint_discomfort to workouts so feedback is fully persisted
+  // v4, add joint_discomfort to workouts so feedback is fully persisted
   [
     `ALTER TABLE workouts ADD COLUMN joint_discomfort INTEGER`,
   ],
-  // v5 — add difficulty to programmes so library filter chips work
+  // v5, add difficulty to programmes so library filter chips work
   [
     'ALTER TABLE programmes ADD COLUMN difficulty INTEGER',
   ],
-  // v6 — Pro coaching tables: morning weights, weekly check-ins, coach outputs
+  // v6, Pro coaching tables: morning weights, weekly check-ins, coach outputs
   [
     `CREATE TABLE IF NOT EXISTS morning_weights (
       id TEXT PRIMARY KEY,
@@ -434,24 +434,24 @@ const SCHEMA_MIGRATIONS = [
     )`,
     `CREATE INDEX IF NOT EXISTS idx_coach_outputs_user ON coach_outputs(user_id, week_start)`,
   ],
-  // v7 — add training performance and joint pain to weekly check-ins
+  // v7, add training performance and joint pain to weekly check-ins
   [
     'ALTER TABLE weekly_checkins ADD COLUMN training_performance TEXT',
     'ALTER TABLE weekly_checkins ADD COLUMN joint_pain INTEGER DEFAULT 0',
   ],
-  // v8 — wellbeing screening score on user body profile
+  // v8, wellbeing screening score on user body profile
   [
     'ALTER TABLE user_body_profile ADD COLUMN scoff_score INTEGER',
   ],
-  // v9 — pre-workout intent captured before each session
+  // v9, pre-workout intent captured before each session
   [
     'ALTER TABLE workouts ADD COLUMN pre_workout_intent TEXT',
   ],
-  // v10 — muscle-specific soreness on weekly check-ins
+  // v10, muscle-specific soreness on weekly check-ins
   [
     'ALTER TABLE weekly_checkins ADD COLUMN sore_muscles TEXT',
   ],
-  // v11 — exercise user notes: persistent per-user per-exercise notes for machine settings, cues, etc.
+  // v11, exercise user notes: persistent per-user per-exercise notes for machine settings, cues, etc.
   [
     `CREATE TABLE IF NOT EXISTS exercise_user_notes (
     id TEXT PRIMARY KEY,
@@ -464,15 +464,15 @@ const SCHEMA_MIGRATIONS = [
   )`,
     `CREATE INDEX IF NOT EXISTS idx_exercise_notes_user ON exercise_user_notes(user_id, exercise_id)`,
   ],
-  // v12 — sleep quality field in weekly_checkins for post-session recovery tracking
+  // v12, sleep quality field in weekly_checkins for post-session recovery tracking
   [
     'ALTER TABLE weekly_checkins ADD COLUMN sleep_quality INTEGER',
   ],
-  // v13 — proper boolean flag to identify sample/library routines, replacing the fragile [SAMPLE] name prefix
+  // v13, proper boolean flag to identify sample/library routines, replacing the fragile [SAMPLE] name prefix
   [
     'ALTER TABLE routines ADD COLUMN is_sample INTEGER NOT NULL DEFAULT 0',
   ],
-  // v14 — between-session "next time" coaching notes
+  // v14, between-session "next time" coaching notes
   [
     `CREATE TABLE IF NOT EXISTS workout_notes (
       id TEXT PRIMARY KEY,
@@ -486,7 +486,7 @@ const SCHEMA_MIGRATIONS = [
     )`,
     `CREATE INDEX IF NOT EXISTS idx_workout_notes_user ON workout_notes(user_id, routine_id)`,
   ],
-  // v15 — exercise milestone goals: target weight + optional target date per exercise
+  // v15, exercise milestone goals: target weight + optional target date per exercise
   [
     `CREATE TABLE IF NOT EXISTS exercise_goals (
       id TEXT PRIMARY KEY,
@@ -501,7 +501,7 @@ const SCHEMA_MIGRATIONS = [
     `CREATE INDEX IF NOT EXISTS idx_exercise_goals_user ON exercise_goals(user_id, exercise_id)`,
   ],
 
-  // v16 — pending sync ops queue. Mutations that fail to ship to the
+  // v16, pending sync ops queue. Mutations that fail to ship to the
   // cloud (offline, flaky connection, server hiccup) are enqueued here
   // and retried on app foreground / next sign-in. Without this, a
   // dropped sync was silent data loss until the user's next sign-in
@@ -521,7 +521,7 @@ const SCHEMA_MIGRATIONS = [
     `CREATE INDEX IF NOT EXISTS idx_pending_sync_user_ready
       ON pending_sync_ops(user_id, next_attempt_at)`,
   ],
-  // v17 — columns that insertRoutineFromCloud + insertProgrammeFromCloud
+  // v17, columns that insertRoutineFromCloud + insertProgrammeFromCloud
   // had been INSERTing into for ages without ever being added to the
   // local schema. Every cross-device restore was failing every
   // routine and programme insert with "table routines has no column
@@ -533,13 +533,13 @@ const SCHEMA_MIGRATIONS = [
     'ALTER TABLE routines ADD COLUMN day_of_week INTEGER',
     'ALTER TABLE programmes ADD COLUMN source_programme_id TEXT',
   ],
-  // v18 — backfill deterministic canonical exercise IDs.
+  // v18, backfill deterministic canonical exercise IDs.
   //
   // Canonical exercises had random uid() IDs minted at seed time, so
   // every install produced a different ID for the same exercise. That
   // meant a routine_exercises row pushed from device A with
   // exercise_id = X resolved on device B's INNER JOIN only if device
-  // B's seed had produced the same random X — which it never did.
+  // B's seed had produced the same random X, which it never did.
   //
   // From this version forward the seed uses canonicalExerciseId(name)
   // (a name hash) instead of uid(). This migration brings existing
@@ -584,7 +584,7 @@ const SCHEMA_MIGRATIONS = [
       }
     },
   ],
-  // v19 — universal sync columns + denormalised exercise_name.
+  // v19, universal sync columns + denormalised exercise_name.
   //
   // updated_at gives the sync layer a stable cursor for delta
   // queries ("give me everything modified since last sync"). Without
@@ -668,7 +668,7 @@ const SCHEMA_MIGRATIONS = [
     )`,
     // Backfill: populate exercise_name on every existing routine_exercise
     // and workout_set by joining against the local exercises table. This
-    // is best-effort — rows whose exercise_id no longer resolves locally
+    // is best-effort, rows whose exercise_id no longer resolves locally
     // (the broken-from-cloud rows) get NULL and will surface in the
     // self-healing UI on the next pull.
     `UPDATE routine_exercises SET exercise_name = (
@@ -686,7 +686,7 @@ const SCHEMA_MIGRATIONS = [
     'CREATE INDEX IF NOT EXISTS idx_body_metric_log_updated ON body_metric_log(updated_at)',
     'CREATE INDEX IF NOT EXISTS idx_routine_exercises_updated ON routine_exercises(updated_at)',
   ],
-  // v20 — indexes on the sync-mirror tables introduced in v19. The
+  // v20, indexes on the sync-mirror tables introduced in v19. The
   // bulk getters (getAllWorkoutNotesForUser etc.) all scan by
   // user_id; without the index those scans degrade to full-table
   // sweeps as the row count grows. Cheap to add now while the
@@ -700,7 +700,7 @@ const SCHEMA_MIGRATIONS = [
     'CREATE INDEX IF NOT EXISTS idx_adaptation_events_sync_user_updated ON adaptation_events_sync(user_id, updated_at)',
   ],
 
-  // v21 — backfill mesocycles.end_date for rows that pre-date the fix
+  // v21, backfill mesocycles.end_date for rows that pre-date the fix
   // in activatePlanWithBlock. The cloud schema declares end_date NOT
   // NULL, so any pre-existing local block with a null end_date was
   // silently dropped by the push and never reached the user's other
@@ -724,7 +724,7 @@ const SCHEMA_MIGRATIONS = [
     },
   ],
 
-  // v22 — re-issue mesocycle_weeks IDs that pre-date the UUID fix.
+  // v22, re-issue mesocycle_weeks IDs that pre-date the UUID fix.
   // Old rows used a composite key `mw_<mesocycleId>_<weekIndex>` which
   // the cloud's UUID column rejected on every push, leaving every
   // user's weekly progression unable to sync. This migration rewrites
@@ -750,7 +750,7 @@ const SCHEMA_MIGRATIONS = [
     },
   ],
 
-  // v23 — indexes that matter at scale. Every aggregate query
+  // v23, indexes that matter at scale. Every aggregate query
   // (analytics, history, weekly volume) filters by created_at; without
   // a btree index those queries scan the full workout_sets table.
   // Same for mesocycle_weeks.mesocycle_id which is the most common
@@ -1093,7 +1093,7 @@ async function runMigrations(d) {
         }
       } catch (e) {
         if (isBenignMigrationError(e)) continue;
-        // A genuine migration failure — surface it instead of silently
+        // A genuine migration failure, surface it instead of silently
         // corrupting the schema and crashing later at an unrelated query.
         console.warn(`[db] migration v${v + 1} failed:`, e?.message || e);
         throw e;
@@ -1107,7 +1107,7 @@ async function runMigrations(d) {
 // Exported so peer modules (syncQueue.js) can grab the SQLite handle
 // directly. Without this export, `import { db } from './database'` in
 // syncQueue resolved to undefined and every `await db()` call there
-// threw "undefined is not a function" on entry — the bug that made
+// threw "undefined is not a function" on entry, the bug that made
 // every drainSyncQueue invocation fail before processing any row.
 export async function db() {
   return _db || initDatabase();
@@ -1143,7 +1143,7 @@ export async function insertExercise(data) {
 // Variant that accepts a caller-supplied id. seedExercisesIfNeeded uses
 // it to plant canonical exercises with deterministic (name-hashed)
 // UUIDs so every install produces the same ID for the same canonical
-// name — see canonicalExerciseId() in seedExercises.js for the
+// name, see canonicalExerciseId() in seedExercises.js for the
 // rationale.
 export async function insertExerciseWithId(id, data) {
   const d = await db();
@@ -1290,7 +1290,7 @@ export async function getAllWorkoutSets(userId) {
   return rows.map(rowToCamel);
 }
 
-// Returns only sets from completed workouts — use for volume analytics.
+// Returns only sets from completed workouts, use for volume analytics.
 export async function getCompletedWorkoutSets(userId) {
   const d = await db();
   const rows = await d.getAllAsync(
@@ -1462,7 +1462,7 @@ export async function getWorkoutSetsForWorkout(workoutId) {
  * recent moving average (and rank it within the window).
  *
  * Aggregates in SQL so we don't pay an N+1 trip per workout. Excludes
- * warm-up sets — they don't count toward "working tonnage" and including
+ * warm-up sets, they don't count toward "working tonnage" and including
  * them would inflate the average vs the headline tonnage shown on the
  * summary screen.
  */
@@ -1689,7 +1689,7 @@ export async function softDeleteRoutine(id) {
  * that doesn't resolve against the local exercises table. These are
  * the "orphaned" routines left over from a cloud restore that
  * pre-dates the denormalised exercise_name + deterministic canonical
- * IDs. They can't be opened in ActiveWorkout meaningfully — the
+ * IDs. They can't be opened in ActiveWorkout meaningfully, the
  * INNER JOIN returns zero rows. The user's only path forward is to
  * either re-link each exercise manually OR delete the routine.
  *
@@ -1699,7 +1699,7 @@ export async function softDeleteRoutine(id) {
  * of those are unresolved (otherwise the routine isn't fully
  * orphaned and shouldn't appear in the cleanup list).
  *
- * A routine with zero routine_exercises is NOT orphaned — that's just
+ * A routine with zero routine_exercises is NOT orphaned, that's just
  * an empty draft the user can still add exercises to.
  */
 export async function getOrphanedRoutines(userId) {
@@ -1733,7 +1733,7 @@ export async function getOrphanedRoutines(userId) {
  * the routines table. These rows can accumulate when older code paths
  * removed routines without cascading children, and they break the
  * cloud push because Supabase's RLS check on routine_exercises
- * requires a matching routine row owned by the same user — every
+ * requires a matching routine row owned by the same user, every
  * sync without this cleanup logs "orphan routine_exercises skipped".
  * Idempotent, runs once at boot.
  */
@@ -1826,7 +1826,7 @@ export async function copyRoutineFromLibrary(routineId, userId) {
 
 export async function getRoutineExercisesWithDetails(routineId) {
   const d = await db();
-  // LEFT JOIN — a routine_exercise whose exercise_id doesn't resolve to
+  // LEFT JOIN, a routine_exercise whose exercise_id doesn't resolve to
   // a local exercise (e.g. cloud-restored rows from before deterministic
   // canonical IDs) still surfaces. The fallback uses the denormalised
   // exercise_name stored on the routine_exercises row so the user sees
@@ -1854,7 +1854,7 @@ export async function getRoutineExercisesWithDetails(routineId) {
     const exercise = {
       id: row.exercise_id,
       name: row.resolved_name,
-      // When the FK didn't resolve these are all null — coach insights
+      // When the FK didn't resolve these are all null, coach insights
       // and volume calculations downstream guard on missing muscle.
       primaryMuscle: row.primary_muscle,
       secondaryMuscles: (() => { try { return JSON.parse(row.secondary_muscles || '[]'); } catch { return []; } })(),
@@ -1965,7 +1965,7 @@ export async function duplicateRoutine(routineId, userId, newName) {
   if (!original) throw new Error('Routine not found');
   const newRoutine = await createRoutine(userId, newName, original.description, original.splitType);
   const exercises = await getRoutineExercisesWithDetails(routineId);
-  // Atomic — was N+1 individual inserts; an interruption used to leave a
+  // Atomic, was N+1 individual inserts; an interruption used to leave a
   // routine row pointing at no exercises (or partial), which the UI
   // couldn't recover and the user couldn't see.
   await d.withTransactionAsync(async () => {
@@ -2283,7 +2283,7 @@ export async function generateMesocycleWeeks(mesocycleId) {
   const weeks = [];
 
   // Wrap in a single transaction so a crash mid-loop doesn't leave a meso
-  // with a partial week list (and so the writes commit atomically — much
+  // with a partial week list (and so the writes commit atomically, much
   // faster than N round trips even on success).
   await d.withTransactionAsync(async () => {
     for (let i = 0; i < plannedWeeks; i++) {
@@ -2317,7 +2317,7 @@ export async function getCurrentMesocycleWeek(userId) {
   try {
     const d = await db();
 
-    // Find the week linked to the most recent workout — that's the current week
+    // Find the week linked to the most recent workout, that's the current week
     const fromWorkout = await d.getFirstAsync(
       `SELECT mw.*, m.name AS meso_name, m.block_type, m.planned_weeks,
               m.rir_ladder, m.deload_protocol, m.status AS meso_status
@@ -2699,7 +2699,7 @@ export async function getLatestBodyWeight(userId) {
     // Fall back to the body weight the user entered during onboarding
     // (saved to user_body_profile). Without this, a user who's done
     // onboarding but hasn't logged a separate weigh-in shows up as
-    // "no body weight" everywhere — Relative Strength, share cards etc.
+    // "no body weight" everywhere, Relative Strength, share cards etc.
     d.getFirstAsync(
       `SELECT weight_kg FROM user_body_profile
        WHERE user_id = ? AND weight_kg IS NOT NULL LIMIT 1`,
@@ -2712,7 +2712,7 @@ export async function getLatestBodyWeight(userId) {
   if (winner && winner.weight_kg != null) {
     return { weightKg: winner.weight_kg, loggedAt: winner.logged_at };
   }
-  // No weigh-in logged — use the onboarding bodyweight as the baseline so
+  // No weigh-in logged, use the onboarding bodyweight as the baseline so
   // features that need a number still work. Marked with loggedAt=0 so
   // callers can tell it's a stale fallback if they care.
   if (profileRow?.weight_kg != null) {
@@ -2791,8 +2791,8 @@ export async function persistInsights(userId, insights) {
   const now = Date.now();
 
   // Prune active (non-dismissed) insights that are no longer generated, so a
-  // condition that has resolved — or a rule that no longer applies after a
-  // logic fix — stops showing instead of lingering forever. Dismissed rows
+  // condition that has resolved, or a rule that no longer applies after a
+  // logic fix, stops showing instead of lingering forever. Dismissed rows
   // are kept so the 14-day "don't resurrect" window still works.
   const liveKeys = insights.map(i => i.key);
   if (liveKeys.length > 0) {
@@ -2951,7 +2951,7 @@ export async function getUserBodyProfile(userId) {
 
 export async function clearWorkoutHistory(userId) {
   const d = await db();
-  // Atomic — was two separate runAsync calls; an interruption between
+  // Atomic, was two separate runAsync calls; an interruption between
   // them would orphan workout rows whose sets had already been deleted.
   await d.withTransactionAsync(async () => {
     await d.runAsync('DELETE FROM workout_sets WHERE user_id = ?', [userId]);
@@ -2975,7 +2975,7 @@ export async function wipeAllUserData(userId) {
   if (!userId) return;
   const d = await db();
 
-  // Tables that have a user_id column on them directly — straight DELETE.
+  // Tables that have a user_id column on them directly, straight DELETE.
   const directTables = [
     'workout_sets', 'workouts',
     'routines', 'programmes',
@@ -2985,7 +2985,7 @@ export async function wipeAllUserData(userId) {
     'body_metric_log', 'user_insights', 'user_body_profile',
     'exercise_user_notes', 'exercise_goals', 'workout_notes',
     'custom_exercises',
-    'pending_sync_ops', // queue table from v16 — wipe so deleted user
+    'pending_sync_ops', // queue table from v16, wipe so deleted user
                          // doesn't have orphan ops still trying to ship
     // Sync-mirror tables added by migration v19. Must be wiped on
     // account deletion otherwise the next account that lands on
@@ -3078,7 +3078,7 @@ export async function wipeAllUserData(userId) {
 
     // 6. Custom exercises. Canonical seed exercises are shared library data
     // and aren't keyed per user, so leave them. is_custom = 1 means
-    // user-added — wipe those.
+    // user-added, wipe those.
     try {
       await d.runAsync('DELETE FROM exercises WHERE is_custom = 1');
     } catch (e) {
@@ -3090,7 +3090,7 @@ export async function wipeAllUserData(userId) {
 // ─── Full local backup / restore ────────────────────────────────────────────
 //
 // Every user-owned table. exercises is intentionally excluded: it is seed
-// data, not user data, and is re-seeded on launch — dumping ~150 canonical
+// data, not user data, and is re-seeded on launch, dumping ~150 canonical
 // rows would only bloat the backup. Custom exercises are preserved because
 // they're referenced by workout_sets via exercise_id; if a restore lands on
 // a fresh install the seed covers the canonical set.
@@ -3101,7 +3101,7 @@ export const BACKUP_TABLES = [
   'routine_exercises',
   'programmes',
   'mesocycles',
-  // Mesocycle child tables — restoring without these leaves orphan week-rows
+  // Mesocycle child tables, restoring without these leaves orphan week-rows
   // pointing at deleted mesocycle ids and planned-volume drift.
   'mesocycle_weeks',
   'planned_muscle_volume',
@@ -3111,7 +3111,7 @@ export const BACKUP_TABLES = [
   'body_metric_log',
   'user_insights',
   'user_body_profile',
-  // Coaching tables — added so Pro users don't lose their check-in / coach
+  // Coaching tables, added so Pro users don't lose their check-in / coach
   // output / morning-weight history on restore.
   'morning_weights',
   'weekly_checkins',
@@ -3283,7 +3283,7 @@ export async function logMorningWeight(userId, { weightKg, loggedAt = Date.now()
     // eslint-disable-next-line global-require
     const { syncMorningWeight } = require('./sync');
     syncMorningWeight(userId, { id: savedId, weightKg, loggedAt, notes }).catch(() => {});
-  } catch (_) { /* sync module unavailable — bulk upload will catch up later */ }
+  } catch (_) { /* sync module unavailable, bulk upload will catch up later */ }
   return savedId;
 }
 
@@ -3362,13 +3362,13 @@ export async function saveWeeklyCheckin(userId, data) {
       ],
     );
   }
-  // Fire-and-forget cloud push — fires from BOTH insert and update
+  // Fire-and-forget cloud push, fires from BOTH insert and update
   // paths so an edit-then-sign-out doesn't strand the change.
   try {
     // eslint-disable-next-line global-require
     const { syncWeeklyCheckin } = require('./sync');
     syncWeeklyCheckin(userId, { id: savedId, ...data }).catch(() => {});
-  } catch (_) { /* sync module unavailable — bulk upload will catch up later */ }
+  } catch (_) { /* sync module unavailable, bulk upload will catch up later */ }
   return savedId;
 }
 
@@ -3505,7 +3505,7 @@ export async function getYearOfLiftsData(userId, yearMs = null) {
   // Unique exercise count
   const uniqueExercises = Object.keys(exerciseCounts).length;
 
-  // Top PRs during the year — compute best estimated 1RM per exercise
+  // Top PRs during the year, compute best estimated 1RM per exercise
   // from logged sets (the historical personal_records table was never
   // created locally; previous SQL silently caught and returned []).
   const bestByExercise = new Map();
@@ -3605,8 +3605,8 @@ export async function getBlockReflectionData(userId, mesocycleId) {
     return v > (best?.volume ?? 0) ? { startedAt: w.started_at, volume: v, duration: w.duration_minutes } : best;
   }, null);
 
-  // PRs during this block — compute best estimated 1RM per exercise from the
-  // block's logged sets (no local personal_records table — see comment above).
+  // PRs during this block, compute best estimated 1RM per exercise from the
+  // block's logged sets (no local personal_records table, see comment above).
   const blockBestByExercise = new Map();
   for (const s of sets) {
     if (!s.exercise_name) continue;
@@ -3698,7 +3698,7 @@ export async function getLatestCoachOutput(userId) {
 }
 
 // ─── Bulk-sync read helpers ───────────────────────────────────────────────
-// Return every row owned by `userId` for a given table — used by sync.js to
+// Return every row owned by `userId` for a given table, used by sync.js to
 // upload the user's complete state to the cloud (idempotent upserts so
 // re-running is safe). Kept separate from the paginated/recency-filtered
 // reads the UI uses.
@@ -3813,7 +3813,7 @@ export async function getAllPlannedMuscleVolumeForUser(userId) {
     // The primary planned_muscle_volume table has no user_id column, so
     // we JOIN through mesocycle_weeks → mesocycles to filter. Previously
     // this read from the _sync mirror, which was only populated by
-    // cloud pulls — so locally-computed planned volumes never reached
+    // cloud pulls, so locally-computed planned volumes never reached
     // the cloud and were lost on cross-device restore.
     const rows = await d.getAllAsync(
       `SELECT pmv.*, m.user_id AS user_id
@@ -3897,7 +3897,7 @@ export async function insertRoutineExerciseFromCloud(re) {
   // locally but carries a denormalised exercise_name, look up the
   // local exercise of that name and rewrite the FK. This turns a
   // would-be-broken row into a fully-resolved one without any user
-  // action — the cure for the 114-routines-with-zero-exercises bug.
+  // action, the cure for the 114-routines-with-zero-exercises bug.
   let exerciseId = re.exercise_id;
   const exerciseName = re.exercise_name ?? null;
   if (exerciseId) {
@@ -3955,7 +3955,7 @@ export async function insertMorningWeightFromCloud(userId, w) {
 // shoulders / forearms / hamstrings / calves with a DATE-typed
 // metric_date instead of an ms epoch logged_at. The previous version
 // of this function was reading m.weight_kg / m.thigh_cm / m.arm_cm
-// / etc. — none of which exist on the cloud row — so every measured
+// / etc., none of which exist on the cloud row, so every measured
 // value came back as null on cross-device restore. The Athlete Hub
 // then showed "Body metrics: No entries yet" even though the user had
 // dutifully logged dozens of weigh-ins.
@@ -4005,7 +4005,7 @@ export async function insertBodyMetricFromCloud(userId, m) {
   );
 }
 
-// INSERT OR REPLACE — the per-table sync handler at
+// INSERT OR REPLACE, the per-table sync handler at
 // src/lib/sync/tables/weeklyCheckins.js applies the LWW gate
 // before calling this. Without the REPLACE a cloud edit to an
 // already-synced row would never land locally.
@@ -4277,7 +4277,7 @@ export async function insertWorkoutSetFromCloud(userId, s) {
 //
 // Each helper accepts a raw cloud row (snake_case keys) and writes it
 // into the matching local table. INSERT OR REPLACE keeps repeated
-// syncs idempotent — re-pulling the same row updates instead of
+// syncs idempotent, re-pulling the same row updates instead of
 // double-inserting. Cloud timestamps (ISO strings) are converted to
 // the local ms epoch convention.
 
@@ -4416,7 +4416,7 @@ export async function insertOrUpdateExerciseUserNoteFromCloud(userId, row) {
 export async function insertOrUpdateWorkoutNoteFromCloud(userId, row) {
   if (!row?.id) return;
   const d = await db();
-  // Local table is workout_notes_v2 — the v1 schema had a different
+  // Local table is workout_notes_v2, the v1 schema had a different
   // shape and we don't migrate user-typed notes between them.
   await d.runAsync(
     `INSERT OR REPLACE INTO workout_notes_v2

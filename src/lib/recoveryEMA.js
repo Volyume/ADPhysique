@@ -5,7 +5,7 @@
  * Half-life model: a data point loses half its weight every `halfLifeDays`.
  * weight(age_days) = 0.5 ^ (age_days / halfLifeDays)
  *
- * Pure functions — no DB calls, no side effects.
+ * Pure functions, no DB calls, no side effects.
  */
 
 const HALF_LIFE_DAYS = 7;

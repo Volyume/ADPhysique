@@ -329,7 +329,7 @@ describe('food preference cycle (migration 048)', () => {
     await applyFavouriteFromCloud(UID, {
       food_ref: 'off:legacy',
       last_used_at: '2026-05-20T08:00:00Z',
-      // kind absent — pre-mig-048 cloud row
+      // kind absent, pre-mig-048 cloud row
     });
     expect(writes[0].params[3]).toBe('fav');
   });

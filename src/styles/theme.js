@@ -3,20 +3,20 @@
 // screen module evaluates its StyleSheet.create. After that point the
 // values are effectively frozen (RN's StyleSheet.create copies primitives
 // at creation time), so non-Reduce-Motion accessibility toggles require an
-// app reload to fully take effect — see App.js for the boot-time apply,
+// app reload to fully take effect, see App.js for the boot-time apply,
 // and SettingsScreen for the reload prompt after toggle.
 const baseColors = {
-  // Core backgrounds — dark charcoal, not pure black.
+  // Core backgrounds, dark charcoal, not pure black.
   // Pure black (#000000) causes halation (blurring) for users with astigmatism.
   // #0D0D0D passes WCAG AAA against textPrimary/textSecondary while reducing eye strain.
   background: '#0D0D0D',
   surface: '#1A1A1A',
   surface2: '#242424',
   surface3: '#2E2E2E',
-  border: '#6E6E6E',       // 3.81:1 on background — meets WCAG 1.4.11 (3:1 for UI separators)
+  border: '#6E6E6E',       // 3.81:1 on background, meets WCAG 1.4.11 (3:1 for UI separators)
   borderLight: '#7A7A7A',  // 4.53:1 on background
 
-  // Primary accent — amber gold
+  // Primary accent, amber gold
   primary: '#F59E0B',
   primaryDim: '#B45309',
   primaryBg: 'rgba(245, 158, 11, 0.10)',
@@ -30,10 +30,10 @@ const baseColors = {
   errorBg: 'rgba(244, 67, 54, 0.15)',
 
   // Text hierarchy
-  textPrimary: '#FFFFFF',  // 19.44:1 on bg — AAA
-  textSecondary: '#9E9E9E', // 7.25:1 on bg — AAA body, AA on raised surfaces
-  textMuted: '#9B9B9B',    // 6.99:1 on bg — AAA at body-text bar; ≥4.89:1 on every surface (AA)
-  textDisabled: '#727272', // 4.04:1 on bg — disabled state only, no WCAG body-text requirement
+  textPrimary: '#FFFFFF',  // 19.44:1 on bg, AAA
+  textSecondary: '#9E9E9E', // 7.25:1 on bg, AAA body, AA on raised surfaces
+  textMuted: '#9B9B9B',    // 6.99:1 on bg, AAA at body-text bar; ≥4.89:1 on every surface (AA)
+  textDisabled: '#727272', // 4.04:1 on bg, disabled state only, no WCAG body-text requirement
 
   // Tab bar
   tabBar: '#111111',
@@ -106,7 +106,7 @@ export const fontSize = { ...baseFontSize };
 //
 // Colour-blind safe (Okabe–Ito deuteranopia-tested swaps):
 //   success #4CAF50 (green)  → #56B4E9 (sky blue)
-//   error   #F44336 (red)    → #CC79A7 (reddish purple — distinct from amber)
+//   error   #F44336 (red)    → #CC79A7 (reddish purple, distinct from amber)
 // Amber primary and warning yellow are kept (CVD-distinguishable already).
 //
 // Larger text multiplies every fontSize token by 1.2 (rounded). The user

@@ -12,7 +12,7 @@ import { colors } from '../styles/theme';
  *   data         array of points (left-to-right rendering)
  *   maxValue     value that fills the full chart height (defaults to max of data)
  *   width        chart width in px (default 220)
- *   height       chart height in px (default 64) — does not include label row
+ *   height       chart height in px (default 64), does not include label row
  *   barWidth     px per bar (default 22)
  *   barGap       px between bars (default 8)
  *   alignRight   right-align bars when fewer than fit (oldest falls off the left)

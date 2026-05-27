@@ -2,7 +2,7 @@
  * PaywallScreen
  *
  * Modal opened from a DifferentialBadge tap (Move #4) or from any
- * other "Upgrade to Pro" surface. Lighter weight than CascadeGate —
+ * other "Upgrade to Pro" surface. Lighter weight than CascadeGate
  * this is a single decision: pay or dismiss. CascadeGate handles the
  * day-14 / day-28 cascade gates where the cascade decision is more
  * branched.

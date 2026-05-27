@@ -43,7 +43,7 @@ const TONES = {
  */
 function buildStops(tint, intensity = 0.16) {
   // Hex with alpha (8-digit) so the gradient blends cleanly into the
-  // dark surface beneath. Two stops are enough — three reads as a
+  // dark surface beneath. Two stops are enough, three reads as a
   // banded gradient on cheap displays.
   const hi = tint + Math.round(intensity * 255).toString(16).padStart(2, '0').toUpperCase();
   const lo = tint + '00';

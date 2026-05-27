@@ -6,7 +6,7 @@
  * Volyume wordmark (V + lettering, one logotype) on the right. The
  * V-only icon used previously had a long lower tail that dipped
  * below the title baseline at every size, making the right edge of
- * every screen look misaligned vs the title text — the wordmark sits
+ * every screen look misaligned vs the title text, the wordmark sits
  * flush with the cap height of the title.
  *
  * Constants:
@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     marginLeft: spacing.sm,
     // Optical centring: wordmark sits a hair below the bold cap line
     // so its baseline aligns with the title baseline. Bumped from 2px
-    // to 6px after user feedback — the V was still riding above the
+    // to 6px after user feedback, the V was still riding above the
     // title cap height at the current weight + size, especially on
     // taller statusbar devices where the title kerns slightly taller.
     paddingTop: 6,

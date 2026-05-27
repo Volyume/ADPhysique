@@ -12,7 +12,7 @@
  * time, so a brand-new user with two sessions doesn't get a stretched
  * empty story.
  *
- * The classic "scroll through stats" view is gone — Spotify Wrapped
+ * The classic "scroll through stats" view is gone, Spotify Wrapped
  * proved that the swipe-story is the format people actually read.
  */
 
@@ -243,7 +243,7 @@ export default function YearOfLiftsScreen({ navigation, route }) {
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
       <StatusBar barStyle="light-content" backgroundColor={colors.background} />
 
-      {/* Progress pips at the top — one per card */}
+      {/* Progress pips at the top, one per card */}
       <View style={styles.pipsRow}>
         {cards.map((_, i) => (
           <View
@@ -307,7 +307,7 @@ export default function YearOfLiftsScreen({ navigation, route }) {
           {/* Tap zones live as a narrow band ABOVE the card content
               (under the pips, above the hero). Previously they spanned
               the entire screen which meant any tap on the card body
-              was consumed by the Pressables — and on Android a press-
+              was consumed by the Pressables, and on Android a press-
               start anywhere on screen blocked the FlatList from
               starting a horizontal swipe. Net effect: the story
               advanced once via tap, then refused to swipe further.
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 
-  // Tap-zone band — narrow strip just under the pips, so the bulk of
+  // Tap-zone band, narrow strip just under the pips, so the bulk of
   // the card area is left clean for FlatList swipe gestures. Without
   // this layout the previous full-screen overlay swallowed every
   // horizontal drag on Android.

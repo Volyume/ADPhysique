@@ -36,7 +36,7 @@ const BASE_INPUTS = {
   nutritionPhase: 'maintain',
 };
 
-describe('generatePlan — determinism', () => {
+describe('generatePlan, determinism', () => {
   test('identical inputs produce byte-identical output', () => {
     const a = generatePlan(BASE_INPUTS);
     const b = generatePlan(BASE_INPUTS);
@@ -75,7 +75,7 @@ describe('generatePlan — determinism', () => {
   });
 });
 
-describe('generatePlan — extreme inputs', () => {
+describe('generatePlan, extreme inputs', () => {
   test('handles 3 days/week (minimum sensible) without crashing', () => {
     const plan = generatePlan({ ...BASE_INPUTS, daysPerWeek: 3 });
     expect(plan).toBeDefined();
@@ -118,7 +118,7 @@ describe('generatePlan — extreme inputs', () => {
       daysPerWeek: 6,
     });
     expect(plan).toBeDefined();
-    // Sum total weekly sets — competitive should be substantial
+    // Sum total weekly sets, competitive should be substantial
     let totalSets = 0;
     plan.workouts.forEach(r => {
       r.exercises.forEach(ex => { totalSets += ex.sets; });
@@ -146,7 +146,7 @@ describe('generatePlan — extreme inputs', () => {
   });
 });
 
-describe('calculateNutritionTargets — bounds', () => {
+describe('calculateNutritionTargets, bounds', () => {
   test('clamps extreme low bodyweight to safe minimum', () => {
     const targets = calculateNutritionTargets({
       sex: 'male', ageYears: 25, heightCm: 175, weightKg: 10, // absurdly low
@@ -196,9 +196,9 @@ describe('calculateNutritionTargets — bounds', () => {
   });
 });
 
-describe('phaseToCoachingKey — defensive logging', () => {
+describe('phaseToCoachingKey, defensive logging', () => {
   test('returns "maint" for unknown phases (with warn logged)', () => {
-    // The fallback fires logWarn but doesn't throw — we just verify the
+    // The fallback fires logWarn but doesn't throw, we just verify the
     // return value, since the warn fires asynchronously via require()
     expect(phaseToCoachingKey('cut')).toBeDefined();
     expect(phaseToCoachingKey('something_weird')).toBe('maint');
@@ -215,7 +215,7 @@ describe('phaseToCoachingKey — defensive logging', () => {
   });
 });
 
-describe('buildPlanInputs — legacy profile migration', () => {
+describe('buildPlanInputs, legacy profile migration', () => {
   test('migrates general_hypertrophy + missing phase to general/maintain', () => {
     const inputs = buildPlanInputs({ trainingGoal: 'general_hypertrophy' });
     expect(inputs).not.toBeNull();

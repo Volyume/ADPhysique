@@ -8,7 +8,7 @@
  *   - AthleteHub re-plan flow (when the user changes their goal)
  *
  * Returns { ok: boolean, programmeId?: string, error?: string }.
- * Pure orchestration — generatePlan stays pure, DB writes are idempotent
+ * Pure orchestration, generatePlan stays pure, DB writes are idempotent
  * per call (each call creates a NEW programme; existing ones are not
  * touched).
  */
@@ -38,27 +38,27 @@ async function makeUniquePlanName(userId, baseName) {
     const programmes = await getAllProgrammes(userId);
     existingNames = (programmes ?? []).map(p => p?.name).filter(Boolean);
   } catch (_) {
-    return baseName; // can't tell — return the base name
+    return baseName; // can't tell, return the base name
   }
   if (!existingNames.includes(baseName)) return baseName;
 
   const now = new Date();
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const dateStr = `${now.getDate()} ${months[now.getMonth()]}`;
-  const withDate = `${baseName} — ${dateStr}`;
+  const withDate = `${baseName}, ${dateStr}`;
   if (!existingNames.includes(withDate)) return withDate;
 
-  // Same name + same day already exists — append time too
+  // Same name + same day already exists, append time too
   const hh = String(now.getHours()).padStart(2, '0');
   const mm = String(now.getMinutes()).padStart(2, '0');
-  return `${baseName} — ${dateStr} ${hh}:${mm}`;
+  return `${baseName}, ${dateStr} ${hh}:${mm}`;
 }
 
 const DEFAULT_DAYS_PER_WEEK = 4;
 
 /**
  * Build the inputs `generatePlan` expects from a user profile.
- * Returns null only when the user's goal/phase aren't set — without those
+ * Returns null only when the user's goal/phase aren't set, without those
  * we can't pick a plan template at all. Other fields fall back to sensible
  * defaults so older profiles (or partially-populated ones) still get a
  * plan regenerated when the user changes goals from the Hub.
@@ -141,7 +141,7 @@ export async function generateAndSavePlan(userId, profile) {
         }
         await addExerciseToRoutine(
           routine.id, dbEx.id, i, ex.repMin, ex.repMax, ex.notes ?? null, ex.sets,
-          null,                          // startingWeight — engine doesn't set this
+          null,                          // startingWeight, engine doesn't set this
           ex.restSec ?? null,
           ex.supersetGroupId ?? null,    // pairing from plan engine
         );

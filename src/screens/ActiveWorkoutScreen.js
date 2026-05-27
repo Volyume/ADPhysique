@@ -93,7 +93,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // second and store-touch was wholesale.
   //
   // Actions are stable function references inside Zustand so they don't
-  // need to participate in the shallow compare — we still pull them
+  // need to participate in the shallow compare, we still pull them
   // off the store via the selector.
   const store = useAppStore(useShallow(s => ({
     user: s.user, units: s.units,
@@ -133,7 +133,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [showExercisePicker, setShowExercisePicker] = useState(false);
   const [noteText, setNoteText] = useState('');
   const [showNoteInput, setShowNoteInput] = useState(false);
-  // Superset notification — tracks which group IDs the user has already
+  // Superset notification, tracks which group IDs the user has already
   // seen the "heads up, paired exercises" modal for in this workout. We
   // show it once per pair so the user can grab both stations before
   // starting. Set, not array, for O(1) membership checks.
@@ -164,7 +164,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [nextTimeNotes, setNextTimeNotes] = useState([]);  // "next time" coaching notes for this routine
   // Cluster counter for myo-reps / rest-pause: 0 = activation set, 1+ = mini-set N+1
   const autoAdvanceRef = useRef(null);
-  const sessionSetsRef = useRef([]);   // tracks sets in this session — used for PR detection
+  const sessionSetsRef = useRef([]);   // tracks sets in this session, used for PR detection
   const warmupHintSeenRef = useRef(false); // show one-liner warmup note only on first warmup of this session
   const finishingRef = useRef(false); // gates handleFinishWorkout so a rapid double-tap can't double-finish
   const shownNoteIdsRef = useRef(new Set()); // note IDs already shown in this session
@@ -320,7 +320,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // Superset heads-up: when the user lands on an exercise that's part of a
   // pair we haven't already shown the modal for in this workout, surface a
   // clear instructional sheet so a first-timer isn't lost. Shown once per
-  // group id per workout — dismissing acknowledges; unlinking removes the
+  // group id per workout, dismissing acknowledges; unlinking removes the
   // pair entirely; swap opens the swap UI for either exercise.
   useEffect(() => {
     if (currentSGI == null) return;
@@ -356,7 +356,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     return () => { infoPulseLoop.current?.stop(); };
   }, [reduceMotion]);
 
-  // Workout timer — always derived from workoutStartTime so backgrounding never
+  // Workout timer, always derived from workoutStartTime so backgrounding never
   // causes drift. Re-syncs on every tick and on app-foreground events.
   useEffect(() => {
     if (!workoutStartTime) return;
@@ -389,7 +389,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // exercise + set + elapsed time so the user sees their workout
   // state without unlocking. Two update paths:
   //
-  //   1. Real-time updates (immediate, no throttle) — fire whenever
+  //   1. Real-time updates (immediate, no throttle), fire whenever
   //      the user-visible state changes: current exercise, set count,
   //      target set count. The notification re-presents on the next
   //      render tick so the lock screen always shows the same set the
@@ -397,7 +397,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   //      throttle dropped these updates and the user saw stale state
   //      until the next tick passed the throttle window.
   //
-  //   2. Elapsed-time refresh (throttled to 15s) — keeps the "12:34"
+  //   2. Elapsed-time refresh (throttled to 15s), keeps the "12:34"
   //      counter in the notification body roughly fresh without
   //      hammering the notification manager every second.
   //
@@ -423,7 +423,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       totalSetsForExercise: routineExercise?.recommendedSets,
       exerciseName: exercise?.name,
     }).catch(() => {});
-    // Intentionally exclude elapsedSeconds — that's handled by
+    // Intentionally exclude elapsedSeconds, that's handled by
     // the throttled effect below. This effect responds only to
     // user-driven state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -583,7 +583,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // Warm-up sets are no longer forced on the first set of every
       // exercise. Forcing every exercise to start with a warm-up that
       // the user has to click through (or change the set type to
-      // skip) is the friction the user kept hitting — they don't want
+      // skip) is the friction the user kept hitting, they don't want
       // it. The default is now a clean working set. Users who want a
       // warm-up first tap the "Add warm-up set" button which flips
       // the current entry to warmup with sensible defaults.
@@ -661,7 +661,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       return;
     }
     // Weight is required unless this is a bodyweight movement. A blank or
-    // non-numeric field means the user hasn't entered a load yet — block
+    // non-numeric field means the user hasn't entered a load yet, block
     // rather than silently saving a 0 kg set.
     const isBodyweight = /body\s*weight/i.test(exercise.equipment || '');
     const weightNum = parseFloat(currentSet.weight);
@@ -715,14 +715,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         setIndex: newLoggedSets.length,
       });
 
-      // Visual ack — flash the SetEntry card border amber for ~700 ms so the
+      // Visual ack, flash the SetEntry card border amber for ~700 ms so the
       // user sees their tap landed. Tracked timeout so back-to-back logs
       // don't truncate the previous flash mid-frame.
       if (logFlashTimeoutRef.current) clearTimeout(logFlashTimeoutRef.current);
       setLogFlash(true);
       logFlashTimeoutRef.current = setTimeout(() => setLogFlash(false), 700);
 
-      // PR Detection — check BEFORE adding current set to the session ref so it
+      // PR Detection, check BEFORE adding current set to the session ref so it
       // can never match itself.  sessionSetsRef is a plain ref so it's never stale
       // the way React state can be between renders.
       const prHistory = [
@@ -795,7 +795,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         }, 1800);
       }
 
-      // Clear ghost — will be re-computed for the next set index on the next render cycle
+      // Clear ghost, will be re-computed for the next set index on the next render cycle
       setGhostSet(null);
 
       // Prepare next set
@@ -942,7 +942,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               });
               // Push to cloud IMMEDIATELY on finish. Previously the
               // syncWorkout call only fired when the user tapped Close
-              // on the Workout Summary screen — if they swiped away to
+              // on the Workout Summary screen, if they swiped away to
               // another tab or backgrounded the app between Finish and
               // Close, the completed workout never reached the cloud.
               // Cross-device sign-in then restored everything except
@@ -1194,7 +1194,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </View>
           )}
 
-          {/* Rest timer — sits ABOVE the SetEntry card, in the slot vacated
+          {/* Rest timer, sits ABOVE the SetEntry card, in the slot vacated
               by the old weekly-sets calendar row. Stays in the user's
               eye-line with the inputs but doesn't clutter the card border.
               The timer only renders when active so this space is normally
@@ -1255,7 +1255,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             {/* Stalled-progress nudge: if the user has done the same
                 weight & reps for the same exercise across the last 3
                 sessions, the suggestion engine isn't doing enough on
-                its own — pull-back the loop and offer a concrete next
+                its own, pull-back the loop and offer a concrete next
                 step. Only shown on the first working set of an
                 exercise so it doesn't blare repeatedly. */}
             {currentSet.setType !== 'warmup' && workingLogged === 0 && (() => {
@@ -1359,7 +1359,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 supersets don't make sense having warm-ups between paired
                 exercises. Users who want a warm-up can mark the current
                 set as Warmup via the Set type picker on the SetEntry
-                card below — same outcome, no prompt. */}
+                card below, same outcome, no prompt. */}
             <SetEntry
               value={currentSet}
               onChange={(next) => {
@@ -1626,7 +1626,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           }}
         />
 
-        {/* Superset heads-up modal — appears once per pair when the user
+        {/* Superset heads-up modal, appears once per pair when the user
             lands on a paired exercise. Educational for first-timers,
             and gives a clear out (unlink or swap) if they're not set up
             for it today. */}
@@ -1759,7 +1759,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
 
 
-        {/* Plate Calculator Bottom Sheet — opens with the current
+        {/* Plate Calculator Bottom Sheet, opens with the current
             working weight pre-filled so the user gets an answer in
             one tap. */}
         <Modal
@@ -2194,7 +2194,7 @@ const styles = StyleSheet.create({
   setEntryCardWarmup: { borderColor: colors.warning, backgroundColor: colors.warningBg || colors.surface },
   // Short amber flash on the card border to ack a successful Log set tap.
   // Border width stays at 1 so the card doesn't shift its 2px layout for the
-  // 700 ms flash — just the colour swaps.
+  // 700 ms flash, just the colour swaps.
   setEntryCardFlash: { borderColor: colors.primary },
   warmupBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   warmupBannerText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.warning, letterSpacing: 0.3 },

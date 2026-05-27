@@ -1,5 +1,5 @@
 /**
- * sync.js — cloud backup layer
+ * sync.js, cloud backup layer
  *
  * SQLite is the source of truth. Supabase is the cloud backup.
  * All functions are fire-and-forget safe: they never throw, never block UI.
@@ -149,7 +149,7 @@ export async function syncProfile(supabaseUserId, userProfile, _tier, { isBetaTe
       updated_at: new Date().toISOString(),
     };
     // Beta-tester flag is still client-writable during the beta window
-    // (set on first sign-up only — the migrate_005 trigger does NOT
+    // (set on first sign-up only, the migrate_005 trigger does NOT
     // protect this column, only `tier`). Server enforces tier strictly,
     // beta-tester is a soft tag for the future Pro extension.
     if (isBetaTester) payload.is_beta_tester = true;
@@ -166,7 +166,7 @@ export async function syncProfile(supabaseUserId, userProfile, _tier, { isBetaTe
  * Canonical exercises are seeded separately via scripts/seed-exercises.js.
  */
 /**
- * Push EVERY exercise — canonical + custom — to the cloud.
+ * Push EVERY exercise, canonical + custom, to the cloud.
  *
  * Renamed from syncCustomExercises (which only pushed is_custom=1
  * rows). Without canonical exercises in cloud, every routine_exercise
@@ -175,10 +175,10 @@ export async function syncProfile(supabaseUserId, userProfile, _tier, { isBetaTe
  * an orphan id with no name lookup possible. Now canonical exercises
  * round-trip with deterministic IDs (canonicalExerciseId in
  * seedExercises.js) so every device produces the same UUID for
- * "Bench Press" — the natural primary key dedupes upserts across
+ * "Bench Press", the natural primary key dedupes upserts across
  * sign-ins from multiple devices.
  *
- * Idempotent — onConflict: 'id' means re-running the push touches
+ * Idempotent, onConflict: 'id' means re-running the push touches
  * existing rows' updated_at but creates no duplicates.
  */
 export async function syncExercises(supabaseUserId, _opts = {}) {
@@ -254,7 +254,7 @@ export async function syncWorkout(supabaseUserId, workoutId) {
       // eslint-disable-next-line global-require
       const { enqueueSyncOp } = require('./syncQueue');
       await enqueueSyncOp('workout', workoutId, supabaseUserId);
-    } catch (_) { /* enqueue itself failed — nothing more we can do */ }
+    } catch (_) { /* enqueue itself failed, nothing more we can do */ }
   }
 }
 
@@ -262,7 +262,7 @@ async function _upsertWorkout(sb, supabaseUserId, w) {
   // Columns: every user-entered + computed field on a workout row.
   // The previous payload omitted name / pre_workout_intent /
   // joint_discomfort / set_count / total_volume / mesocycle_week_id
-  // — the cloud columns existed (migrate_012) but the push never
+  //, the cloud columns existed (migrate_012) but the push never
   // wrote them, so on cross-device restore the session card showed
   // a generic "Workout" without the user's chosen name and the
   // analytics paths missed the cached tonnage.
@@ -302,7 +302,7 @@ async function _upsertSets(sb, supabaseUserId, sets) {
     user_id: supabaseUserId,
     workout_id: s.workoutId,
     exercise_id: s.exerciseId,
-    // Denormalised exercise name — restores correctly on a new
+    // Denormalised exercise name, restores correctly on a new
     // device even when the cloud exercise_id doesn't resolve locally
     // (e.g. data pushed before deterministic canonical IDs landed).
     exercise_name: s.exerciseName ?? null,
@@ -331,7 +331,7 @@ async function _upsertSets(sb, supabaseUserId, sets) {
     if (error) {
       logPgErr('sync._upsertSets', error);
       // Continue with the next chunk rather than aborting all
-      // remaining work — the previous behaviour swallowed the error
+      // remaining work, the previous behaviour swallowed the error
       // and silently lost every set in the failing batch.
     }
   }
@@ -345,7 +345,7 @@ async function _upsertSets(sb, supabaseUserId, sets) {
 /**
  * Push a single morning weight entry to cloud immediately after it's
  * logged locally. Without this, weights live local-only until the
- * next sign-in catch-up — a sign-out between writes loses them.
+ * next sign-in catch-up, a sign-out between writes loses them.
  * Failures enqueue to the retry queue.
  */
 // ─── Debounced full sync trigger ─────────────────────────────────────────
@@ -353,7 +353,7 @@ async function _upsertSets(sb, supabaseUserId, sets) {
 // Most write functions in database.js (createRoutine, addExerciseToRoutine,
 // saveExerciseGoal, saveNutritionTargets, etc.) don't have a per-entity
 // sync helper, and adding one per table would multiply maintenance.
-// Instead, every mutating database write calls scheduleSync() — a
+// Instead, every mutating database write calls scheduleSync(), a
 // debounced (2s) full bulkUploadLocalData. Bursty edits coalesce into
 // one push.
 //
@@ -387,7 +387,7 @@ export function scheduleSync() {
       const localUserId = state.user?.id;
       if (!supabaseUserId || !localUserId) return;
       bulkUploadLocalData(supabaseUserId, localUserId).catch(() => {});
-    } catch (_) { /* store not available — tolerate */ }
+    } catch (_) { /* store not available, tolerate */ }
   }, _SYNC_DEBOUNCE_MS);
 }
 
@@ -511,14 +511,14 @@ export async function syncBodyMetric(supabaseUserId, metric) {
 /**
  * First-time upload: push all local completed workouts to Supabase.
  * Called once after the user creates a cloud account or signs in for the first time.
- * Runs in the background — never blocks UI.
+ * Runs in the background, never blocks UI.
  */
 export async function bulkUploadLocalData(supabaseUserId, localUserId) {
   const sb = getClient();
   if (!sb || !supabaseUserId || !localUserId) return;
 
   try {
-    // Every exercise — canonical + custom — pushed first so all the
+    // Every exercise, canonical + custom, pushed first so all the
     // downstream FK references (routine_exercises, workout_sets) land
     // on cloud rows that exist. Previously only is_custom=1 rows were
     // pushed, which is what left routine_exercises pointing at
@@ -542,7 +542,7 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
             failures++;
             // Per-workout failure doesn't abort the batch but it is logged
             // so the user can spot patterns in the Debug logs surface
-            // (e.g. "every workout from 2024-12 fails — schema mismatch").
+            // (e.g. "every workout from 2024-12 fails, schema mismatch").
             logWarn('sync.bulkUploadLocalData', 'workout upload failed', {
               workoutId: w?.id, supabaseUserId, error: e?.message,
             });
@@ -577,7 +577,7 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
     // The public syncNutritionTargets on-save shim above now also
     // routes through transport so both call sites share the code.
     // Tables that previously stayed local-only. Each is safe to call
-    // for free-tier users — they return zero rows and the helper
+    // for free-tier users, they return zero rows and the helper
     // exits cleanly. No new dependencies between them.
     await _pushUserBodyProfile(sb, supabaseUserId, localUserId);
     await _pushUserInsights(sb, supabaseUserId, localUserId);
@@ -590,7 +590,7 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
     await _pushAdaptationEvents(sb, supabaseUserId, localUserId);
     // Food-domain push (food_entries, custom_foods, saved_meals,
     // recipes, food_favourites, daily_water) moved to
-    // src/lib/sync/tables/foodDomain.js — a coordinator that
+    // src/lib/sync/tables/foodDomain.js, a coordinator that
     // drives the food_sync_push RPC once per syncAll and reports
     // per-table counts back via transport.pushTable.
     // AsyncStorage prefs (units, accessibility, wellbeing, etc.).
@@ -641,7 +641,7 @@ async function _pushRoutinesAndExercises(sb, supabaseUserId, localUserId) {
       // programme_id, day_of_week, is_sample, is_library, source_routine_id
       // are added to the cloud routines table in migrate_010. They were
       // local-only before, which is why a fresh-device sign-in restored
-      // 114 routines but lost the link back to the active plan — every
+      // 114 routines but lost the link back to the active plan, every
       // routine came back with programme_id = null and the plan-detail
       // screen showed "0 workouts".
       const rows = routines.map(r => ({
@@ -672,18 +672,18 @@ async function _pushRoutinesAndExercises(sb, supabaseUserId, localUserId) {
     const routineExs = await getAllRoutineExercisesForUser(localUserId);
     if (routineExs?.length) {
       // starting_weight, rest_seconds, superset_group_id are also added
-      // by migrate_010 — they govern the pre-filled weight, the rest
+      // by migrate_010, they govern the pre-filled weight, the rest
       // timer default, and superset pairing. Without them, every restore
       // dropped users back to the global default rest timer.
       //
       // exercise_name is the denormalised display name added by
-      // migrate_012 — it's what makes a routine recoverable on a new
+      // migrate_012, it's what makes a routine recoverable on a new
       // device even if the exercise_id can't resolve locally.
       //
       // Filter: drop routine_exercises whose routine_id doesn't appear
       // in the routines we just pushed. Cloud RLS on
       // routine_exercises checks EXISTS (SELECT 1 FROM routines WHERE
-      // id = routine_id AND user_id = auth.uid()) — an orphan
+      // id = routine_id AND user_id = auth.uid()), an orphan
       // routine_id (left over from a soft-deleted routine or a partial
       // sync state locally) fails that check and rejects the entire
       // 200-row chunk. Excluding orphans keeps the rest of the batch
@@ -799,7 +799,7 @@ async function _pushCoachOutputs(sb, supabaseUserId, localUserId) {
 // ─── Push helpers for previously local-only tables ───────────────────────
 // Each helper batches its table's rows into 200-row chunks and logs the
 // full Postgres error metadata via logPgErr when an upsert is rejected.
-// Failures don't propagate — a single bad table doesn't stop the rest
+// Failures don't propagate, a single bad table doesn't stop the rest
 // of the bulk upload.
 
 async function _pushExerciseUserNotes(sb, supabaseUserId, localUserId) {
@@ -1052,7 +1052,7 @@ async function _pushAdaptationEvents(sb, supabaseUserId, localUserId) {
 // and one-time seen-flags all restore exactly.
 
 const PREF_PREFIX = '@volyume_';
-// Keys that hold transient or device-specific state — never sync.
+// Keys that hold transient or device-specific state, never sync.
 // crash_log: ephemeral diagnostic ring buffer.
 // local_user_id: per-device anonymous id, regenerated on a fresh install.
 // palette_recents: local-only ordering of recently-opened items.
@@ -1063,7 +1063,7 @@ const PREF_EXCLUDE_PATTERNS = [
   // Notification subscriptions are tied to a device-bound expo push
   // token; syncing them across devices would resubscribe the wrong
   // token. The user's stated reminder preferences ARE synced (see
-  // training_reminders_config below) — only the token/subscription
+  // training_reminders_config below), only the token/subscription
   // mapping is device-bound.
   /^@volyume_expo_push_token/,
 ];
@@ -1074,7 +1074,7 @@ function shouldSyncPref(key) {
 }
 
 /**
- * Push one preference key to the cloud. Idempotent — upsert on
+ * Push one preference key to the cloud. Idempotent, upsert on
  * (user_id, key). Called from the store whenever a synced
  * preference changes so the cloud copy stays current.
  */
@@ -1192,7 +1192,7 @@ export async function pullFromCloud(supabaseUserId) {
     // body_composition_log moved to src/lib/sync/transport.js
     // (registry-driven per-table pull). See MIGRATED_TABLES.
     // New tables that previously stayed local-only on every cross-
-    // device sign-in. Each is fault-tolerant — a missing cloud table
+    // device sign-in. Each is fault-tolerant, a missing cloud table
     // logs and returns 0 rather than crashing the whole pull.
     const bodyProfileFound = await _pullUserBodyProfile(sb, supabaseUserId);
     const insightCount = await _pullUserInsights(sb, supabaseUserId);
@@ -1478,7 +1478,7 @@ async function _pullUserPrefs(sb, supabaseUserId) {
 // ─── Per-table pull helpers ───────────────────────────────────────────────
 // Each helper returns the number of rows it inserted so the orchestrator
 // can emit a single verbose log line showing exactly what came back from
-// the cloud. Errors are logged but never thrown — one missing table
+// the cloud. Errors are logged but never thrown, one missing table
 // shouldn't take down the rest of the restore.
 
 async function _pullProgrammes(sb, supabaseUserId) {

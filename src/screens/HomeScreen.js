@@ -34,7 +34,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import InfoTooltip from '../components/InfoTooltip';
 
-// Soft targets used only to size the weekly progress bars — not enforced
+// Soft targets used only to size the weekly progress bars, not enforced
 const WEEK_TARGETS = { sessions: 5, sets: 80, volume: 15000 };
 
 function getGreeting(firstName) {
@@ -74,7 +74,7 @@ export default function HomeScreen({ navigation }) {
   const [blockProgress, setBlockProgress] = useState([]);
   const [currentMesoWeek, setCurrentMesoWeek] = useState(null);
   const [latestCoachOutput, setLatestCoachOutput] = useState(null);
-  // First-load flag — flipped false in loadData. While true, the
+  // First-load flag, flipped false in loadData. While true, the
   // home screen renders skeleton cards in place of the main cards so
   // the user sees structure instantly on cold launch rather than a
   // blank screen until SQLite reads complete.
@@ -337,7 +337,7 @@ export default function HomeScreen({ navigation }) {
       // Prefill the log-weight inputs with the previously logged weight
       // (most recent morning weight, falling back to onboarding weight).
       // Blank inputs every day forced the user to retype the same number
-      // — annoying, and easy to typo.
+      //, annoying, and easy to typo.
       if (!entry?.weightKg) {
         let prefillKg = null;
         try {
@@ -448,14 +448,14 @@ export default function HomeScreen({ navigation }) {
         setLastSessionTonnage(null);
       }
 
-      // Progression teaser — free tier only, needs 2+ sessions to compare
+      // Progression teaser, free tier only, needs 2+ sessions to compare
       if (tier === 'free' && completed.length >= 2) {
         getProgressionTeaser(user.id, completed[0].id, completed[1].id)
           .then(t => setTeaserInsight(t))
           .catch(() => {});
       }
 
-      // Deload suggestion — build last-4-weeks summary and run shouldDeload
+      // Deload suggestion, build last-4-weeks summary and run shouldDeload
       // Reset dismissed state each time data reloads so a new week's signal shows again
       setDeloadDismissed(false);
       try {
@@ -475,7 +475,7 @@ export default function HomeScreen({ navigation }) {
             avgReps,
             weeksSinceLastDeload: 99, // not tracked in local DB; use conservative value
             avgJointDiscomfort: 0,    // not tracked in local DB
-            hasOverMRV: false,        // not computed here — would need calculateWeeklyVolume + VOLUME_LANDMARKS
+            hasOverMRV: false,        // not computed here, would need calculateWeeklyVolume + VOLUME_LANDMARKS
             avgSoreness: 0,           // not tracked in local DB
           };
         }).reverse(); // oldest first, as shouldDeload expects
@@ -637,14 +637,14 @@ export default function HomeScreen({ navigation }) {
     try {
       let initialExercises;
       if (routineId) {
-        // Load the FULL routine — not just what was done last time
+        // Load the FULL routine, not just what was done last time
         const withExercises = await getRoutineExercisesWithDetails(routineId);
         initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
           exercise, routineExercise, sets: [],
           supersetGroupId: routineExercise?.supersetGroupId ?? null,
         }));
       } else {
-        // No routine linked — fall back to exercises from the session's sets
+        // No routine linked, fall back to exercises from the session's sets
         const prevSets = await getWorkoutSetsForWorkout(lastSession.id);
         const seenIds = [];
         const orderedExerciseIds = [];
@@ -751,7 +751,7 @@ export default function HomeScreen({ navigation }) {
           </GradientCard>
         )}
 
-        {/* Cloud restore banner removed — the typical pull completes
+        {/* Cloud restore banner removed, the typical pull completes
             in under a second on a healthy connection so the banner
             flashed and vanished. Pull-to-refresh on Home still shows
             the standard RefreshControl spinner if the user wants to
@@ -932,7 +932,7 @@ export default function HomeScreen({ navigation }) {
           </View>
         ))}
 
-        {/* ── This week — progress bars ── */}
+        {/* ── This week, progress bars ── */}
         <View style={styles.weekCard}>
           <View style={styles.weekCardHeader}>
             <Text style={styles.weekLabel}>This week</Text>
@@ -997,7 +997,7 @@ export default function HomeScreen({ navigation }) {
         ) : null}
 
         {/* ── Training trend mini-graph ── */}
-        {/* Training trend moved to Progress tab — sits with Mesocycle pulse there. */}
+        {/* Training trend moved to Progress tab, sits with Mesocycle pulse there. */}
 
         {/* ── Pro teaser (free tier only, after 3+ sessions) ── */}
         {tier === 'free' && totalSessions >= 3 && (
@@ -1180,7 +1180,7 @@ export default function HomeScreen({ navigation }) {
               </TouchableOpacity>
             )}
 
-            {/* Progress at a glance — shown when there's history but no plan */}
+            {/* Progress at a glance, shown when there's history but no plan */}
             {lastSession != null && (
               <View style={styles.glanceCard}>
                 <Text style={styles.glanceTitle}>Your progress at a glance</Text>
@@ -1472,7 +1472,7 @@ export default function HomeScreen({ navigation }) {
  * Returns { headline, body, type } where type is 'go' | 'caution' | 'recover'.
  */
 function buildCoachBrief({ fatigueHistory, weeklyVolume, deloadSuggestion, lastWorkoutDaysAgo, blockProgress }) {
-  // Rule 1 — deload suggested
+  // Rule 1, deload suggested
   if (deloadSuggestion) {
     return {
       headline: 'Recovery week',
@@ -1481,7 +1481,7 @@ function buildCoachBrief({ fatigueHistory, weeklyVolume, deloadSuggestion, lastW
     };
   }
 
-  // Rule 2 — high fatigue (avg of last 2 sessions ≥ 3.5)
+  // Rule 2, high fatigue (avg of last 2 sessions ≥ 3.5)
   if (fatigueHistory.length >= 2) {
     const recent = fatigueHistory.slice(0, 2);
     const avg = recent.reduce((s, r) => s + (r.fatigueLevel ?? r.fatigue_level ?? 0), 0) / recent.length;
@@ -1494,7 +1494,7 @@ function buildCoachBrief({ fatigueHistory, weeklyVolume, deloadSuggestion, lastW
     }
   }
 
-  // Rule 3 — long gap since last session
+  // Rule 3, long gap since last session
   if (lastWorkoutDaysAgo != null && lastWorkoutDaysAgo >= 5) {
     return {
       headline: 'Good to see you back',
@@ -1503,11 +1503,11 @@ function buildCoachBrief({ fatigueHistory, weeklyVolume, deloadSuggestion, lastW
     };
   }
 
-  // Rule 4 — 2+ muscles below MEV this week (only meaningful if the user has
+  // Rule 4, 2+ muscles below MEV this week (only meaningful if the user has
   // actually been training). For brand-new users with zero workouts every
   // muscle reads as below-MEV at 0 sets, so this rule used to fire on the
   // very first launch with "Several muscle groups are below their weekly
-  // minimum" — which is technically true but useless advice. Require the
+  // minimum", which is technically true but useless advice. Require the
   // user to have logged something so we're commenting on real adherence.
   if (blockProgress && blockProgress.length > 0) {
     const totalSetsThisWeek = blockProgress.reduce((s, p) => s + (p.actual ?? 0), 0);
@@ -1525,7 +1525,7 @@ function buildCoachBrief({ fatigueHistory, weeklyVolume, deloadSuggestion, lastW
     }
   }
 
-  // Rule 5 — volume on track, low fatigue
+  // Rule 5, volume on track, low fatigue
   if (fatigueHistory.length >= 1) {
     const recent = fatigueHistory.slice(0, 2);
     const avg = recent.reduce((s, r) => s + (r.fatigueLevel ?? r.fatigue_level ?? 0), 0) / recent.length;
@@ -1538,7 +1538,7 @@ function buildCoachBrief({ fatigueHistory, weeklyVolume, deloadSuggestion, lastW
     }
   }
 
-  // Rule 6 — default
+  // Rule 6, default
   return {
     headline: 'Ready when you are',
     body: 'Ready when you are.',
@@ -1704,7 +1704,7 @@ const styles = StyleSheet.create({
   weightLogBtnDisabled: { backgroundColor: colors.surface3 },
   weightLogBtnText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.background },
 
-  // Header — matches Plans/Progress/Athlete Hub pattern
+  // Header, matches Plans/Progress/Athlete Hub pattern
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1953,7 +1953,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
   },
   // Boxed secondary buttons matching the View / surface2 pill style
-  // used elsewhere on the screen — gives the Change workout / Blank
+  // used elsewhere on the screen, gives the Change workout / Blank
   // session affordances proper tap targets and aligns visually with
   // the History / Records / Volume tiles below.
   heroSecondaryBtn: {
@@ -1975,7 +1975,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
   },
 
-  // No plan — plan-first section
+  // No plan, plan-first section
   noPlanSection: { gap: spacing.md },
   proRecoverBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,

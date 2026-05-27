@@ -58,7 +58,7 @@ export const SENSITIVE_KEY_PATTERNS = Object.freeze([
   /^fiber/i,
   /^sodium/i,
   /^sugar/i,
-  /^quantity[._-]?g/i,        // food_entries.quantity_g — dietary intake
+  /^quantity[._-]?g/i,        // food_entries.quantity_g, dietary intake
   /^serving[._-]?g/i,         // foods.serving_g
 
   // PII identifiers
@@ -92,7 +92,7 @@ export const SENSITIVE_KEY_PATTERNS = Object.freeze([
   /^shoulders?/i,
   /^forearm/i,
 
-  // ED-pattern surface — entire payload is sensitive
+  // ED-pattern surface, entire payload is sensitive
   /^signals[._-]?json$/i,
   /^signals$/i,
   /^ed[._-]?pattern/i,

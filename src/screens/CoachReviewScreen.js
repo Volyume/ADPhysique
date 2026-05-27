@@ -286,7 +286,7 @@ export default function CoachReviewScreen() {
       const wins = detectProgressionWins(thisWeekSets, allSets, exerciseMap);
       setProgressionWins(wins);
 
-      // Deload check — build last-4-weeks data from workouts
+      // Deload check, build last-4-weeks data from workouts
       const fourWeeksMs = 28 * 24 * 60 * 60 * 1000;
       const last4Workouts = allWorkouts
         .filter(w => w.isCompleted && (w.startedAt || 0) >= Date.now() - fourWeeksMs)
@@ -344,7 +344,7 @@ export default function CoachReviewScreen() {
 
       setCheckins(recentCheckins);
     } catch (_e) {
-      // Silently fail — show no-data state
+      // Silently fail, show no-data state
     } finally {
       setLoading(false);
     }

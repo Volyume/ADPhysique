@@ -1,5 +1,5 @@
 /**
- * Tests for mesocycle.js — the deload schedule, volume ramp, autoreg
+ * Tests for mesocycle.js, the deload schedule, volume ramp, autoreg
  * decision matrix, time-crunch trimmer, and double-progression check.
  */
 import {

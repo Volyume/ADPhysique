@@ -3,11 +3,11 @@
  * Single source of truth for physique categories, training phases,
  * volume overlays, and nutrition constants used across the entire app.
  *
- * Pure data + pure functions — no side effects, no imports, no React.
+ * Pure data + pure functions, no side effects, no imports, no React.
  *
  * Conceptual model (post-merge):
  *   - PHYSIQUE_GOALS  → "Which body are you building?"  (volume distribution)
- *     This is the optional, secondary question — most users default to
+ *     This is the optional, secondary question, most users default to
  *     'general'. Competitive lifters pick their division.
  *   - TRAINING_PHASES → "What are you focused on right now?"  (calories +
  *     plan tuning + emphasis). This is the primary, prominent question.
@@ -179,7 +179,7 @@ export const TRAINING_PHASES = [
   },
   {
     // Previously a "PHYSIQUE_GOAL" called weak_point_spec.
-    // Specialisation block — strip volume from non-priority muscles.
+    // Specialisation block, strip volume from non-priority muscles.
     value: 'weak_point',
     nutritionKey: 'lean_gain',
     coachingPhaseKey: 'mild_bulk',
@@ -227,7 +227,7 @@ export function phaseToNutritionKey(phase) {
 }
 
 // Map user-facing phase value → coaching system phase key (for weeklyCoach / planEngine)
-// Falls back to 'maint' for unknown phases but logs a warning first — silent
+// Falls back to 'maint' for unknown phases but logs a warning first, silent
 // maintenance was masking data corruption / version skew bugs.
 export function phaseToCoachingKey(phase) {
   const match = TRAINING_PHASES.find(p => p.value === phase);
@@ -236,10 +236,10 @@ export function phaseToCoachingKey(phase) {
       // eslint-disable-next-line global-require
       require('./errorLog').logWarn(
         'coachingGoals.phaseToCoachingKey',
-        `unknown phase "${phase}" — falling back to maint`,
+        `unknown phase "${phase}", falling back to maint`,
         { phase },
       );
-    } catch (_) { /* errorLog itself failed — nothing more to do */ }
+    } catch (_) { /* errorLog itself failed, nothing more to do */ }
     return 'maint';
   }
   return match.coachingPhaseKey;
@@ -309,7 +309,7 @@ export function migrateProfileGoals(profile) {
 // bikini:          Glutes and hamstrings are the primary judging criterion.
 //                  Upper body stays lean and proportional. Waist stays small.
 //
-// wellness:        Like bikini but heavier lower body overall — quads as well
+// wellness:        Like bikini but heavier lower body overall, quads as well
 //                  as glutes and hamstrings. Differentiates from bikini judging.
 //
 // figure:          Athletic symmetry. Capped shoulders, wide back, developed
@@ -319,7 +319,7 @@ export function migrateProfileGoals(profile) {
 //                  All groups developed within a feminine frame.
 
 export const GOAL_OVERLAYS = {
-  general: {}, // no per-muscle bias — balanced volume
+  general: {}, // no per-muscle bias, balanced volume
 
   // ── Male categories ──
 
@@ -440,7 +440,7 @@ export const GOAL_OVERLAYS = {
 //   sets budget goes to prime movers. (Previously lived under
 //   GOAL_OVERLAYS.strength_hypertrophy when this was mis-filed as a goal.)
 //
-// weak_point: handled by separate weak-point logic in planEngine — empty
+// weak_point: handled by separate weak-point logic in planEngine, empty
 //   here so we don't double-up.
 //
 // All other phases (bulk, cut, lean_gain, recomp, maintain) leave the
@@ -490,7 +490,7 @@ export function getTrainingNote(trainingGoal, volumeSignal, trainingSignal, matr
     return pushHighNotes[trainingGoal] ?? pushHighNotes.general;
   }
 
-  // volumeSignal === 1 — push lightly
+  // volumeSignal === 1, push lightly
   const pushNotes = {
     general:          'Recovery is solid. Keep the effort consistent and push for small progress where you can.',
     mens_physique:    'Recovery is solid. Keep shoulder and back sessions consistent and focus on quality.',

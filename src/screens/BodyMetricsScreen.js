@@ -288,7 +288,7 @@ export default function BodyMetricsScreen({ navigation }) {
     tier: s.tier,
     userProfile: s.userProfile,
   })));
-  // Onboarding weight — surfaced in the empty state so a user who just
+  // Onboarding weight, surfaced in the empty state so a user who just
   // completed Pro onboarding doesn't see a misleading "No entries yet"
   // when they did, in fact, give us a starting bodyweight.
   const onboardingWeightKg = userProfile?.weightKg ?? userProfile?.bodyWeightKg ?? null;
@@ -363,7 +363,7 @@ export default function BodyMetricsScreen({ navigation }) {
       // the whole migration. Previously, a thrown logBodyMetric (e.g.
       // a NaN value getting through) tripped the outer catch, MIGRATED_KEY
       // was never written, and the loop reran the partial migration on
-      // every launch — potentially duplicating rows that did succeed.
+      // every launch, potentially duplicating rows that did succeed.
       let migrated = 0;
       let failed = 0;
       for (const entry of legacy) {
@@ -470,7 +470,7 @@ export default function BodyMetricsScreen({ navigation }) {
       const data = { notes: form.notes || null };
       const d = form.metric_date ? new Date(form.metric_date) : new Date();
       data.loggedAt = isNaN(d.getTime()) ? Date.now() : d.getTime();
-      // Body weight — convert to kg for storage
+      // Body weight, convert to kg for storage
       if (bwu === 'st' && form.body_weight_st) {
         const kg = stoneLbsToKg(form.body_weight_st, form.body_weight_st_lbs || '0');
         if (!isNaN(kg) && kg > 0) data.weightKg = kg;
@@ -478,7 +478,7 @@ export default function BodyMetricsScreen({ navigation }) {
         const kg = parseBodyWeightToKg(form.body_weight, bwu);
         if (!isNaN(kg) && kg > 0) data.weightKg = kg;
       }
-      // Measurements (cm) — stored as-is
+      // Measurements (cm), stored as-is
       for (const [formKey, dbField] of Object.entries(FIELD_MAP)) {
         if (formKey === 'body_weight') continue; // handled above
         if (form[formKey] !== '' && form[formKey] != null) {
@@ -513,7 +513,7 @@ export default function BodyMetricsScreen({ navigation }) {
         }
         // Reload to pick up the real id + any DB-computed fields (the
         // optimistic entry was missing things like a properly formatted
-        // loggedAt). Cheap — same SQLite query as before.
+        // loggedAt). Cheap, same SQLite query as before.
         await loadHistory();
       } catch (e) {
         setHistory(prev => prev.filter(h => h.id !== optimisticEntry.id));
@@ -521,7 +521,7 @@ export default function BodyMetricsScreen({ navigation }) {
           // eslint-disable-next-line global-require
           require('../components/Toast'); // ensure module loaded
         } catch (_) {}
-        // Surface the failure — body weight is important; user needs to
+        // Surface the failure, body weight is important; user needs to
         // know it didn't save so they can retry.
         Alert.alert('Could not save', e?.message ?? 'Try again in a moment.');
       }
@@ -530,7 +530,7 @@ export default function BodyMetricsScreen({ navigation }) {
     }
   }
 
-  // Loading state — return the dark background, not null, to avoid a white flash
+  // Loading state, return the dark background, not null, to avoid a white flash
   if (physiqueEnabled === null) return <SafeAreaView style={styles.safe} edges={['bottom']} />;
 
   // Opt-in gate
@@ -734,7 +734,7 @@ export default function BodyMetricsScreen({ navigation }) {
               </View>
             )}
 
-            {/* Measurements section — collapsed by default */}
+            {/* Measurements section, collapsed by default */}
             <TouchableOpacity
               style={styles.measureToggle}
               onPress={() => setShowMeasurements(v => !v)}

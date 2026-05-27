@@ -1,7 +1,7 @@
 /**
  * swapEngine.js
  * Pure-function exercise swap scoring for the Volyume app.
- * No side effects, no DB calls — scores and ranks alternatives.
+ * No side effects, no DB calls, scores and ranks alternatives.
  *
  * Extended (Phase 6) with joint-discomfort pattern detection and auto-swap logic.
  */
@@ -163,7 +163,7 @@ export function rankSwaps(originalExercise, allExercises, options = {}) {
   const scored = allExercises
     // Mandatory exclusions
     .filter((ex) => !excludeSet.has(ex.id))
-    // Optional equipment filter — accepts a string or array of strings
+    // Optional equipment filter, accepts a string or array of strings
     .filter((ex) => {
       if (equipment === null) return true;
       if (Array.isArray(equipment)) return equipment.includes(ex.equipment);
@@ -258,7 +258,7 @@ export function autoSwapForJointDiscomfort(flaggedExerciseIds = [], exerciseLibr
     // Exclude all flagged exercises from candidates
     const excludeIds = flaggedExerciseIds.filter(fid => fid !== id);
 
-    // Prefer lower fatigue-cost alternatives — they're more joint-friendly
+    // Prefer lower fatigue-cost alternatives, they're more joint-friendly
     const swaps = rankSwaps(original, exerciseLibrary, {
       equipment,
       numResults,

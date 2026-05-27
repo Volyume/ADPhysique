@@ -173,7 +173,7 @@ function makePullSb({ data = [], error = null } = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// T0 — Matrix coverage meta
+// T0, Matrix coverage meta
 // ---------------------------------------------------------------------------
 
 describe('Matrix coverage', () => {
@@ -247,7 +247,7 @@ describe('notification_preferences', () => {
     expect(row.enabled).toBe(false);
   });
 
-  // T3 N/A — softDelete:false. Documented in the table entry.
+  // T3 N/A, softDelete:false. Documented in the table entry.
 
   test('T4 remote insert pull: cloud row → applyPreferenceFromPull called', async () => {
     const sb = makePullSb({
@@ -328,7 +328,7 @@ describe('weekly_checkins_v2', () => {
     expect(sb._calls.upserts[0].rows[0]).toMatchObject({ energy_score: 9, soreness_score: 3 });
   });
 
-  // T3 N/A — softDelete:false.
+  // T3 N/A, softDelete:false.
 
   test('T4 remote insert pull: cloud row → insertWeeklyCheckinFromCloud called', async () => {
     const sb = makePullSb({ data: [{ id: 'wc-cloud', week_start: 1, energy_score: 8 }] });
@@ -477,7 +477,7 @@ describe('nutrition_targets', () => {
     expect(sb._calls.upserts[0].rows).toMatchObject({ target_kcal: 2500, phase: 'bulk' });
   });
 
-  // T3 N/A — softDelete:false.
+  // T3 N/A, softDelete:false.
 
   test('T4 remote insert pull: cloud row → insertNutritionTargetsFromCloud called', async () => {
     const sb = makePullSb({ data: { user_id: 'u1', target_kcal: 2200 } });
@@ -625,7 +625,7 @@ describe('profiles', () => {
     expect(sb._calls.upserts[0].rows.column_updates_at.first_name).toMatch(/2026-05-27/);
   });
 
-  // T3 N/A — softDelete:false. Profile rows are never deleted via sync.
+  // T3 N/A, softDelete:false. Profile rows are never deleted via sync.
 
   test('T4 remote pull: cloud row → setUserProfile called via store', async () => {
     const setUserProfile = jest.fn();
@@ -701,7 +701,7 @@ describe('ed_pattern_flags (pull-only, server_wins)', () => {
     expect(db.upsertEdPatternFlagFromCloud).toHaveBeenCalledWith('u1', expect.objectContaining({ id: 'flag-1' }));
   });
 
-  test('T5 conflict (server_wins): INSERT OR REPLACE — local edits are stomped on next pull', async () => {
+  test('T5 conflict (server_wins): INSERT OR REPLACE, local edits are stomped on next pull', async () => {
     // Asserted at the helper-call level: server_wins = unconditional
     // upsert, no client-side gate.
     const sb = makePullSb({
@@ -869,7 +869,7 @@ describe('food domain coordinator (food_entries / custom_foods / saved_meals / r
     const sb = makeFoodSb();
     getSupabaseClient.mockReturnValue(sb);
 
-    // Two food-table pushes in the same cycle — only one RPC call.
+    // Two food-table pushes in the same cycle, only one RPC call.
     await pushTable('food_entries', { userId: 'u1', localUserId: 'u1' });
     await pushTable('custom_foods', { userId: 'u1', localUserId: 'u1' });
 

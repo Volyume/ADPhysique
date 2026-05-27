@@ -8,23 +8,23 @@
  *
  * Three things make this "automatic":
  *
- *   1. **instrumentStore(useStore)** — wraps every zustand action
+ *   1. **instrumentStore(useStore)**, wraps every zustand action
  *      to emit a breadcrumb with action name + duration. So when
  *      a crash happens, Sentry's issue detail shows the last N
  *      store mutations leading up to it, with no manual logInfo
  *      calls.
  *
- *   2. **instrumentNavigation(navigationRef)** — subscribes to
+ *   2. **instrumentNavigation(navigationRef)**, subscribes to
  *      every navigation state change and emits a screen-view
  *      breadcrumb. The user's path through the app is captured
  *      automatically.
  *
- *   3. **instrumentSupabase(client)** — wraps the Supabase client's
+ *   3. **instrumentSupabase(client)**, wraps the Supabase client's
  *      `.from(table)` and `.auth.*` calls so every cloud read /
  *      write emits a breadcrumb with the table and operation
  *      type. Network round-trip time is captured too.
  *
- * Everything is opt-in per surface — call instrumentX() once at
+ * Everything is opt-in per surface, call instrumentX() once at
  * boot and the surface is covered for the rest of the session.
  *
  * Privacy by default: the redactPII layer strips body weight,
@@ -86,7 +86,7 @@ export function getSessionStart() { return SESSION_START_MS; }
 // ─── PII redaction ───────────────────────────────────────────────────────
 //
 // Keys that should never leave the device unless explicitly allowed.
-// The check is on the KEY name only, recursively — a key 'email' at
+// The check is on the KEY name only, recursively, a key 'email' at
 // any depth is redacted regardless of which object it sits in.
 
 const PII_KEYS = new Set([
@@ -115,7 +115,7 @@ export function redactPII(value, depth = 0) {
   const out = {};
   for (const [k, v] of Object.entries(value)) {
     if (PII_KEYS.has(k)) {
-      // Keep the shape — replace the value but preserve the key so
+      // Keep the shape, replace the value but preserve the key so
       // log readers can tell "weight was present, just redacted"
       // versus "weight was missing".
       out[k] = v == null ? null : REDACT_PLACEHOLDER;
@@ -256,7 +256,7 @@ export const track = {
    * @param {Error|unknown} error  Exception or any throwable.
    * @param {string} scope         Logical area (e.g. 'sync.routines').
    *                               Low-cardinality, used for grouping.
-   * @param {Object} extra         Structured context — anything
+   * @param {Object} extra         Structured context, anything
    *                               JSON-serialisable. PII redacted
    *                               automatically unless opts.allowPII.
    */
@@ -361,7 +361,7 @@ export function audit(name, props = {}) {
  * `useAppStore(s => s.setX)` selector patterns still work.
  *
  * Side-effect-free actions (pure getters that happen to be functions)
- * get a tiny extra breadcrumb cost, which is fine — store actions are
+ * get a tiny extra breadcrumb cost, which is fine, store actions are
  * called O(per-tap), not O(per-frame).
  */
 export function instrumentStore(useStore) {
@@ -380,7 +380,7 @@ export function instrumentStore(useStore) {
         try {
           const result = original.apply(this, args);
           if (result && typeof result.then === 'function') {
-            // Promise — wait for resolution to log timing.
+            // Promise, wait for resolution to log timing.
             return result.then(r => {
               track.userAction(`store.${key}`, { durationMs: Date.now() - startedAt });
               return r;
@@ -401,7 +401,7 @@ export function instrumentStore(useStore) {
     }
     if (Object.keys(next).length) setState(next);
   } catch (e) {
-    // Instrumentation is observability infrastructure — if it errors
+    // Instrumentation is observability infrastructure, if it errors
     // the app should still work. Log and move on.
     try { logWarn('observability.instrumentStore', e?.message); } catch (_) {}
   }
@@ -454,7 +454,7 @@ export function instrumentNavigation(navigationRef) {
  * Wrap the supabase-js client so every database query emits a
  * breadcrumb with the table and operation. Returns a proxied client
  * that forwards all other methods through. Safe to call multiple
- * times — the proxy is idempotent.
+ * times, the proxy is idempotent.
  *
  * Coverage:
  *   - client.from(table) → tracks .select / .insert / .update /
@@ -584,7 +584,7 @@ export function instrumentSupabase(client) {
 /**
  * Breadcrumb every AppState transition (active / inactive / background)
  * with the duration spent in the previous state. Independent of the
- * existing installShutdownHandler — that one writes a flag to
+ * existing installShutdownHandler, that one writes a flag to
  * AsyncStorage so the NEXT launch can detect a crash; this one feeds
  * the SAME-session breadcrumb trail so an error fired right after a
  * foreground resume carries "user came back from background 200ms ago"
@@ -628,7 +628,7 @@ export function uninstrumentAppState() {
 /**
  * Breadcrumb every connectivity transition (online ↔ offline,
  * connection-type change). Independent of App.js's sync NetInfo
- * subscription — that one triggers syncAll on reconnect; this one
+ * subscription, that one triggers syncAll on reconnect; this one
  * adds the transition itself to the breadcrumb trail so a sync
  * error or RLS rejection that fires while offline carries that
  * context.

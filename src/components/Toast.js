@@ -1,6 +1,6 @@
 // Toast / snackbar system
 //
-// Lightweight ephemeral notification — replaces 30-40 Alert.alert
+// Lightweight ephemeral notification, replaces 30-40 Alert.alert
 // callsites that were showing routine success / info messages and
 // forcing a modal dismissal. Alert is now reserved for destructive
 // confirmations only (Delete account, Switch to Free, Reset history).
@@ -42,7 +42,7 @@ const DEFAULTS = {
   warning: { icon: 'warning',          tint: colors.warning, duration: 3500 },
   info:    { icon: 'information-circle', tint: colors.primary, duration: 2500 },
   // Undo variant for destructive actions. Longer duration so the user
-  // has time to read + react. Neutral icon, white text — looks distinct
+  // has time to read + react. Neutral icon, white text, looks distinct
   // from success/error to signal "you can take this back".
   undo:    { icon: 'arrow-undo',      tint: colors.warning, duration: 8000 },
 };
@@ -67,7 +67,7 @@ export function ToastProvider({ children }) {
       icon: options.icon || cfg.icon,
       tint: options.tint || cfg.tint,
       duration: options.duration || cfg.duration,
-      // Optional action button. { label, onPress } — e.g. { label: 'Undo',
+      // Optional action button. { label, onPress }, e.g. { label: 'Undo',
       // onPress: () => restoreWorkout(...) }. Tapping the action runs the
       // callback AND dismisses the toast. Use 'undo' variant for the
       // destructive-action pattern (8s window).
@@ -174,7 +174,7 @@ export function ToastProvider({ children }) {
               <TouchableOpacity
                 onPress={() => {
                   try { current.action.onPress?.(); } catch (_) {}
-                  // Action-tap dismisses without firing onTimeout — the
+                  // Action-tap dismisses without firing onTimeout, the
                   // action replaced the destructive commit.
                   dismiss({ skipTimeout: true });
                 }}

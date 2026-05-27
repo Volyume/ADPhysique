@@ -6,7 +6,7 @@
  * the left, Complete on the right. Below each price, the three locked
  * differences from OPEN_QUESTIONS_RESOLVED.md lines 148-159.
  *
- * Three differences only — adding a fourth row was rejected at
+ * Three differences only, adding a fourth row was rejected at
  * design lock ("list length kills conversion").
  *
  * Pricing comes from src/lib/payments/catalogue.js so the displayed
@@ -27,7 +27,7 @@ const COMPARISON_ROWS = [
 
 export default function TierComparisonStrip({
   pricingWindow = 'open_beta',
-  highlighted = 'complete',   // 'complete' | 'pro' — which column gets the amber outline
+  highlighted = 'complete',   // 'complete' | 'pro', which column gets the amber outline
   onPickPro,                  // optional: makes the Pro column tappable
   onPickComplete,             // optional: makes the Complete column tappable
 }) {
@@ -44,7 +44,7 @@ export default function TierComparisonStrip({
       ]}
     >
       <Text style={styles.colHeader}>Pro</Text>
-      <Text style={styles.colPrice}>{proSku?.priceText ?? '—'}</Text>
+      <Text style={styles.colPrice}>{proSku?.priceText ?? '-'}</Text>
       {COMPARISON_ROWS.map((row, i) => (
         <Text key={`pro-${i}`} style={styles.rowText} numberOfLines={2}>
           {row.pro}
@@ -63,7 +63,7 @@ export default function TierComparisonStrip({
       ]}
     >
       <Text style={styles.colHeader}>Complete</Text>
-      <Text style={styles.colPrice}>{completeSku?.priceText ?? '—'}</Text>
+      <Text style={styles.colPrice}>{completeSku?.priceText ?? '-'}</Text>
       {COMPARISON_ROWS.map((row, i) => (
         <Text key={`complete-${i}`} style={styles.rowText} numberOfLines={2}>
           {row.complete}

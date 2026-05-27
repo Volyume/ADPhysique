@@ -3,7 +3,7 @@
  * Standalone mesocycle scheduler, week progression, deload detection,
  * and autoregulation reader for the Volyume Coach Engine v2.
  *
- * Pure functions — no DB calls, no side effects.
+ * Pure functions, no DB calls, no side effects.
  * All inputs are plain values or serialisable objects.
  */
 
@@ -440,10 +440,10 @@ export function checkDoubleProgressionReady(sessionHistory = []) {
  * }}
  *
  * Status meaning:
- *   active    — still in the accumulation phase, keep training
- *   recovery  — currently in the final (lighter) week of the block
- *   complete  — recovery week just finished (0–13 days overdue)
- *   overdue   — block finished 2+ weeks ago, strongly prompt transition
+ *   active   , still in the accumulation phase, keep training
+ *   recovery , currently in the final (lighter) week of the block
+ *   complete , recovery week just finished (0–13 days overdue)
+ *   overdue  , block finished 2+ weeks ago, strongly prompt transition
  */
 export function getBlockStatus(startDateMs, plannedWeeks = 5, nowMs = Date.now()) {
   const start = typeof startDateMs === 'string' ? new Date(startDateMs).getTime() : (startDateMs ?? nowMs);

@@ -221,22 +221,22 @@ export default function WeeklyCheckInScreen({ navigation }) {
   const [weekWeights, setWeekWeights] = useState([]);
   const [alreadyLoggedToday, setAlreadyLoggedToday] = useState(false);
 
-  // Step 1 — How are you?
+  // Step 1, How are you?
   const [energyScore, setEnergyScore] = useState(null);   // 1–5
   const [stressScore, setStressScore] = useState(null);   // 1–5
   const [sleepHours, setSleepHours] = useState('');
 
-  // Step 2 — This week
+  // Step 2, This week
   const [calsAdherence, setCalsAdherence] = useState(null);
   const [stepsAdherence, setStepsAdherence] = useState(null);
 
-  // Step 3 — Recovery
+  // Step 3, Recovery
   const [sorenessScore, setSorenessScore] = useState(null); // 1–5
   const [soreMuscles, setSoreMuscles] = useState([]);       // muscle group keys
   const [jointPain, setJointPain] = useState(null);         // 'yes'|'no'
   const [notes, setNotes] = useState('');
 
-  // Step 4 — Training
+  // Step 4, Training
   const [trainingPerformance, setTrainingPerformance] = useState(null); // 'exceeded'|'hit'|'struggled'|'dropped'
 
   const hasNutritionTarget = Boolean(nutritionTargets?.targetKcal);
@@ -510,7 +510,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         <Text style={styles.stepHeading}>This week's data</Text>
         <Text style={styles.stepSubtitle}>How well did you hit your targets?</Text>
 
-        {/* Weight trend — read-only */}
+        {/* Weight trend, read-only */}
         {!loading && (
           <View style={styles.section}>
             <SectionLabel
@@ -859,7 +859,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Ritual intro — only on step 0 */}
+          {/* Ritual intro, only on step 0 */}
           {step === 0 && (
             <View style={styles.ritualIntro}>
               <Text style={styles.ritualIntroTitle}>{checkinDayLabel}</Text>

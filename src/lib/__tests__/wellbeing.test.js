@@ -25,7 +25,7 @@ describe('isCalm', () => {
     expect(isCalm('')).toBe(false);
   });
 
-  test('is case-sensitive — Calm (capitalised) is not calm', () => {
+  test('is case-sensitive, Calm (capitalised) is not calm', () => {
     expect(isCalm('Calm')).toBe(false);
   });
 });

@@ -15,7 +15,7 @@ beforeEach(() => {
   return AsyncStorage.clear();
 });
 
-describe('workout exercise + set state — concurrent updates', () => {
+describe('workout exercise + set state, concurrent updates', () => {
   test('two near-simultaneous addExerciseToWorkout calls both land', () => {
     // eslint-disable-next-line global-require
     const useAppStore = require('../../store/useAppStore').default;

@@ -275,7 +275,7 @@ export default function PlanDetailScreen({ navigation, route }) {
           )}
         </View>
 
-        {/* Manage actions — free tier only. Pro users manage their plan
+        {/* Manage actions, free tier only. Pro users manage their plan
             through the goal-change wizard in Athlete Hub. */}
         {!isLibrary && tier !== 'pro' && (
           <View style={styles.section}>

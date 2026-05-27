@@ -225,7 +225,7 @@ export default function ScanLabelScreen({ navigation, route }) {
             <Text style={styles.missBody}>
               {ocrAvailable
                 ? 'Frame the nutrition panel and tap the shutter, or type it in.'
-                : 'Type the macros in — we’ll keep the barcode on the saved food so the next scan hits.'}
+                : 'Type the macros in, we’ll keep the barcode on the saved food so the next scan hits.'}
             </Text>
           </View>
         ) : (

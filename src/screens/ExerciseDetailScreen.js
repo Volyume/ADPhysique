@@ -18,7 +18,7 @@ import useAppStore from '../store/useAppStore';
 import { FORM_TIPS } from '../lib/formTips';
 import InfoTooltip from '../components/InfoTooltip';
 
-// Loose date parser — accepts "Dec 2025", "December 2025", "2025-12", "12/2025" etc.
+// Loose date parser, accepts "Dec 2025", "December 2025", "2025-12", "12/2025" etc.
 // Returns unix timestamp (ms) for the 1st of the parsed month, or null.
 function parseLooseDate(str) {
   if (!str || !str.trim()) return null;
@@ -76,11 +76,11 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   async function loadData() {
     try {
       const ex = await getExerciseById(exerciseId);
-      if (!ex) return; // exercise not found — screen will stay on null guard
+      if (!ex) return; // exercise not found, screen will stay on null guard
       setExercise(ex);
       navigation.setOptions({ title: ex.name });
 
-      // History — group by workout, last 8 sessions
+      // History, group by workout, last 8 sessions
       const mySets = await getWorkoutSetsForExercise(exerciseId, user.id, 200);
 
       const byWorkout = {};
@@ -128,13 +128,13 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         setGoal(loadedGoal);
       }
 
-      // Substitutes — ranked by SFR score and similarity
+      // Substitutes, ranked by SFR score and similarity
       const allExercises = await getAllExercises();
       try {
         const swaps = rankSwaps(ex, allExercises, { equipment: [] });
         setSubstitutes(swaps.slice(0, 4));
       } catch (_) {
-        // swapEngine unavailable — hide section silently
+        // swapEngine unavailable, hide section silently
       }
     } catch (e) {
       console.error('ExerciseDetail loadData:', e);
@@ -195,7 +195,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   }
 
   if (!exercise) {
-    // Returning null produced a blank screen during the initial DB load —
+    // Returning null produced a blank screen during the initial DB load
     // looked like a crashed screen. Show a spinner so the user has feedback.
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -353,7 +353,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           );
         })()}
 
-        {/* Congratulatory banner — shown briefly when goal is auto-detected as achieved */}
+        {/* Congratulatory banner, shown briefly when goal is auto-detected as achieved */}
         {congratsBanner && (
           <Animated.View style={[styles.congratsBanner, { opacity: congratsOpacity }]}>
             <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
@@ -535,7 +535,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* Similar exercises — horizontal scroll of small cards */}
+        {/* Similar exercises, horizontal scroll of small cards */}
         {substitutes.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Similar exercises</Text>
@@ -761,7 +761,7 @@ const styles = StyleSheet.create({
   prLabel: { fontSize: fontSize.sm, color: colors.textMuted },
   prValue: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
   prDate: { fontSize: fontSize.xs, color: colors.textMuted },
-  // Similar exercises — horizontal scroll cards
+  // Similar exercises, horizontal scroll cards
   subScrollContent: {
     gap: spacing.sm,
     paddingRight: spacing.lg,

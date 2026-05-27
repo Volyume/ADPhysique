@@ -135,7 +135,7 @@ describe('12-week coaching simulation', () => {
       }
     }
 
-    // Per-exercise set-count multiplier — push / pull adjustments scale this
+    // Per-exercise set-count multiplier, push / pull adjustments scale this
     const setMultiplier = new Map(plan.workouts.flatMap(w => w.exercises.map(ex => [ex.exerciseName, 1.0])));
 
     // ── Per-week loop ───────────────────────────────────────────────────
@@ -324,7 +324,7 @@ describe('12-week coaching simulation', () => {
     expect(phases.size).toBeGreaterThanOrEqual(2);
 
     // 3. The deload week (mesoWeek 6) should produce a 'hold' or 'pull'
-    //    training signal — not 'push'. Catches a bug where the coach
+    //    training signal, not 'push'. Catches a bug where the coach
     //    pushes more volume on the user during a deload.
     const deloadOutputs = coachOutputs.filter(o => o.isDeload);
     for (const o of deloadOutputs) {
@@ -373,7 +373,7 @@ describe('12-week coaching simulation', () => {
     }
 
     // 7. Recovery EMA computed over the workout history should produce
-    //    finite numbers — no NaN. Convert sets into the "workouts" shape
+    //    finite numbers, no NaN. Convert sets into the "workouts" shape
     //    that computeRecoveryEMAs expects (one entry per session).
     const workoutSessions = [];
     for (const o of coachOutputs) {
@@ -503,7 +503,7 @@ describe('12-week coaching simulation', () => {
     }
   });
 
-  // ─── Scenario: cut going well — should NOT change anything ─────────────
+  // ─── Scenario: cut going well, should NOT change anything ─────────────
   test('coach holds when cut is on-target and recovery is fine', () => {
     // Steady downward trend at ~0.4 kg/wk over 14 days
     const morningWeights = Array.from({ length: 14 }, (_, i) => ({
@@ -613,7 +613,7 @@ describe('12-week coaching simulation', () => {
 
   // ─── Scenario: very fast weight loss (over 1% bodyweight per week) ─────
   test('coach pulls back on a cut that is going too fast', () => {
-    // 14 days of fast loss — about 1.2 kg/week
+    // 14 days of fast loss, about 1.2 kg/week
     const morningWeights = Array.from({ length: 14 }, (_, i) => ({
       weightKg: 92 - i * (1.2 / 7),
       loggedAt: Date.now() - (13 - i) * DAY_MS,
@@ -825,7 +825,7 @@ describe('12-week coaching simulation', () => {
     }
   });
 
-  // ─── Scenario: cooldown — last adjustment was 1 week ago, don't ping ───
+  // ─── Scenario: cooldown, last adjustment was 1 week ago, don't ping ───
   test('coach respects the calorie adjustment cooldown', () => {
     const morningWeights = Array.from({ length: 14 }, (_, i) => ({
       weightKg: 90 + i * 0.05,
@@ -840,7 +840,7 @@ describe('12-week coaching simulation', () => {
       consecutiveOffTargetWeeks: 1,
       consecutivePoorRecoveryWeeks: 0,
       lastCalAdjustmentDirection: 'down',
-      lastCalAdjustmentWeeksAgo: 1, // very recent — cooldown should hold
+      lastCalAdjustmentWeeksAgo: 1, // very recent, cooldown should hold
       currentCalTarget: 2200, currentStepsTarget: 8000,
       bodyweightKg: 90.6, units: 'kg', scoffPositive: false,
     });

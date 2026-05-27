@@ -352,7 +352,7 @@ export default function PlansScreen({ navigation }) {
   // Three audiences share this list:
   //   * Pro with an active plan → "switch / re-run wizard" framing
   //   * Pro with active plan → switch framings (update goals / library / manual)
-  //   * Pro without a plan (rare — just after first sign-up) → default order
+  //   * Pro without a plan (rare, just after first sign-up) → default order
   //   * Free → default order (library first, manual second)
   const actionCards = isProWithPlan ? ACTION_CARDS_PRO_SWITCH : ACTION_CARDS_DEFAULT;
 
@@ -387,7 +387,7 @@ export default function PlansScreen({ navigation }) {
 
             <Text style={styles.blockCardBody}>{blockAdvice.body}</Text>
 
-            {/* Signal chips — shown for early_deload and heads_up */}
+            {/* Signal chips, shown for early_deload and heads_up */}
             {blockAdvice.signals?.filter(s => s.severity !== 'info').length > 0 && (
               <View style={styles.signalRow}>
                 {blockAdvice.signals.filter(s => s.severity !== 'info').map((sig, i) => (
@@ -669,7 +669,7 @@ export default function PlansScreen({ navigation }) {
           <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
         </TouchableOpacity>
 
-        {/* Decision Hub — visible to everyone. Section title and copy adapt:
+        {/* Decision Hub, visible to everyone. Section title and copy adapt:
             Pro with active plan → "Switch your plan", Free / no plan → "Start or build a plan". */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
@@ -858,7 +858,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderColor: colors.primary + '40',
   },
-  // Pro-locked variant — matches AthleteHub's lockedCard so gating
+  // Pro-locked variant, matches AthleteHub's lockedCard so gating
   // reads the same across the app.
   actionCardLocked: { opacity: 0.6 },
   actionCardTitleLocked: { color: colors.textSecondary },

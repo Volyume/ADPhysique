@@ -2,7 +2,7 @@
  * recipe_ingredients per-table push + pull.
  *
  * Bidirectional, last_write_wins, soft-delete. The food-domain
- * bulk RPC does not include this table — recipe_ingredients is
+ * bulk RPC does not include this table, recipe_ingredients is
  * synced directly against the cloud table.
  *
  * Schema (matching both ends after the deleted_at + updated_at
@@ -15,7 +15,7 @@
  *   user_id     TEXT NOT NULL
  *   created_at  INTEGER NOT NULL
  *   updated_at  INTEGER NOT NULL  (backfilled = created_at for legacy rows)
- *   deleted_at  INTEGER NULL      (tombstone — soft delete)
+ *   deleted_at  INTEGER NULL      (tombstone, soft delete)
  *
  * Push: read every row for the user including tombstones, map to
  * the cloud schema, upsert in 200-row batches on id. Tombstones

@@ -55,7 +55,7 @@ export async function ensureTable() {
  * sync_queue so the registry-driven push picks it up.
  *
  * For applying rows pulled from the cloud, use
- * applyPreferenceFromPull() instead — it preserves the server
+ * applyPreferenceFromPull() instead, it preserves the server
  * updated_at so a pulled row does not echo back to the cloud as
  * a fresh local write.
  */
@@ -225,7 +225,7 @@ export async function getPreferencesUpdatedSince(userId, sinceMs) {
 
 /**
  * One-shot migration from the legacy AsyncStorage JSON blob into
- * the per-category SQLite rows. Safe to call repeatedly — each
+ * the per-category SQLite rows. Safe to call repeatedly, each
  * category lands once and subsequent calls become no-ops because
  * setPreference is an UPSERT and the screen continues to drive
  * updates via the same setPreference path.

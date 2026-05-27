@@ -118,7 +118,7 @@ describe('estimateWorkoutMinutes', () => {
   });
 });
 
-// ─── generatePlan — shape and determinism ────────────────────────────────────
+// ─── generatePlan, shape and determinism ────────────────────────────────────
 
 const BASE_INPUTS = {
   experience: 'intermediate',
@@ -132,7 +132,7 @@ const BASE_INPUTS = {
   nutritionPhase: 'maintain',
 };
 
-describe('generatePlan — output shape', () => {
+describe('generatePlan, output shape', () => {
   test('returns an object with the required top-level fields', () => {
     const plan = generatePlan(BASE_INPUTS);
     expect(plan).toHaveProperty('name');
@@ -202,9 +202,9 @@ describe('generatePlan — output shape', () => {
   });
 });
 
-// ─── generatePlan — split selection ──────────────────────────────────────────
+// ─── generatePlan, split selection ──────────────────────────────────────────
 
-describe('generatePlan — split selection', () => {
+describe('generatePlan, split selection', () => {
   test('intermediate lifter, 4 days → upper_lower split', () => {
     const plan = generatePlan({ ...BASE_INPUTS, experience: 'intermediate', daysPerWeek: 4 });
     expect(plan.splitType).toBe('upper_lower');
@@ -226,7 +226,7 @@ describe('generatePlan — split selection', () => {
   });
 
   test('5 days, weak_point phase → upper_lower_wp split', () => {
-    // weak_point used to be a "goal" (weak_point_spec) before the merge —
+    // weak_point used to be a "goal" (weak_point_spec) before the merge
     // now it's a phase. Engine maps it back to the legacy split internally.
     const plan = generatePlan({
       ...BASE_INPUTS,
@@ -243,9 +243,9 @@ describe('generatePlan — split selection', () => {
   });
 });
 
-// ─── generatePlan — beginner day cap ─────────────────────────────────────────
+// ─── generatePlan, beginner day cap ─────────────────────────────────────────
 
-describe('generatePlan — beginner day cap', () => {
+describe('generatePlan, beginner day cap', () => {
   test('beginner requesting 6 days is capped to 4 days', () => {
     const plan = generatePlan({ ...BASE_INPUTS, experience: 'beginner', daysPerWeek: 6 });
     expect(plan.daysPerWeek).toBe(4);
@@ -263,9 +263,9 @@ describe('generatePlan — beginner day cap', () => {
   });
 });
 
-// ─── generatePlan — workout count matches effective days ──────────────────────
+// ─── generatePlan, workout count matches effective days ──────────────────────
 
-describe('generatePlan — workout count', () => {
+describe('generatePlan, workout count', () => {
   test('4-day upper_lower plan produces 4 workouts', () => {
     const plan = generatePlan({ ...BASE_INPUTS, daysPerWeek: 4 });
     expect(plan.workouts.length).toBe(4);
@@ -287,9 +287,9 @@ describe('generatePlan — workout count', () => {
   });
 });
 
-// ─── generatePlan — determinism ───────────────────────────────────────────────
+// ─── generatePlan, determinism ───────────────────────────────────────────────
 
-describe('generatePlan — determinism', () => {
+describe('generatePlan, determinism', () => {
   test('identical inputs produce identical exercise names', () => {
     const planA = generatePlan(BASE_INPUTS);
     const planB = generatePlan(BASE_INPUTS);
@@ -307,13 +307,13 @@ describe('generatePlan — determinism', () => {
   });
 });
 
-// ─── generatePlan — strength_size phase ──────────────────────────────────────
+// ─── generatePlan, strength_size phase ──────────────────────────────────────
 // Was the strength_hypertrophy "goal" before the merge. Now it's a phase
 // (current-block emphasis), not a body shape. Engine maps phase===strength_size
 // back to the legacy strength_hypertrophy internalGoal so heavy-compound rep
 // ranges and rest periods still apply.
 
-describe('generatePlan — strength_size phase', () => {
+describe('generatePlan, strength_size phase', () => {
   test('compound exercises have repMax ≤ 8 (lower-rep strength range)', () => {
     const plan = generatePlan({ ...BASE_INPUTS, phase: 'strength_size' });
     for (const w of plan.workouts) {
@@ -336,9 +336,9 @@ describe('generatePlan — strength_size phase', () => {
   });
 });
 
-// ─── generatePlan — nutrition phase influence on RIR ─────────────────────────
+// ─── generatePlan, nutrition phase influence on RIR ─────────────────────────
 
-describe('generatePlan — nutrition phase and RIR', () => {
+describe('generatePlan, nutrition phase and RIR', () => {
   test('cut phase (aggressive_cut) produces higher rirTarget than surplus (lean_gain) for intermediate', () => {
     const cutPlan     = generatePlan({ ...BASE_INPUTS, nutritionPhase: 'aggressive_cut' });
     const surplusPlan = generatePlan({ ...BASE_INPUTS, nutritionPhase: 'lean_gain' });
@@ -354,9 +354,9 @@ describe('generatePlan — nutrition phase and RIR', () => {
   });
 });
 
-// ─── generatePlan — mesocycleSchedule ────────────────────────────────────────
+// ─── generatePlan, mesocycleSchedule ────────────────────────────────────────
 
-describe('generatePlan — mesocycleSchedule', () => {
+describe('generatePlan, mesocycleSchedule', () => {
   test('intermediate plan has 5 weeks in the mesocycle', () => {
     const plan = generatePlan(BASE_INPUTS);
     expect(plan.mesocycleSchedule).toHaveLength(5);
@@ -390,9 +390,9 @@ describe('generatePlan — mesocycleSchedule', () => {
   });
 });
 
-// ─── generatePlan — weeklyVolumeSummary ──────────────────────────────────────
+// ─── generatePlan, weeklyVolumeSummary ──────────────────────────────────────
 
-describe('generatePlan — weeklyVolumeSummary', () => {
+describe('generatePlan, weeklyVolumeSummary', () => {
   test('returns plannedSets for standard muscle groups', () => {
     const plan = generatePlan(BASE_INPUTS);
     const summary = plan.weeklyVolumeSummary;
@@ -428,9 +428,9 @@ describe('generatePlan — weeklyVolumeSummary', () => {
   });
 });
 
-// ─── generatePlan — personalisationSummary ───────────────────────────────────
+// ─── generatePlan, personalisationSummary ───────────────────────────────────
 
-describe('generatePlan — personalisationSummary', () => {
+describe('generatePlan, personalisationSummary', () => {
   test('returns an object with experience and daysPerWeek fields', () => {
     const plan = generatePlan(BASE_INPUTS);
     expect(plan.personalisationSummary).toHaveProperty('experience');
@@ -446,9 +446,9 @@ describe('generatePlan — personalisationSummary', () => {
   });
 });
 
-// ─── generatePlan — equipment filtering ──────────────────────────────────────
+// ─── generatePlan, equipment filtering ──────────────────────────────────────
 
-describe('generatePlan — equipment filtering', () => {
+describe('generatePlan, equipment filtering', () => {
   test('bodyweight-only plan contains no barbell exercises', () => {
     const plan = generatePlan({ ...BASE_INPUTS, equipment: 'bodyweight' });
     const names = plan.workouts.flatMap(w => w.exercises.map(e => e.exerciseName));
@@ -470,9 +470,9 @@ describe('generatePlan — equipment filtering', () => {
   });
 });
 
-// ─── generatePlan — plan name ─────────────────────────────────────────────────
+// ─── generatePlan, plan name ─────────────────────────────────────────────────
 
-describe('generatePlan — plan name', () => {
+describe('generatePlan, plan name', () => {
   test('name is a non-empty string', () => {
     const plan = generatePlan(BASE_INPUTS);
     expect(typeof plan.name).toBe('string');

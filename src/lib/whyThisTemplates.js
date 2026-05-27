@@ -403,7 +403,7 @@ export function getEdSupportLink(locale) {
 }
 
 // ---------------------------------------------------------------------------
-// Jargon blocklist check (for testing — call on any string before display)
+// Jargon blocklist check (for testing, call on any string before display)
 // ---------------------------------------------------------------------------
 
 /**

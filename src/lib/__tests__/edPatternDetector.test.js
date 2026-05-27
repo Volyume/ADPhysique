@@ -12,7 +12,7 @@ const wkLowEnergy = () => ({ energy: 1, adherence: 'hit', hasCheckin: true, hasF
 const wkUnder = () => ({ energy: 4, adherence: 'under', hasCheckin: true, hasFoodData: true });
 const wkWeightOnly = () => ({ energy: 4, adherence: null, hasCheckin: true, hasFoodData: false });
 
-describe('detectEdPatternFlag — individual signals', () => {
+describe('detectEdPatternFlag, individual signals', () => {
   test('s1 rapid loss alone does not fire', () => {
     const out = detectEdPatternFlag(lossRapid, [wkNormal(), wkNormal(), wkNormal()], false);
     expect(out.signals.s1).toBe(true);
@@ -42,7 +42,7 @@ describe('detectEdPatternFlag — individual signals', () => {
   });
 });
 
-describe('detectEdPatternFlag — thresholds', () => {
+describe('detectEdPatternFlag, thresholds', () => {
   test('two signals fire when goal_lock_advanced = false', () => {
     const out = detectEdPatternFlag(lossRapid, [wkLowEnergy(), wkLowEnergy()], false);
     expect(out.signals.count).toBeGreaterThanOrEqual(2);
@@ -74,7 +74,7 @@ describe('detectEdPatternFlag — thresholds', () => {
   });
 });
 
-describe('detectEdPatternFlag — missing data edge cases', () => {
+describe('detectEdPatternFlag, missing data edge cases', () => {
   test('null weight trend never counts as s1', () => {
     const out = detectEdPatternFlag({ weightTrendPctPerWeek: null }, [wkLowEnergy(), wkLowEnergy()], false);
     expect(out.signals.s1).toBe(false);
@@ -134,7 +134,7 @@ describe('hasEdPatternCleared', () => {
   });
 });
 
-describe('detectEdPatternFlag — property checks (locked acceptance)', () => {
+describe('detectEdPatternFlag, property checks (locked acceptance)', () => {
   // From MOVE_2_ED_PATTERN_DETECTION.md tests-required block.
   test('1 signal alone never fires regardless of goal lock', () => {
     for (const goalLock of [false, true]) {

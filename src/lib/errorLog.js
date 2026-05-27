@@ -1,11 +1,11 @@
 /**
- * Verbose error logging — ring buffer in AsyncStorage so test users can
+ * Verbose error logging, ring buffer in AsyncStorage so test users can
  * surface what went wrong off-device.
  *
  * Use cases:
- *   - logError(scope, error, ctx) — catch handlers replace `.catch(() => {})`
- *   - logWarn(scope, msg, ctx)    — recoverable issues worth knowing about
- *   - logInfo(scope, msg, ctx)    — verbose milestone events (auth, plan
+ *   - logError(scope, error, ctx), catch handlers replace `.catch(() => {})`
+ *   - logWarn(scope, msg, ctx)   , recoverable issues worth knowing about
+ *   - logInfo(scope, msg, ctx)   , verbose milestone events (auth, plan
  *     gen, set saves, etc.). Persists during beta so testers' traces
  *     are recoverable; gated by VERBOSE_LOGGING. Flip the constant to
  *     false to quiet things down before public release.
@@ -50,7 +50,7 @@ let loadingPromise = null;
 // so anything sensitive that reaches it is effectively shared. Same list
 // as src/lib/sentry.js#PII_KEYS but applied caller-side here too.
 const PII_KEYS = new Set([
-  // Auth secrets — every shape we've seen plus camelCase variants.
+  // Auth secrets, every shape we've seen plus camelCase variants.
   'email', 'emailAddress', 'email_address',
   'password', 'pwd', 'passcode',
   'token', 'authToken', 'auth_token',
@@ -200,7 +200,7 @@ export function logInfo(scope, message, context) {
   const safeContext = redactPII(context);
   // Gated by VERBOSE_LOGGING for the on-device buffer. Even when off,
   // we forward to Sentry as a breadcrumb so the run-up to an error is
-  // visible in the issue detail view — breadcrumbs are cheap (no event
+  // visible in the issue detail view, breadcrumbs are cheap (no event
   // created on their own, only attached to subsequent errors).
   if (VERBOSE_LOGGING) {
     const entry = buildEntry('info', scope, message, safeContext);
@@ -215,7 +215,7 @@ export function logInfo(scope, message, context) {
     try { _sentry()?.addBreadcrumb(entry.message, { scope, extra: { context: safeContext } }); } catch (_) {}
     return entry;
   }
-  // Quiet mode (post-beta) still feeds Sentry breadcrumbs — almost free.
+  // Quiet mode (post-beta) still feeds Sentry breadcrumbs, almost free.
   try { _sentry()?.addBreadcrumb(message, { scope, extra: { context: safeContext } }); } catch (_) {}
   return null;
 }
@@ -230,7 +230,7 @@ export async function clearErrors() {
   try { await AsyncStorage.removeItem(LOG_KEY); } catch (_) {}
 }
 
-// Cloud shipping is now handled by Sentry (see src/lib/sentry.js) —
+// Cloud shipping is now handled by Sentry (see src/lib/sentry.js)
 // the local ring buffer above is retained for on-device viewing in
 // Settings → Debug logs. Removed: flushDebugLogs, shouldShipDebugLogs,
 // setShipDebugLogs, getLastFlushOutcome, the watermark + ship-pref
@@ -290,7 +290,7 @@ export function installGlobalHandlers() {
     });
   }
 
-  // Unhandled promise rejections — RN private but stable for years.
+  // Unhandled promise rejections, RN private but stable for years.
   try {
     // eslint-disable-next-line global-require, import/no-unresolved
     const tracking = require('react-native/Libraries/promiseRejectionTracking');
@@ -303,5 +303,5 @@ export function installGlobalHandlers() {
         onHandled: () => { /* no-op */ },
       });
     }
-  } catch (_) { /* tracking unavailable — fine */ }
+  } catch (_) { /* tracking unavailable, fine */ }
 }

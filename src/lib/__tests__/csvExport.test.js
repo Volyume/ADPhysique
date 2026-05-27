@@ -1,7 +1,7 @@
 /**
  * CSV export formatter tests.
  *
- * Pure formatter only — no I/O. Locks the header row, the escape
+ * Pure formatter only, no I/O. Locks the header row, the escape
  * rules, and the food-lookup miss fallback (food_ref appears in
  * the food column).
  */

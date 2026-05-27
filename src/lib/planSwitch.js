@@ -5,7 +5,7 @@ import { getBlockStatus } from './mesocycle';
 // Asks the user to confirm before activating a new plan when the current
 // training block has meaningful progress. `activatePlanWithBlock` always
 // kicks off a fresh 6-week mesocycle, so switching at week 3 of 6 silently
-// resets the RIR ladder and week structure — workout history and PRs are
+// resets the RIR ladder and week structure, workout history and PRs are
 // kept, but the block-level plan is lost.
 //
 // Returns true (proceed silently) when:

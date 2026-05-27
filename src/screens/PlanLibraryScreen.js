@@ -232,7 +232,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
     useCallback(() => { loadData(); }, []),
   );
 
-  // Re-load when user.id becomes available — handles the case where the user
+  // Re-load when user.id becomes available, handles the case where the user
   // reaches this screen (e.g. via "fromFirstRun") before initLocalUser has
   // finished, so seedRoutinesIfNeeded was skipped on first mount.
   useEffect(() => {
@@ -284,7 +284,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
                   {
                     text: fromFirstRun ? 'Start training' : 'Set active',
                     onPress: async () => {
-                      // Skip the mid-block confirm during first-run — there's
+                      // Skip the mid-block confirm during first-run, there's
                       // no prior block to disrupt (this IS their first plan).
                       if (!fromFirstRun) {
                         const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: plan.name });
@@ -415,7 +415,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
         )}
       />
 
-      {/* Division grid — shown when Division prep is selected */}
+      {/* Division grid, shown when Division prep is selected */}
       {showDivisionGrid && (
         <DivisionGrid
           selectedDivision={selectedDivision}

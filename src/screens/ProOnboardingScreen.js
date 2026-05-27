@@ -36,7 +36,7 @@ const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 
 const TOTAL_STEPS = 4;
 
-// Default days per week — used for nutrition calc without asking the user.
+// Default days per week, used for nutrition calc without asking the user.
 const DEFAULT_DAYS_PER_WEEK = 4;
 
 function daysToFreqBucket(daysPerWeek) {
@@ -84,7 +84,7 @@ function fmt12(h) {
   return `${h - 12} pm`;
 }
 
-// Inline dropdown component — expands in place, no modal needed.
+// Inline dropdown component, expands in place, no modal needed.
 function Dropdown({ label, hint, value, options, onChange, placeholder = 'Select...' }) {
   const [open, setOpen] = useState(false);
   const selected = options.find(o => o.value === value);
@@ -145,11 +145,11 @@ export default function ProOnboardingScreen({ navigation }) {
 
   const [step, setStep] = useState(1);
 
-  // Step 1 — profile
+  // Step 1, profile
   const [firstName, setFirstName] = useState(userProfile?.firstName || '');
   const localUnits = 'kg';
   const [localBWUnits, setLocalBWUnits] = useState(bodyWeightUnits || 'st');
-  // Sensible defaults so the field is never blank — leaving it empty
+  // Sensible defaults so the field is never blank, leaving it empty
   // previously let a user advance with no weight set, and the downstream
   // safeWeightKg fallback (80kg) silently masked the omission. Other
   // fields (heightFt=5, heightIn=9, sessionLengthMinutes=60, sex=male,
@@ -164,7 +164,7 @@ export default function ProOnboardingScreen({ navigation }) {
   const [heightFt, setHeightFt] = useState('5');
   const [heightIn, setHeightIn] = useState('9');
 
-  // Step 2 — training setup (all dropdowns / segments)
+  // Step 2, training setup (all dropdowns / segments)
   const [experience, setExperience] = useState(null);
   const [sessionLengthMinutes, setSessionLengthMinutes] = useState(60);
   const [equipment, setEquipment] = useState(null);
@@ -173,14 +173,14 @@ export default function ProOnboardingScreen({ navigation }) {
   const [trainingGoal, setTrainingGoal] = useState('general');
   const [trainingPhase, setTrainingPhase] = useState(null);
 
-  // Step 4 — recovery + reminders
+  // Step 4, recovery + reminders
   const [recoveryRating, setRecoveryRating] = useState(null);
   const [morningEnabled, setMorningEnabled] = useState(true);
   const [morningHour, setMorningHour] = useState(7);
   const [checkinEnabled, setCheckinEnabled] = useState(true);
   const [checkinDay, setCheckinDay] = useState(0);
 
-  // Step 1 — account
+  // Step 1, account
   const [authMode, setAuthMode] = useState('signup'); // 'signup' | 'signin'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -202,14 +202,14 @@ export default function ProOnboardingScreen({ navigation }) {
   // Auto-advance past Step 1 if the user is already authenticated when the
   // screen mounts. Happens after OAuth: SIGNED_IN flips isAuthLoading true,
   // RootNavigator's splash gate unmounts ProOnboardingStack, the cloud
-  // restore finishes, the stack remounts — and `step` resets to 1, dropping
+  // restore finishes, the stack remounts, and `step` resets to 1, dropping
   // the user back on "Create your account" even though they're signed in.
   // Without this, the OAuth flow loops: Step 1 → auth → splash → Step 1.
   // Local-only users (isLocal: true) still see Step 1 because they haven't
   // created a cloud account yet.
   useEffect(() => {
     if (step === 1 && user && !user.isLocal) {
-      // Don't auto-advance if userProfile is already set — that means
+      // Don't auto-advance if userProfile is already set, that means
       // restoreSessionFromCloud hydrated an existing account and the
       // navigator is about to unmount us. Auto-advancing here would
       // briefly flash Step 2 before the navigator catches up.
@@ -229,7 +229,7 @@ export default function ProOnboardingScreen({ navigation }) {
   }
 
   async function handleOAuthOnboarding(provider) {
-    // OAuth happens inside the in-app browser sheet — the Supabase session
+    // OAuth happens inside the in-app browser sheet, the Supabase session
     // callback is handled by App.js's deep-link handler. We just need to
     // wait for the result, then advance onboarding if successful.
     const { logInfo, logError } = require('../lib/errorLog');
@@ -248,9 +248,9 @@ export default function ProOnboardingScreen({ navigation }) {
         return;
       }
       // OAuth doesn't pre-fill a userProfile from the provider's metadata
-      // here — the onboarding wizard collects the training fields in the
+      // here, the onboarding wizard collects the training fields in the
       // next steps. Mark the auth step complete and advance.
-      logInfo('ProOnboarding.oauth.success', `provider=${provider} — advancing to step 2`);
+      logInfo('ProOnboarding.oauth.success', `provider=${provider}, advancing to step 2`);
       setAccountCreated(true);
       setStep(2);
     } catch (e) {
@@ -327,7 +327,7 @@ export default function ProOnboardingScreen({ navigation }) {
       Alert.alert('Your name', 'Please enter your first name to continue.');
       return;
     }
-    // Validate body weight — used downstream to compute calorie / protein
+    // Validate body weight, used downstream to compute calorie / protein
     // targets and to seed the body-metrics log. A silent 80kg fallback
     // would produce wrong macros, so refuse to advance until it's filled.
     const bwKg = localBWUnits === 'st'
@@ -563,7 +563,7 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 1 — Create account ──────────────────────────────────────────────────
+  // ── Step 1, Create account ──────────────────────────────────────────────────
 
   if (step === 1) {
     return (
@@ -692,7 +692,7 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 2 — Profile ─────────────────────────────────────────────────────────
+  // ── Step 2, Profile ─────────────────────────────────────────────────────────
 
   if (step === 2) {
     return (
@@ -891,7 +891,7 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 2 — Training setup ──────────────────────────────────────────────────
+  // ── Step 2, Training setup ──────────────────────────────────────────────────
 
   if (step === 3) {
     const goalOptions = PHYSIQUE_GOALS.map(g => ({ value: g.value, label: g.label, sub: g.subtitle }));
@@ -948,7 +948,7 @@ export default function ProOnboardingScreen({ navigation }) {
               placeholder="Select your equipment"
             />
 
-            {/* Primary question — single source of truth for what the
+            {/* Primary question, single source of truth for what the
                 current block is doing. Drives calories, plan structure,
                 weak-point spec, and strength-size emphasis. */}
             <Dropdown
@@ -960,7 +960,7 @@ export default function ProOnboardingScreen({ navigation }) {
               placeholder="Pick your current focus"
             />
 
-            {/* Secondary, optional — only matters for competitive lifters
+            {/* Secondary, optional, only matters for competitive lifters
                 chasing a specific physique category. Defaults to 'general'
                 (balanced volume) for everyone else. */}
             <Dropdown
@@ -987,7 +987,7 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 3 — Recovery & reminders ───────────────────────────────────────────
+  // ── Step 3, Recovery & reminders ───────────────────────────────────────────
 
   if (step === 4) {
     const canContinue = !!recoveryRating;

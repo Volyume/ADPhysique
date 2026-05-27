@@ -27,7 +27,7 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
     // snap back to 100 when the user taps −.
     const limits = { weight: [0, 500], reps: [1, 200] };
     const fieldLimits = limits[field] || [0, 9999];
-    // Coerce in case a previous code path wrote a string like '' or '.' —
+    // Coerce in case a previous code path wrote a string like '' or '.'
     // arithmetic on those produces NaN and the next clamp wedges at the
     // lower bound forever.
     const raw = value[field];
@@ -85,7 +85,7 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
             onChangeText={v => {
               // Preserve in-progress decimal entry. The previous code did
               //   const n = parseFloat(v); setField('weight', n)
-              // which stripped the trailing dot — typing "21." stored 21,
+              // which stripped the trailing dot, typing "21." stored 21,
               // re-rendered "21", and the decimal separator was lost so
               // values like 21.25 kg (fractional plates) couldn't be typed.
               // Accept up to 3 integer digits and up to 2 decimals, max 500.
@@ -156,7 +156,7 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
         </View>
       </View>
 
-      {/* Live estimated 1RM chip — shown when weight and reps are present, not a warm-up */}
+      {/* Live estimated 1RM chip, shown when weight and reps are present, not a warm-up */}
       {live1RM > 0 && liveReps >= 1 && liveReps <= 15 && !isWarmup && (
         <View
           style={styles.oneRmChip}
@@ -170,12 +170,12 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
         </View>
       )}
 
-      {/* Effort picker removed — was rarely used in practice. RIR still
+      {/* Effort picker removed, was rarely used in practice. RIR still
           gets recorded internally (defaulted in DEFAULT_SET) so the
           autoregulation engine keeps working; we just don't ask the
           user to set it per-set. */}
 
-      {/* Set Type — compact inline row */}
+      {/* Set Type, compact inline row */}
       <TouchableOpacity
         testID="volyume-set-type-btn"
         style={styles.setTypeRow}

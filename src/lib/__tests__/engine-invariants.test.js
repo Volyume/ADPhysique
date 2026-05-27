@@ -12,7 +12,7 @@
  *
  * These don't replace targeted unit tests but catch regressions where a
  * normally-rare branch produces garbage (the operator-precedence rir/rpe
- * bug we fixed in wave 2 was exactly this — only NaN for rir > 0 with no
+ * bug we fixed in wave 2 was exactly this, only NaN for rir > 0 with no
  * rpe, would have surfaced here).
  */
 import { runWeeklyCoach } from '../weeklyCoach';

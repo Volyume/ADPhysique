@@ -1,5 +1,5 @@
 /**
- * SYNC_REGISTRY — the locked table list from
+ * SYNC_REGISTRY, the locked table list from
  * SYNC_ARCHITECTURE_LOCKED.md lines 29-153.
  *
  * Adding a table to sync is, by spec, adding a row here. The

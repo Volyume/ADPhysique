@@ -65,10 +65,10 @@ async function _hydrateProfileTimestamps(userId) {
 // Fire-and-forget push of a single AsyncStorage pref to the cloud.
 // Called from store setters whenever a synced preference changes so
 // the cloud copy stays current without waiting for the next sign-in
-// catch-up. Lazy-requires sync to avoid the circular import — sync.js
+// catch-up. Lazy-requires sync to avoid the circular import, sync.js
 // imports from this file. No-op when there's no cloud session, when
 // the pref's key is on the device-only exclude list, or when the
-// sync module errors out (offline, transient network failure — the
+// sync module errors out (offline, transient network failure, the
 // queue will catch up on the next foreground).
 function pushPrefSoon(supabaseUid, key, value) {
   if (!supabaseUid || !key) return;
@@ -94,7 +94,7 @@ const useAppStore = create((set, get) => ({
   session: null,
   userProfile: null,
   // Kept for backwards compat with crash-recovery code paths that still
-  // null-guard on it. Splash gate no longer reads this — splash only fires
+  // null-guard on it. Splash gate no longer reads this, splash only fires
   // during initial bootstrap (splashReady / firstRunChecked / tierChecked).
   isAuthLoading: false,
 
@@ -312,7 +312,7 @@ const useAppStore = create((set, get) => ({
     return { ok: true };
   },
 
-  // Tier — 'free' | 'pro' | null (null = not yet chosen → show WelcomeScreen)
+  // Tier, 'free' | 'pro' | null (null = not yet chosen → show WelcomeScreen)
   tier: null,
   tierChecked: false,
 
@@ -341,8 +341,8 @@ const useAppStore = create((set, get) => ({
   // gates routing decisions on this so the wizard doesn't briefly
   // mount during the ~8s cloud read for returning users (the
   // wizard-flash bug). Defaults to false so cold-launch isn't gated
-  // on it — the gate only matters during an active auth transition.
-  // restoringSession + restoreSplashStage removed — the new
+  // on it, the gate only matters during an active auth transition.
+  // restoringSession + restoreSplashStage removed, the new
   // restoreSessionFromCloud uses optimistic routing and a background
   // cloud sync, so no UI gate is needed. Existing screens with empty
   // states (HomeScreen "no active plan", Plans tab) fill in as
@@ -402,7 +402,7 @@ const useAppStore = create((set, get) => ({
     }
     // Persist BEFORE setting in-memory state so a crash between the two
     // doesn't leave AsyncStorage out of sync with the store. If the
-    // AsyncStorage write fails, log it but still update the store —
+    // AsyncStorage write fails, log it but still update the store
     // the user-visible state matters most; next reload will reconcile.
     try {
       await AsyncStorage.setItem(TIER_KEY, tier);
@@ -415,16 +415,16 @@ const useAppStore = create((set, get) => ({
   // Optimistic-UI sign-in: route INSTANTLY based on local cues, then
   // sync from the cloud in the background. No splash, no blocking
   // cloud reads on the routing path. Same pattern as Linear / Notion /
-  // Slack — the app shell appears immediately, data streams in to fill
+  // Slack, the app shell appears immediately, data streams in to fill
   // empty states as it arrives.
   //
   // Three cues, in priority order:
-  //   1. Per-uid local cache (FIRST_RUN_KEY_PFX + uid). If set, use it —
+  //   1. Per-uid local cache (FIRST_RUN_KEY_PFX + uid). If set, use it
   //      this device has seen this user before.
   //   2. session.user.created_at age. If > 60s, this auth.users row is
   //      old enough that the user definitely isn't brand new in this
-  //      session — assume returning, route to MainTabs.
-  //   3. Default: < 60s old, must be a fresh signup — route to wizard.
+  //      session, assume returning, route to MainTabs.
+  //   3. Default: < 60s old, must be a fresh signup, route to wizard.
   //
   // Cloud read fires AFTER the routing decision, asynchronously. It
   // populates the per-uid cache for future sign-ins, refreshes the
@@ -436,7 +436,7 @@ const useAppStore = create((set, get) => ({
     const log = require('../lib/errorLog');
     log.logInfo('restoreSessionFromCloud.start', `uid=${supabaseUserId}`, { uid: supabaseUserId });
 
-    // Beta tier policy — every cloud-authenticated user is Pro during beta.
+    // Beta tier policy, every cloud-authenticated user is Pro during beta.
     // eslint-disable-next-line global-require
     const { PRO_BETA_ACTIVE } = require('../lib/proGate');
     if (PRO_BETA_ACTIVE) {
@@ -462,13 +462,13 @@ const useAppStore = create((set, get) => ({
     } else if (sessionUser?.created_at) {
       const ageMs = Date.now() - new Date(sessionUser.created_at).getTime();
       if (Number.isFinite(ageMs) && ageMs >= 60_000) {
-        // Old auth row — returning user. Optimistically route to MainTabs.
+        // Old auth row, returning user. Optimistically route to MainTabs.
         set({ firstRunComplete: true, firstRunChecked: true });
         try { await AsyncStorage.setItem(FIRST_RUN_KEY, 'true'); } catch (_) {}
         log.logInfo('restoreSessionFromCloud.optimisticReturning', `ageMs=${ageMs}`);
         routedOptimistically = true;
       } else {
-        // Fresh auth row — new signup. Route to wizard.
+        // Fresh auth row, new signup. Route to wizard.
         set({ firstRunComplete: false, firstRunChecked: true });
         try { await AsyncStorage.setItem(FIRST_RUN_KEY, 'false'); } catch (_) {}
         log.logInfo('restoreSessionFromCloud.freshSignup', `ageMs=${ageMs}`);
@@ -478,7 +478,7 @@ const useAppStore = create((set, get) => ({
 
     // ── Step 2: cloud read (background from the UI's perspective) ───
     // The routing decision was made synchronously above, so any state
-    // mutation in this step is purely background hydration — populates
+    // mutation in this step is purely background hydration, populates
     // the per-uid cache for next time, fills userProfile if empty, and
     // (rarely) corrects the optimistic firstRunComplete if cloud
     // disagrees with it. UI is already responsive; this awaits but
@@ -487,7 +487,7 @@ const useAppStore = create((set, get) => ({
     // The function's returned promise resolves when ALL of this is
     // done (useful for tests + cold-launch bootstrap which want
     // assured cloud sync). Callers in the sign-in path (RootNavigator
-    // onAuthStateChange) intentionally don't await — they kicked off
+    // onAuthStateChange) intentionally don't await, they kicked off
     // the function and let it finish on its own.
     let cloudData = null;
     try {
@@ -514,7 +514,7 @@ const useAppStore = create((set, get) => ({
     }
 
     if (!cloudData) {
-      log.logInfo('restoreSessionFromCloud.noProfile', 'cloud profile missing — optimistic decision stands');
+      log.logInfo('restoreSessionFromCloud.noProfile', 'cloud profile missing, optimistic decision stands');
       return;
     }
 
@@ -550,7 +550,7 @@ const useAppStore = create((set, get) => ({
     // cloud explicitly says first_run_complete=true and we hadn't
     // already set it (e.g. no sessionUser was passed in step 1 so
     // the optimistic path didn't fire). We do NOT flip back to false
-    // if cloud disagrees with an optimistic true — that would be the
+    // if cloud disagrees with an optimistic true, that would be the
     // wizard-flash bug. An old account that was never finished is an
     // edge case; they can complete from Settings → Update your plan.
     if (cloudData.first_run_complete && !get().firstRunComplete) {
@@ -562,10 +562,10 @@ const useAppStore = create((set, get) => ({
 
   // Called after cloud sign-in: reads tier from Supabase and uses it as the
   // authoritative value. During beta this is a no-op (Supabase tier = 'pro').
-  // After beta, this becomes the enforcement point — server wins.
+  // After beta, this becomes the enforcement point, server wins.
   //
   // Wrapped in a 5s timeout so a stalled Supabase doesn't leave the
-  // navigator splash gate spinning forever — the bootstrap path reads
+  // navigator splash gate spinning forever, the bootstrap path reads
   // tierChecked / firstRunChecked and only proceeds once both are set.
   refreshTierFromCloud: async (supabaseClient, supabaseUserId) => {
     if (!supabaseClient || !supabaseUserId) return;
@@ -580,7 +580,7 @@ const useAppStore = create((set, get) => ({
       );
       const { data } = await Promise.race([queryPromise, timeoutPromise]);
       if (data?.tier) {
-        // Same beta tier policy as restoreSessionFromCloud — see comment
+        // Same beta tier policy as restoreSessionFromCloud, see comment
         // there. Any cloud-signed-in user is Pro during beta because the
         // cloud column is unusable as truth (DB default 'free', trigger
         // blocks writes, no webhook yet).
@@ -620,13 +620,13 @@ const useAppStore = create((set, get) => ({
   // dumped back on the main app with no plan and no nutrition targets.
   //
   // Returns { ok: false, error: 'workout_in_progress' } if the user is
-  // mid-workout — flipping firstRunComplete=false would unmount MainTabs
+  // mid-workout, flipping firstRunComplete=false would unmount MainTabs
   // and lose the live set log. Caller surfaces this to the UI.
   resetFirstRun: async () => {
     if (get().activeWorkout) {
       require('../lib/errorLog').logWarn(
         'useAppStore.resetFirstRun',
-        'refused — workout in progress',
+        'refused, workout in progress',
         { workoutId: get().activeWorkout?.id }
       );
       return { ok: false, error: 'workout_in_progress' };
@@ -686,7 +686,7 @@ const useAppStore = create((set, get) => ({
   updateLastActivity: () => set({ lastActivityAt: Date.now() }),
 
   // Use the functional set() form so two near-simultaneous calls (rapid
-  // double-tap on Add set / Add exercise) both land — the previous
+  // double-tap on Add set / Add exercise) both land, the previous
   // get()+set() pair could read the same snapshot twice and drop one update.
   addExerciseToWorkout: (exercise, routineExercise = null) => {
     set((state) => ({
@@ -768,7 +768,7 @@ const useAppStore = create((set, get) => ({
   },
 
   // PR celebration queue. The user might hit two PRs on the same set
-  // (heaviest weight + new 1RM) — the previous single-slot field lost the
+  // (heaviest weight + new 1RM), the previous single-slot field lost the
   // second. Now we queue, the top of the queue renders, dismiss pops.
   prCelebration: null,
   prCelebrationQueue: [],
@@ -783,7 +783,7 @@ const useAppStore = create((set, get) => ({
     return { prCelebration: next, prCelebrationQueue: rest };
   }),
 
-  // Gym weight units (barbells, dumbbells) — 'kg' | 'lbs'
+  // Gym weight units (barbells, dumbbells), 'kg' | 'lbs'
   units: 'kg',
   setUnits: async (units) => {
     set({ units });
@@ -800,7 +800,7 @@ const useAppStore = create((set, get) => ({
     }
   },
 
-  // Body weight units — 'st' | 'kg' | 'lbs'. Default 'st' (UK convention).
+  // Body weight units, 'st' | 'kg' | 'lbs'. Default 'st' (UK convention).
   bodyWeightUnits: 'st',
   setBodyWeightUnits: async (bwu) => {
     set({ bodyWeightUnits: bwu });
@@ -817,7 +817,7 @@ const useAppStore = create((set, get) => ({
     }
   },
 
-  // Bar weight for plate calculator — persisted alongside units
+  // Bar weight for plate calculator, persisted alongside units
   barWeight: 20,
   setBarWeight: async (w) => {
     set({ barWeight: w });
@@ -839,7 +839,7 @@ const useAppStore = create((set, get) => ({
   // field is OS-style: changes take effect immediately for components that
   // subscribe via useAppStore selectors. Components that import theme
   // tokens statically (most existing screens today) will reflect the
-  // changes after the app is restarted — that's noted in the Settings UI.
+  // changes after the app is restarted, that's noted in the Settings UI.
   accessibility: {
     largerText: false,    // applies a 1.2× multiplier via the useAccessibleFontSize hook
     higherContrast: false, // brightens muted text + thickens borders via theme tokens
@@ -866,7 +866,7 @@ const useAppStore = create((set, get) => ({
 }));
 
 // Wrap every action with auto-breadcrumb + duration tracking. The
-// instrumented actions still work exactly like the originals — the
+// instrumented actions still work exactly like the originals, the
 // wrapper only adds observability side effects. Calling this once at
 // module load means every existing useAppStore(s => s.someAction)
 // selector benefits without changing a single call site.

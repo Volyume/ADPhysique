@@ -2,7 +2,7 @@
  * NutritionEducationScreen
  *
  * 5-minute friendly explainer for someone who's never thought about
- * calories or macros — what they are, why each matters, how to
+ * calories or macros, what they are, why each matters, how to
  * actually put a diet together, and what level of accuracy is enough.
  *
  * Linked from NutritionTargetsScreen and AthleteHubScreen so it's the

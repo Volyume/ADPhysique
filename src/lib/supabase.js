@@ -2,7 +2,7 @@ import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
 
-// SecureStore adapter for Supabase auth session — encrypted on both iOS and Android.
+// SecureStore adapter for Supabase auth session, encrypted on both iOS and Android.
 // Falls back silently so the app still launches if SecureStore is unavailable (e.g. emulator).
 const secureAuthStorage = {
   getItem: async (key) => {
@@ -39,7 +39,7 @@ export function getSupabaseClient() {
     // Wrap the client in the observability proxy so every .from(table)
     // call emits a breadcrumb with the table name, operation, and
     // round-trip duration. The breadcrumb is opaque to the rest of
-    // the code — the proxied client forwards every method through.
+    // the code, the proxied client forwards every method through.
     try {
       // eslint-disable-next-line global-require
       const { instrumentSupabase } = require('./observability');
@@ -94,10 +94,10 @@ export async function resetPassword(email) {
 // ─── OAuth (Google + Microsoft) ──────────────────────────────────────────
 //
 // Flow:
-//   1. Call signInWithOAuth — Supabase returns a provider URL.
+//   1. Call signInWithOAuth, Supabase returns a provider URL.
 //   2. Open it in an in-app browser via expo-web-browser.
 //   3. User authenticates with Google / Microsoft in the browser.
-//   4. Provider redirects to volyume://?code=... — the OS routes that to
+//   4. Provider redirects to volyume://?code=..., the OS routes that to
 //      the app, where App.js's handleAuthDeepLink exchanges the code for
 //      a session.
 //   5. RootNavigator's onAuthStateChange listener picks up the new session

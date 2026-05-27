@@ -2,12 +2,12 @@
 //
 // These are commonly cited reference figures (drawn from sources such as
 // strengthlevel.com and symmetricstrength.com) for the five core barbell
-// compounds. They are presented as a single, gender-neutral rough guide —
+// compounds. They are presented as a single, gender-neutral rough guide
 // the app does not collect biological sex, so these values are intended as
 // general orientation rather than a precise verdict.
 //
 // Each entry maps a regex (matched against the exercise name) to an array
-// of five ascending ratios — one per level:
+// of five ascending ratios, one per level:
 //   [Beginner, Novice, Intermediate, Advanced, Elite]
 // A lifter whose 1RM / bodyweight ratio is below the Beginner threshold is
 // labelled "Untrained" so we can still show them their next milestone.
@@ -66,7 +66,7 @@ export function getStrengthLevel(exerciseName, oneRm, bodyweight) {
     }
 
     if (levelIdx < 0) {
-      // Below the Beginner threshold — still surface the next milestone so
+      // Below the Beginner threshold, still surface the next milestone so
       // the user has something concrete to aim for.
       return {
         label: 'Untrained',

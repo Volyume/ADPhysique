@@ -76,7 +76,7 @@ describe('computeFFMFloor: fallback path (no credible BF%)', () => {
     // The fallback path with no BF% gives FFM 62.4kg, floor 1872.
     // The fallback is LOWER than reality for a lean person, which is
     // SAFER for the floor's purpose (we'd let them eat at a lower number
-    // than their actual FFM warrants — but the rapid-loss and ED-pattern
+    // than their actual FFM warrants, but the rapid-loss and ED-pattern
     // detectors catch the rest). Verify the math.
     const dexa = computeFFMFloor(80, { bodyFatPercent: 10, bodyFatSource: 'dexa', sex: 'male' });
     const fallback = computeFFMFloor(80, { sex: 'male' });

@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useShallow } from 'zustand/react/shallow';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
-// Rest-timer notifications removed — see comment in the timer
+// Rest-timer notifications removed, see comment in the timer
 // useEffect below. Keep the file in tree because the timer
 // component still uses imports from theme + store + haptics.
 import { playRestBeep, preloadRestBeeps } from '../lib/restSound';
@@ -45,7 +45,7 @@ export default function RestTimer() {
   const progressAnim = useRef(new Animated.Value(1)).current;
   const [showDone, setShowDone] = useState(false);
   // Track all queued timeouts so we can cancel them on unmount (was
-  // leaking three uncancelled setTimeouts per cycle — haptics + done-flag).
+  // leaking three uncancelled setTimeouts per cycle, haptics + done-flag).
   const timeoutsRef = useRef([]);
 
   useEffect(() => {
@@ -104,7 +104,7 @@ export default function RestTimer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restTimerRemaining, restTimerDuration, reduceMotion]);
 
-  // Preload beeps once when the timer first becomes active in this mount —
+  // Preload beeps once when the timer first becomes active in this mount
   // pays the WAV synth + disk-write cost up front so the first countdown
   // tick doesn't drop audio. preloadRestBeeps is a no-op if expo-av isn't
   // installed yet (graceful fallback to haptics only).
@@ -141,7 +141,7 @@ export default function RestTimer() {
     }
   }, [restTimerRemaining]);
 
-  // Component-wide cleanup — drains any pending timeouts so they don't fire
+  // Component-wide cleanup, drains any pending timeouts so they don't fire
   // on an unmounted component (workout ended, user signed out, etc.).
   // Also clears the active interval and the rest notification so a
   // sign-out mid-rest doesn't leave a phantom notification ticking down.
@@ -184,7 +184,7 @@ export default function RestTimer() {
   return (
     <View style={styles.container}>
       {/* Timer row. accessibilityLiveRegion announces each tick to screen
-          readers without forcing focus — useful so a non-sighted user
+          readers without forcing focus, useful so a non-sighted user
           knows when their rest is nearly up. We use 'polite' to avoid
           interrupting other VoiceOver / TalkBack output. */}
       <View

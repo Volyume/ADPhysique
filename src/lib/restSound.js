@@ -10,7 +10,7 @@
  *
  * The WAVs are written to FileSystem.cacheDirectory on first use and loaded
  * as Audio.Sound instances which are kept warm for the workout. Each beep
- * is ~110 ms, ~5 KB on disk — negligible.
+ * is ~110 ms, ~5 KB on disk, negligible.
  *
  * Both expo-av and expo-file-system are dynamically required so this module
  * silently no-ops on builds where expo-av hasn't yet been installed
@@ -23,7 +23,7 @@ let FileSystem;
 try { Audio = require('expo-av').Audio; } catch (_) {}
 try { FileSystem = require('expo-file-system'); } catch (_) {}
 
-// Lazy cache — populated on first playBeep() call. Survives the whole app
+// Lazy cache, populated on first playBeep() call. Survives the whole app
 // session because preloading is async and we'd rather pay it once than
 // once per set.
 let soundsCache = null;
@@ -113,7 +113,7 @@ async function preload() {
 
     // Allow audio to mix with music apps and play even when the device is on
     // silent. Without setAudioModeAsync, iOS mutes synthesised audio when the
-    // ringer switch is silent — which is most lifters at the gym.
+    // ringer switch is silent, which is most lifters at the gym.
     try {
       await Audio.setAudioModeAsync({
         playsInSilentModeIOS: true,
@@ -136,7 +136,7 @@ async function preload() {
         const { sound } = await Audio.Sound.createAsync({ uri: path }, { shouldPlay: false });
         cache[key] = sound;
       } catch (_) {
-        // Per-beep failure is non-fatal — others can still play.
+        // Per-beep failure is non-fatal, others can still play.
       }
     }
     soundsCache = cache;
@@ -148,11 +148,11 @@ async function preload() {
 
 /**
  * Play a beep by key ('three' | 'two' | 'one' | 'go'). Safe to call
- * synchronously from any UI handler — fires off the preload + replay
+ * synchronously from any UI handler, fires off the preload + replay
  * asynchronously and never throws.
  */
 export function playRestBeep(key) {
-  if (!Audio) return; // build doesn't have expo-av — silent fallback
+  if (!Audio) return; // build doesn't have expo-av, silent fallback
   (async () => {
     try {
       if (!soundsCache) await preload();
@@ -160,7 +160,7 @@ export function playRestBeep(key) {
       if (!sound) return;
       await sound.replayAsync();
     } catch (_) {
-      // Don't surface playback errors during a workout — haptics still fire.
+      // Don't surface playback errors during a workout, haptics still fire.
     }
   })();
 }
@@ -176,7 +176,7 @@ export function preloadRestBeeps() {
 
 /**
  * Release sound resources. Called when the workout ends to free native
- * audio buffers. Idempotent — safe to call when nothing is loaded.
+ * audio buffers. Idempotent, safe to call when nothing is loaded.
  */
 export async function unloadRestBeeps() {
   if (!soundsCache) return;

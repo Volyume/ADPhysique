@@ -69,7 +69,7 @@ export default function WelcomeScreen({ navigation }) {
 
         <Animated.View style={[styles.cards, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
 
-          {/* Pro card — top, prominent */}
+          {/* Pro card, top, prominent */}
           <TouchableOpacity style={styles.proCard} onPress={() => chooseTier('pro')} activeOpacity={0.88}>
             <View style={styles.proCardHeader}>
               <View style={styles.proIconWrap}>
@@ -104,7 +104,7 @@ export default function WelcomeScreen({ navigation }) {
             </View>
           </TouchableOpacity>
 
-          {/* Free card — secondary */}
+          {/* Free card, secondary */}
           <TouchableOpacity style={styles.freeCard} onPress={() => chooseTier('free')} activeOpacity={0.88}>
             <View style={styles.freeCardHeader}>
               <View style={styles.freeIconWrap}>
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
 
   hero: { alignItems: 'center', gap: spacing.sm, paddingTop: spacing.xl },
   // Sized down so the wordmark reads as a brand mark, not a billboard.
-  // Dialled from 200→150 — at 200 it was still overpowering the Pro
+  // Dialled from 200→150, at 200 it was still overpowering the Pro
   // card below; 150 keeps the brand visible without dominating.
   logoImg: { width: 150, height: Math.round(150 / HERO_ASPECT) },
   wordmark: {

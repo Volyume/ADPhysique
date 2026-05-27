@@ -16,7 +16,7 @@
  *       5. After recovery → same programme, adjusted loads/volume
  *       6. After recovery → swap exercise variants
  *       7. After recovery → full rebuild (coach-prompted, never auto)
- *   - Deloads are "reloading the gun" — performance-enabling, not corrective.
+ *   - Deloads are "reloading the gun", performance-enabling, not corrective.
  *   - The Banister fitness-fatigue model is NOT used (no hypertrophy validation).
  *   - All decisions are proposed to the user, never auto-executed.
  *
@@ -39,8 +39,8 @@ import { getBlockStatus } from './mesocycle';
  * Higher = better recovered and ready to train hard.
  *
  * energy_score:   1–5  (1=very low, 5=excellent)
- * soreness_score: 1–5  (1=none, 5=very high) — inverted
- * sleep_hours:    real — clipped 4–9h range
+ * soreness_score: 1–5  (1=none, 5=very high), inverted
+ * sleep_hours:    real, clipped 4–9h range
  */
 function checkinReadiness(c) {
   if (!c) return null;
@@ -207,8 +207,8 @@ function buildNextBlockRecommendation(checkins, userProfile, signals) {
  * BlockAdvice shape:
  * {
  *   action:    'continue' | 'heads_up' | 'early_deload' | 'in_recovery' | 'post_recovery'
- *   headline:  string — short coaching statement
- *   body:      string — plain English, uses user's own data
+ *   headline:  string, short coaching statement
+ *   body:      string, plain English, uses user's own data
  *   signals:   [{ type, severity, label }]
  *   nextBlock: null | { recommendation, headline, body, actionLabel, secondaryLabel }
  *   blockStatus: null | { status, currentWeek, totalWeeks, ... }
@@ -263,10 +263,10 @@ export async function getBlockAdvice(userId, activeBlock, userProfile) {
     };
   }
 
-  // ── Active block — check for early deload triggers ────────────────────────
+  // ── Active block, check for early deload triggers ────────────────────────
 
   // Masters lifters (age ≥40) recover more slowly from accumulated training
-  // stress (Sullivan & Baker; Rippetoe; Hayes et al. 2023 — older adults show
+  // stress (Sullivan & Baker; Rippetoe; Hayes et al. 2023, older adults show
   // longer strength-recovery timelines and lower productive-volume ceilings).
   // Drop the deload trigger from 2 high signals to 1, and the heads-up from
   // 2 medium signals to 1, so the same recovery state surfaces a week earlier.

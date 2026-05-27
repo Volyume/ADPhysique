@@ -28,7 +28,7 @@ function jsWeekdayToExpo(jsDay) {
 // ---------------------------------------------------------------------------
 // ensureTrainingReminderChannel
 // Creates the Android notification channel for training reminders.
-// Safe to call multiple times — Android is idempotent on re-creation.
+// Safe to call multiple times, Android is idempotent on re-creation.
 // ---------------------------------------------------------------------------
 export async function ensureTrainingReminderChannel() {
   if (Platform.OS !== 'android') return;
@@ -62,7 +62,7 @@ export async function cancelTrainingReminders() {
       )
     );
   } catch {
-    // Fail silently — cancellation is best-effort
+    // Fail silently, cancellation is best-effort
   }
 }
 
@@ -162,7 +162,7 @@ export async function scheduleTrainingReminders() {
       })
     );
   } catch (e) {
-    // Fail silently — notification scheduling is non-critical. Fire
+    // Fail silently, notification scheduling is non-critical. Fire
     // notification_failed telemetry so Panel 6 sees scheduling
     // outages even though the user surface stays quiet.
     try {

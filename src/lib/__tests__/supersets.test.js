@@ -24,7 +24,7 @@ function getPairs(workout) {
   return Array.from(byGroup.values()).filter(a => a.length === 2);
 }
 
-describe('superset assignment — gating rules', () => {
+describe('superset assignment, gating rules', () => {
   test('beginners never get supersets', () => {
     const plan = generatePlan({
       experience: 'beginner', daysPerWeek: 4, sessionLengthMinutes: 60,
@@ -64,12 +64,12 @@ describe('superset assignment — gating rules', () => {
       weakPoints: [], recoveryRating: 'average', nutritionPhase: 'maintain',
     });
     const totalPairs = plan.workouts.reduce((s, w) => s + getPairs(w).length, 0);
-    // Time-constrained strength session — supersets help fit it
-    expect(totalPairs).toBeGreaterThanOrEqual(0); // soft — at least allowed to fire
+    // Time-constrained strength session, supersets help fit it
+    expect(totalPairs).toBeGreaterThanOrEqual(0); // soft, at least allowed to fire
   });
 });
 
-describe('superset assignment — quality invariants', () => {
+describe('superset assignment, quality invariants', () => {
   const plan = generatePlan({
     experience: 'intermediate', daysPerWeek: 4, sessionLengthMinutes: 60,
     equipment: 'full_gym', goal: 'general_hypertrophy', phase: 'maintain',
@@ -98,7 +98,7 @@ describe('superset assignment — quality invariants', () => {
     for (const w of plan.workouts) {
       const first = w.exercises[0];
       if (first && first.restSec >= 150) {
-        // First exercise is a heavy compound — must not be supersetted
+        // First exercise is a heavy compound, must not be supersetted
         expect(first.supersetGroupId).toBeFalsy();
       }
     }
@@ -133,7 +133,7 @@ describe('superset assignment — quality invariants', () => {
   });
 });
 
-describe('superset assignment — robustness', () => {
+describe('superset assignment, robustness', () => {
   test('every goal/phase combo runs without throwing', () => {
     const combos = [
       ['general_hypertrophy', 'maintain'],

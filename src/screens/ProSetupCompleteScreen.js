@@ -97,7 +97,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
           <Text style={styles.headline}>You're all set, {firstName}.</Text>
           <Text style={styles.sub}>Here's your daily routine.</Text>
 
-          {/* 1. Log your weight — first thing each morning */}
+          {/* 1. Log your weight, first thing each morning */}
           <View style={styles.routineCard}>
             <View style={styles.routineHeader}>
               <View style={styles.routineIconWrap}>
@@ -177,7 +177,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
             </View>
           ) : null}
 
-          {/* 3. Training split — collapsible */}
+          {/* 3. Training split, collapsible */}
           <TouchableOpacity
             style={[styles.routineCard, planOpen && styles.routineCardOpen]}
             onPress={() => setPlanOpen(v => !v)}
@@ -236,7 +236,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
             </View>
           </View>
 
-          {/* Founder note — appears once at the end of Pro setup. Per the
+          {/* Founder note, appears once at the end of Pro setup. Per the
               competitive-landscape research, visible founder attention is
               one of the cheapest credibility signals in this category
               (Gravitus, RepCount both get praised for it). Sits above the
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
   splitBadgeText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textSecondary },
   splitName: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary, flex: 1 },
 
-  // Founder note card — sits at the bottom of Pro setup. Distinct visual
+  // Founder note card, sits at the bottom of Pro setup. Distinct visual
   // language from the routine cards above so it reads as personal rather
   // than UI: no icon header, subdued background, accent-coloured signature.
   founderCard: {

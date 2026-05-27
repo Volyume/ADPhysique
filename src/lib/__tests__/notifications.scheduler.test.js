@@ -48,7 +48,7 @@ jest.mock('../../store/useAppStore', () => ({
 }));
 
 // AsyncStorage is auto-mocked by __mocks__/@react-native-async-storage/async-storage.js
-// (in-memory Map) — we can write to it directly via the public default API.
+// (in-memory Map), we can write to it directly via the public default API.
 const AsyncStorage = require('@react-native-async-storage/async-storage').default;
 
 const scheduler = require('../notifications/scheduler');

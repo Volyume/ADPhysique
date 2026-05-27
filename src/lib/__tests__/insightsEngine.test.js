@@ -1,5 +1,5 @@
 /**
- * Tests for insightsEngine — the rule-based nudge generator that powers
+ * Tests for insightsEngine, the rule-based nudge generator that powers
  * the Home screen's coaching cards and the analytics insights feed.
  */
 import { generateInsights, rankAndCapInsights } from '../insightsEngine';
@@ -39,7 +39,7 @@ const exerciseMap = {
   curl:  { id: 'curl',  name: 'Bicep Curl', primary_muscle: 'biceps', secondary_muscles: '[]', default_rep_min: 8, default_rep_max: 12 },
 };
 
-describe('generateInsights — base cases', () => {
+describe('generateInsights, base cases', () => {
   test('empty inputs return empty array (no insights for new user)', () => {
     expect(generateInsights({ workouts: [], sets: [], exerciseMap, now: NOW })).toEqual([]);
   });
@@ -92,13 +92,13 @@ describe('rankAndCapInsights', () => {
       { type: 'peaked_lift',  severity: 1, copy: 'c', key: 'k3', action: null },
     ];
     const out = rankAndCapInsights(raw, 5);
-    // Either dedupes by type or keeps all — both are valid behaviours for
+    // Either dedupes by type or keeps all, both are valid behaviours for
     // a ranker. Just assert it never increases the count.
     expect(out.length).toBeLessThanOrEqual(raw.length);
   });
 });
 
-describe('generateInsights — robustness', () => {
+describe('generateInsights, robustness', () => {
   test('handles sets missing exerciseId without crashing', () => {
     const workouts = [mkWorkout(1)];
     const sets = [mkSet(1, undefined)];

@@ -65,7 +65,7 @@ export default function VolumeHeatmapScreen() {
       const lastTrained = await getLastTrainedByMuscle(user.id).catch(() => ({}));
       setLastTrainedMap(lastTrained);
 
-      // Load locally stored custom landmarks (Stage 1 — no Supabase yet)
+      // Load locally stored custom landmarks (Stage 1, no Supabase yet)
       const stored = await AsyncStorage.getItem(`@volyume_landmarks_${user.id}`).catch(() => null);
       let parsed = null;
       if (stored) {
@@ -172,7 +172,7 @@ export default function VolumeHeatmapScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
-        {/* Anatomical body heatmap — tap a muscle to jump to its bar below */}
+        {/* Anatomical body heatmap, tap a muscle to jump to its bar below */}
         <BodyDiagramHeatmap
           volumeByMuscle={volumeByMuscle}
           onMuscleTap={handleMuscleTap}
@@ -292,7 +292,7 @@ export default function VolumeHeatmapScreen() {
           })}
         </View>
 
-        {/* 4-week trend — hidden for new users with no data */}
+        {/* 4-week trend, hidden for new users with no data */}
         {trainedMuscles.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>4-week trend</Text>

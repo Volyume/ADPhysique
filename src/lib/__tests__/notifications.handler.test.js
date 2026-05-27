@@ -69,7 +69,7 @@ describe('configureNotificationHandler', () => {
   });
 });
 
-describe('handleNotification — fallback', () => {
+describe('handleNotification, fallback', () => {
   test('unknown data.type -> show (no DB read)', async () => {
     const h = captureHandler();
     const out = await h(notif('something_random'));
@@ -85,7 +85,7 @@ describe('handleNotification — fallback', () => {
   });
 });
 
-describe('handleNotification — morning_weight', () => {
+describe('handleNotification, morning_weight', () => {
   test('weight already logged today -> suppress', async () => {
     mockGetMorningWeightToday.mockResolvedValue({ weightKg: 80 });
     const h = captureHandler();
@@ -119,7 +119,7 @@ describe('handleNotification — morning_weight', () => {
   });
 });
 
-describe('handleNotification — weekly_checkin', () => {
+describe('handleNotification, weekly_checkin', () => {
   test('checkin row exists for this week -> suppress', async () => {
     mockGetLatestCheckin.mockResolvedValue({ id: 'x' });
     const h = captureHandler();
@@ -140,7 +140,7 @@ describe('handleNotification — weekly_checkin', () => {
   });
 });
 
-describe('handleNotification — training_reminder', () => {
+describe('handleNotification, training_reminder', () => {
   test('completed workout today -> suppress', async () => {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);

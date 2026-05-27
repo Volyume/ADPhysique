@@ -1,10 +1,10 @@
-// Pro coaching reminders — morning weight + weekly check-in.
+// Pro coaching reminders, morning weight + weekly check-in.
 //
 // These reminders feed the Precision Coaching loop and are non-optional
 // for Pro users (you can't run the coach without the morning weight
 // trend or weekly check-in answers). Previously they lived in
 // NotificationSettingsScreen alongside Free-tier training reminders,
-// with on/off toggles — but the toggles were misleading. The user has
+// with on/off toggles, but the toggles were misleading. The user has
 // to keep them on for the app to work as designed, so the toggle just
 // added a way to break the experience.
 //

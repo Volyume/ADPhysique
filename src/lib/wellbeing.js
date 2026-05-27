@@ -1,13 +1,13 @@
-// Wellbeing mode — a single, user-controlled signal that softens the app
+// Wellbeing mode, a single, user-controlled signal that softens the app
 // for anyone who has experienced or is in recovery from an eating disorder
 // or body-image condition. Asked once during first run, changeable anytime
 // in Settings. Stored in AsyncStorage for consistency with the app's other
 // preferences (the flag is not a secret).
 //
 // Values:
-//   'calm'        — user asked for a calmer experience
-//   'normal'      — user said no
-//   'unspecified' — prefer not to say / not yet asked (default; normal UX)
+//   'calm'       , user asked for a calmer experience
+//   'normal'     , user said no
+//   'unspecified', prefer not to say / not yet asked (default; normal UX)
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 

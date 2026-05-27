@@ -1,5 +1,5 @@
 /**
- * Screen mount harness — for every Pro screen the user can reach from
+ * Screen mount harness, for every Pro screen the user can reach from
  * the Hub, this test mounts the component via react-test-renderer with
  * realistic prop and store state, then flushes microtasks so useEffects
  * (data loads, prefills) run. Any synchronous render throw or unhandled
@@ -13,7 +13,7 @@
  *
  * What it does NOT catch:
  * - Native layout crashes (NaN dimensions, ViewManager bugs)
- * - Crashes during user interaction (button taps) — separate harness
+ * - Crashes during user interaction (button taps), separate harness
  * - Real DB / network paths (everything is stubbed)
  */
 
@@ -308,7 +308,7 @@ jest.mock('../components/GradientCard', () => {
   return { __esModule: true, default: props => React.createElement('GradientCard', props, props.children) };
 });
 
-// Local native modules — referenced by package.json file: deps.
+// Local native modules, referenced by package.json file: deps.
 jest.mock('rest-timer-live', () => ({ start: jest.fn(), stop: jest.fn(), update: jest.fn() }), { virtual: true });
 jest.mock('live-activity', () => ({ start: jest.fn(), stop: jest.fn(), update: jest.fn() }), { virtual: true });
 
@@ -401,7 +401,7 @@ async function mountScreen(Screen, props = {}) {
   const origErr = console.error;
   console.error = (msg, ...rest) => {
     const text = typeof msg === 'string' ? msg : String(msg);
-    // Filter out React's act() advisory — it's noise during mount
+    // Filter out React's act() advisory, it's noise during mount
     // tests, not a real failure signal. Likewise filter out the
     // "test environment torn down" warnings that fire when an
     // unawaited useEffect lands after a test completes.
@@ -556,7 +556,7 @@ describe('Pro screens mount without error', () => {
     }
   });
 
-  test('NutritionTargetsScreen — every tappable fires without throwing', async () => {
+  test('NutritionTargetsScreen, every tappable fires without throwing', async () => {
     const Screen = require('../screens/NutritionTargetsScreen').default;
     const { tree } = await mountScreen(Screen);
     try {
@@ -708,7 +708,7 @@ const STATE_VARIANTS = [
 // A then B leaves state where B's onPress crashes).
 
 function seedRand(seed) {
-  // Mulberry32 — deterministic, good enough for jest.
+  // Mulberry32, deterministic, good enough for jest.
   return function () {
     seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
     let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
@@ -739,7 +739,7 @@ async function fuzzTapChain(tree, depth, rand) {
   return failures;
 }
 
-describe('All reachable screens — mount + bash every touchable + every text input', () => {
+describe('All reachable screens, mount + bash every touchable + every text input', () => {
   for (const screenName of SCREENS_TO_SWEEP) {
     for (const variant of STATE_VARIANTS) {
       test(`${screenName} [${variant.name}]`, async () => {
@@ -979,7 +979,7 @@ describe('Screens with route.params', () => {
 // ─── NutritionTargets: realistic userProfile.goal values ────────────────
 //
 // Every goal the app can produce, including legacy / weird values. The
-// screen has a `VALID_GOALS` list — anything outside should not crash.
+// screen has a `VALID_GOALS` list, anything outside should not crash.
 
 describe('NutritionTargets: every userProfile.goal value', () => {
   const goalValues = [
@@ -1026,7 +1026,7 @@ describe('NutritionTargets: fill form then tap Calculate', () => {
           await Promise.resolve();
         });
       }
-      // Now tap every button — the Calculate button is among them.
+      // Now tap every button, the Calculate button is among them.
       const { failures } = await bashTappables(tree);
       const real = failures.filter(f => !/getState|dispatch|navigation\.navigate|getParent/i.test(f.error));
       expect(real).toEqual([]);
@@ -1343,7 +1343,7 @@ describe('Hub → NutritionTargets simulated flow', () => {
       expect(real).toEqual([]);
     } finally { unmountTree(tree); }
 
-    // Now mount NutritionTargets — the target of the Hub tap.
+    // Now mount NutritionTargets, the target of the Hub tap.
     const NT = require('../screens/NutritionTargetsScreen').default;
     let ntTree = null;
     try {
@@ -1554,7 +1554,7 @@ async function bashTwoLevels(tree) {
 describe('Two-level tap: bash, then bash again after each tap re-renders', () => {
   const PRO_LOADED = STATE_VARIANTS[0].state;
   // 38 screens × 2 levels would be slow. Sample the 12 highest-stakes
-  // screens — anything the user touches multiple times in one session.
+  // screens, anything the user touches multiple times in one session.
   // ProGoalSetupScreen is excluded because its Save button kicks off a
   // full plan-engine generation in the test env; the two-level depth
   // ends up regenerating the plan dozens of times and blows the jest
@@ -1779,7 +1779,7 @@ describe('Rapid double-tap stress on every screen', () => {
 
 // ─── ActiveWorkoutScreen: with a workout in progress ─────────────────────
 
-describe('ActiveWorkoutScreen — many exercises, varied set shapes', () => {
+describe('ActiveWorkoutScreen, many exercises, varied set shapes', () => {
   test('5 exercises with varied set arrays mounts and renders', async () => {
     const mkExercise = (i, sets) => ({
       exercise: { id: `ex${i}`, name: `Exercise ${i}`, equipment: i % 2 ? 'Barbell' : 'Dumbbell', primaryMuscle: 'chest' },
@@ -1897,7 +1897,7 @@ describe('ActiveWorkoutScreen with active workout state', () => {
       const result = await mountScreen(Screen);
       tree = result.tree;
       expect(tree).not.toBeNull();
-      // Tap every touchable on the screen — covers Log Set, Skip Rest,
+      // Tap every touchable on the screen, covers Log Set, Skip Rest,
       // Add Set, Finish, Discard, exercise switcher, etc.
       const { failures } = await bashTappables(tree);
       const real = failures.filter(f =>

@@ -2,7 +2,7 @@
  * ImportScreen
  *
  * Pick a CSV exported from Hevy or Strong, preview what will land in
- * Volyume, confirm. One-shot flow — there's no edit-mapping UI in
+ * Volyume, confirm. One-shot flow, there's no edit-mapping UI in
  * this iteration; unmatched exercises become custom exercises that
  * the user can edit in the library later.
  *
@@ -122,7 +122,7 @@ export default function ImportScreen({ navigation }) {
       // user's freshly-imported Hevy / Strong history shows on any
       // other device they sign into. Without this the user could
       // re-open the app, see no data on a sibling device, and assume
-      // the import failed. Fire-and-forget — failures surface in the
+      // the import failed. Fire-and-forget, failures surface in the
       // debug log via the existing sync warnings.
       try {
         // eslint-disable-next-line global-require

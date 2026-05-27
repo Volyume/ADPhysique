@@ -3,9 +3,9 @@
  * Temporary travel plan generator for the Volyume Coach Engine v2.
  *
  * Builds a 1-week plan using limited equipment (bodyweight, dumbbells, hotel gym, resistance bands).
- * Higher reps, shorter rest, same muscle coverage — maintains size while away from the gym.
+ * Higher reps, shorter rest, same muscle coverage, maintains size while away from the gym.
  *
- * Pure functions — no DB calls, no side effects.
+ * Pure functions, no DB calls, no side effects.
  */
 
 // ---------------------------------------------------------------------------
@@ -215,7 +215,7 @@ function buildTravelSessions(pool, daysPerWeek, sessionLengthMinutes, splitType)
 function pickExercise(pool, muscle, excluded = new Set()) {
   const candidates = (pool[muscle] ?? []).filter(e => !excluded.has(e.n));
   if (!candidates.length) return null;
-  return candidates[0]; // deterministic — first in pool for travel
+  return candidates[0]; // deterministic, first in pool for travel
 }
 
 function makeExEntry(poolEntry, sets) {

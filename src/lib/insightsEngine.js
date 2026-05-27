@@ -55,14 +55,14 @@ function sessionsByDay(sets) {
  * @param {Array}  args.sets         - all workout_sets
  * @param {Object} args.exerciseMap  - { exerciseId: exercise }
  * @param {number} [args.now]
- * @returns {Array} insight objects (unsorted/uncapped — caller persists & caps)
+ * @returns {Array} insight objects (unsorted/uncapped, caller persists & caps)
  */
 export function generateInsights({ workouts = [], sets = [], exerciseMap = {}, now = Date.now() }) {
   const insights = [];
 
   // A "low volume for 3 weeks" nudge only makes sense once there is an
   // actual 3-week training base. For brand-new users (no history, or a
-  // first session only days ago) it is meaningless noise — there is no
+  // first session only days ago) it is meaningless noise, there is no
   // trend to be down from. Require completed sessions spanning ≥ 3 weeks.
   const completed = workouts.filter(w => w.isCompleted ?? w.is_completed ?? false);
   const earliestStart = completed.reduce(

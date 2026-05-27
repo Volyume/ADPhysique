@@ -76,7 +76,7 @@ export default function LoginScreen({ navigation, route }) {
         // existing account, offer to switch to sign-up rather than just
         // bouncing the user back to the same screen. Supabase returns
         // "Invalid login credentials" for both wrong-password AND
-        // unknown-email — we can't disambiguate, so the prompt is
+        // unknown-email, we can't disambiguate, so the prompt is
         // permissive: the user knows which they meant.
         const msg = (error.message || '').toLowerCase();
         const looksUnregistered = mode === 'signin' && (
@@ -95,7 +95,7 @@ export default function LoginScreen({ navigation, route }) {
                 text: 'Create account',
                 onPress: () => {
                   setMode('signup');
-                  // Password stays — they only need to confirm it meets
+                  // Password stays, they only need to confirm it meets
                   // the 8-char minimum.
                 },
               },
@@ -151,17 +151,17 @@ export default function LoginScreen({ navigation, route }) {
         syncProfile(supabaseUserId, userProfile, tier)
           .catch(e => logError('LoginScreen.syncProfile', e, { supabaseUserId }));
         if (mode === 'signup') {
-          // New account — push local history up
+          // New account, push local history up
           bulkUploadLocalData(supabaseUserId, localUserId)
             .catch(e => logError('LoginScreen.bulkUploadLocalData.signup', e, { supabaseUserId }));
           // Switch the navigator into ProOnboardingStack by setting the tier.
           // The previous navigation.replace('ProOnboarding') was a no-op
-          // when LoginScreen was reached from WelcomeStack — that stack
+          // when LoginScreen was reached from WelcomeStack, that stack
           // doesn't register ProOnboarding. Tier change is the routing
           // signal RootNavigator watches.
           if (!tier) await setTier('pro', 'LoginScreen.newAccountSetup');
         } else {
-          // Existing account — push any local-only edits made while signed
+          // Existing account, push any local-only edits made while signed
           // out, then pull cloud data down (new device scenario).
           // firstRunComplete + tier + userProfile are restored centrally
           // by RootNavigator's onAuthStateChange SIGNED_IN handler.
@@ -191,9 +191,9 @@ export default function LoginScreen({ navigation, route }) {
         logError('LoginScreen.oauth.providerError', result.error, { provider });
         Alert.alert('Sign-in failed', result.error.message);
       } else {
-        // Success is fully driven by onAuthStateChange — log so the
+        // Success is fully driven by onAuthStateChange, log so the
         // upstream SIGNED_IN event can be correlated to this initiation.
-        logInfo('LoginScreen.oauth.dialogReturned', `provider=${provider} — awaiting SIGNED_IN`);
+        logInfo('LoginScreen.oauth.dialogReturned', `provider=${provider}, awaiting SIGNED_IN`);
       }
     } catch (e) {
       logError('LoginScreen.oauth.threw', e, { provider });
@@ -229,7 +229,7 @@ export default function LoginScreen({ navigation, route }) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Crash log — shown only when a previous fatal error was stored */}
+          {/* Crash log, shown only when a previous fatal error was stored */}
           {crashLog && (
             <View style={styles.crashBanner}>
               <Text style={styles.crashTitle}>Previous crash detected. Screenshot this:</Text>
@@ -244,7 +244,7 @@ export default function LoginScreen({ navigation, route }) {
           {/* ── Brand block ── */}
           {/* The wordmark asset already contains the "Volyume" lettering,
               so we render the mark and skip the duplicate text underneath.
-              Tagline stays. Size dialled back from 80→56 — the previous
+              Tagline stays. Size dialled back from 80→56, the previous
               scale dominated the screen above the auth form. */}
           <View style={styles.brand}>
             <VolyumeMark size={56} style={styles.brandMark} />
@@ -260,7 +260,7 @@ export default function LoginScreen({ navigation, route }) {
               both. Surfaced ABOVE the email form because most users prefer
               continuing with an existing account over creating yet another
               email/password. Falls back gracefully if the user's Supabase
-              project doesn't have the provider configured — the Supabase
+              project doesn't have the provider configured, the Supabase
               error is surfaced via Alert. */}
           <View style={styles.oauthBlock}>
             {Platform.OS === 'ios' && (

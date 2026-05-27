@@ -59,7 +59,7 @@ export default function ProUpgradeScreen({ navigation }) {
 
   // OAuth path (Google / Apple). Sign-in completes via the deep-link
   // handler in App.js → onAuthStateChange in RootNavigator. We don't need
-  // to call activatePro from here — the SIGNED_IN handler runs
+  // to call activatePro from here, the SIGNED_IN handler runs
   // restoreSessionFromCloud which sets tier from the cloud row. New users
   // (no users_profile row yet) need the tier set explicitly though, so
   // we listen briefly for the session and then activate. This mirrors
@@ -77,7 +77,7 @@ export default function ProUpgradeScreen({ navigation }) {
         setBusy(false);
         return;
       }
-      // Poll for the session for up to 3 s — usually it's there on the
+      // Poll for the session for up to 3 s, usually it's there on the
       // first check because exchangeCodeForSession has already fired by
       // the time openAuthSessionAsync returns. 8 s was overkill and was
       // the source of the long spinner users complained about.
@@ -95,7 +95,7 @@ export default function ProUpgradeScreen({ navigation }) {
       } else {
         // Distinguishing cancel vs timeout reliably needs platform hooks
         // we don't have; both end up here. Log so we can spot patterns.
-        logInfo('ProUpgrade.oauth.pollExhausted', `provider=${provider} — user cancelled or session never appeared`);
+        logInfo('ProUpgrade.oauth.pollExhausted', `provider=${provider}, user cancelled or session never appeared`);
       }
     } catch (e) {
       logError('ProUpgrade.oauth.threw', e, { provider });
@@ -145,7 +145,7 @@ export default function ProUpgradeScreen({ navigation }) {
   //
   // Show the "You're Pro" confirmation only when EITHER (a) this screen
   // just successfully activated them in this session (`done`), OR (b) they
-  // are genuinely Pro — meaning tier='pro' AND they have a cloud account.
+  // are genuinely Pro, meaning tier='pro' AND they have a cloud account.
   //
   // Without the cloud-account part of (b), a local-only Free user with a
   // stale tier='pro' value in storage (from a prior install, a bug, or
@@ -274,7 +274,7 @@ export default function ProUpgradeScreen({ navigation }) {
                 Pro needs a free account so your plan and progress are backed up and your access carries over after beta.
               </Text>
 
-              {/* OAuth buttons — Google on both platforms, Apple on iOS only
+              {/* OAuth buttons, Google on both platforms, Apple on iOS only
                   (App Store policy: if any other social provider is offered,
                   Sign in with Apple must be too). Mirrors the LoginScreen and
                   ProOnboardingScreen patterns so the upgrade flow doesn't

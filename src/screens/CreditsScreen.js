@@ -4,12 +4,12 @@
  * Attribution surface required by the licences of the bundled and
  * live food data sources:
  *
- *   - OpenFoodFacts: Open Database License (ODbL) 1.0 — requires
+ *   - OpenFoodFacts: Open Database License (ODbL) 1.0, requires
  *     attribution and share-alike for derivative works.
  *   - CoFID / McCance and Widdowson's: Open Government Licence v3.0
- *     — requires the verbatim attribution string (line 81 of
+ *    , requires the verbatim attribution string (line 81 of
  *     FOOD_DATA_STRATEGY_LOCKED.md).
- *   - USDA FoodData Central: U.S. public domain — no attribution
+ *   - USDA FoodData Central: U.S. public domain, no attribution
  *     legally required but acknowledged here as a courtesy.
  *
  * Reached from You → Credits. Locked in UI_FLOWS_LOCKED.md lines

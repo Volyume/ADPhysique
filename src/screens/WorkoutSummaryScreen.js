@@ -79,7 +79,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const toast = useToast();
   // Renamed to feedbackSheet to avoid clashing with the per-set
   // feedback state below (sessionDifficulty, overallPump, etc.).
-  // Both live in the same scope — JS doesn't let two consts share a
+  // Both live in the same scope, JS doesn't let two consts share a
   // name in the same block.
   const feedbackSheet = useFeedback();
   const insets = useSafeAreaInsets();
@@ -142,7 +142,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     loadVolumeAndHistory();
   }, []);
 
-  // Contextual feedback prompt — fires ONCE after the user has
+  // Contextual feedback prompt, fires ONCE after the user has
   // completed their first ~3 sessions. Suppressed thereafter via
   // the @volyume_feedback_prompt_history_v1 store. Never fires in
   // read-only mode (viewing old history).
@@ -158,7 +158,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     if (!triggerKey) return;
     // Show the sheet a beat after the screen settles so the user
     // has registered the summary before we ask. 1.4s feels natural
-    // — long enough to read the headline, short enough to not feel
+    //, long enough to read the headline, short enough to not feel
     // detached from the completion moment.
     const t = setTimeout(async () => {
       const ok = await shouldPrompt(triggerKey).catch(() => false);
@@ -321,7 +321,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     const deloadEval = evaluateDeloadTriggers(events);
     if (deloadEval.reason) setDeloadRecommendation(deloadEval);
 
-    // For readOnly (history) view — load and group sets by exercise
+    // For readOnly (history) view, load and group sets by exercise
     if (readOnly && workoutId) {
       try {
         const { getWorkoutSetsForWorkout } = await import('../lib/database');
@@ -439,7 +439,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       } catch (_e) {}
     }
 
-    // Background sync to Supabase — fire and forget, never blocks navigation
+    // Background sync to Supabase, fire and forget, never blocks navigation
     const supabaseUserId = session?.user?.id;
     if (supabaseUserId && workoutId) {
       syncWorkout(supabaseUserId, workoutId).catch(() => {});
@@ -474,7 +474,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   }
 
   function handleShareCard() {
-    // Top set across the whole session — heaviest non-warmup set drives the
+    // Top set across the whole session, heaviest non-warmup set drives the
     // "best lift" highlight on the share card.
     let topSet = null;
     let topWeight = 0;
@@ -489,7 +489,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       }
     }
 
-    // Intensity tier — drives the badge on the share card. Heuristic, but
+    // Intensity tier, drives the badge on the share card. Heuristic, but
     // gives a "great workout" flavour without needing a full grading system.
     const sets = workingSetCount ?? setCount ?? 0;
     const ton = tonnage || 0;
@@ -591,7 +591,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           />
         </View>
 
-        {/* 4-week comparison — only when we have at least one prior session
+        {/* 4-week comparison, only when we have at least one prior session
             of this routine. Lives right under the stat row so the user
             reads "your numbers" and then "how those numbers compare".
             Wrapped in RevealSection so it fades in after the stat
@@ -841,7 +841,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         </View>
       </View>
 
-      {/* Template name modal — cross-platform alternative to Alert.prompt */}
+      {/* Template name modal, cross-platform alternative to Alert.prompt */}
       <Modal
         visible={templateModalVisible}
         transparent
@@ -929,7 +929,7 @@ function getVolumeWhy(muscle, sets, status) {
   return null;
 }
 
-// RevealSection — staggered fade-in + small upward translate for the
+// RevealSection, staggered fade-in + small upward translate for the
 // major sections below the stat grid. Sequences the comparison card,
 // exercise list, PRs, feedback, and finish CTA so the screen reads
 // top-to-bottom as the eye scans rather than landing all at once.
@@ -937,7 +937,7 @@ function getVolumeWhy(muscle, sets, status) {
 // Each section's `delay` is roughly the previous section's delay +
 // 120ms; the first reveal kicks off after the StatBox counters
 // settle (~1100ms total for the grid). Reduce-motion users see the
-// final state immediately — no opacity ramp, no transform.
+// final state immediately, no opacity ramp, no transform.
 function RevealSection({ delay = 0, children }) {
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   const opacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
@@ -962,7 +962,7 @@ function RevealSection({ delay = 0, children }) {
 // number-like string (no letters), the value animates from 0 up to
 // the target across ~900ms with an ease-out curve. The user sees
 // "Total kg: 4,000 → 8,432 → 12,800" tick by rather than the number
-// just appearing — gives the summary a cinematic beat. Reduce-motion
+// just appearing, gives the summary a cinematic beat. Reduce-motion
 // users get the final value immediately.
 function StatBox({ icon, value, label, tooltip, animateOrder = 0 }) {
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
@@ -984,7 +984,7 @@ function StatBox({ icon, value, label, tooltip, animateOrder = 0 }) {
   useEffect(() => {
     if (!parsed) { setDisplayed(value); return; }
     if (reduceMotion) { setDisplayed(value); return; }
-    // Staggered reveal — each StatBox starts ~80ms after the previous
+    // Staggered reveal, each StatBox starts ~80ms after the previous
     // one. Gives the grid a left-to-right shimmer rather than four
     // boxes appearing simultaneously.
     const delay = animateOrder * 80;
@@ -1298,7 +1298,7 @@ const styles = StyleSheet.create({
   },
   templateModalSaveText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.background },
 
-  // 4-week comparison card — same surface treatment as other summary
+  // 4-week comparison card, same surface treatment as other summary
   // cards but borderColor is set inline per-verdict (gold for best, green
   // for up, neutral for on-pace, muted for down).
   compareCard: {

@@ -2,7 +2,7 @@
  * importExternal.js
  *
  * Bulk-import a user's training history from another app's CSV
- * export. Supports Hevy and Strong — the two formats that cover the
+ * export. Supports Hevy and Strong, the two formats that cover the
  * overwhelming majority of switchers. JEFIT and others can be added
  * by writing a new parseXxx() and a detector branch.
  *
@@ -18,7 +18,7 @@
  * Design choices:
  *   - CSV parser is dependency-free and tolerates Hevy/Strong's
  *     quoted-field + escaped-quote conventions. We don't ship a full
- *     RFC-4180 parser — these two formats don't need one.
+ *     RFC-4180 parser, these two formats don't need one.
  *   - Exercise matching is fuzzy on a normalised name (lowercase,
  *     stripped of parenthetical equipment qualifiers, punctuation
  *     removed). Score ≥ 0.7 → match the existing exercise. Otherwise
@@ -107,7 +107,7 @@ export function parseCSV(text) {
   }
   // Trailing field / row without a final newline
   if (inQuote) {
-    // Unterminated quote — treat the rest as the field
+    // Unterminated quote, treat the rest as the field
     inQuote = false;
   }
   if (field !== '' || cur.length) pushRow();
@@ -130,11 +130,11 @@ export function detectFormat(rows) {
   const keys = Object.keys(rows[0]);
   const has = (k) => keys.includes(k);
 
-  // Hevy fingerprint — has 'exercise_title' and 'set_index' (Hevy's
+  // Hevy fingerprint, has 'exercise_title' and 'set_index' (Hevy's
   // unmistakeable column names; neither Strong nor JEFIT uses these).
   if (has('exercise_title') && has('set_index')) return 'hevy';
 
-  // Strong fingerprint — title-case columns "Exercise Name" and
+  // Strong fingerprint, title-case columns "Exercise Name" and
   // "Set Order". Strong is the only app using that exact casing.
   if (has('Exercise Name') && has('Set Order')) return 'strong';
 
@@ -308,7 +308,7 @@ export async function analyzeImport(userId, parsed) {
 }
 
 /**
- * Commit the import. Idempotent — calling twice with the same parsed
+ * Commit the import. Idempotent, calling twice with the same parsed
  * set will only insert each workout once thanks to the started_at
  * duplicate check. Wrapped in a single SQLite transaction so a thrown
  * error in the middle rolls everything back.
@@ -326,7 +326,7 @@ export async function runImport(userId, parsed, analysis) {
     newExerciseIds.set(name, id);
   }
   // Names that didn't even fit in the preview list (unmappedCount may
-  // be larger than the unmappedNames array, which is capped) — we
+  // be larger than the unmappedNames array, which is capped), we
   // still need to create them. analysis.unmappedNames is the full list
   // when ≤ 24 names; for longer lists we re-derive from parsed and
   // skip ones we already mapped.
@@ -346,7 +346,7 @@ export async function runImport(userId, parsed, analysis) {
   await d.execAsync('BEGIN');
   try {
     for (const w of parsed.workouts) {
-      // Duplicate skip — match on user + started_at.
+      // Duplicate skip, match on user + started_at.
       const hit = await d.getFirstAsync(
         'SELECT id FROM workouts WHERE user_id = ? AND started_at = ? LIMIT 1',
         [userId, w.startedAt],
@@ -384,7 +384,7 @@ export async function runImport(userId, parsed, analysis) {
         perExCounter.set(exerciseId, setNum);
 
         const sid = uuid();
-        // Denormalise the exercise name onto the row — this is what
+        // Denormalise the exercise name onto the row, this is what
         // makes cross-device sync recoverable when a future install's
         // canonical exercise IDs differ.
         await d.runAsync(
@@ -466,7 +466,7 @@ function bestMatch(importedName, existing) {
 }
 
 // Create a is_custom=1 row for an unmatched name. primary_muscle stays
-// null — the user can edit it later in the exercise library.
+// null, the user can edit it later in the exercise library.
 async function createCustomExerciseRow(d, name) {
   const id = uuid();
   const now = Date.now();

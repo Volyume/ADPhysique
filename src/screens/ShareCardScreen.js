@@ -16,13 +16,13 @@ try { Sharing = require('expo-sharing'); } catch (_) {}
 try { LinearGradient = require('expo-linear-gradient').LinearGradient; } catch (_) {}
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Canvas HTML — renders off-screen, exports a high-res PNG.
+// Canvas HTML, renders off-screen, exports a high-res PNG.
 //
 // Story format is 1080×1920 (Instagram Stories / TikTok / Snapchat). The
 // vertical space gives us room to do the brand justice: big session name at
 // top, a hero stat in the middle, support stats + top lift + muscle chips
 // below, and a generous branded footer at the bottom where Instagram
-// usually overlays its UI — so the V mark stays visible above their chrome.
+// usually overlays its UI, so the V mark stays visible above their chrome.
 // Square 1080×1080 is the secondary format for feed posts.
 // ──────────────────────────────────────────────────────────────────────────────
 const WEBVIEW_HTML = `<!DOCTYPE html>
@@ -34,7 +34,7 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
 <body style="margin:0;padding:0;background:#090A0F;">
 <canvas id="c" style="display:block;"></canvas>
 <script>
-// Brand palette — mirrors theme.js tokens
+// Brand palette, mirrors theme.js tokens
 var B = {
   bg0:'#090A0F', bg1:'#0E0F18', bg2:'#131620',
   surface:'#181B24', surface2:'#1F2330',
@@ -79,7 +79,7 @@ function fitFont(ctx, text, maxW, baseSize, weight) {
   return size;
 }
 
-// Volyume V mark — exact SVG paths scaled. Used at top (small, muted) and
+// Volyume V mark, exact SVG paths scaled. Used at top (small, muted) and
 // bottom (large, branded gold). The accent stroke on the right arm is what
 // distinguishes Volyume's identity.
 function drawVMark(ctx, ox, oy, sz, mainColor, accentColor) {
@@ -102,7 +102,7 @@ function drawVMark(ctx, ox, oy, sz, mainColor, accentColor) {
   ctx.strokeStyle = mainColor;
   ctx.lineWidth = 3.2 * scale;
   ctx.stroke();
-  // Accent stroke on right arm — the V's signature flourish
+  // Accent stroke on right arm, the V's signature flourish
   ctx.beginPath();
   ctx.moveTo(16.5*scale, 22*scale);
   ctx.lineTo(26*scale, 6*scale);
@@ -115,7 +115,7 @@ function drawVMark(ctx, ox, oy, sz, mainColor, accentColor) {
 }
 
 function drawBackground(ctx, W, H) {
-  // Vertical gradient — slightly richer in the centre to focus the eye on
+  // Vertical gradient, slightly richer in the centre to focus the eye on
   // the hero stat without overpowering it.
   var grad = ctx.createLinearGradient(0, 0, 0, H);
   grad.addColorStop(0, B.bg1);
@@ -141,7 +141,7 @@ function drawTopAccentBar(ctx, W) {
 }
 
 function drawTopBrand(ctx, W, pad, y) {
-  // Small brand mark at the top — sets the tone without competing with
+  // Small brand mark at the top, sets the tone without competing with
   // the session content. Bottom footer carries the bigger logo.
   var markSz = 32;
   drawVMark(ctx, pad, y - markSz * 0.86, markSz, B.textSecondary, B.accent);
@@ -150,9 +150,9 @@ function drawTopBrand(ctx, W, pad, y) {
   ctx.fillText('olyume', pad + markSz + 4, y - 2);
 }
 
-// Branded footer — the real branding moment. Big V mark, wordmark, tagline,
+// Branded footer, the real branding moment. Big V mark, wordmark, tagline,
 // and URL. Lives at the bottom where Instagram Stories overlays its own UI
-// (reply box / sticker buttons / share row) — keeping the brand above the
+// (reply box / sticker buttons / share row), keeping the brand above the
 // fold of that chrome ensures it stays visible in every shared story.
 function drawBrandFooter(ctx, W, H, pad, isSquare) {
   var footerH = isSquare ? 130 : 220;
@@ -182,7 +182,7 @@ function drawBrandFooter(ctx, W, H, pad, isSquare) {
   ctx.textAlign = 'center';
   ctx.fillText('SMARTER  TRAINING', W / 2, blockY + (isSquare ? 26 : 44));
 
-  // URL — subtle bottom line
+  // URL, subtle bottom line
   if (!isSquare) {
     ctx.fillStyle = B.textMuted;
     ctx.font = '500 22px Arial,sans-serif';
@@ -199,7 +199,7 @@ function drawBrandFooter(ctx, W, H, pad, isSquare) {
   ctx.fillRect(0, H - 4, W, 4);
 }
 
-// Intensity badge — auto-derived chip that gives a flavour read on the
+// Intensity badge, auto-derived chip that gives a flavour read on the
 // session. Computed in WorkoutSummaryScreen (heuristic from tonnage / sets /
 // PR count) and passed in via p.intensityTier.
 function drawIntensityBadge(ctx, W, y, tier) {
@@ -227,7 +227,7 @@ function drawIntensityBadge(ctx, W, y, tier) {
   return y + bh + 28;
 }
 
-// Top lift card — heaviest non-warmup set of the session. Often more
+// Top lift card, heaviest non-warmup set of the session. Often more
 // motivating to share than aggregate tonnage because it's a single
 // concrete number people can react to.
 function drawTopLiftCard(ctx, W, pad, y, topSet, units) {
@@ -272,7 +272,7 @@ function drawTopLiftCard(ctx, W, pad, y, topSet, units) {
   return y + cardH + 24;
 }
 
-// Exercise chips — show up to 5 exercises trained as compact pills.
+// Exercise chips, show up to 5 exercises trained as compact pills.
 function drawExerciseChips(ctx, W, pad, y, exercises) {
   if (!exercises || !exercises.length) return y;
   var visible = exercises.slice(0, 5);
@@ -308,11 +308,11 @@ function drawExerciseChips(ctx, W, pad, y, exercises) {
   return y + rowH + 16;
 }
 
-// Motivational closer — only shown for tough / epic sessions to avoid
+// Motivational closer, only shown for tough / epic sessions to avoid
 // being preachy on lighter days. Short, punchy, drops into the negative
 // space between content and footer.
 function drawMotivation(ctx, W, y, tier, prCount) {
-  if (tier === 'solid' && prCount === 0) return y; // skip — don't be loud about an average day
+  if (tier === 'solid' && prCount === 0) return y; // skip, don't be loud about an average day
   var line;
   if (prCount > 0) {
     line = prCount === 1 ? 'New PR. Banked.' : prCount + ' PRs. Levelled up.';
@@ -355,7 +355,7 @@ function drawSession(ctx, W, H, p) {
     y += 36;
   }
 
-  // ── Session name — hero text ──
+  // ── Session name, hero text ──
   var heroFont = p.isSquare ? 64 : 78;
   ctx.fillStyle = B.text;
   var sessionName = p.sessionName || 'Session Complete';
@@ -369,7 +369,7 @@ function drawSession(ctx, W, H, p) {
   });
   y += 30;
 
-  // ── HERO stat — big number that captures the session ──
+  // ── HERO stat, big number that captures the session ──
   // If PRs hit: PR count. Else: total volume.
   var heroValue, heroLabel, heroColor;
   if (p.prCount > 0) {
@@ -391,7 +391,7 @@ function drawSession(ctx, W, H, p) {
   ctx.fillStyle = heroColor;
   ctx.font = '900 ' + heroNumFont + 'px Arial,sans-serif';
   ctx.textAlign = 'center';
-  // Vertical position depends on format — story has more room above the footer
+  // Vertical position depends on format, story has more room above the footer
   var heroY = p.isSquare ? y + heroNumFont : H * 0.42;
   ctx.fillText(heroValue, W / 2, heroY);
 
@@ -404,13 +404,13 @@ function drawSession(ctx, W, H, p) {
   y = heroY + (p.isSquare ? 60 : 90);
   y = drawIntensityBadge(ctx, W, y, p.intensityTier);
 
-  // ── Support stats — 3 pill row ──
+  // ── Support stats, 3 pill row ──
   var stats = [
     { label: 'Sets', value: String(p.workingSets || 0) },
     { label: 'Time', value: (p.duration || 0) + 'm' },
   ];
   if (p.showVolume && (p.tonnage || 0) > 0 && p.prCount > 0) {
-    // Volume wasn't the hero (PRs were) — show it here.
+    // Volume wasn't the hero (PRs were), show it here.
     stats.push({ label: 'Total kg', value: Math.round(p.tonnage).toLocaleString('en-GB') });
   } else if (p.exerciseCount > 0) {
     stats.push({ label: 'Exercises', value: String(p.exerciseCount) });
@@ -487,7 +487,7 @@ function drawPR(ctx, W, H, p) {
     ctx.textAlign = 'left';
   }
 
-  // PR badge — premium gold treatment
+  // PR badge, premium gold treatment
   var badgeY = p.isSquare ? H * 0.22 : H * 0.22;
   ctx.font = '700 24px Arial,sans-serif';
   var label = '★  PERSONAL RECORD  ★';
@@ -519,7 +519,7 @@ function drawPR(ctx, W, H, p) {
   });
   ey += 30;
 
-  // Weight × reps — the hero number
+  // Weight × reps, the hero number
   var wStr = p.showPRWeight
     ? (p.weight || '-') + (p.units || 'kg') + ' \xD7 ' + (p.reps || '-')
     : (p.reps || '-') + ' reps';
@@ -529,7 +529,7 @@ function drawPR(ctx, W, H, p) {
   ctx.font = '900 ' + wFont + 'px Arial,sans-serif';
   ctx.fillText(wStr, W / 2, ey + wFont);
 
-  // Previous best — strikethrough style
+  // Previous best, strikethrough style
   if (p.showPrevBest && p.previousBest) {
     var prevStr = 'Previous best: ' + p.previousBest + (p.units || 'kg');
     ctx.fillStyle = B.textMuted;
@@ -563,7 +563,7 @@ export default function ShareCardScreen({ navigation, route }) {
   } = route.params || {};
 
   const [cardType, setCardType] = useState(prData ? 'pr' : 'session');
-  // Default to story (Instagram-Stories first) — the richer, taller layout
+  // Default to story (Instagram-Stories first), the richer, taller layout
   // is the primary use case. Square is the secondary option for feed posts.
   const [format, setFormat] = useState('story');
   const [sharing, setSharing] = useState(false);
@@ -583,7 +583,7 @@ export default function ShareCardScreen({ navigation, route }) {
   const isSession = cardType === 'session';
 
   function formatLongDate(ts) {
-    // "Wed · 21 May 2026" — premium feel vs raw dd/mm/yyyy
+    // "Wed · 21 May 2026", premium feel vs raw dd/mm/yyyy
     const d = ts ? new Date(ts) : new Date();
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -672,7 +672,7 @@ export default function ShareCardScreen({ navigation, route }) {
           )}
         </View>
 
-        {/* Format — story first (primary use case for Instagram) */}
+        {/* Format, story first (primary use case for Instagram) */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Format</Text>
           <View style={styles.segmentRow}>
@@ -914,7 +914,7 @@ function SessionPreview({ sessionData: s, showVolume, showDate, showPlanName, sh
         ))}
       </View>
 
-      {/* Top lift (story only — needs the space) */}
+      {/* Top lift (story only, needs the space) */}
       {!isSquare && d.topSet && d.topSet.weight > 0 && (
         <View style={pvStyles.topLiftCard}>
           <View style={pvStyles.topLiftStripe} />

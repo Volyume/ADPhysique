@@ -26,7 +26,7 @@ describe('STRENGTH_STANDARDS catalogue', () => {
   });
 });
 
-describe('getStrengthLevel — input guards', () => {
+describe('getStrengthLevel, input guards', () => {
   test('returns null when any required input is missing', () => {
     expect(getStrengthLevel('', 100, 80)).toBeNull();
     expect(getStrengthLevel('Bench Press', 0, 80)).toBeNull();
@@ -45,7 +45,7 @@ describe('getStrengthLevel — input guards', () => {
   });
 });
 
-describe('getStrengthLevel — lift name matching', () => {
+describe('getStrengthLevel, lift name matching', () => {
   test('matches bench press variants', () => {
     expect(getStrengthLevel('Bench Press', 80, 80)?.label).toBe('Intermediate');
     expect(getStrengthLevel('Barbell Bench Press', 80, 80)?.label).toBe('Intermediate');
@@ -81,7 +81,7 @@ describe('getStrengthLevel — lift name matching', () => {
   });
 });
 
-describe('getStrengthLevel — banding', () => {
+describe('getStrengthLevel, banding', () => {
   // bench thresholds: 0.50, 0.75, 1.00, 1.25, 1.50
   const BW = 100;
 

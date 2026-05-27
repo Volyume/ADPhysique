@@ -2,7 +2,7 @@
  * Verifies the goal-change input-builder produces the right plan inputs
  * even when the user's profile is missing optional fields. This is the
  * exact path the Hub wizard hits when a user switches from "build muscle"
- * to "wellness" mid-mesocycle — the bug surfaced in commit c1dabca was
+ * to "wellness" mid-mesocycle, the bug surfaced in commit c1dabca was
  * that this used to bail entirely on older profiles.
  */
 jest.mock('../database', () => ({
@@ -24,7 +24,7 @@ describe('buildPlanInputs', () => {
 
   test('falls back to maintain phase for legacy profiles missing trainingPhase', () => {
     // Legacy users with only trainingGoal (general_hypertrophy etc.)
-    // used to be stuck — buildPlanInputs returned null and they couldn't
+    // used to be stuck, buildPlanInputs returned null and they couldn't
     // regenerate. Now we migrate the goal ID and back-fill phase=maintain
     // so they can refresh their plan without re-onboarding.
     const inputs = buildPlanInputs({ trainingGoal: 'build_muscle' });

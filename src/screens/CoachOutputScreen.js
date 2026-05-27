@@ -819,7 +819,7 @@ export default function CoachOutputScreen({ navigation, route }) {
           <Text style={styles.weekRange}>{weekRangeLabel(weekStart)}</Text>
         </View>
 
-        {/* 1. Headline — one sentence */}
+        {/* 1. Headline, one sentence */}
         <Text style={styles.headline}>{buildHeadline(output, checkin)}</Text>
 
         {/* 2. Trend chips */}
@@ -889,20 +889,20 @@ export default function CoachOutputScreen({ navigation, route }) {
           );
         })()}
 
-        {/* Rapid weight loss safety flag — only if relevant */}
+        {/* Rapid weight loss safety flag, only if relevant */}
         {rapidWeightLossFlag && <RapidLossAlert />}
 
-        {/* Diet break — only if relevant */}
+        {/* Diet break, only if relevant */}
         {dietBreakSuggested && (
           <DietBreakCard weeksInDeficit={dietBreakWeeksInDeficit} />
         )}
 
-        {/* Recent decisions — quieter, at the bottom */}
+        {/* Recent decisions, quieter, at the bottom */}
         {heldDecisions && heldDecisions.length > 0 && (
           <HeldDecisionsCard decisions={heldDecisions} history={coachHistory} />
         )}
 
-        {/* Move #4 differential paywall — only renders for free-tier
+        {/* Move #4 differential paywall, only renders for free-tier
             users where 2-of-3 adherence is off-target AND one of the
             six locked triggers fires. Paid users never see it. */}
         {output?.differential_output?.shown && (
@@ -1283,7 +1283,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  // Done button (secondary style — surface fill, border, no solid colour)
+  // Done button (secondary style, surface fill, border, no solid colour)
   doneBtn: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
@@ -1473,7 +1473,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  // Confidence pill (medium/low/data_hold only — hidden at high)
+  // Confidence pill (medium/low/data_hold only, hidden at high)
   confidencePill: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -94,7 +94,7 @@ describe('Scenario: Welcome → pick Free', () => {
 
 describe('Scenario: Pro signs out + signs back in (cloud profile intact)', () => {
   test('tier returns to pro after restoreSessionFromCloud', async () => {
-    // Step 1 — signed in as Pro
+    // Step 1, signed in as Pro
     useAppStore.setState({
       user: { id: 'u1' }, session: { user: { id: 'u1' } },
       tier: 'pro', firstRunComplete: true,
@@ -102,12 +102,12 @@ describe('Scenario: Pro signs out + signs back in (cloud profile intact)', () =>
     await AsyncStorage.setItem('@volyume_tier', 'pro');
     await AsyncStorage.setItem('@volyume_first_run_complete', 'true');
 
-    // Step 2 — sign out
+    // Step 2, sign out
     await useAppStore.getState().clearAuthStateForSignOut();
     expect(useAppStore.getState().tier).toBeNull();
     expect(useAppStore.getState().firstRunComplete).toBe(false);
 
-    // Step 3 — sign back in. Cloud profile exists; cloud.tier='free' (beta)
+    // Step 3, sign back in. Cloud profile exists; cloud.tier='free' (beta)
     mockCloudProfile = {
       first_name: 'Allan',
       training_focus: 'bodybuilding',
@@ -160,7 +160,7 @@ describe('Scenario: App restart while signed in as Pro', () => {
   });
 });
 
-// ─── Scenario 6: Brand new Pro signup — cloud profile not yet created ────────
+// ─── Scenario 6: Brand new Pro signup, cloud profile not yet created ────────
 
 describe('Scenario: Brand new Pro signup', () => {
   test('tier=pro set up front, firstRunComplete stays false', async () => {
@@ -190,7 +190,7 @@ describe('Scenario: Free user upgrades to Pro via OAuth', () => {
 
 // ─── Scenario 8: checkTier loads persisted tier on app launch ────────────────
 
-describe('Scenario: App launch — checkTier loads persisted value', () => {
+describe('Scenario: App launch, checkTier loads persisted value', () => {
   test('persisted pro round-trips', async () => {
     await AsyncStorage.setItem('@volyume_tier', 'pro');
     await useAppStore.getState().checkTier();

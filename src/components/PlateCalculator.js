@@ -14,7 +14,7 @@ export default function PlateCalculator({ targetWeight, onClose }) {
   const weightNum = parseFloat(weight) || 0;
   const barNum = parseFloat(bar) || 20;
   // calculatePlates returns { plates, totalWeight } when weight <= bar and
-  // omits sideWeight in that branch — guard with defaults so the render
+  // omits sideWeight in that branch, guard with defaults so the render
   // doesn't crash on `.toFixed`.
   const calc = calculatePlates(weightNum, barNum) || {};
   const plates = calc.plates ?? [];

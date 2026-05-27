@@ -3,7 +3,7 @@
  *
  * Shows a persistent ("ongoing") notification while a workout is in
  * progress, so the user sees their current set count and elapsed time
- * on the lock screen and notification shade — without unlocking the
+ * on the lock screen and notification shade, without unlocking the
  * phone. Tap the notification to bring the app back to ActiveWorkout.
  *
  * Implementation is pure JS on top of expo-notifications. Each
@@ -64,7 +64,7 @@ async function ensureChannel() {
     await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
       name: 'Active workout',
       importance: Notifications.AndroidImportance.LOW,
-      // No sound, no vibration — this is a persistent status display,
+      // No sound, no vibration, this is a persistent status display,
       // not an alert. We don't want the user's phone buzzing every
       // time we update the body text after a logged set.
       sound: null,
@@ -121,10 +121,10 @@ function buildTitleAndBody({
 // set numbering ("Set 3 of 2") confusing and the lock-screen surface
 // itself unhelpful, so the entire path no-ops. The functions are
 // kept exported so call sites in ActiveWorkoutScreen can stay
-// untouched — they fire into the void. Re-enable later only with a
+// untouched, they fire into the void. Re-enable later only with a
 // correct numbering policy + a settings toggle.
 export async function showActiveWorkoutNotification(args = {}) {
-  return; // notification surface disabled — see comment above
+  return; // notification surface disabled, see comment above
   // eslint-disable-next-line no-unreachable
   if (Platform.OS !== 'android') return;
   const { title, body } = buildTitleAndBody(args);
@@ -143,7 +143,7 @@ export async function showActiveWorkoutNotification(args = {}) {
           channelId: CHANNEL_ID,
           deepLink: 'volyume://active-workout',
         });
-        if (ok) return; // success — skip the JS fallback
+        if (ok) return; // success, skip the JS fallback
       } catch (_) { /* fall through to JS fallback */ }
     }
   }
@@ -167,7 +167,7 @@ export async function showActiveWorkoutNotification(args = {}) {
       },
       trigger: null, // Show immediately. Re-calling replaces the existing.
     });
-  } catch (_) { /* silent — workout flow shouldn't break on notif failure */ }
+  } catch (_) { /* silent, workout flow shouldn't break on notif failure */ }
 }
 
 /**
@@ -179,7 +179,7 @@ export async function showActiveWorkoutNotification(args = {}) {
 export async function dismissActiveWorkoutNotification() {
   if (Platform.OS !== 'android') return;
   // Stop the foreground service if it's running. Safe even when the
-  // feature flag is off — stopWorkoutForeground is a no-op when the
+  // feature flag is off, stopWorkoutForeground is a no-op when the
   // service isn't active or the module is unavailable.
   const rtl = getRestTimerLive();
   try { await rtl?.stopWorkoutForeground?.(); } catch (_) {}

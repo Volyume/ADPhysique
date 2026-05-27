@@ -167,7 +167,7 @@ export function getProLabel(userProfile) {
 
 /**
  * Pro-only screen names. Gating is based on the user's CHOSEN tier
- * (store.tier === 'pro'), NOT isProUser() — during beta Pro is free
+ * (store.tier === 'pro'), NOT isProUser(), during beta Pro is free
  * but a free user must still sign up and go through the upgrade flow
  * to switch.
  */

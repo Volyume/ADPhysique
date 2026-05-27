@@ -210,7 +210,7 @@ function _buildRealProvider() {
  * default stub in place (cascade UI still renders, purchase tap
  * throws "provider not injected" until a real build ships).
  *
- * Safe to call multiple times — only the first install replaces the
+ * Safe to call multiple times, only the first install replaces the
  * provider; subsequent calls are no-ops.
  */
 export function tryWireRealProvider() {

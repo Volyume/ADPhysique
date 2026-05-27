@@ -48,7 +48,7 @@ async function promptRestartForA11y(label) {
         onPress: async () => {
           try { await Updates.reloadAsync(); }
           catch (_) {
-            // Dev clients / Expo Go without OTA support — fall back to a
+            // Dev clients / Expo Go without OTA support, fall back to a
             // soft message. The toggle is saved; next manual restart picks
             // it up.
             Alert.alert('Reload failed', 'Close and reopen Volyume to apply the change.');
@@ -374,7 +374,7 @@ export default function SettingsScreen({ navigation }) {
               // support reload and that's fine, the next manual launch
               // picks up the new bundle.
               try { await Updates.reloadAsync(); }
-              catch (_) { /* dev / Expo Go — no-op */ }
+              catch (_) { /* dev / Expo Go, no-op */ }
             } finally {
               setSigningOut(false);
             }
@@ -431,7 +431,7 @@ export default function SettingsScreen({ navigation }) {
     try {
       if (!user?.isLocal) {
         // Server-side wipe via the delete-account Edge Function. The
-        // function wipes public.* rows AND deletes auth.users — the RPC
+        // function wipes public.* rows AND deletes auth.users, the RPC
         // alone can't reach auth.users (different schema, lacks rights),
         // which left zombie auth records that resurrected on next sign-in.
         // Falls back to the RPC if the function isn't deployed, so the
@@ -497,7 +497,7 @@ export default function SettingsScreen({ navigation }) {
         // CRITICAL: if the cloud wipe failed, ABORT. Previously we still
         // called signOut() and wipeAllUserData() unconditionally, which
         // left the user logged out locally with their cloud account fully
-        // intact — and on next sign-in they were dumped back into the
+        // intact, and on next sign-in they were dumped back into the
         // main app because firstRunComplete=true still lived in the cloud
         // profile they thought they deleted. Now we surface the failure
         // and leave the session alone so they can retry or contact us.
@@ -519,7 +519,7 @@ export default function SettingsScreen({ navigation }) {
       catch (e) { logError('SettingsScreen.deleteAccount.wipeLocal', e); }
       // Clear in-memory state.
       await clearAuthStateForSignOut();
-      // Delete-account is the "truly wipe everything" path — distinct
+      // Delete-account is the "truly wipe everything" path, distinct
       // from sign-out, which is session-only by policy. The selective
       // @volyume_ prefix wipe used to miss three keys that don't carry
       // the @ (volyume_review_prompted, volyume_notif_prompt_seen,
@@ -556,7 +556,7 @@ export default function SettingsScreen({ navigation }) {
       // was meant to fix. Best-effort: dev builds and Expo Go don't
       // support reload.
       try { await Updates.reloadAsync(); }
-      catch (_) { /* dev / Expo Go — no-op */ }
+      catch (_) { /* dev / Expo Go, no-op */ }
     } finally {
       setDeletingAccount(false);
     }
@@ -630,7 +630,7 @@ export default function SettingsScreen({ navigation }) {
   }
 
   // Surfaces the cloud-restored routines that have all-broken
-  // exercise references — the "I have 114 routines but none of them
+  // exercise references, the "I have 114 routines but none of them
   // open with exercises" state. Counts them, asks for confirmation,
   // soft-deletes in bulk. Soft delete so the change syncs to the
   // cloud and propagates to the user's other devices.
@@ -695,7 +695,7 @@ export default function SettingsScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Go Pro — free users only */}
+        {/* Go Pro, free users only */}
         {tier !== 'pro' && (
           <>
             <SectionHeader title="Precision Coaching" />
@@ -795,7 +795,7 @@ export default function SettingsScreen({ navigation }) {
               <Switch
                 value={!!accessibility.largerText}
                 onValueChange={async v => {
-                  // Await the AsyncStorage write before prompting reload — otherwise
+                  // Await the AsyncStorage write before prompting reload, otherwise
                   // a fast "Reload now" tap can tear down the JS VM before the pref
                   // persists, and the user sees no change on restart.
                   await setAccessibilityPref('largerText', v);
@@ -1034,7 +1034,7 @@ export default function SettingsScreen({ navigation }) {
               : healthConsent === false
                 ? 'Withdrawn. Some features are read-only.'
                 : 'Not recorded yet.'}
-            value={healthConsent === true ? 'On' : healthConsent === false ? 'Off' : '—'}
+            value={healthConsent === true ? 'On' : healthConsent === false ? 'Off' : '-'}
             onPress={healthConsent === true && !withdrawing ? handleWithdrawConsent : undefined}
             showArrow={healthConsent === true}
           />
