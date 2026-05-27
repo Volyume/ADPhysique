@@ -10,9 +10,12 @@
 
 export const LINKS = {
   // Privacy policy. Hosted at volyume.app/privacy in production;
-  // GitHub Pages mirror at allansdouglas1983-cmyk.github.io/ADPhysique/privacy.html
-  // is the temporary fallback until the DNS for volyume.app points
-  // at the Pages site (founder action, tracked in CURRENT_STATUS.md).
+  // GitHub Pages serves public/privacy/index.html at /privacy/
+  // (and auto-redirects /privacy -> /privacy/), so the extension-
+  // less URL works as long as `.nojekyll` is present in public/.
+  // The temporary fallback at allansdouglas1983-cmyk.github.io/ADPhysique/privacy/
+  // works the same way until DNS for volyume.app points at the
+  // Pages site (founder action, tracked in CURRENT_STATUS.md).
   privacyPolicy: 'https://volyume.app/privacy',
 
   // Marketing landing page.

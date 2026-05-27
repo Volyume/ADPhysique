@@ -592,7 +592,7 @@ checklist (lines 77-89) is green.
 |---|---|
 | Google Play | **AAB live in Closed Testing track.** The build is the original pre-food-layer version (v1.1.0+4). Sideloaded debug APKs are how we're testing the build-out work; the Closed Testing track stays frozen until Phase A exit. |
 | Apple App Store | **Nothing.** No Apple Developer account, no App Store Connect app entity, no iOS bundle registered. (Locked decision: Android-only at Phase B; iOS deferred indefinitely.) |
-| Marketing site | volyume.app domain registered (Namecheap). Hosting state unknown; waitlist signup form not built. Privacy policy HTML exists at `public/privacy.html` but is not yet deployed. |
+| Marketing site | volyume.app domain registered (Namecheap). Hosting state unknown; waitlist signup form not built. Privacy policy HTML at `public/privacy/index.html` is wired through the `deploy-pages.yml` GitHub Pages workflow; serves at `volyume.app/privacy` once DNS resolves to the Pages site. |
 
 ### Signing infrastructure
 
@@ -837,7 +837,7 @@ Grouped by phase per `RELEASE_PLAN_LOCKED.md`.
 | # | Item | Spec | Effort | Owner |
 |---|---|---|---|---|
 | 1 | ~~Apply migrations 037 → 046~~ **All Applied** end-of-day 2026-05-26. Founder action queue is empty for migrations. | this doc § 3 | done | Founder |
-| 2 | Deploy `public/privacy.html` to volyume.app/privacy | `PRIVACY_CONSENT_LOCKED.md` lines 75-112 | M (hosting setup) | Founder + Claude |
+| 2 | Privacy policy at volyume.app/privacy. File moved to `public/privacy/index.html` 2026-05-27 so GitHub Pages serves it at the extensionless `/privacy` URL (with `.nojekyll` in place). `public/CNAME` already names `volyume.app`; the `deploy-pages.yml` workflow auto-publishes on push to main. Remaining: founder configures DNS A/CNAME for `volyume.app` to point at the GitHub Pages site, then the URL is live. | `PRIVACY_CONSENT_LOCKED.md` lines 75-112 | S (founder DNS only) | Founder |
 | 3 | ~~Build `src/lib/sync/` directory + per-table transport for all 16 tables~~ **Shipped** end-of-day 2026-05-26. All 16 registry tables on transport via 10 per-table handler files + food-domain coordinator; ~580 lines removed from legacy sync.js. Follow-up: sync regression matrix (8 × 16 = 128 paired tests per `TESTING_STRATEGY_LOCKED.md` lines 144-160). | `SYNC_ARCHITECTURE_LOCKED.md` | done | Claude |
 | 4 | ~~Build `src/lib/notifications/` directory + wire `notification_*` events~~ **Shipped**. Follow-up: pull `trainingReminders.js` + `restNotifications.js` + `activeWorkoutNotification.js` into the directory. | `NOTIFICATIONS_LOCKED.md` | done | Claude |
 | 5 | Maestro E2E framework + 12 critical-path flows | `TESTING_STRATEGY_LOCKED.md` lines 114-141 | M-L (~1 week) | Claude (Phase 1 shipped earlier this session). Follow-up: founder validates smoke bundle against a real device; selectors get tightened from there. F4 (Maestro #16 emulator boot diagnosis) still open. |
@@ -913,7 +913,7 @@ Grouped by phase per `RELEASE_PLAN_LOCKED.md`.
 4. Set up Google Cloud Pub/Sub topic for Real-Time Developer Notifications + deploy `supabase/functions/play-billing-rtdn/index.ts`.
 5. Create 3 SKU products in Play Console (open beta visible, others hidden).
 6. Set up sandbox testers in Play Console for end-to-end purchase test.
-7. Deploy `public/privacy.html` to volyume.app/privacy (hosting setup separate question).
+7. Point volyume.app DNS (A + CNAME records) at the GitHub Pages site so `volyume.app/privacy` resolves. File + deploy workflow already in place (`public/privacy/index.html` + `.github/workflows/deploy-pages.yml`); DNS is the only remaining piece.
 
 ### When Phase A exit checklist is green
 
@@ -978,6 +978,6 @@ Code verified directly with grep / Read against locked specs (this session):
 - `supabase/migrate_*.sql` (015 through 038 present)
 - `supabase/functions/` (delete-account + play-billing-rtdn shipped)
 - `tests/simulator/scenarios/` (all 12 locked scenarios shipped)
-- `public/privacy.html` (exists, not deployed)
+- `public/privacy/index.html` (in repo + deploy workflow wired; serves at volyume.app/privacy once DNS resolves)
 - App Store Connect / Apple Developer (founder confirms: nothing)
 - Google Play Console (founder confirms: AAB live in Closed Testing, no keystore yet)
