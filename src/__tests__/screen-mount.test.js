@@ -387,6 +387,15 @@ function makeNav() {
   return nav;
 }
 
+// Every tree that mountScreen creates is registered here. The top-
+// level afterEach unmounts the whole batch so dangling setTimeout /
+// setInterval / subscription cleanup runs even when the per-test
+// caller forgets to call unmountTree explicitly. Closes the open-
+// handle leak that forced --forceExit on the Jest CLI (HomeScreen
+// queues two setTimeout()s in a useEffect with a clearTimeout
+// cleanup; the cleanup only runs on unmount).
+const _trackedTrees = new Set();
+
 async function mountScreen(Screen, props = {}) {
   const errors = [];
   const origErr = console.error;
@@ -410,6 +419,7 @@ async function mountScreen(Screen, props = {}) {
         }),
       );
     });
+    if (tree) _trackedTrees.add(tree);
     // Flush microtasks + one macrotask so async useEffects run.
     // Chained loadFoo() patterns mostly settle in 10-15 microtasks
     // plus the macrotask boundary that AsyncStorage/DB mocks
@@ -427,11 +437,20 @@ async function mountScreen(Screen, props = {}) {
 
 // Tear down the rendered tree so dangling effects don't bleed into the
 // next test's assertions. Call this in afterEach when you've stashed
-// the tree at the test scope.
+// the tree at the test scope. Safe to call twice; the second call is
+// a no-op once the tree leaves _trackedTrees.
 function unmountTree(tree) {
   if (!tree) return;
   try { TestRenderer.act(() => { tree.unmount(); }); } catch (_) {}
+  _trackedTrees.delete(tree);
 }
+
+afterEach(() => {
+  for (const tree of _trackedTrees) {
+    try { TestRenderer.act(() => { tree.unmount(); }); } catch (_) {}
+  }
+  _trackedTrees.clear();
+});
 
 // ─── Button-bashing helpers ──────────────────────────────────────────────
 

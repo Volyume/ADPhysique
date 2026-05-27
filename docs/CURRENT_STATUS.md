@@ -191,10 +191,16 @@ migration files"), tracked but not blocking.
 - The "Download my data" email path still file-shares via the
   Sharing API; the email path needs an Edge Function +
   provider sign-up (founder side).
-- Worker-exit warning under screen-mount.test.js: --forceExit
-  still in use in main-ci.yml; the proper fix (wrap mountScreen
-  in NavigationContainer) is a substantial test-harness
-  rewrite, tracked as TECH DEBT in main-ci.yml.
+- ~~Worker-exit warning under screen-mount.test.js: --forceExit
+  still in use in main-ci.yml~~ **Closed 2026-05-27.** The
+  original NavigationContainer hypothesis was wrong; root cause
+  was two leaked setTimeout()s inside HomeScreen's useEffect
+  that the screen-mount harness never let clean up (the test
+  never unmounted the tree). Fix: mountScreen now registers
+  every created tree in a module-level Set + top-level afterEach
+  unmounts the batch. `--forceExit` removed from
+  `.github/workflows/main-ci.yml`; full suite reports zero open
+  handles via `--detectOpenHandles` and exits 0.
 - **Cloud schema / migration-file divergence audit.** Migration
   046's first apply attempt failed because the live cloud
   `recipe_ingredients` table is missing `created_at`, despite

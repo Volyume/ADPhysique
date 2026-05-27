@@ -48,39 +48,30 @@ jobs:
         run: npm ci --legacy-peer-deps
 
       - name: Run Jest
-        # TECHNICAL DEBT — --forceExit is explicitly TEMPORARY.
+        # --forceExit removed 2026-05-27. The original tech-debt
+        # comment blamed useFocusEffect + tabPress addListener
+        # without a NavigationContainer; that was a red herring.
+        # The actual cause was two leaked setTimeout()s inside
+        # HomeScreen's useEffect (lines 162-163): the effect
+        # schedules them and returns a clearTimeout cleanup, but
+        # the screen-mount test harness never unmounted the tree
+        # so the cleanup never ran.
         #
-        # Root cause: HomeScreen + a handful of other Pro screens
-        # use @react-navigation/native's useFocusEffect +
-        # navigation.getParent()?.addListener('tabPress', ...) at
-        # mount. The test harness's makeNav() in
-        # src/__tests__/screen-mount.test.js provides a flat
-        # jest.fn() mock for navigation; useFocusEffect's behaviour
-        # without a real NavigationContainer fires its callback
-        # asynchronously and a setState in that callback lands AFTER
-        # the test's await chain ends. React emits an act() warning,
-        # Jest's BufferedConsole wraps it as "Cannot log after tests
-        # are done", and --ci treats that as a failure signal even
-        # though every assertion passed.
+        # Fix in src/__tests__/screen-mount.test.js: every tree
+        # mountScreen creates is registered in a module-level Set,
+        # and a top-level afterEach drains and unmounts the batch.
+        # `jest --detectOpenHandles` on the full suite now reports
+        # zero leaks and exit code is 0.
         #
-        # The PROPER fix is to wrap mountScreen in a
-        # NavigationContainer (with a mocked navigator state) so
-        # useFocusEffect resolves synchronously and addListener has
-        # a real subscriber surface. That is a substantial harness
-        # rewrite touching the entire screen-mount.test.js file +
-        # the make-Nav helper + every test that passes a screen
-        # navigation prop. Not in scope for the current audit
-        # response.
-        #
-        # Codex re-audit 2026-05-26 explicitly named
-        # --silent/--forceExit as an acceptable temporary path
-        # provided it is documented as such. Tracked here as a
-        # FOLLOW-UP, not closed:
-        #   TODO(codex-f2ci-followup): wrap mountScreen in a
-        #   NavigationContainer so useFocusEffect resolves
-        #   synchronously, then remove --forceExit and verify
-        #   warning count is 0.
-        run: npx jest --runInBand --ci --forceExit
+        # --runInBand still emits a soft "Jest did not exit one
+        # second after" advisory after the run because of slow
+        # module destruction (Supabase realtime client + similar
+        # singletons hold references to the worker process until
+        # GC sweeps them). It is informational; exit code is 0.
+        # Dropping --runInBand would silence it but reintroduces
+        # parallel-state pollution flakes we saw earlier — keep
+        # it for determinism.
+        run: npx jest --runInBand --ci
         env:
           # Live-cloud E2E (T7 + T8) opt-in. When all four are set,
           # src/lib/sync/__tests__/sync.e2e.liveCloud.test.js signs
