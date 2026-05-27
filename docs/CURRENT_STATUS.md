@@ -19,7 +19,156 @@ session that materially changes shipped state, not appended to.
 > minimisation, main is canonical, session-start protocol. The
 > rules were added after the 2026-05-25 stale-branch incident.
 
-## 0. 2026-05-26 session summary (read first)
+## 0. 2026-05-27 session summary (read first)
+
+**End-of-day handoff.** Today's branch + main are at `c8988ff`.
+The day landed several real improvements and then ate a number of
+hours on a piece of work (live-cloud T7/T8 tests) that turned out
+to be out of scope for the product. Documenting both honestly.
+
+### Shipped today (in order)
+
+1. **Migration 047 applied.** `body_metrics` + `weekly_checkins_v2`
+   gained `updated_at` (both) + `deleted_at` (body_metrics only) +
+   BEFORE UPDATE touch triggers refusing stale writes + a partial
+   live index. Closes the LWW + soft-delete gaps locked on the
+   `body_composition_log` and `weekly_checkins_v2` registry
+   entries.
+
+2. **LWW + soft-delete gaps closed on the handlers.**
+   `src/lib/sync/tables/bodyComposition.js` now ships
+   `updated_at` + `deleted_at` on push and gates pull with the
+   LWW comparison.
+   `src/lib/sync/tables/weeklyCheckins.js` ships `updated_at` on
+   push, gates pull with LWW.
+   `insertBodyMetricFromCloud` + `insertWeeklyCheckinFromCloud`
+   moved from `INSERT OR IGNORE` to `INSERT OR REPLACE` so the
+   LWW gate's "cloud wins" decision actually lands locally.
+   Regression matrix T3 (body_composition_log soft-delete) and
+   T5 (both tables LWW) flipped from "locked gap" assertions to
+   assertions of the correct behaviour.
+
+3. **Notifications listener consolidation
+   (commit `1d17c79`).** The `expo-notifications` listener trio
+   (`addNotificationResponseReceivedListener`,
+   `addNotificationReceivedListener`,
+   `getLastNotificationResponseAsync`) plus the two telemetry
+   firings moved from `src/navigation/RootNavigator.js` into a
+   new `src/lib/notifications/listeners.js` with an idempotent
+   disposer. RootNavigator went from a 67-line useEffect to a
+   23-line one whose only concern is data_type -> screen
+   routing. 8 new tests in `__tests__/listeners.test.js`.
+
+4. **Cloud schema drift audit
+   (`supabase/audit_cloud_schema_drift.sql`).** Read-only
+   `information_schema` introspection of every (table, column)
+   pair each per-table sync handler depends on, with drift
+   surfacing as `status:MISSING` rows sorted to the top. Closes
+   the LATER follow-up opened after migration 046's first apply
+   attempt failed on a `recipe_ingredients.created_at` divergence.
+
+5. **`--forceExit` removed from main-ci.yml
+   (commit `8b48878`).** Original cause was two leaked
+   `setTimeout()`s in `HomeScreen`'s useEffect that the
+   screen-mount test harness never let clean up (the test never
+   unmounted the tree). Fix: `mountScreen` now registers every
+   created tree in a module-level Set and a top-level afterEach
+   drains the batch. `jest --detectOpenHandles` reports zero
+   leaks. The previous tech-debt comment that blamed
+   `useFocusEffect` was a red herring; comment now reflects the
+   actual cause.
+
+6. **Privacy URL fix (commit `184f531`).** With `.nojekyll`
+   present, GitHub Pages serves `public/privacy.html` only at
+   `/privacy.html`. `src/lib/links.js` hardcodes
+   `https://volyume.app/privacy` (no extension) — that link
+   would have 404'd in production. Moved to
+   `public/privacy/index.html` so Pages serves it at `/privacy/`
+   (GitHub auto-redirects from `/privacy`).
+   Founder action queue item dropped from "M (hosting setup)"
+   to "S (founder DNS only)".
+
+7. **CI diagnostic safety net (commits `e099904` + `74045bc`).**
+   The Jest step now tees output to `jest.log`, appends FAIL
+   blocks + last 220 lines to `$GITHUB_STEP_SUMMARY`, uploads
+   `jest.log` as the `jest-log` artefact, AND (on
+   `pull_request` events only) auto-posts the same FAIL detail
+   as a PR comment via `actions/github-script@v7` + the default
+   `GITHUB_TOKEN`. Useful for any future Jest failure; the
+   workflow `permissions:` block was tightened to
+   `contents: read + pull-requests: write` to scope the token.
+   Same `GITHUB_STEP_SUMMARY` treatment applied to the Maestro
+   workflow's existing status report.
+
+### Reversed today
+
+8. **Live-cloud T7/T8 E2E suite — deleted as out of scope.**
+   `TESTING_STRATEGY_LOCKED.md` lines 144-160 spec'd 8 scenarios
+   per registry table. T7 (two-device propagation) and T8
+   (offline collision) were authored as live-cloud tests against
+   a throwaway Supabase project. Founder called the right shot:
+   Volyume is Android-only, phone-only — nobody carries a tablet
+   to the gym, nobody runs two simultaneous active devices. The
+   only realistic cross-device path is sign-out + sign-in on a
+   new handset, which is manually tested dozens of times on real
+   devices. The matrix at
+   `src/lib/sync/__tests__/sync.regressionMatrix.test.js` (50
+   assertions against mocked Supabase) plus the cloud schema
+   drift audit at `supabase/audit_cloud_schema_drift.sql` cover
+   the failure modes that matter for this product. Deletions:
+   - `src/lib/sync/__tests__/sync.e2e.liveCloud.test.js`
+   - `supabase/test_project_bootstrap.sql`
+   - `scripts/verify-e2e-setup.js`
+   - the `SUPABASE_TEST_*` env block from `main-ci.yml`
+   - the Live-cloud E2E section from `supabase/README.md`
+   Regression matrix's T7/T8 markers updated from `DEFERRED` to
+   `OUT OF SCOPE` with the rationale inline. Founder action: tear
+   down the throwaway `volyume-e2e-test` Supabase project + the
+   four `SUPABASE_TEST_*` repo secrets when convenient.
+
+### Lessons logged for next session
+
+- **Before picking up a tracked spec item, ask whether it still
+  applies to the current product scope.** TESTING_STRATEGY's T7/T8
+  is a generic multi-device contract; it was written before the
+  Android-only, single-device decision was locked. Mechanically
+  chasing it without re-evaluating against today's scope cost
+  the day.
+- **Lead any proposed work with what it protects against in
+  concrete user-flow terms.** "T7 from the spec" is a checkbox;
+  "catches X if user A foregrounds while user B's row was just
+  pushed" is a real test of value. If I can't articulate the
+  protection in concrete terms, the work probably shouldn't ship.
+- **Don't overengineer test isolation.** A throwaway Supabase
+  project + 6900-line bootstrap bundle was the textbook-safe
+  pattern. A separate test user in the existing project would
+  have done the same job. (Moot now that the tests are deleted,
+  but the discipline carries over.)
+
+### Branch state
+
+- `main` and `claude/github-main-takeover-CSUfO` both at
+  `c8988ff` (this session's session-end SHA).
+- PR #5 (`test(sync): live-cloud E2E test project now wired`) is
+  open at this SHA on the takeover branch — it's a no-op now
+  that the live-cloud work was reverted; should be closed
+  (founder action) rather than merged.
+- Full Jest suite: **1712 passing / 3 skipped / 0 failing** across
+  85 suites.
+
+### Founder action queue (next session)
+
+- Tear down `volyume-e2e-test` Supabase project + delete the
+  four `SUPABASE_TEST_*` repo secrets.
+- Close PR #5 without merging.
+- Point `volyume.app` DNS at the GitHub Pages site so
+  `/privacy` resolves (file + workflow already shipped).
+- Migration 047 confirmed already applied to production earlier
+  today; nothing further needed there.
+
+---
+
+## 0.B. 2026-05-26 session summary (kept for context)
 
 **End-of-day handoff.** Single session spanning the Codex
 re-audit response (commits c324f99 / d861949 / 41b210f / 7b7cc0f
@@ -836,13 +985,15 @@ Grouped by phase per `RELEASE_PLAN_LOCKED.md`.
 
 | # | Item | Spec | Effort | Owner |
 |---|---|---|---|---|
-| 1 | ~~Apply migrations 037 → 046~~ **All Applied** end-of-day 2026-05-26. Founder action queue is empty for migrations. | this doc § 3 | done | Founder |
+| 1 | ~~Apply migrations 037 → 047~~ **All Applied** (037→046 end-of-day 2026-05-26; 047 2026-05-27). Founder action queue is empty for migrations. | this doc § 3 | done | Founder |
 | 2 | Privacy policy at volyume.app/privacy. File moved to `public/privacy/index.html` 2026-05-27 so GitHub Pages serves it at the extensionless `/privacy` URL (with `.nojekyll` in place). `public/CNAME` already names `volyume.app`; the `deploy-pages.yml` workflow auto-publishes on push to main. Remaining: founder configures DNS A/CNAME for `volyume.app` to point at the GitHub Pages site, then the URL is live. | `PRIVACY_CONSENT_LOCKED.md` lines 75-112 | S (founder DNS only) | Founder |
-| 3 | ~~Build `src/lib/sync/` directory + per-table transport for all 16 tables~~ **Shipped** end-of-day 2026-05-26. All 16 registry tables on transport via 10 per-table handler files + food-domain coordinator; ~580 lines removed from legacy sync.js. Follow-up: sync regression matrix (8 × 16 = 128 paired tests per `TESTING_STRATEGY_LOCKED.md` lines 144-160). | `SYNC_ARCHITECTURE_LOCKED.md` | done | Claude |
-| 4 | ~~Build `src/lib/notifications/` directory + wire `notification_*` events~~ **Shipped**. Follow-up: pull `trainingReminders.js` + `restNotifications.js` + `activeWorkoutNotification.js` into the directory. | `NOTIFICATIONS_LOCKED.md` | done | Claude |
+| 3 | ~~Build `src/lib/sync/` directory + per-table transport for all 16 tables~~ **Shipped** end-of-day 2026-05-26. All 16 registry tables on transport via 10 per-table handler files + food-domain coordinator; ~580 lines removed from legacy sync.js. Sync regression matrix shipped 2026-05-26 with 50 actionable assertions across all 16 registry tables. LWW + soft-delete gaps on `body_composition_log` and `weekly_checkins_v2` closed 2026-05-27 (handler edits + migration 047). | `SYNC_ARCHITECTURE_LOCKED.md` | done | Claude |
+| 4 | ~~Build `src/lib/notifications/` directory + wire `notification_*` events~~ **Shipped**. ~~Follow-up: pull `trainingReminders.js` + `restNotifications.js` + `activeWorkoutNotification.js` into the directory.~~ **Done 2026-05-27**: investigation found all three sibling files already lived under `src/lib/notifications/`; the actual consolidation work was pulling the `expo-notifications` listener wiring out of `RootNavigator.js` into a new `src/lib/notifications/listeners.js` (commit `1d17c79`). | `NOTIFICATIONS_LOCKED.md` | done | Claude |
 | 5 | Maestro E2E framework + 12 critical-path flows | `TESTING_STRATEGY_LOCKED.md` lines 114-141 | M-L (~1 week) | Claude (Phase 1 shipped earlier this session). Follow-up: founder validates smoke bundle against a real device; selectors get tightened from there. F4 (Maestro #16 emulator boot diagnosis) still open. |
 | 6 | ~~Extract `MealSection` / `EntryRow` / `FoodRow` into `src/components/food/`~~ **Shipped** end-of-day 2026-05-26. All 9 components from `UI_FLOWS_LOCKED.md` lines 18-28 now present. | `UI_FLOWS_LOCKED.md` | done | Claude |
 | 7 | ~~CI trigger gap (workflows stopped firing on push after run #714)~~ **Fixed** end-of-day 2026-05-26 by removing the workflow's self-push step. Push events now fire workflow runs normally; status reports moved to artefacts. | `docs/CI_TRIGGER_DIAGNOSTIC_2026-05-26.md` | done | Claude |
+| 8 | ~~`--forceExit` tech debt in main-ci.yml~~ **Fixed 2026-05-27** (commit `8b48878`). Real cause was two leaked `setTimeout()`s in `HomeScreen`'s useEffect that the screen-mount harness never unmounted. Fix: `mountScreen` registers every tree in a module-level Set; a top-level `afterEach` drains and unmounts the batch. `jest --detectOpenHandles` reports zero leaks; `--forceExit` removed. | `.github/workflows/main-ci.yml` (history) | done | Claude |
+| 9 | ~~CI diagnostic safety net (Jest failure not visible to chat from rate-limited container)~~ **Shipped 2026-05-27** (commits `e099904` + `74045bc`). Jest output tee'd to `jest.log` + last 220 lines + FAIL markers appended to `$GITHUB_STEP_SUMMARY` + uploaded as `jest-log` artefact + on `pull_request` events auto-posted as a PR comment via `GITHUB_TOKEN`. Future Jest failures are diagnosable from chat without manual log paste. Same `$GITHUB_STEP_SUMMARY` treatment applied to Maestro workflow's existing status report. | `.github/workflows/main-ci.yml`, `.github/workflows/maestro-e2e.yml` | done | Claude |
 
 ### LATER (Phase A exit prep)
 
@@ -898,8 +1049,10 @@ Grouped by phase per `RELEASE_PLAN_LOCKED.md`.
 1. ~~Apply migration 045~~ **Applied** end-of-day 2026-05-26.
 2. ~~Apply migration 046~~ **Applied** end-of-day 2026-05-26.
 3. ~~Apply migration 047~~ **Applied** 2026-05-27.
-4. ~~Stand up the live-cloud E2E test project~~ **Cancelled** 2026-05-27. T7 (two-device propagation) and T8 (offline collision) test a scenario Volyume doesn't have — Android-only, phone-only, nobody carries a tablet to the gym, nobody runs two simultaneous active devices. The only realistic cross-device path is sign-out + sign-in on a new handset, already manually tested dozens of times on real devices. Suite file, bootstrap SQL bundle, local probe script, and `SUPABASE_TEST_*` CI env wiring all deleted. Founder action: tear down the throwaway `volyume-e2e-test` Supabase project and delete the four `SUPABASE_TEST_*` repo secrets when convenient. The matrix at `src/lib/sync/__tests__/sync.regressionMatrix.test.js` (50 assertions against mocked Supabase) plus the cloud schema drift audit at `supabase/audit_cloud_schema_drift.sql` cover the failure modes that matter for this product.
-5. (Optional, low priority) Add `EXPO_PUBLIC_USDA_API_KEY` repo secret if USDA fallback is wanted active.
+4. **Tear down the throwaway `volyume-e2e-test` Supabase project** + delete the four `SUPABASE_TEST_*` repo secrets in GitHub Actions. Originally set up for T7/T8 live-cloud E2E; that suite was deleted 2026-05-27 as out of scope for the product (see § 0 today). Nothing in the repo references those secrets any more.
+5. **Close PR #5 without merging.** It was opened today to read CI check status through MCP; the work it contained was already merged to main, then reverted. Safe to close.
+6. **Point `volyume.app` DNS at the GitHub Pages site** so the in-app `/privacy` link resolves. The file (`public/privacy/index.html`) and deploy workflow are already shipped. This was the only remaining piece for the privacy URL.
+7. (Optional, low priority) Add `EXPO_PUBLIC_USDA_API_KEY` repo secret if USDA fallback is wanted active.
 
 ### When Claude says "Phase A code work complete, ready for Phase A exit prep"
 
