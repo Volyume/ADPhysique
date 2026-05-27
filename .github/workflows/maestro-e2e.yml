@@ -385,6 +385,19 @@ jobs:
       # see build-android.yml for the 2026-05-26 incident details
       # (run #714 status push failure, no triggers thereafter).
 
+      - name: Surface Maestro status into the run summary
+        # Appends the status doc to $GITHUB_STEP_SUMMARY so the run
+        # page shows the build + maestro logs inline without an
+        # artefact download. Lets a failure be diagnosed from chat
+        # (the run page is publicly readable; the artefact isn't).
+        if: always()
+        run: |
+          if [ -f .ci-status/maestro-latest.md ]; then
+            cat .ci-status/maestro-latest.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "_status report not produced — see step logs above_" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Upload Maestro artefacts
         if: always()
         uses: actions/upload-artifact@v4

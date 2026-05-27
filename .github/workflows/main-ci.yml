@@ -48,6 +48,7 @@ jobs:
         run: npm ci --legacy-peer-deps
 
       - name: Run Jest
+        id: jest
         # --forceExit removed 2026-05-27. The original tech-debt
         # comment blamed useFocusEffect + tabPress addListener
         # without a NavigationContainer; that was a red herring.
@@ -71,7 +72,19 @@ jobs:
         # Dropping --runInBand would silence it but reintroduces
         # parallel-state pollution flakes we saw earlier — keep
         # it for determinism.
-        run: npx jest --runInBand --ci
+        #
+        # `tee` captures the full Jest output to jest.log so the
+        # "Surface Jest failure" step below can tail the relevant
+        # FAIL block into $GITHUB_STEP_SUMMARY when Jest exits
+        # non-zero. The exit code propagates via PIPESTATUS so the
+        # job still fails correctly. Diagnostic added 2026-05-27
+        # after the live-cloud E2E suite first ran red and the
+        # log was unreachable from the assistant's environment
+        # (job-log API needs auth; MCP doesn't expose check-run
+        # output text; unauth API rate-limits this container).
+        run: |
+          set -o pipefail
+          npx jest --runInBand --ci 2>&1 | tee jest.log
         env:
           # Live-cloud E2E (T7 + T8) wiring. With all four secrets
           # populated (founder added them 2026-05-27),
@@ -89,6 +102,47 @@ jobs:
           SUPABASE_TEST_ANON_KEY:      ${{ secrets.SUPABASE_TEST_ANON_KEY }}
           SUPABASE_TEST_USER_EMAIL:    ${{ secrets.SUPABASE_TEST_USER_EMAIL }}
           SUPABASE_TEST_USER_PASSWORD: ${{ secrets.SUPABASE_TEST_USER_PASSWORD }}
+
+      - name: Surface Jest failure into the run summary
+        # Only fires when the Jest step failed. Extracts the
+        # bottom of the log (final FAIL blocks + the totals line)
+        # into $GITHUB_STEP_SUMMARY so the run page shows the
+        # failure detail inline, no artefact download required.
+        # The assistant's environment can read step summaries via
+        # the GitHub Actions web UI even without an auth token,
+        # so a CI failure becomes diagnosable from the chat.
+        if: failure() && steps.jest.conclusion == 'failure'
+        run: |
+          {
+            echo "## Jest failure detail"
+            echo
+            echo "Full log uploaded as the \`jest-log\` artefact. Excerpt below."
+            echo
+            echo '<details><summary>Last 200 lines of jest.log</summary>'
+            echo
+            echo '```'
+            tail -n 200 jest.log || echo "(jest.log missing)"
+            echo '```'
+            echo
+            echo '</details>'
+            echo
+            echo '<details><summary>Every FAIL block</summary>'
+            echo
+            echo '```'
+            # Grab every "FAIL " block plus 60 lines of context
+            grep -nE "^FAIL |^  ● |^  expect\(|^Tests:|^Test Suites:" jest.log 2>/dev/null | head -120 || echo "(no FAIL markers found)"
+            echo '```'
+            echo
+            echo '</details>'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Jest log
+        if: always() && steps.jest.conclusion != 'skipped'
+        uses: actions/upload-artifact@v4
+        with:
+          name: jest-log
+          path: jest.log
+          if-no-files-found: warn
 
   maestro-lint:
     name: Maestro flow structural lint
