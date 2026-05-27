@@ -897,20 +897,24 @@ describe('food domain coordinator (food_entries / custom_foods / saved_meals / r
 });
 
 // ---------------------------------------------------------------------------
-// T7, T8 — deferred to E2E
+// T7, T8 — live-cloud E2E
 // ---------------------------------------------------------------------------
+//
+// Implementation: src/lib/sync/__tests__/sync.e2e.liveCloud.test.js
+// runs the two-device propagation and offline-collision scenarios
+// against a throwaway Supabase test project, gated on
+// SUPABASE_TEST_* env vars (see supabase/README.md § Live-cloud
+// E2E test project). When the env vars are absent, that suite
+// registers a single visible skipped test so the gap stays
+// surfaced in CI output.
 
-describe('T7 + T8 — two-device propagation + offline collision', () => {
-  test.skip('T7 deferred: device A inserts, device B foregrounds within 60s → row appears',
-    () => { /* requires live Supabase test project, not available at v1 */ });
-
-  test.skip('T8 deferred: both devices insert offline, both reconnect → both rows present',
-    () => { /* same — requires real cloud round trip */ });
-
-  test('coverage gap is documented and tracked', () => {
-    // Lightweight assertion so the deferral is visible in test
-    // counts and the gap is searchable from CI output.
-    const deferred = ['T7-two-device', 'T8-offline-collision'];
-    expect(deferred).toHaveLength(2);
+describe('T7 + T8 — live-cloud E2E pointer', () => {
+  test('T7 and T8 live-cloud suite is checked in at sync.e2e.liveCloud.test.js', () => {
+    // Lightweight assertion so the cross-file pointer is searchable
+    // from CI output. The real assertions live in the e2e file.
+    const fs = require('fs');
+    const path = require('path');
+    const target = path.join(__dirname, 'sync.e2e.liveCloud.test.js');
+    expect(fs.existsSync(target)).toBe(true);
   });
 });

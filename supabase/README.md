@@ -385,3 +385,65 @@ The expected column set is hand-maintained inside the audit file;
 when you add a column to a sync handler, add a row to the
 matching VALUES section in the audit. CI does not catch this
 omission yet; tracked as a follow-up in CURRENT_STATUS § 8 LATER.
+
+## Live-cloud E2E test project
+
+`src/lib/sync/__tests__/sync.e2e.liveCloud.test.js` runs the T7
+(two-device propagation) and T8 (offline collision) scenarios
+from the sync regression matrix against a real Supabase project.
+It is opt-in: when the env vars below are absent, the suite
+registers a single skipped test that documents what's missing,
+so CI output keeps the gap visible.
+
+These tests must NEVER run against the production Supabase
+project. They insert + delete real rows in `weekly_checkins_v2`
+and would pollute production telemetry, RLS evaluation, and the
+founder's own data.
+
+### What the founder sets up once
+
+1. Create a separate Supabase project (free tier is fine).
+   Recommend a name like `volyume-e2e-test` so it cannot be
+   confused with production.
+2. Apply every migration in this folder (037 through 047 at
+   time of writing) to the test project in numeric order. The
+   verification queries in this README work against the test
+   project too.
+3. Create one test user account in the test project's
+   Authentication panel (Authentication -> Users -> Add user).
+   Example email: `e2e+volyume@example.com`. Use a long
+   randomly generated password. Disable email confirmation in
+   the project's Authentication settings, otherwise the test
+   sign-in will fail with `email not confirmed`.
+4. Save the four values as GitHub repo secrets (Settings ->
+   Secrets and variables -> Actions):
+     `SUPABASE_TEST_URL`            REST URL from project Settings
+     `SUPABASE_TEST_ANON_KEY`       anon key from project Settings
+     `SUPABASE_TEST_USER_EMAIL`     the test account email
+     `SUPABASE_TEST_USER_PASSWORD`  the test account password
+
+### What CI then does
+
+Once the secrets are in place, add them to the Build Android
+workflow's `env:` block so Jest sees them. The E2E suite picks
+them up and runs the two scenarios end-to-end on every CI run.
+Without the secrets, the suite remains a single skipped test
+and CI stays green.
+
+### Local development
+
+To run locally, export the four vars in your shell before
+`npx jest src/lib/sync/__tests__/sync.e2e.liveCloud.test.js`.
+Do NOT commit them to the repo or to `.env`.
+
+### Cleanup
+
+The suite tags every inserted row id with a per-run prefix
+(`e2e-<timestamp>-<random>-...`) and deletes them in `afterAll`.
+If a run crashes between insert and cleanup, the next clean run
+will not see the orphan rows (different prefix) but they are
+harmless: the test project is throwaway. To wipe everything
+manually:
+```sql
+DELETE FROM weekly_checkins_v2 WHERE id LIKE 'e2e-%';
+```
