@@ -1,20 +1,10 @@
-# Volyume — Feature Backlog
+# Volyume feature backlog
 
-Features listed here are explicitly deferred. None should be implemented without the user explicitly reopening the item and confirming scope.
+Features listed here are explicitly deferred or excluded. None should be implemented without the founder explicitly reopening the item and confirming scope.
 
-_Last updated: 2026-05-25 (evening). Recent additions in this beta-prep branch are noted in the section "Shipped in May 2026 beta-prep" near the bottom._
+_Last verified against code: 2026-05-27._ See `docs/CODE_TRUTH_SURVEY.md` for the line-level evidence behind every claim below.
 
-> **Note (2026-05-25): tier overrides applied.** The "food / meal
-> logging" hard exclusion below was reversed under the Volyume
-> Complete strategy (locked 2026-05-23) and ships as Move #1 + #1.5.
-> The three-tier ladder was then consolidated to a 2-tier model
-> (Free + Pro) per founder override 2026-05-25: Complete tier
-> removed, Peak Week module removed entirely ("needs a human eye,
-> not numbers"). Coach / client mode stays reversed under the
-> coach-handoff path (locked phase 2, now positioned at the Pro
-> tier rather than Complete since Complete no longer exists). See
-> `CURRENT_STATUS.md` section "Founder overrides locked 2026-05-25"
-> and `HANDOFF.md` section 2.
+> **Tier overrides apply.** The food / meal logging exclusion below was reversed under the Volyume Complete strategy (locked 2026-05-23) and ships as Move #1 + #1.5. The three-tier ladder was then consolidated to a 2-tier model (Free + Pro) per founder override 2026-05-25: Complete tier removed, Peak Week module removed entirely. Coach handoff stays a phase 2 workflow at Pro tier (was Complete). See `docs/CURRENT_STATUS.md` § "Locked founder overrides".
 
 ---
 
@@ -24,255 +14,170 @@ These are product decisions, not technical deferrals. Do not add them even if re
 
 | Feature | Reason excluded |
 |---|---|
-| ~~**Food / meal logging**~~ | **REVERSED 2026-05-23 under Volyume Complete strategy.** Food diary, barcode scanner, OCR write-back, custom foods, recipes, daily water + macro rollups all ship in Move #1 and Move #1.5. The original exclusion ("Volyume is a training logbook") no longer holds; the unlock condition was the FFM-aware safety floor that lets food data flow into the engine without harming at-risk users. See `MASTER_VISION_AND_PLAN.md`, `MOVE_1_FOOD_FOUNDATION_AND_FFM.md`, `FOOD_DATA_STRATEGY_LOCKED.md`. |
-| **Social feed / community** | Volyume is private by design. No public profiles, leaderboards, or activity feeds. |
-| **Gamification** | No XP, badges, achievements, or virtual rewards. Progress is real or it is nothing. **Carve-out (2026-05-22):** a single "week-streak" chip on the HomeScreen "This week" card was added to surface training consistency without ranking, levelling, or rewarding. If this drifts into stickers / XP / leaderboards, pull it back. |
-| **Wearable / Health API integration** | No Apple Watch, Garmin, or Fitbit integration. **Carve-out:** `src/lib/health.js` wraps HealthKit (iOS) + Health Connect (Android) for one-way reads of morning weight + step count, and for writing completed workouts to the platform Health app. This is opt-in, surfaced in Settings only. Heart rate, sleep, HRV remain out of scope. |
-| ~~**Coach / client mode**~~ | **REVERSED 2026-05-23 under the Volyume Complete strategy and re-positioned 2026-05-25 under the 2-tier override.** Coach handoff is a phase 2 workflow at the Pro tier (was Complete; Complete tier no longer exists). Coach pays, client gets Pro free. Schema groundwork (`engine_overrides`, `coach_id` columns) ships in Move #5; the coach-facing surface itself is phase 2. See `B2B_COACH_PHASE_2_SCOPED.md`. |
+| Social feed / community | Volyume is private by design. No public profiles, leaderboards, or activity feeds. |
+| Gamification | No XP, badges, achievements, or virtual rewards. Progress is real or it is nothing. **Carve-out:** a single "week-streak" chip on HomeScreen surfaces training consistency without ranking, levelling, or rewarding. If this drifts into stickers / XP / leaderboards, pull it back. |
+| Wearable / Health API integration | No Apple Watch, Garmin, or Fitbit. **Carve-out:** `src/lib/health.js` wraps HealthKit + Health Connect for one-way reads of morning weight + step count, and writes completed workouts to the platform Health app. Opt-in via Settings only. Heart rate, sleep, HRV remain out of scope. |
+| Peak Week module | Founder removed 2026-05-25: "peak week needs a human eye, not numbers." `peak_week_plans` table still exists in `database.js` as legacy (cleanup outstanding) but no UI surface and no engine logic computes peak-week prescriptions. |
+| AI / LLM-assisted plan generation | Coach Builder is deterministic by design (same inputs → same plan). LLM integration is explicitly excluded. If reconsidered, requires separate consent flow and clear labelling. |
+| RevenueCat | Founder switched to Google Play Billing direct 2026-05-25. iOS deferred to post-Android-launch so RevenueCat's cross-platform value is moot. `src/lib/payments/playBilling.js` keeps an abstraction so the underlying SDK can swap later. |
+| Complete tier + 28-day Complete→Pro cascade | Founder consolidated to 2-tier 2026-05-25. Schema retains `complete_*` trial states mapped to `pro` for migration-030 compat (`proGate.js:103-104`); UI never exposes them. |
 
 ---
 
-## Deferred — requires explicit instruction to reopen
+## Reversed (was excluded, now in scope)
+
+These were on the NEVER list and have since been re-opened. Recorded so the original exclusion doesn't quietly re-assert.
+
+| Feature | Status |
+|---|---|
+| Food / meal logging | **Shipped** as Move #1 + #1.5. Food diary, barcode scanner, OCR write-back, custom foods, recipes, daily water + macro rollups. Unlock condition was the FFM-aware safety floor in `nutritionEngine.js`. |
+| Coach / client mode | **Phase 2 workflow at Pro tier.** Schema groundwork (`engine_overrides`, `coach_id` columns) ships in Move #5. Coach-facing surface itself is phase 2. See `B2B_COACH_PHASE_2_SCOPED.md`. |
+
+---
+
+## Deferred (reopen with explicit instruction)
 
 ### Training
 
-| Feature | Notes |
+| Feature | Status |
 |---|---|
-| ~~**Lock-screen / Live Activity widget**~~ | **DONE** (managed-workflow approximation). Sticky/ongoing notification with exercise name + rest end time. True iOS Live Activities (Dynamic Island countdown) still requires native code — deferred. |
-| ~~**Plan-level exercise swap (permanent)**~~ | **DONE**. RoutineDetailScreen has a swap icon per exercise row; taps open a ranked substitute modal; confirmed via Alert; persists via `updateRoutineExerciseExercise` in database.js. |
-| ~~**Auto-generated deload weeks**~~ | **DONE**. `shouldDeload` algorithm now surfaces an amber recovery-week banner on HomeScreen, dismissable, links to CoachReview. |
-| ~~**Myo-rep / rest-pause set tracking UI**~~ | **DONE**. Both set types exposed in the set type picker with descriptions, cluster banner shows activation set + mini-set counter, and a "Cluster complete" button returns the user to straight working sets. |
-| ~~**Superset pairing**~~ | **DONE**. "Pair/Paired" button in ActiveWorkoutScreen assigns a `supersetGroupId` to current + next exercise. Auto-jumps between paired exercises on set complete; rest timer only fires after the second exercise in the pair. |
-| **Video / GIF execution demos** | No video hosting infrastructure planned. Execution notes are text-only. |
-| **RPE / RIR auto-suggest from fatigue trend** | Algorithm foundations exist. Live per-set suggestions based on rolling fatigue require more training-data validation. |
-| ~~**1RM-based percentage loading**~~ | **DONE**. Live estimated 1RM chip in SetEntry shows "Est. max ≈ Nkg" as the user enters weight × reps (limited to 1–15 reps where the estimate is reliable). |
+| Lock-screen / Live Activity widget | **Done** (managed-workflow approximation). Sticky/ongoing notification via `notifications/activeWorkout.js`. True iOS Live Activities still require native code: deferred. |
+| Plan-level exercise swap (permanent) | **Done.** `RoutineDetailScreen.js:209` calls `updateRoutineExerciseExercise`. Swap modal ranks substitutes via `swapEngine.rankSwaps`. |
+| Auto-generated deload weeks | **Done.** `algorithms.shouldDeload` surfaces an amber recovery-week banner on HomeScreen, links to CoachReview. |
+| Superset pairing | **Done.** `ActiveWorkoutScreen.js:186-212` assigns/clears `supersetGroupId`. Auto-jumps between paired exercises; rest timer fires after the second exercise in the pair. |
+| 1RM-based percentage loading | **Done** (live estimate). `algorithms.calculate1RM` used inline in `SetEntry.js`; e1RM chip renders when weight + reps are entered (1-15 reps range). |
+| Strength standards comparison | **Done.** `PRWallScreen.js` renders Beginner/Novice/Intermediate/Advanced/Elite via both `algorithms.getStrengthStandard` and `strengthStandards.getStrengthLevel`. **Known drift:** two parallel implementations of strength standards across `algorithms.js:695` and `strengthStandards.js:15`. Pick one before adding more lifts. |
+| Myo-rep / rest-pause set tracking UI | **NOT done.** Earlier doc claimed cluster banner + mini-set counter shipped. Code reality: `SET_TYPE_OPTIONS` in `ActiveWorkoutScreen.js:62` has only `straight` + `warmup`. Display labels recognise `myo_reps` / `rest_pause` for importer-written sets (line 57-58) and there's a `// Cluster counter` comment at line 165, but no state, no banner, no button. Per CLAUDE.md no-jargon rule, exposing technique names in a picker may not be the right design even if it ships. Decide design before re-opening. |
+| Video / GIF execution demos | Deferred. No video hosting infrastructure planned. Execution notes are text-only. |
+| RPE / RIR auto-suggest from fatigue trend | Deferred. Per-set RIR was built and deliberately removed (`SetEntry.js:173-176`). `DEFAULT_SET.rir = 2` still set internally so the engine works; user doesn't pick per-set. Re-opening this means re-opening the picker decision. |
+| Unilateral L/R logging | Deferred. No `leftReps` / `rightReps` schema, no UI. Worth shipping if you decide to. |
 
 ### Analytics & Progress
 
-| Feature | Notes |
+| Feature | Status |
 |---|---|
-| ~~**Muscle volume heatmap on body diagram**~~ | **DONE**. `BodyDiagramHeatmap` component renders stylised front+back anatomical SVG figures with muscle regions colour-coded by volume status. Tapping a region scrolls to that muscle's bar. |
-| ~~**Strength standards comparison**~~ | **DONE**. PRWall now shows Beginner/Novice/Intermediate/Advanced/Elite labels based on bodyweight ratios for the five core compound lifts. |
-| ~~**Session-to-session fatigue trend graph**~~ | **DONE**. `FatigueTrendCard` on HomeScreen renders an SVG bar chart of the last 6 sessions' fatigue levels (green/amber/red), with a coaching line based on the average of the last 2. Hidden until 2+ sessions have feedback. |
-| **Volume landmark auto-calibration** | MEV/MAV/MRV defaults from RP Hypertrophy are baked in. Per-user calibration from actual response data deferred. |
+| Muscle volume heatmap on body diagram | **Done.** `BodyDiagramHeatmap` component renders front + back anatomical SVG figures colour-coded by volume status. |
+| Session-to-session fatigue trend graph | **Done.** `FatigueTrendCard` on HomeScreen, SVG bar chart of last 6 sessions, coaching line based on last 2. Hidden until 2+ sessions have feedback. |
+| Body composition trend charts (BF%, measurements) | **NOT done.** `BodyMetricsScreen.js` ships a weight trend chart only. BF% + measurement-over-time charts absent. Pro-tier promise per `MASTER_VISION_AND_PLAN.md §8`. |
+| Adherence-neutral macro rings | **NOT done.** `MacroRings.js:61-75, 104-125` turns rings + numbers `colors.warning` when value > target. If the brief is "no red over target", current code doesn't satisfy it. |
+| Volume landmark auto-calibration | Deferred. MEV/MAV/MRV defaults from RP Hypertrophy are in `algorithms.VOLUME_LANDMARKS`. `computeAdaptiveLandmarks` exists in `algorithms.js:857` but isn't widely consumed. Per-user calibration requires the response-data pipeline. |
 
 ### Plans & Coach Builder
 
-| Feature | Notes |
+| Feature | Status |
 |---|---|
-| **Contest prep gating (beyond basic)** | `contest_prep` phase is gated with a warning and volume reduction. Full contest-prep mode (peak week, water/sodium, carb-load scheduling) is deferred and requires specialist review. |
-| **Plan sharing / export** | Plans are stored locally (SQLite). Sharing a plan as a file or URL requires a serialisation format and backend. |
-| ~~**Coach Builder v2 — periodisation**~~ | **DONE**. `buildWeeklyPlan` wraps the week-1 template into a full multi-week progressive plan (MEV → ramp → deload at 60%). CoachBuilderScreen shows a Foundation/Building/Peak/Deload week chip row; tapping a chip shows that week's sessions with adjusted set counts. |
-| **AI / LLM-assisted plan generation** | Coach Builder is deterministic by design (same inputs → same plan). LLM integration is explicitly excluded from the current product. If reconsidered, requires separate consent flow and clear labelling. |
+| Coach Builder v2 periodisation | **Done.** `planEngine.buildWeeklyPlan` wraps the week-1 template into a multi-week progressive plan. Foundation/Building/Peak/Deload labelling at `planEngine.js:856-872`. |
+| Contest prep gating (beyond basic) | Partial. `contest_prep` phase is gated with a warning + volume reduction in `nutritionEngine`. Full contest-prep mode (peak week, water/sodium, carb-load scheduling) explicitly excluded per the Peak Week NEVER row. |
+| Plan sharing / export | Deferred. Plans are local SQLite. Sharing as file or URL requires a serialisation format. |
 
 ### Nutrition
 
-| Feature | Notes |
+| Feature | Status |
 |---|---|
-| ~~**Nutrition target sync with plan phase**~~ | **DONE**. HomeScreen shows an amber banner when stored nutrition targets belong to a different phase than the current training plan. Dismissible; re-appears when phase changes. |
-| ~~**Diet break trigger (MATADOR)**~~ | **DONE**. `shouldSuggestDietBreak` fires at 8+ weeks in deficit (tracked via `goalStartDate` on the user profile), surfaces as a calm card in CoachOutput. Scheduled refeeds (weekly) deferred. |
-| **Macro timing recommendations** | Pre/intra/post-workout nutrition split is outside current scope. |
+| Recipe builder UI | **Done 2026-05-27** (commit `61636ee`). `MyRecipesScreen` + `RecipeBuilderScreen`. Ingredients picked via `FoodSearchScreen` in `pickMode:'recipe'`. CRUD via `food/db.js:429-553`. |
+| Food preferences (dislike / exclude list) | **Done 2026-05-27.** `food_favourites.kind` column carries both fav and dislike. Helpers: `setFoodPreference`, `cycleFoodPreference`, `getFoodPreference`, `getDislikes`, plus a `toggleFavourite` back-compat shim. Long-press in `FoodSearchScreen` cycles `none → fav → dislike → none`. **Pending:** migration 048 founder apply. |
+| Saved meals UI (meal templates) | **NOT done.** `saved_meals` table + `applySavedMealFromCloud` + `getAllSavedMealsSince` helpers exist in `food/db.js`. No screen to create / edit / pick a template. Spec'd in `UI_FLOWS_LOCKED.md` "My Meals". |
+| Nutrition target sync with plan phase | **Done.** Amber banner on `HomeScreen.js:760-779` when stored nutrition targets belong to a different phase than the current plan. Dismissible per-phase via `@volyume_phase_banner_dismissed_v1`. |
+| Diet break trigger (MATADOR) | **Done.** `nutritionEngine.shouldSuggestDietBreak` fires at 8+ weeks in deficit (anchored to `goalStartDate`), surfaces in CoachOutput. Scheduled refeeds (weekly) deferred. |
+| Refeed automation | Deferred. Engine math exists in `nutritionEngine.getPlanNutritionContext` (lines 671-834) but **the function is never called from any screen**. Re-opening means wiring it into `weeklyCoach` AND deciding whether the coach prescribes refeed days or the user toggles them. Per founder direction, diet changes are coach-driven not user-clicked. |
+| High-day / low-day macro shift | **Not in code at all.** No `trainingDayKcal` / `restDayKcal` / carb-cycle implementation anywhere in `src/`. If you decide to ship this, it lives in the precision coach, not as a user setting. |
+| Macro timing recommendations (pre/intra/post) | Deferred. Outside current scope. |
 
 ### Infrastructure
 
-| Feature | Notes |
+| Feature | Status |
 |---|---|
-| ~~**Supabase cloud sync**~~ | **DONE.** Local SQLite remains the single source of truth on-device; cloud sync runs in both directions (bulkUploadLocalData + pullFromCloud) via `src/lib/sync.js` + `src/lib/syncQueue.js`. Per-op retry with exponential backoff. Foreground/background AppState listener in App.js fires `maybeSync` at 60s minimum interval. |
-| **Multi-device / web app** | Cross-device sync ships above; web app stays deferred to never at v1 per `MASTER_VISION_AND_PLAN.md`. |
-| **Cloud infrastructure migration (Azure/AWS)** | Founder override 2026-05-25: deferred until app is stable in production. Supabase + Sentry stack stays for v1 launch. |
-| ~~**Push notifications**~~ | **DONE** (local notifications). Rest timer fires a sticky/ongoing notification with the exercise name and end time, plus an end-of-rest alert with sound. Remote push (server-driven) still deferred. |
-| ~~**Data export (CSV / JSON)**~~ | **DONE**. Settings → Export → writes a CSV of workout history via `expo-file-system` + `expo-sharing`. Full JSON backup/restore also implemented. |
-| ~~**EAS Update (OTA)**~~ | **DONE**. App checks for updates on launch (production builds only) and prompts "Restart now" / "Later" via Alert when an update is downloaded. |
+| Supabase cloud sync | **Done.** Two layers coexist: top-level `lib/sync.js` (1,640 lines, monolithic) is still consumed by some screens; modular `lib/sync/` (16 files including 10 per-table handlers) is the spec'd target per `SYNC_ARCHITECTURE_LOCKED.md`. All 16 registry tables now drive through the new path via `sync/runner.syncAll`. Resolving the coexistence is on the punch list. |
+| Push notifications (local) | **Done.** Rest timer sticky notification + end-of-rest alert + sound. Remote push (server-driven) still deferred. |
+| Notification surfaces still pending | **NOT done.** Per `notifications/index.js:17-22`: cascade gate (day 19, 21) push, subscription payment failure, weekly coach output ready. Spec'd in `categories.js`, schedulers not written. |
+| Data export (CSV / JSON) | **Done.** Settings → Export writes CSV via `dataBackup.exportBackup` + `expo-sharing`. JSON backup/restore included. |
+| EAS Update (OTA) | **Done.** App checks for updates on launch (production builds only) via `expo-updates` in SettingsScreen. |
+| Multi-device / web app | Cross-device sync ships; web app stays deferred to never at v1 per `MASTER_VISION_AND_PLAN.md`. |
+| Cloud infrastructure migration (Azure/AWS) | Deferred until app stable in production. Supabase + Sentry stay for v1 launch. |
+| Resolve known drift in core libs | **NOT done.** `computeEWMA` duplicated across `nutritionEngine.js:151` and `weeklyCoach.js:23` with different signatures; `STRENGTH_STANDARDS` duplicated; `detectRepRegressions` duplicated. Two telemetry modules coexist. See `CURRENT_STATUS § 5` for the full list. Functional today, real maintenance trap. |
 
 ---
 
 ## Copy & UX rules (always in effect, not deferrable)
 
-- UK English throughout. Metric units (kg, cm, kcal, g). No imperial defaults.
+- British English throughout. Metric units (kg, cm, kcal, g). No imperial defaults.
 - "Plans" not "Programmes". "Session" for completed logs. "Workout Template" for saved standalone workouts.
 - Never use: "AI Builder", "perfect", "guaranteed", "beast mode", "crush", "shred", "hacks".
 - Coach Builder is deterministic, rules-based. Never describe it as AI or machine learning.
-- Do not hardcode hex colours. Use theme tokens only.
-- Do not hardcode pixel values. Use spacing tokens only.
+- No hardcoded hex colours. Use theme tokens only. **Outstanding lapses:** `Article9ConsentScreen.js:151,262`, `CoachOutputScreen.js:1391`, `NutritionTargetsScreen.js:906`. `ShareCardScreen.js` excluded (intentional HTML template).
+- No hardcoded pixel values. Use spacing tokens.
 - Explicit GDPR consent checkbox (not pre-ticked) before storing any nutrition or body composition data.
+- No em dashes in user-facing copy. Use a comma, a full stop, or a colon.
+- No AI tells, hedging clusters, or fitness-jargon creep. Full list in `CLAUDE.md`.
 
 ---
 
-## Shipped in May 2026 beta-prep
-
-These items were either backlog candidates or polish-pass additions. They are
-in main now; listing here so they don't get re-proposed.
-
-- **Plate calculator surfaced.** The `PlateCalculator` component existed but
-  was never reachable from a UI surface. Added a "Plates" pill next to the
-  Weight label inside SetEntry that opens the calculator pre-filled with the
-  current weight.
-- **Live e1RM in SetEntry.** Shows "e1RM 102kg" inline next to the Reps label
-  the moment weight + reps are both entered.
-- **Repeat-last quick chip.** One-tap copy of the most recent logged set's
-  weight + reps. Auto-hides when the current entry already matches.
-- **Stalled-progress nudge.** On the first working set of an exercise, if the
-  user has done the same heaviest weight × reps for the last 3 sessions, show
-  a coaching nudge ("Try N+2.5kg × R-1, or stick at N for R+1").
-- **Week-streak chip** on the Train tab's "This week" card (consecutive
-  Mon-start weeks with ≥1 completed workout). See carve-out note above.
-- **Mesocycle context chip** on the workout card showing "Week 3 of 6 · RIR 1"
-  or "Deload week · pull effort back". Surfaces Volyume's coaching identity
-  before every session start.
-- **BETA badge** in Settings → About.
-- **Tester build identifier share** — tap the version in Settings to copy
-  `Volyume v1.1.0 (android 2, release)` to a share sheet for bug reports.
-- **HealthKit / Health Connect.** Settings → Health surfaces opt-in toggles
-  for reading weight + writing workouts to the platform Health app.
-  (See carve-out under "NEVER implement" above — limited scope.)
-- **Discard workout cleanup.** Discarding now hard-deletes the incomplete
-  workout row + its sets so SQLite stops accumulating orphan rows.
-- **Finish workout double-tap guard.** Mashing the Finish button can no
-  longer fire two concurrent finish chains.
-- **Auto warm-up suggestion removed.** Users mark warm-ups via the existing
-  Set type picker. Sheet + handler + ~200 lines of orphan code deleted.
-
-## Must-fix design debt (blocks further work)
-
-Open items at end of 2026-05-25 (late evening) session:
+## Must-fix design debt (open items)
 
 | Item | Status | Owner | Next step |
 |---|---|---|---|
-| Migrations 037, 038, 039, 040, 041 apply | All pending Dashboard run. 037 = app lifecycle telemetry; 038 = payments/cascade telemetry; 039 = `account_deletions_log` audit table + RPCs; 040 = notification telemetry (`_sent` / `_tapped` / `_failed`); 041 = `article9_consent_withdrawn` (paired with the new Settings → Privacy section). All five are additive, all backwards-compatible with the existing closed-test build. | Founder | Paste each in order into Supabase Dashboard → SQL Editor → Run. |
-| Delete Account end-to-end re-test | Edge Function now writes pre/post audit rows to `account_deletions_log` via service-role RPCs (mig 039). Whole flow has not been tested on device since the bracket was added. | Founder | Sign into a test account, tap Delete Account, verify a row lands in `account_deletions_log` with `completed_at` set. If `completed_at` is null after a few minutes, the `auth.admin.deleteUser` leg failed silently. |
-| Withdraw-consent end-to-end test | New Settings → Privacy section ships in next APK. Calls `record_health_consent(false)` → appends to `consent_log` → flips `users_profile.health_data_consent` → fires `article9_consent_withdrawn` (mig 041 must be applied first). | Founder | After applying mig 041 + sideloading the next APK: Settings → Privacy → Withdraw → confirm. Verify a new row in `consent_log` with `granted = false` and an `article9_consent_withdrawn` row in `engine_telemetry`. |
-| Deploy play-billing-rtdn Edge Function | Edge Function code shipped at `supabase/functions/play-billing-rtdn/index.ts` but not deployed. | Founder | Deploy + configure Pub/Sub topic + service account env vars when ready for Phase A exit sandbox purchase. |
-| Generate Android upload keystore | No keystore exists. `build-android.yml` has signing config that's never been exercised in production. Blocks any new AAB replacing the Closed Testing build. | Founder + Claude | Claude writes the commands when founder is ready for Phase A exit prep. |
-| ~~`public/privacy.html` deploy to volyume.app~~ | **Auto-deployed.** `deploy-pages.yml` ships `public/` to GitHub Pages on every push. Live at `https://allansdouglas1983-cmyk.github.io/ADPhysique/privacy.html` with the new favicon. Only outstanding piece: optional DNS CNAME from `volyume.app/privacy` to the GH Pages URL. | Founder (DNS only) | Add CNAME at the DNS provider when volyume.app is wired up; Claude can then add a `public/CNAME` file. |
-| Maestro CI smoke bundle green | Iteration commits visible in `.ci-status/maestro-latest.md`. Last known failure (run #6): JetifyTransform OOM despite gradle heap bumps. Run #9 still pending writeback at session end. Not blocking any visible APK work. | Claude (next session) | Read latest `.ci-status/maestro-latest.md`, fix the next failure, push, repeat. Pull-rebase + retry pattern is in place so concurrent pushes no longer race-fail. |
+| Apply migration 048 (`food_favourites.kind`) | Pending | Founder | Paste `supabase/migrate_048_food_preferences_kind.sql` in Supabase Dashboard → SQL Editor. Verification query in `supabase/README.md`. |
+| Delete Account end-to-end re-test | Edge Function writes pre/post audit rows to `account_deletions_log`. Flow has not been device-tested since the bracket was added. | Founder | Sign into a test account, tap Delete Account, verify a row lands in `account_deletions_log` with `completed_at` set. |
+| Deploy `play-billing-rtdn` Edge Function | Code shipped at `supabase/functions/play-billing-rtdn/index.ts`, not deployed. | Founder | Deploy + configure Pub/Sub topic + service account when ready for Phase A exit sandbox purchase. |
+| Generate Android upload keystore | No keystore exists. `build-android.yml` signing config never exercised in production. Blocks any new AAB replacing the Closed Testing build. | Founder + Claude | Claude writes the commands when founder is ready for Phase A exit prep. |
+| Maestro CI smoke bundle green | Iteration commits in `.ci-status/maestro-latest.md`. F4 (emulator boot diagnosis) still open. Not blocking visible APK work. | Claude | Read latest `.ci-status/maestro-latest.md`, fix next failure, push, repeat. |
+| `peak_week_plans` table cleanup | Table remains in `database.js` despite Peak Week being out of scope. Legacy. | Claude | Migration to drop the table when convenient; verify no live references first. |
 
-The identity + data ownership refactor (the one item that lived
-here as design debt) shipped on 2026-05-24 in migrations 018, 020,
-021 and 024 (composite PKs), code commits `be8e1cc` + `1304a4f` +
-`6caf5e2` + `d80813a` (sign-out wipe, custom_exercises split, food
-composite-PK sync, old-client triggers).
+---
 
-## Shipped in May 2026 -- 2026-05-25 (late evening) round
+## Recently shipped (historical context, do not re-propose)
 
-- **Notifications module split** per `NOTIFICATIONS_LOCKED.md`.
-  `src/lib/notifications/` with 7 modules (categories, quietHours,
-  permissions, handler, scheduler, telemetry, index). Quiet-hours
-  (22:00 → 07:00, wrap-aware, AsyncStorage-persisted). Migration
-  040 wires `notification_sent` / `_tapped` / `_failed` telemetry.
-  21 new tests; existing imports unchanged.
-- **Maestro E2E scaffold** per `TESTING_STRATEGY_LOCKED.md` lines
-  114-141. `e2e/` with all 12 spec'd flows + smoke flow + Jest-
-  wired structural linter + opt-in CI workflow with status
-  writeback to `.ci-status/maestro-latest.md`. 4 flows tagged
-  `blocked` until IAP-sandbox / fixture-deep-link hooks land. CI
-  iteration ongoing (smoke not yet green).
-- **`audit()` helper + 22 user-action breadcrumbs**. Shorthand
-  over `track.userAction` in `src/lib/observability.js`. Wired
-  across workout (set logged, exercise next, start, finish), food
-  (search submit, add, delete, barcode scan / resolved, custom
-  create), auth (sign in / sign up / sign out, email + OAuth),
-  privacy (consent continue / withdraw, account delete tap /
-  confirm), and payments (paywall upgrade / dismiss, cascade pay /
-  skip, subscription restore / upgrade). PII scrub still applies
-  via the existing `redactPII` layer.
-- **Skeleton loaders on 5 more screens**: CoachReview,
-  WeeklyCheckIn, CoachHeldHistory, BlockReflection, CoachOutput.
-  Brings total coverage to 8 screens. Replaces full-screen
-  spinners with structured placeholders.
-- **Web favicon + privacy auto-deploy**. `<link rel="icon">` +
-  apple-touch-icon + theme-color in both `public/*.html` files.
-  `public/favicon.png` copied so GH Pages serves it. Privacy page
-  live at the GH Pages URL with proper branding.
-- **Privacy management UI in Settings**. New Privacy section,
-  health-data-consent row, destructive-confirm withdrawal flow,
-  cloud RPC call, local mirror update, telemetry fire. Migration
-  041 wires the `article9_consent_withdrawn` event.
-- **Cyber-security review** via `/security-review` skill across
-  the branch diff: no high-confidence vulnerabilities.
+**2026-05-27**
 
-## Shipped in May 2026 -- 2026-05-24 round
+- Migration 047 (`body_metrics` + `weekly_checkins_v2` updated_at/deleted_at + triggers + partial live index).
+- Notifications listener consolidation: extracted to `notifications/listeners.js` from `RootNavigator.js`.
+- Cloud schema drift audit at `supabase/audit_cloud_schema_drift.sql`.
+- `--forceExit` removed from main CI (real cause was two leaked setTimeouts in HomeScreen's useEffect).
+- Privacy URL path corrected (`public/privacy/index.html` for the clean `/privacy` route).
+- CI diagnostic safety net (Jest log tee'd to artefact + step summary + PR comment).
+- Live-cloud T7/T8 E2E suite deleted as out of scope.
+- Food preferences (kind column) end-to-end.
+- Recipe builder UI (`MyRecipesScreen` + `RecipeBuilderScreen`).
 
-Late-May ship covering the Volyume Complete food layer end-to-end, the
-harm-prevention safety check, the first slice of cascade telemetry,
-Move #1.5 barcode + OCR, Article 9 health-data consent, and the
-identity + data ownership refactor. Detail in HANDOFF.md.
+**2026-05-26**
 
-- **Move #1 food foundation + FFM floor.** SHIPPED FULL including
-  polish: MacroRings (Skia), FoodDetailSheet bottom sheet,
-  tap-to-edit on diary entries, FoodSearch / Insights / CSV export.
-- **Move #1.5 barcode + OCR.** SHIPPED FULL across three phases.
-  Phase 1 added live OFF + USDA waterfall sources. Phase 2 added the
-  camera barcode scan screen + Diary scan FAB. Phase 3 added OCR
-  (vision-camera + MLKit), the OFF write-back queue, and barcode
-  persistence on `custom_foods`. Migrations 022 (telemetry events)
-  + 023 (custom_foods.barcode_ean). Bundled OFF snapshot + CoFID
-  remain deferred per `FOOD_DATA_STRATEGY_LOCKED.md`.
-- **Move #2 ED-pattern detection.** SHIPPED FULL. Multi-signal
-  detector with 4 signals + 2/3 threshold on goal_lock_advanced.
-  Locked verbatim copy in HeldDecisionsCard with Get-support and
-  Read-more CTAs. GoalLockConsentScreen reachable from AthleteHub.
-- **Article 9 health-data consent (Move #2 deferral).** SHIPPED.
-  Onboarding screen 3 per `ONBOARDING_SEQUENCE_LOCKED.md`,
-  `Article9ConsentScreen.js`, migration 019 (consent_log table +
-  users_profile columns + record_health_consent RPC). Cloud-failure
-  resilient: local AsyncStorage flag gates progression, cloud
-  reconciles when reachable.
-- **Move #3 cascade telemetry slice.** SHIPPED. Local-first
-  event log, allow-listed event taxonomy, debounced push, sign-in
-  drain. Hooks: tier_changed, ed_pattern_flag_fired/_cleared,
-  goal_lock_set/_cleared.
-- **Move #3 upward gate compression.** SHIPPED. Rapid-loss safety
-  condition (weekly loss <= -1.5% AND energy_score <= 2 on a cut)
-  bypasses the standard two-week cooldown and consecutiveOff-
-  TargetWeeks gate; magnitude scales with severity (base +125,
-  +150 per additional 1.0% past -1.5%, capped at +300). Upward-only
-  by design -- bulks do not get the same compression on the
-  downward side. Structured RapidLossCorrectedBlock renders the
-  held-decision; `rapid_loss_compression_triggered` event added to
-  the telemetry allow-list (migration 027). 15 new tests +
-  2 long-standing weeklyCoach.test.js failures fixed; suite green
-  at 1086/0.
-- **Identity + data ownership refactor.** SHIPPED in migrations 018
-  + 020 + 021 + 024 and code commit `be8e1cc`. Composite `(user_id,
-  id)` PKs on every user-scoped table, sign-out wipe, no anonymous
-  mode, `custom_exercises` split out of the mixed-ownership
-  `exercises` table, `food_sync_push` updated to composite-conflict
-  pattern, old-client safety triggers on child tables, CI grep
-  blocking `SET user_id` in src/.
-- **WelcomeScreen disqualifier (Claude draft).** "Who Volyume is
-  for" block above the tier cards, founder to edit.
-- **Plans archive system.** Auto-archive other plans on goal-reroll;
-  collapsible "Archived plans · N" section with Restore action.
-- **17 founder-reported QA fixes from the device testing pass on
-  2026-05-24.** Logged in KNOWN_ISSUES_FROM_QA.md.
-- **Sign-out wipes the device fully** (`7c0dce8`). No carve-outs:
-  per founder direction the device should leave nothing of the
-  signed-out user behind. Same hammer as delete-account on the
-  device side. AsyncStorage.clear() + SQLite wipe + SecureStore
-  token wipe.
-- **`delete_user_data` RPC completeness** (migration 025). The
-  RPC was last touched in migration 008 and only wiped ten
-  legacy tables; every table added since (food, engine, identity,
-  consent, custom_exercises etc) was orphaned by every delete
-  attempt, which is what kept the auth admin delete from
-  finishing. 025 enumerates every user-scoped table. Applied;
-  end-to-end retest still pending.
-- **Tab leaf bottom inset double-counted** (`75ed020`). The tab
-  bar already pads its own bottom by `insets.bottom`; the four
-  tab leaves (`HomeScreen`, `PlansScreen`, `AthleteHubScreen`,
-  `AnalyticsScreen`) were also asking SafeAreaView for the
-  `bottom` edge. Removed. DiaryScreen already did it right.
-- **FoodLayerIntro onboarding screen removed** (`a54df93`). It
-  was a marketing-style "try it now / set up later" intro that
-  landed both paths in the same place. The Diary tab is the
-  real entry point.
-- **`syncExercises` only pushes customs to `custom_exercises`**
-  (`c49e596`). Until this commit, the sync layer bulk-pushed
-  every local exercise (450+ library rows) to cloud `exercises`
-  with `user_id` stamped, which hit the canonical library rows'
-  RLS USING clause (existing `user_id` IS NULL) and fired
-  `42501` warns per chunk on every sync cycle. The post-020
-  design is `exercises` = library, `custom_exercises` = per-user;
-  the sync push didn't catch up at the time. Needs APK install
-  to take effect.
+- All 16 SYNC_REGISTRY tables on per-table transport. ~580 lines removed from legacy `sync.js`.
+- Food components extracted (`MealSection`, `EntryRow`, `FoodRow`) into `src/components/food/`.
+- CI trigger gap fixed (removed workflow's outbound git push that was blocking webhook delivery).
+- Migrations 045 (`column_updates_at` jsonb) + 046 (`recipe_ingredients.updated_at + deleted_at`) applied.
 
+**2026-05-25 (late evening)**
+
+- Notifications module split per `NOTIFICATIONS_LOCKED.md`. Today the directory has 12 files (`activeWorkout`, `categories`, `channels`, `handler`, `index`, `listeners`, `permissions`, `preferences`, `quietHours`, `scheduler`, `telemetry`, `trainingReminders`).
+- Maestro E2E scaffold with all 12 spec'd flows + smoke + structural linter.
+- `audit()` helper + 22 user-action breadcrumbs in `observability.js`.
+- Skeleton loaders on 5 more screens.
+- Web favicon + privacy auto-deploy.
+- Privacy management UI in Settings (withdrawal flow + `record_health_consent(false)` RPC).
+
+**2026-05-24**
+
+- Move #1 food foundation + FFM floor.
+- Move #1.5 barcode + OCR (vision-camera + MLKit + OFF write-back queue + migrations 022/023).
+- Move #2 ED-pattern detection + Article 9 health-data consent + migration 019.
+- Move #3 cascade telemetry slice + upward gate compression.
+- Identity + data ownership refactor (composite (user_id, id) PKs, sign-out wipe, `custom_exercises` split).
+- WelcomeScreen disqualifier ("Who Volyume is for" block).
+- Plans archive system (auto-archive on goal-reroll).
+- 17 founder-reported QA fixes (logged in `KNOWN_ISSUES_FROM_QA.md`).
+- `delete_user_data` RPC completeness (migration 025).
+
+**Earlier beta-prep polish (still in main)**
+
+- PlateCalculator surfaced from SetEntry "Plates" pill.
+- Live e1RM in SetEntry.
+- Repeat-last quick chip.
+- Stalled-progress nudge.
+- Week-streak chip on Train tab (carve-out, not gamification).
+- Mesocycle context chip on workout card.
+- BETA badge in Settings → About.
+- Tester build identifier share.
+- HealthKit / Health Connect (opt-in, limited scope).
+- Discard workout hard-delete cleanup.
+- Finish workout double-tap guard.
+- Auto warm-up suggestion removed.
