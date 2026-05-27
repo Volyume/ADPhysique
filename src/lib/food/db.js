@@ -410,6 +410,221 @@ export async function getWater(userId, entryDate) {
   return row?.ml ?? 0;
 }
 
+// ─── recipes (CRUD) ──────────────────────────────────────────────────────
+//
+// A recipe is the user's own composed food: name + total servings +
+// notes + an ordered list of ingredients (food_ref + quantity_g).
+// Schema lives in `recipes` + `recipe_ingredients`; both tables have
+// soft-delete tombstones (deleted_at) so the cloud sees deletions
+// after sync.
+//
+// computeRecipeMacros() sums the resolved ingredients' macros and
+// returns both the total and the per-serving figures so the UI can
+// render both numbers without redoing the math.
+
+/**
+ * Insert a new recipe. Returns the new id so the caller can navigate
+ * straight into the builder for that recipe.
+ */
+export async function createRecipe(userId, { name, totalServings, notes = null }) {
+  if (!name || !name.trim()) {
+    throw new Error('createRecipe: name is required');
+  }
+  const servings = Number(totalServings);
+  if (!Number.isFinite(servings) || servings <= 0) {
+    throw new Error('createRecipe: totalServings must be > 0');
+  }
+  const d = await db();
+  const id = uid();
+  const now = Date.now();
+  await d.runAsync(
+    `INSERT INTO recipes
+       (id, user_id, name, total_servings, notes, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [id, userId, name.trim(), servings, notes, now, now]
+  );
+  _scheduleSync();
+  return id;
+}
+
+/**
+ * Patch a recipe in place. Fields not present in `patch` are left
+ * untouched. Always bumps `updated_at` so sync picks it up.
+ */
+export async function updateRecipe(userId, recipeId, patch = {}) {
+  const d = await db();
+  const now = Date.now();
+  const fields = [];
+  const params = [];
+  if (patch.name !== undefined) {
+    if (!patch.name || !patch.name.trim()) {
+      throw new Error('updateRecipe: name cannot be blank');
+    }
+    fields.push('name = ?');
+    params.push(patch.name.trim());
+  }
+  if (patch.totalServings !== undefined) {
+    const servings = Number(patch.totalServings);
+    if (!Number.isFinite(servings) || servings <= 0) {
+      throw new Error('updateRecipe: totalServings must be > 0');
+    }
+    fields.push('total_servings = ?');
+    params.push(servings);
+  }
+  if (patch.notes !== undefined) {
+    fields.push('notes = ?');
+    params.push(patch.notes ?? null);
+  }
+  if (!fields.length) return;
+  fields.push('updated_at = ?');
+  params.push(now, recipeId, userId);
+  await d.runAsync(
+    `UPDATE recipes
+     SET ${fields.join(', ')}
+     WHERE id = ? AND user_id = ? AND deleted_at IS NULL`,
+    params
+  );
+  _scheduleSync();
+}
+
+/**
+ * Soft-delete a recipe and tombstone every ingredient under it.
+ */
+export async function deleteRecipe(userId, recipeId) {
+  const d = await db();
+  const now = Date.now();
+  await d.runAsync(
+    `UPDATE recipes
+     SET deleted_at = ?, updated_at = ?
+     WHERE id = ? AND user_id = ?`,
+    [now, now, recipeId, userId]
+  );
+  await d.runAsync(
+    `UPDATE recipe_ingredients
+     SET deleted_at = ?, updated_at = ?
+     WHERE recipe_id = ? AND user_id = ? AND deleted_at IS NULL`,
+    [now, now, recipeId, userId]
+  );
+  _scheduleSync();
+}
+
+/**
+ * Active recipes (not tombstoned), newest-touched first.
+ */
+export async function listRecipes(userId) {
+  const d = await db();
+  return d.getAllAsync(
+    `SELECT id, name, total_servings, notes, created_at, updated_at
+     FROM recipes
+     WHERE user_id = ? AND deleted_at IS NULL
+     ORDER BY updated_at DESC`,
+    [userId]
+  );
+}
+
+/**
+ * Recipe header + ingredients in order. Returns null when the recipe
+ * doesn't exist or has been deleted.
+ */
+export async function getRecipeWithIngredients(userId, recipeId) {
+  const d = await db();
+  const recipe = await d.getFirstAsync(
+    `SELECT id, user_id, name, total_servings, notes, created_at, updated_at
+     FROM recipes
+     WHERE id = ? AND user_id = ? AND deleted_at IS NULL`,
+    [recipeId, userId]
+  );
+  if (!recipe) return null;
+  const ingredients = await d.getAllAsync(
+    `SELECT id, food_ref, quantity_g, order_index
+     FROM recipe_ingredients
+     WHERE recipe_id = ? AND user_id = ? AND deleted_at IS NULL
+     ORDER BY order_index ASC, created_at ASC`,
+    [recipeId, userId]
+  );
+  return { ...recipe, ingredients };
+}
+
+/**
+ * Replace a recipe's ingredient list. Caller passes the new full
+ * ordered set; helper tombstones the existing rows and writes the
+ * new ones. Atomic via withTransactionAsync.
+ *
+ * Each ingredient: { food_ref, quantity_g, id? }
+ * - id missing → new row, fresh uuid
+ * - id present → reuse it so any in-flight sync row identity holds
+ */
+export async function setRecipeIngredients(userId, recipeId, newIngredients) {
+  if (!Array.isArray(newIngredients)) {
+    throw new Error('setRecipeIngredients: newIngredients must be an array');
+  }
+  const d = await db();
+  const now = Date.now();
+  await d.withTransactionAsync(async () => {
+    await d.runAsync(
+      `UPDATE recipe_ingredients
+       SET deleted_at = ?, updated_at = ?
+       WHERE recipe_id = ? AND user_id = ? AND deleted_at IS NULL`,
+      [now, now, recipeId, userId]
+    );
+    for (let i = 0; i < newIngredients.length; i++) {
+      const ing = newIngredients[i];
+      const id = ing.id || uid();
+      const q = Number(ing.quantity_g);
+      if (!ing.food_ref || !Number.isFinite(q) || q <= 0) continue;
+      await d.runAsync(
+        `INSERT OR REPLACE INTO recipe_ingredients
+           (id, recipe_id, user_id, food_ref, quantity_g, order_index,
+            created_at, updated_at, deleted_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
+        [id, recipeId, userId, ing.food_ref, q, i, ing.created_at ?? now, now]
+      );
+    }
+    await d.runAsync(
+      `UPDATE recipes SET updated_at = ? WHERE id = ? AND user_id = ?`,
+      [now, recipeId, userId]
+    );
+  });
+  _scheduleSync();
+}
+
+/**
+ * Compute macros for the recipe as a whole and per-serving.
+ * `resolvedIngredients`: [{ food: <food row with kcal_100g etc>, quantity_g }]
+ * Returns { total: {kcal, protein, carbs, fat, fibre}, perServing: {...} }
+ */
+export function computeRecipeMacros(resolvedIngredients, totalServings) {
+  let kcal = 0, protein = 0, carbs = 0, fat = 0, fibre = 0;
+  for (const item of resolvedIngredients || []) {
+    if (!item || !item.food) continue;
+    const factor = Number(item.quantity_g) / 100;
+    if (!Number.isFinite(factor) || factor < 0) continue;
+    kcal += (item.food.kcal_100g ?? 0) * factor;
+    protein += (item.food.protein_100g ?? 0) * factor;
+    carbs += (item.food.carbs_100g ?? 0) * factor;
+    fat += (item.food.fat_100g ?? 0) * factor;
+    fibre += (item.food.fibre_100g ?? 0) * factor;
+  }
+  const servings = Math.max(Number(totalServings) || 1, 0.01);
+  const round1 = (n) => Math.round(n * 10) / 10;
+  return {
+    total: {
+      kcal: Math.round(kcal),
+      protein: round1(protein),
+      carbs: round1(carbs),
+      fat: round1(fat),
+      fibre: round1(fibre),
+    },
+    perServing: {
+      kcal: Math.round(kcal / servings),
+      protein: round1(protein / servings),
+      carbs: round1(carbs / servings),
+      fat: round1(fat / servings),
+      fibre: round1(fibre / servings),
+    },
+  };
+}
+
 // ─── Sync row fetchers ───────────────────────────────────────────────────
 // Each returns every row touched since `sinceMs` (inclusive), including
 // soft-deleted rows so the cloud receives tombstones. Pure SQL reads.

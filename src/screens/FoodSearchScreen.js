@@ -150,6 +150,21 @@ export default function FoodSearchScreen({ navigation, route }) {
   async function confirmLog({ quantityG, mealSlot: chosenSlot, entryDate: chosenDate }) {
     if (!picker?.food) return;
     const food = picker.food;
+    // Recipe builder reuse: when invoked with pickMode:'recipe', skip
+    // the food_entries write and hand the selected food + quantity
+    // back to the caller (RecipeBuilder) via route params.
+    if (route?.params?.pickMode === 'recipe') {
+      const returnTo = route?.params?.returnTo ?? 'RecipeBuilder';
+      navigation.navigate(returnTo, {
+        addedIngredient: {
+          food_ref: food.food_ref,
+          name: food.name,
+          quantity_g: quantityG,
+          food,
+        },
+      });
+      return;
+    }
     audit('food.add', {
       source: food.source ?? 'unknown',
       mealSlot: chosenSlot,
@@ -218,6 +233,11 @@ export default function FoodSearchScreen({ navigation, route }) {
 
   const flat = useMemo(() => {
     const out = [];
+    // Browse-mode top affordances. Hidden during a query so search
+    // results take the full surface.
+    if (query.trim().length < 2 && route?.params?.pickMode !== 'recipe') {
+      out.push({ type: 'cta', key: 'cta-my-recipes', label: 'My recipes', icon: 'restaurant-outline', target: 'MyRecipes' });
+    }
     for (const s of sections) {
       // Always render the Excluded header so the user can expand
       // it even when its rows are collapsed; skip other empty
@@ -233,9 +253,21 @@ export default function FoodSearchScreen({ navigation, route }) {
       for (const r of s.rows) out.push({ type: 'row', key: `${s.key}-${r.food_ref}`, food: r });
     }
     return out;
-  }, [sections]);
+  }, [sections, query, route?.params?.pickMode]);
 
   function renderItem({ item }) {
+    if (item.type === 'cta') {
+      return (
+        <TouchableOpacity
+          style={styles.ctaRow}
+          onPress={() => navigation.navigate(item.target, { mealSlot, entryDate })}
+        >
+          <Ionicons name={item.icon} size={20} color={colors.primary} />
+          <Text style={styles.ctaText}>{item.label}</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+      );
+    }
     if (item.type === 'header') {
       if (item.toggleable && item.sectionKey === 'excluded') {
         return (
@@ -360,6 +392,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg, paddingBottom: spacing.sm,
   },
+  ctaRow: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
+  ctaText: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold, marginLeft: spacing.md, flex: 1 },
 
   noResults: {
     paddingHorizontal: spacing.lg, paddingVertical: spacing.xl,

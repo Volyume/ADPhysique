@@ -84,6 +84,8 @@ import FoodSearchScreen from '../screens/FoodSearchScreen';
 import ScanBarcodeScreen from '../screens/ScanBarcodeScreen';
 import ScanLabelScreen from '../screens/ScanLabelScreen';
 import FoodInsightsScreen from '../screens/FoodInsightsScreen';
+import MyRecipesScreen from '../screens/MyRecipesScreen';
+import RecipeBuilderScreen from '../screens/RecipeBuilderScreen';
 import { withProGuard } from '../components/ProGate';
 
 const Tab = createBottomTabNavigator();
@@ -184,6 +186,16 @@ function DiaryStack({ navigation }) {
         name="FoodInsights"
         component={FoodInsightsScreen}
         options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="MyRecipes"
+        component={MyRecipesScreen}
+        options={{ headerShown: false, presentation: 'modal' }}
+      />
+      <Stack.Screen
+        name="RecipeBuilder"
+        component={RecipeBuilderScreen}
+        options={{ headerShown: false, presentation: 'modal' }}
       />
     </Stack.Navigator>
   );

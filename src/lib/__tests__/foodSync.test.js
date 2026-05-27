@@ -344,3 +344,194 @@ describe('food preference cycle (migration 048)', () => {
     expect(writes[0].params[3]).toBe('fav');
   });
 });
+
+// ─── Recipe CRUD ──────────────────────────────────────────────────────────
+
+describe('recipes (CRUD helpers)', () => {
+  test('createRecipe rejects blank name', async () => {
+    const { createRecipe } = require('../food/db');
+    await expect(createRecipe(UID, { name: '   ', totalServings: 4 }))
+      .rejects.toThrow(/name is required/);
+  });
+
+  test('createRecipe rejects non-positive totalServings', async () => {
+    const { createRecipe } = require('../food/db');
+    await expect(createRecipe(UID, { name: 'Chilli', totalServings: 0 }))
+      .rejects.toThrow(/totalServings must be > 0/);
+    await expect(createRecipe(UID, { name: 'Chilli', totalServings: -2 }))
+      .rejects.toThrow(/totalServings must be > 0/);
+  });
+
+  test('createRecipe writes a single INSERT with trimmed name + numeric servings', async () => {
+    const { createRecipe } = require('../food/db');
+    const id = await createRecipe(UID, { name: '  My Chilli  ', totalServings: 4, notes: 'spicy' });
+    expect(typeof id).toBe('string');
+    expect(writes).toHaveLength(1);
+    expect(writes[0].sql).toMatch(/INSERT INTO recipes/);
+    expect(writes[0].params[2]).toBe('My Chilli');
+    expect(writes[0].params[3]).toBe(4);
+    expect(writes[0].params[4]).toBe('spicy');
+  });
+
+  test('updateRecipe with no patch fields is a no-op (no SQL fires)', async () => {
+    const { updateRecipe } = require('../food/db');
+    await updateRecipe(UID, 'r-1', {});
+    expect(writes).toHaveLength(0);
+  });
+
+  test('updateRecipe rejects a blank name', async () => {
+    const { updateRecipe } = require('../food/db');
+    await expect(updateRecipe(UID, 'r-1', { name: '  ' }))
+      .rejects.toThrow(/name cannot be blank/);
+  });
+
+  test('updateRecipe only writes the fields present in the patch', async () => {
+    const { updateRecipe } = require('../food/db');
+    await updateRecipe(UID, 'r-1', { name: 'Updated' });
+    expect(writes).toHaveLength(1);
+    expect(writes[0].sql).toMatch(/SET name = \?, updated_at = \?\s+WHERE/);
+  });
+
+  test('deleteRecipe soft-deletes the recipe AND tombstones its ingredients', async () => {
+    const { deleteRecipe } = require('../food/db');
+    await deleteRecipe(UID, 'r-2');
+    expect(writes).toHaveLength(2);
+    expect(writes[0].sql).toMatch(/UPDATE recipes\s+SET deleted_at = \?/);
+    expect(writes[1].sql).toMatch(/UPDATE recipe_ingredients\s+SET deleted_at = \?/);
+  });
+
+  test('listRecipes filters by deleted_at IS NULL and orders by updated_at DESC', async () => {
+    const { listRecipes } = require('../food/db');
+    await listRecipes(UID);
+    expect(mockGetAllAsync).toHaveBeenLastCalledWith(
+      expect.stringMatching(/WHERE user_id = \? AND deleted_at IS NULL\s+ORDER BY updated_at DESC/),
+      [UID],
+    );
+  });
+
+  test('getRecipeWithIngredients returns null when the recipe row is missing', async () => {
+    mockGetFirstAsync.mockResolvedValueOnce(null);
+    const { getRecipeWithIngredients } = require('../food/db');
+    const result = await getRecipeWithIngredients(UID, 'r-missing');
+    expect(result).toBeNull();
+    // Should NOT have called the ingredients query
+    expect(mockGetAllAsync).not.toHaveBeenCalled();
+  });
+
+  test('getRecipeWithIngredients merges the recipe row + ingredient rows', async () => {
+    mockGetFirstAsync.mockResolvedValueOnce({ id: 'r-3', name: 'Chilli', total_servings: 4 });
+    mockGetAllAsync.mockResolvedValueOnce([
+      { id: 'i-1', food_ref: 'off:111', quantity_g: 200, order_index: 0 },
+      { id: 'i-2', food_ref: 'off:222', quantity_g: 100, order_index: 1 },
+    ]);
+    const { getRecipeWithIngredients } = require('../food/db');
+    const result = await getRecipeWithIngredients(UID, 'r-3');
+    expect(result.id).toBe('r-3');
+    expect(result.ingredients).toHaveLength(2);
+    expect(result.ingredients[0].food_ref).toBe('off:111');
+  });
+});
+
+describe('setRecipeIngredients', () => {
+  // setRecipeIngredients runs inside a transaction; the test mock
+  // executes the body immediately so we can assert the writes.
+  beforeEach(() => {
+    mockWrites.length = 0;
+    mockGetAllAsync.mockReset();
+    mockGetFirstAsync.mockReset();
+  });
+
+  function mockDb() {
+    // Override the standard db() mock just for this block so it
+    // exposes withTransactionAsync.
+    const dbMock = {
+      runAsync: async (sql, params) => { mockWrites.push({ sql, params }); },
+      getAllAsync: mockGetAllAsync,
+      getFirstAsync: mockGetFirstAsync,
+      withTransactionAsync: async (fn) => { await fn(); },
+    };
+    jest.doMock('../database', () => ({
+      db: async () => dbMock,
+    }));
+    jest.resetModules();
+  }
+
+  test('writes a tombstone update + one INSERT per new ingredient + updates the recipe row', async () => {
+    mockDb();
+    const { setRecipeIngredients } = require('../food/db');
+    await setRecipeIngredients(UID, 'r-1', [
+      { food_ref: 'off:111', quantity_g: 200 },
+      { food_ref: 'off:222', quantity_g: 100 },
+    ]);
+    // 1 tombstone + 2 inserts + 1 recipe-updated_at bump
+    expect(mockWrites).toHaveLength(4);
+    expect(mockWrites[0].sql).toMatch(/UPDATE recipe_ingredients\s+SET deleted_at/);
+    expect(mockWrites[1].sql).toMatch(/INSERT OR REPLACE INTO recipe_ingredients/);
+    expect(mockWrites[1].params[4]).toBe(200);
+    expect(mockWrites[1].params[5]).toBe(0);  // order_index 0
+    expect(mockWrites[2].params[5]).toBe(1);  // order_index 1
+    expect(mockWrites[3].sql).toMatch(/UPDATE recipes SET updated_at/);
+  });
+
+  test('skips ingredients with missing food_ref or non-positive quantity_g', async () => {
+    mockDb();
+    const { setRecipeIngredients } = require('../food/db');
+    await setRecipeIngredients(UID, 'r-1', [
+      { food_ref: 'off:111', quantity_g: 200 },     // OK
+      { food_ref: '',         quantity_g: 100 },    // skip
+      { food_ref: 'off:222',  quantity_g: 0 },      // skip
+      { food_ref: 'off:333',  quantity_g: -10 },    // skip
+      { food_ref: 'off:444',  quantity_g: 50 },     // OK
+    ]);
+    // 1 tombstone + 2 inserts (only valid rows) + 1 recipe bump
+    expect(mockWrites).toHaveLength(4);
+    expect(mockWrites[1].params[3]).toBe('off:111');
+    expect(mockWrites[2].params[3]).toBe('off:444');
+  });
+});
+
+describe('computeRecipeMacros', () => {
+  test('sums kcal/protein/carbs/fat scaled by quantity_g / 100 across ingredients', () => {
+    const { computeRecipeMacros } = require('../food/db');
+    const result = computeRecipeMacros([
+      { food: { kcal_100g: 200, protein_100g: 20, carbs_100g: 30, fat_100g: 5 }, quantity_g: 100 },
+      { food: { kcal_100g: 100, protein_100g: 5,  carbs_100g: 20, fat_100g: 1 }, quantity_g: 200 },
+    ], 4);
+    expect(result.total.kcal).toBe(400);     // 200 + 200
+    expect(result.total.protein).toBe(30);   // 20 + 10
+    expect(result.total.carbs).toBe(70);     // 30 + 40
+    expect(result.total.fat).toBe(7);        // 5 + 2
+    expect(result.perServing.kcal).toBe(100);
+    expect(result.perServing.protein).toBe(7.5);
+    expect(result.perServing.carbs).toBe(17.5);
+  });
+
+  test('treats missing macro fields as 0', () => {
+    const { computeRecipeMacros } = require('../food/db');
+    const result = computeRecipeMacros([
+      { food: { kcal_100g: 200 }, quantity_g: 100 },
+    ], 1);
+    expect(result.total.kcal).toBe(200);
+    expect(result.total.protein).toBe(0);
+    expect(result.total.carbs).toBe(0);
+    expect(result.total.fat).toBe(0);
+  });
+
+  test('ignores ingredients with no resolved food (food was deleted upstream)', () => {
+    const { computeRecipeMacros } = require('../food/db');
+    const result = computeRecipeMacros([
+      { food: null, quantity_g: 100 },
+      { food: { kcal_100g: 100 }, quantity_g: 100 },
+    ], 1);
+    expect(result.total.kcal).toBe(100);
+  });
+
+  test('falls back to 1 serving when totalServings is missing or zero', () => {
+    const { computeRecipeMacros } = require('../food/db');
+    const result = computeRecipeMacros([
+      { food: { kcal_100g: 200 }, quantity_g: 100 },
+    ], 0);
+    // totalServings = 0 should fall back to 1 (per-serving = total)
+    expect(result.perServing.kcal).toBe(result.total.kcal);
+  });
+});
