@@ -168,13 +168,6 @@ export function signInWithApple() {
   return _signInWithOAuthProvider('apple');
 }
 
-export function signInWithMicrosoft() {
-  // Supabase uses 'azure' as the provider key for Microsoft / Azure AD.
-  // Kept for future use but no longer surfaced in the UI — the platform
-  // primary buttons (Google on Android, Apple on iOS) cover most users.
-  return _signInWithOAuthProvider('azure');
-}
-
 export async function upsertUserProfile(userId, profile) {
   const c = getSupabaseClient();
   if (!c) return { data: null, error: null };

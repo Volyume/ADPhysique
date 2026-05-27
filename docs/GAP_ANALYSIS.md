@@ -450,37 +450,38 @@ All claims carry file:line evidence. Verified against `src/`, `supabase/`, and `
 
 ## 2. Genuinely outstanding features (the ranked punch list)
 
-Pulled from the ❌ and ⚠️ rows above. These are the real product gaps.
+Pulled from the ❌ and ⚠️ rows above. **Founder decisions locked 2026-05-27 evening** are inline in the rows below.
 
-| Rank | Item | Effort | Owner | Blocking |
+| Rank | Item | Decision | Effort | Owner |
 |---|---|---|---|---|
-| 1 | Saved meals UI (My Meals templates) | M | Claude | feature parity with spec |
-| 2 | BF% input + trend chart in BodyMetrics (measurements charts already shipped at line 190). Required for accurate FFM-aware floor; currently engine falls back to sex defaults. | S-M | Claude | Pro-tier promise + engine accuracy |
-| 3 | Decide on coach training auto-apply (volumeDelta writes next-week sets vs stay advisory) | founder decision + S impl | Both | engine surface asymmetry |
-| 4 | Decide on coach steps / cardio / deload / diet-break auto-apply | same pattern | Both | same |
-| 5 | High-day / low-day macro shift in coach (engine-derived, not user click) | M | Claude after founder confirms design | coach completeness |
-| 6 | Refeed wiring: fold `getPlanNutritionContext` into the coach OR delete dead code | founder decision + S impl | Both | dead engine code |
-| 7 | Adherence-neutral macro rings (or confirm warning is correct) | S | Founder decision | UX policy |
-| 8 | Cascade gate push notifications (day 19, 21) | S-M | Claude | spec'd, not shipped |
-| 9 | Subscription payment failure push | S | Claude | spec'd, not shipped |
-| 10 | Weekly coach output ready push | S | Claude | spec'd, not shipped |
-| 11 | Resolve two-sync-layer drift (legacy `sync.js` vs `lib/sync/`) | M | Claude | maintenance trap |
-| 12 | ~~Step 1 of two-telemetry-module drift~~ **Partial 2026-05-27.** `engineTelemetry.ALLOWED_EVENTS` now imports from canonical `telemetry/events.js` instead of a duplicated hardcoded list. Full fold-in of the queue + push logic into `telemetry/transport.js` still pending. | S (remaining fold-in) | Claude | same |
-| 13 | `STRENGTH_STANDARDS` dedup (PRWallScreen refactor to use only `strengthStandards.getStrengthLevel` and drop the bulk-compute path against `algorithms.STRENGTH_STANDARDS`). `computeEWMA` confirmed intentional separation (two smoothing windows, different output shapes), now annotated. `detectRepRegressions` confirmed single definition. | S-M | Claude | drift |
-| 14 | Resolve dead-input `cycleOverride` (build UI or remove) | S | founder decision | dead input |
-| 15 | Delete `phaseEngine.js` + `coachExport.js` (confirmed: only consumers are their own tests/JSDoc; `sentry.js` and `seedExercises.js` are live). Founder decision: delete or keep as scaffolding for phase 2 coach handoff. | S | Founder decision + S impl | code hygiene |
-| 16 | ~~Move `WEAK_POINT_MUSCLES` list from screen to `coachingGoals.js`~~ **Done 2026-05-27.** Exported from `coachingGoals.js`; `ProGoalSetupScreen` imports it. | done | Claude | drift |
-| 17 | Drop `peak_week_plans` table. Migration 049 drafted at `supabase/migrate_049_drop_peak_week_plans.sql` (do not apply yet; client-side cleanup listed in the header). `workout_notes` v1 is NOT legacy: it's the between-session coaching notes table; `workout_notes_v2` is per-workout notes. Both stay. | S | Both | schema hygiene |
-| 18 | Decide on drop-set / myo-rep / rest-pause picker exposure | founder decision | Both | UX policy |
-| 19 | Per-side L/R reps (unilateral logging) | M | Claude after founder confirms scope | requested in earlier session |
-| 20 | ~~Voice-rule sweep over remaining hex lapses~~ **Done 2026-05-27.** ScanBarcode `#000` → `colors.background`; CoachingReminders dead `'#3a2a1a'` fallback removed; Apple OAuth `#000000`/`#FFFFFF` (LoginScreen + ProOnboarding) moved to new `colors.appleBtnBg`/`appleBtnText` tokens. Em-dash sweep over code comments still pending. | S (em-dash sweep remaining) | Claude | spec compliance |
-| 21 | ~~Confirm Microsoft OAuth UI surface~~ **Confirmed unwired 2026-05-27.** `signInWithMicrosoft` exported from `supabase.js:171`; no consumers in any screen. Either wire UI or remove the export. | founder decision | Both | unverified path |
-| 22 | ~~Confirm body measurement UI in BodyMetrics~~ **Confirmed shipped 2026-05-27.** 9 measurements (chest/shoulders/arms/forearms/waist/hips/quads/hamstrings/calves) with input form + per-measurement trend chart at `BodyMetricsScreen.js:190 MeasurementTrendChart`. | done | Claude | unverified field |
-| 23 | ~~Verify FTC HBNR language in `public/privacy/index.html`~~ **Confirmed present 2026-05-27** at section 11, line 261. 500-person threshold, 60-day FTC deadline, UK ICO 72-hour timeline. | done | Claude | claim in HANDOFF |
-| 24 | Decide on 3 v1.1 features in PRO_FEATURES (`refeed_automated_any_cut`, `body_composition_deep`, `share_pack_pdf`): ship or move to deferred list | founder decision | Both | entitlement signal |
-| 25 | Long-press multi-select toolbar on Diary | S-M | Claude after founder | per BACKLOG deferred |
-| 26 | Per-meal macro breakdown sheet on macro ring tap | S | Claude after founder | per BACKLOG deferred |
-| 27 | Search subnav tabs (Recents / Favourites / Frequents / My Foods / My Recipes / Database) | S-M | Claude | per UI_FLOWS_LOCKED |
+| 1 | Saved meals UI (My Meals templates) | Build it. Mirror the recipe pattern. | M | Claude |
+| 2 | BF% input + trend chart in BodyMetrics. Required for accurate FFM-aware floor. | Build it as part of body composition deep (v1.1 row 25 below). | S-M | Claude |
+| 3 | Coach training auto-apply (volumeDelta) | **Confirm-then-apply.** Coach card surfaces "+2 sets" suggestion with Apply button. User taps to commit. | S impl | Claude |
+| 4 | Coach steps + cardio auto-apply | **Confirm-then-apply** (matches training). | S impl | Claude |
+| 5 | Coach deload + diet break auto-apply | **Confirm-then-apply** (matches training + steps). | S impl | Claude |
+| 6 | High-day / low-day macro shift in coach | **Build it, gated by goal phase.** Fires for advanced cuts + physique_competition only. Beginner / intermediate cuts stay flat. | M | Claude |
+| 7 | Refeed wiring | **Wire as confirm-then-apply.** Coach picks the day, user confirms before the kcal swap. Matches the broader auto-apply policy. | M | Claude |
+| 8 | Macro rings colour scheme | **Three-band: under = primary amber, at = success green (within 5%), over = warning amber.** Kcal ring same scheme. | S | Claude |
+| 9 | Cascade gate push notifications (day 19, 21) | Build per spec | S-M | Claude |
+| 10 | Subscription payment failure push | Build per spec | S | Claude |
+| 11 | Weekly coach output ready push | Build per spec | S | Claude |
+| 12 | Resolve two-sync-layer drift (legacy `sync.js` vs `lib/sync/`) | Migrate consumers off legacy, delete duplicated helpers | M | Claude |
+| 13 | ~~Step 1 of two-telemetry-module drift~~ **Done 2026-05-27.** `engineTelemetry.ALLOWED_EVENTS` now imports from canonical `telemetry/events.js`. Full fold-in of the queue + push logic into `telemetry/transport.js` still pending. | S (remaining fold-in) | Claude |
+| 14 | `STRENGTH_STANDARDS` dedup (PRWallScreen refactor to use only `strengthStandards.getStrengthLevel`). `computeEWMA` confirmed intentional separation, annotated. `detectRepRegressions` confirmed single definition. | S-M | Claude |
+| 15 | `cycleOverride` dead input | **Build the input with privacy gate** + **ask biological sex at onboarding**. If female, cycle checkbox appears on weekly check-in. Coach reads it via existing path. | M (onboarding + schema + check-in) | Claude |
+| 16 | Delete `phaseEngine.js` + `coachExport.js` | **Delete both.** No consumers; phase 2 will rebuild from current requirements. | S | Claude |
+| 17 | ~~Move `WEAK_POINT_MUSCLES` to `coachingGoals.js`~~ **Done 2026-05-27.** | done | Claude |
+| 18 | Drop `peak_week_plans` table | Migration 049 drafted. **Hold apply** until next AAB ships. `workout_notes` v1 is NOT legacy. | S (when AAB ships) | Both |
+| 19 | Drop-set / myo-rep / rest-pause / AMRAP picker | **Add all four with cluster banner.** Plain-language labels; cluster banner shows activation set + mini-set counter + "Cluster complete" button. | M | Claude |
+| 20 | Per-side L/R reps (unilateral logging) | **Build it.** `leftReps` + `rightReps` columns on `workout_sets`. Per-exercise "track L/R" toggle. SetEntry shows two rep inputs when on. PR detection uses lower side. | M (schema + migration + UI + engine) | Claude |
+| 21 | Voice + hex sweep | **Hex done 2026-05-27** (ScanBarcode, CoachingReminders, Apple OAuth tokens). Em-dash sweep over code comments still pending. | S | Claude |
+| 22 | Microsoft OAuth | **Remove the unused export from `supabase.js:171`.** Google + Apple cover the paths used. | S | Claude |
+| 23 | ~~Body measurement UI in BodyMetrics~~ **Confirmed shipped 2026-05-27** (9 measurements + per-measurement chart). | done | Claude |
+| 24 | ~~FTC HBNR language in privacy~~ **Confirmed present 2026-05-27** at section 11. | done | Claude |
+| 25 | 3 v1.1 features in FEATURE_MAP | **Ship all three.** Refeed = row 7 above. Body comp deep = BF% input + trend smoothing + delta-since-photo (extends row 2). Share-pack PDF = extend ShareCardScreen to PDF export. | M (across the three) | Claude |
+| 26 | Long-press multi-select toolbar on Diary | **Build full toolbar: Delete + Copy to today + Move meal slot.** | S-M | Claude |
+| 27 | Per-meal macro breakdown sheet on macro ring tap | Build per `BACKLOG.md` deferred entry. | S | Claude |
+| 28 | Search subnav tabs (Recents / Favourites / Frequents / My Foods / My Recipes / Database) | Build per `UI_FLOWS_LOCKED.md`. | S-M | Claude |
 
 ---
 
@@ -488,7 +489,8 @@ Pulled from the ❌ and ⚠️ rows above. These are the real product gaps.
 
 | Item | Status | Why |
 |---|---|---|
-| Apply migration 048 (`food_favourites.kind`) | pending | unlocks dislike toggle cloud-side |
+| Apply migration 048 (`food_favourites.kind`) | **Approved to apply now** 2026-05-27. | unlocks dislike toggle cloud-side |
+| Apply migration 049 (drop `peak_week_plans`) | **Hold until next AAB ships** to avoid sync errors on the closed-test build. | schema hygiene |
 | Tear down `volyume-e2e-test` Supabase project + 4 secrets | pending | T7/T8 suite deleted as out of scope |
 | Close PR #5 without merging | pending | live-cloud work reverted |
 | Point `volyume.app` DNS at GitHub Pages | pending | privacy URL resolution |
