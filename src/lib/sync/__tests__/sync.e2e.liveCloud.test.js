@@ -238,12 +238,23 @@ if (!HAS_ENV) {
 
     beforeAll(async () => {
       const { createClient } = require('@supabase/supabase-js');
+      // Supabase JS v2 initialises a RealtimeClient eagerly in the
+      // SupabaseClient constructor; on Node < 22 there's no native
+      // WebSocket so the constructor throws. `ws` is a transitive
+      // dep in node_modules (8.x); pass it explicitly. The tests
+      // never actually open a realtime channel — this is purely to
+      // unblock construction.
+      // eslint-disable-next-line global-require
+      const ws = require('ws');
 
       function buildClient() {
         return createClient(
           process.env.SUPABASE_TEST_URL,
           process.env.SUPABASE_TEST_ANON_KEY,
-          { auth: { persistSession: false, autoRefreshToken: false } },
+          {
+            auth: { persistSession: false, autoRefreshToken: false },
+            realtime: { transport: ws },
+          },
         );
       }
 
