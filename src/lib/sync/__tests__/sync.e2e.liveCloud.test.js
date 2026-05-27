@@ -16,15 +16,29 @@
  *       reconnect, both push, both pull. Both rows are present in
  *       both local states.
  *
+ * Tables covered:
+ *   - weekly_checkins_v2     (LWW, no soft-delete)
+ *   - body_composition_log   (LWW, soft-delete via deleted_at)
+ *   - recipe_ingredients     (LWW, soft-delete via deleted_at)
+ *
+ * For soft-delete tables a T7-tombstone variant also runs: A pushes
+ * a row, B pulls, A then soft-deletes + pushes the tombstone, B
+ * pulls again, the tombstone lands on B with deleted_at set.
+ *
+ * Other registry tables are deliberately out of scope here:
+ *   - profiles                (merge strategy, store-driven push)
+ *   - food domain coordinator (bulk RPC architecture)
+ *   - nutrition_targets       (single-row-per-user)
+ *   - notification_preferences (composite PK + server-side LWW)
+ * Each merits its own E2E coverage; tracked as a follow-up in
+ * CURRENT_STATUS § 8 LATER.
+ *
  * These tests are gated on a set of env vars pointing at a
  * THROWAWAY Supabase test project (never production: the tests
  * insert + delete real rows and would pollute telemetry / RLS
- * behaviour). The gating is conditional so:
- *   - When env vars are present: the suite runs against the cloud
- *     and the matrix's T7/T8 deferred markers can be retired.
- *   - When absent: the suite registers a single skipped test that
- *     documents what's missing, so CI output makes the gap visible
- *     instead of silently passing.
+ * behaviour). When the env vars are absent the suite registers a
+ * single visible skipped test that points at the setup section, so
+ * the gap stays surfaced in CI output instead of silently passing.
  *
  * Env vars required (set in CI secrets, not in the repo):
  *   SUPABASE_TEST_URL                Test project REST URL
@@ -35,19 +49,20 @@
  * Setup: see supabase/README.md § Live-cloud E2E test project.
  *
  * Each "device" is a separate @supabase/supabase-js client
- * authenticated as the same user. The per-table handlers
- * (pushWeeklyCheckins / pullWeeklyCheckins) take the supabase
- * client as their first arg so we can hand each device its own
- * client without going through the singleton in src/lib/supabase.js.
+ * authenticated as the same user. The per-table handlers take the
+ * supabase client as their first arg so each device gets its own
+ * without going through the singleton in src/lib/supabase.js.
  *
- * Local "device state" is two separate arrays of rows — the
- * handlers' database dependency (getAllWeeklyCheckinsForUser /
- * insertWeeklyCheckinFromCloud / getWeeklyCheckinUpdatedAt) is
- * mocked per-device so each device has its own SQLite-equivalent.
+ * Local "device state" is two arrays of rows per table — the
+ * database module's helpers (getAll* / insert*FromCloud / get*UpdatedAt)
+ * are mocked per-device so each device has its own SQLite-equivalent.
+ * The active device is switched by assigning mockActiveDevice between
+ * push/pull calls inside a single test.
  *
  * Cleanup: a single `afterAll` deletes every row whose id is tagged
- * with the test-run prefix. Failed runs leave at most a handful of
- * orphan rows; the prefix lets the next run wipe them too.
+ * with the test-run prefix from all three test tables. Failed runs
+ * leave at most a handful of orphan rows; the prefix lets the next
+ * run wipe them too.
  */
 
 /* eslint-disable global-require */
@@ -61,19 +76,22 @@ const HAS_ENV = !!(
 
 const TEST_RUN_ID = `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-// Each device has its own local-row store. The database module
-// mock dispatches to the right store based on a per-test setter.
-const mockDeviceA = { rows: [] };
-const mockDeviceB = { rows: [] };
-let mockActiveDevice = mockDeviceA;
+// Per-table per-device row stores. mockActiveDevice toggles which
+// side of each pair the next helper call reads / writes.
+const mockState = {
+  weekly_checkins: { A: [], B: [] },
+  body_metric: { A: [], B: [] },
+  recipe_ingredients: { A: [], B: [] },
+};
+let mockActiveDevice = 'A';
 
 jest.mock('../../database', () => ({
-  getAllWeeklyCheckinsForUser: jest.fn(async () => mockActiveDevice.rows.slice()),
+  // ─── weekly_checkins_v2 ─────────────────────────────────────────
+  getAllWeeklyCheckinsForUser: jest.fn(async () => mockState.weekly_checkins[mockActiveDevice].slice()),
   insertWeeklyCheckinFromCloud: jest.fn(async (_userId, c) => {
-    // Mirror the real LWW REPLACE semantics: drop any existing row
-    // with the same id before inserting the cloud copy.
-    mockActiveDevice.rows = mockActiveDevice.rows.filter((r) => r.id !== c.id);
-    mockActiveDevice.rows.push({
+    const list = mockState.weekly_checkins[mockActiveDevice];
+    const next = list.filter((r) => r.id !== c.id);
+    next.push({
       id: c.id,
       weekStart: c.week_start,
       energyScore: c.energy_score ?? null,
@@ -89,9 +107,74 @@ jest.mock('../../database', () => ({
       notes: c.notes ?? null,
       updatedAt: c.updated_at ? Date.parse(c.updated_at) : Date.now(),
     });
+    mockState.weekly_checkins[mockActiveDevice] = next;
   }),
   getWeeklyCheckinUpdatedAt: jest.fn(async (_userId, id) => {
-    const row = mockActiveDevice.rows.find((r) => r.id === id);
+    const row = mockState.weekly_checkins[mockActiveDevice].find((r) => r.id === id);
+    return row?.updatedAt ?? null;
+  }),
+
+  // ─── body_metric_log ─────────────────────────────────────────────
+  // getBodyMetricLog returns camelCase via rowToCamel in real
+  // database.js; mirror that.
+  getBodyMetricLog: jest.fn(async () => mockState.body_metric[mockActiveDevice].slice()),
+  insertBodyMetricFromCloud: jest.fn(async (_userId, m) => {
+    const list = mockState.body_metric[mockActiveDevice];
+    const next = list.filter((r) => r.id !== m.id);
+    // dateToMs at midnight UTC, matches the real helper.
+    const dateToMs = (s) => {
+      if (s == null) return null;
+      if (typeof s === 'number') return s;
+      const ms = new Date(`${s}T00:00:00Z`).getTime();
+      return Number.isFinite(ms) ? ms : null;
+    };
+    const tsToMs = (v) => v == null ? null : (typeof v === 'string' ? new Date(v).getTime() : v);
+    next.push({
+      id: m.id,
+      loggedAt: dateToMs(m.metric_date) ?? tsToMs(m.logged_at),
+      weightKg: m.body_weight ?? null,
+      waistCm: m.waist ?? null,
+      chestCm: m.chest ?? null,
+      hipsCm: m.hips ?? null,
+      thighCm: m.quads ?? null,
+      armCm: m.arms ?? null,
+      shouldersCm: m.shoulders ?? null,
+      forearmCm: m.forearms ?? null,
+      hamCm: m.hamstrings ?? null,
+      calfCm: m.calves ?? null,
+      bodyFatPercent: m.body_fat_percent ?? null,
+      bodyFatSource: m.body_fat_source ?? null,
+      notes: m.notes ?? null,
+      updatedAt: tsToMs(m.updated_at) ?? Date.now(),
+      deletedAt: m.deleted_at ? tsToMs(m.deleted_at) : null,
+    });
+    mockState.body_metric[mockActiveDevice] = next;
+  }),
+  getBodyMetricUpdatedAt: jest.fn(async (_userId, id) => {
+    const row = mockState.body_metric[mockActiveDevice].find((r) => r.id === id);
+    return row?.updatedAt ?? null;
+  }),
+
+  // ─── recipe_ingredients ─────────────────────────────────────────
+  getAllRecipeIngredientsForUser: jest.fn(async () => mockState.recipe_ingredients[mockActiveDevice].slice()),
+  upsertRecipeIngredientFromCloud: jest.fn(async (_userId, row) => {
+    const list = mockState.recipe_ingredients[mockActiveDevice];
+    const next = list.filter((r) => r.id !== row.id);
+    const tsToMs = (v) => v == null ? null : (typeof v === 'string' ? new Date(v).getTime() : v);
+    next.push({
+      id: row.id,
+      recipeId: row.recipe_id,
+      foodRef: row.food_ref,
+      quantityG: Number(row.quantity_g) || 0,
+      orderIndex: Number(row.order_index) || 0,
+      createdAt: tsToMs(row.created_at) ?? Date.now(),
+      updatedAt: tsToMs(row.updated_at) ?? Date.now(),
+      deletedAt: row.deleted_at ? tsToMs(row.deleted_at) : null,
+    });
+    mockState.recipe_ingredients[mockActiveDevice] = next;
+  }),
+  getRecipeIngredientUpdatedAt: jest.fn(async (_userId, id) => {
+    const row = mockState.recipe_ingredients[mockActiveDevice].find((r) => r.id === id);
     return row?.updatedAt ?? null;
   }),
 }));
@@ -101,6 +184,8 @@ jest.mock('../telemetry', () => ({
 }));
 
 const { pushWeeklyCheckins, pullWeeklyCheckins } = require('../tables/weeklyCheckins');
+const { pushBodyComposition, pullBodyComposition } = require('../tables/bodyComposition');
+const { pushRecipeIngredients, pullRecipeIngredients } = require('../tables/recipeIngredients');
 
 // ---------------------------------------------------------------------------
 // Skipped placeholder when env vars are absent
@@ -115,11 +200,15 @@ if (!HAS_ENV) {
     let sbA;
     let sbB;
     let userId;
-    const insertedIds = [];
+    const insertedByTable = {
+      weekly_checkins_v2: [],
+      body_metrics: [],
+      recipe_ingredients: [],
+    };
 
-    function newRowId(suffix) {
+    function newRowId(table, suffix) {
       const id = `${TEST_RUN_ID}-${suffix}`;
-      insertedIds.push(id);
+      insertedByTable[table].push(id);
       return id;
     }
 
@@ -154,74 +243,258 @@ if (!HAS_ENV) {
     }, 30_000);
 
     beforeEach(() => {
-      mockDeviceA.rows = [];
-      mockDeviceB.rows = [];
-      mockActiveDevice = mockDeviceA;
+      for (const t of Object.keys(mockState)) {
+        mockState[t].A = [];
+        mockState[t].B = [];
+      }
+      mockActiveDevice = 'A';
       jest.clearAllMocks();
     });
 
     afterAll(async () => {
-      if (!sbA || !insertedIds.length) return;
-      try {
-        await sbA.from('weekly_checkins_v2').delete().in('id', insertedIds);
-      } catch (_) { /* best effort */ }
+      if (!sbA) return;
+      for (const [table, ids] of Object.entries(insertedByTable)) {
+        if (!ids.length) continue;
+        try { await sbA.from(table).delete().in('id', ids); } catch (_) { /* best effort */ }
+      }
       try { await sbA.auth.signOut(); } catch (_) { /* tolerate */ }
       try { await sbB.auth.signOut(); } catch (_) { /* tolerate */ }
     }, 30_000);
 
-    test('T7 two-device propagation: A pushes, B pulls within seconds, B has the row', async () => {
-      // Device A inserts a row.
-      mockActiveDevice = mockDeviceA;
-      mockDeviceA.rows.push({
-        id: newRowId('t7'),
-        weekStart: 1717200000000,
-        energyScore: 4,
-        sleepHours: 7.5,
-        updatedAt: Date.now(),
-      });
-      const pushResA = await pushWeeklyCheckins(sbA, { userId, localUserId: userId });
-      expect(pushResA.errors).toBe(0);
-      expect(pushResA.count).toBe(1);
+    // ─── weekly_checkins_v2 ─────────────────────────────────────────
 
-      // Device B foregrounds. Local state is empty; pulls from cloud.
-      mockActiveDevice = mockDeviceB;
-      const pullResB = await pullWeeklyCheckins(sbB, { userId });
-      expect(pullResB.errors).toBe(0);
-      expect(pullResB.count).toBeGreaterThanOrEqual(1);
-      expect(mockDeviceB.rows.some((r) => r.id === insertedIds[insertedIds.length - 1])).toBe(true);
-    }, 30_000);
+    describe('weekly_checkins_v2', () => {
+      test('T7 two-device propagation: A pushes, B pulls within seconds, B has the row', async () => {
+        mockActiveDevice = 'A';
+        mockState.weekly_checkins.A.push({
+          id: newRowId('weekly_checkins_v2', 'wc-t7'),
+          weekStart: 1717200000000,
+          energyScore: 4,
+          sleepHours: 7.5,
+          updatedAt: Date.now(),
+        });
+        const pushResA = await pushWeeklyCheckins(sbA, { userId, localUserId: userId });
+        expect(pushResA.errors).toBe(0);
+        expect(pushResA.count).toBe(1);
 
-    test('T8 offline collision: both devices insert separately offline, both reconnect, both rows present on both', async () => {
-      const idA = newRowId('t8a');
-      const idB = newRowId('t8b');
+        mockActiveDevice = 'B';
+        const pullResB = await pullWeeklyCheckins(sbB, { userId });
+        expect(pullResB.errors).toBe(0);
+        expect(pullResB.count).toBeGreaterThanOrEqual(1);
+        const expectedId = insertedByTable.weekly_checkins_v2.at(-1);
+        expect(mockState.weekly_checkins.B.some((r) => r.id === expectedId)).toBe(true);
+      }, 30_000);
 
-      // Both devices insert different rows while "offline" (no cloud
-      // calls yet; just local state).
-      mockActiveDevice = mockDeviceA;
-      mockDeviceA.rows.push({ id: idA, weekStart: 1717300000000, energyScore: 5, updatedAt: Date.now() });
-      mockActiveDevice = mockDeviceB;
-      mockDeviceB.rows.push({ id: idB, weekStart: 1717400000000, energyScore: 3, updatedAt: Date.now() });
+      test('T8 offline collision: both devices insert separately offline, both reconnect, both rows present on both', async () => {
+        const idA = newRowId('weekly_checkins_v2', 'wc-t8a');
+        const idB = newRowId('weekly_checkins_v2', 'wc-t8b');
 
-      // Both reconnect. Both push their own row, then both pull.
-      mockActiveDevice = mockDeviceA;
-      const pushA = await pushWeeklyCheckins(sbA, { userId, localUserId: userId });
-      expect(pushA.errors).toBe(0);
+        mockActiveDevice = 'A';
+        mockState.weekly_checkins.A.push({ id: idA, weekStart: 1717300000000, energyScore: 5, updatedAt: Date.now() });
+        mockActiveDevice = 'B';
+        mockState.weekly_checkins.B.push({ id: idB, weekStart: 1717400000000, energyScore: 3, updatedAt: Date.now() });
 
-      mockActiveDevice = mockDeviceB;
-      const pushB = await pushWeeklyCheckins(sbB, { userId, localUserId: userId });
-      expect(pushB.errors).toBe(0);
+        mockActiveDevice = 'A';
+        expect((await pushWeeklyCheckins(sbA, { userId, localUserId: userId })).errors).toBe(0);
+        mockActiveDevice = 'B';
+        expect((await pushWeeklyCheckins(sbB, { userId, localUserId: userId })).errors).toBe(0);
 
-      mockActiveDevice = mockDeviceA;
-      const pullA = await pullWeeklyCheckins(sbA, { userId });
-      expect(pullA.errors).toBe(0);
-      expect(mockDeviceA.rows.some((r) => r.id === idA)).toBe(true);
-      expect(mockDeviceA.rows.some((r) => r.id === idB)).toBe(true);
+        mockActiveDevice = 'A';
+        expect((await pullWeeklyCheckins(sbA, { userId })).errors).toBe(0);
+        expect(mockState.weekly_checkins.A.some((r) => r.id === idA)).toBe(true);
+        expect(mockState.weekly_checkins.A.some((r) => r.id === idB)).toBe(true);
 
-      mockActiveDevice = mockDeviceB;
-      const pullB = await pullWeeklyCheckins(sbB, { userId });
-      expect(pullB.errors).toBe(0);
-      expect(mockDeviceB.rows.some((r) => r.id === idA)).toBe(true);
-      expect(mockDeviceB.rows.some((r) => r.id === idB)).toBe(true);
-    }, 30_000);
+        mockActiveDevice = 'B';
+        expect((await pullWeeklyCheckins(sbB, { userId })).errors).toBe(0);
+        expect(mockState.weekly_checkins.B.some((r) => r.id === idA)).toBe(true);
+        expect(mockState.weekly_checkins.B.some((r) => r.id === idB)).toBe(true);
+      }, 30_000);
+    });
+
+    // ─── body_composition_log (cloud table body_metrics) ────────────
+
+    describe('body_composition_log', () => {
+      test('T7 two-device propagation: A pushes a body metric, B pulls, B has the row', async () => {
+        const id = newRowId('body_metrics', 'bm-t7');
+        mockActiveDevice = 'A';
+        mockState.body_metric.A.push({
+          id,
+          loggedAt: Date.UTC(2026, 0, 1),
+          weightKg: 80,
+          waistCm: 80,
+          updatedAt: Date.now(),
+        });
+        expect((await pushBodyComposition(sbA, { userId, localUserId: userId })).errors).toBe(0);
+
+        mockActiveDevice = 'B';
+        const pullB = await pullBodyComposition(sbB, { userId });
+        expect(pullB.errors).toBe(0);
+        const arrived = mockState.body_metric.B.find((r) => r.id === id);
+        expect(arrived).toBeTruthy();
+        expect(arrived.weightKg).toBe(80);
+      }, 30_000);
+
+      test('T7 soft-delete propagation: A pushes a row, B pulls, A tombstones + pushes, B pulls, B sees deleted_at', async () => {
+        const id = newRowId('body_metrics', 'bm-t7-tomb');
+
+        // Initial push (A creates the row).
+        mockActiveDevice = 'A';
+        mockState.body_metric.A.push({
+          id,
+          loggedAt: Date.UTC(2026, 1, 1),
+          weightKg: 81,
+          updatedAt: Date.now(),
+        });
+        expect((await pushBodyComposition(sbA, { userId, localUserId: userId })).errors).toBe(0);
+
+        // B pulls and observes the row alive.
+        mockActiveDevice = 'B';
+        await pullBodyComposition(sbB, { userId });
+        expect(mockState.body_metric.B.find((r) => r.id === id)?.deletedAt).toBeNull();
+
+        // A tombstones the row and pushes again with a later updated_at.
+        mockActiveDevice = 'A';
+        const aRow = mockState.body_metric.A.find((r) => r.id === id);
+        aRow.deletedAt = Date.now();
+        aRow.updatedAt = Date.now();
+        expect((await pushBodyComposition(sbA, { userId, localUserId: userId })).errors).toBe(0);
+
+        // B pulls again. LWW gate must allow the cloud row (newer
+        // updated_at) to replace local; deleted_at lands on B.
+        mockActiveDevice = 'B';
+        await pullBodyComposition(sbB, { userId });
+        const tomb = mockState.body_metric.B.find((r) => r.id === id);
+        expect(tomb).toBeTruthy();
+        expect(tomb.deletedAt).toBeTruthy();
+      }, 30_000);
+
+      test('T8 offline collision: both devices insert separately offline, both reconnect, both rows present on both', async () => {
+        const idA = newRowId('body_metrics', 'bm-t8a');
+        const idB = newRowId('body_metrics', 'bm-t8b');
+
+        mockActiveDevice = 'A';
+        mockState.body_metric.A.push({ id: idA, loggedAt: Date.UTC(2026, 2, 1), weightKg: 82, updatedAt: Date.now() });
+        mockActiveDevice = 'B';
+        mockState.body_metric.B.push({ id: idB, loggedAt: Date.UTC(2026, 2, 2), weightKg: 83, updatedAt: Date.now() });
+
+        mockActiveDevice = 'A';
+        expect((await pushBodyComposition(sbA, { userId, localUserId: userId })).errors).toBe(0);
+        mockActiveDevice = 'B';
+        expect((await pushBodyComposition(sbB, { userId, localUserId: userId })).errors).toBe(0);
+
+        mockActiveDevice = 'A';
+        await pullBodyComposition(sbA, { userId });
+        expect(mockState.body_metric.A.some((r) => r.id === idA)).toBe(true);
+        expect(mockState.body_metric.A.some((r) => r.id === idB)).toBe(true);
+
+        mockActiveDevice = 'B';
+        await pullBodyComposition(sbB, { userId });
+        expect(mockState.body_metric.B.some((r) => r.id === idA)).toBe(true);
+        expect(mockState.body_metric.B.some((r) => r.id === idB)).toBe(true);
+      }, 30_000);
+    });
+
+    // ─── recipe_ingredients ─────────────────────────────────────────
+
+    describe('recipe_ingredients', () => {
+      test('T7 two-device propagation: A pushes an ingredient, B pulls, B has the row', async () => {
+        const id = newRowId('recipe_ingredients', 'ri-t7');
+        mockActiveDevice = 'A';
+        mockState.recipe_ingredients.A.push({
+          id,
+          recipeId: `${TEST_RUN_ID}-recipe`,
+          foodRef: 'off:000',
+          quantityG: 100,
+          orderIndex: 0,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          deletedAt: null,
+        });
+        expect((await pushRecipeIngredients(sbA, { userId, localUserId: userId })).errors).toBe(0);
+
+        mockActiveDevice = 'B';
+        const pullB = await pullRecipeIngredients(sbB, { userId });
+        expect(pullB.errors).toBe(0);
+        const arrived = mockState.recipe_ingredients.B.find((r) => r.id === id);
+        expect(arrived).toBeTruthy();
+        expect(arrived.foodRef).toBe('off:000');
+      }, 30_000);
+
+      test('T7 soft-delete propagation: A pushes, B pulls, A tombstones + pushes, B pulls, B sees deleted_at', async () => {
+        const id = newRowId('recipe_ingredients', 'ri-t7-tomb');
+
+        mockActiveDevice = 'A';
+        mockState.recipe_ingredients.A.push({
+          id,
+          recipeId: `${TEST_RUN_ID}-recipe-tomb`,
+          foodRef: 'off:001',
+          quantityG: 50,
+          orderIndex: 0,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          deletedAt: null,
+        });
+        expect((await pushRecipeIngredients(sbA, { userId, localUserId: userId })).errors).toBe(0);
+
+        mockActiveDevice = 'B';
+        await pullRecipeIngredients(sbB, { userId });
+        expect(mockState.recipe_ingredients.B.find((r) => r.id === id)?.deletedAt).toBeNull();
+
+        mockActiveDevice = 'A';
+        const aRow = mockState.recipe_ingredients.A.find((r) => r.id === id);
+        aRow.deletedAt = Date.now();
+        aRow.updatedAt = Date.now();
+        expect((await pushRecipeIngredients(sbA, { userId, localUserId: userId })).errors).toBe(0);
+
+        mockActiveDevice = 'B';
+        await pullRecipeIngredients(sbB, { userId });
+        const tomb = mockState.recipe_ingredients.B.find((r) => r.id === id);
+        expect(tomb).toBeTruthy();
+        expect(tomb.deletedAt).toBeTruthy();
+      }, 30_000);
+
+      test('T8 offline collision: both devices insert separately offline, both reconnect, both rows present on both', async () => {
+        const idA = newRowId('recipe_ingredients', 'ri-t8a');
+        const idB = newRowId('recipe_ingredients', 'ri-t8b');
+
+        mockActiveDevice = 'A';
+        mockState.recipe_ingredients.A.push({
+          id: idA,
+          recipeId: `${TEST_RUN_ID}-recipe-a`,
+          foodRef: 'off:00a',
+          quantityG: 100,
+          orderIndex: 0,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          deletedAt: null,
+        });
+        mockActiveDevice = 'B';
+        mockState.recipe_ingredients.B.push({
+          id: idB,
+          recipeId: `${TEST_RUN_ID}-recipe-b`,
+          foodRef: 'off:00b',
+          quantityG: 200,
+          orderIndex: 0,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          deletedAt: null,
+        });
+
+        mockActiveDevice = 'A';
+        expect((await pushRecipeIngredients(sbA, { userId, localUserId: userId })).errors).toBe(0);
+        mockActiveDevice = 'B';
+        expect((await pushRecipeIngredients(sbB, { userId, localUserId: userId })).errors).toBe(0);
+
+        mockActiveDevice = 'A';
+        await pullRecipeIngredients(sbA, { userId });
+        expect(mockState.recipe_ingredients.A.some((r) => r.id === idA)).toBe(true);
+        expect(mockState.recipe_ingredients.A.some((r) => r.id === idB)).toBe(true);
+
+        mockActiveDevice = 'B';
+        await pullRecipeIngredients(sbB, { userId });
+        expect(mockState.recipe_ingredients.B.some((r) => r.id === idA)).toBe(true);
+        expect(mockState.recipe_ingredients.B.some((r) => r.id === idB)).toBe(true);
+      }, 30_000);
+    });
   });
 }
