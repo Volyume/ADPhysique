@@ -33,6 +33,11 @@
  * Each merits its own E2E coverage; tracked as a follow-up in
  * CURRENT_STATUS § 8 LATER.
  *
+ * Live as of 2026-05-27: the `volyume-e2e-test` Supabase project,
+ * the test user, the bootstrap SQL, and the four GitHub Actions
+ * secrets are all in place. CI exercises this suite end-to-end on
+ * every run that touches a non-`paths-ignore`d file.
+ *
  * These tests are gated on a set of env vars pointing at a
  * THROWAWAY Supabase test project (never production: the tests
  * insert + delete real rows and would pollute telemetry / RLS
