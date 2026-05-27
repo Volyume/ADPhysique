@@ -193,8 +193,22 @@ jest.mock('../../database', () => ({
   }),
 }));
 
+// Surface the underlying Supabase error on console so the
+// auto-posted PR-comment diagnostic sees WHY a push errored
+// (the handler swallows the error into `errors: 1` otherwise).
 jest.mock('../telemetry', () => ({
-  logSyncError: jest.fn(),
+  logSyncError: jest.fn((scope, err) => {
+    const msg = err?.message ?? String(err);
+    const code = err?.code ?? '';
+    const details = err?.details ?? '';
+    const hint = err?.hint ?? '';
+
+    console.error(
+      `[logSyncError ${scope}] code=${code} msg=${msg}` +
+      (details ? ` details=${details}` : '') +
+      (hint ? ` hint=${hint}` : ''),
+    );
+  }),
 }));
 
 const { pushWeeklyCheckins, pullWeeklyCheckins } = require('../tables/weeklyCheckins');
