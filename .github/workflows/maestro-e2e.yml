@@ -1,18 +1,17 @@
 name: Maestro E2E (Android emulator)
 
-# Runs the smoke bundle on every push to the working branch so
-# Claude can drive validation directly. workflow_dispatch is kept
-# so a wider tag can be requested on demand.
+# Runs on push to main and on manual dispatch. The earlier
+# 'claude/**' trigger was removed 2026-05-27 because the workflow
+# fails on every run (F4 emulator boot, run #16 onward) and was
+# emailing the founder once per Claude-branch commit. Re-add the
+# branch when F4 is fixed and the runs are reliably green.
 #
 # Final step writes a status report to .ci-status/maestro-latest.md
-# and commits it back to the branch with [skip ci]. Lets Claude
-# read the result via `git pull` without needing PR / Actions API
-# access.
+# and commits it back to the branch with [skip ci].
 on:
   push:
     branches:
       - main
-      - 'claude/**'
     paths:
       - 'e2e/**'
       - '.maestro/**'
