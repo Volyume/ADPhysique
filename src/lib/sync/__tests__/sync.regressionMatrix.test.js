@@ -16,8 +16,8 @@
  *   T4  Remote insert   → handler.pull      → local insert helper invoked
  *   T5  Conflict        → handler.pull/push → resolution strategy applies
  *   T6  Push error      → handler.push      → returns errors:>0; does not throw
- *   T7  Two-device      → DEFERRED          → requires live Supabase test project
- *   T8  Offline coll.   → DEFERRED          → requires live Supabase test project
+ *   T7  Two-device      → OUT OF SCOPE      → product is Android-only single-device
+ *   T8  Offline coll.   → OUT OF SCOPE      → product is Android-only single-device
  *
  * Spec also says "Files: tests/sync/<table_name>.test.js". We
  * collapse into one matrix file (driven by SYNC_REGISTRY) rather
@@ -896,25 +896,7 @@ describe('food domain coordinator (food_entries / custom_foods / saved_meals / r
   });
 });
 
-// ---------------------------------------------------------------------------
-// T7, T8 — live-cloud E2E
-// ---------------------------------------------------------------------------
-//
-// Implementation: src/lib/sync/__tests__/sync.e2e.liveCloud.test.js
-// runs the two-device propagation and offline-collision scenarios
-// against a throwaway Supabase test project, gated on
-// SUPABASE_TEST_* env vars (see supabase/README.md § Live-cloud
-// E2E test project). When the env vars are absent, that suite
-// registers a single visible skipped test so the gap stays
-// surfaced in CI output.
-
-describe('T7 + T8 — live-cloud E2E pointer', () => {
-  test('T7 and T8 live-cloud suite is checked in at sync.e2e.liveCloud.test.js', () => {
-    // Lightweight assertion so the cross-file pointer is searchable
-    // from CI output. The real assertions live in the e2e file.
-    const fs = require('fs');
-    const path = require('path');
-    const target = path.join(__dirname, 'sync.e2e.liveCloud.test.js');
-    expect(fs.existsSync(target)).toBe(true);
-  });
-});
+// T7 + T8 (two-device propagation, offline collision) are out of
+// scope: Volyume is Android-only, phone-only. Sign-out + sign-in
+// on a new handset is the only realistic cross-device path and is
+// covered by manual real-device testing.

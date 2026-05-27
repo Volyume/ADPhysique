@@ -89,23 +89,6 @@ jobs:
         run: |
           set -o pipefail
           npx jest --runInBand --ci 2>&1 | tee jest.log
-        env:
-          # Live-cloud E2E (T7 + T8) wiring. With all four secrets
-          # populated (founder added them 2026-05-27),
-          # src/lib/sync/__tests__/sync.e2e.liveCloud.test.js signs
-          # in to the throwaway Supabase test project and runs the
-          # two-device propagation + offline collision scenarios
-          # across weekly_checkins_v2, body_composition_log, and
-          # recipe_ingredients. If any secret goes missing, the
-          # suite reverts to a single visible skipped test that
-          # points at the README setup section, so the gap stays
-          # surfaced in test counts rather than silently passing.
-          # Setup walkthrough: supabase/README.md § Live-cloud E2E
-          # test project. Never paste production values here.
-          SUPABASE_TEST_URL:           ${{ secrets.SUPABASE_TEST_URL }}
-          SUPABASE_TEST_ANON_KEY:      ${{ secrets.SUPABASE_TEST_ANON_KEY }}
-          SUPABASE_TEST_USER_EMAIL:    ${{ secrets.SUPABASE_TEST_USER_EMAIL }}
-          SUPABASE_TEST_USER_PASSWORD: ${{ secrets.SUPABASE_TEST_USER_PASSWORD }}
 
       - name: Surface Jest failure into the run summary
         # Only fires when the Jest step failed. Extracts the
