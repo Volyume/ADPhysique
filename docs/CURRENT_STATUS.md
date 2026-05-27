@@ -898,13 +898,7 @@ Grouped by phase per `RELEASE_PLAN_LOCKED.md`.
 1. ~~Apply migration 045~~ **Applied** end-of-day 2026-05-26.
 2. ~~Apply migration 046~~ **Applied** end-of-day 2026-05-26.
 3. ~~Apply migration 047~~ **Applied** 2026-05-27.
-4. **Stand up the live-cloud E2E test project** (unblocks the T7 + T8 deferred matrix tests; CI auto-runs them the moment the four secrets exist). Four dashboard-only steps; the rest of the setup is checked in:
-   1. Supabase Dashboard -> New Project named `volyume-e2e-test` (free tier; same region as production).
-   2. Authentication -> Providers -> Email -> turn OFF "Confirm email". Then Authentication -> Users -> Add user -> `e2e+volyume@example.com` with a long random password + "Auto Confirm User" checked.
-   3. SQL Editor -> paste `supabase/test_project_bootstrap.sql` (auto-generated bundle: setup_complete.sql + every migration 006..047 in numeric order, idempotent) -> Run. Then paste `supabase/audit_cloud_schema_drift.sql` -> Run. Every column should show `status:OK`.
-   4. GitHub repo -> Settings -> Secrets and variables -> Actions -> add four secrets: `SUPABASE_TEST_URL`, `SUPABASE_TEST_ANON_KEY`, `SUPABASE_TEST_USER_EMAIL`, `SUPABASE_TEST_USER_PASSWORD`.
-
-   Full walkthrough in `supabase/README.md` § Live-cloud E2E test project. Verify locally first with `node scripts/verify-e2e-setup.js` (five-step probe; tells you exactly what's broken if anything is).
+4. ~~Stand up the live-cloud E2E test project~~ **Done** 2026-05-27. Founder confirmed all four steps: project created (`volyume-e2e-test`), bootstrap SQL ran clean against the test project, test user created with email confirmation disabled, four `SUPABASE_TEST_*` secrets added to GitHub Actions. Next CI run on this branch (or main) exercises T7 + T8 against the live cloud automatically.
 5. (Optional, low priority) Add `EXPO_PUBLIC_USDA_API_KEY` repo secret if USDA fallback is wanted active.
 
 ### When Claude says "Phase A code work complete, ready for Phase A exit prep"
