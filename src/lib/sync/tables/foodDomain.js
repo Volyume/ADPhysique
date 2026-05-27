@@ -78,62 +78,105 @@ function _bucketFoodRow(r) {
   return 'updated';
 }
 
-function _foodEntryToCloud(r, userId) {
+function _msToISOorNull(t) {
+  if (t == null) return null;
+  if (typeof t === 'string') return t;
+  if (typeof t === 'number') return new Date(t).toISOString();
+  return null;
+}
+
+// All food-domain mappers read snake_case fields off the raw
+// SQLite rows returned by src/lib/food/db.js (which calls
+// d.getAllAsync directly without a camelCase transform). An
+// earlier extraction from the legacy sync.js introduced a
+// regression where these mappers read camelCase (r.entryDate,
+// r.mealSlot, etc.), which silently nulled every food row's
+// per-column data on push. The regression-matrix test
+// (sync.regressionMatrix.test.js) caught it; restored snake-case
+// reads here match what production rows actually look like.
+
+function _foodEntryToCloud(row, userId) {
   return {
-    id: r.id, user_id: userId, entry_date: r.entryDate, meal_slot: r.mealSlot,
-    food_ref: r.foodRef, quantity_g: r.quantityG, kcal: r.kcal,
-    protein_g: r.proteinG, carbs_g: r.carbsG, fat_g: r.fatG, fibre_g: r.fibreG ?? null,
-    notes: r.notes ?? null,
-    created_at: typeof r.createdAt === 'number' ? new Date(r.createdAt).toISOString() : r.createdAt,
-    updated_at: typeof r.updatedAt === 'number' ? new Date(r.updatedAt).toISOString() : r.updatedAt,
-    deleted_at: r.deletedAt ? new Date(r.deletedAt).toISOString() : null,
+    id: row.id,
+    user_id: userId,
+    entry_date: row.entry_date,
+    meal_slot: row.meal_slot,
+    food_ref: row.food_ref,
+    quantity_g: row.quantity_g,
+    kcal: row.kcal,
+    protein_g: row.protein_g,
+    carbs_g: row.carbs_g,
+    fat_g: row.fat_g,
+    fibre_g: row.fibre_g ?? null,
+    logged_at: _msToISOorNull(row.logged_at),
+    created_at: _msToISOorNull(row.created_at),
+    updated_at: _msToISOorNull(row.updated_at),
+    deleted_at: _msToISOorNull(row.deleted_at),
   };
 }
 
-function _customFoodToCloud(r, userId) {
+function _customFoodToCloud(row, userId) {
   return {
-    id: r.id, user_id: userId, name: r.name, brand: r.brand ?? null,
-    barcode_ean: r.barcodeEan ?? null,
-    kcal_100g: r.kcal100g, protein_100g: r.protein100g, carbs_100g: r.carbs100g,
-    fat_100g: r.fat100g, fibre_100g: r.fibre100g ?? null,
-    serving_g: r.servingG ?? null, serving_label: r.servingLabel ?? null,
-    created_at: typeof r.createdAt === 'number' ? new Date(r.createdAt).toISOString() : r.createdAt,
-    updated_at: typeof r.updatedAt === 'number' ? new Date(r.updatedAt).toISOString() : r.updatedAt,
-    deleted_at: r.deletedAt ? new Date(r.deletedAt).toISOString() : null,
+    id: row.id,
+    user_id: userId,
+    name: row.name,
+    brand: row.brand ?? null,
+    barcode_ean: row.barcode_ean ?? null,
+    kcal_100g: row.kcal_100g,
+    protein_100g: row.protein_100g,
+    carbs_100g: row.carbs_100g,
+    fat_100g: row.fat_100g,
+    fibre_100g: row.fibre_100g ?? null,
+    serving_g: row.serving_g ?? null,
+    serving_label: row.serving_label ?? null,
+    created_at: _msToISOorNull(row.created_at),
+    updated_at: _msToISOorNull(row.updated_at),
+    deleted_at: _msToISOorNull(row.deleted_at),
   };
 }
 
-function _savedMealToCloud(r, userId) {
+function _savedMealToCloud(row, userId) {
   return {
-    id: r.id, user_id: userId, name: r.name, slot: r.slot ?? null,
-    foods_json: typeof r.foodsJson === 'string' ? r.foodsJson : JSON.stringify(r.foodsJson ?? []),
-    created_at: typeof r.createdAt === 'number' ? new Date(r.createdAt).toISOString() : r.createdAt,
-    updated_at: typeof r.updatedAt === 'number' ? new Date(r.updatedAt).toISOString() : r.updatedAt,
-    deleted_at: r.deletedAt ? new Date(r.deletedAt).toISOString() : null,
+    id: row.id,
+    user_id: userId,
+    name: row.name,
+    slot: row.slot ?? null,
+    foods_json: typeof row.foods_json === 'string'
+      ? row.foods_json
+      : JSON.stringify(row.foods_json ?? []),
+    created_at: _msToISOorNull(row.created_at),
+    updated_at: _msToISOorNull(row.updated_at),
+    deleted_at: _msToISOorNull(row.deleted_at),
   };
 }
 
-function _recipeToCloud(r, userId) {
+function _recipeToCloud(row, userId) {
   return {
-    id: r.id, user_id: userId, name: r.name, servings: r.servings ?? 1,
-    notes: r.notes ?? null,
-    created_at: typeof r.createdAt === 'number' ? new Date(r.createdAt).toISOString() : r.createdAt,
-    updated_at: typeof r.updatedAt === 'number' ? new Date(r.updatedAt).toISOString() : r.updatedAt,
-    deleted_at: r.deletedAt ? new Date(r.deletedAt).toISOString() : null,
+    id: row.id,
+    user_id: userId,
+    name: row.name,
+    servings: row.servings ?? 1,
+    notes: row.notes ?? null,
+    created_at: _msToISOorNull(row.created_at),
+    updated_at: _msToISOorNull(row.updated_at),
+    deleted_at: _msToISOorNull(row.deleted_at),
   };
 }
 
-function _favouriteToCloud(r, userId) {
+function _favouriteToCloud(row, userId) {
   return {
-    user_id: userId, food_ref: r.foodRef,
-    updated_at: typeof r.updatedAt === 'number' ? new Date(r.updatedAt).toISOString() : r.updatedAt,
+    user_id: userId,
+    food_ref: row.food_ref,
+    updated_at: _msToISOorNull(row.updated_at),
   };
 }
 
-function _waterToCloud(r, userId) {
+function _waterToCloud(row, userId) {
   return {
-    user_id: userId, entry_date: r.entryDate, ml: r.ml,
-    updated_at: typeof r.updatedAt === 'number' ? new Date(r.updatedAt).toISOString() : r.updatedAt,
+    user_id: userId,
+    entry_date: row.entry_date,
+    ml: row.ml,
+    updated_at: _msToISOorNull(row.updated_at),
   };
 }
 
