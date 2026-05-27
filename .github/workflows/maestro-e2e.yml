@@ -1,26 +1,14 @@
 name: Maestro E2E (Android emulator)
 
-# Runs on push to main and on manual dispatch. The earlier
-# 'claude/**' trigger was removed 2026-05-27 because the workflow
-# fails on every run (F4 emulator boot, run #16 onward) and was
-# emailing the founder once per Claude-branch commit. Re-add the
-# branch when F4 is fixed and the runs are reliably green.
+# Manual-only per founder direction 2026-05-27. The auto-push
+# triggers (main + 'claude/**') fired on every push and the
+# workflow has been failing on every run since #16 (F4 emulator
+# boot). Founder was getting an email per commit.
 #
-# Final step writes a status report to .ci-status/maestro-latest.md
-# and commits it back to the branch with [skip ci].
+# Re-add a push trigger when F4 is diagnosed and runs are reliably
+# green. Until then this workflow fires only when launched from
+# Actions tab or via API.
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'e2e/**'
-      - '.maestro/**'
-      - 'src/**'
-      - 'App.js'
-      - 'app.json'
-      - 'package.json'
-      - 'android/**'
-      - '.github/workflows/maestro-e2e.yml'
   workflow_dispatch:
     inputs:
       tag:
