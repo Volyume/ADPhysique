@@ -14,7 +14,35 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 
 ## 0. Session summary
 
-### 0.A. 2026-05-28 session (Claude): coach confirm-then-apply
+### 0.A. 2026-05-28 session (Claude): UI surfaces + Frequents pipeline
+
+Continuation of the GAP punch list after the coach confirm-then-apply work (§ 0.B). Shipped the food/diary UI surfaces plus the Frequents search pipeline. Every change rode on existing blobs/tables except row 28, which adds one founder-applied cloud migration.
+
+**Shipped (all on `main`):**
+
+| Commit | What |
+|---|---|
+| `8770d34` | Row 8: macro rings three-band colour. `MacroRings.bandColour`: under target = brand amber, within 5% = success green, over = warning amber (amber, not red; numbers only warn above 105%). Replaced the old decorative per-macro tints. Standing tension with the strict adherence-neutral brief noted; founder chose amber feedback. |
+| `393b350` | Rows 26 + 27: Diary long-press multi-select (Move slot / Copy to today / Delete) via `lib/food/bulkEntryOps.js`, and the tappable per-meal macro breakdown sheet (`MacroBreakdownSheet` + pure `mealBreakdown`). Move sends the full field set through `updateFoodEntry` so macros survive. |
+| `1239384` | Row 15: `cycleOverride` is no longer a dead input. Opt-in `Cycle tracking` toggle in Settings (`lib/cyclePrefs.js`, off by default, shown only to female users); when on, the weekly check-in shows one optional cycle question that flows into `saveWeeklyCheckin({ cycleOverride })` and the existing coach path. |
+| `8a76897` | Row 28 decisions captured (5 tabs, full Frequents pipeline). |
+| `f6a5905` | Row 28: `FoodSearchScreen` rebuilt as the 5 locked tabs (Recents / Favourites / Frequents / Custom / Database, `lib/food/searchTabs.js`) + the Frequents server pipeline. |
+
+**Frequents pipeline (row 28).** `migrate_051_food_frequents.sql`: a `food_frequents` cache table (RLS read-own) + a nightly `pg_cron` worker `refresh_food_frequents()` computing every user's top-20-over-30-days (mirrors migration 031) + a `food_frequents_pull()` RPC (mirrors the food RPC style of 016). Client side: a local `food_frequents` cache table (new `SCHEMA_MIGRATIONS` version) + `lib/food/frequents.js`, which refreshes the cache from the RPC when the tab opens and the local copy is older than 12h, then renders from cache. Deliberately **outside** the runtime-critical `food_sync_pull`/`push` cycle: Frequents is derived data, needs no queue/conflict machinery, and a failed pull just leaves the last good cache.
+
+**Founder decisions captured (2026-05-28, via AskUserQuestion):** row 15 privacy gate = opt-in Settings toggle; row 15 sex question = "add to Basic stats step"; row 28 = 5 tabs per `UI_FLOWS_LOCKED.md`; Frequents = full server pipeline.
+
+**Deviations from the brief, surfaced and intended:**
+- **Row 15 did NOT touch onboarding.** Biological sex is already collected by `ProOnboardingScreen` (the basic-stats wizard every beta user hits) and saved to `user_body_profile`. The GAP premise ("ask sex at onboarding", implying it wasn't) traced to a stale comment in `strengthStandards.js`, now corrected. So no duplicate question and no `ONBOARDING_SEQUENCE_LOCKED.md` change. The functional feature works end-to-end off the existing `sex` value. If the founder still wants sex asked in a dedicated/core step, that is a separate change.
+- **Row 28 dropped the old ad-hoc "Excluded" browse list** (it is not one of the 5 locked tabs). The dislike preference still works via long-press; it is just not a browse list any more.
+
+**No migration for rows 8/15/26/27.** Row 28 needs `migrate_051` (additive; see § 9 + `supabase/README.md` § Verify food_frequents). Until applied, `food_frequents_pull` 404s quietly and the Frequents tab shows "Nothing logged often enough yet"; nothing else is affected and the frozen closed-test build is untouched.
+
+**Tests:** new pure-helper suites for `bandColour`, `bulkEntryOps`, `mealBreakdown`, `cyclePrefs` (+ `shouldShowCycleQuestion`), `searchTabs` (`selectTabRows`), and `frequents` (`frequentsCacheStale`). Full suite green serially: **93 suites / 1836 passed / 3 skipped**.
+
+**Next:** GAP rows 8, 15, 26, 27, 28 closed. Remaining UI/product gaps: row 1 (saved meals UI), rows 2 + 25 (body-composition deep: BF% input + trend), rows 19 + 20 (set-type picker + per-side L/R reps; row 20 needs a migration). Row 12 (sync-layer migration) still wants its own focused session. **Founder action:** apply `migrate_051` (and the still-pending 048, 050) in Supabase.
+
+### 0.B. 2026-05-28 session (Claude): coach confirm-then-apply
 
 Built out the coach's confirm-then-apply loop across every weekly adjustment (GAP rows 3-5), engine + coach first, then the surfaces. Founder model: the coach surfaces each adjustment as a suggestion with an Apply button; nothing changes until tapped. Applied-state rides inside the `coach_outputs.output_json` blob (no migration). Pure compute + applied-state helpers live in `src/lib/coachApply.js` with unit tests; `CoachOutputScreen` orchestrates the side effects.
 
@@ -57,7 +85,7 @@ Built out the coach's confirm-then-apply loop across every weekly adjustment (GA
 
 **Next:** rows 3-7 (coach confirm-then-apply) are complete. UI surfaces remain (rows 1, 2, 8, 15, 19, 20, 25-28). Row 12 (sync layer migration) still wants its own session.
 
-### 0.B. 2026-05-28 session (Claude): engine cleanup
+### 0.C. 2026-05-28 session (Claude): engine cleanup
 
 Engine cleanup. Three rows closed off the `docs/GAP_ANALYSIS.md` punch list, plus a Maestro CI fix, plus the previous session's stranded commits brought onto `main`.
 
@@ -83,7 +111,7 @@ Engine cleanup. Three rows closed off the `docs/GAP_ANALYSIS.md` punch list, plu
 
 **Next session opener:** decision on row 12 sync migration vs. starting coach confirm-then-apply work (rows 3-7).
 
-### 0.C. 2026-05-27 session (Claude)
+### 0.D. 2026-05-27 session (Claude)
 
 Documentation rewrite + drift closure. Rewrote `CURRENT_STATUS.md`, `HANDOFF.md`, `BACKLOG.md` end-to-end against code reality (the previous versions had developed internal contradictions). Authored `GAP_ANALYSIS.md` as the ranked 28-row punch list, locked founder decisions for every row. Closed gap #1 (food dislikes via `food_favourites.kind`), gap #2 (recipe builder UI), and shipped migration 048. Authored `CODE_TRUTH_SURVEY.md` (188-file walk with file:line evidence for every claim). Closed drift item 17 (`WEAK_POINT_MUSCLES` move) and row 16 (deleted `phaseEngine.js` + `coachExport.js` + the dead test), removed the unused Microsoft OAuth export. Voice + hex sweep landed for `ScanBarcodeScreen`, `CoachingReminders`, Apple OAuth token references.
 
@@ -183,6 +211,9 @@ Per `DATABASE_SCHEMA_LOCKED.md` + grep against `supabase/migrate_*.sql`.
 | 046 | recipe_ingredients.updated_at + deleted_at + trigger | Applied 2026-05-26 |
 | 047 | body_metrics + weekly_checkins_v2 updated_at/deleted_at + triggers + partial live index | Applied 2026-05-27 |
 | 048 | food_favourites.kind column + CHECK constraint (powers the fav/dislike toggle) | **Pending founder apply.** Verification query in `supabase/README.md`. Old AAB compatible (DEFAULT 'fav'). |
+| 049 | Drop peak_week_plans | **Drafted, held.** Do not apply until the next AAB ships (frozen build still references the table). |
+| 050 | weekly_checkins_v2.cardio_adherence (additive, nullable) | **Pending founder apply.** Backs GAP row 4 cardio adherence. Old AAB compatible. Verification in `supabase/README.md`. |
+| 051 | food_frequents table + RLS + nightly pg_cron worker + food_frequents_pull RPC (Frequents tab, GAP row 28) | **Pending founder apply.** Fully additive; outside the food sync cycle. Until applied the Frequents tab shows its empty state. Verification in `supabase/README.md` § Verify food_frequents. |
 
 ---
 
@@ -241,7 +272,7 @@ The survey at `docs/CODE_TRUTH_SURVEY.md` flags 32 cross-cutting findings. The s
 
 11. **`weight_log` is an alias.** `sync/tables/weightLog.js` is intentionally a no-op (handlers return `skipped:'aliased_to_body_composition_log'`). 16 registry entries map to 15 unique cloud tables.
 
-12. **`cycleOverride` is a dead input.** `weeklyCoach.js:375` reads it; gates the rapid-loss compression at line 489. `WeeklyCheckInScreen.js` never captures it. Permanently false.
+12. ~~**`cycleOverride` is a dead input.**~~ **Wired 2026-05-28** (GAP row 15, see § 0.A). `WeeklyCheckInScreen` now captures it behind an opt-in gate: the `Cycle tracking` Settings toggle (`lib/cyclePrefs.js`, off by default, female only) plus a check-in question that flows into `saveWeeklyCheckin({ cycleOverride })`. The coach read path (`weeklyCoach.js`) was already live.
 
 13. **`weekly_checkins` has two write paths.** `WeeklyCheckInScreen.js:385` and `WorkoutSummaryScreen.js:377`. Field sets may diverge; verify before any schema change.
 
@@ -249,9 +280,9 @@ The survey at `docs/CODE_TRUTH_SURVEY.md` flags 32 cross-cutting findings. The s
 
 15. **Three event-tracking surfaces.** `engineTelemetry.track` (now a shim into `telemetry/transport.postEvent`), `observability.track` namespace, `observability.audit`. Scopes (engine events, UI events, internal audit) need a single doc that says which goes where.
 
-16. ~~**`refeed` engine code is dead.**~~ **Wired 2026-05-28** (GAP row 7, see § 0.A). The refeed math now lives in `coachApply.computeRefeedDay`; `weeklyCoach` proposes it on a cadence for aggressive cuts + competitors, `CoachOutputScreen` confirms it, and the Diary shows it on the next training day. The original `getPlanNutritionContext.refeedRecommendation` block is still unused (the live math is in `coachApply`); it can be removed in a future cleanup.
+16. ~~**`refeed` engine code is dead.**~~ **Wired 2026-05-28** (GAP row 7, see § 0.B). The refeed math now lives in `coachApply.computeRefeedDay`; `weeklyCoach` proposes it on a cadence for aggressive cuts + competitors, `CoachOutputScreen` confirms it, and the Diary shows it on the next training day. The original `getPlanNutritionContext.refeedRecommendation` block is still unused (the live math is in `coachApply`); it can be removed in a future cleanup.
 
-17. ~~**High-day / low-day macro shift is NOT in the coach.**~~ **Shipped 2026-05-28** (GAP row 6, see § 0.A). `coachApply.computeMacroCycle` + the coach gate + the "Carbs by day" apply card + the diary day-aware target. Gated to advanced cuts and physique competitors.
+17. ~~**High-day / low-day macro shift is NOT in the coach.**~~ **Shipped 2026-05-28** (GAP row 6, see § 0.B). `coachApply.computeMacroCycle` + the coach gate + the "Carbs by day" apply card + the diary day-aware target. Gated to advanced cuts and physique competitors.
 
 18. **Per-set RIR deliberately removed.** `SetEntry.js:173-176` documents the decision. `DEFAULT_SET.rir = 2` still set internally so the engine works.
 
@@ -269,7 +300,7 @@ Train tab: HomeScreen with daily narrative + today's plan + morning weight entry
 
 Plans tab: PlansScreen, PlanLibrary (with quiz), PlanDetail, RoutineDetail, MesocycleBuilder, ManualBuilder.
 
-Diary tab: DiaryScreen (date pager, meal sections, macro rings, water, swipe-delete), FoodSearch (3-source waterfall), AddCustomFood (sanity-checked), ScanBarcode (vision-camera), ScanLabel (MLKit OCR), MyRecipes + RecipeBuilder (shipped 2026-05-27), FoodInsights (CSV export).
+Diary tab: DiaryScreen (date pager, meal sections, three-band macro rings tappable to a per-meal breakdown sheet, water, swipe-delete, long-press multi-select toolbar with Move / Copy to today / Delete), FoodSearch (5-tab subnav: Recents / Favourites / Frequents / Custom / Database; Database is the 3-source waterfall), AddCustomFood (sanity-checked), ScanBarcode (vision-camera), ScanLabel (MLKit OCR), MyRecipes + RecipeBuilder (shipped 2026-05-27), FoodInsights (CSV export).
 
 Progress tab: AnalyticsScreen, PRWallScreen, VolumeHeatmap, WorkoutHistory, ExerciseDetail, ExerciseLibrary, YearOfLifts.
 
@@ -324,7 +355,7 @@ Grouped by phase per `RELEASE_PLAN_LOCKED.md`. The live ranked version with foun
 |---|---|---|---|
 | 1 | Saved meals UI (template create / pick / apply) | M | Open. GAP row 1. |
 | 2 | Body composition trend charts (BF% + measurements over time) | S-M | Open. GAP rows 2 + 25. |
-| 3 | Coach confirm-then-apply. Each weekly adjustment surfaces with an Apply button; nothing changes until tapped. **Calories, training volume, steps, cardio, deload, diet break all shipped 2026-05-28** (GAP rows 3-5; see § 0.A). Remaining: row 6 (high/low-day macros) + row 7 (refeed, blocked on row 6). | S impl per output | Partial. Rows 3-5 done; 6-7 open. |
+| 3 | Coach confirm-then-apply. Each weekly adjustment surfaces with an Apply button; nothing changes until tapped. Calories, training volume, steps, cardio, deload, diet break (GAP rows 3-5, see § 0.B), high/low-day macros (row 6), refeed (row 7). | S impl per output | **Done 2026-05-28.** Rows 3-7 all shipped. |
 | 4 | Drift cleanup. Items 2, 4, 5, 14 from § 5 closed this session (telemetry fold-in, STRENGTH_STANDARDS dedup, detectRepRegressions confirmed single, dead-lib delete). Item 1 (sync layer) still open as GAP row 12 — needs its own focused session per CLAUDE.md Rule 5 (offline sync is runtime-critical). | M remaining | Partial. |
 | 5 | Notification surfaces still pending (cascade day 19/21 push, payment failure, coach output) | S-M | Open. GAP rows 9-11. |
 | 6 | Voice + hex sweep | S | **Done 2026-05-28** (commit `79e06f2`). Hex sweep landed 2026-05-27. Em-dash sweep covered 818 of 821 instances; 3 deliberately preserved (OCR regex + lint guard). |
@@ -376,7 +407,11 @@ Grouped by phase per `RELEASE_PLAN_LOCKED.md`. The live ranked version with foun
 
 ### Now
 
-1. **Apply migration 048** (`supabase/migrate_048_food_preferences_kind.sql`). Adds the `kind` column to `food_favourites`. Old AAB compatible (DEFAULT `'fav'`). Verification in `supabase/README.md`.
+1. **Apply the three pending migrations** in the Supabase SQL Editor (all additive, old-AAB compatible; verification queries in `supabase/README.md`):
+   - **048** (`migrate_048_food_preferences_kind.sql`): `food_favourites.kind` (fav/dislike toggle).
+   - **050** (`migrate_050_weekly_checkins_cardio_adherence.sql`): `weekly_checkins_v2.cardio_adherence` (GAP row 4 cardio).
+   - **051** (`migrate_051_food_frequents.sql`): `food_frequents` table + nightly `pg_cron` worker + `food_frequents_pull` RPC (GAP row 28 Frequents tab). After applying, run `SELECT refresh_food_frequents();` once to seed before the first night. Until applied, the Frequents tab just shows its empty state.
+   - (049 is drafted but **held**: do not apply until the next AAB ships.)
 2. **Tear down the `volyume-e2e-test` Supabase project** + delete the four `SUPABASE_TEST_*` repo secrets. The live-cloud E2E suite was deleted as out of scope.
 3. **Close PR #5 without merging.** No-op after the live-cloud revert.
 4. **Point `volyume.app` DNS at GitHub Pages.** File + workflow already shipped; DNS is the only piece left for `/privacy` to resolve.

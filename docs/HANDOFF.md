@@ -2,6 +2,8 @@
 
 Verified against code in `src/` and `supabase/` on 2026-05-27. This is the deep reference for a new session reading in cold. For day-to-day status read `docs/CURRENT_STATUS.md` first; for evidence at the file:line level read `docs/CODE_TRUTH_SURVEY.md`.
 
+> **Stale-snapshot note (2026-05-28):** this doc predates the 2026-05-28 sessions (coach confirm-then-apply rows 3-7, then UI surfaces rows 8/15/26/27/28 + the Frequents pipeline). Anything below described as "planned" or "not built" for those rows is now shipped. `docs/CURRENT_STATUS.md` § 0.A and § 0.B are authoritative; trust them over this doc where they disagree.
+
 **Doc hierarchy.** When new sessions read in:
 
 1. `CLAUDE.md` (project root): voice rules, founder overrides, branch policy, identity contract, the 10 permanent engineering rules.

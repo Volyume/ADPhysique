@@ -12,7 +12,7 @@ proving each one landed. Run them in numeric order in the Supabase
 Dashboard SQL Editor. Every migration is additive and idempotent
 unless the file header says otherwise.
 
-## Pending application order (as of 2026-05-26)
+## Pending application order (as of 2026-05-28)
 
 | # | File | What it adds | Verification query |
 |---|---|---|---|
@@ -40,7 +40,8 @@ unless the file header says otherwise.
 1. Open the Supabase Dashboard → SQL Editor → New query.
 2. Open one migration file at a time from this folder (numeric
    order: 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048,
-   050; 049 held).
+   050, 051; 049 held). 051 is independent and can go any time. After
+   051, run `SELECT refresh_food_frequents();` once to seed the cache.
 3. Paste the full contents into the SQL Editor.
 4. Click **Run**. The migrations are wrapped in `CREATE OR REPLACE
    FUNCTION` / `CREATE TABLE IF NOT EXISTS`, so re-running an
