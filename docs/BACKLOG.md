@@ -59,7 +59,7 @@ These were on the NEVER list and have since been re-opened. Recorded so the orig
 | Muscle volume heatmap on body diagram | **Done.** `BodyDiagramHeatmap` component renders front + back anatomical SVG figures colour-coded by volume status. |
 | Session-to-session fatigue trend graph | **Done.** `FatigueTrendCard` on HomeScreen, SVG bar chart of last 6 sessions, coaching line based on last 2. Hidden until 2+ sessions have feedback. |
 | Body composition trend charts (BF%, measurements) | **NOT done.** `BodyMetricsScreen.js` ships a weight trend chart only. BF% + measurement-over-time charts absent. Pro-tier promise per `MASTER_VISION_AND_PLAN.md §8`. |
-| Adherence-neutral macro rings | **NOT done.** `MacroRings.js:61-75, 104-125` turns rings + numbers `colors.warning` when value > target. If the brief is "no red over target", current code doesn't satisfy it. |
+| Adherence-neutral macro rings | **Reworked 2026-05-28** (GAP row 8). Three-band `MacroRings.bandColour`: under = amber, within 5% = green, over = amber. Over is amber (`#FFC107`), not red, and numbers warn only above 105% (was above 100%). The founder's locked call is gentle feedback, not full neutrality. The brief's "no red over target" is satisfied (no red); a fully neutral over band would be a further founder call. |
 | Volume landmark auto-calibration | Deferred. MEV/MAV/MRV defaults from RP Hypertrophy are in `algorithms.VOLUME_LANDMARKS`. `computeAdaptiveLandmarks` exists in `algorithms.js:857` but isn't widely consumed. Per-user calibration requires the response-data pipeline. |
 
 ### Plans & Coach Builder

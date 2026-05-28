@@ -8,11 +8,19 @@ const KCAL_STROKE = 14;
 const MACRO_SIZE = 44;
 const MACRO_STROKE = 5;
 
-const MACRO_TINTS = {
-  protein: colors.primary,
-  carbs:   '#7AB7FF',
-  fat:     '#F2A65A',
-};
+// Three-band adherence colour (GAP row 8, founder decision 2026-05-27):
+// under target shows the brand amber, within 5% of target shows success
+// green, over target shows the warning amber. The over band is amber,
+// deliberately not red, so an over-target day reads as a gentle signal
+// rather than a punitive one. No target → neutral brand amber (there is
+// nothing to be over or under).
+export function bandColour(value, target) {
+  if (!target || target <= 0) return colors.primary;
+  const ratio = value / target;
+  if (ratio > 1.05) return colors.warning;
+  if (ratio >= 0.95) return colors.success;
+  return colors.primary;
+}
 
 function arcPath(cx, cy, r, startDeg, sweepDeg) {
   const p = Skia.Path.Make();
@@ -56,9 +64,10 @@ function Ring({ size, stroke, progress, tint, track }) {
   );
 }
 
-function MacroChip({ label, value, target, tint }) {
+function MacroChip({ label, value, target }) {
   const progress = target && target > 0 ? value / target : 0;
-  const over = target && value > target;
+  const tint = bandColour(value, target);
+  const warn = tint === colors.warning;
   return (
     <View style={styles.macroChip}>
       <View style={styles.macroRingWrap}>
@@ -66,13 +75,13 @@ function MacroChip({ label, value, target, tint }) {
           size={MACRO_SIZE}
           stroke={MACRO_STROKE}
           progress={progress}
-          tint={over ? colors.warning : tint}
+          tint={tint}
           track={colors.surface2}
         />
       </View>
       <View style={styles.macroChipText}>
         <Text style={styles.macroChipLabel}>{label}</Text>
-        <Text style={[styles.macroChipValue, over && { color: colors.warning }]}>
+        <Text style={[styles.macroChipValue, warn && { color: colors.warning }]}>
           {value}{target != null ? `/${target}` : ''}g
         </Text>
       </View>
@@ -92,6 +101,8 @@ export default function MacroRings({ rollup, targets, dayTypeLabel }) {
   const kcalProgress = kcalTarget && kcalTarget > 0 ? kcal / kcalTarget : 0;
   const kcalRemaining = kcalTarget != null ? kcalTarget - kcal : null;
   const kcalOver = kcalRemaining != null && kcalRemaining < 0;
+  const kcalTint = bandColour(kcal, kcalTarget);
+  const kcalWarn = kcalTint === colors.warning;
 
   return (
     <View style={styles.card}>
@@ -106,7 +117,7 @@ export default function MacroRings({ rollup, targets, dayTypeLabel }) {
             size={KCAL_SIZE}
             stroke={KCAL_STROKE}
             progress={kcalProgress}
-            tint={kcalOver ? colors.warning : colors.primary}
+            tint={kcalTint}
             track={colors.surface2}
           />
           <View style={styles.kcalCentre} pointerEvents="none">
@@ -122,7 +133,7 @@ export default function MacroRings({ rollup, targets, dayTypeLabel }) {
           <View style={styles.kcalRemainingWrap}>
             <Text style={[
               styles.kcalRemainingValue,
-              kcalOver && { color: colors.warning },
+              kcalWarn && { color: colors.warning },
             ]}>
               {kcalOver ? Math.abs(kcalRemaining) : kcalRemaining}
             </Text>
@@ -133,9 +144,9 @@ export default function MacroRings({ rollup, targets, dayTypeLabel }) {
         ) : null}
       </View>
       <View style={styles.macroRow}>
-        <MacroChip label="Protein" value={p} target={pTarget} tint={MACRO_TINTS.protein} />
-        <MacroChip label="Carbs"   value={c} target={cTarget} tint={MACRO_TINTS.carbs} />
-        <MacroChip label="Fat"     value={f} target={fTarget} tint={MACRO_TINTS.fat} />
+        <MacroChip label="Protein" value={p} target={pTarget} />
+        <MacroChip label="Carbs"   value={c} target={cTarget} />
+        <MacroChip label="Fat"     value={f} target={fTarget} />
       </View>
     </View>
   );

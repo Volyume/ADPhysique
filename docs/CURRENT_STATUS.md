@@ -255,7 +255,7 @@ The survey at `docs/CODE_TRUTH_SURVEY.md` flags 32 cross-cutting findings. The s
 
 18. **Per-set RIR deliberately removed.** `SetEntry.js:173-176` documents the decision. `DEFAULT_SET.rir = 2` still set internally so the engine works.
 
-19. **`MacroRings.js:61-75` colours over-target as warning.** Not adherence-neutral. Any "no red over target" claim is wrong against current code.
+19. ~~**`MacroRings.js:61-75` colours over-target as warning.**~~ **Reworked 2026-05-28** (GAP row 8). Three-band `bandColour`: under = amber, within 5% = green, over = amber. The over band is amber (`#FFC107`), not red, and the numbers only warn above 105%. Still gives feedback (founder's locked call), but softer than the old over-100% warning. Note the standing tension with the strict adherence-neutral brief in `BRIEF_C_CLAUDE_ADJUDICATION.md` (lines 276, 320); the founder chose amber feedback over full neutrality.
 
 20. **3 v1.1 features in `FEATURE_MAP` but not shipped.** `proGate.js:62-64` lists `refeed_automated_any_cut`, `body_composition_deep`, `share_pack_pdf` under PRO_FEATURES. Comment line 61 acknowledges these ship later. Entitlement check would say "yes you can" while the UI surface is absent.
 
