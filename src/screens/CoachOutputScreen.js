@@ -27,6 +27,7 @@ import { track as trackEngineEvent } from '../lib/engineTelemetry';
 import DifferentialBadge from '../components/DifferentialBadge';
 import { SkeletonCard } from '../components/Skeleton';
 import { computeEWMA, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
+import { computeCalorieTargets, markApplied, isApplied } from '../lib/coachApply';
 import { logError } from '../lib/errorLog';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import {
@@ -192,7 +193,8 @@ function WhatsWorkingCard({ bullets }) {
   );
 }
 
-function AdjustmentRow({ iconName, label, note, applied }) {
+function AdjustmentRow({ iconName, label, note, applied, onApply, applying }) {
+  const showApply = !!onApply && !applied;
   return (
     <View style={styles.adjustmentRow}>
       <View style={styles.adjustmentIconWrap}>
@@ -210,11 +212,22 @@ function AdjustmentRow({ iconName, label, note, applied }) {
         </View>
         {note ? <Text style={styles.adjustmentNote}>{note}</Text> : null}
       </View>
+      {showApply && (
+        <TouchableOpacity
+          style={[styles.applyBtn, applying && styles.applyBtnBusy]}
+          onPress={onApply}
+          disabled={applying}
+          accessibilityRole="button"
+          accessibilityLabel={`Apply: ${label}`}
+        >
+          <Text style={styles.applyBtnText}>{applying ? 'Applying' : 'Apply'}</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
 
-function NextWeekCard({ adjustments }) {
+function NextWeekCard({ adjustments, onApplyCalories, applyingKey }) {
   const { calories, steps, cardio } = adjustments;
 
   const calLabel =
@@ -225,6 +238,9 @@ function NextWeekCard({ adjustments }) {
       : `${calories.change > 0 ? '+' : ''}${calories.change} kcal`;
 
   const stepsLabel = steps !== null ? `${steps.target.toLocaleString('en-GB')}/day target` : null;
+  // Only an actual change is applyable. "Hold at current target"
+  // (change === 0) has nothing to write, so no button.
+  const caloriesApplyable = calories !== null && calories.change !== 0 && !calories.applied;
 
   return (
     <View style={styles.card}>
@@ -235,6 +251,8 @@ function NextWeekCard({ adjustments }) {
           label={calories.applied && calories.newKcal ? `${calLabel} → ${calories.newKcal} kcal/day` : calLabel}
           note={calories.note}
           applied={!!calories.applied}
+          onApply={caloriesApplyable ? onApplyCalories : undefined}
+          applying={applyingKey === 'calories'}
         />
       ) : (
         <AdjustmentRow
@@ -512,6 +530,35 @@ export default function CoachOutputScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [coachHistory, setCoachHistory] = useState([]);
   const [adaptiveTDEE, setAdaptiveTDEE] = useState(null);
+  const [applyingKey, setApplyingKey] = useState(null);
+
+  // Confirm-then-apply: write the suggested calorie change to
+  // nutrition_targets only when the user taps Apply, then record it on
+  // the coach output so the row flips to "Applied" and can't be applied
+  // twice. Current targets are re-read at tap time so we never scale
+  // from a stale snapshot.
+  async function handleApplyCalories() {
+    if (applyingKey || !user?.id || !output) return;
+    if (isApplied(output, 'calories')) return;
+    setApplyingKey('calories');
+    try {
+      const current = await getNutritionTargets(user.id);
+      const change = output.adjustments?.calories?.change ?? 0;
+      const computed = computeCalorieTargets(current, change);
+      if (!computed) return;
+      await saveNutritionTargets(user.id, computed.targets);
+      await AsyncStorage.setItem(
+        '@volyume_nutrition_targets', JSON.stringify(computed.targets),
+      ).catch(() => {});
+      const updated = markApplied(output, 'calories', { newKcal: computed.newKcal });
+      await saveCoachOutput(user.id, { weekStart, ...updated });
+      setOutput(updated);
+    } catch (e) {
+      logError('CoachOutputScreen.handleApplyCalories', e, { userId: user?.id });
+    } finally {
+      setApplyingKey(null);
+    }
+  }
 
   useEffect(() => {
     async function load() {
@@ -661,30 +708,12 @@ export default function CoachOutputScreen({ navigation, route }) {
         logError('CoachOutputScreen.engineTelemetry', e);
       }
 
+      // Calorie changes are no longer auto-applied. Per founder
+      // direction (GAP rows 3-7, 2026-05-28) every coach adjustment is
+      // confirm-then-apply: the suggestion is surfaced with an Apply
+      // button and only writes to nutrition_targets when the user taps.
+      // See handleApplyCalories below.
       await saveCoachOutput(user.id, { weekStart, ...result });
-
-      // Auto-apply calorie adjustment. Protein stays the same (priority macro);
-      // fat and carbs scale with kcal change so the deficit/surplus math holds.
-      try {
-        const calChange = result.adjustments?.calories?.change ?? 0;
-        if (calChange && nutrition?.targetKcal) {
-          const newKcal = Math.max(1200, nutrition.targetKcal + calChange);
-          const ratio = newKcal / nutrition.targetKcal;
-          const newTargets = {
-            targetKcal: newKcal,
-            proteinG: nutrition.proteinG ?? null,
-            fatG: nutrition.fatG ? Math.round(nutrition.fatG * ratio) : nutrition.fatG ?? null,
-            carbsG: nutrition.carbsG ? Math.round(nutrition.carbsG * ratio) : nutrition.carbsG ?? null,
-            maintenanceKcal: nutrition.maintenanceKcal ?? null,
-          };
-          await saveNutritionTargets(user.id, newTargets);
-          await AsyncStorage.setItem('@volyume_nutrition_targets', JSON.stringify(newTargets)).catch(() => {});
-          result.adjustments.calories.applied = true;
-          result.adjustments.calories.newKcal = newKcal;
-        }
-      } catch (e) {
-        console.warn('Auto-apply calories failed:', e);
-      }
 
       setOutput(result);
 
@@ -872,7 +901,11 @@ export default function CoachOutputScreen({ navigation, route }) {
         })()}
 
         {/* 5. The decision */}
-        <NextWeekCard adjustments={adjustments} />
+        <NextWeekCard
+          adjustments={adjustments}
+          onApplyCalories={handleApplyCalories}
+          applyingKey={applyingKey}
+        />
 
         {/* 6. Why */}
         {whyThisWeek ? <WhyBlock text={whyThisWeek} /> : null}
@@ -1198,6 +1231,21 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textSecondary,
     lineHeight: 20,
+  },
+  applyBtn: {
+    alignSelf: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    minWidth: 84,
+    alignItems: 'center',
+  },
+  applyBtnBusy: { opacity: 0.6 },
+  applyBtnText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.background,
   },
 
   // Why this week
