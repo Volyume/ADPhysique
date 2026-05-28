@@ -311,3 +311,54 @@ describe('robustness to missing fields', () => {
     expect(out.adjustments.calories).toBeNull();
   });
 });
+
+// ── High-day / low-day macro cycle gating (GAP row 6) ──────────────────────
+
+describe('macro cycle gating', () => {
+  // Current daily macros, supplied by the caller from nutrition_targets.
+  const macros = { currentCalTarget: 2400, currentProteinG: 200, currentCarbsG: 280, currentFatG: 70 };
+  const onCut = { morningWeights: trend(85, -0.5), goalPhase: 'mod_cut' };
+
+  test('fires on an advanced cut', () => {
+    const out = runWeeklyCoach(baseInputs({ ...macros, ...onCut, goalLockAdvanced: true }));
+    expect(out.macroCycle).not.toBeNull();
+    expect(out.macroCycle.trainingDay.carbsG).toBeGreaterThan(out.macroCycle.restDay.carbsG);
+    expect(out.macroCycle.trainingDaysPerWeek).toBe(4); // sessionsPlanned default
+  });
+
+  test('fires for a physique competitor on a cut', () => {
+    const out = runWeeklyCoach(baseInputs({ ...macros, ...onCut, trainingGoal: 'mens_physique' }));
+    expect(out.macroCycle).not.toBeNull();
+  });
+
+  test('stays flat for a non-advanced, non-competition cut', () => {
+    const out = runWeeklyCoach(baseInputs({
+      ...macros, ...onCut, trainingGoal: 'build_muscle', goalLockAdvanced: false,
+    }));
+    expect(out.macroCycle).toBeNull();
+  });
+
+  test('does not fire outside a cut even for an advanced competitor', () => {
+    const out = runWeeklyCoach(baseInputs({
+      ...macros,
+      morningWeights: trend(80, 0.5),
+      goalPhase: 'mild_bulk',
+      trainingGoal: 'mens_physique',
+      goalLockAdvanced: true,
+    }));
+    expect(out.macroCycle).toBeNull();
+  });
+
+  test('holds the weekly average kcal at the current target', () => {
+    const out = runWeeklyCoach(baseInputs({ ...macros, ...onCut, goalLockAdvanced: true }));
+    const T = out.macroCycle.trainingDaysPerWeek;
+    const weekly = T * out.macroCycle.trainingDay.kcal + (7 - T) * out.macroCycle.restDay.kcal;
+    expect(Math.abs(weekly / 7 - 2400)).toBeLessThanOrEqual(5);
+  });
+
+  test('note is in voice (no em dash, no AI tells)', () => {
+    const out = runWeeklyCoach(baseInputs({ ...macros, ...onCut, goalLockAdvanced: true }));
+    expect(out.macroCycle.note).not.toMatch(/—/);
+    expect(out.macroCycle.note).not.toMatch(/let me|I'll|ensure|leverage|seamless|utilise/i);
+  });
+});

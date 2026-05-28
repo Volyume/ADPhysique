@@ -74,6 +74,64 @@ export function computeDietBreakTargets(nutrition) {
   return computeCalorieTargets(nutrition, Math.round(maintenance - current));
 }
 
+// Fraction of baseline carbs pulled off each rest day. The freed carbs
+// are spread across the training days, so the weekly carb total (and so
+// the weekly average kcal) is preserved. 0.25 is a moderate cycle:
+// noticeable on the plate without starving rest days.
+export const MACRO_CYCLE_REST_DAY_CARB_CUT = 0.25;
+
+/**
+ * Compute a high-day / low-day macro split for a carb cycle (GAP row 6).
+ *
+ * Protein and fat are held constant every day. Only carbs move: each
+ * rest day is cut by MACRO_CYCLE_REST_DAY_CARB_CUT of baseline, and the
+ * freed carbs are spread evenly across the training days. The weekly
+ * carb total is preserved, so the weekly average kcal stays at the
+ * current target. Each day's kcal is the current target plus the carb
+ * delta from baseline (4 kcal/g), which keeps the day kcal consistent
+ * with its own macros and the week consistent with the target.
+ *
+ * @param {object} nutrition  current targets (targetKcal, proteinG, carbsG, fatG)
+ * @param {number} trainingDaysPerWeek  clamped to 1..6
+ * @returns {null | { trainingDaysPerWeek, trainingDay, restDay }}
+ *   null when there is nothing to cycle: no current target or carbs to
+ *   split, fewer than 1 or more than 6 training days (no rest day to
+ *   pull from, or no training day to push to), or the split rounds to a
+ *   no-op.
+ */
+export function computeMacroCycle(nutrition, trainingDaysPerWeek) {
+  const targetKcal = nutrition?.targetKcal;
+  const baselineCarbs = nutrition?.carbsG;
+  if (!targetKcal || !baselineCarbs) return null;
+  const T = Math.round(trainingDaysPerWeek);
+  if (!Number.isFinite(T) || T < 1 || T > 6) return null;
+  const R = 7 - T;
+
+  const weeklyCarbs = baselineCarbs * 7;
+  const restDayCarbs = Math.round(baselineCarbs * (1 - MACRO_CYCLE_REST_DAY_CARB_CUT));
+  const trainingDayCarbs = Math.round((weeklyCarbs - R * restDayCarbs) / T);
+  if (trainingDayCarbs === restDayCarbs) return null;
+
+  const proteinG = nutrition.proteinG ?? null;
+  const fatG = nutrition.fatG ?? null;
+
+  return {
+    trainingDaysPerWeek: T,
+    trainingDay: {
+      kcal: Math.round(targetKcal + (trainingDayCarbs - baselineCarbs) * 4),
+      proteinG,
+      carbsG: trainingDayCarbs,
+      fatG,
+    },
+    restDay: {
+      kcal: Math.round(targetKcal + (restDayCarbs - baselineCarbs) * 4),
+      proteinG,
+      carbsG: restDayCarbs,
+      fatG,
+    },
+  };
+}
+
 /**
  * Compute the planned-volume changes for a deload apply: cut every
  * muscle to its floor (mev) for the week, the same level the scheduled

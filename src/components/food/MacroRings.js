@@ -80,7 +80,7 @@ function MacroChip({ label, value, target, tint }) {
   );
 }
 
-export default function MacroRings({ rollup, targets }) {
+export default function MacroRings({ rollup, targets, dayTypeLabel }) {
   const kcal = Math.round(rollup?.kcal_total ?? 0);
   const p = Math.round(rollup?.protein_g ?? 0);
   const c = Math.round(rollup?.carbs_g ?? 0);
@@ -95,6 +95,11 @@ export default function MacroRings({ rollup, targets }) {
 
   return (
     <View style={styles.card}>
+      {dayTypeLabel ? (
+        <View style={styles.dayTypeChip}>
+          <Text style={styles.dayTypeChipText}>{dayTypeLabel}</Text>
+        </View>
+      ) : null}
       <View style={styles.kcalRow}>
         <View style={styles.kcalRingWrap}>
           <Ring
@@ -178,6 +183,19 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: fontSize.xs,
     marginTop: 2,
+  },
+  dayTypeChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.surface2,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+  },
+  dayTypeChipText: {
+    color: colors.textSecondary,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    letterSpacing: 0.3,
   },
   macroRow: {
     flexDirection: 'row',

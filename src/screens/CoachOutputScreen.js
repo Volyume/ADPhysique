@@ -32,7 +32,7 @@ import { track as trackEngineEvent } from '../lib/engineTelemetry';
 import DifferentialBadge from '../components/DifferentialBadge';
 import { SkeletonCard } from '../components/Skeleton';
 import { computeEWMA, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
-import { computeCalorieTargets, computeVolumeApply, computeDeloadVolume, computeDietBreakTargets, markApplied, isApplied } from '../lib/coachApply';
+import { computeCalorieTargets, computeVolumeApply, computeDeloadVolume, computeDietBreakTargets, computeMacroCycle, markApplied, isApplied } from '../lib/coachApply';
 import { logError } from '../lib/errorLog';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import {
@@ -415,6 +415,53 @@ function DietBreakCard({ weeksInDeficit, applied, onApply, applying }) {
           accessibilityLabel="Set maintenance calories for a diet break"
         >
           <Text style={styles.applyBtnText}>{applying ? 'Applying' : 'Set maintenance week'}</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
+// High-day / low-day carb cycle as a confirm-then-apply card (GAP row
+// 6). Shows the training-day and rest-day targets side by side; one
+// Apply sets the whole split. Only rendered for advanced cuts and
+// physique competitors (the coach gates it). Applying writes the split
+// to userProfile.macroCycle, which the Diary reads to show the right
+// target for the day.
+function MacroCycleCard({ macroCycle, applied, onApply, applying }) {
+  const { trainingDay, restDay } = macroCycle;
+  return (
+    <View style={styles.card}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
+        <SectionHeader title="Carbs by day" />
+        {applied && (
+          <View style={[styles.appliedChip, { marginBottom: spacing.xs }]}>
+            <Ionicons name="checkmark" size={10} color={colors.success} />
+            <Text style={styles.appliedChipText}>Applied</Text>
+          </View>
+        )}
+      </View>
+      <View style={styles.macroCycleRow}>
+        <View style={styles.macroCycleCol}>
+          <Text style={styles.macroCycleColLabel}>Training days</Text>
+          <Text style={styles.macroCycleColKcal}>{trainingDay.kcal} kcal</Text>
+          <Text style={styles.macroCycleColCarbs}>{trainingDay.carbsG}g carbs</Text>
+        </View>
+        <View style={styles.macroCycleCol}>
+          <Text style={styles.macroCycleColLabel}>Rest days</Text>
+          <Text style={styles.macroCycleColKcal}>{restDay.kcal} kcal</Text>
+          <Text style={styles.macroCycleColCarbs}>{restDay.carbsG}g carbs</Text>
+        </View>
+      </View>
+      <Text style={styles.adjustmentNote}>{macroCycle.note}</Text>
+      {!applied && onApply && (
+        <TouchableOpacity
+          style={[styles.applyBtn, styles.dietBreakApplyBtn, applying && styles.applyBtnBusy]}
+          onPress={onApply}
+          disabled={applying}
+          accessibilityRole="button"
+          accessibilityLabel="Use this training-day and rest-day carb split"
+        >
+          <Text style={styles.applyBtnText}>{applying ? 'Applying' : 'Use this split'}</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -810,6 +857,39 @@ export default function CoachOutputScreen({ navigation, route }) {
     }
   }
 
+  // Confirm-then-apply for the high-day / low-day macro cycle (GAP row
+  // 6). Applying stores the split on userProfile.macroCycle, the same
+  // local-profile destination steps and cardio write to. The Diary
+  // reads it and shows the training-day or rest-day target for the day
+  // being viewed. Re-reads current targets at tap time and recomputes
+  // so the persisted split never scales from a stale snapshot.
+  async function handleApplyMacroCycle() {
+    if (applyingKey || !user?.id || !output) return;
+    if (isApplied(output, 'macroCycle')) return;
+    const trainingDays = output.macroCycle?.trainingDaysPerWeek;
+    if (!trainingDays) return;
+    setApplyingKey('macroCycle');
+    try {
+      const current = await getNutritionTargets(user.id);
+      const split = computeMacroCycle(current, trainingDays);
+      if (!split) return;
+      await saveLocalProfile(user.id, {
+        ...(userProfile || {}),
+        macroCycle: { ...split, appliedAt: Date.now() },
+      });
+      const updated = markApplied(output, 'macroCycle', {
+        trainingDayCarbs: split.trainingDay.carbsG,
+        restDayCarbs: split.restDay.carbsG,
+      });
+      await saveCoachOutput(user.id, { weekStart, ...updated });
+      setOutput(updated);
+    } catch (e) {
+      logError('CoachOutputScreen.handleApplyMacroCycle', e, { userId: user?.id });
+    } finally {
+      setApplyingKey(null);
+    }
+  }
+
   useEffect(() => {
     async function load() {
       const checkin = await getLatestCheckin(user.id, weekStart);
@@ -879,6 +959,9 @@ export default function CoachOutputScreen({ navigation, route }) {
         lastCalAdjustmentDirection,
         lastCalAdjustmentWeeksAgo,
         currentCalTarget: nutrition?.targetKcal ?? null,
+        currentProteinG: nutrition?.proteinG ?? null,
+        currentCarbsG: nutrition?.carbsG ?? null,
+        currentFatG: nutrition?.fatG ?? null,
         currentStepsTarget: userProfile?.stepsTarget ?? 8000,
         bodyweightKg: userProfile?.weightKg ?? null,
         units,
@@ -1073,6 +1156,7 @@ export default function CoachOutputScreen({ navigation, route }) {
     dietBreakSuggested,
     dietBreakNote,
     dietBreakWeeksInDeficit,
+    macroCycle,
     heldDecisions,
     rapidWeightLossFlag,
     adherenceNote,
@@ -1180,6 +1264,16 @@ export default function CoachOutputScreen({ navigation, route }) {
           onApplyCardio={handleApplyCardio}
           applyingKey={applyingKey}
         />
+
+        {/* High-day / low-day carb cycle, advanced cuts + competitors only */}
+        {macroCycle && (
+          <MacroCycleCard
+            macroCycle={macroCycle}
+            applied={isApplied(output, 'macroCycle') || !!userProfile?.macroCycle}
+            onApply={handleApplyMacroCycle}
+            applying={applyingKey === 'macroCycle'}
+          />
+        )}
 
         {/* 6. Why */}
         {whyThisWeek ? <WhyBlock text={whyThisWeek} /> : null}
@@ -1527,6 +1621,34 @@ const styles = StyleSheet.create({
     color: colors.background,
   },
   dietBreakApplyBtn: { alignSelf: 'flex-start', marginTop: spacing.md },
+
+  // Carb cycle (row 6): training-day vs rest-day targets side by side
+  macroCycleRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  macroCycleCol: {
+    flex: 1,
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    gap: 2,
+  },
+  macroCycleColLabel: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.medium,
+    color: colors.textMuted,
+  },
+  macroCycleColKcal: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+  },
+  macroCycleColCarbs: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textSecondary,
+  },
 
   // Why this week
   planNote: {

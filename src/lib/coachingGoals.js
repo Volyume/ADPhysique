@@ -143,6 +143,14 @@ export function shouldShowGoalLockOnboarding({ trainingGoal, trainingPhase, expe
   return false;
 }
 
+// True when the training goal is a physique-competition category. The
+// coach uses this (alongside the advanced goal-lock flag) to gate the
+// high-day / low-day macro cycle, which only fires for competitors and
+// advanced cutters.
+export function isCompetitionGoal(trainingGoal) {
+  return !!trainingGoal && _GOAL_LOCK_COMPETITION_VALUES.has(trainingGoal);
+}
+
 // ─── Training phases (the primary "what are you focused on" question) ──────
 // `nutritionKey` maps to nutritionEngine.js PHASE_ADJUSTMENTS keys
 // `coachingPhaseKey` maps to planEngine NUT_MULT and weeklyCoach phaseConfig

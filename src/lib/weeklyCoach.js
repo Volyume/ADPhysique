@@ -8,8 +8,9 @@
  * and a plain-English rationale.
  */
 
-import { getTrainingNote } from './coachingGoals';
+import { getTrainingNote, isCompetitionGoal } from './coachingGoals';
 import { shouldSuggestDietBreak, computeFFMFloor } from './nutritionEngine';
+import { computeMacroCycle } from './coachApply';
 import { detectEdPatternFlag, hasEdPatternCleared } from './edPatternDetector';
 import { detectDifferentialTrigger } from './differentialPaywall';
 
@@ -305,6 +306,12 @@ export function runWeeklyCoach(inputs) {
     lastCalAdjustmentDirection = null,
     lastCalAdjustmentWeeksAgo = 99,
     currentCalTarget = null,
+    // Current daily macros, read from nutrition_targets by the caller.
+    // Only used to build the high-day / low-day carb cycle (row 6); the
+    // cycle holds protein and fat and shifts carbs onto training days.
+    currentProteinG = null,
+    currentCarbsG = null,
+    currentFatG = null,
     currentStepsTarget = 8000,
     bodyweightKg = null,
     units = 'kg',
@@ -703,6 +710,29 @@ export function runWeeklyCoach(inputs) {
     }
   }
 
+  // ── HIGH-DAY / LOW-DAY MACRO CYCLE (GAP row 6) ────────────────────────────
+  // Carb cycle for advanced cutters and physique competitors only.
+  // Beginner / intermediate cuts stay flat (founder decision
+  // 2026-05-27). Protein and fat are held; carbs shift onto training
+  // days so the weekly average kcal is unchanged. The split is computed
+  // here and surfaced as a confirm-then-apply card; nothing writes until
+  // the user taps Apply (CoachOutputScreen.handleApplyMacroCycle).
+  let macroCycle = null;
+  if (phase.isCut && (goalLockAdvanced || isCompetitionGoal(trainingGoal))) {
+    const trainingDays = Math.max(1, Math.min(6, Math.round(sessionsPlanned)));
+    const split = computeMacroCycle(
+      { targetKcal: currentCalTarget, proteinG: currentProteinG, carbsG: currentCarbsG, fatG: currentFatG },
+      trainingDays,
+    );
+    if (split) {
+      const dayWord = trainingDays === 1 ? 'day' : 'days';
+      macroCycle = {
+        ...split,
+        note: `Carbs move onto your ${trainingDays} training ${dayWord}: ${split.trainingDay.carbsG}g on training days, ${split.restDay.carbsG}g on rest days. Protein and fat stay the same and your weekly average holds at ${currentCalTarget} kcal.`,
+      };
+    }
+  }
+
   // ── ED-PATTERN DETECTOR (Move #2) ─────────────────────────────────────────
   // Multi-signal harm-prevention check. Reads recent weight trend +
   // weekly history and decides whether to raise an ED-pattern flag
@@ -903,6 +933,7 @@ export function runWeeklyCoach(inputs) {
     dietBreakSuggested,
     dietBreakNote,
     dietBreakWeeksInDeficit,
+    macroCycle,
     heldDecisions,
     rapidWeightLossFlag,
     rapidLossCorrectionApplied,

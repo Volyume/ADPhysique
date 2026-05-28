@@ -22,7 +22,7 @@ import {
   recomputeRollup, setWater, getWater,
 } from '../lib/food/db';
 import { resolveFoodRef } from '../lib/food/sources/localCache';
-import { getNutritionTargets } from '../lib/database';
+import { getNutritionTargets, hasWorkoutOnDate } from '../lib/database';
 import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -62,7 +62,10 @@ function friendlyDate(isoStr) {
 }
 
 export default function DiaryScreen({ navigation }) {
-  const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
+  const { user, macroCycle } = useAppStore(useShallow((s) => ({
+    user: s.user,
+    macroCycle: s.userProfile?.macroCycle ?? null,
+  })));
   const userId = user?.id;
 
   const [selectedDate, setSelectedDate] = useState(() => isoDate(new Date()));
@@ -71,14 +74,18 @@ export default function DiaryScreen({ navigation }) {
   const [waterMl, setWaterMl] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [targets, setTargets] = useState(null);
+  // Whether the day being viewed is a training day, for the carb cycle
+  // (row 6). Only meaningful when a macro cycle is applied.
+  const [isTrainingDay, setIsTrainingDay] = useState(false);
 
   const load = useCallback(async () => {
     if (!userId) return;
-    const [es, r, w, t] = await Promise.all([
+    const [es, r, w, t, trainingDay] = await Promise.all([
       getFoodEntriesForDay(userId, selectedDate),
       getRollupForDay(userId, selectedDate),
       getWater(userId, selectedDate),
       getNutritionTargets(userId),
+      macroCycle ? hasWorkoutOnDate(userId, selectedDate) : Promise.resolve(false),
     ]);
     // Resolve each entry's actual food name + brand from the foods /
     // custom_foods tables. food_entries denormalises macros at log
@@ -101,7 +108,27 @@ export default function DiaryScreen({ navigation }) {
     setRollup(r);
     setWaterMl(w);
     setTargets(t);
-  }, [userId, selectedDate]);
+    setIsTrainingDay(trainingDay);
+  }, [userId, selectedDate, macroCycle]);
+
+  // The effective macro target for the day. With no carb cycle applied
+  // this is just the stored nutrition target. With a cycle applied it
+  // swaps in the training-day or rest-day split (row 6). kcal maps to
+  // targetKcal so MacroRings reads it the same way as the flat target.
+  const effectiveTargets = useMemo(() => {
+    if (!macroCycle || !targets) return targets;
+    const day = isTrainingDay ? macroCycle.trainingDay : macroCycle.restDay;
+    if (!day) return targets;
+    return {
+      ...targets,
+      targetKcal: day.kcal ?? targets.targetKcal,
+      proteinG: day.proteinG ?? targets.proteinG,
+      carbsG: day.carbsG ?? targets.carbsG,
+      fatG: day.fatG ?? targets.fatG,
+    };
+  }, [macroCycle, targets, isTrainingDay]);
+
+  const dayTypeLabel = macroCycle ? (isTrainingDay ? 'Training day' : 'Rest day') : null;
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
   useEffect(() => { load(); }, [load]);
@@ -285,7 +312,7 @@ export default function DiaryScreen({ navigation }) {
         </View>
 
         <View style={styles.macroRingsWrap}>
-          <MacroRings rollup={rollup} targets={targets} />
+          <MacroRings rollup={rollup} targets={effectiveTargets} dayTypeLabel={dayTypeLabel} />
         </View>
 
         {MEAL_SLOTS.map((slot) => (

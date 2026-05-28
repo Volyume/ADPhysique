@@ -3,6 +3,8 @@ import {
   computeCalorieTargets,
   computeDietBreakTargets,
   computeDeloadVolume,
+  computeMacroCycle,
+  MACRO_CYCLE_REST_DAY_CARB_CUT,
   markApplied,
   isApplied,
   computeVolumeApply,
@@ -213,6 +215,80 @@ describe('computeVolumeApply', () => {
     const out = computeVolumeApply(rows, 1);
     const chest = out.find(c => c.muscle === 'chest');
     expect(chest).toMatchObject({ muscle: 'chest', plannedSets: 13, mev: 6, mav: 14, mrv: 22 });
+  });
+});
+
+describe('computeMacroCycle', () => {
+  const base = { targetKcal: 2400, proteinG: 200, carbsG: 280, fatG: 70 };
+
+  test('returns null without a target or carbs to split', () => {
+    expect(computeMacroCycle(null, 4)).toBeNull();
+    expect(computeMacroCycle({}, 4)).toBeNull();
+    expect(computeMacroCycle({ targetKcal: 2400 }, 4)).toBeNull();
+    expect(computeMacroCycle({ carbsG: 280 }, 4)).toBeNull();
+  });
+
+  test('returns null outside 1..6 training days (need both day types)', () => {
+    expect(computeMacroCycle(base, 0)).toBeNull();
+    expect(computeMacroCycle(base, 7)).toBeNull();
+    expect(computeMacroCycle(base, -2)).toBeNull();
+  });
+
+  test('holds protein and fat on both day types', () => {
+    const out = computeMacroCycle(base, 4);
+    expect(out.trainingDay.proteinG).toBe(200);
+    expect(out.restDay.proteinG).toBe(200);
+    expect(out.trainingDay.fatG).toBe(70);
+    expect(out.restDay.fatG).toBe(70);
+  });
+
+  test('training days carry more carbs (and kcal) than rest days', () => {
+    const out = computeMacroCycle(base, 4);
+    expect(out.trainingDay.carbsG).toBeGreaterThan(out.restDay.carbsG);
+    expect(out.trainingDay.kcal).toBeGreaterThan(out.restDay.kcal);
+    expect(out.trainingDaysPerWeek).toBe(4);
+  });
+
+  test('rest-day carbs are cut by the configured fraction of baseline', () => {
+    const out = computeMacroCycle(base, 4);
+    expect(out.restDay.carbsG).toBe(Math.round(280 * (1 - MACRO_CYCLE_REST_DAY_CARB_CUT)));
+  });
+
+  test('weekly average kcal stays at the current target', () => {
+    for (const T of [1, 2, 3, 4, 5, 6]) {
+      const out = computeMacroCycle(base, T);
+      const weeklyKcal = T * out.trainingDay.kcal + (7 - T) * out.restDay.kcal;
+      // Per-day gram rounding drifts the weekly average by at most a
+      // couple of kcal; it must stay within that noise of the target.
+      expect(Math.abs(weeklyKcal / 7 - base.targetKcal)).toBeLessThanOrEqual(5);
+    }
+  });
+
+  test('weekly carb total is preserved (carbs only cycle, never created)', () => {
+    for (const T of [1, 3, 5, 6]) {
+      const out = computeMacroCycle(base, T);
+      const weeklyCarbs = T * out.trainingDay.carbsG + (7 - T) * out.restDay.carbsG;
+      expect(Math.round(weeklyCarbs / 7)).toBe(base.carbsG);
+    }
+  });
+
+  test('day kcal tracks the carb delta at 4 kcal/g', () => {
+    const out = computeMacroCycle(base, 4);
+    expect(out.trainingDay.kcal).toBe(2400 + (out.trainingDay.carbsG - 280) * 4);
+    expect(out.restDay.kcal).toBe(2400 + (out.restDay.carbsG - 280) * 4);
+  });
+
+  test('rest-day carbs never go below zero even with six training days', () => {
+    const out = computeMacroCycle(base, 6);
+    expect(out.restDay.carbsG).toBeGreaterThanOrEqual(0);
+    expect(out.trainingDay.carbsG).toBeGreaterThan(out.restDay.carbsG);
+  });
+
+  test('passes protein and fat through as null when not set', () => {
+    const out = computeMacroCycle({ targetKcal: 2000, carbsG: 200 }, 3);
+    expect(out.trainingDay.proteinG).toBeNull();
+    expect(out.trainingDay.fatG).toBeNull();
+    expect(out.restDay.proteinG).toBeNull();
   });
 });
 

@@ -3452,6 +3452,26 @@ export async function getWeeklySessionStats(userId, weekStart) {
   };
 }
 
+// True when a workout exists for the given calendar day (any state,
+// completed or in progress). Drives the Diary's training-day / rest-day
+// carb-cycle target (GAP row 6): the day flips to the training-day
+// target as soon as a session is started, so the higher carb allowance
+// is available while training rather than only after the workout is
+// finished. dateIso is a 'YYYY-MM-DD' string; bounds are UTC to match
+// the diary's isoDate (which uses toISOString).
+export async function hasWorkoutOnDate(userId, dateIso) {
+  if (!userId || !dateIso) return false;
+  const start = Date.parse(`${dateIso}T00:00:00.000Z`);
+  if (Number.isNaN(start)) return false;
+  const end = start + 86400000;
+  const d = await db();
+  const row = await d.getFirstAsync(
+    'SELECT 1 AS hit FROM workouts WHERE user_id = ? AND started_at >= ? AND started_at < ? LIMIT 1',
+    [userId, start, end],
+  );
+  return !!row;
+}
+
 export async function getWeeklyPRCount(userId, weekStart) {
   const d = await db();
   const weekEnd = weekStart + 7 * 86400000;
