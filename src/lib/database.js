@@ -1070,6 +1070,22 @@ const SCHEMA_MIGRATIONS = [
   [
     'ALTER TABLE weekly_checkins ADD COLUMN cardio_adherence TEXT',
   ],
+  // food_frequents: local cache of the most-logged foods (GAP row 28,
+  // Frequents tab). Server computes the top-20-over-30-days nightly
+  // (cloud migration 051); the client pulls a snapshot via the
+  // food_frequents_pull RPC when the tab is opened and renders from
+  // this table. Derived/disposable data, so it sits outside the
+  // food_sync_pull/push cycle. Additive: the frozen build never reads it.
+  [
+    `CREATE TABLE IF NOT EXISTS food_frequents (
+      user_id TEXT NOT NULL,
+      food_ref TEXT NOT NULL,
+      log_count INTEGER NOT NULL DEFAULT 0,
+      last_logged_at INTEGER,
+      computed_at INTEGER,
+      PRIMARY KEY (user_id, food_ref)
+    )`,
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on

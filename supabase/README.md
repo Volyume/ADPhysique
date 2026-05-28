@@ -29,8 +29,11 @@ unless the file header says otherwise.
 | 047 | `migrate_047_body_metrics_weekly_checkins_lww.sql` | Adds `updated_at` to both `body_metrics` and `weekly_checkins_v2` (+ touch triggers refusing stale writes), plus `deleted_at` and a partial live index to `body_metrics`. Closes the locked LWW + soft-delete gaps for `body_composition_log` and `weekly_checkins_v2` registry entries. | See § Verify body_metrics + weekly_checkins_v2 LWW |
 | 048 | `migrate_048_food_preferences_kind.sql` | Adds `kind text NOT NULL DEFAULT 'fav'` + a CHECK constraint to `food_favourites` so the same table holds both "user likes this" (fav) and "user excluded this" (dislike). Backs the food-dislike feature added 2026-05-27. Old AAB sends rows without `kind`; DEFAULT covers them. | See § Verify food_favourites.kind |
 | 050 | `migrate_050_weekly_checkins_cardio_adherence.sql` | Adds nullable `cardio_adherence text` to `weekly_checkins_v2`. Destination for the coach's confirm-then-apply cardio prescription (GAP row 4): once applied, the check-in shows a cardio-adherence question and the answer ships in the per-table push. Additive + nullable; the frozen +4 AAB omits it (left NULL), no behaviour change. | See § Verify weekly_checkins_v2.cardio_adherence |
+| 051 | `migrate_051_food_frequents.sql` | Creates `food_frequents` cache table (RLS read-own) + `refresh_food_frequents()` nightly pg_cron worker (top-20 foods over 30 days, all users) + `food_frequents_pull()` RPC the client calls. Backs the Frequents search tab (GAP row 28). Fully additive: the frozen AAB never references it, and it sits outside the food_sync_pull/push cycle, so existing sync is untouched. Requires `pg_cron` (already enabled by migration 031). | See § Verify food_frequents |
 
 > Migration 049 (`migrate_049_drop_peak_week_plans.sql`) is **drafted but held** — do NOT apply until the next AAB ships, so the frozen closed-test build keeps working against the table. Apply 050 before 049 if 050 is ready first; they're independent.
+
+> Migration 051 is independent of 049/050 and safe to apply any time. Until it's applied, the Frequents tab simply shows its empty state (the `food_frequents_pull` RPC call fails quietly and the cache stays empty); nothing else is affected.
 
 ## How to apply
 
@@ -408,6 +411,35 @@ If the column is absent, the per-table weekly-checkins push will
 reject any row carrying a cardio adherence answer ("column
 cardio_adherence does not exist"). Re-run the migration (IF NOT
 EXISTS makes it safe) and re-check.
+
+### Verify `food_frequents` (migration 051)
+
+Three checks: the table exists, the cron job is scheduled, and the
+worker runs.
+
+```sql
+-- 1. Table + RLS.
+SELECT relrowsecurity FROM pg_class WHERE relname = 'food_frequents';
+-- Expected: t (RLS enabled)
+
+-- 2. Cron job scheduled.
+SELECT jobname, schedule FROM cron.job WHERE jobname = 'refresh-food-frequents';
+-- Expected: refresh-food-frequents | 10 3 * * *
+
+-- 3. Run the worker once by hand to seed before the first night.
+SELECT refresh_food_frequents();
+-- Expected: {"rows": <n>, "ran_at": ..., "duration_ms": ...}
+
+-- 4. Spot-check a user's rows (replace the uid).
+SELECT food_ref, log_count FROM food_frequents
+WHERE user_id = '<uid>' ORDER BY log_count DESC;
+```
+
+The client calls `food_frequents_pull()` (returns the caller's rows as
+a jsonb array) when the Frequents tab opens and the local cache is
+older than 12h. If the migration isn't applied, that RPC 404s, the app
+swallows it, and the tab shows "Nothing logged often enough yet." No
+other surface is affected.
 
 ## Cloud schema drift audit
 

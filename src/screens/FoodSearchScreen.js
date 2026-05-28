@@ -3,22 +3,23 @@
  *
  * Locked in UI_FLOWS_LOCKED.md and FOOD_DATA_STRATEGY_LOCKED.md.
  *
- * Sits between the Diary "Add food" tap and the actual log write.
- * Debounced 250ms type-to-search runs the waterfall (local cache first,
- * Move 1.5 adds live OFF + USDA). Recents and Favourites surface on
- * an empty query so the common case of "I already log this every day"
- * is one tap.
+ * Sits between the Diary "Add food" tap and the actual log write. The
+ * top is a five-tab subnav (GAP row 28): Recents, Favourites, Frequents,
+ * Custom, Database. The first four are curated local lists; the query
+ * filters them by name. Database is the search surface: 250ms-debounced
+ * waterfall (local cache first, then live OFF + USDA), nothing shown
+ * until a 2+ char query.
  *
- * Tap a row → ServingPicker sheet → "Add to diary". Long-press a row
- * to favourite it. "Create a custom food" lives at the bottom of the
- * results list for the inevitable miss.
+ * Tap a row -> ServingPicker sheet -> "Add to diary". Long-press a row
+ * to cycle its preference (favourite / dislike). Custom-food creation
+ * lives on the Custom tab and as a fallback under the Database results.
  *
  * Voice rules from COACHING_VOICE_SYNTHESIS_LOCKED.md.
  */
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList,
-  ActivityIndicator,
+  ActivityIndicator, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -26,8 +27,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import {
   logFoodEntry, getRecentFoodEntries, getFavourites,
-  getDislikes, cycleFoodPreference, getFoodPreference,
+  getDislikes, cycleFoodPreference, getAllCustomFoods, getFoodFrequents,
 } from '../lib/food/db';
+import { refreshFrequentsIfStale } from '../lib/food/frequents';
+import { SEARCH_TABS, selectTabRows } from '../lib/food/searchTabs';
 import { searchFoods } from '../lib/food/waterfall';
 import { resolveFoodRef } from '../lib/food/sources/localCache';
 import { audit } from '../lib/observability';
@@ -43,6 +46,12 @@ const MEAL_LABELS = {
   snack: 'Snacks',
 };
 
+const EMPTY_COPY = {
+  recents: 'Nothing logged yet.',
+  favourites: 'No favourites yet. Long-press a food to star it.',
+  frequents: 'Nothing logged often enough yet.',
+};
+
 export default function FoodSearchScreen({ navigation, route }) {
   const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
   const userId = user?.id;
@@ -51,28 +60,30 @@ export default function FoodSearchScreen({ navigation, route }) {
   const entryDate = route?.params?.entryDate ?? new Date().toISOString().slice(0, 10);
 
   const [query, setQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('recents');
   const [results, setResults] = useState([]);
   const [recents, setRecents] = useState([]);
-  const [favouriteRefs, setFavouriteRefs] = useState(new Set());
   const [favouriteRows, setFavouriteRows] = useState([]);
+  const [favouriteRefs, setFavouriteRefs] = useState(new Set());
   const [dislikeRefs, setDislikeRefs] = useState(new Set());
-  const [dislikeRows, setDislikeRows] = useState([]);
-  const [showExcluded, setShowExcluded] = useState(false);
+  const [customRows, setCustomRows] = useState([]);
+  const [frequentRows, setFrequentRows] = useState([]);
   const [searching, setSearching] = useState(false);
   const [picker, setPicker] = useState(null);
 
   const debounceRef = useRef(null);
 
-  // Load recents + favourites + dislikes on focus so coming back
-  // from a log shows the fresh ordering and any toggle landed
-  // since last visit.
-  const loadRecentsAndFavs = useCallback(async () => {
+  // Browse lists (Recents / Favourites / Custom) + the preference ref
+  // sets that drive each row's star/exclude icon. Reloaded on focus so
+  // a log or a long-press toggle since last visit shows fresh.
+  const loadBrowse = useCallback(async () => {
     if (!userId) return;
     try {
-      const [recentRows, favRows, disRows] = await Promise.all([
-        getRecentFoodEntries(userId, 15),
+      const [recentRows, favRows, disRows, customRaw] = await Promise.all([
+        getRecentFoodEntries(userId, 25),
         getFavourites(userId),
         getDislikes(userId),
+        getAllCustomFoods(userId),
       ]);
       const seen = new Set();
       const recentResolved = [];
@@ -81,35 +92,54 @@ export default function FoodSearchScreen({ navigation, route }) {
         seen.add(r.food_ref);
         const food = await resolveFoodRef(userId, r.food_ref);
         if (food) recentResolved.push(food);
-        if (recentResolved.length >= 10) break;
+        if (recentResolved.length >= 25) break;
       }
       setRecents(recentResolved);
-      const favSet = new Set(favRows.map(f => f.food_ref));
-      setFavouriteRefs(favSet);
+
+      setFavouriteRefs(new Set(favRows.map((f) => f.food_ref)));
       const favResolved = [];
-      for (const f of favRows.slice(0, 20)) {
+      for (const f of favRows.slice(0, 50)) {
         const food = await resolveFoodRef(userId, f.food_ref);
         if (food) favResolved.push(food);
       }
       setFavouriteRows(favResolved);
-      const disSet = new Set(disRows.map(d => d.food_ref));
-      setDislikeRefs(disSet);
-      const disResolved = [];
-      for (const d of disRows.slice(0, 20)) {
-        const food = await resolveFoodRef(userId, d.food_ref);
-        if (food) disResolved.push(food);
-      }
-      setDislikeRows(disResolved);
+
+      setDislikeRefs(new Set(disRows.map((d) => d.food_ref)));
+
+      setCustomRows((customRaw || []).map((c) => ({
+        ...c,
+        food_ref: `custom:${c.id}`,
+        source: 'custom',
+      })));
     } catch (_) { /* tolerate */ }
   }, [userId]);
 
-  useFocusEffect(useCallback(() => { loadRecentsAndFavs(); }, [loadRecentsAndFavs]));
+  // Frequents is server-computed; pull a fresh snapshot if the local
+  // cache is stale, then resolve the refs for display. Lazy: only runs
+  // when the Frequents tab is actually opened.
+  const loadFrequents = useCallback(async () => {
+    if (!userId) return;
+    try {
+      await refreshFrequentsIfStale(userId);
+      const rows = await getFoodFrequents(userId, 20);
+      const resolved = [];
+      for (const r of rows) {
+        const food = await resolveFoodRef(userId, r.food_ref);
+        if (food) resolved.push(food);
+      }
+      setFrequentRows(resolved);
+    } catch (_) { /* tolerate */ }
+  }, [userId]);
 
-  // Debounced search. 250ms matches the locked spec.
+  useFocusEffect(useCallback(() => { loadBrowse(); }, [loadBrowse]));
+  useEffect(() => { if (activeTab === 'frequents') loadFrequents(); }, [activeTab, loadFrequents]);
+
+  // Debounced waterfall search, Database tab only. Matches the locked
+  // 250ms; other tabs filter their list client-side via selectTabRows.
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const q = query.trim();
-    if (q.length < 2) {
+    if (activeTab !== 'database' || q.length < 2) {
       setResults([]);
       setSearching(false);
       return;
@@ -126,18 +156,13 @@ export default function FoodSearchScreen({ navigation, route }) {
       }
     }, 250);
     return () => debounceRef.current && clearTimeout(debounceRef.current);
-  }, [query, userId]);
+  }, [query, userId, activeTab]);
 
   function openPicker(food) {
     setPicker({ food });
   }
 
   // Auto-open the detail sheet when arriving from ScanBarcodeScreen.
-  // The barcode scan resolves the food, then navigates here with the
-  // result in route params so the user lands on a sheet ready to log.
-  // Clearing the param prevents a re-open if the user closes the
-  // sheet (without this, navigating back into the screen would
-  // re-trigger the effect on every focus).
   const scannedFood = route?.params?.scannedFood;
   useEffect(() => {
     if (scannedFood && !picker) {
@@ -150,9 +175,7 @@ export default function FoodSearchScreen({ navigation, route }) {
   async function confirmLog({ quantityG, mealSlot: chosenSlot, entryDate: chosenDate }) {
     if (!picker?.food) return;
     const food = picker.food;
-    // Recipe builder reuse: when invoked with pickMode:'recipe', skip
-    // the food_entries write and hand the selected food + quantity
-    // back to the caller (RecipeBuilder) via route params.
+    // Recipe builder reuse: hand the picked food back instead of logging.
     if (route?.params?.pickMode === 'recipe') {
       const returnTo = route?.params?.returnTo ?? 'RecipeBuilder';
       navigation.navigate(returnTo, {
@@ -188,95 +211,65 @@ export default function FoodSearchScreen({ navigation, route }) {
   async function onLongPress(food) {
     try {
       const next = await cycleFoodPreference(userId, food.food_ref);
-      // Optimistic update of the two ref sets so the row icon
-      // flips before the full reload finishes.
-      setFavouriteRefs(prev => {
+      setFavouriteRefs((prev) => {
         const set = new Set(prev);
         if (next === 'fav') set.add(food.food_ref);
         else set.delete(food.food_ref);
         return set;
       });
-      setDislikeRefs(prev => {
+      setDislikeRefs((prev) => {
         const set = new Set(prev);
         if (next === 'dislike') set.add(food.food_ref);
         else set.delete(food.food_ref);
         return set;
       });
-      loadRecentsAndFavs();
+      loadBrowse();
     } catch (_) {}
   }
 
-  function gotoCustom() {
+  // Database "no match" fallback replaces the screen so Back lands on
+  // the Diary, not an empty search. The Custom tab CTA pushes instead,
+  // so the user can return to the picker.
+  function gotoCustomReplace() {
     navigation.replace('AddCustomFood', { mealSlot, entryDate });
   }
+  function newCustomFood() {
+    navigation.navigate('AddCustomFood', { mealSlot, entryDate });
+  }
 
-  const sections = useMemo(() => {
-    const q = query.trim();
-    if (q.length >= 2) {
-      return [{ key: 'results', label: searching ? 'Searching' : 'Results', rows: results }];
-    }
-    const out = [];
-    if (favouriteRows.length) out.push({ key: 'favs', label: 'Favourites', rows: favouriteRows });
-    if (recents.length) out.push({ key: 'recents', label: 'Recent', rows: recents });
-    if (dislikeRows.length) {
-      out.push({
-        key: 'excluded',
-        label: showExcluded
-          ? `Excluded · ${dislikeRows.length} (tap to hide)`
-          : `Excluded · ${dislikeRows.length} (tap to show)`,
-        rows: showExcluded ? dislikeRows : [],
-        toggleable: true,
-      });
-    }
-    return out;
-  }, [query, results, searching, favouriteRows, recents, dislikeRows, showExcluded]);
+  const tabRows = useMemo(() => selectTabRows({
+    activeTab,
+    query,
+    lists: { recents, favourites: favouriteRows, frequents: frequentRows, custom: customRows },
+    results,
+  }), [activeTab, query, recents, favouriteRows, frequentRows, customRows, results]);
 
-  const flat = useMemo(() => {
+  const listData = useMemo(() => {
     const out = [];
-    // Browse-mode top affordances. Hidden during a query so search
-    // results take the full surface.
-    if (query.trim().length < 2 && route?.params?.pickMode !== 'recipe') {
-      out.push({ type: 'cta', key: 'cta-my-recipes', label: 'My recipes', icon: 'restaurant-outline', target: 'MyRecipes' });
+    if (activeTab === 'custom') {
+      out.push({ type: 'cta', key: 'cta-new-custom', label: 'New custom food', icon: 'add-circle-outline', action: 'custom' });
+      if (route?.params?.pickMode !== 'recipe') {
+        out.push({ type: 'cta', key: 'cta-my-recipes', label: 'My recipes', icon: 'restaurant-outline', action: 'recipes' });
+      }
     }
-    for (const s of sections) {
-      // Always render the Excluded header so the user can expand
-      // it even when its rows are collapsed; skip other empty
-      // sections.
-      if (s.rows.length === 0 && !s.toggleable) continue;
-      out.push({
-        type: 'header',
-        key: `h-${s.key}`,
-        label: s.label,
-        toggleable: !!s.toggleable,
-        sectionKey: s.key,
-      });
-      for (const r of s.rows) out.push({ type: 'row', key: `${s.key}-${r.food_ref}`, food: r });
-    }
+    for (const f of tabRows) out.push({ type: 'row', key: `${activeTab}-${f.food_ref}`, food: f });
     return out;
-  }, [sections, query, route?.params?.pickMode]);
+  }, [activeTab, tabRows, route?.params?.pickMode]);
 
   function renderItem({ item }) {
     if (item.type === 'cta') {
       return (
         <TouchableOpacity
           style={styles.ctaRow}
-          onPress={() => navigation.navigate(item.target, { mealSlot, entryDate })}
+          onPress={() => (item.action === 'custom'
+            ? newCustomFood()
+            : navigation.navigate('MyRecipes', { mealSlot, entryDate }))}
         >
           <Ionicons name={item.icon} size={20} color={colors.primary} />
           <Text style={styles.ctaText}>{item.label}</Text>
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
         </TouchableOpacity>
       );
-    }
-    if (item.type === 'header') {
-      if (item.toggleable && item.sectionKey === 'excluded') {
-        return (
-          <TouchableOpacity onPress={() => setShowExcluded(v => !v)}>
-            <Text style={styles.sectionHeader}>{item.label}</Text>
-          </TouchableOpacity>
-        );
-      }
-      return <Text style={styles.sectionHeader}>{item.label}</Text>;
     }
     const food = item.food;
     const preference = favouriteRefs.has(food.food_ref) ? 'fav'
@@ -289,6 +282,27 @@ export default function FoodSearchScreen({ navigation, route }) {
         onPress={() => openPicker(food)}
         onLongPress={() => onLongPress(food)}
       />
+    );
+  }
+
+  function renderEmpty() {
+    if (activeTab === 'database') {
+      if (query.trim().length < 2 || searching) return null;
+      return (
+        <View style={styles.noResults}>
+          <Text style={styles.noResultsText}>No matches for "{query.trim()}".</Text>
+          <TouchableOpacity style={styles.noResultsBtn} onPress={gotoCustomReplace}>
+            <Text style={styles.noResultsBtnText}>Create a custom food</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    const copy = EMPTY_COPY[activeTab];
+    if (!copy) return null;
+    return (
+      <View style={styles.emptyWrap}>
+        <Text style={styles.emptyText}>{copy}</Text>
+      </View>
     );
   }
 
@@ -307,15 +321,35 @@ export default function FoodSearchScreen({ navigation, route }) {
         </TouchableOpacity>
       </View>
 
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tabBar}
+        contentContainerStyle={styles.tabBarContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        {SEARCH_TABS.map((t) => (
+          <TouchableOpacity
+            key={t.key}
+            style={styles.tab}
+            onPress={() => setActiveTab(t.key)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === t.key }}
+          >
+            <Text style={[styles.tabLabel, activeTab === t.key && styles.tabLabelActive]}>{t.label}</Text>
+            <View style={[styles.tabUnderline, activeTab === t.key && styles.tabUnderlineActive]} />
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
       <View style={styles.searchWrap}>
         <Ionicons name="search" size={18} color={colors.textMuted} style={{ marginRight: spacing.sm }} />
         <TextInput
           style={styles.searchInput}
           value={query}
           onChangeText={setQuery}
-          placeholder="Search foods or brands"
+          placeholder={activeTab === 'database' ? 'Search foods or brands' : 'Filter this list'}
           placeholderTextColor={colors.textMuted}
-          autoFocus
           autoCorrect={false}
           autoCapitalize="none"
           returnKeyType="search"
@@ -324,28 +358,19 @@ export default function FoodSearchScreen({ navigation, route }) {
       </View>
 
       <FlatList
-        data={flat}
+        data={listData}
         keyExtractor={(i) => i.key}
         renderItem={renderItem}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: spacing.xxxl }}
-        ListEmptyComponent={
-          query.trim().length >= 2 && !searching ? (
-            <View style={styles.noResults}>
-              <Text style={styles.noResultsText}>
-                No matches for "{query.trim()}".
-              </Text>
-              <TouchableOpacity style={styles.noResultsBtn} onPress={gotoCustom}>
-                <Text style={styles.noResultsBtnText}>Create a custom food</Text>
-              </TouchableOpacity>
-            </View>
-          ) : null
-        }
+        ListEmptyComponent={renderEmpty()}
         ListFooterComponent={
-          <TouchableOpacity style={styles.footerBtn} onPress={gotoCustom}>
-            <Ionicons name="add" size={18} color={colors.primary} />
-            <Text style={styles.footerBtnText}>Create a custom food</Text>
-          </TouchableOpacity>
+          activeTab === 'database' && results.length > 0 ? (
+            <TouchableOpacity style={styles.footerBtn} onPress={gotoCustomReplace}>
+              <Ionicons name="add" size={18} color={colors.primary} />
+              <Text style={styles.footerBtnText}>Create a custom food</Text>
+            </TouchableOpacity>
+          ) : null
         }
       />
 
@@ -372,6 +397,29 @@ const styles = StyleSheet.create({
   },
   headerTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold },
 
+  tabBar: {
+    flexGrow: 0,
+    borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
+  tabBarContent: {
+    paddingHorizontal: spacing.md,
+  },
+  tab: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    alignItems: 'center',
+  },
+  tabLabel: {
+    color: colors.textMuted, fontSize: fontSize.sm, fontWeight: fontWeight.medium,
+    paddingBottom: spacing.sm,
+  },
+  tabLabelActive: { color: colors.textPrimary, fontWeight: fontWeight.semibold },
+  tabUnderline: {
+    height: 2, width: '100%', backgroundColor: 'transparent',
+    borderRadius: 1,
+  },
+  tabUnderlineActive: { backgroundColor: colors.primary },
+
   searchWrap: {
     flexDirection: 'row', alignItems: 'center',
     margin: spacing.md,
@@ -386,18 +434,15 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
 
-  sectionHeader: {
-    color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.bold,
-    letterSpacing: 1,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg, paddingBottom: spacing.sm,
-  },
   ctaRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   ctaText: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold, marginLeft: spacing.md, flex: 1 },
+
+  emptyWrap: { paddingHorizontal: spacing.lg, paddingVertical: spacing.xl, alignItems: 'center' },
+  emptyText: { color: colors.textSecondary, fontSize: fontSize.sm, textAlign: 'center' },
 
   noResults: {
     paddingHorizontal: spacing.lg, paddingVertical: spacing.xl,

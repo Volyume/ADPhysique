@@ -150,6 +150,39 @@ export async function getFoodEntriesForRange(userId, startDate, endDate) {
   );
 }
 
+// ─── food_frequents (GAP row 28, server-computed cache) ──────────────────
+//
+// Derived data: the server recomputes the top-20-over-30-days nightly
+// (cloud migration 051) and the client pulls a snapshot into this table.
+// replaceFoodFrequents swaps the whole cache for one user in a single
+// transaction so a reader never catches it mid-write.
+
+export async function replaceFoodFrequents(userId, rows) {
+  const d = await db();
+  await d.withTransactionAsync(async () => {
+    await d.runAsync('DELETE FROM food_frequents WHERE user_id = ?', [userId]);
+    for (const r of rows || []) {
+      if (!r?.food_ref) continue;
+      await d.runAsync(
+        `INSERT OR REPLACE INTO food_frequents
+           (user_id, food_ref, log_count, last_logged_at, computed_at)
+         VALUES (?, ?, ?, ?, ?)`,
+        [userId, r.food_ref, r.log_count ?? 0, _isoToMs(r.last_logged_at), _isoToMs(r.computed_at)],
+      );
+    }
+  });
+}
+
+export async function getFoodFrequents(userId, limit = 20) {
+  const d = await db();
+  return d.getAllAsync(
+    `SELECT food_ref, log_count FROM food_frequents
+     WHERE user_id = ? ORDER BY log_count DESC, last_logged_at DESC
+     LIMIT ?`,
+    [userId, limit],
+  );
+}
+
 // ─── custom_foods ────────────────────────────────────────────────────────
 
 export async function insertCustomFood(userId, food) {
