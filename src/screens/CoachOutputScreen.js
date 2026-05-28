@@ -231,7 +231,7 @@ function AdjustmentRow({ iconName, label, note, applied, onApply, applying }) {
   );
 }
 
-function NextWeekCard({ adjustments, onApplyCalories, applyingKey }) {
+function NextWeekCard({ adjustments, onApplyCalories, onApplySteps, applyingKey }) {
   const { calories, steps, cardio } = adjustments;
 
   const calLabel =
@@ -270,6 +270,9 @@ function NextWeekCard({ adjustments, onApplyCalories, applyingKey }) {
           iconName="footsteps-outline"
           label={stepsLabel}
           note={steps.note}
+          applied={!!steps.applied}
+          onApply={steps.target && !steps.applied ? onApplySteps : undefined}
+          applying={applyingKey === 'steps'}
         />
       )}
       {cardio !== null && (
@@ -562,7 +565,7 @@ function InsufficientDataView({ dataNote, onClose }) {
 
 export default function CoachOutputScreen({ navigation, route }) {
   const { weekStart } = route.params ?? {};
-  const { user, userProfile, units } = useAppStore();
+  const { user, userProfile, units, saveLocalProfile } = useAppStore();
 
   const [output, setOutput] = useState(null);
   const [checkin, setCheckin] = useState(null);
@@ -634,6 +637,29 @@ export default function CoachOutputScreen({ navigation, route }) {
       setOutput(updated);
     } catch (e) {
       logError('CoachOutputScreen.handleApplyTraining', e, { userId: user?.id });
+    } finally {
+      setApplyingKey(null);
+    }
+  }
+
+  // Confirm-then-apply for the steps target. Writes
+  // userProfile.stepsTarget, which is the destination the weekly
+  // check-in already consumes: once set, the check-in shows the
+  // steps-adherence question (WeeklyCheckInScreen) and that adherence
+  // feeds the next coach run. No new surface needed.
+  async function handleApplySteps() {
+    if (applyingKey || !user?.id || !output) return;
+    if (isApplied(output, 'steps')) return;
+    const target = output.adjustments?.steps?.target;
+    if (!target) return;
+    setApplyingKey('steps');
+    try {
+      await saveLocalProfile(user.id, { ...(userProfile || {}), stepsTarget: target });
+      const updated = markApplied(output, 'steps', { target });
+      await saveCoachOutput(user.id, { weekStart, ...updated });
+      setOutput(updated);
+    } catch (e) {
+      logError('CoachOutputScreen.handleApplySteps', e, { userId: user?.id });
     } finally {
       setApplyingKey(null);
     }
@@ -1001,6 +1027,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         <NextWeekCard
           adjustments={adjustments}
           onApplyCalories={handleApplyCalories}
+          onApplySteps={handleApplySteps}
           applyingKey={applyingKey}
         />
 
