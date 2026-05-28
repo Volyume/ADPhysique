@@ -122,6 +122,7 @@ These were on the NEVER list and have since been re-opened. Recorded so the orig
 | Generate Android upload keystore | No keystore exists. `build-android.yml` signing config never exercised in production. Blocks any new AAB replacing the Closed Testing build. | Founder + Claude | Claude writes the commands when founder is ready for Phase A exit prep. |
 | Maestro CI smoke bundle green | F4 emulator boot diagnosis still open. **Workflow is now manual-only** as of 2026-05-28 (commit `1f21f39`) — no auto-push triggers, fires only via Actions tab. Re-add a push trigger when F4 is fixed and runs reliably green. | Claude | Diagnose F4, push fix, run workflow manually, repeat. Re-enable push trigger only after sustained green. |
 | `peak_week_plans` table cleanup | Table remains in `database.js` despite Peak Week being out of scope. Legacy. | Claude | Migration to drop the table when convenient; verify no live references first. |
+| No linter in the repo | No `.eslintrc`, no `eslint.config`, no `lint` script in `package.json`. `no-undef` would have caught the `notifPrefCount` crash (and would catch the whole class) at build time instead of in a user's Hermes runtime. | Claude | Add eslint + `no-undef` (+ `react-hooks` rules) as a CI gate. Small task; high leverage given 188 source files and zero current static analysis. |
 
 ---
 
@@ -129,6 +130,7 @@ These were on the NEVER list and have since been re-opened. Recorded so the orig
 
 **2026-05-28**
 
+- pullFromCloud crash fix (commit `3736703`). Founder-reported `ReferenceError: Property 'notifPrefCount' doesn't exist` in `sync.pullFromCloud`. Dangling reference left over when `notification_preferences` moved to the transport layer; it aborted the whole legacy bulk pull into the catch (returned 0, no success log). One-line removal. **Surfaced a systemic gap: the repo has no eslint config or lint script, so `no-undef` never catches this class of bug statically — Hermes only throws it at runtime.**
 - Maestro E2E manual-only trigger (commits `8cdd60d`, `1f21f39`). All auto-push triggers removed; workflow_dispatch only until F4 emulator boot is fixed and runs are reliably green. Stops the per-commit failure-notification email to the founder.
 - Strength-standards dedup, GAP row 14 (commit `48717e0`). PRWallScreen migrated to `strengthStandards.getStrengthLevel` only; `algorithms.STRENGTH_STANDARDS` + `getStrengthStandard` deleted. Per-card duplicate display path collapsed (was rendering the level twice in different formats). Canonical regex broadened to cover alt names PRWallScreen had locally. 15 new tests at `src/lib/__tests__/strengthStandards.test.js`.
 - Telemetry queue + push fold-in, GAP row 13 (commit `099738f`). Logic moved from `engineTelemetry.js` into `telemetry/transport.js`; old file is a thin re-export shim so all existing callers keep working. 10 new tests at `src/lib/telemetry/__tests__/transport.test.js`. Pre-existing bug fixed in the same commit: `useAppStore.clearAuthStateForSignOut` was destructuring `flushPendingTelemetry` from `lib/sync` (which doesn't export it); the silent TypeError meant the telemetry flush never ran at sign-out.
