@@ -231,7 +231,7 @@ function AdjustmentRow({ iconName, label, note, applied, onApply, applying }) {
   );
 }
 
-function NextWeekCard({ adjustments, onApplyCalories, onApplySteps, applyingKey }) {
+function NextWeekCard({ adjustments, onApplyCalories, onApplySteps, onApplyCardio, applyingKey }) {
   const { calories, steps, cardio } = adjustments;
 
   const calLabel =
@@ -280,6 +280,9 @@ function NextWeekCard({ adjustments, onApplyCalories, onApplySteps, applyingKey 
           iconName="bicycle-outline"
           label={cardio.type ?? 'Cardio'}
           note={cardio.note}
+          applied={!!cardio.applied}
+          onApply={!cardio.applied ? onApplyCardio : undefined}
+          applying={applyingKey === 'cardio'}
         />
       )}
     </View>
@@ -665,6 +668,30 @@ export default function CoachOutputScreen({ navigation, route }) {
     }
   }
 
+  // Confirm-then-apply for the cardio prescription. Writes
+  // userProfile.cardioPrescription (the prescription label), which
+  // gates the cardio-adherence question on the weekly check-in
+  // (WeeklyCheckInScreen), same pattern as steps. cardio_adherence
+  // lands via migration 050.
+  async function handleApplyCardio() {
+    if (applyingKey || !user?.id || !output) return;
+    if (isApplied(output, 'cardio')) return;
+    const cardio = output.adjustments?.cardio;
+    if (!cardio) return;
+    setApplyingKey('cardio');
+    try {
+      const prescription = cardio.type ?? cardio.note ?? 'prescribed';
+      await saveLocalProfile(user.id, { ...(userProfile || {}), cardioPrescription: prescription });
+      const updated = markApplied(output, 'cardio', {});
+      await saveCoachOutput(user.id, { weekStart, ...updated });
+      setOutput(updated);
+    } catch (e) {
+      logError('CoachOutputScreen.handleApplyCardio', e, { userId: user?.id });
+    } finally {
+      setApplyingKey(null);
+    }
+  }
+
   useEffect(() => {
     async function load() {
       const checkin = await getLatestCheckin(user.id, weekStart);
@@ -1028,6 +1055,7 @@ export default function CoachOutputScreen({ navigation, route }) {
           adjustments={adjustments}
           onApplyCalories={handleApplyCalories}
           onApplySteps={handleApplySteps}
+          onApplyCardio={handleApplyCardio}
           applyingKey={applyingKey}
         />
 

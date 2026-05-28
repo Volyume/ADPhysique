@@ -28,12 +28,16 @@ unless the file header says otherwise.
 | 046 | `migrate_046_recipe_ingredients_soft_delete.sql` | Adds `updated_at` + `deleted_at` columns to `recipe_ingredients`, plus a BEFORE UPDATE touch trigger and a partial index over live rows. Required for the registry's softDelete:true + LWW contract on recipe_ingredients; without it the per-table push raises PGRST204 on every sync. | See § Verify recipe_ingredients soft-delete |
 | 047 | `migrate_047_body_metrics_weekly_checkins_lww.sql` | Adds `updated_at` to both `body_metrics` and `weekly_checkins_v2` (+ touch triggers refusing stale writes), plus `deleted_at` and a partial live index to `body_metrics`. Closes the locked LWW + soft-delete gaps for `body_composition_log` and `weekly_checkins_v2` registry entries. | See § Verify body_metrics + weekly_checkins_v2 LWW |
 | 048 | `migrate_048_food_preferences_kind.sql` | Adds `kind text NOT NULL DEFAULT 'fav'` + a CHECK constraint to `food_favourites` so the same table holds both "user likes this" (fav) and "user excluded this" (dislike). Backs the food-dislike feature added 2026-05-27. Old AAB sends rows without `kind`; DEFAULT covers them. | See § Verify food_favourites.kind |
+| 050 | `migrate_050_weekly_checkins_cardio_adherence.sql` | Adds nullable `cardio_adherence text` to `weekly_checkins_v2`. Destination for the coach's confirm-then-apply cardio prescription (GAP row 4): once applied, the check-in shows a cardio-adherence question and the answer ships in the per-table push. Additive + nullable; the frozen +4 AAB omits it (left NULL), no behaviour change. | See § Verify weekly_checkins_v2.cardio_adherence |
+
+> Migration 049 (`migrate_049_drop_peak_week_plans.sql`) is **drafted but held** — do NOT apply until the next AAB ships, so the frozen closed-test build keeps working against the table. Apply 050 before 049 if 050 is ready first; they're independent.
 
 ## How to apply
 
 1. Open the Supabase Dashboard → SQL Editor → New query.
 2. Open one migration file at a time from this folder (numeric
-   order: 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048).
+   order: 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048,
+   050; 049 held).
 3. Paste the full contents into the SQL Editor.
 4. Click **Run**. The migrations are wrapped in `CREATE OR REPLACE
    FUNCTION` / `CREATE TABLE IF NOT EXISTS`, so re-running an
@@ -388,6 +392,22 @@ FROM food_favourites;
 If the column doesn't appear, the ADD COLUMN didn't run. If the
 constraint is missing, the DO block fell through; re-run the
 migration (idempotent) and re-check.
+
+### Verify `weekly_checkins_v2.cardio_adherence` (migration 050)
+
+```sql
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name = 'weekly_checkins_v2'
+  AND column_name = 'cardio_adherence';
+-- Expected: cardio_adherence | text | YES
+```
+
+If the column is absent, the per-table weekly-checkins push will
+reject any row carrying a cardio adherence answer ("column
+cardio_adherence does not exist"). Re-run the migration (IF NOT
+EXISTS makes it safe) and re-check.
 
 ## Cloud schema drift audit
 

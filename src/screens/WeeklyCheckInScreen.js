@@ -229,6 +229,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
   // Step 2, This week
   const [calsAdherence, setCalsAdherence] = useState(null);
   const [stepsAdherence, setStepsAdherence] = useState(null);
+  const [cardioAdherence, setCardioAdherence] = useState(null);
 
   // Step 3, Recovery
   const [sorenessScore, setSorenessScore] = useState(null); // 1–5
@@ -241,6 +242,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
   const hasNutritionTarget = Boolean(nutritionTargets?.targetKcal);
   const hasStepsTarget = Boolean(userProfile?.stepsTarget ?? userProfile?.steps_target);
+  const hasCardioPrescription = Boolean(userProfile?.cardioPrescription ?? userProfile?.cardio_prescription);
 
   useEffect(() => {
     let cancelled = false;
@@ -390,6 +392,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         sleepHours: sleepHours.trim() ? parseFloat(sleepHours) : null,
         calsAdherence: calsAdherence ?? null,
         stepsAdherence: stepsAdherence ?? null,
+        cardioAdherence: cardioAdherence ?? null,
         trainingPerformance: trainingPerformance ?? null,
         jointPain: jointPain === 'yes',
         soreMuscles: soreMuscles.length > 0 ? soreMuscles.join(',') : null,
@@ -446,7 +449,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
     }
   }, [
     busy, user?.id, energyScore, sorenessScore, stressScore, sleepHours,
-    calsAdherence, stepsAdherence, trainingPerformance, jointPain, notes, weekStart, navigation,
+    calsAdherence, stepsAdherence, cardioAdherence, trainingPerformance, jointPain, notes, weekStart, navigation,
   ]);
 
   // ─── Step views ─────────────────────────────────────────────────────────────
@@ -579,6 +582,23 @@ export default function WeeklyCheckInScreen({ navigation }) {
               ]}
               selected={stepsAdherence}
               onSelect={setStepsAdherence}
+            />
+          </View>
+        )}
+
+        {/* Cardio (shown once a cardio prescription has been applied
+            from the coach card; mirrors the steps adherence question). */}
+        {hasCardioPrescription && (
+          <View style={styles.section}>
+            <SectionLabel>Prescribed cardio</SectionLabel>
+            <OptionRow
+              options={[
+                { value: 'hit', label: 'Did it' },
+                { value: 'mostly', label: 'Mostly' },
+                { value: 'missed', label: 'Missed it' },
+              ]}
+              selected={cardioAdherence}
+              onSelect={setCardioAdherence}
             />
           </View>
         )}

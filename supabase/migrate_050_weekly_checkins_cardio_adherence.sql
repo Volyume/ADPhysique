@@ -1,0 +1,42 @@
+-- Migration 050: weekly_checkins_v2.cardio_adherence
+--
+-- Destination for the weekly coach's confirm-then-apply cardio
+-- prescription (GAP_ANALYSIS row 4, founder decision 2026-05-28:
+-- "check-in adherence" approach, mirroring steps).
+--
+-- The coach card surfaces a cardio prescription with an Apply
+-- button. Applying it sets `users_profile.cardio_prescription`
+-- client-side, which gates a "did you do the prescribed cardio?"
+-- question on the weekly check-in (hit / mostly / missed), exactly
+-- like the existing steps_adherence question. The answer needs a
+-- column to land in.
+--
+-- The local SQLite `weekly_checkins` table gains `cardio_adherence`
+-- via the additive migration block in src/lib/database.js; the
+-- per-table push handler (src/lib/sync/tables/weeklyCheckins.js)
+-- ships it in the weekly_checkins_v2 upsert payload. Without this
+-- cloud column those pushes would be rejected ("column
+-- cardio_adherence does not exist") the same way the payload_json
+-- gap broke telemetry pre-034.
+--
+-- Schema (post-migration): adds one nullable text column.
+--   cardio_adherence text NULL   -- 'hit' | 'mostly' | 'missed' | NULL
+--
+-- Old-client compatibility (release policy 2026-05-24): additive +
+-- nullable, no default needed. The frozen closed-test build
+-- (v1.1.0+4) never reads or writes the column; its check-in pushes
+-- omit it and the upsert leaves it NULL. No behaviour change for
+-- the old AAB. Safe to re-run (IF NOT EXISTS).
+--
+-- Re-runnable: yes. Rollback: DROP COLUMN cardio_adherence (no data
+-- loss risk beyond the adherence answers themselves).
+--
+-- Apply via Supabase Dashboard -> SQL Editor -> Run.
+
+ALTER TABLE weekly_checkins_v2
+  ADD COLUMN IF NOT EXISTS cardio_adherence text;
+
+-- Verification:
+--   SELECT column_name FROM information_schema.columns
+--   WHERE table_name = 'weekly_checkins_v2' AND column_name = 'cardio_adherence';
+-- Expect one row.
