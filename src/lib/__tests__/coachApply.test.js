@@ -3,6 +3,7 @@ import {
   computeCalorieTargets,
   markApplied,
   isApplied,
+  computeVolumeApply,
 } from '../coachApply';
 
 describe('computeCalorieTargets', () => {
@@ -94,6 +95,54 @@ describe('markApplied', () => {
   test('returns the input unchanged for nullish args', () => {
     expect(markApplied(null, 'calories')).toBeNull();
     expect(markApplied(output, null)).toBe(output);
+  });
+});
+
+describe('computeVolumeApply', () => {
+  // Raw planned_muscle_volume rows (snake_case, as getPlannedMuscleVolume returns)
+  const rows = [
+    { muscle: 'chest', planned_sets: 12, mev: 6, mav: 14, mrv: 22 },
+    { muscle: 'back', planned_sets: 16, mev: 10, mav: 16, mrv: 25 },
+    { muscle: 'biceps', planned_sets: 21, mev: 6, mav: 14, mrv: 22 },
+  ];
+
+  test('returns [] for no delta or non-array', () => {
+    expect(computeVolumeApply(rows, 0)).toEqual([]);
+    expect(computeVolumeApply(rows, null)).toEqual([]);
+    expect(computeVolumeApply(null, 2)).toEqual([]);
+  });
+
+  test('adds the delta to every muscle on a push', () => {
+    const out = computeVolumeApply(rows, 2);
+    const byMuscle = Object.fromEntries(out.map(c => [c.muscle, c.plannedSets]));
+    expect(byMuscle.chest).toBe(14); // 12 + 2
+    expect(byMuscle.back).toBe(18);  // 16 + 2
+    expect(byMuscle.biceps).toBe(22); // 21 + 2 = 23 → clamped to mrv 22
+  });
+
+  test('clamps a push at each muscle mrv and drops no-op muscles', () => {
+    // biceps already at mrv 22 → no change, excluded from output
+    const out = computeVolumeApply([{ muscle: 'biceps', planned_sets: 22, mev: 6, mav: 14, mrv: 22 }], 3);
+    expect(out).toEqual([]);
+  });
+
+  test('pulls back on a negative delta, clamped to mev', () => {
+    const out = computeVolumeApply(rows, -2);
+    const byMuscle = Object.fromEntries(out.map(c => [c.muscle, c.plannedSets]));
+    expect(byMuscle.chest).toBe(10);  // 12 - 2
+    expect(byMuscle.back).toBe(14);   // 16 - 2
+    expect(byMuscle.biceps).toBe(19); // 21 - 2
+  });
+
+  test('pull-back never drops below mev', () => {
+    const out = computeVolumeApply([{ muscle: 'chest', planned_sets: 7, mev: 6, mav: 14, mrv: 22 }], -3);
+    expect(out[0].plannedSets).toBe(6); // 7 - 3 = 4 → clamped to mev 6
+  });
+
+  test('carries mev/mav/mrv through for the upsert', () => {
+    const out = computeVolumeApply(rows, 1);
+    const chest = out.find(c => c.muscle === 'chest');
+    expect(chest).toMatchObject({ muscle: 'chest', plannedSets: 13, mev: 6, mav: 14, mrv: 22 });
   });
 });
 

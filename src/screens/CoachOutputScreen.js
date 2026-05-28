@@ -22,12 +22,16 @@ import {
   getOpenEdPatternFlag,
   raiseEdPatternFlag,
   clearEdPatternFlag,
+  getCurrentMesocycleWeek,
+  getNextMesocycleWeek,
+  getPlannedMuscleVolume,
+  upsertPlannedMuscleVolume,
 } from '../lib/database';
 import { track as trackEngineEvent } from '../lib/engineTelemetry';
 import DifferentialBadge from '../components/DifferentialBadge';
 import { SkeletonCard } from '../components/Skeleton';
 import { computeEWMA, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
-import { computeCalorieTargets, markApplied, isApplied } from '../lib/coachApply';
+import { computeCalorieTargets, computeVolumeApply, markApplied, isApplied } from '../lib/coachApply';
 import { logError } from '../lib/errorLog';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import {
@@ -275,10 +279,45 @@ function NextWeekCard({ adjustments, onApplyCalories, applyingKey }) {
           note={cardio.note}
         />
       )}
+    </View>
+  );
+}
+
+// Weekly training-volume signal as a confirm-then-apply card. Founder
+// decision 2026-05-28: the coach owns weekly volume. Apply spreads the
+// signal across every trained muscle in next week's planned volume.
+// A zero signal is informational (no button); a non-zero signal with
+// no upcoming week to write to (canApply false) shows the guidance but
+// no button.
+function TrainingNextWeekCard({ output, onApply, applying, canApply }) {
+  const signal = output.volumeSignal ?? 0;
+  const applied = isApplied(output, 'training');
+  const note = output.adjustments?.training?.note;
+  const mag = Math.abs(signal);
+  const setWord = mag === 1 ? 'set' : 'sets';
+  const label =
+    signal > 0 ? `Add ${mag} ${setWord} to each muscle group`
+    : signal < 0 ? `Pull back ${mag} ${setWord} per muscle group`
+    : 'Hold your current volume';
+  const applyable = canApply && signal !== 0 && !applied;
+
+  return (
+    <View style={styles.card}>
+      <SectionHeader title="Training next week" />
+      <AdjustmentRow
+        iconName="barbell-outline"
+        label={applied && output.appliedAdjustments?.training?.musclesChanged
+          ? `${label} · ${output.appliedAdjustments.training.musclesChanged} updated`
+          : label}
+        note={note}
+        applied={applied}
+        onApply={applyable ? onApply : undefined}
+        applying={applying}
+      />
       <View style={styles.planNote}>
         <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />
         <Text style={styles.planNoteText}>
-          Training volume and recovery weeks are adjusted automatically by your plan after each session. Your coach focuses on nutrition.
+          This sets next week's starting volume. Your plan still fine-tunes each session as you train.
         </Text>
       </View>
     </View>
@@ -531,6 +570,10 @@ export default function CoachOutputScreen({ navigation, route }) {
   const [coachHistory, setCoachHistory] = useState([]);
   const [adaptiveTDEE, setAdaptiveTDEE] = useState(null);
   const [applyingKey, setApplyingKey] = useState(null);
+  // Next mesocycle week that a training-volume apply would write to.
+  // Loaded once on mount; null when there's no active block or the
+  // current week is the last one (nothing to push volume into).
+  const [nextTrainingWeekId, setNextTrainingWeekId] = useState(null);
 
   // Confirm-then-apply: write the suggested calorie change to
   // nutrition_targets only when the user taps Apply, then record it on
@@ -555,6 +598,42 @@ export default function CoachOutputScreen({ navigation, route }) {
       setOutput(updated);
     } catch (e) {
       logError('CoachOutputScreen.handleApplyCalories', e, { userId: user?.id });
+    } finally {
+      setApplyingKey(null);
+    }
+  }
+
+  // Confirm-then-apply for the weekly training volume signal (founder
+  // decision 2026-05-28: the coach owns weekly volume). Apply spreads
+  // the signal across every trained muscle in next week's planned
+  // volume, each clamped to its own [mev, mrv]. Source tagged 'coach'
+  // so it's distinguishable from the template ramp and the per-session
+  // adaptive writes.
+  async function handleApplyTraining() {
+    if (applyingKey || !user?.id || !output) return;
+    if (isApplied(output, 'training')) return;
+    const delta = output.volumeSignal ?? 0;
+    if (!delta || !nextTrainingWeekId) return;
+    setApplyingKey('training');
+    try {
+      const rows = await getPlannedMuscleVolume(nextTrainingWeekId);
+      const changes = computeVolumeApply(rows, delta);
+      for (const c of changes) {
+        await upsertPlannedMuscleVolume({
+          mesocycleWeekId: nextTrainingWeekId,
+          muscle: c.muscle,
+          plannedSets: c.plannedSets,
+          mev: c.mev, mav: c.mav, mrv: c.mrv,
+          source: 'coach',
+        });
+      }
+      const updated = markApplied(output, 'training', {
+        volumeDelta: delta, musclesChanged: changes.length,
+      });
+      await saveCoachOutput(user.id, { weekStart, ...updated });
+      setOutput(updated);
+    } catch (e) {
+      logError('CoachOutputScreen.handleApplyTraining', e, { userId: user?.id });
     } finally {
       setApplyingKey(null);
     }
@@ -716,6 +795,18 @@ export default function CoachOutputScreen({ navigation, route }) {
       await saveCoachOutput(user.id, { weekStart, ...result });
 
       setOutput(result);
+
+      // Resolve the week a training-volume apply would write to: the
+      // week after the current one in the active mesocycle. Null when
+      // there's no active block or the current week is the last (no
+      // upcoming week to push volume into) -- the Apply button hides.
+      try {
+        const cur = await getCurrentMesocycleWeek(user.id);
+        const next = cur?.id ? await getNextMesocycleWeek(cur.id) : null;
+        setNextTrainingWeekId(next?.id ?? null);
+      } catch (_e) {
+        setNextTrainingWeekId(null);
+      }
 
       // Load the last 5 outputs; skip the first (current week) for the history shelf
       const history = await getCoachOutputHistory(user.id, 5);
@@ -901,6 +992,12 @@ export default function CoachOutputScreen({ navigation, route }) {
         })()}
 
         {/* 5. The decision */}
+        <TrainingNextWeekCard
+          output={output}
+          onApply={handleApplyTraining}
+          applying={applyingKey === 'training'}
+          canApply={!!nextTrainingWeekId}
+        />
         <NextWeekCard
           adjustments={adjustments}
           onApplyCalories={handleApplyCalories}

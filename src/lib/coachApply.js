@@ -82,3 +82,40 @@ export function isApplied(output, key) {
   if (output.appliedAdjustments?.[key]) return true;
   return !!output.adjustments?.[key]?.applied;
 }
+
+/**
+ * Compute the planned-volume changes for a training volumeDelta apply.
+ *
+ * Founder decision 2026-05-28: Apply spreads the delta across every
+ * trained muscle in the target week's planned volume. Each muscle is
+ * clamped to its own [mev, mrv] so a push never exceeds recoverable
+ * volume and a pull-back never drops below the minimum effective dose.
+ *
+ * Takes the raw planned_muscle_volume rows for the target week
+ * (snake_case, straight from getPlannedMuscleVolume) and returns only
+ * the muscles that actually change, shaped for upsertPlannedMuscleVolume.
+ *
+ * @returns {Array<{ muscle, plannedSets, mev, mav, mrv }>}
+ */
+export function computeVolumeApply(plannedRows, volumeDelta) {
+  if (!Array.isArray(plannedRows) || !volumeDelta) return [];
+  const changes = [];
+  for (const row of plannedRows) {
+    const mev = row.mev ?? 0;
+    const mrv = row.mrv ?? Number.POSITIVE_INFINITY;
+    const current = row.planned_sets ?? 0;
+    let next = current + volumeDelta;
+    if (next < mev) next = mev;
+    if (next > mrv) next = mrv;
+    if (next !== current) {
+      changes.push({
+        muscle: row.muscle,
+        plannedSets: next,
+        mev: row.mev ?? null,
+        mav: row.mav ?? null,
+        mrv: row.mrv ?? null,
+      });
+    }
+  }
+  return changes;
+}

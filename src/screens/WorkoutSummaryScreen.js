@@ -13,7 +13,7 @@ import {
   getCompletedWorkoutSets, getAllExercises, getAllWorkouts, updateWorkout,
   getActivePlan, getRoutinesForPlan, advancePlanNextWorkout,
   createAdaptationEvent, getCurrentMesocycleWeek,
-  getNextMesocycleWeek, upsertPlannedMuscleVolume, getRecentAdaptationEvents,
+  getRecentAdaptationEvents,
   saveWeeklyCheckin, saveNextTimeNote, getRoutineWorkoutTonnages,
 } from '../lib/database';
 import { calculateWeeklyVolume, getVolumeStatus, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine, computeAdaptiveDecision, VOLUME_LANDMARKS, evaluateDeloadTriggers } from '../lib/algorithms';
@@ -390,7 +390,16 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       } catch (_e) {}
     }
 
-    // Write adaptation events for engine decisions
+    // Write adaptation events for engine decisions. These are an
+    // in-session record of how each muscle responded (soreness /
+    // performance / pump / joint), surfaced in the AthleteHub timeline.
+    //
+    // The per-session engine no longer writes NEXT-WEEK planned volume.
+    // Founder decision 2026-05-28: the weekly coach owns next-week
+    // volume (confirm-then-apply on the coach card), so the per-session
+    // engine stays in-session only. Letting both write next week's plan
+    // double-counted volume. nextWeekSets is still recorded on the
+    // adaptation event as a signal, it just no longer mutates the plan.
     try {
       const currentWeek = await getCurrentMesocycleWeek(user?.id);
       if (currentWeek?.id && Object.keys(adaptiveDecisions).length > 0) {
@@ -411,23 +420,6 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               nextWeekSets: dec.nextWeekSets,
             },
           });
-        }
-
-        // Write next-week planned volume from engine decisions
-        const nextWeek = await getNextMesocycleWeek(currentWeek.id);
-        if (nextWeek) {
-          for (const [muscle, dec] of Object.entries(adaptiveDecisions)) {
-            const base = VOLUME_LANDMARKS[muscle] || { mev: 6, mav: 14, mrv: 22 };
-            await upsertPlannedMuscleVolume({
-              mesocycleWeekId: nextWeek.id,
-              muscle,
-              plannedSets: dec.nextWeekSets,
-              mev: base.mev,
-              mav: base.mav,
-              mrv: base.mrv,
-              source: 'engine',
-            });
-          }
         }
       }
     } catch (_e) {}
