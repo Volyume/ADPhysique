@@ -1246,7 +1246,12 @@ export async function pullFromCloud(supabaseUserId) {
       plannedVolume: plannedVolCount,
       adaptationEvents: adaptCount,
       prefs: prefCount,
-      notificationPrefs: notifPrefCount,
+      // notificationPrefs intentionally not reported here: the table
+      // moved to the registry-driven transport pull (see comment above
+      // + src/lib/sync/tables/notificationPreferences.js). The runner
+      // counts it under pullCountPerTable. Leaving the old
+      // `notifPrefCount` reference here threw a Hermes ReferenceError
+      // that aborted the whole pull into the catch (returned 0).
       foodEntries: foodCounts.foodEntries,
       customFoods: foodCounts.customFoods,
       savedMeals: foodCounts.savedMeals,
