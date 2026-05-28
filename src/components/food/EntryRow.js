@@ -9,7 +9,10 @@ export function friendlyFoodName(entry) {
   return entry?.food_ref?.startsWith('custom:') ? 'Custom food' : 'Food';
 }
 
-export function EntryRow({ entry, onEdit }) {
+export function EntryRow({
+  entry, onEdit,
+  selectionMode = false, selected = false, onLongPress, onToggleSelect,
+}) {
   const kcal = Math.round(entry.kcal ?? 0);
   const p = Math.round(entry.protein_g ?? 0);
   const c = Math.round(entry.carbs_g ?? 0);
@@ -18,10 +21,21 @@ export function EntryRow({ entry, onEdit }) {
   const brand = entry?._brand ?? null;
   return (
     <TouchableOpacity
-      style={styles.entryRow}
-      onPress={onEdit}
-      accessibilityLabel={`${name}, ${kcal} kcal. Tap to edit.`}
+      style={[styles.entryRow, selected && styles.entryRowSelected]}
+      onPress={selectionMode ? onToggleSelect : onEdit}
+      onLongPress={onLongPress}
+      delayLongPress={300}
+      accessibilityLabel={
+        selectionMode
+          ? `${name}, ${kcal} kcal. ${selected ? 'Selected' : 'Not selected'}. Tap to toggle.`
+          : `${name}, ${kcal} kcal. Tap to edit.`
+      }
     >
+      {selectionMode ? (
+        <View style={[styles.checkbox, selected && styles.checkboxOn]}>
+          {selected ? <Ionicons name="checkmark" size={14} color="#000" /> : null}
+        </View>
+      ) : null}
       <View style={styles.entryMain}>
         <Text style={styles.entryName} numberOfLines={1}>{name}</Text>
         {brand ? <Text style={styles.entryBrand} numberOfLines={1}>{brand}</Text> : null}
@@ -35,7 +49,10 @@ export function EntryRow({ entry, onEdit }) {
   );
 }
 
-export function SwipeableEntryRow({ entry, onEdit, onDelete }) {
+export function SwipeableEntryRow({
+  entry, onEdit, onDelete,
+  selectionMode = false, selected = false, onLongPress, onToggleSelect,
+}) {
   const ref = useRef(null);
   const renderRightActions = useCallback(() => (
     <TouchableOpacity
@@ -54,8 +71,16 @@ export function SwipeableEntryRow({ entry, onEdit, onDelete }) {
       renderRightActions={renderRightActions}
       overshootRight={false}
       rightThreshold={48}
+      enabled={!selectionMode}
     >
-      <EntryRow entry={entry} onEdit={onEdit} />
+      <EntryRow
+        entry={entry}
+        onEdit={onEdit}
+        selectionMode={selectionMode}
+        selected={selected}
+        onLongPress={onLongPress}
+        onToggleSelect={onToggleSelect}
+      />
     </Swipeable>
   );
 }
@@ -71,6 +96,20 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
     marginBottom: spacing.sm,
     minHeight: 48,
+  },
+  entryRowSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.surface2,
+  },
+  checkbox: {
+    width: 22, height: 22, borderRadius: radius.sm,
+    borderWidth: 2, borderColor: colors.border,
+    alignItems: 'center', justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  checkboxOn: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   entryMain: { flex: 1 },
   entryName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.medium },

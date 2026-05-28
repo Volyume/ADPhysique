@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Canvas, Path, Skia } from '@shopify/react-native-skia';
 import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
 
@@ -89,7 +89,7 @@ function MacroChip({ label, value, target }) {
   );
 }
 
-export default function MacroRings({ rollup, targets, dayTypeLabel }) {
+export default function MacroRings({ rollup, targets, dayTypeLabel, onPress }) {
   const kcal = Math.round(rollup?.kcal_total ?? 0);
   const p = Math.round(rollup?.protein_g ?? 0);
   const c = Math.round(rollup?.carbs_g ?? 0);
@@ -105,7 +105,14 @@ export default function MacroRings({ rollup, targets, dayTypeLabel }) {
   const kcalWarn = kcalTint === colors.warning;
 
   return (
-    <View style={styles.card}>
+    <TouchableOpacity
+      style={styles.card}
+      onPress={onPress}
+      disabled={!onPress}
+      activeOpacity={0.9}
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={onPress ? 'View macro breakdown by meal' : undefined}
+    >
       {dayTypeLabel ? (
         <View style={styles.dayTypeChip}>
           <Text style={styles.dayTypeChipText}>{dayTypeLabel}</Text>
@@ -148,7 +155,7 @@ export default function MacroRings({ rollup, targets, dayTypeLabel }) {
         <MacroChip label="Carbs"   value={c} target={cTarget} />
         <MacroChip label="Fat"     value={f} target={fTarget} />
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 

@@ -11,7 +11,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
-  Alert,
+  Alert, Modal, Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,11 +27,13 @@ import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import MacroRings from '../components/food/MacroRings';
+import MacroBreakdownSheet from '../components/food/MacroBreakdownSheet';
 import FoodDetailSheet from '../components/food/FoodDetailSheet';
 import EmptyDiary from '../components/food/EmptyDiary';
 import MealSection from '../components/food/MealSection';
 import { friendlyFoodName } from '../components/food/EntryRow';
 import ScreenHeader from '../components/ScreenHeader';
+import { deleteEntries, moveEntriesToSlot, copyEntriesToDate } from '../lib/food/bulkEntryOps';
 
 const MEAL_SLOTS = [
   { key: 'breakfast', label: 'Breakfast' },
@@ -175,6 +177,90 @@ export default function DiaryScreen({ navigation }) {
   }
 
   const [editSheet, setEditSheet] = useState(null); // { entry, food } | null
+
+  // Multi-select (GAP row 26) + per-meal breakdown sheet (GAP row 27).
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [movePickerVisible, setMovePickerVisible] = useState(false);
+  const [breakdownVisible, setBreakdownVisible] = useState(false);
+
+  // Leaving the day, or deselecting the last row, drops selection mode
+  // so the toolbar never lingers empty.
+  useEffect(() => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  }, [selectedDate]);
+  useEffect(() => {
+    if (selectionMode && selectedIds.size === 0) setSelectionMode(false);
+  }, [selectionMode, selectedIds]);
+
+  const enterSelection = useCallback((entry) => {
+    setSelectionMode(true);
+    setSelectedIds(new Set([entry.id]));
+  }, []);
+
+  const toggleSelect = useCallback((entry) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(entry.id)) next.delete(entry.id);
+      else next.add(entry.id);
+      return next;
+    });
+  }, []);
+
+  const exitSelection = useCallback(() => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  }, []);
+
+  const selectedEntries = useCallback(
+    () => entries.filter((e) => selectedIds.has(e.id)),
+    [entries, selectedIds],
+  );
+
+  const doDeleteSelected = useCallback(() => {
+    const sel = selectedEntries();
+    if (sel.length === 0) return;
+    Alert.alert(
+      `Delete ${sel.length} ${sel.length === 1 ? 'entry' : 'entries'}?`,
+      undefined,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            audit('food.delete', { mealSlot: 'multi', count: sel.length });
+            await deleteEntries(userId, sel);
+            exitSelection();
+            await load();
+          },
+        },
+      ],
+    );
+  }, [selectedEntries, userId, exitSelection, load]);
+
+  const doCopySelectedToToday = useCallback(async () => {
+    const sel = selectedEntries();
+    if (sel.length === 0) return;
+    const today = isoDate(new Date());
+    await copyEntriesToDate(userId, sel, today);
+    exitSelection();
+    if (selectedDate === today) {
+      await load();
+    } else {
+      Alert.alert('Copied to today', `${sel.length} ${sel.length === 1 ? 'entry' : 'entries'} added to today's diary.`);
+    }
+  }, [selectedEntries, userId, selectedDate, exitSelection, load]);
+
+  const doMoveSelected = useCallback(async (slot) => {
+    const sel = selectedEntries();
+    setMovePickerVisible(false);
+    if (sel.length === 0) return;
+    await moveEntriesToSlot(userId, sel, slot);
+    exitSelection();
+    await load();
+  }, [selectedEntries, userId, exitSelection, load]);
 
   async function openEditSheet(entry) {
     const food = await resolveFoodRef(userId, entry.food_ref).catch(() => null);
@@ -329,7 +415,12 @@ export default function DiaryScreen({ navigation }) {
         </View>
 
         <View style={styles.macroRingsWrap}>
-          <MacroRings rollup={rollup} targets={effectiveTargets} dayTypeLabel={dayTypeLabel} />
+          <MacroRings
+            rollup={rollup}
+            targets={effectiveTargets}
+            dayTypeLabel={dayTypeLabel}
+            onPress={entries.length ? () => setBreakdownVisible(true) : undefined}
+          />
         </View>
 
         {MEAL_SLOTS.map((slot) => (
@@ -340,6 +431,10 @@ export default function DiaryScreen({ navigation }) {
             onAdd={() => addFood(slot.key)}
             onEdit={openEditSheet}
             onDelete={requestDelete}
+            selectionMode={selectionMode}
+            selectedIds={selectedIds}
+            onLongPressEntry={enterSelection}
+            onToggleSelect={toggleSelect}
           />
         ))}
 
@@ -360,21 +455,32 @@ export default function DiaryScreen({ navigation }) {
         onClose={() => setEditSheet(null)}
       />
 
-      <TouchableOpacity
-        style={styles.scanFab}
-        onPress={() => navigation.navigate('ScanBarcode', { entryDate: selectedDate })}
-        activeOpacity={0.85}
-        accessibilityRole="button"
-        accessibilityLabel="Scan barcode"
-      >
-        <Ionicons name="barcode-outline" size={26} color="#000" />
-      </TouchableOpacity>
+      <MacroBreakdownSheet
+        visible={breakdownVisible}
+        entries={entries}
+        dateLabel={friendlyDate(selectedDate)}
+        onClose={() => setBreakdownVisible(false)}
+      />
+
+      {/* FABs hide while selecting so the bottom toolbar owns the
+          action space. */}
+      {!selectionMode ? (
+        <TouchableOpacity
+          style={styles.scanFab}
+          onPress={() => navigation.navigate('ScanBarcode', { entryDate: selectedDate })}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Scan barcode"
+        >
+          <Ionicons name="barcode-outline" size={26} color="#000" />
+        </TouchableOpacity>
+      ) : null}
 
       {/* Copy-yesterday FAB stacks above the scan FAB. Hidden when
           the diary already has entries for today, since the action
           appends rather than replaces and copying yesterday's set on
           top of today's would surprise the user. */}
-      {entries.length === 0 ? (
+      {!selectionMode && entries.length === 0 ? (
         <TouchableOpacity
           style={styles.copyYesterdayFab}
           onPress={copyYesterday}
@@ -386,6 +492,53 @@ export default function DiaryScreen({ navigation }) {
           <Text style={styles.copyYesterdayLabel}>Copy yesterday</Text>
         </TouchableOpacity>
       ) : null}
+
+      {selectionMode ? (
+        <View style={styles.selectionBar}>
+          <TouchableOpacity onPress={exitSelection} hitSlop={10} style={styles.selCancel} accessibilityLabel="Cancel selection">
+            <Ionicons name="close" size={22} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <Text style={styles.selCount}>{selectedIds.size} selected</Text>
+          <View style={styles.selActions}>
+            <TouchableOpacity onPress={() => setMovePickerVisible(true)} style={styles.selAction} accessibilityLabel="Move to a meal slot">
+              <Ionicons name="swap-vertical" size={20} color={colors.textPrimary} />
+              <Text style={styles.selActionLabel}>Move</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={doCopySelectedToToday} style={styles.selAction} accessibilityLabel="Copy to today">
+              <Ionicons name="copy-outline" size={20} color={colors.textPrimary} />
+              <Text style={styles.selActionLabel}>To today</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={doDeleteSelected} style={styles.selAction} accessibilityLabel="Delete selected">
+              <Ionicons name="trash-outline" size={20} color={colors.error} />
+              <Text style={[styles.selActionLabel, { color: colors.error }]}>Delete</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : null}
+
+      <Modal
+        visible={movePickerVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMovePickerVisible(false)}
+      >
+        <Pressable style={styles.moveBackdrop} onPress={() => setMovePickerVisible(false)}>
+          <View style={styles.moveCard}>
+            <Text style={styles.moveTitle}>Move to</Text>
+            {MEAL_SLOTS.map((s) => (
+              <TouchableOpacity
+                key={s.key}
+                style={styles.moveOption}
+                onPress={() => doMoveSelected(s.key)}
+                accessibilityRole="button"
+                accessibilityLabel={`Move to ${s.label}`}
+              >
+                <Text style={styles.moveOptionText}>{s.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -442,6 +595,42 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   safe: { flex: 1, backgroundColor: colors.background },
+  selectionBar: {
+    position: 'absolute', left: 0, right: 0, bottom: 0,
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
+    backgroundColor: colors.surface,
+    borderTopWidth: 1, borderTopColor: colors.border,
+    gap: spacing.md,
+  },
+  selCancel: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
+  selCount: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  selActions: { flex: 1, flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.lg },
+  selAction: { alignItems: 'center', minWidth: 48, gap: spacing.xxs },
+  selActionLabel: { color: colors.textPrimary, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
+  moveBackdrop: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center', justifyContent: 'center',
+    padding: spacing.xl,
+  },
+  moveCard: {
+    width: '100%', maxWidth: 320,
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.border,
+    padding: spacing.md,
+  },
+  moveTitle: {
+    color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.bold,
+    letterSpacing: 1, textTransform: 'uppercase',
+    paddingHorizontal: spacing.sm, paddingTop: spacing.xs, paddingBottom: spacing.sm,
+  },
+  moveOption: {
+    minHeight: 48, justifyContent: 'center',
+    paddingHorizontal: spacing.sm, borderRadius: radius.md,
+  },
+  moveOptionText: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.medium },
   dayPagerRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: spacing.sm,

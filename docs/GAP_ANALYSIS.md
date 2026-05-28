@@ -479,9 +479,9 @@ Pulled from the ❌ and ⚠️ rows above. **Founder decisions locked 2026-05-27
 | 23 | ~~Body measurement UI in BodyMetrics~~ **Confirmed shipped 2026-05-27** (9 measurements + per-measurement chart). | done | Claude |
 | 24 | ~~FTC HBNR language in privacy~~ **Confirmed present 2026-05-27** at section 11. | done | Claude |
 | 25 | 3 v1.1 features in FEATURE_MAP | **Ship all three.** Refeed = row 7 above. Body comp deep = BF% input + trend smoothing + delta-since-photo (extends row 2). Share-pack PDF = extend ShareCardScreen to PDF export. | M (across the three) | Claude |
-| 26 | Long-press multi-select toolbar on Diary | **Build full toolbar: Delete + Copy to today + Move meal slot.** | S-M | Claude |
-| 27 | Per-meal macro breakdown sheet on macro ring tap | Build per `BACKLOG.md` deferred entry. | S | Claude |
-| 28 | Search subnav tabs (Recents / Favourites / Frequents / My Foods / My Recipes / Database) | Build per `UI_FLOWS_LOCKED.md`. | S-M | Claude |
+| 26 | ~~Long-press multi-select toolbar on Diary~~ **Done 2026-05-28.** Long-press a diary row enters selection mode (checkboxes, swipe disabled); bottom toolbar offers Move (slot picker), Copy to today, Delete. Bulk ops live in `lib/food/bulkEntryOps.js` (tested). Move sends the full field set through `updateFoodEntry` so macros survive; copy reuses `logFoodEntry`. | done | Claude |
+| 27 | ~~Per-meal macro breakdown sheet on macro ring tap~~ **Done 2026-05-28.** Tapping the macro rings opens `MacroBreakdownSheet` (per-meal kcal + P/C/F + day total), computed from the in-memory entries by the tested `mealBreakdown` helper. Note: the GAP cell pointed at a `BACKLOG.md` deferred entry that does not exist; built a clean minimal sheet to the row's intent instead. | done | Claude |
+| 28 | Search subnav tabs (Recents / Favourites / Frequents / My Foods / My Recipes / Database) | Build per `UI_FLOWS_LOCKED.md`. **Pending two founder calls** (2026-05-28): (a) tab count: `UI_FLOWS_LOCKED.md` lists 5 (Recents/Favourites/Frequents/Custom/Database) but this row lists 6 (adds My Recipes); (b) Frequents is specced as server-computed nightly and cached, which has no data source yet, so it needs either a server pipeline (migration + cron) or a client-side stopgap. Other 5 sources already exist. | blocked | Claude |
 
 ---
 

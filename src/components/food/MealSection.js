@@ -4,7 +4,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
 import { SwipeableEntryRow } from './EntryRow';
 
-export default function MealSection({ slot, entries, onAdd, onEdit, onDelete }) {
+export default function MealSection({
+  slot, entries, onAdd, onEdit, onDelete,
+  selectionMode = false, selectedIds, onLongPressEntry, onToggleSelect,
+}) {
   const slotKcal = Math.round(entries.reduce((a, e) => a + (e.kcal ?? 0), 0));
   return (
     <View style={styles.section}>
@@ -18,6 +21,10 @@ export default function MealSection({ slot, entries, onAdd, onEdit, onDelete }) 
           entry={e}
           onEdit={() => onEdit(e)}
           onDelete={onDelete}
+          selectionMode={selectionMode}
+          selected={!!selectedIds?.has(e.id)}
+          onLongPress={() => onLongPressEntry?.(e)}
+          onToggleSelect={() => onToggleSelect?.(e)}
         />
       ))}
       <TouchableOpacity
