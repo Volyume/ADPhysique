@@ -1,14 +1,48 @@
 # Volyume current status
 
-Verified against code in `src/` and `supabase/` on 2026-05-27. Supersedes `HANDOFF.md`. This doc is the single trusted reference for what is shipped, what is in progress, and what comes next.
+Verified against code in `src/` and `supabase/` on 2026-05-28. Supersedes `HANDOFF.md`. This doc is the single trusted reference for what is shipped, what is in progress, and what comes next.
 
 **Update protocol.** Rewritten end-to-end at the end of any session that materially changes shipped state, not appended to. The previous edit cycle broke that rule and the doc developed internal contradictions; this version restarts the discipline.
 
-Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims below are checked against.
+Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims below are checked against. Note: the survey was taken before the 2026-05-27 dead-lib delete and the 2026-05-28 telemetry fold-in, so it overstates the file count and shows `phaseEngine.js` / `coachExport.js` / two `STRENGTH_STANDARDS` definitions / two telemetry modules. Re-baseline before next major audit.
 
 ---
 
 > **Operational protocol (locked 2026-05-25).** Every session must follow the 10 permanent engineering rules in `CLAUDE.md` § "Permanent engineering rules". Repository validation before code, no silent workflow changes, missing-file anomalies are hard stops, semantic integrity over Git topology, runtime-critical discipline, migration tracking, mandatory tests, no minimisation, main is canonical, session-start protocol.
+
+---
+
+## 0. Session summary
+
+### 0.A — 2026-05-28 session (Claude)
+
+Engine cleanup. Three rows closed off the `docs/GAP_ANALYSIS.md` punch list, plus a Maestro CI fix, plus the previous session's stranded commits brought onto `main`.
+
+**Shipped:**
+
+| Commit | What |
+|---|---|
+| `8cdd60d` | Maestro E2E stopped firing on Claude-branch pushes (founder was getting an email per commit; workflow had been failing every run since #16). |
+| `1f21f39` | Maestro E2E switched to manual-only trigger (workflow_dispatch only). |
+| `48717e0` | Row 14 — strength-standards dedup. PRWallScreen now uses `strengthStandards.getStrengthLevel` only; `algorithms.STRENGTH_STANDARDS` + `getStrengthStandard` deleted. Per-card duplicate display path collapsed. Regex broadened to cover the alt names PRWallScreen had locally. 15 new tests. |
+| `099738f` | Row 13 — telemetry fold-in. Queue + push logic moved from `engineTelemetry.js` to `telemetry/transport.js`; old file is a thin re-export shim. 10 new tests. Pre-existing bug caught + fixed: `useAppStore.clearAuthStateForSignOut` destructured `flushPendingTelemetry` from the wrong module (`lib/sync`); the silent TypeError meant the telemetry flush never ran at sign-out. |
+| `79e06f2` | Row 21 — em-dash sweep. 141 files, 818/818 line symmetry (pure character substitution). Sed-driven mass replace then hand-cleanup for 24 remaining special cases. OCR parser regex and the test-file lint guard kept intentionally. |
+
+**Branch hygiene:** session started with the harness having injected a `claude/github-main-takeover-CSUfO` branch directive. The first Maestro commit landed there before the founder caught it. All 13 previously-stranded takeover-branch commits (last session's `GAP_ANALYSIS`, `CURRENT_STATUS` rewrite, locked decisions, dead-lib delete, etc.) plus the two new Maestro commits were fast-forwarded onto `main` (clean topology, zero behind). The takeover branch was deleted locally; the remote branch delete was blocked with HTTP 403 by the git proxy in this environment, so the founder needs to remove it (and five other stale `claude/*` remote branches) via the GitHub UI.
+
+**Rule 9 violation logged.** The harness injection of a feature branch is exactly what Rule 9 was written to prevent. I followed it instead of surfacing the directive. This is the second occurrence and was caught by the founder, not by me. Surface and stop next time, no exceptions.
+
+**Lessons:**
+
+1. CODE_TRUTH_SURVEY is a snapshot, not live truth. It was authored before commit `9e556c4` and described files that no longer exist (`phaseEngine.js`, `coachExport.js`). Verify file existence before refactor planning.
+2. Pre-existing latent bugs hide in `try/catch (_) {}` blocks. The `flushPendingTelemetry` import-from-wrong-module bug had been there since whenever the import was originally added; the catch ate the TypeError and the symptom (telemetry never flushed at sign-out) was invisible. Grep destructure-from-wrong-module patterns when touching adjacent code.
+3. Row 12 (sync layer migration) was deferred. CLAUDE.md Rule 5 flags offline sync as runtime-critical and explicitly prohibits rushed refactor. The per-entity helpers in legacy `sync.js` (`syncWorkout`, `syncProfile`, `bulkUploadLocalData`, `pullFromCloud`, `cancelScheduledSync`) don't have direct equivalents in `lib/sync/` — each migration is its own design call, not a mechanical rename. Reserve its own focused session.
+
+**Next session opener:** decision on row 12 sync migration vs. starting coach confirm-then-apply work (rows 3-7).
+
+### 0.B — 2026-05-27 session (Claude)
+
+Documentation rewrite + drift closure. Rewrote `CURRENT_STATUS.md`, `HANDOFF.md`, `BACKLOG.md` end-to-end against code reality (the previous versions had developed internal contradictions). Authored `GAP_ANALYSIS.md` as the ranked 28-row punch list, locked founder decisions for every row. Closed gap #1 (food dislikes via `food_favourites.kind`), gap #2 (recipe builder UI), and shipped migration 048. Authored `CODE_TRUTH_SURVEY.md` (188-file walk with file:line evidence for every claim). Closed drift item 17 (`WEAK_POINT_MUSCLES` move) and row 16 (deleted `phaseEngine.js` + `coachExport.js` + the dead test), removed the unused Microsoft OAuth export. Voice + hex sweep landed for `ScanBarcodeScreen`, `CoachingReminders`, Apple OAuth token references.
 
 ---
 
@@ -142,15 +176,15 @@ Per `DATABASE_SCHEMA_LOCKED.md` + grep against `supabase/migrate_*.sql`.
 
 The survey at `docs/CODE_TRUTH_SURVEY.md` flags 32 cross-cutting findings. The structural ones worth tracking here:
 
-1. **Two sync layers coexist.** Top-level `src/lib/sync.js` (1,640 lines) is the monolithic legacy. The newer modular layer at `src/lib/sync/` (16 files, including 10 per-table handlers) is the spec'd architecture per `SYNC_ARCHITECTURE_LOCKED.md`. The runner now drives all 16 registry tables through the new path, but consumers still import from the legacy file for some helpers. Any future sync change must specify which layer it touches.
+1. **Two sync layers coexist.** Top-level `src/lib/sync.js` (1,640 lines) is the monolithic legacy. The newer modular layer at `src/lib/sync/` (16 files, including 10 per-table handlers) is the spec'd architecture per `SYNC_ARCHITECTURE_LOCKED.md`. The runner now drives all 16 registry tables through the new path, but consumers still import from the legacy file for some helpers. Any future sync change must specify which layer it touches. **Punch list row 12 (deferred — needs a focused session per CLAUDE.md Rule 5).**
 
-2. **Two telemetry modules coexist.** `src/lib/engineTelemetry.js` is the active queue + push. `src/lib/telemetry/` (4 files) is the spec'd public API that wraps it. Documented intent is to fold the legacy in, not done yet.
+2. **Two telemetry modules folded.** ~~`engineTelemetry.js` was the active queue + push; `telemetry/` was a thin wrapper that delegated back.~~ **Resolved 2026-05-28 (commit `099738f`).** Queue + push logic moved into `telemetry/transport.js`; `engineTelemetry.js` is now a re-export shim. Existing callers continue to work via the shim; new code should import from `lib/telemetry` directly.
 
-3. **`computeEWMA` duplicated.** Defined in `nutritionEngine.js:151` and `weeklyCoach.js:23` with different signatures. Consumers split: `AthleteHubScreen` + `WeeklyCheckInScreen` + `ProGoalSetupScreen` use `weeklyCoach`'s; `BodyMetricsScreen` + `CoachOutputScreen` use `nutritionEngine`'s.
+3. **`computeEWMA` deliberately split — annotated, not a bug.** `nutritionEngine.js:152` (aggressive alpha for TDEE adjustment, consumed by BodyMetrics + CoachOutput) and `weeklyCoach.js:23` (slow alpha for weight trend, consumed by AthleteHub + WeeklyCheckIn + ProGoalSetup). The header comments at both call sites explicitly mark the separation as intentional.
 
-4. **`STRENGTH_STANDARDS` duplicated.** `algorithms.js:695` and `strengthStandards.js:15`. `PRWallScreen.js` imports both. Same data, two definitions.
+4. **`STRENGTH_STANDARDS` deduped.** ~~Defined twice in `algorithms.js:695` and `strengthStandards.js:15`; PRWallScreen imported both.~~ **Resolved 2026-05-28 (commit `48717e0`).** `algorithms.STRENGTH_STANDARDS` + `getStrengthStandard` deleted; PRWallScreen migrated to `strengthStandards.getStrengthLevel` only. Regex broadened so the canonical home covers all the alt names PRWallScreen had locally.
 
-5. **`detectRepRegressions` duplicated** in `AnalyticsScreen.js:50` and `AthleteHubScreen.js:50`. Same function defined twice.
+5. **`detectRepRegressions` single definition.** Lives at `AthleteHubScreen.js:50` only. The CODE_TRUTH_SURVEY claim of a duplicate at `AnalyticsScreen.js:50` was already stale by 2026-05-28 — the AnalyticsScreen copy was removed in an earlier session.
 
 6. **`evaluateAutoReg` scope split.** `mesocycle.js:165` is per-session autoreg matrix (consumed by `WorkoutSummary`). `weeklyCoach.js:144` has its own `autoregulationMatrix` for the weekly card. Different scopes, but the dimensions overlap; alignment worth verifying.
 
@@ -168,9 +202,9 @@ The survey at `docs/CODE_TRUTH_SURVEY.md` flags 32 cross-cutting findings. The s
 
 13. **`weekly_checkins` has two write paths.** `WeeklyCheckInScreen.js:385` and `WorkoutSummaryScreen.js:377`. Field sets may diverge; verify before any schema change.
 
-14. **Likely dead lib files.** No imports found in surveyed screens for: `phaseEngine.js`, `coachExport.js`, `sentry.js`, `seedExercises.js`. May be invoked from App.js / store init; worth confirming.
+14. **Dead lib files cleared.** ~~`phaseEngine.js`, `coachExport.js` had no consumers; `sentry.js` / `seedExercises.js` not visible in screen imports.~~ `phaseEngine.js` + `coachExport.js` + the dead `phaseEngine.test.js` deleted in commit `9e556c4` (2026-05-27). `sentry.js` and `seedExercises.js` confirmed live via App.js / store init paths (kept).
 
-15. **Three event-tracking surfaces.** `engineTelemetry.track`, `observability.track` namespace, `observability.audit`. Scopes (engine events, UI events, internal audit) need a single doc that says which goes where.
+15. **Three event-tracking surfaces.** `engineTelemetry.track` (now a shim into `telemetry/transport.postEvent`), `observability.track` namespace, `observability.audit`. Scopes (engine events, UI events, internal audit) need a single doc that says which goes where.
 
 16. **`refeed` engine code is dead.** `getPlanNutritionContext` in `nutritionEngine.js:671-834` builds a refeed recommendation object. Never called from any screen. `weeklyCoach` has no refeed logic. Any doc claiming refeed is shipped is wrong; only the engine math exists.
 
@@ -239,18 +273,18 @@ The precision coach (`weeklyCoach.runWeeklyCoach`) produces a weekly card. Only 
 
 ## 8. Outstanding work (the punch list)
 
-Grouped by phase per `RELEASE_PLAN_LOCKED.md`.
+Grouped by phase per `RELEASE_PLAN_LOCKED.md`. The live ranked version with founder decisions per row is `docs/GAP_ANALYSIS.md` § 2. The summary below tracks shipped state at this level of doc.
 
 ### NOW (Phase A code work)
 
-| # | Item | Effort |
-|---|---|---|
-| 1 | Saved meals UI (template create / pick / apply) | M |
-| 2 | Body composition trend charts (BF% + measurements over time) | S-M |
-| 3 | Decide on coach training auto-apply: does `volumeDelta` write the next week's planned sets, or stay advisory? Asymmetric with the calorie auto-apply path today. | S (impl) + founder decision |
-| 4 | Resolve known drift items 1-9 from § 5: pick which legacy to delete and which canonical to keep. Two sync layers, two telemetry modules, duplicated helpers are all functional but a real maintenance trap. | M |
-| 5 | Notification surfaces still pending (cascade day 19/21 push, payment failure, coach output) | S-M |
-| 6 | Voice-rule sweep over code comments + remaining hardcoded hex in `Article9ConsentScreen.js:151,262`, `CoachOutputScreen.js:1391`, `NutritionTargetsScreen.js:906`. `ShareCardScreen.js` excluded (intentional HTML template). | S |
+| # | Item | Effort | Status |
+|---|---|---|---|
+| 1 | Saved meals UI (template create / pick / apply) | M | Open. GAP row 1. |
+| 2 | Body composition trend charts (BF% + measurements over time) | S-M | Open. GAP rows 2 + 25. |
+| 3 | Coach training auto-apply: founder decided **confirm-then-apply** for `volumeDelta`. Coach card surfaces "+2 sets" with Apply button; user taps to commit. Same pattern for steps, cardio, deload, diet break, refeed. | S impl per output | Open. GAP rows 3-7. The biggest product-impact chunk still pending. |
+| 4 | Drift cleanup. Items 2, 4, 5, 14 from § 5 closed this session (telemetry fold-in, STRENGTH_STANDARDS dedup, detectRepRegressions confirmed single, dead-lib delete). Item 1 (sync layer) still open as GAP row 12 — needs its own focused session per CLAUDE.md Rule 5 (offline sync is runtime-critical). | M remaining | Partial. |
+| 5 | Notification surfaces still pending (cascade day 19/21 push, payment failure, coach output) | S-M | Open. GAP rows 9-11. |
+| 6 | Voice + hex sweep | S | **Done 2026-05-28** (commit `79e06f2`). Hex sweep landed 2026-05-27. Em-dash sweep covered 818 of 821 instances; 3 deliberately preserved (OCR regex + lint guard). |
 
 ### LATER (Phase A exit prep)
 

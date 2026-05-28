@@ -120,12 +120,20 @@ These were on the NEVER list and have since been re-opened. Recorded so the orig
 | Delete Account end-to-end re-test | Edge Function writes pre/post audit rows to `account_deletions_log`. Flow has not been device-tested since the bracket was added. | Founder | Sign into a test account, tap Delete Account, verify a row lands in `account_deletions_log` with `completed_at` set. |
 | Deploy `play-billing-rtdn` Edge Function | Code shipped at `supabase/functions/play-billing-rtdn/index.ts`, not deployed. | Founder | Deploy + configure Pub/Sub topic + service account when ready for Phase A exit sandbox purchase. |
 | Generate Android upload keystore | No keystore exists. `build-android.yml` signing config never exercised in production. Blocks any new AAB replacing the Closed Testing build. | Founder + Claude | Claude writes the commands when founder is ready for Phase A exit prep. |
-| Maestro CI smoke bundle green | Iteration commits in `.ci-status/maestro-latest.md`. F4 (emulator boot diagnosis) still open. Not blocking visible APK work. | Claude | Read latest `.ci-status/maestro-latest.md`, fix next failure, push, repeat. |
+| Maestro CI smoke bundle green | F4 emulator boot diagnosis still open. **Workflow is now manual-only** as of 2026-05-28 (commit `1f21f39`) — no auto-push triggers, fires only via Actions tab. Re-add a push trigger when F4 is fixed and runs reliably green. | Claude | Diagnose F4, push fix, run workflow manually, repeat. Re-enable push trigger only after sustained green. |
 | `peak_week_plans` table cleanup | Table remains in `database.js` despite Peak Week being out of scope. Legacy. | Claude | Migration to drop the table when convenient; verify no live references first. |
 
 ---
 
 ## Recently shipped (historical context, do not re-propose)
+
+**2026-05-28**
+
+- Maestro E2E manual-only trigger (commits `8cdd60d`, `1f21f39`). All auto-push triggers removed; workflow_dispatch only until F4 emulator boot is fixed and runs are reliably green. Stops the per-commit failure-notification email to the founder.
+- Strength-standards dedup, GAP row 14 (commit `48717e0`). PRWallScreen migrated to `strengthStandards.getStrengthLevel` only; `algorithms.STRENGTH_STANDARDS` + `getStrengthStandard` deleted. Per-card duplicate display path collapsed (was rendering the level twice in different formats). Canonical regex broadened to cover alt names PRWallScreen had locally. 15 new tests at `src/lib/__tests__/strengthStandards.test.js`.
+- Telemetry queue + push fold-in, GAP row 13 (commit `099738f`). Logic moved from `engineTelemetry.js` into `telemetry/transport.js`; old file is a thin re-export shim so all existing callers keep working. 10 new tests at `src/lib/telemetry/__tests__/transport.test.js`. Pre-existing bug fixed in the same commit: `useAppStore.clearAuthStateForSignOut` was destructuring `flushPendingTelemetry` from `lib/sync` (which doesn't export it); the silent TypeError meant the telemetry flush never ran at sign-out.
+- Em-dash sweep, GAP row 21 (commit `79e06f2`). 141 files, 818 character substitutions. Dominant pattern ` — ` → `, ` via sed; 17 trailing dashes stripped; 4 UI placeholders (`'—'` for null values) replaced with `'-'`. Deliberately preserved: `food/ocrParser.js:24` (the regex IS the substitution rule) and `differentialPaywall.test.js:399, 415` (the literal `'—'` IS the lint guard).
+- Stranded takeover-branch consolidation. The previous session's 13 commits (`GAP_ANALYSIS`, `CURRENT_STATUS` rewrite, locked decisions, dead-lib delete, etc.) were stuck on `claude/github-main-takeover-CSUfO` — never made it onto `main`. Fast-forwarded `main` to the takeover head (clean topology, zero behind). Local branch deleted; remote delete blocked HTTP 403 by the git proxy, founder needs to remove via GitHub UI along with five other stale `claude/*` branches.
 
 **2026-05-27**
 

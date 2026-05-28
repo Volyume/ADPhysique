@@ -297,9 +297,10 @@ Per `PRIVACY_CONSENT_LOCKED.md`:
 
 Per `TELEMETRY_DASHBOARDS_LOCKED.md`:
 
-**Two coexisting modules** (drift to resolve):
-- `src/lib/engineTelemetry.js`: the active queue + push implementation.
-- `src/lib/telemetry/`: the spec'd 4-file split (`events.js`, `index.js`, `sentryBridge.js`, `transport.js`) that wraps `engineTelemetry.js`. Stated intent in `telemetry/index.js:11-14` is to fold the legacy in; not done yet.
+**Folded layout (post 2026-05-28, commit `099738f`):**
+- `src/lib/telemetry/transport.js`: owns persist + push. Validates against `ALLOWED_EVENTS`, writes to local SQLite `engine_telemetry`, schedules a debounced push to the `record_engine_telemetry` RPC. Pure logic, no other module behind it.
+- `src/lib/telemetry/index.js`: public API. Adds Sentry breadcrumb mirror, then delegates to transport.
+- `src/lib/engineTelemetry.js`: thin re-export shim (`track` → `postEvent`, `flushPendingTelemetry` → `flushPending`). Existing callers keep working unchanged; new code should import from `lib/telemetry`.
 
 **Canonical event list at `lib/telemetry/events.js`:**
 - 42 entries total
@@ -528,22 +529,25 @@ Full breakdown in `CODE_TRUTH_SURVEY.md`. All flat under `src/screens/` (no subf
 
 ## 12. Known drift (deep version)
 
-Survey-flagged in `CURRENT_STATUS.md § 5` and `CODE_TRUTH_SURVEY.md`. Most important here:
+Live tracking in `CURRENT_STATUS.md § 5` and the ranked punch list at `GAP_ANALYSIS.md § 2`. Items still open:
 
-1. Two sync layers (`lib/sync.js` monolithic + `lib/sync/` modular).
-2. Two telemetry modules (`engineTelemetry.js` + `lib/telemetry/`).
-3. `computeEWMA` duplicated in `nutritionEngine.js:151` + `weeklyCoach.js:23` with different signatures.
-4. `STRENGTH_STANDARDS` + `getStrengthStandard` duplicated in `algorithms.js:695,719` and `strengthStandards.js`.
-5. `detectRepRegressions` duplicated in `AnalyticsScreen.js:50` + `AthleteHubScreen.js:50`.
-6. `phaseEngine.js`, `coachExport.js`, `sentry.js`, `seedExercises.js` have no consumers found in surveyed files. May be initialised from App.js or genuinely dead.
-7. `food_dislikes` is NOT a separate table (lives on `food_favourites.kind`).
-8. `weight_log` is intentionally aliased to `body_composition_log`.
-9. `cycleOverride` is a dead input (coach reads, check-in UI never sets).
-10. `weekly_checkins` has two write paths (`WeeklyCheckInScreen.js:385` + `WorkoutSummaryScreen.js:377`).
-11. 3 v1.1 features in PRO_FEATURES not actually shipped (`refeed_automated_any_cut`, `body_composition_deep`, `share_pack_pdf`).
-12. Refeed engine code (`getPlanNutritionContext` in `nutritionEngine.js:671-834`) is dead.
-13. High/low day macros: not in code at all (`grep` returns zero).
-14. `peak_week_plans` table remains despite Peak Week being out of scope.
+1. Two sync layers (`lib/sync.js` monolithic + `lib/sync/` modular). GAP row 12. Per-entity helpers in legacy file (`syncWorkout`, `syncProfile`, `bulkUploadLocalData`, `pullFromCloud`, `cancelScheduledSync`) don't have direct equivalents in `lib/sync/`; each migration is its own design call. Reserve a focused session per CLAUDE.md Rule 5.
+2. `weekly_checkins` has two write paths (`WeeklyCheckInScreen.js:385` + `WorkoutSummaryScreen.js:377`). Verify field sets before any schema change.
+3. `cycleOverride` is a dead input (coach reads at `weeklyCoach.js:375`, check-in UI never sets). GAP row 15 — needs biological-sex onboarding + check-in field + privacy gate.
+4. `food_dislikes` is NOT a separate table (lives on `food_favourites.kind`). Not a drift, a fact docs sometimes get wrong.
+5. `weight_log` is intentionally aliased to `body_composition_log` (the `sync/tables/weightLog.js` handler is a no-op).
+6. 3 v1.1 features in PRO_FEATURES not actually shipped (`refeed_automated_any_cut`, `body_composition_deep`, `share_pack_pdf`). GAP row 25.
+7. Refeed engine code (`getPlanNutritionContext` in `nutritionEngine.js:671-834`) is dead. GAP row 7 (wire as confirm-then-apply).
+8. High/low day macros: not in code at all. GAP row 6 (build, gated to advanced cuts).
+9. `peak_week_plans` table remains despite Peak Week being out of scope. Migration 049 drafted, hold apply until next AAB. GAP row 18.
+10. `evaluateAutoReg` exists at `mesocycle.js:165` (per-session matrix) and as `autoregulationMatrix` in `weeklyCoach.js:144` (weekly matrix). Different scopes by design; dimensions overlap; alignment worth verifying before any future change.
+
+**Resolved this session (2026-05-28):**
+- ~~Two telemetry modules~~ → folded into `telemetry/transport.js`; `engineTelemetry.js` is a shim (commit `099738f`).
+- ~~`STRENGTH_STANDARDS` duplicated~~ → `algorithms` copy deleted, PRWallScreen migrated (commit `48717e0`).
+- ~~`detectRepRegressions` duplicated~~ → confirmed single definition (the second copy was already removed in an earlier session; survey was stale).
+- ~~Likely dead lib files~~ → `phaseEngine.js` + `coachExport.js` + `phaseEngine.test.js` deleted (commit `9e556c4`, 2026-05-27). `sentry.js` and `seedExercises.js` confirmed live via App.js init paths.
+- ~~`computeEWMA` duplicated~~ → confirmed intentional separation, annotation already in place at both `nutritionEngine.js:152` and `weeklyCoach.js:23` (different alphas for different consumer needs).
 
 ---
 
@@ -657,16 +661,19 @@ Read these before touching the surface they cover. They cannot be overridden wit
 2. **food_dislikes is NOT a separate table.** It lives on `food_favourites.kind`. Don't grep for a table that doesn't exist.
 3. **Refeed engine code is dead.** `getPlanNutritionContext` in `nutritionEngine.js` builds a refeed object but nothing calls it. Don't claim refeed is shipped.
 4. **Per-set RIR was deliberately removed.** `SetEntry.js:173-176` documents the decision. `DEFAULT_SET.rir = 2` is internal-only.
-5. **Two sync layers coexist.** Any sync change must specify which layer it touches. Don't accidentally update only one.
-6. **Telemetry has two modules.** `engineTelemetry.js` is the queue; `lib/telemetry/` is the wrapper that delegates back.
+5. **Two sync layers coexist (legacy `lib/sync.js` + modular `lib/sync/`).** Any sync change must specify which layer it touches. Don't accidentally update only one. GAP row 12 is the planned consolidation.
+6. **Telemetry is now one module.** As of 2026-05-28 (commit `099738f`) `engineTelemetry.js` is a thin shim re-exporting from `telemetry/transport.js`. Existing callers keep working; new code imports from `lib/telemetry`.
 7. **`weight_log` is an alias.** The sync registry has 16 entries; 15 are unique cloud tables.
 8. **`peak_week_plans` table exists despite Peak Week being out of scope.** Don't take its presence as authorisation to add features.
-9. **`cycleOverride` is a dead input.** Coach reads it; UI never sets it. Permanently false.
+9. **`cycleOverride` is a dead input.** Coach reads it; UI never sets it. Permanently false. GAP row 15 plans to wire it.
 10. **`weekly_checkins` has two write paths.** Verify both before any schema change.
 11. **iOS is NOT locked never.** It's deferred until Android ships. Adjust framing.
 12. **`workout_notes` v1 and v2 both exist.** Use v2; v1 is legacy.
-13. **MacroRings turns warning on over-target.** Not adherence-neutral. Adjust expectations.
-14. **Auto-apply is asymmetric.** Coach writes calorie targets to DB automatically; everything else (steps, cardio, training, deload, diet break) is advisory text. Decide before adding more auto-apply.
+13. **MacroRings turns warning on over-target.** Not adherence-neutral. GAP row 8 plans the three-band (under = primary amber, at = success green within 5%, over = warning amber).
+14. **Auto-apply is asymmetric.** Coach writes calorie targets to DB automatically; everything else (steps, cardio, training, deload, diet break) is advisory text. Founder direction (GAP rows 3-7): all five become confirm-then-apply.
+15. **Silent `try/catch (_) {}` hides import bugs.** Caught one this session: `useAppStore.clearAuthStateForSignOut` destructured `flushPendingTelemetry` from `lib/sync` instead of `lib/engineTelemetry`. The catch ate the TypeError; the symptom (telemetry never flushed at sign-out) was invisible. When touching code adjacent to a swallowed catch, grep the destructured names against the module's actual exports.
+16. **CODE_TRUTH_SURVEY is a snapshot.** It's `188 files` because that's what was on disk when it was authored. Files have been deleted since (`phaseEngine.js`, `coachExport.js`, `phaseEngine.test.js` in commit `9e556c4`). Verify file existence before planning a refactor off the survey alone.
+17. **Harness injects feature-branch directives.** Twice now the session prompt has said "develop on branch `claude/...`". Rule 9 says surface that to the founder and wait. Don't auto-follow.
 
 ---
 
