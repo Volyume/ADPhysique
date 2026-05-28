@@ -27,7 +27,8 @@ Built out the coach's confirm-then-apply loop across every weekly adjustment (GA
 | `6cd63cd` | Steps slice. Apply writes `userProfile.stepsTarget`, which gates the steps-adherence question on the weekly check-in (existing destination). |
 | `7b2757a` | Cardio slice. Apply writes `userProfile.cardioPrescription`, gating a cardio-adherence question. Needed a column: local migration in `database.js` + cloud migration 050 (`weekly_checkins_v2.cardio_adherence`, additive/nullable). **Founder still needs to apply 050 in the Supabase dashboard.** |
 | `d935b88` | Deload + diet break slice (row 5). |
-| (this commit) | High-day / low-day macro cycle (row 6). See below. |
+| `71d8a8c` | High-day / low-day macro cycle (row 6). See below. |
+| (this commit) | Refeed wiring (row 7). See below. |
 
 **Deload + diet break (row 5).** Founder calls: deload = "what's done in real life", diet break = maintenance week.
 
@@ -44,9 +45,17 @@ Built out the coach's confirm-then-apply loop across every weekly adjustment (GA
 
 **Bug fixed in passing (data loss).** `saveNutritionTargets` writes the whole `nutrition_targets` row. The calorie slice (`computeCalorieTargets`) was handing it a targets object with only the three changed macros, so every calorie apply silently nulled `tdee` (maintenance), `bmr`, `phase`, `bmrMethod`, `activityLevel`, `confidence`. Fixed by spreading the full existing row before overriding. This was also a prerequisite for diet break, which reads `tdee`. Caught while tracing the maintenance source; regression test added.
 
-**Tests:** `coachApply.test.js` now 36 (added 9 for `computeMacroCycle`), `weeklyCoach.test.js` +6 for the macro-cycle gate, plus the earlier diet-break + deload helpers and the row-preservation guard. Full suite green (87 suites / 1792 passed / 3 skipped).
+**Refeed wiring (row 7).** Founder call: wire the dead refeed math as confirm-then-apply, coach picks the day, user confirms before the kcal swap.
 
-**Next:** row 7 (refeed wiring). The dead refeed math in `nutritionEngine.getPlanNutritionContext` (`refeedRecommendation`, fires for `aggressive_cut` / `contest_prep`) gets wired as confirm-then-apply: the coach proposes a refeed day raised to maintenance via carbs, the user confirms before the swap. Builds on row 6's day-level macro framing. Then UI surfaces (rows 1, 2, 8, 15, 19, 20, 25-28). Row 12 (sync layer migration) still wants its own session.
+- **Compute.** `coachApply.computeRefeedDay(nutrition)` is the live wiring of the refeed formula that previously sat dead in `nutritionEngine.getPlanNutritionContext`: raise the day to maintenance (stored `tdee`) by adding carbohydrate, holding protein and fat, so the day's kcal lands on maintenance. Returns null when there is no deficit to refeed up to.
+- **Coach.** Gated to aggressive cuts and physique competitors (`phase.isCut && (goalPhase === 'agg_cut' || isCompetitionGoal(trainingGoal))`), matching the `refeed_prescription` entitlement in `proGate`. The coach proposes a refeed on a cadence: weekly for competitors, every two weeks for an aggressive cut, tracked via `userProfile.refeed.appliedAt` (weeks-since). It embeds `output.refeed` with an in-voice note.
+- **Apply + surface.** `CoachOutputScreen` renders a "Refeed day" card with one Apply; `handleApplyRefeed` re-reads targets, recomputes, and writes `userProfile.refeed` (target + frequency + confirm timestamp). The Diary resolves the refeed onto the first training day on or after the confirm timestamp (`getFirstWorkoutDateOnOrAfter`) and shows the maintenance / high-carb target there with a "Refeed day" chip, taking precedence over the row-6 cycle. Coach-driven, deterministic, no user toggle.
+- **Design note.** "Coach picks the day" is implemented as the next training day on or after confirm (deterministic from logged workouts, no forward schedule needed, no profile write-back). A single refeed day per confirm; it naturally expires once that date passes and the cadence re-proposes the next one. If the founder wants a fixed weekday or a 2-day window instead, it is a contained change in `getFirstWorkoutDateOnOrAfter` + the diary precedence.
+- **No migration.** Refeed rides on the local profile blob and the coach output blob.
+
+**Tests:** `coachApply.test.js` now 41 (9 for `computeMacroCycle`, 5 for `computeRefeedDay`), `weeklyCoach.test.js` +13 for the macro-cycle and refeed gates / cadence, plus the earlier diet-break + deload helpers and the row-preservation guard. Full suite green serially (87 suites / 1804 passed / 3 skipped). Note: a pre-existing parallel-worker babel transform race in `error-and-feedback-pipeline.test.js` (`react-native-url-polyfill` ESM) can flake under the default parallel runner on a cold cache; it passes in isolation and under `--runInBand`. Unrelated to this work.
+
+**Next:** rows 3-7 (coach confirm-then-apply) are complete. UI surfaces remain (rows 1, 2, 8, 15, 19, 20, 25-28). Row 12 (sync layer migration) still wants its own session.
 
 ### 0.B. 2026-05-28 session (Claude): engine cleanup
 
@@ -240,7 +249,7 @@ The survey at `docs/CODE_TRUTH_SURVEY.md` flags 32 cross-cutting findings. The s
 
 15. **Three event-tracking surfaces.** `engineTelemetry.track` (now a shim into `telemetry/transport.postEvent`), `observability.track` namespace, `observability.audit`. Scopes (engine events, UI events, internal audit) need a single doc that says which goes where.
 
-16. **`refeed` engine code is dead.** `getPlanNutritionContext` in `nutritionEngine.js:671-834` builds a refeed recommendation object. Never called from any screen. `weeklyCoach` has no refeed logic. Any doc claiming refeed is shipped is wrong; only the engine math exists.
+16. ~~**`refeed` engine code is dead.**~~ **Wired 2026-05-28** (GAP row 7, see § 0.A). The refeed math now lives in `coachApply.computeRefeedDay`; `weeklyCoach` proposes it on a cadence for aggressive cuts + competitors, `CoachOutputScreen` confirms it, and the Diary shows it on the next training day. The original `getPlanNutritionContext.refeedRecommendation` block is still unused (the live math is in `coachApply`); it can be removed in a future cleanup.
 
 17. ~~**High-day / low-day macro shift is NOT in the coach.**~~ **Shipped 2026-05-28** (GAP row 6, see § 0.A). `coachApply.computeMacroCycle` + the coach gate + the "Carbs by day" apply card + the diary day-aware target. Gated to advanced cuts and physique competitors.
 
@@ -301,7 +310,7 @@ The precision coach (`weeklyCoach.runWeeklyCoach`) produces a weekly card. Only 
 
 **Computed elsewhere, fired post-workout:** `algorithms.runAdaptiveEngine` from `WorkoutSummaryScreen.js` writes `adaptation_events` rows. This is the per-session adaptive surface and is distinct from the weekly coach card.
 
-**Computed but gated** (GAP row 6, shipped 2026-05-28): high-day / low-day macro split, for advanced cuts and physique competitors only. **Not computed yet:** refeed scheduling (row 7, next).
+**Computed but gated** (shipped 2026-05-28): high-day / low-day macro split (GAP row 6, advanced cuts and physique competitors); refeed scheduling (GAP row 7, aggressive cuts and competitors, on a cadence).
 
 ---
 

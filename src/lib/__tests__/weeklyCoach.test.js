@@ -362,3 +362,80 @@ describe('macro cycle gating', () => {
     expect(out.macroCycle.note).not.toMatch(/let me|I'll|ensure|leverage|seamless|utilise/i);
   });
 });
+
+// ── Refeed wiring + cadence (GAP row 7) ────────────────────────────────────
+
+describe('refeed gating and cadence', () => {
+  const DAY = 86_400_000;
+  // Maintenance well above target so there is a deficit to refeed up to.
+  const nut = { currentCalTarget: 2000, currentMaintenanceKcal: 2600, currentProteinG: 200, currentFatG: 60 };
+  const aggCut = { morningWeights: trend(85, -1.0), goalPhase: 'agg_cut' };
+
+  test('fires on an aggressive cut with no prior refeed', () => {
+    const out = runWeeklyCoach(baseInputs({ ...nut, ...aggCut, lastRefeedAt: null }));
+    expect(out.refeed).not.toBeNull();
+    expect(out.refeed.kcal).toBe(2600);
+    expect(out.refeed.frequencyWeeks).toBe(2); // aggressive cut cadence
+  });
+
+  test('fires weekly for a physique competitor', () => {
+    const out = runWeeklyCoach(baseInputs({
+      ...nut,
+      morningWeights: trend(85, -1.0),
+      goalPhase: 'mod_cut',
+      trainingGoal: 'bikini',
+      lastRefeedAt: null,
+    }));
+    expect(out.refeed).not.toBeNull();
+    expect(out.refeed.frequencyWeeks).toBe(1); // competitor cadence
+  });
+
+  test('does not fire for a non-aggressive, non-competition cut', () => {
+    const out = runWeeklyCoach(baseInputs({
+      ...nut,
+      morningWeights: trend(85, -0.5),
+      goalPhase: 'mild_cut',
+      trainingGoal: 'build_muscle',
+      lastRefeedAt: null,
+    }));
+    expect(out.refeed).toBeNull();
+  });
+
+  test('holds off when a refeed was taken inside the cadence window', () => {
+    // Competitor: weekly cadence. A refeed 3 days ago is not yet due.
+    const out = runWeeklyCoach(baseInputs({
+      ...nut,
+      morningWeights: trend(85, -1.0),
+      goalPhase: 'mod_cut',
+      trainingGoal: 'bikini',
+      lastRefeedAt: Date.now() - 3 * DAY,
+    }));
+    expect(out.refeed).toBeNull();
+  });
+
+  test('fires again once the cadence window has passed', () => {
+    // Aggressive cut: every two weeks. 15 days ago is due.
+    const out = runWeeklyCoach(baseInputs({
+      ...nut, ...aggCut,
+      lastRefeedAt: Date.now() - 15 * DAY,
+    }));
+    expect(out.refeed).not.toBeNull();
+  });
+
+  test('does not fire outside a cut', () => {
+    const out = runWeeklyCoach(baseInputs({
+      ...nut,
+      morningWeights: trend(80, 0.5),
+      goalPhase: 'mild_bulk',
+      trainingGoal: 'bikini',
+      lastRefeedAt: null,
+    }));
+    expect(out.refeed).toBeNull();
+  });
+
+  test('note is in voice (no em dash, no AI tells)', () => {
+    const out = runWeeklyCoach(baseInputs({ ...nut, ...aggCut, lastRefeedAt: null }));
+    expect(out.refeed.note).not.toMatch(/—/);
+    expect(out.refeed.note).not.toMatch(/let me|I'll|ensure|leverage|seamless|utilise/i);
+  });
+});

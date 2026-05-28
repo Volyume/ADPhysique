@@ -22,7 +22,7 @@ import {
   recomputeRollup, setWater, getWater,
 } from '../lib/food/db';
 import { resolveFoodRef } from '../lib/food/sources/localCache';
-import { getNutritionTargets, hasWorkoutOnDate } from '../lib/database';
+import { getNutritionTargets, hasWorkoutOnDate, getFirstWorkoutDateOnOrAfter } from '../lib/database';
 import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -62,9 +62,10 @@ function friendlyDate(isoStr) {
 }
 
 export default function DiaryScreen({ navigation }) {
-  const { user, macroCycle } = useAppStore(useShallow((s) => ({
+  const { user, macroCycle, refeed } = useAppStore(useShallow((s) => ({
     user: s.user,
     macroCycle: s.userProfile?.macroCycle ?? null,
+    refeed: s.userProfile?.refeed ?? null,
   })));
   const userId = user?.id;
 
@@ -77,15 +78,19 @@ export default function DiaryScreen({ navigation }) {
   // Whether the day being viewed is a training day, for the carb cycle
   // (row 6). Only meaningful when a macro cycle is applied.
   const [isTrainingDay, setIsTrainingDay] = useState(false);
+  // The resolved refeed day (row 7): the first training day on or after
+  // the refeed was confirmed. Null when no refeed is scheduled.
+  const [refeedDate, setRefeedDate] = useState(null);
 
   const load = useCallback(async () => {
     if (!userId) return;
-    const [es, r, w, t, trainingDay] = await Promise.all([
+    const [es, r, w, t, trainingDay, resolvedRefeedDate] = await Promise.all([
       getFoodEntriesForDay(userId, selectedDate),
       getRollupForDay(userId, selectedDate),
       getWater(userId, selectedDate),
       getNutritionTargets(userId),
       macroCycle ? hasWorkoutOnDate(userId, selectedDate) : Promise.resolve(false),
+      refeed?.appliedAt ? getFirstWorkoutDateOnOrAfter(userId, refeed.appliedAt) : Promise.resolve(null),
     ]);
     // Resolve each entry's actual food name + brand from the foods /
     // custom_foods tables. food_entries denormalises macros at log
@@ -109,15 +114,23 @@ export default function DiaryScreen({ navigation }) {
     setWaterMl(w);
     setTargets(t);
     setIsTrainingDay(trainingDay);
-  }, [userId, selectedDate, macroCycle]);
+    setRefeedDate(resolvedRefeedDate);
+  }, [userId, selectedDate, macroCycle, refeed]);
 
-  // The effective macro target for the day. With no carb cycle applied
-  // this is just the stored nutrition target. With a cycle applied it
-  // swaps in the training-day or rest-day split (row 6). kcal maps to
-  // targetKcal so MacroRings reads it the same way as the flat target.
+  const isRefeedDay = !!refeed && !!refeedDate && refeedDate === selectedDate;
+
+  // The effective macro target for the day. With nothing applied this is
+  // the stored nutrition target. A refeed day (row 7) takes top
+  // precedence and shows the maintenance / high-carb target; otherwise a
+  // carb cycle (row 6) swaps in the training-day or rest-day split. kcal
+  // maps to targetKcal so MacroRings reads it like the flat target.
   const effectiveTargets = useMemo(() => {
-    if (!macroCycle || !targets) return targets;
-    const day = isTrainingDay ? macroCycle.trainingDay : macroCycle.restDay;
+    if (!targets) return targets;
+    const day = isRefeedDay
+      ? refeed
+      : macroCycle
+      ? (isTrainingDay ? macroCycle.trainingDay : macroCycle.restDay)
+      : null;
     if (!day) return targets;
     return {
       ...targets,
@@ -126,9 +139,13 @@ export default function DiaryScreen({ navigation }) {
       carbsG: day.carbsG ?? targets.carbsG,
       fatG: day.fatG ?? targets.fatG,
     };
-  }, [macroCycle, targets, isTrainingDay]);
+  }, [macroCycle, refeed, isRefeedDay, targets, isTrainingDay]);
 
-  const dayTypeLabel = macroCycle ? (isTrainingDay ? 'Training day' : 'Rest day') : null;
+  const dayTypeLabel = isRefeedDay
+    ? 'Refeed day'
+    : macroCycle
+    ? (isTrainingDay ? 'Training day' : 'Rest day')
+    : null;
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
   useEffect(() => { load(); }, [load]);

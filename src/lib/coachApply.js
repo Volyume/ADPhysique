@@ -133,6 +133,38 @@ export function computeMacroCycle(nutrition, trainingDaysPerWeek) {
 }
 
 /**
+ * Compute the targets for a single refeed day (GAP row 7). This is the
+ * live wiring of the refeed math that previously sat dead in
+ * nutritionEngine.getPlanNutritionContext: raise the day to maintenance
+ * by adding carbohydrate, holding protein and fat. Maintenance is the
+ * stored tdee, the same source the diet break uses (there is no
+ * separate maintenance column).
+ *
+ * Carbs fill the gap to maintenance after protein and fat are paid for,
+ * so the day's kcal lands on maintenance exactly.
+ *
+ * @returns {null | { kcal, proteinG, carbsG, fatG }}
+ *   null when there is no maintenance figure, no current target, or the
+ *   current target already sits at or above maintenance (not in a
+ *   deficit, so there is nothing to refeed up to).
+ */
+export function computeRefeedDay(nutrition) {
+  const current = nutrition?.targetKcal;
+  const maintenance = nutrition?.tdee;
+  if (!current || !maintenance) return null;
+  if (maintenance <= current) return null;
+  const proteinG = nutrition.proteinG ?? null;
+  const fatG = nutrition.fatG ?? null;
+  const carbsKcal = Math.max(0, maintenance - (proteinG ?? 0) * 4 - (fatG ?? 0) * 9);
+  return {
+    kcal: maintenance,
+    proteinG,
+    carbsG: Math.round(carbsKcal / 4),
+    fatG,
+  };
+}
+
+/**
  * Compute the planned-volume changes for a deload apply: cut every
  * muscle to its floor (mev) for the week, the same level the scheduled
  * recovery week is seeded at. Returns only the muscles that actually

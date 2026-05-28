@@ -10,7 +10,7 @@
 
 import { getTrainingNote, isCompetitionGoal } from './coachingGoals';
 import { shouldSuggestDietBreak, computeFFMFloor } from './nutritionEngine';
-import { computeMacroCycle } from './coachApply';
+import { computeMacroCycle, computeRefeedDay } from './coachApply';
 import { detectEdPatternFlag, hasEdPatternCleared } from './edPatternDetector';
 import { detectDifferentialTrigger } from './differentialPaywall';
 
@@ -312,6 +312,10 @@ export function runWeeklyCoach(inputs) {
     currentProteinG = null,
     currentCarbsG = null,
     currentFatG = null,
+    // Maintenance (tdee) and the timestamp of the last applied refeed,
+    // both read from the caller. Drive the refeed cadence (row 7).
+    currentMaintenanceKcal = null,
+    lastRefeedAt = null,
     currentStepsTarget = 8000,
     bodyweightKg = null,
     units = 'kg',
@@ -733,6 +737,39 @@ export function runWeeklyCoach(inputs) {
     }
   }
 
+  // ── REFEED DAY (GAP row 7) ────────────────────────────────────────────────
+  // A single day raised to maintenance via carbs, for aggressive cuts
+  // and physique competitors only (matches the refeed entitlement in
+  // proGate). The coach proposes it on a cadence (weekly for
+  // competitors, every two weeks for an aggressive cut) and the user
+  // confirms before the swap. Applying schedules it onto the next
+  // training day (CoachOutputScreen.handleApplyRefeed); nothing writes
+  // until then. Builds on row 6's day-level framing.
+  let refeed = null;
+  const refeedEligible = phase.isCut && (goalPhase === 'agg_cut' || isCompetitionGoal(trainingGoal));
+  if (refeedEligible) {
+    const frequencyWeeks = isCompetitionGoal(trainingGoal) ? 1 : 2;
+    const weeksSinceRefeed = lastRefeedAt
+      ? Math.floor((Date.now() - lastRefeedAt) / (7 * 86400000))
+      : null;
+    const due = weeksSinceRefeed === null || weeksSinceRefeed >= frequencyWeeks;
+    if (due) {
+      const target = computeRefeedDay({
+        targetKcal: currentCalTarget,
+        tdee: currentMaintenanceKcal,
+        proteinG: currentProteinG,
+        fatG: currentFatG,
+      });
+      if (target) {
+        refeed = {
+          ...target,
+          frequencyWeeks,
+          note: `Take a refeed on your next training day. Eat up to ${target.kcal} kcal, lifting carbs to ${target.carbsG}g while protein and fat stay the same. A day at maintenance during a long cut helps protect training and hormones.`,
+        };
+      }
+    }
+  }
+
   // ── ED-PATTERN DETECTOR (Move #2) ─────────────────────────────────────────
   // Multi-signal harm-prevention check. Reads recent weight trend +
   // weekly history and decides whether to raise an ED-pattern flag
@@ -934,6 +971,7 @@ export function runWeeklyCoach(inputs) {
     dietBreakNote,
     dietBreakWeeksInDeficit,
     macroCycle,
+    refeed,
     heldDecisions,
     rapidWeightLossFlag,
     rapidLossCorrectionApplied,

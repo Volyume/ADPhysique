@@ -32,7 +32,7 @@ import { track as trackEngineEvent } from '../lib/engineTelemetry';
 import DifferentialBadge from '../components/DifferentialBadge';
 import { SkeletonCard } from '../components/Skeleton';
 import { computeEWMA, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
-import { computeCalorieTargets, computeVolumeApply, computeDeloadVolume, computeDietBreakTargets, computeMacroCycle, markApplied, isApplied } from '../lib/coachApply';
+import { computeCalorieTargets, computeVolumeApply, computeDeloadVolume, computeDietBreakTargets, computeMacroCycle, computeRefeedDay, markApplied, isApplied } from '../lib/coachApply';
 import { logError } from '../lib/errorLog';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import {
@@ -468,6 +468,46 @@ function MacroCycleCard({ macroCycle, applied, onApply, applying }) {
   );
 }
 
+// Refeed day as a confirm-then-apply card (GAP row 7). Shows the
+// single-day maintenance target (carbs lifted, protein + fat held) with
+// one Apply. Only rendered for aggressive cuts and physique competitors
+// on the coach's cadence. Applying schedules it onto the next training
+// day via userProfile.refeed, which the Diary reads.
+function RefeedCard({ refeed, applied, onApply, applying }) {
+  return (
+    <View style={styles.card}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
+        <SectionHeader title="Refeed day" />
+        {applied && (
+          <View style={[styles.appliedChip, { marginBottom: spacing.xs }]}>
+            <Ionicons name="checkmark" size={10} color={colors.success} />
+            <Text style={styles.appliedChipText}>Applied</Text>
+          </View>
+        )}
+      </View>
+      <View style={styles.macroCycleRow}>
+        <View style={styles.macroCycleCol}>
+          <Text style={styles.macroCycleColLabel}>Refeed target</Text>
+          <Text style={styles.macroCycleColKcal}>{refeed.kcal} kcal</Text>
+          <Text style={styles.macroCycleColCarbs}>{refeed.carbsG}g carbs</Text>
+        </View>
+      </View>
+      <Text style={styles.adjustmentNote}>{refeed.note}</Text>
+      {!applied && onApply && (
+        <TouchableOpacity
+          style={[styles.applyBtn, styles.dietBreakApplyBtn, applying && styles.applyBtnBusy]}
+          onPress={onApply}
+          disabled={applying}
+          accessibilityRole="button"
+          accessibilityLabel="Schedule a refeed on the next training day"
+        >
+          <Text style={styles.applyBtnText}>{applying ? 'Applying' : 'Schedule refeed'}</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
 function ConfidencePill({ confidence }) {
   if (!confidence || confidence === 'high') return null;
   const label = confidence === 'data_hold'
@@ -890,6 +930,39 @@ export default function CoachOutputScreen({ navigation, route }) {
     }
   }
 
+  // Confirm-then-apply for a refeed day (GAP row 7). Applying records
+  // the refeed target on userProfile.refeed with the confirm timestamp;
+  // the Diary resolves it onto the next training day on or after that
+  // timestamp and shows the maintenance / high-carb target there. Same
+  // local-profile destination pattern as the macro cycle. Re-reads
+  // current targets at tap time so the refeed never scales from a stale
+  // snapshot.
+  async function handleApplyRefeed() {
+    if (applyingKey || !user?.id || !output) return;
+    if (isApplied(output, 'refeed')) return;
+    setApplyingKey('refeed');
+    try {
+      const current = await getNutritionTargets(user.id);
+      const target = computeRefeedDay(current);
+      if (!target) return;
+      await saveLocalProfile(user.id, {
+        ...(userProfile || {}),
+        refeed: {
+          ...target,
+          frequencyWeeks: output.refeed?.frequencyWeeks ?? null,
+          appliedAt: Date.now(),
+        },
+      });
+      const updated = markApplied(output, 'refeed', { kcal: target.kcal, carbsG: target.carbsG });
+      await saveCoachOutput(user.id, { weekStart, ...updated });
+      setOutput(updated);
+    } catch (e) {
+      logError('CoachOutputScreen.handleApplyRefeed', e, { userId: user?.id });
+    } finally {
+      setApplyingKey(null);
+    }
+  }
+
   useEffect(() => {
     async function load() {
       const checkin = await getLatestCheckin(user.id, weekStart);
@@ -962,6 +1035,8 @@ export default function CoachOutputScreen({ navigation, route }) {
         currentProteinG: nutrition?.proteinG ?? null,
         currentCarbsG: nutrition?.carbsG ?? null,
         currentFatG: nutrition?.fatG ?? null,
+        currentMaintenanceKcal: nutrition?.tdee ?? null,
+        lastRefeedAt: userProfile?.refeed?.appliedAt ?? null,
         currentStepsTarget: userProfile?.stepsTarget ?? 8000,
         bodyweightKg: userProfile?.weightKg ?? null,
         units,
@@ -1157,6 +1232,7 @@ export default function CoachOutputScreen({ navigation, route }) {
     dietBreakNote,
     dietBreakWeeksInDeficit,
     macroCycle,
+    refeed,
     heldDecisions,
     rapidWeightLossFlag,
     adherenceNote,
@@ -1272,6 +1348,16 @@ export default function CoachOutputScreen({ navigation, route }) {
             applied={isApplied(output, 'macroCycle') || !!userProfile?.macroCycle}
             onApply={handleApplyMacroCycle}
             applying={applyingKey === 'macroCycle'}
+          />
+        )}
+
+        {/* Refeed day, aggressive cuts + competitors only, on cadence */}
+        {refeed && (
+          <RefeedCard
+            refeed={refeed}
+            applied={isApplied(output, 'refeed')}
+            onApply={handleApplyRefeed}
+            applying={applyingKey === 'refeed'}
           />
         )}
 

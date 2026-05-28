@@ -5,6 +5,7 @@ import {
   computeDeloadVolume,
   computeMacroCycle,
   MACRO_CYCLE_REST_DAY_CARB_CUT,
+  computeRefeedDay,
   markApplied,
   isApplied,
   computeVolumeApply,
@@ -289,6 +290,45 @@ describe('computeMacroCycle', () => {
     expect(out.trainingDay.proteinG).toBeNull();
     expect(out.trainingDay.fatG).toBeNull();
     expect(out.restDay.proteinG).toBeNull();
+  });
+});
+
+describe('computeRefeedDay', () => {
+  const base = { targetKcal: 2000, tdee: 2600, proteinG: 200, fatG: 60 };
+
+  test('returns null without a target or maintenance', () => {
+    expect(computeRefeedDay(null)).toBeNull();
+    expect(computeRefeedDay({})).toBeNull();
+    expect(computeRefeedDay({ targetKcal: 2000 })).toBeNull();
+    expect(computeRefeedDay({ tdee: 2600 })).toBeNull();
+  });
+
+  test('returns null when already at or above maintenance (not cutting)', () => {
+    expect(computeRefeedDay({ targetKcal: 2600, tdee: 2600, proteinG: 200, fatG: 60 })).toBeNull();
+    expect(computeRefeedDay({ targetKcal: 2700, tdee: 2600, proteinG: 200, fatG: 60 })).toBeNull();
+  });
+
+  test('raises kcal to maintenance and holds protein + fat', () => {
+    const out = computeRefeedDay(base);
+    expect(out.kcal).toBe(2600);
+    expect(out.proteinG).toBe(200); // held
+    expect(out.fatG).toBe(60);      // held
+  });
+
+  test('carbs fill the gap to maintenance after protein and fat', () => {
+    const out = computeRefeedDay(base);
+    // (2600 - 200*4 - 60*9) / 4 = (2600 - 800 - 540) / 4 = 1260 / 4 = 315
+    expect(out.carbsG).toBe(315);
+    // and the macros add back up to maintenance
+    expect(out.proteinG * 4 + out.carbsG * 4 + out.fatG * 9).toBeCloseTo(2600, 0);
+  });
+
+  test('passes protein and fat through as null when unset, still hits maintenance via carbs', () => {
+    const out = computeRefeedDay({ targetKcal: 1800, tdee: 2400 });
+    expect(out.kcal).toBe(2400);
+    expect(out.proteinG).toBeNull();
+    expect(out.fatG).toBeNull();
+    expect(out.carbsG).toBe(Math.round(2400 / 4)); // 600
   });
 });
 

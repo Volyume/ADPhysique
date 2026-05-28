@@ -3472,6 +3472,24 @@ export async function hasWorkoutOnDate(userId, dateIso) {
   return !!row;
 }
 
+// The UTC date ('YYYY-MM-DD') of the earliest workout on or after the
+// calendar day that contains sinceMs, or null. Resolves which day an
+// applied refeed lands on (GAP row 7): the refeed is the first training
+// day on or after the day it was confirmed. The threshold is snapped to
+// UTC midnight so a session trained earlier on the confirm day counts.
+export async function getFirstWorkoutDateOnOrAfter(userId, sinceMs) {
+  if (!userId || sinceMs == null) return null;
+  const dayStart = Date.parse(`${new Date(sinceMs).toISOString().slice(0, 10)}T00:00:00.000Z`);
+  if (Number.isNaN(dayStart)) return null;
+  const d = await db();
+  const row = await d.getFirstAsync(
+    'SELECT started_at FROM workouts WHERE user_id = ? AND started_at >= ? ORDER BY started_at ASC LIMIT 1',
+    [userId, dayStart],
+  );
+  if (!row?.started_at) return null;
+  return new Date(row.started_at).toISOString().slice(0, 10);
+}
+
 export async function getWeeklyPRCount(userId, weekStart) {
   const d = await db();
   const weekEnd = weekStart + 7 * 86400000;
