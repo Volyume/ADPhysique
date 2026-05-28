@@ -1,6 +1,8 @@
 import {
   KCAL_FLOOR,
   computeCalorieTargets,
+  computeDietBreakTargets,
+  computeDeloadVolume,
   markApplied,
   isApplied,
   computeVolumeApply,
@@ -58,6 +60,74 @@ describe('computeCalorieTargets', () => {
     expect(result.targets.proteinG).toBeNull();
     expect(result.targets.fatG).toBeNull();
     expect(result.targets.carbsG).toBeNull();
+  });
+
+  test('preserves untouched row fields so the full-row save does not null them', () => {
+    // saveNutritionTargets writes every column; a targets object that
+    // dropped tdee/bmr/phase would wipe the user's maintenance figure.
+    const full = {
+      targetKcal: 2400, proteinG: 180, fatG: 70, carbsG: 250,
+      tdee: 2600, bmr: 1800, phase: 'cut', bmrMethod: 'mifflin',
+      activityLevel: 'moderate', confidence: 'high',
+    };
+    const result = computeCalorieTargets(full, -240);
+    expect(result.targets.tdee).toBe(2600);
+    expect(result.targets.bmr).toBe(1800);
+    expect(result.targets.phase).toBe('cut');
+    expect(result.targets.bmrMethod).toBe('mifflin');
+    expect(result.targets.activityLevel).toBe('moderate');
+  });
+});
+
+describe('computeDietBreakTargets', () => {
+  test('raises a deficit up to maintenance, holding protein', () => {
+    const nutrition = { targetKcal: 2000, proteinG: 180, fatG: 60, carbsG: 200, tdee: 2600 };
+    const result = computeDietBreakTargets(nutrition);
+    expect(result.newKcal).toBe(2600); // raised to tdee
+    expect(result.targets.targetKcal).toBe(2600);
+    expect(result.targets.proteinG).toBe(180); // held
+    const ratio = 2600 / 2000;
+    expect(result.targets.fatG).toBe(Math.round(60 * ratio));
+    expect(result.targets.carbsG).toBe(Math.round(200 * ratio));
+    expect(result.targets.tdee).toBe(2600); // preserved
+  });
+
+  test('returns null when already at or above maintenance', () => {
+    expect(computeDietBreakTargets({ targetKcal: 2600, tdee: 2600 })).toBeNull();
+    expect(computeDietBreakTargets({ targetKcal: 2800, tdee: 2600 })).toBeNull();
+  });
+
+  test('returns null when maintenance or current is missing', () => {
+    expect(computeDietBreakTargets({ targetKcal: 2000 })).toBeNull(); // no tdee
+    expect(computeDietBreakTargets({ tdee: 2600 })).toBeNull(); // no current
+    expect(computeDietBreakTargets(null)).toBeNull();
+  });
+});
+
+describe('computeDeloadVolume', () => {
+  const rows = [
+    { muscle: 'chest', planned_sets: 14, mev: 6, mav: 14, mrv: 22 },
+    { muscle: 'back', planned_sets: 16, mev: 10, mav: 16, mrv: 25 },
+    { muscle: 'biceps', planned_sets: 6, mev: 6, mav: 14, mrv: 22 }, // already at floor
+  ];
+
+  test('cuts every muscle above its floor down to mev', () => {
+    const out = computeDeloadVolume(rows);
+    const byMuscle = Object.fromEntries(out.map(c => [c.muscle, c.plannedSets]));
+    expect(byMuscle.chest).toBe(6);
+    expect(byMuscle.back).toBe(10);
+    expect('biceps' in byMuscle).toBe(false); // already at floor, no-op dropped
+  });
+
+  test('carries mev/mav/mrv through for the upsert', () => {
+    const out = computeDeloadVolume(rows);
+    const chest = out.find(c => c.muscle === 'chest');
+    expect(chest).toMatchObject({ muscle: 'chest', plannedSets: 6, mev: 6, mav: 14, mrv: 22 });
+  });
+
+  test('returns [] for a non-array', () => {
+    expect(computeDeloadVolume(null)).toEqual([]);
+    expect(computeDeloadVolume(undefined)).toEqual([]);
   });
 });
 

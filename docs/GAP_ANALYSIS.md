@@ -171,12 +171,12 @@ All claims carry file:line evidence. Verified against `src/`, `supabase/`, and `
 | Diet break trigger (MATADOR, 8+ weeks deficit) | `nutritionEngine.shouldSuggestDietBreak` + `weeklyCoach.js:672-698` | ✅ |
 | Held decisions card (FFM floor, ED pattern, rapid loss) | `weeklyCoach.js:729-794` + `HeldDecisionCard` + locked copy in `whyThisTemplates.js` | ✅ |
 | Differential paywall trigger | `differentialPaywall.detectDifferentialTrigger` + `DifferentialBadge` | ✅ |
-| Calorie target change auto-applied to DB | `CoachOutputScreen.js:680` `saveNutritionTargets` | ✅ |
-| Training signal (push / hold / reduce): advisory only | `weeklyCoach.js:465-471` rendered as text | ⚠️ |
-| Steps target change: advisory only | `weeklyCoach.js:592-617` rendered, never persisted | ⚠️ |
-| Cardio prescription: advisory only | `weeklyCoach.js:623-647` rendered, never persisted | ⚠️ |
-| Deload week suggestion: advisory only | `weeklyCoach.js:660-670` | ⚠️ |
-| Diet break suggestion: advisory only | `weeklyCoach.js:680-698` | ⚠️ |
+| Calorie target change: confirm-then-apply to `nutrition_targets` | `CoachOutputScreen.handleApplyCalories` + `coachApply.computeCalorieTargets` | ✅ |
+| Training signal: confirm-then-apply to next week's `planned_muscle_volume` | `CoachOutputScreen.handleApplyTraining` + `coachApply.computeVolumeApply` | ✅ |
+| Steps target: confirm-then-apply to `userProfile.stepsTarget` (gates check-in adherence) | `CoachOutputScreen.handleApplySteps` | ✅ |
+| Cardio prescription: confirm-then-apply to `userProfile.cardioPrescription` (gates check-in adherence) | `CoachOutputScreen.handleApplyCardio` + migration 050 | ✅ |
+| Deload: confirm-then-apply, flips next mesocycle week to a recovery week | `CoachOutputScreen.handleApplyDeload` + `setMesocycleWeekDeload` + `coachApply.computeDeloadVolume` | ✅ |
+| Diet break: confirm-then-apply, raises deficit to maintenance for the week | `CoachOutputScreen.handleApplyDietBreak` + `coachApply.computeDietBreakTargets` | ✅ |
 | Refeed prescription | engine math in `nutritionEngine.getPlanNutritionContext`; **never called** | ❌ |
 | High-day / low-day macro shift | not in code at all | ❌ |
 | Cycle-aware safety branch | reads `cycleOverride`; UI never sets it | ❌ |
@@ -456,9 +456,9 @@ Pulled from the ❌ and ⚠️ rows above. **Founder decisions locked 2026-05-27
 |---|---|---|---|---|
 | 1 | Saved meals UI (My Meals templates) | Build it. Mirror the recipe pattern. | M | Claude |
 | 2 | BF% input + trend chart in BodyMetrics. Required for accurate FFM-aware floor. | Build it as part of body composition deep (v1.1 row 25 below). | S-M | Claude |
-| 3 | Coach training auto-apply (volumeDelta) | **Confirm-then-apply.** Coach card surfaces "+2 sets" suggestion with Apply button. User taps to commit. | S impl | Claude |
-| 4 | Coach steps + cardio auto-apply | **Confirm-then-apply** (matches training). | S impl | Claude |
-| 5 | Coach deload + diet break auto-apply | **Confirm-then-apply** (matches training + steps). | S impl | Claude |
+| 3 | ~~Coach training auto-apply (volumeDelta)~~ **Done 2026-05-28** (commit `75dc2d8`). Confirm-then-apply: "Training next week" card surfaces the volume signal with an Apply button; tapping spreads the delta across every trained muscle in next week's `planned_muscle_volume`, each clamped to its own `[mev, mrv]`, source `'coach'`. Founder decided the coach owns next-week volume, so the per-session WorkoutSummary next-week write was removed (no double-count). Pure compute in `coachApply.computeVolumeApply` with tests. | done | Claude |
+| 4 | ~~Coach steps + cardio auto-apply~~ **Done 2026-05-28** (steps `6cd63cd`, cardio `7b2757a`). Confirm-then-apply: steps writes `userProfile.stepsTarget`; cardio writes `userProfile.cardioPrescription`. Both gate an adherence question on the weekly check-in (the existing destination), feeding the next coach run. Cardio adherence needed a column: local migration in `database.js` + cloud migration 050 (`weekly_checkins_v2.cardio_adherence`, additive/nullable, founder applies). | done | Claude |
+| 5 | ~~Coach deload + diet break auto-apply~~ **Done 2026-05-28**. Confirm-then-apply. **Deload** (founder: "what's done in real life"): applying brings the recovery week forward, next mesocycle week flipped to a deload (`setMesocycleWeekDeload`: `is_deload=1`, `rir_target=4`, both already cloud-synced) and its planned volume cut to the floor (`computeDeloadVolume`, source `'coach'`). `ActiveWorkoutScreen` reads `is_deload` off that week to drive the deload prescription. The coach's deload note was computed but never rendered (void destination); now it replaces the volume row in "Training next week" when suggested. The scheduled final deload stays; coach re-evaluates weekly. `blockAdvisor` is advice-only (never writes), so no write-side reconciliation. **Diet break** (founder: maintenance week): applying raises the deficit back to maintenance (stored `tdee`) for the week, protein held, fat + carbs scaled (`computeDietBreakTargets`), written to `nutrition_targets` like the calorie apply. No migration (all columns exist + sync; applied-state rides in the `output_json` blob). Bug fixed in passing: the calorie apply (`computeCalorieTargets`) was passing only the 3 changed macros to `saveNutritionTargets`, which writes the whole row, so it silently nulled `tdee`/`bmr`/`phase`. Now spreads the full row. New tests in `coachApply.test.js` (27 total). | done | Claude |
 | 6 | High-day / low-day macro shift in coach | **Build it, gated by goal phase.** Fires for advanced cuts + physique_competition only. Beginner / intermediate cuts stay flat. | M | Claude |
 | 7 | Refeed wiring | **Wire as confirm-then-apply.** Coach picks the day, user confirms before the kcal swap. Matches the broader auto-apply policy. | M | Claude |
 | 8 | Macro rings colour scheme | **Three-band: under = primary amber, at = success green (within 5%), over = warning amber.** Kcal ring same scheme. | S | Claude |

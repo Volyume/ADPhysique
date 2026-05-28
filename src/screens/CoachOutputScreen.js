@@ -26,12 +26,13 @@ import {
   getNextMesocycleWeek,
   getPlannedMuscleVolume,
   upsertPlannedMuscleVolume,
+  setMesocycleWeekDeload,
 } from '../lib/database';
 import { track as trackEngineEvent } from '../lib/engineTelemetry';
 import DifferentialBadge from '../components/DifferentialBadge';
 import { SkeletonCard } from '../components/Skeleton';
 import { computeEWMA, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
-import { computeCalorieTargets, computeVolumeApply, markApplied, isApplied } from '../lib/coachApply';
+import { computeCalorieTargets, computeVolumeApply, computeDeloadVolume, computeDietBreakTargets, markApplied, isApplied } from '../lib/coachApply';
 import { logError } from '../lib/errorLog';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import {
@@ -295,7 +296,10 @@ function NextWeekCard({ adjustments, onApplyCalories, onApplySteps, onApplyCardi
 // A zero signal is informational (no button); a non-zero signal with
 // no upcoming week to write to (canApply false) shows the guidance but
 // no button.
-function TrainingNextWeekCard({ output, onApply, applying, canApply }) {
+function TrainingNextWeekCard({
+  output, onApply, applying, canApply,
+  deloadSuggested, deloadNote, onApplyDeload, applyingDeload,
+}) {
   const signal = output.volumeSignal ?? 0;
   const applied = isApplied(output, 'training');
   const note = output.adjustments?.training?.note;
@@ -307,25 +311,53 @@ function TrainingNextWeekCard({ output, onApply, applying, canApply }) {
     : 'Hold your current volume';
   const applyable = canApply && signal !== 0 && !applied;
 
+  // When the coach calls a deload, the recovery week IS the training
+  // decision, so it replaces the incremental volume row. Applying brings
+  // it forward to next week.
+  const deloadApplied = isApplied(output, 'deload');
+
   return (
     <View style={styles.card}>
       <SectionHeader title="Training next week" />
-      <AdjustmentRow
-        iconName="barbell-outline"
-        label={applied && output.appliedAdjustments?.training?.musclesChanged
-          ? `${label} · ${output.appliedAdjustments.training.musclesChanged} updated`
-          : label}
-        note={note}
-        applied={applied}
-        onApply={applyable ? onApply : undefined}
-        applying={applying}
-      />
-      <View style={styles.planNote}>
-        <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />
-        <Text style={styles.planNoteText}>
-          This sets next week's starting volume. Your plan still fine-tunes each session as you train.
-        </Text>
-      </View>
+      {deloadSuggested ? (
+        <>
+          <AdjustmentRow
+            iconName="bed-outline"
+            label={deloadApplied ? 'Recovery week set for next week' : 'Take a recovery week'}
+            note={deloadNote}
+            applied={deloadApplied}
+            onApply={canApply && !deloadApplied ? onApplyDeload : undefined}
+            applying={applyingDeload}
+          />
+          {!canApply && !deloadApplied && (
+            <View style={styles.planNote}>
+              <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />
+              <Text style={styles.planNoteText}>
+                Start your next training week to bring the recovery week forward.
+              </Text>
+            </View>
+          )}
+        </>
+      ) : (
+        <>
+          <AdjustmentRow
+            iconName="barbell-outline"
+            label={applied && output.appliedAdjustments?.training?.musclesChanged
+              ? `${label} · ${output.appliedAdjustments.training.musclesChanged} updated`
+              : label}
+            note={note}
+            applied={applied}
+            onApply={applyable ? onApply : undefined}
+            applying={applying}
+          />
+          <View style={styles.planNote}>
+            <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />
+            <Text style={styles.planNoteText}>
+              This sets next week's starting volume. Your plan still fine-tunes each session as you train.
+            </Text>
+          </View>
+        </>
+      )}
     </View>
   );
 }
@@ -353,10 +385,18 @@ function RapidLossAlert() {
   );
 }
 
-function DietBreakCard({ weeksInDeficit }) {
+function DietBreakCard({ weeksInDeficit, applied, onApply, applying }) {
   return (
     <View style={styles.dietBreakCard}>
-      <Text style={styles.dietBreakTitle}>Diet break worth considering</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
+        <Text style={styles.dietBreakTitle}>Diet break worth considering</Text>
+        {applied && (
+          <View style={styles.appliedChip}>
+            <Ionicons name="checkmark" size={10} color={colors.success} />
+            <Text style={styles.appliedChipText}>Applied</Text>
+          </View>
+        )}
+      </View>
       <Text style={styles.dietBreakBody}>
         {weeksInDeficit >= 8
           ? `You have been in a calorie deficit for ${weeksInDeficit} weeks. `
@@ -366,6 +406,17 @@ function DietBreakCard({ weeksInDeficit }) {
       <Text style={styles.dietBreakFootnote}>
         Based on the MATADOR trial (2017). This is a suggestion, not a requirement.
       </Text>
+      {!applied && onApply && (
+        <TouchableOpacity
+          style={[styles.applyBtn, styles.dietBreakApplyBtn, applying && styles.applyBtnBusy]}
+          onPress={onApply}
+          disabled={applying}
+          accessibilityRole="button"
+          accessibilityLabel="Set maintenance calories for a diet break"
+        >
+          <Text style={styles.applyBtnText}>{applying ? 'Applying' : 'Set maintenance week'}</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -687,6 +738,73 @@ export default function CoachOutputScreen({ navigation, route }) {
       setOutput(updated);
     } catch (e) {
       logError('CoachOutputScreen.handleApplyCardio', e, { userId: user?.id });
+    } finally {
+      setApplyingKey(null);
+    }
+  }
+
+  // Confirm-then-apply for an early deload (founder decision 2026-05-28:
+  // "what's done in real life"). Applying brings the recovery week
+  // forward: next mesocycle week is flipped to a deload (is_deload, RIR
+  // backed off) and its planned volume cut to the floor (source 'coach').
+  // ActiveWorkoutScreen reads is_deload off that week to drive the
+  // deload prescription (week-1 weight, easy effort) when the user gets
+  // there. The block's scheduled final deload stays; the coach
+  // re-evaluates each week. blockAdvisor only advises, it never writes,
+  // so there is nothing to reconcile against on the write side.
+  async function handleApplyDeload() {
+    if (applyingKey || !user?.id || !output) return;
+    if (isApplied(output, 'deload')) return;
+    if (!nextTrainingWeekId) return;
+    setApplyingKey('deload');
+    try {
+      await setMesocycleWeekDeload(nextTrainingWeekId);
+      const rows = await getPlannedMuscleVolume(nextTrainingWeekId);
+      const changes = computeDeloadVolume(rows);
+      for (const c of changes) {
+        await upsertPlannedMuscleVolume({
+          mesocycleWeekId: nextTrainingWeekId,
+          muscle: c.muscle,
+          plannedSets: c.plannedSets,
+          mev: c.mev, mav: c.mav, mrv: c.mrv,
+          source: 'coach',
+        });
+      }
+      const updated = markApplied(output, 'deload', {
+        weekId: nextTrainingWeekId, musclesChanged: changes.length,
+      });
+      await saveCoachOutput(user.id, { weekStart, ...updated });
+      setOutput(updated);
+    } catch (e) {
+      logError('CoachOutputScreen.handleApplyDeload', e, { userId: user?.id });
+    } finally {
+      setApplyingKey(null);
+    }
+  }
+
+  // Confirm-then-apply for a diet break (founder decision 2026-05-28:
+  // maintenance week). Applying raises the deficit back to maintenance
+  // (stored tdee) for the week, protein held, fat + carbs scaled. Same
+  // destination as the calorie apply (nutrition_targets), so it flows to
+  // every diary surface that reads the targets. Re-reads current targets
+  // at tap time so it never scales from a stale snapshot.
+  async function handleApplyDietBreak() {
+    if (applyingKey || !user?.id || !output) return;
+    if (isApplied(output, 'dietBreak')) return;
+    setApplyingKey('dietBreak');
+    try {
+      const current = await getNutritionTargets(user.id);
+      const computed = computeDietBreakTargets(current);
+      if (!computed) return;
+      await saveNutritionTargets(user.id, computed.targets);
+      await AsyncStorage.setItem(
+        '@volyume_nutrition_targets', JSON.stringify(computed.targets),
+      ).catch(() => {});
+      const updated = markApplied(output, 'dietBreak', { newKcal: computed.newKcal });
+      await saveCoachOutput(user.id, { weekStart, ...updated });
+      setOutput(updated);
+    } catch (e) {
+      logError('CoachOutputScreen.handleApplyDietBreak', e, { userId: user?.id });
     } finally {
       setApplyingKey(null);
     }
@@ -1050,6 +1168,10 @@ export default function CoachOutputScreen({ navigation, route }) {
           onApply={handleApplyTraining}
           applying={applyingKey === 'training'}
           canApply={!!nextTrainingWeekId}
+          deloadSuggested={deloadSuggested}
+          deloadNote={deloadNote}
+          onApplyDeload={handleApplyDeload}
+          applyingDeload={applyingKey === 'deload'}
         />
         <NextWeekCard
           adjustments={adjustments}
@@ -1079,7 +1201,12 @@ export default function CoachOutputScreen({ navigation, route }) {
 
         {/* Diet break, only if relevant */}
         {dietBreakSuggested && (
-          <DietBreakCard weeksInDeficit={dietBreakWeeksInDeficit} />
+          <DietBreakCard
+            weeksInDeficit={dietBreakWeeksInDeficit}
+            applied={isApplied(output, 'dietBreak')}
+            onApply={handleApplyDietBreak}
+            applying={applyingKey === 'dietBreak'}
+          />
         )}
 
         {/* Recent decisions, quieter, at the bottom */}
@@ -1399,6 +1526,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.bold,
     color: colors.background,
   },
+  dietBreakApplyBtn: { alignSelf: 'flex-start', marginTop: spacing.md },
 
   // Why this week
   planNote: {

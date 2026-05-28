@@ -39,16 +39,66 @@ export function computeCalorieTargets(nutrition, change) {
   const newKcal = Math.max(KCAL_FLOOR, current + change);
   if (newKcal === current) return null;
   const ratio = newKcal / current;
+  // Spread the existing row first so untouched fields survive the save.
+  // saveNutritionTargets writes the whole row, so a targets object that
+  // only carried the three changed macros would null out tdee
+  // (maintenance), bmr, phase and the rest. Only targetKcal, fat and
+  // carbs move; protein is held.
   return {
     newKcal,
     targets: {
+      ...nutrition,
       targetKcal: newKcal,
       proteinG: nutrition.proteinG ?? null,
       fatG: nutrition.fatG ? Math.round(nutrition.fatG * ratio) : (nutrition.fatG ?? null),
       carbsG: nutrition.carbsG ? Math.round(nutrition.carbsG * ratio) : (nutrition.carbsG ?? null),
-      maintenanceKcal: nutrition.maintenanceKcal ?? null,
     },
   };
+}
+
+/**
+ * Compute the targets for a diet-break apply: raise a deficit back up to
+ * maintenance for the week, holding protein and scaling fat + carbs.
+ * Maintenance is the stored `tdee` value (there is no separate
+ * maintenanceKcal column).
+ *
+ * @returns {null | { newKcal: number, targets: object }}
+ *   null when there is nothing to apply: no current target, no
+ *   maintenance figure to raise to, or already at/above maintenance.
+ */
+export function computeDietBreakTargets(nutrition) {
+  const current = nutrition?.targetKcal;
+  const maintenance = nutrition?.tdee;
+  if (!current || !maintenance) return null;
+  if (maintenance <= current) return null;
+  return computeCalorieTargets(nutrition, Math.round(maintenance - current));
+}
+
+/**
+ * Compute the planned-volume changes for a deload apply: cut every
+ * muscle to its floor (mev) for the week, the same level the scheduled
+ * recovery week is seeded at. Returns only the muscles that actually
+ * move, shaped for upsertPlannedMuscleVolume.
+ *
+ * @returns {Array<{ muscle, plannedSets, mev, mav, mrv }>}
+ */
+export function computeDeloadVolume(plannedRows) {
+  if (!Array.isArray(plannedRows)) return [];
+  const changes = [];
+  for (const row of plannedRows) {
+    const mev = row.mev ?? 0;
+    const current = row.planned_sets ?? 0;
+    if (current > mev) {
+      changes.push({
+        muscle: row.muscle,
+        plannedSets: mev,
+        mev: row.mev ?? null,
+        mav: row.mav ?? null,
+        mrv: row.mrv ?? null,
+      });
+    }
+  }
+  return changes;
 }
 
 /**

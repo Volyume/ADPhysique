@@ -2369,6 +2369,24 @@ export async function getCurrentMesocycleWeek(userId) {
   }
 }
 
+// Flip a mesocycle week to a deload (recovery) week. Used by the weekly
+// coach's confirm-then-apply early-deload (CoachOutputScreen): when the
+// user applies it, next week becomes a recovery week. is_deload drives
+// the deload prescription in ActiveWorkoutScreen; rir_target moves to the
+// deload value (4) to match how generateMesocycleWeeks seeds the
+// scheduled recovery week. is_deload is in the cloud push payload, so the
+// flag syncs; the planned-volume cut to the floor is written separately
+// by the caller via upsertPlannedMuscleVolume.
+export async function setMesocycleWeekDeload(weekId, { isDeload = true, rirTarget = 4 } = {}) {
+  if (!weekId) return;
+  const d = await db();
+  await d.runAsync(
+    'UPDATE mesocycle_weeks SET is_deload = ?, rir_target = ?, updated_at = ? WHERE id = ?',
+    [isDeload ? 1 : 0, rirTarget, Date.now(), weekId],
+  );
+  _scheduleSync();
+}
+
 export async function getNextMesocycleWeek(currentWeekId) {
   try {
     const d = await db();

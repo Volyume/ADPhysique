@@ -14,7 +14,33 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 
 ## 0. Session summary
 
-### 0.A — 2026-05-28 session (Claude)
+### 0.A. 2026-05-28 session (Claude): coach confirm-then-apply
+
+Built out the coach's confirm-then-apply loop across every weekly adjustment (GAP rows 3-5), engine + coach first, then the surfaces. Founder model: the coach surfaces each adjustment as a suggestion with an Apply button; nothing changes until tapped. Applied-state rides inside the `coach_outputs.output_json` blob (no migration). Pure compute + applied-state helpers live in `src/lib/coachApply.js` with unit tests; `CoachOutputScreen` orchestrates the side effects.
+
+**Shipped (this continuation):**
+
+| Commit | What |
+|---|---|
+| `cb3d278` | Calories slice. Apply writes `nutrition_targets` (protein held, fat/carbs scaled, floored at 1200). Removed the old silent auto-apply. |
+| `75dc2d8` | Training-volume slice. Apply spreads the volume signal across next week's `planned_muscle_volume`, each muscle clamped to `[mev, mrv]`, source `'coach'`. Founder decided the coach owns next-week volume, so the per-session WorkoutSummary next-week write was removed (killed a double-count). |
+| `6cd63cd` | Steps slice. Apply writes `userProfile.stepsTarget`, which gates the steps-adherence question on the weekly check-in (existing destination). |
+| `7b2757a` | Cardio slice. Apply writes `userProfile.cardioPrescription`, gating a cardio-adherence question. Needed a column: local migration in `database.js` + cloud migration 050 (`weekly_checkins_v2.cardio_adherence`, additive/nullable). **Founder still needs to apply 050 in the Supabase dashboard.** |
+| (this commit) | Deload + diet break slice (row 5). See below. |
+
+**Deload + diet break (row 5).** Founder calls: deload = "what's done in real life", diet break = maintenance week.
+
+- **Deload.** The coach's `deloadNote` was computed in `weeklyCoach.js` but never rendered (a void destination). Now, when a deload is suggested, it replaces the volume row in "Training next week". Applying brings the recovery week forward: `setMesocycleWeekDeload` flips next mesocycle week to `is_deload=1` + `rir_target=4` (both already in the cloud push payload), and `computeDeloadVolume` cuts that week's planned volume to the floor (`mev`, source `'coach'`), the same level the scheduled recovery week is seeded at. `ActiveWorkoutScreen` reads `is_deload` off that week to drive the deload prescription (week-1 weight, easy effort) when the user gets there. The block's scheduled final deload stays; the coach re-evaluates weekly. `blockAdvisor` is advice-only (it never writes planned volume), so there is no write-side reconciliation to do, this is why deload was *not* the same class of problem as the volume double-count.
+- **Diet break.** Was an informational card. Now has an Apply button ("Set maintenance week"): `computeDietBreakTargets` raises the deficit back to maintenance (the stored `tdee`) for the week, protein held, fat + carbs scaled, written to `nutrition_targets` like the calorie apply.
+- **No migration.** `is_deload`, `planned_muscle_volume`, `nutrition_targets` all exist and sync; applied-state is a blob key. Old AAB unaffected (additive blob keys, unchanged row shapes).
+
+**Bug fixed in passing (data loss).** `saveNutritionTargets` writes the whole `nutrition_targets` row. The calorie slice (`computeCalorieTargets`) was handing it a targets object with only the three changed macros, so every calorie apply silently nulled `tdee` (maintenance), `bmr`, `phase`, `bmrMethod`, `activityLevel`, `confidence`. Fixed by spreading the full existing row before overriding. This was also a prerequisite for diet break, which reads `tdee`. Caught while tracing the maintenance source; regression test added.
+
+**Tests:** `coachApply.test.js` now 27 (was 20): diet-break + deload helpers, plus the row-preservation guard. Full suite green (87 suites / 1776 passed / 3 skipped).
+
+**Next:** row 6 (high/low-day macros, gated to advanced cuts + physique_competition), then row 7 (refeed wiring, blocked on row 6's day-level macros). Then UI surfaces (rows 1, 2, 8, 15, 19, 20, 25-28). Row 12 (sync layer migration) still wants its own session.
+
+### 0.B. 2026-05-28 session (Claude): engine cleanup
 
 Engine cleanup. Three rows closed off the `docs/GAP_ANALYSIS.md` punch list, plus a Maestro CI fix, plus the previous session's stranded commits brought onto `main`.
 
@@ -40,7 +66,7 @@ Engine cleanup. Three rows closed off the `docs/GAP_ANALYSIS.md` punch list, plu
 
 **Next session opener:** decision on row 12 sync migration vs. starting coach confirm-then-apply work (rows 3-7).
 
-### 0.B — 2026-05-27 session (Claude)
+### 0.C. 2026-05-27 session (Claude)
 
 Documentation rewrite + drift closure. Rewrote `CURRENT_STATUS.md`, `HANDOFF.md`, `BACKLOG.md` end-to-end against code reality (the previous versions had developed internal contradictions). Authored `GAP_ANALYSIS.md` as the ranked 28-row punch list, locked founder decisions for every row. Closed gap #1 (food dislikes via `food_favourites.kind`), gap #2 (recipe builder UI), and shipped migration 048. Authored `CODE_TRUTH_SURVEY.md` (188-file walk with file:line evidence for every claim). Closed drift item 17 (`WEAK_POINT_MUSCLES` move) and row 16 (deleted `phaseEngine.js` + `coachExport.js` + the dead test), removed the unused Microsoft OAuth export. Voice + hex sweep landed for `ScanBarcodeScreen`, `CoachingReminders`, Apple OAuth token references.
 
@@ -281,7 +307,7 @@ Grouped by phase per `RELEASE_PLAN_LOCKED.md`. The live ranked version with foun
 |---|---|---|---|
 | 1 | Saved meals UI (template create / pick / apply) | M | Open. GAP row 1. |
 | 2 | Body composition trend charts (BF% + measurements over time) | S-M | Open. GAP rows 2 + 25. |
-| 3 | Coach training auto-apply: founder decided **confirm-then-apply** for `volumeDelta`. Coach card surfaces "+2 sets" with Apply button; user taps to commit. Same pattern for steps, cardio, deload, diet break, refeed. | S impl per output | Open. GAP rows 3-7. The biggest product-impact chunk still pending. |
+| 3 | Coach confirm-then-apply. Each weekly adjustment surfaces with an Apply button; nothing changes until tapped. **Calories, training volume, steps, cardio, deload, diet break all shipped 2026-05-28** (GAP rows 3-5; see § 0.A). Remaining: row 6 (high/low-day macros) + row 7 (refeed, blocked on row 6). | S impl per output | Partial. Rows 3-5 done; 6-7 open. |
 | 4 | Drift cleanup. Items 2, 4, 5, 14 from § 5 closed this session (telemetry fold-in, STRENGTH_STANDARDS dedup, detectRepRegressions confirmed single, dead-lib delete). Item 1 (sync layer) still open as GAP row 12 — needs its own focused session per CLAUDE.md Rule 5 (offline sync is runtime-critical). | M remaining | Partial. |
 | 5 | Notification surfaces still pending (cascade day 19/21 push, payment failure, coach output) | S-M | Open. GAP rows 9-11. |
 | 6 | Voice + hex sweep | S | **Done 2026-05-28** (commit `79e06f2`). Hex sweep landed 2026-05-27. Em-dash sweep covered 818 of 821 instances; 3 deliberately preserved (OCR regex + lint guard). |
