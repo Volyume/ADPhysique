@@ -14,7 +14,8 @@ import { useShallow } from 'zustand/react/shallow';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-import { clearWorkoutHistory, buildWorkoutCSV, wipeAllUserData, getOrphanedRoutines, deleteOrphanedRoutines } from '../lib/database';
+import { clearWorkoutHistory, buildWorkoutCSV, wipeAllUserData, getOrphanedRoutines, deleteOrphanedRoutines, getUserBodyProfile } from '../lib/database';
+import { getCycleTracking, setCycleTracking } from '../lib/cyclePrefs';
 import { logError } from '../lib/errorLog';
 import { audit } from '../lib/observability';
 import { exportBackup, importBackup } from '../lib/dataBackup';
@@ -118,6 +119,8 @@ export default function SettingsScreen({ navigation }) {
   const [editName, setEditName] = useState(userProfile?.firstName ?? '');
   const [calmEnabled, setCalmEnabled] = useState(false);
   const [offConsent, setOffConsent] = useState(false);
+  const [cycleEnabled, setCycleEnabled] = useState(false);
+  const [bioSex, setBioSex] = useState(null);
   // Health integration. Per-scope status: weight read separately from
   // workout write so the user can enable one without the other.
   // healthSyncing tracks the manual "Sync now" tap.
@@ -136,15 +139,22 @@ export default function SettingsScreen({ navigation }) {
     setOffConsent(value);
   }
 
+  async function toggleCycleTracking(value) {
+    await setCycleTracking(value);
+    setCycleEnabled(value);
+  }
+
   useFocusEffect(
     useCallback(() => {
       getWellbeingMode().then(m => setCalmEnabled(m === 'calm'));
       getOffWritebackConsent().then(setOffConsent);
+      getCycleTracking().then(setCycleEnabled).catch(() => {});
+      if (user?.id) getUserBodyProfile(user.id).then(p => setBioSex(p?.sex ?? null)).catch(() => {});
       if (isHealthAvailable()) {
         getHealthPermissionStatus(['weight']).then(setHealthWeightStatus).catch(() => {});
         getHealthPermissionStatus(['workout']).then(setHealthWorkoutStatus).catch(() => {});
       }
-    }, []),
+    }, [user?.id]),
   );
 
   async function handleToggleWeight(next) {
@@ -755,6 +765,22 @@ export default function SettingsScreen({ navigation }) {
               />
             }
           />
+          {bioSex === 'female' && (
+            <SettingRow
+              icon="calendar-outline"
+              label="Cycle tracking"
+              sub="Adds an optional question to your weekly check-in so the coach can hold weight changes around your period"
+              showArrow={false}
+              rightElement={
+                <Switch
+                  value={cycleEnabled}
+                  onValueChange={toggleCycleTracking}
+                  trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                  thumbColor={cycleEnabled ? colors.primary : colors.textMuted}
+                />
+              }
+            />
+          )}
           {tier === 'pro' && (
             <SettingRow
               icon="pulse-outline"

@@ -2,9 +2,10 @@
 //
 // These are commonly cited reference figures (drawn from sources such as
 // strengthlevel.com and symmetricstrength.com) for the five core barbell
-// compounds. They are presented as a single, gender-neutral rough guide
-// the app does not collect biological sex, so these values are intended as
-// general orientation rather than a precise verdict.
+// compounds. They are presented as a single, gender-neutral rough guide:
+// this module does not branch on biological sex (even though the app does
+// record it at onboarding), so these values are general orientation rather
+// than a precise verdict.
 //
 // Each entry maps a regex (matched against the exercise name) to an array
 // of five ascending ratios, one per level:

@@ -25,8 +25,10 @@ import {
   getWeeklySessionStats,
   getWeeklyPRCount,
   getNutritionTargets,
+  getUserBodyProfile,
 } from '../lib/database';
 import { getRollupsForRange } from '../lib/food/db';
+import { getCycleTracking, shouldShowCycleQuestion } from '../lib/cyclePrefs';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { requestNotificationPermissions, getNotificationPermissionStatus, scheduleNextCheckinReminder } from '../lib/notifications';
 import { logError } from '../lib/errorLog';
@@ -184,6 +186,9 @@ const TOTAL_STEPS = 4;
 export default function WeeklyCheckInScreen({ navigation }) {
   const { user, userProfile, units, bodyWeightUnits } = useAppStore();
   const [nutritionTargets, setNutritionTargets] = useState(null);
+  const [bioSex, setBioSex] = useState(null);          // 'male' | 'female' | null
+  const [cycleEnabled, setCycleEnabled] = useState(false);
+  const [cycle, setCycle] = useState(null);            // 'yes' | 'no' | null (GAP row 15)
   const [step, setStep] = useState(0); // 0–3
 
   // ─── Gate state ──────────────────────────────────────────────────────────────
@@ -208,6 +213,8 @@ export default function WeeklyCheckInScreen({ navigation }) {
   useEffect(() => {
     if (!user?.id) return;
     getNutritionTargets(user.id).then(t => setNutritionTargets(t ?? null)).catch(() => {});
+    getUserBodyProfile(user.id).then(p => setBioSex(p?.sex ?? null)).catch(() => {});
+    getCycleTracking().then(setCycleEnabled).catch(() => {});
   }, [user?.id]);
 
   const weekStart = getCurrentWeekStart();
@@ -240,6 +247,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
   // Step 4, Training
   const [trainingPerformance, setTrainingPerformance] = useState(null); // 'exceeded'|'hit'|'struggled'|'dropped'
 
+  const showCycle = shouldShowCycleQuestion(bioSex, cycleEnabled);
   const hasNutritionTarget = Boolean(nutritionTargets?.targetKcal);
   const hasStepsTarget = Boolean(userProfile?.stepsTarget ?? userProfile?.steps_target);
   const hasCardioPrescription = Boolean(userProfile?.cardioPrescription ?? userProfile?.cardio_prescription);
@@ -393,6 +401,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         calsAdherence: calsAdherence ?? null,
         stepsAdherence: stepsAdherence ?? null,
         cardioAdherence: cardioAdherence ?? null,
+        cycleOverride: showCycle && cycle === 'yes',
         trainingPerformance: trainingPerformance ?? null,
         jointPain: jointPain === 'yes',
         soreMuscles: soreMuscles.length > 0 ? soreMuscles.join(',') : null,
@@ -537,6 +546,28 @@ export default function WeeklyCheckInScreen({ navigation }) {
                 No morning weights logged this week. Log each morning from the Train tab. One reading per day makes the trend far more accurate.
               </Text>
             )}
+          </View>
+        )}
+
+        {/* Cycle (GAP row 15). Only shown when the user opted in from
+            Settings and their recorded biological sex is female. Sits
+            with the weight question because that's what it qualifies:
+            a flagged week tells the coach to hold weight-based changes. */}
+        {showCycle && (
+          <View style={styles.section}>
+            <SectionLabel
+              hint="If your period could be moving the scale this week, flag it. The coach holds weight-based changes so a normal fluctuation isn't read as fat gain or loss."
+            >
+              Cycle
+            </SectionLabel>
+            <OptionRow
+              options={[
+                { value: 'yes', label: 'Affecting the scale' },
+                { value: 'no', label: 'Not this week' },
+              ]}
+              selected={cycle}
+              onSelect={setCycle}
+            />
           </View>
         )}
 
