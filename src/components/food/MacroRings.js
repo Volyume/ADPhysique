@@ -99,14 +99,29 @@ export default function MacroRings({ rollup, targets, dayTypeLabel, onPress }) {
   const kcalOver = kcalRemaining != null && kcalRemaining < 0;
   const kcalTint = bandColour();
 
+  // The rings are decorative (Skia canvas); the numbers are the data. Build
+  // one spoken summary of kcal + macros so a screen reader conveys the same
+  // information the rings show, and hide the inner content from a11y so the
+  // card speaks once.
+  const macroPart = (label, value, target) =>
+    `${label} ${value}${target != null ? ` of ${target}` : ''} grams`;
+  const a11ySummary = [
+    kcalTarget != null ? `${kcal} of ${kcalTarget} calories` : `${kcal} calories`,
+    macroPart('protein', p, pTarget),
+    macroPart('carbs', c, cTarget),
+    macroPart('fat', f, fTarget),
+  ].join(', ');
+  const a11yLabel = onPress ? `${a11ySummary}. Tap for the breakdown by meal.` : a11ySummary;
+
   return (
     <TouchableOpacity
       style={styles.card}
       onPress={onPress}
       disabled={!onPress}
       activeOpacity={0.9}
-      accessibilityRole={onPress ? 'button' : undefined}
-      accessibilityLabel={onPress ? 'View macro breakdown by meal' : undefined}
+      accessible
+      accessibilityRole={onPress ? 'button' : 'summary'}
+      accessibilityLabel={a11yLabel}
     >
       {dayTypeLabel ? (
         <View style={styles.dayTypeChip}>
