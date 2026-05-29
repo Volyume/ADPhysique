@@ -9,6 +9,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { VolyumeIcon } from '../components/BrandMark';
 import useAppStore from '../store/useAppStore';
 import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
+import { getSplitRationale } from '../lib/whyThisTemplates';
 import { getActivePlan, getRoutinesForPlan } from '../lib/database';
 
 export default function ProSetupCompleteScreen({ navigation }) {
@@ -209,6 +210,9 @@ export default function ProSetupCompleteScreen({ navigation }) {
             </View>
             {hasPlan && planOpen && (
               <View style={styles.splitList}>
+                {planRoutines[0]?.split_type ? (
+                  <Text style={styles.splitWhy}>{getSplitRationale(planRoutines[0].split_type)}</Text>
+                ) : null}
                 {planRoutines.map((r, i) => (
                   <View key={r.id} style={[styles.splitRow, i < planRoutines.length - 1 && styles.splitRowBorder]}>
                     <View style={styles.splitBadge}>
@@ -339,6 +343,7 @@ const styles = StyleSheet.create({
   eduLearnText: { color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.medium, flex: 1 },
 
   splitList: { marginTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm },
+  splitWhy: { fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 19, marginBottom: spacing.sm },
   splitRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
   splitRowBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
   splitBadge: {
