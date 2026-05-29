@@ -284,6 +284,21 @@ Each scored Impact times Effort and tied to the goal it serves
 scope: nothing here adds a social feed, an LLM, gamification, a watch app, or
 cloud photos.
 
+> **Implementation status (added 2026-05-29 evening).** Tracked live in
+> `CURRENT_STATUS.md` § 0.000.
+> - **Done:** rec 2 (macro rings adherence-neutral, `66f7b76`), rec 4 (honest
+>   cold-start framing, `5042a16`), rec 6 (strength-standing headline on the PR
+>   wall, `054f8cb`), rec 7 (adaptive daily burn surfaced on Body Metrics,
+>   `50e5eb2`).
+> - **Partial:** rec 1 (only the log-set primary button, `4e27827`; the per-set
+>   tap-cost pass remains), rec 5 (clean-equivalent literals routed to tokens,
+>   `3be1648`; ~130 non-token literals deliberately left for a per-surface design
+>   pass), rec 9 (PR-wall share entry shipped, `479bb93`; the coach-win and Year
+>   of Lifts entries and the `B.*` palette alignment remain).
+> - **Not started:** rec 3 (onboarding disqualifier line), rec 8 (conversion-machine
+>   instrumentation, Phase B).
+> - **Deferred / out of scope now:** rec 10, rec 11.
+
 ### Quick wins (low effort, high or medium impact)
 
 1. **Logging-speed pass on `ActiveWorkoutScreen` and `SetEntry`.** Impact high,

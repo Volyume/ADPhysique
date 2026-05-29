@@ -1,6 +1,6 @@
 # Volyume current status
 
-Verified against code in `src/` and `supabase/` on 2026-05-28. Supersedes `HANDOFF.md`. This doc is the single trusted reference for what is shipped, what is in progress, and what comes next.
+Verified against code in `src/` and `supabase/` on 2026-05-29. Supersedes `HANDOFF.md`. This doc is the single trusted reference for what is shipped, what is in progress, and what comes next.
 
 **Update protocol.** Rewritten end-to-end at the end of any session that materially changes shipped state, not appended to. The previous edit cycle broke that rule and the doc developed internal contradictions; this version restarts the discipline.
 
@@ -13,6 +13,39 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 ---
 
 ## 0. Session summary
+
+### 0.000. 2026-05-29 (evening checkpoint, Claude): audit recommendations Wave 1-3 + founder bug fixes
+
+Continuation of the takeover session (§ 0.00). After the competitive audit landed, this run worked the audit's prioritised recommendations (`docs/audit/volyume-competitive-audit-2026-05-29.md` § Phase 4) plus four founder-reported screen issues. All on `main`; HEAD `479bb93`, 0 ahead / 0 behind origin. No migration this run. Full suite stayed green (jest mount sweep 462 passed; ESLint 0 errors, 13 pre-existing import-false-positive warnings).
+
+**Shipped (all on `main`), mapped to the audit recommendation each closes:**
+
+| Commit | What | Audit ref |
+|---|---|---|
+| `66f7b76` | Macro rings made adherence-neutral. Dropped the over-target amber band; the number stays factual, no colour judgement on a logged day. Reverses the row-8 three-band choice (`8770d34`) after the founder picked neutral this session, settling the standing tension noted there and in audit open-question 4. | Quick win 2 (done) |
+| `5042a16` | Honest cold-start framing on the coach's baseline-building card: states plainly what Precision Coaching can see now and what it will say once it has two weeks of data, rather than showing a silent gap. | Quick win 4 (done) |
+| `c60228f` | Voice fix: dropped an en dash from the coach week-range label. | voice rule |
+| `3be1648` | Routed exact-value layout literals through the `spacing` / `radius` tokens. Partial: the ones with a clean token equivalent only. ~130 non-token layout literals remain and are deliberately left (they need a design call / device check, not a blind snap to the nearest token). | Quick win 5 (partial) |
+| `4e27827` | Made the log-set button the filled primary action on `ActiveWorkout`. Partial against the fuller logging-speed pass (tap-cost reduction across `SetEntry` is not done). Founder approved the filled button on device. | Quick win 1 (partial) |
+| `054f8cb` | Strength-standing headline on the PR wall: elevates the existing strength-standard surface into a persistent "where you stand" line. This is the in-scope answer to the single-signature-progress-artefact bet. | High-impact 6 (done) |
+| `656e38c` | Founder bug: the recovery card was firing for brand-new users with no data, and "Got it" did not stick. Fixed both (gate on having data; persist the dismissal). | founder report |
+| `18cca6b` | Founder bug: dropped the shouty all-caps label on the Today's-intake card (an AI-tell / shouty-UI fingerprint). | founder report |
+| `d8a2bd8` | Founder decision: removed the Today's-intake card from the Train screen entirely (calories/macros had seeped onto Train and out of style). | founder report |
+| `50e5eb2` | Surfaced the adaptive daily burn (`computeAdaptiveTDEEAdjustment`) as an estimated-daily-burn figure on Body Metrics. The clearest single move to make the Diary/body surface feel intelligent rather than a log. | High-impact 7 (done) |
+| `479bb93` | Share a PR straight from the PR wall's existing long-press menu ("Share this PR"), building `prData` from the heaviest logged set (fallback to estimated max), navigating to the already-registered `ShareCard`. Routed through the long-press menu, not a per-row share icon, to avoid the decorative-Ionicon-on-every-row fingerprint. First slice of the ShareCard word-of-mouth bet. | High-impact 9 (partial) |
+
+**What is left of the audit recommendations (next-session opener):**
+
+- **ShareCard word-of-mouth (rec 9), remaining two-thirds.** Add a Share entry point from a weekly coach win (`CoachOutputScreen`) and from `YearOfLiftsScreen`, then align `ShareCardScreen`'s standalone `B.*` hex palette to the locked theme so the exported image is unmistakably Volyume. The repo intentionally exempts that file's parallel palette; aligning it is the low-visibility craft item (audit Phase 5 debt 4). PR-wall slice is the only part shipped.
+- **Logging-speed pass (rec 1), remainder.** Only the primary-button change shipped. The per-set tap-cost reduction on `SetEntry` (bigger targets, faster steppers, fewer taps to commit) is the high-impact part and is untouched. Wants device verification.
+- **Token sweep (rec 5), remainder.** ~130 non-token layout literals across screens/components. Deferred on purpose: snapping each to the nearest token without looking at the screen would shift gaps and corners. Needs a per-surface design pass, not a find-and-replace.
+- **Onboarding disqualifier line (rec 3).** Not started. One honest line early in `ProOnboardingScreen` letting a non-target user self-deselect before the trial clock starts.
+- **Conversion machine (rec 8).** Not started. Voice-check the six differential-paywall triggers, wire cascade-stage telemetry, plan the move off `PRO_BETA_ACTIVE`. This is Phase B territory.
+- **Recs 10 (coaching transparency parity) and 11 (maintainability debt).** Long-term / founder-deferred. Not in scope now.
+
+**Founder-side cleanup still outstanding** (unchanged from § 0.00): delete the `volyume-e2e-test` Supabase project and the four `SUPABASE_TEST_*` repo secrets; apply pending migrations 048 / 050 / 051 / 053 (see § 9). Nothing this run added to that queue.
+
+**Verify on device:** every change above wants a look on a fresh sideloaded debug APK, in particular the PR-wall share menu, the Train screen with the intake card gone, the recovery-card dismissal sticking for a new user, and the estimated-daily-burn figure.
 
 ### 0.00. 2026-05-29 (takeover session, Claude): competitive audit + removed the automated E2E / cloud test environment
 
