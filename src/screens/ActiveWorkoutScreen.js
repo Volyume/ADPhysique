@@ -2380,10 +2380,14 @@ const styles = StyleSheet.create({
   noteInput: { backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md, fontSize: fontSize.sm, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, minHeight: 60 },
   ghostChip: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, backgroundColor: colors.surface2, borderRadius: radius.sm, alignSelf: 'flex-start', marginBottom: spacing.xs },
   ghostChipText: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
-  completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderWidth: 1.5, borderColor: colors.primary + '80', borderRadius: radius.lg, paddingVertical: spacing.lg, backgroundColor: colors.primaryBg },
+  // Log set is the primary action on this screen, so it reads as a filled
+  // amber button with a clear label rather than a tinted outline. Dark label
+  // for contrast on amber (white on amber fails WCAG). Warm-ups stay visually
+  // secondary via the tinted-outline override below.
+  completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderRadius: radius.lg, paddingVertical: spacing.lg, backgroundColor: colors.primary },
   btnDisabled: { opacity: 0.5 },
-  completeBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary, letterSpacing: 0.6 },
-  completeBtnWarmup: { borderColor: colors.warning, borderWidth: 1, backgroundColor: colors.warningBg || colors.surface },
+  completeBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.heavy, color: colors.background, letterSpacing: 0.6 },
+  completeBtnWarmup: { backgroundColor: colors.warningBg || colors.surface, borderWidth: 1, borderColor: colors.warning },
   completeBtnTextWarmup: { color: colors.warning },
   extraSetBtn: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, paddingVertical: spacing.md },
   extraSetBtnText: { fontSize: fontSize.md, color: colors.textSecondary, fontWeight: fontWeight.medium },
