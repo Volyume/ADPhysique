@@ -5,6 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import Button from '../components/Button';
 import {
   getRoutineById, getRoutineExercisesWithDetails, getAllExercises,
   addExerciseToRoutine, removeExerciseFromRoutine, createWorkout, updateRoutineExercise,
@@ -288,10 +289,13 @@ export default function RoutineDetailScreen({ navigation, route }) {
         contentContainerStyle={styles.list}
         ListHeaderComponent={
           <>
-            <TouchableOpacity style={styles.startBtn} onPress={handleStartWorkout}>
-              <Ionicons name="play-circle" size={22} color={colors.background} />
-              <Text style={styles.startBtnText}>Start This Workout</Text>
-            </TouchableOpacity>
+            <Button
+              title="Start This Workout"
+              icon="play-circle"
+              size="lg"
+              onPress={handleStartWorkout}
+              style={styles.startBtn}
+            />
             <MuscleTagRow exercises={exercises} />
             {routine.split_type ? (
               <Text style={styles.splitRationale}>{getSplitRationale(routine.split_type)}</Text>
@@ -598,17 +602,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   list: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
-  startBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    paddingVertical: spacing.lg,
-    marginBottom: spacing.xl,
-  },
-  startBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.background },
+  startBtn: { marginBottom: spacing.xl },
   exerciseCard: {
     flexDirection: 'row',
     alignItems: 'center',

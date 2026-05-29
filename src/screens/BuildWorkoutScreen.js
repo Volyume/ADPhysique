@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import Button from '../components/Button';
 import { getAllExercises, createWorkout } from '../lib/database';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { generateTravelPlan } from '../lib/travelMode';
@@ -289,17 +290,15 @@ export default function BuildWorkoutScreen({ navigation }) {
       </ScrollView>
 
       <View style={styles.footer}>
-        <TouchableOpacity
+        <Button
           testID="volyume-btn-start-training"
-          style={[styles.startBtn, (starting || exercises.length === 0) && styles.startBtnDisabled]}
+          title={`Start Training${exercises.length > 0 ? ` (${exercises.length})` : ''}`}
+          icon="play-circle"
+          size="lg"
+          loading={starting}
+          disabled={exercises.length === 0}
           onPress={handleStartTraining}
-          disabled={starting || exercises.length === 0}
-        >
-          <Ionicons name="play-circle" size={22} color={colors.background} />
-          <Text style={styles.startBtnText}>
-            Start Training{exercises.length > 0 ? ` (${exercises.length})` : ''}
-          </Text>
-        </TouchableOpacity>
+        />
       </View>
 
       {/* Travel Mode equipment picker */}
@@ -532,23 +531,6 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderTopWidth: 1,
     borderTopColor: colors.border,
-  },
-  startBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    paddingVertical: spacing.lg,
-  },
-  startBtnDisabled: {
-    opacity: 0.4,
-  },
-  startBtnText: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
-    color: colors.background,
   },
   pickerSafe: { flex: 1, backgroundColor: colors.background },
   pickerHeader: {
