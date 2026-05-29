@@ -11,6 +11,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { getLibraryPlans, getPlanWorkoutCounts, copyPlanFromLibrary, activatePlanWithBlock } from '../lib/database';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
+import { SkeletonCard } from '../components/Skeleton';
 import useAppStore from '../store/useAppStore';
 
 // ─── Collections ─────────────────────────────────────────────────────────────
@@ -221,6 +222,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
   const [selectedDivision, setSelectedDivision] = useState(null);
   const listRef = useRef(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   // Quiz state
   const [quizVisible, setQuizVisible] = useState(false);
@@ -245,7 +247,10 @@ export default function PlanLibraryScreen({ navigation, route }) {
       const [lib, pwc] = await Promise.all([getLibraryPlans(), getPlanWorkoutCounts()]);
       setPlans(lib);
       setWorkoutCounts(pwc);
-    } catch (_e) {}
+    } catch (_e) {
+    } finally {
+      setLoaded(true);
+    }
   }
 
   async function handleRefresh() {
@@ -446,17 +451,25 @@ export default function PlanLibraryScreen({ navigation, route }) {
           ) : null
         }
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="library-outline" size={48} color={colors.surface3} />
-            <Text style={styles.emptyTitle}>No plans found</Text>
-            <Text style={styles.emptyText}>
-              {queryLower
-                ? 'Try a different search term.'
-                : activeCollection === 'division' && selectedDivision
-                  ? "No plans yet for this division. Check back soon."
-                  : 'No plans match this filter yet.'}
-            </Text>
-          </View>
+          !loaded ? (
+            <View style={styles.skeletonWrap}>
+              <SkeletonCard height={96} />
+              <SkeletonCard height={96} />
+              <SkeletonCard height={96} />
+            </View>
+          ) : (
+            <View style={styles.empty}>
+              <Ionicons name="library-outline" size={48} color={colors.surface3} />
+              <Text style={styles.emptyTitle}>No plans found</Text>
+              <Text style={styles.emptyText}>
+                {queryLower
+                  ? 'Try a different search term.'
+                  : activeCollection === 'division' && selectedDivision
+                    ? "No plans yet for this division. Check back soon."
+                    : 'No plans match this filter yet.'}
+              </Text>
+            </View>
+          )
         }
         renderItem={({ item: plan }) => {
           const division = getDivisionForPlan(plan);
@@ -721,6 +734,7 @@ const styles = StyleSheet.create({
   addBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary },
 
   // Empty
+  skeletonWrap: { gap: spacing.md },
   empty: { alignItems: 'center', gap: spacing.md, paddingTop: spacing.xxxl },
   emptyTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textSecondary },
   emptyText: {

@@ -10,6 +10,7 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import InfoTooltip from '../components/InfoTooltip';
+import { SkeletonCard } from '../components/Skeleton';
 import {
   getAllMesocycles, getAllWorkouts, getCompletedWorkoutSets,
   getActivePlan, getRoutinesForPlan,
@@ -27,13 +28,18 @@ export default function MesocycleBuilderScreen({ navigation }) {
   const [mesocycles, setMesocycles] = useState([]);
   const [activePlan, setActivePlanData] = useState(null);  // coach/manual-built plan
   const [activeStats, setActiveStats] = useState(null);   // { tonnageBars, recovery, deload }
+  const [loaded, setLoaded] = useState(false);
 
   useFocusEffect(useCallback(() => {
     if (user?.id) loadAll();
   }, [user?.id]));
 
   async function loadAll() {
-    await Promise.all([loadMesocycles(), loadActiveStats(), loadActivePlan()]);
+    try {
+      await Promise.all([loadMesocycles(), loadActiveStats(), loadActivePlan()]);
+    } finally {
+      setLoaded(true);
+    }
   }
 
   async function loadMesocycles() {
@@ -273,7 +279,12 @@ export default function MesocycleBuilderScreen({ navigation }) {
           );
         }}
         ListEmptyComponent={
-          activeStats ? null : (
+          !loaded ? (
+            <View style={styles.skeletonWrap}>
+              <SkeletonCard height={120} />
+              <SkeletonCard height={72} />
+            </View>
+          ) : activeStats ? null : (
             <View style={styles.empty}>
               <Ionicons name="calendar-outline" size={48} color={colors.surface3} />
               <Text style={styles.emptyTitle}>
@@ -482,6 +493,7 @@ const styles = StyleSheet.create({
   deloadLabel: { fontSize: fontSize.xs, color: colors.warning },
 
   // Empty
+  skeletonWrap: { gap: spacing.md },
   empty:      { alignItems: 'center', gap: spacing.md, paddingTop: spacing.xxxl },
   emptyTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textSecondary },
   emptyText:  { fontSize: fontSize.md, color: colors.textMuted, textAlign: 'center', lineHeight: 22 },
