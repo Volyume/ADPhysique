@@ -59,13 +59,13 @@ function formatDayFull(ms) {
   return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-/** "19 May – 25 May 2026" */
+/** "19 May to 25 May 2026" */
 function weekRangeLabel(weekStartMs) {
   const start = new Date(weekStartMs);
   const end = new Date(weekStartMs + 6 * 24 * 60 * 60 * 1000);
   const startStr = formatDay(start);
   const endStr = formatDayFull(end);
-  return `${startStr} – ${endStr}`;
+  return `${startStr} to ${endStr}`;
 }
 
 const TRAINING_SIGNAL_LABEL = {
