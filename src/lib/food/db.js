@@ -11,6 +11,7 @@
  */
 import { db } from '../database';
 import { CURATED_MEALS, mealItems } from './curatedMeals';
+import { resolveFoodRef } from './sources/localCache';
 
 function uid() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
@@ -863,6 +864,38 @@ export async function applyCuratedMealToDiary(userId, mealId, { mealSlot, entryD
     logged += 1;
   }
   return logged;
+}
+
+/**
+ * Log a recipe to the diary as a single entry (food_ref 'recipe:<id>'),
+ * scaled to the servings eaten. Macros are denormalised at log time like
+ * any other entry, and resolveFoodRef renders the recipe name plus a
+ * per-serving profile so the row shows as one line and rescales on edit.
+ * Reuses the same per-100g maths as a normal food log. Returns the new
+ * entry id, or null when the recipe is missing or has no resolvable
+ * ingredients (so nothing junk is written).
+ */
+export async function applyRecipeToDiary(userId, recipeId, { mealSlot, entryDate, servings = 1 } = {}) {
+  if (!mealSlot || !entryDate) {
+    throw new Error('applyRecipeToDiary: mealSlot and entryDate are required');
+  }
+  const n = Number(servings);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const food = await resolveFoodRef(userId, `recipe:${recipeId}`);
+  if (!food || !(Number(food.serving_g) > 0)) return null;
+  const quantityG = Math.round(food.serving_g * n * 10) / 10;
+  const factor = quantityG / 100;
+  return logFoodEntry(userId, {
+    entryDate,
+    mealSlot,
+    foodRef: `recipe:${recipeId}`,
+    quantityG,
+    kcal: Math.round((food.kcal_100g ?? 0) * factor),
+    proteinG: Math.round((food.protein_100g ?? 0) * factor * 10) / 10,
+    carbsG: Math.round((food.carbs_100g ?? 0) * factor * 10) / 10,
+    fatG: Math.round((food.fat_100g ?? 0) * factor * 10) / 10,
+    fibreG: food.fibre_100g != null ? Math.round((food.fibre_100g) * factor * 10) / 10 : null,
+  });
 }
 
 /**

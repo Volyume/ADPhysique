@@ -92,14 +92,16 @@ export async function findLocalByBarcode(ean, userId = null) {
 }
 
 /**
- * Resolve a food_ref ('global:<uuid>', 'custom:<uuid>' or
- * 'curated:<key>') to its stored row. Returns null if not found or
- * soft-deleted.
+ * Resolve a food_ref ('global:<uuid>', 'custom:<uuid>', 'curated:<key>'
+ * or 'recipe:<uuid>') to a food-shaped row. Returns null if not found
+ * or soft-deleted.
  *
  * Curated refs come from the suggested-meal library (curatedFoods.js).
  * They have no database row, so they are resolved from that static
- * table. Without this the diary falls through to a generic "Food"
- * label for every item logged from a suggested meal.
+ * table. Recipe refs are resolved by summing the recipe's ingredients
+ * into a per-100g profile so a logged recipe shows as one named line
+ * and rescales on edit. Without these the diary falls through to a
+ * generic "Food" label.
  */
 export async function resolveFoodRef(userId, foodRef) {
   if (!foodRef) return null;
@@ -141,6 +143,51 @@ export async function resolveFoodRef(userId, foodRef) {
        WHERE id = ? AND user_id = ? AND deleted_at IS NULL LIMIT 1`,
       [id, userId]
     );
+  }
+  if (scope === 'recipe') {
+    const recipe = await d.getFirstAsync(
+      `SELECT name, total_servings FROM recipes
+       WHERE id = ? AND user_id = ? AND deleted_at IS NULL LIMIT 1`,
+      [id, userId]
+    );
+    if (!recipe) return null;
+    const ings = await d.getAllAsync(
+      `SELECT food_ref, quantity_g FROM recipe_ingredients
+       WHERE recipe_id = ? AND user_id = ? AND deleted_at IS NULL`,
+      [id, userId]
+    );
+    let kcal = 0, protein = 0, carbs = 0, fat = 0, fibre = 0, grams = 0;
+    for (const ing of ings || []) {
+      const q = Number(ing.quantity_g);
+      // Recipes never nest recipes (the builder only adds foods), but
+      // guard against it so resolution can never recurse on itself.
+      if (!Number.isFinite(q) || q <= 0 || String(ing.food_ref).startsWith('recipe:')) continue;
+      const f = await resolveFoodRef(userId, ing.food_ref);
+      if (!f) continue;
+      const factor = q / 100;
+      kcal += (f.kcal_100g ?? 0) * factor;
+      protein += (f.protein_100g ?? 0) * factor;
+      carbs += (f.carbs_100g ?? 0) * factor;
+      fat += (f.fat_100g ?? 0) * factor;
+      fibre += (f.fibre_100g ?? 0) * factor;
+      grams += q;
+    }
+    if (grams <= 0) return null;
+    const servings = Math.max(Number(recipe.total_servings) || 1, 0.01);
+    const per100 = (v) => Math.round((v / grams) * 100 * 10) / 10;
+    return {
+      food_ref: `recipe:${id}`,
+      source: 'recipe',
+      name: recipe.name,
+      brand: null,
+      serving_g: Math.round((grams / servings) * 10) / 10,
+      serving_label: 'serving',
+      kcal_100g: Math.round((kcal / grams) * 100),
+      protein_100g: per100(protein),
+      carbs_100g: per100(carbs),
+      fat_100g: per100(fat),
+      fibre_100g: per100(fibre),
+    };
   }
   return null;
 }

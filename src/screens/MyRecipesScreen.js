@@ -3,7 +3,8 @@
  *
  * List of the user's own composed recipes. Lives under the Diary
  * tab; reached from the Search modal's "My Recipes" entry. Tap a
- * row to edit; long-press to delete; FAB to create a new one.
+ * row to log it as one diary line (one serving); the pencil edits;
+ * long-press deletes; the header plus builds a new one.
  *
  * Data: listRecipes(userId) from src/lib/food/db.js. The cloud
  * sync layer keeps the table in step with the cloud
@@ -14,14 +15,14 @@
  */
 import React, { useCallback, useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, Alert,
+  View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
-import { listRecipes, deleteRecipe } from '../lib/food/db';
+import { listRecipes, deleteRecipe, applyRecipeToDiary } from '../lib/food/db';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -36,6 +37,7 @@ export default function MyRecipesScreen({ navigation, route }) {
 
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loggingId, setLoggingId] = useState(null);
 
   const reload = useCallback(async () => {
     if (!userId) return;
@@ -60,6 +62,26 @@ export default function MyRecipesScreen({ navigation, route }) {
     navigation.navigate('RecipeBuilder', { recipeId: recipe.id, mealSlot, entryDate });
   }
 
+  // Tap a recipe to log one serving to the slot the user came from, then
+  // drop back to where they were. Returns null when the recipe has no
+  // resolvable ingredients yet, so we tell them to add one.
+  async function onLog(recipe) {
+    if (loggingId) return;
+    setLoggingId(recipe.id);
+    try {
+      const id = await applyRecipeToDiary(userId, recipe.id, { mealSlot, entryDate, servings: 1 });
+      if (id) {
+        navigation.goBack();
+        return;
+      }
+      setLoggingId(null);
+      Alert.alert('Nothing to log', 'Add at least one ingredient to this recipe first.');
+    } catch (_) {
+      setLoggingId(null);
+      Alert.alert('Could not log', 'Try again.');
+    }
+  }
+
   function onDelete(recipe) {
     Alert.alert(
       `Delete "${recipe.name}"?`,
@@ -79,11 +101,15 @@ export default function MyRecipesScreen({ navigation, route }) {
   }
 
   function renderItem({ item }) {
+    const busy = loggingId === item.id;
     return (
       <TouchableOpacity
         style={styles.row}
-        onPress={() => onEdit(item)}
+        onPress={() => onLog(item)}
         onLongPress={() => onDelete(item)}
+        disabled={!!loggingId}
+        accessibilityRole="button"
+        accessibilityLabel={`Log ${item.name}`}
       >
         <View style={{ flex: 1 }}>
           <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
@@ -92,7 +118,18 @@ export default function MyRecipesScreen({ navigation, route }) {
             {item.notes ? ` · ${item.notes}` : ''}
           </Text>
         </View>
-        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        <TouchableOpacity
+          onPress={() => onEdit(item)}
+          disabled={!!loggingId}
+          hitSlop={12}
+          accessibilityLabel={`Edit ${item.name}`}
+          style={styles.editBtn}
+        >
+          <Ionicons name="create-outline" size={20} color={colors.textMuted} />
+        </TouchableOpacity>
+        {busy
+          ? <ActivityIndicator size="small" color={colors.primary} />
+          : <Ionicons name="add-circle" size={26} color={colors.primary} />}
       </TouchableOpacity>
     );
   }
@@ -140,6 +177,11 @@ const styles = StyleSheet.create({
   },
   name: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
   meta: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: spacing.xxs },
+  editBtn: {
+    width: 40, height: 40,
+    alignItems: 'center', justifyContent: 'center',
+    marginRight: spacing.xs,
+  },
   empty: {
     flex: 1, justifyContent: 'center', alignItems: 'center',
     paddingHorizontal: spacing.xl,

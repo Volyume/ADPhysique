@@ -14,6 +14,18 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 
 ## 0. Session summary
 
+### 0.00000. 2026-05-29 (food build, Claude): recipes can finally be logged
+
+First build item off the food-logging audit (`docs/audit/volyume-food-logging-audit-2026-05-29.md`). Recipes were build-only: you could compose one but no code path logged it, while `MyRecipesScreen`'s empty state promised "log it as one line in your diary every time you eat it". Closed that gap. No migration, no schema or sync-contract change (recipe rows and `recipe_ingredients` already sync).
+
+- **Engine.** `resolveFoodRef` learns a `recipe:<id>` scope: it sums the recipe's ingredients into a per-100g profile (name, per-serving size, per-100g macros), so a logged recipe shows as one named diary line and rescales correctly on edit. It resolves ingredients through the existing global/custom/curated branches and guards against recipe-in-recipe. `applyRecipeToDiary(userId, recipeId, { mealSlot, entryDate, servings })` scales that profile by servings eaten and writes one `food_entries` row with the `recipe:<id>` ref, reusing the same per-100g maths as any food log. Returns null (writes nothing) for a missing recipe or one with no resolvable ingredients.
+- **Import direction** is one-way and cycle-free: `db.js` imports `resolveFoodRef` from `sources/localCache`, which never imports `db.js`.
+- **UI.** `MyRecipesScreen`: tapping a recipe now logs one serving (amber add-circle affordance, matching suggested meals) to the slot the user came from, then drops back. Edit moved to a pencil button; long-press still deletes. The "one line" promise is now true.
+- **Tests.** New `recipeLogging.test.js` (7): the per-100g resolution maths and the scaled single-line insert, plus the null guards. Food lib 81 passed, screen mount sweep 449 passed, ESLint 0 errors.
+- **Deferred fast-follows:** a "Save and log" button on `RecipeBuilderScreen`, and a serving picker at log time (v1 logs one serving; the user adjusts quantity in the diary, which rescales via the recipe per-100g). Then the rest of the audit's build list (quick-add, multi-add, one-tap repeat-a-meal, browsable curated library).
+
+**Verify on device:** build a recipe, then from Add food, Custom, My recipes, tap it. It should log as one line showing the recipe name and its macros; the pencil should still edit; editing the entry's quantity should rescale the macros.
+
 ### 0.0000. 2026-05-29 (founder feedback, Claude): Plans heading, suggested-meal names, food search reorder
 
 Four founder-reported items off two screenshots (Plans + Diary), all on `main`. No migration, no schema or sync-contract change: every fix is display-layer or static-data resolution. Tests green (food lib 74 passed; screen mount sweep 462 passed; ESLint 0 errors).
