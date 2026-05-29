@@ -167,6 +167,23 @@ export function computeEWMA(weightData, alpha = EWMA_ALPHA) {
   return result;
 }
 
+// Generic EWMA over a plain numeric series, same smoothing factor as the
+// weight trend. Used for the body-fat trend chart (GAP row 25) so the
+// line follows the trend rather than the daily noise. Non-numeric or
+// empty input yields []. Each output is rounded to 2 dp.
+export function ewmaValues(values, alpha = EWMA_ALPHA) {
+  if (!Array.isArray(values)) return [];
+  const nums = values.map((v) => Number(v)).filter((n) => Number.isFinite(n));
+  if (nums.length === 0) return [];
+  const out = [];
+  let ewma = nums[0];
+  for (const n of nums) {
+    ewma = alpha * n + (1 - alpha) * ewma;
+    out.push(parseFloat(ewma.toFixed(2)));
+  }
+  return out;
+}
+
 // Compute weekly weight change rate from EWMA-smoothed data.
 // ewmaData: output of computeEWMA, sorted oldest-first.
 // Returns kg/week (positive = gaining, negative = losing).

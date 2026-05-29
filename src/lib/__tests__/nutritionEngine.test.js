@@ -1,5 +1,6 @@
 import {
   computeEWMA,
+  ewmaValues,
   computeWeeklyWeightChange,
   computeAdaptiveTDEEAdjustment,
   shouldSuggestDietBreak,
@@ -7,6 +8,34 @@ import {
   PROTEIN_MAX_GKGBW,
   DIET_BREAK_THRESHOLD_WEEKS,
 } from '../nutritionEngine';
+
+// ─── ewmaValues (generic series, used by the BF% trend chart) ───────────────────
+
+describe('ewmaValues', () => {
+  test('first point equals the first value (seed)', () => {
+    expect(ewmaValues([20])[0]).toBe(20);
+  });
+  test('smooths toward the series, lagging raw spikes', () => {
+    const out = ewmaValues([20, 20, 30, 20]);
+    expect(out).toHaveLength(4);
+    // The spike to 30 only pulls the smoothed value partway up.
+    expect(out[2]).toBeGreaterThan(20);
+    expect(out[2]).toBeLessThan(30);
+    // Then it eases back down, staying above the seed.
+    expect(out[3]).toBeGreaterThan(20);
+  });
+  test('a flat series stays flat', () => {
+    expect(ewmaValues([15, 15, 15])).toEqual([15, 15, 15]);
+  });
+  test('coerces strings and drops non-numeric entries', () => {
+    expect(ewmaValues(['15', '15', '15'])).toEqual([15, 15, 15]);
+  });
+  test('empty / non-array input yields []', () => {
+    expect(ewmaValues([])).toEqual([]);
+    expect(ewmaValues(null)).toEqual([]);
+    expect(ewmaValues(['x', 'y'])).toEqual([]);
+  });
+});
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 

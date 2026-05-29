@@ -29,7 +29,7 @@ import { logBodyMetric, getBodyMetricLog } from '../lib/database';
 import { getRecentIntakeSummary } from '../lib/food/db';
 import { EmptyBodyIllustration } from '../components/Illustrations';
 import { syncBodyMetric } from '../lib/sync';
-import { computeEWMA, computeWeeklyWeightChange } from '../lib/nutritionEngine';
+import { computeEWMA, ewmaValues, computeWeeklyWeightChange } from '../lib/nutritionEngine';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { formatBodyWeight, formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg } from '../lib/units';
@@ -207,16 +207,22 @@ function BodyFatTrendChart({ entries }) {
   }
 
   const values = withData.map(e => e.body_fat);
-  const minV = Math.floor(Math.min(...values) - 1);
-  const maxV = Math.ceil(Math.max(...values) + 1);
+  // Smooth the trend so the line follows the direction, not day-to-day
+  // noise (same EWMA the weight trend uses). The raw readings stay
+  // visible as a faint second line.
+  const smoothed = ewmaValues(values);
+  const allVals = [...values, ...smoothed];
+  const minV = Math.floor(Math.min(...allVals) - 1);
+  const maxV = Math.ceil(Math.max(...allVals) + 1);
   const axisRange = Math.max(maxV - minV, 1);
 
   const data = withData.map((e, i) => ({
-    value: e.body_fat,
+    value: smoothed[i],
     label: i === 0 || i === withData.length - 1
       ? safeFormatDate(e.metric_date, 'MMM d')
       : '',
   }));
+  const rawData = values.map(v => ({ value: v }));
 
   const chartWidth = SCREEN_W - spacing.lg * 2 - 32;
 
@@ -224,10 +230,13 @@ function BodyFatTrendChart({ entries }) {
     <View style={chartStyles.wrap}>
       <LineChart
         data={data}
+        data2={rawData}
         width={chartWidth}
         height={100}
         color={colors.primary}
+        color2={`${colors.textMuted}66`}
         thickness={2}
+        thickness2={1}
         startFillColor={colors.primary + '30'}
         endFillColor={colors.primary + '05'}
         areaChart
@@ -235,6 +244,8 @@ function BodyFatTrendChart({ entries }) {
         hideDataPoints={withData.length > 6}
         dataPointsColor={colors.primary}
         dataPointsRadius={3}
+        dataPointsRadius2={2.5}
+        dataPointsColor2={`${colors.textMuted}66`}
         yAxisLabelSuffix=" %"
         yAxisTextStyle={chartStyles.axisText}
         xAxisLabelTextStyle={chartStyles.axisText}
@@ -248,6 +259,7 @@ function BodyFatTrendChart({ entries }) {
         rulesType="dashed"
         showVerticalLines={false}
       />
+      <Text style={chartStyles.smoothedHint}>Smoothed trend, faint line is each reading</Text>
     </View>
   );
 }
@@ -323,6 +335,7 @@ const chartStyles = StyleSheet.create({
   emptyHint: { paddingTop: spacing.md },
   emptyHintText: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
   axisText: { color: colors.textMuted, fontSize: 10 },
+  smoothedHint: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xs, textAlign: 'center' },
 });
 
 // ─── Opt-in gate ─────────────────────────────────────────────────────────────
