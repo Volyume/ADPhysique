@@ -1381,17 +1381,21 @@ async function _pullUserInsights(sb, supabaseUserId) {
 
 async function _pullExerciseUserNotes(sb, supabaseUserId) {
   try {
-    const { data, error } = await sb.from('exercise_user_notes')
-      .select('*').eq('user_id', supabaseUserId);
+    const wm = await getPullWatermark(supabaseUserId, 'exercise_user_notes');
+    let q = sb.from('exercise_user_notes').select('*').eq('user_id', supabaseUserId);
+    if (wm > 0) q = q.gte('updated_at', isoFromMs(wm));
+    const { data, error } = await q;
     if (error) { logPgErr('sync._pullExerciseUserNotes', error); return 0; }
     if (!data?.length) return 0;
     // eslint-disable-next-line global-require
     const { insertOrUpdateExerciseUserNoteFromCloud } = require('./database');
     let n = 0;
+    let failures = 0;
     for (const row of data) {
       try { await insertOrUpdateExerciseUserNoteFromCloud(supabaseUserId, row); n++; }
-      catch (e) { logWarn('sync._pullExerciseUserNotes', 'insert failed', { id: row?.id, error: e?.message }); }
+      catch (e) { failures++; logWarn('sync._pullExerciseUserNotes', 'insert failed', { id: row?.id, error: e?.message }); }
     }
+    if (failures === 0) await setPullWatermark(supabaseUserId, 'exercise_user_notes', nextWatermark(wm, data));
     return n;
   } catch (e) { logWarn('sync._pullExerciseUserNotes', e?.message); return 0; }
 }
@@ -1528,7 +1532,10 @@ async function _pullUserPrefs(sb, supabaseUserId) {
 
 async function _pullProgrammes(sb, supabaseUserId) {
   try {
-    const { data, error } = await sb.from('programmes').select('*').eq('user_id', supabaseUserId);
+    const wm = await getPullWatermark(supabaseUserId, 'programmes');
+    let q = sb.from('programmes').select('*').eq('user_id', supabaseUserId);
+    if (wm > 0) q = q.gte('updated_at', isoFromMs(wm));
+    const { data, error } = await q;
     if (error) { logWarn('sync._pullProgrammes', error.message); return 0; }
     let n = 0;
     let failures = 0;
@@ -1540,15 +1547,21 @@ async function _pullProgrammes(sb, supabaseUserId) {
     if (failures > 0) {
       logWarn('sync._pullProgrammes', `${failures} programme insert(s) failed`, { firstError: firstErr });
     }
+    if (failures === 0) await setPullWatermark(supabaseUserId, 'programmes', nextWatermark(wm, data ?? []));
     return n;
   } catch (e) { logWarn('sync._pullProgrammes', e?.message); return 0; }
 }
 
 async function _pullRoutinesAndExercises(sb, supabaseUserId) {
   try {
+    const wm = await getPullWatermark(supabaseUserId, 'routines');
     const routines = await fetchAllRows(
       'sync._pullRoutines',
-      () => sb.from('routines').select('*').eq('user_id', supabaseUserId),
+      () => {
+        let q = sb.from('routines').select('*').eq('user_id', supabaseUserId);
+        if (wm > 0) q = q.gte('updated_at', isoFromMs(wm));
+        return q;
+      },
     );
     let n = 0;
     let routineFailures = 0;
@@ -1561,18 +1574,24 @@ async function _pullRoutinesAndExercises(sb, supabaseUserId) {
       logWarn('sync._pullRoutines', `${routineFailures} routine insert(s) failed`, { firstError: firstRoutineErr });
     }
     const routineIds = (routines ?? []).map(r => r.id);
-    if (routineIds.length === 0) return n;
-    const reRows = await fetchByIdsChunked(
-      'sync._pullRoutineExercises', 'routine_exercises', 'routine_id', routineIds,
-    );
     let reFailures = 0;
-    let firstReErr = null;
-    for (const re of reRows ?? []) {
-      try { await insertRoutineExerciseFromCloud(re); }
-      catch (e) { reFailures++; if (!firstReErr) firstReErr = e?.message; }
+    if (routineIds.length > 0) {
+      const reRows = await fetchByIdsChunked(
+        'sync._pullRoutineExercises', 'routine_exercises', 'routine_id', routineIds,
+      );
+      let firstReErr = null;
+      for (const re of reRows ?? []) {
+        try { await insertRoutineExerciseFromCloud(re); }
+        catch (e) { reFailures++; if (!firstReErr) firstReErr = e?.message; }
+      }
+      if (reFailures > 0) {
+        logWarn('sync._pullRoutineExercises', `${reFailures} routine_exercise insert(s) failed`, { firstError: firstReErr });
+      }
     }
-    if (reFailures > 0) {
-      logWarn('sync._pullRoutineExercises', `${reFailures} routine_exercise insert(s) failed`, { firstError: firstReErr });
+    // Advance only on a clean pass. Children are fetched for the routines
+    // we pulled, so a changed routine re-pulls its exercises with it.
+    if (routineFailures === 0 && reFailures === 0) {
+      await setPullWatermark(supabaseUserId, 'routines', nextWatermark(wm, routines ?? []));
     }
     return n;
   } catch (e) { logWarn('sync._pullRoutinesAndExercises', e?.message); return 0; }
@@ -1580,22 +1599,30 @@ async function _pullRoutinesAndExercises(sb, supabaseUserId) {
 
 async function _pullMesocycles(sb, supabaseUserId) {
   try {
-    const { data: mesos, error: mErr } = await sb
-      .from('mesocycles').select('*').eq('user_id', supabaseUserId);
+    const wm = await getPullWatermark(supabaseUserId, 'mesocycles');
+    let mq = sb.from('mesocycles').select('*').eq('user_id', supabaseUserId);
+    if (wm > 0) mq = mq.gte('updated_at', isoFromMs(wm));
+    const { data: mesos, error: mErr } = await mq;
     if (mErr) { logWarn('sync._pullMesocycles', mErr.message); return 0; }
     let n = 0;
+    let mesoFailures = 0;
     for (const m of mesos ?? []) {
       try { await insertMesocycleFromCloud(supabaseUserId, m); n++; }
-      catch (e) { logWarn('sync._pullMesocycles', 'insert failed', { id: m?.id, error: e?.message }); }
+      catch (e) { mesoFailures++; logWarn('sync._pullMesocycles', 'insert failed', { id: m?.id, error: e?.message }); }
     }
     const mesoIds = (mesos ?? []).map(m => m.id);
-    if (mesoIds.length === 0) return n;
-    const weeks = await fetchByIdsChunked(
-      'sync._pullMesocycleWeeks', 'mesocycle_weeks', 'mesocycle_id', mesoIds,
-    );
-    for (const w of weeks) {
-      try { await insertMesocycleWeekFromCloud(w); }
-      catch (e) { logWarn('sync._pullMesocycleWeeks', 'insert failed', { id: w?.id, error: e?.message }); }
+    let weekFailures = 0;
+    if (mesoIds.length > 0) {
+      const weeks = await fetchByIdsChunked(
+        'sync._pullMesocycleWeeks', 'mesocycle_weeks', 'mesocycle_id', mesoIds,
+      );
+      for (const w of weeks) {
+        try { await insertMesocycleWeekFromCloud(w); }
+        catch (e) { weekFailures++; logWarn('sync._pullMesocycleWeeks', 'insert failed', { id: w?.id, error: e?.message }); }
+      }
+    }
+    if (mesoFailures === 0 && weekFailures === 0) {
+      await setPullWatermark(supabaseUserId, 'mesocycles', nextWatermark(wm, mesos ?? []));
     }
     return n;
   } catch (e) { logWarn('sync._pullMesocycles', e?.message); return 0; }
@@ -1603,28 +1630,40 @@ async function _pullMesocycles(sb, supabaseUserId) {
 
 async function _pullMorningWeights(sb, supabaseUserId) {
   try {
+    const wm = await getPullWatermark(supabaseUserId, 'morning_weights');
     const data = await fetchAllRows(
       'sync._pullMorningWeights',
-      () => sb.from('morning_weights').select('*').eq('user_id', supabaseUserId),
+      () => {
+        let q = sb.from('morning_weights').select('*').eq('user_id', supabaseUserId);
+        if (wm > 0) q = q.gte('updated_at', isoFromMs(wm));
+        return q;
+      },
     );
     let n = 0;
+    let failures = 0;
     for (const w of data ?? []) {
       try { await insertMorningWeightFromCloud(supabaseUserId, w); n++; }
-      catch (e) { logWarn('sync._pullMorningWeights', 'insert failed', { id: w.id, error: e?.message }); }
+      catch (e) { failures++; logWarn('sync._pullMorningWeights', 'insert failed', { id: w.id, error: e?.message }); }
     }
+    if (failures === 0) await setPullWatermark(supabaseUserId, 'morning_weights', nextWatermark(wm, data ?? []));
     return n;
   } catch (e) { logWarn('sync._pullMorningWeights', e?.message); return 0; }
 }
 
 async function _pullCoachOutputs(sb, supabaseUserId) {
   try {
-    const { data, error } = await sb.from('coach_outputs').select('*').eq('user_id', supabaseUserId);
+    const wm = await getPullWatermark(supabaseUserId, 'coach_outputs');
+    let q = sb.from('coach_outputs').select('*').eq('user_id', supabaseUserId);
+    if (wm > 0) q = q.gte('updated_at', isoFromMs(wm));
+    const { data, error } = await q;
     if (error) { logWarn('sync._pullCoachOutputs', error.message); return 0; }
     let n = 0;
+    let failures = 0;
     for (const co of data ?? []) {
       try { await insertCoachOutputFromCloud(supabaseUserId, co); n++; }
-      catch (e) { logWarn('sync._pullCoachOutputs', 'insert failed', { id: co.id, error: e?.message }); }
+      catch (e) { failures++; logWarn('sync._pullCoachOutputs', 'insert failed', { id: co.id, error: e?.message }); }
     }
+    if (failures === 0) await setPullWatermark(supabaseUserId, 'coach_outputs', nextWatermark(wm, data ?? []));
     return n;
   } catch (e) { logWarn('sync._pullCoachOutputs', e?.message); return 0; }
 }
