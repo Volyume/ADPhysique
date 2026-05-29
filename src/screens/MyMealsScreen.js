@@ -24,6 +24,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import BackHeader from '../components/BackHeader';
 import {
   listSavedMeals, applySavedMealToDiary, renameSavedMeal, deleteSavedMeal,
 } from '../lib/food/db';
@@ -143,13 +144,7 @@ export default function MyMealsScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
-          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>My meals</Text>
-        <View style={{ width: 24 }} />
-      </View>
+      <BackHeader title="My meals" />
 
       {loading ? null : meals.length === 0 ? (
         <View style={styles.empty}>
@@ -204,12 +199,6 @@ export default function MyMealsScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
-  },
-  headerTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold },
   row: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,

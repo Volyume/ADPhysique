@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import BackHeader from '../components/BackHeader';
 import { listRecipes, deleteRecipe } from '../lib/food/db';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -98,15 +99,14 @@ export default function MyRecipesScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
-          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>My recipes</Text>
-        <TouchableOpacity onPress={onCreate} hitSlop={12}>
-          <Ionicons name="add" size={26} color={colors.primary} />
-        </TouchableOpacity>
-      </View>
+      <BackHeader
+        title="My recipes"
+        right={(
+          <TouchableOpacity onPress={onCreate} hitSlop={12} accessibilityLabel="New recipe">
+            <Ionicons name="add" size={26} color={colors.primary} />
+          </TouchableOpacity>
+        )}
+      />
 
       {loading ? null : recipes.length === 0 ? (
         <View style={styles.empty}>
@@ -132,12 +132,6 @@ export default function MyRecipesScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
-  },
-  headerTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold },
   row: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
