@@ -25,6 +25,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
+import { useToast } from '../components/Toast';
 import {
   listSavedMeals, applySavedMealToDiary, renameSavedMeal, deleteSavedMeal,
 } from '../lib/food/db';
@@ -38,6 +39,7 @@ const SLOT_LABELS = {
 export default function MyMealsScreen({ navigation, route }) {
   const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
   const userId = user?.id;
+  const toast = useToast();
 
   const mealSlot = route?.params?.mealSlot ?? 'snack';
   const entryDate = route?.params?.entryDate ?? new Date().toISOString().slice(0, 10);
@@ -70,9 +72,9 @@ export default function MyMealsScreen({ navigation, route }) {
         Alert.alert('Nothing to log', 'This meal has no foods in it.');
       }
     } catch (_) {
-      Alert.alert('Couldn\'t log', 'Try again.');
+      toast.show('Couldn\'t log.', { variant: 'error' });
     }
-  }, [userId, mealSlot, entryDate, navigation]);
+  }, [userId, mealSlot, entryDate, navigation, toast]);
 
   function confirmLog(meal) {
     Alert.alert(

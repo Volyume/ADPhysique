@@ -22,6 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
+import { useToast } from '../components/Toast';
 import { listRecipes, deleteRecipe, applyRecipeToDiary } from '../lib/food/db';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -29,6 +30,7 @@ import { useShallow } from 'zustand/react/shallow';
 export default function MyRecipesScreen({ navigation, route }) {
   const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
   const userId = user?.id;
+  const toast = useToast();
 
   // Returned-from-builder hint: pass mealSlot + entryDate forward
   // so the Diary "Add" CTA can hand off seamlessly later.
@@ -78,7 +80,7 @@ export default function MyRecipesScreen({ navigation, route }) {
       Alert.alert('Nothing to log', 'Add at least one ingredient to this recipe first.');
     } catch (_) {
       setLoggingId(null);
-      Alert.alert('Could not log', 'Try again.');
+      toast.show('Couldn\'t log.', { variant: 'error' });
     }
   }
 
