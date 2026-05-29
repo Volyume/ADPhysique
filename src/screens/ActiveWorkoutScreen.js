@@ -2280,18 +2280,25 @@ function ExercisePickerModal({ visible, onClose, onSelect }) {
                 </TouchableOpacity>
               )}
               ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: colors.border }} />}
+              ListFooterComponent={
+                // Always offer "create custom" while there's a query, even
+                // when the search has matches. A near-name match (e.g. typing
+                // "chest") should never hide the option to add your own.
+                query.trim().length > 0 ? (
+                  <TouchableOpacity style={styles.createNewBtn} onPress={openCreate}>
+                    <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
+                    <Text style={styles.createNewBtnText}>
+                      Create "{query.trim()}" as custom exercise
+                    </Text>
+                  </TouchableOpacity>
+                ) : null
+              }
               ListEmptyComponent={
-                <View style={styles.pickerEmptyWrap}>
-                  <Text style={styles.pickerEmptyText}>No exercises found</Text>
-                  {query.trim().length > 0 && (
-                    <TouchableOpacity style={styles.createNewBtn} onPress={openCreate}>
-                      <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
-                      <Text style={styles.createNewBtnText}>
-                        Create "{query.trim()}" as custom exercise
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
+                query.trim().length > 0 ? null : (
+                  <View style={styles.pickerEmptyWrap}>
+                    <Text style={styles.pickerEmptyText}>No exercises found</Text>
+                  </View>
+                )
               }
             />
           </>
