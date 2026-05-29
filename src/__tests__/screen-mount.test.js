@@ -646,6 +646,7 @@ const SCREENS_TO_SWEEP = [
   'WeeklyCheckInScreen',
   'WelcomeScreen',
   'WellbeingCheckScreen',
+  'YouScreen',
   'WorkoutHistoryScreen',
   'YearOfLiftsScreen',
 ];

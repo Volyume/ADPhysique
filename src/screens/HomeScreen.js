@@ -750,14 +750,14 @@ export default function HomeScreen({ navigation }) {
           <View style={styles.phaseBanner}>
             <Ionicons name="information-circle-outline" size={18} color={colors.primary} style={{ marginTop: 1 }} />
             <Text style={styles.phaseBannerText} numberOfLines={3}>
-              Your nutrition targets are set for {phaseMismatch.savedPhaseLabel}. Update them in Athlete Hub to reflect your current plan.
+              Your nutrition targets are set for {phaseMismatch.savedPhaseLabel}. Update them under You to reflect your current plan.
             </Text>
             <TouchableOpacity
               style={styles.phaseBannerArrow}
-              onPress={() => navigation.getParent()?.navigate('ProfileTab', { screen: 'AthleteHub' })}
+              onPress={() => navigation.getParent()?.navigate('ProfileTab', { screen: 'NutritionTargets' })}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               accessibilityRole="button"
-              accessibilityLabel="Go to Athlete Hub to update nutrition targets"
+              accessibilityLabel="Go to nutrition targets"
             >
               <Ionicons name="chevron-forward" size={16} color={colors.primary} />
             </TouchableOpacity>

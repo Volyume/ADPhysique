@@ -11,9 +11,7 @@ import { format, differenceInDays } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius, shadow } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';
 import GradientCard from '../components/GradientCard';
-import PressableCard from '../components/PressableCard';
 import InfoTooltip from '../components/InfoTooltip';
-import { ProBadge } from '../components/ProGate';
 import { SkeletonCard } from '../components/Skeleton';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -479,14 +477,6 @@ export default function AthleteHubScreen({ navigation }) {
     } catch (_e) {}
   }
 
-  const displayName = userProfile?.firstName
-    || user?.email?.split('@')[0]?.replace(/[^a-zA-Z]/g, ' ').trim()
-    || 'Athlete';
-
-  const trainingAge = userProfile?.trainingAgeYears
-    ? `${Math.floor(userProfile.trainingAgeYears)} yr${Math.floor(userProfile.trainingAgeYears) !== 1 ? 's' : ''} training`
-    : null;
-
   const next = nextMilestone(totalWorkouts);
   const progressToNext = next ? Math.min(1, totalWorkouts / next.sessions) : 1;
   const progressPct = `${Math.round(progressToNext * 100)}%`;
@@ -531,25 +521,6 @@ export default function AthleteHubScreen({ navigation }) {
             <SkeletonCard height={120} />
           </View>
         )}
-
-        {/* ── Profile card ──────────────────────────────── */}
-        <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {(displayName?.[0] || 'A').toUpperCase()}
-            </Text>
-          </View>
-          <View style={styles.profileInfo}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-              <Text style={styles.profileName}>{displayName}</Text>
-              {tier === 'pro' && <ProBadge size="sm" />}
-            </View>
-            {trainingAge && <Text style={styles.profileMeta}>{trainingAge}</Text>}
-            <View style={styles.profileStats}>
-              <Text style={styles.profileStat}>{totalWorkouts} sessions</Text>
-            </View>
-          </View>
-        </View>
 
         {/* ── Milestone progress ─────────────────────────── */}
         {(lastUnlocked || next) && (
@@ -606,7 +577,7 @@ export default function AthleteHubScreen({ navigation }) {
         {tier === 'pro' && (
           <TouchableOpacity
             style={[styles.sectionCard, styles.checkinCard]}
-            onPress={() => navigation.navigate('WeeklyCheckIn')}
+            onPress={() => navigation.getParent()?.navigate('ProfileTab', { screen: 'WeeklyCheckIn' })}
             activeOpacity={0.85}
           >
             <View style={styles.cardHeader}>
@@ -687,7 +658,7 @@ export default function AthleteHubScreen({ navigation }) {
         {tier === 'pro' && (
           <TouchableOpacity
             style={styles.sectionCard}
-            onPress={() => navigation.navigate('NutritionTargets')}
+            onPress={() => navigation.getParent()?.navigate('ProfileTab', { screen: 'NutritionTargets' })}
             activeOpacity={0.8}
           >
             <View style={styles.cardHeader}>
@@ -722,7 +693,7 @@ export default function AthleteHubScreen({ navigation }) {
         {tier === 'pro' && (
           <TouchableOpacity
             style={styles.eduLinkRow}
-            onPress={() => navigation.navigate('NutritionEducation')}
+            onPress={() => navigation.getParent()?.navigate('ProfileTab', { screen: 'NutritionEducation' })}
             activeOpacity={0.7}
           >
             <Ionicons name="book-outline" size={14} color={colors.primary} />
@@ -833,32 +804,10 @@ export default function AthleteHubScreen({ navigation }) {
           </>
         )}
 
-        {/* ── Coaching ────────────────────────────────────── */}
-        <View style={styles.section}>
-          {tier === 'pro' && (
-            <>
-              <Text style={styles.sectionLabel}>Coaching</Text>
-              <NavRow
-                icon="flag-outline"
-                label="Update your plan"
-                sub="Change your goal, phase, schedule, equipment or experience. We rebuild the plan and your nutrition targets around the new answers."
-                onPress={() => navigation.navigate('ProGoalSetup')}
-              />
-              <NavRow
-                icon="pause-circle-outline"
-                label="Strategic journal"
-                sub="Every coaching decision, and why"
-                onPress={() => navigation.navigate('CoachHeldHistory')}
-              />
-              <NavRow
-                icon="shield-checkmark-outline"
-                label="Goal lock"
-                sub="Tell Volyume whether you have prior experience with aggressive cuts. Affects how soon the safety check holds further deficit."
-                onPress={() => navigation.navigate('GoalLockConsent', { editMode: true })}
-              />
-
-              {/* Engine Log, collapsible */}
-              {(adaptationHistory.length > 0 || repWarnings.length > 0) && (
+        {/* ── Engine Log (coaching decisions, collapsible) ── */}
+        {tier === 'pro' && (adaptationHistory.length > 0 || repWarnings.length > 0) && (
+          <View style={styles.section}>
+              {(
                 <View style={styles.adaptHistCard}>
                   <TouchableOpacity
                     style={styles.adaptHistHeader}
@@ -930,29 +879,8 @@ export default function AthleteHubScreen({ navigation }) {
                   )}
                 </View>
               )}
-            </>
-          )}
-
-        </View>
-
-        {/* ── Preferences ──────────────────────────────────
-            Settings and wellbeing don't belong under Coaching: one is
-            account-level (units, exports), the other is a calmness /
-            health screening that adjusts UX rather than the plan. Both
-            sit in their own section so the Coaching block reads as
-            actual coaching tools. */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Preferences</Text>
-          {tier === 'pro' && (
-            <NavRow
-              icon="shield-checkmark-outline"
-              label="Wellbeing check"
-              sub="Update your health screening answers. Shapes how your Precision Coaching is applied."
-              onPress={() => navigation.navigate('WellbeingCheck')}
-            />
-          )}
-          <NavRow icon="settings-outline" label="Settings" sub="Units, data export, preferences" onPress={() => navigation.navigate('Settings')} />
-        </View>
+          </View>
+        )}
 
         {/* ── About ─────────────────────────────────────── */}
         <View style={styles.about}>
@@ -1021,24 +949,6 @@ function MetricChip({ label, value }) {
       <Text style={styles.metricChipValue}>{value}</Text>
       <Text style={styles.metricChipLabel}>{label}</Text>
     </View>
-  );
-}
-
-function NavRow({ icon, label, sub, onPress, tooltip }) {
-  return (
-    <PressableCard style={styles.navRow} onPress={onPress} accessibilityLabel={label}>
-      <View style={styles.navRowIcon}>
-        <Ionicons name={icon} size={18} color={colors.primary} />
-      </View>
-      <View style={styles.navRowText}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-          <Text style={styles.navRowLabel}>{label}</Text>
-          {tooltip ? <InfoTooltip size={11} text={tooltip} /> : null}
-        </View>
-        {sub && <Text style={styles.navRowSub}>{sub}</Text>}
-      </View>
-      <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-    </PressableCard>
   );
 }
 

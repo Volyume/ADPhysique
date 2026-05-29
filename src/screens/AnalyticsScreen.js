@@ -649,6 +649,7 @@ export default function AnalyticsScreen({ navigation }) {
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Explore</Text>
           <View style={styles.navGrid}>
+            <NavTile icon="pulse" color={colors.primary} label="Recovery & readiness" onPress={() => navigation.navigate('AthleteHub')} />
             <NavTile icon="trophy" color={colors.gold} label="Personal Records" onPress={() => navigation.navigate('PRWall')} />
             <NavTile icon="barbell" color={colors.primary} label="Lift Progress" onPress={() => navigation.navigate('ExerciseLibrary')} />
             <NavTile icon="time" color={colors.textSecondary} label="Full History" onPress={() => navigation.navigate('WorkoutHistory')} />

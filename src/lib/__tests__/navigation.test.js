@@ -96,8 +96,8 @@ describe('navigation integrity', () => {
     // entered by tab press / initial route, not via navigate(). Exempt
     // a small allowlist.
     const exempt = new Set([
-      'HomeTab', 'PlansTab', 'ProgressTab', 'YouTab',
-      'Home', 'Plans', 'Progress', 'AthleteHub',
+      'HomeTab', 'PlansTab', 'ProgressTab', 'ProfileTab',
+      'Home', 'Plans', 'Progress', 'You', 'AthleteHub',
       'Welcome', 'Login', 'FirstRun',
     ]);
     const orphans = [];

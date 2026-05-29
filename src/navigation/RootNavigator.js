@@ -44,6 +44,7 @@ import PRWallScreen from '../screens/PRWallScreen';
 import BodyMetricsScreen from '../screens/BodyMetricsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import AthleteHubScreen from '../screens/AthleteHubScreen';
+import YouScreen from '../screens/YouScreen';
 import PlansScreen from '../screens/PlansScreen';
 import PlanDetailScreen from '../screens/PlanDetailScreen';
 import RoutineDetailScreen from '../screens/RoutineDetailScreen';
@@ -264,6 +265,7 @@ function ProgressStack({ navigation }) {
       <Stack.Screen name="PRWall" component={PRWallScreen} options={{ title: 'Personal Records' }} />
       <Stack.Screen name="CoachReview" component={CoachReviewScreen} options={{ title: 'Weekly Review' }} />
       <Stack.Screen name="BodyMetrics" component={GatedBodyMetrics} options={{ title: 'Body Metrics' }} />
+      <Stack.Screen name="AthleteHub" component={AthleteHubScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ExerciseLibrary" component={ExerciseLibraryScreen} options={{ title: 'Lift Progress' }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise' }} />
       <Stack.Screen name="YearOfLifts" component={YearOfLiftsScreen} options={{ headerShown: false }} />
@@ -281,7 +283,7 @@ function ProfileStack({ navigation }) {
   }, [navigation]);
   return (
     <Stack.Navigator screenOptions={{ ...stackOptions, ...(useStackMotionOverride() || {}) }}>
-      <Stack.Screen name="AthleteHub" component={AthleteHubScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="You" component={YouScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
       <Stack.Screen name="NutritionTargets" component={GatedNutritionTargets} options={{ title: 'Nutrition Targets' }} />
       <Stack.Screen name="NutritionEducation" component={NutritionEducationScreen} options={{ headerShown: false }} />
