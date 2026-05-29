@@ -28,7 +28,6 @@ import {
   phaseToNutritionKey,
   phaseToCoachingKey,
   daysToActivityLevel,
-  shouldShowGoalLockOnboarding,
 } from '../lib/coachingGoals';
 import { calculateNutritionTargets } from '../lib/nutritionEngine';
 
@@ -352,21 +351,13 @@ export default function ProOnboardingScreen({ navigation }) {
       Alert.alert('Complete all fields', 'Please fill out your training profile to continue.');
       return;
     }
-    // Goal lock consent gate. Locked in ONBOARDING_SEQUENCE_LOCKED.md
-    // screen 6: users picking competition divisions OR advanced recomp
-    // see the goal-lock prompt so they can opt into the higher
-    // ED-pattern detector threshold. GoalLockConsentScreen writes the
-    // choice directly to user_body_profile; here we just chain its
-    // onContinue back into our step machine.
-    if (shouldShowGoalLockOnboarding({ trainingGoal, trainingPhase, experience })) {
-      navigation.navigate('GoalLockConsent', {
-        onContinue: () => {
-          navigation.goBack();
-          setStep(4);
-        },
-      });
-      return;
-    }
+    // The "aggressive cuts" goal-lock interstitial was removed from
+    // onboarding (founder, 2026-05-29): it fired for anyone picking a
+    // competition division even when they were lean-gaining, so the copy
+    // was wrong, and the framing doesn't fit a science-led app. Everyone
+    // now keeps the standard ED-pattern threshold (the more protective
+    // 2-signal setting); the advanced opt-in still lives on the Goal lock
+    // screen under You for anyone who wants it.
     setStep(4);
   }
 

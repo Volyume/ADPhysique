@@ -62,14 +62,22 @@ Behaviour:
   no consent is recorded. They re-enter the flow at screen 1 next
   time.
 
-### Screen 6: Goal lock consent (NEW, conditional)
+### Screen 6: Goal lock consent (REMOVED from onboarding 2026-05-29, founder)
 
-Only shown if the goal selected on screen 5 is either:
-- `physique_competition`
-- `advanced_recomp`
+**Founder override 2026-05-29.** This interstitial is no longer shown
+during onboarding or the goal-setup flow. It fired for anyone picking a
+competition division even when they were lean-gaining, so the "aggressive
+cuts" copy was wrong, and the framing does not fit a science-led app
+("it's not aggressive if it's scientific"). Onboarding now goes straight
+from the training profile to the recovery step.
 
-For any other goal, this screen is skipped entirely (user goes
-straight to screen 7, SCOFF).
+Effect on safety: everyone keeps the standard ED-pattern threshold (the
+more protective 2-signal setting). The advanced opt-in (3-signal) still
+exists on the standalone Goal lock screen reachable from You, so no
+capability is lost; it just no longer interrupts setup.
+
+Original spec (for reference): only shown if the goal selected on screen 5
+was `physique_competition` or `advanced_recomp`.
 
 Locked copy:
 
