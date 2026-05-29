@@ -60,6 +60,7 @@ function rowToEntry(row) {
     metric_date: new Date(row.loggedAt ?? row.createdAt ?? Date.now())
       .toISOString().slice(0, 10),
     body_weight: row.weightKg ?? null,
+    body_fat:    row.bodyFatPercent ?? null,
     chest:       row.chestCm ?? null,
     shoulders:   row.shouldersCm ?? null,
     arms:        row.armCm ?? null,
@@ -173,6 +174,72 @@ function WeightTrendChart({ entries, units, bodyWeightUnits }) {
         xAxisLabelTextStyle={chartStyles.axisText}
         noOfSections={3}
         yAxisOffset={minW}
+        maxValue={axisRange}
+        backgroundColor={colors.surface}
+        xAxisColor={colors.border}
+        yAxisColor={colors.border}
+        rulesColor={colors.border}
+        rulesType="dashed"
+        showVerticalLines={false}
+      />
+    </View>
+  );
+}
+
+// ─── Body Fat Trend Chart ─────────────────────────────────────────────────────
+
+function BodyFatTrendChart({ entries }) {
+  const withData = useMemo(() => {
+    return entries
+      .filter(e => e.body_fat != null)
+      .sort((a, b) => a.metric_date.localeCompare(b.metric_date))
+      .slice(-12);
+  }, [entries]);
+
+  if (withData.length < 2) {
+    return (
+      <View style={chartStyles.emptyHint}>
+        <Text style={chartStyles.emptyHintText}>
+          Log body fat at least twice to see the trend.
+        </Text>
+      </View>
+    );
+  }
+
+  const values = withData.map(e => e.body_fat);
+  const minV = Math.floor(Math.min(...values) - 1);
+  const maxV = Math.ceil(Math.max(...values) + 1);
+  const axisRange = Math.max(maxV - minV, 1);
+
+  const data = withData.map((e, i) => ({
+    value: e.body_fat,
+    label: i === 0 || i === withData.length - 1
+      ? safeFormatDate(e.metric_date, 'MMM d')
+      : '',
+  }));
+
+  const chartWidth = SCREEN_W - spacing.lg * 2 - 32;
+
+  return (
+    <View style={chartStyles.wrap}>
+      <LineChart
+        data={data}
+        width={chartWidth}
+        height={100}
+        color={colors.primary}
+        thickness={2}
+        startFillColor={colors.primary + '30'}
+        endFillColor={colors.primary + '05'}
+        areaChart
+        curved
+        hideDataPoints={withData.length > 6}
+        dataPointsColor={colors.primary}
+        dataPointsRadius={3}
+        yAxisLabelSuffix=" %"
+        yAxisTextStyle={chartStyles.axisText}
+        xAxisLabelTextStyle={chartStyles.axisText}
+        noOfSections={3}
+        yAxisOffset={minV}
         maxValue={axisRange}
         backgroundColor={colors.surface}
         xAxisColor={colors.border}
@@ -302,7 +369,7 @@ export default function BodyMetricsScreen({ navigation }) {
   const [showForm, setShowForm] = useState(false);
   const [showMeasurements, setShowMeasurements] = useState(false);
   const [form, setForm] = useState({
-    body_weight: '', body_weight_st: '', body_weight_st_lbs: '0',
+    body_weight: '', body_weight_st: '', body_weight_st_lbs: '0', body_fat: '',
     chest: '', shoulders: '', arms: '', forearms: '',
     waist: '', hips: '', quads: '', hamstrings: '', calves: '',
     metric_date: format(new Date(), 'yyyy-MM-dd'), notes: '',
@@ -461,8 +528,8 @@ export default function BodyMetricsScreen({ navigation }) {
 
   async function saveMetrics() {
     const hasBW = bwu === 'st' ? !!form.body_weight_st : !!form.body_weight;
-    if (!hasBW && !form.chest) {
-      Alert.alert('Missing data', 'Enter at least body weight or one measurement.');
+    if (!hasBW && !form.chest && !form.body_fat) {
+      Alert.alert('Missing data', 'Enter at least body weight, body fat, or one measurement.');
       return;
     }
     setSaving(true);
@@ -477,6 +544,15 @@ export default function BodyMetricsScreen({ navigation }) {
       } else if (form.body_weight) {
         const kg = parseBodyWeightToKg(form.body_weight, bwu);
         if (!isNaN(kg) && kg > 0) data.weightKg = kg;
+      }
+      // Body fat %, manual entry. Stored with its source so a future
+      // scale/scan import can be told apart from a typed-in value.
+      if (form.body_fat !== '' && form.body_fat != null) {
+        const bf = parseFloat(form.body_fat);
+        if (Number.isFinite(bf) && bf > 0 && bf <= 75) {
+          data.bodyFatPercent = Math.round(bf * 10) / 10;
+          data.bodyFatSource = 'manual';
+        }
       }
       // Measurements (cm), stored as-is
       for (const [formKey, dbField] of Object.entries(FIELD_MAP)) {
@@ -657,6 +733,24 @@ export default function BodyMetricsScreen({ navigation }) {
                 </Text>
               )}
             </View>
+
+            {/* Body composition: body fat % + its own trend, shown once
+                the user has logged it. The delta is rendered neutrally
+                (no good/bad colour) given the sensitivity of this screen. */}
+            {latest?.body_fat != null && (
+              <View style={styles.bodyFatBlock}>
+                <View style={styles.bodyFatRow}>
+                  <Text style={styles.sectionTitle}>Body fat</Text>
+                  <View style={styles.bodyFatValueRow}>
+                    <Text style={styles.bodyFatValue}>{latest.body_fat}%</Text>
+                    {getDelta('body_fat') && (
+                      <DeltaBadge delta={parseFloat(getDelta('body_fat'))} units="%" small neutral />
+                    )}
+                  </View>
+                </View>
+                <BodyFatTrendChart entries={history} />
+              </View>
+            )}
           </View>
         ) : (
           <View style={styles.emptyCard}>
@@ -733,6 +827,19 @@ export default function BodyMetricsScreen({ navigation }) {
                 />
               </View>
             )}
+
+            <View style={styles.formRow}>
+              <Text style={styles.formLabel}>Body fat (%)</Text>
+              <TextInput
+                style={styles.formInput}
+                value={form.body_fat}
+                onChangeText={v => setForm(f => ({ ...f, body_fat: v }))}
+                keyboardType="decimal-pad"
+                placeholder="optional"
+                placeholderTextColor={colors.textMuted}
+                maxLength={4}
+              />
+            </View>
 
             {/* Measurements section, collapsed by default */}
             <TouchableOpacity
@@ -867,9 +974,9 @@ export default function BodyMetricsScreen({ navigation }) {
   );
 }
 
-function DeltaBadge({ delta, units, small }) {
+function DeltaBadge({ delta, units, small, neutral }) {
   const isUp = delta > 0;
-  const color = isUp ? colors.success : colors.error;
+  const color = neutral ? colors.textMuted : (isUp ? colors.success : colors.error);
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
       <Ionicons name={isUp ? 'trending-up' : 'trending-down'} size={small ? 11 : 14} color={color} />
@@ -952,6 +1059,10 @@ const styles = StyleSheet.create({
   weightRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   weightValue: { fontSize: fontSize.xxxl, fontWeight: fontWeight.black, color: colors.textPrimary },
   trendHint: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
+  bodyFatBlock: { gap: spacing.xs, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md },
+  bodyFatRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  bodyFatValueRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  bodyFatValue: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
   measureGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   measureCell: {
     minWidth: '30%', backgroundColor: colors.surface2, borderRadius: radius.md,
