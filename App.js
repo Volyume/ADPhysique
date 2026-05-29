@@ -576,6 +576,19 @@ export default function App() {
         // eslint-disable-next-line global-require
         const { syncAll } = require('./src/lib/sync');
         await syncAll({ userId: supabaseUserId, localUserId, triggeredBy });
+        // Auto-import any new bodyweight from Apple Health / Health
+        // Connect so the morning weight stays in sync with a smart scale
+        // without a manual Settings visit (the app-store promise).
+        // importNewWeights self-gates on permission (returns early if not
+        // granted) and is incremental (reads only since the last import),
+        // so it's cheap on every trigger. Fire-and-forget.
+        if (localUserId) {
+          try {
+            // eslint-disable-next-line global-require
+            const { importNewWeights } = require('./src/lib/health');
+            importNewWeights(localUserId).catch(() => {});
+          } catch (_) { /* health module unavailable, tolerate */ }
+        }
       } catch (_) { /* tolerate */ }
     }
 
