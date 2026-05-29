@@ -41,6 +41,7 @@ import { resolveFoodRef } from '../lib/food/sources/localCache';
 import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
+import { useToast } from '../components/Toast';
 import FoodDetailSheet from '../components/food/FoodDetailSheet';
 import QuickAddSheet from '../components/food/QuickAddSheet';
 import FoodRow from '../components/food/FoodRow';
@@ -61,6 +62,7 @@ const EMPTY_COPY = {
 export default function FoodSearchScreen({ navigation, route }) {
   const { user, userProfile } = useAppStore(useShallow((s) => ({ user: s.user, userProfile: s.userProfile })));
   const userId = user?.id;
+  const toast = useToast();
 
   const mealSlot = route?.params?.mealSlot ?? 'snack';
   const entryDate = route?.params?.entryDate ?? new Date().toISOString().slice(0, 10);
@@ -370,6 +372,12 @@ export default function FoodSearchScreen({ navigation, route }) {
         else set.delete(food.food_ref);
         return set;
       });
+      // The long-press preference cycle is otherwise invisible; confirm
+      // the new state so the gesture has feedback.
+      const msg = next === 'fav' ? 'Added to favourites'
+        : next === 'dislike' ? 'Hidden from suggestions'
+        : 'Preference cleared';
+      toast.show(msg);
       loadBrowse();
     } catch (_) {}
   }
