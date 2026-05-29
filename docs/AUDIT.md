@@ -442,16 +442,19 @@ explicit opt-in preference, not as a default. Terminology ("Plan", "Routine",
   Skia weight); pin native deps with `expo install`; add an explicit
   `transformIgnorePatterns`.
 
-**D7. Performance hot spots.** [Reported]
-- Lists: 14 of 59 screens use `FlatList`; histories that grow with user data
-  render via `ScrollView` + `.map` without virtualisation
-  (`WorkoutHistoryScreen`, `PRWallScreen`, `BodyMetricsScreen`,
-  `MesocycleBuilderScreen`).
-- Data: 61 `SELECT *` including bulk getters (`getAllExercises:1153`,
-  `getAllWorkoutSets:1319`) feed the full bulk upload.
-- Severity: **Medium**.
-- Fix: move growing lists to `FlatList` with `keyExtractor`; select only needed
-  columns in bulk getters.
+**D7. Performance hot spots.** [Largely overturned on verification 2026-05-29]
+- **Lists: not a real issue.** Verified each named screen: `WorkoutHistoryScreen`,
+  `PRWallScreen`, and `MesocycleBuilderScreen` already render their main lists
+  with `FlatList`; `BodyMetricsScreen` caps its history at `.slice(0, 12)` and
+  its other `.map`s iterate the fixed `MEASUREMENTS` array. None render an
+  unbounded list via `.map`. The original "44 screens use `.map`" count counted
+  data-transform `.map()` (building chart data, lookup maps) as if it were
+  render, which it is not. No FlatList migration is needed.
+- **Data: still worth a look (Low).** 61 `SELECT *` including bulk getters
+  (`getAllExercises:1153`, `getAllWorkoutSets:1319`) feed the bulk upload; on a
+  heavy user this is the dominant cost. Trimming to needed columns is a real but
+  low-priority improvement.
+- Severity: **Low** (down from Medium; the list half does not exist).
 
 **D8. Migration tracking and status-doc drift.** [Verified]
 - Location: 53 migration files exist; `supabase/README.md` tracks roughly
@@ -547,18 +550,17 @@ possible regardless of this plan.
   versions, so the float risk is only on a fresh `npm install`; a range change
   needs a coordinated lockfile reinstall), and charting consolidation (a visual
   change to the one victory-native screen, not verifiable here).
-- D7 and D3/D5: **NOT done, deferred with cause.** These cannot be done safely in
-  a sandbox that cannot run the app:
-  - D3/D5 (split the 5,334-line `database.js`, break the store/sync cycle): the
-    test suite **mocks `database.js` wholesale**, so neither the tests nor an
-    app-run can verify a split here. Splitting the most-depended-on file with no
-    verification path would be reckless. It needs a run-capable session, ideally
-    incremental (one domain at a time behind a re-export facade).
-  - D7 (ScrollView+`.map` to `FlatList`): a visual/behavioural change. The mount
-    sweep catches crashes but not nested-VirtualizedList warnings, scroll
-    behaviour, or layout. If these lists sit inside a parent `ScrollView` (common),
-    a blind migration introduces the "VirtualizedLists nested in a plain
-    ScrollView" regression. Needs on-device verification.
+- D3/D5: **NOT done, deferred with cause.** Splitting the 5,334-line
+  `database.js` and breaking the store/sync cycle is pure maintainability
+  tidiness with no user benefit, and it is the highest-risk change in the
+  codebase. The test suite **mocks `database.js` wholesale**, so the tests
+  cannot verify a split. With the app runnable it could be done incrementally
+  (one domain at a time behind a re-export facade), but it is the same
+  category as the row-12 sync refactor the founder deferred for exactly this
+  reason (not worth rewriting the most fragile subsystem for tidiness). Pending
+  a founder decision on whether it is worth a dedicated effort.
+- D7: **Not needed (overturned).** See finding D7: the named screens already use
+  `FlatList` or render bounded lists; no migration required.
 
 **Standing migration-ordering note.** Do not apply migration 049
 (drop `peak_week_plans`) until: (1) the client push/pull/CRUD refs are removed,
