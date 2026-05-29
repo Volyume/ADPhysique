@@ -5,6 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import {
@@ -12,10 +13,16 @@ import {
   activatePlanWithBlock, archivePlan, duplicatePlan, copyPlanFromLibrary,
   createWorkout, getRoutineExercisesWithDetails, getActivePlan,
 } from '../lib/database';
+import { PLAN_WHYTHIS_KEY } from '../lib/planAutoGen';
 import useAppStore from '../store/useAppStore';
 import { logError } from '../lib/errorLog';
 import { useToast } from '../components/Toast';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
+
+// Same reading order the enrollment reveal uses: how the week is structured,
+// then why the volume and progression, then exercise selection and the
+// recovery / nutrition adjustments that shaped it.
+const WHY_ORDER = ['schedule', 'goal', 'experience', 'progression', 'equipment', 'recovery', 'nutrition', 'weakPoints'];
 
 export default function PlanDetailScreen({ navigation, route }) {
   const { planId, isLibrary = false } = route.params || {};
@@ -25,6 +32,7 @@ export default function PlanDetailScreen({ navigation, route }) {
   const [workouts, setWorkouts] = useState([]);
   const [exerciseCounts, setExerciseCounts] = useState({});
   const [activePlan, setActivePlanData] = useState(null);
+  const [whyThis, setWhyThis] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
   useFocusEffect(
@@ -44,6 +52,17 @@ export default function PlanDetailScreen({ navigation, route }) {
       setWorkouts(routines);
       setExerciseCounts(counts);
       setActivePlanData(active);
+      // The rationale cache is per-user and always tracks the active
+      // auto-generated plan (every reroll archives the others), so it's
+      // only meaningful here when this plan is the active one. Loading it
+      // is cheap; the render gates on isActive.
+      if (user?.id) {
+        try {
+          const raw = await AsyncStorage.getItem(PLAN_WHYTHIS_KEY(user.id));
+          const parsed = raw ? JSON.parse(raw) : null;
+          setWhyThis(parsed && typeof parsed === 'object' ? parsed : null);
+        } catch (_) { setWhyThis(null); }
+      }
       if (p) navigation.setOptions({ title: p.name || 'Plan' });
     } catch (e) {
       logError('PlanDetailScreen.loadData', e, { planId, userId: user?.id });
@@ -275,6 +294,23 @@ export default function PlanDetailScreen({ navigation, route }) {
           )}
         </View>
 
+        {/* Why this plan, for you. Only on the active auto-generated plan,
+            mirroring the enrollment reveal so the rationale is here any
+            time, not just right after setup. */}
+        {isActive && !isLibrary && whyThis && WHY_ORDER.some(k => whyThis[k]) && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Why this plan, for you</Text>
+            <View style={styles.whyCard}>
+              {WHY_ORDER.filter(k => whyThis[k]).map((k, i, arr) => (
+                <View key={k} style={[styles.whyItem, i < arr.length - 1 && styles.whyItemGap]}>
+                  <View style={styles.whyBullet} />
+                  <Text style={styles.whyText}>{whyThis[k]}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
         {/* Manage actions, free tier only. Pro users manage their plan
             through the goal-change wizard in Athlete Hub. */}
         {!isLibrary && tier !== 'pro' && (
@@ -372,4 +408,12 @@ const styles = StyleSheet.create({
   },
   manageRowLast: { borderBottomWidth: 0 },
   manageRowText: { flex: 1, fontSize: fontSize.md, color: colors.textPrimary },
+  whyCard: {
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
+    borderWidth: 1, borderColor: colors.border, gap: spacing.sm,
+  },
+  whyItem: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
+  whyItemGap: { marginBottom: spacing.xs },
+  whyBullet: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary, marginTop: 7 },
+  whyText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
 });
