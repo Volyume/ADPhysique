@@ -209,11 +209,6 @@ jest.mock('react-native-gifted-charts', () => {
   };
 }, { virtual: true });
 
-jest.mock('react-native-calendar-heatmap', () => {
-  const React = require('react');
-  return { default: props => React.createElement('CalendarHeatmap', props) };
-}, { virtual: true });
-
 jest.mock('victory-native', () => ({
   CartesianChart: 'CartesianChart', Line: 'Line', Bar: 'Bar',
 }), { virtual: true });

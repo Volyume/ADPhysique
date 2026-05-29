@@ -533,13 +533,32 @@ possible regardless of this plan.
 - The full legacy-to-modular consolidation (D2) stays deferred per the prior
   founder call.
 
-**Phase 5: architecture debt (large, not blocking).**
-- D4: tests for `channels`, `activeWorkout`, `trainingReminders`.
-- D6: drop `react-native-calendar-heatmap`; pin native deps; add jest
-  `transformIgnorePatterns`; consolidate charting if feasible.
-- D7: move growing histories to `FlatList`; trim bulk-getter `SELECT *`.
-- D3/D5: split `database.js` by domain and break the store/sync import cycle.
-  Largest item; sequence last, with tests.
+**Phase 5: architecture debt (large, not blocking). PARTIALLY DONE 2026-05-29.**
+- D4: **Done.** Tests added for the three untested runtime-critical notification
+  modules: `notifications.channels.test.js`, `notifications.trainingReminders.test.js`,
+  `notifications.activeWorkout.test.js` (8 tests). Pins the channel config, the
+  enabled/permission gates + weekday conversion, and the disabled-surface no-op.
+- D6: **Partially done.** Dropped the dead `react-native-calendar-heatmap` dep
+  (only a test mock referenced it; `npm uninstall` kept package.json + lockfile
+  in sync) and removed its stale jest mock. **Deferred:** the jest
+  `transformIgnorePatterns` change (wide blast radius on the whole test config
+  for an intermittent flake; needs a careful full-suite verification), native-dep
+  range pinning (CI uses `npm ci` against the lockfile, which already pins exact
+  versions, so the float risk is only on a fresh `npm install`; a range change
+  needs a coordinated lockfile reinstall), and charting consolidation (a visual
+  change to the one victory-native screen, not verifiable here).
+- D7 and D3/D5: **NOT done, deferred with cause.** These cannot be done safely in
+  a sandbox that cannot run the app:
+  - D3/D5 (split the 5,334-line `database.js`, break the store/sync cycle): the
+    test suite **mocks `database.js` wholesale**, so neither the tests nor an
+    app-run can verify a split here. Splitting the most-depended-on file with no
+    verification path would be reckless. It needs a run-capable session, ideally
+    incremental (one domain at a time behind a re-export facade).
+  - D7 (ScrollView+`.map` to `FlatList`): a visual/behavioural change. The mount
+    sweep catches crashes but not nested-VirtualizedList warnings, scroll
+    behaviour, or layout. If these lists sit inside a parent `ScrollView` (common),
+    a blind migration introduces the "VirtualizedLists nested in a plain
+    ScrollView" regression. Needs on-device verification.
 
 **Standing migration-ordering note.** Do not apply migration 049
 (drop `peak_week_plans`) until: (1) the client push/pull/CRUD refs are removed,

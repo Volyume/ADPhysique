@@ -63,7 +63,6 @@
     "live-activity": "file:./modules/live-activity",
     "react": "18.2.0",
     "react-native": "0.74.5",
-    "react-native-calendar-heatmap": "^0.2.4",
     "react-native-gesture-handler": "~2.16.1",
     "react-native-gifted-charts": "^1.4.41",
     "react-native-iap": "^12.16.1",
