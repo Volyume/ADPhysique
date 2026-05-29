@@ -45,10 +45,11 @@ no confirmed Critical findings. That is a real result, not a gap in the pass.
 4. **[High] Migration 049 is a live trap.** The client still pushes and pulls
    `peak_week_plans` (`sync.js:1002`, `:1455`). Applying the drafted 049 before
    those refs are removed and a build ships would 42P01 every sync run.
-5. **[High] Hero gradients on the home screen.** `GradientCard` renders a
-   `LinearGradient` and is used as the daily-narrative hero on `HomeScreen.js:728`
-   (also AthleteHub, YearOfLifts). The locked design rule is "no gradients,
-   background `#0D0D0D`". Clearest design-fingerprint breach in the app.
+5. **[High, FIXED 2026-05-29 Phase 3] Hero gradients on the home screen.**
+   `GradientCard` rendered a `LinearGradient` hero (HomeScreen, AthleteHub,
+   YearOfLifts), against the locked "no gradients, background `#0D0D0D`" rule.
+   Fixed: the component now renders a flat `colors.surface` card with an amber
+   accent border, no gradient. Needs an on-device visual check.
 6. **[High] Two sync layers with ambiguous ownership.** Screens import both
    legacy `sync.js` and modular `sync/`; the legacy file is both a provider and
    a re-export shim of the new one. This is the documented cause of the past
@@ -496,16 +497,20 @@ possible regardless of this plan.
   left non-uid-scoped on purpose (single-tenant local store; scoping would miss
   legacy null-`user_id` rows). Reconciles locked decision 2. No migration.
 
-**Phase 3: copy and design fingerprint (UX, not runtime-critical).**
-- C1: replace the `GradientCard` hero usages on Home, AthleteHub, YearOfLifts
-  with a flat surface and amber accent.
-- C2/C3/C4: tighten the two SettingsScreen error toasts, drop the
-  WorkoutSummary greeting, normalise "Please try again." to "Try again.".
-- C5: route ProUpgrade / ManualBuilder / SyncStatusBadge hex through theme
-  tokens.
-- A4: rewrite the stale "Continue Locally" error strings in `supabase.js`.
-- Verify on device (the sandbox cannot run the app; flag this explicitly when
-  shipping).
+**Phase 3: copy and design fingerprint (UX, not runtime-critical). DONE 2026-05-29.**
+- C1: `GradientCard` now renders flat (`colors.surface` + amber accent border),
+  no gradient, on Home / AthleteHub / YearOfLifts.
+- C2: the two `SettingsScreen` chatbot error toasts cut to terse lines.
+- C3: the `WorkoutSummary` "Nice work" greeting removed.
+- C4: standalone "Please try again." normalised to "Try again." across the
+  screens (compound and informational variants left as-is).
+- C5: `ProUpgrade` / `ManualBuilder` / `SyncStatusBadge` (and the Apple-logo
+  colour in `LoginScreen` / `ProOnboarding`) routed through theme tokens, which
+  restores the colour-blind palette swap on those surfaces.
+- A4-copy: the stale "Continue Locally" strings in `supabase.js` rewritten.
+- **Not verifiable here:** the sandbox cannot run the app, so the visual result
+  (especially the flat hero) needs an on-device check. Lint green, 449-test
+  mount sweep green.
 
 **Phase 4: contained sync robustness. [runtime-critical: offline sync]**
 - A2: send `user_id` explicitly in the routine_exercises / mesocycle_weeks push.

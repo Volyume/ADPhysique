@@ -470,7 +470,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
       logError('WeeklyCheckInScreen.submit', e, { userId: user?.id });
       Alert.alert(
         'Couldn\'t save check-in',
-        e?.message ?? 'Please try again. Your answers are still here.',
+        e?.message ?? 'Try again.',
       );
     } finally {
       setBusy(false);

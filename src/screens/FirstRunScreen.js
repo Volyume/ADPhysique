@@ -33,7 +33,7 @@ export default function FirstRunScreen({ navigation: _navigation }) {
       if (user?.id) await saveLocalProfile(user.id, merged);
       await completeFirstRun();
     } catch (e) {
-      Alert.alert('Something went wrong', e?.message ?? 'Please try again.');
+      Alert.alert('Something went wrong', e?.message ?? 'Try again.');
       setBusy(false);
     }
   }

@@ -69,13 +69,13 @@ export async function getCurrentUser() {
 
 export async function signInWithEmail(email, password) {
   const c = getSupabaseClient();
-  if (!c) return { data: null, error: { message: 'Supabase is not configured. Use Continue Locally.' } };
+  if (!c) return { data: null, error: { message: 'Cloud sign-in is not available right now.' } };
   return c.auth.signInWithPassword({ email, password });
 }
 
 export async function signUpWithEmail(email, password) {
   const c = getSupabaseClient();
-  if (!c) return { data: null, error: { message: 'Supabase is not configured. Use Continue Locally.' } };
+  if (!c) return { data: null, error: { message: 'Cloud sign-in is not available right now.' } };
   return c.auth.signUp({ email, password });
 }
 
@@ -87,7 +87,7 @@ export async function signOut() {
 
 export async function resetPassword(email) {
   const c = getSupabaseClient();
-  if (!c) return { data: null, error: { message: 'Supabase is not configured. Use Continue Locally.' } };
+  if (!c) return { data: null, error: { message: 'Cloud sign-in is not available right now.' } };
   return c.auth.resetPasswordForEmail(email);
 }
 
@@ -113,7 +113,7 @@ const OAUTH_REDIRECT_URL = 'volyume://';
 async function _signInWithOAuthProvider(provider) {
   const c = getSupabaseClient();
   if (!c) {
-    return { error: { message: 'Cloud auth is not available right now. Try email sign-in or Continue Locally.' } };
+    return { error: { message: 'Cloud sign-in is not available right now. Try again.' } };
   }
   try {
     // 1. Ask Supabase for the provider auth URL. skipBrowserRedirect makes

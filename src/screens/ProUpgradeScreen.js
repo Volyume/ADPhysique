@@ -52,7 +52,7 @@ export default function ProUpgradeScreen({ navigation }) {
       await activatePro(session.user.id, { isNew: false });
       setDone(true);
     } catch (_) {
-      Alert.alert('Something went wrong', 'Please try again.');
+      Alert.alert('Something went wrong', 'Try again.');
     }
     setBusy(false);
   }
@@ -136,7 +136,7 @@ export default function ProUpgradeScreen({ navigation }) {
         setDone(true);
       }
     } catch (_) {
-      Alert.alert('Something went wrong', 'Please try again.');
+      Alert.alert('Something went wrong', 'Try again.');
     }
     setBusy(false);
   }
@@ -479,9 +479,9 @@ const styles = StyleSheet.create({
   oauthBtnApple: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.sm, paddingVertical: spacing.md, borderRadius: radius.md,
-    backgroundColor: '#000000',
+    backgroundColor: colors.appleBtnBg,
   },
-  oauthBtnAppleText: { color: '#FFFFFF', fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  oauthBtnAppleText: { color: colors.appleBtnText, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
   oauthDivider: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   oauthDividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
   oauthDividerText: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.medium },

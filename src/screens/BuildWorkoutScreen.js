@@ -96,7 +96,7 @@ export default function BuildWorkoutScreen({ navigation }) {
       navigation.replace('ActiveWorkout');
     } catch (e) {
       logError('BuildWorkoutScreen.handleStartTraining', e, { userId: user?.id, exerciseCount: exercises.length });
-      Alert.alert('Couldn\'t start workout', e?.message ?? 'Please try again.');
+      Alert.alert('Couldn\'t start workout', e?.message ?? 'Try again.');
     } finally {
       setStarting(false);
     }
@@ -109,7 +109,7 @@ export default function BuildWorkoutScreen({ navigation }) {
       navigation.replace('ActiveWorkout');
     } catch (e) {
       logError('BuildWorkoutScreen.handleSkip', e, { userId: user?.id });
-      Alert.alert('Couldn\'t start workout', e?.message ?? 'Please try again.');
+      Alert.alert('Couldn\'t start workout', e?.message ?? 'Try again.');
     }
   }
 

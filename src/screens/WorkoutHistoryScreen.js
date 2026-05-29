@@ -103,7 +103,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
       logError('WorkoutHistoryScreen.handleRepeatAsIs', e, {
         userId: user?.id, workoutId: workout?.id, routineId: workout?.routineId,
       });
-      Alert.alert('Couldn\'t repeat session', e?.message ?? 'Please try again.');
+      Alert.alert('Couldn\'t repeat session', e?.message ?? 'Try again.');
     }
   }
 

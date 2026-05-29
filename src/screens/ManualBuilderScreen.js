@@ -254,12 +254,13 @@ function muscleStatus(muscle, totalSets) {
   return 'over';
 }
 
+// Theme tokens (not raw hex) so these recolour with the colour-blind palette.
 const STATUS_COLOR = {
-  none: '#555',
-  low:  '#F5A623',
-  good: '#4CAF50',
-  high: '#4CAF50',
-  over: '#F44336',
+  none: colors.textMuted,
+  low:  colors.warning,
+  good: colors.success,
+  high: colors.success,
+  over: colors.error,
 };
 const STATUS_DOT = {
   none: '○',

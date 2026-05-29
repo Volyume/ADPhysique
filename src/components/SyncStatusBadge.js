@@ -24,10 +24,10 @@ import { getStatus, syncAll } from '../lib/sync';
 const POLL_MS = 5_000;
 
 const COLOURS = {
-  synced:  '#16A34A', // green
-  pending: colors.primary, // theme amber
+  synced:  colors.success,
+  pending: colors.primary,
   offline: colors.textMuted,
-  error:   '#DC2626',
+  error:   colors.error,
   unknown: colors.textMuted,
 };
 

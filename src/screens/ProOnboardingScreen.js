@@ -317,7 +317,7 @@ export default function ProOnboardingScreen({ navigation }) {
         return;
       }
     } catch (_) {
-      Alert.alert('Something went wrong', 'Please try again.');
+      Alert.alert('Something went wrong', 'Try again.');
     }
     setBusy(false);
   }
@@ -520,7 +520,7 @@ export default function ProOnboardingScreen({ navigation }) {
         }
       }
     } catch (e) {
-      Alert.alert('Something went wrong', e?.message ?? 'Please try again.');
+      Alert.alert('Something went wrong', e?.message ?? 'Try again.');
       setBusy(false);
       return;
     }
@@ -589,7 +589,7 @@ export default function ProOnboardingScreen({ navigation }) {
                   accessibilityRole="button"
                   accessibilityLabel="Continue with Apple"
                 >
-                  <Ionicons name="logo-apple" size={18} color="#FFFFFF" />
+                  <Ionicons name="logo-apple" size={18} color={colors.appleBtnText} />
                   <Text style={styles.oauthBtnAppleText}>Continue with Apple</Text>
                 </TouchableOpacity>
               )}

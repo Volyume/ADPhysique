@@ -370,7 +370,7 @@ export default function SettingsScreen({ navigation }) {
               if (result?.ok === false) {
                 Alert.alert(
                   "Couldn't sign out",
-                  "We couldn't sync your data to the cloud first. Check your connection and try again. Your edits are safe locally until they ship.",
+                  'Check your connection and try again.',
                 );
                 return;
               }
@@ -522,7 +522,7 @@ export default function SettingsScreen({ navigation }) {
         if (!cloudOk) {
           Alert.alert(
             "Couldn't delete your account",
-            `The cloud delete failed: ${cloudErr}\n\nYour account and data are still safe. Try again in a few minutes, or contact support if it keeps happening.`,
+            'Try again.',
           );
           setDeletingAccount(false);
           return;
@@ -674,7 +674,7 @@ export default function SettingsScreen({ navigation }) {
                 toast.show(`Removed ${n} orphaned routine${n === 1 ? '' : 's'}`, { variant: 'success' });
               } catch (e) {
                 logError('SettingsScreen.cleanOrphans', e, { userId: user.id });
-                Alert.alert("Couldn't clean up", e?.message ?? 'Please try again.');
+                Alert.alert("Couldn't clean up", e?.message ?? 'Try again.');
               }
             },
           },
@@ -682,7 +682,7 @@ export default function SettingsScreen({ navigation }) {
       );
     } catch (e) {
       logError('SettingsScreen.cleanOrphans.scan', e, { userId: user.id });
-      Alert.alert("Couldn't scan routines", e?.message ?? 'Please try again.');
+      Alert.alert("Couldn't scan routines", e?.message ?? 'Try again.');
     }
   }
 
@@ -702,7 +702,7 @@ export default function SettingsScreen({ navigation }) {
               toast.show('Workout history cleared', { variant: 'success' });
             } catch (e) {
               logError('SettingsScreen.handleClearHistory', e, { userId: user.id });
-              Alert.alert('Couldn\'t clear history', e?.message ?? 'Please try again.');
+              Alert.alert('Couldn\'t clear history', e?.message ?? 'Try again.');
             }
           },
         },

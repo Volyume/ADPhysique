@@ -385,7 +385,7 @@ export default function HomeScreen({ navigation }) {
       // Revert the optimistic update and surface the failure.
       setTodayWeight(previousTodayWeight);
       logError('HomeScreen.handleLogWeight', e, { userId: user?.id, weightKg });
-      Alert.alert('Couldn\'t save weight', e?.message ?? 'Please try again.');
+      Alert.alert('Couldn\'t save weight', e?.message ?? 'Try again.');
     }
     setSavingWeight(false);
   }
@@ -589,7 +589,7 @@ export default function HomeScreen({ navigation }) {
     } catch (e) {
       setIsStartingWorkout(false);
       logError('HomeScreen.handleStartNextWorkout', e, { userId: user?.id, routineId: target?.routine?.id });
-      Alert.alert('Couldn\'t load workout', e?.message ?? 'Please try again.');
+      Alert.alert('Couldn\'t load workout', e?.message ?? 'Try again.');
     }
   }
 
@@ -605,7 +605,7 @@ export default function HomeScreen({ navigation }) {
     } catch (e) {
       setIsStartingWorkout(false);
       logError('HomeScreen.confirmStart', e, { userId: user?.id, routineId: pending?.routineId, intent });
-      Alert.alert('Couldn\'t start workout', e?.message ?? 'Please try again.');
+      Alert.alert('Couldn\'t start workout', e?.message ?? 'Try again.');
     }
     pendingStartRef.current = null;
   }
@@ -626,7 +626,7 @@ export default function HomeScreen({ navigation }) {
       navigation.navigate('ActiveWorkout');
     } catch (e) {
       logError('HomeScreen.startBlankSession', e, { userId: user?.id });
-      Alert.alert("Couldn't start session", e?.message ?? 'Please try again.');
+      Alert.alert("Couldn't start session", e?.message ?? 'Try again.');
     }
   }
 
@@ -665,7 +665,7 @@ export default function HomeScreen({ navigation }) {
       setShowIntentPrompt(true);
     } catch (e) {
       logError('HomeScreen.handleRepeatLastSession', e, { userId: user?.id, lastSessionId: lastSession?.id, routineId });
-      Alert.alert('Couldn\'t load last session', e?.message ?? 'Please try again.');
+      Alert.alert('Couldn\'t load last session', e?.message ?? 'Try again.');
     }
   }
 

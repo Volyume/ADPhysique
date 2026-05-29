@@ -192,7 +192,7 @@ export default function PlansScreen({ navigation }) {
               await loadData();
             } catch (e) {
               logError('PlansScreen.handleRestartPlan', e, { userId: user?.id, planId: activePlan?.id });
-              Alert.alert('Couldn\'t restart plan', e?.message ?? 'Please try again.');
+              Alert.alert('Couldn\'t restart plan', e?.message ?? 'Try again.');
             }
           },
         },
@@ -225,7 +225,7 @@ export default function PlansScreen({ navigation }) {
       navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
     } catch (e) {
       logError('PlansScreen.handleStartNextWorkout', e, { userId: user?.id, planId: plan?.id });
-      Alert.alert('Couldn\'t start workout', e?.message ?? 'Please try again.');
+      Alert.alert('Couldn\'t start workout', e?.message ?? 'Try again.');
     }
   }
 
@@ -237,7 +237,7 @@ export default function PlansScreen({ navigation }) {
       await loadData();
     } catch (e) {
       logError('PlansScreen.handleSetActive', e, { userId: user?.id, planId: plan?.id });
-      Alert.alert('Couldn\'t set active plan', e?.message ?? 'Please try again.');
+      Alert.alert('Couldn\'t set active plan', e?.message ?? 'Try again.');
     }
   }
 
@@ -334,7 +334,7 @@ export default function PlansScreen({ navigation }) {
       navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
     } catch (e) {
       logError('PlansScreen.handleStartTemplate', e, { userId: user?.id, routineId: routine?.id });
-      Alert.alert('Couldn\'t start workout', e?.message ?? 'Please try again.');
+      Alert.alert('Couldn\'t start workout', e?.message ?? 'Try again.');
     }
   }
 

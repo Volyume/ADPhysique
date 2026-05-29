@@ -558,9 +558,6 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             <Ionicons name="checkmark-circle" size={28} color={colors.success} />
             <Text style={styles.completionTitle}>Session Complete</Text>
           </View>
-          {userProfile?.firstName ? (
-            <Text style={styles.completionGreeting}>Nice work, {userProfile.firstName}.</Text>
-          ) : null}
           <Text style={styles.completionDate}>{completionDate}</Text>
         </View>
 

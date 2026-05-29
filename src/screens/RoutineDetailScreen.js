@@ -270,7 +270,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
       navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
     } catch (e) {
       logError('RoutineDetailScreen.handleStartWorkout', e, { userId: user?.id, routineId });
-      Alert.alert('Couldn\'t start workout', e?.message ?? 'Please try again.');
+      Alert.alert('Couldn\'t start workout', e?.message ?? 'Try again.');
     }
   }
 
