@@ -21,7 +21,7 @@ export function kcalForServing(food) {
 // signal "you've said you don't eat this". Tapping still works
 // (the user can deliberately log a disliked food); it only
 // affects coach suggestions and the Favourites surface.
-export default function FoodRow({ food, isFav, preference, onPress, onLongPress }) {
+export default function FoodRow({ food, isFav, preference, onPress, onLongPress, onAdd }) {
   const sourceTag = SOURCE_LABEL[food.source] ?? null;
   const kcalPerServing = kcalForServing(food);
   // Back-compat: callers that still pass `isFav` get the legacy
@@ -62,7 +62,18 @@ export default function FoodRow({ food, isFav, preference, onPress, onLongPress 
       {pref === 'dislike'
         ? <Ionicons name="close-circle" size={20} color={colors.textMuted} style={{ marginRight: spacing.sm }} />
         : null}
-      <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
+      {onAdd ? (
+        <TouchableOpacity
+          onPress={onAdd}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          accessibilityRole="button"
+          accessibilityLabel={`Add ${food.name} to the plate`}
+        >
+          <Ionicons name="add-circle" size={26} color={colors.primary} />
+        </TouchableOpacity>
+      ) : (
+        <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
+      )}
     </TouchableOpacity>
   );
 }

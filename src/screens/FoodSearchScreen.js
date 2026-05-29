@@ -19,7 +19,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList,
-  ActivityIndicator, ScrollView,
+  ActivityIndicator, ScrollView, Modal,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -69,6 +69,12 @@ export default function FoodSearchScreen({ navigation, route }) {
   const [activeTab, setActiveTab] = useState('recents');
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const quickSavedRef = useRef(false);
+  // Multi-add plate: tap a row's + to drop a default serving here, then
+  // log the whole plate in one pass. Disabled in recipe pick mode (which
+  // returns a single ingredient). Mirrors MacroFactor's fastest workflow.
+  const [plate, setPlate] = useState([]);
+  const [showPlate, setShowPlate] = useState(false);
+  const isRecipePick = route?.params?.pickMode === 'recipe';
   const [results, setResults] = useState([]);
   const [recents, setRecents] = useState([]);
   const [favouriteRows, setFavouriteRows] = useState([]);
@@ -192,6 +198,8 @@ export default function FoodSearchScreen({ navigation, route }) {
   useFocusEffect(useCallback(() => { loadBrowse(); }, [loadBrowse]));
   useEffect(() => { if (activeTab === 'frequents') loadFrequents(); }, [activeTab, loadFrequents]);
   useEffect(() => { if (activeTab === 'suggested') loadSuggested(); }, [activeTab, loadSuggested]);
+  // Close the plate review once the last item is removed.
+  useEffect(() => { if (showPlate && plate.length === 0) setShowPlate(false); }, [showPlate, plate.length]);
 
   // Debounced waterfall search. The search box searches the food database
   // from any browse tab (250ms debounce). Suggested has no search box, so
@@ -220,6 +228,52 @@ export default function FoodSearchScreen({ navigation, route }) {
 
   function openPicker(food) {
     setPicker({ food });
+  }
+
+  // Add one default serving of a food to the plate (no sheet). Tapping the
+  // row still opens the detail sheet for a custom quantity.
+  function addToPlate(food) {
+    const servingG = food?.serving_g && food.serving_g > 0 ? food.serving_g : 100;
+    const factor = servingG / 100;
+    const item = {
+      key: `${food.food_ref}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      food,
+      quantityG: servingG,
+      kcal: Math.round((food.kcal_100g ?? 0) * factor),
+      proteinG: Math.round((food.protein_100g ?? 0) * factor * 10) / 10,
+      carbsG: Math.round((food.carbs_100g ?? 0) * factor * 10) / 10,
+      fatG: Math.round((food.fat_100g ?? 0) * factor * 10) / 10,
+      fibreG: food.fibre_100g != null ? Math.round((food.fibre_100g) * factor * 10) / 10 : null,
+    };
+    setPlate((p) => [...p, item]);
+  }
+
+  function removeFromPlate(key) {
+    setPlate((p) => p.filter((it) => it.key !== key));
+  }
+
+  const plateKcal = useMemo(() => plate.reduce((s, it) => s + (it.kcal || 0), 0), [plate]);
+
+  // Log every plate item to the meal, then return to the diary.
+  async function logPlate() {
+    if (!plate.length) return;
+    for (const it of plate) {
+      // eslint-disable-next-line no-await-in-loop
+      await logFoodEntry(userId, {
+        entryDate,
+        mealSlot,
+        foodRef: it.food.food_ref,
+        quantityG: it.quantityG,
+        kcal: it.kcal,
+        proteinG: it.proteinG,
+        carbsG: it.carbsG,
+        fatG: it.fatG,
+        fibreG: it.fibreG,
+      });
+    }
+    setPlate([]);
+    setShowPlate(false);
+    navigation.goBack();
   }
 
   // Quick add: log calories (and optional macros) with no food lookup.
@@ -377,6 +431,7 @@ export default function FoodSearchScreen({ navigation, route }) {
         preference={preference}
         onPress={() => openPicker(food)}
         onLongPress={() => onLongPress(food)}
+        onAdd={isRecipePick ? undefined : () => addToPlate(food)}
       />
     );
   }
@@ -545,6 +600,62 @@ export default function FoodSearchScreen({ navigation, route }) {
       </>
       )}
 
+      {!isRecipePick && plate.length > 0 ? (
+        <View style={styles.plateBar}>
+          <TouchableOpacity
+            style={styles.plateInfo}
+            onPress={() => setShowPlate(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Review the plate"
+          >
+            <Text style={styles.plateCount}>{plate.length} on the plate</Text>
+            <Text style={styles.plateKcalLine}>~{plateKcal} kcal · tap to review</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.plateLogBtn}
+            onPress={logPlate}
+            accessibilityRole="button"
+            accessibilityLabel={`Log ${plate.length} foods to ${MEAL_LABELS[mealSlot] ?? 'Snacks'}`}
+          >
+            <Text style={styles.plateLogText}>Log {plate.length}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
+      <Modal visible={showPlate} transparent animationType="slide" onRequestClose={() => setShowPlate(false)}>
+        <View style={styles.plateModalBackdrop}>
+          <View style={styles.plateModalSheet}>
+            <View style={styles.plateModalHeader}>
+              <Text style={styles.plateModalTitle}>Plate ({plate.length})</Text>
+              <TouchableOpacity onPress={() => setShowPlate(false)} hitSlop={12} accessibilityLabel="Close">
+                <Ionicons name="close" size={22} color={colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 360 }}>
+              {plate.map((it) => (
+                <View key={it.key} style={styles.plateItem}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.plateItemName} numberOfLines={1}>{it.food.name}</Text>
+                    <Text style={styles.plateItemMeta}>{Math.round(it.quantityG)}g · {it.kcal} kcal</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => removeFromPlate(it.key)} hitSlop={10} accessibilityLabel={`Remove ${it.food.name}`}>
+                    <Ionicons name="close-circle" size={22} color={colors.textMuted} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </ScrollView>
+            <View style={styles.plateModalActions}>
+              <TouchableOpacity style={styles.plateClearBtn} onPress={() => { setPlate([]); setShowPlate(false); }}>
+                <Text style={styles.plateClearText}>Clear</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.plateLogBtnWide} onPress={logPlate}>
+                <Text style={styles.plateLogText}>Log {plate.length} to {MEAL_LABELS[mealSlot] ?? 'Snacks'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <FoodDetailSheet
         visible={!!picker}
         mode="add"
@@ -661,4 +772,50 @@ const styles = StyleSheet.create({
     borderTopWidth: 1, borderTopColor: colors.border,
   },
   footerBtnText: { color: colors.primary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+
+  plateBar: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    borderTopWidth: 1, borderTopColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  plateInfo: { flex: 1 },
+  plateCount: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  plateKcalLine: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: spacing.xxs },
+  plateLogBtn: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.lg,
+    borderRadius: radius.md,
+  },
+  plateLogText: { color: colors.background, fontSize: fontSize.md, fontWeight: fontWeight.bold },
+  plateModalBackdrop: { flex: 1, backgroundColor: '#000a', justifyContent: 'flex-end' },
+  plateModalSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,
+    paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.xxl,
+    borderTopWidth: 1, borderColor: colors.border,
+  },
+  plateModalHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
+  plateModalTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold },
+  plateItem: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
+  plateItemName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.medium },
+  plateItemMeta: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: spacing.xxs },
+  plateModalActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.lg },
+  plateClearBtn: {
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
+  },
+  plateClearText: { color: colors.textSecondary, fontSize: fontSize.md, fontWeight: fontWeight.medium },
+  plateLogBtnWide: {
+    flex: 1, alignItems: 'center',
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.md, borderRadius: radius.md,
+  },
 });
