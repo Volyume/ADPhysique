@@ -14,6 +14,16 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 
 ## 0. Session summary
 
+### 0.000001. 2026-05-29 (founder feedback, Claude): fixed unilateral logging
+
+The old per-side model was wrong: it split reps into Left and Right inputs and fed the lower side to the engine, presenting the two sides as if they differ. Research (MyFitCoach, Fitbod, Built With Science, and the Hevy/Strong convention) is unanimous, and matches the founder: a unilateral exercise logs ONE weight and ONE reps value, understood as per side, done on both sides at the same weight. Never split, never totalled.
+
+- **`SetEntry`**: the per-side mode now shows a single reps input labelled "Reps per side" with a one-line hint ("Same weight each side. Log the reps you did per side."), not two L/R inputs. The toggle is renamed "Track left / right" to "Per side".
+- **`ActiveWorkoutScreen`**: a per-side set validates and stores like any other (one weight, one rep count). `actual_reps` is the logged value directly; no more lower-side computation. `left_reps`/`right_reps` are written null (columns kept so the frozen build still syncs; legacy sets that carry per-side data still display via `formatPerSide`).
+- **`unilateral.js`**: the per-exercise "this is per side" device preference stays (still useful). `lowerSideReps`/`formatPerSide` are retained only to read older sets; header doc updated.
+- No migration, no schema or sync-contract change. The muscle still gets one working set per logged set, so volume, PR and progression are unchanged. ESLint 0 errors; unilateral unit tests and the 461-screen mount sweep pass.
+- **Possible follow-up the founder raised:** a rest timer that accounts for resting between sides and then between sets. Not built here; this fix is the logging model only.
+
 ### 0.00000. 2026-05-29 (food build, Claude): recipes can finally be logged
 
 First build item off the food-logging audit (`docs/audit/volyume-food-logging-audit-2026-05-29.md`). Recipes were build-only: you could compose one but no code path logged it, while `MyRecipesScreen`'s empty state promised "log it as one line in your diary every time you eat it". Closed that gap. No migration, no schema or sync-contract change (recipe rows and `recipe_ingredients` already sync).

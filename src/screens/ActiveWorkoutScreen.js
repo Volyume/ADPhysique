@@ -41,7 +41,7 @@ import {
 } from '../lib/algorithms';
 import { rankSwaps } from '../lib/swapEngine';
 import { isClusterType, clusterLabel, summariseCluster, mergeClusterNote } from '../lib/clusterSet';
-import { lowerSideReps, formatPerSide, loadUnilateralExercises, setUnilateralExercise } from '../lib/unilateral';
+import { formatPerSide, loadUnilateralExercises, setUnilateralExercise } from '../lib/unilateral';
 import { FORM_TIPS } from '../lib/formTips';
 import InfoTooltip from '../components/InfoTooltip';
 import { applyTimeCrunch } from '../lib/mesocycle';
@@ -678,31 +678,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
   async function handleCompleteSet(overrides = {}) {
     if (!exercise || !activeWorkout) return;
-    // Unilateral exercises are logged per-side; validate both sides
-    // instead of the single reps field. Cluster overrides bypass this
-    // (a cluster carries its own total).
-    const isUni = !overrides.actualReps && unilateralExercises.has(exercise.id);
-    const uniLeft = parseInt(currentSet.leftReps, 10);
-    const uniRight = parseInt(currentSet.rightReps, 10);
-    if (isUni) {
-      if (!(uniLeft >= 1) || !(uniRight >= 1)) {
-        Alert.alert('Enter reps', 'Enter reps for both the left and right side.');
-        return;
-      }
-    } else if (!currentSet.reps || currentSet.reps < 1) {
+    // Reps required (a cluster override carries its own total). A per-side
+    // (unilateral) exercise logs one reps value, done on both sides at the
+    // same weight, so it validates and stores like any other set: one
+    // weight, one rep count, no separate left/right.
+    if (!overrides.actualReps && (!currentSet.reps || currentSet.reps < 1)) {
       Alert.alert('Enter reps', 'Please enter the number of reps completed.');
       return;
     }
-    // Cluster sets (myo-reps / rest-pause) commit the whole cluster as
-    // one row: actualReps is the summed total and notes carry the
-    // breakdown. Both arrive via `overrides` from finishCluster.
-    // For a unilateral set, actual_reps holds the LOWER side so volume +
-    // PR + progression stay conservative; both sides are kept on the row.
-    const effectiveReps = overrides.actualReps
-      ?? (isUni ? lowerSideReps(currentSet.leftReps, currentSet.rightReps) : parseInt(currentSet.reps, 10));
+    // Cluster sets (myo-reps / rest-pause) commit the whole cluster as one
+    // row: actualReps is the summed total and notes carry the breakdown.
+    // Both arrive via `overrides` from finishCluster.
+    const effectiveReps = overrides.actualReps ?? parseInt(currentSet.reps, 10);
     const effectiveNotes = overrides.notes ?? (noteText || null);
-    const effectiveLeft = isUni ? uniLeft : null;
-    const effectiveRight = isUni ? uniRight : null;
     // Weight is required unless this is a bodyweight movement. A blank or
     // non-numeric field means the user hasn't entered a load yet, block
     // rather than silently saving a 0 kg set.
@@ -734,8 +722,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         failed: false,
         notes: effectiveNotes,
         isAmrap: currentSet.setType === 'amrap',
-        leftReps: effectiveLeft,
-        rightReps: effectiveRight,
+        leftReps: null,
+        rightReps: null,
       });
 
       const setData = {
@@ -748,8 +736,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         weight: parseFloat(currentSet.weight) || 0,
         rir: currentSet.rir ?? null,
         rpe: null,
-        leftReps: effectiveLeft,
-        rightReps: effectiveRight,
+        leftReps: null,
+        rightReps: null,
       };
 
       const newLoggedSets = [...loggedSets, setData];
@@ -848,8 +836,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // Prepare next set
       setNoteText('');
       setShowNoteInput(false);
-      // Per-side counts don't carry to the next set.
-      if (isUni) setCurrentSet((cs) => ({ ...cs, leftReps: '', rightReps: '' }));
       // If warmup was just completed, mark hint seen and auto-switch to working set
       if (currentSet.setType === 'warmup') {
         warmupHintSeenRef.current = true;
@@ -944,14 +930,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setClusterReps('');
   }
 
-  // Toggle per-side (left/right) logging for the current exercise and
-  // remember it on the device. Clears any half-entered single rep value
-  // so the switch doesn't carry a stale count across modes.
+  // Mark the current exercise as per-side (unilateral) and remember it on
+  // the device. A per-side exercise logs one reps value, done on both
+  // sides at the same weight; the flag only changes the field labels.
   async function toggleUnilateral() {
     if (!exercise?.id) return;
     const on = !unilateralExercises.has(exercise.id);
     setUnilateralExercises(await setUnilateralExercise(exercise.id, on));
-    setCurrentSet((cs) => ({ ...cs, leftReps: '', rightReps: '' }));
     hapticsVocab.setLogged();
   }
 
