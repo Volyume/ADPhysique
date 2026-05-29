@@ -9,7 +9,7 @@
  * (UI_FLOWS_LOCKED.md line 275) so any future drift breaks here.
  */
 import React from 'react';
-import { create } from 'react-test-renderer';
+import { create, act as actRender } from 'react-test-renderer';
 
 jest.mock('react-native-gesture-handler/Swipeable', () => {
   const React = require('react');
@@ -69,6 +69,31 @@ describe('HeldDecisionCard', () => {
     expect(JSON.stringify(without)).not.toContain('Why?');
     const with_ = create(<HeldDecisionCard type="ffm_floor" body="x" onWhy={() => {}} />).toJSON();
     expect(JSON.stringify(with_)).toContain('Why?');
+  });
+
+  test('Get support opens the Beat link', () => {
+    const { Linking } = require('react-native');
+    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue();
+    let tree;
+    actRender(() => { tree = create(<HeldDecisionCard type="ed_pattern" body="x" />); });
+    const link = tree.root.findByProps({ accessibilityRole: 'link' });
+    actRender(() => link.props.onPress());
+    expect(openURL).toHaveBeenCalledWith('https://www.beateatingdisorders.org.uk/');
+    openURL.mockRestore();
+  });
+
+  test('Get support falls back to an Alert when the link cannot open (no dead-end)', async () => {
+    const { Linking, Alert } = require('react-native');
+    const openURL = jest.spyOn(Linking, 'openURL').mockRejectedValue(new Error('no handler'));
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    let tree;
+    actRender(() => { tree = create(<HeldDecisionCard type="ed_pattern" body="x" />); });
+    const link = tree.root.findByProps({ accessibilityRole: 'link' });
+    await actRender(async () => { await link.props.onPress(); });
+    expect(alert).toHaveBeenCalled();
+    expect(alert.mock.calls[0][1]).toContain('beateatingdisorders');
+    openURL.mockRestore();
+    alert.mockRestore();
   });
 });
 

@@ -10,10 +10,18 @@
  *   - For ED-pattern only: "Get support" button linking to Beat
  */
 import React from 'react';
-import { View, Text, Pressable, StyleSheet, Linking } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Linking, Alert } from 'react-native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
 
 const BEAT_URL = 'https://www.beateatingdisorders.org.uk/';
+
+// The support path must never dead-end. If the link can't open, surface the
+// address so the user can still reach help, rather than swallowing the error.
+function openSupport() {
+  Linking.openURL(BEAT_URL).catch(() => {
+    Alert.alert('Get support', `You can reach Beat at ${BEAT_URL}`);
+  });
+}
 
 /**
  * @param {Object} props
@@ -42,7 +50,7 @@ export default function HeldDecisionCard({ type, body, onWhy }) {
       ) : null}
       {type === 'ed_pattern' ? (
         <Pressable
-          onPress={() => Linking.openURL(BEAT_URL).catch(() => {})}
+          onPress={openSupport}
           accessibilityRole="link"
           accessibilityLabel="Open Beat support"
           style={styles.supportButton}
