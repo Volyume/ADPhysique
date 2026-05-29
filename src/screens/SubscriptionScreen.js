@@ -17,9 +17,10 @@ import {
   ScrollView, Platform, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
+import { colors, spacing, fontSize, fontWeight } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
+import Card from '../components/Card';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { isPaidTier } from '../lib/proGate';
@@ -122,7 +123,7 @@ export default function SubscriptionScreen({ navigation }) {
       <ScrollView contentContainerStyle={styles.scroll}>
 
         {/* Current state card */}
-        <View style={styles.card}>
+        <Card borderless style={styles.card}>
           <Text style={styles.cardLabel}>Your plan</Text>
           <Text style={styles.cardValue}>
             {tier === 'pro' ? 'Pro' : 'Free'}
@@ -131,17 +132,17 @@ export default function SubscriptionScreen({ navigation }) {
             {STAGE_LABEL[stage] ?? '-'}
             {daysLeft != null ? ` · ${daysLeft} day${daysLeft === 1 ? '' : 's'} remaining` : ''}
           </Text>
-        </View>
+        </Card>
 
         {currentSku ? (
-          <View style={styles.card}>
+          <Card borderless style={styles.card}>
             <Text style={styles.cardLabel}>Price</Text>
             <Text style={styles.cardValue}>{currentSku.priceText}</Text>
             <Text style={styles.cardSub}>
               {PRICING_WINDOW_LABEL[currentSku.pricingWindow] ?? currentSku.pricingWindow}
               {' · locked for life of subscription'}
             </Text>
-          </View>
+          </Card>
         ) : null}
 
         {/* Manage actions */}
@@ -189,9 +190,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl,
   },
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
     marginBottom: spacing.md,
   },
   cardLabel: {

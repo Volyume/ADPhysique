@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import Card from '../components/Card';
 import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
 import { PROTEIN_APPROACHES } from '../lib/nutritionEngine';
 
@@ -73,7 +74,7 @@ function buildProteinApproachReason(prevApproach, nextApproach) {
 
 function ChangeCard({ icon, title, prev, next, reason, unchanged }) {
   return (
-    <View style={[styles.card, unchanged && styles.cardUnchanged]}>
+    <Card style={[styles.card, unchanged && styles.cardUnchanged]}>
       <View style={styles.cardHeader}>
         <Ionicons name={icon} size={16} color={unchanged ? colors.textMuted : colors.primary} />
         <Text style={styles.cardTitle}>{title}</Text>
@@ -91,7 +92,7 @@ function ChangeCard({ icon, title, prev, next, reason, unchanged }) {
       {!!reason && !unchanged && (
         <Text style={styles.cardReason}>{reason}</Text>
       )}
-    </View>
+    </Card>
   );
 }
 
@@ -222,7 +223,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
             )}
 
             {(macrosChanged || (!kcalChanged && nextP != null)) && (
-              <View style={styles.card}>
+              <Card style={styles.card}>
                 <View style={styles.cardHeader}>
                   <Ionicons name="restaurant-outline" size={16} color={colors.primary} />
                   <Text style={styles.cardTitle}>Daily macros</Text>
@@ -233,7 +234,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
                 {!macrosChanged && (
                   <Text style={styles.cardReason}>Your macros stay where they are. The change you made does not shift them meaningfully.</Text>
                 )}
-              </View>
+              </Card>
             )}
 
             {approachChanged && (
@@ -308,8 +309,7 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    borderWidth: 1, borderColor: colors.border, gap: spacing.sm,
+    gap: spacing.sm,
   },
   cardUnchanged: { opacity: 0.65 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
