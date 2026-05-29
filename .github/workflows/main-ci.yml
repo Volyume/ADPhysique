@@ -182,6 +182,30 @@ jobs:
               body,
             });
 
+  eslint:
+    name: ESLint (no-undef + hooks gate)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      # Errors-only gate. `eslint .` exits non-zero only on error-level
+      # rules (no-undef, react-hooks/rules-of-hooks); the no-unused-vars
+      # and exhaustive-deps backlog is warning-level and does not fail CI.
+      # Added 2026-05-29 (audit Phase 0): the repo had no static analysis,
+      # which let two no-undef-class bugs ship to a Hermes runtime.
+      - name: Run ESLint
+        run: npm run lint
+
   maestro-lint:
     name: Maestro flow structural lint
     runs-on: ubuntu-latest

@@ -83,7 +83,7 @@ export default function CascadeGateScreen({ navigation, route }) {
   }, [navigation]);
 
   const handlePay = useCallback(async (targetTier) => {
-    audit('cascade.pay.tap', { targetTier, gateDay: state?.dayInCascade ?? null });
+    audit('cascade.pay.tap', { targetTier, gateDay: variant });
     setBusy(targetTier);
     const sku = skuFor(targetTier, pricingWindow);
     if (!sku) {
@@ -124,7 +124,7 @@ export default function CascadeGateScreen({ navigation, route }) {
   }, [pricingWindow, content?.surface, dismiss]);
 
   const handleSkip = useCallback(async (targetTier) => {
-    audit('cascade.skip.tap', { targetTier, gateDay: state?.dayInCascade ?? null });
+    audit('cascade.skip.tap', { targetTier, gateDay: variant });
     setBusy(targetTier ?? 'skip');
     try {
       if (targetTier === 'free') {

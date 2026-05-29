@@ -157,7 +157,7 @@ Documentation rewrite + drift closure. Rewrote `CURRENT_STATUS.md`, `HANDOFF.md`
 ### Branch state
 
 - **`main`** is canonical and the GitHub default branch. Push direct. Do not create feature branches without explicit founder approval in the current session.
-- Active session branch (when one exists) is `claude/github-main-takeover-CSUfO`. Sync to `main` regularly.
+- Session branches are harness-injected per session (most recently `claude/chat-context-overflow-JYbA8`, kept in lockstep with `main` and pushed to both). Per Rule 9 these are surfaced to the founder and synced to `main`; `main` stays canonical. The old `claude/github-main-takeover-CSUfO` reference is stale.
 
 ### Locked founder overrides (2026-05-25)
 
@@ -373,11 +373,11 @@ Grouped by phase per `RELEASE_PLAN_LOCKED.md`. The live ranked version with foun
 
 | # | Item | Effort | Status |
 |---|---|---|---|
-| 1 | Saved meals UI (template create / pick / apply) | M | Open. GAP row 1. |
-| 2 | Body composition trend charts (BF% + measurements over time) | S-M | Open. GAP rows 2 + 25. |
+| 1 | Saved meals UI (template create / pick / apply) | M | **Done 2026-05-29** (`310575a`). `MyMealsScreen` + diary "Save as meal"; see § 6. |
+| 2 | Body composition trend charts (BF% + measurements over time) | S-M | **Done** (`4e219a9` + `d4bf8ed`). BF% input + trend + per-measurement charts; see § 6 / BACKLOG. |
 | 3 | Coach confirm-then-apply. Each weekly adjustment surfaces with an Apply button; nothing changes until tapped. Calories, training volume, steps, cardio, deload, diet break (GAP rows 3-5, see § 0.B), high/low-day macros (row 6), refeed (row 7). | S impl per output | **Done 2026-05-28.** Rows 3-7 all shipped. |
-| 4 | Drift cleanup. Items 2, 4, 5, 14 from § 5 closed this session (telemetry fold-in, STRENGTH_STANDARDS dedup, detectRepRegressions confirmed single, dead-lib delete). Item 1 (sync layer) still open as GAP row 12 — needs its own focused session per CLAUDE.md Rule 5 (offline sync is runtime-critical). | M remaining | Partial. |
-| 5 | Notification surfaces still pending (cascade day 19/21 push, payment failure, coach output) | S-M | Open. GAP rows 9-11. |
+| 4 | Drift cleanup. Items 2, 4, 5, 14 from § 5 closed (telemetry fold-in, STRENGTH_STANDARDS dedup, detectRepRegressions confirmed single, dead-lib delete). Item 1 (sync layer, GAP row 12): the incremental-watermark perf win shipped (`293d15d` + `8ea87ce`); only the legacy-to-modular coexistence refactor remains, deliberately deferred (2026-05-29 founder call, see § 0.0). | M remaining | Partial. |
+| 5 | Notification surfaces (cascade gate push, payment failure, coach output) | S-M | **Done 2026-05-29**. Expo push stack + cascade / payment-failure / weekly-coach schedulers; see § 6 row 4. Founder actions outstanding: `extra.eas.projectId` in app.json, apply migration 053, deploy `send-push`. |
 | 6 | Voice + hex sweep | S | **Done 2026-05-28** (commit `79e06f2`). Hex sweep landed 2026-05-27. Em-dash sweep covered 818 of 821 instances; 3 deliberately preserved (OCR regex + lint guard). |
 
 ### LATER (Phase A exit prep)

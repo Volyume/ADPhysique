@@ -31,6 +31,9 @@ export default function BackHeader({ title, onBack, right }) {
   // a no-op back rather than crashing the screen; real screens always
   // have a navigator, and an explicit onBack takes precedence anyway.
   let navigation = null;
+  // Deliberate single-hook guard (see comment above): the call order is
+  // consistent for any given mount, so rules-of-hooks does not apply here.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   try { navigation = useNavigation(); } catch (_) { navigation = null; }
   const goBack = onBack ?? (() => navigation?.goBack?.());
   return (
