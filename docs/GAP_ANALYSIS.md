@@ -489,14 +489,16 @@ Pulled from the ❌ and ⚠️ rows above. **Founder decisions locked 2026-05-27
 
 | Item | Status | Why |
 |---|---|---|
-| Apply migration 048 (`food_favourites.kind`) | **Approved to apply now** 2026-05-27. | unlocks dislike toggle cloud-side |
+| Apply migrations 048, 050, 051, 052, 053, 054 in the Supabase SQL Editor | **pending founder apply.** 052 first (fixes a live sync error, no rebuild). | back features already shipped in app code |
 | Apply migration 049 (drop `peak_week_plans`) | **Hold until next AAB ships** to avoid sync errors on the closed-test build. | schema hygiene |
-| Tear down `volyume-e2e-test` Supabase project + 4 secrets | pending | T7/T8 suite deleted as out of scope |
-| Close PR #5 without merging | pending | live-cloud work reverted |
+| Tear down `volyume-e2e-test` Supabase project + 4 secrets | pending (dashboard). Code remnants already gone; only the cloud project + secrets remain. | T7/T8 suite deleted as out of scope |
+| ~~Close PR #5~~ | **Done** (merged 2026-05-27; queue note was stale). | live-cloud work reverted |
+| Add `extra.eas.projectId` to `app.json` (paste the ID from expo.dev) | pending founder | without it no device gets a push token |
+| Deploy `send-push` Edge Function | **Automated 2026-05-29:** run the "Deploy Supabase functions" workflow (Actions tab) after adding the `SUPABASE_ACCESS_TOKEN` secret. No CLI. | activates server push (payment failure) |
 | Point `volyume.app` DNS at GitHub Pages | pending | privacy URL resolution |
 | Add `EXPO_PUBLIC_USDA_API_KEY` repo secret (optional) | pending | enables USDA fallback in waterfall |
 | Generate Android upload keystore | pending Phase A exit prep | blocks any new AAB |
-| Deploy `play-billing-rtdn` Edge Function + Pub/Sub topic + service account | pending Phase A exit prep | RTDN purchases |
+| Deploy `play-billing-rtdn` Edge Function + Pub/Sub topic + service account | pending Phase A exit prep. Function deploy is now the same Actions workflow; Pub/Sub topic + service account still need the GCP/Play consoles. | RTDN purchases |
 | Create 3 SKU products in Play Console | pending Phase A exit prep | enables purchase flow |
 | Sandbox tester setup + end-to-end purchase test | pending Phase A exit prep | verifies tier_history + trial_state |
 
