@@ -14,6 +14,7 @@ import {
   createWorkout, getRoutineExercisesWithDetails, getActivePlan,
 } from '../lib/database';
 import { PLAN_WHYTHIS_KEY } from '../lib/planAutoGen';
+import Button from '../components/Button';
 import useAppStore from '../store/useAppStore';
 import { logError } from '../lib/errorLog';
 import { useToast } from '../components/Toast';
@@ -235,15 +236,9 @@ export default function PlanDetailScreen({ navigation, route }) {
 
         {/* Primary action */}
         {isLibrary ? (
-          <TouchableOpacity style={styles.primaryBtn} onPress={handleAddToMyPlans}>
-            <Ionicons name="copy-outline" size={20} color={colors.background} />
-            <Text style={styles.primaryBtnText}>Add to my plans</Text>
-          </TouchableOpacity>
+          <Button title="Add to my plans" icon="copy-outline" size="lg" onPress={handleAddToMyPlans} />
         ) : !isActive ? (
-          <TouchableOpacity style={styles.primaryBtn} onPress={handleSetActive}>
-            <Ionicons name="checkmark-circle" size={20} color={colors.background} />
-            <Text style={styles.primaryBtnText}>Set active</Text>
-          </TouchableOpacity>
+          <Button title="Set active" icon="checkmark-circle" size="lg" onPress={handleSetActive} />
         ) : null}
 
         {/* Workouts list */}
@@ -364,11 +359,6 @@ const styles = StyleSheet.create({
   planStat: { gap: spacing.xxs },
   planStatValue: { fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.textPrimary },
   planStatLabel: { fontSize: fontSize.xs, color: colors.textMuted },
-  primaryBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm, backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: spacing.lg,
-  },
-  primaryBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
   section: { gap: spacing.md },
   sectionTitle: {
     fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary, letterSpacing: 0.2,
