@@ -1803,10 +1803,8 @@ const styles = StyleSheet.create({
   },
   todayIntakeLabel: {
     color: colors.textSecondary,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
   },
   todayIntakeRow: {
     flexDirection: 'row',
