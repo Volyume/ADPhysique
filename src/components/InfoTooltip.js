@@ -11,12 +11,20 @@ export default function InfoTooltip({ text, size = 14 }) {
         onPress={() => setVisible(true)}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         style={styles.trigger}
+        accessibilityRole="button"
+        accessibilityLabel="More information"
       >
         <Ionicons name="information-circle-outline" size={size} color={colors.textMuted} />
       </TouchableOpacity>
       <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
-        <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setVisible(false)}>
-          <View style={styles.box} pointerEvents="box-none">
+        <TouchableOpacity
+          style={styles.overlay}
+          activeOpacity={1}
+          onPress={() => setVisible(false)}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
+        >
+          <View style={styles.box} pointerEvents="box-none" accessible accessibilityRole="text">
             <Text style={styles.text}>{text}</Text>
           </View>
         </TouchableOpacity>

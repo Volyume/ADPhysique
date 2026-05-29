@@ -35,7 +35,12 @@ export default function PlateCalculator({ targetWeight, onClose }) {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Plate Calculator</Text>
-        <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+        <TouchableOpacity
+          onPress={onClose}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          accessibilityRole="button"
+          accessibilityLabel="Close plate calculator"
+        >
           <Ionicons name="close" size={22} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
@@ -49,6 +54,7 @@ export default function PlateCalculator({ targetWeight, onClose }) {
             onChangeText={setWeight}
             keyboardType="decimal-pad"
             selectTextOnFocus
+            accessibilityLabel={`Target weight in ${units}`}
           />
         </View>
         <View style={styles.inputGroup}>
@@ -59,6 +65,7 @@ export default function PlateCalculator({ targetWeight, onClose }) {
             onChangeText={setBar}
             keyboardType="decimal-pad"
             selectTextOnFocus
+            accessibilityLabel={`Bar weight in ${units}`}
           />
         </View>
       </View>
