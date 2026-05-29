@@ -20,14 +20,18 @@
  * so a single sync cycle gets fresh caches without state
  * bleeding between cycles.
  *
- * Rationale: collapsing the bulk RPC into 7 separate per-table
- * RPCs would 7x the network round-trips on every sync, which is
- * a real cost on mobile (battery, latency). Server-side
- * refactoring food_sync_push into per-table endpoints is out of
- * scope per the CLAUDE.md release policy (the closed-test build
- * still expects the bulk shape). The coordinator preserves the
- * single-RPC efficiency while satisfying the registry-driven
- * per-table dispatch contract.
+ * Resilience: the push sends one food_sync_push call PER non-empty
+ * table, not one call carrying every table. A single RPC is one
+ * transaction, so before this a failure in any one table (e.g. a
+ * cloud column drift on daily_water) rolled the whole food domain
+ * back and made every food table report an error. Per-table calls
+ * isolate that: the healthy tables still commit and only the broken
+ * table reports an error. Empty tables are skipped, so a typical
+ * sync that touches one or two tables still makes one or two
+ * round-trips, not seven. The RPC itself is unchanged (it already
+ * guards each table with `IF changes ? '<table>'`), so the frozen
+ * closed-test build, which sends all tables in one call, keeps
+ * working exactly as before.
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -203,45 +207,54 @@ async function _doPushAll(sb, { userId, localUserId }) {
     food.getAllWaterSince(localUserId, sinceMs),
   ]);
 
-  const counts = { ...EMPTY_COUNTS };
   const bucket = (rows, mapper) => {
     const out = { created: [], updated: [], deleted: [] };
     for (const r of rows) out[_bucketFoodRow(r)].push(mapper(r, userId));
     return out;
   };
 
-  const changes = {
-    food_entries: bucket(entries, _foodEntryToCloud),
-    custom_foods: bucket(customs, _customFoodToCloud),
-    saved_meals: bucket(meals, _savedMealToCloud),
-    recipes: bucket(recipesRows, _recipeToCloud),
-    food_favourites: { created: [], updated: favs.map((f) => _favouriteToCloud(f, userId)), deleted: [] },
-    daily_water: { created: [], updated: water.map((w) => _waterToCloud(w, userId)), deleted: [] },
-  };
+  // One payload slice per table. Each is pushed in its own
+  // food_sync_push call so a failure in one table can't roll back the
+  // rest (see the resilience note in the file header).
+  const slices = [
+    ['food_entries',    bucket(entries, _foodEntryToCloud),  entries.length],
+    ['custom_foods',    bucket(customs, _customFoodToCloud),  customs.length],
+    ['saved_meals',     bucket(meals, _savedMealToCloud),     meals.length],
+    ['recipes',         bucket(recipesRows, _recipeToCloud),  recipesRows.length],
+    ['food_favourites', { created: [], updated: favs.map((f) => _favouriteToCloud(f, userId)), deleted: [] }, favs.length],
+    ['daily_water',     { created: [], updated: water.map((w) => _waterToCloud(w, userId)), deleted: [] }, water.length],
+  ];
 
-  counts.food_entries = entries.length;
-  counts.custom_foods = customs.length;
-  counts.saved_meals = meals.length;
-  counts.recipes = recipesRows.length;
-  counts.food_favourites = favs.length;
-  counts.daily_water = water.length;
+  const counts = { ...EMPTY_COUNTS };
+  const errorsByTable = {};
+  let anyError = false;
+  let pushedAny = false;
+  let latestTsMs = null;
 
-  const totalRows = counts.food_entries + counts.custom_foods + counts.saved_meals
-    + counts.recipes + counts.food_favourites + counts.daily_water;
-  if (totalRows === 0) return { counts: { ...EMPTY_COUNTS }, errors: 0 };
-
-  const { data, error } = await sb.rpc('food_sync_push', { changes });
-  if (error) {
-    logSyncError('sync.tables.foodDomain.push', error);
-    return { counts: { ...EMPTY_COUNTS }, errors: 1 };
+  for (const [table, slice, rowCount] of slices) {
+    if (rowCount === 0) continue; // nothing changed: skip the round-trip
+    const { data, error } = await sb.rpc('food_sync_push', { changes: { [table]: slice } });
+    if (error) {
+      logSyncError(`sync.tables.foodDomain.push.${table}`, error);
+      errorsByTable[table] = 1;
+      anyError = true;
+      continue;
+    }
+    counts[table] = rowCount;
+    pushedAny = true;
+    const ts = data?.timestamp ? Date.parse(data.timestamp) : Date.now();
+    if (Number.isFinite(ts) && (latestTsMs === null || ts > latestTsMs)) latestTsMs = ts;
   }
 
-  const ts = data?.timestamp ?? new Date().toISOString();
-  const tsMs = Date.parse(ts);
-  if (Number.isFinite(tsMs)) {
-    try { await AsyncStorage.setItem(key, String(tsMs)); } catch (_) { /* tolerate */ }
+  // Advance the shared watermark only when every non-empty table
+  // succeeded. On a partial failure we leave it, so the tables that did
+  // succeed re-push next cycle (idempotent via the RPC's ON CONFLICT)
+  // and nothing is skipped past the watermark while one table is broken.
+  if (pushedAny && !anyError && latestTsMs !== null) {
+    try { await AsyncStorage.setItem(key, String(latestTsMs)); } catch (_) { /* tolerate */ }
   }
-  return { counts, errors: 0 };
+
+  return { counts, errorsByTable, errors: anyError ? 1 : 0 };
 }
 
 async function _doPullAll(sb, { userId }) {
@@ -327,7 +340,9 @@ export function foodPushFor(tableName) {
       }
       return {
         count: _pushResult.counts[tableName] ?? 0,
-        errors: _pushResult.errors,
+        // Only this table's own push outcome, so one table's failure no
+        // longer reports as an error for every other food table.
+        errors: _pushResult.errorsByTable?.[tableName] ?? 0,
       };
     } catch (e) {
       logSyncError(`sync.tables.foodDomain.push.${tableName}`, e);

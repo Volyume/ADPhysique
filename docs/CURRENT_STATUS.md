@@ -19,8 +19,9 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 > 2. **Article 9 consent re-prompting.** `RootNavigator` defaulted consent to `false` on any transient cloud-read error, re-firing the un-skippable gate after a cache wipe. Now left unresolved (null) on error so a consented user isn't re-prompted (new users still consent at onboarding).
 > 3. **Camera jumping to Settings with no prompt.** The OS dialog only auto-fired on `'not-determined'`; Android 16 / vision-camera can report `'denied'` early (still re-askable). Now requests once for any non-granted status (ref-guarded).
 > 4. **Check-in gate bypassable on the wrong day.** `load()` failed OPEN on any data-load error. Now the wrong-day gate is resolved before any throwable load. Verified my row-15 change did NOT touch the gate. NB: if a user's *configured* check-in day (Settings → Coaching reminders) is not Sunday, the app is correct; the configured day governs.
+> 5. **Food-sync resilience: one table no longer nukes all.** `foodDomain._doPushAll` sent all six food tables in one `food_sync_push` call, so any one table's failure (the daily_water drift above) rolled back the whole food domain and reported an error for every table. Now it pushes one call per non-empty table; a failure is isolated, the healthy tables still commit, and only the broken table reports an error. RPC unchanged (frozen build still works); empty tables skipped to keep round-trips low. New isolation unit test in `sync.regressionMatrix.test.js`.
 >
-> Client fixes (2, 3, 4) ride the next build; migration 052 is founder-applied now. Full suite green serially (93 / 1836).
+> Client fixes (2, 3, 4, 5) ride the next build; migration 052 is founder-applied now. Full suite green serially (93 / 1837).
 
 ### 0.A. 2026-05-28 session (Claude): UI surfaces + Frequents pipeline
 

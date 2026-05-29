@@ -850,7 +850,7 @@ describe('food domain coordinator (food_entries / custom_foods / saved_meals / r
     expect(pushCall.args.changes.food_entries.updated[0].updated_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 
-  test('T6 push error: food_sync_push returns error → coordinator reports errors:1 across all food tables', async () => {
+  test('T6 push error: a failing table reports errors:1', async () => {
     foodDb.getAllFoodEntriesSince.mockResolvedValueOnce([
       { id: 'fe-1', entry_date: '2026-05-26', meal_slot: 'breakfast', food_ref: 'off:1', quantity_g: 100, kcal: 100, protein_g: 10, carbs_g: 10, fat_g: 5, created_at: 1, updated_at: 1 },
     ]);
@@ -862,14 +862,49 @@ describe('food domain coordinator (food_entries / custom_foods / saved_meals / r
     expect(result.errors).toBe(1);
   });
 
-  test('coordinator: single bulk RPC per syncAll cycle, cached across food-table pushes', async () => {
+  test('per-table isolation: one table failing does not error the others', async () => {
+    // food_entries has a row (its push succeeds); daily_water has a row
+    // whose push the cloud rejects (the live daily_water.entry_date
+    // drift). Each table goes in its own food_sync_push call.
+    foodDb.getAllFoodEntriesSince.mockResolvedValueOnce([
+      { id: 'fe-1', entry_date: '2026-05-26', meal_slot: 'breakfast', food_ref: 'off:1', quantity_g: 100, kcal: 100, protein_g: 10, carbs_g: 10, fat_g: 5, created_at: 1, updated_at: 1 },
+    ]);
+    foodDb.getAllWaterSince.mockResolvedValueOnce([
+      { user_id: 'u1', entry_date: '2026-05-26', ml: 500, updated_at: 1 },
+    ]);
+    const sb = {
+      rpc: jest.fn(async (name, args) => {
+        if (name === 'food_sync_push' && args?.changes?.daily_water) {
+          return { data: null, error: new Error('column "entry_date" of relation "daily_water" does not exist') };
+        }
+        return { data: { applied_at: new Date().toISOString() }, error: null };
+      }),
+    };
+    getSupabaseClient.mockReturnValue(sb);
+
+    const feResult = await pushTable('food_entries', { userId: 'u1', localUserId: 'u1' });
+    const waterResult = await pushTable('daily_water', { userId: 'u1', localUserId: 'u1' });
+
+    // food_entries committed cleanly; only daily_water is flagged.
+    expect(feResult).toMatchObject({ count: 1, errors: 0 });
+    expect(waterResult).toMatchObject({ count: 0, errors: 1 });
+    // One food_sync_push per non-empty table (two here), proving the
+    // failure was isolated rather than batched into a single all-or-
+    // nothing call.
+    const pushCalls = sb.rpc.mock.calls.filter(([n]) => n === 'food_sync_push');
+    expect(pushCalls).toHaveLength(2);
+  });
+
+  test('coordinator: one _doPushAll per syncAll cycle, cached across food-table pushes', async () => {
     foodDb.getAllFoodEntriesSince.mockResolvedValueOnce([
       { id: 'fe-1', entry_date: '2026-05-26', meal_slot: 'breakfast', food_ref: 'off:1', quantity_g: 100, kcal: 100, protein_g: 10, carbs_g: 10, fat_g: 5, created_at: 1, updated_at: 1 },
     ]);
     const sb = makeFoodSb();
     getSupabaseClient.mockReturnValue(sb);
 
-    // Two food-table pushes in the same cycle, only one RPC call.
+    // Two food-table pushes in the same cycle share one _doPushAll run.
+    // Only food_entries has rows, so that run makes a single
+    // food_sync_push call (custom_foods is empty and skipped).
     await pushTable('food_entries', { userId: 'u1', localUserId: 'u1' });
     await pushTable('custom_foods', { userId: 'u1', localUserId: 'u1' });
 
