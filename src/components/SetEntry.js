@@ -16,16 +16,16 @@ const SET_TYPE_LABELS = {
   amrap: 'AMRAP',
 };
 
-export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypePicker, onOpenPlateCalc, isWarmup = false }) {
-  const { weight, reps, setType, isGhost } = value;
+export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypePicker, onOpenPlateCalc, isWarmup = false, unilateral = false, onToggleUnilateral }) {
+  const { weight, reps, setType, isGhost, leftReps, rightReps } = value;
   const repsRef = useRef(null);
 
   function adjust(field, delta) {
     Haptics.selectionAsync().catch(() => {});
-    const steps = { weight: 2.5, reps: 1 };
+    const steps = { weight: 2.5, reps: 1, leftReps: 1, rightReps: 1 };
     // Reps cap matches the TextInput's [1, 200] so a typed 150 doesn't
     // snap back to 100 when the user taps −.
-    const limits = { weight: [0, 500], reps: [1, 200] };
+    const limits = { weight: [0, 500], reps: [1, 200], leftReps: [1, 200], rightReps: [1, 200] };
     const fieldLimits = limits[field] || [0, 9999];
     // Coerce in case a previous code path wrote a string like '' or '.'
     // arithmetic on those produces NaN and the next clamp wedges at the
@@ -112,49 +112,121 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
         </View>
       </View>
 
-      {/* Reps Row */}
-      <View style={styles.inputRow}>
-        <View style={styles.fieldLabelWrap}>
-          <Text style={styles.fieldLabel}>Reps</Text>
-          {live1RM != null && live1RM > 0 && (
-            <Text style={styles.e1rmHint}>e1RM {Math.round(live1RM)}{units}</Text>
-          )}
+      {/* Reps Row. One stepper normally; two (Left / Right) when the
+          user logs this exercise per-side (unilateral). */}
+      {unilateral ? (
+        <>
+          {[
+            { field: 'leftReps', label: 'Left reps', val: leftReps },
+            { field: 'rightReps', label: 'Right reps', val: rightReps },
+          ].map(({ field, label, val }) => (
+            <View style={styles.inputRow} key={field}>
+              <View style={styles.fieldLabelWrap}>
+                <Text style={styles.fieldLabel}>{label}</Text>
+              </View>
+              <View style={styles.stepper}>
+                <TouchableOpacity
+                  style={styles.stepBtn}
+                  onPress={() => adjust(field, -1)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Decrease ${label}`}
+                >
+                  <Text style={styles.stepBtnText}>−</Text>
+                </TouchableOpacity>
+                <TextInput
+                  testID={`volyume-${field === 'leftReps' ? 'left' : 'right'}-reps-input`}
+                  style={[styles.valueInput, isGhost && styles.valueInputGhost]}
+                  value={val == null || val === '' ? '' : String(val)}
+                  onChangeText={v => {
+                    const n = parseInt(v, 10);
+                    if (!isNaN(n)) setField(field, Math.min(Math.max(n, 1), 200));
+                    else if (v === '') setField(field, '');
+                  }}
+                  keyboardType="number-pad"
+                  returnKeyType="done"
+                  onSubmitEditing={() => Keyboard.dismiss()}
+                  selectTextOnFocus
+                  accessibilityLabel={`Number of ${label}`}
+                />
+                <TouchableOpacity
+                  style={styles.stepBtn}
+                  onPress={() => adjust(field, 1)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Increase ${label}`}
+                >
+                  <Text style={styles.stepBtnText}>+</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+        </>
+      ) : (
+        <View style={styles.inputRow}>
+          <View style={styles.fieldLabelWrap}>
+            <Text style={styles.fieldLabel}>Reps</Text>
+            {live1RM != null && live1RM > 0 && (
+              <Text style={styles.e1rmHint}>e1RM {Math.round(live1RM)}{units}</Text>
+            )}
+          </View>
+          <View style={styles.stepper}>
+            <TouchableOpacity
+              style={styles.stepBtn}
+              onPress={() => adjust('reps', -1)}
+              accessibilityRole="button"
+              accessibilityLabel="Decrease reps"
+            >
+              <Text style={styles.stepBtnText}>−</Text>
+            </TouchableOpacity>
+            <TextInput
+              testID="volyume-reps-input"
+              ref={repsRef}
+              style={[styles.valueInput, isGhost && styles.valueInputGhost]}
+              value={reps == null || reps === '' ? '' : String(reps)}
+              onChangeText={v => {
+                const n = parseInt(v, 10);
+                if (!isNaN(n)) setField('reps', Math.min(Math.max(n, 1), 200));
+                else if (v === '') setField('reps', '');
+              }}
+              keyboardType="number-pad"
+              returnKeyType="done"
+              onSubmitEditing={() => Keyboard.dismiss()}
+              selectTextOnFocus
+              accessibilityLabel="Number of reps"
+            />
+            <TouchableOpacity
+              style={styles.stepBtn}
+              onPress={() => adjust('reps', 1)}
+              accessibilityRole="button"
+              accessibilityLabel="Increase reps"
+            >
+              <Text style={styles.stepBtnText}>+</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={styles.stepper}>
-          <TouchableOpacity
-            style={styles.stepBtn}
-            onPress={() => adjust('reps', -1)}
-            accessibilityRole="button"
-            accessibilityLabel="Decrease reps"
-          >
-            <Text style={styles.stepBtnText}>−</Text>
-          </TouchableOpacity>
-          <TextInput
-            testID="volyume-reps-input"
-            ref={repsRef}
-            style={[styles.valueInput, isGhost && styles.valueInputGhost]}
-            value={reps == null || reps === '' ? '' : String(reps)}
-            onChangeText={v => {
-              const n = parseInt(v, 10);
-              if (!isNaN(n)) setField('reps', Math.min(Math.max(n, 1), 200));
-              else if (v === '') setField('reps', '');
-            }}
-            keyboardType="number-pad"
-            returnKeyType="done"
-            onSubmitEditing={() => Keyboard.dismiss()}
-            selectTextOnFocus
-            accessibilityLabel="Number of reps"
-          />
-          <TouchableOpacity
-            style={styles.stepBtn}
-            onPress={() => adjust('reps', 1)}
-            accessibilityRole="button"
-            accessibilityLabel="Increase reps"
-          >
-            <Text style={styles.stepBtnText}>+</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      )}
+
+      {/* Per-side (L/R) toggle for unilateral exercises. */}
+      {onToggleUnilateral && !isWarmup && (
+        <TouchableOpacity
+          style={styles.setTypeRow}
+          onPress={onToggleUnilateral}
+          activeOpacity={0.7}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: unilateral }}
+          accessibilityLabel="Log this exercise left and right separately"
+        >
+          <Text style={styles.setTypeLabel}>Track left / right</Text>
+          <View style={styles.setTypeRight}>
+            <Text style={styles.setTypeValue}>{unilateral ? 'On' : 'Off'}</Text>
+            <Ionicons
+              name={unilateral ? 'toggle' : 'toggle-outline'}
+              size={20}
+              color={unilateral ? colors.primary : colors.textMuted}
+              style={{ marginLeft: 4 }}
+            />
+          </View>
+        </TouchableOpacity>
+      )}
 
       {/* Live estimated 1RM chip, shown when weight and reps are present, not a warm-up */}
       {live1RM > 0 && liveReps >= 1 && liveReps <= 15 && !isWarmup && (

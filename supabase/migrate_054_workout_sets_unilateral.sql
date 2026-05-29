@@ -1,0 +1,40 @@
+-- Migration 054: workout_sets per-side reps (unilateral logging)
+--
+-- Backs GAP row 20 (per-side L/R reps). A unilateral exercise (e.g. a
+-- single-leg press, a one-arm row) is logged with a rep count for each
+-- side. We store both, and keep actual_reps holding the LOWER side, so
+-- everything downstream that reads actual_reps (weekly volume, PR
+-- detection, progression) stays correct and conservative without any
+-- engine change. left_reps / right_reps are the per-side record for
+-- display ("L 10 / R 9").
+--
+-- Both columns are additive + nullable. The frozen closed-test AAB has
+-- no writer for them (its _upsertSets sends the old column set) and
+-- reads actual_reps exactly as before, so it keeps working against this
+-- schema. The new AAB's push sends left_reps / right_reps, which is why
+-- this migration must be applied before that build ships (same ordering
+-- rule as every other additive workout_sets column).
+--
+-- Tracking (CLAUDE.md Rule 6):
+--   - Migration number:        054
+--   - Purpose:                 left_reps + right_reps on workout_sets
+--   - Applied locally:         no (no local dev Supabase project at v1)
+--   - Applied remotely:        pending founder apply
+--   - Safe to re-run:          yes (ADD COLUMN IF NOT EXISTS)
+--   - Rollback:                ALTER TABLE workout_sets
+--                                DROP COLUMN left_reps, DROP COLUMN right_reps;
+--                              No data loss for bilateral sets (always
+--                              NULL there); unilateral sets keep their
+--                              actual_reps (the lower side) regardless.
+--   - App-code dependencies:   src/lib/sync.js _upsertSets pushes both
+--                              columns; src/lib/database.js
+--                              createWorkoutSet + insertWorkoutSetFromCloud
+--                              read/write them; SetEntry +
+--                              ActiveWorkoutScreen own the L/R input.
+--                              The cloud pull is select('*') so no RPC
+--                              or pull-query change is needed.
+--
+-- Apply via Supabase Dashboard -> SQL Editor -> Run.
+
+ALTER TABLE workout_sets ADD COLUMN IF NOT EXISTS left_reps  integer;
+ALTER TABLE workout_sets ADD COLUMN IF NOT EXISTS right_reps integer;

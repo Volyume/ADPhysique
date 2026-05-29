@@ -337,6 +337,10 @@ async function _upsertSets(sb, supabaseUserId, sets) {
     is_amrap: s.isAmrap === 1,
     amrap_reps: s.amrapReps ?? null,
     missed_reps: s.missedReps ?? null,
+    // Per-side reps for unilateral sets (migration 054). null on every
+    // bilateral set. actual_reps already holds the lower side.
+    left_reps: s.leftReps ?? null,
+    right_reps: s.rightReps ?? null,
     updated_at: new Date().toISOString(),
   }));
   // Chunk to avoid hitting Supabase row limits

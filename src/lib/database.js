@@ -1086,6 +1086,16 @@ const SCHEMA_MIGRATIONS = [
       PRIMARY KEY (user_id, food_ref)
     )`,
   ],
+  // Per-side reps for unilateral exercises (GAP row 20). When a set is
+  // logged left/right, both counts are stored here and actual_reps holds
+  // the lower side, so volume + PR + progression (all of which read
+  // actual_reps) stay conservative with no engine change. Mirrors cloud
+  // migration 054. Additive + nullable: the frozen build never writes
+  // them and reads actual_reps as before.
+  [
+    'ALTER TABLE workout_sets ADD COLUMN left_reps INTEGER',
+    'ALTER TABLE workout_sets ADD COLUMN right_reps INTEGER',
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
@@ -1603,8 +1613,8 @@ export async function createWorkoutSet(data) {
     `INSERT INTO workout_sets
       (id, user_id, workout_id, exercise_id, exercise_name, set_number, set_type,
        target_reps_min, target_reps_max, actual_reps, weight, rir, rpe,
-       failed, notes, is_amrap, amrap_reps, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       failed, notes, is_amrap, amrap_reps, left_reps, right_reps, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       data.userId,
@@ -1623,6 +1633,8 @@ export async function createWorkoutSet(data) {
       data.notes || null,
       data.isAmrap ? 1 : 0,
       data.amrapReps ?? null,
+      data.leftReps ?? null,
+      data.rightReps ?? null,
       now,
       now,
     ],
@@ -4339,8 +4351,8 @@ export async function insertWorkoutSetFromCloud(userId, s) {
       (id, user_id, workout_id, exercise_id, exercise_name, set_number, set_type,
        target_reps_min, target_reps_max, actual_reps, weight, rir, rpe,
        failed, notes, post_set_pump, post_set_muscle_connection, joint_discomfort,
-       is_amrap, amrap_reps, missed_reps, created_at, updated_at, deleted_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+       is_amrap, amrap_reps, missed_reps, left_reps, right_reps, created_at, updated_at, deleted_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [
       s.id, userId, s.workout_id, exerciseId, exerciseName,
       s.set_number ?? 1, s.set_type ?? 'straight',
@@ -4351,6 +4363,7 @@ export async function insertWorkoutSetFromCloud(userId, s) {
       s.joint_discomfort ?? null,
       s.is_amrap ? 1 : 0, s.amrap_reps ?? null,
       s.missed_reps ?? null,
+      s.left_reps ?? null, s.right_reps ?? null,
       Date.now(), Date.now(),
       s.deleted_at ? new Date(s.deleted_at).getTime() : null,
     ],

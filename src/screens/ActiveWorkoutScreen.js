@@ -41,6 +41,7 @@ import {
 } from '../lib/algorithms';
 import { rankSwaps } from '../lib/swapEngine';
 import { isClusterType, clusterLabel, summariseCluster, mergeClusterNote } from '../lib/clusterSet';
+import { lowerSideReps, formatPerSide, loadUnilateralExercises, setUnilateralExercise } from '../lib/unilateral';
 import { FORM_TIPS } from '../lib/formTips';
 import InfoTooltip from '../components/InfoTooltip';
 import { applyTimeCrunch } from '../lib/mesocycle';
@@ -150,6 +151,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // shape: { setType, weight, reps: [activation, mini1, ...] }
   const [cluster, setCluster] = useState(null);
   const [clusterReps, setClusterReps] = useState('');
+  // Exercise IDs the user logs per-side (unilateral). Device-local pref.
+  const [unilateralExercises, setUnilateralExercises] = useState(() => new Set());
   const [progression, setProgression] = useState(null);
   const [setTargets, setSetTargets] = useState([]);
   const [targetReason, setTargetReason] = useState(null);
@@ -302,6 +305,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       return true;
     });
     return () => sub.remove();
+  }, []);
+
+  // Load the per-exercise "log left/right" preference once.
+  useEffect(() => {
+    loadUnilateralExercises().then(setUnilateralExercises).catch(() => {});
   }, []);
 
   // Stale workout check (>4h since last activity)
@@ -665,15 +673,31 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
   async function handleCompleteSet(overrides = {}) {
     if (!exercise || !activeWorkout) return;
-    if (!currentSet.reps || currentSet.reps < 1) {
+    // Unilateral exercises are logged per-side; validate both sides
+    // instead of the single reps field. Cluster overrides bypass this
+    // (a cluster carries its own total).
+    const isUni = !overrides.actualReps && unilateralExercises.has(exercise.id);
+    const uniLeft = parseInt(currentSet.leftReps, 10);
+    const uniRight = parseInt(currentSet.rightReps, 10);
+    if (isUni) {
+      if (!(uniLeft >= 1) || !(uniRight >= 1)) {
+        Alert.alert('Enter reps', 'Enter reps for both the left and right side.');
+        return;
+      }
+    } else if (!currentSet.reps || currentSet.reps < 1) {
       Alert.alert('Enter reps', 'Please enter the number of reps completed.');
       return;
     }
     // Cluster sets (myo-reps / rest-pause) commit the whole cluster as
     // one row: actualReps is the summed total and notes carry the
     // breakdown. Both arrive via `overrides` from finishCluster.
-    const effectiveReps = overrides.actualReps ?? parseInt(currentSet.reps, 10);
+    // For a unilateral set, actual_reps holds the LOWER side so volume +
+    // PR + progression stay conservative; both sides are kept on the row.
+    const effectiveReps = overrides.actualReps
+      ?? (isUni ? lowerSideReps(currentSet.leftReps, currentSet.rightReps) : parseInt(currentSet.reps, 10));
     const effectiveNotes = overrides.notes ?? (noteText || null);
+    const effectiveLeft = isUni ? uniLeft : null;
+    const effectiveRight = isUni ? uniRight : null;
     // Weight is required unless this is a bodyweight movement. A blank or
     // non-numeric field means the user hasn't entered a load yet, block
     // rather than silently saving a 0 kg set.
@@ -705,6 +729,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         failed: false,
         notes: effectiveNotes,
         isAmrap: currentSet.setType === 'amrap',
+        leftReps: effectiveLeft,
+        rightReps: effectiveRight,
       });
 
       const setData = {
@@ -717,6 +743,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         weight: parseFloat(currentSet.weight) || 0,
         rir: currentSet.rir ?? null,
         rpe: null,
+        leftReps: effectiveLeft,
+        rightReps: effectiveRight,
       };
 
       const newLoggedSets = [...loggedSets, setData];
@@ -815,6 +843,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // Prepare next set
       setNoteText('');
       setShowNoteInput(false);
+      // Per-side counts don't carry to the next set.
+      if (isUni) setCurrentSet((cs) => ({ ...cs, leftReps: '', rightReps: '' }));
       // If warmup was just completed, mark hint seen and auto-switch to working set
       if (currentSet.setType === 'warmup') {
         warmupHintSeenRef.current = true;
@@ -907,6 +937,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   function cancelCluster() {
     setCluster(null);
     setClusterReps('');
+  }
+
+  // Toggle per-side (left/right) logging for the current exercise and
+  // remember it on the device. Clears any half-entered single rep value
+  // so the switch doesn't carry a stale count across modes.
+  async function toggleUnilateral() {
+    if (!exercise?.id) return;
+    const on = !unilateralExercises.has(exercise.id);
+    setUnilateralExercises(await setUnilateralExercise(exercise.id, on));
+    setCurrentSet((cs) => ({ ...cs, leftReps: '', rightReps: '' }));
+    hapticsVocab.setLogged();
   }
 
   function handleRevertTimeCrunch() {
@@ -1441,6 +1482,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 setShowPlateCalc(true);
               }}
               isWarmup={currentSet.setType === 'warmup'}
+              unilateral={exercise ? unilateralExercises.has(exercise.id) : false}
+              onToggleUnilateral={toggleUnilateral}
             />
 
             {showNoteInput ? (
@@ -1546,18 +1589,22 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             <TouchableOpacity
               testID="volyume-btn-complete-set"
               style={[styles.completeBtn, saving && styles.btnDisabled, currentSet.setType === 'warmup' && styles.completeBtnWarmup]}
-              onPress={() => (isClusterType(currentSet.setType) ? startCluster() : handleCompleteSet())}
+              onPress={() => {
+                const uni = exercise ? unilateralExercises.has(exercise.id) : false;
+                if (isClusterType(currentSet.setType) && !uni) return startCluster();
+                return handleCompleteSet();
+              }}
               disabled={saving}
               accessibilityRole="button"
               accessibilityLabel={
                 currentSet.setType === 'warmup' ? 'Done with warm-up'
-                : isClusterType(currentSet.setType) ? 'Start cluster' : 'Complete set'
+                : (isClusterType(currentSet.setType) && !(exercise && unilateralExercises.has(exercise.id))) ? 'Start cluster' : 'Complete set'
               }
             >
               <Ionicons name="checkmark-circle" size={20} color={currentSet.setType === 'warmup' ? colors.warning : colors.primary} />
               <Text style={[styles.completeBtnText, currentSet.setType === 'warmup' && styles.completeBtnTextWarmup]}>
                 {currentSet.setType === 'warmup' ? 'Done'
-                  : isClusterType(currentSet.setType) ? 'Start cluster' : 'Log set'}
+                  : (isClusterType(currentSet.setType) && !(exercise && unilateralExercises.has(exercise.id))) ? 'Start cluster' : 'Log set'}
               </Text>
             </TouchableOpacity>
           )}
@@ -1673,6 +1720,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     )}
                     <Text style={[styles.loggedSetText, isWarmup && styles.loggedSetTextWarmup]}>
                       {s.weight}{units} × {s.actualReps}
+                      {formatPerSide(s.leftReps, s.rightReps) ? ` · ${formatPerSide(s.leftReps, s.rightReps)}` : ''}
                       {isWarmup ? ' · Warm-up' : ''}
                     </Text>
                     {!isWarmup && est1RM > 0 && (
