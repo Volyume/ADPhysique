@@ -40,6 +40,7 @@ import {
   generateDeloadPrescription,
 } from '../lib/algorithms';
 import { rankSwaps } from '../lib/swapEngine';
+import { isClusterType, clusterLabel, summariseCluster, mergeClusterNote } from '../lib/clusterSet';
 import { FORM_TIPS } from '../lib/formTips';
 import InfoTooltip from '../components/InfoTooltip';
 import { applyTimeCrunch } from '../lib/mesocycle';
@@ -145,6 +146,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [supersetHeadsUp, setSupersetHeadsUp] = useState(null);
   // shape: { groupId, exerciseAName, exerciseBName } | null
   const [saving, setSaving] = useState(false);
+  // Myo-rep / rest-pause cluster in progress. null when not clustering.
+  // shape: { setType, weight, reps: [activation, mini1, ...] }
+  const [cluster, setCluster] = useState(null);
+  const [clusterReps, setClusterReps] = useState('');
   const [progression, setProgression] = useState(null);
   const [setTargets, setSetTargets] = useState([]);
   const [targetReason, setTargetReason] = useState(null);
@@ -658,12 +663,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     }
   }, [currentSet.weight, currentSet.reps, prevSets]);
 
-  async function handleCompleteSet() {
+  async function handleCompleteSet(overrides = {}) {
     if (!exercise || !activeWorkout) return;
     if (!currentSet.reps || currentSet.reps < 1) {
       Alert.alert('Enter reps', 'Please enter the number of reps completed.');
       return;
     }
+    // Cluster sets (myo-reps / rest-pause) commit the whole cluster as
+    // one row: actualReps is the summed total and notes carry the
+    // breakdown. Both arrive via `overrides` from finishCluster.
+    const effectiveReps = overrides.actualReps ?? parseInt(currentSet.reps, 10);
+    const effectiveNotes = overrides.notes ?? (noteText || null);
     // Weight is required unless this is a bodyweight movement. A blank or
     // non-numeric field means the user hasn't entered a load yet, block
     // rather than silently saving a 0 kg set.
@@ -688,12 +698,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         setType: currentSet.setType || 'straight',
         targetRepsMin: routineExercise?.recommendedRepsMin ?? null,
         targetRepsMax: routineExercise?.recommendedRepsMax ?? null,
-        actualReps: parseInt(currentSet.reps, 10),
+        actualReps: effectiveReps,
         weight: parseFloat(currentSet.weight) || 0,
         rir: currentSet.rir != null ? parseInt(currentSet.rir, 10) : null,
         rpe: null,
         failed: false,
-        notes: noteText || null,
+        notes: effectiveNotes,
         isAmrap: currentSet.setType === 'amrap',
       });
 
@@ -703,7 +713,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         workoutId: activeWorkout.id,
         setNumber,
         setType: currentSet.setType,
-        actualReps: parseInt(currentSet.reps, 10),
+        actualReps: effectiveReps,
         weight: parseFloat(currentSet.weight) || 0,
         rir: currentSet.rir ?? null,
         rpe: null,
@@ -843,6 +853,60 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     } finally {
       setSaving(false);
     }
+  }
+
+  // ─── Cluster sets (myo-reps / rest-pause) ───────────────────────────
+  // The activation effort + each mini-set accumulate locally; the whole
+  // cluster commits as one workout_sets row on finish (summed reps +
+  // breakdown note). See lib/clusterSet.js.
+
+  function startCluster() {
+    if (!currentSet.reps || currentSet.reps < 1) {
+      Alert.alert('Enter reps', 'Enter your activation set reps first.');
+      return;
+    }
+    const isBodyweight = /body\s*weight/i.test(exercise?.equipment || '');
+    const weightNum = parseFloat(currentSet.weight);
+    if (!isBodyweight && (currentSet.weight === '' || currentSet.weight == null || isNaN(weightNum) || weightNum <= 0)) {
+      Alert.alert('Enter weight', `Enter the weight used (in ${units}) before starting the cluster.`);
+      return;
+    }
+    setCluster({
+      setType: currentSet.setType,
+      weight: currentSet.weight,
+      reps: [parseInt(currentSet.reps, 10)],
+    });
+    setClusterReps('');
+    hapticsVocab.setLogged();
+    // Short intra-cluster rest hint (rest-pause is 10 to 20s).
+    startRestTimer(20);
+  }
+
+  function addMiniSet() {
+    const n = parseInt(clusterReps, 10);
+    if (!Number.isFinite(n) || n <= 0) {
+      Alert.alert('Enter reps', 'Enter the mini-set reps.');
+      return;
+    }
+    setCluster((c) => (c ? { ...c, reps: [...c.reps, n] } : c));
+    setClusterReps('');
+    hapticsVocab.setLogged();
+    startRestTimer(20);
+  }
+
+  async function finishCluster() {
+    if (!cluster) return;
+    const summary = summariseCluster(cluster.setType, cluster.reps);
+    if (!summary) { setCluster(null); setClusterReps(''); return; }
+    const notes = mergeClusterNote(noteText, summary.notes);
+    await handleCompleteSet({ actualReps: summary.totalReps, notes });
+    setCluster(null);
+    setClusterReps('');
+  }
+
+  function cancelCluster() {
+    setCluster(null);
+    setClusterReps('');
   }
 
   function handleRevertTimeCrunch() {
@@ -1394,8 +1458,55 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             ) : null}
           </View>
 
+          {/* Cluster banner: drives myo-rep / rest-pause mini-sets. */}
+          {cluster ? (
+            <View style={styles.clusterBanner}>
+              <Text style={styles.clusterTitle}>
+                {clusterLabel(cluster.setType)} cluster
+              </Text>
+              <Text style={styles.clusterReps}>
+                {cluster.reps.join(' + ')} = {cluster.reps.reduce((a, n) => a + n, 0)} reps
+                {cluster.weight ? ` @ ${cluster.weight}${units}` : ''}
+              </Text>
+              <View style={styles.clusterInputRow}>
+                <TextInput
+                  style={styles.clusterInput}
+                  value={clusterReps}
+                  onChangeText={setClusterReps}
+                  placeholder="Mini-set reps"
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="number-pad"
+                  returnKeyType="done"
+                  onSubmitEditing={addMiniSet}
+                />
+                <TouchableOpacity
+                  style={styles.clusterAddBtn}
+                  onPress={addMiniSet}
+                  accessibilityRole="button"
+                  accessibilityLabel="Add mini-set"
+                >
+                  <Ionicons name="add" size={20} color={colors.primary} />
+                  <Text style={styles.clusterAddBtnText}>Mini-set</Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity
+                style={[styles.completeBtn, saving && styles.btnDisabled]}
+                onPress={finishCluster}
+                disabled={saving}
+                accessibilityRole="button"
+                accessibilityLabel="Finish cluster and log the set"
+              >
+                <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                <Text style={styles.completeBtnText}>Finish cluster</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={cancelCluster} style={styles.clusterCancel} accessibilityLabel="Cancel cluster">
+                <Text style={styles.clusterCancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
           {/* Action Buttons */}
-          {targetComplete ? (
+          {cluster ? null : targetComplete ? (
             <>
               {isLastExercise ? (
                 <TouchableOpacity
@@ -1435,14 +1546,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             <TouchableOpacity
               testID="volyume-btn-complete-set"
               style={[styles.completeBtn, saving && styles.btnDisabled, currentSet.setType === 'warmup' && styles.completeBtnWarmup]}
-              onPress={handleCompleteSet}
+              onPress={() => (isClusterType(currentSet.setType) ? startCluster() : handleCompleteSet())}
               disabled={saving}
               accessibilityRole="button"
-              accessibilityLabel={currentSet.setType === 'warmup' ? 'Done with warm-up' : 'Complete set'}
+              accessibilityLabel={
+                currentSet.setType === 'warmup' ? 'Done with warm-up'
+                : isClusterType(currentSet.setType) ? 'Start cluster' : 'Complete set'
+              }
             >
               <Ionicons name="checkmark-circle" size={20} color={currentSet.setType === 'warmup' ? colors.warning : colors.primary} />
               <Text style={[styles.completeBtnText, currentSet.setType === 'warmup' && styles.completeBtnTextWarmup]}>
-                {currentSet.setType === 'warmup' ? 'Done' : 'Log set'}
+                {currentSet.setType === 'warmup' ? 'Done'
+                  : isClusterType(currentSet.setType) ? 'Start cluster' : 'Log set'}
               </Text>
             </TouchableOpacity>
           )}
@@ -1452,7 +1567,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               "if someone wants to they can add one" path. Hidden once
               the user has already switched the current entry to a
               warm-up so the row isn't redundant. */}
-          {currentSet.setType !== 'warmup' && (
+          {currentSet.setType !== 'warmup' && !cluster && (
             <TouchableOpacity
               style={styles.addWarmupBtn}
               onPress={() => {
@@ -2219,6 +2334,26 @@ const styles = StyleSheet.create({
   completeBtnTextWarmup: { color: colors.warning },
   extraSetBtn: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, paddingVertical: spacing.md },
   extraSetBtnText: { fontSize: fontSize.md, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  clusterBanner: {
+    borderWidth: 1, borderColor: colors.primary + '80', borderRadius: radius.lg,
+    backgroundColor: colors.primaryBg, padding: spacing.md, gap: spacing.sm, marginBottom: spacing.sm,
+  },
+  clusterTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary, letterSpacing: 0.6 },
+  clusterReps: { fontSize: fontSize.md, color: colors.textPrimary, fontWeight: fontWeight.semibold },
+  clusterInputRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  clusterInput: {
+    flex: 1, backgroundColor: colors.background, color: colors.textPrimary,
+    borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, fontSize: fontSize.md,
+  },
+  clusterAddBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderWidth: 1, borderColor: colors.primary + '80', borderRadius: radius.md,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+  },
+  clusterAddBtnText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
+  clusterCancel: { alignItems: 'center', paddingVertical: spacing.xs },
+  clusterCancelText: { fontSize: fontSize.sm, color: colors.textMuted },
   addWarmupBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.xs, paddingVertical: spacing.sm + 2,
