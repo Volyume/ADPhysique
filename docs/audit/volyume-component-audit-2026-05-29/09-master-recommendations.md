@@ -18,6 +18,41 @@ build-out on the branch.
 
 ---
 
+## Progress log (implementation)
+
+Tracked here as the roadmap is worked. Status as of 2026-05-29:
+
+DONE (shipped to main, tested):
+- S1 scrim token + withAlpha helper, rolled out across ~21 modal/sheet/menu
+  backdrops; GradientCard / BlockProgressCard / EntryRow alpha + off-token
+  colours moved onto withAlpha / tokens.
+- S2 lineHeight + letterSpacing scales + type role map (getters that track
+  the larger-text swap); tab-bar labels + splash background tokenised.
+- S3 Card primitive (base surface + accent border via withAlpha + optional
+  PressableCard press).
+- S4 Button primitive (variant/size/loading/disabled/icon/trailingIcon),
+  adopted on PlanDetail, Paywall, ProSetupComplete, Subscription.
+- H2 HeldDecisionCard support-link no longer dead-ends (safety).
+- H4 (partial) chart a11y: VolumeBars, BlockProgressCard, FatigueTrendCard,
+  Sparkline, and BodyDiagramHeatmap regions now expose accessibility
+  labels/roles. MacroRings Skia fallback + ring a11y still outstanding.
+- H5 (partial) skeleton loading on PlanDetail. Plans / PlanLibrary /
+  Mesocycle still to do.
+- DiaryScreen FABs moved to shadow tokens.
+
+NOT STARTED (need runtime verification, deferred to a verifiable session):
+- C1 ActiveWorkout virtualise + decompose (core loop, highest risk).
+- S5 Field / SearchBar / Chip / Stepper.
+- S6 BottomSheet chrome extraction.
+- S7 chart-kit convergence (retire gifted-charts + victory-native).
+- S8 Toast-as-error sweep (broad; touches many write paths).
+- H1 header-system unification.
+- H8 CoachOutput decomposition.
+- Remaining Button/Card rollout across the other ~10 inline-button screens
+  and the 83 inline card blocks.
+
+---
+
 ## Systemic fixes (do these first, highest leverage)
 
 ### S1, Scrim/overlay token + `withAlpha()` helper
