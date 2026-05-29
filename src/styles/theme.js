@@ -55,9 +55,42 @@ const baseColors = {
   // Chart tokens
   chartLine: '#F59E0B',
   chartFill: 'rgba(245, 158, 11, 0.08)',
+
+  // One scrim for every dimmed surface (modal / sheet / menu backdrop) so
+  // backdrop darkness is consistent app-wide. Replaces the ad-hoc
+  // rgba(0,0,0,x) and '#000' literals that drifted between 0.4 and 0.65.
+  scrim: 'rgba(0, 0, 0, 0.55)',
 };
 
 export const colors = { ...baseColors };
+
+// Apply an alpha to a colour token. Accepts hex (#RGB / #RRGGBB / #RRGGBBAA)
+// or rgb()/rgba() strings and returns an rgba() string. Replaces the fragile
+// `colour + '55'` hex-concat pattern, which silently breaks on the rgba()
+// primaries (primaryBg, chartFill) and on 3-digit hex. Pure function.
+export function withAlpha(color, alpha) {
+  const a = Math.max(0, Math.min(1, Number.isFinite(alpha) ? alpha : 1));
+  if (typeof color !== 'string') return color;
+  const c = color.trim();
+  if (c.startsWith('#')) {
+    let hex = c.slice(1);
+    if (hex.length === 3) hex = hex.split('').map(ch => ch + ch).join('');
+    if (hex.length === 8) hex = hex.slice(0, 6); // drop any existing alpha
+    if (hex.length !== 6) return color;
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    if ([r, g, b].some(Number.isNaN)) return color;
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+  const m = c.match(/^rgba?\(\s*([^)]+)\)$/i);
+  if (m) {
+    const [r, g, b] = m[1].split(',').map(s => s.trim());
+    if (r === undefined || g === undefined || b === undefined) return color;
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+  return color;
+}
 
 export const spacing = {
   xxs: 2,
@@ -157,6 +190,69 @@ export const fontWeight = {
   bold: '700',
   heavy: '800',
   black: '900',
+};
+
+// Line-height multipliers (USWDS-style). Absolute line height is
+// round(fontSize * multiplier), computed in the type roles below so it
+// tracks the larger-text fontSize swap.
+export const lineHeight = {
+  tight: 1.2,
+  snug: 1.35,
+  normal: 1.5,
+  relaxed: 1.6,
+};
+
+// Letter-spacing scale: tighter on large display type, looser on micro
+// labels, neutral on body. Values in px (RN letterSpacing is absolute).
+export const letterSpacing = {
+  display: -0.5,
+  heading: -0.25,
+  body: 0,
+  label: 0.2,
+  caption: 0.4,
+};
+
+// Semantic type roles. Getters (like volumeColors) so they reflect the
+// larger-text fontSize swap: applyAccessibility mutates fontSize in place
+// before screens build their styles, and these read it fresh at
+// StyleSheet.create time. Usage: style={{ ...type.body, color: ... }}.
+export const type = {
+  get display() {
+    return { fontSize: fontSize.display, fontWeight: fontWeight.black,
+      lineHeight: Math.round(fontSize.display * lineHeight.tight), letterSpacing: letterSpacing.display };
+  },
+  get h1() {
+    return { fontSize: fontSize.xxxl, fontWeight: fontWeight.bold,
+      lineHeight: Math.round(fontSize.xxxl * lineHeight.tight), letterSpacing: letterSpacing.heading };
+  },
+  get h2() {
+    return { fontSize: fontSize.xxl, fontWeight: fontWeight.bold,
+      lineHeight: Math.round(fontSize.xxl * lineHeight.snug), letterSpacing: letterSpacing.heading };
+  },
+  get h3() {
+    return { fontSize: fontSize.xl, fontWeight: fontWeight.semibold,
+      lineHeight: Math.round(fontSize.xl * lineHeight.snug), letterSpacing: letterSpacing.heading };
+  },
+  get title() {
+    return { fontSize: fontSize.lg, fontWeight: fontWeight.semibold,
+      lineHeight: Math.round(fontSize.lg * lineHeight.snug), letterSpacing: letterSpacing.body };
+  },
+  get body() {
+    return { fontSize: fontSize.md, fontWeight: fontWeight.regular,
+      lineHeight: Math.round(fontSize.md * lineHeight.normal), letterSpacing: letterSpacing.body };
+  },
+  get bodyStrong() {
+    return { fontSize: fontSize.md, fontWeight: fontWeight.semibold,
+      lineHeight: Math.round(fontSize.md * lineHeight.normal), letterSpacing: letterSpacing.body };
+  },
+  get label() {
+    return { fontSize: fontSize.sm, fontWeight: fontWeight.medium,
+      lineHeight: Math.round(fontSize.sm * lineHeight.snug), letterSpacing: letterSpacing.label };
+  },
+  get caption() {
+    return { fontSize: fontSize.xs, fontWeight: fontWeight.regular,
+      lineHeight: Math.round(fontSize.xs * lineHeight.snug), letterSpacing: letterSpacing.caption };
+  },
 };
 
 export const hitSlop = { top: 12, bottom: 12, left: 12, right: 12 };

@@ -13,7 +13,7 @@ const HERO_ASPECT = 1032 / 277;
 const SPLASH_W = Math.round(Dimensions.get('window').width * 0.7);
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors, fontWeight, spacing } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing } from '../styles/theme';
 import SyncStatusBadge from '../components/SyncStatusBadge';
 import useAppStore from '../store/useAppStore';
 import { getSupabaseClient } from '../lib/supabase';
@@ -329,7 +329,9 @@ function MainTabs() {
         },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        // Tokenised so the labels scale with the larger-text accessibility
+        // setting (read at render time, after applyAccessibility).
+        tabBarLabelStyle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold },
         tabBarIcon: ({ focused, color }) => {
           const icons = {
             HomeTab: focused ? 'home' : 'home-outline',
@@ -1036,18 +1038,11 @@ function SplashScreen() {
 const splashStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    // Brand background, matches the rest of the app so there's no black
+    // seam at splash hand-off (was hardcoded #000000).
+    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  wordmark: {
-    fontSize: 34,
-    fontWeight: fontWeight.black,
-    color: colors.textPrimary,
-    letterSpacing: -0.5,
-    includeFontPadding: false,
-    textAlign: 'center',
-    marginTop: spacing.lg,
   },
   accent: {
     width: 40,
