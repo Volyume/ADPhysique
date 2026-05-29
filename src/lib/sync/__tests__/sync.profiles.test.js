@@ -226,4 +226,81 @@ describe('profiles pull (merge)', () => {
     expect(result).toEqual({ count: 0, errors: 1 });
     expect(setUserProfile).not.toHaveBeenCalled();
   });
+
+  // Anti-churn (2026-05-29): the cloud row carries the SAME values the
+  // store already holds, so the merge resolves to the current profile.
+  // Writing it back would re-stamp userProfileFieldUpdatedAt and make the
+  // next push look newer, re-triggering the merge every sync cycle. The
+  // handler must skip the store write when merged == local.
+  test('no-op when the merged profile equals local: skips setUserProfile', async () => {
+    const setUserProfile = jest.fn();
+    setStoreState({
+      userProfile: {
+        firstName: 'Allan',
+        units: 'kg',
+        trainingFocus: 'bodybuilding',
+        trainingAgeYears: 8,
+        primaryEquipment: 'commercial',
+        barWeight: 20,
+      },
+      userProfileFieldUpdatedAt: {},
+      setUserProfile,
+    });
+    const sb = makeMaybeSingleSb({
+      data: {
+        first_name: 'Allan',
+        units: 'kg',
+        training_focus: 'bodybuilding',
+        training_age: 8,
+        primary_equipment: 'commercial',
+        bar_weight: 20,
+        updated_at: new Date(Date.UTC(2026, 5, 1)).toISOString(),
+        column_updates_at: {},
+      },
+    });
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await pullProfiles(sb, { userId: 'u1' });
+
+    expect(setUserProfile).not.toHaveBeenCalled();
+    expect(result.count).toBe(0);
+    expect(result.errors).toBe(0);
+  });
+
+  // Counterpart: a genuine cloud change still writes. The cloud wrote
+  // bar_weight most recently (per column_updates_at), so the merge pulls
+  // it in and the profile differs from local, so the write happens.
+  test('writes when the merge changes a field', async () => {
+    const setUserProfile = jest.fn();
+    setStoreState({
+      userProfile: {
+        firstName: 'Allan',
+        units: 'kg',
+        trainingFocus: 'bodybuilding',
+        trainingAgeYears: 8,
+        primaryEquipment: 'commercial',
+        barWeight: 20,
+      },
+      userProfileFieldUpdatedAt: { barWeight: Date.UTC(2026, 0, 1) },
+      setUserProfile,
+    });
+    const sb = makeMaybeSingleSb({
+      data: {
+        first_name: 'Allan',
+        units: 'kg',
+        training_focus: 'bodybuilding',
+        training_age: 8,
+        primary_equipment: 'commercial',
+        bar_weight: 25,
+        updated_at: new Date(Date.UTC(2026, 5, 1)).toISOString(),
+        column_updates_at: { bar_weight: '2026-05-15T00:00:00.000Z' },
+      },
+    });
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await pullProfiles(sb, { userId: 'u1' });
+
+    expect(setUserProfile).toHaveBeenCalledWith(expect.objectContaining({ barWeight: 25 }));
+    expect(result.count).toBe(1);
+  });
 });
