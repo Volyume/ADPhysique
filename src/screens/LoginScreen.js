@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { VolyumeMark } from '../components/BrandMark';
+import Button from '../components/Button';
 import { signInWithEmail, signUpWithEmail, resetPassword, signInWithGoogle, signInWithApple } from '../lib/supabase';
 import { syncProfile, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
 import { wipeAllUserData } from '../lib/database';
@@ -370,22 +371,15 @@ export default function LoginScreen({ navigation, route }) {
           </View>
 
           {/* ── Primary CTA ── */}
-          <TouchableOpacity
+          <Button
             testID={isSignIn ? 'submit-signin' : 'submit-signup'}
             accessibilityLabel={isSignIn ? 'Sign in' : 'Create account'}
-            style={[styles.primaryBtn, loading && styles.btnDisabled]}
+            title={isSignIn ? 'Sign In' : 'Create Account'}
+            size="lg"
+            loading={loading}
             onPress={handleEmailAuth}
-            disabled={loading}
-            activeOpacity={0.88}
-          >
-            {loading ? (
-              <ActivityIndicator color={colors.background} />
-            ) : (
-              <Text style={styles.primaryBtnText}>
-                {isSignIn ? 'Sign In' : 'Create Account'}
-              </Text>
-            )}
-          </TouchableOpacity>
+            style={styles.submitBtn}
+          />
 
           {/* Mode switch */}
           <TouchableOpacity
@@ -530,20 +524,8 @@ const styles = StyleSheet.create({
   },
 
   // Primary button
-  primaryBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    paddingVertical: spacing.lg + 2,
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
+  submitBtn: { marginBottom: spacing.lg },
   btnDisabled: { opacity: 0.55 },
-  primaryBtnText: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
-    color: colors.background,
-    letterSpacing: 0.3,
-  },
 
   // Mode switch
   modeSwitch: {

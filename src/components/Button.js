@@ -48,6 +48,7 @@ export default function Button({
   style,
   textStyle,
   accessibilityLabel,
+  testID,
   children,
 }) {
   const v = VARIANTS[variant] || VARIANTS.primary;
@@ -60,6 +61,7 @@ export default function Button({
       disabled={isDisabled}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel || title}
+      testID={testID}
       style={[
         styles.base,
         {

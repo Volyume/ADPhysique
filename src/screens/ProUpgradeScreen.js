@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import Button from '../components/Button';
 import useAppStore from '../store/useAppStore';
 import { signUpWithEmail, signInWithEmail, signInWithGoogle, signInWithApple, getSupabaseClient } from '../lib/supabase';
 import { syncProfile, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
@@ -183,14 +184,7 @@ export default function ProUpgradeScreen({ navigation }) {
           <Text style={styles.successBody}>
             Everything's unlocked and your data is backed up. Now let's set up your training plan and nutrition targets so your coach can get to work.
           </Text>
-          <TouchableOpacity
-            style={styles.primaryBtn}
-            onPress={startSetup}
-            activeOpacity={0.88}
-          >
-            <Ionicons name="sparkles" size={16} color={colors.background} />
-            <Text style={styles.primaryBtnText}>Set up your training</Text>
-          </TouchableOpacity>
+          <Button title="Set up your training" icon="sparkles" size="lg" onPress={startSetup} />
           <TouchableOpacity
             style={styles.secondaryLink}
             onPress={() => navigation.goBack()}
@@ -252,21 +246,13 @@ export default function ProUpgradeScreen({ navigation }) {
               <Text style={styles.accountNote}>
                 Your account is ready. Activate Pro and everything unlocks instantly.
               </Text>
-              <TouchableOpacity
-                style={[styles.primaryBtn, busy && styles.btnDisabled]}
+              <Button
+                title="Activate Pro"
+                icon="sparkles"
+                size="lg"
+                loading={busy}
                 onPress={confirmExistingAccount}
-                disabled={busy}
-                activeOpacity={0.88}
-              >
-                {busy ? (
-                  <ActivityIndicator color={colors.background} />
-                ) : (
-                  <>
-                    <Ionicons name="sparkles" size={16} color={colors.background} />
-                    <Text style={styles.primaryBtnText}>Activate Pro</Text>
-                  </>
-                )}
-              </TouchableOpacity>
+              />
             </>
           ) : (
             <>
@@ -358,23 +344,13 @@ export default function ProUpgradeScreen({ navigation }) {
                 </View>
               </View>
 
-              <TouchableOpacity
-                style={[styles.primaryBtn, busy && styles.btnDisabled]}
+              <Button
+                title={mode === 'signup' ? 'Create account and go Pro' : 'Sign in and go Pro'}
+                icon="sparkles"
+                size="lg"
+                loading={busy}
                 onPress={handleAuth}
-                disabled={busy}
-                activeOpacity={0.88}
-              >
-                {busy ? (
-                  <ActivityIndicator color={colors.background} />
-                ) : (
-                  <>
-                    <Ionicons name="sparkles" size={16} color={colors.background} />
-                    <Text style={styles.primaryBtnText}>
-                      {mode === 'signup' ? 'Create account and go Pro' : 'Sign in and go Pro'}
-                    </Text>
-                  </>
-                )}
-              </TouchableOpacity>
+              />
 
               <TouchableOpacity
                 style={styles.switchBtn}
@@ -461,12 +437,6 @@ const styles = StyleSheet.create({
     top: 0, bottom: 0, justifyContent: 'center', paddingHorizontal: spacing.xs,
   },
 
-  primaryBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm, backgroundColor: colors.primary,
-    borderRadius: radius.lg, paddingVertical: spacing.lg + 2,
-    marginTop: spacing.sm,
-  },
   btnDisabled: { opacity: 0.55 },
 
   oauthBlock: { gap: spacing.sm, marginBottom: spacing.lg },
@@ -485,10 +455,6 @@ const styles = StyleSheet.create({
   oauthDivider: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   oauthDividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
   oauthDividerText: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
-  primaryBtnText: {
-    fontSize: fontSize.lg, fontWeight: fontWeight.bold,
-    color: colors.background,
-  },
 
   switchBtn: { alignItems: 'center', paddingVertical: spacing.md },
   switchText: { fontSize: fontSize.sm, color: colors.textMuted },

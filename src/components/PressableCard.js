@@ -27,6 +27,7 @@ export default function PressableCard({
   children,
   accessibilityRole = 'button',
   accessibilityLabel,
+  testID,
   hitSlop,
   // Subtle by default. Pass scale={0.94} for a more pronounced press
   // on hero CTAs; anything below 0.92 looks heavy and slow.
@@ -70,6 +71,7 @@ export default function PressableCard({
       onPressOut={pressOut}
       disabled={disabled}
       hitSlop={hitSlop}
+      testID={testID}
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}
     >
