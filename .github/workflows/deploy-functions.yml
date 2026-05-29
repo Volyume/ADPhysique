@@ -1,0 +1,75 @@
+name: Deploy Supabase functions
+
+# Manual deploy for the Edge Functions in supabase/functions, so no CLI
+# is needed locally. Open the Actions tab, pick this workflow, click
+# "Run workflow".
+#
+# One-time setup (paste a secret, no commands):
+#   Repo Settings -> Secrets and variables -> Actions -> New repository secret
+#     SUPABASE_ACCESS_TOKEN = a personal access token from the Supabase
+#       dashboard -> Account -> Access Tokens.
+#   EXPO_PUBLIC_SUPABASE_URL is already set; the project ref is read from it.
+#
+# send-push deploys with JWT verification on (its caller, the RTDN
+# webhook, presents the service-role key and the function also checks it
+# internally). play-billing-rtdn deploys with --no-verify-jwt because
+# Google Pub/Sub calls it with OIDC, not a Supabase JWT.
+
+on:
+  workflow_dispatch:
+    inputs:
+      function:
+        description: Which function to deploy
+        type: choice
+        default: send-push
+        options:
+          - send-push
+          - play-billing-rtdn
+          - all
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check required secrets
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "::error::SUPABASE_ACCESS_TOKEN is empty. Add it in repo Settings → Secrets and variables → Actions (get it from Supabase dashboard → Account → Access Tokens)."
+            exit 1
+          fi
+          if [ -z "$EXPO_PUBLIC_SUPABASE_URL" ]; then
+            echo "::error::EXPO_PUBLIC_SUPABASE_URL is empty. It should already be set for the Android build."
+            exit 1
+          fi
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Deploy
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          CHOICE: ${{ github.event.inputs.function }}
+        run: |
+          REF=$(printf '%s' "$EXPO_PUBLIC_SUPABASE_URL" | sed -E 's#https?://([^.]+)\..*#\1#')
+          if [ -z "$REF" ]; then
+            echo "::error::Could not read the project ref from EXPO_PUBLIC_SUPABASE_URL."
+            exit 1
+          fi
+          echo "Project ref: $REF"
+          if [ "$CHOICE" = "send-push" ] || [ "$CHOICE" = "all" ]; then
+            echo "Deploying send-push (JWT verification on)"
+            supabase functions deploy send-push --project-ref "$REF"
+          fi
+          if [ "$CHOICE" = "play-billing-rtdn" ] || [ "$CHOICE" = "all" ]; then
+            echo "Deploying play-billing-rtdn (--no-verify-jwt for Google Pub/Sub OIDC)"
+            supabase functions deploy play-billing-rtdn --project-ref "$REF" --no-verify-jwt
+          fi
