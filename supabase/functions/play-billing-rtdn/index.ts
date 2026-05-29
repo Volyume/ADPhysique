@@ -187,6 +187,46 @@ async function verifyWithPlayApi(
   return await res.json();
 }
 
+// Fire the subscription-payment-failure push via the send-push Edge
+// Function. Called when Google reports the sub on hold / in grace,
+// which means a renewal charge failed. send-push reads the user's
+// device_push_tokens (migration 053) and fans out via Expo. Copy is
+// fixed in NOTIFICATIONS_LOCKED.md. Best-effort: a push failure must
+// not change the HTTP response to Google (we still ACK the RTDN).
+//
+// Quiet hours are not applied here: the user's quiet-hours window lives
+// in device AsyncStorage and is never synced to the server, so the
+// server cannot read it. Payment failure is transactional and fires on
+// receipt; the device's foreground handler still suppresses it if the
+// app is open (handler.js).
+async function sendPaymentFailurePush(userId: string): Promise<void> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    log("warn", "cannot send payment-failure push: SUPABASE_URL/SERVICE_ROLE_KEY missing");
+    return;
+  }
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        user_id: userId,
+        title: "We couldn't take your payment",
+        body: "Update your billing in Google Play to keep your Complete features.",
+        data: { type: "subscription_payment_failure" },
+      }),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      log("warn", `send-push payment-failure failed: ${res.status} ${body}`);
+    }
+  } catch (e) {
+    log("warn", "send-push payment-failure threw", e);
+  }
+}
+
 async function callUpgradeTier(
   userId: string,
   targetTier: "pro" | "free",
@@ -290,12 +330,20 @@ serve(async (req: Request) => {
     case "refund":
       await callUpgradeTier(userId, "free", "refunded", paymentRef, "play_billing_rtdn");
       break;
+    case "grace":
+      // SUBSCRIPTION_ON_HOLD / IN_GRACE_PERIOD: a renewal charge
+      // failed. No tier change (the 3-day grace timer is client-side
+      // and the user keeps access during it), but this is exactly the
+      // subscription_payment_failure surface in NOTIFICATIONS_LOCKED.md.
+      // Push the "update your billing" notice. Best-effort; we still ACK.
+      log("info", `notificationType=${sub.notificationType} action=grace; sending payment-failure push`);
+      await sendPaymentFailurePush(userId);
+      break;
     case "renewal":
     case "cancel":     // sub continues to billing-period end
     case "pause":      // app gates separately based on entitlement
     case "defer":
     case "price_change":
-    case "grace":      // 3-day grace timer is client-side
     case "ignore":
       log("info", `notificationType=${sub.notificationType} action=${action} (no tier change)`);
       break;

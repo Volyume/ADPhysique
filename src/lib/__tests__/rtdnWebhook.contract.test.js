@@ -42,3 +42,33 @@ describe('play-billing-rtdn → Supabase RPC contract', () => {
     expect(RTDN).not.toMatch(/["']x-supabase-user-id["']\s*:/i);
   });
 });
+
+describe('play-billing-rtdn → payment-failure push', () => {
+  test('grace action sends the subscription_payment_failure push', () => {
+    // ON_HOLD (5) / IN_GRACE_PERIOD (9) map to the grace action, which
+    // must fire the payment-failure push via send-push.
+    expect(RTDN).toMatch(/sendPaymentFailurePush\(userId\)/);
+    expect(RTDN).toMatch(/\/functions\/v1\/send-push/);
+    expect(RTDN).toMatch(/subscription_payment_failure/);
+  });
+
+  test('grace still applies NO tier change (3-day timer is client-side)', () => {
+    // The grace case must not call upgrade_tier_for_user; access is
+    // retained during the grace window.
+    const graceBlock = RTDN.slice(
+      RTDN.indexOf('case "grace":'),
+      RTDN.indexOf('case "renewal":'),
+    );
+    expect(graceBlock).toMatch(/sendPaymentFailurePush/);
+    expect(graceBlock).not.toMatch(/callUpgradeTier/);
+  });
+
+  test('payment-failure push authenticates to send-push with the service-role key', () => {
+    expect(RTDN).toMatch(/Bearer \$\{SUPABASE_SERVICE_ROLE_KEY\}/);
+  });
+
+  test('does not redeclare SUPABASE_SERVICE_ROLE_KEY (single top-level const)', () => {
+    const decls = RTDN.match(/const SUPABASE_SERVICE_ROLE_KEY\b/g) ?? [];
+    expect(decls).toHaveLength(1);
+  });
+});
