@@ -52,6 +52,7 @@ import {
   // src/lib/sync/tables/<table>.js per MIGRATED_TABLES.
 } from './database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getPullWatermark, setPullWatermark, nextWatermark, isoFromMs } from './sync/watermark';
 import { logError, logWarn, logInfo } from './errorLog';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -1162,21 +1163,33 @@ export async function pullFromCloud(supabaseUserId) {
     // cloud rows that pre-date deterministic IDs heal automatically.
     const exerciseCount = await _pullExercises(sb, supabaseUserId);
 
+    // Incremental delta pull (GAP row 12b). On a warm cursor we ask the
+    // cloud only for workouts changed since the last pull, instead of
+    // re-downloading the entire session history every foreground. The
+    // cursor lives in AsyncStorage and is cleared on sign-out, so a
+    // fresh sign-in (cursor == 0) still does a full pull. The
+    // (user_id, updated_at) index from migrate_012 backs this query.
+    // Sets stay fetched by the pulled workouts' IDs below, so semantics
+    // are unchanged except for the rows we skip re-pulling.
+    const wmWorkouts = await getPullWatermark(supabaseUserId, 'workouts');
     const cloudWorkouts = await fetchAllRows(
       'sync.pullFromCloud.workouts',
-      () => sb.from('workouts')
-        .select('id, started_at, ended_at, duration_minutes, notes, is_completed, session_difficulty, overall_pump, soreness_24h_before, fatigue_level, routine_id, mesocycle_id, name, pre_workout_intent, set_count, total_volume, mesocycle_week_id, joint_discomfort')
-        .eq('user_id', supabaseUserId)
-        .eq('is_completed', true)
-        .order('started_at', { ascending: false }),
+      () => {
+        let q = sb.from('workouts')
+          .select('id, started_at, ended_at, duration_minutes, notes, is_completed, session_difficulty, overall_pump, soreness_24h_before, fatigue_level, routine_id, mesocycle_id, name, pre_workout_intent, set_count, total_volume, mesocycle_week_id, joint_discomfort, updated_at')
+          .eq('user_id', supabaseUserId)
+          .eq('is_completed', true);
+        if (wmWorkouts > 0) q = q.gte('updated_at', isoFromMs(wmWorkouts));
+        return q.order('started_at', { ascending: false });
+      },
     );
-
+    let workoutFailures = 0;
     if (cloudWorkouts?.length) {
       // First pass: insert every workout shell. Don't fetch sets per
       // workout (that was N+1 round-trips); batch them after.
       for (const w of cloudWorkouts) {
         try { await insertWorkoutFromCloud(supabaseUserId, w); workoutCount++; }
-        catch (e) { logWarn('sync.pullFromCloud', 'workout insert failed', { workoutId: w?.id, error: e?.message }); }
+        catch (e) { workoutFailures++; logWarn('sync.pullFromCloud', 'workout insert failed', { workoutId: w?.id, error: e?.message }); }
       }
       // Second pass: one chunked query per ~200 workouts for their sets.
       const workoutIds = cloudWorkouts.map(w => w.id);
@@ -1195,6 +1208,14 @@ export async function pullFromCloud(supabaseUserId) {
     }
     if (setFailures > 0) {
       logWarn('sync.pullFromCloud', `${setFailures} sets failed to insert`, { supabaseUserId });
+    }
+    // Advance the workouts cursor only on a clean pass. On any failure
+    // the cursor stays put, so the next pull re-pulls the same (small,
+    // idempotent) delta and retries rather than skipping the row for
+    // good. nextWatermark never moves backwards, so an empty delta is a
+    // no-op. Sign-out clears the cursor, so sign-in always full-pulls.
+    if (workoutFailures === 0 && setFailures === 0) {
+      await setPullWatermark(supabaseUserId, 'workouts', nextWatermark(wmWorkouts, cloudWorkouts));
     }
 
     // Pro-state tables. Each runs independently regardless of whether
