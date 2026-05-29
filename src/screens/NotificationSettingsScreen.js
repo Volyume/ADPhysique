@@ -16,7 +16,8 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import {
   scheduleMorningWeightNotification,
   scheduleCheckinReminder,
-  cancelAllNotifications,
+  cancelMorningNotification,
+  cancelCheckinNotification,
   requestNotificationPermissions,
 } from '../lib/notifications';
 import {
@@ -77,7 +78,16 @@ function formatNextFire(date) {
 }
 
 async function applyNotifications(prefs, permissionStatus) {
-  await cancelAllNotifications();
+  // Cancel ONLY the two notifications this screen owns (morning weight +
+  // weekly check-in), then re-lay them if enabled. Previously this called
+  // cancelAllNotifications(), which wiped every scheduled notification
+  // including ones managed elsewhere (cascade-gate day 19/21, weekly
+  // coach-ready, year-of-lifts), so saving any notification setting
+  // silently destroyed them with nothing to re-lay. Each schedule* helper
+  // self-cancels its own ID too, so the explicit cancels here only matter
+  // for the disabled case.
+  await cancelMorningNotification();
+  await cancelCheckinNotification();
   if (prefs.morningEnabled && permissionStatus === 'granted') {
     await scheduleMorningWeightNotification(prefs.morningHour, prefs.morningMinute);
   }
