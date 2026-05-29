@@ -15,7 +15,7 @@ import {
 } from '../lib/database';
 import { PLAN_WHYTHIS_KEY } from '../lib/planAutoGen';
 import Button from '../components/Button';
-import Skeleton, { SkeletonCard } from '../components/Skeleton';
+import { Skeleton, SkeletonCard } from '../components/Skeleton';
 import useAppStore from '../store/useAppStore';
 import { logError } from '../lib/errorLog';
 import { useToast } from '../components/Toast';
