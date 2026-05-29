@@ -14,6 +14,18 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 
 ## 0. Session summary
 
+### 0.00000001. 2026-05-29 (You tab redesign, Claude): stage 1 shipped, structural split scoped
+
+Audited the whole You tab and agreed the target structure with the founder (via AskUserQuestion): **You = profile + account + settings**; the coaching/progress dashboard (recovery signals, weight-trend chart, muscle readiness, quick stats) **moves to the Progress tab**; the root screen is **renamed "You"** (it is titled "Athlete Hub" today); and add an **account identity row, Help & support, and Rate the app**.
+
+**Stage 1 shipped (`5dd428d`), the account/settings half:** reorganised `SettingsScreen`. Account section now leads with the signed-in identity (email + plan) and Subscription moved here from Preferences. Folded Legal + Diagnostics into one Help & support group (Send feedback, Rate Volyume → store listing, Privacy Policy, Credits, Debug logs); Credits moved out of Preferences. Tightened the cycle-tracking copy. No behaviour change to the locked sign-out / delete-account / consent / subscription flows, rows were regrouped only. Mount sweep 449 passed, 0 errors.
+
+**Stage 2 (next): the structural split. Not started, deliberately.** It is a navigation-level refactor with a constraint that must be handled or it breaks at runtime:
+
+- The You-tab root is `AthleteHubScreen` (ProfileStack root, `RootNavigator.js:284`), a ~1040-line data-heavy dashboard. Its cards navigate to ProfileStack screens (`NutritionTargets`, `WeeklyCheckIn`, `CoachOutput`, `NutritionEducation`). The dashboard widgets also load a lot (workouts, sets, body metrics, recovery EMAs, EWMA weight, muscle freshness).
+- Moving the dashboard into the Progress tab (`ProgressStack`, root `AnalyticsScreen`) therefore requires re-registering those navigation targets in `ProgressStack`, or the cards dead-end. `BodyMetrics` is already in both stacks; the others are not.
+- **Plan:** (a) build a new lean `YouScreen` as the ProfileStack root (profile header with identity + tier + training age + session count, the personal coaching nav rows currently in AthleteHub's "Coaching" + "Preferences" sections, a Settings entry, Help links) and set the stack title to "You"; (b) re-home the dashboard so it surfaces under Progress, re-registering its nav targets; (c) strip the now-duplicated account/coaching-nav rows from the dashboard so it reads as pure progress. Each step must leave navigation working and be committed separately. Keep the locked flows untouched.
+
 ### 0.0000001. 2026-05-29 (food build-out, Claude): quick-add + multi-add, food now leads on speed
 
 Worked the food-logging audit's build list (`docs/audit/volyume-food-logging-audit-2026-05-29.md`) to close the dimensions where Volyume lagged. With these on top of recipes-now-loggable, the food layer is best-in-class on the speed gaps and stays ahead on accuracy (curated macros computed from a fixed staple table; diary macros denormalised at log time). No migration, no schema or sync-contract change in any of these.
