@@ -91,12 +91,12 @@ export async function resetPassword(email) {
   return c.auth.resetPasswordForEmail(email);
 }
 
-// ─── OAuth (Google + Microsoft) ──────────────────────────────────────────
+// ─── OAuth (Google + Apple) ──────────────────────────────────────────────
 //
 // Flow:
 //   1. Call signInWithOAuth, Supabase returns a provider URL.
 //   2. Open it in an in-app browser via expo-web-browser.
-//   3. User authenticates with Google / Microsoft in the browser.
+//   3. User authenticates with Google / Apple in the browser.
 //   4. Provider redirects to volyume://?code=..., the OS routes that to
 //      the app, where App.js's handleAuthDeepLink exchanges the code for
 //      a session.
@@ -104,7 +104,7 @@ export async function resetPassword(email) {
 //      and routes the user to the right place.
 //
 // Requires the user to have configured the provider in the Supabase
-// dashboard (Authentication → Providers → Google / Azure) AND added
+// dashboard (Authentication → Providers → Google / Apple) AND added
 // `volyume://` to the Allowed Redirect URLs list. Without those the call
 // returns a clear error from Supabase that we surface to the caller.
 
