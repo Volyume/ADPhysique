@@ -1,21 +1,32 @@
 /**
  * food/curatedMeals.js
  *
- * Curated clean-bodybuilding meal library for the Suggested tab. These
- * are balanced, high-protein meals modelled on what physique-focused and
- * health-conscious people actually eat, NOT arbitrary database foods. The
- * suggestion engine (mealSuggest.js) ranks them against one meal's share
- * of the day's remaining macros, filtered to the slot being logged and
- * the user's dietary preference.
+ * Curated clean-bodybuilding meal library for the Suggested tab, grounded
+ * in evidence-based sports nutrition (research pass 2026-05-29: ISSN
+ * protein + nutrient-timing position stands, Morton 2018, Helms 2014,
+ * Schoenfeld & Aragon 2018). The suggestion engine (mealSuggest.js) ranks
+ * these against one meal's share of the day's remaining macros, filtered
+ * to the slot being logged and the user's dietary preference.
  *
- * FIRST TRANCHE FOR FOUNDER REVIEW (2026-05-29): ~15 meals spanning every
- * slot and all three diets, to lock the shape + macro quality before the
- * set is grown to ~40. Per-item macros are sensible estimates for common
- * foods at the listed gram weights; the coach should sanity-check and
- * adjust. Macros are baked onto each item (like saved-meal items) so a
- * logged suggestion needs no live database lookup; the foodRef is a
- * descriptive 'curated:*' marker, and the diary edit sheet falls back to
- * the stored macros if it can't resolve it.
+ * Principles baked into the set:
+ *   - Protein-forward: ~25-40g per meal (leucine threshold), 15-25g snacks.
+ *   - Fat is a deliberate SPREAD, not uniform. Some meals are genuinely
+ *     lean (<= ~10g fat) for around training / when the fat budget is tight;
+ *     others are balanced and carry the day's healthy fats (olive oil, nuts,
+ *     seeds, avocado, oily fish, nut butter). The engine surfaces leaner
+ *     meals automatically once the user has had their fat. (Founder decision
+ *     2026-05-29: no automatic pre/post-workout detection yet, so timing is
+ *     handled by having lean options in the pool, not by a peri tag. No goal
+ *     tags either: the macro targets the engine ranks against are already
+ *     goal-driven.)
+ *   - Higher-protein plant options (seitan, TVP, soy/pea protein, tempeh,
+ *     edamame) so vegan/vegetarian meals still clear the per-meal protein
+ *     target without a fat blowout.
+ *
+ * Macros are label-grade reference values (USDA-level), rounded, for coach
+ * review. Each item carries baked macros + a descriptive 'curated:*'
+ * foodRef so a logged suggestion needs no live database lookup; the diary
+ * edit sheet falls back to the stored macros if it can't resolve it.
  *
  * Schema (per meal):
  *   id     stable string id ('curated_*')
@@ -23,24 +34,19 @@
  *   diet   'omnivore' | 'vegetarian' | 'vegan'  (the STRICTEST diet it suits)
  *   slots  array of 'breakfast'|'lunch'|'dinner'|'snack' (or ['any'])
  *   items  [{ foodRef, name, quantityG, kcal, proteinG, carbsG, fatG }]
- *
- * Diet inheritance: a vegan meal also suits vegetarian + omnivore eaters;
- * a vegetarian meal suits omnivores. dietAllows() encodes that.
  */
 
 export const DIETS = Object.freeze(['omnivore', 'vegetarian', 'vegan']);
 
-// What a meal of diet `mealDiet` is acceptable for, given the user's
-// preference `userDiet`. Vegan ⊂ vegetarian ⊂ omnivore.
+// vegan ⊂ vegetarian ⊂ omnivore.
 export function dietAllows(userDiet, mealDiet) {
   if (userDiet === 'vegan') return mealDiet === 'vegan';
   if (userDiet === 'vegetarian') return mealDiet === 'vegan' || mealDiet === 'vegetarian';
-  return true; // omnivore (or unset) eats anything
+  return true;
 }
 
 const num = (n) => (Number.isFinite(Number(n)) ? Number(n) : 0);
 
-// Sum baked item macros into the totals shape the engine scores on.
 export function mealTotals(items) {
   let kcal = 0, protein = 0, carbs = 0, fat = 0;
   for (const it of items || []) {
@@ -54,127 +60,203 @@ export function mealTotals(items) {
 }
 
 export const CURATED_MEALS = Object.freeze([
-  // ── Breakfast ──────────────────────────────────────────────────────
+  // ─── OMNIVORE ──────────────────────────────────────────────────────
   {
-    id: 'curated_eggs_oats_banana', name: 'Eggs, oats & banana', diet: 'omnivore', slots: ['breakfast'],
-    items: [
-      { foodRef: 'curated:eggs', name: 'Whole eggs (3)', quantityG: 150, kcal: 234, proteinG: 19, carbsG: 1, fatG: 16 },
-      { foodRef: 'curated:oats', name: 'Rolled oats', quantityG: 60, kcal: 228, proteinG: 8, carbsG: 40, fatG: 4 },
-      { foodRef: 'curated:banana', name: 'Banana', quantityG: 100, kcal: 89, proteinG: 1, carbsG: 23, fatG: 0 },
-    ],
-  },
-  {
-    id: 'curated_oats_whey_berries', name: 'Oats, whey, berries & almonds', diet: 'vegetarian', slots: ['breakfast'],
+    id: 'curated_om_oats_whey_banana', name: 'Oats, whey & banana', diet: 'omnivore', slots: ['breakfast'],
     items: [
       { foodRef: 'curated:oats', name: 'Rolled oats', quantityG: 60, kcal: 228, proteinG: 8, carbsG: 40, fatG: 4 },
-      { foodRef: 'curated:whey', name: 'Whey protein', quantityG: 30, kcal: 113, proteinG: 24, carbsG: 2, fatG: 1.5 },
-      { foodRef: 'curated:blueberries', name: 'Blueberries', quantityG: 60, kcal: 35, proteinG: 0.4, carbsG: 8, fatG: 0.2 },
-      { foodRef: 'curated:almonds', name: 'Almonds', quantityG: 15, kcal: 92, proteinG: 3, carbsG: 3, fatG: 8 },
+      { foodRef: 'curated:whey', name: 'Whey protein', quantityG: 35, kcal: 133, proteinG: 28, carbsG: 3, fatG: 2 },
+      { foodRef: 'curated:banana', name: 'Banana', quantityG: 120, kcal: 107, proteinG: 1.3, carbsG: 27, fatG: 0.4 },
     ],
   },
   {
-    id: 'curated_greek_yog_granola', name: 'Greek yogurt, berries, granola & seeds', diet: 'vegetarian', slots: ['breakfast', 'snack'],
+    id: 'curated_om_egg_omelette_toast', name: 'Egg & veg omelette with toast', diet: 'omnivore', slots: ['breakfast'],
     items: [
-      { foodRef: 'curated:greek_yogurt', name: 'Greek yogurt (2%)', quantityG: 200, kcal: 146, proteinG: 20, carbsG: 8, fatG: 4 },
-      { foodRef: 'curated:berries', name: 'Mixed berries', quantityG: 80, kcal: 35, proteinG: 0.5, carbsG: 8, fatG: 0 },
-      { foodRef: 'curated:granola', name: 'Granola', quantityG: 30, kcal: 135, proteinG: 3, carbsG: 19, fatG: 5 },
-      { foodRef: 'curated:mixed_seeds', name: 'Mixed seeds', quantityG: 15, kcal: 85, proteinG: 3.5, carbsG: 2, fatG: 7 },
+      { foodRef: 'curated:eggs', name: 'Whole eggs (3)', quantityG: 150, kcal: 214, proteinG: 19, carbsG: 1.5, fatG: 15 },
+      { foodRef: 'curated:veg_mix', name: 'Peppers & onion', quantityG: 80, kcal: 24, proteinG: 1, carbsG: 5, fatG: 0.2 },
+      { foodRef: 'curated:wholemeal_toast', name: 'Wholemeal toast', quantityG: 40, kcal: 99, proteinG: 5, carbsG: 16, fatG: 1.4 },
     ],
   },
   {
-    id: 'curated_tofu_scramble', name: 'Tofu scramble on toast', diet: 'vegan', slots: ['breakfast'],
+    id: 'curated_om_chicken_rice_broc', name: 'Chicken, rice & broccoli', diet: 'omnivore', slots: ['lunch', 'dinner'],
     items: [
-      { foodRef: 'curated:tofu_firm', name: 'Firm tofu', quantityG: 150, kcal: 180, proteinG: 17, carbsG: 3, fatG: 11 },
-      { foodRef: 'curated:wholemeal_toast', name: 'Wholemeal toast (2)', quantityG: 60, kcal: 150, proteinG: 6, carbsG: 26, fatG: 2 },
-      { foodRef: 'curated:spinach', name: 'Spinach', quantityG: 50, kcal: 12, proteinG: 1.5, carbsG: 2, fatG: 0 },
-    ],
-  },
-
-  // ── Lunch ──────────────────────────────────────────────────────────
-  {
-    id: 'curated_chicken_rice_broc', name: 'Chicken, rice, broccoli & olive oil', diet: 'omnivore', slots: ['lunch', 'dinner'],
-    items: [
-      { foodRef: 'curated:chicken_breast', name: 'Chicken breast', quantityG: 150, kcal: 248, proteinG: 47, carbsG: 0, fatG: 5 },
+      { foodRef: 'curated:chicken_breast', name: 'Chicken breast (cooked)', quantityG: 150, kcal: 248, proteinG: 46, carbsG: 0, fatG: 6 },
       { foodRef: 'curated:white_rice', name: 'White rice (cooked)', quantityG: 200, kcal: 260, proteinG: 5, carbsG: 56, fatG: 0.6 },
-      { foodRef: 'curated:broccoli', name: 'Broccoli', quantityG: 100, kcal: 34, proteinG: 2.8, carbsG: 7, fatG: 0.4 },
-      { foodRef: 'curated:olive_oil', name: 'Olive oil', quantityG: 10, kcal: 90, proteinG: 0, carbsG: 0, fatG: 10 },
+      { foodRef: 'curated:broccoli', name: 'Broccoli', quantityG: 120, kcal: 41, proteinG: 3.4, carbsG: 8, fatG: 0.5 },
     ],
   },
   {
-    id: 'curated_tuna_jacket', name: 'Tuna jacket potato, salad & avocado', diet: 'omnivore', slots: ['lunch'],
+    id: 'curated_om_cod_sweet_potato', name: 'Cod, sweet potato & veg', diet: 'omnivore', slots: ['lunch', 'dinner'],
     items: [
-      { foodRef: 'curated:tuna', name: 'Tuna (spring water)', quantityG: 100, kcal: 116, proteinG: 26, carbsG: 0, fatG: 1 },
-      { foodRef: 'curated:baked_potato', name: 'Baked potato', quantityG: 250, kcal: 235, proteinG: 6, carbsG: 52, fatG: 0.3 },
-      { foodRef: 'curated:salad', name: 'Mixed salad', quantityG: 80, kcal: 15, proteinG: 1, carbsG: 3, fatG: 0 },
-      { foodRef: 'curated:avocado', name: 'Avocado (half)', quantityG: 80, kcal: 130, proteinG: 1.5, carbsG: 7, fatG: 12 },
+      { foodRef: 'curated:cod', name: 'Cod fillet', quantityG: 200, kcal: 164, proteinG: 36, carbsG: 0, fatG: 1.4 },
+      { foodRef: 'curated:sweet_potato', name: 'Sweet potato', quantityG: 250, kcal: 215, proteinG: 4, carbsG: 50, fatG: 0.3 },
+      { foodRef: 'curated:green_beans', name: 'Green beans', quantityG: 120, kcal: 37, proteinG: 2.2, carbsG: 8, fatG: 0.2 },
     ],
   },
   {
-    id: 'curated_lentil_rice_bowl', name: 'Lentil, rice & tahini bowl', diet: 'vegan', slots: ['lunch', 'dinner'],
+    id: 'curated_om_steak_potato_greens', name: 'Lean steak, potatoes & greens', diet: 'omnivore', slots: ['dinner'],
     items: [
-      { foodRef: 'curated:lentils', name: 'Lentils (cooked)', quantityG: 200, kcal: 232, proteinG: 18, carbsG: 38, fatG: 0.8 },
-      { foodRef: 'curated:brown_rice', name: 'Brown rice (cooked)', quantityG: 120, kcal: 132, proteinG: 2.8, carbsG: 27, fatG: 1 },
-      { foodRef: 'curated:veg_mix', name: 'Mixed veg', quantityG: 100, kcal: 40, proteinG: 2, carbsG: 8, fatG: 0.5 },
-      { foodRef: 'curated:tahini', name: 'Tahini', quantityG: 15, kcal: 90, proteinG: 2.6, carbsG: 1, fatG: 8 },
+      { foodRef: 'curated:steak_lean', name: 'Lean steak (cooked)', quantityG: 150, kcal: 250, proteinG: 40, carbsG: 0, fatG: 10 },
+      { foodRef: 'curated:boiled_potato', name: 'Boiled potatoes', quantityG: 250, kcal: 215, proteinG: 5, carbsG: 50, fatG: 0.3 },
+      { foodRef: 'curated:salad', name: 'Mixed salad', quantityG: 100, kcal: 20, proteinG: 1.5, carbsG: 3, fatG: 0.2 },
     ],
   },
-
-  // ── Dinner ─────────────────────────────────────────────────────────
   {
-    id: 'curated_salmon_sweet_potato', name: 'Salmon, sweet potato & greens', diet: 'omnivore', slots: ['dinner'],
+    id: 'curated_om_salmon_rice_asparagus', name: 'Salmon, rice & asparagus', diet: 'omnivore', slots: ['dinner'],
     items: [
       { foodRef: 'curated:salmon', name: 'Salmon fillet', quantityG: 150, kcal: 312, proteinG: 31, carbsG: 0, fatG: 20 },
-      { foodRef: 'curated:sweet_potato', name: 'Sweet potato', quantityG: 200, kcal: 172, proteinG: 3, carbsG: 40, fatG: 0.2 },
-      { foodRef: 'curated:green_beans', name: 'Green beans', quantityG: 100, kcal: 31, proteinG: 1.8, carbsG: 7, fatG: 0.2 },
+      { foodRef: 'curated:white_rice', name: 'White rice (cooked)', quantityG: 180, kcal: 234, proteinG: 4.5, carbsG: 50, fatG: 0.5 },
+      { foodRef: 'curated:asparagus', name: 'Asparagus', quantityG: 100, kcal: 20, proteinG: 2.2, carbsG: 4, fatG: 0.2 },
     ],
   },
   {
-    id: 'curated_beef_potato_veg', name: 'Lean beef, potato & veg', diet: 'omnivore', slots: ['dinner'],
+    id: 'curated_om_turkey_avocado_wrap', name: 'Turkey & avocado wrap', diet: 'omnivore', slots: ['lunch'],
     items: [
-      { foodRef: 'curated:beef_5', name: 'Beef mince (5% fat)', quantityG: 150, kcal: 205, proteinG: 30, carbsG: 0, fatG: 9 },
-      { foodRef: 'curated:boiled_potato', name: 'Boiled potato', quantityG: 200, kcal: 172, proteinG: 4, carbsG: 40, fatG: 0.2 },
-      { foodRef: 'curated:veg_mix', name: 'Mixed veg', quantityG: 100, kcal: 35, proteinG: 2, carbsG: 7, fatG: 0.4 },
+      { foodRef: 'curated:turkey', name: 'Turkey breast (cooked)', quantityG: 120, kcal: 168, proteinG: 36, carbsG: 0, fatG: 2 },
+      { foodRef: 'curated:tortilla', name: 'Tortilla wrap', quantityG: 60, kcal: 180, proteinG: 5, carbsG: 30, fatG: 4 },
+      { foodRef: 'curated:avocado', name: 'Avocado', quantityG: 60, kcal: 96, proteinG: 1.2, carbsG: 5, fatG: 9 },
+      { foodRef: 'curated:salad', name: 'Salad', quantityG: 60, kcal: 12, proteinG: 0.9, carbsG: 2, fatG: 0.1 },
     ],
   },
   {
-    id: 'curated_cottage_potato_bowl', name: 'Cottage cheese, potato & veg', diet: 'vegetarian', slots: ['lunch', 'dinner'],
+    id: 'curated_om_tuna_ricecakes', name: 'Tuna & rice cakes', diet: 'omnivore', slots: ['snack'],
     items: [
-      { foodRef: 'curated:cottage_cheese', name: 'Cottage cheese', quantityG: 200, kcal: 196, proteinG: 22, carbsG: 8, fatG: 8 },
-      { foodRef: 'curated:boiled_potato', name: 'Boiled potato', quantityG: 150, kcal: 129, proteinG: 3, carbsG: 30, fatG: 0.2 },
-      { foodRef: 'curated:veg_mix', name: 'Mixed veg', quantityG: 100, kcal: 35, proteinG: 2, carbsG: 7, fatG: 0.4 },
+      { foodRef: 'curated:tuna', name: 'Tuna (in water)', quantityG: 100, kcal: 116, proteinG: 26, carbsG: 0, fatG: 1 },
+      { foodRef: 'curated:rice_cakes', name: 'Rice cakes (4)', quantityG: 32, kcal: 123, proteinG: 2.6, carbsG: 26, fatG: 1 },
+    ],
+  },
+
+  // ─── VEGETARIAN ────────────────────────────────────────────────────
+  {
+    id: 'curated_veg_yog_oats_berries', name: 'Greek yogurt, oats & berries', diet: 'vegetarian', slots: ['breakfast'],
+    items: [
+      { foodRef: 'curated:greek_yogurt', name: 'Greek yogurt (0%)', quantityG: 200, kcal: 118, proteinG: 20, carbsG: 8, fatG: 0 },
+      { foodRef: 'curated:oats', name: 'Rolled oats', quantityG: 40, kcal: 152, proteinG: 5.2, carbsG: 27, fatG: 2.8 },
+      { foodRef: 'curated:berries', name: 'Mixed berries', quantityG: 80, kcal: 35, proteinG: 0.5, carbsG: 8, fatG: 0 },
+      { foodRef: 'curated:honey', name: 'Honey', quantityG: 15, kcal: 46, proteinG: 0, carbsG: 12, fatG: 0 },
     ],
   },
   {
-    id: 'curated_tofu_noodle_stirfry', name: 'Tofu & noodle stir-fry', diet: 'vegan', slots: ['lunch', 'dinner'],
+    id: 'curated_veg_egg_scramble_beans', name: 'Egg scramble, toast & beans', diet: 'vegetarian', slots: ['breakfast'],
     items: [
-      { foodRef: 'curated:tofu_firm', name: 'Firm tofu', quantityG: 150, kcal: 180, proteinG: 17, carbsG: 3, fatG: 11 },
-      { foodRef: 'curated:noodles', name: 'Noodles (cooked)', quantityG: 150, kcal: 210, proteinG: 7, carbsG: 42, fatG: 1.5 },
+      { foodRef: 'curated:eggs', name: '2 whole eggs + 4 whites', quantityG: 220, kcal: 248, proteinG: 31, carbsG: 2, fatG: 13 },
+      { foodRef: 'curated:wholemeal_toast', name: 'Wholemeal toast', quantityG: 40, kcal: 99, proteinG: 5, carbsG: 16, fatG: 1.4 },
+      { foodRef: 'curated:baked_beans', name: 'Baked beans', quantityG: 100, kcal: 78, proteinG: 4.7, carbsG: 13, fatG: 0.6 },
+    ],
+  },
+  {
+    id: 'curated_veg_tofu_stirfry_rice', name: 'Tofu stir-fry with rice', diet: 'vegetarian', slots: ['lunch', 'dinner'],
+    items: [
+      { foodRef: 'curated:tofu_firm', name: 'Firm tofu', quantityG: 200, kcal: 288, proteinG: 34, carbsG: 6, fatG: 16 },
+      { foodRef: 'curated:white_rice', name: 'White rice (cooked)', quantityG: 180, kcal: 234, proteinG: 4.5, carbsG: 50, fatG: 0.5 },
       { foodRef: 'curated:stirfry_veg', name: 'Stir-fry veg', quantityG: 120, kcal: 48, proteinG: 2.5, carbsG: 9, fatG: 0.6 },
     ],
   },
-
-  // ── Snack ──────────────────────────────────────────────────────────
   {
-    id: 'curated_greek_yog_whey', name: 'Greek yogurt, whey & almonds', diet: 'vegetarian', slots: ['snack'],
+    id: 'curated_veg_lentil_quinoa', name: 'Lentil & quinoa bowl', diet: 'vegetarian', slots: ['lunch'],
+    items: [
+      { foodRef: 'curated:lentils', name: 'Lentils (cooked)', quantityG: 250, kcal: 290, proteinG: 22.5, carbsG: 48, fatG: 1 },
+      { foodRef: 'curated:quinoa', name: 'Quinoa (cooked)', quantityG: 120, kcal: 144, proteinG: 5, carbsG: 25, fatG: 2.4 },
+      { foodRef: 'curated:veg_mix', name: 'Roast veg', quantityG: 120, kcal: 48, proteinG: 2.4, carbsG: 9, fatG: 0.5 },
+    ],
+  },
+  {
+    id: 'curated_veg_halloumi_chickpea', name: 'Halloumi & chickpea salad', diet: 'vegetarian', slots: ['lunch', 'dinner'],
+    items: [
+      { foodRef: 'curated:halloumi', name: 'Halloumi (grilled)', quantityG: 80, kcal: 256, proteinG: 17.6, carbsG: 1.6, fatG: 20 },
+      { foodRef: 'curated:chickpeas', name: 'Chickpeas (cooked)', quantityG: 150, kcal: 246, proteinG: 13, carbsG: 41, fatG: 4 },
+      { foodRef: 'curated:salad', name: 'Salad + lemon', quantityG: 120, kcal: 24, proteinG: 1.8, carbsG: 4, fatG: 0.2 },
+    ],
+  },
+  {
+    id: 'curated_veg_tempeh_sweet_potato', name: 'Tempeh & sweet potato', diet: 'vegetarian', slots: ['dinner'],
+    items: [
+      { foodRef: 'curated:tempeh', name: 'Tempeh', quantityG: 120, kcal: 230, proteinG: 24, carbsG: 10, fatG: 13 },
+      { foodRef: 'curated:sweet_potato', name: 'Sweet potato', quantityG: 250, kcal: 215, proteinG: 4, carbsG: 50, fatG: 0.3 },
+      { foodRef: 'curated:greens', name: 'Steamed greens', quantityG: 100, kcal: 30, proteinG: 2.5, carbsG: 4, fatG: 0.4 },
+    ],
+  },
+  {
+    id: 'curated_veg_cottage_pineapple', name: 'Cottage cheese, pineapple & rice cakes', diet: 'vegetarian', slots: ['snack'],
+    items: [
+      { foodRef: 'curated:cottage_cheese', name: 'Cottage cheese (low-fat)', quantityG: 200, kcal: 144, proteinG: 24, carbsG: 6, fatG: 2 },
+      { foodRef: 'curated:pineapple', name: 'Pineapple', quantityG: 100, kcal: 50, proteinG: 0.5, carbsG: 13, fatG: 0.1 },
+      { foodRef: 'curated:rice_cakes', name: 'Rice cakes (3)', quantityG: 24, kcal: 92, proteinG: 2, carbsG: 19, fatG: 0.7 },
+    ],
+  },
+  {
+    id: 'curated_veg_yog_whey_almonds', name: 'Greek yogurt, whey & almonds', diet: 'vegetarian', slots: ['snack'],
     items: [
       { foodRef: 'curated:greek_yogurt', name: 'Greek yogurt (2%)', quantityG: 150, kcal: 110, proteinG: 15, carbsG: 6, fatG: 3 },
       { foodRef: 'curated:whey', name: 'Whey protein', quantityG: 15, kcal: 56, proteinG: 12, carbsG: 1, fatG: 0.7 },
-      { foodRef: 'curated:almonds', name: 'Almonds', quantityG: 12, kcal: 74, proteinG: 2.5, carbsG: 2, fatG: 6.4 },
+      { foodRef: 'curated:almonds', name: 'Almonds', quantityG: 15, kcal: 92, proteinG: 3, carbsG: 3, fatG: 8 },
+    ],
+  },
+
+  // ─── VEGAN ─────────────────────────────────────────────────────────
+  {
+    id: 'curated_vg_soy_oats_banana', name: 'Soy protein oats & banana', diet: 'vegan', slots: ['breakfast'],
+    items: [
+      { foodRef: 'curated:oats', name: 'Rolled oats', quantityG: 60, kcal: 228, proteinG: 8, carbsG: 40, fatG: 4 },
+      { foodRef: 'curated:soy_protein', name: 'Soy protein', quantityG: 30, kcal: 108, proteinG: 26, carbsG: 1, fatG: 0.5 },
+      { foodRef: 'curated:banana', name: 'Banana', quantityG: 120, kcal: 107, proteinG: 1.3, carbsG: 27, fatG: 0.4 },
     ],
   },
   {
-    id: 'curated_cottage_pineapple', name: 'Cottage cheese & pineapple', diet: 'vegetarian', slots: ['snack'],
+    id: 'curated_vg_tofu_scramble', name: 'Tofu scramble on toast', diet: 'vegan', slots: ['breakfast'],
     items: [
-      { foodRef: 'curated:cottage_cheese', name: 'Cottage cheese', quantityG: 150, kcal: 147, proteinG: 16.5, carbsG: 6, fatG: 6 },
-      { foodRef: 'curated:pineapple', name: 'Pineapple', quantityG: 80, kcal: 40, proteinG: 0.4, carbsG: 10, fatG: 0.1 },
+      { foodRef: 'curated:tofu_firm', name: 'Firm tofu', quantityG: 200, kcal: 288, proteinG: 34, carbsG: 6, fatG: 16 },
+      { foodRef: 'curated:wholemeal_toast', name: 'Wholemeal toast', quantityG: 40, kcal: 99, proteinG: 5, carbsG: 16, fatG: 1.4 },
+      { foodRef: 'curated:spinach', name: 'Spinach', quantityG: 60, kcal: 14, proteinG: 1.7, carbsG: 2, fatG: 0.2 },
     ],
   },
   {
-    id: 'curated_plant_shake_banana', name: 'Plant shake, banana & peanut butter', diet: 'vegan', slots: ['snack'],
+    id: 'curated_vg_seitan_rice_veg', name: 'Seitan, rice & veg stir-fry', diet: 'vegan', slots: ['lunch', 'dinner'],
     items: [
-      { foodRef: 'curated:plant_protein', name: 'Plant protein', quantityG: 30, kcal: 113, proteinG: 24, carbsG: 2, fatG: 1.5 },
-      { foodRef: 'curated:banana', name: 'Banana', quantityG: 100, kcal: 89, proteinG: 1, carbsG: 23, fatG: 0 },
-      { foodRef: 'curated:peanut_butter', name: 'Peanut butter', quantityG: 15, kcal: 88, proteinG: 4, carbsG: 3, fatG: 7.5 },
+      { foodRef: 'curated:seitan', name: 'Seitan', quantityG: 130, kcal: 196, proteinG: 49, carbsG: 9, fatG: 1.3 },
+      { foodRef: 'curated:white_rice', name: 'White rice (cooked)', quantityG: 180, kcal: 234, proteinG: 4.5, carbsG: 50, fatG: 0.5 },
+      { foodRef: 'curated:stirfry_veg', name: 'Stir-fry veg', quantityG: 120, kcal: 48, proteinG: 2.5, carbsG: 9, fatG: 0.6 },
+    ],
+  },
+  {
+    id: 'curated_vg_tvp_chilli_rice', name: 'TVP chilli with rice', diet: 'vegan', slots: ['dinner'],
+    items: [
+      { foodRef: 'curated:tvp', name: 'TVP (dry)', quantityG: 50, kcal: 164, proteinG: 26, carbsG: 15, fatG: 0.5 },
+      { foodRef: 'curated:kidney_beans', name: 'Kidney beans (cooked)', quantityG: 120, kcal: 127, proteinG: 8.7, carbsG: 23, fatG: 0.5 },
+      { foodRef: 'curated:white_rice', name: 'White rice (cooked)', quantityG: 150, kcal: 195, proteinG: 3.8, carbsG: 42, fatG: 0.4 },
+      { foodRef: 'curated:tomato_veg', name: 'Tomato & veg', quantityG: 100, kcal: 30, proteinG: 1.5, carbsG: 6, fatG: 0.3 },
+    ],
+  },
+  {
+    id: 'curated_vg_tempeh_quinoa', name: 'Tempeh, quinoa & roast veg', diet: 'vegan', slots: ['lunch', 'dinner'],
+    items: [
+      { foodRef: 'curated:tempeh', name: 'Tempeh', quantityG: 120, kcal: 230, proteinG: 24, carbsG: 10, fatG: 13 },
+      { foodRef: 'curated:quinoa', name: 'Quinoa (cooked)', quantityG: 120, kcal: 144, proteinG: 5, carbsG: 25, fatG: 2.4 },
+      { foodRef: 'curated:veg_mix', name: 'Roast veg', quantityG: 120, kcal: 48, proteinG: 2.4, carbsG: 9, fatG: 0.5 },
+      { foodRef: 'curated:olive_oil', name: 'Olive oil', quantityG: 8, kcal: 72, proteinG: 0, carbsG: 0, fatG: 8 },
+    ],
+  },
+  {
+    id: 'curated_vg_lentil_pasta', name: 'High-protein lentil pasta', diet: 'vegan', slots: ['lunch', 'dinner'],
+    items: [
+      { foodRef: 'curated:lentil_pasta', name: 'Lentil pasta (dry)', quantityG: 100, kcal: 350, proteinG: 25, carbsG: 50, fatG: 4 },
+      { foodRef: 'curated:tomato_sauce', name: 'Tomato sauce', quantityG: 120, kcal: 60, proteinG: 2, carbsG: 10, fatG: 1.5 },
+      { foodRef: 'curated:veg_mix', name: 'Mixed veg', quantityG: 100, kcal: 40, proteinG: 2, carbsG: 8, fatG: 0.5 },
+    ],
+  },
+  {
+    id: 'curated_vg_pea_shake_berries', name: 'Pea protein shake & berries', diet: 'vegan', slots: ['snack'],
+    items: [
+      { foodRef: 'curated:pea_protein', name: 'Pea protein', quantityG: 33, kcal: 124, proteinG: 26, carbsG: 1.6, fatG: 2.3 },
+      { foodRef: 'curated:berries', name: 'Mixed berries', quantityG: 100, kcal: 44, proteinG: 0.6, carbsG: 10, fatG: 0 },
+    ],
+  },
+  {
+    id: 'curated_vg_soy_yog_granola_pb', name: 'Soy yogurt, granola & peanut butter', diet: 'vegan', slots: ['snack'],
+    items: [
+      { foodRef: 'curated:soy_yogurt', name: 'High-protein soy yogurt', quantityG: 200, kcal: 140, proteinG: 12, carbsG: 10, fatG: 6 },
+      { foodRef: 'curated:granola', name: 'Granola', quantityG: 25, kcal: 113, proteinG: 2.5, carbsG: 16, fatG: 4 },
+      { foodRef: 'curated:peanut_butter', name: 'Peanut butter', quantityG: 12, kcal: 71, proteinG: 3, carbsG: 2.4, fatG: 6 },
     ],
   },
 ]);

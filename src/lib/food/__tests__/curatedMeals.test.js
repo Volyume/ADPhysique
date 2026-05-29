@@ -44,12 +44,16 @@ describe('library data integrity', () => {
     }
   });
 
-  test('meals are balanced: every meal carries a real fat source (>= 5g)', () => {
-    // Clean is not fat-free. Each meal must include healthy fats
-    // (oily fish, nuts, seeds, olive oil, avocado, nut butter, etc.).
-    for (const m of CURATED_MEALS) {
-      expect(mealTotals(m.items).fat).toBeGreaterThanOrEqual(5);
-    }
+  test('fat is a deliberate spread: lean options AND balanced fat-carrying meals', () => {
+    // Per founder + the peri-workout research: NOT every meal should carry
+    // fat (some are intentionally lean for around training / a tight fat
+    // budget); but the library must also contain balanced meals that carry
+    // the day's healthy fats. Both kinds must exist so the engine has range.
+    const fats = CURATED_MEALS.map(m => mealTotals(m.items).fat);
+    expect(fats.some(f => f <= 10)).toBe(true);   // lean options exist
+    expect(fats.some(f => f >= 15)).toBe(true);    // balanced fat-carrying meals exist
+    // and the lean ones genuinely are lean (a low-fat tier is present)
+    expect(Math.min(...fats)).toBeLessThanOrEqual(6);
   });
 
   test('first tranche covers every slot and all three diets', () => {
