@@ -713,7 +713,11 @@ async function _pushRoutinesAndExercises(sb, supabaseUserId, localUserId) {
       const rows = routineExs
         .filter(re => pushableRoutineIds.has(re.routineId))
         .map(re => ({
-          id: re.id, routine_id: re.routineId, exercise_id: re.exerciseId,
+          // Send user_id explicitly (composite PK is (user_id, id)) rather
+          // than relying on the migrate_018 inheritance trigger, matching the
+          // sibling routines/mesocycles pushes (audit A2).
+          id: re.id, user_id: supabaseUserId,
+          routine_id: re.routineId, exercise_id: re.exerciseId,
           exercise_name: re.exerciseName ?? null,
           order_in_routine: re.orderInRoutine ?? 0,
           recommended_sets: re.recommendedSets ?? 3,
@@ -764,7 +768,10 @@ async function _pushMesocycles(sb, supabaseUserId, localUserId) {
     const weeks = await getAllMesocycleWeeksForUser(localUserId);
     if (weeks?.length) {
       const rows = weeks.map(w => ({
-        id: w.id, mesocycle_id: w.mesocycleId,
+        // Explicit user_id for the (user_id, id) composite PK, not relying on
+        // the inheritance trigger alone (audit A2).
+        id: w.id, user_id: supabaseUserId,
+        mesocycle_id: w.mesocycleId,
         week_number: w.weekIndex ?? w.weekNumber ?? 1,
         is_deload: !!w.isDeload,
         notes: w.notes ?? null,

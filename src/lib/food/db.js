@@ -881,9 +881,17 @@ export async function getLoggedMealSlotsForDay(userId, entryDate) {
 }
 
 // ─── Sync row fetchers ───────────────────────────────────────────────────
-// Each returns every row touched since `sinceMs` (inclusive), including
-// soft-deleted rows so the cloud receives tombstones. Pure SQL reads.
-// Used by sync._pushFoodChanges to assemble the food_sync_push payload.
+// Each returns every row touched since `sinceMs` (EXCLUSIVE: updated_at >
+// sinceMs), including soft-deleted rows so the cloud receives tombstones.
+// Pure SQL reads. Used by sync._pushFoodChanges to assemble the
+// food_sync_push payload.
+//
+// Audit B7: the foodDomain push advances its watermark to the server
+// response timestamp while these compare a client-clock updated_at, so a row
+// edited mid-push can in theory be skipped. The fix is to mirror the workouts
+// watermark (inclusive .gte + advance to max local updated_at pushed), which
+// is a careful change to this runtime-critical path and is deferred, not made
+// blindly here. The comment previously claimed "inclusive", which was wrong.
 
 export async function getAllFoodEntriesSince(userId, sinceMs = 0) {
   const d = await db();

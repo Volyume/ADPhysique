@@ -102,7 +102,7 @@ Each finding: location, what is wrong, why it matters, severity, fix.
   custom-exercise delete by `user_id`. Extend the existing sign-out/sign-in
   mount test to assert the food tables are empty between users. No migration.
 
-**A2. Child-table push omits `user_id` and leans on a server trigger.** [Verified]
+**A2. Child-table push omits `user_id` and leans on a server trigger.** [Verified, FIXED Phase 4]
 - Location: `src/lib/sync.js:715-726` (routine_exercises) and `:766-771`
   (mesocycle_weeks), upsert at `:732` and `:773` with `onConflict:'user_id,id'`.
 - What: both payloads omit `user_id`. The sibling `mesocycles` push sends it
@@ -237,7 +237,7 @@ Each finding: location, what is wrong, why it matters, severity, fix.
   push/pull/CRUD refs, (2) ship a build, (3) only then apply 049. Documented in
   `supabase/README.md` already; restate in the fix plan.
 
-**B4. Client telemetry event ahead of the server allow-list re-pushes forever.** [Uncertain]
+**B4. Client telemetry event ahead of the server allow-list re-pushes forever.** [Resolved: no drift today, guard added Phase 4]
 - Location: `src/lib/telemetry/transport.js:84-94`; server check
   `migrate_017...:172-184` (`record_engine_telemetry` `RAISE EXCEPTION` on
   unknown event).
@@ -252,7 +252,7 @@ Each finding: location, what is wrong, why it matters, severity, fix.
 - Fix: add a CI check diffing client `ALLOWED_EVENTS` against the server RPC's
   `IN (...)` list so the two never drift.
 
-**B5. Dead RPC wrappers with wrong param names.** [Reported]
+**B5. Dead RPC wrappers with wrong param names.** [Reported, FIXED Phase 4]
 - Location: `src/lib/sync/transport.js:183-211` (`pullChanges`, `pushChanges`).
 - What: they call `food_sync_pull`/`food_sync_push` with `{_since}` / `{_changes}`,
   but the deployed RPC params are `last_pulled_at` / `changes` (`migrate_016`).
@@ -261,7 +261,7 @@ Each finding: location, what is wrong, why it matters, severity, fix.
 - Severity: **Low** (loaded footgun).
 - Fix: delete the dead wrappers or correct the param names.
 
-**B6. recipe_ingredients pulled before recipes within a cycle.** [Reported]
+**B6. recipe_ingredients pulled before recipes within a cycle.** [Reported, FIXED Phase 4]
 - Location: `src/lib/sync/transport.js:79-90` (`MIGRATED_TABLES` order),
   `runner.js:127` pulls in array order.
 - What: the child `recipe_ingredients` precedes the parent `recipes`.
@@ -512,14 +512,26 @@ possible regardless of this plan.
   (especially the flat hero) needs an on-device check. Lint green, 449-test
   mount sweep green.
 
-**Phase 4: contained sync robustness. [runtime-critical: offline sync]**
-- A2: send `user_id` explicitly in the routine_exercises / mesocycle_weeks push.
-- B4: add the CI diff of client `ALLOWED_EVENTS` vs the server allow-list.
-- B5: delete or correct the dead `pullChanges`/`pushChanges` wrappers.
-- B6: order `recipe_ingredients` after `recipes` in `MIGRATED_TABLES`.
-- B7: confirm the food watermark boundary operator is inclusive.
+**Phase 4: contained sync robustness. [runtime-critical: offline sync] DONE 2026-05-29.**
+- A2: `routine_exercises` / `mesocycle_weeks` push now sends `user_id`
+  explicitly (no longer relying on the inheritance trigger alone); matches the
+  sibling pushes. Behaviour-preserving (the trigger set the same value).
+- B4: added a jest guard (`telemetry/__tests__/allowlistDrift.test.js`)
+  asserting every client `ALLOWED_EVENTS` member appears in the migration
+  allow-lists. Checked: zero drift today (all 39 events present). Runs in the
+  existing CI jest job, so no workflow change needed.
+- B5: the dead `pullChanges`/`pushChanges` wrappers (wrong param names, no
+  callers) were deleted; transport docstring updated.
+- B6: `recipe_ingredients` reordered after `recipes` in `MIGRATED_TABLES`;
+  regression test `sync/__tests__/migratedTablesOrder.test.js`.
+- B7: confirmed the food selectors are `> sinceMs` (exclusive) while the push
+  watermark advances to the server timestamp, so a row edited mid-push can in
+  theory be skipped. The misleading "inclusive" comment was corrected. The
+  actual fix (mirror the workouts inclusive `.gte` + max-local-updated_at
+  watermark) is a careful change to a recently-bug-fixed runtime-critical path
+  and is deferred, not made blindly. Single-device makes the race narrow.
 - The full legacy-to-modular consolidation (D2) stays deferred per the prior
-  founder call; this phase is only the contained items. Tests with each.
+  founder call.
 
 **Phase 5: architecture debt (large, not blocking).**
 - D4: tests for `channels`, `activeWorkout`, `trainingReminders`.
