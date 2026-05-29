@@ -30,7 +30,7 @@ import {
 import { getRollupsForRange } from '../lib/food/db';
 import { getCycleTracking, shouldShowCycleQuestion } from '../lib/cyclePrefs';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { requestNotificationPermissions, getNotificationPermissionStatus, scheduleNextCheckinReminder } from '../lib/notifications';
+import { requestNotificationPermissions, getNotificationPermissionStatus, scheduleNextCheckinReminder, scheduleWeeklyCoachReady } from '../lib/notifications';
 import { logError } from '../lib/errorLog';
 import { audit } from '../lib/observability';
 import { SkeletonCard } from '../components/Skeleton';
@@ -432,6 +432,15 @@ export default function WeeklyCheckInScreen({ navigation }) {
             prefs.checkin.weekday ?? 0,
             prefs.checkin.hour ?? 12,
             prefs.checkin.minute ?? 0,
+          );
+        }
+        // A check-in just landed, so next week's coach output computes
+        // overnight. Lay (or refresh) the recurring Monday 09:00 "plan
+        // ready" reminder unless the user disabled it. Default on.
+        if (prefs?.coachReady?.enabled !== false) {
+          await scheduleWeeklyCoachReady(
+            prefs?.coachReady?.hour ?? 9,
+            prefs?.coachReady?.minute ?? 0,
           );
         }
       } catch (_) {}

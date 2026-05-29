@@ -331,7 +331,7 @@ Onboarding: WelcomeScreen, LoginScreen, OnboardingScreen, FirstRunScreen, ProOnb
 | 1 | Saved meals UI (My Meals templates) | `saved_meals` table + `applySavedMealFromCloud` / `getAllSavedMealsSince` exist in `food/db.js`; no screen registered. Spec'd in `UI_FLOWS_LOCKED.md`. |
 | 2 | Body composition trend charts | `BodyMetricsScreen.js` ships a weight trend chart only. BF% and measurement-over-time charts absent. Pro-tier promise per `MASTER_VISION_AND_PLAN.md §8`. |
 | 3 | Photo progress timeline | No `Photo*` screen. Deferred to v1.1 per `BUDGET_POSTURE_LOCKED.md`. Aligns with explicit deferral. |
-| 4 | Notification surfaces still pending | `notifications/index.js:17-22` calls out three: cascade gate (day 19, 21) push, subscription payment failure, weekly coach output ready. Spec'd in `categories.js`, schedulers not written. |
+| 4 | Notification surfaces (GAP rows 9-11) | DONE 2026-05-29. All three built. Discovery: the spec claimed Expo Push was "already wired" but no token pipeline existed and the RTDN webhook sent no push, so the founder chose to build the full Expo stack. Shipped: device_push_tokens (migration 053) + client register/unregister (`pushToken.js`), the `send-push` Edge Function, RTDN grace -> payment-failure push (row 10), and local cascade-gate (row 9) + weekly-coach-ready (row 11) schedulers wired into `startCascade()` and the weekly check-in save. Founder actions outstanding: add `extra.eas.projectId` to app.json (no token can be obtained without it), apply migration 053, deploy send-push. Until then the stack is inert and local notifications are unaffected. |
 
 ---
 
@@ -419,11 +419,15 @@ Grouped by phase per `RELEASE_PLAN_LOCKED.md`. The live ranked version with foun
 
 ### Now
 
-1. **Apply the three pending migrations** in the Supabase SQL Editor (all additive, old-AAB compatible; verification queries in `supabase/README.md`):
+1. **Apply the pending migrations** in the Supabase SQL Editor (all additive, old-AAB compatible; verification queries in `supabase/README.md`):
    - **048** (`migrate_048_food_preferences_kind.sql`): `food_favourites.kind` (fav/dislike toggle).
    - **050** (`migrate_050_weekly_checkins_cardio_adherence.sql`): `weekly_checkins_v2.cardio_adherence` (GAP row 4 cardio).
    - **051** (`migrate_051_food_frequents.sql`): `food_frequents` table + nightly `pg_cron` worker + `food_frequents_pull` RPC (GAP row 28 Frequents tab). After applying, run `SELECT refresh_food_frequents();` once to seed before the first night. Until applied, the Frequents tab just shows its empty state.
+   - **053** (`migrate_053_device_push_tokens.sql`): `device_push_tokens` table for the remote-push pipeline (GAP rows 9-11). Until applied, the client's token register no-ops and no server push can be delivered.
    - (049 is drafted but **held**: do not apply until the next AAB ships.)
+1a. **Remote push prerequisites (GAP rows 9-11):**
+   - Add `extra.eas.projectId` to `app.json`. Without it `getExpoPushTokenAsync` cannot return a token, so no device can be registered for push. The cascade-gate and weekly-coach reminders are LOCAL and work without it; only the server-driven payment-failure push needs it.
+   - `supabase functions deploy send-push` (service-to-service; uses the auto-populated SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY, no new secrets).
 2. **Tear down the `volyume-e2e-test` Supabase project** + delete the four `SUPABASE_TEST_*` repo secrets. The live-cloud E2E suite was deleted as out of scope.
 3. **Close PR #5 without merging.** No-op after the live-cloud revert.
 4. **Point `volyume.app` DNS at GitHub Pages.** File + workflow already shipped; DNS is the only piece left for `/privacy` to resolve.

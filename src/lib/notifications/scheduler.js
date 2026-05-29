@@ -189,6 +189,160 @@ export async function scheduleNextCheckinReminder(userId, weekday = 0, hour = 12
   await scheduleCheckinReminder(weekday, hour, minute, { skipThisWeek: alreadyDone });
 }
 
+// ─── Cascade gate (day 19 + day 21) ─────────────────────────────────────────────
+// NOTIFICATIONS_LOCKED.md "Timing": cascade day 19 (Pro winding down)
+// and day 21 (auto-downgrade fired) both at 10:00 local, not
+// configurable. These are LOCAL one-shots derived from the trial end
+// date the device already holds (proTrialEndsAt); no server push is
+// involved. The end date is the day-21 cutover; day 19 is 2 days
+// before, matching the "ends in 2 days" copy.
+
+const NOTIF_ID_CASCADE_19 = 'volyume_cascade_day19';
+const NOTIF_ID_CASCADE_21 = 'volyume_cascade_day21';
+
+const CASCADE_19_COPY = {
+  title: 'Your Pro trial ends in 2 days',
+  body: 'Tap to choose what\'s next.',
+};
+const CASCADE_21_COPY = {
+  title: 'You\'re now on Free',
+  body: 'Your data stays. Some features are read-only. Upgrade any time.',
+};
+
+/**
+ * Schedule both cascade-gate reminders from the trial end date.
+ *
+ * @param {number|string|Date} trialEndsAt  proTrialEndsAt: the day-21
+ *        cutover instant. Day 19 is derived as 2 days earlier.
+ *
+ * Both fire at 10:00 local on their day, shifted out of quiet hours.
+ * Past gates are skipped (a trial ending tomorrow has no day-19 push).
+ * Re-running cancels and re-lays the schedules, so calling this on
+ * every launch is safe and idempotent.
+ */
+export async function scheduleCascadeGateNotifications(trialEndsAt) {
+  if (Platform.OS === 'web') return;
+  const endMs = trialEndsAt instanceof Date
+    ? trialEndsAt.getTime()
+    : (typeof trialEndsAt === 'number' ? trialEndsAt : Date.parse(trialEndsAt));
+  if (!Number.isFinite(endMs)) return;
+
+  try {
+    await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_CASCADE_19).catch(() => {});
+    await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_CASCADE_21).catch(() => {});
+
+    const quiet = await getQuietHours();
+    const now = Date.now();
+
+    // Day 21: 10:00 local on the cutover day.
+    const day21 = new Date(endMs);
+    day21.setHours(10, 0, 0, 0);
+    // Day 19: 10:00 local, two days before the cutover.
+    const day19 = new Date(endMs);
+    day19.setDate(day19.getDate() - 2);
+    day19.setHours(10, 0, 0, 0);
+
+    const gates = [
+      { id: NOTIF_ID_CASCADE_19, when: day19, copy: CASCADE_19_COPY },
+      { id: NOTIF_ID_CASCADE_21, when: day21, copy: CASCADE_21_COPY },
+    ];
+
+    for (const g of gates) {
+      if (g.when.getTime() <= now) continue; // past gate, don't schedule
+      const { date: shifted } = shiftDateOutOfQuietHours(g.when, quiet);
+      await Notifications.scheduleNotificationAsync({
+        identifier: g.id,
+        content: {
+          title: g.copy.title,
+          body: g.copy.body,
+          data: { type: 'cascade_gate' },
+          sound: false,
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: shifted,
+        },
+      });
+    }
+  } catch (e) {
+    trackNotificationFailed({
+      category: CATEGORY.CASCADE_GATE,
+      reason: 'schedule_threw',
+      payload: { message: e?.message ?? 'unknown' },
+    });
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      console.warn('[notifications] scheduleCascadeGate failed:', e?.message);
+    }
+  }
+}
+
+export async function cancelCascadeGateNotifications() {
+  try { await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_CASCADE_19); } catch {}
+  try { await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_CASCADE_21); } catch {}
+}
+
+// ─── Weekly coach output ready ───────────────────────────────────────────────────
+// NOTIFICATIONS_LOCKED.md "Timing": Monday 09:00 local, time-only
+// configurable. Coach output is computed client-side after the weekly
+// check-in, so this is a LOCAL recurring weekly reminder, not a server
+// push. The default weekday is Monday (weekday 2 in expo's 1=Sunday
+// convention); hour/minute are user-adjustable.
+
+const NOTIF_ID_COACH_READY = 'volyume_weekly_coach_ready';
+
+const COACH_READY_COPY = {
+  title: 'Your week\'s plan is ready',
+  body: 'Tap to see what changes and why.',
+};
+
+/**
+ * Schedule the recurring "weekly coach output ready" reminder.
+ *
+ * @param {number} hour    0-23, default 9 (09:00 local)
+ * @param {number} minute  0-59, default 0
+ *
+ * expo's WEEKLY trigger uses weekday 1=Sunday..7=Saturday; Monday is 2.
+ * Quiet hours are applied to the hour/minute the same way the morning
+ * reminder does. Recurring (repeats:true), so it fires every Monday
+ * until cancelled. Re-running cancels and re-lays, so it's idempotent.
+ */
+export async function scheduleWeeklyCoachReady(hour = 9, minute = 0) {
+  if (Platform.OS === 'web') return;
+  try {
+    await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_COACH_READY).catch(() => {});
+    const quiet = await getQuietHours();
+    const { hour: h, minute: m } = shiftHourMinuteOutOfQuietHours(hour, minute, quiet);
+    await Notifications.scheduleNotificationAsync({
+      identifier: NOTIF_ID_COACH_READY,
+      content: {
+        title: COACH_READY_COPY.title,
+        body: COACH_READY_COPY.body,
+        data: { type: 'weekly_coach_ready' },
+        sound: false,
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+        weekday: 2, // Monday (1=Sunday)
+        hour: h,
+        minute: m,
+      },
+    });
+  } catch (e) {
+    trackNotificationFailed({
+      category: CATEGORY.WEEKLY_COACH_READY,
+      reason: 'schedule_threw',
+      payload: { message: e?.message ?? 'unknown' },
+    });
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      console.warn('[notifications] scheduleWeeklyCoachReady failed:', e?.message);
+    }
+  }
+}
+
+export async function cancelWeeklyCoachReady() {
+  try { await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_COACH_READY); } catch {}
+}
+
 // ─── Cancel helpers ───────────────────────────────────────────────────────────
 
 export async function cancelMorningNotification() {

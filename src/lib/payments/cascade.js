@@ -103,7 +103,21 @@ function _trackTransition({ reason, sourceSurface, targetTier, paymentRef }) {
 
 export async function startCascade() {
   const r = await _call('start_cascade', {});
-  if (r.ok) _trackTransition({ reason: 'cascade_started', sourceSurface: 'article9_consent', targetTier: 'pro_trial' });
+  if (r.ok) {
+    _trackTransition({ reason: 'cascade_started', sourceSurface: 'article9_consent', targetTier: 'pro_trial' });
+    // Lay the local cascade-gate reminders (day 19 + day 21 at 10:00)
+    // from the trial end date the RPC just returned. Fire-and-forget:
+    // the cascade transition is the important write, the reminders are
+    // a convenience and must not block or fail the return.
+    const endsAt = r.data?.pro_trial_ends_at ?? r.data?.complete_trial_ends_at ?? null;
+    if (endsAt) {
+      try {
+        // eslint-disable-next-line global-require
+        const { scheduleCascadeGateNotifications } = require('../notifications');
+        scheduleCascadeGateNotifications(endsAt).catch(() => {});
+      } catch (_) { /* tolerate */ }
+    }
+  }
   return r;
 }
 

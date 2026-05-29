@@ -308,3 +308,114 @@ describe('restoreNotifications', () => {
     expect(mockCancelAllAsync).not.toHaveBeenCalled();
   });
 });
+
+// ─── scheduleCascadeGateNotifications ──────────────────────────────
+
+describe('scheduleCascadeGateNotifications', () => {
+  const DAY = 86400000;
+
+  test('schedules day-19 and day-21 one-shots from a future trial end', async () => {
+    const endsAt = Date.now() + 10 * DAY; // 10 days out, both gates future
+    await scheduler.scheduleCascadeGateNotifications(endsAt);
+
+    // Both prior schedules cancelled first.
+    expect(mockCancelAsync).toHaveBeenCalledWith('volyume_cascade_day19');
+    expect(mockCancelAsync).toHaveBeenCalledWith('volyume_cascade_day21');
+
+    const ids = mockScheduleAsync.mock.calls.map(c => c[0].identifier);
+    expect(ids).toContain('volyume_cascade_day19');
+    expect(ids).toContain('volyume_cascade_day21');
+
+    for (const call of mockScheduleAsync.mock.calls) {
+      const arg = call[0];
+      expect(arg.content.data).toEqual({ type: 'cascade_gate' });
+      expect(arg.trigger.type).toBe('date');
+      expect(arg.trigger.date instanceof Date).toBe(true);
+    }
+  });
+
+  test('day-19 lands 2 days before day-21, both at 10:00 local', async () => {
+    const endsAt = Date.now() + 10 * DAY;
+    await scheduler.scheduleCascadeGateNotifications(endsAt);
+    const byId = {};
+    for (const call of mockScheduleAsync.mock.calls) byId[call[0].identifier] = call[0].trigger.date;
+    const d19 = byId['volyume_cascade_day19'];
+    const d21 = byId['volyume_cascade_day21'];
+    // 2 calendar days apart (10:00 both; quiet hours don't touch 10:00).
+    expect(d21.getTime() - d19.getTime()).toBe(2 * DAY);
+    expect(d19.getHours()).toBe(10);
+    expect(d21.getHours()).toBe(10);
+  });
+
+  test('skips a past gate: trial ending tomorrow schedules only day-21', async () => {
+    const endsAt = Date.now() + 1 * DAY; // day 19 would be yesterday
+    await scheduler.scheduleCascadeGateNotifications(endsAt);
+    const ids = mockScheduleAsync.mock.calls.map(c => c[0].identifier);
+    expect(ids).toContain('volyume_cascade_day21');
+    expect(ids).not.toContain('volyume_cascade_day19');
+  });
+
+  test('both gates past: schedules nothing', async () => {
+    const endsAt = Date.now() - 1 * DAY;
+    await scheduler.scheduleCascadeGateNotifications(endsAt);
+    expect(mockScheduleAsync).not.toHaveBeenCalled();
+  });
+
+  test('invalid date: no-op, no throw', async () => {
+    await scheduler.scheduleCascadeGateNotifications('not-a-date');
+    expect(mockScheduleAsync).not.toHaveBeenCalled();
+  });
+
+  test('web: no-op', async () => {
+    mockPlatformOS = 'web';
+    await scheduler.scheduleCascadeGateNotifications(Date.now() + 10 * DAY);
+    expect(mockScheduleAsync).not.toHaveBeenCalled();
+  });
+
+  test('schedule failure fires notification_failed with CASCADE_GATE', async () => {
+    mockScheduleAsync.mockRejectedValue(new Error('os down'));
+    await scheduler.scheduleCascadeGateNotifications(Date.now() + 10 * DAY);
+    expect(mockTrack).toHaveBeenCalledWith(
+      'user-1', 'notification_failed',
+      expect.objectContaining({ category: 'cascade_gate', reason: 'schedule_threw' }),
+    );
+  });
+});
+
+// ─── scheduleWeeklyCoachReady ──────────────────────────────────────
+
+describe('scheduleWeeklyCoachReady', () => {
+  test('default Monday 09:00 schedules a repeating WEEKLY trigger', async () => {
+    await scheduler.scheduleWeeklyCoachReady(); // defaults 9, 0
+    expect(mockCancelAsync).toHaveBeenCalledWith('volyume_weekly_coach_ready');
+    expect(mockScheduleAsync).toHaveBeenCalledTimes(1);
+    const arg = mockScheduleAsync.mock.calls[0][0];
+    expect(arg.identifier).toBe('volyume_weekly_coach_ready');
+    expect(arg.content.data).toEqual({ type: 'weekly_coach_ready' });
+    expect(arg.trigger.type).toBe('weekly');
+    expect(arg.trigger.weekday).toBe(2); // Monday
+    expect(arg.trigger.hour).toBe(9);
+    expect(arg.trigger.minute).toBe(0);
+  });
+
+  test('09:00 is outside the default quiet window, unshifted', async () => {
+    await scheduler.scheduleWeeklyCoachReady(9, 0);
+    const arg = mockScheduleAsync.mock.calls[0][0];
+    expect(arg.trigger.hour).toBe(9);
+  });
+
+  test('web: no-op', async () => {
+    mockPlatformOS = 'web';
+    await scheduler.scheduleWeeklyCoachReady();
+    expect(mockScheduleAsync).not.toHaveBeenCalled();
+  });
+
+  test('schedule failure fires notification_failed with WEEKLY_COACH_READY', async () => {
+    mockScheduleAsync.mockRejectedValue(new Error('os down'));
+    await scheduler.scheduleWeeklyCoachReady();
+    expect(mockTrack).toHaveBeenCalledWith(
+      'user-1', 'notification_failed',
+      expect.objectContaining({ category: 'weekly_coach_ready', reason: 'schedule_threw' }),
+    );
+  });
+});
