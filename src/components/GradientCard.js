@@ -14,7 +14,7 @@
 
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { colors, radius, spacing } from '../styles/theme';
+import { colors, radius, spacing, withAlpha } from '../styles/theme';
 
 const TONES = {
   primary: colors.primary,
@@ -34,8 +34,10 @@ export default function GradientCard({
   accessibilityLabel,
 }) {
   const accent = tint || TONES[tone] || TONES.primary;
-  // 0x55 alpha so the accent reads as a border, not a fill.
-  const borderColour = accent + '55';
+  // ~0.33 alpha so the accent reads as a border, not a fill. withAlpha
+  // handles hex and rgba tokens (the old accent + '55' concat broke on
+  // the rgba primaries).
+  const borderColour = withAlpha(accent, 0.33);
   return (
     <View
       style={[

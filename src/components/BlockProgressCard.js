@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
 
 /**
  * Planned vs actual weekly volume per muscle for the current training block.
@@ -32,7 +32,7 @@ export default function BlockProgressCard({ blockProgress, currentMesoWeek }) {
         const fillColor =
           pct >= 1 ? colors.primary
           : pct >= 0.7 ? colors.warning
-          : 'rgba(245,158,11,0.25)';
+          : withAlpha(colors.primary, 0.25);
         return (
           <View key={p.muscle} style={styles.row}>
             <Text style={styles.muscle} numberOfLines={1}>{p.label}</Text>
