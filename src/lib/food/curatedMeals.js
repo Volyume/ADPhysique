@@ -64,19 +64,21 @@ export const CURATED_MEALS = Object.freeze([
     ],
   },
   {
-    id: 'curated_oats_whey_berries', name: 'Oats, whey & blueberries', diet: 'vegetarian', slots: ['breakfast'],
+    id: 'curated_oats_whey_berries', name: 'Oats, whey, berries & almonds', diet: 'vegetarian', slots: ['breakfast'],
     items: [
       { foodRef: 'curated:oats', name: 'Rolled oats', quantityG: 60, kcal: 228, proteinG: 8, carbsG: 40, fatG: 4 },
       { foodRef: 'curated:whey', name: 'Whey protein', quantityG: 30, kcal: 113, proteinG: 24, carbsG: 2, fatG: 1.5 },
       { foodRef: 'curated:blueberries', name: 'Blueberries', quantityG: 60, kcal: 35, proteinG: 0.4, carbsG: 8, fatG: 0.2 },
+      { foodRef: 'curated:almonds', name: 'Almonds', quantityG: 15, kcal: 92, proteinG: 3, carbsG: 3, fatG: 8 },
     ],
   },
   {
-    id: 'curated_greek_yog_granola', name: 'Greek yogurt, berries & granola', diet: 'vegetarian', slots: ['breakfast', 'snack'],
+    id: 'curated_greek_yog_granola', name: 'Greek yogurt, berries, granola & seeds', diet: 'vegetarian', slots: ['breakfast', 'snack'],
     items: [
-      { foodRef: 'curated:greek_yogurt', name: 'Greek yogurt (0%)', quantityG: 200, kcal: 114, proteinG: 20, carbsG: 8, fatG: 0 },
+      { foodRef: 'curated:greek_yogurt', name: 'Greek yogurt (2%)', quantityG: 200, kcal: 146, proteinG: 20, carbsG: 8, fatG: 4 },
       { foodRef: 'curated:berries', name: 'Mixed berries', quantityG: 80, kcal: 35, proteinG: 0.5, carbsG: 8, fatG: 0 },
       { foodRef: 'curated:granola', name: 'Granola', quantityG: 30, kcal: 135, proteinG: 3, carbsG: 19, fatG: 5 },
+      { foodRef: 'curated:mixed_seeds', name: 'Mixed seeds', quantityG: 15, kcal: 85, proteinG: 3.5, carbsG: 2, fatG: 7 },
     ],
   },
   {
@@ -90,27 +92,30 @@ export const CURATED_MEALS = Object.freeze([
 
   // ── Lunch ──────────────────────────────────────────────────────────
   {
-    id: 'curated_chicken_rice_broc', name: 'Chicken, rice & broccoli', diet: 'omnivore', slots: ['lunch', 'dinner'],
+    id: 'curated_chicken_rice_broc', name: 'Chicken, rice, broccoli & olive oil', diet: 'omnivore', slots: ['lunch', 'dinner'],
     items: [
       { foodRef: 'curated:chicken_breast', name: 'Chicken breast', quantityG: 150, kcal: 248, proteinG: 47, carbsG: 0, fatG: 5 },
       { foodRef: 'curated:white_rice', name: 'White rice (cooked)', quantityG: 200, kcal: 260, proteinG: 5, carbsG: 56, fatG: 0.6 },
       { foodRef: 'curated:broccoli', name: 'Broccoli', quantityG: 100, kcal: 34, proteinG: 2.8, carbsG: 7, fatG: 0.4 },
+      { foodRef: 'curated:olive_oil', name: 'Olive oil', quantityG: 10, kcal: 90, proteinG: 0, carbsG: 0, fatG: 10 },
     ],
   },
   {
-    id: 'curated_tuna_jacket', name: 'Tuna jacket potato & salad', diet: 'omnivore', slots: ['lunch'],
+    id: 'curated_tuna_jacket', name: 'Tuna jacket potato, salad & avocado', diet: 'omnivore', slots: ['lunch'],
     items: [
       { foodRef: 'curated:tuna', name: 'Tuna (spring water)', quantityG: 100, kcal: 116, proteinG: 26, carbsG: 0, fatG: 1 },
       { foodRef: 'curated:baked_potato', name: 'Baked potato', quantityG: 250, kcal: 235, proteinG: 6, carbsG: 52, fatG: 0.3 },
       { foodRef: 'curated:salad', name: 'Mixed salad', quantityG: 80, kcal: 15, proteinG: 1, carbsG: 3, fatG: 0 },
+      { foodRef: 'curated:avocado', name: 'Avocado (half)', quantityG: 80, kcal: 130, proteinG: 1.5, carbsG: 7, fatG: 12 },
     ],
   },
   {
-    id: 'curated_lentil_rice_bowl', name: 'Lentil & rice bowl', diet: 'vegan', slots: ['lunch', 'dinner'],
+    id: 'curated_lentil_rice_bowl', name: 'Lentil, rice & tahini bowl', diet: 'vegan', slots: ['lunch', 'dinner'],
     items: [
       { foodRef: 'curated:lentils', name: 'Lentils (cooked)', quantityG: 200, kcal: 232, proteinG: 18, carbsG: 38, fatG: 0.8 },
-      { foodRef: 'curated:brown_rice', name: 'Brown rice (cooked)', quantityG: 150, kcal: 165, proteinG: 3.5, carbsG: 34, fatG: 1.3 },
+      { foodRef: 'curated:brown_rice', name: 'Brown rice (cooked)', quantityG: 120, kcal: 132, proteinG: 2.8, carbsG: 27, fatG: 1 },
       { foodRef: 'curated:veg_mix', name: 'Mixed veg', quantityG: 100, kcal: 40, proteinG: 2, carbsG: 8, fatG: 0.5 },
+      { foodRef: 'curated:tahini', name: 'Tahini', quantityG: 15, kcal: 90, proteinG: 2.6, carbsG: 1, fatG: 8 },
     ],
   },
 
@@ -150,10 +155,11 @@ export const CURATED_MEALS = Object.freeze([
 
   // ── Snack ──────────────────────────────────────────────────────────
   {
-    id: 'curated_greek_yog_whey', name: 'Greek yogurt & whey', diet: 'vegetarian', slots: ['snack'],
+    id: 'curated_greek_yog_whey', name: 'Greek yogurt, whey & almonds', diet: 'vegetarian', slots: ['snack'],
     items: [
-      { foodRef: 'curated:greek_yogurt', name: 'Greek yogurt (0%)', quantityG: 150, kcal: 86, proteinG: 15, carbsG: 6, fatG: 0 },
+      { foodRef: 'curated:greek_yogurt', name: 'Greek yogurt (2%)', quantityG: 150, kcal: 110, proteinG: 15, carbsG: 6, fatG: 3 },
       { foodRef: 'curated:whey', name: 'Whey protein', quantityG: 15, kcal: 56, proteinG: 12, carbsG: 1, fatG: 0.7 },
+      { foodRef: 'curated:almonds', name: 'Almonds', quantityG: 12, kcal: 74, proteinG: 2.5, carbsG: 2, fatG: 6.4 },
     ],
   },
   {
@@ -164,10 +170,11 @@ export const CURATED_MEALS = Object.freeze([
     ],
   },
   {
-    id: 'curated_plant_shake_banana', name: 'Plant protein shake & banana', diet: 'vegan', slots: ['snack'],
+    id: 'curated_plant_shake_banana', name: 'Plant shake, banana & peanut butter', diet: 'vegan', slots: ['snack'],
     items: [
       { foodRef: 'curated:plant_protein', name: 'Plant protein', quantityG: 30, kcal: 113, proteinG: 24, carbsG: 2, fatG: 1.5 },
       { foodRef: 'curated:banana', name: 'Banana', quantityG: 100, kcal: 89, proteinG: 1, carbsG: 23, fatG: 0 },
+      { foodRef: 'curated:peanut_butter', name: 'Peanut butter', quantityG: 15, kcal: 88, proteinG: 4, carbsG: 3, fatG: 7.5 },
     ],
   },
 ]);

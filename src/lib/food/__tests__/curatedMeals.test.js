@@ -44,6 +44,14 @@ describe('library data integrity', () => {
     }
   });
 
+  test('meals are balanced: every meal carries a real fat source (>= 5g)', () => {
+    // Clean is not fat-free. Each meal must include healthy fats
+    // (oily fish, nuts, seeds, olive oil, avocado, nut butter, etc.).
+    for (const m of CURATED_MEALS) {
+      expect(mealTotals(m.items).fat).toBeGreaterThanOrEqual(5);
+    }
+  });
+
   test('first tranche covers every slot and all three diets', () => {
     const slotsCovered = new Set();
     const dietsCovered = new Set();
