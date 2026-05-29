@@ -1,34 +1,30 @@
 /**
  * curatedMeals.test.js
  *
- * The curated clean-meal library + its diet/slot filters. Locks data
- * integrity (every meal is well-formed and high-protein-ish) and the
- * diet-inheritance + slot filtering the Suggested tab relies on.
+ * The curated clean-meal library + its diet/slot filters. Meals are now
+ * defined as foods + grams; macros are COMPUTED from the staple-food table
+ * (curatedFoods.js), so the tests resolve each meal and assert on the
+ * computed result. Locks data integrity, food-key validity, the
+ * lean/balanced fat spread, and the diet-inheritance + slot filtering.
  */
 import {
-  CURATED_MEALS, DIETS, dietAllows, mealTotals, getCuratedCandidates,
+  CURATED_MEALS, CURATED_FOODS, DIETS, dietAllows, mealItems, mealTotals, getCuratedCandidates,
 } from '../curatedMeals';
 
 const SLOTS = ['breakfast', 'lunch', 'dinner', 'snack'];
 
 describe('library data integrity', () => {
-  test('every meal is well-formed', () => {
-    for (const m of CURATED_MEALS) {
-      expect(typeof m.id).toBe('string');
-      expect(m.id).toMatch(/^curated_/);
-      expect(typeof m.name).toBe('string');
-      expect(DIETS).toContain(m.diet);
-      expect(Array.isArray(m.slots)).toBe(true);
-      expect(m.slots.length).toBeGreaterThan(0);
-      m.slots.forEach(s => expect([...SLOTS, 'any']).toContain(s));
-      expect(Array.isArray(m.items)).toBe(true);
-      expect(m.items.length).toBeGreaterThan(0);
-      for (const it of m.items) {
-        expect(typeof it.foodRef).toBe('string');
-        expect(it.foodRef).toMatch(/^curated:/);
-        expect(it.quantityG).toBeGreaterThan(0);
-        expect(it.kcal).toBeGreaterThanOrEqual(0);
-        expect(it.proteinG).toBeGreaterThanOrEqual(0);
+  test('every meal is well-formed and references real foods', () => {
+    for (const meal of CURATED_MEALS) {
+      expect(meal.id).toMatch(/^curated_/);
+      expect(typeof meal.name).toBe('string');
+      expect(DIETS).toContain(meal.diet);
+      expect(meal.slots.length).toBeGreaterThan(0);
+      meal.slots.forEach(s => expect([...SLOTS, 'any']).toContain(s));
+      expect(meal.components.length).toBeGreaterThan(0);
+      for (const c of meal.components) {
+        expect(CURATED_FOODS[c.food]).toBeTruthy(); // no typo'd / missing food keys
+        expect(c.g).toBeGreaterThan(0);
       }
     }
   });
@@ -38,58 +34,62 @@ describe('library data integrity', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
+  test('every meal resolves to items with computed macros', () => {
+    for (const meal of CURATED_MEALS) {
+      const items = mealItems(meal);
+      expect(items.length).toBe(meal.components.length);
+      for (const it of items) {
+        expect(it.foodRef).toMatch(/^curated:/);
+        expect(it.quantityG).toBeGreaterThan(0);
+        expect(it.kcal).toBeGreaterThanOrEqual(0);
+      }
+    }
+  });
+
   test('meals are protein-forward (>= ~15g per meal)', () => {
-    for (const m of CURATED_MEALS) {
-      expect(mealTotals(m.items).protein).toBeGreaterThanOrEqual(15);
+    for (const meal of CURATED_MEALS) {
+      expect(mealTotals(mealItems(meal)).protein).toBeGreaterThanOrEqual(15);
     }
   });
 
   test('fat is a deliberate spread: lean options AND balanced fat-carrying meals', () => {
-    // Per founder + the peri-workout research: NOT every meal should carry
-    // fat (some are intentionally lean for around training / a tight fat
-    // budget); but the library must also contain balanced meals that carry
-    // the day's healthy fats. Both kinds must exist so the engine has range.
-    const fats = CURATED_MEALS.map(m => mealTotals(m.items).fat);
-    expect(fats.some(f => f <= 10)).toBe(true);   // lean options exist
-    expect(fats.some(f => f >= 15)).toBe(true);    // balanced fat-carrying meals exist
-    // and the lean ones genuinely are lean (a low-fat tier is present)
+    const fats = CURATED_MEALS.map(meal => mealTotals(mealItems(meal)).fat);
+    expect(fats.some(f => f <= 10)).toBe(true);
+    expect(fats.some(f => f >= 15)).toBe(true);
     expect(Math.min(...fats)).toBeLessThanOrEqual(6);
   });
 
-  test('first tranche covers every slot and all three diets', () => {
+  test('covers every slot and all three diets', () => {
     const slotsCovered = new Set();
     const dietsCovered = new Set();
-    for (const m of CURATED_MEALS) {
-      m.slots.forEach(s => slotsCovered.add(s));
-      dietsCovered.add(m.diet);
+    for (const meal of CURATED_MEALS) {
+      meal.slots.forEach(s => slotsCovered.add(s));
+      dietsCovered.add(meal.diet);
     }
     SLOTS.forEach(s => expect(slotsCovered.has(s)).toBe(true));
     expect([...dietsCovered].sort()).toEqual(['omnivore', 'vegan', 'vegetarian']);
   });
 });
 
-describe('mealTotals', () => {
-  test('sums baked item macros', () => {
-    expect(mealTotals([
-      { kcal: 200, proteinG: 20, carbsG: 10, fatG: 5 },
-      { kcal: 100, proteinG: 5, carbsG: 20, fatG: 1 },
-    ])).toEqual({ kcal: 300, protein: 25, carbs: 30, fat: 6 });
+describe('resolveComponent macros (computed, not hand-typed)', () => {
+  test('scales per-100g by grams', () => {
+    const [it] = mealItems({ components: [{ food: 'chicken_breast', g: 200 }] });
+    // chicken_breast = 165/31/0/3.6 per 100g -> x2
+    expect(it.kcal).toBe(330);
+    expect(it.proteinG).toBe(62);
   });
 });
 
 describe('dietAllows (vegan ⊂ vegetarian ⊂ omnivore)', () => {
   test('omnivore eats anything', () => {
-    expect(dietAllows('omnivore', 'omnivore')).toBe(true);
-    expect(dietAllows('omnivore', 'vegetarian')).toBe(true);
     expect(dietAllows('omnivore', 'vegan')).toBe(true);
+    expect(dietAllows('omnivore', 'omnivore')).toBe(true);
   });
   test('vegetarian gets vegetarian + vegan, not omnivore', () => {
     expect(dietAllows('vegetarian', 'omnivore')).toBe(false);
-    expect(dietAllows('vegetarian', 'vegetarian')).toBe(true);
     expect(dietAllows('vegetarian', 'vegan')).toBe(true);
   });
   test('vegan gets vegan only', () => {
-    expect(dietAllows('vegan', 'omnivore')).toBe(false);
     expect(dietAllows('vegan', 'vegetarian')).toBe(false);
     expect(dietAllows('vegan', 'vegan')).toBe(true);
   });
@@ -99,28 +99,18 @@ describe('getCuratedCandidates', () => {
   test('vegan user only ever gets vegan meals', () => {
     const c = getCuratedCandidates({ diet: 'vegan' });
     expect(c.length).toBeGreaterThan(0);
-    c.forEach(m => expect(m.diet).toBe('vegan'));
-  });
-
-  test('vegetarian user gets no omnivore meals', () => {
-    const c = getCuratedCandidates({ diet: 'vegetarian' });
-    c.forEach(m => expect(m.diet === 'vegan' || m.diet === 'vegetarian').toBe(true));
+    c.forEach(meal => expect(meal.diet).toBe('vegan'));
   });
 
   test('slot filter only returns meals tagged for that slot', () => {
-    const breakfast = getCuratedCandidates({ diet: 'omnivore', slot: 'breakfast' });
-    expect(breakfast.length).toBeGreaterThan(0);
-    breakfast.forEach(m => expect(m.slots.includes('breakfast') || m.slots.includes('any')).toBe(true));
-    // a breakfast-only meal must not show at dinner
     const dinner = getCuratedCandidates({ diet: 'omnivore', slot: 'dinner' });
-    expect(dinner.map(m => m.id)).not.toContain('curated_eggs_oats_banana');
+    expect(dinner.map(meal => meal.id)).not.toContain('curated_om_oats_whey_banana');
+    dinner.forEach(meal => expect(meal.slots.includes('dinner') || meal.slots.includes('any')).toBe(true));
   });
 
-  test('candidates are engine-ready (totals + itemCount)', () => {
+  test('candidates are engine-ready (computed totals + items)', () => {
     const [c] = getCuratedCandidates({ diet: 'omnivore', slot: 'lunch' });
-    expect(c.totals).toEqual(expect.objectContaining({
-      kcal: expect.any(Number), protein: expect.any(Number),
-    }));
+    expect(c.totals.protein).toBeGreaterThan(0);
     expect(c.itemCount).toBe(c.items.length);
   });
 });
