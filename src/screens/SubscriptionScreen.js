@@ -17,8 +17,8 @@ import {
   ScrollView, Platform, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, fontSize, fontWeight, hitSlop } from '../styles/theme';
+import BackHeader from '../components/BackHeader';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { isPaidTier } from '../lib/proGate';
@@ -116,13 +116,7 @@ export default function SubscriptionScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation?.goBack?.()} hitSlop={hitSlop}>
-          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Subscription</Text>
-        <View style={{ width: 24 }} />
-      </View>
+      <BackHeader title="Subscription" />
 
       <ScrollView contentContainerStyle={styles.scroll}>
 
@@ -199,12 +193,6 @@ export default function SubscriptionScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.tabBarBorder,
-  },
-  headerTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold },
   scroll: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xl,

@@ -26,8 +26,13 @@ import { colors, fontSize, fontWeight, spacing } from '../styles/theme';
 const HIT = { top: 12, bottom: 12, left: 12, right: 12 };
 
 export default function BackHeader({ title, onBack, right }) {
-  const navigation = useNavigation();
-  const goBack = onBack ?? (() => navigation.goBack());
+  // useNavigation throws when rendered outside a navigation container
+  // (e.g. some isolated mount tests). Guard it so the header degrades to
+  // a no-op back rather than crashing the screen; real screens always
+  // have a navigator, and an explicit onBack takes precedence anyway.
+  let navigation = null;
+  try { navigation = useNavigation(); } catch (_) { navigation = null; }
+  const goBack = onBack ?? (() => navigation?.goBack?.());
   return (
     <View style={styles.header}>
       <TouchableOpacity onPress={goBack} hitSlop={HIT} accessibilityRole="button" accessibilityLabel="Go back">

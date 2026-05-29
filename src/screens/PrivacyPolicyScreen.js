@@ -1,21 +1,15 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing } from '../styles/theme';
+import BackHeader from '../components/BackHeader';
 
 const LAST_UPDATED = '22 May 2026';
 
 export default function PrivacyPolicyScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Privacy Policy</Text>
-        <View style={{ width: 32 }} />
-      </View>
+      <BackHeader title="Privacy Policy" />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.updated}>Last updated {LAST_UPDATED}</Text>
@@ -109,17 +103,6 @@ function Body({ children }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  backBtn: { width: 32, alignItems: 'flex-start' },
-  title: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   scroll: { flex: 1 },
   content: { padding: spacing.lg, paddingBottom: spacing.xl * 2 },
   updated: { fontSize: fontSize.xs, color: colors.textMuted, marginBottom: spacing.xl },

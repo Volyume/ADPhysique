@@ -3,6 +3,7 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Share } fr
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import BackHeader from '../components/BackHeader';
 import { getRecentErrors, clearErrors, exportErrorsAsText, getCrashLog, clearCrashLog, logInfo } from '../lib/errorLog';
 import { diagnoseSyncConflicts } from '../lib/database';
 import useAppStore from '../store/useAppStore';
@@ -81,15 +82,14 @@ export default function DebugLogScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Debug logs</Text>
-        <TouchableOpacity onPress={load} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="refresh" size={22} color={colors.textSecondary} />
-        </TouchableOpacity>
-      </View>
+      <BackHeader
+        title="Debug logs"
+        right={(
+          <TouchableOpacity onPress={load} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityLabel="Refresh logs">
+            <Ionicons name="refresh" size={22} color={colors.textSecondary} />
+          </TouchableOpacity>
+        )}
+      />
 
       <View style={styles.toolbar}>
         {['all', 'error', 'warn', 'info'].map(level => {
@@ -184,9 +184,6 @@ function levelLabelStyle(level) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
-  backBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
-  title: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold },
   toolbar: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
   chip: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.full, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   chipOn: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
