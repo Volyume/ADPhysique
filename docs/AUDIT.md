@@ -27,10 +27,12 @@ no confirmed Critical findings. That is a real result, not a gap in the pass.
 
 ## 1. Executive summary: top 10 by severity
 
-1. **[High] Soft-deleted plans resurrect on reinstall.** The legacy training
-   pull restores routines/programmes/mesocycles without `deleted_at`
-   (`database.js:3950` `INSERT OR IGNORE`), so a plan a user deleted comes back
-   live after a reinstall or full restore. Breaks locked identity scenario F.
+1. **[Corrected, not a live bug] Soft-deleted plans resurrect on reinstall.**
+   Overturned during Phase 1 implementation (2026-05-29). Routines are hidden by
+   `is_active = 0`, which both delete paths set and `insertRoutineFromCloud`
+   restores; the omitted `deleted_at` is never a routine read filter, and
+   programmes/mesocycles/workouts have no delete path at all. No change made.
+   See finding B1 for the evidence.
 2. **[High] No linter in the repo.** No eslint config or `lint` script. The
    `no-undef` / `exhaustive-deps` / `no-unused-vars` classes go uncaught and have
    already shipped two runtime bugs. Highest-impact single fix.
@@ -153,7 +155,20 @@ Each finding: location, what is wrong, why it matters, severity, fix.
 
 ### B. Correctness & runtime
 
-**B1. Soft-deleted plans resurrect on reinstall (tombstone not honoured).** [Verified]
+**B1. Soft-deleted plans resurrect on reinstall (tombstone not honoured).** [Corrected: NOT a live bug]
+- **Correction (2026-05-29, Phase 1 implementation).** This finding does not
+  hold. The original analysis traced the `deleted_at` omission in the restore
+  helpers but not the actual hide mechanism. Routines are hidden by
+  `is_active = 0`, not by `deleted_at`: both delete paths (`softDeleteRoutine`
+  `database.js:1718` and `deleteOrphanedRoutines` `:1808`) set `is_active = 0`,
+  every routine read filters on `is_active` (`database.js:1689, 2126, 2153,
+  2221`), none filter on `deleted_at`, and `insertRoutineFromCloud` restores
+  `is_active` from the cloud row. So a deleted routine stays hidden after a
+  reinstall. Programmes, mesocycles, and workouts have no soft-delete path at
+  all (only `softDeleteRoutine` exists), so there is nothing to resurrect. The
+  omitted `deleted_at` on restore is inert for these tables. No change was
+  made. The detail below is the original (incorrect) analysis, kept for the
+  record.
 - Location: pull `src/lib/sync.js:1556-1599` (`_pullRoutinesAndExercises`),
   restore helpers `src/lib/database.js:3950` (`insertRoutineFromCloud`),
   `:3974` (`insertProgrammeFromCloud`), `:4248` (`insertMesocycleFromCloud`).
@@ -449,19 +464,19 @@ phase needs a new migration; the standing pending migrations (048, 050, 051,
 Migration 052 (the live `daily_water` sync error) should be applied as soon as
 possible regardless of this plan.
 
-**Phase 0: safety net (no runtime-critical code).**
-- D1: add eslint + react-hooks, errors-only gate, wired into CI.
-- D8: backfill the migration tracker and fix the CURRENT_STATUS contradictions.
-- Dependencies: none. Lowest risk, highest impact. Do first.
+**Phase 0: safety net (no runtime-critical code). DONE 2026-05-29 (`8b41675`).**
+- D1: eslint flat config + errors-only CI job + lint scripts. Gate caught and
+  fixed two real issues (CascadeGateScreen undefined `state`, BackHeader hook
+  guard).
+- D8: CURRENT_STATUS contradictions and stale branch ref corrected.
 
-**Phase 1: data-integrity fixes. [runtime-critical: offline sync + DB contracts]**
-- B1: restore `deleted_at` in `insertRoutineFromCloud` /
-  `insertProgrammeFromCloud` / `insertMesocycleFromCloud` (and the workout
-  restore, to close the latent case) so tombstoned cloud rows restore as local
-  soft-deletes. Regression test: soft-delete then full-pull stays deleted.
-- B2: give the `body_metric` queue case the bulk fallback its siblings have.
-  Test.
-- Dependencies: none. No migration.
+**Phase 1: data-integrity fixes. [runtime-critical: offline sync + DB contracts] DONE 2026-05-29.**
+- B1: investigated, NOT a live bug (see the correction on finding B1: routines
+  are hidden by `is_active`, which is restored; other tables have no delete
+  path). No change made.
+- B2: `body_metric` queue case now falls back to the bulk push when its
+  dedicated sync fn is missing, matching `morning_weight` / `check_in`. New
+  regression test `src/lib/__tests__/syncQueue.test.js`. No migration.
 
 **Phase 2: sign-out wipe completeness. [runtime-critical: identity]**
 - A1: add the food tables to `wipeAllUserData`; uid-scope the custom-exercise

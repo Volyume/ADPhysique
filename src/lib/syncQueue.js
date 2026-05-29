@@ -154,7 +154,12 @@ async function _runOp(supabaseClient, row) {
     case 'body_metric': {
       const payload = row.payload ? JSON.parse(row.payload) : null;
       if (!payload) return true; // payload missing, treat as drained
-      await safeCall(sync.syncBodyMetric, row.user_id, payload);
+      // Fall back to the bulk push when the dedicated sync fn is missing,
+      // matching morning_weight / check_in below, so a renamed or removed
+      // syncBodyMetric can't silently drop the op (audit B2).
+      const r = safeCall(sync.syncBodyMetric, row.user_id, payload);
+      if (r === null) await safeCall(sync.bulkUploadLocalData, row.user_id, row.user_id);
+      else await r;
       return true;
     }
     case 'morning_weight': {
