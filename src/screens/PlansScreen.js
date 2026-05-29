@@ -152,8 +152,10 @@ export default function PlansScreen({ navigation }) {
         const advice = await getBlockAdvice(user.id, block, userProfile).catch(() => null);
         setBlockAdvice(advice);
 
-        // heads_up always shows (informational, no snooze needed)
-        if (advice && advice.action !== 'continue' && advice.action !== 'heads_up') {
+        // Any non-continue advice, heads_up included, respects the 7-day
+        // snooze so tapping "Got it" keeps the card dismissed across tab
+        // focus instead of reappearing on every visit.
+        if (advice && advice.action !== 'continue') {
           const snoozeRaw = await AsyncStorage.getItem(BLOCK_SNOOZE_KEY).catch(() => null);
           if (snoozeRaw) {
             setBlockSnoozed(Date.now() < parseInt(snoozeRaw, 10));

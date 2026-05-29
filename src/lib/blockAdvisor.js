@@ -295,8 +295,12 @@ export async function getBlockAdvice(userId, activeBlock, userProfile) {
     };
   }
 
-  // Moderate: heads-up, signals building
-  if (highSignals.length >= 1 || mediumSignals.length >= headsUpMediumThreshold) {
+  // Moderate: heads-up, signals building. Gated on the same enough-history
+  // check as the deload above: a single check-in, including a stray or seeded
+  // one on a brand-new user, must not surface a recovery-concern card. Without
+  // a real pattern (>= 2 check-ins and >= 2 weeks into the block) we stay on
+  // 'continue' and show no card.
+  if (hasEnoughHistory && (highSignals.length >= 1 || mediumSignals.length >= headsUpMediumThreshold)) {
     return {
       action: 'heads_up',
       headline: 'Keep an eye on recovery',
