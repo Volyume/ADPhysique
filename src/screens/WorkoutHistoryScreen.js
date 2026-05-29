@@ -11,6 +11,7 @@ import {
 } from 'date-fns';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import PressableCard from '../components/PressableCard';
+import Card from '../components/Card';
 import { EmptyWorkoutsIllustration } from '../components/Illustrations';
 import { getAllWorkouts, getAllWorkoutSets, getAllExercises, createWorkout, getWorkoutSetsForWorkout, getRoutineExercisesWithDetails } from '../lib/database';
 import { logError } from '../lib/errorLog';
@@ -255,7 +256,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
     const exerciseDetail = expandedSets[workout.id];
 
     return (
-      <View style={styles.card}>
+      <Card style={styles.card}>
         {/* Tappable header row, toggles expansion */}
         <PressableCard
           onPress={() => handleToggleExpand(workout.id)}
@@ -387,7 +388,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
             <Text style={styles.repeatBtnText}>Repeat</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </Card>
     );
   }
 
@@ -723,12 +724,7 @@ const styles = StyleSheet.create({
 
   // ── Cards ──────────────────────────────────────────────────────────────────
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
     gap: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   cardHeaderTouchable: {
     gap: spacing.sm,
