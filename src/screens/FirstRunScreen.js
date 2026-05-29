@@ -5,6 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import Button from '../components/Button';
 import useAppStore from '../store/useAppStore';
 
 // First-run for Free users only. Pro signups go through ProOnboardingStack
@@ -74,15 +75,14 @@ export default function FirstRunScreen({ navigation: _navigation }) {
           ))}
         </View>
 
-        <TouchableOpacity
-          style={[styles.primaryBtn, (!hasName || busy) && styles.btnDisabled]}
+        <Button
+          title="Start logging"
+          trailingIcon="arrow-forward"
+          size="lg"
+          loading={busy}
+          disabled={!hasName}
           onPress={finish}
-          disabled={!hasName || busy}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.primaryBtnText}>Start logging</Text>
-          <Ionicons name="arrow-forward" size={18} color={colors.background} />
-        </TouchableOpacity>
+        />
 
         <View style={styles.hintCard}>
           <Ionicons name="information-circle-outline" size={16} color={colors.textMuted} />
@@ -116,13 +116,6 @@ const styles = StyleSheet.create({
   unitBtnActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
   unitBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textSecondary },
   unitBtnTextActive: { color: colors.primary },
-  primaryBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: spacing.lg,
-    marginTop: spacing.lg,
-  },
-  primaryBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
-  btnDisabled: { opacity: 0.6 },
   hintCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
     backgroundColor: colors.surface, borderRadius: radius.md,

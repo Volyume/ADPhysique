@@ -22,12 +22,13 @@
  */
 import React, { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
+  View, Text, StyleSheet, TouchableOpacity,
   ScrollView, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, radius, fontSize, fontWeight, hitSlop } from '../styles/theme';
+import { colors, spacing, fontSize, fontWeight, hitSlop } from '../styles/theme';
+import Button from '../components/Button';
 import * as cascade from '../lib/payments/cascade';
 import * as playBilling from '../lib/payments/playBilling';
 import { skuFor } from '../lib/payments/catalogue';
@@ -190,56 +191,42 @@ export default function CascadeGateScreen({ navigation, route }) {
 
         <View style={styles.ctaStack}>
           {content.primaryTarget === 'billing' ? (
-            <TouchableOpacity
-              style={styles.primaryBtn}
+            <Button
+              title={content.primaryCta}
+              size="lg"
+              disabled={busy !== null}
               onPress={handleBilling}
-              disabled={busy !== null}
-              accessibilityRole="button"
-            >
-              <Text style={styles.primaryBtnText}>{content.primaryCta}</Text>
-            </TouchableOpacity>
+            />
           ) : content.primaryTarget ? (
-            <TouchableOpacity
-              style={styles.primaryBtn}
-              onPress={() => handlePay(content.primaryTarget)}
+            <Button
+              title={content.primaryCta}
+              size="lg"
+              loading={busy === content.primaryTarget}
               disabled={busy !== null}
-              accessibilityRole="button"
-            >
-              {busy === content.primaryTarget ? (
-                <ActivityIndicator color={colors.background} />
-              ) : (
-                <Text style={styles.primaryBtnText}>{content.primaryCta}</Text>
-              )}
-            </TouchableOpacity>
+              onPress={() => handlePay(content.primaryTarget)}
+            />
           ) : null}
 
           {content.secondaryCta && content.secondaryTarget === 'pro' ? (
-            <TouchableOpacity
-              style={styles.secondaryBtn}
-              onPress={() => handlePay('pro')}
+            <Button
+              title={content.secondaryCta}
+              variant="secondary"
+              loading={busy === 'pro'}
               disabled={busy !== null}
-              accessibilityRole="button"
-            >
-              {busy === 'pro' ? (
-                <ActivityIndicator color={colors.textPrimary} />
-              ) : (
-                <Text style={styles.secondaryBtnText}>{content.secondaryCta}</Text>
-              )}
-            </TouchableOpacity>
+              onPress={() => handlePay('pro')}
+            />
           ) : null}
 
           {content.tertiaryCta ? (
-            <TouchableOpacity
-              style={styles.tertiaryBtn}
+            <Button
+              title={content.tertiaryCta}
+              variant="tertiary"
+              disabled={busy !== null}
               onPress={() => {
                 if (content.tertiaryTarget === 'free') handleSkip('free');
                 else dismiss();
               }}
-              disabled={busy !== null}
-              accessibilityRole="button"
-            >
-              <Text style={styles.tertiaryBtnText}>{content.tertiaryCta}</Text>
-            </TouchableOpacity>
+            />
           ) : null}
         </View>
       </ScrollView>
@@ -278,36 +265,6 @@ const styles = StyleSheet.create({
   },
   ctaStack: {
     gap: spacing.md,
-  },
-  primaryBtn: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.lg,
-    borderRadius: radius.md,
-    alignItems: 'center',
-  },
-  primaryBtnText: {
-    color: colors.background,
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
-  },
-  secondaryBtn: {
-    backgroundColor: colors.surface2,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-    alignItems: 'center',
-  },
-  secondaryBtnText: {
-    color: colors.textPrimary,
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.medium,
-  },
-  tertiaryBtn: {
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
-  tertiaryBtnText: {
-    color: colors.textMuted,
-    fontSize: fontSize.md,
   },
   errorText: { color: colors.error },
 });
