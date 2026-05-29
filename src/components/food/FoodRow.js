@@ -11,9 +11,16 @@ export const SOURCE_LABEL = {
   custom: 'You',
 };
 
+// Per-100g foods (curated staples, some database rows) carry no serving
+// size. Fall back to a 100g basis so the row shows "100g · X kcal" rather
+// than "nullg".
+export function servingGrams(food) {
+  return food?.serving_g && food.serving_g > 0 ? food.serving_g : 100;
+}
+
 export function kcalForServing(food) {
-  if (!food || !food.serving_g) return null;
-  return Math.round((food.kcal_100g ?? 0) * food.serving_g / 100);
+  if (!food) return null;
+  return Math.round((food.kcal_100g ?? 0) * servingGrams(food) / 100);
 }
 
 // `preference`: 'fav' | 'dislike' | null. When dislike, the row
@@ -54,7 +61,7 @@ export default function FoodRow({ food, isFav, preference, onPress, onLongPress,
           numberOfLines={1}
         >
           {food.brand ? `${food.brand} · ` : ''}
-          {food.serving_label || `${food.serving_g}g`}
+          {food.serving_label || `${servingGrams(food)}g`}
           {kcalPerServing != null ? ` · ${kcalPerServing} kcal` : ''}
           {sourceTag ? `  ${sourceTag}` : ''}
         </Text>

@@ -242,9 +242,11 @@ describe('kcalForServing', () => {
     expect(kcalForServing({ kcal_100g: 247, serving_g: 36 })).toBe(89);
     expect(kcalForServing({ kcal_100g: 100, serving_g: 50 })).toBe(50);
   });
-  test('returns null when no serving_g', () => {
-    expect(kcalForServing({ kcal_100g: 100 })).toBe(null);
-    expect(kcalForServing({ kcal_100g: 100, serving_g: 0 })).toBe(null);
+  test('falls back to a 100g basis when there is no serving size', () => {
+    // Per-100g foods (curated staples) carry no serving_g; show per-100g
+    // kcal rather than "nullg".
+    expect(kcalForServing({ kcal_100g: 100 })).toBe(100);
+    expect(kcalForServing({ kcal_100g: 100, serving_g: 0 })).toBe(100);
   });
   test('handles missing food', () => {
     expect(kcalForServing(null)).toBe(null);

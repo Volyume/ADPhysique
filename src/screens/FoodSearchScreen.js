@@ -691,11 +691,14 @@ const styles = StyleSheet.create({
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
 
   tabBar: {
-    flexGrow: 0,
+    // flexShrink: 0 so the strip keeps its intrinsic height and never gets
+    // squished by the list below (which was clipping the tab labels).
+    flexGrow: 0, flexShrink: 0,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   tabBarContent: {
     paddingHorizontal: spacing.md,
+    alignItems: 'center',
   },
   tab: {
     paddingHorizontal: spacing.md,
@@ -704,6 +707,7 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     color: colors.textMuted, fontSize: fontSize.sm, fontWeight: fontWeight.medium,
+    lineHeight: fontSize.sm + 6,
     paddingBottom: spacing.sm,
   },
   tabLabelActive: { color: colors.textPrimary, fontWeight: fontWeight.semibold },
