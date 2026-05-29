@@ -45,16 +45,39 @@ export default function PRWallScreen({ navigation }) {
   function openPRMenu(exerciseName) {
     const ex = exerciseList?.find(e => e.name === exerciseName);
     if (!ex) return;
-    peekRef.current?.open({
-      title: exerciseName,
-      items: [
-        {
-          icon: 'analytics-outline',
-          label: 'View exercise detail',
-          onPress: () => navigation.navigate('ExerciseDetail', { exerciseId: ex.id }),
-        },
-      ],
-    });
+    const types = grouped[exerciseName] || {};
+    const heaviest = types['heaviest_weight'];
+    const best1RM = types['1rm_estimate'];
+    const items = [
+      {
+        icon: 'analytics-outline',
+        label: 'View exercise detail',
+        onPress: () => navigation.navigate('ExerciseDetail', { exerciseId: ex.id }),
+      },
+    ];
+    if (heaviest || best1RM) {
+      const prData = heaviest
+        ? {
+            exerciseName,
+            weight: String(heaviest.value),
+            reps: String(heaviest.reps),
+            units,
+            date: heaviest.achieved_date,
+          }
+        : {
+            exerciseName,
+            weight: parseFloat(best1RM.value).toFixed(1),
+            reps: String(best1RM.reps || 1),
+            units,
+            date: best1RM.achieved_date,
+          };
+      items.push({
+        icon: 'share-outline',
+        label: 'Share this PR',
+        onPress: () => navigation.navigate('ShareCard', { prData }),
+      });
+    }
+    peekRef.current?.open({ title: exerciseName, items });
   }
 
   useFocusEffect(useCallback(() => { if (user?.id) loadData(); }, [user?.id]));
