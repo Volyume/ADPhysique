@@ -20,8 +20,9 @@ import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, radius, fontSize, fontWeight, hitSlop } from '../styles/theme';
+import { colors, spacing, fontSize, fontWeight, hitSlop } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
+import Card from '../components/Card';
 
 function openUrl(url) {
   Linking.openURL(url).catch(() => {});
@@ -39,7 +40,7 @@ export default function CreditsScreen({ navigation }) {
         </Text>
 
         {/* OpenFoodFacts */}
-        <View style={styles.card}>
+        <Card borderless style={styles.card}>
           <Text style={styles.cardTitle}>OpenFoodFacts</Text>
           <Text style={styles.body}>
             Branded UK food data, both bundled (weekly snapshot) and live (barcode misses fall through to OFF's API).
@@ -50,10 +51,10 @@ export default function CreditsScreen({ navigation }) {
           <TouchableOpacity onPress={() => openUrl('https://world.openfoodfacts.org/')}>
             <Text style={styles.link}>world.openfoodfacts.org</Text>
           </TouchableOpacity>
-        </View>
+        </Card>
 
         {/* CoFID */}
-        <View style={styles.card}>
+        <Card borderless style={styles.card}>
           <Text style={styles.cardTitle}>McCance and Widdowson's Composition of Foods (CoFID)</Text>
           <Text style={styles.body}>
             Generic UK foods (raw chicken breast, plain oats, etc.) bundled into Volyume from the 7th edition (2021) dataset published by Public Health England / OHID.
@@ -64,10 +65,10 @@ export default function CreditsScreen({ navigation }) {
           <TouchableOpacity onPress={() => openUrl('https://www.gov.uk/government/publications/composition-of-foods-integrated-dataset-cofid')}>
             <Text style={styles.link}>gov.uk · CoFID</Text>
           </TouchableOpacity>
-        </View>
+        </Card>
 
         {/* USDA */}
-        <View style={styles.card}>
+        <Card borderless style={styles.card}>
           <Text style={styles.cardTitle}>USDA FoodData Central</Text>
           <Text style={styles.body}>
             North-American food data, hit only when both the bundled snapshot and OpenFoodFacts miss. Used for imported items and occasional UK gaps.
@@ -78,7 +79,7 @@ export default function CreditsScreen({ navigation }) {
           <TouchableOpacity onPress={() => openUrl('https://fdc.nal.usda.gov/')}>
             <Text style={styles.link}>fdc.nal.usda.gov</Text>
           </TouchableOpacity>
-        </View>
+        </Card>
 
         <Text style={styles.footnote}>
           Research, design, and code by the Volyume team. Bug reports and missing-product reports are welcome at support@volyume.app.
@@ -98,9 +99,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
     marginBottom: spacing.md,
   },
   cardTitle: {
