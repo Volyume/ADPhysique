@@ -106,6 +106,9 @@ describe('friendlyFoodName', () => {
   test('falls back to "Custom food" for custom: refs', () => {
     expect(friendlyFoodName({ food_ref: 'custom:abc' })).toBe('Custom food');
   });
+  test('labels quick-add entries "Quick add"', () => {
+    expect(friendlyFoodName({ food_ref: 'quick:adhoc' })).toBe('Quick add');
+  });
   test('falls back to "Food" for everything else', () => {
     expect(friendlyFoodName({ food_ref: 'off:12345' })).toBe('Food');
     expect(friendlyFoodName({})).toBe('Food');

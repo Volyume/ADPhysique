@@ -42,6 +42,7 @@ import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import FoodDetailSheet from '../components/food/FoodDetailSheet';
+import QuickAddSheet from '../components/food/QuickAddSheet';
 import FoodRow from '../components/food/FoodRow';
 
 const MEAL_LABELS = {
@@ -66,6 +67,8 @@ export default function FoodSearchScreen({ navigation, route }) {
 
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState('recents');
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const quickSavedRef = useRef(false);
   const [results, setResults] = useState([]);
   const [recents, setRecents] = useState([]);
   const [favouriteRows, setFavouriteRows] = useState([]);
@@ -217,6 +220,24 @@ export default function FoodSearchScreen({ navigation, route }) {
 
   function openPicker(food) {
     setPicker({ food });
+  }
+
+  // Quick add: log calories (and optional macros) with no food lookup.
+  // food_ref 'quick:adhoc' has no resolvable name, so the diary shows it
+  // as "Quick add" with no gram weight. Logs, then returns to the diary.
+  async function confirmQuickAdd({ kcal, protein, carbs, fat, mealSlot: slot }) {
+    await logFoodEntry(userId, {
+      entryDate,
+      mealSlot: slot,
+      foodRef: 'quick:adhoc',
+      quantityG: 0,
+      kcal,
+      proteinG: protein,
+      carbsG: carbs,
+      fatG: fat,
+      fibreG: null,
+    });
+    quickSavedRef.current = true;
   }
 
   // Auto-open the detail sheet when arriving from ScanBarcodeScreen.
@@ -447,12 +468,24 @@ export default function FoodSearchScreen({ navigation, route }) {
           <Ionicons name="close" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Add to {MEAL_LABELS[mealSlot] ?? 'Snacks'}</Text>
-        <TouchableOpacity
-          onPress={() => navigation.navigate('ScanBarcode', { mealSlot, entryDate })}
-          hitSlop={12}
-        >
-          <Ionicons name="barcode-outline" size={24} color={colors.primary} />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            onPress={() => setShowQuickAdd(true)}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Quick add calories"
+          >
+            <Ionicons name="flash-outline" size={23} color={colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('ScanBarcode', { mealSlot, entryDate })}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Scan a barcode"
+          >
+            <Ionicons name="barcode-outline" size={24} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -521,6 +554,16 @@ export default function FoodSearchScreen({ navigation, route }) {
         onSave={confirmLog}
         onClose={() => setPicker(null)}
       />
+
+      <QuickAddSheet
+        visible={showQuickAdd}
+        initialMealSlot={mealSlot}
+        onSave={confirmQuickAdd}
+        onClose={() => {
+          setShowQuickAdd(false);
+          if (quickSavedRef.current) { quickSavedRef.current = false; navigation.goBack(); }
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -534,6 +577,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   headerTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
 
   tabBar: {
     flexGrow: 0,

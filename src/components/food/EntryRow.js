@@ -6,7 +6,10 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/them
 
 export function friendlyFoodName(entry) {
   if (entry?._name && typeof entry._name === 'string') return entry._name;
-  return entry?.food_ref?.startsWith('custom:') ? 'Custom food' : 'Food';
+  const ref = entry?.food_ref ?? '';
+  if (ref.startsWith('quick:')) return 'Quick add';
+  if (ref.startsWith('custom:')) return 'Custom food';
+  return 'Food';
 }
 
 export function EntryRow({
@@ -19,6 +22,8 @@ export function EntryRow({
   const f = Math.round(entry.fat_g ?? 0);
   const name = friendlyFoodName(entry);
   const brand = entry?._brand ?? null;
+  // Quick-add entries carry macros directly with no meaningful gram weight.
+  const isQuick = (entry?.food_ref ?? '').startsWith('quick:');
   return (
     <TouchableOpacity
       style={[styles.entryRow, selected && styles.entryRowSelected]}
@@ -39,7 +44,7 @@ export function EntryRow({
       <View style={styles.entryMain}>
         <Text style={styles.entryName} numberOfLines={1}>{name}</Text>
         {brand ? <Text style={styles.entryBrand} numberOfLines={1}>{brand}</Text> : null}
-        <Text style={styles.entryQuantity}>{Math.round(entry.quantity_g)}g</Text>
+        {!isQuick ? <Text style={styles.entryQuantity}>{Math.round(entry.quantity_g)}g</Text> : null}
       </View>
       <View style={styles.entryMacros}>
         <Text style={styles.entryKcal}>{kcal} kcal</Text>
