@@ -155,7 +155,7 @@ export default function MyMealsScreen({ navigation, route }) {
         <View style={styles.empty}>
           <Text style={styles.emptyTitle}>No saved meals yet.</Text>
           <Text style={styles.emptyBody}>
-            In your diary, select the foods you eat together, then tap "Save as meal". Log the whole thing in one tap next time.
+            Select foods in your diary and tap "Save as meal".
           </Text>
         </View>
       ) : (

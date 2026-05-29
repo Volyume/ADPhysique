@@ -206,7 +206,7 @@ const CASCADE_19_COPY = {
 };
 const CASCADE_21_COPY = {
   title: 'You\'re now on Free',
-  body: 'Your data stays. Some features are read-only. Upgrade any time.',
+  body: 'Your data\'s safe. Upgrade whenever you like.',
 };
 
 /**

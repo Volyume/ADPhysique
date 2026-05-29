@@ -293,7 +293,7 @@ export default function DiaryScreen({ navigation }) {
       await createSavedMeal(userId, { name, items });
       audit('food.saveMeal', { count: items.length });
       exitSelection();
-      Alert.alert('Meal saved', `"${name}" is in My meals. Log it in one tap from the food search.`);
+      Alert.alert('Meal saved', `"${name}" is in My meals.`);
     } catch (_) {
       Alert.alert('Couldn\'t save', 'Try again.');
     }
