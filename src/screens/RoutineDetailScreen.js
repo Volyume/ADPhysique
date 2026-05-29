@@ -11,7 +11,7 @@ import {
   updateRoutineExerciseExercise, updateRoutineExerciseOrder,
 } from '../lib/database';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
-import { getExerciseWhyThis } from '../lib/whyThisTemplates';
+import { getExerciseWhyThis, getSplitRationale } from '../lib/whyThisTemplates';
 import { rankSwaps } from '../lib/swapEngine';
 import { logError } from '../lib/errorLog';
 import { audit } from '../lib/observability';
@@ -293,6 +293,9 @@ export default function RoutineDetailScreen({ navigation, route }) {
               <Text style={styles.startBtnText}>Start This Workout</Text>
             </TouchableOpacity>
             <MuscleTagRow exercises={exercises} />
+            {routine.split_type ? (
+              <Text style={styles.splitRationale}>{getSplitRationale(routine.split_type)}</Text>
+            ) : null}
           </>
         }
         renderItem={({ item: { routineExercise, exercise }, index }) => (
@@ -663,6 +666,7 @@ const styles = StyleSheet.create({
   exerciseMeta: { fontSize: fontSize.sm, color: colors.primary },
   exerciseMuscle: { fontSize: fontSize.xs, color: colors.textMuted },
   exerciseWhy: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic', marginTop: 2, lineHeight: 16 },
+  splitRationale: { fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 19, marginTop: spacing.xs, marginBottom: spacing.sm },
   exerciseStartWeight: { fontSize: fontSize.xs, color: colors.primary },
   cardActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   reorderActions: { flexDirection: 'column', alignItems: 'center', gap: spacing.xs },
