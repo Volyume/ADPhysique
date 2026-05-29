@@ -31,6 +31,16 @@ function getFill(volumeByMuscle, muscle) {
   return entry.color;
 }
 
+// Spoken label for a muscle region so the map is usable with a screen
+// reader: the muscle name plus its volume status when the caller provides
+// one (entry.label / entry.status), e.g. "Front delts, optimal".
+function muscleLabel(volumeByMuscle, muscle) {
+  const name = String(muscle).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  const entry = volumeByMuscle?.[muscle];
+  const status = entry?.label ?? entry?.status;
+  return status ? `${name}, ${String(status).toLowerCase()}` : name;
+}
+
 export default function BodyDiagramHeatmap({ volumeByMuscle = {}, onMuscleTap }) {
   const handle = muscle => () => {
     if (onMuscleTap) onMuscleTap(muscle);
@@ -45,6 +55,9 @@ export default function BodyDiagramHeatmap({ volumeByMuscle = {}, onMuscleTap })
     stroke: regionStroke,
     strokeWidth: 0.75,
     onPress: handle(muscleKey),
+    accessible: true,
+    accessibilityRole: 'button',
+    accessibilityLabel: muscleLabel(volumeByMuscle, muscleKey),
   });
 
   return (
