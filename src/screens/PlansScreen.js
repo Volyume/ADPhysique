@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';
+import { SkeletonCard } from '../components/Skeleton';
 import PressableCard from '../components/PressableCard';
 import PeekMenu from '../components/PeekMenu';
 import { EmptyPlanIllustration } from '../components/Illustrations';
@@ -101,6 +102,7 @@ export default function PlansScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [blockAdvice, setBlockAdvice] = useState(null);
   const [blockSnoozed, setBlockSnoozed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   const scrollRef = useRef(null);
   const peekRef = useRef(null);
@@ -169,7 +171,10 @@ export default function PlansScreen({ navigation }) {
         setBlockAdvice(null);
         setBlockSnoozed(false);
       }
-    } catch (_e) {}
+    } catch (_e) {
+    } finally {
+      setLoaded(true);
+    }
   }
 
   async function handleRefresh() {
@@ -367,6 +372,20 @@ export default function PlansScreen({ navigation }) {
       >
         <ScreenHeader title="Plans" />
 
+        {/* First-load skeleton: mirror the active-plan hero + a couple of
+            plan cards so the screen doesn't flash empty states before data
+            arrives. Refreshes (pull-to-refresh, focus) keep the real
+            content, since `loaded` stays true after the first pass. */}
+        {!loaded ? (
+          <View style={styles.skeletonWrap}>
+            <SkeletonCard height={120} />
+            <SkeletonCard height={72} />
+            <SkeletonCard height={72} />
+          </View>
+        ) : null}
+
+        {loaded ? (
+          <>
         {/* Block advisor card */}
         {showBlockCard && (
           <View style={[
@@ -709,6 +728,8 @@ export default function PlansScreen({ navigation }) {
             );
           })}
         </View>
+          </>
+        ) : null}
       </ScrollView>
       <PeekMenu ref={peekRef} />
     </SafeAreaView>
@@ -718,6 +739,7 @@ export default function PlansScreen({ navigation }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
+  skeletonWrap: { gap: spacing.lg },
   screenHeader: {
     flexDirection: 'row',
     alignItems: 'center',
