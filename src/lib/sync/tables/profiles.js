@@ -62,6 +62,29 @@ function _writeStore(profile) {
   }
 }
 
+// Compare the six user-editable fields the merge can touch. Defaults
+// are applied on both sides (matching mergedProfile + how the store
+// holds them) so a null-vs-default mismatch doesn't read as a change
+// and re-trigger the churn the gate exists to stop.
+function _profilesEqual(a, b) {
+  const norm = (p) => ({
+    firstName:        p?.firstName ?? null,
+    units:            p?.units ?? 'kg',
+    trainingFocus:    p?.trainingFocus ?? 'bodybuilding',
+    trainingAgeYears: p?.trainingAgeYears ?? null,
+    primaryEquipment: p?.primaryEquipment ?? null,
+    barWeight:        p?.barWeight ?? 20,
+  });
+  const x = norm(a);
+  const y = norm(b);
+  return x.firstName === y.firstName
+    && x.units === y.units
+    && x.trainingFocus === y.trainingFocus
+    && x.trainingAgeYears === y.trainingAgeYears
+    && x.primaryEquipment === y.primaryEquipment
+    && x.barWeight === y.barWeight;
+}
+
 function _profileToCloudPayload(userId, profile, fieldUpdatedAt) {
   const payload = {
     id: userId,
@@ -150,6 +173,18 @@ export async function pullProfiles(sb, { userId } = {}) {
       primaryEquipment: merged.primary_equipment ?? null,
       barWeight:        merged.bar_weight ?? 20,
     };
+
+    // Only write back when the merge actually changed something. Writing
+    // unconditionally caused a merge-churn loop: setUserProfile re-stamps
+    // every tracked field's userProfileFieldUpdatedAt to now(), which
+    // inflated the local column_updates_at so the NEXT push looked newer,
+    // re-triggering the merge, the write, the re-stamp, every sync cycle
+    // (observed in prod: sync_conflict_resolved + setUserProfile on every
+    // run). Comparing the six mapped fields against the current local
+    // profile and skipping a no-op write breaks the loop.
+    if (_profilesEqual(mergedProfile, localProfile)) {
+      return { count: 0, errors: 0, ...(winner ? { winner } : {}) };
+    }
     const ok = _writeStore(mergedProfile);
     return {
       count: ok ? 1 : 0,

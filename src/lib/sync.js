@@ -110,17 +110,32 @@ async function fetchAllRows(scope, queryBuilder) {
 
 // IN-list queries can hit URL length limits with thousands of IDs.
 // Chunk to keep the query string well under any practical cap.
-async function fetchByIdsChunked(scope, table, column, ids, queryFactory) {
+export async function fetchByIdsChunked(scope, table, column, ids, queryFactory) {
   const CHUNK = 200;
+  const PAGE = 1000;
   const out = [];
   for (let i = 0; i < ids.length; i += CHUNK) {
     const slice = ids.slice(i, i + CHUNK);
-    const q = queryFactory ? queryFactory(slice) : null;
-    const { data, error } = q
-      ? await q
-      : await getClient().from(table).select('*').in(column, slice);
-    if (error) { logWarn(scope, error.message); continue; }
-    if (data?.length) out.push(...data);
+    // Paginate WITHIN each chunk. A 200-id chunk can match far more than
+    // 1000 child rows (e.g. 200 workouts each with many sets, or 200
+    // routines each with several exercises), and PostgREST caps every
+    // response at 1000. Without the .range() loop the surplus was
+    // silently dropped, so a fresh pull could leave workouts missing
+    // sets and routines missing exercises (observed in prod logs: a
+    // 200-routine chunk returning exactly 1000 routine_exercises). The
+    // builder is single-use once awaited, so rebuild it per page.
+    let from = 0;
+    for (;;) {
+      const base = queryFactory
+        ? queryFactory(slice)
+        : getClient().from(table).select('*').in(column, slice);
+      const { data, error } = await base.range(from, from + PAGE - 1);
+      if (error) { logWarn(scope, error.message); break; }
+      if (!data?.length) break;
+      out.push(...data);
+      if (data.length < PAGE) break;
+      from += PAGE;
+    }
   }
   return out;
 }
