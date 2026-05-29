@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import Button from '../components/Button';
 import useAppStore from '../store/useAppStore';
 import { saveUserBodyProfile } from '../lib/database';
 
@@ -99,13 +100,13 @@ export default function WellbeingCheckScreen({ navigation }) {
           ))}
         </View>
 
-        <TouchableOpacity
-          style={[styles.saveBtn, (!allAnswered || saving) && styles.saveBtnDisabled]}
+        <Button
+          title="Save answers"
+          size="lg"
+          loading={saving}
+          disabled={!allAnswered}
           onPress={handleSave}
-          activeOpacity={allAnswered && !saving ? 0.88 : 1}
-        >
-          <Text style={styles.saveBtnText}>{saving ? 'Saving...' : 'Save answers'}</Text>
-        </TouchableOpacity>
+        />
 
         <Text style={styles.privacy}>
           Your answers are stored on this device and never shared without your permission.
@@ -166,21 +167,6 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
 
-  saveBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-    marginTop: spacing.sm,
-  },
-  saveBtnDisabled: {
-    opacity: 0.4,
-  },
-  saveBtnText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.background,
-  },
 
   privacy: {
     fontSize: fontSize.xs,

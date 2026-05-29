@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import Button from '../components/Button';
 import { insertCustomFood, logFoodEntry } from '../lib/food/db';
 import { checkFoodSanity } from '../lib/food/sanityChecks';
 import { audit } from '../lib/observability';
@@ -168,14 +169,15 @@ export default function AddCustomFoodScreen({ navigation, route }) {
           <NumField label="Eaten (g)" value={quantityG} onChange={setQuantityG} suffix="g" />
         </View>
 
-        <TouchableOpacity
-          style={[styles.saveBtn, !canSave && styles.saveBtnDisabled]}
-          onPress={onSave}
-          disabled={!canSave || saving}
+        <Button
+          title="Save and add to diary"
           accessibilityLabel="Save food and add to diary"
-        >
-          <Text style={styles.saveBtnLabel}>{saving ? 'Saving…' : 'Save and add to diary'}</Text>
-        </TouchableOpacity>
+          size="lg"
+          loading={saving}
+          disabled={!canSave}
+          onPress={onSave}
+          style={styles.saveBtn}
+        />
       </ScrollView>
     </SafeAreaView>
   );
@@ -258,14 +260,5 @@ const styles = StyleSheet.create({
   numInput: { flex: 1, color: colors.textPrimary, fontSize: fontSize.md, paddingVertical: spacing.md },
   numSuffix: { color: colors.textMuted, fontSize: fontSize.sm, marginLeft: spacing.xs },
 
-  saveBtn: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.lg, paddingHorizontal: spacing.xl,
-    borderRadius: radius.lg,
-    alignItems: 'center', justifyContent: 'center',
-    marginTop: spacing.xl,
-    minHeight: 48,
-  },
-  saveBtnDisabled: { opacity: 0.5 },
-  saveBtnLabel: { color: colors.background, fontSize: fontSize.md, fontWeight: fontWeight.bold },
+  saveBtn: { marginTop: spacing.xl },
 });
