@@ -81,34 +81,38 @@ date and meal_slot). Cold open under 1s.
 
 ### Search tab (NEW)
 
-Tabbed list at the top: Recents | Favourites | Frequents | Custom |
-Database. Below: a single search input.
+**Founder override 2026-05-29.** The old far-right "Database" tab is
+removed. The search box now searches the food database from any tab,
+matching MyFitnessPal, MacroFactor, Cronometer and Lose It: a
+persistent search bar over browse lists, not a tab the user has to
+hunt for. The earlier five-tab layout (with Database last) confused a
+user who could not find database search. Suggested moves to second so
+the curated meals are visible without scrolling.
 
-Behaviour per tab:
+Browse subnav at the top: Recents | Suggested | Favourites |
+Frequents | Custom. Below: a single search input that searches the
+database from whichever tab is active.
 
-- **Recents**: last 25 distinct foods logged. From local SQLite
-  only. Instant.
-- **Favourites**: foods the user has starred. Star icon on every
-  food row toggles favourite state.
-- **Frequents**: top 20 foods logged in the last 30 days, by count.
-  Updated nightly server-side, cached locally.
-- **Custom**: the user's `custom_foods` rows. Tappable to edit. "+
-  New custom food" CTA at top.
-- **Database**: free-text search across local `foods` table first,
-  then live OFF + USDA as fallback. Source chip on every result.
-  Debounced 250ms.
+Behaviour:
+
+- A 2+ char query is a database search from any tab: free-text across
+  the local `foods` + `custom_foods` cache first, then live OFF +
+  USDA as fallback, debounced 250ms. The user's own custom foods rank
+  first in results. Source chip on every result.
+- With no query (or under 2 chars), each tab shows its own list:
+  - **Recents**: last 25 distinct foods logged. Local SQLite. Instant.
+  - **Suggested**: curated meals sized to the macros left for this
+    meal (lists whole meals, not food rows; one tap logs the meal).
+  - **Favourites**: foods the user has starred. Long-press a row to
+    toggle favourite / dislike.
+  - **Frequents**: top 20 foods logged in the last 30 days, by count.
+    Updated nightly server-side, cached locally.
+  - **Custom**: the user's `custom_foods` rows. "+ New custom food"
+    CTA at top, plus My recipes / My meals.
 
 Results: each row is a `FoodRow` showing name, brand, default
 serving size, kcal per serving, source chip. Tap = open the food
-detail sheet.
-
-Search input behaviour:
-- Type 1 character: local cache search starts.
-- Type 3+ characters: live OFF + USDA fallback kicks in after 250ms
-  debounce.
-- Pull-down on results: refresh.
-- Empty search input on Database tab: shows nothing (no random
-  food list).
+detail sheet. No matches on a live query offers "Create a custom food".
 
 ### Scan barcode flow (move #1.5, NEW)
 

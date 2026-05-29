@@ -4,15 +4,15 @@
  * Locked in UI_FLOWS_LOCKED.md and FOOD_DATA_STRATEGY_LOCKED.md.
  *
  * Sits between the Diary "Add food" tap and the actual log write. The
- * top is a five-tab subnav (GAP row 28): Recents, Favourites, Frequents,
- * Custom, Database. The first four are curated local lists; the query
- * filters them by name. Database is the search surface: 250ms-debounced
- * waterfall (local cache first, then live OFF + USDA), nothing shown
- * until a 2+ char query.
+ * top is a browse subnav (GAP row 28): Recents, Suggested, Favourites,
+ * Frequents, Custom. The search box under it searches the food database
+ * from any tab (250ms-debounced waterfall: local cache first, then live
+ * OFF + USDA), nothing shown until a 2+ char query. With no query each
+ * tab shows its own list. Suggested lists curated meals, not food rows.
  *
  * Tap a row -> ServingPicker sheet -> "Add to diary". Long-press a row
  * to cycle its preference (favourite / dislike). Custom-food creation
- * lives on the Custom tab and as a fallback under the Database results.
+ * lives on the Custom tab and as a fallback under the search results.
  *
  * Voice rules from COACHING_VOICE_SYNTHESIS_LOCKED.md.
  */
@@ -190,12 +190,13 @@ export default function FoodSearchScreen({ navigation, route }) {
   useEffect(() => { if (activeTab === 'frequents') loadFrequents(); }, [activeTab, loadFrequents]);
   useEffect(() => { if (activeTab === 'suggested') loadSuggested(); }, [activeTab, loadSuggested]);
 
-  // Debounced waterfall search, Database tab only. Matches the locked
-  // 250ms; other tabs filter their list client-side via selectTabRows.
+  // Debounced waterfall search. The search box searches the food database
+  // from any browse tab (250ms debounce). Suggested has no search box, so
+  // it is skipped. With no query each tab shows its own browse list.
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const q = query.trim();
-    if (activeTab !== 'database' || q.length < 2) {
+    if (activeTab === 'suggested' || q.length < 2) {
       setResults([]);
       setSearching(false);
       return;
@@ -360,8 +361,9 @@ export default function FoodSearchScreen({ navigation, route }) {
   }
 
   function renderEmpty() {
-    if (activeTab === 'database') {
-      if (query.trim().length < 2 || searching) return null;
+    // A live search with no hits: offer the custom-food fallback.
+    if (query.trim().length >= 2) {
+      if (searching) return null;
       return (
         <View style={styles.noResults}>
           <Text style={styles.noResultsText}>No matches for "{query.trim()}".</Text>
@@ -482,7 +484,7 @@ export default function FoodSearchScreen({ navigation, route }) {
           style={styles.searchInput}
           value={query}
           onChangeText={setQuery}
-          placeholder={activeTab === 'database' ? 'Search foods or brands' : 'Filter this list'}
+          placeholder="Search foods or brands"
           placeholderTextColor={colors.textMuted}
           autoCorrect={false}
           autoCapitalize="none"
@@ -499,7 +501,7 @@ export default function FoodSearchScreen({ navigation, route }) {
         contentContainerStyle={{ paddingBottom: spacing.xxxl }}
         ListEmptyComponent={renderEmpty()}
         ListFooterComponent={
-          activeTab === 'database' && results.length > 0 ? (
+          query.trim().length >= 2 && results.length > 0 ? (
             <TouchableOpacity style={styles.footerBtn} onPress={gotoCustomReplace}>
               <Ionicons name="add" size={18} color={colors.primary} />
               <Text style={styles.footerBtnText}>Create a custom food</Text>
@@ -586,8 +588,12 @@ const styles = StyleSheet.create({
   },
   suggestCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1, borderColor: colors.border,
+    borderLeftWidth: 3, borderLeftColor: colors.primary,
+    borderRadius: radius.md,
+    marginHorizontal: spacing.md, marginTop: spacing.sm,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   suggestName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
   suggestMacros: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 3 },

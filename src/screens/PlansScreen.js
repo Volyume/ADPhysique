@@ -468,7 +468,6 @@ export default function PlansScreen({ navigation }) {
         {/* Active Plan */}
         {activePlan ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Active plan</Text>
             <View style={styles.activePlanCard}>
               <View style={styles.activePlanHeader}>
                 <View style={styles.activeBadge}>

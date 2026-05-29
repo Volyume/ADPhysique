@@ -3,9 +3,9 @@ import { SEARCH_TABS, selectTabRows } from '../searchTabs';
 const F = (name, ref) => ({ name, food_ref: ref });
 
 describe('SEARCH_TABS (GAP row 28 + curated suggestions)', () => {
-  test('Suggested leads, then the five locked tabs in order', () => {
+  test('Recents leads, Suggested second, then the browse lists; no Database tab', () => {
     expect(SEARCH_TABS.map((t) => t.key)).toEqual([
-      'suggested', 'recents', 'favourites', 'frequents', 'custom', 'database',
+      'recents', 'suggested', 'favourites', 'frequents', 'custom',
     ]);
   });
 
@@ -22,21 +22,20 @@ describe('selectTabRows', () => {
     custom: [F('My shake', 'custom:1')],
   };
 
-  test('database shows nothing under 2 chars', () => {
-    expect(selectTabRows({ activeTab: 'database', query: 'b', lists, results: [F('x', 'g:9')] })).toEqual([]);
+  test('a query under 2 chars shows the browse list, not search results', () => {
+    expect(selectTabRows({ activeTab: 'recents', query: 'b', lists, results: [F('x', 'g:9')] }))
+      .toEqual(lists.recents);
   });
 
-  test('database shows the waterfall results at 2+ chars', () => {
+  test('a 2+ char query is a database search from any tab', () => {
     const results = [F('Beef', 'g:9')];
-    expect(selectTabRows({ activeTab: 'database', query: 'be', lists, results })).toBe(results);
+    expect(selectTabRows({ activeTab: 'recents', query: 'be', lists, results })).toBe(results);
+    expect(selectTabRows({ activeTab: 'favourites', query: 'be', lists, results })).toBe(results);
+    expect(selectTabRows({ activeTab: 'custom', query: 'be', lists, results })).toBe(results);
   });
 
-  test('a curated tab returns its full list with no query', () => {
+  test('a browse tab returns its full list with no query', () => {
     expect(selectTabRows({ activeTab: 'recents', query: '', lists })).toEqual(lists.recents);
-  });
-
-  test('query filters a curated tab by name, case-insensitive', () => {
-    expect(selectTabRows({ activeTab: 'recents', query: 'BAG', lists })).toEqual([F('Bagel', 'g:2')]);
   });
 
   test('missing list for a tab yields an empty array', () => {

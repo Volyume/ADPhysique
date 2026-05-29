@@ -14,6 +14,17 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 
 ## 0. Session summary
 
+### 0.0000. 2026-05-29 (founder feedback, Claude): Plans heading, suggested-meal names, food search reorder
+
+Four founder-reported items off two screenshots (Plans + Diary), all on `main`. No migration, no schema or sync-contract change: every fix is display-layer or static-data resolution. Tests green (food lib 74 passed; screen mount sweep 462 passed; ESLint 0 errors).
+
+1. **"Active plan" heading removed** (`PlansScreen.js`). The card already carries an ACTIVE pill, so the heading above it was redundant. Removed the heading only; the card and the "Switch your plan" section are unchanged.
+2. **Suggested-meal items no longer all read "Food"** (`lib/food/sources/localCache.js`). Root cause: `food_entries` does not store a name; the diary resolves each row's name from its `food_ref` at display time via `resolveFoodRef`, which only handled `global:` and `custom:` scopes. Curated suggested-meal items log with a `curated:<key>` ref, so they fell through to the generic "Food" label. Fix: `resolveFoodRef` now resolves `curated:` refs from the static `CURATED_FOODS` table (name + per-100g macros), returning before it touches SQLite. Additive, read-only, no data migration: existing `curated:` rows already in users' diaries now show their real names on next load. Regression tests assert every component of every curated meal resolves to a name.
+3. **Food search: database is no longer hidden** (`lib/food/searchTabs.js`, `FoodSearchScreen.js`). The founder could not find database search because it was a far-right tab. Reworked to the competitor-standard pattern (MyFitnessPal, MacroFactor, Cronometer, Lose It): the search box now searches the database from any tab, the standalone "Database" tab is gone, and the browse tabs are the empty-query lists. The waterfall already searches `custom_foods` + `foods` (customs ranked first), so custom foods stay findable via search. `UI_FLOWS_LOCKED.md` § Search tab updated with the founder override (it previously locked the five-tab layout).
+4. **Suggested meals made to stand out + moved second** (`searchTabs.js`, `FoodSearchScreen.js`). New tab order: Recents, **Suggested**, Favourites, Frequents, Custom (was Suggested-first-but-not-default, so it read as hidden). The suggestion rows are now bordered surface cards with the brand amber left accent instead of plain divider rows, so a meal reads as a meal, not a food entry.
+
+**Verify on device:** Plans screen (no heading, ACTIVE pill still shows), log a suggested meal then open the Diary (items show real food names, not "Food"), and the food picker (type to search the database from any tab, Suggested visible as the second tab with lifted cards).
+
 ### 0.000. 2026-05-29 (evening checkpoint, Claude): audit recommendations Wave 1-3 + founder bug fixes
 
 Continuation of the takeover session (§ 0.00). After the competitive audit landed, this run worked the audit's prioritised recommendations (`docs/audit/volyume-competitive-audit-2026-05-29.md` § Phase 4) plus four founder-reported screen issues. All on `main`; HEAD `479bb93`, 0 ahead / 0 behind origin. No migration this run. Full suite stayed green (jest mount sweep 462 passed; ESLint 0 errors, 13 pre-existing import-false-positive warnings).

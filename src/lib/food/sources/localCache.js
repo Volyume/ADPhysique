@@ -9,6 +9,7 @@
  * Locked in FOOD_DATA_STRATEGY_LOCKED.md.
  */
 import { db } from '../../database';
+import { CURATED_FOODS } from '../curatedFoods';
 
 /**
  * Search local foods + custom_foods by name. Returns up to `limit`
@@ -91,14 +92,37 @@ export async function findLocalByBarcode(ean, userId = null) {
 }
 
 /**
- * Resolve a food_ref ('global:<uuid>' or 'custom:<uuid>') to its
- * stored row. Returns null if not found or soft-deleted.
+ * Resolve a food_ref ('global:<uuid>', 'custom:<uuid>' or
+ * 'curated:<key>') to its stored row. Returns null if not found or
+ * soft-deleted.
+ *
+ * Curated refs come from the suggested-meal library (curatedFoods.js).
+ * They have no database row, so they are resolved from that static
+ * table. Without this the diary falls through to a generic "Food"
+ * label for every item logged from a suggested meal.
  */
 export async function resolveFoodRef(userId, foodRef) {
   if (!foodRef) return null;
-  const d = await db();
   const [scope, id] = String(foodRef).split(':');
   if (!id) return null;
+  if (scope === 'curated') {
+    const f = CURATED_FOODS[id];
+    if (!f) return null;
+    return {
+      food_ref: `curated:${id}`,
+      source: 'curated',
+      name: f.name,
+      brand: null,
+      serving_g: null,
+      serving_label: null,
+      kcal_100g: f.kcal,
+      protein_100g: f.protein,
+      carbs_100g: f.carbs,
+      fat_100g: f.fat,
+      fibre_100g: null,
+    };
+  }
+  const d = await db();
   if (scope === 'global') {
     return d.getFirstAsync(
       `SELECT 'global:' || id AS food_ref, source, name, brand,

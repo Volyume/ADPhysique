@@ -36,6 +36,8 @@ jest.mock('../../engineTelemetry', () => ({ track: jest.fn(() => Promise.resolve
 
 const food = require('../db');
 const { CURATED_MEALS, mealItems } = require('../curatedMeals');
+const { resolveFoodRef } = require('../sources/localCache');
+const { CURATED_FOODS } = require('../curatedFoods');
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -67,6 +69,30 @@ describe('applyCuratedMealToDiary', () => {
 
   test('requires mealSlot and entryDate', async () => {
     await expect(food.applyCuratedMealToDiary('u1', CURATED_MEALS[0].id, {})).rejects.toThrow(/mealSlot and entryDate/);
+  });
+});
+
+describe('resolveFoodRef for curated items (the "Food" label fix)', () => {
+  test('resolves a curated ref to the real food name and macros', async () => {
+    const row = await resolveFoodRef('u1', 'curated:oats');
+    expect(row).not.toBeNull();
+    expect(row.name).toBe(CURATED_FOODS.oats.name);
+    expect(row.source).toBe('curated');
+    expect(row.kcal_100g).toBe(CURATED_FOODS.oats.kcal);
+    expect(row.protein_100g).toBe(CURATED_FOODS.oats.protein);
+  });
+
+  test('every component of every curated meal resolves to a name (no "Food" fallthrough)', async () => {
+    for (const meal of CURATED_MEALS) {
+      for (const it of mealItems(meal)) {
+        const row = await resolveFoodRef('u1', it.foodRef);
+        expect(row && row.name).toBeTruthy();
+      }
+    }
+  });
+
+  test('returns null for an unknown curated key', async () => {
+    expect(await resolveFoodRef('u1', 'curated:not_a_real_food')).toBeNull();
   });
 });
 

@@ -1,28 +1,26 @@
-// Search subnav tabs (GAP row 28). Locked in UI_FLOWS_LOCKED.md:
-// Recents, Favourites, Frequents, Custom, Database. Suggested leads the
-// row: curated meals sized to the macros and meals left (handled by the
-// screen, not selectTabRows, since it lists meals, not food rows).
-// (My Recipes stays a CTA, not a tab, per the founder's 2026-05-28 call.)
+// Search subnav tabs (GAP row 28). Updated 2026-05-29 (founder): the old
+// far-right "Database" tab is gone. The search box itself now searches the
+// database from any tab, matching how MyFitnessPal, MacroFactor, Cronometer
+// and Lose It work: a persistent search bar over browse lists, not a tab you
+// hunt for. The tabs are the empty-query browse lists; Suggested sits second
+// so the curated meals are visible without scrolling.
+// Suggested is handled by the screen, not selectTabRows, since it lists meals,
+// not food rows. (My Recipes stays a CTA, not a tab, per the 2026-05-28 call.)
 
 export const SEARCH_TABS = [
-  { key: 'suggested', label: 'Suggested' },
   { key: 'recents', label: 'Recents' },
+  { key: 'suggested', label: 'Suggested' },
   { key: 'favourites', label: 'Favourites' },
   { key: 'frequents', label: 'Frequents' },
   { key: 'custom', label: 'Custom' },
-  { key: 'database', label: 'Database' },
 ];
 
-// Which food rows a tab shows for the current query.
-//   Database is search-driven: nothing until a 2+ char query, then the
-//   waterfall results. The other four are curated local lists that the
-//   query filters by name client-side (instant, no network).
+// Which food rows the list shows for the current query.
+//   A 2+ char query is a database search from any tab: return the waterfall
+//   results (which already include the user's custom foods, ranked first).
+//   With no query, show the active tab's browse list.
 export function selectTabRows({ activeTab, query = '', lists = {}, results = [] }) {
   const q = (query || '').trim().toLowerCase();
-  if (activeTab === 'database') {
-    return q.length >= 2 ? results : [];
-  }
-  const base = lists[activeTab] ?? [];
-  if (!q) return base;
-  return base.filter((f) => (f?.name ?? '').toLowerCase().includes(q));
+  if (q.length >= 2) return results;
+  return lists[activeTab] ?? [];
 }
