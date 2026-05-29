@@ -38,9 +38,17 @@ DONE (shipped to main, tested):
   1331, ManualBuilder 1269, WeeklyCheckIn, BodyMetrics, ProGoalSetup,
   ExerciseLibrary, VolumeHeatmap, Plans/Mesocycle secondary CTAs).
 - H2 HeldDecisionCard support-link no longer dead-ends (safety).
-- H4 (partial) chart a11y: VolumeBars, BlockProgressCard, FatigueTrendCard,
-  Sparkline, and BodyDiagramHeatmap regions now expose accessibility
-  labels/roles. MacroRings Skia fallback + ring a11y still outstanding.
+- H4 chart a11y COMPLETE: VolumeBars, BlockProgressCard, FatigueTrendCard,
+  Sparkline, BodyDiagramHeatmap regions, and MacroRings (spoken kcal+macro
+  summary) all expose accessibility labels/roles. (MacroRings Skia
+  *fallback* for no-Skia environments is a separate runtime item, still
+  open.)
+- Additional a11y: InfoTooltip trigger + dismiss, PlateCalculator close +
+  weight inputs, FoodDetailSheet macro-preview live region.
+- S8 (partial, additive half): recipe + saved-meal log failures now use
+  Toast instead of Alert; FoodRow long-press preference cycle now confirms
+  via toast (M10). The broad Alert-to-Toast sweep across all write paths
+  remains.
 - H5 skeleton loading on PlanDetail, Plans, PlanLibrary, Mesocycle (the
   plan surfaces are done).
 - DiaryScreen FABs moved to shadow tokens.
