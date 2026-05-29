@@ -12,15 +12,17 @@
  *   permissions.js  request / status helpers
  *   handler.js      foreground delivery handler with smart suppression
  *   scheduler.js    cron-like schedule + cancel helpers
+ *   pushToken.js    remote-push token register / unregister (Expo Push)
  *   telemetry.js    notification_sent / _tapped / _failed firers
  *
- * Surfaces still pending split-out (tracked in NOTIFICATIONS_LOCKED.md):
- *   - Cascade gate (day 19, 21) push
- *   - Subscription payment failure
- *   - Weekly coach output ready
- * Each of those will land here as a category + scheduler helper
- * when its feature ships; the spec table in categories.js already
- * names them.
+ * Remote-push surfaces (NOTIFICATIONS_LOCKED.md), being built on the
+ * device_push_tokens pipeline (migration 053) + the send-push Edge
+ * Function:
+ *   - Subscription payment failure  server-driven, fired by the Play
+ *                                   Billing RTDN webhook via send-push
+ *   - Cascade gate (day 19, 21)     local scheduled at fixed times
+ *   - Weekly coach output ready     local scheduled (Monday 09:00)
+ * The categories for all three already exist in categories.js.
  */
 
 export {
@@ -66,3 +68,10 @@ export {
   trackNotificationTapped,
   trackNotificationFailed,
 } from './telemetry';
+
+export {
+  registerPushToken,
+  unregisterPushToken,
+  getExpoPushToken,
+  PUSH_TOKEN_KEY,
+} from './pushToken';

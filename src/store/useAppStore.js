@@ -243,6 +243,19 @@ const useAppStore = create((set, get) => ({
       }
     }
 
+    // Remove THIS device's push-token row so the server stops pushing
+    // to it after sign-out. Runs before AsyncStorage.clear() because it
+    // reads the cached token from there. Best-effort: a failure here
+    // must not block sign-out (a stale row is pruned server-side when
+    // Expo reports DeviceNotRegistered on the next send).
+    if (prevUid) {
+      try {
+        // eslint-disable-next-line global-require
+        const { unregisterPushToken } = require('../lib/notifications');
+        await unregisterPushToken(prevUid);
+      } catch (_) { /* tolerate */ }
+    }
+
     // Wipe local SQLite rows owned by this user. Cloud copy is intact
     // (we just pushed). On next sign-in to the same account, data
     // restores via pullFromCloud. On sign-in to a different account,

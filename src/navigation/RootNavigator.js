@@ -822,6 +822,16 @@ export default function RootNavigator() {
             pullFromCloud(session.user.id)
               .then(() => useAppStore.getState().markCloudSyncComplete())
               .catch((err) => useAppStore.getState().markCloudSyncError(err?.message));
+
+            // Register this device for remote push (subscription
+            // payment-failure pushes, fired by the Play Billing RTDN
+            // webhook). No-ops cleanly when permission isn't granted or
+            // app.json has no extra.eas.projectId; local notifications
+            // are unaffected either way. Fire-and-forget.
+            // eslint-disable-next-line global-require
+            require('../lib/notifications')
+              .registerPushToken(session.user.id)
+              .catch(() => {});
           }
         });
         subscription = data.subscription;
