@@ -8,10 +8,7 @@
     "ios": "expo run:ios",
     "test": "jest",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "e2e:smoke": "maestro test --include-tags=smoke e2e/",
-    "e2e:full": "maestro test --include-tags=full e2e/",
-    "e2e:lint": "node scripts/lint-maestro-flows.js"
+    "lint:fix": "eslint . --fix"
   },
   "jest": {
     "testEnvironment": "node",

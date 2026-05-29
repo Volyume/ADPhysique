@@ -1,9 +1,9 @@
 name: Main CI (tests + lint + Expo Doctor)
 
 # Real protection layer for main. Per the 2026-05-26 audit, the
-# Android build workflow does not run Jest, Maestro lint, or
-# Expo Doctor, so code that compiles can still ship with broken
-# tests or malformed e2e flows. This workflow closes that gap.
+# Android build workflow does not run Jest or Expo Doctor, so code
+# that compiles can still ship with broken tests. This workflow
+# closes that gap.
 #
 # Uses 'npm ci' so any future package-lock.json drift fails CI
 # loudly instead of being silently papered over by 'npm install'.
@@ -205,25 +205,6 @@ jobs:
       # which let two no-undef-class bugs ship to a Hermes runtime.
       - name: Run ESLint
         run: npm run lint
-
-  maestro-lint:
-    name: Maestro flow structural lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci --legacy-peer-deps
-
-      - name: Lint Maestro flows
-        run: node scripts/lint-maestro-flows.js
 
   expo-doctor:
     name: Expo Doctor

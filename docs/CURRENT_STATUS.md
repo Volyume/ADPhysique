@@ -14,6 +14,13 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 
 ## 0. Session summary
 
+### 0.00. 2026-05-29 (takeover session, Claude): competitive audit + removed the automated E2E / cloud test environment
+
+No app behaviour changed. Two things shipped to `main`:
+
+1. **Competitive audit** added at `docs/audit/volyume-competitive-audit-2026-05-29.md`: internal audit from code, live 2026 research across 11 competitor apps, comparison matrix, prioritised recommendations scoped to the locked decisions, design/craft audit, open questions, cited sources.
+2. **Removed the automated E2E / cloud test environment, per founder direction** ("we test on live devices, this product is still in development; the cloud test environment is not needed"). Deleted: `maestro-e2e.yml`, `e2e/`, `maestro/`, `.maestro/`, `scripts/lint-maestro-flows.js` and its Jest wrapper, the `maestro-lint` job in `main-ci.yml`, and the `e2e:*` npm scripts. **Kept (not a cloud test environment):** the APK/AAB sideload build (`build-android.yml`), the Jest + ESLint + Expo-Doctor gate (`main-ci.yml`), the identity-invariant guard, and the deploy/data workflows. Testing is on-device via sideloaded debug APKs; no closed-test build gates any work, and that framing is retired. References to Maestro / E2E in the older locked docs (`TESTING_STRATEGY_LOCKED.md`, `QA_TEST_PLAN.md`, `HANDOFF.md`) are now historical. **Founder-side cleanup still outstanding:** delete the `volyume-e2e-test` Supabase project and the four `SUPABASE_TEST_*` repo secrets (no repo code references them any more).
+
 > **2026-05-29 production bug fixes (Claude).** Four founder-reported issues (build #5, Sentry-confirmed), root-caused and fixed:
 > 1. **Live "Sync error" badge + Sentry `foodDomain.push` spam.** Cloud `daily_water` lost its `entry_date` column (drifted from migrate_015), so `food_sync_push` 42703s and fails every sync run. Fix: `migrate_052_daily_water_reconcile.sql` (founder applies; **the only fix needing no rebuild**).
 > 2. **Article 9 consent re-prompting.** `RootNavigator` defaulted consent to `false` on any transient cloud-read error, re-firing the un-skippable gate after a cache wipe. Now left unresolved (null) on error so a consented user isn't re-prompted (new users still consent at onboarding).
