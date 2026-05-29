@@ -33,6 +33,7 @@ unless the file header says otherwise.
 | 052 | `migrate_052_daily_water_reconcile.sql` | **Apply ASAP: fixes the live "Sync error" badge.** The live `daily_water` table is missing `entry_date` (drifted from migrate_015), so `food_sync_push` throws 42703 and fails the whole food push + the entire sync run. This recreates `daily_water` to the canonical shape, but only when `entry_date` is missing (no-op + safe to re-run otherwise). No data loss: daily_water never synced successfully, so the cloud table is empty; clients re-push local water on next sync. | See § Verify daily_water reconcile |
 | 053 | `migrate_053_device_push_tokens.sql` | Creates `device_push_tokens(user_id, expo_push_token, platform, ...)` with composite PK + RLS + touch trigger. Backs the Expo remote-push pipeline (NOTIFICATIONS_LOCKED.md provider stack). The client registers its token after sign-in; the `send-push` Edge Function reads rows (service role) to fan out; the Play Billing RTDN webhook calls it on payment failure. Fully additive; the frozen AAB has no writer for this table. **Also requires `extra.eas.projectId` in app.json before any token can be obtained (see founder-action queue).** | See § Verify device_push_tokens |
 | 054 | `migrate_054_workout_sets_unilateral.sql` | Adds nullable `left_reps` + `right_reps` to `workout_sets` for per-side (unilateral) logging (GAP row 20). `actual_reps` holds the lower side, so volume/PR/progression are unchanged; the new columns are a display record. Additive; the frozen AAB sends the old column set and reads `actual_reps` as before. Apply before the next AAB ships (same ordering rule as every additive workout_sets column). | See § Verify workout_sets unilateral |
+| 055 | `migrate_055_diet_preference.sql` | Adds `diet_preference text DEFAULT 'omnivore'` to `users_profile`. Backs the curated meal-suggestion feature: the user's diet layer (omnivore/vegetarian/vegan) filters the curated meal library in the Suggested food-search tab. Joins the migration-045 per-column merge set (no trigger change; the jsonb merge handles the new key). Additive + defaulted; the frozen AAB neither writes nor reads it. Apply before the next AAB ships. | See § Verify users_profile.diet_preference |
 
 > Migration 049 (`migrate_049_drop_peak_week_plans.sql`) is **drafted but held** — do NOT apply until the next AAB ships, so the frozen closed-test build keeps working against the table. Apply 050 before 049 if 050 is ready first; they're independent.
 
@@ -43,9 +44,11 @@ unless the file header says otherwise.
 1. Open the Supabase Dashboard → SQL Editor → New query.
 2. Open one migration file at a time from this folder (numeric
    order: 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048,
-   050, 051, 052; 049 held). 051 and 052 are independent and can go any
-   time. 052 fixes the live Sync error and should go ASAP. After 051,
-   run `SELECT refresh_food_frequents();` once to seed the cache.
+   050, 051, 052, 053, 054, 055; 049 held). 051 and 052 are independent
+   and can go any time. 052 fixes the live Sync error and should go ASAP.
+   After 051, run `SELECT refresh_food_frequents();` once to seed the
+   cache. 055 must precede the next AAB (the new profile pull selects
+   `diet_preference`).
 3. Paste the full contents into the SQL Editor.
 4. Click **Run**. The migrations are wrapped in `CREATE OR REPLACE
    FUNCTION` / `CREATE TABLE IF NOT EXISTS`, so re-running an
@@ -467,6 +470,25 @@ WHERE i.indrelid = 'daily_water'::regclass AND i.indisprimary;
 After applying, open the app and pull-to-refresh / let it sync. The red
 "Sync error" badge should clear (no more `food_sync_push` 42703), and the
 Sentry `sync.tables.foodDomain.push` errors should stop.
+
+### Verify `users_profile.diet_preference` (migration 055)
+
+```sql
+-- Column present with the right type + default
+SELECT column_name, data_type, column_default
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name = 'users_profile'
+  AND column_name = 'diet_preference';
+-- Expected:
+--   diet_preference | text | 'omnivore'::text
+```
+
+If the column doesn't appear, the ADD COLUMN didn't run; re-run the
+migration (idempotent) and re-check. Until it's applied, the new
+build's profile pull errors on the missing column, so apply this
+before the next AAB ships. Existing rows read as 'omnivore' on the
+client whether the stored value is the default or NULL.
 
 ## Cloud schema drift audit
 

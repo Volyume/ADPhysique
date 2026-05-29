@@ -28,6 +28,7 @@ const PROFILE_FIELDS_TRACKED = [
   'primaryEquipment',
   'barWeight',
   'bodyWeightUnits',
+  'dietPreference',
 ];
 
 // Persist the per-field profile write timestamps to AsyncStorage.
@@ -825,6 +826,25 @@ const useAppStore = create((set, get) => ({
       try { await AsyncStorage.setItem(key, value); } catch (_) {}
       set({ userProfile: updated });
       _stampProfileFields(['bodyWeightUnits']);
+      await _persistProfileTimestamps(user.id, get().userProfileFieldUpdatedAt);
+      pushPrefSoon(user.id, key, value);
+    }
+  },
+
+  // Diet preference for curated meal suggestions: 'omnivore' | 'vegetarian'
+  // | 'vegan'. Set in onboarding, editable in Settings. Synced as a
+  // users_profile column (migration 055) via the per-field merge, same
+  // path as units. The Suggested food-search tab filters the curated
+  // meal library by this.
+  setDietPreference: async (diet) => {
+    const { user, userProfile, _stampProfileFields } = get();
+    if (user?.id) {
+      const updated = { ...(userProfile || {}), dietPreference: diet };
+      const key = PROFILE_KEY_PFX + user.id;
+      const value = JSON.stringify(updated);
+      try { await AsyncStorage.setItem(key, value); } catch (_) {}
+      set({ userProfile: updated });
+      _stampProfileFields(['dietPreference']);
       await _persistProfileTimestamps(user.id, get().userProfileFieldUpdatedAt);
       pushPrefSoon(user.id, key, value);
     }

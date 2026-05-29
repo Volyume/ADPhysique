@@ -162,6 +162,7 @@ export async function syncProfile(supabaseUserId, userProfile, _tier, { isBetaTe
       training_age: userProfile?.trainingAgeYears ?? null,
       primary_equipment: userProfile?.primaryEquipment ?? null,
       bar_weight: userProfile?.barWeight ?? 20,
+      diet_preference: userProfile?.dietPreference ?? 'omnivore',
       updated_at: new Date().toISOString(),
     };
     // Beta-tester flag is still client-writable during the beta window

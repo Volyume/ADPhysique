@@ -34,6 +34,18 @@ export function perMealMacros(remaining, mealsLeft) {
 }
 
 /**
+ * How many meals are still to come today: the planned meals per day
+ * minus the distinct slots already logged, floored at 1 (you always
+ * have at least the one you're logging now). Drives perMealMacros so a
+ * suggestion fills one meal's share of what's left, not the whole day.
+ */
+export function mealsLeftToday(mealsPerDay, loggedSlots) {
+  const per = Math.max(1, Math.floor(num(mealsPerDay)) || 0);
+  const done = Array.isArray(loggedSlots) ? new Set(loggedSlots.filter(Boolean)).size : 0;
+  return Math.max(1, per - done);
+}
+
+/**
  * Is a candidate appropriate for the meal slot being logged? A meal tags
  * the slots it suits (e.g. ['breakfast'] or ['lunch','dinner']). 'any' or
  * no tags means it fits any slot (so oats won't be offered at dinner, but

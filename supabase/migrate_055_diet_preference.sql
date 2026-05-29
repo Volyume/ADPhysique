@@ -1,0 +1,47 @@
+-- Migration 055: users_profile.diet_preference
+--
+-- Backs the curated meal-suggestion feature. The user picks a diet
+-- layer in onboarding and can change it in Settings: omnivore,
+-- vegetarian, or vegan (vegan is a subset of vegetarian is a subset
+-- of omnivore). The Suggested tab in food search filters the curated
+-- meal library to the meals that diet allows.
+--
+-- The column joins the existing per-column merge set
+-- (migration 045): the client stamps a write timestamp under
+-- diet_preference in column_updates_at and the safe-merge trigger
+-- already handles any new key generically (jsonb ||), so no trigger
+-- change is needed here.
+--
+-- Additive + has a default. The frozen closed-test AAB has no writer
+-- for this column (its syncProfile payload omits it) and no reader
+-- (its profile pull selects named columns only), so it keeps working
+-- against this schema unchanged. The new build's pull selects
+-- diet_preference, so this migration must be applied before that
+-- build ships (same ordering rule as every additive users_profile
+-- column).
+--
+-- Tracking (CLAUDE.md Rule 6):
+--   - Migration number:        055
+--   - Purpose:                 diet_preference text on users_profile
+--   - Applied locally:         no (no local dev Supabase project)
+--   - Applied remotely:        pending founder apply
+--   - Safe to re-run:          yes (ADD COLUMN IF NOT EXISTS)
+--   - Rollback:                ALTER TABLE users_profile
+--                                DROP COLUMN diet_preference;
+--                              No data loss beyond the stored
+--                              preference; the app defaults to
+--                              'omnivore' when the column is absent.
+--   - App-code dependencies:   src/lib/sync/tables/profiles.js maps
+--                              dietPreference <-> diet_preference in
+--                              FIELD_MAP and selects it on pull;
+--                              src/lib/sync.js syncProfile sends it;
+--                              src/store/useAppStore.js setDietPreference
+--                              + PROFILE_FIELDS_TRACKED;
+--                              OnboardingScreen sets it; SettingsScreen
+--                              edits it. The new client treats a NULL
+--                              column as 'omnivore'.
+--
+-- Apply via Supabase Dashboard -> SQL Editor -> Run.
+
+ALTER TABLE users_profile
+  ADD COLUMN IF NOT EXISTS diet_preference text DEFAULT 'omnivore';

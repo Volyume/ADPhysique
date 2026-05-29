@@ -1,8 +1,11 @@
-// Search subnav tabs (GAP row 28). Five tabs, locked in
-// UI_FLOWS_LOCKED.md: Recents, Favourites, Frequents, Custom, Database.
+// Search subnav tabs (GAP row 28). Locked in UI_FLOWS_LOCKED.md:
+// Recents, Favourites, Frequents, Custom, Database. Suggested leads the
+// row: curated meals sized to the macros and meals left (handled by the
+// screen, not selectTabRows, since it lists meals, not food rows).
 // (My Recipes stays a CTA, not a tab, per the founder's 2026-05-28 call.)
 
 export const SEARCH_TABS = [
+  { key: 'suggested', label: 'Suggested' },
   { key: 'recents', label: 'Recents' },
   { key: 'favourites', label: 'Favourites' },
   { key: 'frequents', label: 'Frequents' },

@@ -8,7 +8,7 @@
  */
 import {
   remainingMacros, fitScore, suggestFood, suggestMeal, rankSuggestions,
-  perMealMacros, slotMatches,
+  perMealMacros, slotMatches, mealsLeftToday,
 } from '../mealSuggest';
 
 describe('perMealMacros', () => {
@@ -19,6 +19,20 @@ describe('perMealMacros', () => {
   test('floors meals-left at 1 (whole remainder)', () => {
     expect(perMealMacros({ kcal: 500, protein: 40, carbs: 50, fat: 15 }, 0))
       .toEqual({ kcal: 500, protein: 40, carbs: 50, fat: 15 });
+  });
+});
+
+describe('mealsLeftToday', () => {
+  test('meals per day minus distinct slots logged, floored at 1', () => {
+    expect(mealsLeftToday(4, ['breakfast', 'lunch'])).toBe(2);
+    expect(mealsLeftToday(4, [])).toBe(4);
+    expect(mealsLeftToday(4, ['breakfast', 'breakfast'])).toBe(3); // de-dupes slots
+    expect(mealsLeftToday(3, ['breakfast', 'lunch', 'dinner', 'snack'])).toBe(1); // never below 1
+  });
+  test('floors meals-per-day at 1 for missing or garbage input', () => {
+    expect(mealsLeftToday(0, [])).toBe(1);
+    expect(mealsLeftToday(null, [])).toBe(1);
+    expect(mealsLeftToday(4, null)).toBe(4);
   });
 });
 

@@ -31,6 +31,7 @@ const FIELD_MAP = Object.freeze([
   ['trainingAgeYears', 'training_age'],
   ['primaryEquipment', 'primary_equipment'],
   ['barWeight',        'bar_weight'],
+  ['dietPreference',   'diet_preference'],
 ]);
 
 function _toIso(ms) {
@@ -74,6 +75,7 @@ function _profilesEqual(a, b) {
     trainingAgeYears: p?.trainingAgeYears ?? null,
     primaryEquipment: p?.primaryEquipment ?? null,
     barWeight:        p?.barWeight ?? 20,
+    dietPreference:   p?.dietPreference ?? 'omnivore',
   });
   const x = norm(a);
   const y = norm(b);
@@ -82,7 +84,8 @@ function _profilesEqual(a, b) {
     && x.trainingFocus === y.trainingFocus
     && x.trainingAgeYears === y.trainingAgeYears
     && x.primaryEquipment === y.primaryEquipment
-    && x.barWeight === y.barWeight;
+    && x.barWeight === y.barWeight
+    && x.dietPreference === y.dietPreference;
 }
 
 function _profileToCloudPayload(userId, profile, fieldUpdatedAt) {
@@ -98,6 +101,7 @@ function _profileToCloudPayload(userId, profile, fieldUpdatedAt) {
     else if (camel === 'trainingAgeYears') payload[snake] = profile.trainingAgeYears ?? null;
     else if (camel === 'primaryEquipment') payload[snake] = profile.primaryEquipment ?? null;
     else if (camel === 'barWeight')   payload[snake] = profile.barWeight ?? 20;
+    else if (camel === 'dietPreference') payload[snake] = profile.dietPreference ?? 'omnivore';
 
     const ts = fieldUpdatedAt?.[camel];
     if (ts) columnUpdatesAt[snake] = _toIso(ts);
@@ -135,7 +139,7 @@ export async function pullProfiles(sb, { userId } = {}) {
   try {
     const { data, error } = await sb
       .from('users_profile')
-      .select('first_name, units, training_focus, training_age, primary_equipment, bar_weight, updated_at, column_updates_at')
+      .select('first_name, units, training_focus, training_age, primary_equipment, bar_weight, diet_preference, updated_at, column_updates_at')
       .eq('id', userId)
       .maybeSingle();
     if (error) {
@@ -172,6 +176,7 @@ export async function pullProfiles(sb, { userId } = {}) {
       trainingAgeYears: merged.training_age ?? null,
       primaryEquipment: merged.primary_equipment ?? null,
       barWeight:        merged.bar_weight ?? 20,
+      dietPreference:   merged.diet_preference ?? 'omnivore',
     };
 
     // Only write back when the merge actually changed something. Writing

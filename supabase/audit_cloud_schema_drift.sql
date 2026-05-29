@@ -99,6 +99,7 @@ WITH expected (cloud_table, column_name, source) AS (
     ('users_profile', 'training_age',       'sync/tables/profiles.js push+pull'),
     ('users_profile', 'primary_equipment',  'sync/tables/profiles.js push+pull'),
     ('users_profile', 'bar_weight',         'sync/tables/profiles.js push+pull'),
+    ('users_profile', 'diet_preference',    'sync/tables/profiles.js push+pull (mig 055)'),
     ('users_profile', 'updated_at',         'sync/tables/profiles.js push+pull'),
     ('users_profile', 'column_updates_at',  'sync/tables/profiles.js push+pull (mig 045)'),
 

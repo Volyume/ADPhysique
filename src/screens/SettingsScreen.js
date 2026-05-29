@@ -60,6 +60,12 @@ async function promptRestartForA11y(label) {
   );
 }
 
+const DIET_OPTIONS = [
+  { value: 'omnivore', label: 'Omnivore' },
+  { value: 'vegetarian', label: 'Vegetarian' },
+  { value: 'vegan', label: 'Vegan' },
+];
+
 function SettingRow({ icon, label, sub, value, onPress, destructive, rightElement, showArrow = true }) {
   return (
     <TouchableOpacity
@@ -94,11 +100,12 @@ function SectionHeader({ title }) {
 export default function SettingsScreen({ navigation }) {
   const toast = useToast();
   const feedback = useFeedback();
-  const { user, setUser, setSession, clearAuthStateForSignOut, userProfile, saveLocalProfile, tier, setTier, accessibility, setAccessibilityPref, loadAccessibility, accessibilityLoaded, healthConsent, setHealthConsent } =
+  const { user, setUser, setSession, clearAuthStateForSignOut, userProfile, saveLocalProfile, setDietPreference, tier, setTier, accessibility, setAccessibilityPref, loadAccessibility, accessibilityLoaded, healthConsent, setHealthConsent } =
     useAppStore(useShallow(s => ({
       user: s.user, setUser: s.setUser, setSession: s.setSession,
       clearAuthStateForSignOut: s.clearAuthStateForSignOut,
       userProfile: s.userProfile, saveLocalProfile: s.saveLocalProfile,
+      setDietPreference: s.setDietPreference,
       tier: s.tier, setTier: s.setTier,
       accessibility: s.accessibility,
       setAccessibilityPref: s.setAccessibilityPref,
@@ -118,6 +125,7 @@ export default function SettingsScreen({ navigation }) {
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [editName, setEditName] = useState(userProfile?.firstName ?? '');
   const [calmEnabled, setCalmEnabled] = useState(false);
+  const [diet, setDiet] = useState(userProfile?.dietPreference ?? 'omnivore');
   const [offConsent, setOffConsent] = useState(false);
   const [cycleEnabled, setCycleEnabled] = useState(false);
   const [bioSex, setBioSex] = useState(null);
@@ -751,6 +759,33 @@ export default function SettingsScreen({ navigation }) {
               body weight units come from onboarding (the morning-weight
               setup screen). The store still holds these values; they
               just aren't user-editable from Settings any more. */}
+          <View style={styles.dietBlock}>
+            <View style={styles.dietHeader}>
+              <View style={styles.settingIcon}>
+                <Ionicons name="nutrition-outline" size={18} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.settingLabel}>Diet preference</Text>
+                <Text style={styles.settingSub}>Filters the meals we suggest</Text>
+              </View>
+            </View>
+            <View style={styles.dietChips}>
+              {DIET_OPTIONS.map(opt => {
+                const active = diet === opt.value;
+                return (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[styles.dietChip, active && styles.dietChipActive]}
+                    onPress={() => { setDiet(opt.value); setDietPreference(opt.value); }}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                  >
+                    <Text style={[styles.dietChipText, active && styles.dietChipTextActive]}>{opt.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
           <SettingRow
             icon="heart-outline"
             label="Calmer experience"
@@ -1191,6 +1226,43 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   settingValue: { fontSize: fontSize.sm, color: colors.textSecondary },
+  dietBlock: {
+    padding: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  dietHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  dietChips: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  dietChip: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+  },
+  dietChipActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryBg,
+  },
+  dietChipText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    fontWeight: fontWeight.medium,
+  },
+  dietChipTextActive: {
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
+  },
   comingSoon: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
   about: {
     alignItems: 'center',

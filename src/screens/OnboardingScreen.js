@@ -52,6 +52,17 @@ const STEPS = [
     ],
   },
   {
+    id: 'diet',
+    title: 'How do you eat?',
+    subtitle: 'Used to suggest meals that fit your diet. You can change this later.',
+    field: 'diet_preference',
+    options: [
+      { value: 'omnivore', label: 'Omnivore', desc: 'You eat meat, fish and everything else', icon: 'restaurant' },
+      { value: 'vegetarian', label: 'Vegetarian', desc: 'No meat or fish, dairy and eggs are fine', icon: 'leaf' },
+      { value: 'vegan', label: 'Vegan', desc: 'Plant-based, no animal products', icon: 'flower' },
+    ],
+  },
+  {
     id: 'units',
     title: 'Preferred weight unit?',
     subtitle: 'You can change this later in settings.',
@@ -93,6 +104,7 @@ export default function OnboardingScreen({ navigation, route }) {
     training_focus: 'bodybuilding',
     training_age: 2,
     primary_equipment: 'commercial',
+    diet_preference: 'omnivore',
     units: 'kg',
   });
   const [loading, setLoading] = useState(false);
@@ -130,6 +142,7 @@ export default function OnboardingScreen({ navigation, route }) {
         trainingFocus: selections.training_focus,
         trainingAgeYears: selections.training_age,
         primaryEquipment: selections.primary_equipment,
+        dietPreference: selections.diet_preference,
         units: selections.units,
       };
       try {

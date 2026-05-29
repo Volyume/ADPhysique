@@ -2,11 +2,15 @@ import { SEARCH_TABS, selectTabRows } from '../searchTabs';
 
 const F = (name, ref) => ({ name, food_ref: ref });
 
-describe('SEARCH_TABS (GAP row 28, 5 tabs per locked doc)', () => {
-  test('five tabs in the locked order', () => {
+describe('SEARCH_TABS (GAP row 28 + curated suggestions)', () => {
+  test('Suggested leads, then the five locked tabs in order', () => {
     expect(SEARCH_TABS.map((t) => t.key)).toEqual([
-      'recents', 'favourites', 'frequents', 'custom', 'database',
+      'suggested', 'recents', 'favourites', 'frequents', 'custom', 'database',
     ]);
+  });
+
+  test('Suggested has no selectTabRows list (the screen renders meals, not rows)', () => {
+    expect(selectTabRows({ activeTab: 'suggested', query: '', lists: {} })).toEqual([]);
   });
 });
 

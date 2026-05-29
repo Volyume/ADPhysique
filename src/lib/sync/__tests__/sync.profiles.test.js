@@ -124,6 +124,31 @@ describe('profiles push', () => {
     expect(row.column_updates_at).toEqual({});
   });
 
+  test('payload carries diet_preference + its column timestamp', async () => {
+    setStoreState({
+      userProfile: { firstName: 'Allan', dietPreference: 'vegan' },
+      userProfileFieldUpdatedAt: { dietPreference: Date.UTC(2026, 4, 28) },
+    });
+    const sb = makeUpsertSb();
+    getSupabaseClient.mockReturnValue(sb);
+
+    await pushProfiles(sb, { userId: 'u1' });
+
+    const { row } = sb._calls.upserts[0];
+    expect(row.diet_preference).toBe('vegan');
+    expect(row.column_updates_at.diet_preference).toBe('2026-05-28T00:00:00.000Z');
+  });
+
+  test('diet_preference defaults to omnivore when unset', async () => {
+    setStoreState({ userProfile: { firstName: 'Allan' }, userProfileFieldUpdatedAt: {} });
+    const sb = makeUpsertSb();
+    getSupabaseClient.mockReturnValue(sb);
+
+    await pushProfiles(sb, { userId: 'u1' });
+
+    expect(sb._calls.upserts[0].row.diet_preference).toBe('omnivore');
+  });
+
   test('returns count:0 when there is no profile in the store', async () => {
     setStoreState({ userProfile: null });
     const sb = makeUpsertSb();
@@ -193,6 +218,34 @@ describe('profiles pull (merge)', () => {
     const applied = setUserProfile.mock.calls[0][0];
     expect(applied.firstName).toBe('CloudName');
     expect(applied.units).toBe('kg');
+  });
+
+  test('per-column merge pulls a newer cloud diet_preference', async () => {
+    const setUserProfile = jest.fn();
+    setStoreState({
+      userProfile: {
+        firstName: 'Allan', units: 'kg', trainingFocus: 'bodybuilding',
+        trainingAgeYears: 8, primaryEquipment: 'commercial', barWeight: 20,
+        dietPreference: 'omnivore',
+      },
+      userProfileFieldUpdatedAt: { dietPreference: Date.UTC(2026, 0, 1) },
+      setUserProfile,
+    });
+    const sb = makeMaybeSingleSb({
+      data: {
+        first_name: 'Allan', units: 'kg', training_focus: 'bodybuilding',
+        training_age: 8, primary_equipment: 'commercial', bar_weight: 20,
+        diet_preference: 'vegan',
+        updated_at: new Date(Date.UTC(2026, 5, 1)).toISOString(),
+        column_updates_at: { diet_preference: '2026-05-15T00:00:00.000Z' },
+      },
+    });
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await pullProfiles(sb, { userId: 'u1' });
+
+    expect(setUserProfile).toHaveBeenCalledWith(expect.objectContaining({ dietPreference: 'vegan' }));
+    expect(result.count).toBe(1);
   });
 
   test('pull short-circuits when the cloud row does not exist', async () => {

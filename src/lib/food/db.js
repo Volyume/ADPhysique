@@ -10,6 +10,7 @@
  * COACHING_VOICE_SYNTHESIS_LOCKED.md and is applied by callers.
  */
 import { db } from '../database';
+import { CURATED_MEALS, mealItems } from './curatedMeals';
 
 function uid() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
@@ -829,6 +830,54 @@ export async function applySavedMealToDiary(userId, id, { mealSlot, entryDate } 
     logged += 1;
   }
   return logged;
+}
+
+/**
+ * Log a curated meal (from the suggestion library) into the diary. The
+ * meal is defined as foods + grams; its items carry computed macros
+ * (foodRef 'curated:<key>'), so this fans them out into food_entries
+ * exactly like a saved meal. Returns the number of items logged, or 0
+ * when the meal id is unknown.
+ */
+export async function applyCuratedMealToDiary(userId, mealId, { mealSlot, entryDate } = {}) {
+  if (!mealSlot || !entryDate) {
+    throw new Error('applyCuratedMealToDiary: mealSlot and entryDate are required');
+  }
+  const meal = CURATED_MEALS.find(m => m.id === mealId);
+  if (!meal) return 0;
+  let logged = 0;
+  for (const it of mealItems(meal)) {
+    const q = Number(it?.quantityG);
+    if (!it?.foodRef || !Number.isFinite(q) || q <= 0) continue;
+    await logFoodEntry(userId, {
+      entryDate,
+      mealSlot,
+      foodRef: it.foodRef,
+      quantityG: q,
+      kcal: Number(it.kcal) || 0,
+      proteinG: Number(it.proteinG) || 0,
+      carbsG: Number(it.carbsG) || 0,
+      fatG: Number(it.fatG) || 0,
+      fibreG: null,
+    });
+    logged += 1;
+  }
+  return logged;
+}
+
+/**
+ * Distinct meal slots that already have (live) entries for a day. Used
+ * to work out how many meals are still to come today when sizing a
+ * suggestion to one meal's share of the remaining macros.
+ */
+export async function getLoggedMealSlotsForDay(userId, entryDate) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT DISTINCT meal_slot FROM food_entries
+     WHERE user_id = ? AND entry_date = ? AND deleted_at IS NULL`,
+    [userId, entryDate]
+  );
+  return (rows || []).map(r => r.meal_slot).filter(Boolean);
 }
 
 // ─── Sync row fetchers ───────────────────────────────────────────────────

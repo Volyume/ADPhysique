@@ -21,6 +21,7 @@ import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList,
   ActivityIndicator, ScrollView,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,7 +29,11 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import {
   logFoodEntry, getRecentFoodEntries, getFavourites,
   getDislikes, cycleFoodPreference, getAllCustomFoods, getFoodFrequents,
+  getRollupForDay, getLoggedMealSlotsForDay, applyCuratedMealToDiary,
 } from '../lib/food/db';
+import { getNutritionTargets } from '../lib/database';
+import { getCuratedCandidates } from '../lib/food/curatedMeals';
+import { rankSuggestions, mealsLeftToday } from '../lib/food/mealSuggest';
 import { refreshFrequentsIfStale } from '../lib/food/frequents';
 import { SEARCH_TABS, selectTabRows } from '../lib/food/searchTabs';
 import { searchFoods } from '../lib/food/waterfall';
@@ -53,7 +58,7 @@ const EMPTY_COPY = {
 };
 
 export default function FoodSearchScreen({ navigation, route }) {
-  const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
+  const { user, userProfile } = useAppStore(useShallow((s) => ({ user: s.user, userProfile: s.userProfile })));
   const userId = user?.id;
 
   const mealSlot = route?.params?.mealSlot ?? 'snack';
@@ -70,6 +75,10 @@ export default function FoodSearchScreen({ navigation, route }) {
   const [frequentRows, setFrequentRows] = useState([]);
   const [searching, setSearching] = useState(false);
   const [picker, setPicker] = useState(null);
+  const [suggestions, setSuggestions] = useState([]);
+  const [suggestLoading, setSuggestLoading] = useState(false);
+  const [suggestMeta, setSuggestMeta] = useState(null);
+  const [loggingMealId, setLoggingMealId] = useState(null);
 
   const debounceRef = useRef(null);
 
@@ -131,8 +140,55 @@ export default function FoodSearchScreen({ navigation, route }) {
     } catch (_) { /* tolerate */ }
   }, [userId]);
 
+  // Curated meal suggestions, sized to one meal's share of what's left
+  // today. Pulls the day's targets + intake, works out how many meals
+  // remain, filters the curated library to the user's diet + this slot,
+  // then ranks. Lazy: only runs when the Suggested tab is open.
+  const loadSuggested = useCallback(async () => {
+    if (!userId) return;
+    setSuggestLoading(true);
+    try {
+      const diet = userProfile?.dietPreference ?? 'omnivore';
+      const [targetsRow, rollup, loggedSlots, mealsPerRaw] = await Promise.all([
+        getNutritionTargets(userId),
+        getRollupForDay(userId, entryDate),
+        getLoggedMealSlotsForDay(userId, entryDate),
+        AsyncStorage.getItem('@volyume_meals_per_day'),
+      ]);
+      if (!targetsRow) {
+        setSuggestions([]);
+        setSuggestMeta({ hasTargets: false });
+        return;
+      }
+      const targets = {
+        kcal: targetsRow.targetKcal,
+        protein: targetsRow.proteinG,
+        carbs: targetsRow.carbsG,
+        fat: targetsRow.fatG,
+      };
+      const consumed = rollup
+        ? { kcal: rollup.kcal_total, protein: rollup.protein_g, carbs: rollup.carbs_g, fat: rollup.fat_g }
+        : { kcal: 0, protein: 0, carbs: 0, fat: 0 };
+      const parsedMeals = parseInt(mealsPerRaw, 10);
+      const mealsPerDay = (parsedMeals >= 3 && parsedMeals <= 6) ? parsedMeals : 4;
+      const mealsLeft = mealsLeftToday(mealsPerDay, loggedSlots);
+      const candidates = getCuratedCandidates({ diet, slot: mealSlot });
+      const { suggestions: ranked, remaining, perMeal } = rankSuggestions({
+        targets, consumed, savedMeals: candidates, foods: [], slot: mealSlot, mealsLeft, limit: 12,
+      });
+      setSuggestions(ranked);
+      setSuggestMeta({ hasTargets: true, remaining, perMeal });
+    } catch (_) {
+      setSuggestions([]);
+      setSuggestMeta(null);
+    } finally {
+      setSuggestLoading(false);
+    }
+  }, [userId, userProfile, entryDate, mealSlot]);
+
   useFocusEffect(useCallback(() => { loadBrowse(); }, [loadBrowse]));
   useEffect(() => { if (activeTab === 'frequents') loadFrequents(); }, [activeTab, loadFrequents]);
+  useEffect(() => { if (activeTab === 'suggested') loadSuggested(); }, [activeTab, loadSuggested]);
 
   // Debounced waterfall search, Database tab only. Matches the locked
   // 250ms; other tabs filter their list client-side via selectTabRows.
@@ -206,6 +262,21 @@ export default function FoodSearchScreen({ navigation, route }) {
       fibreG:    food.fibre_100g != null ? Math.round(food.fibre_100g * factor * 10) / 10 : null,
     });
     navigation.goBack();
+  }
+
+  // Log a whole curated meal: fan its items into the diary at this
+  // slot/date, then close back to the diary. Fixed portions, so no
+  // serving picker.
+  async function logCuratedMeal(s) {
+    if (!userId || !s?.id || loggingMealId) return;
+    setLoggingMealId(s.id);
+    try {
+      audit('food.suggestMeal', { mealId: s.id, mealSlot, itemCount: s.itemCount });
+      await applyCuratedMealToDiary(userId, s.id, { mealSlot, entryDate });
+      navigation.goBack();
+    } catch (_) {
+      setLoggingMealId(null);
+    }
   }
 
   async function onLongPress(food) {
@@ -309,6 +380,64 @@ export default function FoodSearchScreen({ navigation, route }) {
     );
   }
 
+  function renderSuggested() {
+    if (suggestLoading) {
+      return (
+        <View style={styles.emptyWrap}>
+          <ActivityIndicator color={colors.textMuted} />
+        </View>
+      );
+    }
+    if (suggestMeta && !suggestMeta.hasTargets) {
+      return (
+        <View style={styles.emptyWrap}>
+          <Text style={styles.emptyText}>Set your daily targets to get meal ideas.</Text>
+        </View>
+      );
+    }
+    if (!suggestions.length) {
+      return (
+        <View style={styles.emptyWrap}>
+          <Text style={styles.emptyText}>Nothing to suggest right now.</Text>
+        </View>
+      );
+    }
+    return (
+      <FlatList
+        data={suggestions}
+        keyExtractor={(s) => s.id}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingBottom: spacing.xxxl }}
+        ListHeaderComponent={
+          suggestMeta?.perMeal ? (
+            <Text style={styles.suggestHint}>
+              Sized for this meal: around {Math.round(suggestMeta.perMeal.protein)}g protein, {Math.round(suggestMeta.perMeal.kcal)} kcal.
+            </Text>
+          ) : null
+        }
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={styles.suggestCard}
+            onPress={() => logCuratedMeal(item)}
+            disabled={!!loggingMealId}
+            accessibilityRole="button"
+            accessibilityLabel={`Log ${item.name}`}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={styles.suggestName}>{item.name}</Text>
+              <Text style={styles.suggestMacros}>
+                {item.macros.kcal} kcal · {item.macros.protein}g protein · {item.macros.carbs}g carbs · {item.macros.fat}g fat
+              </Text>
+            </View>
+            {loggingMealId === item.id
+              ? <ActivityIndicator size="small" color={colors.primary} />
+              : <Ionicons name="add-circle" size={26} color={colors.primary} />}
+          </TouchableOpacity>
+        )}
+      />
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
@@ -345,6 +474,8 @@ export default function FoodSearchScreen({ navigation, route }) {
         ))}
       </ScrollView>
 
+      {activeTab === 'suggested' ? renderSuggested() : (
+      <>
       <View style={styles.searchWrap}>
         <Ionicons name="search" size={18} color={colors.textMuted} style={{ marginRight: spacing.sm }} />
         <TextInput
@@ -376,6 +507,8 @@ export default function FoodSearchScreen({ navigation, route }) {
           ) : null
         }
       />
+      </>
+      )}
 
       <FoodDetailSheet
         visible={!!picker}
@@ -446,6 +579,18 @@ const styles = StyleSheet.create({
 
   emptyWrap: { paddingHorizontal: spacing.lg, paddingVertical: spacing.xl, alignItems: 'center' },
   emptyText: { color: colors.textSecondary, fontSize: fontSize.sm, textAlign: 'center' },
+
+  suggestHint: {
+    color: colors.textMuted, fontSize: fontSize.xs,
+    paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.sm,
+  },
+  suggestCard: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
+  suggestName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  suggestMacros: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 3 },
 
   noResults: {
     paddingHorizontal: spacing.lg, paddingVertical: spacing.xl,
