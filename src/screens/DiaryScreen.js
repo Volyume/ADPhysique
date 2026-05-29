@@ -16,7 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, shadow } from '../styles/theme';
 import {
   getFoodEntriesForDay, deleteFoodEntry, updateFoodEntry, getRollupForDay,
   recomputeRollup, setWater, getWater, createSavedMeal,
@@ -646,8 +646,7 @@ const styles = StyleSheet.create({
     width: 56, height: 56, borderRadius: 28,
     backgroundColor: colors.primary,
     alignItems: 'center', justifyContent: 'center',
-    elevation: 6,
-    shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 4 },
+    ...shadow.lg,
   },
   copyYesterdayFab: {
     position: 'absolute',
@@ -662,8 +661,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    elevation: 4,
-    shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 6, shadowOffset: { width: 0, height: 3 },
+    ...shadow.md,
   },
   copyYesterdayLabel: {
     color: colors.textPrimary,
