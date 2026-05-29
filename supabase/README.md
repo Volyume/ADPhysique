@@ -30,6 +30,7 @@ unless the file header says otherwise.
 | 048 | `migrate_048_food_preferences_kind.sql` | Adds `kind text NOT NULL DEFAULT 'fav'` + a CHECK constraint to `food_favourites` so the same table holds both "user likes this" (fav) and "user excluded this" (dislike). Backs the food-dislike feature added 2026-05-27. Old AAB sends rows without `kind`; DEFAULT covers them. | See § Verify food_favourites.kind |
 | 050 | `migrate_050_weekly_checkins_cardio_adherence.sql` | Adds nullable `cardio_adherence text` to `weekly_checkins_v2`. Destination for the coach's confirm-then-apply cardio prescription (GAP row 4): once applied, the check-in shows a cardio-adherence question and the answer ships in the per-table push. Additive + nullable; the frozen +4 AAB omits it (left NULL), no behaviour change. | See § Verify weekly_checkins_v2.cardio_adherence |
 | 051 | `migrate_051_food_frequents.sql` | Creates `food_frequents` cache table (RLS read-own) + `refresh_food_frequents()` nightly pg_cron worker (top-20 foods over 30 days, all users) + `food_frequents_pull()` RPC the client calls. Backs the Frequents search tab (GAP row 28). Fully additive: the frozen AAB never references it, and it sits outside the food_sync_pull/push cycle, so existing sync is untouched. Requires `pg_cron` (already enabled by migration 031). | See § Verify food_frequents |
+| 052 | `migrate_052_daily_water_reconcile.sql` | **Apply ASAP: fixes the live "Sync error" badge.** The live `daily_water` table is missing `entry_date` (drifted from migrate_015), so `food_sync_push` throws 42703 and fails the whole food push + the entire sync run. This recreates `daily_water` to the canonical shape, but only when `entry_date` is missing (no-op + safe to re-run otherwise). No data loss: daily_water never synced successfully, so the cloud table is empty; clients re-push local water on next sync. | See § Verify daily_water reconcile |
 
 > Migration 049 (`migrate_049_drop_peak_week_plans.sql`) is **drafted but held** — do NOT apply until the next AAB ships, so the frozen closed-test build keeps working against the table. Apply 050 before 049 if 050 is ready first; they're independent.
 
@@ -40,8 +41,9 @@ unless the file header says otherwise.
 1. Open the Supabase Dashboard → SQL Editor → New query.
 2. Open one migration file at a time from this folder (numeric
    order: 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048,
-   050, 051; 049 held). 051 is independent and can go any time. After
-   051, run `SELECT refresh_food_frequents();` once to seed the cache.
+   050, 051, 052; 049 held). 051 and 052 are independent and can go any
+   time. 052 fixes the live Sync error and should go ASAP. After 051,
+   run `SELECT refresh_food_frequents();` once to seed the cache.
 3. Paste the full contents into the SQL Editor.
 4. Click **Run**. The migrations are wrapped in `CREATE OR REPLACE
    FUNCTION` / `CREATE TABLE IF NOT EXISTS`, so re-running an
@@ -441,6 +443,28 @@ a jsonb array) when the Frequents tab opens and the local cache is
 older than 12h. If the migration isn't applied, that RPC 404s, the app
 swallows it, and the tab shows "Nothing logged often enough yet." No
 other surface is affected.
+
+### Verify daily_water reconcile (migration 052)
+
+```sql
+-- 1. Confirm the column is now present.
+SELECT column_name, data_type
+FROM information_schema.columns
+WHERE table_schema = 'public' AND table_name = 'daily_water'
+ORDER BY ordinal_position;
+-- Expected to include: user_id (uuid), entry_date (date), ml (integer), updated_at (timestamptz)
+
+-- 2. Confirm the composite primary key.
+SELECT a.attname
+FROM pg_index i
+JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+WHERE i.indrelid = 'daily_water'::regclass AND i.indisprimary;
+-- Expected: user_id, entry_date
+```
+
+After applying, open the app and pull-to-refresh / let it sync. The red
+"Sync error" badge should clear (no more `food_sync_push` 42703), and the
+Sentry `sync.tables.foodDomain.push` errors should stop.
 
 ## Cloud schema drift audit
 

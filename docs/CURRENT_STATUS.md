@@ -14,6 +14,14 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 
 ## 0. Session summary
 
+> **2026-05-29 production bug fixes (Claude).** Four founder-reported issues (build #5, Sentry-confirmed), root-caused and fixed:
+> 1. **Live "Sync error" badge + Sentry `foodDomain.push` spam.** Cloud `daily_water` lost its `entry_date` column (drifted from migrate_015), so `food_sync_push` 42703s and fails every sync run. Fix: `migrate_052_daily_water_reconcile.sql` (founder applies; **the only fix needing no rebuild**).
+> 2. **Article 9 consent re-prompting.** `RootNavigator` defaulted consent to `false` on any transient cloud-read error, re-firing the un-skippable gate after a cache wipe. Now left unresolved (null) on error so a consented user isn't re-prompted (new users still consent at onboarding).
+> 3. **Camera jumping to Settings with no prompt.** The OS dialog only auto-fired on `'not-determined'`; Android 16 / vision-camera can report `'denied'` early (still re-askable). Now requests once for any non-granted status (ref-guarded).
+> 4. **Check-in gate bypassable on the wrong day.** `load()` failed OPEN on any data-load error. Now the wrong-day gate is resolved before any throwable load. Verified my row-15 change did NOT touch the gate. NB: if a user's *configured* check-in day (Settings → Coaching reminders) is not Sunday, the app is correct; the configured day governs.
+>
+> Client fixes (2, 3, 4) ride the next build; migration 052 is founder-applied now. Full suite green serially (93 / 1836).
+
 ### 0.A. 2026-05-28 session (Claude): UI surfaces + Frequents pipeline
 
 Continuation of the GAP punch list after the coach confirm-then-apply work (§ 0.B). Shipped the food/diary UI surfaces plus the Frequents search pipeline. Every change rode on existing blobs/tables except row 28, which adds one founder-applied cloud migration.
@@ -214,6 +222,7 @@ Per `DATABASE_SCHEMA_LOCKED.md` + grep against `supabase/migrate_*.sql`.
 | 049 | Drop peak_week_plans | **Drafted, held.** Do not apply until the next AAB ships (frozen build still references the table). |
 | 050 | weekly_checkins_v2.cardio_adherence (additive, nullable) | **Pending founder apply.** Backs GAP row 4 cardio adherence. Old AAB compatible. Verification in `supabase/README.md`. |
 | 051 | food_frequents table + RLS + nightly pg_cron worker + food_frequents_pull RPC (Frequents tab, GAP row 28) | **Pending founder apply.** Fully additive; outside the food sync cycle. Until applied the Frequents tab shows its empty state. Verification in `supabase/README.md` § Verify food_frequents. |
+| 052 | daily_water reconcile (adds back the drifted `entry_date` column) | **Pending founder apply, HIGH PRIORITY.** Fixes the live "Sync error" badge + Sentry `foodDomain.push` spam: the live `daily_water` lost `entry_date`, so `food_sync_push` 42703s and fails every sync run. Guarded drop+recreate, no-op if already healthy, no data loss (never synced). Verification in `supabase/README.md` § Verify daily_water reconcile. |
 
 ---
 

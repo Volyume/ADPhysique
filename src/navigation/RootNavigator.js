@@ -766,10 +766,16 @@ export default function RootNavigator() {
                       .eq('id', session.user.id)
                       .maybeSingle();
                     if (error) {
-                      // Network error or table missing -- default to
-                      // not-granted so the gate fires. User can grant
-                      // in-app; failures retried on next session.
-                      useAppStore.getState().setHealthConsent(false, true);
+                      // A transient cloud-read failure must NOT re-fire
+                      // the (un-skippable) Article 9 gate. New users
+                      // still hit the dedicated consent step during
+                      // onboarding; this branch only runs for a returning
+                      // / cross-device sign-in whose local cache is
+                      // absent. Leave consent unresolved (null, not
+                      // false) so the gate stays closed and we re-check
+                      // next session, rather than re-prompting a user who
+                      // already consented just because the network blipped.
+                      useAppStore.getState().setHealthConsent(null, true);
                     } else {
                       const granted = data?.health_data_consent === true;
                       useAppStore.getState().setHealthConsent(granted, true);

@@ -272,6 +272,16 @@ export default function WeeklyCheckInScreen({ navigation }) {
         // Today's day of week (0=Sunday)
         const todayDay = new Date().getDay();
 
+        // Wrong-day gate resolved FIRST, before any throwable data load.
+        // The day check needs no data, so settling it up front means a
+        // later read that throws (e.g. the morning-weights query) can't
+        // skip to the catch below and fail OPEN, which previously let a
+        // user check in on a day that wasn't their scheduled one.
+        if (todayDay !== scheduledDay) {
+          if (!cancelled) setGateState('wrong_day');
+          return;
+        }
+
         const weights = await getMorningWeightsLast14Days(user.id);
         if (cancelled) return;
         setAlreadyLoggedToday(hasLoggedToday(weights));

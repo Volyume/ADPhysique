@@ -61,6 +61,7 @@ export default function ScanBarcodeScreen({ navigation, route }) {
   const [appActive, setAppActive] = useState(AppState.currentState === 'active');
   const [focused, setFocused] = useState(true);
   const scanLock = useRef(false);
+  const askedRef = useRef(false);
   const device = useCameraDevice('back');
 
   useFocusEffect(useCallback(() => {
@@ -80,15 +81,20 @@ export default function ScanBarcodeScreen({ navigation, route }) {
     setPermission(next);
   }, []);
 
-  // First-time arrivals get an in-app OS permission prompt
-  // automatically. Previously the screen sat on a spinner forever
-  // while in 'not-determined' state, forcing users into Settings
-  // even though the OS would happily prompt the first time. The
-  // requestCameraPermission call below triggers the native dialog;
-  // the user's choice updates `permission` and the right branch
-  // below renders.
+  // First arrival: attempt the native OS permission dialog. We fire for
+  // ANY non-granted status, not just 'not-determined', because on
+  // Android a prior 'denied' is still re-askable, and some OS /
+  // vision-camera versions report a never-asked permission as 'denied'
+  // rather than 'not-determined' (Android 16 does this). Gating only on
+  // 'not-determined' meant those users were dumped straight to the
+  // Settings screen with no prompt. requestCameraPermission shows the
+  // dialog when the OS still allows it, and is a harmless no-op (returns
+  // the same status, no dialog) once the permission is permanently
+  // denied, at which point the Settings fallback below takes over.
+  // Guarded by a ref so it runs at most once per mount.
   useEffect(() => {
-    if (permission === 'not-determined') {
+    if (permission !== 'granted' && !askedRef.current) {
+      askedRef.current = true;
       requestPermission().catch(() => {});
     }
   }, [permission, requestPermission]);
