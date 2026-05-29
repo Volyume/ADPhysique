@@ -34,7 +34,12 @@ export default function BlockProgressCard({ blockProgress, currentMesoWeek }) {
           : pct >= 0.7 ? colors.warning
           : withAlpha(colors.primary, 0.25);
         return (
-          <View key={p.muscle} style={styles.row}>
+          <View
+            key={p.muscle}
+            style={styles.row}
+            accessibilityRole="text"
+            accessibilityLabel={`${p.label}: ${p.actual} of ${p.planned} sets`}
+          >
             <Text style={styles.muscle} numberOfLines={1}>{p.label}</Text>
             <View style={styles.barBg}>
               <View style={[styles.barFill, { width: `${Math.round(pct * 100)}%`, backgroundColor: fillColor }]} />

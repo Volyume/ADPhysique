@@ -16,7 +16,12 @@ export default function VolumeBars({ weeklyVolume = {}, customLandmarks = null }
         const fillPct = Math.min(sets / mrv, 1);
 
         return (
-          <View key={muscle} style={styles.row}>
+          <View
+            key={muscle}
+            style={styles.row}
+            accessibilityRole="text"
+            accessibilityLabel={`${MUSCLE_DISPLAY_NAMES[muscle]}: ${sets} sets, ${String(label).toLowerCase()}`}
+          >
             <Text style={styles.muscleName}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
             <View style={styles.barTrack}>
               <View style={[styles.barFill, { width: `${fillPct * 100}%`, backgroundColor: color }]} />
