@@ -13,12 +13,13 @@
  */
 import React, { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator,
+  View, Text, StyleSheet, Alert,
   ScrollView, Platform, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, radius, fontSize, fontWeight, hitSlop } from '../styles/theme';
+import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
+import Button from '../components/Button';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { isPaidTier } from '../lib/proGate';
@@ -146,38 +147,27 @@ export default function SubscriptionScreen({ navigation }) {
         {/* Manage actions */}
         <View style={styles.actionGroup}>
           {tier === 'free' || stage === 'pro_trial' ? (
-            <TouchableOpacity
-              style={styles.primaryBtn}
+            <Button
+              title={tier === 'free' ? 'Upgrade' : 'Stay on Pro'}
+              size="lg"
               onPress={handleUpgrade}
-              accessibilityRole="button"
-            >
-              <Text style={styles.primaryBtnText}>
-                {tier === 'free' ? 'Upgrade' : 'Stay on Pro'}
-              </Text>
-            </TouchableOpacity>
+            />
           ) : null}
 
-          <TouchableOpacity
-            style={styles.secondaryBtn}
+          <Button
+            title="Restore purchases"
+            variant="secondary"
+            loading={busy}
             onPress={handleRestore}
-            disabled={busy}
-            accessibilityRole="button"
-          >
-            {busy ? (
-              <ActivityIndicator color={colors.textPrimary} />
-            ) : (
-              <Text style={styles.secondaryBtnText}>Restore purchases</Text>
-            )}
-          </TouchableOpacity>
+          />
 
           {tier === 'pro' ? (
-            <TouchableOpacity
-              style={styles.tertiaryBtn}
+            <Button
+              title="Cancel subscription"
+              variant="tertiary"
+              textStyle={{ color: colors.error }}
               onPress={handleCancel}
-              accessibilityRole="button"
-            >
-              <Text style={styles.tertiaryBtnText}>Cancel subscription</Text>
-            </TouchableOpacity>
+            />
           ) : null}
         </View>
 
@@ -222,36 +212,6 @@ const styles = StyleSheet.create({
   actionGroup: {
     marginTop: spacing.lg,
     gap: spacing.md,
-  },
-  primaryBtn: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.lg,
-    borderRadius: radius.md,
-    alignItems: 'center',
-  },
-  primaryBtnText: {
-    color: colors.background,
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
-  },
-  secondaryBtn: {
-    backgroundColor: colors.surface2,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-    alignItems: 'center',
-  },
-  secondaryBtnText: {
-    color: colors.textPrimary,
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.medium,
-  },
-  tertiaryBtn: {
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
-  tertiaryBtnText: {
-    color: colors.error,
-    fontSize: fontSize.md,
   },
   footnote: {
     color: colors.textMuted,
