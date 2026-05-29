@@ -19,6 +19,33 @@ const round1 = (n) => Math.round(n * 10) / 10;
 const num = (n) => (Number.isFinite(Number(n)) ? Number(n) : 0);
 
 /**
+ * One meal's share of the remaining macros. Suggestions portion to what's
+ * left divided by how many meals are still to come, so a pick fills a
+ * single meal rather than the whole rest of the day. mealsLeft floors at 1.
+ */
+export function perMealMacros(remaining, mealsLeft) {
+  const m = Math.max(1, Math.floor(num(mealsLeft)) || 1);
+  return {
+    kcal: num(remaining.kcal) / m,
+    protein: num(remaining.protein) / m,
+    carbs: num(remaining.carbs) / m,
+    fat: num(remaining.fat) / m,
+  };
+}
+
+/**
+ * Is a candidate appropriate for the meal slot being logged? A meal tags
+ * the slots it suits (e.g. ['breakfast'] or ['lunch','dinner']). 'any' or
+ * no tags means it fits any slot (so oats won't be offered at dinner, but
+ * a chicken/rice bowl can be lunch or dinner). No slot requested = all pass.
+ */
+export function slotMatches(candidateSlots, slot) {
+  if (!slot) return true;
+  if (!Array.isArray(candidateSlots) || candidateSlots.length === 0) return true;
+  return candidateSlots.includes(slot) || candidateSlots.includes('any');
+}
+
+/**
  * Macros still to eat today: target minus consumed, floored at 0 (you
  * can't "need" a negative amount).
  */
@@ -111,24 +138,36 @@ export function suggestMeal(remaining, meal) {
 }
 
 /**
- * Rank saved meals + foods by fit, best first, de-duped by name, capped
- * at `limit`. Returns { remaining, suggestions }. When there's nothing
+ * Rank meals + foods by fit, best first, de-duped by name, capped at
+ * `limit`. Scoring targets ONE meal's share of the day (remaining /
+ * mealsLeft), and meals are filtered to the slot being logged so a pick
+ * is both right-sized and right-timed (breakfast meals at breakfast).
+ *
+ * Returns { remaining, perMeal, suggestions }. When there's nothing
  * meaningful left to eat (under ~50 kcal and ~5g protein, e.g. already at
  * or over target) it returns no suggestions rather than padding the day.
+ *
+ * @param slot      meal slot being logged ('breakfast'|'lunch'|...) or null
+ * @param mealsLeft how many meals remain today (default 1 = target whole remainder)
  */
-export function rankSuggestions({ targets, consumed, savedMeals = [], foods = [], limit = 8 } = {}) {
+export function rankSuggestions({ targets, consumed, savedMeals = [], foods = [], slot = null, mealsLeft = 1, limit = 8 } = {}) {
   const remaining = remainingMacros(targets, consumed);
   if (remaining.kcal < 50 && remaining.protein < 5) {
-    return { remaining, suggestions: [] };
+    return { remaining, perMeal: perMealMacros(remaining, mealsLeft), suggestions: [] };
   }
+
+  // Score against a single meal's share, not the whole day's remainder.
+  const perMeal = perMealMacros(remaining, mealsLeft);
 
   const scored = [];
   for (const meal of savedMeals) {
-    const s = suggestMeal(remaining, meal);
+    if (!slotMatches(meal?.slots, slot)) continue;
+    const s = suggestMeal(perMeal, meal);
     if (s) scored.push(s);
   }
   for (const food of foods) {
-    const s = suggestFood(remaining, food);
+    if (!slotMatches(food?.slots, slot)) continue;
+    const s = suggestFood(perMeal, food);
     if (s) scored.push(s);
   }
 
@@ -142,5 +181,5 @@ export function rankSuggestions({ targets, consumed, savedMeals = [], foods = []
     seen.add(key);
     deduped.push(s);
   }
-  return { remaining, suggestions: deduped.slice(0, limit) };
+  return { remaining, perMeal, suggestions: deduped.slice(0, limit) };
 }

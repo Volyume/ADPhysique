@@ -8,7 +8,35 @@
  */
 import {
   remainingMacros, fitScore, suggestFood, suggestMeal, rankSuggestions,
+  perMealMacros, slotMatches,
 } from '../mealSuggest';
+
+describe('perMealMacros', () => {
+  test('divides the remainder by meals left', () => {
+    expect(perMealMacros({ kcal: 900, protein: 90, carbs: 90, fat: 30 }, 3))
+      .toEqual({ kcal: 300, protein: 30, carbs: 30, fat: 10 });
+  });
+  test('floors meals-left at 1 (whole remainder)', () => {
+    expect(perMealMacros({ kcal: 500, protein: 40, carbs: 50, fat: 15 }, 0))
+      .toEqual({ kcal: 500, protein: 40, carbs: 50, fat: 15 });
+  });
+});
+
+describe('slotMatches', () => {
+  test('untagged or "any" fits every slot', () => {
+    expect(slotMatches(undefined, 'dinner')).toBe(true);
+    expect(slotMatches([], 'dinner')).toBe(true);
+    expect(slotMatches(['any'], 'breakfast')).toBe(true);
+  });
+  test('tagged meal only fits its slots', () => {
+    expect(slotMatches(['breakfast'], 'breakfast')).toBe(true);
+    expect(slotMatches(['breakfast'], 'dinner')).toBe(false);
+    expect(slotMatches(['lunch', 'dinner'], 'dinner')).toBe(true);
+  });
+  test('no slot requested = everything passes', () => {
+    expect(slotMatches(['breakfast'], null)).toBe(true);
+  });
+});
 
 describe('remainingMacros', () => {
   test('target minus consumed', () => {
@@ -104,6 +132,29 @@ describe('rankSuggestions', () => {
   test('no suggestions when at/over target', () => {
     const { suggestions } = rankSuggestions({ targets, consumed: targets, savedMeals: meals, foods });
     expect(suggestions).toEqual([]);
+  });
+
+  test('filters meals to the slot being logged (no oats at dinner)', () => {
+    const slotMeals = [
+      { id: 'b', name: 'Oats & whey', itemCount: 2, slots: ['breakfast'], totals: { kcal: 400, protein: 35, carbs: 50, fat: 8 } },
+      { id: 'd', name: 'Chicken & rice', itemCount: 3, slots: ['lunch', 'dinner'], totals: { kcal: 550, protein: 48, carbs: 60, fat: 9 } },
+    ];
+    const dinner = rankSuggestions({ targets, consumed, savedMeals: slotMeals, foods: [], slot: 'dinner' });
+    expect(dinner.suggestions.map(s => s.name)).toEqual(['Chicken & rice']);
+    const breakfast = rankSuggestions({ targets, consumed, savedMeals: slotMeals, foods: [], slot: 'breakfast' });
+    expect(breakfast.suggestions.map(s => s.name)).toEqual(['Oats & whey']);
+  });
+
+  test('portions to one meal: a day-sized meal overshoots a per-meal target', () => {
+    // remaining 600/50/60/20 split across 3 meals -> ~200/16.7/20/6.7 per meal
+    const perMealOpt = { id: 's', name: 'Small bowl', itemCount: 2, totals: { kcal: 210, protein: 18, carbs: 22, fat: 6 } };
+    const dayOpt = { id: 'l', name: 'Big plate', itemCount: 4, totals: { kcal: 600, protein: 50, carbs: 60, fat: 20 } };
+    const { perMeal, suggestions } = rankSuggestions({
+      targets, consumed, savedMeals: [perMealOpt, dayOpt], foods: [], mealsLeft: 3,
+    });
+    expect(perMeal.kcal).toBeCloseTo(200, 0);
+    // the meal sized for one third ranks above the one sized for the whole day
+    expect(suggestions[0].name).toBe('Small bowl');
   });
 
   test('de-dupes by name + kind and caps at limit', () => {
