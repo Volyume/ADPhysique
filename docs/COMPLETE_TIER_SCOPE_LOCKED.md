@@ -105,13 +105,23 @@ acquisition.
 
 ### Engine code implications
 
-`src/lib/proGate.js` has the three helpers:
+> **Founder decision 2026-05-29:** gating is binary (Pro or Free),
+> enforced solely by `store.tier === 'pro'` via the `ProGate`
+> component. The granular `hasFeature` / `FEATURE_MAP` /
+> `hasGoalUnlock` / `PRO_ROUTES` layer described below was built and
+> tested but never wired into a single screen, so it was removed as
+> dead code. `proGate.js` now exports only `PRO_BETA_ACTIVE`,
+> `_resolveTier`, and `isPaidTier`. If per-feature/per-goal gating is
+> ever wanted it returns as a fresh build against the then-current
+> scope. The text below is retained for historical context only.
 
-- `isPaidTier(user)` returns `'free' | 'pro'`.
+`src/lib/proGate.js` had the three helpers:
+
+- `isPaidTier(user)` returns `'free' | 'pro'`. (Retained.)
 - `hasFeature(user, feature)` returns boolean against the per-tier
-  feature flag map.
+  feature flag map. (Removed 2026-05-29.)
 - `hasGoalUnlock(user, feature)` returns boolean against the user's
-  current goal state, independent of tier.
+  current goal state, independent of tier. (Removed 2026-05-29.)
 
 `weeklyCoach.js` and `nutritionEngine.js` MUST NOT consult `proGate`
 when computing safety floors, lockouts, or guardrails. They consult
