@@ -168,7 +168,12 @@ export default function FoodDetailSheet({
             onSubmitEditing={() => Keyboard.dismiss()}
           />
 
-          <View style={styles.macroSummary}>
+          <View
+            style={styles.macroSummary}
+            accessible
+            accessibilityLiveRegion="polite"
+            accessibilityLabel={`${macros.kcal} calories, protein ${macros.protein} grams, carbs ${macros.carbs} grams, fat ${macros.fat} grams`}
+          >
             <MacroPill label="kcal" value={macros.kcal} />
             <MacroPill label="P"    value={`${macros.protein}g`} />
             <MacroPill label="C"    value={`${macros.carbs}g`} />
