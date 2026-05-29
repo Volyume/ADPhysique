@@ -31,6 +31,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Camera, useCameraDevice } from 'react-native-vision-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import Button from '../components/Button';
 import { isOcrConfigured, recogniseText } from '../lib/food/ocr';
 import { parseNutritionLabel } from '../lib/food/ocrParser';
 import { queueContribution, getConsent } from '../lib/food/writeback';
@@ -154,17 +155,11 @@ export default function ScanLabelScreen({ navigation, route }) {
             Volyume uses the camera to read nutrition labels.
           </Text>
           {permission === 'denied' ? (
-            <TouchableOpacity style={styles.primaryBtn} onPress={() => Linking.openSettings()}>
-              <Text style={styles.primaryBtnText}>Open Settings</Text>
-            </TouchableOpacity>
+            <Button title="Open Settings" onPress={() => Linking.openSettings()} />
           ) : (
-            <TouchableOpacity style={styles.primaryBtn} onPress={requestPermission}>
-              <Text style={styles.primaryBtnText}>Allow camera</Text>
-            </TouchableOpacity>
+            <Button title="Allow camera" onPress={requestPermission} />
           )}
-          <TouchableOpacity style={styles.secondaryBtn} onPress={gotoManual}>
-            <Text style={styles.secondaryBtnText}>Type it in instead</Text>
-          </TouchableOpacity>
+          <Button title="Type it in instead" variant="tertiary" onPress={gotoManual} />
         </View>
       </SafeAreaView>
     );
@@ -183,9 +178,7 @@ export default function ScanLabelScreen({ navigation, route }) {
         <View style={styles.fallbackWrap}>
           <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} />
           <Text style={styles.fallbackTitle}>No camera available</Text>
-          <TouchableOpacity style={styles.secondaryBtn} onPress={gotoManual}>
-            <Text style={styles.secondaryBtnText}>Type it in instead</Text>
-          </TouchableOpacity>
+          <Button title="Type it in instead" variant="tertiary" onPress={gotoManual} />
         </View>
       </SafeAreaView>
     );
@@ -246,9 +239,7 @@ export default function ScanLabelScreen({ navigation, route }) {
               {busy ? <ActivityIndicator color="#000" /> : <View style={styles.captureInner} />}
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity style={styles.secondaryBtn} onPress={gotoManual}>
-              <Text style={styles.secondaryBtnText}>Type it in</Text>
-            </TouchableOpacity>
+            <Button title="Type it in" variant="tertiary" onPress={gotoManual} />
           )}
         </View>
       </View>
@@ -308,13 +299,4 @@ const styles = StyleSheet.create({
     color: colors.textMuted, fontSize: fontSize.md, textAlign: 'center',
     marginTop: spacing.sm, marginBottom: spacing.xl, lineHeight: 22,
   },
-  primaryBtn: {
-    backgroundColor: colors.primary, paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md, borderRadius: radius.md,
-  },
-  primaryBtnText: { color: colors.background, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
-  secondaryBtn: {
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md, marginTop: spacing.md,
-  },
-  secondaryBtnText: { color: colors.primary, fontSize: fontSize.md },
 });
