@@ -44,6 +44,13 @@ DONE (shipped to main, tested):
 - H5 skeleton loading on PlanDetail, Plans, PlanLibrary, Mesocycle (the
   plan surfaces are done).
 - DiaryScreen FABs moved to shadow tokens.
+- S3 Card adoption (incremental): Credits, Subscription, GoalChangeSummary,
+  Food Insights, Workout History now use the Card primitive. Remaining
+  inline card blocks are mostly deliberate variants (surface2, radius.md,
+  overflow-hidden row wrappers, full-screen story layouts) where forcing
+  the base shell would change the design, so they are intentionally left;
+  Card adoption continues opportunistically where a block matches the base
+  shell exactly.
 
 NOT STARTED (need runtime verification, deferred to a verifiable session):
 - C1 ActiveWorkout virtualise + decompose (core loop, highest risk).
