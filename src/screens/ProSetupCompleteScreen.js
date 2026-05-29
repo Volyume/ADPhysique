@@ -11,6 +11,12 @@ import useAppStore from '../store/useAppStore';
 import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
 import { getSplitRationale } from '../lib/whyThisTemplates';
 import { getActivePlan, getRoutinesForPlan } from '../lib/database';
+import { PLAN_WHYTHIS_KEY } from '../lib/planAutoGen';
+
+// Order the rationale reads top-to-bottom: how the week is structured,
+// then why the volume and progression, then exercise selection and the
+// recovery / nutrition adjustments that shaped it.
+const WHY_ORDER = ['schedule', 'goal', 'experience', 'progression', 'equipment', 'recovery', 'nutrition', 'weakPoints'];
 
 export default function ProSetupCompleteScreen({ navigation }) {
   const { user, userProfile, completeFirstRun } = useAppStore();
@@ -21,6 +27,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
   const [planRoutines, setPlanRoutines] = useState([]);
   const [planName, setPlanName] = useState(null);
   const [planOpen, setPlanOpen] = useState(false);
+  const [whyThis, setWhyThis] = useState(null);
 
   const opacity    = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
   const slideY     = useRef(new Animated.Value(reduceMotion ? 0 : 20)).current;
@@ -65,6 +72,11 @@ export default function ProSetupCompleteScreen({ navigation }) {
           setPlanName(active.name);
           const routines = await getRoutinesForPlan(active.id);
           setPlanRoutines(routines || []);
+        }
+        const raw = await AsyncStorage.getItem(PLAN_WHYTHIS_KEY(user.id));
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object') setWhyThis(parsed);
         }
       } catch (_) {}
     })();
@@ -210,7 +222,9 @@ export default function ProSetupCompleteScreen({ navigation }) {
             </View>
             {hasPlan && planOpen && (
               <View style={styles.splitList}>
-                {planRoutines[0]?.split_type ? (
+                {/* The richer engine rationale supersedes the one-line split
+                    note when it's available. */}
+                {!whyThis && planRoutines[0]?.split_type ? (
                   <Text style={styles.splitWhy}>{getSplitRationale(planRoutines[0].split_type)}</Text>
                 ) : null}
                 {planRoutines.map((r, i) => (
@@ -221,6 +235,17 @@ export default function ProSetupCompleteScreen({ navigation }) {
                     <Text style={styles.splitName}>{r.name}</Text>
                   </View>
                 ))}
+                {whyThis && WHY_ORDER.some(k => whyThis[k]) ? (
+                  <View style={styles.whyPlanWrap}>
+                    <Text style={styles.whyPlanTitle}>Why this plan, for you</Text>
+                    {WHY_ORDER.filter(k => whyThis[k]).map(k => (
+                      <View key={k} style={styles.whyPlanItem}>
+                        <View style={styles.whyPlanBullet} />
+                        <Text style={styles.whyPlanText}>{whyThis[k]}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
               </View>
             )}
           </TouchableOpacity>
@@ -353,6 +378,11 @@ const styles = StyleSheet.create({
   },
   splitBadgeText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textSecondary },
   splitName: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary, flex: 1 },
+  whyPlanWrap: { marginTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md, gap: spacing.sm },
+  whyPlanTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 },
+  whyPlanItem: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
+  whyPlanBullet: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary, marginTop: 7 },
+  whyPlanText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
 
   // Founder note card, sits at the bottom of Pro setup. Distinct visual
   // language from the routine cards above so it reads as personal rather

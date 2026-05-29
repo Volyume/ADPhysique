@@ -22,8 +22,14 @@ import {
   archiveOtherUserPlans,
   getAllProgrammes,
 } from './database';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { generatePlan } from './planEngine';
 import { phaseToNutritionKey } from './coachingGoals';
+
+// Where the per-plan rationale ("Why this plan?") is cached so the
+// enrollment reveal and the plan view can explain why the routine, sets,
+// reps and exercise selection are what they are for this user.
+export const PLAN_WHYTHIS_KEY = (userId) => `@volyume_plan_whythis_${userId}`;
 
 /**
  * If the user already has a programme with this exact name, append a
@@ -115,6 +121,12 @@ export async function generateAndSavePlan(userId, profile) {
     return { ok: false, error: `Plan engine failed: ${e?.message ?? 'unknown'}` };
   }
   if (!plan?.workouts?.length) return { ok: false, error: 'Plan engine returned no workouts' };
+
+  // Cache the engine's plain-English rationale so the enrollment reveal can
+  // explain why the plan is built this way for this user. Best-effort.
+  try {
+    await AsyncStorage.setItem(PLAN_WHYTHIS_KEY(userId), JSON.stringify(plan.whyThis ?? {}));
+  } catch (_) { /* non-fatal */ }
 
   const baseName = plan.name ?? 'Your plan';
   const planName = await makeUniquePlanName(userId, baseName);
