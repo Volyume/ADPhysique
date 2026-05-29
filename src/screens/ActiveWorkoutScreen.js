@@ -486,6 +486,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setAllTimeSets([]);
     setCurrentSet({ ...DEFAULT_SET });
     setGhostSet(null);
+    // An unfinished cluster belongs to the exercise it was started on;
+    // abandon it on any exercise change (incl. superset auto-jump) so
+    // its banner can't carry stale reps onto the next exercise.
+    setCluster(null);
+    setClusterReps('');
 
     // Guard so that async state updates don't land after the exercise
     // changes (rapid swap) or the screen unmounts mid-load. Without this,
