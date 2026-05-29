@@ -692,7 +692,7 @@ function InsufficientDataView({ dataNote, onClose }) {
         <Text style={styles.insufficientTitle}>Building your baseline.</Text>
         <Text style={styles.insufficientBody}>
           {dataNote ??
-            'A few more weeks of data needed before adjustments kick in. Keep logging sessions and your morning weight.'}
+            'Precision Coaching reads your training and weight from day one. It holds calorie and volume changes until it has about two weeks of weigh-ins plus a check-in, so it moves on a real trend rather than one noisy week. Keep logging sessions, your morning weight, and your weekly check-in. The first adjustment lands once the trend is clear.'}
         </Text>
       </View>
       <TouchableOpacity style={styles.doneBtn} onPress={onClose} activeOpacity={0.8}>
