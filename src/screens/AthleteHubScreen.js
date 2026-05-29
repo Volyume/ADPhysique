@@ -211,7 +211,7 @@ const mfStyles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
   title: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  sub: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16, marginTop: 2 },
+  sub: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16, marginTop: spacing.xxs },
   chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
@@ -562,7 +562,7 @@ export default function AthleteHubScreen({ navigation }) {
                 </View>
               )}
               {next && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
                   <Text style={styles.milestoneNext}>
                     {next.sessions - totalWorkouts} to go: {next.label}
                   </Text>
@@ -1031,7 +1031,7 @@ function NavRow({ icon, label, sub, onPress, tooltip }) {
         <Ionicons name={icon} size={18} color={colors.primary} />
       </View>
       <View style={styles.navRowText}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
           <Text style={styles.navRowLabel}>{label}</Text>
           {tooltip ? <InfoTooltip size={11} text={tooltip} /> : null}
         </View>
@@ -1101,7 +1101,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   gaugeItem:   { flex: 1, alignItems: 'center', gap: spacing.xs },
-  gaugeDot:    { width: 12, height: 12, borderRadius: 6 },
+  gaugeDot:    { width: 12, height: 12, borderRadius: radius.sm },
   gaugeValue:  { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
   gaugeLabel:  { fontSize: 10, color: colors.textMuted, textAlign: 'center' },
   gaugeScale:  { fontSize: 9, color: colors.textMuted, textAlign: 'center' },
@@ -1128,7 +1128,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textSecondary,
   },
   lockedCardSub: {
-    fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2, lineHeight: 17,
+    fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xxs, lineHeight: 17,
   },
   lockBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 3,
@@ -1147,14 +1147,14 @@ const styles = StyleSheet.create({
   },
   cardHeaderText: { flex: 1 },
   cardTitle:      { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  cardSubtitle:   { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2 },
+  cardSubtitle:   { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: spacing.xxs },
   alert:          { color: colors.warning },
   macroStrip:     { flexDirection: 'row', gap: spacing.sm },
   eduLinkRow:     { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, marginTop: -spacing.sm, marginBottom: spacing.sm },
   eduLinkText:    { color: colors.primary, fontSize: fontSize.xs, fontWeight: fontWeight.medium, flex: 1 },
   macroPill:      {
     flex: 1, alignItems: 'center', backgroundColor: colors.surface2,
-    borderRadius: radius.md, paddingVertical: spacing.sm, gap: 2,
+    borderRadius: radius.md, paddingVertical: spacing.sm, gap: spacing.xxs,
   },
   macroPillValue: { fontSize: fontSize.sm, fontWeight: fontWeight.bold },
   macroPillLabel: { fontSize: 10, color: colors.textMuted },
@@ -1178,7 +1178,7 @@ const styles = StyleSheet.create({
   },
   navRowText:  { flex: 1 },
   navRowLabel: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  navRowSub:   { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2 },
+  navRowSub:   { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: spacing.xxs },
 
   // About
   about: { alignItems: 'center', paddingTop: spacing.md, gap: spacing.xs },
@@ -1205,7 +1205,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary,
   },
   adaptHistHeaderSub: {
-    fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2,
+    fontSize: fontSize.xs, color: colors.textSecondary, marginTop: spacing.xxs,
   },
   adaptHistBody: {
     borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md, gap: spacing.md,
@@ -1213,10 +1213,10 @@ const styles = StyleSheet.create({
   adaptHistTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.5, marginBottom: spacing.xs },
   adaptHistRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   adaptHistMuscle: { fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.semibold },
-  adaptHistReason: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2, lineHeight: 16 },
-  adaptHistDate: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
+  adaptHistReason: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: spacing.xxs, lineHeight: 16 },
+  adaptHistDate: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xxs },
   sparklineWrap: { marginTop: spacing.sm, overflow: 'hidden' },
-  sparklineLegend: { flexDirection: 'row', gap: spacing.xl, marginTop: spacing.sm, paddingHorizontal: 2 },
+  sparklineLegend: { flexDirection: 'row', gap: spacing.xl, marginTop: spacing.sm, paddingHorizontal: spacing.xxs },
   sparklineLegendRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   sparklineDot: { width: 7, height: 7, borderRadius: 4 },
   sparklineLegendText: { fontSize: fontSize.xs, color: colors.textSecondary },

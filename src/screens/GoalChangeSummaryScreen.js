@@ -106,7 +106,7 @@ function MacroRow({ label, prev, next, unit = 'g' }) {
         {changed ? (
           <>
             <Text style={styles.macroPrev}>{prev ?? '-'}{unit}</Text>
-            <Ionicons name="arrow-forward" size={11} color={colors.textMuted} style={{ marginHorizontal: 4 }} />
+            <Ionicons name="arrow-forward" size={11} color={colors.textMuted} style={{ marginHorizontal: spacing.xs }} />
             <Text style={styles.macroNext}>{next ?? '-'}{unit}</Text>
             <Text style={[styles.macroDelta, delta > 0 ? styles.macroDeltaUp : styles.macroDeltaDown]}>
               {' '}({sign}{delta}{unit})
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
     borderWidth: 1, borderColor: colors.success + '40',
   },
-  heroTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: 4 },
+  heroTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.xs },
   heroBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
 
   sectionLabel: {
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
   diffNext: { fontSize: fontSize.md, color: colors.primary, fontWeight: fontWeight.bold },
 
   cardValue: { fontSize: fontSize.md, color: colors.textPrimary, fontWeight: fontWeight.semibold },
-  cardReason: { fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 18, marginTop: 2 },
+  cardReason: { fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 18, marginTop: spacing.xxs },
 
   macroRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: fontSize.sm,
     color: colors.textMuted,
-    marginTop: 2,
+    marginTop: spacing.xxs,
     marginBottom: spacing.lg,
   },
   itemList: { gap: spacing.md },
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
   itemBody: {
     fontSize: fontSize.xs,
     color: colors.textSecondary,
-    marginTop: 2,
+    marginTop: spacing.xxs,
     lineHeight: 18,
   },
   actionRow: {

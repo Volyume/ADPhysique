@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   lockChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
     backgroundColor: colors.primary, borderRadius: radius.sm,
     paddingHorizontal: 10, paddingVertical: 5,
   },
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 3,
     backgroundColor: colors.primary, borderRadius: 4,
   },
-  badgeSm: { paddingHorizontal: 5, paddingVertical: 2 },
+  badgeSm: { paddingHorizontal: 5, paddingVertical: spacing.xxs },
   badgeMd: { paddingHorizontal: 7, paddingVertical: 3 },
   badgeText: { fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.3 },
   badgeTextSm: { fontSize: 8 },

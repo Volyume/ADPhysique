@@ -549,7 +549,7 @@ export default function ProGoalSetupScreen({ navigation }) {
                 />
               </View>
               <View style={styles.phaseBody}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: 2 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xxs }}>
                   <Text style={[styles.phaseLabel, active && styles.phaseLabelActive]}>{ap.label}</Text>
                   <Text style={[styles.approachRange, active && styles.approachRangeActive]}>{ap.range}</Text>
                   {isSuggested && (
@@ -636,7 +636,7 @@ const styles = StyleSheet.create({
   goalIconWrapActive: { backgroundColor: colors.surface },
   goalLabel: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary, flexShrink: 1 },
   goalLabelActive: { color: colors.primary },
-  goalCheck: { marginTop: 2 },
+  goalCheck: { marginTop: spacing.xxs },
 
   optionalTag: {
     fontSize: fontSize.xs,

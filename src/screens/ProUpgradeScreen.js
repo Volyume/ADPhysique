@@ -332,7 +332,7 @@ export default function ProUpgradeScreen({ navigation }) {
                 <Text style={styles.fieldLabel}>Password</Text>
                 <View style={[styles.fieldWrap, passwordFocused && styles.fieldWrapFocused]}>
                   <TextInput
-                    style={[styles.fieldInput, { paddingRight: 48 }]}
+                    style={[styles.fieldInput, { paddingRight: spacing.xxxl }]}
                     value={password}
                     onChangeText={setPassword}
                     placeholder={mode === 'signup' ? 'Min 8 characters' : 'Your password'}
@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
   },
   eyeBtn: {
     position: 'absolute', right: spacing.md,
-    top: 0, bottom: 0, justifyContent: 'center', paddingHorizontal: 4,
+    top: 0, bottom: 0, justifyContent: 'center', paddingHorizontal: spacing.xs,
   },
 
   primaryBtn: {

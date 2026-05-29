@@ -115,7 +115,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
       headerRight: () => (
         <TouchableOpacity
           onPress={() => setIsReordering(prev => !prev)}
-          style={{ marginRight: 16 }}
+          style={{ marginRight: spacing.lg }}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Text style={{ fontSize: fontSize.md, color: isReordering ? colors.primary : colors.textSecondary, fontWeight: isReordering ? fontWeight.bold : fontWeight.regular }}>
@@ -638,7 +638,7 @@ const styles = StyleSheet.create({
   },
   orderBadgeUnresolved: { backgroundColor: colors.warning + '40' },
   orderNum: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textSecondary },
-  exerciseInfo: { flex: 1, gap: 2 },
+  exerciseInfo: { flex: 1, gap: spacing.xxs },
   exerciseTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -650,9 +650,9 @@ const styles = StyleSheet.create({
   relinkChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: spacing.xs,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: spacing.xxs,
     borderRadius: radius.full,
     backgroundColor: colors.warningBg,
     borderWidth: 1,
@@ -665,7 +665,7 @@ const styles = StyleSheet.create({
   },
   exerciseMeta: { fontSize: fontSize.sm, color: colors.primary },
   exerciseMuscle: { fontSize: fontSize.xs, color: colors.textMuted },
-  exerciseWhy: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic', marginTop: 2, lineHeight: 16 },
+  exerciseWhy: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic', marginTop: spacing.xxs, lineHeight: 16 },
   splitRationale: { fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 19, marginTop: spacing.xs, marginBottom: spacing.sm },
   exerciseStartWeight: { fontSize: fontSize.xs, color: colors.primary },
   cardActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
@@ -759,7 +759,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
-    marginBottom: 2,
+    marginBottom: spacing.xxs,
   },
   pickerItemMuscle: { fontSize: fontSize.sm, color: colors.textSecondary },
   swapSafe: { flex: 1, backgroundColor: colors.background },
@@ -798,7 +798,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
-    marginBottom: 2,
+    marginBottom: spacing.xxs,
   },
   swapItemReason: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
 });

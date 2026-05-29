@@ -1218,7 +1218,7 @@ const styles = StyleSheet.create({
   },
   settingIconDestructive: { backgroundColor: colors.errorBg },
   settingLabel: { fontSize: fontSize.md, color: colors.textPrimary },
-  settingSub: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2, lineHeight: 16 },
+  settingSub: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xxs, lineHeight: 16 },
   settingLabelDestructive: { color: colors.error },
   settingRight: {
     flexDirection: 'row',
@@ -1274,7 +1274,7 @@ const styles = StyleSheet.create({
   appNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   betaBadge: {
     paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: spacing.xxs,
     borderRadius: radius.sm,
     backgroundColor: colors.primary,
   },

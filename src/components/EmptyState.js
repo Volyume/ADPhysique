@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     opacity: 0.75,
   },
-  dismiss: { position: 'absolute', top: spacing.md, right: spacing.md, padding: 2 },
+  dismiss: { position: 'absolute', top: spacing.md, right: spacing.md, padding: spacing.xxs },
   title: {
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,

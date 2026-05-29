@@ -254,8 +254,8 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: fontSize.sm, color: colors.textMuted, marginTop: -spacing.xs },
   sourceChip: {
     alignSelf: 'flex-start',
-    paddingHorizontal: spacing.sm, paddingVertical: 2,
-    borderRadius: 999,
+    paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
+    borderRadius: radius.full,
     borderWidth: 1, borderColor: colors.border,
   },
   sourceChipText: {
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   macroPillValue: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  macroPillLabel: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
+  macroPillLabel: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xxs },
   mealRow: { flexDirection: 'row', gap: spacing.xs },
   mealBtn: {
     flex: 1,

@@ -1105,7 +1105,7 @@ const styles = StyleSheet.create({
   },
 
   section: { marginBottom: spacing.xl },
-  sectionLabelWrap: { marginBottom: spacing.sm, gap: 2 },
+  sectionLabelWrap: { marginBottom: spacing.sm, gap: spacing.xxs },
   sectionLabel: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
@@ -1123,7 +1123,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.surface2, borderRadius: radius.md,
     borderWidth: 1, borderColor: colors.border,
-    paddingVertical: spacing.sm, paddingHorizontal: spacing.xs, gap: 2,
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.xs, gap: spacing.xxs,
   },
   chipSelected: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
   chipValue: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textSecondary },

@@ -114,10 +114,10 @@ const styles = StyleSheet.create({
   entryMain: { flex: 1 },
   entryName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.medium },
   entryBrand: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: 1 },
-  entryQuantity: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: 2 },
+  entryQuantity: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: spacing.xxs },
   entryMacros: { alignItems: 'flex-end' },
   entryKcal: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
-  entryMacroLine: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: 2 },
+  entryMacroLine: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: spacing.xxs },
   swipeDelete: {
     backgroundColor: colors.error,
     width: 90,

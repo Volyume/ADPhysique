@@ -684,7 +684,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   backButton: {
-    marginTop: 2,
+    marginTop: spacing.xxs,
     width: 32,
     alignItems: 'center',
     justifyContent: 'center',
@@ -932,7 +932,7 @@ const styles = StyleSheet.create({
   crossLinkSub: {
     fontSize: fontSize.xs,
     color: colors.textMuted,
-    marginTop: 2,
+    marginTop: spacing.xxs,
     lineHeight: 16,
   },
   savedText: {

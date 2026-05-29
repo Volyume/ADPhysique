@@ -193,9 +193,9 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: fontSize.xs,
     color: colors.textMuted,
-    marginTop: 2,
+    marginTop: spacing.xxs,
   },
-  itemList: { marginTop: spacing.md, gap: 2 },
+  itemList: { marginTop: spacing.md, gap: spacing.xxs },
   item: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
   kcalSubLabel: {
     color: colors.textMuted,
     fontSize: fontSize.xs,
-    marginTop: 2,
+    marginTop: spacing.xxs,
   },
   kcalRemainingWrap: {
     alignItems: 'flex-end',
@@ -192,14 +192,14 @@ const styles = StyleSheet.create({
   kcalRemainingLabel: {
     color: colors.textMuted,
     fontSize: fontSize.xs,
-    marginTop: 2,
+    marginTop: spacing.xxs,
   },
   dayTypeChip: {
     alignSelf: 'flex-start',
     backgroundColor: colors.surface2,
     borderRadius: radius.full,
     paddingHorizontal: spacing.md,
-    paddingVertical: 4,
+    paddingVertical: spacing.xs,
   },
   dayTypeChipText: {
     color: colors.textSecondary,

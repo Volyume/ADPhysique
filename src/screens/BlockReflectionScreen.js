@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
   statBlock: {
     flex: 1, alignItems: 'center', paddingVertical: spacing.lg, gap: spacing.xs,
   },
-  statIcon: { marginBottom: 2 },
+  statIcon: { marginBottom: spacing.xxs },
   statValue: { fontSize: fontSize.lg, fontWeight: fontWeight.black, color: colors.textPrimary },
   statLabel: { fontSize: fontSize.xs, color: colors.textMuted },
 
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     borderTopWidth: 1, borderTopColor: colors.border,
   },
-  prInfo: { flex: 1, gap: 2 },
+  prInfo: { flex: 1, gap: spacing.xxs },
   prExercise: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textPrimary },
   prType: { fontSize: fontSize.xs, color: colors.textMuted },
   prValue: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.primary },
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary + '30',
     padding: spacing.lg,
   },
-  bestSessionInfo: { flex: 1, gap: 2 },
+  bestSessionInfo: { flex: 1, gap: spacing.xxs },
   bestSessionLabel: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   bestSessionDate: { fontSize: fontSize.xs, color: colors.textMuted },
   bestSessionVolume: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.primary },

@@ -154,7 +154,7 @@ const DIFFICULTY_LABELS = ['Beginner', 'Intermediate', 'Advanced'];
 function PlanBadge({ label, amber }) {
   return (
     <View style={[styles.badge, amber && styles.badgeAmber]}>
-      {amber && <Ionicons name="sparkles" size={9} color={colors.background} style={{ marginRight: 2 }} />}
+      {amber && <Ionicons name="sparkles" size={9} color={colors.background} style={{ marginRight: spacing.xxs }} />}
       <Text style={[styles.badgeText, amber && styles.badgeTextAmber]}>{label}</Text>
     </View>
   );
@@ -405,7 +405,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
                 name="trophy-outline"
                 size={12}
                 color={activeCollection === 'division' ? colors.primary : colors.textMuted}
-                style={{ marginRight: 4 }}
+                style={{ marginRight: spacing.xs }}
               />
             )}
             <Text style={[styles.chipText, activeCollection === item.key && styles.chipTextActive]}>
@@ -683,11 +683,11 @@ const styles = StyleSheet.create({
     padding: spacing.lg, marginBottom: spacing.lg,
   },
   quizBannerIcon: {
-    width: 40, height: 40, borderRadius: 20,
+    width: 40, height: 40, borderRadius: radius.xl,
     backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center',
   },
   quizBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  quizBannerBody: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
+  quizBannerBody: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xxs },
 
   // Plan card
   planCard: {
@@ -702,7 +702,7 @@ const styles = StyleSheet.create({
   badge: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: colors.surface2, borderRadius: radius.sm,
-    paddingHorizontal: 6, paddingVertical: 2,
+    paddingHorizontal: 6, paddingVertical: spacing.xxs,
     borderWidth: 1, borderColor: colors.border,
   },
   badgeAmber: { backgroundColor: colors.primaryBg, borderColor: colors.primary + '60' },

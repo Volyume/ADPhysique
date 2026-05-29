@@ -222,7 +222,7 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
               name={unilateral ? 'toggle' : 'toggle-outline'}
               size={20}
               color={unilateral ? colors.primary : colors.textMuted}
-              style={{ marginLeft: 4 }}
+              style={{ marginLeft: spacing.xs }}
             />
           </View>
         </TouchableOpacity>
@@ -259,7 +259,7 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
         <Text style={styles.setTypeLabel}>Set type</Text>
         <View style={styles.setTypeRight}>
           <Text style={styles.setTypeValue}>{setTypeLabel}</Text>
-          <Ionicons name="chevron-forward" size={13} color={colors.primary} style={{ marginLeft: 2 }} />
+          <Ionicons name="chevron-forward" size={13} color={colors.primary} style={{ marginLeft: spacing.xxs }} />
         </View>
       </TouchableOpacity>
     </View>
@@ -294,8 +294,8 @@ const styles = StyleSheet.create({
   plateBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingVertical: 2,
+    gap: spacing.xs,
+    paddingVertical: spacing.xxs,
     paddingHorizontal: spacing.xs,
     backgroundColor: colors.primaryBg,
     borderRadius: radius.sm,
@@ -397,10 +397,10 @@ const styles = StyleSheet.create({
   oneRmChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: spacing.xs,
     alignSelf: 'flex-start',
     paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: spacing.xxs,
     backgroundColor: colors.surface2,
     borderRadius: radius.sm,
     marginTop: spacing.xs,

@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
   indexBadge: {
     width: 28,
     height: 28,
-    borderRadius: 14,
+    borderRadius: radius.lg,
     backgroundColor: colors.surface2,
     alignItems: 'center',
     justifyContent: 'center',
@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
   exerciseMuscle: {
     fontSize: fontSize.xs,
     color: colors.textMuted,
-    marginTop: 2,
+    marginTop: spacing.xxs,
   },
   controls: {
     flexDirection: 'row',
@@ -581,7 +581,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
-    marginBottom: 2,
+    marginBottom: spacing.xxs,
   },
   pickerItemMuscle: { fontSize: fontSize.sm, color: colors.textSecondary },
 

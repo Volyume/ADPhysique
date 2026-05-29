@@ -563,7 +563,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                 activeOpacity={0.8}
               >
                 <View style={styles.approachCardHeader}>
-                  {active && <Ionicons name="checkmark-circle" size={14} color={colors.primary} style={{ marginRight: 4 }} />}
+                  {active && <Ionicons name="checkmark-circle" size={14} color={colors.primary} style={{ marginRight: spacing.xs }} />}
                   <Text style={[styles.approachCardLabel, active && styles.approachCardLabelActive]}>
                     {ap.label}
                   </Text>
@@ -1048,7 +1048,7 @@ const styles = StyleSheet.create({
   eduCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, borderLeftWidth: 3, borderLeftColor: colors.primary, padding: spacing.md, marginTop: spacing.sm },
   eduIconWrap: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center' },
   eduTitle: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
-  eduBody: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 2, lineHeight: 17 },
+  eduBody: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: spacing.xxs, lineHeight: 17 },
   pageSubtitle: {
     fontSize: fontSize.sm,
     color: colors.textMuted,
@@ -1334,7 +1334,7 @@ const styles = StyleSheet.create({
   },
   perMealCenter: {
     alignItems: 'center',
-    gap: 2,
+    gap: spacing.xxs,
     paddingVertical: spacing.xs,
   },
   perMealValue: {
@@ -1731,6 +1731,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textSecondary,
     lineHeight: 21,
-    paddingLeft: 32,
+    paddingLeft: spacing.xxl,
   },
 });

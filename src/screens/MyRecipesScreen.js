@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     minHeight: 64,
   },
   name: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
-  meta: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: 2 },
+  meta: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: spacing.xxs },
   empty: {
     flex: 1, justifyContent: 'center', alignItems: 'center',
     paddingHorizontal: spacing.xl,

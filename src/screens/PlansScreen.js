@@ -748,7 +748,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   trainingBlocksLabel: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  trainingBlocksSub: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
+  trainingBlocksSub: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xxs },
   proCoachNote: {
     fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18,
     borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm,
@@ -845,7 +845,7 @@ const styles = StyleSheet.create({
   actionCardTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   actionCardBadge: {
     backgroundColor: colors.primaryBg, borderRadius: radius.full,
-    paddingHorizontal: spacing.sm, paddingVertical: 2,
+    paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
     borderWidth: 1, borderColor: colors.primary + '40',
   },
   actionCardBadgeText: { fontSize: 9, fontWeight: fontWeight.black, color: colors.primary, letterSpacing: 0.5 },
@@ -913,7 +913,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs,
   },
   signalChip: {
-    paddingHorizontal: spacing.sm, paddingVertical: 4,
+    paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
     backgroundColor: colors.surface2, borderRadius: radius.full,
     borderWidth: 1, borderColor: colors.warning + '50',
   },

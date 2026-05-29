@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
   badgeRow: { flexDirection: 'row', marginBottom: spacing.sm },
   badge: {
     paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+    paddingVertical: spacing.xs,
     borderRadius: radius.sm,
     backgroundColor: colors.primary,
   },
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
   supportButton: {
     marginTop: spacing.md,

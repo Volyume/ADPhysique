@@ -1255,7 +1255,7 @@ export default function HomeScreen({ navigation }) {
             accessibilityLabel="Open workout history"
           >
             <View style={styles.lastSessionTop}>
-              <View style={{ gap: 2 }}>
+              <View style={{ gap: spacing.xxs }}>
                 <Text style={styles.lastSessionLabel}>Last session</Text>
                 <Text style={styles.lastSessionRelDate}>{getRelativeDay(lastSession.startedAt)}</Text>
               </View>
@@ -1315,7 +1315,7 @@ export default function HomeScreen({ navigation }) {
             <View style={styles.coachingNudgeLeft}>
               <Ionicons name="pulse-outline" size={20} color={colors.primary} />
             </View>
-            <View style={{ flex: 1, gap: 4 }}>
+            <View style={{ flex: 1, gap: spacing.xs }}>
               <Text style={styles.coachingNudgeTitle}>Your weekly coaching review is here</Text>
               <Text style={styles.coachingNudgeBody}>
                 Each week Volyume looks at how your training went and suggests what to adjust going forward. Tap to see yours.
@@ -1629,7 +1629,7 @@ function CoachBriefCard({ brief, onDismiss }) {
 
   return (
     <View style={[styles.coachBriefCard, { borderColor }]}>
-      <Ionicons name={iconName} size={18} color={iconColor} style={{ marginTop: 2 }} />
+      <Ionicons name={iconName} size={18} color={iconColor} style={{ marginTop: spacing.xxs }} />
       <View style={{ flex: 1, gap: 3 }}>
         <Text style={styles.coachBriefHeadline}>{brief.headline}</Text>
         <Text style={styles.coachBriefBody}>{brief.body}</Text>
@@ -1755,8 +1755,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   streakChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: spacing.sm, paddingVertical: 2,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
     borderRadius: radius.full,
     backgroundColor: colors.primaryBg,
   },
@@ -1838,7 +1838,7 @@ const styles = StyleSheet.create({
   todayIntakeEntries: {
     color: colors.textMuted,
     fontSize: fontSize.xs,
-    marginTop: 2,
+    marginTop: spacing.xxs,
   },
   weekBarValue: {
     fontSize: fontSize.xl,
@@ -1871,12 +1871,12 @@ const styles = StyleSheet.create({
   },
   continueInner: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   continueIcon: {
-    width: 40, height: 40, borderRadius: 20,
+    width: 40, height: 40, borderRadius: radius.xl,
     backgroundColor: 'rgba(0,0,0,0.2)',
     alignItems: 'center', justifyContent: 'center',
   },
   continueTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
-  continueSub: { fontSize: fontSize.xs, color: colors.background + 'CC', marginTop: 2 },
+  continueSub: { fontSize: fontSize.xs, color: colors.background + 'CC', marginTop: spacing.xxs },
 
   // Hero plan card. Restrained: flat surface, one primary CTA, two
   // discreet text links underneath. Stat goes in the eyebrow line so
@@ -1908,7 +1908,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 6,
     alignSelf: 'flex-start',
     marginTop: spacing.xs,
-    paddingHorizontal: spacing.sm, paddingVertical: 4,
+    paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
     borderRadius: radius.full,
     backgroundColor: colors.surface2,
     borderWidth: 1, borderColor: colors.border,
@@ -1978,8 +1978,8 @@ const styles = StyleSheet.create({
   // No plan, plan-first section
   noPlanSection: { gap: spacing.md },
   proRecoverBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: colors.primary, borderRadius: 14, paddingVertical: 14, marginTop: 8,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: 14, marginTop: spacing.sm,
   },
   proRecoverBtnText: {
     fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background,
@@ -2072,11 +2072,11 @@ const styles = StyleSheet.create({
     width: 40, height: 40, borderRadius: radius.sm,
     backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
   },
-  builderTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: 2 },
+  builderTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xxs },
   builderTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   builderBadge: {
     backgroundColor: colors.primaryBg, borderRadius: radius.full,
-    paddingHorizontal: spacing.sm, paddingVertical: 2,
+    paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
     borderWidth: 1, borderColor: colors.primary + '40',
   },
   builderBadgeText: { fontSize: 9, fontWeight: fontWeight.bold, color: colors.primary },
@@ -2104,11 +2104,11 @@ const styles = StyleSheet.create({
   repeatBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: spacing.xs,
     backgroundColor: colors.primaryBg,
     borderRadius: radius.full,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+    paddingVertical: spacing.xs,
     borderWidth: 1,
     borderColor: colors.primary + '40',
   },
@@ -2122,9 +2122,9 @@ const styles = StyleSheet.create({
   },
   lastSessionStatRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.xs },
   lastSessionStatPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
     backgroundColor: colors.surface2, borderRadius: radius.full,
-    paddingHorizontal: spacing.sm, paddingVertical: 4,
+    paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
     borderWidth: 1, borderColor: colors.border,
   },
   lastSessionStatText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
@@ -2173,17 +2173,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   dayBadge: {
-    width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface2,
+    width: 40, height: 40, borderRadius: radius.xl, backgroundColor: colors.surface2,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border,
   },
   dayBadgeActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary + '60' },
   dayNum: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textSecondary },
   dayNumActive: { color: colors.primary },
   pickerName: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  pickerMeta: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
+  pickerMeta: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xxs },
   nextBadge: {
     backgroundColor: colors.primaryBg, borderRadius: radius.full,
-    paddingHorizontal: spacing.sm, paddingVertical: 2,
+    paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
     borderWidth: 1, borderColor: colors.primary + '40',
   },
   nextBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
@@ -2284,7 +2284,7 @@ const styles = StyleSheet.create({
   intentOptionSub: {
     fontSize: fontSize.xs,
     color: colors.textSecondary,
-    marginTop: 2,
+    marginTop: spacing.xxs,
   },
   intentSkip: {
     alignItems: 'center',
@@ -2328,20 +2328,20 @@ const styles = StyleSheet.create({
   // Recovery week banner
   coachBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: colors.primaryBg, borderRadius: 14,
+    backgroundColor: colors.primaryBg, borderRadius: radius.lg,
     borderWidth: 1, borderColor: colors.primary + '50',
-    padding: 14, marginBottom: 12, gap: 12,
+    padding: 14, marginBottom: spacing.md, gap: spacing.md,
   },
   coachBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
-  coachBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary, marginBottom: 2 },
+  coachBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary, marginBottom: spacing.xxs },
   coachBannerBody: { fontSize: 12, color: colors.textSecondary, lineHeight: 17 },
   deloadBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: 'rgba(245,158,11,0.12)', borderRadius: 10, padding: 14,
-    borderWidth: 1, borderColor: 'rgba(245,158,11,0.35)', marginBottom: 12,
+    backgroundColor: 'rgba(245,158,11,0.12)', borderRadius: radius.md, padding: 14,
+    borderWidth: 1, borderColor: 'rgba(245,158,11,0.35)', marginBottom: spacing.md,
   },
   deloadBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
-  deloadBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.warning, marginBottom: 2 },
+  deloadBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.warning, marginBottom: spacing.xxs },
   deloadBannerBody: { fontSize: 12, color: colors.textSecondary, lineHeight: 17 },
 
   // Nutrition phase sync banner
@@ -2394,11 +2394,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 14,
     backgroundColor: colors.primaryBg,
-    borderRadius: 14,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.primary,
-    padding: 16,
-    marginBottom: 16,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
   },
   quickStartIcon: {
     width: 48,

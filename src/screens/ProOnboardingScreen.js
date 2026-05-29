@@ -634,7 +634,7 @@ export default function ProOnboardingScreen({ navigation }) {
               <Text style={styles.fieldLabel}>Password</Text>
               <View style={[styles.fieldWrap, passwordFocused && styles.fieldWrapFocused]}>
                 <TextInput
-                  style={[styles.fieldInput, { paddingRight: 48 }]}
+                  style={[styles.fieldInput, { paddingRight: spacing.xxxl }]}
                   value={password}
                   onChangeText={setPassword}
                   placeholder={authMode === 'signup' ? 'At least 8 characters' : 'Your password'}
@@ -1142,14 +1142,14 @@ const styles = StyleSheet.create({
   },
   proBadge: {
     backgroundColor: colors.primary, borderRadius: 4,
-    paddingHorizontal: 7, paddingVertical: 2,
+    paddingHorizontal: 7, paddingVertical: spacing.xxs,
   },
   proBadgeText: {
     fontSize: 9, fontWeight: fontWeight.black,
     color: colors.background, letterSpacing: 0.8,
   },
 
-  progressRow: { flexDirection: 'row', gap: 4, marginBottom: spacing.sm },
+  progressRow: { flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.sm },
   progressSegment: { flex: 1, height: 3, borderRadius: 2 },
   progressDone: { backgroundColor: colors.primary },
   progressActive: { backgroundColor: colors.primary + 'CC' },
@@ -1165,7 +1165,7 @@ const styles = StyleSheet.create({
   // Back button
   backBtn: {
     flexDirection: 'row', alignItems: 'center',
-    gap: 4, marginBottom: spacing.lg, alignSelf: 'flex-start',
+    gap: spacing.xs, marginBottom: spacing.lg, alignSelf: 'flex-start',
   },
   backBtnText: { fontSize: fontSize.sm, color: colors.textSecondary },
 
@@ -1195,7 +1195,7 @@ const styles = StyleSheet.create({
   },
   eyeBtn: {
     position: 'absolute', right: spacing.md,
-    top: 0, bottom: 0, justifyContent: 'center', paddingHorizontal: 4,
+    top: 0, bottom: 0, justifyContent: 'center', paddingHorizontal: spacing.xs,
   },
 
   heightImperialRow: { flexDirection: 'row', gap: spacing.md },
@@ -1206,10 +1206,10 @@ const styles = StyleSheet.create({
   },
   segmentRowSmall: {
     flexDirection: 'row', backgroundColor: colors.surface,
-    borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, padding: 2,
+    borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, padding: spacing.xxs,
   },
   segmentSmall: {
-    paddingVertical: 4, paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs, paddingHorizontal: spacing.sm,
     borderRadius: radius.sm - 2, alignItems: 'center',
   },
   segmentTextSmall: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted },
@@ -1266,7 +1266,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
     alignItems: 'center', justifyContent: 'center',
   },
-  notifTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary, marginBottom: 2 },
+  notifTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.xxs },
   notifSub: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17 },
 
   toggle: {
@@ -1274,7 +1274,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface3, justifyContent: 'center', paddingHorizontal: 3,
   },
   toggleOn: { backgroundColor: colors.primary },
-  toggleThumb: { width: 20, height: 20, borderRadius: 10, backgroundColor: colors.textMuted },
+  toggleThumb: { width: 20, height: 20, borderRadius: radius.md, backgroundColor: colors.textMuted },
   toggleThumbOn: { backgroundColor: colors.background, alignSelf: 'flex-end' },
 
   timeRow: { marginTop: spacing.md },
@@ -1302,7 +1302,7 @@ const styles = StyleSheet.create({
   offerBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     alignSelf: 'flex-start', backgroundColor: colors.primary,
-    borderRadius: 4, paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: 4, paddingHorizontal: spacing.sm, paddingVertical: 3,
   },
   offerBadgeText: { fontSize: 9, fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.8 },
   offerHeadline: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.sm, lineHeight: 26 },

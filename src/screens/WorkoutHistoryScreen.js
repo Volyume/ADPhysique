@@ -891,8 +891,8 @@ const styles = StyleSheet.create({
   },
   empty: {
     alignItems: 'center',
-    paddingHorizontal: 32,
-    paddingTop: 48,
+    paddingHorizontal: spacing.xxl,
+    paddingTop: spacing.xxxl,
     gap: spacing.md,
   },
   emptyTitle: {

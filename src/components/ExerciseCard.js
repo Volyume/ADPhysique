@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
   tag: {
     backgroundColor: colors.primaryBg,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: spacing.xxs,
     borderRadius: radius.sm,
   },
   tagText: {

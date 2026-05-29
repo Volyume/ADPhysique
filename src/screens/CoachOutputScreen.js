@@ -1679,7 +1679,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 3,
     backgroundColor: colors.successBg ?? colors.surface2,
     borderRadius: radius.full,
-    paddingHorizontal: spacing.sm, paddingVertical: 2,
+    paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
     borderWidth: 1, borderColor: (colors.success ?? colors.primary) + '50',
   },
   appliedChipText: {
@@ -1718,7 +1718,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2,
     borderRadius: radius.md,
     padding: spacing.md,
-    gap: 2,
+    gap: spacing.xxs,
   },
   macroCycleColLabel: {
     fontSize: fontSize.xs,

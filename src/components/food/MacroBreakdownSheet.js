@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
   },
   header: { marginBottom: spacing.md },
   title: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold },
-  subtitle: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: 2 },
+  subtitle: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: spacing.xxs },
   row: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingVertical: spacing.md,

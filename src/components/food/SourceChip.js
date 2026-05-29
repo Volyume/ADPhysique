@@ -33,7 +33,7 @@ export default function SourceChip({ source }) {
 const styles = StyleSheet.create({
   chip: {
     paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingVertical: spacing.xxs,
     borderRadius: radius.sm,
     backgroundColor: colors.surface,
     borderWidth: 1,

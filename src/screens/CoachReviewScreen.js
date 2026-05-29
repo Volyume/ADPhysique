@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { startOfWeek, endOfWeek, format, isWithinInterval } from 'date-fns';
-import { colors, spacing, fontSize } from '../styles/theme';
+import { colors, spacing, fontSize, radius } from '../styles/theme';
 import { getAllWorkouts, getCompletedWorkoutSets, getAllExercises, getRecentCheckins } from '../lib/database';
 import { calculateWeeklyVolume, getVolumeStatus, shouldDeload, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS, detectLaggingMuscles } from '../lib/algorithms';
 import { SkeletonCard } from '../components/Skeleton';
@@ -630,7 +630,7 @@ const styles = StyleSheet.create({
   // Cards
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 10,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.lg,
@@ -723,7 +723,7 @@ const styles = StyleSheet.create({
   volumeBadge: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,
-    borderRadius: 6,
+    borderRadius: radius.sm,
     minWidth: 80,
     alignItems: 'center',
   },

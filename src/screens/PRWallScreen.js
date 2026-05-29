@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
   },
-  strengthNarrative: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
+  strengthNarrative: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xxs },
   levelBadge: {
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
@@ -509,11 +509,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
   chartFooterText: { fontSize: 10, color: colors.textMuted },
 
-  empty: { alignItems: 'center', paddingHorizontal: 32, paddingTop: 48, gap: spacing.md },
+  empty: { alignItems: 'center', paddingHorizontal: spacing.xxl, paddingTop: spacing.xxxl, gap: spacing.md },
   emptyTitle: {
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,

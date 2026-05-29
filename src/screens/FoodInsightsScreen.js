@@ -248,12 +248,12 @@ const styles = StyleSheet.create({
   barRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
   barDay: { color: colors.textSecondary, fontSize: fontSize.sm, width: 36 },
   barTrack: {
-    flex: 1, height: 12, borderRadius: 6,
+    flex: 1, height: 12, borderRadius: radius.sm,
     backgroundColor: colors.surface2,
     overflow: 'hidden',
     marginHorizontal: spacing.sm,
   },
-  barFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 6 },
+  barFill: { height: '100%', backgroundColor: colors.primary, borderRadius: radius.sm },
   barValue: { color: colors.textPrimary, fontSize: fontSize.sm, width: 56, textAlign: 'right' },
 
   adherenceRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },

@@ -1139,7 +1139,7 @@ const styles = StyleSheet.create({
   mesoEmptyBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
   mesoTop:          { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   mesoName:         { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary, flex: 1 },
-  mesoWeek:         { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2 },
+  mesoWeek:         { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: spacing.xxs },
   mesoProgressTrack: {
     height: 4, borderRadius: radius.full,
     backgroundColor: colors.surface2, overflow: 'hidden',
@@ -1160,7 +1160,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3,
   },
   insightCopy:    { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
-  insightDismiss: { padding: 2 },
+  insightDismiss: { padding: spacing.xxs },
 
   // ── Volume snapshot ──
   volGrid: {
@@ -1168,18 +1168,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderRadius: radius.lg,
     padding: spacing.md, borderWidth: 1, borderColor: colors.border,
   },
-  volCell:   { width: '30%', alignItems: 'center', gap: 4, paddingVertical: spacing.xs },
+  volCell:   { width: '30%', alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.xs },
   volDot:    { width: 10, height: 10, borderRadius: 5 },
   volMuscle: { fontSize: 10, color: colors.textSecondary, textAlign: 'center' },
   volSets:   { fontSize: 10, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   volLegend: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
-  volLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  volLegendItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   volLegendDot: { width: 8, height: 8, borderRadius: 4 },
   volLegendText: { fontSize: 9, color: colors.textMuted },
 
   // ── PR Sparkline ──
   windowToggle: {
-    flexDirection: 'row', alignItems: 'center', gap: 2,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xxs,
     backgroundColor: colors.primaryBg, borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: 3,
     borderWidth: 1, borderColor: colors.primary,
@@ -1188,11 +1188,11 @@ const styles = StyleSheet.create({
   prWrap:    { gap: spacing.sm },
   prTotal:   { fontSize: fontSize.xs, color: colors.textMuted },
   prBarsRow: {
-    flexDirection: 'row', alignItems: 'flex-end', gap: 4, height: 60,
+    flexDirection: 'row', alignItems: 'flex-end', gap: spacing.xs, height: 60,
   },
   prBarCol:  { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
   prBar:     { width: '100%', borderRadius: 2 },
-  prBarCount: { fontSize: 8, color: colors.gold, marginTop: 2, fontWeight: '700' },
+  prBarCount: { fontSize: 8, color: colors.gold, marginTop: spacing.xxs, fontWeight: '700' },
   prEmpty:   {
     backgroundColor: colors.surface, borderRadius: radius.md,
     padding: spacing.lg, borderWidth: 1, borderColor: colors.border,
@@ -1220,7 +1220,7 @@ const styles = StyleSheet.create({
   },
   sessionLeft:  { flex: 1 },
   sessionName:  { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  sessionMeta:  { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2 },
+  sessionMeta:  { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: spacing.xxs },
   diffChip:     { borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: 3 },
   diffText:     { fontSize: fontSize.xs, fontWeight: fontWeight.bold },
 
@@ -1254,7 +1254,7 @@ const styles = StyleSheet.create({
   },
   deloadTitle: {
     fontSize: fontSize.md, fontWeight: fontWeight.semibold,
-    color: colors.warning, marginBottom: 2,
+    color: colors.warning, marginBottom: spacing.xxs,
   },
   deloadSub: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
 
@@ -1374,8 +1374,8 @@ const styles = StyleSheet.create({
   // ── Analytics empty state ──
   emptyState: {
     alignItems: 'center',
-    paddingHorizontal: 32,
-    paddingTop: 48,
+    paddingHorizontal: spacing.xxl,
+    paddingTop: spacing.xxxl,
     gap: spacing.md,
   },
   emptyStateHeading: {

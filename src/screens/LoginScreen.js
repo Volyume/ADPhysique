@@ -511,7 +511,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     color: colors.textPrimary,
   },
-  fieldInputPassword: { paddingRight: 48 },
+  fieldInputPassword: { paddingRight: spacing.xxxl },
   eyeBtn: {
     position: 'absolute',
     right: spacing.md,

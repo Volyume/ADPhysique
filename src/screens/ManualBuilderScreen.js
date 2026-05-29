@@ -899,7 +899,7 @@ const styles = StyleSheet.create({
   },
   exRowLeft: {
     flex: 1,
-    gap: 2,
+    gap: spacing.xxs,
   },
   exName: {
     fontSize: fontSize.md,
@@ -1015,7 +1015,7 @@ const styles = StyleSheet.create({
   },
   pickerRowContent: {
     flex: 1,
-    gap: 2,
+    gap: spacing.xxs,
   },
   pickerExName: {
     fontSize: fontSize.md,
@@ -1229,7 +1229,7 @@ const balanceStyles = StyleSheet.create({
   cell: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: spacing.xs,
     minWidth: '45%',
     flex: 1,
   },

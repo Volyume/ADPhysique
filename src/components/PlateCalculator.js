@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
   resultSide: {
     fontSize: fontSize.sm,
     color: colors.textSecondary,
-    marginTop: 2,
+    marginTop: spacing.xxs,
   },
   barVisual: {
     flexDirection: 'row',
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     height: 18,
     backgroundColor: colors.textSecondary,
     borderRadius: 3,
-    marginLeft: 2,
+    marginLeft: spacing.xxs,
   },
   emptyText: {
     textAlign: 'center',
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
   plateDot: {
     width: 12,
     height: 12,
-    borderRadius: 6,
+    borderRadius: radius.sm,
   },
   plateRowText: {
     fontSize: fontSize.sm,

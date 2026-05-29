@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.lg,
   },
   proBadge: {
-    backgroundColor: colors.primary, borderRadius: 4, paddingHorizontal: 7, paddingVertical: 2,
+    backgroundColor: colors.primary, borderRadius: 4, paddingHorizontal: 7, paddingVertical: spacing.xxs,
   },
   proBadgeText: { fontSize: 9, fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.8 },
 
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
     width: 36, height: 36, borderRadius: radius.md, backgroundColor: colors.primaryBg,
     alignItems: 'center', justifyContent: 'center',
   },
-  routineTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: 4 },
+  routineTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.xs },
   routineBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
 
   calorieRow: {
@@ -327,13 +327,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row', borderTopWidth: 1, borderTopColor: colors.border,
     paddingTop: spacing.md, marginBottom: spacing.md,
   },
-  macroItem: { flex: 1, alignItems: 'center', gap: 2 },
+  macroItem: { flex: 1, alignItems: 'center', gap: spacing.xxs },
   macroItemBorder: { borderLeftWidth: 1, borderLeftColor: colors.border },
   macroValue: { fontSize: fontSize.lg, fontWeight: fontWeight.black, color: colors.textPrimary },
   macroLabel: { fontSize: fontSize.xs, color: colors.textMuted },
   goalRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
   goalChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
     backgroundColor: colors.primaryBg, borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
     borderWidth: 1, borderColor: colors.primary + '30',

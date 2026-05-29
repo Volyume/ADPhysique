@@ -76,6 +76,6 @@ const styles = StyleSheet.create({
   },
   rowName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
   rowNameMuted: { color: colors.textMuted, textDecorationLine: 'line-through' },
-  rowMeta: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: 2 },
+  rowMeta: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: spacing.xxs },
   rowMetaMuted: { color: colors.textMuted, opacity: 0.7 },
 });

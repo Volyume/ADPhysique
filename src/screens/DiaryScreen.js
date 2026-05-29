@@ -740,7 +740,7 @@ const styles = StyleSheet.create({
   dateLabel: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold, minWidth: 96, textAlign: 'center' },
   todayPill: {
     paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
-    borderRadius: 999, borderWidth: 1, borderColor: colors.border,
+    borderRadius: radius.full, borderWidth: 1, borderColor: colors.border,
   },
   todayPillText: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
   scroll: { flex: 1 },

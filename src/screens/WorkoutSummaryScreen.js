@@ -1057,8 +1057,8 @@ const styles = StyleSheet.create({
   muscleSetCount: { fontSize: fontSize.sm, color: colors.textSecondary },
   volumeInsightText: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18 },
   volumeWhyToggle: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    alignSelf: 'flex-start', paddingVertical: 2,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    alignSelf: 'flex-start', paddingVertical: spacing.xxs,
   },
   volumeWhyToggleText: {
     fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold,
@@ -1066,7 +1066,7 @@ const styles = StyleSheet.create({
   volumeWhyBody: {
     fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 19,
     backgroundColor: colors.surface2, borderRadius: radius.sm,
-    padding: spacing.sm, marginTop: 2,
+    padding: spacing.sm, marginTop: spacing.xxs,
   },
   statusBadge: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, borderRadius: radius.sm },
   statusText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold },
@@ -1109,7 +1109,7 @@ const styles = StyleSheet.create({
   ratingLabel: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textSecondary },
   ratingBtns: { flexDirection: 'row', gap: spacing.xs },
   ratingBtn: {
-    width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface2,
+    width: 40, height: 40, borderRadius: radius.xl, backgroundColor: colors.surface2,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border,
   },
   ratingBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },

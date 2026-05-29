@@ -1126,7 +1126,7 @@ const pvStyles = StyleSheet.create({
   topAccent: { height: 3, backgroundColor: colors.primary },
   headerRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.sm, paddingTop: spacing.sm, paddingBottom: 2,
+    paddingHorizontal: spacing.sm, paddingTop: spacing.sm, paddingBottom: spacing.xxs,
   },
   dateText: { color: colors.textMuted, fontWeight: fontWeight.medium },
   planLabel: {
@@ -1135,7 +1135,7 @@ const pvStyles = StyleSheet.create({
   },
   heroText: {
     fontWeight: fontWeight.black, color: colors.textPrimary,
-    paddingHorizontal: spacing.sm, marginTop: 2,
+    paddingHorizontal: spacing.sm, marginTop: spacing.xxs,
   },
   heroTextSq: { fontSize: 16, lineHeight: 19 },
   heroTextSt: { fontSize: 12, lineHeight: 14 },
@@ -1147,19 +1147,19 @@ const pvStyles = StyleSheet.create({
   },
   heroLabel: {
     color: colors.textSecondary, fontWeight: fontWeight.bold,
-    letterSpacing: 0.5, marginTop: 2,
+    letterSpacing: 0.5, marginTop: spacing.xxs,
   },
   intensityBadge: {
     alignSelf: 'center', borderRadius: 12, borderWidth: 1,
-    paddingHorizontal: 8, paddingVertical: 2, marginVertical: 4,
+    paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, marginVertical: spacing.xs,
   },
   intensityText: { fontWeight: fontWeight.bold, letterSpacing: 0.5 },
   statsRow: {
     flexDirection: 'row', gap: 5,
-    paddingHorizontal: spacing.sm, marginTop: 4,
+    paddingHorizontal: spacing.sm, marginTop: spacing.xs,
   },
   statBox: {
-    flex: 1, backgroundColor: colors.surface, borderRadius: 6,
+    flex: 1, backgroundColor: colors.surface, borderRadius: radius.sm,
     paddingVertical: 5, alignItems: 'center',
     borderWidth: 1, borderColor: colors.border,
   },
@@ -1168,12 +1168,12 @@ const pvStyles = StyleSheet.create({
   topLiftCard: {
     flexDirection: 'row', alignItems: 'center',
     marginHorizontal: spacing.sm, marginTop: 5,
-    backgroundColor: colors.surface, borderRadius: 6,
+    backgroundColor: colors.surface, borderRadius: radius.sm,
     borderWidth: 1, borderColor: colors.border,
     overflow: 'hidden',
   },
   topLiftStripe: { width: 3, backgroundColor: colors.primary, alignSelf: 'stretch' },
-  topLiftBody: { flex: 1, paddingVertical: 4, paddingHorizontal: 6 },
+  topLiftBody: { flex: 1, paddingVertical: spacing.xs, paddingHorizontal: 6 },
   topLiftLabel: { fontSize: 5.5, color: colors.textMuted, fontWeight: fontWeight.bold, letterSpacing: 0.5 },
   topLiftValue: { fontSize: 11, color: colors.textPrimary, fontWeight: fontWeight.black },
   topLiftName: { fontSize: 7, color: colors.textSecondary, paddingRight: 6, maxWidth: 60 },
@@ -1183,7 +1183,7 @@ const pvStyles = StyleSheet.create({
   },
   chip: {
     backgroundColor: colors.surface2, borderRadius: 8,
-    paddingHorizontal: 5, paddingVertical: 2,
+    paddingHorizontal: 5, paddingVertical: spacing.xxs,
     borderWidth: 0.5, borderColor: colors.border,
   },
   chipText: { fontSize: 6.5, color: colors.textSecondary, fontWeight: fontWeight.semibold },
@@ -1197,14 +1197,14 @@ const pvStyles = StyleSheet.create({
     height: 1, backgroundColor: 'rgba(255,255,255,0.06)',
     width: '90%', marginBottom: 6,
   },
-  footerBrand: { marginBottom: 2 },
+  footerBrand: { marginBottom: spacing.xxs },
   footerTagline: {
     color: colors.primary, fontWeight: fontWeight.bold,
     letterSpacing: 1, marginTop: 1,
   },
   footerUrl: {
     fontSize: 6.5, color: colors.textMuted,
-    fontWeight: fontWeight.medium, marginTop: 2,
+    fontWeight: fontWeight.medium, marginTop: spacing.xxs,
   },
   footerAccent: { height: 2, backgroundColor: colors.primary, width: '40%', marginTop: 6, borderRadius: 1 },
   prCenter: {
@@ -1223,7 +1223,7 @@ const pvStyles = StyleSheet.create({
   prWeight: { fontWeight: fontWeight.black, color: colors.primary, textAlign: 'center' },
   prWeightSq: { fontSize: 28 },
   prWeightSt: { fontSize: 24 },
-  prPrevBest: { fontSize: 8, color: colors.textMuted, textAlign: 'center', marginTop: 4 },
+  prPrevBest: { fontSize: 8, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xs },
 });
 
 const styles = StyleSheet.create({
@@ -1235,7 +1235,7 @@ const styles = StyleSheet.create({
   },
   segmentRow: {
     flexDirection: 'row', gap: spacing.xs,
-    backgroundColor: colors.surface, borderRadius: radius.md, padding: 4,
+    backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.xs,
     borderWidth: 1, borderColor: colors.border,
   },
   segment: {

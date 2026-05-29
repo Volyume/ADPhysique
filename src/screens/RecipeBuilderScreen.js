@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   ingName: { color: colors.textPrimary, fontSize: fontSize.md },
-  ingBrand: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: 2 },
+  ingBrand: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: spacing.xxs },
   qtyInput: {
     width: 64, textAlign: 'right',
     color: colors.textPrimary, fontSize: fontSize.md,
@@ -328,5 +328,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background, borderRadius: radius.sm,
   },
   pillVal: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.bold },
-  pillLabel: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: 2 },
+  pillLabel: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: spacing.xxs },
 });

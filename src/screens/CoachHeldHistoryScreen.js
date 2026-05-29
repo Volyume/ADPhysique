@@ -233,12 +233,12 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: spacing.sm,
   },
-  decisionIcon: { marginTop: 2 },
+  decisionIcon: { marginTop: spacing.xxs },
   decisionLabel: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
     color: colors.textMuted,
-    marginBottom: 2,
+    marginBottom: spacing.xxs,
   },
   decisionLabelChanged: { color: colors.success },
   decisionDetail: {

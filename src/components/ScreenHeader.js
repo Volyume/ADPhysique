@@ -40,7 +40,7 @@ export default function ScreenHeader({ title, subtitle, right }) {
 
 const styles = StyleSheet.create({
   wrap: {
-    gap: 2,
+    gap: spacing.xxs,
     paddingBottom: spacing.xs,
   },
   titleRow: {

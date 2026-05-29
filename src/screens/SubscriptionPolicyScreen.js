@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
   strong: { color: colors.textPrimary, fontWeight: fontWeight.bold },
 
   bulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, paddingLeft: spacing.xs },
-  bulletDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: colors.primary, marginTop: 8 },
+  bulletDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: colors.primary, marginTop: spacing.sm },
   bulletText: { color: colors.textSecondary, fontSize: fontSize.sm, lineHeight: 20, flex: 1 },
 
   keypoint: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, backgroundColor: colors.primaryBg, borderRadius: radius.md, padding: spacing.md, borderLeftWidth: 3, borderLeftColor: colors.primary, marginTop: spacing.xs },

@@ -66,7 +66,7 @@ export function SkeletonCard({ height = 92, style }) {
     <View style={[styles.cardWrap, style, { minHeight: height }]}>
       <Skeleton width={120} height={12} />
       <Skeleton width="78%" height={20} style={{ marginTop: 10 }} />
-      <Skeleton width="46%" height={12} style={{ marginTop: 8 }} />
+      <Skeleton width="46%" height={12} style={{ marginTop: spacing.sm }} />
     </View>
   );
 }

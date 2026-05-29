@@ -991,7 +991,7 @@ function DeltaBadge({ delta, units, small, neutral }) {
   const isUp = delta > 0;
   const color = neutral ? colors.textMuted : (isUp ? colors.success : colors.error);
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xxs }}>
       <Ionicons name={isUp ? 'trending-up' : 'trending-down'} size={small ? 11 : 14} color={color} />
       <Text style={{ fontSize: small ? 10 : fontSize.xs, color, fontWeight: fontWeight.semibold }}>
         {isUp ? '+' : ''}{delta} {units}
@@ -1044,7 +1044,7 @@ const styles = StyleSheet.create({
   nutritionCardTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   nutritionCardLink: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
   nutritionGrid: { flexDirection: 'row', gap: spacing.md },
-  nutritionCell: { flex: 1, alignItems: 'center', gap: 2 },
+  nutritionCell: { flex: 1, alignItems: 'center', gap: spacing.xxs },
   nutritionValue: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
   nutritionLabel: { fontSize: fontSize.xs, color: colors.textMuted },
   nutritionEmpty: { fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 18 },
@@ -1064,9 +1064,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
   phaseChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
     borderWidth: 1, borderRadius: radius.full,
-    paddingHorizontal: spacing.sm, paddingVertical: 2,
+    paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
   },
   phaseLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.bold },
   weightRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
@@ -1079,7 +1079,7 @@ const styles = StyleSheet.create({
   measureGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   measureCell: {
     minWidth: '30%', backgroundColor: colors.surface2, borderRadius: radius.md,
-    padding: spacing.md, gap: 2, borderWidth: 1, borderColor: 'transparent',
+    padding: spacing.md, gap: spacing.xxs, borderWidth: 1, borderColor: 'transparent',
   },
   measureCellActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
   measureValue: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },

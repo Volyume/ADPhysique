@@ -273,9 +273,9 @@ const styles = StyleSheet.create({
   macroHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: spacing.sm },
   macroName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
   macroKcal: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
-  macroRole: { color: colors.textSecondary, fontSize: fontSize.sm, lineHeight: 19, marginTop: 2 },
+  macroRole: { color: colors.textSecondary, fontSize: fontSize.sm, lineHeight: 19, marginTop: spacing.xxs },
 
-  phaseLine: { backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md, gap: 2 },
+  phaseLine: { backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md, gap: spacing.xxs },
   phaseHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: spacing.sm, flexWrap: 'wrap' },
   phaseName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
   phaseRate: { color: colors.primary, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
 
   teaser: { flexDirection: 'row', gap: spacing.md, backgroundColor: colors.surface2, borderRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.borderLight, alignItems: 'flex-start' },
   teaserIconWrap: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center' },
-  teaserTitle: { color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.bold, marginBottom: 2 },
+  teaserTitle: { color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.bold, marginBottom: spacing.xxs },
   teaserBody: { color: colors.textSecondary, fontSize: fontSize.sm, lineHeight: 20 },
 
   footer: { color: colors.textMuted, fontSize: fontSize.xs, lineHeight: 17, textAlign: 'center', marginTop: spacing.sm, fontStyle: 'italic' },
