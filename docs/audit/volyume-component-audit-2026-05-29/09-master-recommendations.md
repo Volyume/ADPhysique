@@ -30,14 +30,19 @@ DONE (shipped to main, tested):
   the larger-text swap); tab-bar labels + splash background tokenised.
 - S3 Card primitive (base surface + accent border via withAlpha + optional
   PressableCard press).
-- S4 Button primitive (variant/size/loading/disabled/icon/trailingIcon),
-  adopted on PlanDetail, Paywall, ProSetupComplete, Subscription.
+- S4 Button primitive (variant/size/loading/disabled/icon/trailingIcon/
+  testID), adopted on PlanDetail, Paywall, ProSetupComplete, Subscription,
+  FirstRun, CascadeGate, ScanLabel, Login, ProUpgrade, BuildWorkout,
+  RoutineDetail, WellbeingCheck, AddCustomFood. Remaining inline-button
+  sites are inside the large stateful screens (Home 2331, ProOnboarding
+  1331, ManualBuilder 1269, WeeklyCheckIn, BodyMetrics, ProGoalSetup,
+  ExerciseLibrary, VolumeHeatmap, Plans/Mesocycle secondary CTAs).
 - H2 HeldDecisionCard support-link no longer dead-ends (safety).
 - H4 (partial) chart a11y: VolumeBars, BlockProgressCard, FatigueTrendCard,
   Sparkline, and BodyDiagramHeatmap regions now expose accessibility
   labels/roles. MacroRings Skia fallback + ring a11y still outstanding.
-- H5 (partial) skeleton loading on PlanDetail. Plans / PlanLibrary /
-  Mesocycle still to do.
+- H5 skeleton loading on PlanDetail, Plans, PlanLibrary, Mesocycle (the
+  plan surfaces are done).
 - DiaryScreen FABs moved to shadow tokens.
 
 NOT STARTED (need runtime verification, deferred to a verifiable session):
@@ -48,8 +53,10 @@ NOT STARTED (need runtime verification, deferred to a verifiable session):
 - S8 Toast-as-error sweep (broad; touches many write paths).
 - H1 header-system unification.
 - H8 CoachOutput decomposition.
-- Remaining Button/Card rollout across the other ~10 inline-button screens
-  and the 83 inline card blocks.
+- Card primitive adoption across the 83 inline card blocks (the primitive
+  exists; migration is incremental and low-risk but high-volume).
+- Button rollout into the large stateful screens listed above (one or two
+  CTAs each, buried in dense logic; lower value-per-edit, do opportunistically).
 
 ---
 
