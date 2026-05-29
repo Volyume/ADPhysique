@@ -557,8 +557,14 @@ possible regardless of this plan.
   cannot verify a split. With the app runnable it could be done incrementally
   (one domain at a time behind a re-export facade), but it is the same
   category as the row-12 sync refactor the founder deferred for exactly this
-  reason (not worth rewriting the most fragile subsystem for tidiness). Pending
-  a founder decision on whether it is worth a dedicated effort.
+  reason (not worth rewriting the most fragile subsystem for tidiness).
+  **Skipped 2026-05-29 by founder decision**, consistent with the row-12 call.
+  Revisit only if the maintenance pain starts to bite.
+
+**Audit-implementation arc closed 2026-05-29.** Phases 0-4 plus D4 and the D6
+dead-dep removal shipped and tested. D7 was overturned on verification (no work
+needed). The D3/D5 database split and the remaining D6 hygiene (jest config,
+dep pinning, charting consolidation) were consciously left, with cause, above.
 - D7: **Not needed (overturned).** See finding D7: the named screens already use
   `FlatList` or render bounded lists; no migration required.
 
