@@ -8,17 +8,14 @@ const KCAL_STROKE = 14;
 const MACRO_SIZE = 44;
 const MACRO_STROKE = 5;
 
-// Three-band adherence colour (GAP row 8, founder decision 2026-05-27):
-// under target shows the brand amber, within 5% of target shows success
-// green, over target shows the warning amber. The over band is amber,
-// deliberately not red, so an over-target day reads as a gentle signal
-// rather than a punitive one. No target → neutral brand amber (there is
-// nothing to be over or under).
-export function bandColour(value, target) {
-  if (!target || target <= 0) return colors.primary;
-  const ratio = value / target;
-  if (ratio > 1.05) return colors.warning;
-  if (ratio >= 0.95) return colors.success;
+// Adherence-neutral ring colour (founder decision 2026-05-29, reversing the
+// earlier amber/green/amber three-band). The ring shows progress in the brand
+// amber and makes no colour judgement about being under or over target. The
+// adherence-neutral brief is explicit: neither congratulate adherence nor flag
+// a deviation by colour, since for the at-risk subgroup colour-coded targets
+// drive the harm pattern. The numbers stay factual (value/target). Kept as a
+// function so the ring tint has a single source for call sites and tests.
+export function bandColour() {
   return colors.primary;
 }
 
@@ -66,8 +63,7 @@ function Ring({ size, stroke, progress, tint, track }) {
 
 function MacroChip({ label, value, target }) {
   const progress = target && target > 0 ? value / target : 0;
-  const tint = bandColour(value, target);
-  const warn = tint === colors.warning;
+  const tint = bandColour();
   return (
     <View style={styles.macroChip}>
       <View style={styles.macroRingWrap}>
@@ -81,7 +77,7 @@ function MacroChip({ label, value, target }) {
       </View>
       <View style={styles.macroChipText}>
         <Text style={styles.macroChipLabel}>{label}</Text>
-        <Text style={[styles.macroChipValue, warn && { color: colors.warning }]}>
+        <Text style={styles.macroChipValue}>
           {value}{target != null ? `/${target}` : ''}g
         </Text>
       </View>
@@ -101,8 +97,7 @@ export default function MacroRings({ rollup, targets, dayTypeLabel, onPress }) {
   const kcalProgress = kcalTarget && kcalTarget > 0 ? kcal / kcalTarget : 0;
   const kcalRemaining = kcalTarget != null ? kcalTarget - kcal : null;
   const kcalOver = kcalRemaining != null && kcalRemaining < 0;
-  const kcalTint = bandColour(kcal, kcalTarget);
-  const kcalWarn = kcalTint === colors.warning;
+  const kcalTint = bandColour();
 
   return (
     <TouchableOpacity
@@ -138,10 +133,7 @@ export default function MacroRings({ rollup, targets, dayTypeLabel, onPress }) {
         </View>
         {kcalRemaining != null ? (
           <View style={styles.kcalRemainingWrap}>
-            <Text style={[
-              styles.kcalRemainingValue,
-              kcalWarn && { color: colors.warning },
-            ]}>
+            <Text style={styles.kcalRemainingValue}>
               {kcalOver ? Math.abs(kcalRemaining) : kcalRemaining}
             </Text>
             <Text style={styles.kcalRemainingLabel}>

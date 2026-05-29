@@ -9,34 +9,26 @@ jest.mock('@shopify/react-native-skia', () => ({
 import { bandColour } from '../MacroRings';
 import { colors } from '../../../styles/theme';
 
-describe('bandColour (GAP row 8 three-band)', () => {
-  test('no target → neutral brand amber', () => {
-    expect(bandColour(100, null)).toBe(colors.primary);
-    expect(bandColour(100, 0)).toBe(colors.primary);
-    expect(bandColour(0, undefined)).toBe(colors.primary);
-  });
-
-  test('under target (below 95%) → brand amber', () => {
+describe('bandColour (adherence-neutral, founder decision 2026-05-29)', () => {
+  test('always the brand amber, regardless of under or over target', () => {
     expect(bandColour(0, 100)).toBe(colors.primary);
     expect(bandColour(80, 100)).toBe(colors.primary);
-    expect(bandColour(94, 100)).toBe(colors.primary);
+    expect(bandColour(100, 100)).toBe(colors.primary);
+    expect(bandColour(150, 100)).toBe(colors.primary);
   });
 
-  test('within 5% of target → success green', () => {
-    expect(bandColour(95, 100)).toBe(colors.success);
-    expect(bandColour(100, 100)).toBe(colors.success);
-    expect(bandColour(105, 100)).toBe(colors.success);
+  test('no target also resolves to the brand amber', () => {
+    expect(bandColour(100, null)).toBe(colors.primary);
+    expect(bandColour(0, undefined)).toBe(colors.primary);
+    expect(bandColour()).toBe(colors.primary);
   });
 
-  test('over target (above 105%) → warning amber', () => {
-    expect(bandColour(106, 100)).toBe(colors.warning);
-    expect(bandColour(150, 100)).toBe(colors.warning);
-  });
-
-  test('the over band is amber, not red', () => {
-    // Founder chose amber (#FFC107) for over target, deliberately not
-    // red, to keep an over-target day a gentle signal. Locks the hex so
-    // a future palette change to red fails CI and gets a second look.
-    expect(colors.warning).toBe('#FFC107');
+  test('never signals success-green or warning-amber (no colour judgement)', () => {
+    for (const [v, t] of [[0, 100], [95, 100], [100, 100], [106, 100], [200, 100]]) {
+      const c = bandColour(v, t);
+      expect(c).not.toBe(colors.success);
+      expect(c).not.toBe(colors.warning);
+      expect(c).not.toBe(colors.error);
+    }
   });
 });
