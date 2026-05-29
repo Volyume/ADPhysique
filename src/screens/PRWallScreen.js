@@ -12,7 +12,7 @@ import { getCompletedWorkoutSets, getAllExercises, getLatestBodyWeight } from '.
 import { calculate1RM } from '../lib/algorithms';
 import { EmptyPRsIllustration } from '../components/Illustrations';
 import PeekMenu from '../components/PeekMenu';
-import { getStrengthLevel } from '../lib/strengthStandards';
+import { getStrengthLevel, summariseStrengthStanding } from '../lib/strengthStandards';
 import useAppStore from '../store/useAppStore';
 import InfoTooltip from '../components/InfoTooltip';
 
@@ -166,6 +166,16 @@ export default function PRWallScreen({ navigation }) {
     });
   });
 
+  // One glanceable standing across the tracked compounds: where you stand
+  // (overall tier) and where you're heading (the single nearest rank-up).
+  const strengthStanding = summariseStrengthStanding(
+    Object.entries(strengthLevels).map(([name, level]) => ({
+      lift: name,
+      oneRm: grouped[name]?.['1rm_estimate']?.value ?? null,
+      level,
+    })),
+  );
+
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <View style={styles.filterRow}>
@@ -192,6 +202,21 @@ export default function PRWallScreen({ navigation }) {
         ListHeaderComponent={
           bodyWeight && Object.keys(strengthLevels).length > 0 ? (
             <View style={styles.relativeStrengthCard}>
+              {strengthStanding ? (
+                <View style={styles.standingHeadline}>
+                  <Text style={styles.standingLabel}>{strengthStanding.overallLabel}</Text>
+                  <Text style={styles.standingSub}>
+                    overall across {strengthStanding.count} main {strengthStanding.count === 1 ? 'lift' : 'lifts'}
+                  </Text>
+                  {strengthStanding.nearest ? (
+                    <Text style={styles.standingNext}>
+                      {strengthStanding.nearest.delta} {units} from {strengthStanding.nearest.toLabel} on {strengthStanding.nearest.lift}
+                    </Text>
+                  ) : (
+                    <Text style={styles.standingNext}>At the top of the standards on every tracked lift.</Text>
+                  )}
+                </View>
+              ) : null}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
                 <Text style={styles.sectionLabel}>Relative strength</Text>
                 <InfoTooltip
@@ -399,6 +424,30 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     marginBottom: spacing.md,
     gap: spacing.xs,
+  },
+  standingHeadline: {
+    alignItems: 'flex-start',
+    paddingBottom: spacing.md,
+    marginBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  standingLabel: {
+    color: colors.primary,
+    fontSize: fontSize.xxxl,
+    fontWeight: fontWeight.heavy,
+    lineHeight: 36,
+  },
+  standingSub: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    marginTop: spacing.xxs,
+  },
+  standingNext: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+    marginTop: spacing.sm,
   },
   sectionLabel: {
     fontSize: fontSize.sm,

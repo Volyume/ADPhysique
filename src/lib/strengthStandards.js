@@ -88,3 +88,45 @@ export function getStrengthLevel(exerciseName, oneRm, bodyweight) {
 
   return null;
 }
+
+// All tiers low to high, including the below-Beginner "Untrained" floor, so a
+// standing can be averaged across lifts into a single overall label.
+export const STRENGTH_TIERS = ['Untrained', ...LEVEL_LABELS];
+
+/**
+ * Roll the per-lift strength levels into one glanceable standing: an overall
+ * tier across the tracked compounds (the rounded-down average), plus the
+ * single nearest rank-up so the user has one concrete thing to chase.
+ *
+ * @param {Array<{lift: string, oneRm: number, level: {label, nextTarget, nextLabel}}>} entries
+ * @returns {null | {
+ *   count: number,
+ *   overallLabel: string,
+ *   nearest: null | { lift: string, toLabel: string, delta: number },
+ * }}
+ */
+export function summariseStrengthStanding(entries) {
+  const valid = (entries || []).filter(
+    e => e && e.level && STRENGTH_TIERS.includes(e.level.label),
+  );
+  if (valid.length === 0) return null;
+
+  const meanIdx =
+    valid.reduce((sum, e) => sum + STRENGTH_TIERS.indexOf(e.level.label), 0) /
+    valid.length;
+  const overallLabel = STRENGTH_TIERS[Math.floor(meanIdx)];
+
+  let nearest = null;
+  for (const e of valid) {
+    const { nextTarget, nextLabel } = e.level;
+    if (nextTarget == null || nextLabel == null || e.oneRm == null) continue;
+    const delta = nextTarget - e.oneRm;
+    if (delta <= 0) continue; // already past it; the bucket will catch up
+    if (!nearest || delta < nearest.delta) {
+      nearest = { lift: e.lift, toLabel: nextLabel, delta };
+    }
+  }
+  if (nearest) nearest.delta = Math.round(nearest.delta * 10) / 10;
+
+  return { count: valid.length, overallLabel, nearest };
+}

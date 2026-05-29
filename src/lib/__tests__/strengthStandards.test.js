@@ -2,6 +2,7 @@ import {
   STRENGTH_STANDARDS,
   LEVEL_LABELS,
   getStrengthLevel,
+  summariseStrengthStanding,
 } from '../strengthStandards';
 
 describe('STRENGTH_STANDARDS catalogue', () => {
@@ -129,5 +130,58 @@ describe('getStrengthLevel, banding', () => {
     const result = getStrengthLevel('Bench Press', 120, 80);
     expect(typeof result?.ratio).toBe('number');
     expect(result?.ratio).toBeCloseTo(1.5, 5);
+  });
+});
+
+describe('summariseStrengthStanding', () => {
+  test('returns null with no usable entries', () => {
+    expect(summariseStrengthStanding(null)).toBeNull();
+    expect(summariseStrengthStanding([])).toBeNull();
+    expect(
+      summariseStrengthStanding([{ lift: 'X', oneRm: 100, level: { label: 'Mystery' } }]),
+    ).toBeNull();
+  });
+
+  test('overall tier is the rounded-down average across lifts', () => {
+    const out = summariseStrengthStanding([
+      { lift: 'Bench Press', oneRm: 100, level: { label: 'Intermediate', nextTarget: 125, nextLabel: 'Advanced' } },
+      { lift: 'Squat', oneRm: 160, level: { label: 'Advanced', nextTarget: 200, nextLabel: 'Elite' } },
+    ]);
+    // tiers Intermediate (3) and Advanced (4) → mean 3.5 → floor 3 → Intermediate
+    expect(out.overallLabel).toBe('Intermediate');
+    expect(out.count).toBe(2);
+  });
+
+  test('nearest is the smallest positive gap to the next tier', () => {
+    const out = summariseStrengthStanding([
+      { lift: 'Bench Press', oneRm: 118, level: { label: 'Intermediate', nextTarget: 125, nextLabel: 'Advanced' } },
+      { lift: 'Squat', oneRm: 160, level: { label: 'Advanced', nextTarget: 200, nextLabel: 'Elite' } },
+    ]);
+    expect(out.nearest).toEqual({ lift: 'Bench Press', toLabel: 'Advanced', delta: 7 });
+  });
+
+  test('rounds the gap to one decimal', () => {
+    const out = summariseStrengthStanding([
+      { lift: 'OHP', oneRm: 58.33, level: { label: 'Novice', nextTarget: 60, nextLabel: 'Intermediate' } },
+    ]);
+    expect(out.nearest.delta).toBe(1.7);
+  });
+
+  test('nearest is null when every tracked lift is at Elite', () => {
+    const out = summariseStrengthStanding([
+      { lift: 'Bench Press', oneRm: 200, level: { label: 'Elite', nextTarget: null, nextLabel: null } },
+      { lift: 'Deadlift', oneRm: 300, level: { label: 'Elite', nextTarget: null, nextLabel: null } },
+    ]);
+    expect(out.overallLabel).toBe('Elite');
+    expect(out.nearest).toBeNull();
+  });
+
+  test('skips unknown-label entries when averaging', () => {
+    const out = summariseStrengthStanding([
+      { lift: 'Bench Press', oneRm: 100, level: { label: 'Intermediate', nextTarget: 125, nextLabel: 'Advanced' } },
+      { lift: 'Junk', oneRm: 50, level: { label: 'Nope' } },
+    ]);
+    expect(out.count).toBe(1);
+    expect(out.overallLabel).toBe('Intermediate');
   });
 });
