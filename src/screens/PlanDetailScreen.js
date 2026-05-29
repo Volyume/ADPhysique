@@ -15,6 +15,7 @@ import {
 } from '../lib/database';
 import { PLAN_WHYTHIS_KEY } from '../lib/planAutoGen';
 import Button from '../components/Button';
+import Skeleton, { SkeletonCard } from '../components/Skeleton';
 import useAppStore from '../store/useAppStore';
 import { logError } from '../lib/errorLog';
 import { useToast } from '../components/Toast';
@@ -180,7 +181,24 @@ export default function PlanDetailScreen({ navigation, route }) {
     0,
   );
 
-  if (!plan) return null;
+  if (!plan) {
+    // Mirror the loaded layout (header block, primary button, workout rows)
+    // so the swap to real content is seamless, rather than a blank flash.
+    return (
+      <SafeAreaView style={styles.safe} edges={['bottom']}>
+        <View style={styles.content}>
+          <Skeleton width={'55%'} height={28} />
+          <Skeleton width={'80%'} height={14} />
+          <SkeletonCard height={48} />
+          <View style={styles.section}>
+            <SkeletonCard height={72} />
+            <SkeletonCard height={72} />
+            <SkeletonCard height={72} />
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
