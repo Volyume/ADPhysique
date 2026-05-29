@@ -3026,38 +3026,43 @@ export async function clearWorkoutHistory(userId) {
 // exercises (user_id IS NULL) are preserved because they're shared data.
 // Wrapped in a single transaction so a kill mid-wipe doesn't leave a
 // half-wiped DB the user can't recover from.
+//
+// The direct-user_id table set lives here (exported) so the regression test
+// can assert it. The food tables were added 2026-05-29 (audit Phase 2,
+// finding A4): they were previously omitted, so on a shared device the next
+// user could read the prior user's cached food log, recipes, and water until
+// a pull overwrote them.
+export const WIPE_DIRECT_TABLES = [
+  'workout_sets', 'workouts',
+  'routines', 'programmes', 'mesocycles',
+  'morning_weights', 'weekly_checkins', 'coach_outputs',
+  'nutrition_targets', 'peak_week_plans',
+  'body_metric_log', 'user_insights', 'user_body_profile',
+  'exercise_user_notes', 'exercise_goals', 'workout_notes',
+  'custom_exercises',
+  // queue table from v16: wipe so a deleted user has no orphan ops shipping.
+  'pending_sync_ops',
+  // Sync-mirror tables (migration v19): wipe so the next account on this
+  // device does not inherit orphan rows tagged with the deleted user's id.
+  'workout_notes_v2', 'planned_muscle_volume_sync', 'adaptation_events_sync',
+  // SQLite mirror of cloud migration 044 (Codex re-audit 2026-05-26 #3):
+  // without this a sign-out left notification prefs visible to the next user.
+  'notification_preferences',
+  // Food domain (audit Phase 2, finding A4). All carry user_id locally.
+  'food_entries', 'custom_foods', 'saved_meals',
+  'recipes', 'recipe_ingredients',
+  'daily_water', 'food_favourites', 'daily_intake_rollups',
+  'food_frequents',
+];
+
 export async function wipeAllUserData(userId) {
   if (!userId) return;
   const d = await db();
 
-  // Tables that have a user_id column on them directly, straight DELETE.
-  const directTables = [
-    'workout_sets', 'workouts',
-    'routines', 'programmes',
-    'mesocycles',
-    'morning_weights', 'weekly_checkins', 'coach_outputs',
-    'nutrition_targets', 'peak_week_plans',
-    'body_metric_log', 'user_insights', 'user_body_profile',
-    'exercise_user_notes', 'exercise_goals', 'workout_notes',
-    'custom_exercises',
-    'pending_sync_ops', // queue table from v16, wipe so deleted user
-                         // doesn't have orphan ops still trying to ship
-    // Sync-mirror tables added by migration v19. Must be wiped on
-    // account deletion otherwise the next account that lands on
-    // this device inherits orphan rows tagged with the deleted
-    // user's id.
-    'workout_notes_v2', 'planned_muscle_volume_sync', 'adaptation_events_sync',
-    // notification_preferences (SQLite mirror of cloud migration
-    // 044). Codex re-audit 2026-05-26 finding #3: previously
-    // listed by deletePreferencesForUser but never invoked from
-    // wipeAllUserData, so a sign-out / account delete left
-    // notification prefs visible to the next user on the same
-    // device. Wipe via the direct DELETE pattern (the table is
-    // CREATE TABLE IF NOT EXISTS at first access; the DELETE is
-    // tolerant of the table not yet existing because we wrap
-    // each in try/catch downstream).
-    'notification_preferences',
-  ];
+  // Direct-user_id tables (the exported set above), each wiped by
+  // DELETE ... WHERE user_id = ?. A missing table on an older schema is
+  // tolerated by the per-table try/catch in the loop below.
+  const directTables = WIPE_DIRECT_TABLES;
 
   // Tables that DON'T have user_id and must be wiped through a parent FK.
   // routine_exercises   → keys off routine_id     → routines.user_id

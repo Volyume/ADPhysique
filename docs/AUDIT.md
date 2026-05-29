@@ -36,10 +36,12 @@ no confirmed Critical findings. That is a real result, not a gap in the pass.
 2. **[High] No linter in the repo.** No eslint config or `lint` script. The
    `no-undef` / `exhaustive-deps` / `no-unused-vars` classes go uncaught and have
    already shipped two runtime bugs. Highest-impact single fix.
-3. **[High] Local food data is not wiped on sign-out.** `wipeAllUserData`
-   (`database.js:3034-3060`) omits every food table, so on a shared device user
-   B can read user A's cached food log, recipes, and custom foods. Contradicts
-   locked decision 2.
+3. **[High, FIXED 2026-05-29 Phase 2] Local food data is not wiped on sign-out.**
+   `wipeAllUserData` omitted every food table, so on a shared device user B
+   could read user A's cached food log, recipes, and custom foods (contradicts
+   locked decision 2). Fixed: the nine food tables are now in the exported
+   `WIPE_DIRECT_TABLES` set the wipe deletes by `user_id`, with a regression
+   test. See finding A1.
 4. **[High] Migration 049 is a live trap.** The client still pushes and pulls
    `peak_week_plans` (`sync.js:1002`, `:1455`). Applying the drafted 049 before
    those refs are removed and a build ships would 42P01 every sync run.
@@ -70,7 +72,16 @@ Each finding: location, what is wrong, why it matters, severity, fix.
 
 ### A. Security & data ownership
 
-**A1. Food tables (and others) are absent from the sign-out wipe.** [Verified]
+**A1. Food tables (and others) are absent from the sign-out wipe.** [Verified, FIXED 2026-05-29 Phase 2]
+- **Fix shipped.** The direct-user_id table list was extracted to an exported
+  `WIPE_DIRECT_TABLES` const in `database.js` with the nine food tables added
+  (`food_entries`, `custom_foods`, `saved_meals`, `recipes`,
+  `recipe_ingredients`, `daily_water`, `food_favourites`,
+  `daily_intake_rollups`, `food_frequents`), all of which carry `user_id`
+  locally. Regression test `src/lib/__tests__/wipeAllUserData.test.js`. The
+  non-uid-scoped custom-exercise delete was left as-is on purpose: the local
+  store is single-tenant by the wipe-on-sign-out design, and scoping it by
+  `user_id` would miss legacy custom rows with a null `user_id`.
 - Location: `src/lib/database.js:3034-3060` (`wipeAllUserData` `directTables`),
   parent-chain `:3070-3121`, custom-exercise wipe `:3138`.
 - What: the wipe list covers training, body, coaching, and notification tables
@@ -478,11 +489,12 @@ possible regardless of this plan.
   dedicated sync fn is missing, matching `morning_weight` / `check_in`. New
   regression test `src/lib/__tests__/syncQueue.test.js`. No migration.
 
-**Phase 2: sign-out wipe completeness. [runtime-critical: identity]**
-- A1: add the food tables to `wipeAllUserData`; uid-scope the custom-exercise
-  delete. Extend the sign-out/sign-in mount test to assert food tables empty
-  between users.
-- Reconciles against the locked identity doc. No migration.
+**Phase 2: sign-out wipe completeness. [runtime-critical: identity] DONE 2026-05-29.**
+- A1: the nine food tables were added to the wipe via the exported
+  `WIPE_DIRECT_TABLES` set; regression test in
+  `src/lib/__tests__/wipeAllUserData.test.js`. The custom-exercise delete was
+  left non-uid-scoped on purpose (single-tenant local store; scoping would miss
+  legacy null-`user_id` rows). Reconciles locked decision 2. No migration.
 
 **Phase 3: copy and design fingerprint (UX, not runtime-critical).**
 - C1: replace the `GradientCard` hero usages on Home, AthleteHub, YearOfLifts
