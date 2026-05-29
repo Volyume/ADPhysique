@@ -21,6 +21,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import Card from '../components/Card';
 import {
   getRollupsForRange, getFoodEntriesForRange,
 } from '../lib/food/db';
@@ -132,7 +133,7 @@ export default function FoodInsightsScreen({ navigation }) {
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.sectionLabel}>LAST 7 DAYS · CALORIES</Text>
-        <View style={styles.card}>
+        <Card style={styles.card}>
           {days.map((d) => {
             const r = rollupByDate.get(d);
             const kcal = Math.round(r?.kcal_total ?? 0);
@@ -163,10 +164,10 @@ export default function FoodInsightsScreen({ navigation }) {
               Set your calorie target in Precision Coaching to see adherence colours.
             </Text>
           )}
-        </View>
+        </Card>
 
         <Text style={styles.sectionLabel}>MACRO ADHERENCE</Text>
-        <View style={styles.card}>
+        <Card style={styles.card}>
           {adherence && adherence.logged > 0 ? (
             <>
               <AdherenceRow label="Calories" hit={adherence.kcalDays} total={adherence.logged} />
@@ -182,7 +183,7 @@ export default function FoodInsightsScreen({ navigation }) {
               Log a few days to see your macro adherence.
             </Text>
           )}
-        </View>
+        </Card>
 
         <TouchableOpacity
           style={styles.exportBtn}
@@ -237,9 +238,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1, marginBottom: spacing.sm,
   },
   card: {
-    backgroundColor: colors.surface,
-    padding: spacing.lg, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border,
     marginBottom: spacing.lg,
   },
   cardFootnote: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: spacing.md },
