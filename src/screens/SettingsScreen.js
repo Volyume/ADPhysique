@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, TextInput, Share, Platform,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, TextInput, Share, Platform, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -804,7 +804,7 @@ export default function SettingsScreen({ navigation }) {
             <SettingRow
               icon="calendar-outline"
               label="Cycle tracking"
-              sub="Adds an optional question to your weekly check-in so the coach can hold weight changes around your period"
+              sub="Adds an optional question to your weekly check-in so the coach can steady your targets around your period"
               showArrow={false}
               rightElement={
                 <Switch
@@ -829,18 +829,6 @@ export default function SettingsScreen({ navigation }) {
             label="Notifications"
             sub="Training reminders"
             onPress={() => navigation.navigate('NotificationSettings')}
-          />
-          <SettingRow
-            icon="card-outline"
-            label="Subscription"
-            sub="Plan, billing, restore purchases"
-            onPress={() => navigation.navigate('Subscription')}
-          />
-          <SettingRow
-            icon="information-circle-outline"
-            label="Credits"
-            sub="OpenFoodFacts, CoFID, USDA attribution"
-            onPress={() => navigation.navigate('Credits')}
           />
         </View>
 
@@ -1046,6 +1034,18 @@ export default function SettingsScreen({ navigation }) {
         <SectionHeader title="Account" />
         <View style={styles.section}>
           <SettingRow
+            icon="person-circle-outline"
+            label={user?.email || 'Signed in'}
+            sub={tier === 'pro' ? 'Volyume Pro' : 'Free plan'}
+            showArrow={false}
+          />
+          <SettingRow
+            icon="card-outline"
+            label="Subscription"
+            sub="Plan, billing, restore purchases"
+            onPress={() => navigation.navigate('Subscription')}
+          />
+          <SettingRow
             icon="information-circle-outline"
             label="Free, Pro, and your data"
             sub="What's free, what Pro adds, what stays if you switch back"
@@ -1101,24 +1101,36 @@ export default function SettingsScreen({ navigation }) {
           />
         </View>
 
-        {/* Legal */}
-        <SectionHeader title="Legal" />
-        <View style={styles.section}>
-          <SettingRow
-            icon="document-text-outline"
-            label="Privacy Policy"
-            onPress={() => navigation.navigate('PrivacyPolicy')}
-          />
-        </View>
-
-        {/* Diagnostics */}
-        <SectionHeader title="Diagnostics" />
+        {/* Help & support */}
+        <SectionHeader title="Help & support" />
         <View style={styles.section}>
           <SettingRow
             icon="chatbubble-ellipses-outline"
             label="Send feedback"
             sub="Quick sentiment + optional note"
             onPress={() => feedback?.open({ trigger: 'settings' })}
+          />
+          <SettingRow
+            icon="star-outline"
+            label="Rate Volyume"
+            sub="A rating helps other lifters find it"
+            onPress={() => {
+              const pkg = Constants.expoConfig?.android?.package || 'app.volyume';
+              const market = `market://details?id=${pkg}`;
+              const web = `https://play.google.com/store/apps/details?id=${pkg}`;
+              Linking.openURL(market).catch(() => Linking.openURL(web).catch(() => {}));
+            }}
+          />
+          <SettingRow
+            icon="document-text-outline"
+            label="Privacy Policy"
+            onPress={() => navigation.navigate('PrivacyPolicy')}
+          />
+          <SettingRow
+            icon="information-circle-outline"
+            label="Credits"
+            sub="OpenFoodFacts, CoFID, USDA attribution"
+            onPress={() => navigation.navigate('Credits')}
           />
           <SettingRow
             icon="bug-outline"
