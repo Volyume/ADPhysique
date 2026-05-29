@@ -165,11 +165,13 @@ WITH expected (cloud_table, column_name, source) AS (
     ('custom_foods', 'deleted_at',    'sync/tables/foodDomain.js RPC payload'),
 
     -- ─── saved_meals (via food_sync_push/pull RPC) ─────────────
+    -- Canonical columns per migrate_015 DDL + migrate_016 RPC. An
+    -- earlier audit listed slot + foods_json, copied from a buggy
+    -- serialiser that invented those names; the real table has neither.
     ('saved_meals', 'id',         'sync/tables/foodDomain.js RPC payload'),
     ('saved_meals', 'user_id',    'sync/tables/foodDomain.js RPC payload'),
     ('saved_meals', 'name',       'sync/tables/foodDomain.js RPC payload'),
-    ('saved_meals', 'slot',       'sync/tables/foodDomain.js RPC payload'),
-    ('saved_meals', 'foods_json', 'sync/tables/foodDomain.js RPC payload'),
+    ('saved_meals', 'items_json', 'sync/tables/foodDomain.js RPC payload'),
     ('saved_meals', 'created_at', 'sync/tables/foodDomain.js RPC payload'),
     ('saved_meals', 'updated_at', 'sync/tables/foodDomain.js RPC payload'),
     ('saved_meals', 'deleted_at', 'sync/tables/foodDomain.js RPC payload'),

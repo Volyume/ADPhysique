@@ -250,6 +250,7 @@ export default function FoodSearchScreen({ navigation, route }) {
       out.push({ type: 'cta', key: 'cta-new-custom', label: 'New custom food', icon: 'add-circle-outline', action: 'custom' });
       if (route?.params?.pickMode !== 'recipe') {
         out.push({ type: 'cta', key: 'cta-my-recipes', label: 'My recipes', icon: 'restaurant-outline', action: 'recipes' });
+        out.push({ type: 'cta', key: 'cta-my-meals', label: 'My meals', icon: 'fast-food-outline', action: 'meals' });
       }
     }
     for (const f of tabRows) out.push({ type: 'row', key: `${activeTab}-${f.food_ref}`, food: f });
@@ -261,9 +262,11 @@ export default function FoodSearchScreen({ navigation, route }) {
       return (
         <TouchableOpacity
           style={styles.ctaRow}
-          onPress={() => (item.action === 'custom'
-            ? newCustomFood()
-            : navigation.navigate('MyRecipes', { mealSlot, entryDate }))}
+          onPress={() => {
+            if (item.action === 'custom') return newCustomFood();
+            if (item.action === 'meals') return navigation.navigate('MyMeals', { mealSlot, entryDate });
+            return navigation.navigate('MyRecipes', { mealSlot, entryDate });
+          }}
         >
           <Ionicons name={item.icon} size={20} color={colors.primary} />
           <Text style={styles.ctaText}>{item.label}</Text>

@@ -1,0 +1,179 @@
+/**
+ * savedMeals.test.js
+ *
+ * Local CRUD + apply-to-diary for the My Meals feature (GAP row 1).
+ *
+ * The food layer has no shared SQLite harness (expo-sqlite isn't
+ * available under node), so these tests mock `db()` from ../database
+ * and assert the SQL + params each helper issues, plus the parse /
+ * totals logic and the apply-to-diary fan-out into food_entries.
+ *
+ * Why this matters: a saved meal stores its foods inline in items_json.
+ * The column name and the apply path are the contract the sync
+ * serialiser (_savedMealToCloud) and the cloud RPC depend on; a drift
+ * here silently loses meal contents (the very bug this feature exposed).
+ */
+
+// db() routes reads by SQL substring so the same fake serves
+// listSavedMeals, getSavedMeal, and the rollup recompute inside
+// logFoodEntry. runAsync records every write for assertion.
+const mockState = { savedMealRow: null, savedMealRows: [] };
+const runCalls = [];
+
+function makeDb() {
+  return {
+    runAsync: jest.fn(async (sql, params) => { runCalls.push({ sql, params }); }),
+    getFirstAsync: jest.fn(async (sql) => {
+      if (/FROM saved_meals/.test(sql)) return mockState.savedMealRow;
+      if (/FROM food_entries/.test(sql)) {
+        // recomputeRollup's SUM query
+        return { kcal_total: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fibre_g: 0, entries_count: 0 };
+      }
+      return null;
+    }),
+    getAllAsync: jest.fn(async (sql) => {
+      if (/FROM saved_meals/.test(sql)) return mockState.savedMealRows;
+      return [];
+    }),
+  };
+}
+
+let mockDb;
+jest.mock('../../database', () => ({
+  db: jest.fn(async () => mockDb),
+}));
+
+jest.mock('../../engineTelemetry', () => ({ track: jest.fn(() => Promise.resolve()) }));
+
+const food = require('../db');
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  runCalls.length = 0;
+  mockState.savedMealRow = null;
+  mockState.savedMealRows = [];
+  mockDb = makeDb();
+});
+
+const ITEMS = [
+  { foodRef: 'off:1', name: 'Oats', quantityG: 80, kcal: 300, proteinG: 11, carbsG: 50, fatG: 6, fibreG: 8 },
+  { foodRef: 'off:2', name: 'Milk', quantityG: 200, kcal: 100, proteinG: 7, carbsG: 10, fatG: 4 },
+];
+
+describe('computeSavedMealTotals', () => {
+  test('sums per-item macros, tolerant of missing fields', () => {
+    expect(food.computeSavedMealTotals(ITEMS)).toEqual({ kcal: 400, protein: 18, carbs: 60, fat: 10 });
+  });
+  test('empty / nullish items give zeroes', () => {
+    expect(food.computeSavedMealTotals([])).toEqual({ kcal: 0, protein: 0, carbs: 0, fat: 0 });
+    expect(food.computeSavedMealTotals(null)).toEqual({ kcal: 0, protein: 0, carbs: 0, fat: 0 });
+  });
+});
+
+describe('createSavedMeal', () => {
+  test('inserts into items_json (not foods_json) with a serialised array', async () => {
+    const id = await food.createSavedMeal('u1', { name: '  Breakfast  ', items: ITEMS });
+    expect(typeof id).toBe('string');
+    const insert = runCalls.find(c => /INSERT INTO saved_meals/.test(c.sql));
+    expect(insert).toBeTruthy();
+    expect(insert.sql).toMatch(/items_json/);
+    expect(insert.sql).not.toMatch(/foods_json|slot/);
+    // params: [id, userId, name(trimmed), itemsJson, created, updated]
+    expect(insert.params[1]).toBe('u1');
+    expect(insert.params[2]).toBe('Breakfast');
+    expect(JSON.parse(insert.params[3])).toHaveLength(2);
+  });
+
+  test('rejects a blank name', async () => {
+    await expect(food.createSavedMeal('u1', { name: '   ', items: ITEMS })).rejects.toThrow(/name is required/);
+  });
+
+  test('rejects an empty item list', async () => {
+    await expect(food.createSavedMeal('u1', { name: 'x', items: [] })).rejects.toThrow(/at least one item/);
+  });
+});
+
+describe('listSavedMeals / getSavedMeal', () => {
+  test('list parses items_json and attaches totals + itemCount', async () => {
+    mockState.savedMealRows = [
+      { id: 'sm-1', name: 'Breakfast', items_json: JSON.stringify(ITEMS), created_at: 1, updated_at: 2 },
+    ];
+    const meals = await food.listSavedMeals('u1');
+    expect(meals).toHaveLength(1);
+    expect(meals[0].itemCount).toBe(2);
+    expect(meals[0].totals).toEqual({ kcal: 400, protein: 18, carbs: 60, fat: 10 });
+    expect(meals[0].items[0].foodRef).toBe('off:1');
+  });
+
+  test('list tolerates a corrupt items_json (empty items, no throw)', async () => {
+    mockState.savedMealRows = [
+      { id: 'sm-bad', name: 'Corrupt', items_json: '{not json', created_at: 1, updated_at: 2 },
+    ];
+    const meals = await food.listSavedMeals('u1');
+    expect(meals[0].items).toEqual([]);
+    expect(meals[0].itemCount).toBe(0);
+  });
+
+  test('getSavedMeal returns null when missing', async () => {
+    mockState.savedMealRow = null;
+    expect(await food.getSavedMeal('u1', 'nope')).toBeNull();
+  });
+});
+
+describe('renameSavedMeal', () => {
+  test('updates name + updated_at, scoped to live rows', async () => {
+    await food.renameSavedMeal('u1', 'sm-1', '  Lunch ');
+    const upd = runCalls.find(c => /UPDATE saved_meals SET name/.test(c.sql));
+    expect(upd).toBeTruthy();
+    expect(upd.sql).toMatch(/deleted_at IS NULL/);
+    expect(upd.params[0]).toBe('Lunch');
+  });
+  test('rejects a blank name', async () => {
+    await expect(food.renameSavedMeal('u1', 'sm-1', '  ')).rejects.toThrow(/cannot be blank/);
+  });
+});
+
+describe('deleteSavedMeal', () => {
+  test('soft-deletes (sets deleted_at + updated_at)', async () => {
+    await food.deleteSavedMeal('u1', 'sm-1');
+    const del = runCalls.find(c => /UPDATE saved_meals SET deleted_at/.test(c.sql));
+    expect(del).toBeTruthy();
+    expect(del.params.slice(-2)).toEqual(['sm-1', 'u1']);
+  });
+});
+
+describe('applySavedMealToDiary', () => {
+  test('logs every valid item as a food_entries row at the chosen slot/date', async () => {
+    mockState.savedMealRow = { id: 'sm-1', name: 'Breakfast', items_json: JSON.stringify(ITEMS), created_at: 1, updated_at: 2 };
+    const n = await food.applySavedMealToDiary('u1', 'sm-1', { mealSlot: 'breakfast', entryDate: '2026-05-29' });
+    expect(n).toBe(2);
+    const inserts = runCalls.filter(c => /INSERT INTO food_entries/.test(c.sql));
+    expect(inserts).toHaveLength(2);
+    // logFoodEntry params order: id,user,entry_date,meal_slot,food_ref,quantity_g,...
+    expect(inserts[0].params[2]).toBe('2026-05-29');
+    expect(inserts[0].params[3]).toBe('breakfast');
+    expect(inserts[0].params[4]).toBe('off:1');
+    expect(inserts[0].params[5]).toBe(80);
+  });
+
+  test('skips items with no foodRef or non-positive quantity', async () => {
+    const dirty = [
+      { foodRef: 'off:1', quantityG: 100, kcal: 1, proteinG: 1, carbsG: 1, fatG: 1 },
+      { foodRef: '', quantityG: 100 },          // no ref
+      { foodRef: 'off:2', quantityG: 0 },        // zero qty
+    ];
+    mockState.savedMealRow = { id: 'sm-2', name: 'Mixed', items_json: JSON.stringify(dirty), created_at: 1, updated_at: 2 };
+    const n = await food.applySavedMealToDiary('u1', 'sm-2', { mealSlot: 'lunch', entryDate: '2026-05-29' });
+    expect(n).toBe(1);
+  });
+
+  test('returns 0 when the meal is missing', async () => {
+    mockState.savedMealRow = null;
+    const n = await food.applySavedMealToDiary('u1', 'gone', { mealSlot: 'lunch', entryDate: '2026-05-29' });
+    expect(n).toBe(0);
+  });
+
+  test('requires mealSlot and entryDate', async () => {
+    await expect(food.applySavedMealToDiary('u1', 'sm-1', {})).rejects.toThrow(/mealSlot and entryDate/);
+  });
+});

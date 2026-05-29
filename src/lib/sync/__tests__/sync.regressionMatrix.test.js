@@ -929,6 +929,50 @@ describe('food domain coordinator (food_entries / custom_foods / saved_meals / r
     const rollupResult = await pullTable('daily_intake_rollups', { userId: 'u1' });
     expect(rollupResult.count).toBeGreaterThan(0);
   });
+
+  // ── saved_meals serialiser contract ──────────────────────────────
+  // Regression guard for the 2026-05-29 latent bug: the serialiser used
+  // foods_json + slot, columns that exist in neither the cloud DDL
+  // (migrate_015) nor the food_sync_push RPC (migrate_016, reads
+  // items_json). The effect was empty items pushed to the cloud, i.e.
+  // every saved meal silently losing its contents on sync. Dormant
+  // until the saved-meals UI shipped, which it now has.
+  test('saved_meals push: emits items_json as a parsed array, never foods_json/slot', async () => {
+    const items = [
+      { foodRef: 'off:1', name: 'Oats', quantityG: 80, kcal: 300, proteinG: 11, carbsG: 50, fatG: 6 },
+      { foodRef: 'off:2', name: 'Milk', quantityG: 200, kcal: 100, proteinG: 7, carbsG: 10, fatG: 4 },
+    ];
+    foodDb.getAllSavedMealsSince.mockResolvedValueOnce([
+      { id: 'sm-1', name: 'Breakfast', items_json: JSON.stringify(items), created_at: 1, updated_at: 1 },
+    ]);
+    const sb = makeFoodSb();
+    getSupabaseClient.mockReturnValue(sb);
+
+    await pushTable('saved_meals', { userId: 'u1', localUserId: 'u1' });
+
+    const pushCall = sb._calls.rpcs.find((r) => r.name === 'food_sync_push');
+    expect(pushCall).toBeTruthy();
+    const row = pushCall.args.changes.saved_meals.created[0];
+    // The RPC does COALESCE(v_row->'items_json', '[]'), so items_json
+    // must be an actual array to land as a jsonb array (not a string).
+    expect(Array.isArray(row.items_json)).toBe(true);
+    expect(row.items_json).toHaveLength(2);
+    expect(row.items_json[0]).toMatchObject({ foodRef: 'off:1', quantityG: 80 });
+    // The phantom columns must never reappear.
+    expect(row).not.toHaveProperty('foods_json');
+    expect(row).not.toHaveProperty('slot');
+  });
+
+  test('saved_meals push: malformed items_json degrades to an empty array, not a throw', async () => {
+    foodDb.getAllSavedMealsSince.mockResolvedValueOnce([
+      { id: 'sm-bad', name: 'Corrupt', items_json: 'not json', created_at: 1, updated_at: 1 },
+    ]);
+    const sb = makeFoodSb();
+    getSupabaseClient.mockReturnValue(sb);
+    await pushTable('saved_meals', { userId: 'u1', localUserId: 'u1' });
+    const pushCall = sb._calls.rpcs.find((r) => r.name === 'food_sync_push');
+    expect(pushCall.args.changes.saved_meals.created[0].items_json).toEqual([]);
+  });
 });
 
 // T7 + T8 (two-device propagation, offline collision) are out of

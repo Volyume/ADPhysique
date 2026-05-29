@@ -89,6 +89,23 @@ function _msToISOorNull(t) {
   return null;
 }
 
+// saved_meals.items_json is stored locally as a TEXT JSON array. Parse
+// it to a real array for the push payload so it lands in the cloud's
+// jsonb column as an array, not a quoted string. Tolerant of an already
+// parsed array and of malformed/empty values (defaults to []).
+function _parseItemsJson(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === 'string') {
+    try {
+      const v = JSON.parse(raw);
+      return Array.isArray(v) ? v : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 // All food-domain mappers read snake_case fields off the raw
 // SQLite rows returned by src/lib/food/db.js (which calls
 // d.getAllAsync directly without a camelCase transform). An
@@ -144,10 +161,15 @@ function _savedMealToCloud(row, userId) {
     id: row.id,
     user_id: userId,
     name: row.name,
-    slot: row.slot ?? null,
-    foods_json: typeof row.foods_json === 'string'
-      ? row.foods_json
-      : JSON.stringify(row.foods_json ?? []),
+    // Canonical column is items_json (migrate_015 DDL + migrate_016
+    // food_sync_push RPC + local schema + applySavedMealFromCloud all
+    // agree). Emit the PARSED array, not the raw TEXT string: the cloud
+    // column is jsonb and the RPC stores COALESCE(v_row->'items_json',
+    // '[]'), so a JSON-encoded string would land as a quoted scalar
+    // instead of an array. There is no slot/foods_json column; an
+    // earlier draft invented both, which silently dropped every meal's
+    // contents on sync (dormant until the saved-meals UI shipped).
+    items_json: _parseItemsJson(row.items_json),
     created_at: _msToISOorNull(row.created_at),
     updated_at: _msToISOorNull(row.updated_at),
     deleted_at: _msToISOorNull(row.deleted_at),

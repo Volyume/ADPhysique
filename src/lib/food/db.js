@@ -658,6 +658,179 @@ export function computeRecipeMacros(resolvedIngredients, totalServings) {
   };
 }
 
+// ─── Saved meals (My Meals templates) ────────────────────────────────────
+// A saved meal is a named bundle of foods the user logs together (e.g.
+// "my usual breakfast"). Unlike a recipe (a child-table ingredient list
+// scaled by servings), a saved meal stores its foods inline as a JSON
+// array in items_json, so applying it is just N food_entries inserts.
+//
+// Item shape (camelCase, aligned 1:1 with logFoodEntry's `entry` so apply
+// can hand each item straight to it):
+//   { foodRef, name, quantityG, kcal, proteinG, carbsG, fatG, fibreG }
+//
+// The cloud column is items_json (jsonb); the sync serialiser
+// (_savedMealToCloud) parses this TEXT back to an array on push.
+
+function _parseSavedMealItems(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === 'string') {
+    try {
+      const v = JSON.parse(raw);
+      return Array.isArray(v) ? v : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+/**
+ * Sum the per-item macros for list/detail display. Tolerant of missing
+ * fields (an item with no fat contributes 0 fat).
+ */
+export function computeSavedMealTotals(items) {
+  let kcal = 0, protein = 0, carbs = 0, fat = 0;
+  for (const it of items || []) {
+    kcal += Number(it?.kcal) || 0;
+    protein += Number(it?.proteinG) || 0;
+    carbs += Number(it?.carbsG) || 0;
+    fat += Number(it?.fatG) || 0;
+  }
+  const round1 = (n) => Math.round(n * 10) / 10;
+  return { kcal: Math.round(kcal), protein: round1(protein), carbs: round1(carbs), fat: round1(fat) };
+}
+
+/**
+ * Create a saved meal from a set of food items. `items` is the inline
+ * food array (see shape above). Returns the new id.
+ */
+export async function createSavedMeal(userId, { name, items } = {}) {
+  if (!name || !name.trim()) {
+    throw new Error('createSavedMeal: name is required');
+  }
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new Error('createSavedMeal: at least one item is required');
+  }
+  const d = await db();
+  const id = uid();
+  const now = Date.now();
+  await d.runAsync(
+    `INSERT INTO saved_meals (id, user_id, name, items_json, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [id, userId, name.trim(), JSON.stringify(items), now, now]
+  );
+  _scheduleSync();
+  return id;
+}
+
+/**
+ * Active saved meals (not tombstoned), newest-touched first. Each row
+ * carries its parsed `items` array plus `totals` + `itemCount` so the
+ * list can render macros without re-parsing.
+ */
+export async function listSavedMeals(userId) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT id, name, items_json, created_at, updated_at
+     FROM saved_meals
+     WHERE user_id = ? AND deleted_at IS NULL
+     ORDER BY updated_at DESC`,
+    [userId]
+  );
+  return rows.map((r) => {
+    const items = _parseSavedMealItems(r.items_json);
+    return {
+      id: r.id,
+      name: r.name,
+      items,
+      itemCount: items.length,
+      totals: computeSavedMealTotals(items),
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+    };
+  });
+}
+
+/**
+ * One saved meal with its parsed items, or null if missing/deleted.
+ */
+export async function getSavedMeal(userId, id) {
+  const d = await db();
+  const row = await d.getFirstAsync(
+    `SELECT id, name, items_json, created_at, updated_at
+     FROM saved_meals
+     WHERE id = ? AND user_id = ? AND deleted_at IS NULL`,
+    [id, userId]
+  );
+  if (!row) return null;
+  const items = _parseSavedMealItems(row.items_json);
+  return { ...row, items, itemCount: items.length, totals: computeSavedMealTotals(items) };
+}
+
+/**
+ * Rename a saved meal. Bumps updated_at so sync picks it up.
+ */
+export async function renameSavedMeal(userId, id, name) {
+  if (!name || !name.trim()) {
+    throw new Error('renameSavedMeal: name cannot be blank');
+  }
+  const d = await db();
+  const now = Date.now();
+  await d.runAsync(
+    `UPDATE saved_meals SET name = ?, updated_at = ?
+     WHERE id = ? AND user_id = ? AND deleted_at IS NULL`,
+    [name.trim(), now, id, userId]
+  );
+  _scheduleSync();
+}
+
+/**
+ * Soft-delete a saved meal so the tombstone reaches the cloud.
+ */
+export async function deleteSavedMeal(userId, id) {
+  const d = await db();
+  const now = Date.now();
+  await d.runAsync(
+    `UPDATE saved_meals SET deleted_at = ?, updated_at = ?
+     WHERE id = ? AND user_id = ?`,
+    [now, now, id, userId]
+  );
+  _scheduleSync();
+}
+
+/**
+ * Log every food in a saved meal to the diary at the given slot + date.
+ * Reuses logFoodEntry per item so rollup recompute, telemetry, and sync
+ * scheduling all behave exactly like a manual log. Returns the number of
+ * items logged. Items missing a foodRef or a positive quantity are
+ * skipped rather than logged as junk.
+ */
+export async function applySavedMealToDiary(userId, id, { mealSlot, entryDate } = {}) {
+  if (!mealSlot || !entryDate) {
+    throw new Error('applySavedMealToDiary: mealSlot and entryDate are required');
+  }
+  const meal = await getSavedMeal(userId, id);
+  if (!meal) return 0;
+  let logged = 0;
+  for (const it of meal.items) {
+    const q = Number(it?.quantityG);
+    if (!it?.foodRef || !Number.isFinite(q) || q <= 0) continue;
+    await logFoodEntry(userId, {
+      entryDate,
+      mealSlot,
+      foodRef: it.foodRef,
+      quantityG: q,
+      kcal: Number(it.kcal) || 0,
+      proteinG: Number(it.proteinG) || 0,
+      carbsG: Number(it.carbsG) || 0,
+      fatG: Number(it.fatG) || 0,
+      fibreG: it.fibreG != null ? Number(it.fibreG) : null,
+    });
+    logged += 1;
+  }
+  return logged;
+}
+
 // ─── Sync row fetchers ───────────────────────────────────────────────────
 // Each returns every row touched since `sinceMs` (inclusive), including
 // soft-deleted rows so the cloud receives tombstones. Pure SQL reads.

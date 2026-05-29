@@ -11,7 +11,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
-  Alert, Modal, Pressable,
+  Alert, Modal, Pressable, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,7 +19,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import {
   getFoodEntriesForDay, deleteFoodEntry, updateFoodEntry, getRollupForDay,
-  recomputeRollup, setWater, getWater,
+  recomputeRollup, setWater, getWater, createSavedMeal,
 } from '../lib/food/db';
 import { resolveFoodRef } from '../lib/food/sources/localCache';
 import { getNutritionTargets, hasWorkoutOnDate, getFirstWorkoutDateOnOrAfter } from '../lib/database';
@@ -182,6 +182,8 @@ export default function DiaryScreen({ navigation }) {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [movePickerVisible, setMovePickerVisible] = useState(false);
+  const [saveMealItems, setSaveMealItems] = useState(null); // captured items | null
+  const [saveMealName, setSaveMealName] = useState('');
   const [breakdownVisible, setBreakdownVisible] = useState(false);
 
   // Leaving the day, or deselecting the last row, drops selection mode
@@ -261,6 +263,41 @@ export default function DiaryScreen({ navigation }) {
     exitSelection();
     await load();
   }, [selectedEntries, userId, exitSelection, load]);
+
+  // "Save as meal": snapshot the selected entries into a reusable saved
+  // meal. Capture the items now (before the name prompt) so exiting
+  // selection mid-prompt can't lose them.
+  const openSaveMeal = useCallback(() => {
+    const sel = selectedEntries();
+    if (sel.length === 0) return;
+    const items = sel.map((e) => ({
+      foodRef: e.food_ref,
+      name: friendlyFoodName(e),
+      quantityG: e.quantity_g,
+      kcal: e.kcal,
+      proteinG: e.protein_g,
+      carbsG: e.carbs_g,
+      fatG: e.fat_g,
+      fibreG: e.fibre_g ?? null,
+    }));
+    setSaveMealItems(items);
+    setSaveMealName('');
+  }, [selectedEntries]);
+
+  const submitSaveMeal = useCallback(async () => {
+    const name = saveMealName.trim();
+    const items = saveMealItems;
+    if (!name || !items || items.length === 0) { setSaveMealItems(null); return; }
+    setSaveMealItems(null);
+    try {
+      await createSavedMeal(userId, { name, items });
+      audit('food.saveMeal', { count: items.length });
+      exitSelection();
+      Alert.alert('Meal saved', `"${name}" is in My meals. Log it in one tap from the food search.`);
+    } catch (_) {
+      Alert.alert('Couldn\'t save', 'Try again.');
+    }
+  }, [saveMealName, saveMealItems, userId, exitSelection]);
 
   async function openEditSheet(entry) {
     const food = await resolveFoodRef(userId, entry.food_ref).catch(() => null);
@@ -508,6 +545,10 @@ export default function DiaryScreen({ navigation }) {
               <Ionicons name="copy-outline" size={20} color={colors.textPrimary} />
               <Text style={styles.selActionLabel}>To today</Text>
             </TouchableOpacity>
+            <TouchableOpacity onPress={openSaveMeal} style={styles.selAction} accessibilityLabel="Save selected as a meal">
+              <Ionicons name="bookmark-outline" size={20} color={colors.textPrimary} />
+              <Text style={styles.selActionLabel}>Save meal</Text>
+            </TouchableOpacity>
             <TouchableOpacity onPress={doDeleteSelected} style={styles.selAction} accessibilityLabel="Delete selected">
               <Ionicons name="trash-outline" size={20} color={colors.error} />
               <Text style={[styles.selActionLabel, { color: colors.error }]}>Delete</Text>
@@ -537,6 +578,41 @@ export default function DiaryScreen({ navigation }) {
               </TouchableOpacity>
             ))}
           </View>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={!!saveMealItems}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSaveMealItems(null)}
+      >
+        <Pressable style={styles.moveBackdrop} onPress={() => setSaveMealItems(null)}>
+          <Pressable style={styles.moveCard} onPress={() => {}}>
+            <Text style={styles.moveTitle}>Save as meal</Text>
+            <Text style={styles.saveMealHint}>
+              {saveMealItems?.length ?? 0} {(saveMealItems?.length ?? 0) === 1 ? 'food' : 'foods'} saved together. Name it.
+            </Text>
+            <TextInput
+              style={styles.saveMealInput}
+              value={saveMealName}
+              onChangeText={setSaveMealName}
+              placeholder="e.g. My breakfast"
+              placeholderTextColor={colors.textMuted}
+              autoFocus
+              maxLength={60}
+              returnKeyType="done"
+              onSubmitEditing={submitSaveMeal}
+            />
+            <View style={styles.saveMealActions}>
+              <TouchableOpacity onPress={() => setSaveMealItems(null)} style={styles.saveMealBtn}>
+                <Text style={styles.saveMealBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={submitSaveMeal} style={[styles.saveMealBtn, styles.saveMealBtnPrimary]}>
+                <Text style={[styles.saveMealBtnText, { color: colors.background, fontWeight: fontWeight.bold }]}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
         </Pressable>
       </Modal>
     </SafeAreaView>
@@ -631,6 +707,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm, borderRadius: radius.md,
   },
   moveOptionText: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.medium },
+  saveMealHint: {
+    color: colors.textMuted, fontSize: fontSize.sm,
+    paddingHorizontal: spacing.sm, paddingBottom: spacing.md,
+  },
+  saveMealInput: {
+    backgroundColor: colors.background, color: colors.textPrimary,
+    borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    fontSize: fontSize.md, marginHorizontal: spacing.sm,
+  },
+  saveMealActions: {
+    flexDirection: 'row', justifyContent: 'flex-end',
+    marginTop: spacing.md, gap: spacing.sm,
+  },
+  saveMealBtn: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radius.md },
+  saveMealBtnPrimary: { backgroundColor: colors.primary },
+  saveMealBtnText: { color: colors.textPrimary, fontSize: fontSize.md },
   dayPagerRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: spacing.sm,
