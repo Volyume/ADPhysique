@@ -14,6 +14,17 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 
 ## 0. Session summary
 
+### 0.0000001. 2026-05-29 (food build-out, Claude): quick-add + multi-add, food now leads on speed
+
+Worked the food-logging audit's build list (`docs/audit/volyume-food-logging-audit-2026-05-29.md`) to close the dimensions where Volyume lagged. With these on top of recipes-now-loggable, the food layer is best-in-class on the speed gaps and stays ahead on accuracy (curated macros computed from a fixed staple table; diary macros denormalised at log time). No migration, no schema or sync-contract change in any of these.
+
+- **Quick add** (`QuickAddSheet`, wired into `FoodSearchScreen` header): log a bare calorie figure plus optional P/C/F with no food lookup. Stored as a `quick:adhoc` entry shown as "Quick add" with no gram weight; counts toward the day via the normal rollup. Closes the "every competitor has it, we don't" gap. Commit `ec522f9`.
+- **Multi-add plate** (`FoodSearchScreen` + `FoodRow.onAdd`): the row + drops a default serving onto a plate; a sticky bar logs the lot in one pass, with a review sheet to remove items first. Row tap still opens the detail sheet for a custom quantity. This is MacroFactor's fastest-logger pattern. Commit `e4ffbac`.
+- **Already strong base** (unchanged, for the record): copy-yesterday FAB, multi-select copy/move/save-as-meal, saved meals, curated suggestions ranked to remaining macros, the global database search bar (`c971430`), barcode + label OCR, adherence-neutral rings, and training-aware targets (carb cycle / refeed / adaptive burn).
+- **Remaining audit items, deliberately deferred as enhancements (not gaps):** browsable/filterable curated library with "save as my meal", a serving picker + "Save and log" on the recipe builder, and recipe cooked-weight scaling. Tracked in the food audit's Phase 5.
+
+Verify on device: the flash icon in the food picker (quick add), the + on a search row building a plate then "Log N", and a recipe logging as one line.
+
 ### 0.000001. 2026-05-29 (founder feedback, Claude): fixed unilateral logging
 
 The old per-side model was wrong: it split reps into Left and Right inputs and fed the lower side to the engine, presenting the two sides as if they differ. Research (MyFitCoach, Fitbod, Built With Science, and the Hevy/Strong convention) is unanimous, and matches the founder: a unilateral exercise logs ONE weight and ONE reps value, understood as per side, done on both sides at the same weight. Never split, never totalled.
