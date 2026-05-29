@@ -9,11 +9,11 @@ import { calculate1RM } from '../lib/algorithms';
 const SET_TYPE_LABELS = {
   straight: 'Working',
   warmup: 'Warm-up',
-  dropset: 'Working',
-  superset: 'Working',
-  myo_reps: 'Working',
-  rest_pause: 'Working',
-  amrap: 'Working',
+  dropset: 'Drop set',
+  superset: 'Superset',
+  myo_reps: 'Myo-reps',
+  rest_pause: 'Rest-pause',
+  amrap: 'AMRAP',
 };
 
 export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypePicker, onOpenPlateCalc, isWarmup = false }) {

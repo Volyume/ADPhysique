@@ -52,16 +52,20 @@ const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '', rir: 
 const SET_TYPE_DISPLAY = {
   straight: 'Working',
   warmup: 'Warm-up',
-  dropset: 'Working',
-  amrap: 'Working',
-  myo_reps: 'Working',
-  rest_pause: 'Working',
-  superset: 'Working',
+  dropset: 'Drop set',
+  amrap: 'AMRAP',
+  myo_reps: 'Myo-reps',
+  rest_pause: 'Rest-pause',
+  superset: 'Superset',
 };
 
 const SET_TYPE_OPTIONS = [
   { value: 'straight', label: 'Working', description: 'Counts toward your weekly totals and progress tracking.' },
   { value: 'warmup', label: 'Warm-up', description: 'Lighter sets before your main work. Not counted in your weekly totals.' },
+  { value: 'dropset', label: 'Drop set', description: 'Reduce the weight at failure and keep going. Counts toward weekly volume, not the set-target counter.' },
+  { value: 'myo_reps', label: 'Myo-reps', description: 'A heavy activation set, then short mini-sets with a few breaths between. Counts toward volume and progress.' },
+  { value: 'rest_pause', label: 'Rest-pause', description: 'Hit failure, rest 10 to 20 seconds, then squeeze out more reps. Counts toward volume and progress.' },
+  { value: 'amrap', label: 'AMRAP', description: 'As many reps as possible, usually the last set. Counts toward volume and progress.' },
 ];
 
 // Returns the set to use as the rep-progression anchor.
@@ -1798,7 +1802,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             <View style={styles.sheetHandle} />
             <Text style={styles.sheetTitle}>Set type</Text>
             <Text style={styles.sheetExplainer}>
-              Working sets are counted in your weekly totals. Warm-up sets are not.{'\n'}Use Working for the sets you want to track progress on. Use Warm-up for lighter preparation sets before your main work.
+              Pick how this set was done. Working and the intensity techniques all count toward your weekly totals; warm-ups don't. The label tells the coach how you trained.
             </Text>
             {SET_TYPE_OPTIONS.map(opt => (
               <TouchableOpacity
