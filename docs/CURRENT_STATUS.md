@@ -51,7 +51,7 @@ Continuation of the GAP punch list after the coach confirm-then-apply work (§ 0
 
 **Tests:** new pure-helper suites for `bandColour`, `bulkEntryOps`, `mealBreakdown`, `cyclePrefs` (+ `shouldShowCycleQuestion`), `searchTabs` (`selectTabRows`), and `frequents` (`frequentsCacheStale`). Full suite green serially: **93 suites / 1836 passed / 3 skipped**.
 
-**Next:** GAP rows 8, 15, 26, 27, 28 closed. Remaining UI/product gaps: row 1 (saved meals UI), rows 2 + 25 (body-composition deep: BF% input + trend), rows 19 + 20 (set-type picker + per-side L/R reps; row 20 needs a migration). Row 12 (sync-layer migration) still wants its own focused session. **Founder action:** apply `migrate_051` (and the still-pending 048, 050) in Supabase.
+**Next:** GAP rows 8, 15, 26, 27, 28 closed. **Update 2026-05-29:** rows 1 (saved meals, `310575a`), 2 + 25 (body-composition BF% input + trend + per-measurement charts, `4e219a9` / `d4bf8ed`), 19 (set-type picker, `8aae807`) and 20 (per-side L/R, `94dc84a`) have all since shipped. The single remaining product/infra gap is **row 12** (sync-layer: `updated_at` watermark so routines/programmes/mesocycles stop full-resyncing every foreground; plus resolving the legacy `sync.js` / modular `sync/` coexistence), which still wants its own focused session. **Founder action:** apply `migrate_051` (and the still-pending 048, 050) in Supabase.
 
 ### 0.B. 2026-05-28 session (Claude): coach confirm-then-apply
 
