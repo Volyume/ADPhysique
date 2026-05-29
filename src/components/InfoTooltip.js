@@ -29,7 +29,7 @@ const styles = StyleSheet.create({
   trigger: { justifyContent: 'center', alignItems: 'center' },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.65)',
+    backgroundColor: colors.scrim,
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.xl,

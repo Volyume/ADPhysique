@@ -43,6 +43,7 @@ export default function Button({
   loading = false,
   disabled = false,
   icon,
+  trailingIcon,
   fullWidth = true,
   style,
   textStyle,
@@ -85,6 +86,7 @@ export default function Button({
             </Text>
           ) : null}
           {children}
+          {trailingIcon ? <Ionicons name={trailingIcon} size={s.icon} color={v.fg} /> : null}
         </>
       )}
     </PressableCard>

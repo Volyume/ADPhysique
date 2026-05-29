@@ -679,7 +679,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2,
   },
   reorderBtnDisabled: { opacity: 0.3 },
-  editOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  editOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
   editSheet: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: radius.xl,

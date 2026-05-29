@@ -554,7 +554,7 @@ const styles = StyleSheet.create({
   // Create Exercise sheet
   sheetOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: colors.scrim,
     justifyContent: 'flex-end',
   },
   sheetSafe: {
@@ -664,7 +664,7 @@ const styles = StyleSheet.create({
   // Filter sheet
   filterOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: colors.scrim,
     justifyContent: 'flex-end',
   },
   filterSheet: {

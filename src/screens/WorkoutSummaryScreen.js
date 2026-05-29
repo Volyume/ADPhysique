@@ -1259,7 +1259,7 @@ const styles = StyleSheet.create({
   deloadCardNote: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18 },
 
   templateModalBg: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.7)',
+    flex: 1, backgroundColor: colors.scrim,
     justifyContent: 'center', alignItems: 'center', padding: spacing.xl,
   },
   templateModalCard: {

@@ -729,7 +729,7 @@ const styles = StyleSheet.create({
   },
 
   // Quiz modal
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' },
+  backdrop: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
   quizSheet: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,

@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold, marginBottom: spacing.sm },
   emptyBody: { color: colors.textMuted, fontSize: fontSize.sm, textAlign: 'center' },
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xl },
+  backdrop: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xl },
   card: { width: '100%', backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg },
   cardTitle: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold, marginBottom: spacing.md },
   input: {

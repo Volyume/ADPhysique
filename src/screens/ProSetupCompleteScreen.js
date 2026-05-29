@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { VolyumeIcon } from '../components/BrandMark';
+import Button from '../components/Button';
 import useAppStore from '../store/useAppStore';
 import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
 import { getSplitRationale } from '../lib/whyThisTemplates';
@@ -287,10 +288,13 @@ export default function ProSetupCompleteScreen({ navigation }) {
         </Animated.View>
 
         <Animated.View style={{ opacity }}>
-          <TouchableOpacity style={styles.startBtn} onPress={handleStart} activeOpacity={0.88}>
-            <Text style={styles.startBtnText}>Start training</Text>
-            <Ionicons name="arrow-forward" size={18} color={colors.background} />
-          </TouchableOpacity>
+          <Button
+            title="Start training"
+            trailingIcon="arrow-forward"
+            size="lg"
+            onPress={handleStart}
+            style={styles.startBtn}
+          />
         </Animated.View>
       </ScrollView>
     </SafeAreaView>
@@ -408,11 +412,5 @@ const styles = StyleSheet.create({
     color: colors.primary, marginTop: spacing.xs,
   },
 
-  startBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm, backgroundColor: colors.primary,
-    borderRadius: radius.lg, paddingVertical: spacing.lg + 2,
-    marginTop: spacing.md,
-  },
-  startBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.background },
+  startBtn: { marginTop: spacing.md },
 });

@@ -18,13 +18,14 @@
  */
 import React, { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
+  View, Text, StyleSheet, TouchableOpacity,
   ScrollView, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, radius, fontSize, fontWeight, hitSlop } from '../styles/theme';
+import { colors, spacing, fontSize, fontWeight, hitSlop } from '../styles/theme';
 import TierComparisonStrip from '../components/TierComparisonStrip';
+import Button from '../components/Button';
 import * as cascade from '../lib/payments/cascade';
 import * as playBilling from '../lib/payments/playBilling';
 import { skuFor, priceTextFor } from '../lib/payments/catalogue';
@@ -116,27 +117,8 @@ export default function PaywallScreen({ navigation, route }) {
         </View>
 
         <View style={styles.ctaStack}>
-          <TouchableOpacity
-            style={styles.primaryBtn}
-            onPress={handlePay}
-            disabled={busy}
-            accessibilityRole="button"
-            accessibilityLabel={ctaLabel}
-          >
-            {busy ? (
-              <ActivityIndicator color={colors.background} />
-            ) : (
-              <Text style={styles.primaryBtnText}>{ctaLabel}</Text>
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.tertiaryBtn}
-            onPress={dismiss}
-            disabled={busy}
-            accessibilityRole="button"
-          >
-            <Text style={styles.tertiaryBtnText}>Not now</Text>
-          </TouchableOpacity>
+          <Button title={ctaLabel} size="lg" loading={busy} onPress={handlePay} />
+          <Button title="Not now" variant="tertiary" disabled={busy} onPress={dismiss} />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -170,23 +152,4 @@ const styles = StyleSheet.create({
   },
   stripWrap: { marginBottom: spacing.xl },
   ctaStack: { gap: spacing.md },
-  primaryBtn: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.lg,
-    borderRadius: radius.md,
-    alignItems: 'center',
-  },
-  primaryBtnText: {
-    color: colors.background,
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
-  },
-  tertiaryBtn: {
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
-  tertiaryBtnText: {
-    color: colors.textMuted,
-    fontSize: fontSize.md,
-  },
 });

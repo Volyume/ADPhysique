@@ -687,7 +687,7 @@ const styles = StyleSheet.create({
   selAction: { alignItems: 'center', minWidth: 48, gap: spacing.xxs },
   selActionLabel: { color: colors.textPrimary, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
   moveBackdrop: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
+    flex: 1, backgroundColor: colors.scrim,
     alignItems: 'center', justifyContent: 'center',
     padding: spacing.xl,
   },

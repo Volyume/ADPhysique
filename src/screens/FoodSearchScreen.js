@@ -792,7 +792,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   plateLogText: { color: colors.background, fontSize: fontSize.md, fontWeight: fontWeight.bold },
-  plateModalBackdrop: { flex: 1, backgroundColor: '#000a', justifyContent: 'flex-end' },
+  plateModalBackdrop: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
   plateModalSheet: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,

@@ -231,7 +231,7 @@ function MacroPill({ label, value }) {
 }
 
 const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: '#000', opacity: 0.55 },
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.scrim },
   kbWrap: { ...StyleSheet.absoluteFillObject, justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: colors.surface,

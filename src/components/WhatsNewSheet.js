@@ -160,7 +160,7 @@ export default function WhatsNewSheet({ items = [], onOpenSettings }) {
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#000',
+    backgroundColor: colors.scrim,
     opacity: 0.55,
   },
   sheet: {

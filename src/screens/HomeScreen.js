@@ -2053,7 +2053,7 @@ const styles = StyleSheet.create({
   quickLinkLabel: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
 
   // Change workout sheet
-  sheetBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' },
+  sheetBackdrop: { flex: 1, backgroundColor: colors.scrim },
   sheet: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: radius.xl,

@@ -118,7 +118,7 @@ export default function MacroBreakdownSheet({ visible, entries, dateLabel, onClo
 }
 
 const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.scrim },
   backdropPress: { flex: 1 },
   sheet: {
     position: 'absolute', left: 0, right: 0, bottom: 0,

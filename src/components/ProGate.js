@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
   },
   lockChipText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.background },
 
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' },
+  backdrop: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,

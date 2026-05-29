@@ -594,7 +594,7 @@ const styles = StyleSheet.create({
   },
   travelChipText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.medium, flex: 1 },
   travelOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.7)',
+    flex: 1, backgroundColor: colors.scrim,
     justifyContent: 'center', alignItems: 'center', padding: spacing.lg,
   },
   travelCard: {
