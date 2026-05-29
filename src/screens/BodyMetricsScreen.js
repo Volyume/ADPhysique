@@ -29,7 +29,7 @@ import { logBodyMetric, getBodyMetricLog } from '../lib/database';
 import { getRecentIntakeSummary } from '../lib/food/db';
 import { EmptyBodyIllustration } from '../components/Illustrations';
 import { syncBodyMetric } from '../lib/sync';
-import { computeEWMA, ewmaValues, computeWeeklyWeightChange } from '../lib/nutritionEngine';
+import { computeEWMA, ewmaValues, computeWeeklyWeightChange, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { formatBodyWeight, formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg } from '../lib/units';
@@ -391,6 +391,24 @@ export default function BodyMetricsScreen({ navigation }) {
   const [selectedMeasurement, setSelectedMeasurement] = useState(null);
   const [ewmaData, setEwmaData] = useState([]);
 
+  // Estimated daily burn: Precision Coaching's reverse-engineered TDEE from
+  // the weight trend and logged intake. A point estimate with a confidence
+  // tier, not a fabricated history line. Returns insufficient_data until there
+  // are about two weeks of weigh-ins plus targets, which the card renders as an
+  // honest cold-start line.
+  const adaptiveBurn = useMemo(() => {
+    const prescribedKcal = nutritionTargets?.targetKcal ?? null;
+    const currentTDEEEstimate = nutritionTargets?.tdee ?? nutritionTargets?.maintenanceKcal ?? null;
+    const adherenceFactor =
+      recentIntake?.avgKcal && prescribedKcal ? recentIntake.avgKcal / prescribedKcal : 1.0;
+    return computeAdaptiveTDEEAdjustment({
+      ewmaData,
+      prescribedKcal,
+      currentTDEEEstimate,
+      adherenceFactor,
+    });
+  }, [ewmaData, nutritionTargets, recentIntake]);
+
   const measurementsWithData = useMemo(() =>
     MEASUREMENTS.filter(m => history.some(e => e[m.key] != null)),
     [history],
@@ -746,6 +764,34 @@ export default function BodyMetricsScreen({ navigation }) {
                 </Text>
               )}
             </View>
+
+            {ewmaData.length >= 7 ? (
+              <View style={styles.burnCard}>
+                <Text style={styles.burnLabel}>Estimated daily burn</Text>
+                {adaptiveBurn.confidence === 'insufficient_data' ? (
+                  <Text style={styles.burnMuted}>
+                    Precision Coaching works out your real daily burn from your weight trend and what you log. Keep logging your morning weight and meals for about two weeks and it appears here.
+                  </Text>
+                ) : (
+                  <>
+                    <View style={styles.burnRow}>
+                      <Text style={styles.burnValue}>{adaptiveBurn.adjustedTDEE}</Text>
+                      <Text style={styles.burnUnit}>kcal/day</Text>
+                    </View>
+                    {adaptiveBurn.insight ? (
+                      <Text style={styles.burnMuted}>{adaptiveBurn.insight}</Text>
+                    ) : null}
+                    <Text style={styles.burnConfidence}>
+                      {adaptiveBurn.confidence === 'high'
+                        ? 'High confidence'
+                        : adaptiveBurn.confidence === 'medium'
+                          ? 'Firming up'
+                          : 'Early estimate'}, from {adaptiveBurn.weeks} {adaptiveBurn.weeks === 1 ? 'week' : 'weeks'} of data
+                    </Text>
+                  </>
+                )}
+              </View>
+            ) : null}
 
             {/* Body composition: body fat % + its own trend, shown once
                 the user has logged it. The delta is rendered neutrally
@@ -1146,4 +1192,14 @@ const styles = StyleSheet.create({
   ewmaWeekly: { fontSize: fontSize.sm, color: colors.textSecondary },
   ewmaMuted: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
   ewmaIntake: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: spacing.xs },
+  burnCard: {
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    borderRadius: radius.md, padding: spacing.md, gap: spacing.xs, marginTop: spacing.md,
+  },
+  burnLabel: { fontSize: fontSize.xs, color: colors.textSecondary },
+  burnRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs },
+  burnValue: { fontSize: fontSize.xxl, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  burnUnit: { fontSize: fontSize.sm, color: colors.textSecondary },
+  burnMuted: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
+  burnConfidence: { fontSize: fontSize.xs, color: colors.textSecondary },
 });
