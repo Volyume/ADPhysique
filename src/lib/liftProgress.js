@@ -70,7 +70,10 @@ export function buildLiftProgressRows(sets, exercises) {
     const latest = sessions[sessions.length - 1];
     const first = sessions[0];
     const bestE1rm = sessions.reduce((m, s) => Math.max(m, s.bestE1rm), 0);
-    const deltaPct = first.bestE1rm > 0
+    // Percent change from the first to the latest session. Needs at least
+    // two sessions to mean anything; a single session has nothing to
+    // compare against, so it reports null rather than a misleading 0%.
+    const deltaPct = (sessions.length > 1 && first.bestE1rm > 0)
       ? Math.round(((latest.bestE1rm - first.bestE1rm) / first.bestE1rm) * 100)
       : null;
 

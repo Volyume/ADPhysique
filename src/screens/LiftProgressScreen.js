@@ -49,7 +49,7 @@ export default function LiftProgressScreen({ navigation }) {
   function trendColor(deltaPct) {
     if (deltaPct == null) return colors.textMuted;
     if (deltaPct > 0) return colors.success;
-    if (deltaPct < 0) return colors.danger;
+    if (deltaPct < 0) return colors.error;
     return colors.textMuted;
   }
 
