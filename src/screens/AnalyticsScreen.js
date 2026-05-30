@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns';
 
-import { colors, fontSize, fontWeight, spacing, radius, volumeColors, motion } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, volumeColors, motion, type } from '../styles/theme';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import ScreenHeader from '../components/ScreenHeader';
 import { EmptyChartIllustration } from '../components/Illustrations';
@@ -1130,15 +1130,15 @@ const styles = StyleSheet.create({
   safe:        { flex: 1, backgroundColor: colors.background },
   content:     { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxxl },
   header:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  pageTitle:   { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  pageTitle:   { ...type.h3, color: colors.textPrimary },
 
   section:     { gap: spacing.md },
   sectionLabel: {
-    fontSize: fontSize.sm, fontWeight: fontWeight.semibold,
-    color: colors.textSecondary, letterSpacing: 0.2,
+    ...type.label,
+    color: colors.textSecondary,
   },
   rowBetween:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  seeAll:      { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.medium },
+  seeAll:      { ...type.label, color: colors.primary },
 
   card: {
     backgroundColor: colors.surface,
@@ -1151,27 +1151,27 @@ const styles = StyleSheet.create({
   // ── Mesocycle card ──
   mesoCard:         { gap: spacing.md },
   mesoEmpty:        { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl },
-  mesoEmptyTitle:   { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  mesoEmptyTitle:   { ...type.bodyStrong, color: colors.textPrimary },
   mesoEmptySub:     { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', lineHeight: 19 },
   mesoEmptyBtn:     {
     backgroundColor: colors.primaryBg, borderRadius: radius.full,
     paddingHorizontal: spacing.xl, paddingVertical: spacing.sm,
     borderWidth: 1, borderColor: colors.primary, marginTop: spacing.xs,
   },
-  mesoEmptyBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
+  mesoEmptyBtnText: { ...type.label, color: colors.primary },
   mesoTop:          { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
-  mesoName:         { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary, flex: 1 },
-  mesoWeek:         { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: spacing.xxs },
+  mesoName:         { ...type.bodyStrong, color: colors.textPrimary, flex: 1 },
+  mesoWeek:         { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
   mesoProgressTrack: {
     height: 4, borderRadius: radius.full,
     backgroundColor: colors.surface2, overflow: 'hidden',
   },
   mesoProgressFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
-  mesoProgressLabel: { fontSize: fontSize.xs, color: colors.textMuted },
+  mesoProgressLabel: { ...type.num('caption'), color: colors.textMuted },
   sparkWrap:           { marginTop: spacing.xs },
   sparkLabelRow:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: spacing.xs },
-  sparkLabel:          { fontSize: fontSize.xs, color: colors.textMuted },
-  sparkValue:          { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
+  sparkLabel:          { ...type.caption, color: colors.textMuted },
+  sparkValue:          { ...type.num('bodyStrong'), color: colors.textPrimary },
   sparkChartCentered:  { alignItems: 'center', paddingTop: spacing.xs },
 
   // ── Insight rows ──
@@ -1208,7 +1208,7 @@ const styles = StyleSheet.create({
   },
   windowToggleText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.bold },
   prWrap:    { gap: spacing.sm },
-  prTotal:   { fontSize: fontSize.xs, color: colors.textMuted },
+  prTotal:   { ...type.num('caption'), color: colors.textMuted },
   prBarsRow: {
     flexDirection: 'row', alignItems: 'flex-end', gap: spacing.xs, height: 60,
   },
@@ -1231,7 +1231,7 @@ const styles = StyleSheet.create({
   calCol:        { flex: 1, gap: 3 },
   calLegend:     { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   calDot:        { width: 10, height: 10, borderRadius: 2 },
-  calLegendText: { fontSize: fontSize.xs, color: colors.textMuted },
+  calLegendText: { ...type.caption, color: colors.textMuted },
 
   // ── Recent sessions ──
   sessionCard: {
@@ -1241,8 +1241,8 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   sessionLeft:  { flex: 1 },
-  sessionName:  { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  sessionMeta:  { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: spacing.xxs },
+  sessionName:  { ...type.bodyStrong, color: colors.textPrimary },
+  sessionMeta:  { ...type.num('caption'), color: colors.textSecondary, marginTop: spacing.xxs },
   diffChip:     { borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: 3 },
   diffText:     { fontSize: fontSize.xs, fontWeight: fontWeight.bold },
 
@@ -1263,7 +1263,7 @@ const styles = StyleSheet.create({
   navTileLocked: { opacity: 0.55 },
   navTileLabelLocked: { color: colors.textMuted },
   navTileSub: {
-    fontSize: fontSize.xs,
+    ...type.num('caption'),
     color: colors.textMuted,
     marginTop: spacing.xxs,
     textAlign: 'center',
@@ -1275,7 +1275,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   deloadTitle: {
-    fontSize: fontSize.md, fontWeight: fontWeight.semibold,
+    ...type.bodyStrong,
     color: colors.warning, marginBottom: spacing.xxs,
   },
   deloadSub: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
@@ -1319,11 +1319,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.border + '60',
   },
   freqMuscle: {
-    fontSize: fontSize.sm, color: colors.textPrimary,
-    fontWeight: fontWeight.medium, flex: 1,
+    ...type.label, color: colors.textPrimary,
+    flex: 1,
   },
   freqCounts: {
-    fontSize: fontSize.xs, color: colors.textSecondary,
+    ...type.caption, color: colors.textSecondary,
   },
   freqCountBold: {
     fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textPrimary,
@@ -1356,10 +1356,8 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   workloadTitle: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    ...type.label,
     color: colors.textMuted,
-    letterSpacing: 0.2,
   },
   workloadBarBg: {
     height: 8,
@@ -1380,12 +1378,11 @@ const styles = StyleSheet.create({
     gap: spacing.xxs,
   },
   workloadStatValue: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    ...type.num('title'),
     color: colors.textPrimary,
   },
   workloadStatLabel: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
   },
   workloadStatus: {
@@ -1401,8 +1398,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   emptyStateHeading: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    ...type.title,
     color: colors.textPrimary,
     textAlign: 'center',
   },

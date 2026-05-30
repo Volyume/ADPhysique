@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { setGoalLockAdvanced, getGoalLockAdvanced, recordEngineTelemetry } from '../lib/database';
 
@@ -131,8 +131,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   scroll: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxxl },
   title: {
-    fontSize: fontSize.xxl,
-    fontWeight: fontWeight.bold,
+    ...type.h2,
     color: colors.textPrimary,
     marginTop: spacing.sm,
     marginBottom: spacing.xs,
@@ -191,7 +190,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     marginTop: spacing.sm,
   },
-  noteText: { fontSize: fontSize.xs, color: colors.textMuted, flex: 1 },
+  noteText: { ...type.caption, color: colors.textMuted, flex: 1 },
   cta: {
     marginTop: spacing.lg,
     paddingVertical: spacing.md,
@@ -200,5 +199,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ctaDisabled: { opacity: 0.5 },
-  ctaText: { color: colors.background, fontWeight: fontWeight.bold, fontSize: fontSize.md },
+  ctaText: { ...type.bodyStrong, color: colors.background },
 });

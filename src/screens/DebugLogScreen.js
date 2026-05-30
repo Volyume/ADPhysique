@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import { getRecentErrors, clearErrors, exportErrorsAsText, getCrashLog, clearCrashLog, logInfo } from '../lib/errorLog';
 import { diagnoseSyncConflicts } from '../lib/database';
@@ -192,13 +192,13 @@ const styles = StyleSheet.create({
   actionsRow: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
   actionBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   actionBtnDanger: { borderColor: colors.error },
-  actionLabel: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
+  actionLabel: { ...type.label, color: colors.textPrimary },
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.lg, paddingTop: 0, gap: spacing.sm, paddingBottom: spacing.xxl },
   crashCard: { backgroundColor: colors.errorBg, borderRadius: radius.md, borderWidth: 1, borderColor: colors.error, padding: spacing.md, gap: spacing.xs, marginBottom: spacing.sm },
   crashTitle: { color: colors.error, fontSize: fontSize.sm, fontWeight: fontWeight.bold },
-  crashWhen: { color: colors.textMuted, fontSize: fontSize.xs },
-  crashMsg: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
+  crashWhen: { ...type.num('caption'), color: colors.textMuted },
+  crashMsg: { ...type.label, color: colors.textPrimary },
   crashStack: { color: colors.textSecondary, fontSize: fontSize.xs, fontFamily: 'monospace' },
   empty: { alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xxxl, gap: spacing.sm },
   emptyText: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.medium },
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
   entryHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   entryLevel: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, textTransform: 'uppercase', minWidth: 44 },
   entryScope: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.medium, flex: 1 },
-  entryWhen: { color: colors.textMuted, fontSize: fontSize.xs },
+  entryWhen: { ...type.num('caption'), color: colors.textMuted },
   entryMessage: { color: colors.textPrimary, fontSize: fontSize.sm },
   entryContext: { color: colors.textMuted, fontSize: fontSize.xs, fontFamily: 'monospace' },
   entryStack: { color: colors.textMuted, fontSize: fontSize.xs, fontFamily: 'monospace' },

@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import PressableCard from '../components/PressableCard';
 import { getCompletedWorkoutSets, getAllExercises } from '../lib/database';
@@ -128,14 +128,14 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   cardMain: { flex: 1, gap: spacing.xxs },
-  name: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  meta: { fontSize: fontSize.xs, color: colors.textMuted },
+  name: { ...type.bodyStrong, color: colors.textPrimary },
+  meta: { ...type.caption, color: colors.textMuted },
   statRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs, marginTop: spacing.xxs },
   statValue: { fontSize: fontSize.lg, fontWeight: fontWeight.heavy, color: colors.textPrimary },
-  statLabel: { fontSize: fontSize.xs, color: colors.textMuted },
-  delta: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, marginLeft: spacing.xs },
+  statLabel: { ...type.caption, color: colors.textMuted },
+  delta: { ...type.num('label'), marginLeft: spacing.xs },
   cardRight: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   empty: { alignItems: 'center', paddingHorizontal: spacing.xxl, paddingTop: spacing.xxxl, gap: spacing.md },
-  emptyTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary, textAlign: 'center' },
+  emptyTitle: { ...type.title, color: colors.textPrimary, textAlign: 'center' },
   emptyText: { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
 });

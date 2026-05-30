@@ -19,7 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
 import PressableCard from '../components/PressableCard';
@@ -302,8 +302,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, paddingBottom: spacing.xxl },
   h1: {
-    fontSize: fontSize.xxl,
-    fontWeight: fontWeight.bold,
+    ...type.h2,
     color: colors.textPrimary,
     marginBottom: spacing.sm,
   },
@@ -329,8 +328,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   sourceName: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
+    ...type.bodyStrong,
     color: colors.textPrimary,
   },
   sourceText: {
@@ -350,8 +348,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
   primaryCtaText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
+    ...type.bodyStrong,
     color: colors.background,
   },
   secondaryCta: {
@@ -364,8 +361,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   secondaryCtaText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    ...type.label,
     color: colors.textSecondary,
   },
 
@@ -382,8 +378,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xxl,
   },
   workingText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    ...type.bodyStrong,
     color: colors.textPrimary,
   },
   workingSub: {
@@ -413,12 +408,11 @@ const styles = StyleSheet.create({
   },
   stat: { flex: 1, alignItems: 'center' },
   statValue: {
-    fontSize: fontSize.xxl,
-    fontWeight: fontWeight.bold,
+    ...type.num('h2'),
     color: colors.textPrimary,
   },
   statLabel: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
     marginTop: spacing.xxs,
   },
@@ -455,7 +449,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   unmappedHint: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
     marginTop: spacing.xs,
     fontStyle: 'italic',
@@ -471,8 +465,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   doneTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    ...type.title,
     color: colors.textPrimary,
   },
   doneBody: {

@@ -23,7 +23,7 @@ function safeFormatDate(value, fmt) {
 }
 import { useFocusEffect } from '@react-navigation/native';
 import { LineChart } from 'react-native-gifted-charts';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logBodyMetric, getBodyMetricLog } from '../lib/database';
 import { getRecentIntakeSummary } from '../lib/food/db';
@@ -333,9 +333,9 @@ function MeasurementTrendChart({ entries, measureKey, label }) {
 const chartStyles = StyleSheet.create({
   wrap: { marginTop: spacing.sm, marginHorizontal: -spacing.xs },
   emptyHint: { paddingTop: spacing.md },
-  emptyHintText: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
+  emptyHintText: { ...type.caption, color: colors.textMuted, fontStyle: 'italic' },
   axisText: { color: colors.textMuted, fontSize: fontSize.micro },
-  smoothedHint: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xs, textAlign: 'center' },
+  smoothedHint: { ...type.caption, color: colors.textMuted, marginTop: spacing.xs, textAlign: 'center' },
 });
 
 // ─── Opt-in gate ─────────────────────────────────────────────────────────────
@@ -1051,7 +1051,7 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
   optInContent: { padding: spacing.lg, paddingTop: spacing.xxl },
   sectionTitle: {
-    fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary, letterSpacing: 0.2,
+    ...type.label, color: colors.textSecondary,
   },
 
   optInCard: {
@@ -1067,18 +1067,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, borderRadius: radius.lg,
     paddingVertical: spacing.lg, paddingHorizontal: spacing.xl, marginTop: spacing.md,
   },
-  optInBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
+  optInBtnText: { ...type.bodyStrong, color: colors.background },
   confirmCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.xl,
     borderWidth: 1, borderColor: colors.border, gap: spacing.md, alignItems: 'flex-start',
   },
-  confirmTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  confirmTitle: { ...type.h3, color: colors.textPrimary },
   confirmBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 21 },
   confirmBtn: {
     alignSelf: 'stretch', alignItems: 'center', backgroundColor: colors.primary,
     borderRadius: radius.lg, paddingVertical: spacing.lg, marginTop: spacing.sm,
   },
-  confirmBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
+  confirmBtnText: { ...type.bodyStrong, color: colors.background },
   confirmHelpline: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18, marginTop: spacing.sm },
 
   nutritionCard: {
@@ -1087,19 +1087,19 @@ const styles = StyleSheet.create({
   },
   nutritionCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   nutritionCardLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  nutritionCardTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  nutritionCardLink: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
+  nutritionCardTitle: { ...type.bodyStrong, color: colors.textPrimary },
+  nutritionCardLink: { ...type.label, color: colors.primary },
   nutritionGrid: { flexDirection: 'row', gap: spacing.md },
   nutritionCell: { flex: 1, alignItems: 'center', gap: spacing.xxs },
-  nutritionValue: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  nutritionLabel: { fontSize: fontSize.xs, color: colors.textMuted },
+  nutritionValue: { ...type.num('h3'), color: colors.textPrimary },
+  nutritionLabel: { ...type.caption, color: colors.textMuted },
   nutritionEmpty: { fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 18 },
 
   emptyCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.xxl,
     borderWidth: 1, borderColor: colors.border, alignItems: 'center', gap: spacing.md,
   },
-  emptyTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textSecondary },
+  emptyTitle: { ...type.title, color: colors.textSecondary },
   emptyText: { fontSize: fontSize.sm, color: colors.textMuted, textAlign: 'center', lineHeight: 20 },
 
   snapshotCard: {
@@ -1117,20 +1117,20 @@ const styles = StyleSheet.create({
   phaseLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.bold },
   weightRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   weightValue: { fontSize: fontSize.xxxl, fontWeight: fontWeight.black, color: colors.textPrimary },
-  trendHint: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
+  trendHint: { ...type.caption, color: colors.textMuted, fontStyle: 'italic' },
   bodyFatBlock: { gap: spacing.xs, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md },
   bodyFatRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   bodyFatValueRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  bodyFatValue: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  bodyFatValue: { ...type.num('h3'), color: colors.textPrimary },
   measureGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   measureCell: {
     minWidth: '30%', backgroundColor: colors.surface2, borderRadius: radius.md,
     padding: spacing.md, gap: spacing.xxs, borderWidth: 1, borderColor: 'transparent',
   },
   measureCellActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
-  measureValue: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  measureValue: { ...type.num('bodyStrong'), color: colors.textPrimary },
   measureValueActive: { color: colors.primary },
-  measureLabel: { fontSize: fontSize.xs, color: colors.textMuted },
+  measureLabel: { ...type.caption, color: colors.textMuted },
   measureLabelActive: { color: colors.primaryDim },
   measureTabRow: { flexDirection: 'row', gap: spacing.xs, paddingVertical: spacing.sm },
   measureTab: {
@@ -1146,18 +1146,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
     backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: spacing.lg,
   },
-  logBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.background },
+  logBtnText: { ...type.title, color: colors.background },
   formCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
     gap: spacing.md, borderWidth: 1, borderColor: colors.border,
   },
-  formTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  formTitle: { ...type.title, color: colors.textPrimary },
   formRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   formLabel: { width: 140, fontSize: fontSize.sm, color: colors.textSecondary },
   formInput: {
     flex: 1, backgroundColor: colors.surface2, borderRadius: radius.sm,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    fontSize: fontSize.md, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border,
+    ...type.body, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border,
   },
   notesInput: { flex: undefined, minHeight: 60 },
   measureToggle: {
@@ -1171,7 +1171,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', marginTop: spacing.sm,
   },
   btnDisabled: { opacity: 0.6 },
-  saveBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
+  saveBtnText: { ...type.bodyStrong, color: colors.background },
   section: { gap: spacing.sm },
   historyRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -1180,26 +1180,26 @@ const styles = StyleSheet.create({
   },
   historyDate: { fontSize: fontSize.sm, color: colors.textSecondary },
   historyValues: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  historyWeight: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  historyMeasure: { fontSize: fontSize.xs, color: colors.textMuted },
+  historyWeight: { ...type.num('bodyStrong'), color: colors.textPrimary },
+  historyMeasure: { ...type.num('caption'), color: colors.textMuted },
 
   ewmaCard: {
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
     borderRadius: radius.md, padding: spacing.md, gap: spacing.xs,
   },
-  ewmaLabel: { fontSize: fontSize.xs, color: colors.textSecondary },
-  ewmaValue: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  ewmaLabel: { ...type.caption, color: colors.textSecondary },
+  ewmaValue: { ...type.num('h3'), color: colors.textPrimary },
   ewmaWeekly: { fontSize: fontSize.sm, color: colors.textSecondary },
-  ewmaMuted: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
-  ewmaIntake: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: spacing.xs },
+  ewmaMuted: { ...type.caption, color: colors.textMuted, fontStyle: 'italic' },
+  ewmaIntake: { ...type.num('caption'), color: colors.textSecondary, marginTop: spacing.xs },
   burnCard: {
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
     borderRadius: radius.md, padding: spacing.md, gap: spacing.xs, marginTop: spacing.md,
   },
-  burnLabel: { fontSize: fontSize.xs, color: colors.textSecondary },
+  burnLabel: { ...type.caption, color: colors.textSecondary },
   burnRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs },
-  burnValue: { fontSize: fontSize.xxl, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  burnValue: { ...type.num('h2'), color: colors.textPrimary },
   burnUnit: { fontSize: fontSize.sm, color: colors.textSecondary },
-  burnMuted: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
-  burnConfidence: { fontSize: fontSize.xs, color: colors.textSecondary },
+  burnMuted: { ...type.caption, color: colors.textMuted, fontStyle: 'italic' },
+  burnConfidence: { ...type.caption, color: colors.textSecondary },
 });

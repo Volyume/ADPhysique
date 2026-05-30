@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import Card from '../components/Card';
 import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
 import { PROTEIN_APPROACHES } from '../lib/nutritionEngine';
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  headerTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  headerTitle: { ...type.bodyStrong, color: colors.textPrimary },
 
   scroll: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxxl },
 
@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
     borderWidth: 1, borderColor: colors.success + '40',
   },
-  heroTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.xs },
+  heroTitle: { ...type.title, color: colors.textPrimary, marginBottom: spacing.xs },
   heroBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
 
   sectionLabel: {
@@ -313,26 +313,26 @@ const styles = StyleSheet.create({
   },
   cardUnchanged: { opacity: 0.65 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  cardTitle: { flex: 1, fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  cardTitle: { ...type.label, flex: 1, color: colors.textPrimary },
   unchangedTag: { fontSize: fontSize.micro, color: colors.textMuted, fontStyle: 'italic' },
 
   diffRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
-  diffPrev: { fontSize: fontSize.md, color: colors.textMuted, textDecorationLine: 'line-through' },
+  diffPrev: { ...type.body, color: colors.textMuted, textDecorationLine: 'line-through' },
   diffArrow: { marginHorizontal: spacing.sm },
-  diffNext: { fontSize: fontSize.md, color: colors.primary, fontWeight: fontWeight.bold },
+  diffNext: { ...type.bodyStrong, color: colors.primary },
 
-  cardValue: { fontSize: fontSize.md, color: colors.textPrimary, fontWeight: fontWeight.semibold },
+  cardValue: { ...type.bodyStrong, color: colors.textPrimary },
   cardReason: { fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 18, marginTop: spacing.xxs },
 
   macroRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingVertical: spacing.xs,
   },
-  macroLabel: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  macroLabel: { ...type.label, color: colors.textSecondary },
   macroValues: { flexDirection: 'row', alignItems: 'center' },
   macroPrev: { fontSize: fontSize.sm, color: colors.textMuted, textDecorationLine: 'line-through' },
   macroNext: { fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.bold },
-  macroUnchanged: { fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.semibold },
+  macroUnchanged: { ...type.label, color: colors.textPrimary },
   macroDelta: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold },
   macroDeltaUp: { color: colors.primary },
   macroDeltaDown: { color: colors.warning },

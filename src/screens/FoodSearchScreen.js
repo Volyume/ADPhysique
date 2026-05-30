@@ -25,7 +25,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import { SkeletonRow } from '../components/Skeleton';
 import {
   logFoodEntry, getRecentFoodEntries, getFavourites,
@@ -699,7 +699,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  headerTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold },
+  headerTitle: { ...type.title, color: colors.textPrimary },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
 
   tabBar: {
@@ -748,13 +748,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  ctaText: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold, marginLeft: spacing.md, flex: 1 },
+  ctaText: { ...type.bodyStrong, color: colors.textPrimary, marginLeft: spacing.md, flex: 1 },
 
   emptyWrap: { paddingHorizontal: spacing.lg, paddingVertical: spacing.xl, alignItems: 'center' },
   emptyText: { color: colors.textSecondary, fontSize: fontSize.sm, textAlign: 'center' },
 
   suggestHint: {
-    color: colors.textMuted, fontSize: fontSize.xs,
+    ...type.caption, color: colors.textMuted,
     paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.sm,
   },
   suggestCard: {
@@ -766,14 +766,14 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.md, marginTop: spacing.sm,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
-  suggestName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
-  suggestMacros: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: 3 },
+  suggestName: { ...type.bodyStrong, color: colors.textPrimary },
+  suggestMacros: { ...type.caption, color: colors.textSecondary, marginTop: 3 },
 
   noResults: {
     paddingHorizontal: spacing.lg, paddingVertical: spacing.xl,
     alignItems: 'center',
   },
-  noResultsText: { color: colors.textSecondary, fontSize: fontSize.md, marginBottom: spacing.md, textAlign: 'center' },
+  noResultsText: { ...type.body, color: colors.textSecondary, marginBottom: spacing.md, textAlign: 'center' },
   noResultsBtn: {
     backgroundColor: colors.primary,
     paddingVertical: spacing.md, paddingHorizontal: spacing.xl,
@@ -787,7 +787,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg, marginTop: spacing.md,
     borderTopWidth: 1, borderTopColor: colors.border,
   },
-  footerBtnText: { color: colors.primary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  footerBtnText: { ...type.bodyStrong, color: colors.primary },
 
   plateBar: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
@@ -796,14 +796,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   plateInfo: { flex: 1 },
-  plateCount: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
-  plateKcalLine: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: spacing.xxs },
+  plateCount: { ...type.bodyStrong, color: colors.textPrimary },
+  plateKcalLine: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
   plateLogBtn: {
     backgroundColor: colors.primary,
     paddingVertical: spacing.sm, paddingHorizontal: spacing.lg,
     borderRadius: radius.md,
   },
-  plateLogText: { color: colors.background, fontSize: fontSize.md, fontWeight: fontWeight.bold },
+  plateLogText: { ...type.bodyStrong, color: colors.background },
   plateModalBackdrop: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
   plateModalSheet: {
     backgroundColor: colors.surface,
@@ -815,14 +815,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginBottom: spacing.md,
   },
-  plateModalTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold },
+  plateModalTitle: { ...type.title, color: colors.textPrimary },
   plateItem: {
     flexDirection: 'row', alignItems: 'center',
     paddingVertical: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   plateItemName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.medium },
-  plateItemMeta: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: spacing.xxs },
+  plateItemMeta: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
   plateModalActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.lg },
   plateClearBtn: {
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,

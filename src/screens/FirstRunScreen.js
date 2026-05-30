@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import Button from '../components/Button';
 import useAppStore from '../store/useAppStore';
 
@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
   content: { padding: spacing.xl, gap: spacing.lg, flexGrow: 1 },
   title: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary, marginTop: spacing.lg },
   subtitle: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
-  fieldLabel: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary, marginTop: spacing.md },
+  fieldLabel: { ...type.label, color: colors.textSecondary, marginTop: spacing.md },
   input: {
     backgroundColor: colors.surface2, borderRadius: radius.md,
     paddingHorizontal: spacing.md, paddingVertical: spacing.md,
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface,
   },
   unitBtnActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
-  unitBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textSecondary },
+  unitBtnText: { ...type.bodyStrong, color: colors.textSecondary },
   unitBtnTextActive: { color: colors.primary },
   hintCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,

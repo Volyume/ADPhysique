@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import EngineLog from '../components/EngineLog';
 import useAppStore from '../store/useAppStore';
@@ -206,8 +206,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   emptyTitle: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    ...type.bodyStrong,
     color: colors.textPrimary,
   },
   emptyBody: {
@@ -240,8 +239,7 @@ const styles = StyleSheet.create({
   },
   decisionIcon: { marginTop: spacing.xxs },
   decisionLabel: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    ...type.label,
     color: colors.textMuted,
     marginBottom: spacing.xxs,
   },
@@ -253,7 +251,7 @@ const styles = StyleSheet.create({
   },
 
   footer: {
-    fontSize: fontSize.xs,
+    ...type.num('caption'),
     color: colors.textMuted,
     textAlign: 'center',
     paddingTop: spacing.xs,

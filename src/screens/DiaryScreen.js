@@ -16,7 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, fontSize, fontWeight, spacing, radius, shadow, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, shadow, circle, type } from '../styles/theme';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import {
   getFoodEntriesForDay, deleteFoodEntry, updateFoodEntry, getRollupForDay,
@@ -669,9 +669,8 @@ const styles = StyleSheet.create({
     ...shadow.md,
   },
   copyYesterdayLabel: {
+    ...type.label,
     color: colors.textPrimary,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
   },
   safe: { flex: 1, backgroundColor: colors.background },
   selectionBar: {
@@ -685,7 +684,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   selCancel: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
-  selCount: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  selCount: { ...type.bodyStrong, color: colors.textPrimary },
   selActions: { flex: 1, flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.lg },
   selAction: { alignItems: 'center', minWidth: 48, gap: spacing.xxs },
   selActionLabel: { color: colors.textPrimary, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
@@ -726,7 +725,7 @@ const styles = StyleSheet.create({
   },
   saveMealBtn: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radius.md },
   saveMealBtnPrimary: { backgroundColor: colors.primary },
-  saveMealBtnText: { color: colors.textPrimary, fontSize: fontSize.md },
+  saveMealBtnText: { ...type.body, color: colors.textPrimary },
   dayPagerRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: spacing.sm,
@@ -740,12 +739,12 @@ const styles = StyleSheet.create({
   dateGroup: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
   },
-  dateLabel: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold, minWidth: 96, textAlign: 'center' },
+  dateLabel: { ...type.title, color: colors.textPrimary, minWidth: 96, textAlign: 'center' },
   todayPill: {
     paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
     borderRadius: radius.full, borderWidth: 1, borderColor: colors.border,
   },
-  todayPillText: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
+  todayPillText: { ...type.label, color: colors.textPrimary },
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxxl },
   macroRingsWrap: { marginBottom: spacing.lg },
@@ -770,6 +769,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderRadius: radius.lg,
     borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed',
   },
-  emptyTitle: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold, marginBottom: spacing.sm },
+  emptyTitle: { ...type.bodyStrong, color: colors.textPrimary, marginBottom: spacing.sm },
   emptyBody: { color: colors.textSecondary, fontSize: fontSize.sm, textAlign: 'center', lineHeight: 20 },
 });

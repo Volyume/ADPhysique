@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { startOfWeek, endOfWeek, format, isWithinInterval } from 'date-fns';
-import { colors, spacing, fontSize, fontWeight, radius } from '../styles/theme';
+import { colors, spacing, fontSize, fontWeight, radius, type } from '../styles/theme';
 import { getAllWorkouts, getCompletedWorkoutSets, getAllExercises, getRecentCheckins } from '../lib/database';
 import { calculateWeeklyVolume, getVolumeStatus, shouldDeload, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS, detectLaggingMuscles } from '../lib/algorithms';
 import { SkeletonCard } from '../components/Skeleton';
@@ -665,7 +665,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   statLabel: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textSecondary,
     textAlign: 'center',
   },
@@ -680,10 +680,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   sectionHeading: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    ...type.label,
     color: colors.textSecondary,
-    letterSpacing: 0.2,
   },
   sectionSubtext: {
     fontSize: fontSize.xs,

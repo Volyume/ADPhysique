@@ -20,7 +20,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import Card from '../components/Card';
 import {
   getRollupsForRange, getFoodEntriesForRange,
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  headerTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold },
+  headerTitle: { ...type.title, color: colors.textPrimary },
   scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxxl },
 
   sectionLabel: {
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
   card: {
     marginBottom: spacing.lg,
   },
-  cardFootnote: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: spacing.md },
+  cardFootnote: { ...type.caption, color: colors.textMuted, marginTop: spacing.md },
   emptyText: { color: colors.textMuted, fontSize: fontSize.sm, textAlign: 'center', paddingVertical: spacing.lg },
 
   barRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
@@ -273,5 +273,5 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     minHeight: 48,
   },
-  exportBtnText: { color: colors.background, fontSize: fontSize.md, fontWeight: fontWeight.bold },
+  exportBtnText: { ...type.bodyStrong, color: colors.background },
 });

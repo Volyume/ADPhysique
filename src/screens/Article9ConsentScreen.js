@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Application from 'expo-application';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, spacing, radius, type } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { getSupabaseClient } from '../lib/supabase';
 import { logError, logInfo } from '../lib/errorLog';
@@ -189,8 +189,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   scroll: { padding: spacing.lg, paddingBottom: spacing.xxxl, gap: spacing.md },
   title: {
-    fontSize: fontSize.xxl,
-    fontWeight: fontWeight.bold,
+    ...type.h2,
     color: colors.textPrimary,
     marginTop: spacing.sm,
     marginBottom: spacing.sm,
@@ -201,8 +200,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   subhead: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    ...type.bodyStrong,
     color: colors.textPrimary,
     marginTop: spacing.md,
   },
@@ -259,7 +257,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ctaDisabled: { opacity: 0.5 },
-  ctaPrimaryText: { color: colors.background, fontWeight: fontWeight.bold, fontSize: fontSize.md },
+  ctaPrimaryText: { ...type.bodyStrong, color: colors.background },
   ctaGhost: {
     marginTop: spacing.sm,
     paddingVertical: spacing.md,

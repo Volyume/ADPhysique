@@ -19,7 +19,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import {
   scheduleMorningWeightNotification,
   scheduleCheckinReminder,
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
     width: 36, height: 36, borderRadius: radius.sm,
     backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center',
   },
-  cardTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  cardTitle: { ...type.bodyStrong, color: colors.textPrimary },
   pickerLabel: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
     color: colors.textMuted, letterSpacing: 0.2,
@@ -317,10 +317,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   chipSelected: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
-  chipText: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textSecondary },
+  chipText: { ...type.label, color: colors.textSecondary },
   chipTextSelected: { color: colors.primary, fontWeight: fontWeight.semibold },
   scheduleText: {
-    fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.medium,
+    ...type.label, color: colors.primary,
     paddingHorizontal: spacing.lg, marginTop: -spacing.sm, marginBottom: spacing.sm,
   },
   scheduleSubText: {

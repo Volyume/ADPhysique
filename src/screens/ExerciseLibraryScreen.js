@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import ExerciseCard from '../components/ExerciseCard';
 import SearchBar from '../components/SearchBar';
 import PeekMenu from '../components/PeekMenu';
@@ -522,7 +522,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xxxl,
   },
   emptyText: {
-    fontSize: fontSize.md,
+    ...type.body,
     color: colors.textMuted,
   },
 
@@ -560,8 +560,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   sheetTitle: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
+    ...type.h3,
     color: colors.textPrimary,
   },
   cancelLink: {
@@ -574,10 +573,8 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxxl,
   },
   sectionLabel: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    ...type.label,
     color: colors.textSecondary,
-    letterSpacing: 0.2,
     marginBottom: spacing.sm,
   },
   nameInput: {
@@ -594,7 +591,7 @@ const styles = StyleSheet.create({
     borderColor: colors.error,
   },
   errorText: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.error,
     marginTop: spacing.xs,
   },
@@ -616,9 +613,8 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   chipText: {
-    fontSize: fontSize.sm,
+    ...type.label,
     color: colors.textSecondary,
-    fontWeight: fontWeight.medium,
   },
   chipTextActive: {
     color: colors.primary,
@@ -631,8 +627,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
   },
   saveBtnText: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    ...type.title,
     color: colors.background,
   },
 
@@ -656,20 +651,16 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   filterTitle: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
+    ...type.h3,
     color: colors.textPrimary,
   },
   clearAll: {
-    fontSize: fontSize.sm,
+    ...type.label,
     color: colors.error,
-    fontWeight: fontWeight.medium,
   },
   filterGroupLabel: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    ...type.label,
     color: colors.textSecondary,
-    letterSpacing: 0.2,
     marginBottom: spacing.md,
   },
   filterGrid: {
@@ -690,9 +681,8 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   filterOptionText: {
-    fontSize: fontSize.sm,
+    ...type.label,
     color: colors.textSecondary,
-    fontWeight: fontWeight.medium,
   },
   filterOptionTextActive: {
     color: colors.primary,
@@ -705,8 +695,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
   },
   applyBtnText: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    ...type.title,
     color: colors.background,
   },
   addNewBtn: {

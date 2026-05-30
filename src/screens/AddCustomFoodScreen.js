@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import Button from '../components/Button';
 import { insertCustomFood, logFoodEntry } from '../lib/food/db';
 import { checkFoodSanity } from '../lib/food/sanityChecks';
@@ -225,12 +225,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  headerTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold },
+  headerTitle: { ...type.title, color: colors.textPrimary },
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxxl },
   contextLabel: { color: colors.textMuted, fontSize: fontSize.sm, marginBottom: spacing.lg },
   barcodeHint: {
-    color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold,
+    ...type.label,
+    color: colors.primary,
     marginTop: -spacing.md, marginBottom: spacing.lg,
   },
 
@@ -246,7 +247,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md, paddingVertical: spacing.md,
     borderRadius: radius.md,
     borderWidth: 1, borderColor: colors.border,
-    fontSize: fontSize.md, minHeight: 48,
+    ...type.body, minHeight: 48,
   },
   row: { flexDirection: 'row', gap: spacing.sm },
   numWrap: {
@@ -257,7 +258,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
     minHeight: 48,
   },
-  numInput: { flex: 1, color: colors.textPrimary, fontSize: fontSize.md, paddingVertical: spacing.md },
+  numInput: { flex: 1, color: colors.textPrimary, ...type.body, paddingVertical: spacing.md },
   numSuffix: { color: colors.textMuted, fontSize: fontSize.sm, marginLeft: spacing.xs },
 
   saveBtn: { marginTop: spacing.xl },

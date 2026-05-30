@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import useAppStore from '../store/useAppStore';
 import { getBlockReflectionData } from '../lib/database';
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
     padding: spacing.xl, alignItems: 'center', gap: spacing.md,
   },
-  emptyTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  emptyTitle: { ...type.bodyStrong, color: colors.textPrimary },
   emptyBody: { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', lineHeight: 20 },
 
   blockTitle: { gap: spacing.xs },
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
   },
   statIcon: { marginBottom: spacing.xxs },
   statValue: { fontSize: fontSize.lg, fontWeight: fontWeight.black, color: colors.textPrimary },
-  statLabel: { fontSize: fontSize.xs, color: colors.textMuted },
+  statLabel: { ...type.caption, color: colors.textMuted },
 
   narrativeCard: {
     backgroundColor: colors.surface,
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg, gap: spacing.sm,
   },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
-  sectionTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  sectionTitle: { ...type.label, color: colors.textPrimary },
 
   prRow: {
     flexDirection: 'row', alignItems: 'center',
@@ -261,9 +261,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1, borderTopColor: colors.border,
   },
   prInfo: { flex: 1, gap: spacing.xxs },
-  prExercise: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textPrimary },
-  prType: { fontSize: fontSize.xs, color: colors.textMuted },
-  prValue: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.primary },
+  prExercise: { ...type.label, color: colors.textPrimary },
+  prType: { ...type.caption, color: colors.textMuted },
+  prValue: { ...type.num('bodyStrong'), color: colors.primary },
 
   bestSessionCard: {
     flexDirection: 'row',
@@ -276,16 +276,16 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   bestSessionInfo: { flex: 1, gap: spacing.xxs },
-  bestSessionLabel: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  bestSessionDate: { fontSize: fontSize.xs, color: colors.textMuted },
-  bestSessionVolume: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.primary },
+  bestSessionLabel: { ...type.label, color: colors.textPrimary },
+  bestSessionDate: { ...type.num('caption'), color: colors.textMuted },
+  bestSessionVolume: { ...type.num('title'), color: colors.primary },
 
   nextSection: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
     padding: spacing.lg, gap: spacing.md,
   },
-  nextTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  nextTitle: { ...type.bodyStrong, color: colors.textPrimary },
   nextBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 21 },
   newBlockBtn: {
     flexDirection: 'row',
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingVertical: spacing.sm,
   },
-  newBlockBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
+  newBlockBtnText: { ...type.label, color: colors.primary },
 
   doneBtn: {
     backgroundColor: colors.surface,
@@ -301,5 +301,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg, alignItems: 'center',
     marginTop: spacing.sm,
   },
-  doneBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  doneBtnText: { ...type.title, color: colors.textPrimary },
 });

@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns';
 
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, type } from '../styles/theme';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import { formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg, kgToStoneLbsStrings, kgToLbs } from '../lib/units';
 import { VolyumeIcon } from '../components/BrandMark';
@@ -1641,7 +1641,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   weightCardPrompt: {
-    fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary,
+    ...type.label, color: colors.textPrimary,
   },
   weightCardHint: {
     fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 16,
@@ -1656,7 +1656,7 @@ const styles = StyleSheet.create({
   },
   weightInputUnit: { fontSize: fontSize.sm, color: colors.textSecondary },
   weightCardText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary },
-  weightCardEdit: { fontSize: fontSize.xs, color: colors.primary },
+  weightCardEdit: { ...type.caption, color: colors.primary },
   narrativeCard: {
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
@@ -1689,8 +1689,7 @@ const styles = StyleSheet.create({
   },
   headerText: { gap: 1 },
   pageTitle: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
+    ...type.h3,
     color: colors.textPrimary,
   },
   greeting: {
@@ -1768,7 +1767,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   weekBarLabel: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
   },
   weekBarTrack: {
@@ -1797,8 +1796,8 @@ const styles = StyleSheet.create({
     backgroundColor: withAlpha(colors.background, 0.2),
     alignItems: 'center', justifyContent: 'center',
   },
-  continueTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
-  continueSub: { fontSize: fontSize.xs, color: colors.background + 'CC', marginTop: spacing.xxs },
+  continueTitle: { ...type.bodyStrong, color: colors.background },
+  continueSub: { ...type.caption, color: colors.background + 'CC', marginTop: spacing.xxs },
 
   // Hero plan card. Restrained: flat surface, one primary CTA, two
   // discreet text links underneath. Stat goes in the eyebrow line so
@@ -1846,7 +1845,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     marginTop: spacing.xs,
   },
-  primaryBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
+  primaryBtnText: { ...type.bodyStrong, color: colors.background },
   // Two-button row: primary "Start workout" + secondary "View" so the
   // user can preview the routine's exercises before committing. Mirrors
   // the Start Next Workout + View Plan layout on PlansScreen for visual
@@ -1867,7 +1866,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  viewWorkoutBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textSecondary },
+  viewWorkoutBtnText: { ...type.label, color: colors.textSecondary },
   heroSecondaryRow: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -1904,7 +1903,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: 14, marginTop: spacing.sm,
   },
   proRecoverBtnText: {
-    fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background,
+    ...type.bodyStrong, color: colors.background,
   },
   noPlanHero: {
     alignItems: 'center',
@@ -1919,7 +1918,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   noPlanTitle: {
-    fontSize: fontSize.xl, fontWeight: fontWeight.bold,
+    ...type.h3,
     color: colors.textPrimary, textAlign: 'center',
   },
   noPlanSub: {
@@ -1962,7 +1961,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   glanceStatLabel: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
     textAlign: 'center',
   },
@@ -1995,7 +1994,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
   },
   builderTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xxs },
-  builderTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  builderTitle: { ...type.label, color: colors.textPrimary },
   builderBadge: {
     backgroundColor: colors.primaryBg, borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
@@ -2040,7 +2039,7 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   lastSessionName: {
-    fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary,
+    ...type.title, color: colors.textPrimary,
   },
   lastSessionStatRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.xs },
   lastSessionStatPill: {
@@ -2081,7 +2080,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.border, alignSelf: 'center', marginBottom: spacing.lg,
   },
   sheetTitle: {
-    fontSize: fontSize.xl, fontWeight: fontWeight.bold,
+    ...type.h3,
     color: colors.textPrimary, marginBottom: spacing.xs,
   },
   sheetSub: { fontSize: fontSize.sm, color: colors.textMuted, marginBottom: spacing.lg },
@@ -2101,8 +2100,8 @@ const styles = StyleSheet.create({
   dayBadgeActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary + '60' },
   dayNum: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textSecondary },
   dayNumActive: { color: colors.primary },
-  pickerName: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  pickerMeta: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xxs },
+  pickerName: { ...type.bodyStrong, color: colors.textPrimary },
+  pickerMeta: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
   nextBadge: {
     backgroundColor: colors.primaryBg, borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
@@ -2110,7 +2109,7 @@ const styles = StyleSheet.create({
   },
   nextBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
   sheetCancel: { marginTop: spacing.lg, alignItems: 'center', paddingVertical: spacing.md },
-  sheetCancelText: { fontSize: fontSize.md, color: colors.textSecondary },
+  sheetCancelText: { ...type.body, color: colors.textSecondary },
 
   // Block progress card
   // Pro coaching discovery nudge
@@ -2130,7 +2129,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   coachingNudgeTitle: {
-    fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary,
+    ...type.label, color: colors.textPrimary,
   },
   coachingNudgeBody: {
     fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 17,
@@ -2171,8 +2170,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxxl,
   },
   intentTitle: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
+    ...type.h3,
     color: colors.textPrimary,
     textAlign: 'center',
   },
@@ -2199,12 +2197,11 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   intentOptionLabel: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    ...type.bodyStrong,
     color: colors.textPrimary,
   },
   intentOptionSub: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textSecondary,
     marginTop: spacing.xxs,
   },
@@ -2242,7 +2239,7 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   proTeaserSub: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.primary,
     marginTop: 1,
   },
@@ -2331,9 +2328,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   quickStartTitle: {
+    ...type.bodyStrong,
     color: colors.textPrimary,
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
     marginBottom: 3,
   },
   quickStartSub: {

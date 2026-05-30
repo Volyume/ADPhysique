@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import Button from '../components/Button';
 import { getAllExercises, createWorkout } from '../lib/database';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
@@ -394,14 +394,12 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   skipText: {
-    fontSize: fontSize.sm,
+    ...type.label,
     color: colors.textSecondary,
-    fontWeight: fontWeight.medium,
     width: 80,
   },
   headerTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    ...type.title,
     color: colors.textPrimary,
   },
   scroll: { flex: 1 },
@@ -439,12 +437,11 @@ const styles = StyleSheet.create({
   },
   exerciseInfo: { flex: 1 },
   exerciseName: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    ...type.bodyStrong,
     color: colors.textPrimary,
   },
   exerciseMuscle: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
     marginTop: spacing.xxs,
   },
@@ -555,7 +552,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    fontSize: fontSize.md,
+    ...type.body,
     color: colors.textPrimary,
     borderWidth: 1,
     borderColor: colors.border,
@@ -568,8 +565,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   pickerItemName: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    ...type.bodyStrong,
     color: colors.textPrimary,
     marginBottom: spacing.xxs,
   },
@@ -582,7 +578,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     backgroundColor: colors.surface, alignSelf: 'flex-start',
   },
-  travelChipText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.medium, flex: 1 },
+  travelChipText: { ...type.label, color: colors.primary, flex: 1 },
   travelOverlay: {
     flex: 1, backgroundColor: colors.scrim,
     justifyContent: 'center', alignItems: 'center', padding: spacing.lg,
@@ -592,7 +588,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl, width: '100%', gap: spacing.md,
     borderWidth: 1, borderColor: colors.border,
   },
-  travelTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  travelTitle: { ...type.title, color: colors.textPrimary },
   travelSub: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
   travelOptions: { gap: spacing.sm },
   travelOpt: {
@@ -601,7 +597,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   travelOptActive: { borderColor: colors.primary, backgroundColor: colors.surface2 },
-  travelOptText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  travelOptText: { ...type.label, flex: 1, color: colors.textSecondary },
   travelBtns: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
   travelCancel: {
     flex: 1, paddingVertical: spacing.md, alignItems: 'center',

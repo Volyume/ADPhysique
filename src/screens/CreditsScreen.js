@@ -20,7 +20,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, hitSlop } from '../styles/theme';
+import { colors, spacing, fontSize, type } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import Card from '../components/Card';
 
@@ -102,9 +102,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   cardTitle: {
+    ...type.bodyStrong,
     color: colors.textPrimary,
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
     marginBottom: spacing.sm,
   },
   body: {

@@ -27,7 +27,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, fontSize, fontWeight, hitSlop } from '../styles/theme';
+import { colors, spacing, fontSize, fontWeight, hitSlop, type } from '../styles/theme';
 import Button from '../components/Button';
 import * as cascade from '../lib/payments/cascade';
 import * as playBilling from '../lib/payments/playBilling';
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.tabBarBorder,
   },
-  headerTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold },
+  headerTitle: { ...type.title, color: colors.textPrimary },
   scroll: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xl,

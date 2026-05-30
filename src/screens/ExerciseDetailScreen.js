@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { CartesianChart, Line, Area } from 'victory-native';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import { SkeletonCard } from '../components/Skeleton';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import {
@@ -693,11 +693,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     borderRadius: radius.full,
   },
-  tagText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
+  tagText: { ...type.label, color: colors.primary },
   tagSecondary: { backgroundColor: colors.surface2 },
   tagTextSecondary: { color: colors.textSecondary },
   secMuscles: { flexDirection: 'row', alignItems: 'center' },
-  secMuscleLabel: { fontSize: fontSize.sm, color: colors.textMuted, fontWeight: fontWeight.medium },
+  secMuscleLabel: { ...type.label, color: colors.textMuted },
   secMuscleText: { fontSize: fontSize.sm, color: colors.textSecondary },
   est1RM: {
     flexDirection: 'row',
@@ -707,7 +707,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     padding: spacing.sm,
   },
-  est1RMText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.gold },
+  est1RMText: { ...type.bodyStrong, color: colors.gold },
   sfrRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -716,8 +716,8 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   sfrItem: { flex: 1, alignItems: 'center', gap: spacing.xxs },
-  sfrValue: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  sfrLabel: { fontSize: fontSize.xs, color: colors.textMuted },
+  sfrValue: { ...type.num('title'), color: colors.textPrimary },
+  sfrLabel: { ...type.caption, color: colors.textMuted },
   sfrLabelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   sfrDivider: { width: 1, height: 36, backgroundColor: colors.border },
   chartSection: { gap: spacing.sm },
@@ -739,7 +739,7 @@ const styles = StyleSheet.create({
   chartToggleBtnActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
   chartToggleBtnText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
   chartToggleBtnTextActive: { color: colors.primary },
-  e1rmNote: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xs, fontStyle: 'italic' },
+  e1rmNote: { ...type.caption, color: colors.textMuted, marginTop: spacing.xs, fontStyle: 'italic' },
   chartContainer: {
     height: 120,
     backgroundColor: colors.surface,
@@ -759,10 +759,8 @@ const styles = StyleSheet.create({
   },
   section: { gap: spacing.md },
   sectionTitle: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    ...type.label,
     color: colors.textSecondary,
-    letterSpacing: 0.2,
   },
   historyCard: {
     backgroundColor: colors.surface,
@@ -775,7 +773,7 @@ const styles = StyleSheet.create({
   historyDate: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textPrimary },
   historySets: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   historySetText: { fontSize: fontSize.sm, color: colors.textSecondary },
-  historyEst: { fontSize: fontSize.xs, color: colors.textMuted },
+  historyEst: { ...type.num('caption'), color: colors.textMuted },
   prRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -790,8 +788,8 @@ const styles = StyleSheet.create({
   prIcon: { fontSize: 22 },
   prInfo: { flex: 1 },
   prLabel: { fontSize: fontSize.sm, color: colors.textMuted },
-  prValue: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  prDate: { fontSize: fontSize.xs, color: colors.textMuted },
+  prValue: { ...type.num('bodyStrong'), color: colors.textPrimary },
+  prDate: { ...type.num('caption'), color: colors.textMuted },
   // Similar exercises, horizontal scroll cards
   subScrollContent: {
     gap: spacing.sm,
@@ -817,7 +815,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   subCardEquipment: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
     flex: 1,
   },
@@ -856,16 +854,15 @@ const styles = StyleSheet.create({
     borderLeftColor: colors.border,
   },
   prHighlightStatValue: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    ...type.num('title'),
     color: colors.primary,
   },
   prHighlightStatLabel: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
   },
   prHighlightDate: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
     fontStyle: 'italic',
   },
@@ -901,9 +898,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   plateauTitle: {
+    ...type.label,
     color: colors.warning,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
     marginBottom: spacing.xxs,
   },
   plateauBody: {
@@ -959,12 +955,11 @@ const styles = StyleSheet.create({
     gap: spacing.xxs,
   },
   goalWeightValue: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    ...type.num('title'),
     color: colors.textPrimary,
   },
   goalWeightLabel: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
   },
   goalBarTrack: {
@@ -995,10 +990,9 @@ const styles = StyleSheet.create({
     borderColor: colors.primary + '40',
   },
   congratsText: {
+    ...type.label,
     flex: 1,
-    fontSize: fontSize.sm,
     color: colors.primary,
-    fontWeight: fontWeight.medium,
   },
   // Goal modal
   modalOverlay: {
@@ -1026,8 +1020,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   modalTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    ...type.title,
     color: colors.textPrimary,
   },
   modalSubtitle: {
@@ -1036,8 +1029,7 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   inputLabel: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
+    ...type.label,
     color: colors.textSecondary,
     marginTop: spacing.xs,
   },
@@ -1071,8 +1063,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   saveGoalBtnText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
+    ...type.bodyStrong,
     color: colors.background,
   },
   removeGoalLink: {
