@@ -156,6 +156,10 @@ export default function BodyDiagramHeatmap({ volumeByMuscle = {}, onMuscleTap })
           <Ellipse cx={68} cy={196} rx={12} ry={32} {...region('quads')} />
           <Ellipse cx={92} cy={196} rx={12} ry={32} {...region('quads')} />
 
+          {/* Adductors (inner thigh, between the quads) */}
+          <Ellipse cx={73} cy={190} rx={4} ry={24} {...region('adductors')} />
+          <Ellipse cx={87} cy={190} rx={4} ry={24} {...region('adductors')} />
+
           {/* Calves (front, smaller, front-of-shin region) */}
           <Ellipse cx={68} cy={266} rx={9} ry={22} {...region('calves')} />
           <Ellipse cx={92} cy={266} rx={9} ry={22} {...region('calves')} />

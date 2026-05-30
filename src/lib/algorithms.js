@@ -22,6 +22,11 @@ export const VOLUME_LANDMARKS = {
   quads:       { mv: 6,  mev: 8,  mav: 14, mrv: 20 },
   hamstrings:  { mv: 4,  mev: 6,  mav: 12, mrv: 20 },
   glutes:      { mv: 0,  mev: 4,  mav: 10, mrv: 16 },
+  // Adductors (inner thigh) are a distinct target (founder decision,
+  // docs/audit/volyume-exercise-audit-2026-05-30). mev is 0 so a user who
+  // never directly trains them is not flagged as having a lagging muscle;
+  // direct adductor work counts toward mav/mrv once it is logged.
+  adductors:   { mv: 0,  mev: 0,  mav: 8,  mrv: 14 },
   calves:      { mv: 6,  mev: 8,  mav: 14, mrv: 20 },
   abs:         { mv: 0,  mev: 4,  mav: 16, mrv: 25 },
   traps:       { mv: 0,  mev: 4,  mav: 12, mrv: 20 },
@@ -41,6 +46,7 @@ export const MUSCLE_DISPLAY_NAMES = {
   quads: 'Quads',
   hamstrings: 'Hamstrings',
   glutes: 'Glutes',
+  adductors: 'Adductors',
   calves: 'Calves',
   abs: 'Abs',
   traps: 'Traps',
