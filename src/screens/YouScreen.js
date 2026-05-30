@@ -14,7 +14,7 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';
 import PressableCard from '../components/PressableCard';
 import { ProBadge } from '../components/ProGate';
@@ -197,14 +197,14 @@ const styles = StyleSheet.create({
   },
   avatarText: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.primary },
   profileInfo: { flex: 1, gap: 3 },
-  profileName: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  profileMeta: { fontSize: fontSize.xs, color: colors.textMuted },
-  profileStat: { fontSize: fontSize.xs, color: colors.textSecondary },
+  profileName: { ...type.title, color: colors.textPrimary },
+  profileMeta: { ...type.caption, color: colors.textMuted },
+  profileStat: { ...type.num('caption'), color: colors.textSecondary },
 
   section: { gap: spacing.md },
   sectionLabel: {
-    fontSize: fontSize.sm, fontWeight: fontWeight.semibold,
-    color: colors.textSecondary, letterSpacing: 0.2,
+    ...type.label,
+    color: colors.textSecondary,
   },
 
   navRow: {
@@ -217,10 +217,10 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   navRowText: { flex: 1 },
-  navRowLabel: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  navRowSub: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: spacing.xxs },
+  navRowLabel: { ...type.bodyStrong, color: colors.textPrimary },
+  navRowSub: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
 
   about: { alignItems: 'center', paddingTop: spacing.md, gap: spacing.xs },
   aboutName: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textMuted },
-  aboutVersion: { fontSize: fontSize.xs, color: colors.textMuted },
+  aboutVersion: { ...type.caption, color: colors.textMuted },
 });
