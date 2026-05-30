@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput,
+  View, Text, StyleSheet, FlatList, TouchableOpacity,
   Alert, RefreshControl, Modal, Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,6 +12,7 @@ import { getLibraryPlans, getPlanWorkoutCounts, copyPlanFromLibrary, activatePla
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import { SkeletonCard } from '../components/Skeleton';
+import SearchBar from '../components/SearchBar';
 import useAppStore from '../store/useAppStore';
 
 // ─── Collections ─────────────────────────────────────────────────────────────
@@ -370,23 +371,12 @@ export default function PlanLibraryScreen({ navigation, route }) {
     <SafeAreaView style={styles.safe} edges={['bottom']}>
 
       {/* Search */}
-      <View style={styles.searchRow}>
-        <Ionicons name="search-outline" size={18} color={colors.textMuted} style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Search plans..."
-          placeholderTextColor={colors.textMuted}
-          clearButtonMode="while-editing"
-          returnKeyType="search"
-        />
-        {query.length > 0 && (
-          <TouchableOpacity onPress={() => setQuery('')}>
-            <Ionicons name="close-circle" size={18} color={colors.textMuted} />
-          </TouchableOpacity>
-        )}
-      </View>
+      <SearchBar
+        value={query}
+        onChangeText={setQuery}
+        placeholder="Search plans"
+        style={styles.searchRow}
+      />
 
       {/* Collection chips */}
       <FlatList
@@ -627,15 +617,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
 
   searchRow: {
-    flexDirection: 'row', alignItems: 'center',
     margin: spacing.lg, marginBottom: spacing.sm,
-    backgroundColor: colors.surface, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.md,
-  },
-  searchIcon: { marginRight: spacing.xs },
-  searchInput: {
-    flex: 1, paddingVertical: spacing.md,
-    fontSize: fontSize.md, color: colors.textPrimary,
   },
 
   chipsList: { height: 52, flexShrink: 0 },
