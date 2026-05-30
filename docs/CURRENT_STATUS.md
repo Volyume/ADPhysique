@@ -53,22 +53,47 @@ Full suite stayed green throughout (2240 passed); 0 lint errors.
   render from this environment (verified by tests/lint only). For a design
   task that is a real limitation, surfaced too late.
 
-**WRONG, NOT FIXED, must be undone next session:**
-- **Athlete Hub must be DELETED, not renamed.** Founder instruction, stated
-  repeatedly: the `AthleteHubScreen` page should be removed and its content
-  moved to the pages where it fits. Instead this session RETITLED it to
-  "Recovery & readiness" (`f605d78`) and added entrance motion to it
-  (`f9b555e`), keeping it as a standalone page reached from a "Recovery &
-  readiness" tile on `AnalyticsScreen`. That is the opposite of the
-  instruction. Next session: with the founder, agree where each section goes
-  (milestones, recovery signals, quick stats, weekly-coaching card, recovery
-  insight, weight trend, muscle readiness, nutrition/body cards, Pro previews,
-  Engine Log), then delete `AthleteHubScreen.js`, remove the `AthleteHub`
-  route in `RootNavigator.js` and the tile in `AnalyticsScreen.js:655`, and
-  redistribute. Do NOT keep a standalone Recovery page unless the founder says
-  so. The CURRENT_STATUS entry below (2026-05-29 You-tab redesign) records the
-  OLD plan ("moved to Progress as a tile"), which the founder has since
-  overridden to "delete and redistribute"; trust the founder, not that entry.
+**WRONG, NOT FIXED. Read this carefully, do NOT blind-delete anything:**
+
+There are TWO screens involved. Do not confuse them:
+- `src/screens/YouScreen.js` ("You" tab, ProfileStack root): profile +
+  account + settings. This is what the old Athlete Hub profile BECAME in the
+  2026-05-29 redesign. It is correct and stays.
+- `src/screens/AthleteHubScreen.js`: the OLD dashboard (milestones, recovery
+  signals, quick stats, weekly-coaching card, recovery insight, weight trend,
+  muscle readiness, nutrition/body cards, Pro previews, Engine Log). It is
+  still registered as route `AthleteHub` in `RootNavigator.js` and still
+  reached from a tile in `AnalyticsScreen.js` (the `navigate('AthleteHub')`
+  call). The founder's position: this old standalone screen should not keep
+  existing as its own page; its content belongs on the pages that fit.
+
+What this session did wrong: it RETITLED `AthleteHubScreen` to "Recovery &
+readiness" (`f605d78`) and added entrance motion to it (`f9b555e`), i.e. it
+re-engaged and dressed up the old screen instead of resolving it. That made
+the duplication worse, not better.
+
+DANGER, why this is NOT a simple delete: most of the dashboard's content
+(recovery signals, muscle readiness, weight-trend chart, milestones, Engine
+Log, etc.) may exist ONLY in `AthleteHubScreen.js`. Deleting the file/route
+before that content has a confirmed home would LOSE features. Several of its
+cards also cross-navigate (`getParent()?.navigate('ProfileTab', ...)`) and
+have downstream chains. So:
+- Do NOT delete `AthleteHubScreen.js` or its route as a first step.
+- FIRST, with the founder, build an explicit per-section mapping: for each
+  block on the screen, decide its destination (Progress/Analytics inline,
+  Diary, You, Home, or drop), and confirm whether anything is genuinely
+  redundant vs unique.
+- THEN move each block to its destination, re-point or remove the
+  `AnalyticsScreen` tile and the `AthleteHub` route, verify the cross-nav
+  chains still work, and only remove the file once nothing references it.
+- Revert the cosmetic changes (`f605d78` retitle, the `f9b555e` entrance
+  wrap on this screen) as part of that work, not before the mapping exists.
+
+The 2026-05-29 You-tab-redesign entry below records the OLD plan ("dashboard
+moves to Progress as a 'Recovery & readiness' tile"). The founder has since
+overridden that: the standalone page should go and its content be
+redistributed. Confirm the destination mapping with the founder before any
+structural change. Trust the founder over the older entry.
 
 **STEPS, partially addressed, real limits remain:**
 - The cardio/steps plan is `docs/audit/volyume-cardio-steps-audit-2026-05-30.md`
