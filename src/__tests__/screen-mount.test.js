@@ -625,6 +625,7 @@ const SCREENS_TO_SWEEP = [
   'GoalChangeSummaryScreen',
   'HomeScreen',
   'ImportScreen',
+  'LiftProgressScreen',
   'LoginScreen',
   'ManualBuilderScreen',
   'MesocycleBuilderScreen',
