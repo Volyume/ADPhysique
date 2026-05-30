@@ -17,6 +17,7 @@ import PressableCard from '../components/PressableCard';
 import { buildDailyNarrative } from '../lib/dailyNarrative';
 import { SkeletonCard } from '../components/Skeleton';
 import Sparkline from '../components/Sparkline';
+import DailyStepsCard from '../components/DailyStepsCard';
 import {
   getAllWorkouts, getCompletedWorkoutSets, getActivePlan, getRoutinesForPlan,
   getAllRoutineExerciseCounts, createWorkout, getRoutineExercisesWithDetails,

@@ -11,6 +11,13 @@ jest.mock('../../lib/database', () => ({
   setDailySteps: jest.fn(),
 }));
 
+jest.mock('../../lib/activitySteps', () => ({
+  isStepSourceAvailable: jest.fn().mockResolvedValue(false),
+  getStepPermissionStatus: jest.fn().mockResolvedValue('unavailable'),
+  requestStepPermission: jest.fn().mockResolvedValue(false),
+  readTodaySteps: jest.fn().mockResolvedValue(null),
+}));
+
 jest.mock('../Toast', () => ({
   useToast: () => ({ show: jest.fn() }),
 }));
@@ -18,6 +25,7 @@ jest.mock('../Toast', () => ({
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
 
 const dbModule = require('../../lib/database');
+const stepsSrc = require('../../lib/activitySteps');
 const DailyStepsCard = require('../DailyStepsCard').default;
 
 function allText(node) {
@@ -38,12 +46,54 @@ async function render(el) {
   return renderer;
 }
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  // Default: no automatic source, so the card is pure-manual unless a test
+  // opts into the auto path.
+  stepsSrc.isStepSourceAvailable.mockResolvedValue(false);
+  stepsSrc.getStepPermissionStatus.mockResolvedValue('unavailable');
+  stepsSrc.requestStepPermission.mockResolvedValue(false);
+  stepsSrc.readTodaySteps.mockResolvedValue(null);
+});
 
 test('shows the prompt when no steps are logged today', async () => {
   dbModule.getDailyStepsToday.mockResolvedValue(null);
   const renderer = await render(<DailyStepsCard userId="u1" />);
   expect(allText(renderer.toJSON())).toContain('Steps today');
+});
+
+test('auto-reads and persists the phone count when permission is already granted', async () => {
+  dbModule.getDailyStepsToday.mockResolvedValue(null);
+  dbModule.setDailySteps.mockResolvedValue({});
+  stepsSrc.getStepPermissionStatus.mockResolvedValue('granted');
+  stepsSrc.readTodaySteps.mockResolvedValue(7321);
+
+  const renderer = await render(<DailyStepsCard userId="u1" />);
+
+  expect(stepsSrc.readTodaySteps).toHaveBeenCalled();
+  expect(dbModule.setDailySteps).toHaveBeenCalledWith('u1', { steps: 7321, source: 'auto' });
+  const text = allText(renderer.toJSON());
+  expect(text).toContain('7,321');
+  expect(text).toContain('from your phone');
+});
+
+test('offers to use the phone count when a source exists but permission is undetermined', async () => {
+  dbModule.getDailyStepsToday.mockResolvedValue(null);
+  stepsSrc.getStepPermissionStatus.mockResolvedValue('undetermined');
+  stepsSrc.isStepSourceAvailable.mockResolvedValue(true);
+
+  const renderer = await render(<DailyStepsCard userId="u1" />);
+
+  // No prompt fired on mount; only the offer is shown.
+  expect(stepsSrc.requestStepPermission).not.toHaveBeenCalled();
+  expect(allText(renderer.toJSON())).toContain("Use my phone's step count");
+});
+
+test('does not auto-read or offer when no source is available', async () => {
+  dbModule.getDailyStepsToday.mockResolvedValue(null);
+  const renderer = await render(<DailyStepsCard userId="u1" />);
+  expect(stepsSrc.readTodaySteps).not.toHaveBeenCalled();
+  expect(allText(renderer.toJSON())).not.toContain("Use my phone's step count");
 });
 
 test('shows the logged total with a thousands separator when a row exists', async () => {
