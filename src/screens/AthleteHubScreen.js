@@ -490,7 +490,7 @@ export default function AthleteHubScreen({ navigation }) {
           tabs. Previously this used spacing.md which made the Hub
           title sit ~4px higher than its siblings. */}
       <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg }}>
-        <ScreenHeader title="Athlete Hub" />
+        <ScreenHeader title="Recovery & readiness" />
       </View>
 
       <ScrollView
