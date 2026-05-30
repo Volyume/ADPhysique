@@ -20,9 +20,16 @@ const mockHC = {
   aggregateRecord: jest.fn(),
   readRecords: jest.fn(),
 };
-jest.mock('react-native-health-connect', () => mockHC, { virtual: true });
-// iOS module; present so the require doesn't blow up when resolved.
-jest.mock('react-native-health', () => ({ default: {} }), { virtual: true });
+// react-native-health-connect and react-native-health are real installed
+// packages, so these are ordinary (non-virtual) mocks. They were previously
+// declared { virtual: true }, which is for modules with no file on disk; for
+// a real module that flag makes resolution order-dependent, so under a full
+// --runInBand run Jest could resolve the real package instead of this mock
+// and readStepsToday (which lazy-requires the module and catches a throw as
+// "unavailable") would short-circuit to 0. Without virtual, the mock is
+// authoritative regardless of suite order.
+jest.mock('react-native-health-connect', () => mockHC);
+jest.mock('react-native-health', () => ({ default: {} }));
 
 const { readStepsToday } = require('../health');
 

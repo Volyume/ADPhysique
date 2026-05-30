@@ -20,7 +20,8 @@
       "^.+\\.js$": "babel-jest"
     },
     "moduleNameMapper": {
-      "\\.(png|jpg|jpeg|gif|svg|webp|ttf|otf|mp3|mp4|wav)$": "<rootDir>/__mocks__/asset-stub.js"
+      "\\.(png|jpg|jpeg|gif|svg|webp|ttf|otf|mp3|mp4|wav)$": "<rootDir>/__mocks__/asset-stub.js",
+      "^react-native-url-polyfill/auto$": "<rootDir>/__mocks__/url-polyfill-stub.js"
     }
   },
   "dependencies": {
