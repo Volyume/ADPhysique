@@ -118,7 +118,7 @@ export const WEAK_POINT_MUSCLES = Object.freeze([
   'Chest', 'Upper Chest', 'Lats / Back Width', 'Back Thickness',
   'Side Delts', 'Rear Delts', 'Front Delts',
   'Biceps', 'Triceps',
-  'Quads', 'Hamstrings', 'Glutes', 'Calves',
+  'Quads', 'Hamstrings', 'Glutes', 'Adductors', 'Calves',
   'Core / Abs', 'Traps',
 ]);
 

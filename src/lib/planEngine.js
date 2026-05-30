@@ -39,6 +39,7 @@ const WEAK_POINT_MAP = {
   'Quads':            'quads',
   'Hamstrings':       'hamstrings',
   'Glutes':           'glutes',
+  'Adductors':        'adductors',
   'Calves':           'calves',
   'Core / Abs':       'abs',
   'Traps':            'traps',
@@ -559,22 +560,62 @@ function pickAt(arr, index) {
   return arr[index % arr.length];
 }
 
+// How many exercises a session holds for a muscle, given its set target.
+// Extracted so difficulty gating can size its coverage threshold to the same
+// number the selection loop uses below.
+function numExHint(sessionTarget) {
+  return sessionTarget <= 5 ? 1 : 2;
+}
+
 function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal, slot, usedNames, weeklyTotalSets, landmarks, experience, nutritionPhase) {
   if (sessionTarget < 2) return [];
 
-  const available = filterPool(muscle, equipment, goal);
+  let available = filterPool(muscle, equipment, goal);
   if (available.length === 0) return [];
+
+  // Difficulty gating (founder decision: gate, but never starve coverage).
+  // Beginners don't get advanced (difficulty 3) lifts in generated plans,
+  // but only drop them if enough options remain to cover the muscle; if
+  // gating would leave too few, keep the advanced lifts so coverage wins.
+  // Library entries carry `difficulty`; the hand-written POOL fallback
+  // entries don't, so they're treated as ungated (null) and never dropped.
+  if (experience === 'beginner') {
+    const gated = available.filter(e => e.difficulty == null || e.difficulty < 3);
+    if (gated.length >= Math.max(2, numExHint(sessionTarget))) {
+      available = gated;
+    }
+  }
 
   // Determine subregion priority
   const req = SUBREGION_REQUIREMENTS[muscle];
   const requiredSubs = req && weeklyTotalSets >= req.minSets ? req.required : [];
 
-  // Sort: required subregion first → compound before isolation → pool index
+  // Goal-aware selection bias (06 section 2). A scoring nudge, not a hard
+  // filter, so a machine-only or thin-library user still gets a plan.
+  //  - strength: favour barbell/landmine compounds for the heavy slots.
+  //  - hypertrophy (default): favour higher stimulus-to-fatigue where two
+  //    candidates otherwise tie, so machines/cables and stable movements win.
+  const isStrengthGoal = goal === 'strength_hypertrophy';
+
+  // Sort: required subregion first → compound before isolation → goal bias
+  // → SFR tiebreak → pool index. Each term is an order of magnitude below
+  // the previous so the established priority order is preserved.
   function sortScore(e, idx) {
     const reqBonus   = requiredSubs.includes(e.sub) ? 0 : 100;
     const paramOrder = { heavy_compound: 0, mod_compound: 1, machine: 2, isolation: 3 };
     const paramBonus = (paramOrder[e.p] ?? 3) * 10;
-    return reqBonus + paramBonus + idx;
+    let goalBonus = 0;
+    if (isStrengthGoal) {
+      // Strength: nudge barbell/landmine compounds up a little.
+      const heavyBarbell = e.p === 'heavy_compound'
+        && (e.equipmentCategory == null || e.equipmentCategory === 'barbell' || e.equipmentCategory === 'landmine');
+      goalBonus = heavyBarbell ? -3 : 0;
+    } else if (e.sfr != null) {
+      // Hypertrophy: higher SFR ranks earlier (sfr 1..10 -> bonus -1..-0.1),
+      // small enough to act only as a tiebreak within the same param tier.
+      goalBonus = -(e.sfr / 10);
+    }
+    return reqBonus + paramBonus + goalBonus + idx;
   }
 
   const sorted = available
@@ -586,9 +627,7 @@ function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal, slot, 
   // Cap at 2 per session: each exercise needs at least 3 working sets for
   // compounds (standard PT/coach minimum), so 6 sets minimum for two exercises.
   // Three exercises per muscle per session fragments volume unnecessarily.
-  let numEx;
-  if (sessionTarget <= 5) numEx = 1;
-  else                     numEx = 2;
+  const numEx = numExHint(sessionTarget);
 
   const covered = new Set();
   const chosen = [];
@@ -748,7 +787,11 @@ function buildFullBodyWorkouts(weeklyTargets, landmarks, equipment, goal, experi
 
 function buildUpperLowerWorkouts(weeklyTargets, landmarks, equipment, goal, experience, nutritionPhase) {
   const upperMuscles = ['chest', 'back', 'side_delts', 'rear_delts', 'front_delts', 'biceps', 'triceps'];
-  const lowerMuscles = ['quads', 'hamstrings', 'glutes', 'calves', 'abs'];
+  // Adductors sit in the lower split. They default to a 0 weekly target
+  // (mev 0, like front delts), so they're only programmed when a user makes
+  // them a weak point or otherwise raises the target; including them here
+  // just means that work lands on lower days when it exists.
+  const lowerMuscles = ['quads', 'hamstrings', 'glutes', 'adductors', 'calves', 'abs'];
 
   const sessionsPerMuscle = {};
   for (const m of upperMuscles) sessionsPerMuscle[m] = 2;
@@ -769,7 +812,7 @@ function buildUpperLowerWorkouts(weeklyTargets, landmarks, equipment, goal, expe
 function buildPPLWorkouts(weeklyTargets, landmarks, equipment, goal, experience, nutritionPhase, effectiveDays) {
   const pushMuscles = ['chest', 'front_delts', 'side_delts', 'triceps'];
   const pullMuscles = ['back', 'rear_delts', 'biceps', 'traps'];
-  const legMuscles  = ['quads', 'hamstrings', 'glutes', 'calves', 'abs'];
+  const legMuscles  = ['quads', 'hamstrings', 'glutes', 'adductors', 'calves', 'abs'];
 
   const sessionsPerMuscle = {};
   const allMuscles = [...pushMuscles, ...pullMuscles, ...legMuscles];
