@@ -547,6 +547,114 @@ function drawPR(ctx, W, H, p) {
   drawBrandFooter(ctx, W, H, pad, p.isSquare);
 }
 
+// Milestone card. One generic hero-stat layout reused for a year-in-review
+// (Year of Lifts) and a weekly coach summary. Reports facts only, no
+// cheerleading, per the voice rules. Reuses the same primitives as the
+// session card so it reads as the same family.
+function drawMilestone(ctx, W, H, p) {
+  var pad = Math.round(W * 0.074);
+  drawBackground(ctx, W, H);
+  drawTopAccentBar(ctx, W);
+
+  var y = pad + 60;
+
+  // Top brand + optional date
+  drawTopBrand(ctx, W, pad, y);
+  if (p.showDate && p.date) {
+    ctx.fillStyle = B.textMuted;
+    ctx.font = '500 22px Arial,sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(p.date, W - pad, y - 2);
+    ctx.textAlign = 'left';
+  }
+  y += 70;
+
+  // Eyebrow (small accent label)
+  if (p.eyebrow) {
+    ctx.fillStyle = B.accent;
+    ctx.font = '700 22px Arial,sans-serif';
+    ctx.fillText(String(p.eyebrow).toUpperCase(), pad, y);
+    y += 36;
+  }
+
+  // Title, hero text (up to two lines)
+  var titleFont = p.isSquare ? 60 : 74;
+  ctx.fillStyle = B.text;
+  var title = p.title || '';
+  var titleLines = wrapText(
+    (function() { ctx.font = '900 ' + titleFont + 'px Arial,sans-serif'; return ctx; })(),
+    title, W - pad * 2
+  );
+  titleLines.slice(0, 2).forEach(function(l) {
+    ctx.fillText(l, pad, y + Math.round(titleFont * 0.82));
+    y += Math.round(titleFont * 1.05);
+  });
+  y += 24;
+
+  // Hero value
+  var heroValue = String(p.heroValue != null ? p.heroValue : '');
+  var heroNumFont = p.isSquare ? 140 : 220;
+  heroNumFont = fitFont(ctx, heroValue, W - pad * 2, heroNumFont);
+  ctx.fillStyle = B.accent;
+  ctx.font = '900 ' + heroNumFont + 'px Arial,sans-serif';
+  ctx.textAlign = 'center';
+  var heroY = p.isSquare ? y + heroNumFont : H * 0.42;
+  ctx.fillText(heroValue, W / 2, heroY);
+
+  if (p.heroUnit) {
+    ctx.fillStyle = B.textSecondary;
+    ctx.font = '700 ' + (p.isSquare ? 18 : 24) + 'px Arial,sans-serif';
+    ctx.fillText(String(p.heroUnit).toUpperCase(), W / 2, heroY + (p.isSquare ? 30 : 50));
+  }
+  ctx.textAlign = 'left';
+
+  y = heroY + (p.isSquare ? 64 : 100);
+
+  // Caption (factual one-liner, up to two lines)
+  if (p.caption) {
+    ctx.fillStyle = B.textMuted;
+    ctx.font = '500 ' + (p.isSquare ? 22 : 28) + 'px Arial,sans-serif';
+    ctx.textAlign = 'center';
+    var capLines = wrapText(ctx, String(p.caption), W - pad * 2);
+    capLines.slice(0, 2).forEach(function(l) {
+      ctx.fillText(l, W / 2, y);
+      y += (p.isSquare ? 30 : 38);
+    });
+    ctx.textAlign = 'left';
+    y += 16;
+  }
+
+  // Support stats (up to three pills)
+  var stats = (p.stats || []).slice(0, 3);
+  if (stats.length) {
+    var statBoxH = p.isSquare ? 100 : 130;
+    var statGap = 14;
+    var statBoxW = Math.floor((W - pad * 2 - statGap * (stats.length - 1)) / stats.length);
+    stats.forEach(function(s, i) {
+      var bx = pad + i * (statBoxW + statGap);
+      ctx.fillStyle = B.surface;
+      rrect(ctx, bx, y, statBoxW, statBoxH, 16);
+      ctx.fill();
+      ctx.strokeStyle = B.border;
+      ctx.lineWidth = 1.2;
+      rrect(ctx, bx, y, statBoxW, statBoxH, 16);
+      ctx.stroke();
+      ctx.fillStyle = B.text;
+      var sv = fitFont(ctx, String(s.value), statBoxW - 24, (p.isSquare ? 40 : 50));
+      ctx.font = '900 ' + sv + 'px Arial,sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(String(s.value), bx + statBoxW / 2, y + statBoxH * 0.56);
+      ctx.fillStyle = B.textMuted;
+      ctx.font = '700 16px Arial,sans-serif';
+      ctx.fillText(String(s.label).toUpperCase(), bx + statBoxW / 2, y + statBoxH - 18);
+      ctx.textAlign = 'left';
+    });
+    y += statBoxH + 24;
+  }
+
+  drawBrandFooter(ctx, W, H, pad, p.isSquare);
+}
+
 window.drawCard = function() {
   var p = window.__cardParams;
   if (!p) return;
@@ -554,7 +662,9 @@ window.drawCard = function() {
   var c = document.getElementById('c');
   c.width = W; c.height = H;
   var ctx = c.getContext('2d');
-  if (p.cardType === 'pr') { drawPR(ctx, W, H, p); } else { drawSession(ctx, W, H, p); }
+  if (p.cardType === 'pr') { drawPR(ctx, W, H, p); }
+  else if (p.cardType === 'milestone') { drawMilestone(ctx, W, H, p); }
+  else { drawSession(ctx, W, H, p); }
   window.ReactNativeWebView.postMessage(JSON.stringify({ base64: c.toDataURL('image/png'), isSquare: p.isSquare }));
 };
 <\/script>
@@ -565,9 +675,12 @@ export default function ShareCardScreen({ navigation, route }) {
   const {
     sessionData = null,
     prData = null,
+    milestoneData = null,
   } = route.params || {};
 
-  const [cardType, setCardType] = useState(prData ? 'pr' : 'session');
+  const [cardType, setCardType] = useState(
+    prData ? 'pr' : milestoneData ? 'milestone' : 'session',
+  );
   // Default to story (Instagram-Stories first), the richer, taller layout
   // is the primary use case. Square is the secondary option for feed posts.
   const [format, setFormat] = useState('story');
@@ -587,6 +700,7 @@ export default function ShareCardScreen({ navigation, route }) {
 
   const isSquare = format === 'square';
   const isSession = cardType === 'session';
+  const isMilestone = cardType === 'milestone';
 
   function formatLongDate(ts) {
     // "Wed · 21 May 2026", premium feel vs raw dd/mm/yyyy
@@ -597,6 +711,19 @@ export default function ShareCardScreen({ navigation, route }) {
   }
 
   function buildParams() {
+    if (isMilestone) {
+      const m = milestoneData || {};
+      return {
+        cardType: 'milestone', isSquare, showDate,
+        date: (showDate && m.date) ? formatLongDate(m.date) : '',
+        eyebrow: m.eyebrow || '',
+        title: m.title || '',
+        heroValue: m.heroValue != null ? m.heroValue : '',
+        heroUnit: m.heroUnit || '',
+        caption: m.caption || '',
+        stats: Array.isArray(m.stats) ? m.stats.slice(0, 3) : [],
+      };
+    }
     if (isSession) {
       const s = sessionData || {};
       return {
@@ -650,14 +777,14 @@ export default function ShareCardScreen({ navigation, route }) {
     try {
       const { base64, isSquare: sq } = JSON.parse(event.nativeEvent.data);
       const pure = base64.replace(/^data:image\/png;base64,/, '');
-      const filename = `volyume-${isSession ? 'session' : 'pr'}-card-${sq ? 'square' : 'story'}.png`;
+      const filename = `volyume-${cardType}-card-${sq ? 'square' : 'story'}.png`;
       const uri = (FileSystem.cacheDirectory || '') + filename;
       await FileSystem.writeAsStringAsync(uri, pure, { encoding: FileSystem.EncodingType.Base64 });
       const canShare = await Sharing.isAvailableAsync();
       if (!canShare) { Alert.alert('Sharing not available on this device.'); return; }
       await Sharing.shareAsync(uri, {
         mimeType: 'image/png', UTI: 'public.png',
-        dialogTitle: isSession ? 'Share Session Card' : 'Share PR Card',
+        dialogTitle: cardType === 'session' ? 'Share Session Card' : cardType === 'pr' ? 'Share PR Card' : 'Share Card',
       });
     } catch (_e) {
       Alert.alert("Couldn't generate card", 'Try again.');
@@ -687,6 +814,14 @@ export default function ShareCardScreen({ navigation, route }) {
         </div>
         ${p.prCount ? `<p class="prs">${p.prCount} new ${p.prCount === 1 ? 'PR' : 'PRs'} this session</p>` : ''}
         ${rows ? `<table><thead><tr><th>Exercise</th><th>Sets</th></tr></thead><tbody>${rows}</tbody></table>` : ''}`;
+    } else if (p.cardType === 'milestone') {
+      const rows = (p.stats || []).map((s) => stat(s.label, s.value)).join('');
+      body = `
+        <div class="statRow">
+          ${(p.heroValue !== '' && p.heroValue != null) ? stat(p.heroUnit || '', p.heroValue) : ''}
+          ${rows}
+        </div>
+        ${p.caption ? `<p class="prs">${esc(p.caption)}</p>` : ''}`;
     } else {
       body = `
         <div class="statRow">
@@ -696,7 +831,9 @@ export default function ShareCardScreen({ navigation, route }) {
           ${p.previousBest ? stat('Previous best', `${p.previousBest} ${p.units || 'kg'}`) : ''}
         </div>`;
     }
-    const title = p.cardType === 'session' ? esc(p.sessionName) : `${esc(p.exerciseName)} PR`;
+    const title = p.cardType === 'session' ? esc(p.sessionName)
+      : p.cardType === 'milestone' ? esc(p.title || 'Milestone')
+      : `${esc(p.exerciseName)} PR`;
     return `<!DOCTYPE html><html><head><meta charset="utf-8" />
       <style>
         * { box-sizing: border-box; }
@@ -736,7 +873,7 @@ export default function ShareCardScreen({ navigation, route }) {
       if (!canShare) { Alert.alert('Sharing not available on this device.'); return; }
       await Sharing.shareAsync(uri, {
         mimeType: 'application/pdf', UTI: 'com.adobe.pdf',
-        dialogTitle: isSession ? 'Share session summary' : 'Share PR summary',
+        dialogTitle: cardType === 'session' ? 'Share session summary' : cardType === 'pr' ? 'Share PR summary' : 'Share summary',
       });
     } catch (_e) {
       Alert.alert("Couldn't make the PDF", 'Try again.');
@@ -749,11 +886,16 @@ export default function ShareCardScreen({ navigation, route }) {
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
 
-        {/* Card type */}
+        {/* Card type. Shown per the data the screen was opened with. */}
         <View style={styles.segmentRow}>
-          <SegmentBtn label="Session" active={isSession} onPress={() => setCardType('session')} />
+          {sessionData && (
+            <SegmentBtn label="Session" active={cardType === 'session'} onPress={() => setCardType('session')} />
+          )}
           {prData && (
-            <SegmentBtn label="New PR" active={!isSession} onPress={() => setCardType('pr')} />
+            <SegmentBtn label="New PR" active={cardType === 'pr'} onPress={() => setCardType('pr')} />
+          )}
+          {milestoneData && (
+            <SegmentBtn label="Milestone" active={cardType === 'milestone'} onPress={() => setCardType('milestone')} />
           )}
         </View>
 
@@ -780,7 +922,14 @@ export default function ShareCardScreen({ navigation, route }) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Preview</Text>
           <View style={styles.previewOuter}>
-            {isSession ? (
+            {isMilestone ? (
+              <MilestonePreview
+                milestoneData={milestoneData}
+                showDate={showDate}
+                isSquare={isSquare}
+                formatLongDate={formatLongDate}
+              />
+            ) : isSession ? (
               <SessionPreview
                 sessionData={sessionData}
                 showVolume={showVolume}
@@ -815,7 +964,7 @@ export default function ShareCardScreen({ navigation, route }) {
                 <ToggleRow label="Exercise names" value={showExercises} onChange={setShowExercises} last />
               </>
             )}
-            {!isSession && (
+            {cardType === 'pr' && (
               <>
                 <ToggleRow label="PR weight" value={showPRWeight} onChange={setShowPRWeight} />
                 <ToggleRow label="Previous best" value={showPrevBest} onChange={setShowPrevBest} last />
@@ -839,7 +988,7 @@ export default function ShareCardScreen({ navigation, route }) {
             <>
               <Ionicons name="share-outline" size={20} color={colors.background} />
               <Text style={styles.shareBtnText}>
-                {isSession ? 'Share Session Card' : 'Share PR Card'}
+                {cardType === 'session' ? 'Share Session Card' : cardType === 'pr' ? 'Share PR Card' : 'Share Card'}
               </Text>
             </>
           )}
@@ -1089,6 +1238,52 @@ function PRPreview({ prData: p, showPRWeight, showPrevBest, showDate, isSquare, 
   );
 }
 
+function MilestonePreview({ milestoneData: m, showDate, isSquare, formatLongDate }) {
+  const d = m || {};
+  const dateStr = d.date ? formatLongDate(d.date) : '';
+  const stats = Array.isArray(d.stats) ? d.stats.slice(0, 3) : [];
+  return (
+    <GradientBg style={[pvStyles.card, isSquare ? pvStyles.square : pvStyles.story]}>
+      <View style={pvStyles.topAccent} />
+
+      <View style={pvStyles.headerRow}>
+        <BrandRowPreview size={isSquare ? 11 : 10} color={colors.textSecondary} />
+        {showDate && !!dateStr && (
+          <Text style={[pvStyles.dateText, { fontSize: isSquare ? 8 : 7 }]}>{dateStr}</Text>
+        )}
+      </View>
+
+      <View style={pvStyles.msCenter}>
+        {!!d.eyebrow && (
+          <Text style={pvStyles.msEyebrow} numberOfLines={1}>{String(d.eyebrow).toUpperCase()}</Text>
+        )}
+        {!!d.title && (
+          <Text style={[pvStyles.msTitle, isSquare ? pvStyles.msTitleSq : pvStyles.msTitleSt]} numberOfLines={2}>
+            {d.title}
+          </Text>
+        )}
+        <Text style={[pvStyles.msHero, isSquare ? pvStyles.msHeroSq : pvStyles.msHeroSt]} numberOfLines={1} adjustsFontSizeToFit>
+          {d.heroValue != null ? String(d.heroValue) : ''}
+        </Text>
+        {!!d.heroUnit && <Text style={pvStyles.msUnit}>{String(d.heroUnit).toUpperCase()}</Text>}
+        {!!d.caption && <Text style={pvStyles.msCaption} numberOfLines={2}>{d.caption}</Text>}
+        {stats.length > 0 && (
+          <View style={pvStyles.msStatRow}>
+            {stats.map((s, i) => (
+              <View key={i} style={pvStyles.msStat}>
+                <Text style={pvStyles.msStatValue} numberOfLines={1} adjustsFontSizeToFit>{String(s.value)}</Text>
+                <Text style={pvStyles.msStatLabel} numberOfLines={1}>{String(s.label).toUpperCase()}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+
+      <BrandFooterPreview isSquare={isSquare} />
+    </GradientBg>
+  );
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function SegmentBtn({ label, active, onPress, icon }) {
@@ -1227,6 +1422,25 @@ const pvStyles = StyleSheet.create({
   prWeightSq: { fontSize: 28 },
   prWeightSt: { fontSize: 24 },
   prPrevBest: { fontSize: 8, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xs },
+
+  msCenter: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.sm },
+  msEyebrow: { fontSize: 8, color: colors.primary, fontWeight: fontWeight.bold, letterSpacing: 1.2, marginBottom: spacing.xxs },
+  msTitle: { fontWeight: fontWeight.black, color: colors.textPrimary, textAlign: 'center' },
+  msTitleSq: { fontSize: 15, lineHeight: 18 },
+  msTitleSt: { fontSize: 13, lineHeight: 16 },
+  msHero: { fontWeight: fontWeight.black, color: colors.primary, textAlign: 'center', marginTop: spacing.xs },
+  msHeroSq: { fontSize: 52 },
+  msHeroSt: { fontSize: 44 },
+  msUnit: { fontSize: 8, color: colors.textSecondary, fontWeight: fontWeight.bold, letterSpacing: 1, marginTop: 2 },
+  msCaption: { fontSize: 8, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xs, paddingHorizontal: spacing.xs },
+  msStatRow: { flexDirection: 'row', gap: 6, marginTop: spacing.sm },
+  msStat: {
+    backgroundColor: colors.surface, borderRadius: radius.sm,
+    borderWidth: 1, borderColor: colors.border,
+    paddingVertical: spacing.xs, paddingHorizontal: spacing.xs, minWidth: 44, alignItems: 'center',
+  },
+  msStatValue: { fontSize: 13, color: colors.textPrimary, fontWeight: fontWeight.black },
+  msStatLabel: { fontSize: 6, color: colors.textMuted, fontWeight: fontWeight.bold, letterSpacing: 0.5, marginTop: 1 },
 });
 
 const styles = StyleSheet.create({

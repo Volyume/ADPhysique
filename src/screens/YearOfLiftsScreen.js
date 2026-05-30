@@ -239,6 +239,32 @@ export default function YearOfLiftsScreen({ navigation, route }) {
     goTo(index - 1);
   }
 
+  // Share the year as a single milestone card. Factual stats only, no
+  // bodyweight or private data, same fields the deck already shows.
+  function handleShareYear() {
+    if (!data) return;
+    const stats = [];
+    if (data.tonnage > 0) {
+      stats.push({ value: data.tonnage.toLocaleString('en-GB'), label: 'kg lifted' });
+    }
+    if (data.totalSets > 0) {
+      stats.push({ value: data.totalSets.toLocaleString('en-GB'), label: 'sets' });
+    }
+    if (data.uniqueExercises > 0) {
+      stats.push({ value: data.uniqueExercises.toLocaleString('en-GB'), label: 'exercises' });
+    }
+    navigation.navigate('ShareCard', {
+      milestoneData: {
+        title: 'My year of lifts',
+        eyebrow: '',
+        heroValue: (data.totalSessions || 0).toLocaleString('en-GB'),
+        heroUnit: data.totalSessions === 1 ? 'session' : 'sessions',
+        caption: `${fmtDate(data.yearStart)} to ${fmtDate(data.yearEnd)}`,
+        stats,
+      },
+    });
+  }
+
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
       <StatusBar barStyle="light-content" backgroundColor={colors.background} />
@@ -255,6 +281,16 @@ export default function YearOfLiftsScreen({ navigation, route }) {
             ]}
           />
         ))}
+        {!loading && cards.length > 0 && (
+          <TouchableOpacity
+            style={styles.shareBtn}
+            onPress={handleShareYear}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityLabel="Share your year"
+          >
+            <Ionicons name="share-outline" size={18} color={colors.textPrimary} />
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={styles.closeBtn}
           onPress={() => navigation.goBack()}
@@ -341,8 +377,13 @@ const styles = StyleSheet.create({
   },
   pipDone: { backgroundColor: colors.textSecondary },
   pipCurrent: { backgroundColor: colors.primary },
-  closeBtn: {
+  shareBtn: {
     marginLeft: spacing.sm,
+    width: 30, height: 30,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  closeBtn: {
+    marginLeft: spacing.xs,
     width: 30, height: 30,
     alignItems: 'center', justifyContent: 'center',
   },
