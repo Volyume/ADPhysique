@@ -1234,7 +1234,7 @@ const balanceStyles = StyleSheet.create({
     flex: 1,
   },
   dot: {
-    fontSize: 12,
+    fontSize: fontSize.sm,
     lineHeight: 16,
   },
   muscleName: {

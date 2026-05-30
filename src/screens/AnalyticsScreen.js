@@ -1171,12 +1171,12 @@ const styles = StyleSheet.create({
   },
   volCell:   { width: '30%', alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.xs },
   volDot:    { width: 10, height: 10, borderRadius: 5 },
-  volMuscle: { fontSize: 10, color: colors.textSecondary, textAlign: 'center' },
-  volSets:   { fontSize: 10, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  volMuscle: { fontSize: fontSize.micro, color: colors.textSecondary, textAlign: 'center' },
+  volSets:   { fontSize: fontSize.micro, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   volLegend: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
   volLegendItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   volLegendDot: { width: 8, height: 8, borderRadius: 4 },
-  volLegendText: { fontSize: 9, color: colors.textMuted },
+  volLegendText: { fontSize: fontSize.micro, color: colors.textMuted },
 
   // ── PR Sparkline ──
   windowToggle: {
@@ -1193,7 +1193,7 @@ const styles = StyleSheet.create({
   },
   prBarCol:  { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
   prBar:     { width: '100%', borderRadius: 2 },
-  prBarCount: { fontSize: 8, color: colors.gold, marginTop: spacing.xxs, fontWeight: '700' },
+  prBarCount: { fontSize: fontSize.micro, color: colors.gold, marginTop: spacing.xxs, fontWeight: '700' },
   prEmpty:   {
     backgroundColor: colors.surface, borderRadius: radius.md,
     padding: spacing.lg, borderWidth: 1, borderColor: colors.border,
@@ -1276,10 +1276,10 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   durationBarValue: {
-    fontSize: 9, color: colors.textSecondary, fontWeight: fontWeight.semibold,
+    fontSize: fontSize.micro, color: colors.textSecondary, fontWeight: fontWeight.semibold,
   },
   durationBarLabel: {
-    fontSize: 9, color: colors.textMuted,
+    fontSize: fontSize.micro, color: colors.textMuted,
   },
   durationCoach: {
     fontSize: fontSize.xs, color: colors.textSecondary,

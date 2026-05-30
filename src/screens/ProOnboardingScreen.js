@@ -1170,7 +1170,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7, paddingVertical: spacing.xxs,
   },
   proBadgeText: {
-    fontSize: 9, fontWeight: fontWeight.black,
+    fontSize: fontSize.micro, fontWeight: fontWeight.black,
     color: colors.background, letterSpacing: 0.8,
   },
 
@@ -1329,7 +1329,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start', backgroundColor: colors.primary,
     borderRadius: 4, paddingHorizontal: spacing.sm, paddingVertical: 3,
   },
-  offerBadgeText: { fontSize: 9, fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.8 },
+  offerBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.8 },
   offerHeadline: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.sm, lineHeight: 26 },
   offerBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20, marginBottom: spacing.md },
   offerPerks: { gap: spacing.xs },

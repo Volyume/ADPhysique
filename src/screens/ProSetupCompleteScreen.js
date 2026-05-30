@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
   proBadge: {
     backgroundColor: colors.primary, borderRadius: 4, paddingHorizontal: 7, paddingVertical: spacing.xxs,
   },
-  proBadgeText: { fontSize: 9, fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.8 },
+  proBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.8 },
 
   headline: {
     fontSize: fontSize.xxxl, fontWeight: fontWeight.bold,
@@ -399,7 +399,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   founderLabel: {
-    fontSize: 10, fontWeight: fontWeight.black,
+    fontSize: fontSize.micro, fontWeight: fontWeight.black,
     color: colors.textMuted, letterSpacing: 1.5,
     marginBottom: spacing.xs,
   },

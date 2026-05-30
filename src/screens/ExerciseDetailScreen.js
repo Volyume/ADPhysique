@@ -866,7 +866,7 @@ const styles = StyleSheet.create({
   },
   plateauBody: {
     color: colors.textSecondary,
-    fontSize: 12,
+    fontSize: fontSize.sm,
     lineHeight: 18,
   },
   // Goal section

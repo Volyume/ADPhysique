@@ -1373,7 +1373,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   betaBadgeText: {
-    fontSize: 10,
+    fontSize: fontSize.micro,
     fontWeight: fontWeight.bold,
     color: colors.background,
     letterSpacing: 1,

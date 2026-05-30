@@ -701,7 +701,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   badgeAmber: { backgroundColor: colors.primaryBg, borderColor: colors.primary + '60' },
-  badgeText: { fontSize: 10, color: colors.textMuted, fontWeight: fontWeight.semibold },
+  badgeText: { fontSize: fontSize.micro, color: colors.textMuted, fontWeight: fontWeight.semibold },
   badgeTextAmber: { color: colors.primary },
   workoutCount: { fontSize: fontSize.xs, color: colors.textMuted, marginLeft: spacing.sm },
   planName: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },

@@ -1685,7 +1685,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: (colors.success ?? colors.primary) + '50',
   },
   appliedChipText: {
-    fontSize: 10, fontWeight: fontWeight.bold,
+    fontSize: fontSize.micro, fontWeight: fontWeight.bold,
     color: colors.success ?? colors.primary, letterSpacing: 0.4,
   },
   adjustmentNote: {

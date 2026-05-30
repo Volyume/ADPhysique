@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   sourceChipText: {
-    fontSize: 10, color: colors.textMuted, fontWeight: fontWeight.semibold, letterSpacing: 0.4,
+    fontSize: fontSize.micro, color: colors.textMuted, fontWeight: fontWeight.semibold, letterSpacing: 0.4,
   },
   fieldLabel: {
     fontSize: fontSize.xs, color: colors.textSecondary,

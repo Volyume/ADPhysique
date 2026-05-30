@@ -2329,7 +2329,7 @@ const styles = StyleSheet.create({
   navTabText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
   navTabTextActive: { color: colors.primary },
   navTabBadge: { width: 16, height: 16, borderRadius: 8, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
-  navTabBadgeText: { fontSize: 9, fontWeight: fontWeight.black, color: colors.background },
+  navTabBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.background },
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.md, paddingTop: spacing.sm, gap: spacing.sm },
   exerciseHeader: { gap: spacing.xs },

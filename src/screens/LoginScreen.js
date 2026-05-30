@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
   },
   crashTitle: { color: colors.error, fontWeight: fontWeight.bold, marginBottom: spacing.xs, fontSize: fontSize.sm },
   crashMsg: { color: colors.error, fontSize: fontSize.xs },
-  crashStack: { color: colors.textMuted, fontSize: 10, marginTop: spacing.xs },
+  crashStack: { color: colors.textMuted, fontSize: fontSize.micro, marginTop: spacing.xs },
   crashDismiss: { color: colors.error, fontSize: fontSize.xs, marginTop: spacing.sm },
 
   // Brand block

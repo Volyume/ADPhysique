@@ -365,7 +365,7 @@ export default function PRWallScreen({ navigation }) {
                     hideDataPoints={history.length > 10}
                     dataPointsColor={colors.primary}
                     dataPointsRadius={3}
-                    yAxisTextStyle={{ color: colors.textMuted, fontSize: 9 }}
+                    yAxisTextStyle={{ color: colors.textMuted, fontSize: fontSize.micro }}
                     yAxisColor="transparent"
                     xAxisColor="transparent"
                     rulesColor={colors.border + '80'}
@@ -586,7 +586,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: spacing.xs,
   },
-  chartFooterText: { fontSize: 10, color: colors.textMuted },
+  chartFooterText: { fontSize: fontSize.micro, color: colors.textMuted },
 
   empty: { alignItems: 'center', paddingHorizontal: spacing.xxl, paddingTop: spacing.xxxl, gap: spacing.md },
   emptyTitle: {

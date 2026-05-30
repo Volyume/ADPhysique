@@ -362,7 +362,7 @@ function LegendItem({ color, label }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
       <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: color }} />
-      <Text style={{ fontSize: 10, color: colors.textMuted }}>{label}</Text>
+      <Text style={{ fontSize: fontSize.micro, color: colors.textMuted }}>{label}</Text>
     </View>
   );
 }

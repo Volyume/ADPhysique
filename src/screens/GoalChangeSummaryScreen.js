@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
   cardUnchanged: { opacity: 0.65 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   cardTitle: { flex: 1, fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  unchangedTag: { fontSize: 10, color: colors.textMuted, fontStyle: 'italic' },
+  unchangedTag: { fontSize: fontSize.micro, color: colors.textMuted, fontStyle: 'italic' },
 
   diffRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
   diffPrev: { fontSize: fontSize.md, color: colors.textMuted, textDecorationLine: 'line-through' },

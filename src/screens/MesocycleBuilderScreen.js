@@ -429,11 +429,11 @@ const styles = StyleSheet.create({
   progFill:   { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
   tonnageWrap: { gap: spacing.xs },
   tonnageLabel: { fontSize: fontSize.xs, color: colors.textMuted },
-  barAxisLabel: { fontSize: 9, color: colors.textMuted },
+  barAxisLabel: { fontSize: fontSize.micro, color: colors.textMuted },
   recovRow:   { flexDirection: 'row', gap: spacing.lg },
   recovItem:  { alignItems: 'center', gap: spacing.xxs },
   recovValue: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  recovLabel: { fontSize: 10, color: colors.textMuted },
+  recovLabel: { fontSize: fontSize.micro, color: colors.textMuted },
   deloadBanner: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
     backgroundColor: colors.warningBg, borderRadius: radius.md,

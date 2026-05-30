@@ -217,7 +217,7 @@ const mfStyles = StyleSheet.create({
   },
   dot: { width: 6, height: 6, borderRadius: 3, flexShrink: 0 },
   chipName: { fontSize: fontSize.xs, fontWeight: fontWeight.medium },
-  chipLabel: { fontSize: 10, fontWeight: fontWeight.semibold },
+  chipLabel: { fontSize: fontSize.micro, fontWeight: fontWeight.semibold },
 });
 
 export default function AthleteHubScreen({ navigation }) {
@@ -1012,8 +1012,8 @@ const styles = StyleSheet.create({
   gaugeItem:   { flex: 1, alignItems: 'center', gap: spacing.xs },
   gaugeDot:    { width: 12, height: 12, borderRadius: radius.sm },
   gaugeValue:  { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  gaugeLabel:  { fontSize: 10, color: colors.textMuted, textAlign: 'center' },
-  gaugeScale:  { fontSize: 9, color: colors.textMuted, textAlign: 'center' },
+  gaugeLabel:  { fontSize: fontSize.micro, color: colors.textMuted, textAlign: 'center' },
+  gaugeScale:  { fontSize: fontSize.micro, color: colors.textMuted, textAlign: 'center' },
   recoveryNote: { fontSize: fontSize.xs, color: colors.textMuted, textAlign: 'center' },
 
   // Quick stats
@@ -1046,7 +1046,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   lockBadgeText: {
-    fontSize: 10, fontWeight: fontWeight.semibold, color: colors.textMuted,
+    fontSize: fontSize.micro, fontWeight: fontWeight.semibold, color: colors.textMuted,
   },
   checkinPrompt: { paddingTop: spacing.xs },
   checkinPromptText: { fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 18 },
@@ -1066,14 +1066,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.md, paddingVertical: spacing.sm, gap: spacing.xxs,
   },
   macroPillValue: { fontSize: fontSize.sm, fontWeight: fontWeight.bold },
-  macroPillLabel: { fontSize: 10, color: colors.textMuted },
+  macroPillLabel: { fontSize: fontSize.micro, color: colors.textMuted },
   metricRow:      { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   metricChip: {
     backgroundColor: colors.surface2, borderRadius: radius.md,
     paddingHorizontal: spacing.md, paddingVertical: spacing.xs, gap: 1,
   },
   metricChipValue: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  metricChipLabel: { fontSize: 10, color: colors.textMuted },
+  metricChipLabel: { fontSize: fontSize.micro, color: colors.textMuted },
 
   // Nav rows
   navRow: {

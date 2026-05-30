@@ -334,7 +334,7 @@ const chartStyles = StyleSheet.create({
   wrap: { marginTop: spacing.sm, marginHorizontal: -spacing.xs },
   emptyHint: { paddingTop: spacing.md },
   emptyHintText: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
-  axisText: { color: colors.textMuted, fontSize: 10 },
+  axisText: { color: colors.textMuted, fontSize: fontSize.micro },
   smoothedHint: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xs, textAlign: 'center' },
 });
 

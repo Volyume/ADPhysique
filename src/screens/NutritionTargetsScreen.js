@@ -1415,7 +1415,7 @@ const styles = StyleSheet.create({
   },
   mealCountRecCaptionDot: {
     color: colors.primary,
-    fontSize: 8,
+    fontSize: fontSize.micro,
   },
   perMealHint: {
     flexDirection: 'row',
@@ -1643,7 +1643,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xxs,
   },
   recommendedBadgeText: {
-    fontSize: 10,
+    fontSize: fontSize.micro,
     fontWeight: fontWeight.bold,
     color: colors.primary,
   },

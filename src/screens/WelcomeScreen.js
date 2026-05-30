@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, borderRadius: 4,
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
   },
-  betaBadgeText: { fontSize: 9, fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.5 },
+  betaBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.5 },
   proSubtitle: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: spacing.xxs },
 
   divider: { height: 1, backgroundColor: colors.border, marginHorizontal: spacing.lg },

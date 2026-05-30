@@ -871,7 +871,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
     borderWidth: 1, borderColor: colors.primary + '40',
   },
-  actionCardBadgeText: { fontSize: 9, fontWeight: fontWeight.black, color: colors.primary, letterSpacing: 0.5 },
+  actionCardBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.primary, letterSpacing: 0.5 },
   actionCardDesc: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
   actionCardFeatured: {
     borderColor: colors.primary + '40',
@@ -892,7 +892,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   lockBadgeText: {
-    fontSize: 10, fontWeight: fontWeight.semibold, color: colors.textMuted,
+    fontSize: fontSize.micro, fontWeight: fontWeight.semibold, color: colors.textMuted,
   },
 
   // Block advisor card

@@ -133,6 +133,7 @@ export function circle(size) {
 }
 
 const baseFontSize = {
+  micro: 10, // dense chart axis / data micro-labels only, below body min (replaces hand-rolled 8-10px)
   xs: 11,
   sm: 13,
   md: 16,   // body (design premium audit 2026-05-30: 16 is the premium body size; was 15)
@@ -192,6 +193,7 @@ export function applyAccessibility(prefs) {
 
   if (prefs?.largerText) {
     Object.assign(fontSize, {
+      micro:   Math.round(baseFontSize.micro   * 1.2),
       xs:      Math.round(baseFontSize.xs      * 1.2),
       sm:      Math.round(baseFontSize.sm      * 1.2),
       md:      Math.round(baseFontSize.md      * 1.2),

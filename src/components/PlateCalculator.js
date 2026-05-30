@@ -202,13 +202,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   plateText: {
-    fontSize: 8,
+    fontSize: fontSize.micro,
     fontWeight: fontWeight.black,
     color: colors.background,
     transform: [{ rotate: '90deg' }],
   },
   plateTextLarge: {
-    fontSize: 9,
+    fontSize: fontSize.micro,
   },
   collar: {
     width: 8,

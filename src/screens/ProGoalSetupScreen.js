@@ -693,7 +693,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary + '20', borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: 1,
   },
-  suggestedBadgeText: { fontSize: 10, fontWeight: fontWeight.bold, color: colors.primary },
+  suggestedBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.bold, color: colors.primary },
 
   saveBtn: {
     backgroundColor: colors.primary, borderRadius: radius.lg,

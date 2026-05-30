@@ -1996,7 +1996,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
     borderWidth: 1, borderColor: colors.primary + '40',
   },
-  builderBadgeText: { fontSize: 9, fontWeight: fontWeight.bold, color: colors.primary },
+  builderBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.bold, color: colors.primary },
   builderDesc: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
 
   // Last session
@@ -2251,7 +2251,7 @@ const styles = StyleSheet.create({
   },
   coachBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
   coachBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary, marginBottom: spacing.xxs },
-  coachBannerBody: { fontSize: 12, color: colors.textSecondary, lineHeight: 17 },
+  coachBannerBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 17 },
   deloadBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: 'rgba(245,158,11,0.12)', borderRadius: radius.md, padding: 14,
@@ -2259,7 +2259,7 @@ const styles = StyleSheet.create({
   },
   deloadBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
   deloadBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.warning, marginBottom: spacing.xxs },
-  deloadBannerBody: { fontSize: 12, color: colors.textSecondary, lineHeight: 17 },
+  deloadBannerBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 17 },
 
   // Nutrition phase sync banner
   phaseBanner: {
