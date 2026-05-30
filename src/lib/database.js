@@ -3437,6 +3437,7 @@ export async function setDailySteps(userId, { entryDate, steps, source = 'manual
        updated_at = excluded.updated_at`,
     [userId, day, value, source, now],
   );
+  _scheduleSync();
   return { entryDate: day, steps: value, source, updatedAt: now };
 }
 
@@ -3467,6 +3468,54 @@ export async function getDailyStepsRange(userId, fromDate, toDate) {
     [userId, fromDate, toDate],
   );
   return rows.map(rowToCamel);
+}
+
+// Rows for the sync push window (most recent N days). Step history is one
+// small row per day, so a generous window is cheap. Used by the
+// daily_steps per-table push handler.
+export async function getDailyStepsForPush(userId, days = 400) {
+  if (!userId) return [];
+  const d = await db();
+  const cutoff = activityDayKey(Date.now() - days * 86400000);
+  const rows = await d.getAllAsync(
+    'SELECT * FROM daily_steps WHERE user_id = ? AND entry_date >= ? ORDER BY entry_date ASC',
+    [userId, cutoff],
+  );
+  return rows.map(rowToCamel);
+}
+
+// Local updated_at (ms) for one day, or null if no local row. The pull
+// handler uses this as the last-write-wins gate so a stale cloud row never
+// clobbers a fresher local edit.
+export async function getDailyStepsUpdatedAt(userId, entryDate) {
+  if (!userId || !entryDate) return null;
+  const d = await db();
+  const row = await d.getFirstAsync(
+    'SELECT updated_at FROM daily_steps WHERE user_id = ? AND entry_date = ?',
+    [userId, entryDate],
+  );
+  return row?.updated_at ?? null;
+}
+
+// Restore one cloud daily_steps row into local SQLite. INSERT OR REPLACE so
+// the pull handler's LWW gate gets the overwrite it expects when the cloud
+// row wins. Cloud updated_at is an ISO string; store it as ms to match the
+// local convention.
+export async function insertDailyStepsFromCloud(userId, row) {
+  if (!userId || !row?.entry_date) return;
+  const d = await db();
+  const toMs = (v) => v == null ? Date.now() : (typeof v === 'string' ? new Date(v).getTime() : v);
+  await d.runAsync(
+    `INSERT OR REPLACE INTO daily_steps (user_id, entry_date, steps, source, updated_at)
+     VALUES (?, ?, ?, ?, ?)`,
+    [
+      userId,
+      row.entry_date,
+      Math.max(0, Math.round(Number(row.steps) || 0)),
+      row.source ?? 'manual',
+      toMs(row.updated_at),
+    ],
+  );
 }
 
 // ─── Pro: Weekly Check-Ins ────────────────────────────────────────────────────

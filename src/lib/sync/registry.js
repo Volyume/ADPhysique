@@ -101,6 +101,17 @@ export const SYNC_REGISTRY = [
     direction: 'pull_only',
   },
   {
+    // Activity store (cardio/steps audit). Per-day step total, same
+    // contract as daily_water but with its own handler so it stays
+    // off the food bulk RPC. Cloud migration 056.
+    table: 'daily_steps',
+    pk: ['user_id', 'entry_date'],
+    conflictStrategy: 'last_write_wins',
+    serverAuthoritative: false,
+    softDelete: false,
+    direction: 'bidirectional',
+  },
+  {
     table: 'ed_pattern_flags',
     pk: 'id',
     conflictStrategy: 'server_wins',

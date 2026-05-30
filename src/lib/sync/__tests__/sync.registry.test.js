@@ -23,6 +23,7 @@ const EXPECTED_TABLES = [
   'food_favourites',
   'daily_water',
   'daily_intake_rollups',
+  'daily_steps',
   'ed_pattern_flags',
   'tier_history',
   'body_composition_log',
