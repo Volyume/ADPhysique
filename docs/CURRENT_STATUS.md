@@ -14,6 +14,27 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 
 ## 0. Session summary
 
+### 0.0000000001. 2026-05-30 (premium design audit + Foundation build, Claude): design system audited, then implemented
+
+Ran the full premium-design audit (`docs/audit/volyume-design-premium-audit-2026-05-30/`, six docs: internal audit, research, standards proposal, application audit, roadmap, exec summary) and then, on founder approval, implemented the Foundation tier and several high-visibility/polish items. Central finding: the design foundation was already good but its best tokens were barely consumed (`type` roles used in 0/61 screens; `motion`/`shadow` near-zero; `PressableCard` in 12 files vs `TouchableOpacity` in 72). The work was mostly adoption, not invention.
+
+Founder decisions (locked): keep **amber** (retire the stale blue `#2979FF` in the old design doc), stay on the system font for now, warm + widen the dark surface ladder, deepen large amber fills, body 15→16, tabular numerals on all data, one press feel, full Reanimated migration, skeletons everywhere data loads, CI lint guards.
+
+Shipped this arc (each commit verified with the *exact* CI commands — `eslint .` 0 errors + `npx jest --runInBand --ci` green — not just the default suite):
+- **Foundation tokens** (`d935bff`): surface ladder widened + faintly warmed (`surface #191917`, new `surfaceElevated #222220`, `surface2 #2A2A27`, `surface3 #343431`, `borderSubtle`); accent `primary #F5A623` + new `primaryFill #E08C0B` for large fills; body 16; `type.num()` tabular helper; `fontSize.micro`; motion curves (Material-3 easing + iOS-0.8 spring); `spacing.hair/xs2`, `radius.xs`, `circle()`.
+- **Card consolidation** (`01db3b5`): GradientCard → thin shim over Card; Card gains `elevated`.
+- **Type-literal cleanup** (`f9a4d7b`, `98cfb8b`, `6c3a52e`): 0 raw fontWeight, 44 fontSize → tokens; tabular numerals on PR Wall, Analytics, Athlete Hub. 9 intentional hero/display sizes left with scoped disables.
+- **Colour cleanup** (`08bf714`): 30 stray hex/rgba → tokens (`withAlpha`, `scrim`, `chartFill`, `borderSubtle`); Toast → `shadow.lg`; domain exceptions (IPF plate colours, confetti, camera UI) documented.
+- **CI guards promoted to error** (`84641ef`): hardcoded colour + raw type literals now fail CI in screens/components; drift is blocked.
+- **DESIGN_SYSTEM.md rewritten** to amber (`f9e8cb8`), ending the two-sources-of-truth conflict.
+- **Active Workout (signature surface, `b45ed2f`)**: COMPLETE SET → deepened `primaryFill`; tabular set data; all overlay scrims → `scrim` token; all haptics → the intent vocab; hex-clean.
+- **Settings (`3e1b7d6`)**: SettingRow → PressableCard (one press feel); toggle haptics.
+- **Skeletons** (`4ec728f`, `ca26d9a`): Food Search + My Recipes list loads.
+- **Reanimated everyday motion** (`fa86734`, `478cfcb`): new `AnimatedEntrance` (reduce-motion aware, staggered) on Workout History + Plans; reanimated now mocked globally (`__mocks__/`) not per-file-virtual (avoids the `--runInBand` resolution flake class).
+- **Crash screen** (`6dd3da3`): amber identity, not the retired blue. Zero `#2979FF` references remain anywhere.
+
+State at end: `main` = `6dd3da3`, 0/0 with origin, full suite green (2236 passed) in both parallel and `--runInBand`. **Not yet done (remaining roadmap):** press-feel rollout to Home/Diary/the other high-traffic screens; full migration of the *existing* RN-Animated peaks to Reanimated (P2, the deliberately-last risky item); hero-number transitions (P3); skeletons on the remaining spinner screens; the optional active-workout blur moment (P7). Honest note on CI: verified via the exact CI commands locally; the live GitHub Actions conclusion can't be read from this environment (MCP doesn't expose check-run status).
+
 ### 0.000000001. 2026-05-30 (exercise/workout audit build-out, Claude): the whole audit shipped, plus a real test-flake fix
 
 Picked up the frozen workout/exercise-audit session and built out every
