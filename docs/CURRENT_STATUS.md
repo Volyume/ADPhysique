@@ -14,6 +14,100 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 
 ## 0. Session summary
 
+### 0.000000001. 2026-05-30 (exercise/workout audit build-out, Claude): the whole audit shipped, plus a real test-flake fix
+
+Picked up the frozen workout/exercise-audit session and built out every
+phase of `docs/audit/volyume-exercise-audit-2026-05-30` on `main`, as a
+chain of green, individually-tested, individually-pushed commits. Repo
+note for the next session: this container started with a stale local `main`
+that had **diverged from GitHub's `main`** (no common ancestor, 50 commits
+each). It was reconciled at the start by tagging the old local history
+(`backup/local-main-2026-05-30`) and pointing local `main` at
+`origin/main`; `origin/main` was a clean superset. Validate repo state
+(Rule 1) carefully if that recurs.
+
+**Lift Progress fix (`fe9d7aa`, corrected by `1b98ed3`).** The Progress
+tab's "Lift Progress" tile opened the Exercise Library (a browse/search
+list), which is not lift progress. New `LiftProgressScreen` lists every
+lift you've trained, most recent first, with the estimated-1RM trend as a
+sparkline; tapping a lift drops into the existing ExerciseDetail charts.
+New pure `lib/liftProgress.js` (`buildLiftProgressRows`). Honest note: the
+first commit was pushed with a failing unit test and a bad theme token
+(`colors.danger`, which doesn't exist); `1b98ed3` fixed both. Process
+lesson recorded: run the full suite green before pushing, not after.
+
+**The exercise-library rebuild (steps 2-7), one commit per step:**
+
+- **`b58a355` metadata deriver.** Pure `lib/exerciseMetadata.js` derives
+  equipment_category, machine_type, force, laterality, difficulty,
+  machine_ok, home_ok and equipment_profiles from each exercise's existing
+  fields, with override maps for the judgment calls (machine bucket splits
+  into selectorised vs plate-loaded, landmine/band reclassified). 27 tests,
+  incl. coverage over all seed exercises.
+- **`d78e63e` seed + backfill.** Seed populates the metadata at insert;
+  new idempotent `backfillExerciseMetadataIfNeeded()` updates existing
+  installs (the seed early-returns when rows exist). New
+  `updateExerciseMetadata` in `database.js`. Boot chains seed → backfill.
+- **`27fa51d` adductors as a distinct muscle.** Founder decision. Added to
+  `VOLUME_LANDMARKS` (mev 0, so an untrained user is never flagged lagging),
+  `MUSCLE_DISPLAY_NAMES`, and the body diagram. Not yet programmed here
+  (no exercises until step 5).
+- **`b42ea66` 30 new exercises + top-up.** Adductor movements (the muscle
+  is now programmable), the Hammer-Strength plate-loaded class, the triceps
+  long-head fix, and machine-only coverage fill. 445 → 475. New idempotent
+  `topUpNewExercisesIfNeeded()` inserts any RAW row whose canonical ID is
+  missing, so existing installs receive future additions. No cloud
+  migration: canonical exercises seed locally with deterministic IDs.
+- **`156f8e6` + `203353f` pool generated from the library.** The big one:
+  the Coach now derives its selection pool from the library instead of a
+  hardcoded `POOL`, closing the two-dataset drift end to end (a name can no
+  longer fail to resolve and silently drop). Pure `lib/poolGenerator.js`
+  with a subregion-vocabulary translation layer; planEngine sets a
+  library-generated effective pool per run and restores it in a finally
+  (no state leak), with per-muscle fallback to the built-in POOL where the
+  library is thin (founder's "generate + fallback" choice). With no library
+  passed, behaviour is byte-identical, so all prior engine tests are
+  unchanged.
+- **`3f860db` goal bias, difficulty gating, adductors into splits.**
+  Beginners no longer get advanced (difficulty 3) lifts, but the gate
+  relaxes rather than starve coverage (founder choice). Goal bias is a
+  scoring nudge (strength favours barbell compounds, hypertrophy uses SFR
+  as a tiebreak). Adductors added to the lower/leg split arrays and the
+  weak-point map + UI list, so selecting "Adductors" as a weak point now
+  programs real adductor work.
+- **`00fcf47` routine fix + swap subregion.** Corrected the "Abductor
+  Machine" typo (→ canonical "Abduction Machine") that three routines
+  silently dropped; added a `routineIntegrity` test so the class of drift
+  can't return (zero broken refs now). Swap engine scores same-subregion
+  swaps higher (gap C6) so a suggested swap stays in the same area of the
+  muscle.
+
+**`80898d7` test-flake fix (not caused here, fixed fully anyway).** The
+full suite failed intermittently (~1 in 3, worse under `--runInBand`). Two
+real root causes, both test-config only, no production code touched: (1)
+`react-native-url-polyfill/auto` ships untransformed ESM that Jest's
+default `transformIgnorePatterns` skips, so any suite transitively importing
+`supabase.js` could hit a parse error depending on transform-cache warmth,
+fixed with a global `moduleNameMapper` stub; (2) `health.steps` mocked two
+**real** installed packages with `{ virtual: true }`, which made resolution
+order-dependent so the real package sometimes won and `readStepsToday`
+returned 0, fixed by dropping the virtual flag. The cold-cache flake that
+§ 0.00000001 called "pre-existing and unrelated" is this, and it is now
+fixed: verified deterministically green over 9 parallel + 5 `--runInBand`
+consecutive full runs (2217 passing each).
+
+**State at session end.** `main` = `80898d7`, 0 ahead / 0 behind
+`origin/main`. Full suite deterministically green (2217 passed, 3 skipped).
+Verify on device: Progress → Lift Progress shows per-lift trends; generate
+a plan and confirm it draws on the new exercises; set Adductors as a weak
+point and confirm adductor work appears.
+
+**Design debt flagged, not yet done.** The audit's optional enhancements
+(browsable machine-only routine, a dedicated neck machine entry) were left
+as enhancements, not gaps. Test-isolation more broadly: the two flakes here
+are fixed, but the suite still leans on shared global mocks; a pass to give
+each suite its own isolated mock instances would harden it further.
+
 ### 0.00000001. 2026-05-29 (You tab redesign, Claude): stage 1 shipped, structural split scoped
 
 Audited the whole You tab and agreed the target structure with the founder (via AskUserQuestion): **You = profile + account + settings**; the coaching/progress dashboard (recovery signals, weight-trend chart, muscle readiness, quick stats) **moves to the Progress tab**; the root screen is **renamed "You"** (it is titled "Athlete Hub" today); and add an **account identity row, Help & support, and Rate the app**.
@@ -25,7 +119,7 @@ Audited the whole You tab and agreed the target structure with the founder (via 
 - New `YouScreen` is the You-tab root (ProfileStack root, titled "You"): profile header (name, tier, training age, session count), Go Pro (free), a Coaching group (Precision Coaching, Update your plan, Nutrition targets, Body metrics, Weekly check-in, Strategic journal, Goal lock), Wellbeing check, Settings, and the About footer. All its targets live in ProfileStack, so its navigation is in-stack.
 - The dashboard (`AthleteHubScreen`) moved to the Progress tab: registered in `ProgressStack`, reached from a new "Recovery & readiness" tile on `AnalyticsScreen`. Stripped its profile card, the coaching-management nav rows and the Preferences section (those moved to YouScreen); it now reads as a pure progress/readiness dashboard (milestones, recovery signals, quick stats, weekly-coaching card, recovery insight, weight trend, muscle readiness, nutrition/body cards, Pro previews, Engine Log). Removed the now-unused `NavRow`, `PressableCard` and `ProBadge`.
 - **The nav constraint, solved cleanly:** the dashboard's management cards (Weekly check-in, Nutrition targets, Nutrition education) now cross-navigate to the ProfileTab (`getParent()?.navigate('ProfileTab', { screen })`), the same pattern HomeScreen uses, so their downstream chains (CoachOutput, Paywall, etc.) run in their native ProfileStack instead of dead-ending in Progress. Body metrics and Pro previews stay in-stack (both already registered in ProgressStack). The HomeScreen phase banner that pointed at "Athlete Hub" now points at You → Nutrition targets.
-- Tests: `YouScreen` added to the mount sweep (459 passed); navigation soft-check exempt list updated; full suite green on a warm run (2041 passed, 3 skipped). The cold-cache flake in `error-and-feedback-pipeline.test.js` is pre-existing and unrelated.
+- Tests: `YouScreen` added to the mount sweep (459 passed); navigation soft-check exempt list updated; full suite green on a warm run (2041 passed, 3 skipped). (The cold-cache flake in `error-and-feedback-pipeline.test.js` noted here was diagnosed and fixed on 2026-05-30, see § 0.000000001 / commit `80898d7`; it was a `transformIgnorePatterns` ESM-parse race, not cold cache.)
 - Verify on device: the You tab opens to the new profile/account/settings screen; Progress → Recovery & readiness opens the dashboard; from the dashboard, Weekly check-in / Nutrition targets jump to the You tab and their flows complete.
 
 ### 0.0000001. 2026-05-29 (food build-out, Claude): quick-add + multi-add, food now leads on speed
