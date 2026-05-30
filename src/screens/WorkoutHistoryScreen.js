@@ -18,6 +18,7 @@ import { logError } from '../lib/errorLog';
 import { calculateTonnage } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 import { SkeletonRow } from '../components/Skeleton';
+import AnimatedEntrance from '../components/AnimatedEntrance';
 import { useShallow } from 'zustand/react/shallow';
 
 const FILTERS = [
@@ -249,13 +250,14 @@ export default function WorkoutHistoryScreen({ navigation }) {
   }
 
   // ─── Render helpers ──────────────────────────────────────────────────────────
-  function renderItem({ item }) {
+  function renderItem({ item, index }) {
     const { workout, setCount, workingSetCount, exerciseCount, tonnage, exerciseNames } = item;
     const date = new Date(workout.startedAt);
     const isExpanded = expandedId === workout.id;
     const exerciseDetail = expandedSets[workout.id];
 
     return (
+      <AnimatedEntrance index={index}>
       <Card style={styles.card}>
         {/* Tappable header row, toggles expansion */}
         <PressableCard
@@ -389,6 +391,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
           </TouchableOpacity>
         </View>
       </Card>
+      </AnimatedEntrance>
     );
   }
 

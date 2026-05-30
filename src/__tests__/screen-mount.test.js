@@ -224,20 +224,8 @@ jest.mock('react-native-svg', () => {
   };
 }, { virtual: true });
 
-jest.mock('react-native-reanimated', () => {
-  const React = require('react');
-  const passthrough = name => props => React.createElement(name, props, props.children);
-  return {
-    default: { View: passthrough('Animated.View'), Text: passthrough('Animated.Text'), createAnimatedComponent: c => c, call: () => {}, Value: function (v) { return { value: v }; } },
-    useSharedValue: v => ({ value: v }),
-    useAnimatedStyle: () => ({}),
-    withTiming: v => v, withSpring: v => v, withDelay: (_, v) => v, withRepeat: v => v, withSequence: v => v,
-    runOnJS: fn => fn, runOnUI: fn => fn,
-    Easing: new Proxy({}, { get: () => () => 0 }),
-    interpolate: () => 0, Extrapolate: { CLAMP: 'clamp' },
-    FadeIn: { duration: () => ({}) }, FadeOut: { duration: () => ({}) },
-  };
-}, { virtual: true });
+// react-native-reanimated is mocked globally via __mocks__/react-native-
+// reanimated.js (auto-applied by Jest), so no per-file mock is needed here.
 
 jest.mock('react-native-webview', () => {
   const React = require('react');
