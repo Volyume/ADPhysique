@@ -13,6 +13,65 @@ sync is an enhancement for the minority, never the default path.
 
 ---
 
+> **⚠️ CORRECTION REQUIRED before building steps (founder, 2026-05-30). Do NOT build § 3a / F3b as written. The steps research below is flawed and the capture model is being redecided.**
+>
+> Founder direction supersedes the audit on the steps capture path and the
+> manual model. The points below are the agreed starting position for a
+> fresh research pass the founder will run; treat § 3a, § 5.3, F3, F3b and
+> F4 as **suspended**, not authoritative, until that research lands.
+>
+> **1. Steps are automatic only. No daily manual step card anywhere.**
+> The shipped `DailyStepsCard` on Home/Train and the per-day manual entry
+> are to be REMOVED. There is no daily "type your steps" surface on Train,
+> Home or Diary. (Steps must never sit on the food Diary page.)
+>
+> **2. Manual fallback = a single AVERAGE on the weekly check-in.** A user
+> who cannot capture steps automatically enters an average steps/day figure
+> at check-in, as an average only, not a per-day log.
+>
+> **3. Use the health AGGREGATOR APIs, not Core Motion.** § 3a's
+> recommendation to default iOS to `expo-sensors` Core Motion is the core
+> flaw: Core Motion reads the iPhone's own chip ONLY and silently EXCLUDES
+> Apple Watch and every wearable (Garmin, Fitbit, Whoop). The previously
+> agreed approach is the aggregator route: **Apple HealthKit on iOS,
+> Health Connect on Android (and Google Fit later)** — which is what brings
+> in watch and wearable data (Garmin etc.). This is also already half-wired
+> in `health.js`. § 3a quietly proposed moving AWAY from the working
+> aggregator to save one permission prompt; that trade was wrong for a
+> serious-training app. The asymmetry § 3a never states: on Android its
+> "Health Connect" choice IS the aggregator (wearables included), but on
+> iOS its "Core Motion" choice is NOT (wearables excluded).
+>
+> **4. Fresh research pass owed (founder will run it).** The capture
+> research in § 3 / § 3a is not trusted. The fresh pass should cover:
+> HealthKit vs Core Motion for wearable coverage on iOS; Health Connect as
+> the Android aggregator and which wearables write to it; Google Fit
+> deprecation and migration to Health Connect; Garmin/Fitbit/Samsung/Whoop
+> step availability via each aggregator; and the no-aggregator fallback
+> (the check-in average from point 2).
+>
+> **5. Native crash still outstanding and unrelated to the above.** The
+> Android Health Connect permission path crashes fatally
+> (`UninitializedPropertyAccessException: lateinit property
+> requestPermission`, `react-native-health-connect`
+> `HealthConnectPermissionDelegate`) because the delegate is never
+> registered in `MainActivity.onCreate`. `expo prebuild --clean`
+> regenerates `MainActivity` each build, so the fix must be an Expo config
+> plugin that re-adds `HealthConnectPermissionDelegate.setPermissionDelegate(this)`.
+> This is needed regardless of which capture model wins, because the
+> aggregator route uses Health Connect on Android too.
+>
+> **6. What is genuinely DONE vs NOT (corrects the progress log below).**
+> Built: the `daily_steps` store (migration 056, not yet applied to cloud),
+> sync handler, auto-read plumbing, onboarding opt-in, settings toggle.
+> NOT built and NOT to be claimed as done: any **steps record / history /
+> trend display** — there is nowhere a user sees their steps over time, only
+> today's figure on the card that is itself being removed. The "steps over
+> time" feed (C4) and pre-filling the check-in adherence from logged data
+> are unbuilt. The entire **cardio** half (C1-C6) is unbuilt.
+
+---
+
 ## 1. Executive summary
 
 **The core problem.** Volyume already calculates a step target and a
