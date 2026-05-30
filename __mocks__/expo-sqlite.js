@@ -12,6 +12,7 @@ function makeDb() {
     getAllAsync: jest.fn(() => Promise.resolve([])),
     getFirstAsync: jest.fn(() => Promise.resolve(null)),
     withTransactionAsync: jest.fn(async (fn) => { await fn(); }),
+    isInTransactionSync: jest.fn(() => false),
     closeAsync: jest.fn(() => Promise.resolve()),
   };
 }

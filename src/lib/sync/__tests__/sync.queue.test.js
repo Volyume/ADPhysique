@@ -6,6 +6,8 @@
 const mockState = { rows: [], nextId: 1 };
 
 jest.mock('../../database', () => ({
+  // Mirror the real serialiser: run the task inside the mock's transaction.
+  runInTransaction: async (d, task) => (d.withTransactionAsync ? d.withTransactionAsync(task) : task()),
   db: jest.fn(async () => ({
     async execAsync() {},
     async withTransactionAsync(fn) { await fn(); },

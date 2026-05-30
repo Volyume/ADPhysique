@@ -9,7 +9,7 @@
  * deals with raw data). Surface copy lives in
  * COACHING_VOICE_SYNTHESIS_LOCKED.md and is applied by callers.
  */
-import { db } from '../database';
+import { db, runInTransaction } from '../database';
 import { CURATED_MEALS, mealItems } from './curatedMeals';
 import { resolveFoodRef } from './sources/localCache';
 
@@ -161,7 +161,7 @@ export async function getFoodEntriesForRange(userId, startDate, endDate) {
 
 export async function replaceFoodFrequents(userId, rows) {
   const d = await db();
-  await d.withTransactionAsync(async () => {
+  await runInTransaction(d, async () => {
     await d.runAsync('DELETE FROM food_frequents WHERE user_id = ?', [userId]);
     for (const r of rows || []) {
       if (!r?.food_ref) continue;
@@ -595,7 +595,7 @@ export async function setRecipeIngredients(userId, recipeId, newIngredients) {
   }
   const d = await db();
   const now = Date.now();
-  await d.withTransactionAsync(async () => {
+  await runInTransaction(d, async () => {
     await d.runAsync(
       `UPDATE recipe_ingredients
        SET deleted_at = ?, updated_at = ?

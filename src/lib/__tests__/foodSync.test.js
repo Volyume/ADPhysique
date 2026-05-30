@@ -21,6 +21,9 @@ jest.mock('../database', () => ({
     getAllAsync: mockGetAllAsync,
     getFirstAsync: mockGetFirstAsync,
   }),
+  // Mirror the real serialiser: this mock db has no withTransactionAsync,
+  // so just run the task.
+  runInTransaction: async (d, task) => (d.withTransactionAsync ? d.withTransactionAsync(task) : task()),
 }));
 
 beforeEach(() => {
@@ -452,6 +455,7 @@ describe('setRecipeIngredients', () => {
     };
     jest.doMock('../database', () => ({
       db: async () => dbMock,
+      runInTransaction: async (d, task) => (d.withTransactionAsync ? d.withTransactionAsync(task) : task()),
     }));
     jest.resetModules();
   }

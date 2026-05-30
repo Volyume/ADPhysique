@@ -738,7 +738,7 @@ const SCHEMA_MIGRATIONS = [
       for (const row of bad) {
         const oldId = row.id;
         const newId = uid();
-        await d.withTransactionAsync(async () => {
+        await runInTransaction(d, async () => {
           await d.runAsync('UPDATE planned_muscle_volume      SET mesocycle_week_id = ? WHERE mesocycle_week_id = ?', [newId, oldId]);
           await d.runAsync('UPDATE planned_muscle_volume_sync SET mesocycle_week_id = ? WHERE mesocycle_week_id = ?', [newId, oldId]);
           await d.runAsync('UPDATE adaptation_events          SET mesocycle_week_id = ? WHERE mesocycle_week_id = ?', [newId, oldId]);
@@ -1184,6 +1184,32 @@ async function runMigrations(d) {
 // every drainSyncQueue invocation fail before processing any row.
 export async function db() {
   return _db || initDatabase();
+}
+
+// Serialise every SQLite transaction through one queue.
+//
+// expo-sqlite's withTransactionAsync is explicitly NOT exclusive on the
+// shared connection (its own docs: "not exclusive and can be interrupted by
+// other async queries"). When two transaction blocks overlap on the single
+// connection — e.g. plan generation (generateMesocycleWeeks) running while
+// the offline-sync queue flushes (sync/queue.js), which both fire during
+// onboarding — SQLite rejects the second BEGIN with "cannot start a
+// transaction within a transaction". That surfaced as plan setup failing
+// with "NativeDatabase.execAsync has been rejected".
+//
+// runInTransaction chains transactions so only one BEGIN/COMMIT is ever in
+// flight across the whole app (database, food, sync all route through here).
+// A reentrancy guard runs the task inline if a transaction is somehow
+// already open, so a task that itself calls runInTransaction cannot deadlock
+// on the queue or nest a second BEGIN.
+let _txTail = Promise.resolve();
+export async function runInTransaction(d, task) {
+  const inTx = () => typeof d.isInTransactionSync === 'function' && d.isInTransactionSync();
+  if (inTx()) return task();
+  const run = _txTail.then(() => (inTx() ? task() : d.withTransactionAsync(task)));
+  // Keep the queue alive whatever this transaction's outcome.
+  _txTail = run.then(() => {}, () => {});
+  return run;
 }
 
 // ─── Exercises ───────────────────────────────────────────────────────────────────────────────────
@@ -2085,7 +2111,7 @@ export async function duplicateRoutine(routineId, userId, newName) {
   // Atomic, was N+1 individual inserts; an interruption used to leave a
   // routine row pointing at no exercises (or partial), which the UI
   // couldn't recover and the user couldn't see.
-  await d.withTransactionAsync(async () => {
+  await runInTransaction(d, async () => {
     for (let i = 0; i < exercises.length; i++) {
       const { routineExercise: re } = exercises[i];
       await addExerciseToRoutine(
@@ -2402,7 +2428,7 @@ export async function generateMesocycleWeeks(mesocycleId) {
   // Wrap in a single transaction so a crash mid-loop doesn't leave a meso
   // with a partial week list (and so the writes commit atomically, much
   // faster than N round trips even on success).
-  await d.withTransactionAsync(async () => {
+  await runInTransaction(d, async () => {
     for (let i = 0; i < plannedWeeks; i++) {
       const weekIndex = i + 1;
       const isDeload = weekIndex === plannedWeeks ? 1 : 0;
@@ -2531,7 +2557,7 @@ export async function generateInitialPlannedVolume(mesocycleId, volumeLandmarks)
     const totalAcc = accWeeks.length;
     const now = Date.now();
 
-    await d.withTransactionAsync(async () => {
+    await runInTransaction(d, async () => {
       for (const [muscle, landmarks] of Object.entries(volumeLandmarks)) {
         const { mev, mav, mrv } = landmarks;
         for (let i = 0; i < accWeeks.length; i++) {
@@ -3088,7 +3114,7 @@ export async function clearWorkoutHistory(userId) {
   const d = await db();
   // Atomic, was two separate runAsync calls; an interruption between
   // them would orphan workout rows whose sets had already been deleted.
-  await d.withTransactionAsync(async () => {
+  await runInTransaction(d, async () => {
     await d.runAsync('DELETE FROM workout_sets WHERE user_id = ?', [userId]);
     await d.runAsync('DELETE FROM workouts WHERE user_id = ?', [userId]);
   });
@@ -3155,7 +3181,7 @@ export async function wipeAllUserData(userId) {
   //
   // Order matters: deepest child first so each step's FK target still
   // exists when we delete it.
-  await d.withTransactionAsync(async () => {
+  await runInTransaction(d, async () => {
     // 1. adaptation_events (deepest child)
     try {
       await d.runAsync(
@@ -3287,7 +3313,7 @@ export async function dumpAllTables() {
 export async function restoreAllTables(dump) {
   const d = await db();
   const tables = dump?.tables || {};
-  await d.withTransactionAsync(async () => {
+  await runInTransaction(d, async () => {
     for (const t of BACKUP_TABLES) {
       const rows = tables[t];
       if (!Array.isArray(rows)) continue;

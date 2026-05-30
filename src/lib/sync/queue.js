@@ -15,7 +15,7 @@
  * modules consume it. Lives in SQLite only; never synced to cloud.
  */
 
-import { db as getDb } from '../database';
+import { db as getDb, runInTransaction } from '../database';
 
 const BACKOFF_MS = [2_000, 4_000, 8_000, 16_000, 32_000, 64_000, 128_000, 256_000, 300_000];
 
@@ -64,7 +64,7 @@ export async function enqueue({ table, operation, recordId, payload }) {
   if (!d) return;
   const queuedAt = new Date().toISOString();
   const payloadJson = JSON.stringify(payload ?? {});
-  await d.withTransactionAsync(async () => {
+  await runInTransaction(d, async () => {
     // Compaction: delete supersedes everything earlier for this row.
     if (operation === 'delete') {
       await d.runAsync(
