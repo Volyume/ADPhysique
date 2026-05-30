@@ -19,13 +19,14 @@
  * mount; renders nothing if already seen.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Animated, Easing, Modal, Platform,
+  View, Text, StyleSheet, TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
+import BottomSheet from './BottomSheet';
 import useAppStore from '../store/useAppStore';
 
 /**
@@ -37,12 +38,8 @@ const SEEN_KEY = '@volyume_seen_whats_new_2026_05_v2';
 
 export default function WhatsNewSheet({ items = [], onOpenSettings }) {
   const [visible, setVisible] = useState(false);
-  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   const tier = useAppStore(s => s.tier);
   const user = useAppStore(s => s.user);
-
-  const translateY = useRef(new Animated.Value(reduceMotion ? 0 : 400)).current;
-  const backdropOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     // Gate the show on having a user + tier so we never appear over
@@ -62,126 +59,58 @@ export default function WhatsNewSheet({ items = [], onOpenSettings }) {
     return () => { cancelled = true; };
   }, [user?.id, tier]);
 
-  useEffect(() => {
-    if (!visible) return;
-    Animated.parallel([
-      Animated.timing(backdropOpacity, {
-        toValue: 1, duration: reduceMotion ? 0 : 220,
-        easing: Easing.out(Easing.cubic), useNativeDriver: true,
-      }),
-      Animated.timing(translateY, {
-        toValue: 0, duration: reduceMotion ? 0 : 320,
-        easing: Easing.out(Easing.cubic), useNativeDriver: true,
-      }),
-    ]).start();
-  }, [visible, reduceMotion]);
-
   async function dismiss() {
     try { await AsyncStorage.setItem(SEEN_KEY, '1'); } catch (_) {}
-    Animated.parallel([
-      Animated.timing(backdropOpacity, {
-        toValue: 0, duration: reduceMotion ? 0 : 180,
-        easing: Easing.in(Easing.cubic), useNativeDriver: true,
-      }),
-      Animated.timing(translateY, {
-        toValue: reduceMotion ? 0 : 420, duration: reduceMotion ? 0 : 200,
-        easing: Easing.in(Easing.cubic), useNativeDriver: true,
-      }),
-    ]).start(() => setVisible(false));
+    setVisible(false);
   }
 
-  if (!visible || !items?.length) return null;
+  if (!items?.length) return null;
 
   return (
-    <Modal
-      transparent
-      visible={visible}
-      onRequestClose={dismiss}
-      animationType="none"
-      statusBarTranslucent={Platform.OS === 'android'}
-    >
-      <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
-        <TouchableOpacity
-          style={StyleSheet.absoluteFillObject}
-          activeOpacity={1}
-          onPress={dismiss}
-          accessibilityLabel="Close what's new"
-        />
-      </Animated.View>
+    <BottomSheet visible={visible} onClose={dismiss} accessibilityLabel="New in Volyume">
+      <Text style={styles.title}>New in Volyume</Text>
+      <Text style={styles.subtitle}>A few additions you might find useful.</Text>
 
-      <Animated.View
-        style={[styles.sheet, { transform: [{ translateY }] }]}
-        accessibilityViewIsModal
-      >
-        <View style={styles.handle} />
-        <Text style={styles.title}>New in Volyume</Text>
-        <Text style={styles.subtitle}>A few additions you might find useful.</Text>
-
-        <View style={styles.itemList}>
-          {items.map((item, idx) => (
-            <View key={idx} style={styles.item}>
-              <View style={[styles.itemIcon, { backgroundColor: (item.tint || colors.primary) + '22' }]}>
-                <Ionicons name={item.icon} size={20} color={item.tint || colors.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.itemHeadline}>{item.headline}</Text>
-                <Text style={styles.itemBody}>{item.body}</Text>
-              </View>
+      <View style={styles.itemList}>
+        {items.map((item, idx) => (
+          <View key={idx} style={styles.item}>
+            <View style={[styles.itemIcon, { backgroundColor: withAlpha(item.tint || colors.primary, 0.13) }]}>
+              <Ionicons name={item.icon} size={20} color={item.tint || colors.primary} />
             </View>
-          ))}
-        </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.itemHeadline}>{item.headline}</Text>
+              <Text style={styles.itemBody}>{item.body}</Text>
+            </View>
+          </View>
+        ))}
+      </View>
 
-        <View style={styles.actionRow}>
+      <View style={styles.actionRow}>
+        <TouchableOpacity
+          style={styles.secondaryBtn}
+          onPress={dismiss}
+          accessibilityRole="button"
+          accessibilityLabel="Dismiss"
+        >
+          <Text style={styles.secondaryBtnText}>Got it</Text>
+        </TouchableOpacity>
+        {onOpenSettings && (
           <TouchableOpacity
-            style={styles.secondaryBtn}
-            onPress={dismiss}
+            style={styles.primaryBtn}
+            onPress={() => { dismiss(); onOpenSettings(); }}
             accessibilityRole="button"
-            accessibilityLabel="Dismiss"
+            accessibilityLabel="Open Settings"
           >
-            <Text style={styles.secondaryBtnText}>Got it</Text>
+            <Text style={styles.primaryBtnText}>Open Settings</Text>
+            <Ionicons name="arrow-forward" size={14} color={colors.background} />
           </TouchableOpacity>
-          {onOpenSettings && (
-            <TouchableOpacity
-              style={styles.primaryBtn}
-              onPress={() => { dismiss(); onOpenSettings(); }}
-              accessibilityRole="button"
-              accessibilityLabel="Open Settings"
-            >
-              <Text style={styles.primaryBtnText}>Open Settings</Text>
-              <Ionicons name="arrow-forward" size={14} color={colors.background} />
-            </TouchableOpacity>
-          )}
-        </View>
-      </Animated.View>
-    </Modal>
+        )}
+      </View>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.scrim,
-    opacity: 0.55,
-  },
-  sheet: {
-    position: 'absolute',
-    left: 0, right: 0, bottom: 0,
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xxl + spacing.md,
-    borderTopWidth: 1,
-    borderColor: colors.border,
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 36, height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.border,
-    marginBottom: spacing.lg,
-  },
   title: {
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
