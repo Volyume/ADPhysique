@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import ExerciseCard from '../components/ExerciseCard';
+import SearchBar from '../components/SearchBar';
 import PeekMenu from '../components/PeekMenu';
 import { getAllExercises, getCompletedWorkoutSets, insertExercise, deleteExercise } from '../lib/database';
 import { logError } from '../lib/errorLog';
@@ -209,23 +210,12 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       {/* Search Bar */}
       <View style={styles.searchRow}>
-        <View style={styles.searchBar}>
-          <Ionicons name="search-outline" size={18} color={colors.textMuted} />
-          <TextInput
-            style={styles.searchInput}
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Search exercises..."
-            placeholderTextColor={colors.textMuted}
-            clearButtonMode="while-editing"
-            autoCapitalize="none"
-          />
-          {query ? (
-            <TouchableOpacity onPress={() => setQuery('')}>
-              <Ionicons name="close-circle" size={18} color={colors.textMuted} />
-            </TouchableOpacity>
-          ) : null}
-        </View>
+        <SearchBar
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Search exercises"
+          style={styles.searchBar}
+        />
         <TouchableOpacity
           style={[styles.filterBtn, (filterMuscle || filterEquipment) && styles.filterBtnActive]}
           onPress={() => setShowFilters(true)}
@@ -487,20 +477,6 @@ const styles = StyleSheet.create({
   },
   searchBar: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  searchInput: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    fontSize: fontSize.md,
-    color: colors.textPrimary,
   },
   filterBtn: {
     width: 46,
