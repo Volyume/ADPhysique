@@ -587,13 +587,20 @@ Enhancement, as required.
 ### Implementation progress (updated 2026-05-30)
 
 Founder decisions taken before build started:
-- Steps are free; the adaptive cardio prescription stays PRO.
+- Steps are PRO, not free. Steps exist to feed the coach's calculations and
+  adjustments, and the free tier has no coach, so logging steps there would
+  be busywork with no payoff. The step card mounts only when the coach is in
+  play. (This corrects an earlier "steps free" call.)
 - Logged activity is a compliance signal only, never added to the calorie
   target (it already accounts for activity; double-counting is the MFP trap).
 - First step target is set from a measured baseline (a week of normal days,
   then baseline plus about 2,000), not a flat default.
 - Cardio is a weekly count the user slots themselves, not pinned to days.
 - The activity store is local SQLite plus additive cloud sync.
+- Manual step entry means typing the number the user already sees on their
+  phone or watch. No walking-minutes conversion (unscientific and unneeded).
+  The aim is only that no one is forced to connect a health platform or
+  device; the number itself comes from wherever they already read it.
 
 Resequencing that follows from "measure baseline first": F2's onboarding
 promise ("we set your target after your first week") needs a real logging
@@ -605,17 +612,20 @@ DONE (shipped to main, tested):
   source, updated_at), CRUD, the sign-out wipe and delete-completeness
   wiring, additive cloud sync through the registry/transport path (own
   last-write-wins handler), and cloud migration 056 (table, RLS, touch
-  trigger, CASCADE FK) with README tracking and a verify block. The step
-  total is keyed to the Diary day so steps and food share a boundary. Source
-  records 'manual' vs 'health' so a later wearable auto-fill and a typed
-  entry stay distinguishable.
+  trigger, CASCADE FK) with README tracking and a verify block. Source
+  records 'manual' vs 'health' so a later health auto-fill and a typed entry
+  stay distinguishable.
+- F3 manual step entry. A DailyStepsCard on Home, beside the morning-weight
+  prompt and gated to PRO (steps feed the coach), taking one daily step
+  number. No device connection required: the user types the figure they
+  already see on their phone or watch.
 
 NEXT:
-- F3 manual step logging on the Diary day view (number entry plus
-  walking-minutes conversion, labelled an estimate).
-- Then F2 onboarding intro and opt-in, now able to point at a real surface.
+- F2 onboarding intro and opt-in for the step target, now able to point at a
+  real entry surface.
+- F4 step opt-out and manual target in a Settings "Daily movement" section.
 
-Build order from here: F1 (done), F3, F2, F4, then the Core cardio items.
+Build order from here: F1 + F3 (done), F2, F4, then the Core cardio items.
 
 ### Foundation (all manual, no wearable dependency)
 
@@ -626,8 +636,10 @@ Build order from here: F1 (done), F3, F2, F4, then the Core cardio items.
   below depends on this.
 - **F2. Surface and explain the step target.** The setup intro screen and
   the opt-in. Impact high, effort low to medium. Depends on nothing.
-- **F3. Manual step logging.** Number entry plus walking-minutes conversion
-  on the Diary day view. Impact high, effort medium. Depends on F1.
+- **F3. Manual step logging.** A daily step-number entry on Home beside the
+  weight prompt (PRO; steps feed the coach). The user types the figure from
+  their own phone or watch, no device connection required. Impact high,
+  effort medium. Depends on F1.
 - **F4. Step opt-out and manual target in Settings.** A "Daily movement"
   section. Impact medium, effort low. Depends on F2.
 
@@ -676,11 +688,10 @@ F3 and C3 to have any data.
    honest sequence is: ship F3, default to the phase band first, then offer a
    baseline measure later. Confirm we are happy starting from the band
    default rather than a measured baseline.
-3. **Is activity PRO-only?** The coach is PRO-gated today
-   (`HomeScreen.js:177,775`). Recommendation: make the step target and manual
-   logging available to free users too (they are core, low-cost, and on
-   brand), and keep the adaptive cardio prescription inside the PRO coach.
-   Needs a tiering decision.
+3. **Is activity PRO-only?** RESOLVED: yes. Steps and cardio are PRO. Steps
+   feed the coach's calculations and adjustments, and the free tier has no
+   coach, so logging there would be effort with no payoff. The step card
+   mounts only for PRO. (An earlier draft suggested free steps; reversed.)
 4. **Weekly cardio count versus specific-day placement.** Recommendation:
    weekly count, user slots the days. Confirm.
 5. **Manual steps and the NEAT-to-calories path.** Today `readStepsToday`
