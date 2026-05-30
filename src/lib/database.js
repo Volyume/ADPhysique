@@ -1096,6 +1096,27 @@ const SCHEMA_MIGRATIONS = [
     'ALTER TABLE workout_sets ADD COLUMN left_reps INTEGER',
     'ALTER TABLE workout_sets ADD COLUMN right_reps INTEGER',
   ],
+  // daily_steps: the activity store for the cardio/steps audit
+  // (docs/audit/volyume-cardio-steps-audit-2026-05-30.md). One row per
+  // local day, same per-day shape as daily_water. Holds the day's step
+  // total so the manual step-logging path has somewhere to write with no
+  // wearable, and so the coach's step target has real data to check
+  // against. source records whether the figure was typed ('manual') or
+  // filled from a health platform ('health') so an auto-fill and a manual
+  // entry can be told apart. Last-write-wins on updated_at; mirrored to
+  // cloud via the daily_steps registry entry (additive, cloud migration
+  // 056). entry_date is the diary day key (toISOString slice), so a day's
+  // steps and that day's food share a boundary on the Diary view.
+  [
+    `CREATE TABLE IF NOT EXISTS daily_steps (
+      user_id TEXT NOT NULL,
+      entry_date TEXT NOT NULL,
+      steps INTEGER NOT NULL DEFAULT 0,
+      source TEXT NOT NULL DEFAULT 'manual',
+      updated_at INTEGER NOT NULL,
+      PRIMARY KEY (user_id, entry_date)
+    )`,
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
@@ -3053,6 +3074,9 @@ export const WIPE_DIRECT_TABLES = [
   'recipes', 'recipe_ingredients',
   'daily_water', 'food_favourites', 'daily_intake_rollups',
   'food_frequents',
+  // Activity store (cardio/steps audit). Carries user_id locally; wipe so
+  // the next account on a shared device never inherits a step history.
+  'daily_steps',
 ];
 
 export async function wipeAllUserData(userId) {
@@ -3376,6 +3400,73 @@ export async function getMorningWeightToday(userId) {
     [userId, dayStart, dayStart + 86400000],
   );
   return rowToCamel(row);
+}
+
+// ─── Daily steps (activity store) ─────────────────────────────────────────────
+//
+// The cardio/steps audit
+// (docs/audit/volyume-cardio-steps-audit-2026-05-30.md) found no store for
+// what the user actually did, only the coach's target and a weekly
+// hit/mostly/missed memory. daily_steps is that store: one row per day, a
+// step total, and the source of the figure. It backs the manual step log
+// (no wearable needed) and the baseline-and-compliance reads the coach uses.
+
+// The day key for an activity row. Matches the Diary's isoDate
+// (toISOString slice) on purpose so a day's steps and that day's food line
+// up on the same calendar day in the Diary. This is the UTC-day convention
+// the food domain already uses, not the local-midnight bucket the morning
+// weight uses; steps render beside food, so they follow food's boundary.
+export function activityDayKey(ms = Date.now()) {
+  return new Date(ms).toISOString().slice(0, 10);
+}
+
+// Write (or overwrite) the step total for a day. steps is clamped to a
+// sane non-negative integer. updated_at drives last-write-wins on sync.
+export async function setDailySteps(userId, { entryDate, steps, source = 'manual' } = {}) {
+  if (!userId) return null;
+  const d = await db();
+  const day = entryDate || activityDayKey();
+  const now = Date.now();
+  const value = Math.max(0, Math.min(200000, Math.round(Number(steps) || 0)));
+  await d.runAsync(
+    `INSERT INTO daily_steps (user_id, entry_date, steps, source, updated_at)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(user_id, entry_date) DO UPDATE SET
+       steps = excluded.steps,
+       source = excluded.source,
+       updated_at = excluded.updated_at`,
+    [userId, day, value, source, now],
+  );
+  return { entryDate: day, steps: value, source, updatedAt: now };
+}
+
+export async function getDailySteps(userId, entryDate) {
+  if (!userId) return null;
+  const d = await db();
+  const day = entryDate || activityDayKey();
+  const row = await d.getFirstAsync(
+    'SELECT * FROM daily_steps WHERE user_id = ? AND entry_date = ?',
+    [userId, day],
+  );
+  return row ? rowToCamel(row) : null;
+}
+
+export async function getDailyStepsToday(userId) {
+  return getDailySteps(userId, activityDayKey());
+}
+
+// Inclusive range read, oldest first. Backs the baseline average (a week
+// of normal days) and the compliance view (target hit rate over time).
+export async function getDailyStepsRange(userId, fromDate, toDate) {
+  if (!userId) return [];
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT * FROM daily_steps
+     WHERE user_id = ? AND entry_date >= ? AND entry_date <= ?
+     ORDER BY entry_date ASC`,
+    [userId, fromDate, toDate],
+  );
+  return rows.map(rowToCamel);
 }
 
 // ─── Pro: Weekly Check-Ins ────────────────────────────────────────────────────
@@ -5116,6 +5207,7 @@ export async function diagnoseSyncConflicts(currentSessionUid) {
     'custom_exercises',
     'custom_foods', 'food_entries', 'daily_intake_rollups',
     'saved_meals', 'recipes', 'food_favourites', 'daily_water',
+    'daily_steps',
     'pending_sync_ops',
   ];
   const report = {
