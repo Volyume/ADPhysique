@@ -1,10 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, Modal, Pressable, TextInput,
-  Animated, Easing, Platform, KeyboardAvoidingView, Keyboard, Alert,
+  View, Text, StyleSheet, Pressable, TextInput, Alert,
 } from 'react-native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
-import useAppStore from '../../store/useAppStore';
+import BottomSheet from '../BottomSheet';
 
 const MEAL_SLOTS = [
   { key: 'breakfast', label: 'Breakfast' },
@@ -25,10 +24,6 @@ const MEAL_SLOTS = [
  *   onClose          () => void
  */
 export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSave, onClose }) {
-  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
-  const translateY = useRef(new Animated.Value(reduceMotion ? 0 : 600)).current;
-  const backdrop = useRef(new Animated.Value(0)).current;
-
   const [kcal, setKcal] = useState('');
   const [protein, setProtein] = useState('');
   const [carbs, setCarbs] = useState('');
@@ -36,29 +31,16 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
   const [mealSlot, setMealSlot] = useState(initialMealSlot);
   const [submitting, setSubmitting] = useState(false);
 
+  // Reset the form each time the sheet opens.
   useEffect(() => {
     if (!visible) return;
     setKcal(''); setProtein(''); setCarbs(''); setFat('');
     setMealSlot(initialMealSlot);
     setSubmitting(false);
-    translateY.setValue(reduceMotion ? 0 : 600);
-    backdrop.setValue(0);
-    Animated.parallel([
-      Animated.timing(backdrop,   { toValue: 1, duration: 200, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: 260, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-    ]).start();
   }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function animateOut(then) {
-    Keyboard.dismiss();
-    Animated.parallel([
-      Animated.timing(backdrop,   { toValue: 0, duration: 160, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 600, duration: 200, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
-    ]).start(() => { then?.(); });
-  }
-
   function handleClose() {
-    animateOut(() => { onClose?.(); });
+    onClose?.();
   }
 
   // A blank macro field is allowed (it counts as 0); only kcal is required.
@@ -76,27 +58,15 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
     setSubmitting(true);
     try {
       await onSave({ kcal: Math.round(k), protein: num(protein), carbs: num(carbs), fat: num(fat), mealSlot });
-      animateOut(() => { onClose?.(); });
+      onClose?.();
     } catch (e) {
       setSubmitting(false);
       Alert.alert('Couldn\'t save', e?.message ?? 'Try again.');
     }
   }
 
-  if (!visible) return null;
-
   return (
-    <Modal transparent visible animationType="none" onRequestClose={handleClose} statusBarTranslucent={Platform.OS === 'android'}>
-      <Animated.View style={[styles.backdrop, { opacity: backdrop }]}>
-        <Pressable style={StyleSheet.absoluteFillObject} onPress={handleClose} />
-      </Animated.View>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.kbWrap}
-        pointerEvents="box-none"
-      >
-        <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]} accessibilityViewIsModal>
-          <View style={styles.handle} />
+    <BottomSheet visible={visible} onClose={handleClose} keyboardAvoiding accessibilityLabel="Quick add">
           <Text style={styles.title}>Quick add</Text>
           <Text style={styles.subtitle}>Log calories now, with macros if you have them.</Text>
 
@@ -156,29 +126,11 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
               <Text style={styles.saveText}>{submitting ? 'Saving' : 'Add to diary'}</Text>
             </Pressable>
           </View>
-        </Animated.View>
-      </KeyboardAvoidingView>
-    </Modal>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.scrim },
-  kbWrap: { ...StyleSheet.absoluteFillObject, justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xxl + spacing.md,
-    borderTopWidth: 1, borderColor: colors.border,
-    gap: spacing.md,
-  },
-  handle: {
-    alignSelf: 'center', width: 36, height: 4, borderRadius: 2,
-    backgroundColor: colors.border, marginBottom: spacing.sm,
-  },
   title: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
   subtitle: { fontSize: fontSize.sm, color: colors.textMuted, marginTop: -spacing.xs },
   fieldLabel: {

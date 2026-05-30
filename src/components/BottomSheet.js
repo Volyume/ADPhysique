@@ -16,6 +16,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Modal, Animated, Easing, Pressable, View, StyleSheet, Platform, Keyboard,
+  KeyboardAvoidingView,
 } from 'react-native';
 import useAppStore from '../store/useAppStore';
 import { colors, spacing, radius } from '../styles/theme';
@@ -32,6 +33,8 @@ export default function BottomSheet({
   children,
   // Set false to hide the grab handle (e.g. a menu that fills to the edge).
   showHandle = true,
+  // Lift the panel above the keyboard for sheets with text inputs.
+  keyboardAvoiding = false,
   // Extra style merged onto the sheet panel.
   sheetStyle,
   accessibilityLabel,
@@ -90,7 +93,11 @@ export default function BottomSheet({
           accessibilityLabel="Close"
         />
       </Animated.View>
-      <View style={styles.anchor} pointerEvents="box-none">
+      <KeyboardAvoidingView
+        style={styles.anchor}
+        pointerEvents="box-none"
+        behavior={keyboardAvoiding && Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <Animated.View
           style={[styles.sheet, sheetStyle, { transform: [{ translateY }] }]}
           accessibilityViewIsModal
@@ -99,7 +106,7 @@ export default function BottomSheet({
           {showHandle ? <View style={styles.handle} /> : null}
           {children}
         </Animated.View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
