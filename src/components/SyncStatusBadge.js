@@ -18,7 +18,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Pressable, View, Text, StyleSheet, Modal, ScrollView } from 'react-native';
-import { colors, fontSize, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import { getStatus, syncAll } from '../lib/sync';
 
 const POLL_MS = 5_000;
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
   sheetTitle: {
     fontSize: fontSize.md,
     color: colors.textPrimary,
-    fontWeight: '700',
+    fontWeight: fontWeight.bold,
     marginBottom: spacing.sm,
   },
   row: {
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
   },
   syncButtonText: {
     color: colors.background,
-    fontWeight: '700',
+    fontWeight: fontWeight.bold,
     fontSize: fontSize.sm,
   },
 });

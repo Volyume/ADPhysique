@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { startOfWeek, endOfWeek, format, isWithinInterval } from 'date-fns';
-import { colors, spacing, fontSize, radius } from '../styles/theme';
+import { colors, spacing, fontSize, fontWeight, radius } from '../styles/theme';
 import { getAllWorkouts, getCompletedWorkoutSets, getAllExercises, getRecentCheckins } from '../lib/database';
 import { calculateWeeklyVolume, getVolumeStatus, shouldDeload, getAutoRegSuggestion, MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS, detectLaggingMuscles } from '../lib/algorithms';
 import { SkeletonCard } from '../components/Skeleton';
@@ -618,7 +618,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: fontSize.xxl,
-    fontWeight: '800',
+    fontWeight: fontWeight.heavy,
     color: colors.textPrimary,
     letterSpacing: -0.3,
   },
@@ -641,7 +641,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: fontSize.xs,
-    fontWeight: '600',
+    fontWeight: fontWeight.semibold,
     color: colors.textMuted,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
@@ -660,7 +660,7 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: fontSize.xl,
-    fontWeight: '800',
+    fontWeight: fontWeight.heavy,
     color: colors.textPrimary,
     textAlign: 'center',
   },
@@ -681,7 +681,7 @@ const styles = StyleSheet.create({
   },
   sectionHeading: {
     fontSize: fontSize.sm,
-    fontWeight: '600',
+    fontWeight: fontWeight.semibold,
     color: colors.textSecondary,
     letterSpacing: 0.2,
   },
@@ -713,7 +713,7 @@ const styles = StyleSheet.create({
   volumeMuscleName: {
     flex: 1,
     fontSize: fontSize.md,
-    fontWeight: '500',
+    fontWeight: fontWeight.medium,
     color: colors.textPrimary,
   },
   volumeSetCount: {
@@ -729,7 +729,7 @@ const styles = StyleSheet.create({
   },
   volumeBadgeText: {
     fontSize: fontSize.xs,
-    fontWeight: '600',
+    fontWeight: fontWeight.semibold,
   },
 
   // Insight rows
@@ -750,7 +750,7 @@ const styles = StyleSheet.create({
   },
   insightText: {
     fontSize: fontSize.sm,
-    fontWeight: '500',
+    fontWeight: fontWeight.medium,
     color: colors.textPrimary,
     lineHeight: 20,
   },
@@ -780,7 +780,7 @@ const styles = StyleSheet.create({
   },
   recIndexText: {
     fontSize: fontSize.xs,
-    fontWeight: '700',
+    fontWeight: fontWeight.bold,
     color: colors.primary,
   },
   recText: {
