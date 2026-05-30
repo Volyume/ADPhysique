@@ -10,6 +10,8 @@ import * as SecureStore from 'expo-secure-store';
 import { getSupabaseClient, signOut } from '../lib/supabase';
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
+import PressableCard from '../components/PressableCard';
+import * as haptics from '../lib/haptics';
 import { useShallow } from 'zustand/react/shallow';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
@@ -67,11 +69,14 @@ const DIET_OPTIONS = [
 ];
 
 function SettingRow({ icon, label, sub, value, onPress, destructive, rightElement, showArrow = true }) {
+  // One press feel app-wide: tappable rows use the PressableCard spring.
+  // Rows that are just a label + a Switch (rightElement, no onPress) render
+  // as a static View so the row itself isn't "pressable", the Switch is.
+  const Wrapper = onPress ? PressableCard : View;
   return (
-    <TouchableOpacity
+    <Wrapper
       style={styles.settingRow}
       onPress={onPress}
-      disabled={!onPress && !rightElement}
       accessibilityRole={onPress ? 'button' : 'none'}
       accessibilityLabel={value ? `${label}: ${value}` : label}
     >
@@ -89,7 +94,7 @@ function SettingRow({ icon, label, sub, value, onPress, destructive, rightElemen
           <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
         ) : null}
       </View>
-    </TouchableOpacity>
+    </Wrapper>
   );
 }
 
@@ -140,22 +145,26 @@ export default function SettingsScreen({ navigation }) {
   const [healthSyncing, setHealthSyncing] = useState(false);
 
   async function toggleCalmMode(value) {
+    haptics.selection();
     const mode = value ? 'calm' : 'normal';
     await setWellbeingMode(mode);
     setCalmEnabled(value);
   }
 
   async function toggleOffConsent(value) {
+    haptics.selection();
     await setOffWritebackConsent(value);
     setOffConsent(value);
   }
 
   async function toggleCycleTracking(value) {
+    haptics.selection();
     await setCycleTracking(value);
     setCycleEnabled(value);
   }
 
   async function toggleStepTarget(value) {
+    haptics.selection();
     setStepsEnabled(value);
     if (user?.id) {
       await saveLocalProfile(user.id, { ...(userProfile || {}), stepsEnabled: value });
