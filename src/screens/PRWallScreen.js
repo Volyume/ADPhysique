@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 import { useFocusEffect } from '@react-navigation/native';
 import { LineChart } from 'react-native-gifted-charts';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import AnimatedEntrance from '../components/AnimatedEntrance';
 import { getCompletedWorkoutSets, getAllExercises, getLatestBodyWeight } from '../lib/database';
 import { calculate1RM } from '../lib/algorithms';
 import { EmptyPRsIllustration } from '../components/Illustrations';
@@ -284,7 +285,7 @@ export default function PRWallScreen({ navigation }) {
             </TouchableOpacity>
           ) : null
         }
-        renderItem={({ item: name }) => {
+        renderItem={({ item: name, index }) => {
           const types = grouped[name];
           const best1RM = types['1rm_estimate'];
           const heaviest = types['heaviest_weight'];
@@ -293,6 +294,7 @@ export default function PRWallScreen({ navigation }) {
           const isExpanded = expandedExercise === name;
 
           return (
+            <AnimatedEntrance index={index}>
             <TouchableOpacity
               style={styles.prCard}
               onPress={() => history && setExpandedExercise(isExpanded ? null : name)}
@@ -390,7 +392,7 @@ export default function PRWallScreen({ navigation }) {
                 </View>
               )}
             </TouchableOpacity>
-
+            </AnimatedEntrance>
           );
         }}
         ListEmptyComponent={

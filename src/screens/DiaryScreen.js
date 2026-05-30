@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius, shadow, circle } from '../styles/theme';
+import AnimatedEntrance from '../components/AnimatedEntrance';
 import {
   getFoodEntriesForDay, deleteFoodEntry, updateFoodEntry, getRollupForDay,
   recomputeRollup, setWater, getWater, createSavedMeal,
@@ -463,9 +464,9 @@ export default function DiaryScreen({ navigation }) {
           />
         </View>
 
-        {MEAL_SLOTS.map((slot) => (
+        {MEAL_SLOTS.map((slot, i) => (
+          <AnimatedEntrance key={slot.key} index={i}>
           <MealSection
-            key={slot.key}
             slot={slot}
             entries={entriesBySlot[slot.key]}
             onAdd={() => addFood(slot.key)}
@@ -476,6 +477,7 @@ export default function DiaryScreen({ navigation }) {
             onLongPressEntry={enterSelection}
             onToggleSelect={toggleSelect}
           />
+          </AnimatedEntrance>
         ))}
 
         <WaterRow ml={waterMl} onAdd={() => logWaterDelta(250)} onSub={() => logWaterDelta(-250)} />

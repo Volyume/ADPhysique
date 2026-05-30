@@ -7,6 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import AnimatedEntrance from '../components/AnimatedEntrance';
+import PressableCard from '../components/PressableCard';
 import { getCompletedWorkoutSets, getAllExercises } from '../lib/database';
 import { buildLiftProgressRows } from '../lib/liftProgress';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
@@ -62,14 +64,14 @@ export default function LiftProgressScreen({ navigation }) {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
         }
-        renderItem={({ item }) => {
+        renderItem={({ item, index }) => {
           const muscle = item.primaryMuscle
             ? (MUSCLE_DISPLAY_NAMES[item.primaryMuscle] || item.primaryMuscle)
             : null;
           return (
-            <TouchableOpacity
+            <AnimatedEntrance index={index}>
+            <PressableCard
               style={styles.card}
-              activeOpacity={0.85}
               onPress={() => navigation.navigate('ExerciseDetail', { exerciseId: item.exerciseId })}
             >
               <View style={styles.cardMain}>
@@ -91,7 +93,8 @@ export default function LiftProgressScreen({ navigation }) {
                 <Sparkline data={item.trend} width={84} height={34} color={trendColor(item.deltaPct)} />
                 <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
               </View>
-            </TouchableOpacity>
+            </PressableCard>
+            </AnimatedEntrance>
           );
         }}
         ListEmptyComponent={
