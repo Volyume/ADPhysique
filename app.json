@@ -31,6 +31,7 @@
         "NSPhotoLibraryAddUsageDescription": "Used to save shared workout cards to your photo library",
         "NSHealthShareUsageDescription": "Volyume reads your weight and daily steps from Apple Health so your morning weight log and step count stay in sync with your watch, scale, or other apps.",
         "NSHealthUpdateUsageDescription": "Volyume writes completed workouts to Apple Health so your weekly activity stays accurate across your other apps.",
+        "NSMotionUsageDescription": "Volyume reads your step count from your phone's motion sensor so your daily steps log automatically, with no wearable needed.",
         "UIBackgroundModes": [
           "fetch",
           "remote-notification"
@@ -53,7 +54,8 @@
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.WAKE_LOCK",
-        "android.permission.health.READ_STEPS"
+        "android.permission.health.READ_STEPS",
+        "android.permission.ACTIVITY_RECOGNITION"
       ],
       "intentFilters": [
         {

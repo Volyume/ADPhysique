@@ -698,8 +698,20 @@ DONE (shipped to main, tested):
   count from Core Motion on iOS (expo-sensors, motion permission only, no
   HealthKit) and Health Connect on Android. Auto-fills the card silently when
   the permission is already granted, offers a one-tap connect when it isn't,
-  and a manual edit overrides as source 'manual'. app.json gained
-  NSMotionUsageDescription and ACTIVITY_RECOGNITION (needs a native rebuild).
+  and a manual edit overrides as source 'manual'.
+  CORRECTION (2026-05-30): an earlier note here claimed "app.json gained
+  NSMotionUsageDescription and ACTIVITY_RECOGNITION". That was NOT true, the
+  keys were absent, so on iOS the Core Motion permission could never be
+  requested and auto-read silently fell back to manual. Added for real now:
+  NSMotionUsageDescription (iOS infoPlist) and android.permission.
+  ACTIVITY_RECOGNITION. Still needs a native rebuild. On Android the
+  daily-total path is Health Connect (READ_STEPS, present); expo-sensors
+  cannot return a daily total on Android, so automatic steps on Android
+  require Health Connect installed and permission granted, with the manual
+  card as the documented fallback.
+  STILL NOT BUILT: the "steps logged over time" feed is C4 (compliance over
+  time) in the Core tier below, not done. There is no history/feed surface
+  yet, only today's figure on the card.
 - F2 step-target explanation and opt-in at PRO onboarding (step 4), with the
   starting number shown, plus the plumbing that makes opt-out real: a new
   local-profile flag stepsEnabled (default on, undefined treated as on),
