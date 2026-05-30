@@ -33,18 +33,21 @@ const WEBVIEW_HTML = `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 </head>
-<body style="margin:0;padding:0;background:#090A0F;">
+<body style="margin:0;padding:0;background:#0D0D0D;">
 <canvas id="c" style="display:block;"></canvas>
 <script>
-// Brand palette, mirrors theme.js tokens
+// Brand palette, mirrors the locked theme.js tokens (background #0D0D0D
+// neutral black, primary amber #F5A623). The old values were blue-tinted
+// blacks and a slightly-off amber, so an exported card did not read as
+// unmistakably Volyume. Aligned 2026-05-30.
 var B = {
-  bg0:'#090A0F', bg1:'#0E0F18', bg2:'#131620',
-  surface:'#181B24', surface2:'#1F2330',
-  border:'#252A38', borderFaint:'#1B1F2A',
-  accent:'#F59E0B', accentSoft:'#FBBF24', accentDim:'rgba(245,158,11,0.18)',
-  accentGlow:'rgba(245,158,11,0.10)',
+  bg0:'#0D0D0D', bg1:'#141413', bg2:'#191917',
+  surface:'#222220', surface2:'#2A2A27',
+  border:'#343431', borderFaint:'#2E2E2C',
+  accent:'#F5A623', accentSoft:'#F7B84B', accentDim:'rgba(245,166,35,0.18)',
+  accentGlow:'rgba(245,166,35,0.10)',
   gold:'#FFD700', goldDim:'rgba(255,215,0,0.15)',
-  text:'#FFFFFF', textSecondary:'#B8BCC8', textMuted:'#6A7080',
+  text:'#FFFFFF', textSecondary:'#9E9E9E', textMuted:'#727272',
   divider:'rgba(255,255,255,0.06)'
 };
 
@@ -473,7 +476,7 @@ function drawPR(ctx, W, H, p) {
   var glowR = W * 0.7;
   var glowGrad = ctx.createRadialGradient(W / 2, glowY, 0, W / 2, glowY, glowR);
   glowGrad.addColorStop(0, 'rgba(255,215,0,0.10)');
-  glowGrad.addColorStop(0.6, 'rgba(245,158,11,0.04)');
+  glowGrad.addColorStop(0.6, 'rgba(245,166,35,0.04)');
   glowGrad.addColorStop(1, 'transparent');
   ctx.fillStyle = glowGrad;
   ctx.fillRect(0, 0, W, H);
@@ -698,14 +701,14 @@ export default function ShareCardScreen({ navigation, route }) {
       <style>
         * { box-sizing: border-box; }
         body { margin: 0; background: #0D0D0D; color: #FFFFFF; font-family: -apple-system, Roboto, Helvetica, sans-serif; padding: 40px; }
-        .brand { color: #F59E0B; font-size: 14px; letter-spacing: 3px; text-transform: uppercase; font-weight: 700; }
+        .brand { color: #F5A623; font-size: 14px; letter-spacing: 3px; text-transform: uppercase; font-weight: 700; }
         h1 { font-size: 34px; margin: 8px 0 2px; }
         .date { color: #9B9B9B; font-size: 14px; margin-bottom: 28px; }
         .statRow { display: flex; flex-wrap: wrap; gap: 16px; }
         .stat { background: #1A1A1A; border-radius: 14px; padding: 18px 22px; min-width: 130px; }
-        .statValue { font-size: 26px; font-weight: 700; color: #F59E0B; }
+        .statValue { font-size: 26px; font-weight: 700; color: #F5A623; }
         .statLabel { font-size: 12px; color: #9B9B9B; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
-        .prs { color: #F59E0B; font-weight: 700; margin: 24px 0 0; }
+        .prs { color: #F5A623; font-weight: 700; margin: 24px 0 0; }
         table { width: 100%; border-collapse: collapse; margin-top: 28px; }
         th { text-align: left; color: #9B9B9B; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #2A2A2A; padding: 8px 0; }
         td { padding: 10px 0; border-bottom: 1px solid #1A1A1A; font-size: 15px; }
@@ -882,7 +885,7 @@ function GradientBg({ children, style }) {
   if (LinearGradient) {
     return (
       <LinearGradient
-        colors={['#0E0F18', '#090A0F', '#131620']}
+        colors={['#141413', '#0D0D0D', '#191917']}
         locations={[0, 0.5, 1]}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
@@ -892,10 +895,10 @@ function GradientBg({ children, style }) {
       </LinearGradient>
     );
   }
-  return <View style={[style, { backgroundColor: '#090A0F' }]}>{children}</View>;
+  return <View style={[style, { backgroundColor: '#0D0D0D' }]}>{children}</View>;
 }
 
-function VMarkPreview({ size = 14, color, accentColor = '#F59E0B' }) {
+function VMarkPreview({ size = 14, color, accentColor = '#F5A623' }) {
   const finalColor = color || colors.textSecondary;
   return (
     <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
