@@ -296,12 +296,29 @@ export async function readStepsToday() {
     const HC = getAndroidModule();
     if (!HC) return 0;
     try {
-      const { records } = await HC.readRecords('Steps', {
+      // Aggregate, not raw readRecords. The aggregate API deduplicates
+      // overlapping data across sources (phone, watch, Garmin, Whoop) using
+      // Health Connect's per-app priority, so a user with several trackers
+      // sees one accurate total rather than the sum of every source. Summing
+      // raw records would double-count anyone with more than one tracker.
+      const result = await HC.aggregateRecord({
+        recordType: 'Steps',
         timeRangeFilter: { operator: 'between', startTime: startISO, endTime: endISO },
       });
-      const total = (records ?? []).reduce((sum, r) => sum + (r?.count ?? 0), 0);
+      const total = result?.COUNT_TOTAL ?? 0;
       return Math.round(total);
-    } catch (_) { return 0; }
+    } catch (_) {
+      // A denied permission or an older Health Connect can throw on aggregate.
+      // Fall back to summing raw records so a single-source user still gets a
+      // number rather than a silent zero.
+      try {
+        const { records } = await HC.readRecords('Steps', {
+          timeRangeFilter: { operator: 'between', startTime: startISO, endTime: endISO },
+        });
+        const total = (records ?? []).reduce((sum, r) => sum + (r?.count ?? 0), 0);
+        return Math.round(total);
+      } catch (_) { return 0; }
+    }
   }
 
   return 0;
