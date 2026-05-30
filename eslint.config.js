@@ -129,4 +129,41 @@ module.exports = [
     files: ['**/__tests__/**/*.js', '**/*.test.js', 'tests/**/*.js', '__mocks__/**/*.js'],
     languageOptions: { globals: { ...rnGlobals, ...jestGlobals } },
   },
+  {
+    // Design-system guards (design premium audit 2026-05-30, F6). Flag the
+    // drift the audit found: hardcoded hex/rgba colours and raw fontSize /
+    // fontWeight literals in screens and components. Use theme tokens
+    // (colors.*, withAlpha, the `type` roles) instead. Warnings for now,
+    // matching the "green today, pay down the backlog" posture; promote to
+    // error once F3/F5 clear the existing violations.
+    files: ['src/screens/**/*.js', 'src/components/**/*.js'],
+    ignores: [
+      '**/__tests__/**',
+      '**/*.test.js',
+      // ShareCardScreen builds an offline HTML canvas that cannot read RN
+      // styles, so its palette is legitimately literal; theme.js is the
+      // token source itself.
+      'src/screens/ShareCardScreen.js',
+    ],
+    rules: {
+      'no-restricted-syntax': ['warn',
+        {
+          selector: "Literal[value=/^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/]",
+          message: 'No hardcoded hex colours in screens/components. Use a theme token (colors.*) or withAlpha().',
+        },
+        {
+          selector: "Literal[value=/^rgba?\\(/]",
+          message: 'No hardcoded rgba()/rgb() in screens/components. Use a theme token or withAlpha(colors.*, a).',
+        },
+        {
+          selector: "Property[key.name='fontSize'] > Literal[raw=/^[0-9]/]",
+          message: 'No raw fontSize literal. Use a type role (type.body, type.h2…) or fontSize.* token.',
+        },
+        {
+          selector: "Property[key.name='fontWeight'] > Literal",
+          message: 'No raw fontWeight literal. Use a type role or fontWeight.* token.',
+        },
+      ],
+    },
+  },
 ];
