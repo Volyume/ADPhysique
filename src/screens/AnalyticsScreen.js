@@ -1150,7 +1150,7 @@ const styles = StyleSheet.create({
   sparkWrap:           { marginTop: spacing.xs },
   sparkLabelRow:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: spacing.xs },
   sparkLabel:          { fontSize: fontSize.xs, color: colors.textMuted },
-  sparkValue:          { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  sparkValue:          { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
   sparkChartCentered:  { alignItems: 'center', paddingTop: spacing.xs },
 
   // ── Insight rows ──
@@ -1193,7 +1193,7 @@ const styles = StyleSheet.create({
   },
   prBarCol:  { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
   prBar:     { width: '100%', borderRadius: 2 },
-  prBarCount: { fontSize: fontSize.micro, color: colors.gold, marginTop: spacing.xxs, fontWeight: '700' },
+  prBarCount: { fontSize: fontSize.micro, color: colors.gold, marginTop: spacing.xxs, fontWeight: fontWeight.bold, fontVariant: ['tabular-nums'] },
   prEmpty:   {
     backgroundColor: colors.surface, borderRadius: radius.md,
     padding: spacing.lg, borderWidth: 1, borderColor: colors.border,

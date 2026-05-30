@@ -1011,7 +1011,7 @@ const styles = StyleSheet.create({
   },
   gaugeItem:   { flex: 1, alignItems: 'center', gap: spacing.xs },
   gaugeDot:    { width: 12, height: 12, borderRadius: radius.sm },
-  gaugeValue:  { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  gaugeValue:  { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
   gaugeLabel:  { fontSize: fontSize.micro, color: colors.textMuted, textAlign: 'center' },
   gaugeScale:  { fontSize: fontSize.micro, color: colors.textMuted, textAlign: 'center' },
   recoveryNote: { fontSize: fontSize.xs, color: colors.textMuted, textAlign: 'center' },
@@ -1023,7 +1023,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg, alignItems: 'center', gap: spacing.xs,
     borderWidth: 1, borderColor: colors.border,
   },
-  quickStatValue: { fontSize: fontSize.xl, fontWeight: fontWeight.black },
+  quickStatValue: { fontSize: fontSize.xl, fontWeight: fontWeight.black, fontVariant: ['tabular-nums'] },
   quickStatLabel: { fontSize: fontSize.xs, color: colors.textSecondary, textAlign: 'center' },
 
   // Section cards
@@ -1129,7 +1129,7 @@ const styles = StyleSheet.create({
   sparklineLegendRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   sparklineDot: { width: 7, height: 7, borderRadius: 4 },
   sparklineLegendText: { fontSize: fontSize.xs, color: colors.textSecondary },
-  sparklineLegendVal: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  sparklineLegendVal: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
 
   trendInsightCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
