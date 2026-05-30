@@ -1117,6 +1117,23 @@ const SCHEMA_MIGRATIONS = [
       PRIMARY KEY (user_id, entry_date)
     )`,
   ],
+  // Exercise-library schema expansion (docs/audit/volyume-exercise-audit-
+  // 2026-05-30). The richer metadata that lets plan construction reason
+  // about anatomical subregion, granular equipment, machine type, goal
+  // alignment and difficulty. All additive; canonical exercises are seeded
+  // locally so no server migration is needed. equipment_profiles is stored
+  // as a JSON array string. See seedExercises.js for the populated values.
+  [
+    `ALTER TABLE exercises ADD COLUMN equipment_category TEXT`,
+    `ALTER TABLE exercises ADD COLUMN machine_type TEXT`,
+    `ALTER TABLE exercises ADD COLUMN force TEXT`,
+    `ALTER TABLE exercises ADD COLUMN laterality TEXT`,
+    `ALTER TABLE exercises ADD COLUMN difficulty INTEGER`,
+    `ALTER TABLE exercises ADD COLUMN machine_ok INTEGER DEFAULT 0`,
+    `ALTER TABLE exercises ADD COLUMN home_ok INTEGER DEFAULT 0`,
+    `ALTER TABLE exercises ADD COLUMN cue TEXT`,
+    `ALTER TABLE exercises ADD COLUMN equipment_profiles TEXT`,
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
@@ -1209,8 +1226,11 @@ export async function insertExerciseWithId(id, data) {
       (id, name, primary_muscle, secondary_muscles, equipment, movement_pattern,
        compound_isolation, default_rep_min, default_rep_max, fatigue_cost,
        stimulus_to_fatigue_ratio, subregion, is_custom, notes, created_at, updated_at,
-       exercise_category, increment_kg)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       exercise_category, increment_kg,
+       equipment_category, machine_type, force, laterality, difficulty,
+       machine_ok, home_ok, cue, equipment_profiles)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+             ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       data.name,
@@ -1230,6 +1250,15 @@ export async function insertExerciseWithId(id, data) {
       now,
       data.exerciseCategory ?? 'compound',
       data.incrementKg ?? 2.5,
+      data.equipmentCategory ?? null,
+      data.machineType ?? null,
+      data.force ?? null,
+      data.laterality ?? null,
+      data.difficulty ?? null,
+      data.machineOk ? 1 : 0,
+      data.homeOk ? 1 : 0,
+      data.cue ?? null,
+      data.equipmentProfiles ? JSON.stringify(data.equipmentProfiles) : null,
     ],
   );
   return { id, ...data, createdAt: now, updatedAt: now };
