@@ -44,6 +44,9 @@ jest.mock('../../database', () => ({
   upsertTierHistoryFromCloud: jest.fn().mockResolvedValue(undefined),
   getAllRecipeIngredientsForUser: jest.fn().mockResolvedValue([]),
   upsertRecipeIngredientFromCloud: jest.fn().mockResolvedValue(undefined),
+  getDailyStepsForPush: jest.fn().mockResolvedValue([]),
+  insertDailyStepsFromCloud: jest.fn().mockResolvedValue(undefined),
+  getDailyStepsUpdatedAt: jest.fn().mockResolvedValue(null),
 }));
 
 jest.mock('../../food/db', () => ({

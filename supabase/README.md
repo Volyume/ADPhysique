@@ -34,6 +34,7 @@ unless the file header says otherwise.
 | 053 | `migrate_053_device_push_tokens.sql` | Creates `device_push_tokens(user_id, expo_push_token, platform, ...)` with composite PK + RLS + touch trigger. Backs the Expo remote-push pipeline (NOTIFICATIONS_LOCKED.md provider stack). The client registers its token after sign-in; the `send-push` Edge Function reads rows (service role) to fan out; the Play Billing RTDN webhook calls it on payment failure. Fully additive; the frozen AAB has no writer for this table. **Also requires `extra.eas.projectId` in app.json before any token can be obtained (see founder-action queue).** | See § Verify device_push_tokens |
 | 054 | `migrate_054_workout_sets_unilateral.sql` | Adds nullable `left_reps` + `right_reps` to `workout_sets` for per-side (unilateral) logging (GAP row 20). `actual_reps` holds the lower side, so volume/PR/progression are unchanged; the new columns are a display record. Additive; the frozen AAB sends the old column set and reads `actual_reps` as before. Apply before the next AAB ships (same ordering rule as every additive workout_sets column). | See § Verify workout_sets unilateral |
 | 055 | `migrate_055_diet_preference.sql` | Adds `diet_preference text DEFAULT 'omnivore'` to `users_profile`. Backs the curated meal-suggestion feature: the user's diet layer (omnivore/vegetarian/vegan) filters the curated meal library in the Suggested food-search tab. Joins the migration-045 per-column merge set (no trigger change; the jsonb merge handles the new key). Additive + defaulted; the frozen AAB neither writes nor reads it. Apply before the next AAB ships. | See § Verify users_profile.diet_preference |
+| 056 | `migrate_056_daily_steps.sql` | Creates `daily_steps(user_id, entry_date, steps, source, updated_at)` with composite PK + RLS + a BEFORE UPDATE touch trigger (last-write-wins), same per-day shape as `daily_water`. The activity store for the cardio/steps audit: the manual step log writes here and the coach's step target checks against it. Bidirectional sync via the `daily_steps` registry entry + `src/lib/sync/tables/dailySteps.js`. `user_id` FK is ON DELETE CASCADE so account deletion clears it; `delete_user_data` is not rewritten here (fold a `daily_steps` DELETE in at its next revision). Fully additive: the frozen AAB has no writer. Safe to apply any time. | See § Verify daily_steps |
 
 > Migration 049 (`migrate_049_drop_peak_week_plans.sql`) is **drafted but held** — do NOT apply until the next AAB ships, so the frozen closed-test build keeps working against the table. Apply 050 before 049 if 050 is ready first; they're independent.
 
@@ -44,7 +45,7 @@ unless the file header says otherwise.
 1. Open the Supabase Dashboard → SQL Editor → New query.
 2. Open one migration file at a time from this folder (numeric
    order: 037, 038, 039, 040, 041, 042, 043, 044, 045, 046, 047, 048,
-   050, 051, 052, 053, 054, 055; 049 held). 051 and 052 are independent
+   050, 051, 052, 053, 054, 055, 056; 049 held). 051 and 052 are independent
    and can go any time. 052 fixes the live Sync error and should go ASAP.
    After 051, run `SELECT refresh_food_frequents();` once to seed the
    cache. 055 must precede the next AAB (the new profile pull selects
@@ -489,6 +490,29 @@ migration (idempotent) and re-check. Until it's applied, the new
 build's profile pull errors on the missing column, so apply this
 before the next AAB ships. Existing rows read as 'omnivore' on the
 client whether the stored value is the default or NULL.
+
+### Verify daily_steps (migration 056)
+
+After applying, confirm the table, policy, and trigger exist:
+
+```sql
+SELECT column_name, data_type FROM information_schema.columns
+  WHERE table_name = 'daily_steps' ORDER BY ordinal_position;
+-- expect: user_id uuid, entry_date date, steps integer,
+--         source text, updated_at timestamp with time zone
+
+SELECT polname FROM pg_policies WHERE tablename = 'daily_steps';
+-- expect: "Users can manage own steps"
+
+SELECT tgname FROM pg_trigger WHERE tgrelid = 'daily_steps'::regclass
+  AND NOT tgisinternal;
+-- expect: daily_steps_touch_updated_at
+```
+
+If any are missing, re-run the migration (idempotent) and re-check.
+Additive and independent, so it can go any time; until it's applied
+the new client keeps step data local (per-table push errors are
+caught and do not fail the wider sync run).
 
 ## Cloud schema drift audit
 

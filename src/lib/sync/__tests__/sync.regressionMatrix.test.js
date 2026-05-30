@@ -195,6 +195,9 @@ describe('Matrix coverage', () => {
       // Non-food bidirectional handlers:
       'notification_preferences', 'weekly_checkins_v2', 'body_composition_log',
       'nutrition_targets', 'recipe_ingredients', 'profiles',
+      // daily_steps (activity store): push/pull covered in the dedicated
+      // sync.dailySteps.test.js.
+      'daily_steps',
       // Pull-only handlers:
       'ed_pattern_flags', 'tier_history', 'daily_intake_rollups',
       // Aliased no-op handler:
