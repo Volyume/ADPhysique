@@ -11,6 +11,12 @@
 // ---------------------------------------------------------------------------
 
 const SCORE_SAME_PRIMARY_MUSCLE = 40;
+// Same anatomical subregion within the same muscle (audit gap C6): a swap
+// should default to the same subregion so it preserves the balance the plan
+// was built for (e.g. an incline-press swap stays an upper-chest movement,
+// not a flat press). Ranked just below same-muscle and above movement
+// pattern, so a same-subregion option wins where it otherwise ties.
+const SCORE_SAME_SUBREGION = 25;
 const SCORE_SAME_MOVEMENT_PATTERN = 20;
 const SCORE_SAME_EQUIPMENT = 15;
 const SCORE_SAME_COMPOUND_ISOLATION = 10;
@@ -27,6 +33,17 @@ function scoreCandidate(original, candidate) {
 
   if (candidate.primaryMuscle === original.primaryMuscle) {
     score += SCORE_SAME_PRIMARY_MUSCLE;
+
+    // Subregion only carries meaning within the same muscle. Both must have
+    // a subregion tag to count; legacy/custom exercises with no tag are
+    // neither rewarded nor penalised, so the scorer degrades gracefully.
+    if (
+      original.subregion &&
+      candidate.subregion &&
+      candidate.subregion === original.subregion
+    ) {
+      score += SCORE_SAME_SUBREGION;
+    }
   }
 
   if (candidate.movementPattern === original.movementPattern) {
@@ -88,6 +105,12 @@ export function buildSwapReason(original, candidate) {
     original.stimulusToFatigueRatio !== undefined &&
     Math.abs(candidate.stimulusToFatigueRatio - original.stimulusToFatigueRatio) <= SIMILAR_WITHIN;
 
+  const sameSubregion =
+    samePrimary &&
+    original.subregion &&
+    candidate.subregion &&
+    candidate.subregion === original.subregion;
+
   if (samePrimary && samePattern) {
     parts.push(
       `Targets ${candidate.primaryMuscle} with the same ${candidate.movementPattern} pattern`,
@@ -96,6 +119,10 @@ export function buildSwapReason(original, candidate) {
     parts.push(`Same primary muscle (${candidate.primaryMuscle})`);
   } else if (samePattern) {
     parts.push(`Shares the ${candidate.movementPattern} movement pattern`);
+  }
+
+  if (sameSubregion) {
+    parts.push('same area of the muscle');
   }
 
   if (sameEquipment) {

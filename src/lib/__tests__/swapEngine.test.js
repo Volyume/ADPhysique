@@ -156,3 +156,45 @@ describe('autoSwapForJointDiscomfort', () => {
     expect(result[0].swaps).toEqual([]);
   });
 });
+
+describe('subregion-aware swaps (phase 7 step 7)', () => {
+  // Production exercises come from getAllExercises (camelCase). Subregion is
+  // one word, identical in snake/camel, so it reads the same either way.
+  const camelEx = (o) => ({
+    id: `e_${Math.random().toString(36).slice(2)}`,
+    name: 'X', primaryMuscle: 'chest', movementPattern: 'push',
+    equipment: 'machine', compoundIsolation: 'compound',
+    fatigueCost: 3, stimulusToFatigueRatio: 4, subregion: 'incline', ...o,
+  });
+
+  test('a same-subregion candidate outranks a different-subregion one, all else equal', () => {
+    const original = camelEx({ name: 'Incline Machine Press', subregion: 'incline' });
+    const sameSub  = camelEx({ name: 'Plate-Loaded Incline Press', subregion: 'incline' });
+    const otherSub = camelEx({ name: 'Machine Chest Press', subregion: 'flat' });
+    const ranked = rankSwaps(original, [sameSub, otherSub]);
+    expect(ranked[0].exercise.name).toBe('Plate-Loaded Incline Press');
+  });
+
+  test('the same-subregion swap explains it in the reason', () => {
+    const original = camelEx({ name: 'Incline Machine Press', subregion: 'incline' });
+    const sameSub  = camelEx({ name: 'Plate-Loaded Incline Press', subregion: 'incline' });
+    const reason = buildSwapReason(original, sameSub);
+    expect(reason.toLowerCase()).toContain('same area of the muscle');
+  });
+
+  test('missing subregion tags neither reward nor crash (graceful)', () => {
+    const original = camelEx({ subregion: undefined });
+    const candidate = camelEx({ subregion: undefined, name: 'Other' });
+    expect(() => rankSwaps(original, [candidate])).not.toThrow();
+    // No subregion bonus, but same muscle/pattern still ranks it.
+    expect(rankSwaps(original, [candidate])).toHaveLength(1);
+  });
+
+  test('same subregion across different muscles does not falsely reward', () => {
+    // subregion only counts within the same primary muscle.
+    const original  = camelEx({ primaryMuscle: 'chest', subregion: 'incline' });
+    const crossMusc = camelEx({ primaryMuscle: 'back', subregion: 'incline', name: 'Row' });
+    const reason = buildSwapReason(original, crossMusc);
+    expect(reason.toLowerCase()).not.toContain('same area of the muscle');
+  });
+});
