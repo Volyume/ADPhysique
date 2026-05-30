@@ -55,9 +55,13 @@ DONE (shipped to main, tested):
   labels in place rather than a layout-breaking swap). FoodSearch's search
   bar kept as-is (it has an inline loading spinner SearchBar lacks).
 - S6 BottomSheet chrome built + adopted on MacroBreakdownSheet,
-  QuickAddSheet, FoodDetailSheet (3 of 6 sheets). FeedbackSheet, WhatsNew,
-  and PeekMenu still on their own animation (PeekMenu is an imperative
-  menu, not a passive sheet; the other two are lower-traffic).
+  QuickAddSheet, FoodDetailSheet, WhatsNewSheet (4 of 6 sheets; the
+  WhatsNew migration also fixed a latent alpha-concat + double-dimmed
+  backdrop). FeedbackSheet and PeekMenu are left on their own animation
+  on purpose: both are imperative forwardRef APIs (open/close, shake-to-
+  report, auto-dismiss) rather than passive visible/onClose sheets, so
+  forcing them through BottomSheet risks their behaviour for little gain.
+  Both already use the scrim token, so backdrop colour is consistent.
 - PressableCard/Button gained testID + accessibilityState passthrough.
 - Extra a11y: MacroRings summary, InfoTooltip, PlateCalculator,
   FoodDetailSheet macro live region, FoodRow preference toast.
