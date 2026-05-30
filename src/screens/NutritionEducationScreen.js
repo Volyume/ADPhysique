@@ -12,7 +12,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 
 export default function NutritionEducationScreen({ navigation }) {
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
   section: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md, borderWidth: 1, borderColor: colors.border },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   sectionIconWrap: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  sectionTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold, flex: 1 },
+  sectionTitle: { ...type.title, color: colors.textPrimary, flex: 1 },
   sectionBody: { gap: spacing.sm },
 
   body: { color: colors.textPrimary, fontSize: fontSize.sm, lineHeight: 21 },
@@ -271,13 +271,13 @@ const styles = StyleSheet.create({
   macroLine: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, paddingVertical: spacing.xs, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm },
   macroDot: { width: 10, height: 10, borderRadius: 5, marginTop: 6 },
   macroHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: spacing.sm },
-  macroName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  macroName: { ...type.bodyStrong, color: colors.textPrimary },
   macroKcal: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
   macroRole: { color: colors.textSecondary, fontSize: fontSize.sm, lineHeight: 19, marginTop: spacing.xxs },
 
   phaseLine: { backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md, gap: spacing.xxs },
   phaseHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: spacing.sm, flexWrap: 'wrap' },
-  phaseName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  phaseName: { ...type.bodyStrong, color: colors.textPrimary },
   phaseRate: { color: colors.primary, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
   phaseGist: { color: colors.textSecondary, fontSize: fontSize.sm, lineHeight: 19 },
 

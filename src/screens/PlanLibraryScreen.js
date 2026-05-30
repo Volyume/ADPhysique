@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import { getLibraryPlans, getPlanWorkoutCounts, copyPlanFromLibrary, activatePlanWithBlock } from '../lib/database';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
@@ -632,7 +632,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   chipActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary + '80' },
-  chipText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  chipText: { ...type.label, color: colors.textSecondary },
   chipTextActive: { color: colors.primary, fontWeight: fontWeight.bold },
 
   // Division grid
@@ -682,7 +682,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center',
   },
   quizBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  quizBannerBody: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xxs },
+  quizBannerBody: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
 
   // Plan card
   planCard: {
@@ -703,15 +703,15 @@ const styles = StyleSheet.create({
   badgeAmber: { backgroundColor: colors.primaryBg, borderColor: colors.primary + '60' },
   badgeText: { fontSize: fontSize.micro, color: colors.textMuted, fontWeight: fontWeight.semibold },
   badgeTextAmber: { color: colors.primary },
-  workoutCount: { fontSize: fontSize.xs, color: colors.textMuted, marginLeft: spacing.sm },
-  planName: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  workoutCount: { ...type.caption, color: colors.textMuted, marginLeft: spacing.sm },
+  planName: { ...type.bodyStrong, color: colors.textPrimary },
   planDesc: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
   planCardFooter: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     borderTopWidth: 1, borderTopColor: colors.border,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
-  previewText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  previewText: { ...type.label, color: colors.textSecondary },
   addBtn: { paddingVertical: spacing.xs, paddingHorizontal: spacing.md },
   addBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary },
 
@@ -720,7 +720,7 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', gap: spacing.md, paddingTop: spacing.xxxl },
   emptyTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textSecondary },
   emptyText: {
-    fontSize: fontSize.md, color: colors.textMuted,
+    ...type.body, color: colors.textMuted,
     textAlign: 'center', paddingHorizontal: spacing.xl,
   },
 
@@ -772,14 +772,14 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
     padding: spacing.lg, gap: spacing.sm,
   },
-  quizResultName: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  quizResultName: { ...type.bodyStrong, color: colors.textPrimary },
   quizResultDesc: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
-  quizResultMeta: { fontSize: fontSize.xs, color: colors.textMuted },
+  quizResultMeta: { ...type.caption, color: colors.textMuted },
   quizStartBtn: {
     backgroundColor: colors.primary, borderRadius: radius.lg,
     paddingVertical: spacing.md, alignItems: 'center',
   },
-  quizStartText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
+  quizStartText: { ...type.bodyStrong, color: colors.background },
   quizBrowseBtn: {
     backgroundColor: colors.surface2, borderRadius: radius.lg,
     paddingVertical: spacing.md, alignItems: 'center',

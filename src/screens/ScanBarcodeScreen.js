@@ -35,7 +35,7 @@ import {
 } from 'react-native-vision-camera';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, spacing, radius, type } from '../styles/theme';
 import { resolveBarcode } from '../lib/food/waterfall';
 import { logError, logInfo } from '../lib/errorLog';
 import { audit } from '../lib/observability';
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  headerTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold },
+  headerTitle: { color: colors.textPrimary, ...type.title },
   cameraWrap: { flex: 1, backgroundColor: colors.background },
   overlay: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   reticle: {
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md, backgroundColor: 'transparent',
   },
   hint: {
-    marginTop: spacing.lg, color: colors.textPrimary, fontSize: fontSize.md,
+    marginTop: spacing.lg, color: colors.textPrimary, ...type.body,
     backgroundColor: colors.scrim, paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm, borderRadius: radius.sm,
   },
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
   },
   permissionWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl },
   permissionTitle: {
-    color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold,
+    color: colors.textPrimary, ...type.title,
     marginTop: spacing.lg,
   },
   permissionBody: {
@@ -272,5 +272,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md, borderRadius: radius.md,
   },
-  permissionBtnText: { color: colors.background, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  permissionBtnText: { color: colors.background, ...type.bodyStrong },
 });

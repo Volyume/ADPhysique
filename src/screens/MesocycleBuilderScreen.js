@@ -8,7 +8,7 @@ import { format, differenceInWeeks } from 'date-fns';
 import { BarChart } from 'react-native-gifted-charts';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import InfoTooltip from '../components/InfoTooltip';
 import { SkeletonCard } from '../components/Skeleton';
 import {
@@ -413,8 +413,8 @@ const styles = StyleSheet.create({
   list:  { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
 
   historyLabel: {
-    fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary,
-    letterSpacing: 0.2, marginBottom: spacing.sm,
+    ...type.label, color: colors.textSecondary,
+    marginBottom: spacing.sm,
   },
 
   // Active dashboard
@@ -423,16 +423,16 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.primary, gap: spacing.md, marginBottom: spacing.xl,
   },
   dashHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  dashName:   { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  dashWeek:   { fontSize: fontSize.xs, color: colors.textSecondary },
+  dashName:   { ...type.title, color: colors.textPrimary },
+  dashWeek:   { ...type.num('caption'), color: colors.textSecondary },
   progTrack:  { height: 4, borderRadius: radius.full, backgroundColor: colors.surface2, overflow: 'hidden' },
   progFill:   { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
   tonnageWrap: { gap: spacing.xs },
-  tonnageLabel: { fontSize: fontSize.xs, color: colors.textMuted },
+  tonnageLabel: { ...type.caption, color: colors.textMuted },
   barAxisLabel: { fontSize: fontSize.micro, color: colors.textMuted },
   recovRow:   { flexDirection: 'row', gap: spacing.lg },
   recovItem:  { alignItems: 'center', gap: spacing.xxs },
-  recovValue: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  recovValue: { ...type.num('bodyStrong'), color: colors.textPrimary },
   recovLabel: { fontSize: fontSize.micro, color: colors.textMuted },
   deloadBanner: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: spacing.lg,
     marginBottom: spacing.xl,
   },
-  createBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.background },
+  createBtnText: { ...type.title, color: colors.background },
 
   // Meso list cards
   mesoCard: {
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
   activeBadgeText: {
     fontSize: fontSize.xs, fontWeight: fontWeight.black, color: colors.primary, letterSpacing: 1,
   },
-  mesoName:   { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  mesoName:   { ...type.title, color: colors.textPrimary },
   mesoMeta:   { flexDirection: 'row', gap: spacing.lg, flexWrap: 'wrap' },
   metaItem:   { fontSize: fontSize.sm, color: colors.textSecondary },
 
@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs, fontWeight: fontWeight.black,
     color: colors.primary, letterSpacing: 1,
   },
-  planCardName: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  planCardName: { ...type.h3, color: colors.textPrimary },
   planCardMeta: { fontSize: fontSize.sm, color: colors.textSecondary },
   planCardNote: {
     fontSize: fontSize.sm, color: colors.textMuted,
@@ -485,17 +485,17 @@ const styles = StyleSheet.create({
   },
   weekProgress: { gap: spacing.sm },
   weekProgressHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  weekLabel:  { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary },
+  weekLabel:  { ...type.num('label'), color: colors.textSecondary },
   weekBar:    { flexDirection: 'row', gap: spacing.sm },
   weekDot:    { flex: 1, height: 8, borderRadius: 4, backgroundColor: colors.surface2 },
   weekDotActive: { backgroundColor: colors.primary },
   weekDotDeload: { backgroundColor: colors.warning + '80' },
-  deloadLabel: { fontSize: fontSize.xs, color: colors.warning },
+  deloadLabel: { ...type.num('caption'), color: colors.warning },
 
   // Empty
   skeletonWrap: { gap: spacing.md },
   empty:      { alignItems: 'center', gap: spacing.md, paddingTop: spacing.xxxl },
-  emptyTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textSecondary },
+  emptyTitle: { ...type.h3, color: colors.textSecondary },
   emptyText:  { fontSize: fontSize.md, color: colors.textMuted, textAlign: 'center', lineHeight: 22 },
 
   // Modal
@@ -504,11 +504,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl, padding: spacing.xl, paddingBottom: spacing.xxxl, gap: spacing.lg,
   },
-  modalTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  modalTitle: { ...type.h3, color: colors.textPrimary },
   input: {
+    ...type.body,
     backgroundColor: colors.surface2, borderRadius: radius.md,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    fontSize: fontSize.md, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border,
+    color: colors.textPrimary, borderWidth: 1, borderColor: colors.border,
   },
   row:        { flexDirection: 'row', gap: spacing.md, alignItems: 'center', flexWrap: 'wrap' },
   inputGroup: { flex: 1, gap: spacing.xs },
@@ -519,19 +520,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2,
   },
   weekChipActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
-  weekChipText: { fontSize: fontSize.xs, color: colors.textSecondary },
+  weekChipText: { ...type.num('caption'), color: colors.textSecondary },
   weekChipTextActive: { color: colors.primary, fontWeight: fontWeight.semibold },
   modalActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm },
   cancelBtn: {
     flex: 1, alignItems: 'center', paddingVertical: spacing.md,
     borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
   },
-  cancelText: { fontSize: fontSize.md, color: colors.textSecondary, fontWeight: fontWeight.semibold },
+  cancelText: { ...type.bodyStrong, color: colors.textSecondary },
   saveBtn: {
     flex: 2, alignItems: 'center', paddingVertical: spacing.md,
     borderRadius: radius.lg, backgroundColor: colors.primary,
   },
-  saveText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
+  saveText: { ...type.bodyStrong, color: colors.background },
 
   summaryBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
@@ -544,7 +545,7 @@ const styles = StyleSheet.create({
 
   // Plan card week indicator
   planWeekRow:       { gap: spacing.xs, marginTop: spacing.sm },
-  planWeekLabel:     { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
+  planWeekLabel:     { ...type.num('label'), color: colors.primary },
   planWeekLabelDeload: { color: colors.warning },
   planWeekBar:       { flexDirection: 'row', gap: spacing.xs },
   planWeekDot:       { flex: 1, height: 6, borderRadius: 3, backgroundColor: colors.surface2 },

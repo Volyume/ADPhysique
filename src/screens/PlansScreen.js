@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';
 import { SkeletonCard } from '../components/Skeleton';
 import PressableCard from '../components/PressableCard';
@@ -750,8 +750,8 @@ const styles = StyleSheet.create({
   },
   pageTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
   section: { gap: spacing.md },
-  sectionTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary, letterSpacing: 0.2 },
-  sectionSubtitle: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: -spacing.sm },
+  sectionTitle: { ...type.label, color: colors.textSecondary },
+  sectionSubtitle: { ...type.caption, color: colors.textMuted, marginTop: -spacing.sm },
   sectionDeemphasised: { opacity: 0.85 },
 
   goalsPointer: {
@@ -773,8 +773,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: colors.border,
   },
-  trainingBlocksLabel: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  trainingBlocksSub: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xxs },
+  trainingBlocksLabel: { ...type.bodyStrong, color: colors.textPrimary },
+  trainingBlocksSub: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
   proCoachNote: {
     fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18,
     borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm,
@@ -800,7 +800,7 @@ const styles = StyleSheet.create({
   activeBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.black, letterSpacing: 1 },
   activePlanName: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
   activePlanMeta: { fontSize: fontSize.sm, color: colors.textSecondary },
-  activePlanWeek: { fontSize: fontSize.xs, color: colors.textMuted },
+  activePlanWeek: { ...type.num('caption'), color: colors.textMuted },
   activePlanActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
   startNextBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
@@ -811,7 +811,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, borderRadius: radius.md, paddingVertical: spacing.md,
     backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border,
   },
-  viewPlanBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textSecondary },
+  viewPlanBtnText: { ...type.label, color: colors.textSecondary },
 
   planCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg,
@@ -824,22 +824,21 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   archivedHeaderText: {
-    fontSize: fontSize.sm, fontWeight: fontWeight.semibold,
-    color: colors.textSecondary, letterSpacing: 0.2,
+    ...type.label, color: colors.textSecondary,
   },
   planCardBody: { padding: spacing.lg, gap: spacing.sm },
   planCardMetaRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
-  planCardName: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  planCardMeta: { fontSize: fontSize.xs, color: colors.textSecondary },
+  planCardName: { ...type.bodyStrong, color: colors.textPrimary },
+  planCardMeta: { ...type.num('caption'), color: colors.textSecondary },
   planCardFooter: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
     borderTopWidth: 1, borderTopColor: colors.border,
   },
-  planCardFooterGhost: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary },
-  planCardFooterPrimary: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
+  planCardFooterGhost: { ...type.label, color: colors.textSecondary },
+  planCardFooterPrimary: { ...type.label, color: colors.primary },
   moreBtn: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
 
   templateCard: {
@@ -847,8 +846,8 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: spacing.md,
   },
   templateMain: { flex: 1, gap: spacing.xs },
-  templateName: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  templateMeta: { fontSize: fontSize.xs, color: colors.textSecondary },
+  templateName: { ...type.bodyStrong, color: colors.textPrimary },
+  templateMeta: { ...type.num('caption'), color: colors.textSecondary },
   templateActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   startTemplateBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
@@ -868,7 +867,7 @@ const styles = StyleSheet.create({
   },
   actionCardBody: { flex: 1 },
   actionCardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: 3 },
-  actionCardTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  actionCardTitle: { ...type.bodyStrong, color: colors.textPrimary },
   actionCardBadge: {
     backgroundColor: colors.primaryBg, borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
@@ -928,7 +927,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   blockCardTitle: {
-    flex: 1, fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary,
+    flex: 1, ...type.bodyStrong, color: colors.textPrimary,
   },
   blockCardBody: {
     fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20,
@@ -964,7 +963,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted, letterSpacing: 0.2,
   },
   nextBlockHeadline: {
-    fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary,
+    ...type.bodyStrong, color: colors.textPrimary,
   },
   nextBlockBody: {
     fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20,
@@ -982,9 +981,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2, borderRadius: radius.md, paddingVertical: spacing.md,
     borderWidth: 1, borderColor: colors.border,
   },
-  blockNewBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textSecondary },
+  blockNewBtnText: { ...type.label, color: colors.textSecondary },
   blockSnooze: { alignItems: 'center', paddingTop: spacing.xs },
-  blockSnoozeText: { fontSize: fontSize.xs, color: colors.textMuted },
+  blockSnoozeText: { ...type.caption, color: colors.textMuted },
 
   // Training days picker
   trainingDaysRow: {
@@ -1016,7 +1015,7 @@ const styles = StyleSheet.create({
     color: colors.background,
   },
   trainingDaysHint: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
     marginTop: spacing.xs,
   },

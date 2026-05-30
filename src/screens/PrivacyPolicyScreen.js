@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, fontSize, fontWeight, spacing } from '../styles/theme';
+import { colors, fontSize, spacing, type } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 
 const LAST_UPDATED = '22 May 2026';
@@ -105,11 +105,10 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
   content: { padding: spacing.lg, paddingBottom: spacing.xl * 2 },
-  updated: { fontSize: fontSize.xs, color: colors.textMuted, marginBottom: spacing.xl },
+  updated: { ...type.caption, color: colors.textMuted, marginBottom: spacing.xl },
   section: { marginBottom: spacing.xl },
   sectionTitle: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    ...type.label,
     color: colors.textPrimary,
     marginBottom: spacing.sm,
   },

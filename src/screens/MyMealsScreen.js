@@ -23,7 +23,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 import { useToast } from '../components/Toast';
 import {
@@ -207,24 +207,25 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.border,
     minHeight: 64,
   },
-  name: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  name: { ...type.bodyStrong, color: colors.textPrimary },
   meta: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: spacing.xxs },
   empty: {
     flex: 1, justifyContent: 'center', alignItems: 'center',
     paddingHorizontal: spacing.xl,
   },
-  emptyTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold, marginBottom: spacing.sm },
+  emptyTitle: { ...type.title, color: colors.textPrimary, marginBottom: spacing.sm },
   emptyBody: { color: colors.textMuted, fontSize: fontSize.sm, textAlign: 'center' },
   backdrop: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xl },
   card: { width: '100%', backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg },
-  cardTitle: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold, marginBottom: spacing.md },
+  cardTitle: { ...type.bodyStrong, color: colors.textPrimary, marginBottom: spacing.md },
   input: {
+    ...type.body,
     backgroundColor: colors.background, color: colors.textPrimary,
     borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, fontSize: fontSize.md,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
   },
   cardActions: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: spacing.lg, gap: spacing.sm },
   cardBtn: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radius.md },
   cardBtnPrimary: { backgroundColor: colors.primary },
-  cardBtnText: { color: colors.textPrimary, fontSize: fontSize.md },
+  cardBtnText: { ...type.body, color: colors.textPrimary },
 });

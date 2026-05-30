@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useFocusEffect } from '@react-navigation/native';
 import { LineChart } from 'react-native-gifted-charts';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import { getCompletedWorkoutSets, getAllExercises, getLatestBodyWeight } from '../lib/database';
 import { calculate1RM } from '../lib/algorithms';
@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   filterTabActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
-  filterTabText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  filterTabText: { ...type.label, color: colors.textSecondary },
   filterTabTextActive: { color: colors.primary },
   list: { padding: spacing.lg, paddingBottom: spacing.xxl },
 
@@ -465,23 +465,20 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   standingSub: {
+    ...type.caption,
     color: colors.textMuted,
-    fontSize: fontSize.xs,
     marginTop: spacing.xxs,
   },
   standingNext: {
+    ...type.label,
     color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
     marginTop: spacing.sm,
   },
   sectionLabel: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    ...type.label,
     color: colors.textSecondary,
-    letterSpacing: 0.2,
   },
-  sectionSub: { fontSize: fontSize.xs, color: colors.textMuted, marginBottom: spacing.xs },
+  sectionSub: { ...type.caption, color: colors.textMuted, marginBottom: spacing.xs },
   strengthRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -491,11 +488,10 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   strengthName: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    ...type.label,
     color: colors.textPrimary,
   },
-  strengthNarrative: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xxs },
+  strengthNarrative: { ...type.num('caption'), color: colors.textMuted, marginTop: spacing.xxs },
   levelBadge: {
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
@@ -515,7 +511,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary + '44',
     marginBottom: spacing.md,
   },
-  bwPromptTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  bwPromptTitle: { ...type.bodyStrong, color: colors.textPrimary },
   bwPromptText: { fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 17, marginTop: spacing.xxs },
 
   prCard: {
@@ -534,8 +530,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   exerciseName: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
+    ...type.bodyStrong,
     color: colors.textPrimary,
     flex: 1,
     marginRight: spacing.sm,
@@ -546,8 +541,8 @@ const styles = StyleSheet.create({
   prType: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary },
   // The PR value and date are data: tabular figures so the column of
   // numbers down the card aligns and doesn't jitter as digit widths change.
-  prValue: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
-  prDate: { fontSize: fontSize.xs, color: colors.textMuted, fontVariant: ['tabular-nums'] },
+  prValue: { ...type.num('bodyStrong'), color: colors.textPrimary },
+  prDate: { ...type.num('caption'), color: colors.textMuted },
 
   standardInCard: {
     backgroundColor: colors.surface2,
@@ -555,9 +550,9 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     marginTop: spacing.xs,
   },
-  standardInCardText: { fontSize: fontSize.xs, color: colors.textSecondary },
+  standardInCardText: { ...type.num('caption'), color: colors.textSecondary },
   strengthLevelNext: {
-    fontSize: fontSize.xs,
+    ...type.num('caption'),
     color: colors.textMuted,
     marginTop: spacing.xxs,
   },
@@ -582,7 +577,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   chartLabel: { fontSize: fontSize.xs, color: colors.textMuted, fontWeight: fontWeight.medium },
-  chartUnit: { fontSize: fontSize.xs, color: colors.textMuted },
+  chartUnit: { ...type.caption, color: colors.textMuted },
   chartFooterRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -593,8 +588,7 @@ const styles = StyleSheet.create({
 
   empty: { alignItems: 'center', paddingHorizontal: spacing.xxl, paddingTop: spacing.xxxl, gap: spacing.md },
   emptyTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    ...type.title,
     color: colors.textPrimary,
     textAlign: 'center',
   },

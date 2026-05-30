@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, type } from '../styles/theme';
 import {
   scheduleMorningWeightNotification,
   scheduleCheckinReminder,
@@ -742,10 +742,8 @@ const styles = StyleSheet.create({
 
   // Section label
   sectionLabel: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    ...type.label,
     color: colors.textSecondary,
-    letterSpacing: 0.2,
     paddingHorizontal: spacing.xs,
     paddingTop: spacing.lg,
     paddingBottom: spacing.sm,
@@ -832,8 +830,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   chipText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
+    ...type.label,
     color: colors.textSecondary,
   },
   chipTextSelected: {
@@ -843,9 +840,8 @@ const styles = StyleSheet.create({
 
   // Schedule text
   scheduleText: {
-    fontSize: fontSize.sm,
+    ...type.label,
     color: colors.primary,
-    fontWeight: fontWeight.medium,
     paddingHorizontal: spacing.lg,
     marginTop: spacing.xs,
     marginBottom: spacing.sm,
@@ -890,9 +886,8 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   timePickerValue: {
-    fontSize: fontSize.md,
+    ...type.num('bodyStrong'),
     color: colors.primary,
-    fontWeight: fontWeight.semibold,
   },
 
   // Bottom note
@@ -908,7 +903,7 @@ const styles = StyleSheet.create({
   },
 
   savingText: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
     textAlign: 'center',
     marginTop: spacing.sm,
@@ -925,8 +920,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   crossLinkTitle: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    ...type.bodyStrong,
     color: colors.textPrimary,
   },
   crossLinkSub: {

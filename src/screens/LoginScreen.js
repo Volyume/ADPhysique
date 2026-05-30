@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import { VolyumeMark } from '../components/BrandMark';
 import Button from '../components/Button';
 import { signInWithEmail, signUpWithEmail, resetPassword, signInWithGoogle, signInWithApple } from '../lib/supabase';
@@ -431,9 +431,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.lg,
   },
   crashTitle: { color: colors.error, fontWeight: fontWeight.bold, marginBottom: spacing.xs, fontSize: fontSize.sm },
-  crashMsg: { color: colors.error, fontSize: fontSize.xs },
+  crashMsg: { ...type.caption, color: colors.error },
   crashStack: { color: colors.textMuted, fontSize: fontSize.micro, marginTop: spacing.xs },
-  crashDismiss: { color: colors.error, fontSize: fontSize.xs, marginTop: spacing.sm },
+  crashDismiss: { ...type.caption, color: colors.error, marginTop: spacing.sm },
 
   // Brand block
   brand: {
@@ -467,16 +467,15 @@ const styles = StyleSheet.create({
   formBlock: { gap: spacing.lg, marginBottom: spacing.xl },
   oauthBlock: { gap: spacing.sm, marginBottom: spacing.lg },
   oauthBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
-  oauthBtnText: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  oauthBtnText: { ...type.bodyStrong, color: colors.textPrimary },
   // Apple branding requires black background + white text (HIG)
   oauthBtnApple: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.md, borderRadius: radius.md, backgroundColor: colors.appleBtnBg },
-  oauthBtnAppleText: { color: colors.appleBtnText, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  oauthBtnAppleText: { ...type.bodyStrong, color: colors.appleBtnText },
   oauthDivider: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   oauthDividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
   oauthDividerText: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
   formTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
+    ...type.title,
     color: colors.textPrimary,
     marginBottom: spacing.xs,
   },
@@ -500,10 +499,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   fieldInput: {
+    ...type.body,
     flex: 1,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md + 2,
-    fontSize: fontSize.md,
     color: colors.textPrimary,
   },
   fieldInputPassword: { paddingRight: spacing.xxxl },
@@ -519,9 +518,8 @@ const styles = StyleSheet.create({
     marginTop: -spacing.sm,
   },
   forgotText: {
-    fontSize: fontSize.sm,
+    ...type.label,
     color: colors.primary,
-    fontWeight: fontWeight.medium,
   },
 
   // Primary button
@@ -549,7 +547,7 @@ const styles = StyleSheet.create({
     gap: spacing.md, marginBottom: spacing.xl,
   },
   dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
-  dividerText: { fontSize: fontSize.xs, color: colors.textMuted },
+  dividerText: { ...type.caption, color: colors.textMuted },
 
   backupPrompt: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
@@ -583,8 +581,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   betaNote: {
+    ...type.caption,
     textAlign: 'center',
-    fontSize: fontSize.xs,
     color: colors.textDisabled,
   },
 });

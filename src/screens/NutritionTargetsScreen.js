@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { format } from 'date-fns';
 
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import InfoTooltip from '../components/InfoTooltip';
 import { calculateNutritionTargets, PROTEIN_APPROACHES } from '../lib/nutritionEngine';
 import { saveNutritionTargets, getNutritionTargets, logBodyMetric, getUserBodyProfile } from '../lib/database';
@@ -1047,7 +1047,7 @@ const styles = StyleSheet.create({
   },
   eduCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, borderLeftWidth: 3, borderLeftColor: colors.primary, padding: spacing.md, marginTop: spacing.sm },
   eduIconWrap: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center' },
-  eduTitle: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
+  eduTitle: { ...type.label, color: colors.textPrimary },
   eduBody: { color: colors.textSecondary, fontSize: fontSize.xs, marginTop: spacing.xxs, lineHeight: 17 },
   pageSubtitle: {
     fontSize: fontSize.sm,
@@ -1059,10 +1059,8 @@ const styles = StyleSheet.create({
   // ── Section heading ───────────────────────────────────────────────────────────────────
 
   sectionHeading: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    ...type.label,
     color: colors.textSecondary,
-    letterSpacing: 0.2,
     marginTop: spacing.sm,
   },
 
@@ -1072,8 +1070,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   fieldLabel: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    ...type.label,
     color: colors.textSecondary,
   },
   optional: {
@@ -1081,11 +1078,11 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   numInput: {
+    ...type.body,
     backgroundColor: colors.inputBg,
     borderRadius: radius.md,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    fontSize: fontSize.md,
     color: colors.textPrimary,
     borderWidth: 1,
     borderColor: colors.border,
@@ -1102,8 +1099,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   unitLabel: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    ...type.bodyStrong,
     color: colors.textSecondary,
   },
 
@@ -1127,8 +1123,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   pillText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
+    ...type.label,
     color: colors.textSecondary,
   },
   pillTextActive: {
@@ -1160,15 +1155,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xxs,
   },
   goalLabel: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    ...type.label,
     color: colors.textPrimary,
   },
   goalLabelActive: {
     color: colors.primary,
   },
   goalDetail: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
   },
   goalDetailActive: {
@@ -1216,10 +1210,9 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   consentCheckLabel: {
+    ...type.label,
     flex: 1,
-    fontSize: fontSize.sm,
     color: colors.textPrimary,
-    fontWeight: fontWeight.medium,
   },
 
   // ── Calculate button ──────────────────────────────────────────────────────────────────
@@ -1239,8 +1232,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   calcBtnText: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    ...type.title,
     color: colors.background,
   },
   calcBtnTextDisabled: {
@@ -1264,16 +1256,12 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   heroLabel: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    ...type.label,
     color: colors.textSecondary,
-    letterSpacing: 0.2,
   },
   heroKcal: {
-    fontSize: fontSize.display,
-    fontWeight: fontWeight.black,
+    ...type.num('display'),
     color: colors.primary,
-    lineHeight: 48,
   },
   heroRange: {
     fontSize: fontSize.sm,
@@ -1306,7 +1294,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   macroPerKg: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
     marginTop: spacing.xxs,
   },
@@ -1369,7 +1357,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   mealCountLabel: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
   },
   mealCountChips: {
@@ -1392,8 +1380,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   mealCountChipText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
+    ...type.num('bodyStrong'),
     color: colors.textSecondary,
   },
   mealCountChipTextActive: {
@@ -1409,7 +1396,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   mealCountRecCaption: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
     textAlign: 'center',
   },
@@ -1443,8 +1430,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   phaseTitle: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
+    ...type.bodyStrong,
     color: colors.textPrimary,
   },
   phaseDesc: {
@@ -1497,8 +1483,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   expandTitle: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    ...type.label,
     color: colors.textSecondary,
   },
   expandBody: {
@@ -1519,8 +1504,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   calcValue: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    ...type.label,
     color: colors.textPrimary,
   },
   disclaimer: {
@@ -1545,8 +1529,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary + '50',
   },
   recalcBtnText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    ...type.label,
     color: colors.primary,
   },
 
@@ -1659,11 +1642,11 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   customProteinInput: {
+    ...type.body,
     backgroundColor: colors.inputBg,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    fontSize: fontSize.md,
     color: colors.textPrimary,
     borderWidth: 1,
     borderColor: colors.border,
@@ -1671,9 +1654,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   customProteinUnit: {
-    fontSize: fontSize.sm,
+    ...type.label,
     color: colors.textSecondary,
-    fontWeight: fontWeight.medium,
   },
 
   // ── Why these numbers ────────────────────────────────────────────────────────
@@ -1697,8 +1679,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   whyHeaderLabel: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
+    ...type.bodyStrong,
     color: colors.textPrimary,
   },
   whyBody: {

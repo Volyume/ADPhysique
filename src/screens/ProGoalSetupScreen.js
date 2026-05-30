@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../store/useAppStore';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import Chip from '../components/Chip';
 import {
   PHYSIQUE_GOALS, PHYSIQUE_GOAL_GROUPS,
@@ -592,13 +592,13 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1, textAlign: 'center',
-    color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold,
+    color: colors.textPrimary, ...type.title,
   },
   scroll: { paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.xxxl },
 
   sectionLabel: {
-    fontSize: fontSize.sm, fontWeight: fontWeight.semibold,
-    color: colors.textSecondary, letterSpacing: 0.2, marginBottom: spacing.xs,
+    ...type.label,
+    color: colors.textSecondary, marginBottom: spacing.xs,
   },
   sectionLabelSpaced: { marginTop: spacing.xxl },
   sectionSub: {
@@ -622,14 +622,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
   },
   goalIconWrapActive: { backgroundColor: colors.surface },
-  goalLabel: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary, flexShrink: 1 },
+  goalLabel: { ...type.label, color: colors.textPrimary, flexShrink: 1 },
   goalLabelActive: { color: colors.primary },
   goalCheck: { marginTop: spacing.xxs },
 
   optionalTag: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
-    fontWeight: fontWeight.regular,
   },
   weakPointGrid: {
     flexDirection: 'row',
@@ -673,7 +672,7 @@ const styles = StyleSheet.create({
   },
   phaseBody: { flex: 1 },
   phaseLabel: {
-    fontSize: fontSize.md, fontWeight: fontWeight.semibold,
+    ...type.bodyStrong,
     color: colors.textPrimary, marginBottom: spacing.xs,
   },
   phaseLabelActive: { color: colors.primary },
@@ -700,7 +699,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg, alignItems: 'center',
   },
   saveBtnDisabled: { backgroundColor: colors.surface2 },
-  saveBtnText: { color: colors.background, fontSize: fontSize.md, fontWeight: fontWeight.bold },
+  saveBtnText: { color: colors.background, ...type.bodyStrong },
   saveBtnTextDisabled: { color: colors.textMuted },
 
   chipRow: {
@@ -724,8 +723,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   scheduleChipText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    ...type.num('label'),
     color: colors.textSecondary,
   },
   scheduleChipTextActive: { color: colors.primary },

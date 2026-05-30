@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import Button from '../components/Button';
 import {
   getRoutineById, getRoutineExercisesWithDetails, getAllExercises,
@@ -639,7 +639,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.xs,
   },
-  exerciseName: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  exerciseName: { ...type.bodyStrong, color: colors.textPrimary },
   exerciseNameUnresolved: { color: colors.warning },
   relinkChip: {
     flexDirection: 'row',
@@ -658,10 +658,10 @@ const styles = StyleSheet.create({
     color: colors.warning,
   },
   exerciseMeta: { fontSize: fontSize.sm, color: colors.primary },
-  exerciseMuscle: { fontSize: fontSize.xs, color: colors.textMuted },
+  exerciseMuscle: { ...type.caption, color: colors.textMuted },
   exerciseWhy: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic', marginTop: spacing.xxs, lineHeight: 16 },
   splitRationale: { fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 19, marginTop: spacing.xs, marginBottom: spacing.sm },
-  exerciseStartWeight: { fontSize: fontSize.xs, color: colors.primary },
+  exerciseStartWeight: { ...type.num('caption'), color: colors.primary },
   cardActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   reorderActions: { flexDirection: 'column', alignItems: 'center', gap: spacing.xs },
   reorderBtn: {
@@ -706,7 +706,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: spacing.xs,
   },
-  editSaveBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
+  editSaveBtnText: { ...type.bodyStrong, color: colors.background },
   addBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -721,7 +721,7 @@ const styles = StyleSheet.create({
   },
   addBtnText: { fontSize: fontSize.md, color: colors.primary, fontWeight: fontWeight.medium },
   empty: { alignItems: 'center', paddingVertical: spacing.xl },
-  emptyText: { fontSize: fontSize.md, color: colors.textMuted },
+  emptyText: { ...type.body, color: colors.textMuted },
   pickerSafe: { flex: 1, backgroundColor: colors.background },
   pickerHeader: {
     flexDirection: 'row',
@@ -750,8 +750,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   pickerItemName: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    ...type.bodyStrong,
     color: colors.textPrimary,
     marginBottom: spacing.xxs,
   },
@@ -773,7 +772,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
   },
   swapNote: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.sm,
@@ -789,8 +788,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   swapItemName: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    ...type.bodyStrong,
     color: colors.textPrimary,
     marginBottom: spacing.xxs,
   },

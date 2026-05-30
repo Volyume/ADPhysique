@@ -5,7 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import { VolyumeIcon } from '../components/BrandMark';
 import Button from '../components/Button';
 import useAppStore from '../store/useAppStore';
@@ -325,8 +325,8 @@ const styles = StyleSheet.create({
   proBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.8 },
 
   headline: {
-    fontSize: fontSize.xxxl, fontWeight: fontWeight.bold,
-    color: colors.textPrimary, marginBottom: spacing.sm, lineHeight: 38,
+    ...type.h1,
+    color: colors.textPrimary, marginBottom: spacing.sm,
   },
   sub: {
     fontSize: fontSize.md, color: colors.textSecondary, lineHeight: 23, marginBottom: spacing.xl,
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
     width: 36, height: 36, borderRadius: radius.md, backgroundColor: colors.primaryBg,
     alignItems: 'center', justifyContent: 'center',
   },
-  routineTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.xs },
+  routineTitle: { ...type.bodyStrong, color: colors.textPrimary, marginBottom: spacing.xs },
   routineBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
 
   calorieRow: {
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
   macroItem: { flex: 1, alignItems: 'center', gap: spacing.xxs },
   macroItemBorder: { borderLeftWidth: 1, borderLeftColor: colors.border },
   macroValue: { fontSize: fontSize.lg, fontWeight: fontWeight.black, color: colors.textPrimary },
-  macroLabel: { fontSize: fontSize.xs, color: colors.textMuted },
+  macroLabel: { ...type.caption, color: colors.textMuted },
   goalRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
   goalChip: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
   },
   goalChipText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
   eduLearnRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
-  eduLearnText: { color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.medium, flex: 1 },
+  eduLearnText: { color: colors.primary, ...type.label, flex: 1 },
 
   splitList: { marginTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm },
   splitWhy: { fontSize: fontSize.sm, color: colors.textMuted, lineHeight: 19, marginBottom: spacing.sm },
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   splitBadgeText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textSecondary },
-  splitName: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary, flex: 1 },
+  splitName: { ...type.label, color: colors.textPrimary, flex: 1 },
   whyPlanWrap: { marginTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md, gap: spacing.sm },
   whyPlanTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 },
   whyPlanItem: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
   founderSig: {
-    fontSize: fontSize.md, fontWeight: fontWeight.bold,
+    ...type.bodyStrong,
     color: colors.primary, marginTop: spacing.xs,
   },
 

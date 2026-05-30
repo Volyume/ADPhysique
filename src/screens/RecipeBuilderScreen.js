@@ -24,7 +24,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import {
   createRecipe, updateRecipe, getRecipeWithIngredients,
   setRecipeIngredients, computeRecipeMacros,
@@ -286,8 +286,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  headerTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold },
-  saveText: { color: colors.primary, fontSize: fontSize.md, fontWeight: fontWeight.bold },
+  headerTitle: { color: colors.textPrimary, ...type.title },
+  saveText: { color: colors.primary, ...type.bodyStrong },
   saveTextDisabled: { color: colors.textMuted },
 
   section: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg },
@@ -309,8 +309,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  ingName: { color: colors.textPrimary, fontSize: fontSize.md },
-  ingBrand: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: spacing.xxs },
+  ingName: { color: colors.textPrimary, ...type.body },
+  ingBrand: { color: colors.textMuted, ...type.caption, marginTop: spacing.xxs },
   qtyInput: {
     width: 64, textAlign: 'right',
     color: colors.textPrimary, fontSize: fontSize.md,
@@ -322,11 +322,11 @@ const styles = StyleSheet.create({
   macros: { marginHorizontal: spacing.lg, marginTop: spacing.xl, padding: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md },
   macrosTitle: { color: colors.textSecondary, fontSize: fontSize.xs, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: spacing.sm },
   macrosRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
-  macrosSub: { color: colors.textMuted, fontSize: fontSize.xs },
+  macrosSub: { color: colors.textMuted, ...type.num('caption') },
   pill: {
     flex: 1, alignItems: 'center', paddingVertical: spacing.sm,
     backgroundColor: colors.background, borderRadius: radius.sm,
   },
-  pillVal: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.bold },
-  pillLabel: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: spacing.xxs },
+  pillVal: { color: colors.textPrimary, ...type.num('bodyStrong') },
+  pillLabel: { color: colors.textMuted, ...type.caption, marginTop: spacing.xxs },
 });

@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import {
   createProgramme, createRoutine, addExerciseToRoutine,
   activatePlanWithBlock, getAllExercises, insertExercise,
@@ -762,17 +762,15 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   label: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    ...type.label,
     color: colors.textSecondary,
-    letterSpacing: 0.2,
   },
   textInput: {
+    ...type.body,
     backgroundColor: colors.inputBg,
     borderRadius: radius.md,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    fontSize: fontSize.md,
     color: colors.textPrimary,
     borderWidth: 1,
     borderColor: colors.border,
@@ -809,8 +807,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   pillText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
+    ...type.label,
     color: colors.textSecondary,
   },
   pillTextActive: {
@@ -828,8 +825,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   primaryBtnText: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    ...type.title,
     color: colors.background,
   },
   btnDisabled: {
@@ -844,8 +840,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxxl,
   },
   planNameInput: {
-    fontSize: fontSize.xxl,
-    fontWeight: fontWeight.bold,
+    ...type.h2,
     color: colors.textPrimary,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
@@ -877,9 +872,8 @@ const styles = StyleSheet.create({
     minWidth: 44,
   },
   dayNameInput: {
+    ...type.bodyStrong,
     flex: 1,
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
     paddingVertical: 0,
   },
@@ -907,7 +901,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   exMeta: {
-    fontSize: fontSize.xs,
+    ...type.num('caption'),
     color: colors.textMuted,
   },
   addExBtn: {
@@ -918,8 +912,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   addExText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    ...type.label,
     color: colors.primary,
   },
   addDayBtn: {
@@ -954,8 +947,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   draftBtnText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    ...type.bodyStrong,
     color: colors.textSecondary,
   },
   activateBtn: {
@@ -969,8 +961,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
   },
   activateBtnText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
+    ...type.bodyStrong,
     color: colors.background,
   },
 
@@ -990,12 +981,12 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   pickerSearch: {
+    ...type.body,
     flex: 1,
     backgroundColor: colors.inputBg,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    fontSize: fontSize.md,
     color: colors.textPrimary,
     borderWidth: 1,
     borderColor: colors.border,
@@ -1023,7 +1014,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   pickerMuscle: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
     textTransform: 'capitalize',
   },
@@ -1034,7 +1025,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   pickerEmptyText: {
-    fontSize: fontSize.md,
+    ...type.body,
     color: colors.textMuted,
   },
   separator: {
@@ -1053,15 +1044,13 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   createNewBtnText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    ...type.label,
     color: colors.primary,
     flex: 1,
   },
   createTitle: {
+    ...type.title,
     flex: 1,
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
     color: colors.textPrimary,
     textAlign: 'center',
   },
@@ -1071,12 +1060,11 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxxl,
   },
   createNameInput: {
+    ...type.title,
     backgroundColor: colors.inputBg,
     borderRadius: radius.md,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
     borderWidth: 1,
     borderColor: colors.border,
@@ -1105,9 +1093,8 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   chipText: {
-    fontSize: fontSize.sm,
+    ...type.label,
     color: colors.textSecondary,
-    fontWeight: fontWeight.medium,
   },
   chipTextActive: {
     color: colors.primary,
@@ -1124,8 +1111,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   createSaveBtnText: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    ...type.title,
     color: colors.background,
   },
   successOverlay: {
@@ -1154,8 +1140,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   successName: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
+    ...type.title,
     color: colors.primary,
     textAlign: 'center',
   },
@@ -1180,8 +1165,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   successSecondaryText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    ...type.bodyStrong,
     color: colors.textSecondary,
   },
   successPrimary: {
@@ -1195,8 +1179,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   successPrimaryText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
+    ...type.bodyStrong,
     color: colors.background,
   },
 });

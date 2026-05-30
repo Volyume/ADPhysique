@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import { upsertUserProfile } from '../lib/supabase';
 import { saveUserBodyProfile } from '../lib/database';
 import useAppStore from '../store/useAppStore';
@@ -260,11 +260,9 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
   stepNum: {
-    fontSize: fontSize.sm,
+    ...type.num('label'),
     color: colors.textSecondary,
-    fontWeight: fontWeight.semibold,
     marginBottom: spacing.sm,
-    letterSpacing: 0.2,
   },
   title: {
     fontSize: fontSize.xxl,
@@ -310,8 +308,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   optionLabel: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    ...type.bodyStrong,
     color: colors.textPrimary,
     marginBottom: spacing.xxs,
   },
@@ -319,7 +316,7 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   optionDesc: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textSecondary,
   },
   footer: {
@@ -363,8 +360,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   nextBtnText: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    ...type.title,
     color: colors.background,
   },
 });

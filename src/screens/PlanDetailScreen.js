@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import {
   getProgrammeById, getRoutinesForPlan, getAllRoutineExerciseCounts,
@@ -379,10 +379,10 @@ const styles = StyleSheet.create({
   planStats: { flexDirection: 'row', gap: spacing.xl },
   planStat: { gap: spacing.xxs },
   planStatValue: { fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.textPrimary },
-  planStatLabel: { fontSize: fontSize.xs, color: colors.textMuted },
+  planStatLabel: { ...type.caption, color: colors.textMuted },
   section: { gap: spacing.md },
   sectionTitle: {
-    fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary, letterSpacing: 0.2,
+    ...type.label, color: colors.textSecondary,
   },
   emptyCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.xl,
@@ -399,8 +399,8 @@ const styles = StyleSheet.create({
   },
   workoutIndexText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textSecondary },
   workoutInfo: { flex: 1, gap: spacing.xxs },
-  workoutName: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  workoutMeta: { fontSize: fontSize.xs, color: colors.textSecondary },
+  workoutName: { ...type.bodyStrong, color: colors.textPrimary },
+  workoutMeta: { ...type.caption, color: colors.textSecondary },
   workoutActions: { flexDirection: 'row', gap: spacing.sm },
   editWorkoutBtn: {
     width: 36, height: 36, alignItems: 'center', justifyContent: 'center',
@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   manageRowLast: { borderBottomWidth: 0 },
-  manageRowText: { flex: 1, fontSize: fontSize.md, color: colors.textPrimary },
+  manageRowText: { flex: 1, ...type.body, color: colors.textPrimary },
   whyCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
     borderWidth: 1, borderColor: colors.border, gap: spacing.sm,

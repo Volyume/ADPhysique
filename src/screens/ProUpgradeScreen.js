@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import Button from '../components/Button';
 import useAppStore from '../store/useAppStore';
 import { signUpWithEmail, signInWithEmail, signInWithGoogle, signInWithApple, getSupabaseClient } from '../lib/supabase';
@@ -445,13 +445,13 @@ const styles = StyleSheet.create({
     gap: spacing.sm, paddingVertical: spacing.md, borderRadius: radius.md,
     borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface,
   },
-  oauthBtnText: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  oauthBtnText: { color: colors.textPrimary, ...type.bodyStrong },
   oauthBtnApple: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.sm, paddingVertical: spacing.md, borderRadius: radius.md,
     backgroundColor: colors.appleBtnBg,
   },
-  oauthBtnAppleText: { color: colors.appleBtnText, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  oauthBtnAppleText: { color: colors.appleBtnText, ...type.bodyStrong },
   oauthDivider: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   oauthDividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
   oauthDividerText: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.medium },

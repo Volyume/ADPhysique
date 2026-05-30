@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import { VolyumeIcon } from '../components/BrandMark';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -1180,7 +1180,7 @@ const styles = StyleSheet.create({
   progressActive: { backgroundColor: colors.primary + 'CC' },
   progressPending: { backgroundColor: colors.border },
 
-  stepCount: { fontSize: fontSize.xs, color: colors.textMuted, marginBottom: spacing.xs },
+  stepCount: { ...type.num('caption'), color: colors.textMuted, marginBottom: spacing.xs },
   stepTitle: {
     fontSize: fontSize.xxl, fontWeight: fontWeight.bold,
     color: colors.textPrimary, marginBottom: spacing.sm, lineHeight: 30,
@@ -1248,7 +1248,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', borderRadius: radius.sm - 2,
   },
   segmentActive: { backgroundColor: colors.primary },
-  segmentText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textMuted },
+  segmentText: { ...type.label, color: colors.textMuted },
   segmentTextActive: { color: colors.background },
 
   // Dropdown
@@ -1275,7 +1275,7 @@ const styles = StyleSheet.create({
   },
   dropdownItemBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
   dropdownItemActive: { backgroundColor: colors.primaryBg },
-  dropdownItemLabel: { fontSize: fontSize.md, color: colors.textSecondary, marginBottom: 1 },
+  dropdownItemLabel: { ...type.body, color: colors.textSecondary, marginBottom: 1 },
   dropdownItemLabelActive: { color: colors.textPrimary, fontWeight: fontWeight.semibold },
   dropdownItemSub: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
 
@@ -1291,7 +1291,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
     alignItems: 'center', justifyContent: 'center',
   },
-  notifTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.xxs },
+  notifTitle: { ...type.bodyStrong, color: colors.textPrimary, marginBottom: spacing.xxs },
   notifSub: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 17 },
 
   toggle: {
@@ -1345,9 +1345,9 @@ const styles = StyleSheet.create({
   btnDisabled: { opacity: 0.55 },
   oauthBlock: { gap: spacing.sm, marginBottom: spacing.lg },
   oauthBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
-  oauthBtnText: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  oauthBtnText: { color: colors.textPrimary, ...type.bodyStrong },
   oauthBtnApple: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.md, borderRadius: radius.md, backgroundColor: colors.appleBtnBg },
-  oauthBtnAppleText: { color: colors.appleBtnText, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  oauthBtnAppleText: { color: colors.appleBtnText, ...type.bodyStrong },
   oauthDivider: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   oauthDividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
   oauthDividerText: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
