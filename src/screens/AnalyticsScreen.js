@@ -468,6 +468,13 @@ export default function AnalyticsScreen({ navigation }) {
     return Math.max(1, Math.ceil((Date.now() - start) / WEEK_MS));
   }
 
+  // Has the user logged anything yet? Used to hide the always-on chart
+  // sections (volume grid, PR sparkline, training calendar) until there
+  // is data, so a brand-new user does not see "No data yet" sitting on
+  // top of a wall of zeros. The Training block and the first-session
+  // milestone still show, because those are forward-looking, not history.
+  const hasData = allSets.length > 0;
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView
@@ -562,6 +569,7 @@ export default function AnalyticsScreen({ navigation }) {
         )}
 
         {/* ── 3 · Volume Snapshot ───────────────────────────── */}
+        {hasData && (
         <View style={styles.section}>
           <View style={styles.rowBetween}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
@@ -580,6 +588,7 @@ export default function AnalyticsScreen({ navigation }) {
           </View>
           <VolumeSnapshotGrid volume={weeklyVolume} />
         </View>
+        )}
 
         {/* ── 3b · Training Load (ACWR) ─────────────────────── */}
         {workloadData && workloadData.ratio !== null && (
@@ -614,6 +623,7 @@ export default function AnalyticsScreen({ navigation }) {
         )}
 
         {/* ── 4 · PR Rate Sparkline ─────────────────────────── */}
+        {hasData && (
         <View style={styles.section}>
           <View style={styles.rowBetween}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
@@ -630,14 +640,17 @@ export default function AnalyticsScreen({ navigation }) {
           </View>
           <PRSparkline bars={prBars} windowDays={prWindow} />
         </View>
+        )}
 
         {/* ── 5 · Training Day Calendar ─────────────────────── */}
+        {hasData && (
         <View style={styles.section}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
             <Text style={styles.sectionLabel}>Training days (last 12 weeks)</Text>
           </View>
           <TrainingCalendar values={calValues} />
         </View>
+        )}
 
         {/* ── 6 · Recent Sessions Strip ─────────────────────── */}
         {recentSessions.length > 0 && (
@@ -1173,15 +1186,15 @@ const styles = StyleSheet.create({
 
   // ── Volume snapshot ──
   volGrid: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm,
+    flexDirection: 'row', flexWrap: 'wrap', rowGap: spacing.md,
     backgroundColor: colors.surface, borderRadius: radius.lg,
     padding: spacing.md, borderWidth: 1, borderColor: colors.border,
   },
-  volCell:   { width: '30%', alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.xs },
+  volCell:   { width: '33.333%', alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.xs },
   volDot:    { width: 10, height: 10, borderRadius: 5 },
   volMuscle: { fontSize: fontSize.micro, color: colors.textSecondary, textAlign: 'center' },
-  volSets:   { fontSize: fontSize.micro, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  volLegend: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
+  volSets:   { fontSize: fontSize.micro, fontWeight: fontWeight.semibold, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
+  volLegend: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.md, width: '100%' },
   volLegendItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   volLegendDot: { width: 8, height: 8, borderRadius: 4 },
   volLegendText: { fontSize: fontSize.micro, color: colors.textMuted },
