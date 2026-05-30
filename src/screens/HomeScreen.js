@@ -9,6 +9,7 @@ import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
+import AnimatedEntrance from '../components/AnimatedEntrance';
 import { formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg, kgToStoneLbsStrings, kgToLbs } from '../lib/units';
 import { VolyumeIcon } from '../components/BrandMark';
 import ScreenHeader from '../components/ScreenHeader';
@@ -929,6 +930,7 @@ export default function HomeScreen({ navigation }) {
         ))}
 
         {/* ── This week, progress bars ── */}
+        <AnimatedEntrance index={0}>
         <View style={styles.weekCard}>
           <View style={styles.weekCardHeader}>
             <Text style={styles.weekLabel}>This week</Text>
@@ -962,6 +964,7 @@ export default function HomeScreen({ navigation }) {
             />
           </View>
         </View>
+        </AnimatedEntrance>
 
         {/* Today's intake card removed from the Train screen (founder
             2026-05-29): food and macros live on the Diary tab; the Train
@@ -1314,6 +1317,7 @@ export default function HomeScreen({ navigation }) {
         )}
 
         {/* ── Quick nav ── */}
+        <AnimatedEntrance index={2}>
         <View style={styles.quickRow}>
           <QuickLink
             icon="time-outline"
@@ -1331,6 +1335,7 @@ export default function HomeScreen({ navigation }) {
             onPress={() => navigation.navigate('VolumeHeatmap')}
           />
         </View>
+        </AnimatedEntrance>
       </ScrollView>
 
       {/* Change Workout Sheet */}

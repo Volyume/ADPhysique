@@ -16,7 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, fontSize, fontWeight, spacing, radius, shadow } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, shadow, circle } from '../styles/theme';
 import {
   getFoodEntriesForDay, deleteFoodEntry, updateFoodEntry, getRollupForDay,
   recomputeRollup, setWater, getWater, createSavedMeal,
@@ -646,7 +646,7 @@ function WaterRow({ ml, onAdd, onSub }) {
 const styles = StyleSheet.create({
   scanFab: {
     position: 'absolute', right: spacing.lg, bottom: spacing.xl,
-    width: 56, height: 56, borderRadius: 28,
+    width: 56, height: 56, borderRadius: circle(56),
     backgroundColor: colors.primary,
     alignItems: 'center', justifyContent: 'center',
     ...shadow.lg,

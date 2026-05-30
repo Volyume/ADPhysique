@@ -191,6 +191,7 @@ const styles = StyleSheet.create({
     fontSize: 34,
     fontWeight: fontWeight.bold,
     lineHeight: 36,
+    fontVariant: ['tabular-nums'],
   },
   kcalSubLabel: {
     color: colors.textMuted,
@@ -204,6 +205,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: fontSize.xxl,
     fontWeight: fontWeight.bold,
+    fontVariant: ['tabular-nums'],
   },
   kcalRemainingLabel: {
     color: colors.textMuted,
