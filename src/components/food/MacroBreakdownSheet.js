@@ -1,7 +1,7 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Modal, Pressable, Animated } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
-import useAppStore from '../../store/useAppStore';
+import BottomSheet from '../BottomSheet';
 
 const MEAL_SLOTS = [
   { key: 'breakfast', label: 'Breakfast' },
@@ -64,74 +64,40 @@ function MacroLine({ kcal, protein, carbs, fat }) {
  * anything with it is handled back on the diary itself.
  */
 export default function MacroBreakdownSheet({ visible, entries, dateLabel, onClose }) {
-  const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
-  const translateY = useRef(new Animated.Value(reduceMotion ? 0 : 400)).current;
-  const backdrop = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (!visible) return;
-    translateY.setValue(reduceMotion ? 0 : 400);
-    backdrop.setValue(0);
-    Animated.parallel([
-      Animated.timing(backdrop, { toValue: 1, duration: 180, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: 220, useNativeDriver: true }),
-    ]).start();
-  }, [visible, reduceMotion, translateY, backdrop]);
-
   const { rows, total } = mealBreakdown(entries);
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <Animated.View style={[styles.backdrop, { opacity: backdrop }]}>
-        <Pressable style={styles.backdropPress} onPress={onClose} accessibilityLabel="Close breakdown" />
-      </Animated.View>
-      <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>
-        <View style={styles.handle} />
-        <View style={styles.header}>
-          <Text style={styles.title}>By meal</Text>
-          {dateLabel ? <Text style={styles.subtitle}>{dateLabel}</Text> : null}
-        </View>
+    <BottomSheet visible={visible} onClose={onClose} accessibilityLabel="Macro breakdown by meal">
+      <View style={styles.header}>
+        <Text style={styles.title}>By meal</Text>
+        {dateLabel ? <Text style={styles.subtitle}>{dateLabel}</Text> : null}
+      </View>
 
-        {rows.length === 0 ? (
-          <Text style={styles.empty}>No food logged.</Text>
-        ) : (
-          <View>
-            {rows.map((r) => (
-              <View key={r.key} style={styles.row}>
-                <Text style={styles.rowLabel}>{r.label}</Text>
-                <MacroLine kcal={r.kcal} protein={r.protein} carbs={r.carbs} fat={r.fat} />
-              </View>
-            ))}
-            <View style={[styles.row, styles.totalRow]}>
-              <Text style={styles.totalLabel}>Total</Text>
-              <MacroLine kcal={total.kcal} protein={total.protein} carbs={total.carbs} fat={total.fat} />
+      {rows.length === 0 ? (
+        <Text style={styles.empty}>No food logged.</Text>
+      ) : (
+        <View>
+          {rows.map((r) => (
+            <View key={r.key} style={styles.row}>
+              <Text style={styles.rowLabel}>{r.label}</Text>
+              <MacroLine kcal={r.kcal} protein={r.protein} carbs={r.carbs} fat={r.fat} />
             </View>
+          ))}
+          <View style={[styles.row, styles.totalRow]}>
+            <Text style={styles.totalLabel}>Total</Text>
+            <MacroLine kcal={total.kcal} protein={total.protein} carbs={total.carbs} fat={total.fat} />
           </View>
-        )}
+        </View>
+      )}
 
-        <Pressable style={styles.doneBtn} onPress={onClose} accessibilityRole="button" accessibilityLabel="Done">
-          <Text style={styles.doneText}>Done</Text>
-        </Pressable>
-      </Animated.View>
-    </Modal>
+      <Pressable style={styles.doneBtn} onPress={onClose} accessibilityRole="button" accessibilityLabel="Done">
+        <Text style={styles.doneText}>Done</Text>
+      </Pressable>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.scrim },
-  backdropPress: { flex: 1 },
-  sheet: {
-    position: 'absolute', left: 0, right: 0, bottom: 0,
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xxl,
-  },
-  handle: {
-    alignSelf: 'center', width: 36, height: 4, borderRadius: 2,
-    backgroundColor: colors.border, marginBottom: spacing.md,
-  },
   header: { marginBottom: spacing.md },
   title: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold },
   subtitle: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: spacing.xxs },
