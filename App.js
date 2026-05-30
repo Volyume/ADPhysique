@@ -216,16 +216,22 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+// The ErrorBoundary deliberately uses literal hex rather than theme tokens:
+// if the thing that crashed is the theme/style layer itself, importing
+// colors.* here could re-crash the recovery screen. The values mirror the
+// theme (background #0D0D0D, error red, amber action) so the crash screen
+// still reads as Volyume. The button is amber #E08C0B (= primaryFill), not
+// the retired electric blue it used to be.
 const eb = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0D0D0D', padding: 20, paddingTop: 60 },
-  title: { color: '#FF3B30', fontSize: 18, fontWeight: 'bold', marginBottom: 8 },
-  subtitle: { color: '#aaa', fontSize: 14, marginBottom: 12 },
-  scroll: { flex: 1, backgroundColor: '#1a1a1a', borderRadius: 8, padding: 12 },
-  msgBox: { backgroundColor: '#2a1212', borderRadius: 8, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#FF3B30' },
+  title: { color: '#F44336', fontSize: 18, fontWeight: 'bold', marginBottom: 8 },
+  subtitle: { color: '#9E9E9E', fontSize: 14, marginBottom: 12 },
+  scroll: { flex: 1, backgroundColor: '#191917', borderRadius: 10, padding: 12 },
+  msgBox: { backgroundColor: '#2a1212', borderRadius: 10, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#F44336' },
   msg: { color: '#FF6B60', fontSize: 14, fontWeight: 'bold' },
   stack: { color: '#ccc', fontSize: 11, fontFamily: 'monospace' },
-  btn: { marginTop: 16, backgroundColor: '#2979FF', borderRadius: 8, padding: 14, alignItems: 'center' },
-  btnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  btn: { marginTop: 16, backgroundColor: '#E08C0B', borderRadius: 14, padding: 14, alignItems: 'center' },
+  btnText: { color: '#0D0D0D', fontWeight: 'bold', fontSize: 16 },
 });
 
 // Small inner component that fires the "crash recovered" toast +
