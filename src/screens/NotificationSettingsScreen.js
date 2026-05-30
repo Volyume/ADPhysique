@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
 import {
   scheduleMorningWeightNotification,
   scheduleCheckinReminder,
@@ -721,9 +721,9 @@ const styles = StyleSheet.create({
   permissionBanner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: 'rgba(255, 193, 7, 0.12)',
+    backgroundColor: withAlpha(colors.warning, 0.12),
     borderWidth: 1,
-    borderColor: 'rgba(255, 193, 7, 0.35)',
+    borderColor: withAlpha(colors.warning, 0.35),
     borderRadius: radius.md,
     padding: spacing.lg,
     gap: spacing.md,

@@ -21,6 +21,10 @@ export default function PlateCalculator({ targetWeight, onClose }) {
   const totalWeight = calc.totalWeight ?? barNum;
   const sideWeight = calc.sideWeight ?? 0;
 
+  // Real-world IPF/competition plate colours by weight. These are physical
+  // equipment standards (red 25, blue 20, yellow 15, green 10, white 5),
+  // not theme colours, so they are deliberately literal.
+  /* eslint-disable no-restricted-syntax */
   const plateColors = {
     25: '#E53935',
     20: '#1565C0',
@@ -30,6 +34,7 @@ export default function PlateCalculator({ targetWeight, onClose }) {
     2.5: '#757575',
     1.25: '#BDBDBD',
   };
+  /* eslint-enable no-restricted-syntax */
 
   return (
     <View style={styles.container}>

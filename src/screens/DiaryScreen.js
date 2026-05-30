@@ -512,7 +512,7 @@ export default function DiaryScreen({ navigation }) {
           accessibilityRole="button"
           accessibilityLabel="Scan barcode"
         >
-          <Ionicons name="barcode-outline" size={26} color="#000" />
+          <Ionicons name="barcode-outline" size={26} color={colors.background} />
         </TouchableOpacity>
       ) : null}
 

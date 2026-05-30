@@ -236,6 +236,7 @@ export default function ScanLabelScreen({ navigation, route }) {
               onPress={onCapture}
               disabled={busy}
             >
+              {/* eslint-disable-next-line no-restricted-syntax -- spinner sits on the white camera capture button */}
               {busy ? <ActivityIndicator color="#000" /> : <View style={styles.captureInner} />}
             </TouchableOpacity>
           ) : (
@@ -256,6 +257,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   headerTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold },
+  // eslint-disable-next-line no-restricted-syntax -- camera viewport is true black behind the live preview
   cameraWrap: { flex: 1, backgroundColor: '#000' },
   overlay: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   frame: {
@@ -264,12 +266,12 @@ const styles = StyleSheet.create({
   },
   hint: {
     marginTop: spacing.lg, color: colors.textPrimary, fontSize: fontSize.md,
-    backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: spacing.md,
+    backgroundColor: colors.scrim, paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm, borderRadius: radius.sm,
   },
   missBanner: {
     position: 'absolute', top: spacing.lg, left: spacing.lg, right: spacing.lg,
-    backgroundColor: 'rgba(0,0,0,0.78)', borderRadius: radius.md,
+    backgroundColor: colors.scrim, borderRadius: radius.md,
     paddingHorizontal: spacing.md, paddingVertical: spacing.md, gap: spacing.xs,
   },
   missTitle: {
@@ -286,9 +288,11 @@ const styles = StyleSheet.create({
     width: 72, height: 72, borderRadius: 36,
     backgroundColor: colors.primary,
     alignItems: 'center', justifyContent: 'center',
+    // eslint-disable-next-line no-restricted-syntax -- white capture-ring is camera-UI convention, sits over the live preview
     borderWidth: 4, borderColor: 'rgba(255,255,255,0.9)',
   },
   captureBtnDisabled: { opacity: 0.6 },
+  // eslint-disable-next-line no-restricted-syntax -- camera capture-button inner dot, black-on-white is the shutter convention
   captureInner: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#000' },
   fallbackWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl },
   fallbackTitle: {

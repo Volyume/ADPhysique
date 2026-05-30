@@ -27,7 +27,7 @@
 import React, { createContext, useContext, useRef, useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, shadow } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 
 const ToastContext = createContext({ show: () => {} });
@@ -217,11 +217,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     minWidth: 220,
     maxWidth: 480,
-    shadowColor: '#000',
-    shadowOpacity: 0.35,
-    shadowOffset: { width: 0, height: 6 },
-    shadowRadius: 14,
-    elevation: 10,
+    // Floating, above-everything surface: depth via the shared shadow token
+    // (the standard reserves shadows for floating temporary surfaces).
+    ...shadow.lg,
   },
   text: {
     flex: 1,

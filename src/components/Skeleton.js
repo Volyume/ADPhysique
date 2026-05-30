@@ -84,7 +84,7 @@ export function SkeletonRow({ style }) {
 }
 
 const styles = StyleSheet.create({
-  base: { backgroundColor: colors.surface3 ?? '#1F2024' },
+  base: { backgroundColor: colors.surface3 },
   cardWrap: {
     backgroundColor: colors.surface2,
     borderRadius: radius.md,

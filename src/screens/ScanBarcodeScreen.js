@@ -252,12 +252,12 @@ const styles = StyleSheet.create({
   },
   hint: {
     marginTop: spacing.lg, color: colors.textPrimary, fontSize: fontSize.md,
-    backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: spacing.md,
+    backgroundColor: colors.scrim, paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm, borderRadius: radius.sm,
   },
   resolvingBadge: {
     position: 'absolute', top: spacing.lg, right: spacing.lg,
-    backgroundColor: 'rgba(0,0,0,0.6)', padding: spacing.sm, borderRadius: radius.sm,
+    backgroundColor: colors.scrim, padding: spacing.sm, borderRadius: radius.sm,
   },
   permissionWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl },
   permissionTitle: {

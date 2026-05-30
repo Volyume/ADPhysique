@@ -274,7 +274,7 @@ export default function ProUpgradeScreen({ navigation }) {
                     accessibilityRole="button"
                     accessibilityLabel="Continue with Apple"
                   >
-                    <Ionicons name="logo-apple" size={18} color="#FFFFFF" />
+                    <Ionicons name="logo-apple" size={18} color={colors.appleBtnText} />
                     <Text style={styles.oauthBtnAppleText}>Continue with Apple</Text>
                   </TouchableOpacity>
                 )}

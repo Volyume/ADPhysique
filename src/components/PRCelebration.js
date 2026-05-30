@@ -22,9 +22,10 @@ function createParticle(index) {
     scale: new Animated.Value(0),
     angle: (index / NUM_PARTICLES) * Math.PI * 2,
     distance: 80 + Math.random() * 180,
-    color: [
-      colors.primary, colors.gold, colors.success, '#FF6B35', '#9C27B0',
-    ][index % 5],
+    // Decorative confetti palette: brand tokens plus two festive accents
+    // that intentionally sit outside the UI palette for a one-off burst.
+    /* eslint-disable-next-line no-restricted-syntax */
+    color: [colors.primary, colors.gold, colors.success, '#FF6B35', '#9C27B0'][index % 5],
     size: 6 + Math.random() * 8,
   };
 }
@@ -187,7 +188,8 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
 const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#000',
+    // Near-black base; the dimming comes from the animated opacity at render.
+    backgroundColor: colors.background,
   },
   particle: {
     position: 'absolute',

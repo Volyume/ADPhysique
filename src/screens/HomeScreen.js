@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns';
 
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha } from '../styles/theme';
 import { formatBodyWeightShort, stoneLbsToKg, parseBodyWeightToKg, kgToStoneLbsStrings, kgToLbs } from '../lib/units';
 import { VolyumeIcon } from '../components/BrandMark';
 import ScreenHeader from '../components/ScreenHeader';
@@ -1789,7 +1789,7 @@ const styles = StyleSheet.create({
   continueInner: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   continueIcon: {
     width: 40, height: 40, borderRadius: radius.xl,
-    backgroundColor: 'rgba(0,0,0,0.2)',
+    backgroundColor: withAlpha(colors.background, 0.2),
     alignItems: 'center', justifyContent: 'center',
   },
   continueTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.background },
@@ -2154,7 +2154,7 @@ const styles = StyleSheet.create({
 
   intentOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: colors.scrim,
     justifyContent: 'flex-end',
   },
   intentSheet: {
@@ -2254,8 +2254,8 @@ const styles = StyleSheet.create({
   coachBannerBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 17 },
   deloadBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: 'rgba(245,158,11,0.12)', borderRadius: radius.md, padding: 14,
-    borderWidth: 1, borderColor: 'rgba(245,158,11,0.35)', marginBottom: spacing.md,
+    backgroundColor: withAlpha(colors.primary, 0.12), borderRadius: radius.md, padding: spacing.lg,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.35), marginBottom: spacing.md,
   },
   deloadBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
   deloadBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.warning, marginBottom: spacing.xxs },
