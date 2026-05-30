@@ -21,6 +21,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { SkeletonRow } from '../components/Skeleton';
 import BackHeader from '../components/BackHeader';
 import { useToast } from '../components/Toast';
 import { listRecipes, deleteRecipe, applyRecipeToDiary } from '../lib/food/db';
@@ -147,7 +148,13 @@ export default function MyRecipesScreen({ navigation, route }) {
         )}
       />
 
-      {loading ? null : recipes.length === 0 ? (
+      {loading ? (
+        <View style={{ paddingHorizontal: spacing.lg }}>
+          <SkeletonRow />
+          <SkeletonRow />
+          <SkeletonRow />
+        </View>
+      ) : recipes.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyTitle}>No recipes yet.</Text>
           <Text style={styles.emptyBody}>
