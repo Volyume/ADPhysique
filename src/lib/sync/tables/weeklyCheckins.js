@@ -66,6 +66,7 @@ export async function pushWeeklyCheckins(sb, { userId, localUserId } = {}) {
       cals_adherence: c.calsAdherence ?? null,
       steps_adherence: c.stepsAdherence ?? null,
       cardio_adherence: c.cardioAdherence ?? null,
+      steps_avg: c.stepsAvg ?? null,
       training_performance: c.trainingPerformance ?? null,
       joint_pain: !!c.jointPain,
       sore_muscles: c.soreMuscles ?? null,

@@ -1134,6 +1134,15 @@ const SCHEMA_MIGRATIONS = [
     `ALTER TABLE exercises ADD COLUMN cue TEXT`,
     `ALTER TABLE exercises ADD COLUMN equipment_profiles TEXT`,
   ],
+  // Weekly steps average on the check-in. Mirrors cloud migration 058.
+  // The persistent home for the week's steps figure the coach reads as a
+  // secondary signal: when at least four days of daily_steps are registered
+  // the check-in saves the auto average here; otherwise the user types a
+  // single average on the check-in and that lands here. Additive + nullable,
+  // so the frozen closed-test build is unaffected.
+  [
+    'ALTER TABLE weekly_checkins ADD COLUMN steps_avg INTEGER',
+  ],
 ];
 
 // Errors that are safe to ignore when re-applying additive migrations on
@@ -3617,13 +3626,13 @@ export async function saveWeeklyCheckin(userId, data) {
     await d.runAsync(
       `UPDATE weekly_checkins SET
         energy_score = ?, soreness_score = ?, stress_score = ?, sleep_hours = ?,
-        cals_adherence = ?, steps_adherence = ?, cardio_adherence = ?, cycle_override = ?, notes = ?,
+        cals_adherence = ?, steps_adherence = ?, cardio_adherence = ?, steps_avg = ?, cycle_override = ?, notes = ?,
         training_performance = ?, joint_pain = ?, sore_muscles = ?, sleep_quality = ?, updated_at = ?
        WHERE id = ?`,
       [
         data.energyScore ?? null, data.sorenessScore ?? null, data.stressScore ?? null,
         data.sleepHours ?? null, data.calsAdherence ?? null, data.stepsAdherence ?? null,
-        data.cardioAdherence ?? null,
+        data.cardioAdherence ?? null, data.stepsAvg ?? null,
         data.cycleOverride ? 1 : 0, data.notes ?? null,
         data.trainingPerformance ?? null, data.jointPain ? 1 : 0,
         data.soreMuscles ?? null, data.sleepQuality ?? null, now, existing.id,
@@ -3635,14 +3644,14 @@ export async function saveWeeklyCheckin(userId, data) {
     await d.runAsync(
       `INSERT INTO weekly_checkins
         (id, user_id, week_start, energy_score, soreness_score, stress_score, sleep_hours,
-         cals_adherence, steps_adherence, cardio_adherence, cycle_override, notes,
+         cals_adherence, steps_adherence, cardio_adherence, steps_avg, cycle_override, notes,
          training_performance, joint_pain, sore_muscles, sleep_quality, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         savedId, userId, data.weekStart,
         data.energyScore ?? null, data.sorenessScore ?? null, data.stressScore ?? null,
         data.sleepHours ?? null, data.calsAdherence ?? null, data.stepsAdherence ?? null,
-        data.cardioAdherence ?? null,
+        data.cardioAdherence ?? null, data.stepsAvg ?? null,
         data.cycleOverride ? 1 : 0, data.notes ?? null,
         data.trainingPerformance ?? null, data.jointPain ? 1 : 0,
         data.soreMuscles ?? null, data.sleepQuality ?? null, now, now,
@@ -4340,14 +4349,14 @@ export async function insertWeeklyCheckinFromCloud(userId, c) {
   await d.runAsync(
     `INSERT OR REPLACE INTO weekly_checkins
       (id, user_id, week_start, energy_score, soreness_score, stress_score, sleep_hours,
-       cals_adherence, steps_adherence, cardio_adherence, cycle_override, notes,
+       cals_adherence, steps_adherence, cardio_adherence, steps_avg, cycle_override, notes,
        training_performance, joint_pain, sore_muscles, sleep_quality, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       c.id, userId, c.week_start,
       c.energy_score ?? null, c.soreness_score ?? null, c.stress_score ?? null,
       c.sleep_hours ?? null, c.cals_adherence ?? null, c.steps_adherence ?? null,
-      c.cardio_adherence ?? null,
+      c.cardio_adherence ?? null, c.steps_avg ?? null,
       c.cycle_override ? 1 : 0, c.notes ?? null,
       c.training_performance ?? null,
       c.joint_pain ? 1 : 0,

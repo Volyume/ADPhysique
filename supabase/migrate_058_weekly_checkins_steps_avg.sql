@@ -1,0 +1,42 @@
+-- Migration 058: weekly_checkins_v2.steps_avg
+--
+-- The persistent home for the week's steps figure the Precision Coach
+-- reads as a secondary signal (cardio/steps audit, founder decisions
+-- 2026-05-30).
+--
+-- When at least four of the last seven days have a daily_steps row, the
+-- weekly check-in computes the average of the logged days and saves it
+-- here (the registered, automatic path). When fewer than four days are
+-- registered, the check-in asks the user for a single average steps/day
+-- figure and saves that here instead (the manual fallback). Either way
+-- the coach reads one number, the week's average steps, and uses it as a
+-- secondary signal alongside the existing weight-trend levers.
+--
+-- The local SQLite weekly_checkins table gains steps_avg via the additive
+-- migration block in src/lib/database.js; the per-table push handler
+-- (src/lib/sync/tables/weeklyCheckins.js) ships it in the
+-- weekly_checkins_v2 upsert payload. Without this cloud column those
+-- pushes would be rejected ("column steps_avg does not exist") the same
+-- way the cardio_adherence gap would have before migration 050.
+--
+-- Schema (post-migration): adds one nullable integer column.
+--   steps_avg integer NULL   -- average steps/day for the week, or NULL
+--
+-- Old-client compatibility (release policy 2026-05-24): additive +
+-- nullable, no default needed. The frozen closed-test build (v1.1.0+4)
+-- never reads or writes the column; its check-in pushes omit it and the
+-- upsert leaves it NULL. No behaviour change for the old AAB. Safe to
+-- re-run (IF NOT EXISTS).
+--
+-- Re-runnable: yes. Rollback: DROP COLUMN steps_avg (no data loss risk
+-- beyond the saved averages themselves).
+--
+-- Apply via Supabase Dashboard -> SQL Editor -> Run.
+
+ALTER TABLE weekly_checkins_v2
+  ADD COLUMN IF NOT EXISTS steps_avg integer;
+
+-- Verification:
+--   SELECT column_name FROM information_schema.columns
+--   WHERE table_name = 'weekly_checkins_v2' AND column_name = 'steps_avg';
+-- Expect one row.

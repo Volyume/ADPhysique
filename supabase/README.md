@@ -18,8 +18,9 @@ unless the file header says otherwise.
 > § 3. This table is the apply-order and verification playbook for every
 > migration from 037 onward; a row appearing here does not by itself mean
 > the migration is still unapplied. Per CURRENT_STATUS § 3, migrations
-> 037-047 and 056-057 are applied; 048 and 050-055 are pending founder apply
-> (049 is held). Apply the pending ones in numeric order in the SQL Editor.
+> 037-047 and 056-057 are applied; 048, 050-055 and 058 are pending founder
+> apply (049 is held). Apply the pending ones in numeric order in the SQL
+> Editor.
 
 | # | File | What it adds | Verification query |
 |---|---|---|---|
@@ -43,6 +44,7 @@ unless the file header says otherwise.
 | 055 | `migrate_055_diet_preference.sql` | Adds `diet_preference text DEFAULT 'omnivore'` to `users_profile`. Backs the curated meal-suggestion feature: the user's diet layer (omnivore/vegetarian/vegan) filters the curated meal library in the Suggested food-search tab. Joins the migration-045 per-column merge set (no trigger change; the jsonb merge handles the new key). Additive + defaulted; the frozen AAB neither writes nor reads it. Apply before the next AAB ships. | See § Verify users_profile.diet_preference |
 | 056 | `migrate_056_daily_steps.sql` | Creates `daily_steps(user_id, entry_date, steps, source, updated_at)` with composite PK + RLS + a BEFORE UPDATE touch trigger (last-write-wins), same per-day shape as `daily_water`. The activity store for the cardio/steps audit: the manual step log writes here and the coach's step target checks against it. Bidirectional sync via the `daily_steps` registry entry + `src/lib/sync/tables/dailySteps.js`. `user_id` FK is ON DELETE CASCADE so account deletion clears it; `delete_user_data` is not rewritten here (fold a `daily_steps` DELETE in at its next revision). Fully additive: the frozen AAB has no writer. Safe to apply any time. | See § Verify daily_steps |
 | 057 | `migrate_057_meal_slots_periworkout.sql` | Relaxes the `food_entries.meal_slot` CHECK (set by migration 015) to also allow `'preworkout'` and `'postworkout'`, backing the new Pre-workout and Post-workout diary sections and the curated peri-workout meals. Purely additive: the four original slots still pass, so nothing stored changes and the frozen AAB (which only sends the original four) keeps syncing. Local SQLite `meal_slot` has no CHECK, so logging works before this is applied; only cloud sync of the new slots needs it. Apply before a build that writes the new slots reaches production sync. | See § Verify peri-workout meal slots |
+| 058 | `migrate_058_weekly_checkins_steps_avg.sql` | Adds nullable `steps_avg integer` to `weekly_checkins_v2`. The persistent home for the week's average steps the Precision Coach reads as a secondary signal: the check-in saves the auto average when 4+ days of `daily_steps` are registered, otherwise the user's typed average. Additive + nullable, mirrors migration 050; the frozen AAB omits it (left NULL). The per-table weekly-checkins push ships `steps_avg`, so without the column that push is rejected. | See § Verify weekly_checkins_v2.steps_avg |
 
 > Migration 049 (`migrate_049_drop_peak_week_plans.sql`) is **drafted but held** — do NOT apply until the next AAB ships, so the frozen closed-test build keeps working against the table. Apply 050 before 049 if 050 is ready first; they're independent.
 
@@ -549,6 +551,22 @@ If the constraint still lists only four values, re-run the migration
 (idempotent) and re-check. Additive: the four original slots stay
 valid, so the frozen AAB keeps syncing; only the two new values need
 this applied before they can reach the cloud.
+
+### Verify weekly_checkins_v2.steps_avg (migration 058)
+
+```sql
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name = 'weekly_checkins_v2'
+  AND column_name = 'steps_avg';
+-- Expected: steps_avg | integer | YES
+```
+
+If the column is absent, the per-table weekly-checkins push rejects any
+row carrying a steps average ("column steps_avg does not exist"). Re-run
+the migration (IF NOT EXISTS makes it safe) and re-check. Additive +
+nullable, so the frozen AAB is unaffected (its pushes omit the column).
 
 ## Cloud schema drift audit
 

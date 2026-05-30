@@ -640,6 +640,7 @@ Per `DATABASE_SCHEMA_LOCKED.md` + grep against `supabase/migrate_*.sql`.
 | 055 | users_profile.diet_preference text DEFAULT 'omnivore' (curated meal-suggestion diet filter) | **Pending founder apply.** Additive + defaulted; joins the migration-045 per-column merge set. Must precede the next AAB (the new profile pull selects the column). Verification in `supabase/README.md` § Verify users_profile.diet_preference. |
 | 056 | daily_steps table (composite PK + RLS + LWW touch trigger) for the cardio/steps activity store | **Applied 2026-05-30.** Fully additive. Bidirectional sync via `src/lib/sync/tables/dailySteps.js`. Verification in `supabase/README.md` § Verify daily_steps. |
 | 057 | food_entries.meal_slot CHECK relaxed to allow 'preworkout' + 'postworkout' (peri-workout diary sections) | **Applied 2026-05-30.** Purely additive; the four original slots still pass, so the frozen AAB keeps syncing. Verification in `supabase/README.md` § Verify peri-workout meal slots. |
+| 058 | weekly_checkins_v2.steps_avg (nullable integer): the week's average steps the coach reads as a secondary signal (auto when 4+ days registered, else the manual check-in figure) | **Pending founder apply.** Additive + nullable, frozen-AAB safe (mirrors 050). The per-table weekly-checkins push ships `steps_avg`; without the column the push is rejected. Verification in `supabase/README.md` § Verify weekly_checkins_v2.steps_avg. |
 
 ---
 
