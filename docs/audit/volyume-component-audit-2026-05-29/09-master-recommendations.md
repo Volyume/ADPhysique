@@ -78,16 +78,55 @@ DONE (shipped to main, tested):
 
 NOT STARTED (need runtime verification, deferred to a verifiable session):
 - C1 ActiveWorkout virtualise + decompose (core loop, highest risk).
-- S5 Field / SearchBar / Chip / Stepper.
-- S6 BottomSheet chrome extraction.
 - S7 chart-kit convergence (retire gifted-charts + victory-native).
-- S8 Toast-as-error sweep (broad; touches many write paths).
+- S8 Toast-as-error sweep (broad remainder; touches many write paths).
 - H1 header-system unification.
 - H8 CoachOutput decomposition.
-- Card primitive adoption across the 83 inline card blocks (the primitive
-  exists; migration is incremental and low-risk but high-volume).
-- Button rollout into the large stateful screens listed above (one or two
-  CTAs each, buried in dense logic; lower value-per-edit, do opportunistically).
+- MacroRings Skia fallback for no-Skia environments.
+
+LOW-RISK / OPPORTUNISTIC (primitive exists, migration is incremental):
+- Card primitive adoption across the remaining inline card blocks (most
+  remaining ones are deliberate variants; adopt only where a block matches
+  the base shell exactly).
+- Button rollout into the large stateful screens (Home 2331, ProOnboarding
+  1331, ManualBuilder 1269, etc.): one or two CTAs each, buried in dense
+  logic, lower value-per-edit.
+
+---
+
+## RESUME HERE (paused 2026-05-30)
+
+Work paused at founder request to hold before starting the structural items.
+Pick up from this exact point.
+
+State at pause:
+- Branch `main`, HEAD `e12d0f7`, in sync with `origin/main` (0 ahead / 0
+  behind), working tree clean. 45 commits this session, all pushed.
+- Full warm test suite green: 115 suites, ~2086 passed, 3 skipped. (The
+  cold-cache flake in `error-and-feedback-pipeline.test.js` is unrelated:
+  re-run warm to confirm.)
+
+What is finished: every *additive* audit item (S1 to S6, the chart/a11y
+work, the skeleton-loading surfaces, the partial Toast sweep, and the Card
+and Button adoptions that did not change a design). See the DONE list above.
+
+What is left, and why it was held: only the items that change runtime
+behaviour and so need the app actually run to verify, plus the high-volume
+opportunistic rollout. The five structural ones are C1 (ActiveWorkout
+virtualise + decompose, the core logging loop, highest risk), S7 (chart
+library convergence), H1 (header unification), H8 (CoachOutput
+decomposition), and the broad remainder of S8 (Alert to Toast across all
+write paths). None of these can be confirmed safe from tests alone.
+
+Recommended next step when resuming: run C1 through the `verify` skill (or a
+device session) so a logged set can be confirmed end-to-end, OR take it in
+small test-heavy steps with an on-device checklist per commit. Do NOT batch
+these. One change, verify, commit, push, with the em-dash and warm-suite
+checks each time.
+
+Guardrails still in force: `main` only, no `--no-verify`, no new
+closed-test release, no model identifier in any committed artifact, no em
+dashes in shipped copy/comments/commits.
 
 ---
 
