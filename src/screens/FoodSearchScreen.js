@@ -26,6 +26,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { SkeletonRow } from '../components/Skeleton';
 import {
   logFoodEntry, getRecentFoodEntries, getFavourites,
   getDislikes, cycleFoodPreference, getAllCustomFoods, getFoodFrequents,
@@ -468,9 +469,12 @@ export default function FoodSearchScreen({ navigation, route }) {
 
   function renderSuggested() {
     if (suggestLoading) {
+      // Content-shaped skeleton rather than a bare spinner (premium loading).
       return (
-        <View style={styles.emptyWrap}>
-          <ActivityIndicator color={colors.textMuted} />
+        <View>
+          <SkeletonRow />
+          <SkeletonRow />
+          <SkeletonRow />
         </View>
       );
     }
