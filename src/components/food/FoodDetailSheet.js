@@ -1,12 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, Modal, Pressable, TextInput,
-  Animated, Easing, Platform, KeyboardAvoidingView, Keyboard,
-  TouchableWithoutFeedback, Alert,
+  View, Text, StyleSheet, Pressable, TextInput, Keyboard, Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
-import useAppStore from '../../store/useAppStore';
+import BottomSheet from '../BottomSheet';
 
 const MEAL_SLOTS = [
   { key: 'breakfast', label: 'Breakfast' },
@@ -50,10 +48,6 @@ export default function FoodDetailSheet({
   initialQuantityG, initialMealSlot = 'snack', initialEntryDate,
   onSave, onDelete, onClose,
 }) {
-  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
-  const translateY = useRef(new Animated.Value(reduceMotion ? 0 : 600)).current;
-  const backdrop = useRef(new Animated.Value(0)).current;
-
   const defaultQty = useMemo(() => {
     if (initialQuantityG != null && initialQuantityG > 0) return String(Math.round(initialQuantityG));
     if (food?.serving_g) return String(Math.round(food.serving_g));
@@ -69,24 +63,10 @@ export default function FoodDetailSheet({
     setQuantityG(defaultQty);
     setMealSlot(initialMealSlot);
     setSubmitting(false);
-    translateY.setValue(reduceMotion ? 0 : 600);
-    backdrop.setValue(0);
-    Animated.parallel([
-      Animated.timing(backdrop,   { toValue: 1, duration: 200, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: 260, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-    ]).start();
   }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function animateOut(then) {
-    Keyboard.dismiss();
-    Animated.parallel([
-      Animated.timing(backdrop,   { toValue: 0, duration: 160, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 600, duration: 200, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
-    ]).start(() => { then?.(); });
-  }
-
   function handleClose() {
-    animateOut(() => { onClose?.(); });
+    onClose?.();
   }
 
   async function handleSave() {
@@ -98,7 +78,7 @@ export default function FoodDetailSheet({
     setSubmitting(true);
     try {
       await onSave({ quantityG: qty, mealSlot, entryDate: initialEntryDate });
-      animateOut(() => { onClose?.(); });
+      onClose?.();
     } catch (e) {
       setSubmitting(false);
       Alert.alert('Couldn\'t save', e?.message ?? 'Try again.');
@@ -116,7 +96,7 @@ export default function FoodDetailSheet({
           style: 'destructive',
           onPress: async () => {
             try { await onDelete?.(); } catch (_) {}
-            animateOut(() => { onClose?.(); });
+            onClose?.();
           },
         },
       ],
@@ -125,29 +105,10 @@ export default function FoodDetailSheet({
 
   const macros = macrosFor(food, Number(quantityG));
 
-  if (!visible || !food) return null;
+  if (!food) return null;
 
   return (
-    <Modal
-      transparent
-      visible
-      animationType="none"
-      onRequestClose={handleClose}
-      statusBarTranslucent={Platform.OS === 'android'}
-    >
-      <Animated.View style={[styles.backdrop, { opacity: backdrop }]}>
-        <Pressable style={StyleSheet.absoluteFillObject} onPress={handleClose} />
-      </Animated.View>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.kbWrap}
-        pointerEvents="box-none"
-      >
-        <Animated.View
-          style={[styles.sheet, { transform: [{ translateY }] }]}
-          accessibilityViewIsModal
-        >
-          <View style={styles.handle} />
+    <BottomSheet visible={visible} onClose={handleClose} keyboardAvoiding accessibilityLabel={food.name}>
           <Text style={styles.title} numberOfLines={2}>{food.name}</Text>
           {food.brand ? <Text style={styles.subtitle}>{food.brand}</Text> : null}
           {food.source ? (
@@ -220,9 +181,7 @@ export default function FoodDetailSheet({
               </Text>
             </Pressable>
           </View>
-        </Animated.View>
-      </KeyboardAvoidingView>
-    </Modal>
+    </BottomSheet>
   );
 }
 
@@ -236,25 +195,6 @@ function MacroPill({ label, value }) {
 }
 
 const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.scrim },
-  kbWrap: { ...StyleSheet.absoluteFillObject, justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xxl + spacing.md,
-    borderTopWidth: 1, borderColor: colors.border,
-    gap: spacing.md,
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 36, height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.border,
-    marginBottom: spacing.sm,
-  },
   title: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
   subtitle: { fontSize: fontSize.sm, color: colors.textMuted, marginTop: -spacing.xs },
   sourceChip: {
