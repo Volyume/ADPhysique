@@ -539,6 +539,7 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   prRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  // eslint-disable-next-line no-restricted-syntax -- PR medal emoji, intentional large size
   prIcon: { fontSize: 18 },
   prType: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary },
   // The PR value and date are data: tabular figures so the column of

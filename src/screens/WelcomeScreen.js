@@ -166,6 +166,7 @@ const styles = StyleSheet.create({
   // card below; 150 keeps the brand visible without dominating.
   logoImg: { width: 150, height: Math.round(150 / HERO_ASPECT) },
   wordmark: {
+    // eslint-disable-next-line no-restricted-syntax -- welcome hero title, intentional display size
     fontSize: 28, fontWeight: fontWeight.black, color: colors.textPrimary,
     letterSpacing: 5, marginTop: spacing.xs,
   },

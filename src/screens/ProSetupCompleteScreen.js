@@ -350,6 +350,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm,
     marginTop: spacing.md, marginBottom: spacing.md,
   },
+  // eslint-disable-next-line no-restricted-syntax -- setup-complete hero numeral
   calorieNum: { fontSize: 38, fontWeight: fontWeight.black, color: colors.textPrimary, lineHeight: 42 },
   calorieUnit: { fontSize: fontSize.sm, color: colors.textMuted },
   macroRow: {

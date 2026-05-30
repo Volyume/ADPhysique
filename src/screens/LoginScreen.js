@@ -445,6 +445,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   brandName: {
+    // eslint-disable-next-line no-restricted-syntax -- login hero title, intentional display size
     fontSize: 38,
     fontWeight: fontWeight.black,
     color: colors.textPrimary,

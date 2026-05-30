@@ -250,6 +250,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   timeText: {
+    // eslint-disable-next-line no-restricted-syntax -- rest-timer countdown is a hero numeral
     fontSize: 28,
     fontWeight: fontWeight.bold,
     color: colors.textPrimary,

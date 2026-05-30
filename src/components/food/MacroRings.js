@@ -187,6 +187,7 @@ const styles = StyleSheet.create({
   },
   kcalValue: {
     color: colors.textPrimary,
+    // eslint-disable-next-line no-restricted-syntax -- macro ring centre is a hero numeral
     fontSize: 34,
     fontWeight: fontWeight.bold,
     lineHeight: 36,

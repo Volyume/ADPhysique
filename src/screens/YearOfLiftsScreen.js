@@ -380,6 +380,7 @@ const styles = StyleSheet.create({
 
   // Stat layout
   statValue: {
+    // eslint-disable-next-line no-restricted-syntax -- Year-of-Lifts hero number, 96px by design
     fontSize: 96,
     lineHeight: 100,
     fontWeight: fontWeight.black,
@@ -400,6 +401,7 @@ const styles = StyleSheet.create({
 
   // Intro / outro hero
   heroHeadline: {
+    // eslint-disable-next-line no-restricted-syntax -- Year-of-Lifts secondary hero number
     fontSize: 44,
     lineHeight: 48,
     fontWeight: fontWeight.black,

@@ -756,6 +756,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  // eslint-disable-next-line no-restricted-syntax -- PR medal glyph, intentional large size
   prIcon: { fontSize: 22 },
   prInfo: { flex: 1 },
   prLabel: { fontSize: fontSize.sm, color: colors.textMuted },
