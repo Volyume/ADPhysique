@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import InfoTooltip from '../components/InfoTooltip';
 import BodyDiagramHeatmap from '../components/BodyDiagramHeatmap';
@@ -426,8 +426,8 @@ const trendStyles = StyleSheet.create({
     paddingVertical: spacing.xxs,
   },
   muscleName: {
+    ...type.caption,
     width: 80,
-    fontSize: fontSize.xs,
     color: colors.textMuted,
   },
   sparkContainer: {
@@ -462,8 +462,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   windowBtnText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    ...type.label,
   },
   windowNote: {
     flexDirection: 'row',
@@ -500,9 +499,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   muscleName: {
+    ...type.label,
     width: 90,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
     color: colors.textSecondary,
   },
   barTrack: {
@@ -533,7 +531,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   mrvLabel: {
-    fontSize: fontSize.xs,
+    ...type.num('caption'),
     color: colors.textMuted,
     width: 24,
   },
@@ -554,8 +552,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   sectionTitle: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    ...type.label,
     color: colors.textSecondary,
     marginBottom: spacing.xs,
   },
@@ -572,7 +569,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  editBtnText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  editBtnText: { ...type.label, color: colors.textSecondary },
   resetBtn: {
     flex: 1,
     backgroundColor: colors.surface,
@@ -582,7 +579,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.error,
   },
-  resetBtnText: { fontSize: fontSize.sm, color: colors.error, fontWeight: fontWeight.medium },
+  resetBtnText: { ...type.label, color: colors.error },
   editSection: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
@@ -591,7 +588,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  editTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  editTitle: { ...type.title, color: colors.textPrimary },
   editSubtitle: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: -spacing.sm },
   editRow: {
     gap: spacing.sm,
@@ -599,10 +596,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  editMuscleName: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary },
+  editMuscleName: { ...type.label, color: colors.textSecondary },
   editInputs: { flexDirection: 'row', gap: spacing.sm },
   editInputGroup: { flex: 1, gap: spacing.xs },
-  editInputLabel: { fontSize: fontSize.xs, color: colors.textMuted, textAlign: 'center' },
+  editInputLabel: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
   editInput: {
     backgroundColor: colors.surface2,
     borderRadius: radius.sm,
@@ -622,7 +619,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     alignItems: 'center',
   },
-  cancelBtnText: { fontSize: fontSize.md, color: colors.textSecondary },
+  cancelBtnText: { ...type.body, color: colors.textSecondary },
   saveBtn: {
     flex: 1,
     backgroundColor: colors.primary,

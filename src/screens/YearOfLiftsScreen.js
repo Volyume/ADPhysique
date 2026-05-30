@@ -22,7 +22,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import { getYearOfLiftsData } from '../lib/database';
 import GradientCard from '../components/GradientCard';
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl, gap: spacing.md,
   },
   loadingText: { fontSize: fontSize.sm, color: colors.textMuted },
-  emptyTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  emptyTitle: { ...type.bodyStrong, color: colors.textPrimary },
   emptyBody: { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', lineHeight: 20 },
 
   // Cards
@@ -429,14 +429,12 @@ const styles = StyleSheet.create({
     letterSpacing: -2,
   },
   statUnit: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.semibold,
+    ...type.h3,
     color: colors.textPrimary,
   },
   statCaption: {
-    fontSize: fontSize.md,
+    ...type.body,
     color: colors.textSecondary,
-    lineHeight: 24,
     marginTop: spacing.sm,
   },
 
@@ -450,9 +448,8 @@ const styles = StyleSheet.create({
     letterSpacing: -1,
   },
   heroSubline: {
-    fontSize: fontSize.md,
+    ...type.body,
     color: colors.textSecondary,
-    lineHeight: 24,
   },
 
   // List layout
@@ -481,9 +478,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   listPrimary: {
+    ...type.bodyStrong,
     flex: 1,
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
   },
   listSecondary: {
@@ -514,8 +510,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   doneBtnText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    ...type.bodyStrong,
     color: colors.textPrimary,
   },
 });

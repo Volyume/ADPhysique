@@ -9,7 +9,7 @@ import {
   startOfMonth, getDaysInMonth, getDay,
   addMonths, subMonths, isSameDay,
 } from 'date-fns';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import PressableCard from '../components/PressableCard';
 import Card from '../components/Card';
 import { EmptyWorkoutsIllustration } from '../components/Illustrations';
@@ -607,8 +607,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   topBarTitle: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    ...type.label,
     color: colors.textMuted,
   },
   toggleBtn: {
@@ -642,9 +641,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
   },
   chipText: {
-    fontSize: fontSize.sm,
+    ...type.label,
     color: colors.textSecondary,
-    fontWeight: fontWeight.medium,
   },
   chipTextActive: {
     color: colors.primary,
@@ -667,8 +665,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
   },
   calendarMonthTitle: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    ...type.bodyStrong,
     color: colors.textPrimary,
   },
   calendarRow: {
@@ -703,7 +700,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   dayNum: {
-    fontSize: fontSize.xs,
+    ...type.num('caption'),
     color: colors.textMuted,
   },
   dayNumTrained: {
@@ -750,7 +747,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   cardTime: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
     marginTop: spacing.xxs,
   },
@@ -760,7 +757,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   cardMetaText: {
-    fontSize: fontSize.xs,
+    ...type.num('caption'),
     color: colors.textMuted,
   },
   cardMetaDivider: {
@@ -804,19 +801,18 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   exerciseBreakdownName: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    ...type.label,
     color: colors.textPrimary,
     flex: 1,
   },
   exerciseBreakdownSummary: {
-    fontSize: fontSize.xs,
+    ...type.num('caption'),
     color: colors.textSecondary,
     flex: 2,
     textAlign: 'right',
   },
   loadingText: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
     fontStyle: 'italic',
   },
@@ -845,9 +841,8 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   fullSummaryBtnText: {
-    fontSize: fontSize.sm,
+    ...type.label,
     color: colors.primary,
-    fontWeight: fontWeight.semibold,
   },
 
   cardActions: {
@@ -865,9 +860,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   viewBtnText: {
-    fontSize: fontSize.sm,
+    ...type.label,
     color: colors.textSecondary,
-    fontWeight: fontWeight.medium,
   },
   repeatBtn: {
     flexDirection: 'row',
@@ -884,9 +878,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   repeatBtnText: {
-    fontSize: fontSize.sm,
+    ...type.label,
     color: colors.primary,
-    fontWeight: fontWeight.semibold,
   },
   empty: {
     alignItems: 'center',
@@ -895,8 +888,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   emptyTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    ...type.title,
     color: colors.textPrimary,
     textAlign: 'center',
   },

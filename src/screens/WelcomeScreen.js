@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 
 const HERO = require('../../assets/volyume-wordmark.png');
@@ -221,12 +221,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
   },
   betaBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.background, letterSpacing: 0.5 },
-  proSubtitle: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: spacing.xxs },
+  proSubtitle: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
 
   divider: { height: 1, backgroundColor: colors.border, marginHorizontal: spacing.lg },
 
   bullets: { padding: spacing.lg, gap: spacing.sm },
-  bulletHeader: { fontSize: fontSize.xs, color: colors.textMuted, marginBottom: spacing.xxs },
+  bulletHeader: { ...type.caption, color: colors.textMuted, marginBottom: spacing.xxs },
   bulletRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   bulletText: { fontSize: fontSize.sm, color: colors.textSecondary, flex: 1 },
 
@@ -252,9 +252,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
   },
   freeTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  freeSubtitle: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 1 },
+  freeSubtitle: { ...type.caption, color: colors.textMuted, marginTop: 1 },
   freeBullets: { gap: spacing.xs, paddingLeft: spacing.xs },
-  freeBulletText: { fontSize: fontSize.xs, color: colors.textMuted, flex: 1 },
+  freeBulletText: { ...type.caption, color: colors.textMuted, flex: 1 },
   freeBackupNote: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs,
     marginTop: spacing.xs, paddingTop: spacing.sm,
@@ -267,11 +267,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   signInText: { fontSize: fontSize.sm, color: colors.textMuted },
-  signInAction: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
+  signInAction: { ...type.label, color: colors.primary },
 
 
   founderNote: {
-    fontSize: fontSize.xs, color: colors.textMuted, textAlign: 'center',
+    ...type.caption, color: colors.textMuted, textAlign: 'center',
     paddingBottom: spacing.md, opacity: 0.6,
   },
 });

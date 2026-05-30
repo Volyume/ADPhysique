@@ -30,7 +30,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Camera, useCameraDevice } from 'react-native-vision-camera';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, spacing, radius, type } from '../styles/theme';
 import Button from '../components/Button';
 import { isOcrConfigured, recogniseText } from '../lib/food/ocr';
 import { parseNutritionLabel } from '../lib/food/ocrParser';
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  headerTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold },
+  headerTitle: { ...type.title, color: colors.textPrimary },
   // eslint-disable-next-line no-restricted-syntax -- camera viewport is true black behind the live preview
   cameraWrap: { flex: 1, backgroundColor: '#000' },
   overlay: { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -265,7 +265,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.md, backgroundColor: 'transparent',
   },
   hint: {
-    marginTop: spacing.lg, color: colors.textPrimary, fontSize: fontSize.md,
+    ...type.body,
+    marginTop: spacing.lg, color: colors.textPrimary,
     backgroundColor: colors.scrim, paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm, borderRadius: radius.sm,
   },
@@ -275,7 +276,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md, paddingVertical: spacing.md, gap: spacing.xs,
   },
   missTitle: {
-    color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold,
+    ...type.bodyStrong, color: colors.textPrimary,
   },
   missBody: {
     color: colors.textSecondary, fontSize: fontSize.sm, lineHeight: 20,
@@ -296,7 +297,7 @@ const styles = StyleSheet.create({
   captureInner: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#000' },
   fallbackWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl },
   fallbackTitle: {
-    color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold,
+    ...type.title, color: colors.textPrimary,
     marginTop: spacing.lg,
   },
   fallbackBody: {

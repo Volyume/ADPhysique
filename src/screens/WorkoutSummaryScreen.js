@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import InfoTooltip from '../components/InfoTooltip';
 import { useFeedback } from '../components/FeedbackSheet';
 import { shouldPrompt } from '../lib/feedback';
@@ -1033,18 +1033,18 @@ const styles = StyleSheet.create({
     padding: spacing.lg, alignItems: 'center', gap: spacing.xs, borderWidth: 1, borderColor: colors.border,
   },
   statValue: { fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.textPrimary },
-  statLabel: { fontSize: fontSize.xs, color: colors.textSecondary },
+  statLabel: { ...type.caption, color: colors.textSecondary },
   prRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     backgroundColor: colors.warningBg, borderRadius: radius.md, padding: spacing.md,
     borderWidth: 1, borderColor: colors.warning + '40',
   },
-  prRowText: { flex: 1, fontSize: fontSize.sm, color: colors.warning, fontWeight: fontWeight.semibold },
+  prRowText: { ...type.label, flex: 1, color: colors.warning },
   divider: { height: 1, backgroundColor: colors.border },
   section: { gap: spacing.md },
   sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  sectionTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary, letterSpacing: 0.2 },
-  optionalLabel: { fontSize: fontSize.xs, color: colors.textMuted },
+  sectionTitle: { ...type.label, color: colors.textSecondary },
+  optionalLabel: { ...type.caption, color: colors.textMuted },
   volumeRow: {
     flexDirection: 'column', gap: spacing.xs,
     backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md,
@@ -1106,7 +1106,7 @@ const styles = StyleSheet.create({
   feedbackCard: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.lg, borderWidth: 1, borderColor: colors.border },
   ratingRow: { gap: spacing.sm },
   ratingLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  ratingLabel: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textSecondary },
+  ratingLabel: { ...type.label, color: colors.textSecondary },
   ratingBtns: { flexDirection: 'row', gap: spacing.xs },
   ratingBtn: {
     width: 40, height: 40, borderRadius: radius.xl, backgroundColor: colors.surface2,
@@ -1117,8 +1117,9 @@ const styles = StyleSheet.create({
   ratingBtnTextActive: { color: colors.background },
   ratingValueLabel: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.medium },
   notesInput: {
+    ...type.body,
     backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.lg,
-    fontSize: fontSize.md, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, minHeight: 80,
+    color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, minHeight: 80,
   },
   nextTimeNoteInput: {
     backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.lg,
@@ -1131,7 +1132,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderRadius: radius.lg, paddingVertical: spacing.md,
     borderWidth: 1, borderColor: colors.border,
   },
-  templateBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textSecondary },
+  templateBtnText: { ...type.label, color: colors.textSecondary },
   stickyFooter: {
     borderTopWidth: 1,
     borderTopColor: colors.border,
@@ -1154,8 +1155,7 @@ const styles = StyleSheet.create({
   },
   btnDisabled: { opacity: 0.6 },
   doneBtnText: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    ...type.title,
     color: colors.background,
   },
   shareFooterBtn: {
@@ -1187,9 +1187,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   adaptiveMuscle: {
-    fontSize: fontSize.sm,
+    ...type.label,
     color: colors.textPrimary,
-    fontWeight: fontWeight.semibold,
   },
   adaptiveSetCount: {
     color: colors.primary,
@@ -1223,12 +1222,11 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   exerciseListName: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    ...type.label,
     color: colors.textPrimary,
   },
   exerciseListMeta: {
-    fontSize: fontSize.xs,
+    ...type.num('caption'),
     color: colors.textSecondary,
   },
   exerciseSetsList: {
@@ -1237,7 +1235,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   exerciseSetChip: {
-    fontSize: fontSize.xs,
+    ...type.num('caption'),
     color: colors.textSecondary,
     backgroundColor: colors.surface2 ?? colors.background,
     paddingHorizontal: spacing.sm,
@@ -1270,9 +1268,10 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary,
   },
   templateModalInput: {
+    ...type.body,
     backgroundColor: colors.surface2, borderRadius: radius.md,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm + 2,
-    fontSize: fontSize.md, color: colors.textPrimary,
+    color: colors.textPrimary,
     borderWidth: 1, borderColor: colors.border,
   },
   templateModalBtns: { flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end' },
@@ -1285,7 +1284,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
     borderRadius: radius.md, backgroundColor: colors.primary,
   },
-  templateModalSaveText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.background },
+  templateModalSaveText: { ...type.label, color: colors.background },
 
   // 4-week comparison card, same surface treatment as other summary
   // cards but borderColor is set inline per-verdict (gold for best, green

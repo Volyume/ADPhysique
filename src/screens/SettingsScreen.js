@@ -5,7 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import * as SecureStore from 'expo-secure-store';
 import { getSupabaseClient, signOut } from '../lib/supabase';
 import useAppStore from '../store/useAppStore';
@@ -1276,8 +1276,8 @@ const styles = StyleSheet.create({
   },
   nameIcon: { marginTop: 1 },
   nameInput: {
+    ...type.body,
     flex: 1,
-    fontSize: fontSize.md,
     color: colors.textPrimary,
     paddingVertical: spacing.sm,
   },
@@ -1298,7 +1298,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  stepTargetLabel: { fontSize: fontSize.md, color: colors.textSecondary },
+  stepTargetLabel: { ...type.body, color: colors.textSecondary },
   stepTargetInput: {
     minWidth: 88,
     backgroundColor: colors.surface2,
@@ -1308,7 +1308,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     color: colors.textPrimary,
-    fontSize: fontSize.md,
+    ...type.body,
     textAlign: 'center',
   },
   settingIcon: {
@@ -1320,7 +1320,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   settingIconDestructive: { backgroundColor: colors.errorBg },
-  settingLabel: { fontSize: fontSize.md, color: colors.textPrimary },
+  settingLabel: { ...type.body, color: colors.textPrimary },
   settingSub: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xxs, lineHeight: 16 },
   settingLabelDestructive: { color: colors.error },
   settingRight: {
@@ -1358,15 +1358,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
   },
   dietChipText: {
-    fontSize: fontSize.sm,
+    ...type.label,
     color: colors.textSecondary,
-    fontWeight: fontWeight.medium,
   },
   dietChipTextActive: {
     color: colors.primary,
     fontWeight: fontWeight.semibold,
   },
-  comingSoon: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
+  comingSoon: { ...type.caption, color: colors.textMuted, fontStyle: 'italic' },
   about: {
     alignItems: 'center',
     gap: spacing.xs,
@@ -1389,7 +1388,7 @@ const styles = StyleSheet.create({
   },
   appVersion: { fontSize: fontSize.sm, color: colors.textMuted },
   a11yNote: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic', paddingHorizontal: spacing.md, paddingTop: spacing.xs, lineHeight: 16 },
-  tagline: { fontSize: fontSize.xs, color: colors.textMuted },
+  tagline: { ...type.caption, color: colors.textMuted },
   dataPrivacyNote: {
     fontSize: fontSize.xs,
     color: colors.textMuted,

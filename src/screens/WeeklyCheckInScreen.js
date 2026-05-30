@@ -29,7 +29,7 @@ import {
 } from '../lib/database';
 import { getRollupsForRange } from '../lib/food/db';
 import { getCycleTracking, shouldShowCycleQuestion } from '../lib/cyclePrefs';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import { requestNotificationPermissions, getNotificationPermissionStatus, scheduleNextCheckinReminder, scheduleWeeklyCoachReady } from '../lib/notifications';
 import { logError } from '../lib/errorLog';
 import { audit } from '../lib/observability';
@@ -1010,7 +1010,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
   gateHeaderTitle: {
-    fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary,
+    ...type.title, color: colors.textPrimary,
   },
   // Centred wrapper kept for the other gate states (loading / etc.) that
   // still use it elsewhere on this screen.
@@ -1033,7 +1033,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border, alignItems: 'center', gap: spacing.md,
   },
   gateTitle: {
-    fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textSecondary,
+    ...type.title, color: colors.textSecondary,
     textAlign: 'center',
   },
   gateBody: {
@@ -1088,15 +1088,12 @@ const styles = StyleSheet.create({
   },
 
   weekLabel: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    ...type.label,
     color: colors.primary,
     marginBottom: spacing.lg,
-    letterSpacing: 0.2,
   },
   stepHeading: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
+    ...type.h3,
     color: colors.textPrimary,
     marginBottom: spacing.xs,
   },
@@ -1110,13 +1107,11 @@ const styles = StyleSheet.create({
   section: { marginBottom: spacing.xl },
   sectionLabelWrap: { marginBottom: spacing.sm, gap: spacing.xxs },
   sectionLabel: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    ...type.label,
     color: colors.textSecondary,
-    letterSpacing: 0.2,
   },
   sectionHint: {
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
   },
 
@@ -1143,7 +1138,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm, paddingHorizontal: spacing.xs,
   },
   optionBtnSelected: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
-  optionBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textSecondary, textAlign: 'center' },
+  optionBtnText: { ...type.label, color: colors.textSecondary, textAlign: 'center' },
   optionBtnTextSelected: { color: colors.primary, fontWeight: fontWeight.semibold },
 
   weightSummaryRow: {
@@ -1153,7 +1148,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   weightSummaryText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary },
-  weightSummaryMissed: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic' },
+  weightSummaryMissed: { ...type.caption, color: colors.textMuted, fontStyle: 'italic' },
 
   skipNote: {
     fontSize: fontSize.sm, color: colors.textMuted, fontStyle: 'italic',
@@ -1168,7 +1163,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.primary + '40',
   },
   autoDerivedNote: {
-    fontSize: fontSize.xs, color: colors.textSecondary,
+    ...type.caption, color: colors.textSecondary,
     paddingVertical: spacing.xs,
     marginBottom: spacing.xs,
     fontStyle: 'italic',
@@ -1189,7 +1184,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md, color: colors.textPrimary,
     minHeight: 88, lineHeight: 22,
   },
-  charCount: { fontSize: fontSize.xs, color: colors.textMuted, textAlign: 'right', marginTop: spacing.xs },
+  charCount: { ...type.num('caption'), color: colors.textMuted, textAlign: 'right', marginTop: spacing.xs },
 
   perfGrid: { gap: spacing.sm },
   perfCard: {
@@ -1199,7 +1194,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   perfCardSelected: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
-  perfCardText: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.textSecondary, flex: 1 },
+  perfCardText: { ...type.label, color: colors.textSecondary, flex: 1 },
   perfCardTextSelected: { color: colors.primary, fontWeight: fontWeight.semibold },
 
   ctaRow: { marginTop: spacing.lg },

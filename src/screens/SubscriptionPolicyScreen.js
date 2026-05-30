@@ -15,7 +15,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
 
 export default function SubscriptionPolicyScreen({ navigation }) {
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
   section: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md, borderWidth: 1, borderColor: colors.border },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   sectionIconWrap: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  sectionTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold, flex: 1 },
+  sectionTitle: { ...type.title, color: colors.textPrimary, flex: 1 },
   sectionBody: { gap: spacing.sm },
 
   body: { color: colors.textPrimary, fontSize: fontSize.sm, lineHeight: 21 },
