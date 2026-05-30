@@ -102,3 +102,26 @@ export async function readTodaySteps() {
     return null;
   }
 }
+
+/**
+ * Read today's steps and record them in daily_steps, but only when the read
+ * permission is already granted (which only happens after the user opts in).
+ * Silent and guarded: no prompt, no-op on any failure or a null figure. Called
+ * from the app-foreground handler so the step store and the weekly coach
+ * average stay current without a visible daily step card. Returns the written
+ * row, or null when nothing was written.
+ */
+export async function recordTodaySteps(userId) {
+  if (!userId) return null;
+  try {
+    const status = await getStepPermissionStatus();
+    if (status !== 'granted') return null;
+    const steps = await readTodaySteps();
+    if (steps == null) return null;
+    // eslint-disable-next-line global-require
+    const { setDailySteps } = require('./database');
+    return await setDailySteps(userId, { steps, source: 'auto' });
+  } catch (_) {
+    return null;
+  }
+}

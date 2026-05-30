@@ -169,6 +169,16 @@ export default function SettingsScreen({ navigation }) {
     if (user?.id) {
       await saveLocalProfile(user.id, { ...(userProfile || {}), stepsEnabled: value });
     }
+    // Turning steps on is the moment to ask for the health step permission, so
+    // the foreground auto-read can populate daily_steps. Silent if declined:
+    // the check-in then falls back to a manual average.
+    if (value) {
+      try {
+        // eslint-disable-next-line global-require
+        const { requestStepPermission } = require('../lib/activitySteps');
+        requestStepPermission().catch(() => {});
+      } catch (_) { /* activitySteps unavailable */ }
+    }
   }
 
   // Save the typed target on blur. Clamp to a sane band and never let an

@@ -20,8 +20,12 @@ const mockHealth = {
 };
 jest.mock('../health', () => mockHealth);
 
+const mockDb = { setDailySteps: jest.fn() };
+jest.mock('../database', () => mockDb);
+
 const {
   isStepSourceAvailable, getStepPermissionStatus, requestStepPermission, readTodaySteps,
+  recordTodaySteps,
 } = require('../activitySteps');
 
 beforeEach(() => {
@@ -98,6 +102,33 @@ describe('Android (Health Connect via health.js)', () => {
   test('isStepSourceAvailable reflects Health Connect availability', async () => {
     mockHealth.isHealthAvailable.mockReturnValue(true);
     expect(await isStepSourceAvailable()).toBe(true);
+  });
+});
+
+describe('recordTodaySteps', () => {
+  test('writes daily_steps with source auto when granted and a figure exists', async () => {
+    mockHealth.getHealthPermissionStatus.mockResolvedValue('granted');
+    mockHealth.readStepsToday.mockResolvedValue(9100);
+    await recordTodaySteps('user-1');
+    expect(mockDb.setDailySteps).toHaveBeenCalledWith('user-1', { steps: 9100, source: 'auto' });
+  });
+
+  test('does nothing when the permission is not granted', async () => {
+    mockHealth.getHealthPermissionStatus.mockResolvedValue('denied'); // iOS maps to undetermined
+    await recordTodaySteps('user-1');
+    expect(mockDb.setDailySteps).not.toHaveBeenCalled();
+  });
+
+  test('does nothing when there is no figure', async () => {
+    mockHealth.getHealthPermissionStatus.mockResolvedValue('granted');
+    mockHealth.readStepsToday.mockResolvedValue(0);
+    await recordTodaySteps('user-1');
+    expect(mockDb.setDailySteps).not.toHaveBeenCalled();
+  });
+
+  test('does nothing without a user id', async () => {
+    await recordTodaySteps(null);
+    expect(mockDb.setDailySteps).not.toHaveBeenCalled();
   });
 });
 

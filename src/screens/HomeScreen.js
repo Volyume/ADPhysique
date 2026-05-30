@@ -18,7 +18,6 @@ import PressableCard from '../components/PressableCard';
 import { buildDailyNarrative } from '../lib/dailyNarrative';
 import { SkeletonCard } from '../components/Skeleton';
 import Sparkline from '../components/Sparkline';
-import DailyStepsCard from '../components/DailyStepsCard';
 import {
   getAllWorkouts, getCompletedWorkoutSets, getActivePlan, getRoutinesForPlan,
   getAllRoutineExerciseCounts, createWorkout, getRoutineExercisesWithDetails,
@@ -838,12 +837,9 @@ export default function HomeScreen({ navigation }) {
           </View>
         )}
 
-        {/* ── Daily steps card (PRO; steps feed the coach's calculations). ──
-            Hidden when the user opted out of step targets. Undefined means
-            never opted out, so it shows by default. ── */}
-        {tier === 'pro' && user?.id && userProfile?.stepsEnabled !== false
-          ? <DailyStepsCard userId={user.id} />
-          : null}
+        {/* Steps no longer have a daily card here. They are read silently from
+            the platform health aggregator on app foreground (see App.js) and
+            shown on the Progress tab; the weekly average feeds the coach. */}
 
         {/* ── Morning weight card ── */}
         {tier === 'pro' && (todayWeight != null ? (

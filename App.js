@@ -469,6 +469,14 @@ export default function App() {
           // eslint-disable-next-line global-require
           const { importNewWeights } = require('./src/lib/health');
           importNewWeights(localUserId).catch(() => {});
+
+          // Steps: record today's total from the platform health aggregator
+          // (Apple Health / Health Connect) so the daily_steps store and the
+          // weekly coach average stay current with no visible step card.
+          // Silent: no-op if the user has not granted the steps permission.
+          // eslint-disable-next-line global-require
+          const { recordTodaySteps } = require('./src/lib/activitySteps');
+          recordTodaySteps(localUserId).catch(() => {});
         }
 
         // Flush any feedback rows that were captured offline (the user
