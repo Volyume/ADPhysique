@@ -77,16 +77,35 @@ test('auto-reads and persists the phone count when permission is already granted
   expect(text).toContain('from your phone');
 });
 
-test('offers to use the phone count when a source exists but permission is undetermined', async () => {
+test('automatic is the standard: requests permission and reads when undetermined', async () => {
+  // Automatic recording is the default, so an undetermined permission is
+  // requested on mount (not offered as an opt-in), then the device count is
+  // read and persisted.
   dbModule.getDailyStepsToday.mockResolvedValue(null);
+  dbModule.setDailySteps.mockResolvedValue({});
   stepsSrc.getStepPermissionStatus.mockResolvedValue('undetermined');
   stepsSrc.isStepSourceAvailable.mockResolvedValue(true);
+  stepsSrc.requestStepPermission.mockResolvedValue(true);
+  stepsSrc.readTodaySteps.mockResolvedValue(5120);
 
   const renderer = await render(<DailyStepsCard userId="u1" />);
 
-  // No prompt fired on mount; only the offer is shown.
-  expect(stepsSrc.requestStepPermission).not.toHaveBeenCalled();
-  expect(allText(renderer.toJSON())).toContain("Use my phone's step count");
+  expect(stepsSrc.requestStepPermission).toHaveBeenCalled();
+  expect(stepsSrc.readTodaySteps).toHaveBeenCalled();
+  expect(dbModule.setDailySteps).toHaveBeenCalledWith('u1', { steps: 5120, source: 'auto' });
+  const text = allText(renderer.toJSON());
+  expect(text).toContain('5,120');
+  expect(text).toContain('from your phone');
+});
+
+test('falls back to a manual check-in when the device source is unavailable', async () => {
+  dbModule.getDailyStepsToday.mockResolvedValue(null);
+  // default mocks: no source, status unavailable
+  const renderer = await render(<DailyStepsCard userId="u1" />);
+  const text = allText(renderer.toJSON());
+  expect(stepsSrc.readTodaySteps).not.toHaveBeenCalled();
+  expect(text).toContain('Log a check-in');
+  expect(text).toContain('Turn on automatic steps');
 });
 
 test('does not auto-read or offer when no source is available', async () => {

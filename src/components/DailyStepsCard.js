@@ -1,16 +1,18 @@
 /**
  * DailyStepsCard
  *
- * One number a day, the same shape as the morning-weight prompt it sits
- * beside on Home. Steps are the primary non-lifting activity lever the coach
- * uses for its calculations and adjustments (cardio/steps audit), so this is
- * a PRO surface, mounted only when the coach is in play.
+ * Steps are the primary non-lifting activity lever the coach uses for its
+ * calculations (cardio/steps audit), so this is a PRO surface, mounted only
+ * when the coach is in play.
  *
- * Almost everyone who tracks steps already has the figure on their phone or
- * watch. The point here is to let them type that number in without being made
- * to connect Apple Health, Google Fit, or any device. Manual entry is the
- * path; a later health auto-fill is an optional convenience on top, which is
- * why the stored row carries a source ('manual' now, 'health' later).
+ * Automatic is the standard. The card reads the day's step count from the
+ * device (iOS Core Motion pedometer / Android Health Connect via
+ * activitySteps) and records it live, asking for the motion/steps permission
+ * the first time because automatic recording is the point. The stored row
+ * carries source 'auto'.
+ *
+ * Manual entry is a fallback only: a check-in for when the device source is
+ * unavailable or the user declined the permission. It is not the daily path.
  *
  * The figure is a compliance and coaching signal. It does not change the
  * calorie target (the target already accounts for activity).
@@ -36,10 +38,12 @@ export default function DailyStepsCard({ userId }) {
   const [loaded, setLoaded] = useState(false);
   const [stepInput, setStepInput] = useState('');
   const [saving, setSaving] = useState(false);
-  // Whether to offer "use my phone's step count": a source exists but the
-  // user hasn't granted the motion/steps permission yet. We never prompt on
-  // mount, only when they tap the offer.
-  const [canConnect, setCanConnect] = useState(false);
+  // Automatic-source state, drives the framing:
+  //   'reading'      — asking permission / reading the device count
+  //   'on'           — device source is granted and live
+  //   'off'          — no usable source (unavailable or permission declined);
+  //                    manual check-in is the fallback
+  const [autoState, setAutoState] = useState('reading');
   const [connecting, setConnecting] = useState(false);
 
   // Persist an automatically read figure so the coach and the trend see it
@@ -61,28 +65,44 @@ export default function DailyStepsCard({ userId }) {
         if (row?.steps != null) {
           setTodaySteps(row.steps);
           setTodaySource(row.source ?? null);
+          setAutoState(row.source === 'auto' ? 'on' : 'off');
           return;
         }
-        // No stored figure yet. If the phone source is already permitted,
-        // read it silently and pre-fill. If a source exists but isn't
-        // permitted, offer the one-tap connect rather than prompting now.
-        const status = await getStepPermissionStatus();
+        // Automatic is the standard path: read the device's count, asking for
+        // the permission the first time because that is the point of the
+        // feature. Manual entry is only the fallback below.
+        let status = await getStepPermissionStatus();
         if (cancelled) return;
+        if (status === 'undetermined') {
+          // A source exists but we haven't asked yet: request now, because
+          // automatic recording is the default behaviour, not an opt-in extra.
+          const available = await isStepSourceAvailable();
+          if (cancelled) return;
+          if (available) {
+            const granted = await requestStepPermission();
+            if (cancelled) return;
+            status = granted ? 'granted' : 'denied';
+          } else {
+            status = 'unavailable';
+          }
+        }
         if (status === 'granted') {
+          setAutoState('on');
           const steps = await readTodaySteps();
           if (cancelled) return;
           if (steps != null && steps > 0) {
             setTodaySteps(steps);
             setTodaySource('auto');
             persistAuto(steps);
-            return;
           }
-        } else if (status === 'undetermined') {
-          const available = await isStepSourceAvailable();
-          if (!cancelled && available) setCanConnect(true);
+          // Granted but no steps yet today: stay 'on', the live figure fills
+          // in on the next read. Manual remains available as a check-in.
+        } else {
+          setAutoState('off'); // declined or unavailable, manual fallback
         }
       } catch (e) {
         logError('DailyStepsCard.load', e, { userId });
+        setAutoState('off');
       } finally {
         if (!cancelled) setLoaded(true);
       }
@@ -90,15 +110,15 @@ export default function DailyStepsCard({ userId }) {
     return () => { cancelled = true; };
   }, [userId]);
 
-  async function handleConnect() {
+  // Retry turning automatic on (after a decline, or if it wasn't available
+  // at first). Re-requests the permission and reads once.
+  async function handleEnableAuto() {
     if (connecting) return;
     setConnecting(true);
     try {
       const granted = await requestStepPermission();
-      if (!granted) {
-        setCanConnect(false); // they declined; fall back to manual quietly
-        return;
-      }
+      if (!granted) return; // still declined, stay on manual fallback
+      setAutoState('on');
       const steps = await readTodaySteps();
       if (steps != null && steps > 0) {
         setTodaySteps(steps);
@@ -106,9 +126,8 @@ export default function DailyStepsCard({ userId }) {
         await persistAuto(steps);
         toast.show(`${steps.toLocaleString('en-GB')} steps from your phone`, { variant: 'success' });
       }
-      setCanConnect(false);
     } catch (e) {
-      logError('DailyStepsCard.connect', e, { userId });
+      logError('DailyStepsCard.enableAuto', e, { userId });
     } finally {
       setConnecting(false);
     }
@@ -143,8 +162,17 @@ export default function DailyStepsCard({ userId }) {
   }
 
   // Render nothing until the first read resolves so the card doesn't flash
-  // the prompt over an already-logged day.
-  if (!loaded) return null;
+  // over an already-recorded day. While the device read is in flight, show a
+  // reading state rather than the manual fallback.
+  if (!loaded || (todaySteps == null && autoState === 'reading')) {
+    if (!loaded) return null;
+    return (
+      <View style={styles.card}>
+        <Ionicons name="footsteps-outline" size={16} color={colors.primary} />
+        <Text style={styles.loggedText}>Reading your steps…</Text>
+      </View>
+    );
+  }
 
   if (todaySteps != null) {
     return (
@@ -166,11 +194,28 @@ export default function DailyStepsCard({ userId }) {
     );
   }
 
+  // No figure yet. Automatic is the standard; manual is the fallback.
+  const autoOn = autoState === 'on';
   return (
     <View style={[styles.card, styles.cardEmpty]}>
       <View style={styles.promptRow}>
-        <Ionicons name="footsteps-outline" size={16} color={colors.primary} />
-        <Text style={styles.prompt}>Steps today</Text>
+        <Ionicons
+          name={autoOn ? 'footsteps' : 'footsteps-outline'}
+          size={16}
+          color={colors.primary}
+        />
+        <Text style={styles.prompt}>
+          {autoOn ? 'Steps recording automatically' : 'Steps today'}
+        </Text>
+      </View>
+
+      <Text style={styles.subtle}>
+        {autoOn
+          ? 'No steps from your phone yet today. This updates on its own; add a check-in only if it stays empty.'
+          : "Automatic steps aren't available here. Log a check-in:"}
+      </Text>
+
+      <View style={styles.promptRow}>
         <TextInput
           style={styles.input}
           value={stepInput}
@@ -190,20 +235,20 @@ export default function DailyStepsCard({ userId }) {
           accessibilityRole="button"
           accessibilityLabel="Log steps"
         >
-          <Text style={styles.logBtnText}>Log</Text>
+          <Text style={styles.logBtnText}>Log a check-in</Text>
         </TouchableOpacity>
       </View>
 
-      {canConnect ? (
+      {!autoOn ? (
         <TouchableOpacity
-          onPress={handleConnect}
+          onPress={handleEnableAuto}
           disabled={connecting}
           hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
           accessibilityRole="button"
-          accessibilityLabel="Use my phone's step count"
+          accessibilityLabel="Turn on automatic steps"
         >
           <Text style={styles.connectLink}>
-            {connecting ? 'Checking your phone...' : "Use my phone's step count"}
+            {connecting ? 'Checking your phone…' : 'Turn on automatic steps'}
           </Text>
         </TouchableOpacity>
       ) : null}
@@ -238,6 +283,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   loggedText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary },
+  subtle: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 16 },
   edit: { fontSize: fontSize.xs, color: colors.primary },
   connectLink: { fontSize: fontSize.xs, color: colors.primary, paddingLeft: spacing.xl },
   input: {
