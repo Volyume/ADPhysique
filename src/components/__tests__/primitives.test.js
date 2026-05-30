@@ -7,6 +7,7 @@ import { create, act } from 'react-test-renderer';
 
 import Button from '../Button';
 import Card from '../Card';
+import { colors, withAlpha } from '../../styles/theme';
 
 describe('Button', () => {
   test('renders its title', () => {
@@ -72,6 +73,10 @@ describe('Card', () => {
 
   test('tone applies an accent border via withAlpha (rgba, not hex concat)', () => {
     const tree = create(<Card tone="primary"><Text>x</Text></Card>).toJSON();
-    expect(JSON.stringify(tree)).toContain('rgba(245, 158, 11, 0.33)');
+    // Derive the expected border from the token so this survives accent
+    // tweaks; the point of the test is "rgba via withAlpha, not hex concat".
+    const expected = withAlpha(colors.primary, 0.33);
+    expect(expected.startsWith('rgba(')).toBe(true);
+    expect(JSON.stringify(tree)).toContain(expected);
   });
 });

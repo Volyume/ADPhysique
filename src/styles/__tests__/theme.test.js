@@ -7,10 +7,15 @@
 import {
   colors,
   fontSize,
+  spacing,
+  radius,
+  circle,
+  motion,
   withAlpha,
   lineHeight,
   letterSpacing,
   type,
+  num,
   applyAccessibility,
 } from '../theme';
 
@@ -54,9 +59,9 @@ describe('scrim token', () => {
 describe('type roles', () => {
   test('body bundles size + weight + lineHeight + letterSpacing', () => {
     expect(type.body).toEqual({
-      fontSize: 15,
+      fontSize: 16,
       fontWeight: '400',
-      lineHeight: Math.round(15 * lineHeight.normal),
+      lineHeight: Math.round(16 * lineHeight.normal),
       letterSpacing: letterSpacing.body,
     });
   });
@@ -74,6 +79,74 @@ describe('type roles', () => {
     expect(type.body.lineHeight).toBe(Math.round(fontSize.md * lineHeight.normal));
     applyAccessibility({}); // reset
     expect(type.body.fontSize).toBe(baseBody);
+  });
+});
+
+describe('num() tabular-numeral helper', () => {
+  test('wraps a type role with tabular-nums', () => {
+    expect(num('title')).toEqual({ ...type.title, fontVariant: ['tabular-nums'] });
+  });
+  test('defaults to body and is reachable as type.num', () => {
+    expect(num().fontVariant).toEqual(['tabular-nums']);
+    expect(type.num('display').fontVariant).toEqual(['tabular-nums']);
+  });
+  test('unknown role falls back to body, never throws', () => {
+    expect(num('nope').fontSize).toBe(type.body.fontSize);
+  });
+});
+
+describe('surface elevation ladder', () => {
+  test('steps get lighter from background up', () => {
+    // compare the red channel as a luminance proxy
+    const red = h => parseInt(h.slice(1, 3), 16);
+    expect(red(colors.background)).toBeLessThan(red(colors.surface));
+    expect(red(colors.surface)).toBeLessThan(red(colors.surfaceElevated));
+    expect(red(colors.surfaceElevated)).toBeLessThan(red(colors.surface2));
+    expect(red(colors.surface2)).toBeLessThan(red(colors.surface3));
+  });
+  test('new depth tokens exist', () => {
+    expect(colors.surfaceElevated).toBeDefined();
+    expect(colors.borderSubtle).toBeDefined();
+  });
+  test('accent has a deepened large-fill variant', () => {
+    expect(colors.primary).toBe('#F5A623');
+    expect(colors.primaryFill).toBe('#E08C0B');
+  });
+});
+
+describe('spacing / radius additions', () => {
+  test('spacing gained hair and xs2 steps, still ordered', () => {
+    expect(spacing.hair).toBe(1);
+    expect(spacing.xs2).toBe(6);
+    expect(spacing.hair).toBeLessThan(spacing.xxs);
+    expect(spacing.xs).toBeLessThan(spacing.xs2);
+    expect(spacing.xs2).toBeLessThan(spacing.sm);
+  });
+  test('radius gained an xs step', () => {
+    expect(radius.xs).toBe(4);
+    expect(radius.xs).toBeLessThan(radius.sm);
+  });
+  test('circle() halves and rounds a size', () => {
+    expect(circle(36)).toBe(18);
+    expect(circle(56)).toBe(28);
+    expect(circle(25)).toBe(13);
+  });
+});
+
+describe('motion tokens', () => {
+  test('durations are ordered micro < state < enter < hero', () => {
+    expect(motion.micro).toBeLessThan(motion.state);
+    expect(motion.state).toBeLessThan(motion.enter);
+    expect(motion.enter).toBeLessThan(motion.hero);
+  });
+  test('easing curves are 4-point cubic-bezier arrays', () => {
+    for (const c of [motion.easeStandard, motion.easeDecelerate, motion.easeAccelerate]) {
+      expect(Array.isArray(c)).toBe(true);
+      expect(c).toHaveLength(4);
+    }
+  });
+  test('spring config has stiffness/damping/mass', () => {
+    expect(motion.spring).toEqual({ stiffness: 150, damping: 18, mass: 1 });
   });
 });
 

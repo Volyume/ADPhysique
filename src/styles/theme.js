@@ -9,17 +9,29 @@ const baseColors = {
   // Core backgrounds, dark charcoal, not pure black.
   // Pure black (#000000) causes halation (blurring) for users with astigmatism.
   // #0D0D0D passes WCAG AAA against textPrimary/textSecondary while reducing eye strain.
+  //
+  // Elevation ladder (design premium audit 2026-05-30): the steps are
+  // widened and given a barely-perceptible warm pull (blue channel a few
+  // points below red/green) so layered surfaces read as distinct depths and
+  // tie subtly to the amber brand, the way premium dark UIs separate
+  // elevation by lightening each layer rather than relying on shadows.
   background: '#0D0D0D',
-  surface: '#1A1A1A',
-  surface2: '#242424',
-  surface3: '#2E2E2E',
+  surface: '#191917',          // 1st elevation: cards, sheets
+  surfaceElevated: '#222220',  // nested cards / raised tier (new)
+  surface2: '#2A2A27',         // inputs, chips, secondary cards
+  surface3: '#343431',         // skeletons, fills, highest
   border: '#6E6E6E',       // 3.81:1 on background, meets WCAG 1.4.11 (3:1 for UI separators)
   borderLight: '#7A7A7A',  // 4.53:1 on background
+  borderSubtle: '#2E2E2C', // hairline dividers INSIDE a card (low-contrast, not a card edge)
 
-  // Primary accent, amber gold
-  primary: '#F59E0B',
+  // Primary accent, amber gold. `primary` is the bright amber for small
+  // marks, icons, text and key data values; `primaryFill` is a slightly
+  // deepened amber for large filled buttons, where the bright tone
+  // optically vibrates on a dark background.
+  primary: '#F5A623',
+  primaryFill: '#E08C0B',
   primaryDim: '#B45309',
-  primaryBg: 'rgba(245, 158, 11, 0.10)',
+  primaryBg: 'rgba(245, 166, 35, 0.12)',
 
   // Semantic status
   success: '#4CAF50',
@@ -93,8 +105,10 @@ export function withAlpha(color, alpha) {
 }
 
 export const spacing = {
+  hair: 1,   // optical baseline nudge (replaces the hand-rolled marginTop:1)
   xxs: 2,
   xs: 4,
+  xs2: 6,    // dense data-row gaps (replaces the hand-rolled gap:3/5/6)
   sm: 8,
   md: 12,
   lg: 16,
@@ -104,6 +118,7 @@ export const spacing = {
 };
 
 export const radius = {
+  xs: 4,     // chart dots, tiny chips, micro-UI (replaces hand-rolled 2-4px)
   sm: 6,
   md: 10,
   lg: 14,
@@ -111,10 +126,16 @@ export const radius = {
   full: 999,
 };
 
+// Helper for perfect circles (avatars, FABs, round icon buttons) so call
+// sites stop hand-computing `borderRadius: width / 2`.
+export function circle(size) {
+  return Math.round(size / 2);
+}
+
 const baseFontSize = {
   xs: 11,
   sm: 13,
-  md: 15,
+  md: 16,   // body (design premium audit 2026-05-30: 16 is the premium body size; was 15)
   lg: 17,
   xl: 20,
   xxl: 24,
@@ -255,6 +276,17 @@ export const type = {
   },
 };
 
+// Numerals are the hero. Any text node rendering a number the user reads as
+// data (weight, reps, sets, %, kcal, timer, table date) should use tabular
+// figures so columns align and a changing value doesn't jitter as digit
+// widths change. `roleName` is any key of `type`; defaults to body.
+// Usage: style={{ ...type.num('display'), color }}.
+export function num(roleName = 'body') {
+  const role = type[roleName] || type.body;
+  return { ...role, fontVariant: ['tabular-nums'] };
+}
+type.num = num;
+
 export const hitSlop = { top: 12, bottom: 12, left: 12, right: 12 };
 
 export const shadow = {
@@ -299,12 +331,33 @@ export const iconSize = {
   xl: 32,
 };
 
-// Motion timing tokens (single source of truth for animation durations).
-// Respect Reduce Motion at call sites by collapsing to 0 when enabled.
+// Motion timing tokens (single source of truth for animation durations and
+// easing). Durations in ms; easing as cubic-bezier control points usable by
+// Reanimated's Easing.bezier(...) and RN Animated's Easing.bezier(...).
+// Respect Reduce Motion at call sites by collapsing duration to 0.
+//
+// Curves follow Material 3's motion system (design premium audit 2026-05-30):
+// standard for on-screen changes, emphasized-decelerate for entrances,
+// emphasized-accelerate for exits. The spring (≈ iOS 0.8 damping) is the
+// premium physical-feel default for press and drag-release.
 export const motion = {
-  card: 220,        // card enter/exit (ms)
-  state: 160,       // state changes (ms)
-  micro: 90,        // micro-interactions / taps (ms)
+  // durations (ms)
+  micro: 120,   // taps, toggles, opacity dips
+  state: 200,   // state changes, colour / size shifts
+  enter: 320,   // sheets, cards, screen content entering
+  exit: 220,    // leaving
+  hero: 440,    // the one "important moment" per screen
+
+  // easing control points [x1, y1, x2, y2]
+  easeStandard: [0.2, 0, 0, 1],
+  easeDecelerate: [0.05, 0.7, 0.1, 1],
+  easeAccelerate: [0.3, 0, 0.8, 0.15],
+
+  // spring (Reanimated withSpring config)
+  spring: { stiffness: 150, damping: 18, mass: 1 },
+
+  // Legacy aliases (kept so any older call site keeps working).
+  card: 320,
   easeOut: 'ease-out',
   easeInOut: 'ease-in-out',
 };
