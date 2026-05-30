@@ -206,14 +206,18 @@ export default function BuildWorkoutScreen({ navigation }) {
                     style={styles.stepBtn}
                     onPress={() => adjustSets(item.key, -1)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Decrease sets"
                   >
                     <Ionicons name="remove" size={16} color={colors.primary} />
                   </TouchableOpacity>
-                  <Text style={styles.stepValue}>{item.sets}</Text>
+                  <Text style={styles.stepValue} accessibilityLabel={`${item.sets} sets`}>{item.sets}</Text>
                   <TouchableOpacity
                     style={styles.stepBtn}
                     onPress={() => adjustSets(item.key, 1)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Increase sets"
                   >
                     <Ionicons name="add" size={16} color={colors.primary} />
                   </TouchableOpacity>
@@ -250,14 +254,18 @@ export default function BuildWorkoutScreen({ navigation }) {
                     style={styles.stepBtn}
                     onPress={() => adjustRest(item.key, -15)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Decrease rest"
                   >
                     <Ionicons name="remove" size={16} color={colors.primary} />
                   </TouchableOpacity>
-                  <Text style={styles.stepValue}>{formatRest(item.restSeconds)}</Text>
+                  <Text style={styles.stepValue} accessibilityLabel={`Rest ${formatRest(item.restSeconds)}`}>{formatRest(item.restSeconds)}</Text>
                   <TouchableOpacity
                     style={styles.stepBtn}
                     onPress={() => adjustRest(item.key, 15)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Increase rest"
                   >
                     <Ionicons name="add" size={16} color={colors.primary} />
                   </TouchableOpacity>
