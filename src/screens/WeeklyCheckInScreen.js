@@ -26,7 +26,10 @@ import {
   getWeeklyPRCount,
   getNutritionTargets,
   getUserBodyProfile,
+  getDailyStepsRange,
+  activityDayKey,
 } from '../lib/database';
+import { summariseWeekSteps } from '../lib/stepsSummary';
 import { getRollupsForRange } from '../lib/food/db';
 import { getCycleTracking, shouldShowCycleQuestion } from '../lib/cyclePrefs';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
@@ -215,6 +218,12 @@ export default function WeeklyCheckInScreen({ navigation }) {
     getNutritionTargets(user.id).then(t => setNutritionTargets(t ?? null)).catch(() => {});
     getUserBodyProfile(user.id).then(p => setBioSex(p?.sex ?? null)).catch(() => {});
     getCycleTracking().then(setCycleEnabled).catch(() => {});
+    // The week's registered steps: the trailing seven days up to today.
+    const toDate = activityDayKey();
+    const fromDate = activityDayKey(Date.now() - 6 * 24 * 60 * 60 * 1000);
+    getDailyStepsRange(user.id, fromDate, toDate)
+      .then(rows => setStepsSummary(summariseWeekSteps(rows)))
+      .catch(() => setStepsSummary(null));
   }, [user?.id]);
 
   const weekStart = getCurrentWeekStart();
@@ -235,8 +244,13 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
   // Step 2, This week
   const [calsAdherence, setCalsAdherence] = useState(null);
-  const [stepsAdherence, setStepsAdherence] = useState(null);
+  const [stepsAdherence] = useState(null); // legacy field, no longer collected; steps_avg replaces it
   const [cardioAdherence, setCardioAdherence] = useState(null);
+  // Steps: the week's auto summary (null until loaded). When 4+ days are
+  // registered the check-in shows a read-only average; otherwise the user
+  // types a single average as the fallback.
+  const [stepsSummary, setStepsSummary] = useState(null);
+  const [stepsManual, setStepsManual] = useState('');
 
   // Step 3, Recovery
   const [sorenessScore, setSorenessScore] = useState(null); // 1–5
@@ -413,6 +427,11 @@ export default function WeeklyCheckInScreen({ navigation }) {
         sleepHours: sleepHours.trim() ? parseFloat(sleepHours) : null,
         calsAdherence: calsAdherence ?? null,
         stepsAdherence: stepsAdherence ?? null,
+        stepsAvg: hasStepsTarget
+          ? (stepsSummary?.registered
+            ? Math.round(stepsSummary.avgSteps)
+            : (stepsManual ? parseInt(stepsManual, 10) : null))
+          : null,
         cardioAdherence: cardioAdherence ?? null,
         cycleOverride: showCycle && cycle === 'yes',
         trainingPerformance: trainingPerformance ?? null,
@@ -623,19 +642,37 @@ export default function WeeklyCheckInScreen({ navigation }) {
           </View>
         )}
 
-        {/* Steps */}
+        {/* Steps. Read the registered average when 4+ days are tracked,
+            otherwise ask for a single average as the fallback. */}
         {hasStepsTarget && (
           <View style={styles.section}>
-            <SectionLabel>Steps target</SectionLabel>
-            <OptionRow
-              options={[
-                { value: 'hit', label: 'Hit it' },
-                { value: 'mostly', label: 'Mostly' },
-                { value: 'missed', label: 'Missed it' },
-              ]}
-              selected={stepsAdherence}
-              onSelect={setStepsAdherence}
-            />
+            {stepsSummary?.registered ? (
+              <>
+                <SectionLabel>Steps this week</SectionLabel>
+                <View style={styles.stepsAutoRow}>
+                  <Ionicons name="walk-outline" size={18} color={colors.primary} />
+                  <Text style={styles.stepsAutoText}>
+                    Averaged {Math.round(stepsSummary.avgSteps).toLocaleString('en-GB')} a day.
+                  </Text>
+                </View>
+              </>
+            ) : (
+              <>
+                <SectionLabel hint="We could not read your steps automatically this week">
+                  Average steps a day
+                </SectionLabel>
+                <TextInput
+                  style={styles.shortInput}
+                  value={stepsManual}
+                  onChangeText={t => setStepsManual(t.replace(/[^0-9]/g, ''))}
+                  keyboardType="number-pad"
+                  placeholder="8000"
+                  placeholderTextColor={colors.textMuted}
+                  returnKeyType="done"
+                  maxLength={6}
+                />
+              </>
+            )}
           </View>
         )}
 
@@ -1176,6 +1213,13 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg, color: colors.textPrimary,
     fontWeight: fontWeight.medium, width: 120,
   },
+  stepsAutoRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: colors.surface2, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.md,
+  },
+  stepsAutoText: { ...type.num('body'), color: colors.textPrimary },
 
   notesInput: {
     backgroundColor: colors.surface2, borderRadius: radius.md,

@@ -223,6 +223,38 @@ describe('off-target threshold gating', () => {
   });
 });
 
+// ── Steps average as a secondary signal ────────────────────────────────────
+
+describe('steps average as a secondary signal', () => {
+  const losingTooSlowly = (over = {}) => baseInputs({
+    morningWeights: trend(85, 0),
+    weeksInPhase: 4,
+    consecutiveOffTargetWeeks: 2,
+    lastCalAdjustmentWeeksAgo: 99,
+    currentStepsTarget: 8000,
+    ...over,
+  });
+
+  test('steps well below the current target → holds the target instead of bumping', () => {
+    const out = runWeeklyCoach(losingTooSlowly({ checkin: checkin({ stepsAvg: 5000 }) }));
+    expect(out.adjustments.steps).not.toBeNull();
+    expect(out.adjustments.steps.change).toBe(0);
+    expect(out.adjustments.steps.note).toMatch(/before adding more/i);
+  });
+
+  test('steps at the current target → bumps the target as usual', () => {
+    const out = runWeeklyCoach(losingTooSlowly({ checkin: checkin({ stepsAvg: 8200 }) }));
+    expect(out.adjustments.steps).not.toBeNull();
+    expect(out.adjustments.steps.change).toBeGreaterThan(0);
+  });
+
+  test('no steps average (legacy check-in) → bump behaviour unchanged', () => {
+    const out = runWeeklyCoach(losingTooSlowly({ checkin: checkin({ stepsAvg: null }) }));
+    expect(out.adjustments.steps).not.toBeNull();
+    expect(out.adjustments.steps.change).toBeGreaterThan(0);
+  });
+});
+
 // ── Guardrails: cooldown + adherence ───────────────────────────────────────
 
 describe('guardrails', () => {

@@ -395,6 +395,11 @@ export function runWeeklyCoach(inputs) {
   const sorenessScore  = checkin?.sorenessScore  ?? null;
   const calsAdherence  = checkin?.calsAdherence  ?? 'untracked';
   const stepsAdherence = checkin?.stepsAdherence ?? null;
+  // Week's average steps: auto when 4+ days are registered, else the manual
+  // figure the user typed on the check-in. A secondary signal: it refines the
+  // step note and stops the coach raising a target the user is not yet
+  // hitting. Null on legacy check-ins, in which case behaviour is unchanged.
+  const stepsAvg       = checkin?.stepsAvg       ?? null;
   const cycleOverride  = !!(checkin?.cycleOverride);
   const sleepHours     = checkin?.sleepHours     ?? null;
 
@@ -620,20 +625,30 @@ export function runWeeklyCoach(inputs) {
     // cardio block below sees the step lever as unavailable and can fire.
     stepsAdjustment = null;
   } else if (phase.isCut && !onTarget && offTargetDirection > 0 && !poorRecovery) {
-    // Losing too slowly, bump steps if room
-    const newTarget = Math.min(currentStepsTarget + 1000, band.upper);
-    if (newTarget > currentStepsTarget) {
-      stepsAdjustment = {
-        target: newTarget,
-        change: newTarget - currentStepsTarget,
-        note: "Adding a bit more daily movement is the gentlest way to widen the deficit without touching your food.",
-      };
-    } else {
+    if (stepsAvg != null && currentStepsTarget > 0 && stepsAvg < currentStepsTarget * 0.9) {
+      // Secondary signal: the user is not even hitting their current target,
+      // so raising it would not help. Ask them to hold the current one first.
       stepsAdjustment = {
         target: currentStepsTarget,
         change: 0,
-        note: "Steps are already near the upper limit. If more deficit is needed, light cardio is the next lever.",
+        note: `You averaged ${stepsAvg.toLocaleString('en-GB')} steps against your ${currentStepsTarget.toLocaleString('en-GB')} target. Hit that consistently before adding more.`,
       };
+    } else {
+      // Losing too slowly, bump steps if room
+      const newTarget = Math.min(currentStepsTarget + 1000, band.upper);
+      if (newTarget > currentStepsTarget) {
+        stepsAdjustment = {
+          target: newTarget,
+          change: newTarget - currentStepsTarget,
+          note: "Adding a bit more daily movement is the gentlest way to widen the deficit without touching your food.",
+        };
+      } else {
+        stepsAdjustment = {
+          target: currentStepsTarget,
+          change: 0,
+          note: "Steps are already near the upper limit. If more deficit is needed, light cardio is the next lever.",
+        };
+      }
     }
   } else if (phase.isCut || phase.goalRatePct === 0) {
     stepsAdjustment = {
@@ -892,7 +907,15 @@ export function runWeeklyCoach(inputs) {
     whatWorking.push(`${prsThisWeek} PR${prsThisWeek > 1 ? 's' : ''} this week.`);
   }
 
-  if (stepsEnabled && stepsAdherence === 'hit') {
+  // Prefer the registered/entered average; fall back to the legacy subjective
+  // chip for old check-ins that only carry stepsAdherence.
+  if (stepsEnabled && stepsAvg != null && currentStepsTarget > 0) {
+    if (stepsAvg >= currentStepsTarget) {
+      whatWorking.push(`Step target hit (averaged ${stepsAvg.toLocaleString('en-GB')}).`);
+    } else if (stepsAvg >= currentStepsTarget * 0.9) {
+      whatWorking.push(`Step target mostly hit (averaged ${stepsAvg.toLocaleString('en-GB')}).`);
+    }
+  } else if (stepsEnabled && stepsAdherence === 'hit') {
     whatWorking.push('Step target hit.');
   } else if (stepsEnabled && stepsAdherence === 'mostly') {
     whatWorking.push('Step target mostly hit.');
