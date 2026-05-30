@@ -1,24 +1,16 @@
 /**
- * activitySteps platform branching.
+ * activitySteps platform delegation.
  *
- * iOS reads the phone pedometer (expo-sensors Core Motion); Android reads
- * Health Connect via health.js. Both are mocked here so we exercise the
- * branching and the guards (everything resolves safely, nothing throws) with
- * no native modules present.
+ * Both iOS (HealthKit) and Android (Health Connect) now read through the
+ * unified health.js aggregator wrapper, which is mocked here so we exercise
+ * the delegation and the guards (everything resolves safely, nothing throws)
+ * with no native modules present.
  */
 
 let mockPlatformOS = 'ios';
 jest.mock('react-native', () => ({
   Platform: { get OS() { return mockPlatformOS; } },
 }));
-
-const mockPedometer = {
-  isAvailableAsync: jest.fn(),
-  getStepCountAsync: jest.fn(),
-  getPermissionsAsync: jest.fn(),
-  requestPermissionsAsync: jest.fn(),
-};
-jest.mock('expo-sensors', () => ({ Pedometer: mockPedometer }), { virtual: true });
 
 const mockHealth = {
   isHealthAvailable: jest.fn(),
@@ -37,35 +29,43 @@ beforeEach(() => {
   mockPlatformOS = 'ios';
 });
 
-describe('iOS (expo-sensors Pedometer)', () => {
-  test('readTodaySteps returns the rounded step count', async () => {
-    mockPedometer.getStepCountAsync.mockResolvedValue({ steps: 8123.6 });
+describe('iOS (Apple HealthKit via health.js)', () => {
+  test('readTodaySteps returns the rounded aggregator total', async () => {
+    mockHealth.readStepsToday.mockResolvedValue(8123.6);
     expect(await readTodaySteps()).toBe(8124);
-    expect(mockPedometer.getStepCountAsync).toHaveBeenCalled();
+    expect(mockHealth.readStepsToday).toHaveBeenCalled();
   });
 
-  test('readTodaySteps returns null when the pedometer throws', async () => {
-    mockPedometer.getStepCountAsync.mockRejectedValue(new Error('no motion'));
+  test('readTodaySteps treats 0 as no figure (fall back to manual)', async () => {
+    mockHealth.readStepsToday.mockResolvedValue(0);
     expect(await readTodaySteps()).toBeNull();
   });
 
-  test('getStepPermissionStatus maps granted', async () => {
-    mockPedometer.getPermissionsAsync.mockResolvedValue({ granted: true, status: 'granted' });
-    expect(await getStepPermissionStatus()).toBe('granted');
+  test('readTodaySteps returns null when the read throws', async () => {
+    mockHealth.readStepsToday.mockRejectedValue(new Error('no health'));
+    expect(await readTodaySteps()).toBeNull();
   });
 
-  test('getStepPermissionStatus maps a blocked permission to denied', async () => {
-    mockPedometer.getPermissionsAsync.mockResolvedValue({ granted: false, canAskAgain: false, status: 'denied' });
-    expect(await getStepPermissionStatus()).toBe('denied');
+  test('getStepPermissionStatus passes granted through', async () => {
+    mockHealth.getHealthPermissionStatus.mockResolvedValue('granted');
+    expect(await getStepPermissionStatus()).toBe('granted');
+    expect(mockHealth.getHealthPermissionStatus).toHaveBeenCalledWith(['steps']);
+  });
+
+  test('getStepPermissionStatus maps iOS denied to undetermined so the caller still offers to connect', async () => {
+    // HealthKit cannot report read auth, so health.js returns denied before init.
+    mockHealth.getHealthPermissionStatus.mockResolvedValue('denied');
+    expect(await getStepPermissionStatus()).toBe('undetermined');
   });
 
   test('requestStepPermission returns true when granted', async () => {
-    mockPedometer.requestPermissionsAsync.mockResolvedValue({ granted: true });
+    mockHealth.requestHealthPermissions.mockResolvedValue('granted');
     expect(await requestStepPermission()).toBe(true);
+    expect(mockHealth.requestHealthPermissions).toHaveBeenCalledWith(['steps']);
   });
 
-  test('isStepSourceAvailable reflects the pedometer', async () => {
-    mockPedometer.isAvailableAsync.mockResolvedValue(true);
+  test('isStepSourceAvailable reflects health availability', async () => {
+    mockHealth.isHealthAvailable.mockReturnValue(true);
     expect(await isStepSourceAvailable()).toBe(true);
   });
 });
@@ -83,9 +83,9 @@ describe('Android (Health Connect via health.js)', () => {
     expect(await readTodaySteps()).toBeNull();
   });
 
-  test('getStepPermissionStatus delegates to health.js', async () => {
-    mockHealth.getHealthPermissionStatus.mockResolvedValue('granted');
-    expect(await getStepPermissionStatus()).toBe('granted');
+  test('getStepPermissionStatus delegates to health.js and keeps denied (Android can report it)', async () => {
+    mockHealth.getHealthPermissionStatus.mockResolvedValue('denied');
+    expect(await getStepPermissionStatus()).toBe('denied');
     expect(mockHealth.getHealthPermissionStatus).toHaveBeenCalledWith(['steps']);
   });
 
