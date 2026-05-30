@@ -6,6 +6,7 @@
 
 import { GOAL_LABELS as _GOAL_LABELS, GOAL_OVERLAYS, PHASE_OVERLAYS, GOALS_WITH_WEAK_POINTS } from './coachingGoals';
 import { VOLUME_LANDMARKS } from './algorithms';
+import { generatePoolFromLibrary } from './poolGenerator';
 
 // ---------------------------------------------------------------------------
 // Public label maps
@@ -338,6 +339,42 @@ const POOL = {
 };
 
 // ---------------------------------------------------------------------------
+// Effective pool (library-generated, with per-muscle fallback to POOL)
+// ---------------------------------------------------------------------------
+// planEngine has always selected from the hardcoded POOL above. When the
+// caller passes the exercise library (planAutoGen does), generatePlan builds
+// a pool from it (poolGenerator) and points selection at that instead, so
+// new library exercises become selectable and POOL/library names can't drift
+// (docs/audit/volyume-exercise-audit-2026-05-30, 06 section 0).
+//
+// The engine stays synchronous and deterministic: the effective pool is a
+// module-level reference that generatePlan sets at the start of a run and
+// clears at the end. When no library is passed (every existing unit test),
+// it stays exactly POOL, so behaviour is unchanged unless a library is
+// supplied. The founder's choice was generate + per-muscle fallback: a
+// muscle the library covers thinly keeps POOL's entries for that muscle.
+let _effectivePool = POOL;
+
+// Minimum library entries per muscle before we trust the generated pool for
+// that muscle; below this we fall back to POOL's hand-written entries.
+const MIN_GENERATED_PER_MUSCLE = 3;
+
+function buildEffectivePool(exerciseLibrary) {
+  if (!exerciseLibrary || exerciseLibrary.length === 0) return POOL;
+  const generated = generatePoolFromLibrary(exerciseLibrary);
+  // Start from the generated pool, then for any muscle POOL knows about that
+  // the library covers thinly, keep POOL's entries. This never leaves a
+  // muscle worse-covered than today.
+  const merged = { ...generated };
+  for (const muscle of Object.keys(POOL)) {
+    if ((merged[muscle]?.length ?? 0) < MIN_GENERATED_PER_MUSCLE) {
+      merged[muscle] = POOL[muscle];
+    }
+  }
+  return merged;
+}
+
+// ---------------------------------------------------------------------------
 // Subregion coverage requirements (weekly-level)
 // ---------------------------------------------------------------------------
 
@@ -512,7 +549,7 @@ function trimToTimeBudget(exercises, sessionLengthMinutes, equipment) {
 // ---------------------------------------------------------------------------
 
 function filterPool(muscle, equipment, goal) {
-  const pool = POOL[muscle] ?? [];
+  const pool = _effectivePool[muscle] ?? [];
   return pool.filter(e => e.eq.includes(equipment));
 }
 
@@ -944,7 +981,7 @@ function buildVolumeSummary(workouts, weeklyTargets, weakPointKeys) {
       // We attribute sets based on position in pool to avoid muscle parsing
       // Instead count from raw exercises via their exerciseName membership
       // Using the muscle→pool map
-      for (const [muscle, pool] of Object.entries(POOL)) {
+      for (const [muscle, pool] of Object.entries(_effectivePool)) {
         if (pool.some(p => p.n === ex.exerciseName)) {
           actualSets[muscle] = (actualSets[muscle] ?? 0) + ex.sets;
         }
@@ -1279,6 +1316,20 @@ function assignSupersets(exercises, { goal, experience, sessionLengthMinutes }) 
 }
 
 export function generatePlan(inputs) {
+  // Point selection at a library-generated pool for the duration of this
+  // run when the caller supplies the library, then always restore POOL so
+  // the module stays stateless between runs (try/finally guards a throw).
+  // No library (every existing unit test) means _effectivePool stays POOL.
+  const prevPool = _effectivePool;
+  _effectivePool = buildEffectivePool(inputs?.exerciseLibrary);
+  try {
+    return _generatePlanInner(inputs);
+  } finally {
+    _effectivePool = prevPool;
+  }
+}
+
+function _generatePlanInner(inputs) {
   const {
     experience        = 'intermediate',
     trainingAge       = null,

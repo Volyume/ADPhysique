@@ -112,9 +112,19 @@ export async function generateAndSavePlan(userId, profile) {
   // eslint-disable-next-line global-require
   try { require('./errorLog').logInfo('plan.generateAndSave.start', `goal=${inputs.goal} phase=${inputs.phase} days=${inputs.daysPerWeek}`); } catch (_) {}
 
+  // Load the library up front and hand it to the engine so it generates
+  // from the same exercises it will resolve names against (06 section 0).
+  // The engine derives its selection pool from this list, so a name can't
+  // fail to resolve below. Falls back to the engine's built-in POOL if the
+  // load fails, so generation never hard-depends on this read.
+  let allExercises = [];
+  try {
+    allExercises = await getAllExercises();
+  } catch (_) { /* engine falls back to its built-in pool */ }
+
   let plan;
   try {
-    plan = generatePlan(inputs);
+    plan = generatePlan({ ...inputs, exerciseLibrary: allExercises });
   } catch (e) {
     // eslint-disable-next-line global-require
     try { require('./errorLog').logError('plan.generateAndSave.engineFailed', e, { inputs }); } catch (_) {}
@@ -132,7 +142,6 @@ export async function generateAndSavePlan(userId, profile) {
   const planName = await makeUniquePlanName(userId, baseName);
   try {
     const prog = await createProgramme(userId, planName, plan.description ?? '', 0);
-    const allExercises = await getAllExercises();
     const exerciseMap = {};
     for (const ex of allExercises) exerciseMap[ex.name.toLowerCase()] = ex;
 
