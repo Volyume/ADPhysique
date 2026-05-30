@@ -18,8 +18,8 @@ unless the file header says otherwise.
 > § 3. This table is the apply-order and verification playbook for every
 > migration from 037 onward; a row appearing here does not by itself mean
 > the migration is still unapplied. Per CURRENT_STATUS § 3, migrations
-> 037-047 are applied and 048 + 050-057 are pending founder apply (049 is
-> held). Apply the pending ones in numeric order in the SQL Editor.
+> 037-047 and 056-057 are applied; 048 and 050-055 are pending founder apply
+> (049 is held). Apply the pending ones in numeric order in the SQL Editor.
 
 | # | File | What it adds | Verification query |
 |---|---|---|---|
