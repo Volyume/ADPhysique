@@ -55,6 +55,9 @@
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.WAKE_LOCK",
         "android.permission.health.READ_STEPS",
+        "android.permission.health.READ_WEIGHT",
+        "android.permission.health.WRITE_EXERCISE",
+        "android.permission.health.WRITE_ACTIVE_CALORIES_BURNED",
         "android.permission.ACTIVITY_RECOGNITION"
       ],
       "intentFilters": [
