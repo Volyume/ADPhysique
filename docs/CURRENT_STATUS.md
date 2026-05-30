@@ -635,6 +635,11 @@ Per `DATABASE_SCHEMA_LOCKED.md` + grep against `supabase/migrate_*.sql`.
 | 050 | weekly_checkins_v2.cardio_adherence (additive, nullable) | **Pending founder apply.** Backs GAP row 4 cardio adherence. Old AAB compatible. Verification in `supabase/README.md`. |
 | 051 | food_frequents table + RLS + nightly pg_cron worker + food_frequents_pull RPC (Frequents tab, GAP row 28) | **Pending founder apply.** Fully additive; outside the food sync cycle. Until applied the Frequents tab shows its empty state. Verification in `supabase/README.md` § Verify food_frequents. |
 | 052 | daily_water reconcile (adds back the drifted `entry_date` column) | **Pending founder apply, HIGH PRIORITY.** Fixes the live "Sync error" badge + Sentry `foodDomain.push` spam: the live `daily_water` lost `entry_date`, so `food_sync_push` 42703s and fails every sync run. Guarded drop+recreate, no-op if already healthy, no data loss (never synced). Verification in `supabase/README.md` § Verify daily_water reconcile. |
+| 053 | device_push_tokens table (composite PK + RLS + touch trigger) for the Expo remote-push pipeline (GAP rows 9-11) | **Pending founder apply.** Fully additive; the frozen AAB has no writer. Also needs `extra.eas.projectId` in app.json before any token can be obtained. Verification in `supabase/README.md` § Verify device_push_tokens. |
+| 054 | workout_sets.left_reps + right_reps (nullable) for per-side unilateral logging (GAP row 20) | **Pending founder apply.** Additive; `actual_reps` unchanged so volume/PR/progression are unaffected. Apply before the next AAB ships. Verification in `supabase/README.md` § Verify workout_sets unilateral. |
+| 055 | users_profile.diet_preference text DEFAULT 'omnivore' (curated meal-suggestion diet filter) | **Pending founder apply.** Additive + defaulted; joins the migration-045 per-column merge set. Must precede the next AAB (the new profile pull selects the column). Verification in `supabase/README.md` § Verify users_profile.diet_preference. |
+| 056 | daily_steps table (composite PK + RLS + LWW touch trigger) for the cardio/steps activity store | **Pending founder apply.** Fully additive; the frozen AAB has no writer; safe to apply any time. Bidirectional sync via `src/lib/sync/tables/dailySteps.js`. Verification in `supabase/README.md` § Verify daily_steps. |
+| 057 | food_entries.meal_slot CHECK relaxed to allow 'preworkout' + 'postworkout' (peri-workout diary sections) | **Pending founder apply.** Purely additive; the four original slots still pass, so the frozen AAB keeps syncing. Apply before a build that writes the new slots reaches production sync. Verification in `supabase/README.md` § Verify peri-workout meal slots. |
 
 ---
 
@@ -675,11 +680,11 @@ The survey at `docs/CODE_TRUTH_SURVEY.md` flags 32 cross-cutting findings. The s
 
 2. **Two telemetry modules folded.** ~~`engineTelemetry.js` was the active queue + push; `telemetry/` was a thin wrapper that delegated back.~~ **Resolved 2026-05-28 (commit `099738f`).** Queue + push logic moved into `telemetry/transport.js`; `engineTelemetry.js` is now a re-export shim. Existing callers continue to work via the shim; new code should import from `lib/telemetry` directly.
 
-3. **`computeEWMA` deliberately split — annotated, not a bug.** `nutritionEngine.js:152` (aggressive alpha for TDEE adjustment, consumed by BodyMetrics + CoachOutput) and `weeklyCoach.js:23` (slow alpha for weight trend, consumed by AthleteHub + WeeklyCheckIn + ProGoalSetup). The header comments at both call sites explicitly mark the separation as intentional.
+3. **`computeEWMA` deliberately split: annotated, not a bug.** `nutritionEngine.js:152` (aggressive alpha for TDEE adjustment, consumed by BodyMetrics + CoachOutput) and `weeklyCoach.js:23` (slow alpha for weight trend, consumed by ReadinessCards + WeeklyCheckIn + ProGoalSetup). The header comments at both call sites explicitly mark the separation as intentional.
 
 4. **`STRENGTH_STANDARDS` deduped.** ~~Defined twice in `algorithms.js:695` and `strengthStandards.js:15`; PRWallScreen imported both.~~ **Resolved 2026-05-28 (commit `48717e0`).** `algorithms.STRENGTH_STANDARDS` + `getStrengthStandard` deleted; PRWallScreen migrated to `strengthStandards.getStrengthLevel` only. Regex broadened so the canonical home covers all the alt names PRWallScreen had locally.
 
-5. **`detectRepRegressions` single definition.** Lives at `AthleteHubScreen.js:50` only. The CODE_TRUTH_SURVEY claim of a duplicate at `AnalyticsScreen.js:50` was already stale by 2026-05-28 — the AnalyticsScreen copy was removed in an earlier session.
+5. **`detectRepRegressions` single definition.** Lives at `EngineLog.js:22` only (it moved there when the Athlete Hub dashboard was split; the old `AthleteHubScreen.js` is deleted). The CODE_TRUTH_SURVEY claim of a duplicate at `AnalyticsScreen.js:50` was stale: the AnalyticsScreen copy was removed in an earlier session.
 
 6. **`evaluateAutoReg` scope split.** `mesocycle.js:165` is per-session autoreg matrix (consumed by `WorkoutSummary`). `weeklyCoach.js:144` has its own `autoregulationMatrix` for the weekly card. Different scopes, but the dimensions overlap; alignment worth verifying.
 
@@ -723,9 +728,9 @@ Plans tab: PlansScreen, PlanLibrary (with quiz), PlanDetail, RoutineDetail, Meso
 
 Diary tab: DiaryScreen (date pager, meal sections, three-band macro rings tappable to a per-meal breakdown sheet, water, swipe-delete, long-press multi-select toolbar with Move / Copy to today / Delete), FoodSearch (5-tab subnav: Recents / Favourites / Frequents / Custom / Database; Database is the 3-source waterfall), AddCustomFood (sanity-checked), ScanBarcode (vision-camera), ScanLabel (MLKit OCR), MyRecipes + RecipeBuilder (shipped 2026-05-27), FoodInsights (CSV export).
 
-Progress tab: AnalyticsScreen, PRWallScreen, VolumeHeatmap, WorkoutHistory, ExerciseDetail, ExerciseLibrary, YearOfLifts.
+Progress tab: AnalyticsScreen, PRWallScreen, VolumeHeatmap, WorkoutHistory, ExerciseDetail, ExerciseLibrary, LiftProgress, YearOfLifts. The readiness half of the old Athlete Hub dashboard (milestones, recovery signals, muscle readiness, recovery trend) now renders inline here via the `ReadinessCards` component.
 
-You tab: AthleteHubScreen, BodyMetrics, NutritionTargets, WeeklyCheckIn, NotificationSettings, CoachingReminders, Settings, Subscription, ProUpgrade, ProGoalSetup, GoalLockConsent, GoalChangeSummary, WellbeingCheck, Credits, Article9Consent, PrivacyPolicy, SubscriptionPolicy, DebugLog, ShareCard.
+You tab: YouScreen (the ProfileStack root: profile, account, settings), BodyMetrics, NutritionTargets, WeeklyCheckIn, NotificationSettings, CoachingReminders, Settings, Subscription, ProUpgrade, ProGoalSetup, GoalLockConsent, GoalChangeSummary, WellbeingCheck, Credits, Article9Consent, PrivacyPolicy, SubscriptionPolicy, DebugLog, ShareCard. The coaching Engine Log half of the old Athlete Hub dashboard now renders inside the Strategic journal here via the `EngineLog` component. The standalone `AthleteHubScreen` and its `AthleteHub` route are deleted.
 
 Coach: CoachOutputScreen (weekly card, calorie auto-apply at line 680), CoachHeldHistory.
 

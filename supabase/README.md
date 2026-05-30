@@ -12,7 +12,14 @@ proving each one landed. Run them in numeric order in the Supabase
 Dashboard SQL Editor. Every migration is additive and idempotent
 unless the file header says otherwise.
 
-## Pending application order (as of 2026-05-28)
+## Application order and verification playbook (migrations 037-057)
+
+> Authoritative applied-vs-pending status lives in `docs/CURRENT_STATUS.md`
+> § 3. This table is the apply-order and verification playbook for every
+> migration from 037 onward; a row appearing here does not by itself mean
+> the migration is still unapplied. Per CURRENT_STATUS § 3, migrations
+> 037-047 are applied and 048 + 050-057 are pending founder apply (049 is
+> held). Apply the pending ones in numeric order in the SQL Editor.
 
 | # | File | What it adds | Verification query |
 |---|---|---|---|
