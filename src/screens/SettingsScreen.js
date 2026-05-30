@@ -16,7 +16,7 @@ import { useShallow } from 'zustand/react/shallow';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-import { clearWorkoutHistory, buildWorkoutCSV, wipeAllUserData, getOrphanedRoutines, deleteOrphanedRoutines, getUserBodyProfile } from '../lib/database';
+import { clearWorkoutHistory, buildWorkoutCSV, wipeAllUserData, getUserBodyProfile } from '../lib/database';
 import { getCycleTracking, setCycleTracking } from '../lib/cyclePrefs';
 import { logError } from '../lib/errorLog';
 import { audit } from '../lib/observability';
@@ -722,45 +722,6 @@ export default function SettingsScreen({ navigation }) {
     );
   }
 
-  // Surfaces the cloud-restored routines that have all-broken
-  // exercise references, the "I have 114 routines but none of them
-  // open with exercises" state. Counts them, asks for confirmation,
-  // soft-deletes in bulk. Soft delete so the change syncs to the
-  // cloud and propagates to the user's other devices.
-  async function handleCleanOrphanedRoutines() {
-    if (!user?.id) return;
-    try {
-      const orphans = await getOrphanedRoutines(user.id);
-      if (!orphans.length) {
-        toast.show('No orphaned routines to clean up.', { variant: 'success' });
-        return;
-      }
-      Alert.alert(
-        `Clean up ${orphans.length} orphaned routine${orphans.length === 1 ? '' : 's'}?`,
-        `These routines were restored from cloud but their exercise references couldn't be resolved on this device. Deleting them removes the broken entries; intact routines are not touched.`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: `Delete ${orphans.length}`,
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                const n = await deleteOrphanedRoutines(user.id);
-                toast.show(`Removed ${n} orphaned routine${n === 1 ? '' : 's'}`, { variant: 'success' });
-              } catch (e) {
-                logError('SettingsScreen.cleanOrphans', e, { userId: user.id });
-                Alert.alert("Couldn't clean up", e?.message ?? 'Try again.');
-              }
-            },
-          },
-        ],
-      );
-    } catch (e) {
-      logError('SettingsScreen.cleanOrphans.scan', e, { userId: user.id });
-      Alert.alert("Couldn't scan routines", e?.message ?? 'Try again.');
-    }
-  }
-
   async function handleClearHistory() {
     Alert.alert(
       'Clear workout history?',
@@ -788,19 +749,50 @@ export default function SettingsScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Go Pro, free users only */}
-        {tier !== 'pro' && (
-          <>
-            <SectionHeader title="Precision Coaching" />
-            <View style={styles.section}>
-              <SettingRow
-                icon="sparkles"
-                label="Go Pro"
-                onPress={() => navigation.navigate('ProUpgrade')}
-              />
-            </View>
-          </>
-        )}
+        {/* Account: identity, plan, upgrade/downgrade. Destructive
+            account actions live at the very bottom of the screen. */}
+        <SectionHeader title="Account" />
+        <View style={styles.section}>
+          <SettingRow
+            icon="person-circle-outline"
+            label={user?.email || 'Signed in'}
+            sub={tier === 'pro' ? 'Volyume Pro' : 'Free plan'}
+            showArrow={false}
+          />
+          <SettingRow
+            icon="card-outline"
+            label="Subscription"
+            sub="Plan, billing, restore purchases"
+            onPress={() => navigation.navigate('Subscription')}
+          />
+          {tier !== 'pro' && (
+            <SettingRow
+              icon="sparkles"
+              label="Go Pro"
+              sub="Precision Coaching and weekly check-ins"
+              onPress={() => navigation.navigate('ProUpgrade')}
+            />
+          )}
+          {tier === 'pro' && (
+            <SettingRow
+              icon="arrow-down-circle-outline"
+              label="Switch to Free"
+              onPress={() =>
+                Alert.alert(
+                  'Switch to Free?',
+                  'Everything you\'ve logged stays. Past coach outputs, check-ins, training blocks and PRs remain readable. You just won\'t get new Precision Coaching adjustments until you re-enable Pro.',
+                  [
+                    { text: 'Keep Pro', style: 'cancel' },
+                    {
+                      text: 'Switch to Free',
+                      onPress: async () => { await setTier('free', 'SettingsScreen.switchToFree'); },
+                    },
+                  ],
+                )
+              }
+            />
+          )}
+        </View>
 
         {/* Profile */}
         <SectionHeader title="Profile" />
@@ -824,11 +816,6 @@ export default function SettingsScreen({ navigation }) {
               }}
             />
           </View>
-        </View>
-
-        {/* Preferences */}
-        <SectionHeader title="Preferences" />
-        <View style={styles.section}>
           {/* Gym weight units, body weight units, and bar weight rows
               removed at user request. UK defaults: gym + bar = kg;
               body weight units come from onboarding (the morning-weight
@@ -861,6 +848,11 @@ export default function SettingsScreen({ navigation }) {
               })}
             </View>
           </View>
+        </View>
+
+        {/* Coaching */}
+        <SectionHeader title="Coaching" />
+        <View style={styles.section}>
           <SettingRow
             icon="heart-outline"
             label="Calmer experience"
@@ -875,30 +867,6 @@ export default function SettingsScreen({ navigation }) {
               />
             }
           />
-          {bioSex === 'female' && (
-            <SettingRow
-              icon="calendar-outline"
-              label="Cycle tracking"
-              sub="Adds an optional question to your weekly check-in so the coach can steady your targets around your period"
-              showArrow={false}
-              rightElement={
-                <Switch
-                  value={cycleEnabled}
-                  onValueChange={toggleCycleTracking}
-                  trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
-                  thumbColor={cycleEnabled ? colors.primary : colors.textMuted}
-                />
-              }
-            />
-          )}
-          {tier === 'pro' && (
-            <SettingRow
-              icon="pulse-outline"
-              label="Coaching reminders"
-              sub="Schedule your morning weight log and weekly check-in"
-              onPress={() => navigation.navigate('CoachingReminders')}
-            />
-          )}
           {tier === 'pro' && (
             <>
               <SettingRow
@@ -935,16 +903,45 @@ export default function SettingsScreen({ navigation }) {
               )}
             </>
           )}
-          <SettingRow
-            icon="notifications-outline"
-            label="Notifications"
-            sub="Training reminders"
-            onPress={() => navigation.navigate('NotificationSettings')}
-          />
+          {bioSex === 'female' && (
+            <SettingRow
+              icon="calendar-outline"
+              label="Cycle tracking"
+              sub="Adds an optional question to your weekly check-in so the coach can steady your targets around your period"
+              showArrow={false}
+              rightElement={
+                <Switch
+                  value={cycleEnabled}
+                  onValueChange={toggleCycleTracking}
+                  trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                  thumbColor={cycleEnabled ? colors.primary : colors.textMuted}
+                />
+              }
+            />
+          )}
         </View>
 
-        {/* Accessibility */}
-        <SectionHeader title="Accessibility" />
+        {/* Notifications */}
+        <SectionHeader title="Notifications" />
+        <View style={styles.section}>
+          <SettingRow
+            icon="notifications-outline"
+            label="Training reminders"
+            sub="Set when Volyume nudges you to train"
+            onPress={() => navigation.navigate('NotificationSettings')}
+          />
+          {tier === 'pro' && (
+            <SettingRow
+              icon="pulse-outline"
+              label="Coaching reminders"
+              sub="Morning weight log and weekly check-in"
+              onPress={() => navigation.navigate('CoachingReminders')}
+            />
+          )}
+        </View>
+
+        {/* Display & accessibility */}
+        <SectionHeader title="Display & accessibility" />
         <View style={styles.section}>
           <SettingRow
             icon="text-outline"
@@ -1105,20 +1102,14 @@ export default function SettingsScreen({ navigation }) {
           </>
         )}
 
-        {/* Data */}
-        <SectionHeader title="Data & privacy" />
+        {/* Your data */}
+        <SectionHeader title="Your data" />
         <View style={styles.section}>
           <SettingRow
             icon="swap-horizontal-outline"
             label="Import from another app"
             sub="Bring sessions over from Hevy or Strong"
             onPress={() => navigation.navigate('Import')}
-          />
-          <SettingRow
-            icon="construct-outline"
-            label="Clean up restored routines"
-            sub="Remove cloud-restored routines whose exercises couldn't be linked"
-            onPress={handleCleanOrphanedRoutines}
           />
           <SettingRow
             icon="save-outline"
@@ -1141,6 +1132,26 @@ export default function SettingsScreen({ navigation }) {
             destructive
             onPress={handleClearHistory}
           />
+        </View>
+        <Text style={styles.dataPrivacyNote}>
+          Your data is always yours. Export or back up any time, no account required.
+        </Text>
+
+        {/* Privacy & legal */}
+        <SectionHeader title="Privacy & legal" />
+        <View style={styles.section}>
+          <SettingRow
+            icon="shield-checkmark-outline"
+            label="Health-data consent"
+            sub={healthConsent === true
+              ? 'Granted. Tap to withdraw at any time.'
+              : healthConsent === false
+                ? 'Withdrawn. Some features are read-only.'
+                : 'Not recorded yet.'}
+            value={healthConsent === true ? 'On' : healthConsent === false ? 'Off' : '-'}
+            onPress={healthConsent === true && !withdrawing ? handleWithdrawConsent : undefined}
+            showArrow={healthConsent === true}
+          />
           <SettingRow
             icon="share-social-outline"
             label="Share scanned labels with Open Food Facts"
@@ -1155,84 +1166,15 @@ export default function SettingsScreen({ navigation }) {
               />
             }
           />
-        </View>
-        <Text style={styles.dataPrivacyNote}>
-          Your data is always yours. Export or back up any time, no account required.
-        </Text>
-
-        {/* Account */}
-        <SectionHeader title="Account" />
-        <View style={styles.section}>
           <SettingRow
-            icon="person-circle-outline"
-            label={user?.email || 'Signed in'}
-            sub={tier === 'pro' ? 'Volyume Pro' : 'Free plan'}
-            showArrow={false}
-          />
-          <SettingRow
-            icon="card-outline"
-            label="Subscription"
-            sub="Plan, billing, restore purchases"
-            onPress={() => navigation.navigate('Subscription')}
-          />
-          <SettingRow
-            icon="information-circle-outline"
-            label="Free, Pro, and your data"
-            sub="What's free, what Pro adds, what stays if you switch back"
-            onPress={() => navigation.navigate('SubscriptionPolicy')}
-          />
-          {tier === 'pro' && (
-            <SettingRow
-              icon="arrow-down-circle-outline"
-              label="Switch to Free"
-              onPress={() =>
-                Alert.alert(
-                  'Switch to Free?',
-                  'Everything you\'ve logged stays. Past coach outputs, check-ins, training blocks and PRs remain readable. You just won\'t get new Precision Coaching adjustments until you re-enable Pro.',
-                  [
-                    { text: 'Keep Pro', style: 'cancel' },
-                    {
-                      text: 'Switch to Free',
-                      onPress: async () => { await setTier('free', 'SettingsScreen.switchToFree'); },
-                    },
-                  ],
-                )
-              }
-            />
-          )}
-          <SettingRow
-            icon="log-out-outline"
-            label={signingOut ? 'Signing out…' : 'Sign out'}
-            destructive
-            onPress={signingOut ? undefined : handleSignOut}
-          />
-          <SettingRow
-            icon="trash-outline"
-            label={deletingAccount ? 'Deleting account…' : 'Delete account'}
-            destructive
-            onPress={deletingAccount ? undefined : handleDeleteAccount}
+            icon="document-text-outline"
+            label="Privacy Policy"
+            onPress={() => navigation.navigate('PrivacyPolicy')}
           />
         </View>
 
-        {/* Privacy */}
-        <SectionHeader title="Privacy" />
-        <View style={styles.section}>
-          <SettingRow
-            icon="shield-checkmark-outline"
-            label="Health-data consent"
-            sub={healthConsent === true
-              ? 'Granted. Tap to withdraw at any time.'
-              : healthConsent === false
-                ? 'Withdrawn. Some features are read-only.'
-                : 'Not recorded yet.'}
-            value={healthConsent === true ? 'On' : healthConsent === false ? 'Off' : '-'}
-            onPress={healthConsent === true && !withdrawing ? handleWithdrawConsent : undefined}
-            showArrow={healthConsent === true}
-          />
-        </View>
-
-        {/* Help & support */}
-        <SectionHeader title="Help & support" />
+        {/* Help & about */}
+        <SectionHeader title="Help & about" />
         <View style={styles.section}>
           <SettingRow
             icon="chatbubble-ellipses-outline"
@@ -1252,20 +1194,27 @@ export default function SettingsScreen({ navigation }) {
             }}
           />
           <SettingRow
-            icon="document-text-outline"
-            label="Privacy Policy"
-            onPress={() => navigation.navigate('PrivacyPolicy')}
-          />
-          <SettingRow
             icon="information-circle-outline"
             label="Credits"
             sub="OpenFoodFacts, CoFID, USDA attribution"
             onPress={() => navigation.navigate('Credits')}
           />
+        </View>
+
+        {/* Sign out and delete account, isolated at the bottom so a
+            destructive tap is never next to a routine toggle. */}
+        <View style={styles.section}>
           <SettingRow
-            icon="bug-outline"
-            label="Debug logs"
-            onPress={() => navigation.navigate('DebugLog')}
+            icon="log-out-outline"
+            label={signingOut ? 'Signing out…' : 'Sign out'}
+            destructive
+            onPress={signingOut ? undefined : handleSignOut}
+          />
+          <SettingRow
+            icon="trash-outline"
+            label={deletingAccount ? 'Deleting account…' : 'Delete account'}
+            destructive
+            onPress={deletingAccount ? undefined : handleDeleteAccount}
           />
         </View>
 
@@ -1290,8 +1239,10 @@ export default function SettingsScreen({ navigation }) {
               const id = `Volyume v${v} (${Platform.OS} ${code ?? '?'}, ${env})`;
               Share.share({ message: id }).catch(() => {});
             }}
+            onLongPress={() => navigation.navigate('DebugLog')}
+            delayLongPress={600}
             activeOpacity={0.7}
-            accessibilityLabel="App version, tap to share"
+            accessibilityLabel="App version. Tap to share, press and hold for debug logs."
           >
             <Text style={styles.appVersion}>
               v{Constants.expoConfig?.version ?? '1.1.0'}
