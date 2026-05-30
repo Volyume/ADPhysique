@@ -18,7 +18,7 @@ import SyncStatusBadge from '../components/SyncStatusBadge';
 import useAppStore from '../store/useAppStore';
 import { getSupabaseClient } from '../lib/supabase';
 import { initDatabase, cleanupOrphanRoutineExercises } from '../lib/database';
-import { seedExercisesIfNeeded, backfillExerciseMetadataIfNeeded } from '../lib/seedExercises';
+import { seedExercisesIfNeeded, topUpNewExercisesIfNeeded, backfillExerciseMetadataIfNeeded } from '../lib/seedExercises';
 import {
   configureNotificationHandler,
   installNotificationListeners,
@@ -480,6 +480,7 @@ export default function RootNavigator() {
         try {
           await initDatabase();
           seedExercisesIfNeeded()
+            .then(() => topUpNewExercisesIfNeeded())
             .then(() => backfillExerciseMetadataIfNeeded())
             .catch(console.warn);
           cleanupOrphanRoutineExercises().catch(console.warn);

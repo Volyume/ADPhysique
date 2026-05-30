@@ -5,6 +5,9 @@ import { deriveExerciseMetadata } from './exerciseMetadata';
 const SEEDED_KEY = '@volyume_exercises_seeded_v7';
 // Bumped when the derived metadata changes so the backfill re-runs once.
 const METADATA_BACKFILL_KEY = '@volyume_exercise_metadata_backfilled_v1';
+// Bumped when exercises are added to RAW so the top-up scans for the new
+// canonical IDs once on installs that already seeded an earlier list.
+const LIBRARY_VERSION_KEY = '@volyume_exercise_library_topped_up_v2';
 
 // ─── Deterministic canonical exercise IDs ────────────────────────────────
 //
@@ -284,6 +287,29 @@ const SUBREGION_MAP = {
   'Cable Woodchop':                  'rotation',
   'Landmine Twist':                  'rotation',
   'Landmine Rotation':               'rotation',
+
+  // Plate-loaded / machine additions (phase 7 step 5), tagged into the
+  // existing per-muscle subregion vocab so selection can reason about
+  // coverage the same way it does for the rest of the library.
+  'Plate-Loaded Incline Press':      'incline',
+  'Plate-Loaded Chest Press':        'flat',
+  'Plate-Loaded Decline Press':      'decline',
+  'Iso-Lateral Chest Press':         'flat',
+  'Plate-Loaded Lat Pulldown':       'vertical_pull',
+  'Iso-Lateral Front Pulldown':      'vertical_pull',
+  'Plate-Loaded Row':                'horizontal_row',
+  'Plate-Loaded High Row':           'horizontal_row',
+  'Plate-Loaded Low Row':            'horizontal_row',
+  'Plate-Loaded Rear Delt':          'horiz_abduction',
+  // Triceps long-head fix: overhead bias (Maeo). These satisfy the
+  // existing triceps `overhead` subregion requirement.
+  'Overhead Cable Rope Extension':   'overhead',
+  'Plate-Loaded Overhead Extension': 'overhead',
+  'Triceps Extension Machine':       'pushdown',
+  'Seated Dip Machine':              'pushdown',
+  'Assisted Dip Machine':            'pushdown',
+  'Lateral Raise Machine':           'lateral_raise',
+  'Ab Crunch Machine':               'flexion',
 };
 
 // [name, primaryMuscle, secondaryMuscles, equipment, movementPattern, isCompound, minReps, maxReps, fatigueCost, sfr]
@@ -798,7 +824,77 @@ const RAW = [
   ['Incline Board Sit-Up',          'abs', [],                            'bodyweight',   'isolation', false, 10, 20, 2, 3],
   ['Hanging Oblique Raise',         'abs', [],                            'bodyweight',   'isolation', false, 8, 15,  2, 4],
   ['Seated Twist (Plate)',          'abs', [],                            'barbell',      'isolation', false, 15, 25, 1, 3],
+
+  // ─── ADDUCTORS (inner thigh) ───────────────────────────────────────────────
+  // New distinct muscle (docs/audit/volyume-exercise-audit-2026-05-30). These
+  // are the exercises that make it programmable, the machine entry is the
+  // backbone of the machine-only pathway.
+  ['Hip Adduction Machine',         'adductors', [],                       'machine',      'isolation', false, 12, 20, 2, 5],
+  ['Cable Hip Adduction',           'adductors', [],                       'cable',        'isolation', false, 12, 20, 2, 4],
+  ['Copenhagen Adduction',          'adductors', ['abs'],                  'bodyweight',   'isolation', false, 8, 15,  3, 4],
+  ['Cossack Squat',                 'adductors', ['quads', 'glutes'],      'bodyweight',   'squat',     true,  8, 15,  3, 4],
+  ['Sumo Squat (Adductor Focus)',   'adductors', ['glutes', 'quads'],      'dumbbell',     'squat',     true,  10, 20, 3, 4],
+  ['Side-Lying Adduction',          'adductors', [],                       'bodyweight',   'isolation', false, 15, 25, 1, 4],
+  ['Banded Adduction',              'adductors', [],                       'bodyweight',   'isolation', false, 15, 25, 1, 4],
+  ['Lateral Lunge',                 'adductors', ['quads', 'glutes'],      'dumbbell',     'lunge',     true,  10, 15, 3, 4],
+
+  // ─── PLATE-LOADED / ISO-LATERAL MACHINES ───────────────────────────────────
+  // The Hammer-Strength backbone of commercial gyms (05 library build). The
+  // deriver tags these machine_plate_loaded by name. Subregions match the
+  // existing per-muscle taxonomy so selection can reason about coverage.
+  ['Plate-Loaded Incline Press',    'chest', ['triceps', 'front_delts'],   'machine',      'push',      true,  8, 15,  3, 4],
+  ['Plate-Loaded Chest Press',      'chest', ['triceps', 'front_delts'],   'machine',      'push',      true,  8, 15,  3, 4],
+  ['Plate-Loaded Decline Press',    'chest', ['triceps'],                  'machine',      'push',      true,  8, 15,  3, 4],
+  ['Iso-Lateral Chest Press',       'chest', ['triceps', 'front_delts'],   'machine',      'push',      true,  8, 15,  3, 4],
+  ['Plate-Loaded Lat Pulldown',     'back', ['biceps'],                    'machine',      'pull',      true,  8, 15,  3, 4],
+  ['Iso-Lateral Front Pulldown',    'back', ['biceps'],                    'machine',      'pull',      true,  8, 15,  3, 4],
+  ['Plate-Loaded Row',              'back', ['biceps', 'rear_delts'],      'machine',      'pull',      true,  8, 15,  3, 4],
+  ['Plate-Loaded High Row',         'back', ['biceps', 'rear_delts'],      'machine',      'pull',      true,  8, 15,  3, 4],
+  ['Plate-Loaded Low Row',          'back', ['biceps'],                    'machine',      'pull',      true,  10, 15, 3, 4],
+  ['Plate-Loaded Shoulder Press',   'side_delts', ['front_delts', 'triceps'], 'machine',   'push',      true,  8, 15,  3, 4],
+  ['Plate-Loaded Rear Delt',        'rear_delts', ['back'],                'machine',      'isolation', false, 12, 20, 2, 5],
+  ['Plate-Loaded Preacher Curl',    'biceps', [],                          'machine',      'isolation', false, 10, 15, 2, 5],
+  ['Plate-Loaded Hip Thrust',       'glutes', ['hamstrings'],              'machine',      'hinge',     true,  8, 15,  3, 5],
+
+  // ─── TRICEPS LONG HEAD (highest-yield subregion fix, 05/02b) ────────────────
+  // Overhead extensions grew the triceps long head far more than pushdowns
+  // (Maeo). The library was thin here, these close the gap.
+  ['Overhead Cable Rope Extension', 'triceps', [],                         'cable',        'isolation', false, 10, 20, 2, 5],
+  ['Plate-Loaded Overhead Extension','triceps', [],                        'machine',      'isolation', false, 10, 15, 2, 5],
+  ['Seated Dip Machine',            'triceps', ['chest'],                  'machine',      'push',      true,  8, 15,  2, 5],
+
+  // ─── MACHINE-ONLY COVERAGE FILL (05) ───────────────────────────────────────
+  // Single tagged entries so every machine in the commercial-gym inventory
+  // maps to a library exercise, completing the machine-only pathway.
+  ['Lateral Raise Machine',         'side_delts', [],                      'machine',      'isolation', false, 12, 20, 2, 5],
+  ['Preacher Curl Machine',         'biceps', [],                          'machine',      'isolation', false, 10, 15, 2, 5],
+  ['Triceps Extension Machine',     'triceps', [],                         'machine',      'isolation', false, 10, 15, 2, 5],
+  ['Glute Kickback Machine',        'glutes', ['hamstrings'],              'machine',      'isolation', false, 12, 20, 2, 5],
+  ['Ab Crunch Machine',             'abs', [],                             'machine',      'isolation', false, 12, 20, 2, 5],
+  ['Assisted Dip Machine',          'triceps', ['chest', 'front_delts'],   'machine',      'push',      true,  8, 15,  2, 4],
 ];
+
+// Build the full insert payload for one RAW row: the base fields the seed
+// has always written, plus the derived metadata. Pure; shared by the seed
+// and the top-up so a row inserted by either path is identical.
+function rowToExercise(row) {
+  const [name, primaryMuscle, secondaryMuscles, equipment, movementPattern, isCompound, min, max, fatigue, sfr] = row;
+  const base = {
+    name,
+    primaryMuscle,
+    secondaryMuscles,
+    equipment,
+    movementPattern,
+    compoundIsolation: isCompound ? 'compound' : 'isolation',
+    defaultRepMin: min,
+    defaultRepMax: max,
+    fatigueCost: fatigue,
+    stimulusToFatigueRatio: sfr,
+    subregion: SUBREGION_MAP[name] ?? null,
+    isCustom: false,
+  };
+  return { ...base, ...deriveExerciseMetadata(base) };
+}
 
 export async function seedExercisesIfNeeded() {
   try {
@@ -812,39 +908,49 @@ export async function seedExercisesIfNeeded() {
     }
 
     for (const row of RAW) {
-      const [name, primaryMuscle, secondaryMuscles, equipment, movementPattern, isCompound, min, max, fatigue, sfr] = row;
       // Deterministic ID derived from the canonical name. Same name on
       // any device produces the same UUID, so a routine pushed from
       // device A with exercise_id = canonicalExerciseId('Bench Press')
       // resolves on device B's fresh seed without any name lookup.
-      const id = canonicalExerciseId(name);
-      const base = {
-        name,
-        primaryMuscle,
-        secondaryMuscles,
-        equipment,
-        movementPattern,
-        compoundIsolation: isCompound ? 'compound' : 'isolation',
-        defaultRepMin: min,
-        defaultRepMax: max,
-        fatigueCost: fatigue,
-        stimulusToFatigueRatio: sfr,
-        subregion: SUBREGION_MAP[name] ?? null,
-        isCustom: false,
-      };
-      // Derive the richer metadata from the base fields so a fresh install
-      // seeds with equipment_category, force, laterality, difficulty etc.
-      // already populated (docs/audit/volyume-exercise-audit-2026-05-30).
-      await insertExerciseWithId(id, { ...base, ...deriveExerciseMetadata(base) });
+      await insertExerciseWithId(canonicalExerciseId(row[0]), rowToExercise(row));
     }
 
     await AsyncStorage.setItem(SEEDED_KEY, 'true');
-    // A fresh seed already carries the metadata, so mark the backfill done
-    // to skip the redundant pass.
+    // A fresh seed already carries the metadata and the full list, so mark
+    // both follow-up passes done to skip the redundant work.
     await AsyncStorage.setItem(METADATA_BACKFILL_KEY, 'true');
+    await AsyncStorage.setItem(LIBRARY_VERSION_KEY, 'true');
     console.log(`[Seed] Inserted ${RAW.length} exercises`);
   } catch (err) {
     console.error('[Seed] seedExercisesIfNeeded failed:', err);
+  }
+}
+
+// Idempotent top-up for installs that seeded an earlier, shorter library and
+// would otherwise never receive exercises added to RAW later (the seed
+// early-returns when any rows exist). Inserts any RAW row whose canonical ID
+// is not already present, fully populated with derived metadata. Safe to
+// re-run: insertExerciseWithId is INSERT OR IGNORE, and a version flag skips
+// the scan once the current list is in. Custom exercises are untouched.
+export async function topUpNewExercisesIfNeeded() {
+  try {
+    const done = await AsyncStorage.getItem(LIBRARY_VERSION_KEY);
+    if (done === 'true') return;
+
+    const existing = await getAllExercises();
+    const haveIds = new Set(existing.map(e => e.id));
+    let added = 0;
+    for (const row of RAW) {
+      const id = canonicalExerciseId(row[0]);
+      if (haveIds.has(id)) continue;
+      await insertExerciseWithId(id, rowToExercise(row));
+      added++;
+    }
+
+    await AsyncStorage.setItem(LIBRARY_VERSION_KEY, 'true');
+    if (added > 0) console.log(`[Seed] Topped up ${added} new exercises`);
+  } catch (err) {
+    console.error('[Seed] topUpNewExercisesIfNeeded failed:', err);
   }
 }
 

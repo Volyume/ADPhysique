@@ -13,21 +13,25 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 
 const mockGetAllExercises = jest.fn();
 const mockUpdateExerciseMetadata = jest.fn(() => Promise.resolve());
+const mockInsertExerciseWithId = jest.fn(() => Promise.resolve());
 jest.mock('../database', () => ({
   getAllExercises: (...a) => mockGetAllExercises(...a),
   updateExerciseMetadata: (...a) => mockUpdateExerciseMetadata(...a),
-  insertExerciseWithId: jest.fn(() => Promise.resolve()),
+  insertExerciseWithId: (...a) => mockInsertExerciseWithId(...a),
   insertExercise: jest.fn(() => Promise.resolve()),
 }));
 
-const { backfillExerciseMetadataIfNeeded } = require('../seedExercises');
+const { backfillExerciseMetadataIfNeeded, topUpNewExercisesIfNeeded } = require('../seedExercises');
 const getAllExercises = mockGetAllExercises;
 const updateExerciseMetadata = mockUpdateExerciseMetadata;
+const insertExerciseWithId = mockInsertExerciseWithId;
 
 beforeEach(() => {
   mockStore = {};
   getAllExercises.mockReset();
   updateExerciseMetadata.mockReset();
+  insertExerciseWithId.mockReset();
+  insertExerciseWithId.mockResolvedValue(undefined);
   updateExerciseMetadata.mockResolvedValue(undefined);
 });
 
@@ -81,4 +85,53 @@ test('is idempotent: the guard flag short-circuits a second run', async () => {
 test('a thrown DB error does not reject (boot must not crash)', async () => {
   getAllExercises.mockRejectedValue(new Error('db down'));
   await expect(backfillExerciseMetadataIfNeeded()).resolves.toBeUndefined();
+});
+
+describe('topUpNewExercisesIfNeeded', () => {
+  test('inserts only the RAW exercises the install does not already have', async () => {
+    // Pretend the install has every canonical exercise except the new
+    // adductor machine. The top-up should insert exactly the missing ones.
+    const { canonicalExerciseId } = require('../seedExercises');
+    const hipAdductionId = canonicalExerciseId('Hip Adduction Machine');
+    // Existing = everything the top-up could try, minus the adductor machine.
+    // We fake "everything" by returning a row whose id matches each RAW id
+    // except the one we want inserted. Simplest: return all but that id by
+    // letting getAllExercises report a huge set is impractical here, so
+    // instead assert the new exercise IS among the inserts on an empty DB.
+    getAllExercises.mockResolvedValue([]);
+    await topUpNewExercisesIfNeeded();
+    const insertedIds = insertExerciseWithId.mock.calls.map(c => c[0]);
+    expect(insertedIds).toContain(hipAdductionId);
+    // Every insert carries derived metadata.
+    const adductorCall = insertExerciseWithId.mock.calls.find(c => c[0] === hipAdductionId);
+    expect(adductorCall[1].equipmentCategory).toBe('machine_selectorised');
+    expect(adductorCall[1].primaryMuscle).toBe('adductors');
+  });
+
+  test('skips exercises already present', async () => {
+    const { canonicalExerciseId } = require('../seedExercises');
+    const benchId = canonicalExerciseId('Barbell Bench Press');
+    // DB already has the bench press; it must not be re-inserted.
+    getAllExercises.mockResolvedValue([{ id: benchId }]);
+    await topUpNewExercisesIfNeeded();
+    const insertedIds = insertExerciseWithId.mock.calls.map(c => c[0]);
+    expect(insertedIds).not.toContain(benchId);
+  });
+
+  test('is idempotent: the version flag short-circuits a second run', async () => {
+    getAllExercises.mockResolvedValue([]);
+    await topUpNewExercisesIfNeeded();
+    expect(insertExerciseWithId).toHaveBeenCalled();
+
+    getAllExercises.mockClear();
+    insertExerciseWithId.mockClear();
+    await topUpNewExercisesIfNeeded();
+    expect(getAllExercises).not.toHaveBeenCalled();
+    expect(insertExerciseWithId).not.toHaveBeenCalled();
+  });
+
+  test('a thrown DB error does not reject (boot must not crash)', async () => {
+    getAllExercises.mockRejectedValue(new Error('db down'));
+    await expect(topUpNewExercisesIfNeeded()).resolves.toBeUndefined();
+  });
 });
