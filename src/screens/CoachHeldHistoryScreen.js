@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import BackHeader from '../components/BackHeader';
+import EngineLog from '../components/EngineLog';
 import useAppStore from '../store/useAppStore';
 import { getCoachOutputHistory } from '../lib/database';
 import { SkeletonCard } from '../components/Skeleton';
@@ -107,6 +108,10 @@ export default function CoachHeldHistoryScreen({ navigation }) {
         <Text style={styles.intro}>
           Every week the coach makes decisions. Some things change, some things stay the same. You can see all of it here, and why.
         </Text>
+
+        {/* Recent engine adaptations and rep-regression warnings, moved
+            from the retired Athlete Hub dashboard. */}
+        <EngineLog userId={user?.id} />
 
         {loading && (
           <View style={{ gap: spacing.md, marginTop: spacing.md }}>

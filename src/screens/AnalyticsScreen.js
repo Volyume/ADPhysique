@@ -16,6 +16,7 @@ import InfoTooltip from '../components/InfoTooltip';
 import SvgBarSparkline from '../components/SvgBarSparkline';
 import FatigueTrendCard from '../components/FatigueTrendCard';
 import BlockProgressCard from '../components/BlockProgressCard';
+import ReadinessCards from '../components/ReadinessCards';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import {
@@ -526,6 +527,11 @@ export default function AnalyticsScreen({ navigation }) {
         </View>
         </AnimatedEntrance>
 
+        {/* ── Readiness (milestones, recovery signals, muscle
+            readiness, recovery trend), moved inline from the retired
+            Athlete Hub dashboard. ──────────────────────────────── */}
+        <ReadinessCards userId={user?.id} tier={tier} />
+
         {/* ── Lighter week banner ──────────────────────────────── */}
         {deloadAlert && (
           <View style={styles.deloadBanner}>
@@ -652,7 +658,6 @@ export default function AnalyticsScreen({ navigation }) {
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Explore</Text>
           <View style={styles.navGrid}>
-            <NavTile icon="pulse" color={colors.primary} label="Recovery & readiness" onPress={() => navigation.navigate('AthleteHub')} />
             <NavTile icon="trophy" color={colors.gold} label="Personal Records" onPress={() => navigation.navigate('PRWall')} />
             <NavTile icon="barbell" color={colors.primary} label="Lift Progress" onPress={() => navigation.navigate('LiftProgress')} />
             <NavTile icon="time" color={colors.textSecondary} label="Full History" onPress={() => navigation.navigate('WorkoutHistory')} />
