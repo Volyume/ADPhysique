@@ -9,6 +9,7 @@ import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius, volumeColors, motion } from '../styles/theme';
+import AnimatedEntrance from '../components/AnimatedEntrance';
 import ScreenHeader from '../components/ScreenHeader';
 import { EmptyChartIllustration } from '../components/Illustrations';
 import InfoTooltip from '../components/InfoTooltip';
@@ -494,6 +495,7 @@ export default function AnalyticsScreen({ navigation }) {
         )}
 
         {/* ── 1 · Mesocycle Pulse Card ───────────────────────── */}
+        <AnimatedEntrance index={0}>
         <View style={styles.section}>
           <View style={styles.rowBetween}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
@@ -522,6 +524,7 @@ export default function AnalyticsScreen({ navigation }) {
             currentMesoWeek={currentMesoWeek}
           />
         </View>
+        </AnimatedEntrance>
 
         {/* ── Lighter week banner ──────────────────────────────── */}
         {deloadAlert && (

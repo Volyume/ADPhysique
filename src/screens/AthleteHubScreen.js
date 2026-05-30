@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { format, differenceInDays } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius, shadow } from '../styles/theme';
+import AnimatedEntrance from '../components/AnimatedEntrance';
 import ScreenHeader from '../components/ScreenHeader';
 import InfoTooltip from '../components/InfoTooltip';
 import { SkeletonCard } from '../components/Skeleton';
@@ -523,6 +524,7 @@ export default function AthleteHubScreen({ navigation }) {
 
         {/* ── Milestone progress ─────────────────────────── */}
         {(lastUnlocked || next) && (
+          <AnimatedEntrance index={0}>
           <View style={styles.milestoneCard}>
             <View style={styles.milestoneTop}>
               {lastUnlocked && (
@@ -546,6 +548,7 @@ export default function AthleteHubScreen({ navigation }) {
               </View>
             )}
           </View>
+          </AnimatedEntrance>
         )}
 
         {/* ── Recovery signals ──────────────────────────── */}

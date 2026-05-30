@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Modal, TextInput, KeyboardAvoidingView, Platform, Animated, ActivityIndicator,
+  Modal, TextInput, KeyboardAvoidingView, Platform, Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { CartesianChart, Line, Area } from 'victory-native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { SkeletonCard } from '../components/Skeleton';
+import AnimatedEntrance from '../components/AnimatedEntrance';
 import {
   getExerciseById, getWorkoutSetsForExercise, getAllExercises,
   getExerciseGoal, saveExerciseGoal, markGoalAchieved, deleteExerciseGoal,
@@ -195,12 +197,14 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   }
 
   if (!exercise) {
-    // Returning null produced a blank screen during the initial DB load
-    // looked like a crashed screen. Show a spinner so the user has feedback.
+    // Content-shaped skeletons during the initial DB load, instead of a bare
+    // spinner, so it reads as the screen filling in rather than stalling.
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <ActivityIndicator size="large" color={colors.primary} />
+        <View style={{ padding: spacing.md, gap: spacing.md }}>
+          <SkeletonCard height={120} />
+          <SkeletonCard height={180} />
+          <SkeletonCard height={92} />
         </View>
       </SafeAreaView>
     );
@@ -244,6 +248,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
         {/* Overview */}
+        <AnimatedEntrance index={0}>
         <View style={styles.overviewCard}>
           <View style={styles.tags}>
             <View style={styles.tag}><Text style={styles.tagText}>{primaryMuscle}</Text></View>
@@ -304,6 +309,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             </View>
           </View>
         </View>
+        </AnimatedEntrance>
 
         {/* Personal Record highlight card */}
         {prs.length > 0 && (() => {

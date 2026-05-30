@@ -8,6 +8,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import AnimatedEntrance from '../components/AnimatedEntrance';
 import {
   getProgrammeById, getRoutinesForPlan, getAllRoutineExerciseCounts,
   activatePlanWithBlock, archivePlan, duplicatePlan, copyPlanFromLibrary,
@@ -207,6 +208,7 @@ export default function PlanDetailScreen({ navigation, route }) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
       >
         {/* Plan header */}
+        <AnimatedEntrance index={0}>
         <View style={styles.planHeader}>
           <View style={styles.planHeaderBadgeRow}>
             {isLibrary && (
@@ -251,6 +253,7 @@ export default function PlanDetailScreen({ navigation, route }) {
             )}
           </View>
         </View>
+        </AnimatedEntrance>
 
         {/* Primary action */}
         {isLibrary ? (
