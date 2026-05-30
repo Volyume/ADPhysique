@@ -1,9 +1,7 @@
 /**
- * DailyStepsCard render states.
- *
- * The pure conversion is covered in src/lib/__tests__/stepEstimate.test.js;
- * here we pin the card's two states (prompt vs logged) and the no-tracker
- * minutes toggle, with the data layer and toast mocked.
+ * DailyStepsCard render states: prompt when nothing logged, the logged total
+ * (with a thousands separator) when a row exists, and the edit affordance.
+ * The data layer and toast are mocked.
  */
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
@@ -17,7 +15,7 @@ jest.mock('../Toast', () => ({
   useToast: () => ({ show: jest.fn() }),
 }));
 
-jest.mock('../../lib/errors', () => ({ logError: jest.fn() }));
+jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
 
 const dbModule = require('../../lib/database');
 const DailyStepsCard = require('../DailyStepsCard').default;
@@ -45,9 +43,7 @@ beforeEach(() => jest.clearAllMocks());
 test('shows the prompt when no steps are logged today', async () => {
   dbModule.getDailyStepsToday.mockResolvedValue(null);
   const renderer = await render(<DailyStepsCard userId="u1" />);
-  const text = allText(renderer.toJSON());
-  expect(text).toContain('Steps today');
-  expect(text).toContain('No tracker? Enter minutes walked');
+  expect(allText(renderer.toJSON())).toContain('Steps today');
 });
 
 test('shows the logged total with a thousands separator when a row exists', async () => {
@@ -58,16 +54,21 @@ test('shows the logged total with a thousands separator when a row exists', asyn
   expect(text).toContain('Edit');
 });
 
-test('the no-tracker toggle swaps to minutes mode', async () => {
+test('saves the typed number via setDailySteps', async () => {
   dbModule.getDailyStepsToday.mockResolvedValue(null);
+  dbModule.setDailySteps.mockResolvedValue({});
   const renderer = await render(<DailyStepsCard userId="u1" />);
 
-  const toggle = renderer.root.findAll(
-    (n) => n.props && typeof n.props.onPress === 'function'
-      && allText(n.props.children) === 'No tracker? Enter minutes walked',
+  const input = renderer.root.findAll(
+    (n) => n.props && n.props.accessibilityLabel === 'Steps today'
+      && typeof n.props.onChangeText === 'function',
   )[0];
-  await act(async () => { toggle.props.onPress(); });
+  await act(async () => { input.props.onChangeText('9000'); });
 
-  const text = allText(renderer.toJSON());
-  expect(text).toContain('Enter a step count instead');
+  const logBtn = renderer.root.findAll(
+    (n) => n.props && n.props.accessibilityLabel === 'Log steps',
+  )[0];
+  await act(async () => { await logBtn.props.onPress(); });
+
+  expect(dbModule.setDailySteps).toHaveBeenCalledWith('u1', { steps: 9000, source: 'manual' });
 });

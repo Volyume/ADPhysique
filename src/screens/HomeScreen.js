@@ -836,8 +836,8 @@ export default function HomeScreen({ navigation }) {
           </View>
         )}
 
-        {/* ── Daily steps card (all tiers; steps are free) ── */}
-        {user?.id ? <DailyStepsCard userId={user.id} /> : null}
+        {/* ── Daily steps card (PRO; steps feed the coach's calculations) ── */}
+        {tier === 'pro' && user?.id ? <DailyStepsCard userId={user.id} /> : null}
 
         {/* ── Morning weight card ── */}
         {tier === 'pro' && (todayWeight != null ? (

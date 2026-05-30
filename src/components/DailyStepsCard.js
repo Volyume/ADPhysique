@@ -1,15 +1,19 @@
 /**
  * DailyStepsCard
  *
- * One number a day, the same shape as the morning-weight prompt on Home.
- * Steps are the primary non-lifting activity lever (cardio/steps audit), and
- * with most users having no tracker the card has to work for someone who
- * cannot read a step count anywhere: tap "No tracker?" and enter minutes
- * walked instead, which converts to an estimate at a normal walking cadence.
+ * One number a day, the same shape as the morning-weight prompt it sits
+ * beside on Home. Steps are the primary non-lifting activity lever the coach
+ * uses for its calculations and adjustments (cardio/steps audit), so this is
+ * a PRO surface, mounted only when the coach is in play.
  *
- * Available to every tier (steps are free; the adaptive cardio prescription
- * is the PRO part). Writes a single daily total via setDailySteps; the figure
- * is a compliance and coaching signal, it does not change the calorie target.
+ * Almost everyone who tracks steps already has the figure on their phone or
+ * watch. The point here is to let them type that number in without being made
+ * to connect Apple Health, Google Fit, or any device. Manual entry is the
+ * path; a later health auto-fill is an optional convenience on top, which is
+ * why the stored row carries a source ('manual' now, 'health' later).
+ *
+ * The figure is a compliance and coaching signal. It does not change the
+ * calorie target (the target already accounts for activity).
  */
 
 import React, { useEffect, useState } from 'react';
@@ -19,17 +23,14 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
 import { getDailyStepsToday, setDailySteps } from '../lib/database';
-import { estimateStepsFromMinutes } from '../lib/stepEstimate';
 import { useToast } from './Toast';
-import { logError } from '../lib/errors';
+import { logError } from '../lib/errorLog';
 
 export default function DailyStepsCard({ userId }) {
   const toast = useToast();
   const [todaySteps, setTodaySteps] = useState(null);
   const [loaded, setLoaded] = useState(false);
   const [stepInput, setStepInput] = useState('');
-  const [minutesMode, setMinutesMode] = useState(false);
-  const [minutesInput, setMinutesInput] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -47,12 +48,11 @@ export default function DailyStepsCard({ userId }) {
     return () => { cancelled = true; };
   }, [userId]);
 
-  const estimate = minutesMode ? estimateStepsFromMinutes(minutesInput) : 0;
-  const canLog = minutesMode ? estimate > 0 : Number(stepInput) > 0;
+  const canLog = Number(stepInput) > 0;
 
   async function handleLog() {
     if (saving || !canLog) return;
-    const steps = minutesMode ? estimate : Math.round(Number(stepInput));
+    const steps = Math.round(Number(stepInput));
     if (!steps || steps <= 0) return;
     setSaving(true);
     const previous = todaySteps;
@@ -60,8 +60,6 @@ export default function DailyStepsCard({ userId }) {
     try {
       await setDailySteps(userId, { steps, source: 'manual' });
       setStepInput('');
-      setMinutesInput('');
-      setMinutesMode(false);
       toast.show(`${steps.toLocaleString('en-GB')} steps logged`, { variant: 'success' });
     } catch (e) {
       setTodaySteps(previous);
@@ -74,8 +72,6 @@ export default function DailyStepsCard({ userId }) {
 
   function startEdit() {
     setStepInput(todaySteps ? String(todaySteps) : '');
-    setMinutesMode(false);
-    setMinutesInput('');
     setTodaySteps(null);
   }
 
@@ -104,66 +100,29 @@ export default function DailyStepsCard({ userId }) {
 
   return (
     <View style={[styles.card, styles.cardEmpty]}>
-      <View style={styles.promptRow}>
-        <Ionicons name="footsteps-outline" size={16} color={colors.primary} />
-        <Text style={styles.prompt}>Steps today</Text>
-        {minutesMode ? (
-          <View style={styles.inputWrap}>
-            <TextInput
-              style={styles.input}
-              value={minutesInput}
-              onChangeText={setMinutesInput}
-              placeholder="mins"
-              placeholderTextColor={colors.textMuted}
-              keyboardType="number-pad"
-              maxLength={3}
-              returnKeyType="done"
-              onSubmitEditing={handleLog}
-              accessibilityLabel="Minutes walked"
-            />
-            <Text style={styles.unit}>min</Text>
-          </View>
-        ) : (
-          <TextInput
-            style={styles.input}
-            value={stepInput}
-            onChangeText={setStepInput}
-            placeholder="steps"
-            placeholderTextColor={colors.textMuted}
-            keyboardType="number-pad"
-            maxLength={6}
-            returnKeyType="done"
-            onSubmitEditing={handleLog}
-            accessibilityLabel="Steps today"
-          />
-        )}
-        <TouchableOpacity
-          style={[styles.logBtn, (!canLog || saving) && styles.logBtnDisabled]}
-          onPress={handleLog}
-          disabled={!canLog || saving}
-          accessibilityRole="button"
-          accessibilityLabel="Log steps"
-        >
-          <Text style={styles.logBtnText}>Log</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.assistRow}>
-        <TouchableOpacity
-          onPress={() => { setMinutesMode(m => !m); }}
-          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-          accessibilityRole="button"
-        >
-          <Text style={styles.assistLink}>
-            {minutesMode ? 'Enter a step count instead' : 'No tracker? Enter minutes walked'}
-          </Text>
-        </TouchableOpacity>
-        {minutesMode && estimate > 0 ? (
-          <Text style={styles.assistEstimate}>
-            About {estimate.toLocaleString('en-GB')} steps
-          </Text>
-        ) : null}
-      </View>
+      <Ionicons name="footsteps-outline" size={16} color={colors.primary} />
+      <Text style={styles.prompt}>Steps today</Text>
+      <TextInput
+        style={styles.input}
+        value={stepInput}
+        onChangeText={setStepInput}
+        placeholder="steps"
+        placeholderTextColor={colors.textMuted}
+        keyboardType="number-pad"
+        maxLength={6}
+        returnKeyType="done"
+        onSubmitEditing={handleLog}
+        accessibilityLabel="Steps today"
+      />
+      <TouchableOpacity
+        style={[styles.logBtn, (!canLog || saving) && styles.logBtnDisabled]}
+        onPress={handleLog}
+        disabled={!canLog || saving}
+        accessibilityRole="button"
+        accessibilityLabel="Log steps"
+      >
+        <Text style={styles.logBtnText}>Log</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -174,7 +133,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
     paddingHorizontal: spacing.md,
@@ -182,12 +141,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   cardEmpty: {
-    flexDirection: 'column',
-    alignItems: 'stretch',
-    gap: spacing.xs,
     borderStyle: 'dashed',
   },
-  promptRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   prompt: {
     flex: 1,
     fontSize: fontSize.sm,
@@ -196,35 +151,24 @@ const styles = StyleSheet.create({
   },
   loggedText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary },
   edit: { fontSize: fontSize.xs, color: colors.primary },
-  inputWrap: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs },
   input: {
-    minWidth: 64,
+    minWidth: 72,
     backgroundColor: colors.surface2,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     color: colors.textPrimary,
     fontSize: fontSize.sm,
     textAlign: 'center',
   },
-  unit: { fontSize: fontSize.xs, color: colors.textMuted },
   logBtn: {
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.sm,
   },
   logBtnDisabled: { backgroundColor: colors.surface3 },
   logBtnText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.background },
-  assistRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-    paddingLeft: spacing.xl,
-  },
-  assistLink: { fontSize: fontSize.xs, color: colors.primary },
-  assistEstimate: { fontSize: fontSize.xs, color: colors.textMuted },
 });
