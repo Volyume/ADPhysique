@@ -156,6 +156,35 @@ export const CURATED_MEALS = Object.freeze([
   m('curated_vg_edamame_tahini_ricecakes', 'Edamame & tahini rice cakes', 'vegan', ['snack'], [{ food: 'edamame', g: 150 }, { food: 'rice_cakes', g: 24 }, { food: 'tahini', g: 10 }]),
   m('curated_vg_pea_oat_shake', 'Pea protein oat shake', 'vegan', ['snack'], [{ food: 'pea_protein', g: 30 }, { food: 'oats', g: 30 }, { food: 'soy_milk', g: 200 }]),
   m('curated_vg_soy_apple_almonds', 'Soya yogurt, apple & almonds', 'vegan', ['snack'], [{ food: 'soy_protein', g: 15 }, { food: 'soy_yogurt_hp', g: 200 }, { food: 'apple', g: 100 }, { food: 'almonds', g: 12 }]),
+
+  // ── Pre-workout ────────────────────────────────────────────────────────
+  // Easy-to-digest carbs with moderate protein, kept low in fat and fibre so
+  // they sit light before training. Eaten roughly 60 to 90 minutes out.
+  m('curated_om_pre_ricecakes_whey_banana', 'Rice cakes, whey & banana', 'omnivore', ['preworkout'], [{ food: 'rice_cakes', g: 30 }, { food: 'whey', g: 30 }, { food: 'banana', g: 120 }]),
+  m('curated_om_pre_oats_whey_honey', 'Oats, whey & honey', 'omnivore', ['preworkout'], [{ food: 'oats', g: 50 }, { food: 'whey', g: 30 }, { food: 'honey', g: 15 }]),
+  m('curated_om_pre_bagel_whey', 'Bagel & whey shake', 'omnivore', ['preworkout'], [{ food: 'bagel', g: 85 }, { food: 'whey', g: 30 }, { food: 'milk_skimmed', g: 200 }]),
+  m('curated_om_pre_chicken_white_rice', 'Chicken & white rice', 'omnivore', ['preworkout'], [{ food: 'chicken_breast', g: 120 }, { food: 'white_rice', g: 150 }]),
+  m('curated_veg_pre_skyr_oats_banana', 'Skyr, oats & banana', 'vegetarian', ['preworkout'], [{ food: 'skyr', g: 200 }, { food: 'oats', g: 40 }, { food: 'banana', g: 100 }]),
+  m('curated_veg_pre_yogurt_ricecakes_honey', 'Greek yogurt, rice cakes & honey', 'vegetarian', ['preworkout'], [{ food: 'greek_yogurt_0', g: 200 }, { food: 'rice_cakes', g: 24 }, { food: 'honey', g: 15 }]),
+  m('curated_veg_pre_cottage_bagel', 'Cottage cheese bagel', 'vegetarian', ['preworkout'], [{ food: 'cottage_cheese', g: 150 }, { food: 'bagel', g: 85 }, { food: 'honey', g: 10 }]),
+  m('curated_vg_pre_soy_oats_banana', 'Soya protein, oats & banana', 'vegan', ['preworkout'], [{ food: 'soy_protein', g: 30 }, { food: 'oats', g: 50 }, { food: 'banana', g: 120 }]),
+  m('curated_vg_pre_pea_ricecakes_banana', 'Pea protein, rice cakes & banana', 'vegan', ['preworkout'], [{ food: 'pea_protein', g: 30 }, { food: 'rice_cakes', g: 30 }, { food: 'banana', g: 120 }]),
+  m('curated_vg_pre_tofu_white_rice', 'Tofu & white rice', 'vegan', ['preworkout'], [{ food: 'tofu_firm', g: 150 }, { food: 'white_rice', g: 150 }]),
+
+  // ── Post-workout ───────────────────────────────────────────────────────
+  // Fast protein plus carbs to refill glycogen and start recovery, eaten
+  // soon after the session. Bigger and slightly higher carb than pre.
+  m('curated_om_post_whey_banana_shake', 'Whey & banana shake', 'omnivore', ['postworkout'], [{ food: 'whey', g: 40 }, { food: 'banana', g: 120 }, { food: 'milk_skimmed', g: 250 }]),
+  m('curated_om_post_chicken_rice_veg', 'Chicken, white rice & veg', 'omnivore', ['postworkout'], [{ food: 'chicken_breast', g: 150 }, { food: 'white_rice', g: 180 }, { food: 'mixed_veg', g: 100 }]),
+  m('curated_om_post_turkey_potato', 'Turkey & white potato', 'omnivore', ['postworkout'], [{ food: 'turkey_breast', g: 150 }, { food: 'white_potato', g: 250 }, { food: 'green_beans', g: 100 }]),
+  m('curated_om_post_whey_oats_honey', 'Whey, oats & honey', 'omnivore', ['postworkout'], [{ food: 'whey', g: 40 }, { food: 'oats', g: 60 }, { food: 'honey', g: 15 }]),
+  m('curated_om_post_tuna_bagel', 'Tuna bagel', 'omnivore', ['postworkout'], [{ food: 'tuna_water', g: 100 }, { food: 'bagel', g: 85 }]),
+  m('curated_veg_post_skyr_berries_honey', 'Skyr, berries & honey', 'vegetarian', ['postworkout'], [{ food: 'skyr', g: 250 }, { food: 'berries', g: 100 }, { food: 'honey', g: 15 }]),
+  m('curated_veg_post_whey_ricecakes_banana', 'Whey, rice cakes & banana', 'vegetarian', ['postworkout'], [{ food: 'whey', g: 40 }, { food: 'rice_cakes', g: 30 }, { food: 'banana', g: 120 }]),
+  m('curated_veg_post_yogurt_granola_banana', 'Greek yogurt, granola & banana', 'vegetarian', ['postworkout'], [{ food: 'greek_yogurt_0', g: 200 }, { food: 'granola', g: 40 }, { food: 'banana', g: 100 }]),
+  m('curated_vg_post_soy_banana_shake', 'Soya protein & banana shake', 'vegan', ['postworkout'], [{ food: 'soy_protein', g: 35 }, { food: 'banana', g: 120 }, { food: 'soy_milk', g: 250 }]),
+  m('curated_vg_post_tofu_rice_veg', 'Tofu, white rice & veg', 'vegan', ['postworkout'], [{ food: 'tofu_firm', g: 200 }, { food: 'white_rice', g: 180 }, { food: 'mixed_veg', g: 100 }]),
+  m('curated_vg_post_pea_oats_berries', 'Pea protein, oats & berries', 'vegan', ['postworkout'], [{ food: 'pea_protein', g: 35 }, { food: 'oats', g: 60 }, { food: 'berries', g: 80 }]),
 ]);
 
 const round = (n) => Math.round(n);

@@ -6,10 +6,12 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/them
 import BottomSheet from '../BottomSheet';
 
 const MEAL_SLOTS = [
-  { key: 'breakfast', label: 'Breakfast' },
-  { key: 'lunch',     label: 'Lunch' },
-  { key: 'dinner',    label: 'Dinner' },
-  { key: 'snack',     label: 'Snacks' },
+  { key: 'breakfast',   label: 'Breakfast' },
+  { key: 'lunch',       label: 'Lunch' },
+  { key: 'dinner',      label: 'Dinner' },
+  { key: 'preworkout',  label: 'Pre-workout' },
+  { key: 'postworkout', label: 'Post-workout' },
+  { key: 'snack',       label: 'Snacks' },
 ];
 
 /**
@@ -19,7 +21,7 @@ const MEAL_SLOTS = [
  *
  * Props:
  *   visible          show / hide
- *   initialMealSlot  'breakfast' | 'lunch' | 'dinner' | 'snack'
+ *   initialMealSlot  'breakfast' | 'lunch' | 'dinner' | 'preworkout' | 'postworkout' | 'snack'
  *   onSave           ({ kcal, protein, carbs, fat, mealSlot }) => Promise<void>
  *   onClose          () => void
  */

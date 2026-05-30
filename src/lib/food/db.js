@@ -30,7 +30,7 @@ function uid() {
  * @param {string} userId
  * @param {object} entry
  * @param {string} entry.entryDate    - 'YYYY-MM-DD'
- * @param {'breakfast'|'lunch'|'dinner'|'snack'} entry.mealSlot
+ * @param {'breakfast'|'lunch'|'dinner'|'preworkout'|'postworkout'|'snack'} entry.mealSlot
  * @param {string} entry.foodRef      - 'global:<uuid>' or 'custom:<uuid>'
  * @param {number} entry.quantityG
  * @param {number} entry.kcal

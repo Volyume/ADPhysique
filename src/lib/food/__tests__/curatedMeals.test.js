@@ -11,7 +11,7 @@ import {
   CURATED_MEALS, CURATED_FOODS, DIETS, dietAllows, mealItems, mealTotals, getCuratedCandidates,
 } from '../curatedMeals';
 
-const SLOTS = ['breakfast', 'lunch', 'dinner', 'snack'];
+const SLOTS = ['breakfast', 'lunch', 'dinner', 'snack', 'preworkout', 'postworkout'];
 
 describe('library data integrity', () => {
   test('every meal is well-formed and references real foods', () => {

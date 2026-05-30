@@ -35,6 +35,7 @@ unless the file header says otherwise.
 | 054 | `migrate_054_workout_sets_unilateral.sql` | Adds nullable `left_reps` + `right_reps` to `workout_sets` for per-side (unilateral) logging (GAP row 20). `actual_reps` holds the lower side, so volume/PR/progression are unchanged; the new columns are a display record. Additive; the frozen AAB sends the old column set and reads `actual_reps` as before. Apply before the next AAB ships (same ordering rule as every additive workout_sets column). | See § Verify workout_sets unilateral |
 | 055 | `migrate_055_diet_preference.sql` | Adds `diet_preference text DEFAULT 'omnivore'` to `users_profile`. Backs the curated meal-suggestion feature: the user's diet layer (omnivore/vegetarian/vegan) filters the curated meal library in the Suggested food-search tab. Joins the migration-045 per-column merge set (no trigger change; the jsonb merge handles the new key). Additive + defaulted; the frozen AAB neither writes nor reads it. Apply before the next AAB ships. | See § Verify users_profile.diet_preference |
 | 056 | `migrate_056_daily_steps.sql` | Creates `daily_steps(user_id, entry_date, steps, source, updated_at)` with composite PK + RLS + a BEFORE UPDATE touch trigger (last-write-wins), same per-day shape as `daily_water`. The activity store for the cardio/steps audit: the manual step log writes here and the coach's step target checks against it. Bidirectional sync via the `daily_steps` registry entry + `src/lib/sync/tables/dailySteps.js`. `user_id` FK is ON DELETE CASCADE so account deletion clears it; `delete_user_data` is not rewritten here (fold a `daily_steps` DELETE in at its next revision). Fully additive: the frozen AAB has no writer. Safe to apply any time. | See § Verify daily_steps |
+| 057 | `migrate_057_meal_slots_periworkout.sql` | Relaxes the `food_entries.meal_slot` CHECK (set by migration 015) to also allow `'preworkout'` and `'postworkout'`, backing the new Pre-workout and Post-workout diary sections and the curated peri-workout meals. Purely additive: the four original slots still pass, so nothing stored changes and the frozen AAB (which only sends the original four) keeps syncing. Local SQLite `meal_slot` has no CHECK, so logging works before this is applied; only cloud sync of the new slots needs it. Apply before a build that writes the new slots reaches production sync. | See § Verify peri-workout meal slots |
 
 > Migration 049 (`migrate_049_drop_peak_week_plans.sql`) is **drafted but held** — do NOT apply until the next AAB ships, so the frozen closed-test build keeps working against the table. Apply 050 before 049 if 050 is ready first; they're independent.
 
@@ -513,6 +514,34 @@ If any are missing, re-run the migration (idempotent) and re-check.
 Additive and independent, so it can go any time; until it's applied
 the new client keeps step data local (per-table push errors are
 caught and do not fail the wider sync run).
+
+### Verify peri-workout meal slots (migration 057)
+
+After applying, confirm the relaxed CHECK is in place:
+
+```sql
+SELECT pg_get_constraintdef(oid)
+FROM pg_constraint
+WHERE conname = 'food_entries_meal_slot_check';
+-- expect the definition to list all six values:
+--   CHECK ((meal_slot = ANY (ARRAY['breakfast','lunch','dinner',
+--           'snack','preworkout','postworkout'])))
+
+-- A peri-workout insert is now accepted (rolls back, no row kept):
+BEGIN;
+INSERT INTO food_entries
+  (id, user_id, entry_date, meal_slot, food_ref, quantity_g,
+   kcal, protein_g, carbs_g, fat_g)
+VALUES (gen_random_uuid(), auth.uid(), current_date, 'preworkout',
+   'global:test', 100, 0, 0, 0, 0);
+ROLLBACK;
+-- expect: INSERT 0 1 (no CHECK violation), then ROLLBACK
+```
+
+If the constraint still lists only four values, re-run the migration
+(idempotent) and re-check. Additive: the four original slots stay
+valid, so the frozen AAB keeps syncing; only the two new values need
+this applied before they can reach the cloud.
 
 ## Cloud schema drift audit
 

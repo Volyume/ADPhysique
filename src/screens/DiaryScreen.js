@@ -36,10 +36,12 @@ import ScreenHeader from '../components/ScreenHeader';
 import { deleteEntries, moveEntriesToSlot, copyEntriesToDate } from '../lib/food/bulkEntryOps';
 
 const MEAL_SLOTS = [
-  { key: 'breakfast', label: 'Breakfast' },
-  { key: 'lunch',     label: 'Lunch' },
-  { key: 'dinner',    label: 'Dinner' },
-  { key: 'snack',     label: 'Snacks' },
+  { key: 'breakfast',   label: 'Breakfast' },
+  { key: 'lunch',       label: 'Lunch' },
+  { key: 'dinner',      label: 'Dinner' },
+  { key: 'preworkout',  label: 'Pre-workout' },
+  { key: 'postworkout', label: 'Post-workout' },
+  { key: 'snack',       label: 'Snacks' },
 ];
 
 function isoDate(d) {
@@ -159,7 +161,8 @@ export default function DiaryScreen({ navigation }) {
   }, [load]);
 
   const entriesBySlot = useMemo(() => {
-    const out = { breakfast: [], lunch: [], dinner: [], snack: [] };
+    const out = {};
+    for (const s of MEAL_SLOTS) out[s.key] = [];
     for (const e of entries) {
       if (out[e.meal_slot]) out[e.meal_slot].push(e);
     }
