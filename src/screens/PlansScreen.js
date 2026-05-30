@@ -11,6 +11,7 @@ import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';
 import { SkeletonCard } from '../components/Skeleton';
 import PressableCard from '../components/PressableCard';
+import AnimatedEntrance from '../components/AnimatedEntrance';
 import PeekMenu from '../components/PeekMenu';
 import { EmptyPlanIllustration } from '../components/Illustrations';
 import {
@@ -539,8 +540,9 @@ export default function PlansScreen({ navigation }) {
         {myPlans.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>My plans</Text>
-            {myPlans.map(plan => (
-              <View key={plan.id} style={styles.planCard}>
+            {myPlans.map((plan, i) => (
+              <AnimatedEntrance key={plan.id} index={i}>
+              <View style={styles.planCard}>
                 <PressableCard
                   style={styles.planCardBody}
                   onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
@@ -578,6 +580,7 @@ export default function PlansScreen({ navigation }) {
                   </TouchableOpacity>
                 </View>
               </View>
+              </AnimatedEntrance>
             ))}
           </View>
         )}
