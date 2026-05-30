@@ -14,13 +14,25 @@ import { Ionicons } from '@expo/vector-icons';
 import PressableCard from './PressableCard';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 
-export default function Chip({ label, selected = false, onPress, icon, disabled = false, style, testID }) {
+export default function Chip({
+  label,
+  selected = false,
+  onPress,
+  icon,
+  disabled = false,
+  // 'button' for a plain toggle; pass 'radio' for single-select groups so
+  // assistive tech announces the chosen-one-of-many semantics.
+  accessibilityRole = 'button',
+  style,
+  testID,
+}) {
   return (
     <PressableCard
       onPress={onPress}
       disabled={disabled}
-      accessibilityRole="button"
+      accessibilityRole={accessibilityRole}
       accessibilityLabel={label}
+      accessibilityState={{ selected, disabled }}
       style={[styles.chip, selected && styles.chipSelected, disabled && styles.chipDisabled, style]}
       testID={testID}
     >

@@ -56,7 +56,10 @@ describe('Chip', () => {
     const onPress = jest.fn();
     let tree;
     act(() => { tree = create(<Chip label="Build muscle" onPress={onPress} />); });
-    act(() => tree.root.findByProps({ accessibilityRole: 'button' }).props.onPress());
+    // The host Pressable carries onPress; grab the deepest matching node.
+    const nodes = tree.root.findAllByProps({ accessibilityRole: 'button' });
+    const pressable = nodes.find(n => typeof n.props.onPress === 'function');
+    act(() => pressable.props.onPress());
     expect(onPress).toHaveBeenCalled();
   });
 
@@ -68,7 +71,24 @@ describe('Chip', () => {
   test('disabled blocks press', () => {
     let tree;
     act(() => { tree = create(<Chip label="x" disabled onPress={() => {}} />); });
-    expect(tree.root.findByProps({ accessibilityRole: 'button' }).props.disabled).toBe(true);
+    const nodes = tree.root.findAllByProps({ accessibilityRole: 'button' });
+    expect(nodes.some(n => n.props.disabled === true)).toBe(true);
+  });
+
+  test('reflects selected via accessibilityState', () => {
+    let tree;
+    act(() => { tree = create(<Chip label="x" selected onPress={() => {}} />); });
+    const nodes = tree.root.findAllByProps({ accessibilityRole: 'button' });
+    expect(nodes.length).toBeGreaterThan(0);
+    expect(nodes.some(n => n.props.accessibilityState?.selected === true)).toBe(true);
+  });
+
+  test('supports a radio role for single-select groups', () => {
+    let tree;
+    act(() => { tree = create(<Chip label="Mon" accessibilityRole="radio" selected onPress={() => {}} />); });
+    const nodes = tree.root.findAllByProps({ accessibilityRole: 'radio' });
+    expect(nodes.length).toBeGreaterThan(0);
+    expect(nodes.some(n => n.props.accessibilityState?.selected === true)).toBe(true);
   });
 });
 

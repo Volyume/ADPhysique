@@ -27,6 +27,7 @@ export default function PressableCard({
   children,
   accessibilityRole = 'button',
   accessibilityLabel,
+  accessibilityState,
   testID,
   hitSlop,
   // Subtle by default. Pass scale={0.94} for a more pronounced press
@@ -74,6 +75,7 @@ export default function PressableCard({
       testID={testID}
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}
+      accessibilityState={accessibilityState}
     >
       <Animated.View style={[style, animatedStyle]}>
         {children}
