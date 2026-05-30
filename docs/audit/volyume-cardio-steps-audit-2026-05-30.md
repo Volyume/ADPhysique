@@ -584,6 +584,39 @@ Touches `health.js`, `SettingsScreen`.
 Scored roughly by impact against effort. Health-platform work is confined to
 Enhancement, as required.
 
+### Implementation progress (updated 2026-05-30)
+
+Founder decisions taken before build started:
+- Steps are free; the adaptive cardio prescription stays PRO.
+- Logged activity is a compliance signal only, never added to the calorie
+  target (it already accounts for activity; double-counting is the MFP trap).
+- First step target is set from a measured baseline (a week of normal days,
+  then baseline plus about 2,000), not a flat default.
+- Cardio is a weekly count the user slots themselves, not pinned to days.
+- The activity store is local SQLite plus additive cloud sync.
+
+Resequencing that follows from "measure baseline first": F2's onboarding
+promise ("we set your target after your first week") needs a real logging
+surface to point at, so F3 (manual step logging) is built before F2. Shipping
+F2 first would be a coming-soon placeholder, which the house rules forbid.
+
+DONE (shipped to main, tested):
+- F1 activity store. A per-day daily_steps table (user_id, entry_date, steps,
+  source, updated_at), CRUD, the sign-out wipe and delete-completeness
+  wiring, additive cloud sync through the registry/transport path (own
+  last-write-wins handler), and cloud migration 056 (table, RLS, touch
+  trigger, CASCADE FK) with README tracking and a verify block. The step
+  total is keyed to the Diary day so steps and food share a boundary. Source
+  records 'manual' vs 'health' so a later wearable auto-fill and a typed
+  entry stay distinguishable.
+
+NEXT:
+- F3 manual step logging on the Diary day view (number entry plus
+  walking-minutes conversion, labelled an estimate).
+- Then F2 onboarding intro and opt-in, now able to point at a real surface.
+
+Build order from here: F1 (done), F3, F2, F4, then the Core cardio items.
+
 ### Foundation (all manual, no wearable dependency)
 
 - **F1. Activity store.** New additive `activity_log` table, keyed
