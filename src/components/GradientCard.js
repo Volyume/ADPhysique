@@ -1,67 +1,40 @@
 /**
- * GradientCard
+ * GradientCard — compatibility shim.
  *
- * A flat hero surface with an amber (or toned) accent border, used for the
- * most important card on a screen (today's readiness, next session, week
- * summary). It stands above the plain surface cards around it via the accent
- * border, not a gradient: the locked design rule is a flat #0D0D0D background
- * with no gradients, orbs, or glows (audit finding C1, 2026-05-29). The name
- * is kept for the existing call sites; there is no gradient.
+ * The component audit (design premium 2026-05-30, F4) found this was
+ * identical to `Card` with a `tone` accent border: there is no gradient (the
+ * locked rule is a flat background, no gradients/orbs/glows). To stop two
+ * card components drifting, the real implementation now lives in `Card`, and
+ * this forwards to it so existing call sites keep working unchanged.
  *
- * Choose a tone: 'primary' (amber), 'success', 'warning', 'error', 'gold',
- * 'neutral'. `tint` overrides the accent with a specific hex if needed.
+ * Prefer `<Card tone="primary">` directly in new code. `tint` maps to a
+ * custom accent; the old `intensity` prop was always ignored and still is.
  */
 
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { colors, radius, spacing, withAlpha } from '../styles/theme';
-
-const TONES = {
-  primary: colors.primary,
-  success: colors.success,
-  warning: colors.warning,
-  error: colors.error,
-  gold: colors.gold,
-  neutral: colors.border,
-};
+import Card from './Card';
+import { withAlpha } from '../styles/theme';
 
 export default function GradientCard({
   tone = 'primary',
   tint,
+  intensity: _intensity, // accepted but unused (was always ignored)
   style,
   children,
   borderless = false,
   accessibilityLabel,
 }) {
-  const accent = tint || TONES[tone] || TONES.primary;
-  // ~0.33 alpha so the accent reads as a border, not a fill. withAlpha
-  // handles hex and rgba tokens (the old accent + '55' concat broke on
-  // the rgba primaries).
-  const borderColour = withAlpha(accent, 0.33);
+  // If a caller passed an explicit tint hex, honour it as the accent border;
+  // otherwise let Card resolve the tone. withAlpha keeps the 0.33 border read.
+  const tintStyle = tint && !borderless ? { borderColor: withAlpha(tint, 0.33) } : null;
   return (
-    <View
-      style={[
-        styles.card,
-        !borderless && { borderColor: borderColour },
-        borderless && styles.borderless,
-        style,
-      ]}
+    <Card
+      tone={tint ? undefined : tone}
+      borderless={borderless}
+      style={[tintStyle, style]}
       accessibilityLabel={accessibilityLabel}
     >
       {children}
-    </View>
+    </Card>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-  },
-  borderless: {
-    borderWidth: 0,
-  },
-});

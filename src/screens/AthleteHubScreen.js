@@ -10,7 +10,6 @@ import { format, differenceInDays } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius, shadow } from '../styles/theme';
 import ScreenHeader from '../components/ScreenHeader';
-import GradientCard from '../components/GradientCard';
 import InfoTooltip from '../components/InfoTooltip';
 import { SkeletonCard } from '../components/Skeleton';
 import useAppStore from '../store/useAppStore';

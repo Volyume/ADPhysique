@@ -7,6 +7,7 @@ import { create, act } from 'react-test-renderer';
 
 import Button from '../Button';
 import Card from '../Card';
+import GradientCard from '../GradientCard';
 import { colors, withAlpha } from '../../styles/theme';
 
 describe('Button', () => {
@@ -78,5 +79,26 @@ describe('Card', () => {
     const expected = withAlpha(colors.primary, 0.33);
     expect(expected.startsWith('rgba(')).toBe(true);
     expect(JSON.stringify(tree)).toContain(expected);
+  });
+
+  test('elevated sits the card on the raised surface tier', () => {
+    const tree = create(<Card elevated><Text>x</Text></Card>).toJSON();
+    expect(JSON.stringify(tree)).toContain(colors.surfaceElevated);
+  });
+});
+
+describe('GradientCard shim', () => {
+  test('forwards to Card and renders its children (no gradient)', () => {
+    const tree = create(<GradientCard tone="primary"><Text>hi</Text></GradientCard>).toJSON();
+    // Renders the Card surface with the tone accent border.
+    expect(JSON.stringify(tree)).toContain(withAlpha(colors.primary, 0.33));
+    expect(JSON.stringify(tree)).toContain('hi');
+  });
+  test('honours an explicit tint as the accent border', () => {
+    const tree = create(<GradientCard tint="#FFD700"><Text>x</Text></GradientCard>).toJSON();
+    expect(JSON.stringify(tree)).toContain(withAlpha('#FFD700', 0.33));
+  });
+  test('the dead intensity prop is accepted without throwing', () => {
+    expect(() => create(<GradientCard intensity={0.28}><Text>x</Text></GradientCard>)).not.toThrow();
   });
 });

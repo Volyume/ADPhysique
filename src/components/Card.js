@@ -30,6 +30,9 @@ const TONES = {
 export default function Card({
   children,
   tone,
+  // `elevated` sits the card on the raised surface tier, for a card nested
+  // inside another card so its depth reads against the parent.
+  elevated = false,
   borderless = false,
   padding = 'lg',
   onPress,
@@ -41,6 +44,7 @@ export default function Card({
   const accent = tone ? (TONES[tone] || TONES.primary) : null;
   const cardStyle = [
     styles.base,
+    elevated && styles.elevated,
     { padding: spacing[padding] ?? spacing.lg },
     borderless && styles.borderless,
     // 0.33 alpha so the accent reads as a border, not a fill (replaces the
@@ -77,5 +81,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  elevated: { backgroundColor: colors.surfaceElevated },
   borderless: { borderWidth: 0 },
 });
