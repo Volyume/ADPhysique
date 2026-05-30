@@ -96,7 +96,7 @@ function volumeDotColor(muscleKey, workingSets) {
 }
 
 export default function AnalyticsScreen({ navigation }) {
-  const { user, units } = useAppStore(useShallow(s => ({ user: s.user, units: s.units })));
+  const { user, units, tier } = useAppStore(useShallow(s => ({ user: s.user, units: s.units, tier: s.tier })));
 
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
