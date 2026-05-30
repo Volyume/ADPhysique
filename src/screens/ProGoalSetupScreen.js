@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../store/useAppStore';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import Chip from '../components/Chip';
 import {
   PHYSIQUE_GOALS, PHYSIQUE_GOAL_GROUPS,
   TRAINING_PHASES,
@@ -313,16 +314,13 @@ export default function ProGoalSetupScreen({ navigation }) {
           contentContainerStyle={styles.filterRow}
         >
           {['All', ...PHYSIQUE_GOAL_GROUPS].map(group => (
-            <TouchableOpacity
+            <Chip
               key={group}
-              style={[styles.filterChip, goalFilterGroup === group && styles.filterChipActive]}
+              label={group}
+              selected={goalFilterGroup === group}
+              accessibilityRole="radio"
               onPress={() => setGoalFilterGroup(group)}
-              activeOpacity={0.75}
-            >
-              <Text style={[styles.filterChipText, goalFilterGroup === group && styles.filterChipTextActive]}>
-                {group}
-              </Text>
-            </TouchableOpacity>
+            />
           ))}
         </ScrollView>
 
@@ -609,16 +607,6 @@ const styles = StyleSheet.create({
   },
 
   filterRow: { gap: spacing.sm, paddingBottom: spacing.md },
-  filterChip: {
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    backgroundColor: colors.surface2, borderRadius: radius.full,
-    borderWidth: 1, borderColor: colors.border,
-  },
-  filterChipActive: {
-    backgroundColor: colors.primaryBg, borderColor: colors.primary,
-  },
-  filterChipText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
-  filterChipTextActive: { color: colors.primary, fontWeight: fontWeight.semibold },
 
   goalGrid: {
     flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md,
