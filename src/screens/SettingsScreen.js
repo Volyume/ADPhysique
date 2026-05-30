@@ -128,6 +128,9 @@ export default function SettingsScreen({ navigation }) {
   const [diet, setDiet] = useState(userProfile?.dietPreference ?? 'omnivore');
   const [offConsent, setOffConsent] = useState(false);
   const [cycleEnabled, setCycleEnabled] = useState(false);
+  // Daily movement. stepsEnabled undefined means never opted out, so on.
+  const [stepsEnabled, setStepsEnabled] = useState(userProfile?.stepsEnabled !== false);
+  const [stepTargetInput, setStepTargetInput] = useState(String(userProfile?.stepsTarget ?? 8000));
   const [bioSex, setBioSex] = useState(null);
   // Health integration. Per-scope status: weight read separately from
   // workout write so the user can enable one without the other.
@@ -150,6 +153,27 @@ export default function SettingsScreen({ navigation }) {
   async function toggleCycleTracking(value) {
     await setCycleTracking(value);
     setCycleEnabled(value);
+  }
+
+  async function toggleStepTarget(value) {
+    setStepsEnabled(value);
+    if (user?.id) {
+      await saveLocalProfile(user.id, { ...(userProfile || {}), stepsEnabled: value });
+    }
+  }
+
+  // Save the typed target on blur. Clamp to a sane band and never let an
+  // empty or junk value through; fall back to the current target or 8,000.
+  async function saveStepTarget() {
+    const parsed = Math.round(Number(stepTargetInput));
+    const current = userProfile?.stepsTarget ?? 8000;
+    const next = Number.isFinite(parsed) && parsed > 0
+      ? Math.min(Math.max(parsed, 1000), 30000)
+      : current;
+    setStepTargetInput(String(next));
+    if (user?.id && next !== current) {
+      await saveLocalProfile(user.id, { ...(userProfile || {}), stepsTarget: next });
+    }
   }
 
   useFocusEffect(
@@ -824,6 +848,42 @@ export default function SettingsScreen({ navigation }) {
               onPress={() => navigation.navigate('CoachingReminders')}
             />
           )}
+          {tier === 'pro' && (
+            <>
+              <SettingRow
+                icon="footsteps-outline"
+                label="Daily step target"
+                sub={stepsEnabled
+                  ? "Steps are the coach's first lever when progress slows, before your food. Your phone fills the number in."
+                  : 'Off. The coach leans on your food, and later cardio, instead of steps.'}
+                showArrow={false}
+                rightElement={
+                  <Switch
+                    value={stepsEnabled}
+                    onValueChange={toggleStepTarget}
+                    trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                    thumbColor={stepsEnabled ? colors.primary : colors.textMuted}
+                  />
+                }
+              />
+              {stepsEnabled && (
+                <View style={styles.stepTargetRow}>
+                  <Text style={styles.stepTargetLabel}>Steps a day</Text>
+                  <TextInput
+                    style={styles.stepTargetInput}
+                    value={stepTargetInput}
+                    onChangeText={setStepTargetInput}
+                    onBlur={saveStepTarget}
+                    onSubmitEditing={saveStepTarget}
+                    keyboardType="number-pad"
+                    maxLength={5}
+                    returnKeyType="done"
+                    accessibilityLabel="Daily step target"
+                  />
+                </View>
+              )}
+            </>
+          )}
           <SettingRow
             icon="notifications-outline"
             label="Notifications"
@@ -1219,6 +1279,28 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+  stepTargetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  stepTargetLabel: { fontSize: fontSize.md, color: colors.textSecondary },
+  stepTargetInput: {
+    minWidth: 88,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    color: colors.textPrimary,
+    fontSize: fontSize.md,
+    textAlign: 'center',
   },
   settingIcon: {
     width: 34,

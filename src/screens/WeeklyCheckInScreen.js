@@ -249,7 +249,10 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
   const showCycle = shouldShowCycleQuestion(bioSex, cycleEnabled);
   const hasNutritionTarget = Boolean(nutritionTargets?.targetKcal);
-  const hasStepsTarget = Boolean(userProfile?.stepsTarget ?? userProfile?.steps_target);
+  // Steps question only when the user keeps a step target. Opting out
+  // (stepsEnabled === false) hides it; undefined means never opted out.
+  const hasStepsTarget = userProfile?.stepsEnabled !== false
+    && Boolean(userProfile?.stepsTarget ?? userProfile?.steps_target);
   const hasCardioPrescription = Boolean(userProfile?.cardioPrescription ?? userProfile?.cardio_prescription);
 
   useEffect(() => {

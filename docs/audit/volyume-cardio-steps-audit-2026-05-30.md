@@ -694,18 +694,26 @@ DONE (shipped to main, tested):
   prompt and gated to PRO (steps feed the coach), taking one daily step
   number. This is the fallback and override surface; auto-read from the phone
   pedometer (F3b) lands on top of it.
+- F3b phone-pedometer auto-read (both platforms). activitySteps reads today's
+  count from Core Motion on iOS (expo-sensors, motion permission only, no
+  HealthKit) and Health Connect on Android. Auto-fills the card silently when
+  the permission is already granted, offers a one-tap connect when it isn't,
+  and a manual edit overrides as source 'manual'. app.json gained
+  NSMotionUsageDescription and ACTIVITY_RECOGNITION (needs a native rebuild).
+- F2 step-target explanation and opt-in at PRO onboarding (step 4), with the
+  starting number shown, plus the plumbing that makes opt-out real: a new
+  local-profile flag stepsEnabled (default on, undefined treated as on),
+  honoured by the coach (no step prescription, cardio becomes the next lever),
+  the Home card (hidden when off), and the weekly check-in (steps question
+  hidden when off). stepsEnabled is local-only profile state, not synced (the
+  syncProfile allow-list does not carry stepsTarget either), so no migration.
+- F4 Settings "Daily movement" (PRO): a toggle for the step target and a
+  typed daily target, clamped 1,000 to 30,000, written to the local profile.
 
 NEXT:
-- F3b phone-pedometer auto-read (both platforms, founder-decided). Read
-  today's steps from Core Motion on iOS (`expo-sensors`, motion permission
-  only, no HealthKit) and Health Connect on Android (already wired in
-  `health.js` `readStepsToday`). Pre-fill the card; a manual edit overrides
-  and wins for the day. This is the primary path for most users.
-- F2 onboarding intro and opt-in for the step target, now able to point at a
-  real entry surface.
-- F4 step opt-out and manual target in a Settings "Daily movement" section.
+- Core cardio items (the day-to-day cardio logging and weekly count).
 
-Build order from here: F1 + F3 (done), F3b, F2, F4, then the Core cardio
+Build order from here: F1, F3, F3b, F2, F4 (done), then the Core cardio
 items.
 
 ### Foundation (all manual, no wearable dependency)

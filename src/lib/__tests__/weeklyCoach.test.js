@@ -288,6 +288,54 @@ describe('cardio prescription', () => {
   });
 });
 
+// ── Step opt-out (stepsEnabled) ────────────────────────────────────────────
+
+describe('stepsEnabled opt-out', () => {
+  // A cut that is losing too slowly: the case that normally bumps steps.
+  const losingSlowly = {
+    morningWeights: trend(85, 0),
+    consecutiveOffTargetWeeks: 2,
+    currentStepsTarget: 8000,
+    consecutivePoorRecoveryWeeks: 0,
+    checkin: checkin({ energyScore: 4, sorenessScore: 2 }),
+  };
+
+  test('defaults on: a slow cut still produces a step prescription', () => {
+    const out = runWeeklyCoach(baseInputs(losingSlowly));
+    expect(out.adjustments.steps).not.toBeNull();
+  });
+
+  test('opted out: no step prescription is made', () => {
+    const out = runWeeklyCoach(baseInputs({ ...losingSlowly, stepsEnabled: false }));
+    expect(out.adjustments.steps).toBeNull();
+  });
+
+  test('opted out: cardio becomes the lever without steps needing to be maxed', () => {
+    // Steps target is mid-band, which would normally block cardio. With
+    // steps disabled the lever is treated as unavailable so cardio can fire.
+    const out = runWeeklyCoach(baseInputs({ ...losingSlowly, stepsEnabled: false }));
+    expect(out.adjustments.cardio).not.toBeNull();
+    expect(out.adjustments.cardio.prescribed).toBe(true);
+  });
+
+  test('opted out: the week reason is not the step-bump message', () => {
+    const out = runWeeklyCoach(baseInputs({ ...losingSlowly, stepsEnabled: false }));
+    // steps_bump can only fire off a non-null stepsAdjustment, which is null
+    // here, so the resolved reason must not be about raising the step target.
+    expect(out.whyThisWeek).toBeTruthy();
+    expect(out.whyThisWeek.toLowerCase()).not.toContain('step target');
+  });
+
+  test('opted out: a hit step adherence is not claimed as working', () => {
+    const out = runWeeklyCoach(baseInputs({
+      ...losingSlowly,
+      stepsEnabled: false,
+      checkin: checkin({ energyScore: 4, sorenessScore: 2, stepsAdherence: 'hit' }),
+    }));
+    expect(JSON.stringify(out.whatWorking)).not.toContain('Step target');
+  });
+});
+
 // ── Field defaults and missing-data robustness ─────────────────────────────
 
 describe('robustness to missing fields', () => {

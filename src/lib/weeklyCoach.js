@@ -317,6 +317,12 @@ export function runWeeklyCoach(inputs) {
     currentMaintenanceKcal = null,
     lastRefeedAt = null,
     currentStepsTarget = 8000,
+    // Whether the user keeps a daily step target. Defaults true so existing
+    // users and every prior caller are unchanged. When false (the user opted
+    // out at setup or in Settings) the coach makes no step prescription and
+    // treats the step lever as unavailable, so cardio becomes the next lever
+    // straight away instead of waiting for steps to reach the band ceiling.
+    stepsEnabled = true,
     bodyweightKg = null,
     units = 'kg',
     scoffPositive = false,
@@ -609,7 +615,11 @@ export function runWeeklyCoach(inputs) {
   let stepsAdjustment = null;
   const band = stepsBand(goalPhase, bwRef);
 
-  if (phase.isCut && !onTarget && offTargetDirection > 0 && !poorRecovery) {
+  if (!stepsEnabled) {
+    // User opted out of step targets. No step prescription at all; the
+    // cardio block below sees the step lever as unavailable and can fire.
+    stepsAdjustment = null;
+  } else if (phase.isCut && !onTarget && offTargetDirection > 0 && !poorRecovery) {
     // Losing too slowly, bump steps if room
     const newTarget = Math.min(currentStepsTarget + 1000, band.upper);
     if (newTarget > currentStepsTarget) {
@@ -638,7 +648,9 @@ export function runWeeklyCoach(inputs) {
   // Poor recovery overrides the prescription with a "pause" message instead
   // of letting cardio compound the recovery deficit.
   let cardioAdjustment = null;
-  const stepsAtUpperBand = currentStepsTarget >= band.upper;
+  // When steps are disabled the step lever is unavailable, so treat it as
+  // already maxed and let cardio be the next lever the coach reaches for.
+  const stepsAtUpperBand = !stepsEnabled || currentStepsTarget >= band.upper;
   const cardioConditionsMet = phase.isCut && !onTarget && offTargetDirection > 0 && stepsAtUpperBand;
 
   if (cardioConditionsMet && poorRecovery) {
@@ -880,9 +892,9 @@ export function runWeeklyCoach(inputs) {
     whatWorking.push(`${prsThisWeek} PR${prsThisWeek > 1 ? 's' : ''} this week.`);
   }
 
-  if (stepsAdherence === 'hit') {
+  if (stepsEnabled && stepsAdherence === 'hit') {
     whatWorking.push('Step target hit.');
-  } else if (stepsAdherence === 'mostly') {
+  } else if (stepsEnabled && stepsAdherence === 'mostly') {
     whatWorking.push('Step target mostly hit.');
   }
 

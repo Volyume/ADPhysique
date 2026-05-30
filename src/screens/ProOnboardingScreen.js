@@ -178,6 +178,9 @@ export default function ProOnboardingScreen({ navigation }) {
   const [morningHour, setMorningHour] = useState(7);
   const [checkinEnabled, setCheckinEnabled] = useState(true);
   const [checkinDay, setCheckinDay] = useState(0);
+  // Daily step target. On by default: the coach uses steps as its first,
+  // gentlest lever. The user can opt out here or later in Settings.
+  const [stepsTargetOn, setStepsTargetOn] = useState(true);
 
   // Step 1, account
   const [authMode, setAuthMode] = useState('signup'); // 'signup' | 'signin'
@@ -443,6 +446,7 @@ export default function ProOnboardingScreen({ navigation }) {
         phaseStartedAt: Date.now(),
         goalStartDate: isDeficit ? new Date().toISOString() : null,
         stepsTarget: (userProfile || {}).stepsTarget ?? 8000,
+        stepsEnabled: stepsTargetOn,
         trainingFreq: trainingFreqBucket,
         trainingFreqBucket,
         daysPerWeek: DEFAULT_DAYS_PER_WEEK,
@@ -1095,6 +1099,36 @@ export default function ProOnboardingScreen({ navigation }) {
                   </ScrollView>
                 </View>
               )}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.fieldLabel}>Daily movement</Text>
+            <Text style={styles.fieldHint}>How much you walk each day. Steps are the first thing the coach leans on when progress slows, before it touches your food.</Text>
+
+            <View style={styles.notifSection}>
+              <View style={styles.notifHeader}>
+                <View style={styles.notifIconWrap}>
+                  <Ionicons name="footsteps-outline" size={18} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.notifTitle}>Daily step target</Text>
+                  <Text style={styles.notifSub}>
+                    {stepsTargetOn
+                      ? 'Starts at 8,000 a day, the same every day. Your phone fills the number in for you. Adjust it any time in Settings.'
+                      : 'Off. The coach will lean on your food, and later on cardio, instead of steps. Turn this back on any time in Settings.'}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.toggle, stepsTargetOn && styles.toggleOn]}
+                  onPress={() => setStepsTargetOn(v => !v)}
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: stepsTargetOn }}
+                  accessibilityLabel="Keep a daily step target"
+                >
+                  <View style={[styles.toggleThumb, stepsTargetOn && styles.toggleThumbOn]} />
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
 

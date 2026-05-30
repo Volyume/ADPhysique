@@ -837,8 +837,12 @@ export default function HomeScreen({ navigation }) {
           </View>
         )}
 
-        {/* ── Daily steps card (PRO; steps feed the coach's calculations) ── */}
-        {tier === 'pro' && user?.id ? <DailyStepsCard userId={user.id} /> : null}
+        {/* ── Daily steps card (PRO; steps feed the coach's calculations). ──
+            Hidden when the user opted out of step targets. Undefined means
+            never opted out, so it shows by default. ── */}
+        {tier === 'pro' && user?.id && userProfile?.stepsEnabled !== false
+          ? <DailyStepsCard userId={user.id} />
+          : null}
 
         {/* ── Morning weight card ── */}
         {tier === 'pro' && (todayWeight != null ? (

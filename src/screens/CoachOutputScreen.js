@@ -1038,6 +1038,8 @@ export default function CoachOutputScreen({ navigation, route }) {
         currentMaintenanceKcal: nutrition?.tdee ?? null,
         lastRefeedAt: userProfile?.refeed?.appliedAt ?? null,
         currentStepsTarget: userProfile?.stepsTarget ?? 8000,
+        // Undefined/null means the user never opted out, so default on.
+        stepsEnabled: userProfile?.stepsEnabled !== false,
         bodyweightKg: userProfile?.weightKg ?? null,
         units,
         scoffPositive: (userProfile?.scoffScore ?? 0) >= 2,
