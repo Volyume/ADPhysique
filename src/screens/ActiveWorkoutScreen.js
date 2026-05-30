@@ -17,7 +17,6 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import * as hapticsVocab from '../lib/haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -227,7 +226,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       updated[currentExerciseIndex + 1] = { ...updated[currentExerciseIndex + 1], supersetGroupId: newId };
     }
     useAppStore.getState().setWorkoutExercises(updated);
-    Haptics.selectionAsync();
+    hapticsVocab.selection();
   }
 
   function handleRemoveExercise() {
@@ -351,7 +350,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       exerciseAName: exercise?.name ?? 'this exercise',
       exerciseBName: pairedExerciseName,
     });
-    Haptics.selectionAsync().catch(() => {});
+    hapticsVocab.selection();
   }, [currentSGI, pairedExerciseName, exercise?.name]);
 
   // First-use info tip: pulse the Info button until tapped. The pulse itself
@@ -1962,7 +1961,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 key={opt.value}
                 style={styles.sheetOption}
                 onPress={() => {
-                  Haptics.selectionAsync();
+                  hapticsVocab.selection();
                   setCurrentSet(s => ({ ...s, setType: opt.value }));
                   setShowSetTypePicker(false);
                 }}
@@ -2348,7 +2347,7 @@ const styles = StyleSheet.create({
   exerciseMuscle: { fontSize: fontSize.sm, color: colors.textSecondary },
   prevCard: { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border, gap: spacing.xs },
   prevTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, letterSpacing: 0.2 },
-  prevSetsSummary: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary, lineHeight: 22 },
+  prevSetsSummary: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary, lineHeight: 22, fontVariant: ['tabular-nums'] },
   prevEmpty: { fontSize: fontSize.sm, color: colors.textMuted, fontStyle: 'italic' },
   progressionBadge: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: colors.primaryBg, borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, alignSelf: 'flex-start' },
   progressionText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.medium, flexShrink: 1 },
@@ -2376,7 +2375,7 @@ const styles = StyleSheet.create({
   // amber button with a clear label rather than a tinted outline. Dark label
   // for contrast on amber (white on amber fails WCAG). Warm-ups stay visually
   // secondary via the tinted-outline override below.
-  completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderRadius: radius.lg, paddingVertical: spacing.lg, backgroundColor: colors.primary },
+  completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderRadius: radius.lg, paddingVertical: spacing.lg, backgroundColor: colors.primaryFill },
   btnDisabled: { opacity: 0.5 },
   completeBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.heavy, color: colors.background, letterSpacing: 0.6 },
   completeBtnWarmup: { backgroundColor: colors.warningBg || colors.surface, borderWidth: 1, borderColor: colors.warning },
@@ -2443,10 +2442,10 @@ const styles = StyleSheet.create({
   loggedSetRowWarmup: { borderColor: colors.warning + '60', backgroundColor: colors.warningBg || colors.surface },
   loggedSetTextWarmup: { color: colors.warning },
   setNumBadge: { width: 28, height: 28, borderRadius: radius.lg, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
-  setNumText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textSecondary },
+  setNumText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
   loggedSetText: { flex: 1, fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   loggedEst1RM: { fontSize: fontSize.xs, color: colors.textMuted },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+  modalOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
   modalContent: { padding: spacing.lg, paddingBottom: spacing.xxl },
   pickerSafe: { flex: 1, backgroundColor: colors.background },
   pickerHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border },
@@ -2477,7 +2476,7 @@ const styles = StyleSheet.create({
   emptySubtitle: { fontSize: fontSize.md, color: colors.textSecondary, textAlign: 'center' },
   addFirstBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.primary, borderRadius: radius.lg, paddingHorizontal: spacing.xxl, paddingVertical: spacing.lg, marginTop: spacing.lg },
   addFirstBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.background },
-  sheetOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' },
+  sheetOverlay: { flex: 1, backgroundColor: colors.scrim },
   sheet: { backgroundColor: colors.surface, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, paddingHorizontal: spacing.xl, paddingTop: spacing.md },
   sheetHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginBottom: spacing.lg },
   sheetTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.sm },
@@ -2497,7 +2496,7 @@ const styles = StyleSheet.create({
   targetBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.successBg, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderWidth: 1, borderColor: colors.success },
   targetBannerText: { fontSize: fontSize.sm, color: colors.success, fontWeight: fontWeight.semibold, flex: 1 },
   // Superset heads-up modal
-  supOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.78)', justifyContent: 'flex-end' },
+  supOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
   supSheet: { backgroundColor: colors.surface, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, padding: spacing.xl, paddingBottom: spacing.xxl, borderTopWidth: 1, borderColor: colors.border, gap: spacing.md },
   supIconRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   supTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
@@ -2519,7 +2518,7 @@ const styles = StyleSheet.create({
   supSecondaryBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: 'transparent' },
   supSecondaryBtnText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
 
-  staleOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
+  staleOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
   staleSheet: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.xl, width: '100%', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.border },
   staleTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, textAlign: 'center' },
   staleBody: { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: spacing.md },
@@ -2529,7 +2528,7 @@ const styles = StyleSheet.create({
   staleFinishText: { fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.textPrimary },
   staleDiscard: { width: '100%', paddingVertical: spacing.md, alignItems: 'center' },
   staleDiscardText: { fontSize: fontSize.sm, color: colors.error, fontWeight: fontWeight.medium },
-  discardOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
+  discardOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
   discardSheet: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.xl, width: '100%', gap: spacing.md, borderWidth: 1, borderColor: colors.border },
   discardTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, textAlign: 'center' },
   discardBody: { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: spacing.xs },
@@ -2578,7 +2577,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
     paddingVertical: 6, paddingHorizontal: spacing.sm,
     borderRadius: radius.sm,
-    backgroundColor: colors.warningBg || 'rgba(245,158,11,0.10)',
+    backgroundColor: colors.warningBg,
     borderWidth: 1, borderColor: colors.warning + '40',
   },
   stalledChipText: { fontSize: fontSize.xs, color: colors.warning, fontWeight: fontWeight.medium, flex: 1, lineHeight: 16 },
@@ -2604,7 +2603,7 @@ const styles = StyleSheet.create({
   },
   deloadBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: colors.warningBg || '#2A2000',
+    backgroundColor: colors.warningBg,
     borderRadius: radius.md, marginHorizontal: spacing.lg, marginBottom: spacing.sm,
     padding: spacing.md, borderWidth: 1, borderColor: colors.warning,
   },
