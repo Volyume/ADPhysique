@@ -62,8 +62,9 @@ real coaches work:
    did. Everything else depends on this.
 2. Surface and explain the step target from setup, with a one-screen
    plain-language intro and an opt-out.
-3. Ship manual step logging that works with no device: enter a step number,
-   or enter walking minutes and let the app convert them.
+3. Read steps from the phone pedometer by default (no wearable, no health
+   account), with manual entry as the override and fallback. (See section 3a;
+   this corrects an earlier draft that led with a manual field.)
 4. Turn the cardio prescription into an explained opt-in at the stall
    moment, with a fast manual completion log (type, minutes, easy or hard).
 5. Show simple compliance over time and wire the existing weekly adherence
@@ -301,6 +302,70 @@ first-class, sync is a bonus.
 
 ---
 
+## 3a. Phone-only step capture (added 2026-05-30, corrects an earlier gap)
+
+An earlier draft of this proposal led with a manual step-number field. That
+was a mistake: it skipped the most important technical fact for a phone-only
+app, which is that the phone already counts steps natively, with no wearable
+and no health-platform link. The corrected position is that the app should
+read the phone's step count by default, and manual entry is the fallback.
+
+Three capture paths, from the research:
+
+1. **The phone's own pedometer, no health platform, no wearable.**
+   - iOS: `expo-sensors` Pedometer reads Core Motion (the motion
+     coprocessor) directly. One "Motion and Fitness" permission, no
+     HealthKit, no account. It returns today's steps and up to 7 days of
+     history (`getStepCountAsync`). This is the lowest-friction option on
+     iOS.
+   - Android: `expo-sensors` cannot return a daily total
+     (`getStepCountAsync` is not implemented on Android, it is live and
+     session-only). The reliable phone-only daily total on Android comes
+     from Health Connect `READ_STEPS` (Android 14+, one permission sheet,
+     still no wearable). Volyume already reads this in `health.js`
+     `readStepsToday` via `react-native-health-connect`.
+   - Dedicated step apps (Pacer, StepsApp, Fitbit phone-only) all default to
+     reading the phone sensor with a single permission and treat
+     health-platform links as optional. That is the norm to match.
+
+2. **Health-platform sync (Apple Health, Health Connect, Google Fit).** Adds
+   a per-data-type consent sheet, sometimes an app dependency or a Google
+   account. Higher friction. Worth it on Android (for the daily total via
+   Health Connect) or for future wearable data, not as the default on iOS.
+
+3. **Manual entry.** Typing the day's number. The universal fallback for
+   days the phone was not carried. A simple number, overwriting the day's
+   value.
+
+Accuracy, because it decides whether a phone count is good enough to drive a
+coaching target:
+- On a treadmill, smartphone apps (about -6.7% to +6.2% vs observed) beat
+  wrist wearables (-22.7% to -1.5%) (JAMA 2015).
+- In real life the phone undercounts by roughly 10 to 20%, almost entirely
+  because the phone is not always carried, not because the sensor is poor
+  (UBC study).
+- A consistent per-user undercount is fine for a coach that adapts to the
+  user's own trend rather than a true population step count, which is exactly
+  how the weekly coach works. So phone-counted steps are good enough to drive
+  the target, provided we never present the number as exact and we let the
+  user correct a day the phone missed.
+
+Design consequence: read the phone pedometer as the default (Core Motion on
+iOS, Health Connect on Android), pre-fill the day's figure, and let the user
+override it by hand (an override is a manual value and wins for that day). No
+health connection is forced on iOS, because Core Motion needs only the motion
+permission. The shipped manual card stays as the override and the fallback
+for when the sensor is unavailable or permission is declined.
+
+On the "don't force a connection" rule: the iOS Core Motion path needs only
+the Motion and Fitness permission, not HealthKit, so it honours the rule
+directly. On Android, Health Connect is the daily-total path and needs its
+permission sheet, but it is still phone-only (no wearable), and if the user
+declines, the manual card is there. Nobody is ever required to connect a
+device or a health account to record steps.
+
+---
+
 ## 4. Real-world coaching research
 
 Full sources in the appendix. The consensus among science-based coaches
@@ -409,13 +474,16 @@ target. Cardio is a weekly total, do the sessions on whichever days fit."
   move (it is daily). The cardio weekly count is independent of which days
   are training days, so it adapts for free.
 
-### 5.3 Daily logging, primary path with no wearable
+### 5.3 Daily logging, the primary path
 
-**Steps.** A single fast entry on the day view. The user can either type the
-day's step number, or tap "Add a walk" and enter minutes, which the app
-converts to an estimated step band (around 100 to 120 steps a minute). The
-estimate is labelled as an estimate, never shown as exact. Minimum friction:
-one tap to open, number pad, done.
+**Steps.** The phone counts steps already, so the default is to read that
+count, not ask the user to type it. The card shows today's figure read from
+the phone (Core Motion on iOS, Health Connect on Android), and the user can
+tap to correct it for a day the phone was not carried. The correction is a
+manual value and wins for that day. For a user whose sensor is unavailable or
+who declines the motion permission, the same card takes a typed number. No
+walking-minutes conversion: it was unscientific and, given the phone counts
+natively, unneeded. The number is never shown as exact.
 
 **Cardio.** A standalone activity entry, logged the same way food is logged,
 reusing the existing bottom-sheet and quick-add patterns. Fields, kept
@@ -429,18 +497,21 @@ both. Cardio is a weekly count logged whenever it is done. On a training
 day, also offer "log cardio" from the workout summary, since the user is
 already there and the session is fresh.
 
-**Steps for the no-wearable user, explicitly.** Manual daily entry is the
-answer, with walking-minutes conversion as the friction-saver, and honest
-labelling that the figure is approximate. Steps must never depend on health
-access. This is the heart of designing for the 80%.
+**Steps for the no-wearable user, explicitly.** The phone's own pedometer is
+the answer for the majority: it reads the count with one motion permission
+and no wearable, no health account, no device pairing. Manual entry is the
+fallback for when the sensor is off or denied, and the override for a day the
+phone missed. Steps never depend on connecting a wearable. This is the heart
+of designing for the 80%. (See section 3a for the capture-path evidence.)
 
-### 5.4 Daily logging, secondary path with a wearable or health platform
+### 5.4 Daily logging, wearable or health-platform data
 
-If Apple Health, Health Connect, or Google Fit is connected, the day's step
-field is pre-filled automatically and the manual entry becomes a confirm or
-override. Cardio sessions can optionally be imported from health workouts.
-Nothing about the manual experience changes; the device just fills in what
-the user would otherwise type. Setup and management live where they already
+A wearable adds nothing the phone pedometer does not already give for steps,
+so it is not required at any point. Where the user has connected Health
+(Apple Health workouts, Health Connect), cardio sessions can optionally be
+imported. Nothing about the manual experience changes; the device just fills
+in what the user would otherwise confirm. Setup and management live where they
+already
 do, in Settings, and the feature is never presumed. The copy frames it as
 "we will fill your steps in for you", an enhancement, not the expected norm.
 
@@ -530,10 +601,14 @@ log, to pre-empt the MFP distrust trap):
   steps are a daily floor, cardio is a weekly count the client slots
   themselves (RippedBody, Precision Nutrition cardio-confusion).
 
-### 6.4 Manual logging mechanic (primary path)
+### 6.4 Logging mechanic
 
-- **Steps:** type the number, or "Add a walk" in minutes converted to an
-  estimated band, labelled approximate. One tap to open, number pad, done.
+- **Steps (primary):** read today's count from the phone pedometer and
+  pre-fill it (Core Motion on iOS, Health Connect on Android), the user
+  confirming or correcting. **Steps (fallback/override):** type the day's
+  number when the sensor is off or for a day the phone missed. No
+  walking-minutes conversion. Evidence: section 3a (phone counts natively;
+  Pacer/StepsApp default to the sensor with one permission).
 - **Cardio:** standalone entry like food quick-add. Type, minutes, optional
   easy or hard. Completion of a prescribed session prefills duration, so it
   can be one tap.
@@ -617,15 +692,21 @@ DONE (shipped to main, tested):
   stay distinguishable.
 - F3 manual step entry. A DailyStepsCard on Home, beside the morning-weight
   prompt and gated to PRO (steps feed the coach), taking one daily step
-  number. No device connection required: the user types the figure they
-  already see on their phone or watch.
+  number. This is the fallback and override surface; auto-read from the phone
+  pedometer (F3b) lands on top of it.
 
 NEXT:
+- F3b phone-pedometer auto-read (both platforms, founder-decided). Read
+  today's steps from Core Motion on iOS (`expo-sensors`, motion permission
+  only, no HealthKit) and Health Connect on Android (already wired in
+  `health.js` `readStepsToday`). Pre-fill the card; a manual edit overrides
+  and wins for the day. This is the primary path for most users.
 - F2 onboarding intro and opt-in for the step target, now able to point at a
   real entry surface.
 - F4 step opt-out and manual target in a Settings "Daily movement" section.
 
-Build order from here: F1 + F3 (done), F2, F4, then the Core cardio items.
+Build order from here: F1 + F3 (done), F3b, F2, F4, then the Core cardio
+items.
 
 ### Foundation (all manual, no wearable dependency)
 
@@ -636,10 +717,16 @@ Build order from here: F1 + F3 (done), F2, F4, then the Core cardio items.
   below depends on this.
 - **F2. Surface and explain the step target.** The setup intro screen and
   the opt-in. Impact high, effort low to medium. Depends on nothing.
-- **F3. Manual step logging.** A daily step-number entry on Home beside the
-  weight prompt (PRO; steps feed the coach). The user types the figure from
-  their own phone or watch, no device connection required. Impact high,
-  effort medium. Depends on F1.
+- **F3. Manual step entry.** A daily step-number entry on Home beside the
+  weight prompt (PRO; steps feed the coach), as the fallback and override.
+  The user types the figure for a day the phone missed or when the sensor is
+  off. Impact high, effort medium. Depends on F1.
+- **F3b. Phone-pedometer auto-read (primary path).** Read today's steps from
+  the phone and pre-fill the card: Core Motion via `expo-sensors` on iOS
+  (motion permission only, no HealthKit), Health Connect on Android (already
+  in `health.js`). A manual edit overrides for the day. No wearable, no
+  forced health account. Impact high, effort medium. Depends on F1, F3.
+  Needs on-device verification (dev build, real iOS and Android devices).
 - **F4. Step opt-out and manual target in Settings.** A "Daily movement"
   section. Impact medium, effort low. Depends on F2.
 
@@ -777,6 +864,35 @@ F3 and C3 to have any data.
   pmc.ncbi.nlm.nih.gov/articles/PMC5508112, sciencedirect.com.
 - Step-count framing / 10k myth: vitalibrary.com, menstreets.com.
 - Adherence and rationale: theptdc.com, traineracademy.org, coactive.com.
+
+### 9.3a External sources (phone-only step capture, added 2026-05-30)
+
+- expo-sensors Pedometer: docs.expo.dev/versions/latest/sdk/pedometer,
+  Expo GitHub issues #3629 (iOS 7-day window), #4895 (Android
+  getStepCountAsync unsupported), #13131 / #16605 (Android watchStepCount),
+  #19899 (Android 9 and below), SDK 52 changelog (Expo Go Android removal).
+- iOS Core Motion: developer.apple.com CMPedometer and queryPedometerData,
+  devfright.com CMPedometer guide.
+- Android sensors / Health Connect: developer.android.com (read step count
+  via SensorManager; Health Connect steps feature; Fit-to-Health-Connect
+  migration), support.google.com Health Connect, androidauthority.com.
+- Apple Health / Fitness phone-only: support.apple.com 105048,
+  appleinsider.com, iphonelife.com.
+- Default-capture and manual-entry behaviour: mypacer.com / support and blog,
+  steps.app support, help.fitbit.com, samsung community, google fit help.
+- Manual entry in coaching/diet apps: help.macrofactorapp.com (import steps,
+  wearable-expenditure article, weight log / edit, weight trend),
+  community.myfitnesspal.com and support.myfitnesspal.com,
+  forums.cronometer.com and support.cronometer.com, ideas.trainerize.com and
+  help.trainerize.com, play.google.com (Lose It!).
+- Phone vs wearable step accuracy: pubmed.ncbi.nlm.nih.gov/25668268 (JAMA
+  2015), sciencedaily.com and penntoday.upenn.edu summaries, vice.com (UBC
+  free-living undercount), washingtonpost.com (calorie miscount),
+  psychologytoday.com (trusting step/calorie apps), rippedbody.com/step-tracking.
+- Tiering / freemium principle: feastgood.com and nutriscan.app (MacroFactor
+  premium-only), joincarbon.com pricing, mensjournal.com and techsith.com
+  (Caliber free logging), corahealth.app (Future), demogo.com and
+  productled.com and chargebee.com (feature-gating / freemium economics).
 
 ### 9.4 Evidence confidence
 
