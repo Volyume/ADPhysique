@@ -458,6 +458,18 @@ export default function ProOnboardingScreen({ navigation }) {
 
       if (user?.id) await saveLocalProfile(user.id, merged);
 
+      // Opting into step targets is the moment to ask for the health step
+      // permission, so the foreground auto-read can populate daily_steps.
+      // Fire-and-forget: declining is fine, the check-in falls back to a
+      // manual average. Mirrors the Settings toggle.
+      if (stepsTargetOn) {
+        try {
+          // eslint-disable-next-line global-require
+          const { requestStepPermission } = require('../lib/activitySteps');
+          requestStepPermission().catch(() => {});
+        } catch (_) { /* activitySteps unavailable */ }
+      }
+
       if (user?.id && !isNaN(bwKg) && bwKg > 0) {
         await logBodyMetric(user.id, { weightKg: bwKg, loggedAt: Date.now() });
         // Also seed the morning weights series so the weekly check-in

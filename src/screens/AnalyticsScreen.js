@@ -17,6 +17,7 @@ import SvgBarSparkline from '../components/SvgBarSparkline';
 import FatigueTrendCard from '../components/FatigueTrendCard';
 import BlockProgressCard from '../components/BlockProgressCard';
 import ReadinessCards from '../components/ReadinessCards';
+import StepsCard from '../components/StepsCard';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import {
@@ -96,7 +97,7 @@ function volumeDotColor(muscleKey, workingSets) {
 }
 
 export default function AnalyticsScreen({ navigation }) {
-  const { user, units, tier } = useAppStore(useShallow(s => ({ user: s.user, units: s.units, tier: s.tier })));
+  const { user, units, tier, userProfile } = useAppStore(useShallow(s => ({ user: s.user, units: s.units, tier: s.tier, userProfile: s.userProfile })));
 
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -538,6 +539,13 @@ export default function AnalyticsScreen({ navigation }) {
             readiness, recovery trend), moved inline from the retired
             Athlete Hub dashboard. ──────────────────────────────── */}
         <ReadinessCards userId={user?.id} tier={tier} />
+
+        {/* ── Steps (Pro; automatic from the health aggregator) ── */}
+        {tier === 'pro' && user?.id && userProfile?.stepsEnabled !== false && (
+          <View style={{ marginTop: spacing.lg }}>
+            <StepsCard userId={user.id} stepsTarget={userProfile?.stepsTarget} />
+          </View>
+        )}
 
         {/* ── Lighter week banner ──────────────────────────────── */}
         {deloadAlert && (
