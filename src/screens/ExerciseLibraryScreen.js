@@ -11,11 +11,12 @@ import PeekMenu from '../components/PeekMenu';
 import { getAllExercises, getCompletedWorkoutSets, insertExercise, deleteExercise } from '../lib/database';
 import { logError } from '../lib/errorLog';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
+import { matchesEquipmentFilter } from '../lib/exerciseDisplay';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
 const MUSCLES = Object.keys(MUSCLE_DISPLAY_NAMES);
-const EQUIPMENT = ['Barbell', 'Dumbbell', 'Cable', 'Machine', 'Bodyweight', 'Smith Machine', 'Bands'];
+const EQUIPMENT = ['Barbell', 'Dumbbell', 'Cable', 'Machine', 'Plate-loaded', 'Bodyweight', 'Smith Machine', 'Bands', 'Landmine'];
 
 const DIFFICULTY_OPTIONS = [
   { label: 'Beginner', value: 'beginner' },
@@ -178,9 +179,7 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
       );
     }
     if (filterEquipment) {
-      result = result.filter(e =>
-        (e.equipment || '').toLowerCase().includes(filterEquipment.toLowerCase()),
-      );
+      result = result.filter(e => matchesEquipmentFilter(e, filterEquipment));
     }
     // Custom exercises always appear at the top
     const custom = result.filter(e => e.isCustom);

@@ -15,6 +15,7 @@ import {
   getExerciseGoal, saveExerciseGoal, markGoalAchieved, deleteExerciseGoal,
 } from '../lib/database';
 import { calculate1RM, MUSCLE_DISPLAY_NAMES, detectPlateau } from '../lib/algorithms';
+import { equipmentDisplayLabel, difficultyDisplayLabel, subregionDisplayLabel } from '../lib/exerciseDisplay';
 import { rankSwaps } from '../lib/swapEngine';
 import useAppStore from '../store/useAppStore';
 import { FORM_TIPS } from '../lib/formTips';
@@ -213,6 +214,10 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   const formTip = FORM_TIPS[exercise.name] ?? null;
   const primaryMuscle = MUSCLE_DISPLAY_NAMES[(exercise.primaryMuscle || '').toLowerCase()] || exercise.primaryMuscle;
   const secondaryMuscles = exercise.secondaryMuscles || [];
+  const equipmentLabel = equipmentDisplayLabel(exercise);
+  const difficultyLabel = difficultyDisplayLabel(exercise);
+  const subregionLabel = subregionDisplayLabel(exercise.subregion);
+  const coachingCue = exercise.cue || null;
 
   const allTimeSets = history.flat();
   const best1RM = allTimeSets.reduce((best, s) => {
@@ -252,9 +257,14 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         <View style={styles.overviewCard}>
           <View style={styles.tags}>
             <View style={styles.tag}><Text style={styles.tagText}>{primaryMuscle}</Text></View>
-            {exercise.equipment && (
+            {subregionLabel && (
               <View style={[styles.tag, styles.tagSecondary]}>
-                <Text style={[styles.tagText, styles.tagTextSecondary]}>{exercise.equipment}</Text>
+                <Text style={[styles.tagText, styles.tagTextSecondary]}>{subregionLabel}</Text>
+              </View>
+            )}
+            {equipmentLabel && (
+              <View style={[styles.tag, styles.tagSecondary]}>
+                <Text style={[styles.tagText, styles.tagTextSecondary]}>{equipmentLabel}</Text>
               </View>
             )}
             {exercise.compoundIsolation && (
@@ -262,6 +272,11 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                 <Text style={[styles.tagText, styles.tagTextSecondary]}>
                   {exercise.compoundIsolation.charAt(0).toUpperCase() + exercise.compoundIsolation.slice(1)}
                 </Text>
+              </View>
+            )}
+            {difficultyLabel && (
+              <View style={[styles.tag, styles.tagSecondary]}>
+                <Text style={[styles.tagText, styles.tagTextSecondary]}>{difficultyLabel}</Text>
               </View>
             )}
           </View>
@@ -575,6 +590,15 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           </View>
         )}
 
+        {coachingCue && (
+          <View style={styles.section}>
+            <View style={styles.cueCard}>
+              <Ionicons name="bulb-outline" size={16} color={colors.primary} />
+              <Text style={styles.cueText}>{coachingCue}</Text>
+            </View>
+          </View>
+        )}
+
         {(formTip || exercise.notes) && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>How to do it</Text>
@@ -853,6 +877,17 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   notesText: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
+  cueCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primaryBg,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.primary + '50',
+  },
+  cueText: { flex: 1, fontSize: fontSize.sm, color: colors.textPrimary, lineHeight: 20 },
   plateauBanner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
