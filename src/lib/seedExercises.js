@@ -1,7 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getAllExercises, insertExercise, insertExerciseWithId } from './database';
+import { getAllExercises, insertExercise, insertExerciseWithId, updateExerciseMetadata } from './database';
+import { deriveExerciseMetadata } from './exerciseMetadata';
 
 const SEEDED_KEY = '@volyume_exercises_seeded_v7';
+// Bumped when the derived metadata changes so the backfill re-runs once.
+const METADATA_BACKFILL_KEY = '@volyume_exercise_metadata_backfilled_v1';
 
 // ─── Deterministic canonical exercise IDs ────────────────────────────────
 //
@@ -815,7 +818,7 @@ export async function seedExercisesIfNeeded() {
       // device A with exercise_id = canonicalExerciseId('Bench Press')
       // resolves on device B's fresh seed without any name lookup.
       const id = canonicalExerciseId(name);
-      await insertExerciseWithId(id, {
+      const base = {
         name,
         primaryMuscle,
         secondaryMuscles,
@@ -828,12 +831,49 @@ export async function seedExercisesIfNeeded() {
         stimulusToFatigueRatio: sfr,
         subregion: SUBREGION_MAP[name] ?? null,
         isCustom: false,
-      });
+      };
+      // Derive the richer metadata from the base fields so a fresh install
+      // seeds with equipment_category, force, laterality, difficulty etc.
+      // already populated (docs/audit/volyume-exercise-audit-2026-05-30).
+      await insertExerciseWithId(id, { ...base, ...deriveExerciseMetadata(base) });
     }
 
     await AsyncStorage.setItem(SEEDED_KEY, 'true');
+    // A fresh seed already carries the metadata, so mark the backfill done
+    // to skip the redundant pass.
+    await AsyncStorage.setItem(METADATA_BACKFILL_KEY, 'true');
     console.log(`[Seed] Inserted ${RAW.length} exercises`);
   } catch (err) {
     console.error('[Seed] seedExercisesIfNeeded failed:', err);
+  }
+}
+
+// One-time backfill for installs whose canonical exercises were seeded
+// before the metadata columns existed (phase 7 step 1 added the columns;
+// the seed early-returns when rows already exist, so those rows have null
+// metadata). Derives and writes the columns in place. Idempotent and safe
+// to re-run: it only touches rows whose equipment_category is still null,
+// and a guard flag skips the pass entirely once done.
+//
+// Canonical exercises only (is_custom = 0). Custom exercises keep null
+// metadata; selection falls back to their coarse equipment string.
+export async function backfillExerciseMetadataIfNeeded() {
+  try {
+    const done = await AsyncStorage.getItem(METADATA_BACKFILL_KEY);
+    if (done === 'true') return;
+
+    const all = await getAllExercises();
+    let updated = 0;
+    for (const ex of all) {
+      if (ex.isCustom === 1 || ex.isCustom === true) continue;
+      if (ex.equipmentCategory) continue; // already populated
+      await updateExerciseMetadata(ex.id, deriveExerciseMetadata(ex));
+      updated++;
+    }
+
+    await AsyncStorage.setItem(METADATA_BACKFILL_KEY, 'true');
+    if (updated > 0) console.log(`[Seed] Backfilled metadata on ${updated} exercises`);
+  } catch (err) {
+    console.error('[Seed] backfillExerciseMetadataIfNeeded failed:', err);
   }
 }

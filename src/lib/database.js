@@ -1270,6 +1270,36 @@ export async function deleteExercise(id) {
   _scheduleSync();
 }
 
+// Update only the derived metadata columns on an exercise. Used by the
+// one-time backfill that populates equipment_category and friends on
+// installs whose canonical rows were seeded before those columns existed
+// (docs/audit/volyume-exercise-audit-2026-05-30). Additive and idempotent:
+// it overwrites the metadata columns and nothing else. equipment_profiles
+// is stored as a JSON array string, matching insertExerciseWithId. Does not
+// schedule a sync; canonical exercises are local and the columns don't sync.
+export async function updateExerciseMetadata(id, meta) {
+  const d = await db();
+  await d.runAsync(
+    `UPDATE exercises SET
+       equipment_category = ?, machine_type = ?, force = ?, laterality = ?,
+       difficulty = ?, machine_ok = ?, home_ok = ?, equipment_profiles = ?,
+       updated_at = ?
+     WHERE id = ?`,
+    [
+      meta.equipmentCategory ?? null,
+      meta.machineType ?? null,
+      meta.force ?? null,
+      meta.laterality ?? null,
+      meta.difficulty ?? null,
+      meta.machineOk ? 1 : 0,
+      meta.homeOk ? 1 : 0,
+      meta.equipmentProfiles ? JSON.stringify(meta.equipmentProfiles) : null,
+      Date.now(),
+      id,
+    ],
+  );
+}
+
 // ─── Workouts ─────────────────────────────────────────────────────────────────────────────────────
 
 export async function getAllWorkouts(userId) {

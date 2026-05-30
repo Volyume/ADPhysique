@@ -18,7 +18,7 @@ import SyncStatusBadge from '../components/SyncStatusBadge';
 import useAppStore from '../store/useAppStore';
 import { getSupabaseClient } from '../lib/supabase';
 import { initDatabase, cleanupOrphanRoutineExercises } from '../lib/database';
-import { seedExercisesIfNeeded } from '../lib/seedExercises';
+import { seedExercisesIfNeeded, backfillExerciseMetadataIfNeeded } from '../lib/seedExercises';
 import {
   configureNotificationHandler,
   installNotificationListeners,
@@ -479,7 +479,9 @@ export default function RootNavigator() {
         // surface it via the log layer.
         try {
           await initDatabase();
-          seedExercisesIfNeeded().catch(console.warn);
+          seedExercisesIfNeeded()
+            .then(() => backfillExerciseMetadataIfNeeded())
+            .catch(console.warn);
           cleanupOrphanRoutineExercises().catch(console.warn);
           // OpenFoodFacts UK snapshot import. Idempotent + safe;
           // logs to errorLog at every fault boundary. Fire-and-
