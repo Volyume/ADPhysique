@@ -142,6 +142,7 @@ export default function SettingsScreen({ navigation }) {
   // healthSyncing tracks the manual "Sync now" tap.
   const [healthWeightStatus, setHealthWeightStatus] = useState('unavailable');
   const [healthWorkoutStatus, setHealthWorkoutStatus] = useState('unavailable');
+  const [healthStepsStatus, setHealthStepsStatus] = useState('unavailable');
   const [healthSyncing, setHealthSyncing] = useState(false);
 
   async function toggleCalmMode(value) {
@@ -204,6 +205,7 @@ export default function SettingsScreen({ navigation }) {
       if (isHealthAvailable()) {
         getHealthPermissionStatus(['weight']).then(setHealthWeightStatus).catch(() => {});
         getHealthPermissionStatus(['workout']).then(setHealthWorkoutStatus).catch(() => {});
+        getHealthPermissionStatus(['steps']).then(setHealthStepsStatus).catch(() => {});
       }
     }, [user?.id]),
   );
@@ -234,6 +236,36 @@ export default function SettingsScreen({ navigation }) {
       }
     } catch (e) {
       logError('SettingsScreen.toggleWeight', e);
+      toast.show('Could not connect. Try again in a moment.', { variant: 'error' });
+    } finally {
+      setHealthSyncing(false);
+    }
+  }
+
+  async function handleToggleSteps(next) {
+    if (!next) {
+      toast.show('Open Health settings to turn step read off', { variant: 'info' });
+      await openSystemHealthSettings();
+      return;
+    }
+    setHealthSyncing(true);
+    try {
+      const status = await requestHealthPermissions(['steps']);
+      setHealthStepsStatus(status);
+      if (status === 'granted') {
+        // Read today's steps straight away so the figure shows without waiting
+        // for the next app foreground.
+        try {
+          // eslint-disable-next-line global-require
+          const { recordTodaySteps } = require('../lib/activitySteps');
+          await recordTodaySteps(user?.id);
+        } catch (_) { /* read is best-effort */ }
+        toast.show('Connected. Volyume reads your daily steps from your watch, phone or tracker.', { variant: 'success' });
+      } else if (status === 'denied') {
+        toast.show(`Permission needed to read steps from ${getHealthProviderLabel()}`, { variant: 'warning' });
+      }
+    } catch (e) {
+      logError('SettingsScreen.toggleSteps', e);
       toast.show('Could not connect. Try again in a moment.', { variant: 'error' });
     } finally {
       setHealthSyncing(false);
@@ -1008,6 +1040,25 @@ export default function SettingsScreen({ navigation }) {
                     disabled={healthSyncing}
                     trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
                     thumbColor={healthWeightStatus === 'granted' ? colors.primary : colors.textMuted}
+                  />
+                }
+              />
+              <SettingRow
+                icon="walk-outline"
+                label="Read daily steps"
+                sub={
+                  healthStepsStatus === 'granted'
+                    ? 'Connected. Volyume reads your daily steps from your watch, phone or tracker in the background.'
+                    : `Read your daily steps from ${getHealthProviderLabel()} (covers your watch, phone and trackers). Used for your step target and the coach.`
+                }
+                showArrow={false}
+                rightElement={
+                  <Switch
+                    value={healthStepsStatus === 'granted'}
+                    onValueChange={handleToggleSteps}
+                    disabled={healthSyncing}
+                    trackColor={{ false: colors.surface3, true: colors.primary + '80' }}
+                    thumbColor={healthStepsStatus === 'granted' ? colors.primary : colors.textMuted}
                   />
                 }
               />
