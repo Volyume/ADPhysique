@@ -49,6 +49,18 @@ DONE (shipped to main, tested):
   Toast instead of Alert; FoodRow long-press preference cycle now confirms
   via toast (M10). The broad Alert-to-Toast sweep across all write paths
   remains.
+- S5 input primitives built + adopted: SearchBar (ExerciseLibrary,
+  PlanLibrary), Chip (ProGoalSetup filter row; gained radio role +
+  accessibilityState), Stepper (built; BuildWorkout steppers got a11y
+  labels in place rather than a layout-breaking swap). FoodSearch's search
+  bar kept as-is (it has an inline loading spinner SearchBar lacks).
+- S6 BottomSheet chrome built + adopted on MacroBreakdownSheet,
+  QuickAddSheet, FoodDetailSheet (3 of 6 sheets). FeedbackSheet, WhatsNew,
+  and PeekMenu still on their own animation (PeekMenu is an imperative
+  menu, not a passive sheet; the other two are lower-traffic).
+- PressableCard/Button gained testID + accessibilityState passthrough.
+- Extra a11y: MacroRings summary, InfoTooltip, PlateCalculator,
+  FoodDetailSheet macro live region, FoodRow preference toast.
 - H5 skeleton loading on PlanDetail, Plans, PlanLibrary, Mesocycle (the
   plan surfaces are done).
 - DiaryScreen FABs moved to shadow tokens.
