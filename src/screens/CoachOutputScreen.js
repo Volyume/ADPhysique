@@ -1181,11 +1181,11 @@ export default function CoachOutputScreen({ navigation, route }) {
   }, [user?.id]);
 
   function handleClose() {
-    // The user arrived here from the Athlete Hub check-in card via
-    // WeeklyCheckIn. Closing the coach output should land them back on
-    // Hub, not on the WeeklyCheckIn screen they just submitted. Both
-    // screens sit in the same Profile stack, so popToTop is the right
-    // primitive: AthleteHub is the stack root.
+    // The user arrived here from the You tab via WeeklyCheckIn. Closing
+    // the coach output should land them back on the You root, not on the
+    // WeeklyCheckIn screen they just submitted. Both screens sit in the
+    // same Profile stack, so popToTop is the right primitive: You
+    // (YouScreen) is the stack root.
     navigation.popToTop();
   }
 

@@ -97,7 +97,7 @@ describe('navigation integrity', () => {
     // a small allowlist.
     const exempt = new Set([
       'HomeTab', 'PlansTab', 'ProgressTab', 'ProfileTab',
-      'Home', 'Plans', 'Progress', 'You', 'AthleteHub',
+      'Home', 'Plans', 'Progress', 'You',
       'Welcome', 'Login', 'FirstRun',
     ]);
     const orphans = [];

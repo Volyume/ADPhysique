@@ -598,7 +598,6 @@ describe('Pro screens mount without error', () => {
 // WorkoutSummaryScreen reads route.params populated by the finish flow).
 
 const SCREENS_TO_SWEEP = [
-  'AthleteHubScreen',
   'AnalyticsScreen',
   'BlockReflectionScreen',
   'BodyMetricsScreen',
@@ -1301,89 +1300,6 @@ describe('Workout lifecycle: start → log → finish', () => {
   });
 });
 
-// ─── Hub → NutritionTargets navigation simulation ──────────────────────
-//
-// The reported crash was tapping "Nutrition Targets" on AthleteHub. We
-// can't drive real navigation in the harness, but we can verify that
-// when AthleteHub IS mounted with realistic Pro state and the user
-// taps every card on it, no onPress throws. Combined with the
-// NutritionTargets mount tests above, this covers the same surface as
-// the actual navigation.
-
-describe('Hub → NutritionTargets simulated flow', () => {
-  test('AthleteHub mounts and every card onPress fires without throwing', async () => {
-    useAppStore.setState({
-      ...STATE_VARIANTS[0].state,
-      userProfile: { firstName: 'Test', goal: 'lean_gain', units: 'metric' },
-    });
-    const Hub = require('../screens/AthleteHubScreen').default;
-    let tree = null;
-    try {
-      const { tree: t, errors } = await mountScreen(Hub);
-      tree = t;
-      expect(tree).not.toBeNull();
-      expect(errors).toEqual([]);
-      const { failures } = await bashTappables(tree);
-      const real = failures.filter(f => !/getState|dispatch|navigation\.navigate|getParent/i.test(f.error));
-      expect(real).toEqual([]);
-    } finally { unmountTree(tree); }
-
-    // Now mount NutritionTargets, the target of the Hub tap.
-    const NT = require('../screens/NutritionTargetsScreen').default;
-    let ntTree = null;
-    try {
-      const { tree: t, errors } = await mountScreen(NT);
-      ntTree = t;
-      expect(ntTree).not.toBeNull();
-      expect(errors).toEqual([]);
-    } finally { unmountTree(ntTree); }
-  });
-
-  test('AthleteHub renders with the exact data shape the user has (lots of programmes, 1 mesocycle, nutrition set)', async () => {
-    const database = require('../lib/database');
-    const origGet = {
-      getAllWorkouts: database.getAllWorkouts,
-      getNutritionTargets: database.getNutritionTargets,
-    };
-    database.getAllWorkouts = () => Promise.resolve([{
-      id: 'w-real', userId: 'u-real', startedAt: Date.now() - 86400000,
-      endedAt: Date.now() - 86400000 + 3600000, durationMinutes: 60,
-      isCompleted: 1, setCount: 7, totalVolume: 50,
-    }]);
-    database.getNutritionTargets = () => Promise.resolve({
-      id: 'nt-real', userId: 'u-real',
-      bmr: 1700, tdee: 2600, targetKcal: 2900,
-      proteinG: 200, carbsG: 350, fatG: 80,
-      phase: 'lean gain', activityLevel: 'moderate',
-      confidence: 'medium', warnings: null, gdprConsented: true,
-      createdAt: Date.now() - 3600000, updatedAt: Date.now() - 3600000,
-    });
-    try {
-      useAppStore.setState({
-        user: { id: 'u-real', email: 'real@e.com', isLocal: false },
-        session: { user: { id: 'u-real' } },
-        tier: 'pro',
-        firstRunComplete: true,
-        userProfile: { firstName: 'R', goal: 'lean_gain', trainingFocus: 'hypertrophy', units: 'metric' },
-        accessibility: { reduceMotion: false },
-      });
-      const Hub = require('../screens/AthleteHubScreen').default;
-      let tree = null;
-      try {
-        const { tree: t, errors } = await mountScreen(Hub);
-        tree = t;
-        expect(tree).not.toBeNull();
-        expect(errors).toEqual([]);
-        const { failures } = await bashTappables(tree);
-        const real = failures.filter(f => !/getState|dispatch|navigation\.navigate|getParent/i.test(f.error));
-        expect(real).toEqual([]);
-      } finally { unmountTree(tree); }
-    } finally {
-      Object.assign(database, origGet);
-    }
-  });
-});
-
 // ─── Scale stress: large data shapes ─────────────────────────────────────
 
 describe('Scale stress: large data does not break render or interaction', () => {
@@ -1545,7 +1461,6 @@ describe('Two-level tap: bash, then bash again after each tap re-renders', () =>
   // ends up regenerating the plan dozens of times and blows the jest
   // default timeout. That path is covered by the deterministic sweep.
   const HOT_SCREENS = [
-    'AthleteHubScreen',
     'BodyMetricsScreen',
     'CoachOutputScreen',
     'CoachingRemindersScreen',

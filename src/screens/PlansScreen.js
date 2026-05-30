@@ -884,7 +884,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderColor: colors.primary + '40',
   },
-  // Pro-locked variant, matches AthleteHub's lockedCard so gating
+  // Pro-locked variant, matches the shared lockedCard pattern so gating
   // reads the same across the app.
   actionCardLocked: { opacity: 0.6 },
   actionCardTitleLocked: { color: colors.textSecondary },

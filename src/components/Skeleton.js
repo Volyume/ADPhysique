@@ -1,7 +1,7 @@
 // Skeleton placeholder for loading states.
 //
 // Replaces full-screen ActivityIndicator spinners on data-heavy screens
-// (HomeScreen, AnalyticsScreen, AthleteHub etc.). Shows the structure
+// (HomeScreen, AnalyticsScreen, You etc.). Shows the structure
 // of the real content using animated grey blocks so the app feels
 // responsive before the data arrives.
 //

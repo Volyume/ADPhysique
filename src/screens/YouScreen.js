@@ -2,9 +2,10 @@
  * YouScreen
  *
  * Root of the You tab. Profile + account + the personal coaching and
- * preference shortcuts. The progress/recovery dashboard moved to the
- * Progress tab (AthleteHubScreen); this screen is the place you manage
- * yourself, your plan and your settings.
+ * preference shortcuts. The progress/recovery dashboard content now
+ * lives inline on the Progress tab and the coaching Engine Log on the
+ * Strategic journal; this screen is the place you manage yourself, your
+ * plan and your settings.
  *
  * Voice rules: CLAUDE.md + COACHING_VOICE_SYNTHESIS_LOCKED. No em dashes.
  */

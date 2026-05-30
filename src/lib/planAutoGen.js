@@ -5,7 +5,7 @@
  * Shared by:
  *   - ProOnboardingScreen.advanceFrom4 (initial creation)
  *   - HomeScreen Pro recovery CTA (if auto-gen failed during onboarding)
- *   - AthleteHub re-plan flow (when the user changes their goal)
+ *   - You tab re-plan flow (when the user changes their goal)
  *
  * Returns { ok: boolean, programmeId?: string, error?: string }.
  * Pure orchestration, generatePlan stays pure, DB writes are idempotent

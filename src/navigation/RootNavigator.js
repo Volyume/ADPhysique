@@ -43,7 +43,6 @@ import VolumeHeatmapScreen from '../screens/VolumeHeatmapScreen';
 import PRWallScreen from '../screens/PRWallScreen';
 import BodyMetricsScreen from '../screens/BodyMetricsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
-import AthleteHubScreen from '../screens/AthleteHubScreen';
 import LiftProgressScreen from '../screens/LiftProgressScreen';
 import YouScreen from '../screens/YouScreen';
 import PlansScreen from '../screens/PlansScreen';
@@ -266,7 +265,6 @@ function ProgressStack({ navigation }) {
       <Stack.Screen name="PRWall" component={PRWallScreen} options={{ title: 'Personal Records' }} />
       <Stack.Screen name="CoachReview" component={CoachReviewScreen} options={{ title: 'Weekly Review' }} />
       <Stack.Screen name="BodyMetrics" component={GatedBodyMetrics} options={{ title: 'Body Metrics' }} />
-      <Stack.Screen name="AthleteHub" component={AthleteHubScreen} options={{ headerShown: false }} />
       <Stack.Screen name="LiftProgress" component={LiftProgressScreen} options={{ title: 'Lift Progress' }} />
       <Stack.Screen name="ExerciseLibrary" component={ExerciseLibraryScreen} options={{ title: 'Exercise Library' }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: 'Exercise' }} />

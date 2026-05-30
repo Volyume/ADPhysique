@@ -153,7 +153,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
   const approachReason = buildProteinApproachReason(previous.approach, next.approach);
 
   function handleDone() {
-    // Pop summary off the stack and go back to AthleteHub (the stack root)
+    // Pop summary off the stack and go back to You (the stack root)
     if (typeof navigation.popToTop === 'function') {
       navigation.popToTop();
     } else {

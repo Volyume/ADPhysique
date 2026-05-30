@@ -375,7 +375,7 @@ export default function ProOnboardingScreen({ navigation }) {
       if (morningEnabled || checkinEnabled) {
         const status = await requestNotificationPermissions();
         if (status === 'granted') {
-          // Flat schema: CoachingReminders, WeeklyCheckIn and AthleteHub
+          // Flat schema: CoachingReminders, WeeklyCheckIn and the You tab
           // all read these top-level keys. An earlier nested shape
           // (prefs.checkin.weekday, prefs.morning.hour) was silently
           // dropped by every reader, defaulting every enrolled user to
