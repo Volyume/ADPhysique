@@ -49,8 +49,11 @@ test('shows the prompt when no steps are logged today', async () => {
 test('shows the logged total with a thousands separator when a row exists', async () => {
   dbModule.getDailyStepsToday.mockResolvedValue({ steps: 8421, source: 'manual' });
   const renderer = await render(<DailyStepsCard userId="u1" />);
+  // allText joins text nodes with spaces, so the count and label can be
+  // double-spaced. Assert the pieces, not the exact spacing.
   const text = allText(renderer.toJSON());
-  expect(text).toContain('8,421 steps today');
+  expect(text).toContain('8,421');
+  expect(text).toContain('steps today');
   expect(text).toContain('Edit');
 });
 
