@@ -460,6 +460,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xxxl,
     fontWeight: fontWeight.heavy,
     lineHeight: 36,
+    fontVariant: ['tabular-nums'],
   },
   standingSub: {
     color: colors.textMuted,
@@ -540,8 +541,10 @@ const styles = StyleSheet.create({
   prRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   prIcon: { fontSize: 18 },
   prType: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary },
-  prValue: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  prDate: { fontSize: fontSize.xs, color: colors.textMuted },
+  // The PR value and date are data: tabular figures so the column of
+  // numbers down the card aligns and doesn't jitter as digit widths change.
+  prValue: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
+  prDate: { fontSize: fontSize.xs, color: colors.textMuted, fontVariant: ['tabular-nums'] },
 
   standardInCard: {
     backgroundColor: colors.surface2,
