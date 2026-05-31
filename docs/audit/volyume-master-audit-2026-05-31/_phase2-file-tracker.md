@@ -2,7 +2,7 @@
 
 Status: `[x]` read in full + findings recorded · `[~]` partially read (see 02-code-audit.md scope notes) · `[ ]` not yet read.
 Generated 2026-05-31T16:09Z. Total non-test source files: 227 (83,854 LOC).
-Read so far: 130 files.
+Read so far: 131 files (+ health partial).
 
 ## App.js/
 
@@ -92,7 +92,7 @@ Read so far: 130 files.
 - [ ] `links.js` (26)
 - [ ] `mesocycle.js` (472)
 - [x] `nutritionEngine.js` (860)
-- [ ] `observability.js` (721)
+- [x] `observability.js` (721)
 - [ ] `planAutoGen.js` (197)
 - [~] `planEngine.js` (1549)
 - [ ] `planSwitch.js` (53)

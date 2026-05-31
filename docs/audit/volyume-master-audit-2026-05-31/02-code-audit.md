@@ -1577,6 +1577,47 @@ All clean, pure, no defects.
 
 ---
 
+## lib core — batch 6: observability.js (full) + health.js (head + surface)
+
+> Process note: the first read of `observability.js` came back corrupted
+> (a transient environment glitch produced garbled line numbers + invented
+> symbols). I re-read it cleanly (`wc -l` = 721, full file rendered) and
+> **discarded the corrupted impression** rather than record it — per Rule 1.
+> The clean read is below.
+
+### `observability.js` (721 lines, full) — VERIFIED STRENGTH, no defects
+The single observability front door over `errorLog` + `sentry`:
+- **PII-safe by construction:** `redactPII` (`:110-127`) strips a
+  comprehensive `PII_KEYS` set (email/name/DOB/weight/height/body-fat/
+  measurements) recursively, applied via `enrich` to every track call
+  unless `opts.allowPII`. `instrumentSupabase` records **metadata only**
+  (table, op, duration, error code, row *count*) — explicitly **no raw
+  rows** (`:480-481`).
+- **Crash detection:** clean-shutdown flag toggled on AppState
+  background/active (`:146-184`); `bootObservability` reports a prior
+  crash so the user sees a calm "report's already away" banner.
+- **Idempotent auto-instrumentation:** `instrumentStore` wraps every
+  zustand action with timing (guards `__volyumeInstrumented`),
+  `instrumentNavigation` (screen breadcrumbs), `instrumentSupabase`
+  (Proxy over `.from`/`.rpc`), `instrumentAppState`, `instrumentNetInfo`.
+  All wrapped in try/catch so observability can never break the app.
+- This is the engine behind the strong Phase-5 privacy posture (third PII
+  layer alongside `errorLog` + `sentryScrub`).
+
+### `health.js` (head + export surface read; bodies partial)
+Apple HealthKit + Health Connect wrapper. Lazy-requires native modules,
+**no-ops cleanly when unavailable** (Expo Go / unbuilt), quiet on failure.
+Exports: availability/label, permission request+status, `readLatestWeight`/
+`readWeightsSince`/`readStepsToday`/`writeWorkoutToHealth`,
+`importNewWeights` (per-uid last-import marker so a shared device keeps
+separate windows). **Identity-safe** (grep: no `SET user_id`). Structure
+sound; the read/import/permission bodies (`:130-586`) still to read fully.
+
+> Correction: an "ENGINE_EVENTS dead export" and "track_legacy scaffolding"
+> noted from the corrupted read **do not exist** — removed, not recorded.
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction
