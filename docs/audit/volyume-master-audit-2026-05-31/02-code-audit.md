@@ -1518,6 +1518,35 @@ safety-adjacent contexts or softening their copy.
 
 ---
 
+## lib core — batch 4: nutritionEngine (complete) + coachingGoals (complete)
+
+Both verified strengths, no defects.
+
+- **`nutritionEngine.js` (now fully read)** — `calculateNutritionTargets`
+  stacks **multiple safety floors**: kcal floor 1500♂/1200♀ (`:559-565`),
+  a **1.5%/wk hard-gate** that caps the deficit (`:574-582`), a 0.8% soft
+  warning, a fat hormonal floor (`:605`), a 2.2 g/kg protein cap when BF%
+  unknown (Morton 2018), and an explicit contest-prep dietitian warning.
+  Inputs clamped to safe physiological ranges (`:519-521`). Surplus scaled
+  by experience (beginners use more), evidence-cited. `getPlanNutritionContext`
+  links the nutrition phase to training (recovery modifier, volume ceiling,
+  failure exposure, deload frequency, refeed/diet-break) — genuine
+  nutrition↔training integration. One of the best-built subsystems here.
+- **`coachingGoals.js`** — pure data+functions: 8 physique categories with
+  **per-muscle volume overlays grounded in real judging criteria** (bikini
+  glutes ×1.55, men's-physique side-delts ×1.40 + legs de-emphasised,
+  etc.); training phases mapped to `nutritionKey`+`coachingPhaseKey`;
+  `migrateProfileGoals` cleans legacy goal values on every load;
+  `phaseToCoachingKey` logs a warning on unknown phase rather than silently
+  defaulting (documented anti-corruption choice). Strong domain modelling.
+
+> Coaching `lib/` still to read: `mesocycle`, `blockAdvisor`, `swapEngine`,
+> `poolGenerator`, `coachApply`, `whyThisTemplates`, `dailyNarrative`,
+> `strengthStandards`, `liftProgress`, `formTips`, plus `health`,
+> `observability.js`, `seedExercises`, `seedRoutines`, and ~20 small utils.
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction
