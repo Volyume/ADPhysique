@@ -22,7 +22,9 @@ Branch: `main` @ `a4bf964`
 > migration system, 1390–1417 + 2074 update builders, 3176–3265
 > wipeAllUserData, full-file SQLi scan) — the hundreds of repository CRUD
 > functions are NOT each read; claims are scoped to what was read.
-> **Next:** food engine, large screens; per-repository sweep of database.js.
+> Also read in full: `src/lib/algorithms.js` (1–1100) and the food
+> waterfall/sources. **Next:** large screens (ActiveWorkout/Home/CoachOutput),
+> `planEngine.js`, `weeklyCoach.js`; per-repository sweep of database.js.
 
 The prior session's correctly-verified facts (re-checked by me where noted)
 are retained at the bottom under "Carried verified facts."
@@ -611,6 +613,89 @@ quota abuse becomes real. Low.
 Minor: `_promoteAll` (`:83-87`) promotes sequentially (await-in-loop) — up
 to 10 serial SQLite inserts on a network search. Acceptable (the unique-
 index race makes sequential safer than `Promise.all`); noted for Phase 6.
+
+---
+
+## `src/lib/algorithms.js` (1100 lines) — read in full
+
+**Purpose:** the 25 pure training-science functions (volume landmarks,
+1RM, weekly/effective volume, double-progression set targets, PR
+detection, auto-regulation, adaptive landmarks, deload logic, plateau,
+substitutes, plates). **Overall this is the strongest file in the
+codebase** — evidence-cited (Robinson 2024, Coleman 2024, Maeo 2023,
+Kreher & Schwartz 2012, etc.), defensive about camelCase/snake_case dual
+shapes, and the math is sensible. Findings are mostly accuracy/consistency
+nits, not breakage.
+
+### A2-038 — `getVolumeStatus` returns HARDCODED hex colours that bypass the accessibility palette.
+`:141,150,153,156,159,162,164` return literal hex (`#616161`, `#FFB300`,
+`#00C853`, `#FF3D00`, `#9E9E9E`) for muscle-volume status. These are in a
+`lib/` file, so the screens/components hardcoded-hex ESLint guard does
+**not** apply — but it means any screen consuming `getVolumeStatus().color`
+shows colours that **do not adapt** to `colorBlindSafe` / `higherContrast`
+(the theme's `volumeColors` getters at `theme.js:321-326` DO adapt). So
+there are two competing volume-colour sources. → **Phase 9 (a11y):** for a
+deuteranope, the green/amber/red volume states render in the
+non-CVD-safe palette. Identify which screens use `getVolumeStatus().color`
+vs `theme.volumeColors` and unify on the adaptive tokens. Medium.
+
+### A2-039 — Auto-progression increments are kg-centric; the `units` arg only relabels (lbs users get wrong-sized jumps).
+`computeSetTargets` (`:211`) and `getProgressionSuggestion` (`:168`) take
+`units`, but it is used **only for the display label** (`:189, :205, :362,
+:365`). `getIncrement` (`:230-236`) and the inline increments
+(`:186, :195, :659`) are hardcoded kg magnitudes (`weight >= 60 ? 2.5 :
+1.25`, isolation `>= 20 ? 1 : 0.5`). Verified the caller passes real
+`units` (`ActiveWorkoutScreen.js:575`) — yet the **manual** bump on the
+same screen IS unit-aware (`:1401` `units === 'lbs' ? 5 : 2.5`). So a lbs
+user gets a unit-aware manual +5 but a kg-sized auto-suggestion (+2.5)
+relabelled "lbs", and the `>= 60` threshold is applied to a lbs number.
+`calculatePlates` (`:681`) and `generateDeloadPrescription` (`:1027`)
+likewise assume **kg plate increments** (`[25,20,15,10,5,2.5,1.25]`,
+`*0.5` rounded to 0.25). → Real correctness/UX issue for lbs users across
+progression, plates, and deload. The per-exercise `incrementKg` override
+(`:578`) can mask it but defaults don't. **Storage model to confirm**
+(kg-canonical vs display-unit) in the ActiveWorkout save path — that
+determines whether the number is also numerically wrong or "only"
+mislabelled/under-sized. Medium–high; carry to Phase 9/10.
+
+### A2-040 — `calculate1RM` is brzycki-only above 20 reps → inflated e1RM, can fire spurious 1RM PRs.
+`:58-68`: for `reps > 20` it returns `brzycki` alone (`:66`), and Brzycki
+diverges badly at high reps (e.g. ~30 reps ⇒ ≈5× weight). `detectPR`
+(`:387-403`) builds the `1rm_estimate` PR from this, so a high-rep set can
+trigger a false "New estimated 1RM". The `reps < 37` guard (`:63`) only
+prevents the sign flip, not the inflation. → cap e1RM rep range (e.g.
+ignore 1RM PR when reps > 12–15) or clamp the estimate. Low–medium
+(accuracy of a celebratory surface).
+
+### A2-041 — `calculateWeeklyVolume` counts secondary muscles; `calculateEffectiveSets` does not (inconsistency).
+`calculateWeeklyVolume` adds fractional secondary-muscle sets
+(`:123-132`, default `contribution 0.5`), but `calculateEffectiveSets`
+(`:924-957`) only credits the **primary** muscle — no secondary loop. So
+"effective sets" under-counts muscles trained mainly as secondaries (e.g.
+rear delts on rows, triceps on presses) relative to "working sets". If
+both feed the same UI/coach, the two volume numbers disagree by design. →
+confirm intended; if not, mirror the secondary handling. Low–medium.
+
+### A2-042 — Confirmed dead variables (match the Phase 7 lint findings).
+`:586 targetSFR` (defined in `getExerciseSubstitutes`, never read — the
+sort uses `sfrA/sfrB`, and `buildSubstituteReason` recomputes its own at
+`:629`) and `:885 worstVolume` (computed but absent from the returned
+`adapted[muscle]` object). These are the exact two locals ESLint flagged
+(`07-…:A.1`). Promote from "lint-reported" to **read-confirmed dead code.**
+Trivial cleanup.
+
+### Positive observations (verified)
+- `getSetEffectivenessWeight` (`:912-919`) implements a continuous
+  RIR→credit curve with a cited rationale (Robinson 2024); null RIR → 0.9
+  (conservative). Sound.
+- `shouldDeload` (`:534-572`) is a weighted multi-signal score
+  (performance 50 / wellness 30 / soreness 20) with citations explaining
+  why soreness is down-weighted. Thoughtful.
+- `computeSetTargets` anchors every set to the session high-water mark
+  (`:308-343`) and caps jumps at 5%/session (`:264-265`) — avoids the
+  classic "set 1 regressed because its own history was light" bug.
+- `getVolumeStatus` short-circuits `workingSets <= 0` to `below` (`:149`)
+  so `mev=0` muscles don't render green before any work is logged. Good.
 
 ---
 
