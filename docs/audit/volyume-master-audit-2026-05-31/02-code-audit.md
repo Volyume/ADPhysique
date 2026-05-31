@@ -12,10 +12,10 @@ Branch: `main` @ `a4bf964`
 > If a line cannot be quoted from a read I performed, it is not here.
 >
 > **Files read in full so far:** `App.js` (1–768),
-> `src/navigation/RootNavigator.js` (1–1066), `src/lib/supabase.js` (1–188).
-> **Next:** `src/store/useAppStore.js`, `src/styles/theme.js`,
-> `src/lib/sync.js` + `src/lib/sync/`, `src/lib/database.js`, then food engine
-> and the large screens.
+> `src/navigation/RootNavigator.js` (1–1066), `src/lib/supabase.js` (1–188),
+> `src/store/useAppStore.js` (1–911), `src/styles/theme.js` (1–366).
+> **Next:** `src/lib/sync.js` + `src/lib/sync/`, `src/lib/database.js`, then
+> food engine and the large screens.
 
 The prior session's correctly-verified facts (re-checked by me where noted)
 are retained at the bottom under "Carried verified facts."
@@ -274,6 +274,139 @@ exist yet (brand-new user), whereas RootNavigator's consent read uses
 `.maybeSingle()` (`RootNavigator:780`). Callers of `getUserProfile` must
 treat "no row" as an error. → flag for the per-caller audit; ensure no
 screen renders an error state for a legitimately-absent profile. Low/med.
+
+---
+
+## `src/store/useAppStore.js` (911 lines) — read in full
+
+**Purpose:** the single Zustand store. Holds auth/session/profile, Article 9
+consent, tier, cloud-sync status, active-workout + rest-timer + PR-queue,
+units/bodyWeightUnits/barWeight/dietPreference, and accessibility prefs.
+Instrumented once at module load by `observability.instrumentStore`
+(`:901-908`).
+
+### Findings
+
+**A2-019 — Sign-out's `AsyncStorage.clear()` destroys device-wide prefs and other accounts' fast-path caches (UX regression).**
+`clearAuthStateForSignOut` calls `AsyncStorage.clear()` (`:283`) "leave
+nothing behind". But AsyncStorage also holds **accessibility prefs**
+(`A11Y_PREFS_KEY`, written at `:895`), notification prefs, and the
+**per-uid `FIRST_RUN_KEY_PFX` caches for *other* accounts** (`:14, :664`).
+So signing out of account A: (a) **resets a blind/low-vision user's
+Larger-Text / Higher-Contrast / Reduce-Motion settings**, and (b) wipes
+account B's optimistic-routing cache, forcing B through a cloud read on
+next sign-in. The targeted wipe (`wipeAllUserData`, `:267`) already
+handles user data; the blanket `clear()` is too broad. → Medium. Preserve
+device-scoped prefs (a11y, notif) across sign-out.
+
+**A2-020 — `generateUUID()` uses `Math.random()` (`:85-90`), not a CSPRNG.**
+Exported and (per name) used for local row IDs. `Math.random` UUIDv4 is
+non-cryptographic and weaker on collision/predictability. Acceptable for
+opaque local row keys, a concern if any value is used as a security token
+or guessable resource id. → flag for the per-caller sweep (grep usages);
+recommend `expo-crypto`'s `randomUUID`. Low–med pending usage.
+
+**A2-021 — The 60-second "new vs returning" heuristic can skip onboarding for slow email-confirmers.**
+`restoreSessionFromCloud` (`:476-491`) routes a user to MainTabs
+(returning) when `session.user.created_at` is ≥ 60 s old (`:478`). A user
+who signs up but confirms their email > 60 s later has an auth row already
+older than 60 s on first real sign-in, so they are routed **past the
+onboarding wizard into an empty MainTabs** (no plan, no nutrition
+targets). The comment at `:564-569` acknowledges this edge case and
+defers it to "Settings → Update your plan". → Phase 10 friction; medium
+for the new-user activation journey.
+
+**A2-022 — Four near-identical profile setters (duplicated logic).**
+`setUnits` (`:802-815`), `setBodyWeightUnits` (`:819-832`),
+`setDietPreference` (`:839-851`), `setBarWeight` (`:855-868`) each repeat
+the same 8–10 line block: build `updated`, `AsyncStorage.setItem`,
+`set({userProfile})`, `_stampProfileFields([field])`,
+`_persistProfileTimestamps`, `pushPrefSoon`. Should collapse to one
+`_setProfileField(field, value, {topLevel})` helper. Maintenance + drift
+risk (e.g. `setDietPreference` omits the top-level `set` the others do,
+because there is no top-level `dietPreference` state — easy to get wrong).
+
+**A2-023 — Offline sign-out is blocked by design (Phase 10 friction).**
+Push-first safety (`:231-245`): if `bulkUploadLocalData` throws (offline),
+sign-out aborts with `{ ok: false, reason: 'unsynced' }`. Correct for
+data safety, but a user with no connection **cannot sign out at all**
+(e.g. on a plane, or to hand the phone to someone). Deliberate, but worth
+a Phase 10 note on whether a "sign out anyway, I'll lose unsynced edits"
+escape hatch is warranted.
+
+**A2-024 — Stale comment referencing removed "Athlete Hub".**
+`:714` "Subscribers (Athlete Hub volume chart, etc.)" — AthleteHub was
+removed (per the inventory / status notes). Dead reference in a live
+comment on `lastSetLoggedAt`. Trivial, but a documentation-rot signal.
+
+**A2-025 — `LOCAL_USER_KEY` + `clearLocalUser` may be dead after the "no anonymous mode" lock.**
+`LOCAL_USER_KEY` (`:12`) and `clearLocalUser` (`:184-187`) reference the
+local-user concept that `IDENTITY_AND_OWNERSHIP_LOCKED.md` removed
+(`initLocalUser` deleted, `:155-159`). → grep call sites; likely
+removable dead code. Low.
+
+### Positive observations (verified)
+- Concurrency-safe functional `set()` forms with comments on the exact
+  race they prevent: `addExerciseToWorkout` (`:702-712`),
+  `addSetToCurrentExercise` (`:720-731`). Good for rapid double-taps.
+- `setTier` (`:417-426`) and `refreshTierFromCloud` (`:604-607`) persist
+  to AsyncStorage **before** the in-memory `set()`, with a crash-
+  consistency comment. Correct ordering.
+- PR-celebration **queue** (`:787-798`) fixes the "two PRs on one set lost
+  the second" single-slot bug. Sound.
+- `resetFirstRun` refuses while a workout is active (`:639-647`) to avoid
+  unmounting MainTabs mid-set. Good guard.
+
+---
+
+## `src/styles/theme.js` (366 lines) — read in full
+
+**Purpose:** the design-token single source of truth — `colors`,
+`spacing`, `radius`, `fontSize`, `fontWeight`, `lineHeight`,
+`letterSpacing`, semantic `type` roles, `motion`, `shadow`, `hitSlop`,
+`iconSize`, `volumeColors`, plus `withAlpha`, `circle`, `num`, and
+`applyAccessibility`. **This is a high-quality, premium token system** —
+documented WCAG ratios per colour, Okabe–Ito CVD swaps, Material-3 motion
+curves, tabular-figure numerals. Most files audited will be measured
+against it in Phase 9.
+
+### Findings
+
+**A2-026 — Text-size & contrast accessibility toggles require an app reload to take effect (real a11y weakness).**
+`colors` and `fontSize` are exported **mutable** objects (`:77, :147`);
+`applyAccessibility` (`:170-207`) mutates them in place, but only at boot
+(`App.js:328-330`) **before** any `StyleSheet.create` runs. RN copies
+primitives at `StyleSheet.create` time, so toggling **Larger Text /
+Higher Contrast / Colour-Blind Safe** in Settings produces **no visible
+change until the app is restarted** (only `reduceMotion`, read reactively
+from the store, is live). The code comments (`:1-7, :149-152`) and the
+store comment (`:874-875`) acknowledge this and rely on SettingsScreen
+prompting a reload. Best-in-class apps apply text scaling live. → Phase
+9/10; meaningful for low-vision users.
+
+**A2-027 — Stacked text scaling can overflow layouts at extremes (to verify Phase 9).**
+The in-app `largerText` 1.2× (`:194-206`) **stacks** on top of the OS
+font scale (RN `allowFontScaling=true`), per the comment (`:167-169`). A
+user with a large OS font + in-app Larger Text gets ≈1.2 × OS-scale, which
+can break dense data rows / tab labels. → Phase 9 must check truncation /
+overflow on the heaviest screens at max scale.
+
+**A2-028 — WCAG ratios in comments are claims, not yet independently verified.**
+Each colour carries a stated contrast ratio (`:45-48` etc.). Per Rule 1 I
+have **not** recomputed these; Phase 9 will calculate the actual ratios
+for `textMuted`, `textSecondary`, `border` against `#0D0D0D` and the
+elevated surfaces (the AA claim "on raised surfaces" at `:46-47` is the
+one most worth checking, since contrast drops on lighter surfaces).
+
+### Positive observations (verified)
+- `applyAccessibility` resets to `baseColors`/`baseFontSize` first
+  (`:171-173`) so consecutive applies don't compound. Correct.
+- `withAlpha` (`:83-105`) is a robust pure function handling #RGB,
+  #RRGGBB, #RRGGBBAA and rgb()/rgba(), replacing the fragile `color+'55'`
+  concat. Good.
+- `type` roles are **getters** (`:242-279`) so they read the post-a11y
+  `fontSize` at `StyleSheet.create` time — the one accessibility dimension
+  that *can* update at boot is wired correctly.
 
 ---
 
