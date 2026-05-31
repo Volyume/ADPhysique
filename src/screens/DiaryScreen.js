@@ -34,6 +34,7 @@ import EmptyDiary from '../components/food/EmptyDiary';
 import MealSection from '../components/food/MealSection';
 import { friendlyFoodName } from '../components/food/EntryRow';
 import ScreenHeader from '../components/ScreenHeader';
+import { useToast } from '../components/Toast';
 import { deleteEntries, moveEntriesToSlot, copyEntriesToDate } from '../lib/food/bulkEntryOps';
 
 const MEAL_SLOTS = [
@@ -73,6 +74,7 @@ export default function DiaryScreen({ navigation }) {
     refeed: s.userProfile?.refeed ?? null,
   })));
   const userId = user?.id;
+  const toast = useToast();
 
   const [selectedDate, setSelectedDate] = useState(() => isoDate(new Date()));
   const [entries, setEntries] = useState([]);
@@ -255,7 +257,7 @@ export default function DiaryScreen({ navigation }) {
     if (selectedDate === today) {
       await load();
     } else {
-      Alert.alert('Copied to today', `${sel.length} ${sel.length === 1 ? 'entry' : 'entries'} added to today's diary.`);
+      toast.show(`${sel.length} ${sel.length === 1 ? 'entry' : 'entries'} added to today.`, { variant: 'success' });
     }
   }, [selectedEntries, userId, selectedDate, exitSelection, load]);
 
@@ -297,9 +299,9 @@ export default function DiaryScreen({ navigation }) {
       await createSavedMeal(userId, { name, items });
       audit('food.saveMeal', { count: items.length });
       exitSelection();
-      Alert.alert('Meal saved', `"${name}" is in My meals.`);
+      toast.show(`"${name}" is in My meals.`, { variant: 'success' });
     } catch (_) {
-      Alert.alert('Couldn\'t save', 'Try again.');
+      toast.show('Couldn\'t save. Try again.', { variant: 'error' });
     }
   }, [saveMealName, saveMealItems, userId, exitSelection]);
 
@@ -381,7 +383,7 @@ export default function DiaryScreen({ navigation }) {
     const yesterday = shiftDate(selectedDate, -1);
     const yEntries = await getFoodEntriesForDay(userId, yesterday).catch(() => []);
     if (!yEntries || yEntries.length === 0) {
-      Alert.alert('Nothing to copy', `No entries logged on ${yesterday}.`);
+      toast.show('Nothing logged yesterday to copy.', { variant: 'info' });
       return;
     }
     Alert.alert(
