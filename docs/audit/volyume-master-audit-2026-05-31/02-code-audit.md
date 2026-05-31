@@ -577,6 +577,43 @@ partially answers A2-020 for **row** ids. Recommend a single shared
 
 ---
 
+## Food layer — `sources/usda.js` (full) + `waterfall.js` (full) read
+
+### Carried claim CONFIRMED + extended
+- **`usda.js` has `_fetchWithTimeout` (AbortController, 1500 ms) with
+  `clearTimeout` in `.finally`** (`:30-38`) — no leaked timer. Key read
+  from `process.env` via an **indirect name** (`:24-27`) to defeat
+  babel-preset-expo's compile-time `EXPO_PUBLIC_*` inlining. All query
+  inputs are `encodeURIComponent`'d (`:48-50, :70-71`). Graceful `[]`/`null`
+  on missing key or error. `liveOff.js` mirrors the timeout pattern
+  (`:24-25, :75, :98`). Prior carried claim confirmed.
+
+### A2-037 — USDA API key is shipped in the client bundle (inherent to `EXPO_PUBLIC_`, low value).
+The indirect-access trick (`usda.js:18-28`) keeps `process.env
+.EXPO_PUBLIC_USDA_API_KEY` readable **at runtime**, i.e. it is in the
+client bundle (all `EXPO_PUBLIC_*` vars are, by Expo design). The comment
+(`:8-11`) notes it is a free-tier api.data.gov key (1000 calls/hr,
+per-developer). → `05-security-audit.md`: a leaked-but-low-value key; the
+risk is quota abuse, not data exposure. Recommend a server proxy only if
+quota abuse becomes real. Low.
+
+### Positive observations (verified)
+- `waterfall.js` 5-source first-hit-wins (local → OFF → USDA) with
+  **cache promotion** writing network hits back into local `foods`
+  (`:40-87`), idempotent on `(source, source_id)` with an explicit
+  race re-read (`:73-80`). Sound.
+- Per-search / per-barcode telemetry tags the winning source
+  (`local`/`off_live`/`usda`/`miss`) with latency (`:105-132, :147-165`)
+  — good funnel observability for the food feature.
+- All `waterfall.js` SQLite calls are parameterised (`:46-48, :56-71,
+  :75-77`). Consistent with the A2-034 DB-layer finding.
+
+Minor: `_promoteAll` (`:83-87`) promotes sequentially (await-in-loop) — up
+to 10 serial SQLite inserts on a network search. Acceptable (the unique-
+index race makes sequential safer than `Promise.all`); noted for Phase 6.
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction
@@ -589,8 +626,9 @@ own findings yet:
   numbers and `m.up()` description were wrong.**
 - ~~`supabase.js` env-only…~~ **CONFIRMED by my read — see the
   `supabase.js` section above (A2-016..018 + verified positives).**
-- Food sources have `AbortController` timeouts + env keys: `usda.js:26-48`,
-  `liveOff.js:24-30`.
+- ~~Food sources have `AbortController` timeouts + env keys~~ **CONFIRMED
+  by my read — see the Food layer section above (+ A2-037 on the
+  client-bundled USDA key).**
 - `sync.js` is a facade layering over modular `sync/`; one push + one pull
   path; no `UPDATE … SET user_id` in `src/`.
 
