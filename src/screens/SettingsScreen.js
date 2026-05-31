@@ -30,7 +30,7 @@ import {
 import {
   isHealthAvailable, getHealthProviderLabel,
   getHealthPermissionStatus, requestHealthPermissions, importNewWeights,
-  openSystemHealthSettings,
+  openSystemHealthSettings, getHealthConnectSdkStatus, openHealthConnectInstall,
 } from '../lib/health';
 import Constants from 'expo-constants';
 import * as Updates from 'expo-updates';
@@ -210,6 +210,24 @@ export default function SettingsScreen({ navigation }) {
     }, [user?.id]),
   );
 
+  // When a connect attempt comes back 'sdk_unavailable' the problem isn't a
+  // refused permission, it's that Health Connect itself isn't ready on this
+  // phone (not installed, or needs an update). A flat "permission needed"
+  // toast is a dead end there, so offer the real next step: open the Play
+  // listing. Returns true if it handled an sdk_unavailable status.
+  async function handleSdkUnavailable(status) {
+    if (status !== 'sdk_unavailable') return false;
+    Alert.alert(
+      'Health Connect needed',
+      'Volyume reads and writes this through Health Connect. It isn\'t set up on this phone yet. Install or update it, then try again.',
+      [
+        { text: 'Not now', style: 'cancel' },
+        { text: 'Get Health Connect', onPress: () => { openHealthConnectInstall(); } },
+      ],
+    );
+    return true;
+  }
+
   async function handleToggleWeight(next) {
     if (!next) {
       // Health Connect / HealthKit deliberately don't expose a "revoke"
@@ -231,6 +249,8 @@ export default function SettingsScreen({ navigation }) {
             : 'Connected. No new readings yet.',
           { variant: 'success' },
         );
+      } else if (await handleSdkUnavailable(status)) {
+        // handled: prompted to install Health Connect
       } else if (status === 'denied') {
         toast.show(`Permission needed to read weight from ${getHealthProviderLabel()}`, { variant: 'warning' });
       }
@@ -261,6 +281,8 @@ export default function SettingsScreen({ navigation }) {
           await recordTodaySteps(user?.id);
         } catch (_) { /* read is best-effort */ }
         toast.show('Connected. Volyume reads your daily steps from your watch, phone or tracker.', { variant: 'success' });
+      } else if (await handleSdkUnavailable(status)) {
+        // handled: prompted to install Health Connect
       } else if (status === 'denied') {
         toast.show(`Permission needed to read steps from ${getHealthProviderLabel()}`, { variant: 'warning' });
       }
@@ -284,6 +306,8 @@ export default function SettingsScreen({ navigation }) {
       setHealthWorkoutStatus(status);
       if (status === 'granted') {
         toast.show('Workouts will appear in your Health log from now on', { variant: 'success' });
+      } else if (await handleSdkUnavailable(status)) {
+        // handled: prompted to install Health Connect
       } else if (status === 'denied') {
         toast.show(`Permission needed to write workouts to ${getHealthProviderLabel()}`, { variant: 'warning' });
       }

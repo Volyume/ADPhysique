@@ -128,8 +128,15 @@ export async function requestHealthPermissions(scopes = ['weight']) {
   if (Platform.OS === 'android') {
     const HC = getAndroidModule();
     try {
+      // Tell "Health Connect isn't set up on this phone" apart from "the
+      // user said no". Without this the caller can only ever say
+      // "permission needed", which is a dead end when the real fix is to
+      // install or open Health Connect. SDK_AVAILABLE is the only state
+      // where a permission request can succeed.
+      const sdk = await HC.getSdkStatus();
+      if (sdk !== HC.SdkAvailabilityStatus.SDK_AVAILABLE) return 'sdk_unavailable';
       const initialised = await HC.initialize();
-      if (!initialised) return 'unavailable';
+      if (!initialised) return 'sdk_unavailable';
       const recordTypes = [];
       if (scopes.includes('weight')) recordTypes.push({ accessType: 'read', recordType: 'Weight' });
       if (scopes.includes('steps')) recordTypes.push({ accessType: 'read', recordType: 'Steps' });
@@ -199,11 +206,67 @@ export async function openSystemHealthSettings() {
       return true;
     }
     if (Platform.OS === 'android') {
-      await Linking.openURL('package:com.google.android.apps.healthdata');
-      return true;
+      // Use the library's native intent. The old `package:` URL never
+      // resolved, so this row used to go nowhere. openHealthConnectSettings
+      // launches the Health Connect app's own settings where the user can
+      // grant or revoke Volyume's access.
+      const HC = getAndroidModule();
+      if (HC?.openHealthConnectSettings) {
+        await HC.openHealthConnectSettings();
+        return true;
+      }
+      // Fallback for the unlikely case the native method is missing: open
+      // the Health Connect data-management screen if exposed, else the app's
+      // own OS settings.
+      if (HC?.openHealthConnectDataManagement) {
+        await HC.openHealthConnectDataManagement();
+        return true;
+      }
     }
   } catch (_) {
     try { await Linking.openSettings(); return true; } catch (__) {}
+  }
+  try { await Linking.openSettings(); return true; } catch (_) {}
+  return false;
+}
+
+/**
+ * Android only. Returns whether the Health Connect SDK is usable right now:
+ *   'available'       Health Connect installed and ready to grant permissions
+ *   'update_required' Health Connect (or the system provider) needs an update
+ *   'not_installed'   Health Connect app isn't installed on this phone
+ *   'unavailable'     not Android, or the native module didn't load
+ * Lets the UI send the user to install/update Health Connect rather than
+ * showing a dead "permission needed" with no way forward. Never throws.
+ */
+export async function getHealthConnectSdkStatus() {
+  if (Platform.OS !== 'android') return 'unavailable';
+  const HC = getAndroidModule();
+  if (!HC?.getSdkStatus) return 'unavailable';
+  try {
+    const sdk = await HC.getSdkStatus();
+    if (sdk === HC.SdkAvailabilityStatus.SDK_AVAILABLE) return 'available';
+    if (sdk === HC.SdkAvailabilityStatus.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED) return 'update_required';
+    return 'not_installed';
+  } catch (_) { return 'unavailable'; }
+}
+
+/**
+ * Opens the Google Play listing for Health Connect so a user without it can
+ * install it. On Android 14+ Health Connect ships in the OS and this is a
+ * no-op path, but on Android 13 and below it's a separate app. Never throws.
+ */
+export async function openHealthConnectInstall() {
+  if (Platform.OS !== 'android') return false;
+  // eslint-disable-next-line global-require
+  const { Linking } = require('react-native');
+  const PLAY_URL = 'market://details?id=com.google.android.apps.healthdata';
+  const WEB_URL = 'https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata';
+  try {
+    await Linking.openURL(PLAY_URL);
+    return true;
+  } catch (_) {
+    try { await Linking.openURL(WEB_URL); return true; } catch (__) {}
   }
   return false;
 }

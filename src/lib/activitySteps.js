@@ -85,6 +85,22 @@ export async function requestStepPermission() {
 }
 
 /**
+ * Like requestStepPermission but returns the full status string so the caller
+ * can react to 'sdk_unavailable' (send the user to install Health Connect)
+ * rather than treating everything that isn't 'granted' as a flat refusal.
+ * Returns 'granted' | 'denied' | 'sdk_unavailable' | 'unavailable'. Never throws.
+ */
+export async function requestStepPermissionStatus() {
+  const health = getHealth();
+  if (!health?.requestHealthPermissions) return 'unavailable';
+  try {
+    return await health.requestHealthPermissions(['steps']);
+  } catch (_) {
+    return 'unavailable';
+  }
+}
+
+/**
  * Today's step count from the aggregator, or null when no automatic figure is
  * available (module missing, permission not granted, or a genuine zero so far
  * today). Null means "fall back to manual", which the caller already handles.
