@@ -18,6 +18,7 @@ import { logError } from '../lib/errorLog';
 import { calculateTonnage } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 import { SkeletonRow } from '../components/Skeleton';
+import { useToast } from '../components/Toast';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -33,6 +34,7 @@ const DAY_HEADERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 export default function WorkoutHistoryScreen({ navigation }) {
   const { user, startWorkout } = useAppStore(useShallow(s => ({ user: s.user, startWorkout: s.startWorkout })));
+  const toast = useToast();
   const [workouts, setWorkouts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -105,7 +107,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
       logError('WorkoutHistoryScreen.handleRepeatAsIs', e, {
         userId: user?.id, workoutId: workout?.id, routineId: workout?.routineId,
       });
-      Alert.alert('Couldn\'t repeat session', e?.message ?? 'Try again.');
+      toast.show('Couldn\'t repeat session. Try again.', { variant: 'error' });
     }
   }
 

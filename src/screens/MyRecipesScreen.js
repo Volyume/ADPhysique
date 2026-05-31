@@ -78,7 +78,7 @@ export default function MyRecipesScreen({ navigation, route }) {
         return;
       }
       setLoggingId(null);
-      Alert.alert('Nothing to log', 'Add at least one ingredient to this recipe first.');
+      toast.show('Add at least one ingredient first.', { variant: 'info' });
     } catch (_) {
       setLoggingId(null);
       toast.show('Couldn\'t log.', { variant: 'error' });
