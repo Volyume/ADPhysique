@@ -571,6 +571,22 @@ export default function AnalyticsScreen({ navigation }) {
           </View>
         )}
 
+        {/* ── Recent sessions: what you actually did, kept high up (above the
+            analytical charts) so it is the first concrete thing you see. ── */}
+        {recentSessions.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.rowBetween}>
+              <Text style={styles.sectionLabel}>Recent sessions</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('WorkoutHistory')}>
+                <Text style={styles.seeAll}>All sessions</Text>
+              </TouchableOpacity>
+            </View>
+            {recentSessions.map(w => (
+              <SessionCard key={w.id} workout={w} units={units} />
+            ))}
+          </View>
+        )}
+
         {/* ── 3 · Volume Snapshot ───────────────────────────── */}
         {hasData && (
         <View style={styles.section}>
@@ -653,21 +669,6 @@ export default function AnalyticsScreen({ navigation }) {
           </View>
           <TrainingCalendar values={calValues} />
         </View>
-        )}
-
-        {/* ── 6 · Recent Sessions Strip ─────────────────────── */}
-        {recentSessions.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.rowBetween}>
-              <Text style={styles.sectionLabel}>Recent sessions</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('WorkoutHistory')}>
-                <Text style={styles.seeAll}>All sessions</Text>
-              </TouchableOpacity>
-            </View>
-            {recentSessions.map(w => (
-              <SessionCard key={w.id} workout={w} units={units} />
-            ))}
-          </View>
         )}
 
         {/* ── Quick nav tiles ────────────────────────────────── */}
