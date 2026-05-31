@@ -11,6 +11,7 @@ import {
   calculatePlates,
   PLATE_SETS,
   DEFAULT_BAR_WEIGHT,
+  calculate1RM,
 } from '../algorithms';
 
 // ─── VOLUME_LANDMARKS shape ────────────────────────────────────────────────────
@@ -393,5 +394,36 @@ describe('plate sets and bar weights (A2-043)', () => {
     const { plates, totalWeight } = calculatePlates(100, 20, PLATE_SETS.kg);
     expect(plates).toEqual([25, 15]);
     expect(totalWeight).toBe(100);
+  });
+});
+
+describe('calculate1RM, high-rep guard (A2-040)', () => {
+  test('1-20 reps behaviour is unchanged', () => {
+    // Single rep returns the weight; low reps use the Epley/Brzycki blend.
+    expect(calculate1RM(100, 1)).toBe(100);
+    expect(calculate1RM(100, 5)).toBeCloseTo(115.0, 1);
+    expect(calculate1RM(100, 10)).toBeCloseTo(133.35, 1);
+  });
+
+  test('above 20 reps plateaus at the 20-rep estimate instead of exploding', () => {
+    const at20 = calculate1RM(100, 20);
+    expect(calculate1RM(100, 25)).toBeCloseTo(at20, 5);
+    expect(calculate1RM(100, 30)).toBeCloseTo(at20, 5);
+    expect(calculate1RM(100, 50)).toBeCloseTo(at20, 5);
+  });
+
+  test('a 30-rep set no longer estimates a runaway 1RM', () => {
+    // Old code returned pure Brzycki here (~516 for 100kg x 30). Now bounded.
+    expect(calculate1RM(100, 30)).toBeLessThan(220);
+  });
+
+  test('estimate is monotonic non-decreasing in reps and always finite', () => {
+    let prev = 0;
+    for (let reps = 1; reps <= 60; reps++) {
+      const v = calculate1RM(100, reps);
+      expect(Number.isFinite(v)).toBe(true);
+      expect(v).toBeGreaterThanOrEqual(prev - 1e-9);
+      prev = v;
+    }
   });
 });

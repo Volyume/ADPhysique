@@ -59,11 +59,17 @@ export function calculate1RM(weight, reps) {
   if (!weight || weight <= 0 || !reps || reps < 1) return weight || 0;
   if (reps === 1) return weight;
 
-  const epley = weight * (1 + reps / 30);
-  const brzycki = reps < 37 ? weight / (1.0278 - 0.0278 * reps) : weight * 2;
+  // 1RM estimators lose validity past ~12-15 reps, and Brzycki's denominator
+  // runs toward its pole as reps climb, so a 25-30 rep set used to return a
+  // wildly inflated estimate (≈5x the weight at 30 reps) that fired spurious
+  // 1RM PRs. Clamp the rep count the formula sees at 20: above that we plateau
+  // at the 20-rep estimate rather than extrapolate into nonsense. Behaviour for
+  // 1-20 reps is unchanged. (A2-040.)
+  const r = Math.min(reps, 20);
+  const epley = weight * (1 + r / 30);
+  const brzycki = weight / (1.0278 - 0.0278 * r);
 
-  if (reps <= 10) return epley * 0.6 + brzycki * 0.4;
-  if (reps > 20) return brzycki;
+  if (r <= 10) return epley * 0.6 + brzycki * 0.4;
   return (epley + brzycki) / 2;
 }
 
