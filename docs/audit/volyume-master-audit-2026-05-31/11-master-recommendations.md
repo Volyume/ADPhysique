@@ -52,8 +52,36 @@ place to lose trust, and a large share of users (US) log in lbs.
   — this is a contract change). This is the highest-value *code* fix found.
 
 ### T1-C — A2-016: Apple Sign-In uses browser OAuth, not native *(App Store risk)*
-Only true blocker for an iOS submission (Phase 5). Browser OAuth flow where
-Apple requires native Sign in with Apple. Pre-launch if iOS ships.
+Confirmed real (2026-05-31, verified against `src/lib/supabase.js:162`).
+`signInWithApple()` routes through `_signInWithOAuthProvider('apple')`, the
+Supabase OAuth browser flow (`signInWithOAuth` + `expo-web-browser`). The
+function's own comment already flags native as the App Store-required follow-up.
+`expo-apple-authentication` and `expo-crypto` are not installed; the
+`ios.usesAppleSignIn` entitlement is not set in `app.json`.
+
+**Status: DEFERRED to the iOS build work (founder decision 2026-05-31).** It is
+a native-module change that cannot be verified in the cloud environment (no iOS
+device or build), and iOS is planned but not shipping yet. Spec below so it can
+be landed alongside the iOS prebuild.
+
+**Implementation spec (do at iOS-build time):**
+1. Add deps: `expo-apple-authentication` and `expo-crypto` (for the nonce).
+2. `app.json` → `ios.usesAppleSignIn: true` (the entitlement). Add the
+   `expo-apple-authentication` config plugin if prebuild needs it.
+3. In `supabase.js`, gate by platform inside `signInWithApple()`:
+   - iOS: generate a raw nonce, hash it with
+     `Crypto.digestStringAsync(SHA256, rawNonce)`, call
+     `AppleAuthentication.signInAsync({ requestedScopes: [FULL_NAME, EMAIL], nonce: hashedNonce })`,
+     then `supabase.auth.signInWithIdToken({ provider: 'apple', token: credential.identityToken, nonce: rawNonce })`.
+   - Non-iOS (or `AppleAuthentication.isAvailableAsync()` false): keep the
+     existing `_signInWithOAuthProvider('apple')` browser fallback.
+4. The Apple buttons in `LoginScreen`, `ProOnboardingScreen` and
+   `ProUpgradeScreen` already gate to iOS, so no UI change is needed beyond
+   optionally swapping in `AppleAuthentication.AppleAuthenticationButton`.
+5. Tests: mock both native modules; assert iOS takes the native path and other
+   platforms fall back to browser OAuth. End-to-end needs a real iOS build.
+6. Runtime-critical (auth, Rule 5): additive, native path guarded so the
+   existing Android build is untouched.
 
 ---
 
