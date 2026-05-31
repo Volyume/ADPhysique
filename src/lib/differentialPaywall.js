@@ -10,14 +10,23 @@
  *   1. user is on the 'free' tier
  *   2. weekly check-in adherence is 'under' or 'over' in 2 of the last
  *      3 check-ins (a single off-week does NOT fire)
- *   3. exactly one of six locked contexts matches
+ *   3. exactly one of four locked contexts matches
  *
  * The trigger does NOT fire for paid users, ever. Per the locked
  * tier scope, paid tiers carry the `differential_paywall_disabled`
  * feature flag.
  *
- * Copy variants are verbatim from MOVE_4_DIFFERENTIAL_PAYWALL.md
- * lines 62-86. Each under 25 words; no jargon-blocklist terms.
+ * Safety note (audit 2026-05-31, founder decision): the two
+ * safety-adjacent distress contexts (`extreme_soreness`,
+ * `energy_crash`) were REMOVED as conversion triggers. Surfacing a
+ * paywall because a user's soreness or energy is crashing reads as
+ * monetising distress and works against the tier-blind safety system.
+ * The detector still accepts `energyScore`/`sorenessScore` (callers
+ * pass them), but they no longer fire a paywall. The actual recovery
+ * guardrails remain free and unaffected.
+ *
+ * Copy variants are verbatim from MOVE_4_DIFFERENTIAL_PAYWALL.md.
+ * Each under 25 words; no jargon-blocklist terms.
  *
  * CTA selection:
  *   - User still has trial entitlement -> 'try_pro_14d'
@@ -31,11 +40,9 @@
 
 export const LOCKED_COPY = Object.freeze({
   stalled_lift: "Your bench has stalled for three weeks. With food data, we could tell you if it's training or fuel. Try Pro free for 14 days.",
-  extreme_soreness: "Your soreness scores are stacking up. Food intake usually explains half of recovery. See yours with Pro, free for 14 days.",
   deload: "We're holding a deload this week. With food data, we'd know if your fuel is the cause. Pro shows you, free for 14 days.",
   missing_tdee: "Your weight is moving faster than your calories suggest. Pro tracks your true daily burn from your own data. 14 days free.",
   block_summary: "Your training block ended. With food data, we'd show how fuel shaped your results. Try Pro free for 14 days.",
-  energy_crash: "Your energy scores have dropped two weeks running. Food data usually shows why. Pro can tell you. 14 days free.",
 });
 
 // Alternate copy for users who've already used their cascade trial.
@@ -46,17 +53,16 @@ export const LOCKED_COPY = Object.freeze({
 // purchase will actually charge.
 export const LOCKED_COPY_NO_TRIAL = Object.freeze({
   stalled_lift: "Your bench has stalled for three weeks. With food data, we could tell you if it's training or fuel.",
-  extreme_soreness: "Your soreness scores are stacking up. Food intake usually explains half of recovery. See yours with Pro.",
   deload: "We're holding a deload this week. With food data, we'd know if your fuel is the cause.",
   missing_tdee: "Your weight is moving faster than your calories suggest. Pro tracks your true daily burn.",
   block_summary: "Your training block ended. With food data, we'd show how fuel shaped your results.",
-  energy_crash: "Your energy scores have dropped two weeks running. Food data usually shows why.",
 });
 
+// Safety-adjacent distress contexts (extreme_soreness, energy_crash) were
+// removed here (audit 2026-05-31). The remaining contexts are training and
+// engine signals, never a user's distress.
 export const TRIGGER_CONTEXTS = Object.freeze([
-  'extreme_soreness',  // safety-adjacent → highest priority
-  'energy_crash',      // safety-adjacent
-  'deload',            // this week's decision
+  'deload',            // this week's decision → highest priority
   'stalled_lift',      // multi-week training signal
   'missing_tdee',      // engine confidence signal
   'block_summary',     // end-of-block recap → lowest priority
@@ -148,22 +154,6 @@ function _firstMatchingContext(signals) {
 
 function _contextFires(context, s) {
   switch (context) {
-    case 'extreme_soreness': {
-      // Current week soreness ≥4 OR 2-of-3 weeks with soreness ≥4.
-      if (s.sorenessScore != null && s.sorenessScore >= 4) return true;
-      const recent = Array.isArray(s.recentWeeklyHistory) ? s.recentWeeklyHistory.slice(0, 3) : [];
-      const highCount = recent.filter(w => (w?.soreness ?? 0) >= 4).length;
-      return highCount >= 2;
-    }
-    case 'energy_crash': {
-      // Current week energy ≤2 AND at least one prior of the two
-      // most recent also ≤2. (Per locked copy "two weeks running".)
-      if (s.energyScore != null && s.energyScore <= 2) {
-        const prior = Array.isArray(s.recentWeeklyHistory) ? s.recentWeeklyHistory.slice(0, 2) : [];
-        return prior.some(w => (w?.energy ?? 99) <= 2);
-      }
-      return false;
-    }
     case 'deload':
       return !!s.deloadSuggested;
     case 'stalled_lift':

@@ -126,58 +126,52 @@ describe('adherence 2-of-3 gate', () => {
 
 // ── Trigger contexts ────────────────────────────────────────────────
 
-describe('trigger context: extreme_soreness', () => {
-  test('current week soreness ≥4 fires', () => {
+// Safety: the two distress contexts were removed as conversion triggers
+// (audit 2026-05-31, founder decision). They must NEVER fire a paywall,
+// even when the distress signals are strong and the adherence gate passes.
+describe('distress contexts are not conversion triggers', () => {
+  test('high soreness alone does NOT fire a paywall', () => {
     const r = detectDifferentialTrigger({
       userTier: 'free',
       ...passingAdherenceArgs,
-      sorenessScore: 4,
-    });
-    expect(r.shown).toBe(true);
-    expect(r.trigger).toBe('extreme_soreness');
-  });
-
-  test('2-of-3 weeks with high soreness fires (no current week reading)', () => {
-    const r = detectDifferentialTrigger({
-      userTier: 'free',
-      calsAdherence: 'under',
+      sorenessScore: 5,
       recentWeeklyHistory: [
-        { adherence: 'under', soreness: 4 },
         { adherence: 'under', soreness: 5 },
+        { adherence: 'under', soreness: 4 },
       ],
-      sorenessScore: null,
     });
-    expect(r.shown).toBe(true);
-    expect(r.trigger).toBe('extreme_soreness');
+    expect(r.shown).toBe(false);
   });
-});
 
-describe('trigger context: energy_crash', () => {
-  test('two weeks running of energy ≤2 fires', () => {
+  test('two-week energy crash alone does NOT fire a paywall', () => {
     const r = detectDifferentialTrigger({
       userTier: 'free',
       ...passingAdherenceArgs,
       energyScore: 2,
       recentWeeklyHistory: [
         { adherence: 'under', energy: 2 },
-        { adherence: 'under', energy: 4 },
+        { adherence: 'under', energy: 2 },
       ],
     });
-    expect(r.shown).toBe(true);
-    expect(r.trigger).toBe('energy_crash');
+    expect(r.shown).toBe(false);
   });
 
-  test('single week of low energy does NOT fire', () => {
+  test('extreme_soreness / energy_crash are absent from the trigger list', () => {
+    expect(TRIGGER_CONTEXTS).not.toContain('extreme_soreness');
+    expect(TRIGGER_CONTEXTS).not.toContain('energy_crash');
+  });
+
+  test('distress signals do not override a real training trigger', () => {
+    // Strong distress + a genuine deload: only the deload fires.
     const r = detectDifferentialTrigger({
       userTier: 'free',
-      calsAdherence: 'under',
+      ...passingAdherenceArgs,
+      sorenessScore: 5,
       energyScore: 2,
-      recentWeeklyHistory: [
-        { adherence: 'under', energy: 4 },
-        { adherence: 'under', energy: 4 },
-      ],
+      deloadSuggested: true,
     });
-    expect(r.trigger).not.toBe('energy_crash');
+    expect(r.shown).toBe(true);
+    expect(r.trigger).toBe('deload');
   });
 });
 
@@ -241,34 +235,6 @@ describe('trigger context: block_summary', () => {
 // ── Priority ordering ───────────────────────────────────────────────
 
 describe('priority ordering when multiple contexts match', () => {
-  test('extreme_soreness wins over energy_crash', () => {
-    const r = detectDifferentialTrigger({
-      userTier: 'free',
-      ...passingAdherenceArgs,
-      sorenessScore: 4,
-      energyScore: 2,
-      recentWeeklyHistory: [
-        { adherence: 'under', energy: 2, soreness: 4 },
-        { adherence: 'under', energy: 2, soreness: 4 },
-      ],
-    });
-    expect(r.trigger).toBe('extreme_soreness');
-  });
-
-  test('energy_crash wins over deload', () => {
-    const r = detectDifferentialTrigger({
-      userTier: 'free',
-      ...passingAdherenceArgs,
-      energyScore: 2,
-      recentWeeklyHistory: [
-        { adherence: 'under', energy: 2 },
-        { adherence: 'under', energy: 3 },
-      ],
-      deloadSuggested: true,
-    });
-    expect(r.trigger).toBe('energy_crash');
-  });
-
   test('deload wins over stalled_lift', () => {
     const r = detectDifferentialTrigger({
       userTier: 'free',
@@ -301,8 +267,6 @@ describe('priority ordering when multiple contexts match', () => {
 
   test('TRIGGER_CONTEXTS export matches the priority order used internally', () => {
     expect(TRIGGER_CONTEXTS).toEqual([
-      'extreme_soreness',
-      'energy_crash',
       'deload',
       'stalled_lift',
       'missing_tdee',

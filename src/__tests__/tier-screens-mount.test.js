@@ -176,8 +176,8 @@ describe('DifferentialBadge mount', () => {
     const r = await mount(Badge, {
       differential: {
         shown: true,
-        trigger: 'energy_crash',
-        with_food_data_message: 'Your energy scores have dropped two weeks running. Food data usually shows why.',
+        trigger: 'block_summary',
+        with_food_data_message: "Your training block ended. With food data, we'd show how fuel shaped your results.",
         paywall_cta: 'buy_pro',
       },
       pricingPriceText: '£3.99/month',
