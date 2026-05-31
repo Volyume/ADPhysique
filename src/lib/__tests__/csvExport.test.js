@@ -70,4 +70,56 @@ describe('buildDiaryCsv', () => {
     const lastCell = csv.split('\n')[1].split(',').pop();
     expect(lastCell).toBe('');
   });
+
+  describe('formula-injection hardening (A2-060)', () => {
+    test('neutralises a formula in a food name by prefixing a quote', () => {
+      const lookup = new Map([
+        ['global:x', { name: '=HYPERLINK("http://evil","x")', brand: '' }],
+      ]);
+      const entries = [{
+        entry_date: '2026-05-19', meal_slot: 'lunch', food_ref: 'global:x',
+        quantity_g: 100, kcal: 100, protein_g: 1, carbs_g: 1, fat_g: 1, fibre_g: 1,
+      }];
+      const cell = buildDiaryCsv(entries, lookup).split('\n')[1];
+      // Quoted because it contains a comma, with the neutralising apostrophe
+      // inside the quotes so it no longer starts with a bare '='.
+      expect(cell).toContain('"\'=HYPERLINK');
+      expect(cell).not.toMatch(/,=HYPERLINK/);
+    });
+
+    test('neutralises a + / - / @ prefixed brand', () => {
+      const lookup = new Map([
+        ['global:y', { name: 'Whey', brand: '+SUM(A1:A9)' }],
+      ]);
+      const entries = [{
+        entry_date: '2026-05-18', meal_slot: 'snack', food_ref: 'global:y',
+        quantity_g: 30, kcal: 120, protein_g: 24, carbs_g: 3, fat_g: 1, fibre_g: 0,
+      }];
+      const cell = buildDiaryCsv(entries, lookup).split('\n')[1];
+      expect(cell).toContain("'+SUM(A1:A9)");
+      expect(cell).not.toMatch(/,\+SUM/);
+    });
+
+    test('leaves an ordinary food name untouched', () => {
+      const lookup = new Map([['global:z', { name: 'Banana', brand: '' }]]);
+      const entries = [{
+        entry_date: '2026-05-17', meal_slot: 'breakfast', food_ref: 'global:z',
+        quantity_g: 120, kcal: 105, protein_g: 1, carbs_g: 27, fat_g: 0, fibre_g: 3,
+      }];
+      const cell = buildDiaryCsv(entries, lookup).split('\n')[1];
+      expect(cell).toBe('2026-05-17,breakfast,Banana,,120,105,1,27,0,3');
+    });
+
+    test('a negative number value is not mangled (numbers are not formulas here)', () => {
+      // Macros are non-negative in practice, but guard the intent: a leading "-"
+      // gets the apostrophe. This documents the trade-off rather than hiding it.
+      const lookup = new Map([['global:n', { name: 'Test', brand: '' }]]);
+      const entries = [{
+        entry_date: '2026-05-16', meal_slot: 'lunch', food_ref: 'global:n',
+        quantity_g: 100, kcal: 100, protein_g: 1, carbs_g: 1, fat_g: 1, fibre_g: 1,
+      }];
+      const cell = buildDiaryCsv(entries, lookup).split('\n')[1];
+      expect(cell.startsWith('2026-05-16,lunch,Test')).toBe(true);
+    });
+  });
 });

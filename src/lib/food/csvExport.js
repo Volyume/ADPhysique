@@ -17,7 +17,14 @@ const CSV_HEADERS = [
 
 function csvEscape(value) {
   if (value == null) return '';
-  const s = String(value);
+  let s = String(value);
+  // Neutralise spreadsheet formula injection: a cell that begins with =, +, -,
+  // @, tab or carriage return can be run as a formula by Excel / Google Sheets
+  // (a food name from an external database or a custom food could carry one).
+  // Prefix it with a single quote so it is treated as plain text. (A2-060.)
+  if (/^[=+\-@\t\r]/.test(s)) {
+    s = `'${s}`;
+  }
   if (s.includes(',') || s.includes('"') || s.includes('\n')) {
     return `"${s.replace(/"/g, '""')}"`;
   }

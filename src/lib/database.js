@@ -2895,7 +2895,14 @@ export async function getLatestBodyWeight(userId) {
 
 function csvEscape(value) {
   if (value == null) return '';
-  const s = String(value);
+  let s = String(value);
+  // Neutralise spreadsheet formula injection: a cell that begins with =, +, -,
+  // @, tab or carriage return can be run as a formula by Excel / Google Sheets.
+  // A workout note is free text, so it is the most likely carrier. Prefix it
+  // with a single quote so it is treated as plain text. (A2-060.)
+  if (/^[=+\-@\t\r]/.test(s)) {
+    s = `'${s}`;
+  }
   if (s.includes(',') || s.includes('"') || s.includes('\n')) {
     return `"${s.replace(/"/g, '""')}"`;
   }
