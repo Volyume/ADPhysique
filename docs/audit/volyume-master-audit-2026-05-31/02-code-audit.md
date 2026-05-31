@@ -1123,6 +1123,104 @@ cross-cutting issue already tracked (A2-038 colours, A2-043 units).
 
 ---
 
+## Sync infrastructure — `registry.js`, `transport.js`, `conflict.js`, `queue.js`, `watermark.js`, `telemetry.js` (all read in full)
+
+**Verdict: a strong, well-documented subsystem.** No defects found.
+
+### A2-029 refined — the "two sync layers" split is by domain, and the registry path is complete for its 16 tables.
+`transport.js:75-89` `MIGRATED_TABLES` is a **frozen** list of all 16
+registry tables (food domain, weekly check-ins, body comp, weight log,
+nutrition targets, profiles, ed_pattern_flags, tier_history, daily_steps,
+notification_preferences, recipe_ingredients). These flow through the
+registry-driven per-table handlers. The **legacy** `bulkUploadLocalData`/
+`pullFromCloud` still own the **training** tables (workouts, workout_sets,
+routines, mesocycles, exercises, etc.) which are **not** in the registry.
+So the two layers are split by domain, not racing for the same tables —
+less concerning than "two layers" first implied. Both run inside one
+`syncAll` cycle.
+
+### Verified strengths
+- **`registry.js`** — declarative per-table `conflictStrategy`/`direction`/
+  `softDelete`/`pk`. Sensible strategy choices: `server_wins`+`pull_only`
+  for derived/safety tables (`ed_pattern_flags`, `tier_history`,
+  `daily_intake_rollups`), `merge` for `profiles`, `last_write_wins`
+  elsewhere. A documented bug-fix: `nutrition_targets` was wrongly
+  `pull_only`/`serverAuthoritative` vs. shipping code, now corrected
+  (`:138-155`).
+- **`conflict.js`** — three strategies; the `merge` path does per-column
+  resolution via a `column_updates_at` jsonb map, skipping `id`/`user_id`
+  (`:86-102`), with a `last_write_wins` fallback when the server lacks the
+  map. Exactly the "phone A and phone B edited different fields" clobber
+  fix. `compareUpdatedAt` tolerant of number/ISO timestamps.
+- **`queue.js`** — offline mutation queue with **compaction** (delete
+  supersedes; update/insert collapse to one pending row, `:67-89`),
+  exponential backoff `[2s…300s]` (`:20-26`), `listPending` respects the
+  backoff window, all parameterised, `LIMIT` guard against runaway. Lives
+  in SQLite only, never synced.
+- **`watermark.js`** — incremental delta-pull cursors in AsyncStorage,
+  **self-healing** (sign-out clears → next sign-in full-pulls), never
+  moves backward, boundary row re-pulled via `.gte` (idempotent INSERT OR
+  REPLACE) so no row is skipped on equal timestamps.
+- **`transport.js`** — clean per-table dispatch; lazy `require('../supabase')`
+  so importing transport doesn't drag the url-polyfill/supabase stack into
+  runner unit tests; pull-only tables refused at `pushTable` before the
+  handler map.
+- **`telemetry.js`** — structured `sync_run`/`sync_conflict_resolved`
+  events with safe coercion; failures logged, never thrown.
+
+> Confirms A2-031's scope: the per-table transport handlers DO return
+> `{count}` merged into `pull/push_count_per_table`; only the **legacy**
+> training-table bulk counts are absent from `sync_run` telemetry.
+
+---
+
+## Sync table handlers — all 11 `sync/tables/*` read in full → SYNC LAYER COMPLETE
+
+All 11 handlers read: `profiles`, `foodDomain`, `weightLog`,
+`edPatternFlags`, `bodyComposition`, `dailySteps`, `notificationPreferences`,
+`nutritionTargets`, `recipeIngredients`, `tierHistory`, `weeklyCheckins`.
+**Uniform, high-quality pattern; no correctness defects.**
+
+### A2-055 — Pull handlers do a per-row `updated_at` lookup (N+1) — minor perf.
+The LWW gate in each bidirectional pull (`bodyComposition:134`,
+`dailySteps:107`, `recipeIngredients:117`, `weeklyCheckins:122`) issues a
+separate `getXUpdatedAt(userId, id)` SQLite query **per cloud row** to
+decide whether to apply it. For N pulled rows that's N extra reads. Row
+counts are bounded (365-day windows, weekly check-ins) so impact is modest,
+but a single batched "select id, updated_at where id in (…)" would remove
+the N+1. → Phase 6, low.
+
+### Verified strengths
+- **LWW gate on every pull** skips cloud rows the local copy already wrote
+  past (`local >= cloud`), preventing both clobbering of unsynced local
+  edits and the documented "pulled row echoes back as a fresh local write"
+  churn loop (notificationPreferences F4, recipeIngredients).
+- **`profiles`** per-column merge with a no-op-write guard (`_profilesEqual`,
+  `:182-192`) that fixed a prod merge-churn loop; **`tier` is excluded from
+  the push payload** (`:16-19`) — server owns tier (security-correct).
+- **`foodDomain`** coordinator: one bulk RPC per non-empty table for
+  **fault isolation** (one table's failure no longer rolls back the other
+  six), promise-cached so it runs once per `syncAll`, watermark advanced
+  only on full success. Snake_case mappers (with a documented camelCase
+  regression that the regression-matrix test caught).
+- **`weightLog`** is an intentional documented no-op (aliased to
+  `body_composition_log`) to avoid double-push.
+- Pull-only server-authoritative tables (`edPatternFlags`, `tierHistory`)
+  use INSERT-OR-REPLACE (server canonical) — correct for the ED-flag and
+  tier-audit safety data.
+- Batched upserts (200 rows) with `onConflict` throughout; idempotent.
+
+### SYNC LAYER VERDICT
+The entire sync layer (legacy `sync.js` orchestration + modular
+`sync/` registry/transport/conflict/queue/watermark/telemetry + 11 table
+handlers) is **a mature, well-tested, well-documented subsystem**. The
+only items are perf/observability (A2-001 redundant foreground calls,
+A2-031 legacy counts absent from telemetry, A2-055 N+1 pull lookups) and
+the by-design legacy/registry split (A2-029) — **no data-integrity
+defects**. This subsystem reflects real production debugging.
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction

@@ -2,7 +2,7 @@
 
 Status: `[x]` read in full + findings recorded · `[~]` partially read (see 02-code-audit.md scope notes) · `[ ]` not yet read.
 Generated 2026-05-31T16:09Z. Total non-test source files: 227 (83,854 LOC).
-Read so far: 58 files (component layer 49/49 complete).
+Read so far: 75 files (component + sync layers complete).
 
 ## App.js/
 
@@ -176,28 +176,28 @@ Read so far: 58 files (component layer 49/49 complete).
 
 ## src/lib/sync/
 
-- [ ] `conflict.js` (102)
+- [x] `conflict.js` (102)
 - [x] `index.js` (39)
-- [ ] `queue.js` (150)
-- [ ] `registry.js` (188)
+- [x] `queue.js` (150)
+- [x] `registry.js` (188)
 - [x] `runner.js` (242)
-- [ ] `telemetry.js` (86)
-- [ ] `transport.js` (178)
-- [ ] `watermark.js` (85)
+- [x] `telemetry.js` (86)
+- [x] `transport.js` (178)
+- [x] `watermark.js` (85)
 
 ## src/lib/sync/tables/
 
-- [ ] `bodyComposition.js` (152)
-- [ ] `dailySteps.js` (125)
-- [ ] `edPatternFlags.js` (50)
-- [ ] `foodDomain.js` (400)
-- [ ] `notificationPreferences.js` (149)
-- [ ] `nutritionTargets.js` (89)
-- [ ] `profiles.js` (203)
-- [ ] `recipeIngredients.js` (135)
-- [ ] `tierHistory.js` (52)
-- [ ] `weeklyCheckins.js` (140)
-- [ ] `weightLog.js` (24)
+- [x] `bodyComposition.js` (152)
+- [x] `dailySteps.js` (125)
+- [x] `edPatternFlags.js` (50)
+- [x] `foodDomain.js` (400)
+- [x] `notificationPreferences.js` (149)
+- [x] `nutritionTargets.js` (89)
+- [x] `profiles.js` (203)
+- [x] `recipeIngredients.js` (135)
+- [x] `tierHistory.js` (52)
+- [x] `weeklyCheckins.js` (140)
+- [x] `weightLog.js` (24)
 
 ## src/lib/telemetry/
 
