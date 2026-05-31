@@ -62,7 +62,7 @@ export default function LoginScreen({ navigation, route }) {
 
   async function handleEmailAuth() {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Missing fields', 'Please enter your email and password.');
+      toast.show('Enter your email and password', { variant: 'warning' });
       return;
     }
     audit(mode === 'signup' ? 'auth.signup.attempt' : 'auth.signin.attempt', {
@@ -103,7 +103,7 @@ export default function LoginScreen({ navigation, route }) {
             ],
           );
         } else {
-          Alert.alert('Error', error.message);
+          toast.show(error.message || 'Could not sign in', { variant: 'error' });
         }
       } else if (mode === 'signup' && data.user && !data.session) {
         Alert.alert(
@@ -190,7 +190,7 @@ export default function LoginScreen({ navigation, route }) {
       const result = await fn();
       if (result?.error) {
         logError('LoginScreen.oauth.providerError', result.error, { provider });
-        Alert.alert('Sign-in failed', result.error.message);
+        toast.show(result.error.message || 'Sign-in failed', { variant: 'error' });
       } else {
         // Success is fully driven by onAuthStateChange, log so the
         // upstream SIGNED_IN event can be correlated to this initiation.
@@ -205,7 +205,7 @@ export default function LoginScreen({ navigation, route }) {
 
   async function handleForgotPassword() {
     if (!email.trim()) {
-      Alert.alert('Enter email', 'Enter your email address above first.');
+      toast.show('Enter your email address above first', { variant: 'warning' });
       return;
     }
     setLoading(true);

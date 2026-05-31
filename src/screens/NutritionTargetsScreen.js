@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
-  Alert, KeyboardAvoidingView, Platform, Keyboard,
+  KeyboardAvoidingView, Platform, Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import { format } from 'date-fns';
 
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import InfoTooltip from '../components/InfoTooltip';
+import { useToast } from '../components/Toast';
 import { calculateNutritionTargets, PROTEIN_APPROACHES } from '../lib/nutritionEngine';
 import { saveNutritionTargets, getNutritionTargets, logBodyMetric, getUserBodyProfile } from '../lib/database';
 import useAppStore from '../store/useAppStore';
@@ -129,6 +130,7 @@ const BODY_METRICS_KEY_PREFIX = '@volyume_body_metrics_';
 const PHYSIQUE_PREF_KEY = '@volyume_physique_tracking_enabled';
 
 export default function NutritionTargetsScreen({ navigation }) {
+  const toast = useToast();
   // Use a shallow selector instead of useAppStore() with no args. The
   // bare call subscribes to the entire store object, so every store
   // mutation (rest timer ticks, sync events, etc.) re-renders this
@@ -262,7 +264,7 @@ export default function NutritionTargetsScreen({ navigation }) {
     const heightNum = ftNum * 30.48 + inNum * 2.54; // convert to cm
 
     if (!ageNum || !heightNum || !weightNum) {
-      Alert.alert('Invalid input', 'Age, height, and weight must be valid numbers.');
+      toast.show('Age, height and weight must be valid numbers', { variant: 'error' });
       return;
     }
 
@@ -272,10 +274,7 @@ export default function NutritionTargetsScreen({ navigation }) {
     if (proteinApproach === 'custom') {
       const customNum = parseFloat(customProteinGPerKg);
       if (!customNum || customNum <= 0) {
-        Alert.alert(
-          'Custom protein rate needed',
-          'Enter a value in g/kg, or switch to Optimised protein.',
-        );
+        toast.show('Enter a protein value in g/kg, or switch to Optimised', { variant: 'warning' });
         return;
       }
     }
@@ -333,7 +332,7 @@ export default function NutritionTargetsScreen({ navigation }) {
       // Collapse form to show results prominently
       setFormCollapsed(true);
     } catch (e) {
-      Alert.alert('Calculation error', e.message || 'Something went wrong.');
+      toast.show(e.message || 'Could not calculate targets', { variant: 'error' });
     } finally {
       setCalculating(false);
     }
