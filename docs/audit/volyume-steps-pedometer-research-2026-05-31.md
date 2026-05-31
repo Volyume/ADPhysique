@@ -11,100 +11,94 @@ is available. It does not change any code.
 
 ---
 
+## Revision note (2026-05-31, after verification)
+
+The first version of this doc claimed that on Android "nothing feeds Health
+Connect automatically" and built an entire feed-then-read architecture on it:
+a custom `TYPE_STEP_COUNTER` native module, `WRITE_STEPS`, interval writing, a
+cumulative checkpoint, and reboot-delta logic. That premise is wrong. Verified
+against Google's own page: on Android 14 (API 34) with SDK Extension 20 or
+higher, Health Connect counts steps on-device itself, using `TYPE_STEP_COUNTER`,
+batched no more than once a minute, active whenever any app has been granted
+`READ_STEPS`. Volyume already requests `READ_STEPS` and already reads a plain
+`COUNT_TOTAL` aggregate with no origin filter, so on the modern-Android majority
+the bare phone is already solved by shipped code. The expensive native work was
+unnecessary. This section and the Android sections below are the corrected
+version. The honest cause: my own Phase 3 research had this right ("Health
+Connect counts on-device via `TYPE_STEP_COUNTER` once any app holds
+`READ_STEPS`") and I contradicted it when over-building around a write-first
+instinct. Source: https://developer.android.com/health-and-fitness/health-connect/features/steps
+
 ## Executive summary
 
-The goal is three layers: (1) Volyume measures steps itself from the phone's
-built-in sensor, with zero setup; (2) when Apple Health or Health Connect holds
-a better number from a watch or band, that wins; (3) a decision tree picks the
-right source at any moment, including after the app has been fully closed.
+Both platforms already count the phone's own steps into their aggregator with no
+app code, and Volyume already reads that aggregator. So the headline is much
+smaller than first thought: on a modern phone, steps work with what Volyume
+ships, once the steps permission is actually granted and the card refreshes. The
+two things that broke it were both bugs that are now fixed: the Android 14
+permission dialog never launching (the activity-alias / delegate / package
+visibility fixes), and the steps card not refreshing on warm resume (`d554a17`).
+The 51 steps that appeared on a bare S24 with no Samsung Health were Health
+Connect's own on-device capture switching on the moment `READ_STEPS` was granted,
+which is the confirmation that this works without Volyume feeding anything.
 
-The single most important finding is that the two platforms are not symmetric,
-so the "phone sensor is the foundation, health platform is the upgrade" framing
-holds on iOS but only half-holds on Android. Be honest about this rather than
-design for a symmetry that does not exist.
+**iOS: already works via the shipped read.** The iPhone's motion coprocessor
+records steps at the OS level and writes them into HealthKit with no setup, so
+`health.js` reading `getStepCount` (a HealthKit statistics total, deduped across
+iPhone and Watch) returns real data on a bare phone once the user grants the
+HealthKit read. Catch-up after a full close is inherent: HealthKit kept the data,
+the next read picks it up. A direct `expo-sensors` CMPedometer read is only a
+fallback for the case where the user declines HealthKit but we still want a
+number.
 
-**iOS is effectively solved with what Volyume already ships.** The iPhone's
-motion coprocessor records steps at the OS level whether or not Volyume is
-running, and keeps roughly seven days of history. `expo-sensors`
-(`~13.0.9`, already a dependency) wraps this: `Pedometer.getStepCountAsync(start,
-now)` returns the real total for any window in the last seven days, even one
-where the app was dead the whole time. Catch-up after a full close is one query
-on launch. No background service, no native code, near-zero battery. This is the
-Pedometer++ model.
+**Android: already works via the shipped read on Android 14+.** Health Connect is
+the datastore and the arbiter, not a source Volyume must populate. On Android 14
+with SDK Extension 20+, Health Connect runs `TYPE_STEP_COUNTER` itself and writes
+the phone's steps in (attributed to the `android` origin, or a device-specific
+Synthetic Package Name after June 2026), active whenever any app holds
+`READ_STEPS`. Volyume holds `READ_STEPS` and reads the plain `COUNT_TOTAL`
+aggregate, which picks those steps up transparently. A Galaxy Watch or Samsung
+Health simply adds another source that Health Connect dedupes by the user's
+priority. So on the modern-Android majority Volyume does not write anything, does
+not need a native module, and catch-up after a close is the same single
+`aggregate(startOfToday, now)` call, because Health Connect persisted everything
+while the app was closed.
 
-**Android is where the work is, and the right model is feed-then-read.** Health
-Connect is the underlying datastore and arbiter on Android. It does not generate
-steps itself; apps are sources that write to it and readers that query it, and
-the `aggregate` query dedupes across all sources by the user's priority list.
-Samsung Health, Fitbit, Garmin and the rest are just sources, not the
-infrastructure. The key correction to make here: on Android nothing feeds Health
-Connect automatically. Unlike iOS, the phone's hardware steps are not written
-into Health Connect by the OS. That is precisely why a device with no fitness app
-(an S24 with no Samsung Health out of the box) shows nothing: the infrastructure
-is present but no source is feeding it.
+**Catch-up approach per platform (corrected):** both reduce to "request the
+permission, read the platform aggregate for the day". iOS reads the HealthKit
+total; Android reads the Health Connect `COUNT_TOTAL` aggregate. No checkpoint,
+no gap backfill, no write. This is what `health.js` already does.
 
-So the correct Android design is for Volyume's own pedometer to become a source.
-Volyume measures steps from the phone sensor, writes them into Health Connect,
-and reads the deduplicated `aggregate` back. Health Connect does the arbitration:
-if a Galaxy Watch is also present and higher priority, the watch wins for
-overlapping windows; on a bare phone Volyume is the only source, so steps just
-work with zero setup. The raw hardware path is still needed, but its job is to
-*measure* what Volyume writes, including the cumulative-delta backfill on relaunch
-for the period the app was closed (Health Connect will not capture the closed gap
-on a bare device unless an app writes it). `expo-sensors` cannot do this:
-`getStepCountAsync` throws on Android and the live watcher only reports
-subscription-relative deltas while foregrounded, so a small custom native module
-that exposes the raw `TYPE_STEP_COUNTER` value is required. Two consequences:
-feeding Health Connect needs the `WRITE_STEPS` permission (`app.json` has
-`READ_STEPS` only today), and the raw counter loses steps across a reboot while
-the app was closed unless another source covered the gap.
+**Recommended libraries:** the ones already shipped do the core job:
+`react-native-health` (iOS read) and `react-native-health-connect` `3.3.3`
+(Android read). No new dependency and no new native code for the modern-phone
+case. `expo-sensors` (`~13.0.9`, already present) is held in reserve as the iOS
+permission-declined fallback only.
 
-**Catch-up approach per platform:**
+**Decision tree in one line:** request the platform read permission; read the
+platform aggregate for the day; if the platform has no data or the permission is
+declined, fall back (where built) to a direct sensor read; manual entry at the
+weekly check-in is the last resort and is sticky for its day.
 
-- iOS: on launch/foreground, `getStepCountAsync(startOfToday, now)` via
-  `expo-sensors`. Read only, the phone already feeds HealthKit. Done.
-- Android: a new raw `TYPE_STEP_COUNTER` module measures steps, writes them into
-  Health Connect (with the cumulative-delta backfill for the closed period on
-  relaunch), and Volyume reads the deduplicated
-  `aggregate(Steps → COUNT_TOTAL, between(startOfToday, now))` back (the read is
-  already wired in `health.js`). Health Connect arbitrates between Volyume's
-  contribution and any wearable. If another source (Samsung Health, a watch) is
-  already feeding Health Connect, Volyume's write is deduped against it and the
-  higher-priority source wins, so feeding does not double count.
+**Top three priorities (corrected, much smaller):**
 
-**Recommended libraries:** `expo-sensors` (already present) for iOS and for the
-Android live-while-open figure; `react-native-health-connect` `3.3.3` (already
-present) for the Android catch-up and wearable merge; `react-native-health`
-(already present) for the optional iOS HealthKit upgrade. The only new native
-code is a small Android config-plugin module that exposes the raw
-`TYPE_STEP_COUNTER` value, and only if we decide to support the no-Health-Connect
-fallback.
+1. Confirm on-device the two fixes already landed: the Android permission dialog
+   launches and grants `READ_STEPS`, and the steps card refreshes on warm resume.
+   This is verification of shipped code, not new work, and may close the whole
+   issue for modern phones.
+2. Measure the real Android install base: how many users are on Android 13 and
+   below (no on-device Health Connect counting), and how many Android 14 users
+   are on SDK Extension 20+. This single measurement decides whether any further
+   work is justified.
+3. Only if the numbers warrant it, address the genuine residual: Android 13 and
+   below via Google's Recording API (not a hand-rolled sensor module), and an
+   optional direct-sensor fallback for users who decline the read permission.
 
-**Decision tree in one line:** pick the highest-quality available source for the
-window, never sum sources, prefer the health-platform aggregate when authorised
-(it already includes the phone's own steps), and fall back to the internal
-sensor, then to manual entry at the weekly check-in.
-
-**Top three build priorities:**
-
-1. iOS internal pedometer via `expo-sensors`, written into the existing
-   `daily_steps` store with `source = 'device'`. Lowest effort, immediate win,
-   no new dependency.
-2. A source-selection layer in `activitySteps.js` that prefers the health
-   aggregate when granted and falls back to the device sensor, with a stored
-   last-seen checkpoint so a relaunch query fills the gap. This makes catch-up
-   real on both platforms without double counting.
-3. Android raw `TYPE_STEP_COUNTER` fallback (custom config-plugin module) for
-   devices where Health Connect is not available. Highest effort and the only
-   new native code, so it comes last and only if the data says enough users land
-   on Android without Health Connect.
-
-The honest complexity assessment: iOS is a day or two. The cross-cutting
-source-selection and checkpoint logic is a few days with tests. The Android raw
-sensor module is the hard, risky part (native code, reboot edge cases, OEM
-battery behaviour, ~5 to 10 percent of devices with no usable sensor) and may
-not be worth it if Android 14+ Health Connect coverage is high enough among real
-users.
+The honest complexity assessment: for modern phones there is little to no new
+code, the work was already done and the blockers were bugs. The residual is
+narrow (older Android, and permission-declined users) and should be sized against
+real install data before anything native is built. The custom `TYPE_STEP_COUNTER`
+module, `WRITE_STEPS`, and reboot logic from the first draft are not needed.
 
 ---
 
@@ -295,10 +289,16 @@ Xiaomi/MIUI devices lack it or fire it late. Always feature-detect
 (`isAvailableAsync`) and plan an accelerometer fallback or manual entry for the
 ~5 to 10 percent without a usable sensor.
 
-Android verdict: `expo-sensors` is a dead end for catch-up. The live watcher gives
-a foreground-only, subscription-relative delta, useful only as a "steps since you
-opened the app" figure. True catch-up needs either Health Connect (preferred, see
-the next section) or a custom raw-sensor module.
+Android verdict: `expo-sensors` is a dead end for catch-up, but that no longer
+matters for the common case. On Android 14+ with SDK Extension 20+, Health
+Connect runs this exact `TYPE_STEP_COUNTER` sensor itself, in the OS, and writes
+the phone's steps into its own store whenever any app holds `READ_STEPS`. So
+Volyume gets the phone's steps and the closed-app catch-up from the Health
+Connect aggregate it already reads, with no custom module. A hand-rolled
+`TYPE_STEP_COUNTER` module is only relevant to the genuine residual: Android 13
+and below (where Google's Recording API is the recommended option), or as a
+fallback when the user declines the read permission. The detail above is kept as
+background for that narrow case, not as the main path.
 
 ---
 
@@ -350,10 +350,13 @@ HealthKit or Health Connect and let the platform's source priority or aggregatio
 decide whether the watch beats the phone. Pedometer++ is the exception that adds
 its own merge.
 
-Pattern to copy: iOS is CMPedometer historical query on launch (via
-`expo-sensors`), done. Android is Health Connect `aggregate` on launch as the
-primary catch-up source, with a raw-sensor fallback for devices without Health
-Connect.
+Pattern to copy: on both platforms, hold the read permission and read the
+platform aggregate on launch. iOS reads the HealthKit total (the iPhone feeds it);
+Android reads the Health Connect `COUNT_TOTAL` aggregate (Health Connect feeds
+itself on 14+). The third-party-app pain described above is mostly the old world
+of apps that avoided the health platform; Volyume should lean on it, not around
+it. A direct sensor read is a fallback for older Android and permission-declined
+users only.
 
 ---
 
@@ -401,33 +404,33 @@ while the app was terminated, so a relaunch range query fills the gap:
   store keeps collecting while the app is terminated; only background delivery to
   the process stops, which is precisely why a relaunch query is needed.
 
-The double-count trap, stated plainly, and it differs by platform:
-
-- iOS: the phone already writes its own steps into HealthKit automatically. So
-  Volyume must read only and must not write its CMPedometer figure back, or it
-  creates a second phone source HealthKit then has to dedupe. Read the HealthKit
-  statistics total when connected (it merges the Watch), or the bare CMPedometer
-  figure otherwise. Never write, never sum.
-- Android: the opposite. Nothing feeds Health Connect automatically, so Volyume
-  *should* write its measured steps in as a source. The double-count risk is not
-  Volyume-versus-the-platform, it is Volyume overlapping its own previous writes,
-  so the writer must track its last-written end time and write non-overlapping
-  intervals. Across sources, Health Connect handles dedup by priority: if Samsung
-  Health or a watch also wrote the same window, the higher-priority source wins
-  and the rest is discarded from the aggregate. So Volyume writes, then reads the
-  aggregate, and lets the infrastructure arbitrate rather than choosing at read
-  time.
+The write trap, stated plainly: do not have Volyume write its own measured steps
+into either platform, because each platform already records the phone's steps
+itself. On iOS the coprocessor writes them into HealthKit; on Android 14+ Health
+Connect writes them via its own `TYPE_STEP_COUNTER` capture. If Volyume also
+wrote a phone figure, it would create a second phone source the platform then has
+to dedupe against its own, which can only go wrong. Read the platform aggregate
+and let it arbitrate. This is why the first draft's feed-then-read model was a
+mistake: it solved a problem the platform had already solved, and added a
+double-source risk in the process. The only legitimate writer-style work is the
+narrow Android 13-and-below case, and even there Google's Recording API, not a
+raw write, is the recommended route.
 
 ### Availability with zero setup
 
 Android: on Android 14+ (API 34) Health Connect ships in the OS framework, cannot
-be uninstalled, and needs no install, which is as close to zero-setup as Android
-gets. On Android 13 and below it is a separate Play Store app the user must
-install. Check at runtime with `getSdkStatus`: `SDK_AVAILABLE` (proceed),
-`SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED` (offer an update, treat as not ready),
-`SDK_UNAVAILABLE` (do not attempt). Volyume already exposes this via
-`getHealthConnectSdkStatus` in `health.js:273`. If anything other than available,
-fall back to the internal sensor and do not nag.
+be uninstalled, and needs no install. More than that, with SDK Extension 20+ it
+counts the phone's steps itself the moment any app holds `READ_STEPS`, so on the
+modern-Android majority "Health Connect available" means "phone steps already
+work", not "steps work only if something feeds it". On Android 13 and below it is
+a separate Play Store app with no on-device counting; Google recommends the
+Recording API for apps with significant users there. Check availability at runtime
+with `getSdkStatus`: `SDK_AVAILABLE` (proceed), `SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED`
+(offer an update), `SDK_UNAVAILABLE` (do not attempt). Volyume already exposes this
+via `getHealthConnectSdkStatus` in `health.js:273`. The one unknown to measure
+against real users is SDK Extension 20+ coverage among Android-14 installs;
+Android 14 launched October 2023 and extensions arrive via Play system updates, so
+it should be near-universal, but that is the number that sizes the residual.
 
 iOS: HealthKit is present on every iPhone (check `isHealthDataAvailable()`). An
 iPhone with no wearable still has step data because the coprocessor records it
@@ -435,15 +438,19 @@ with no setup, so the statistics query returns real data on a bare phone. A watc
 or third-party app just adds sources to merge.
 
 Framing permission as optional: present it as an enhancement ("connect your
-health data for a more complete step count"), make it skippable, never block
-logging on it, and when declined keep working entirely on the internal sensor
-with no degraded messaging.
+health data for a more complete step count"), make it skippable, and never block
+logging on it. Note that on Android the same `READ_STEPS` grant that lets Volyume
+read is also what switches on Health Connect's on-device capture, so granting it
+is what makes a bare phone start counting at all.
 
-Forward-looking Android risk worth flagging now: from June 2026 Health Connect
-moves on-device step records to device-specific Synthetic Package Names. When
-aggregating, code should be ready to include both the legacy `android` origin and
-the device SPN so on-device steps are not missed after that change. This affects
-the existing `health.js` aggregate read, not just future work.
+The June 2026 Synthetic Package Name change, scoped correctly: from June 2026
+Health Connect attributes its on-device step records to a device-specific SPN
+rather than the `android` origin. This only affects code that filters the
+aggregate by `DataOrigin = "android"`. Volyume's `health.js` does a plain
+`COUNT_TOTAL` aggregate with no origin filter, so it picks up both the legacy and
+the SPN-tagged steps transparently and is not at risk. The change matters only if
+Volyume ever adds origin-based source attribution to the UI. The first draft
+overstated this as a risk to the current read; it is not.
 
 ---
 
@@ -451,97 +458,73 @@ the existing `health.js` aggregate read, not just future work.
 
 ### Source model, per platform
 
-The two platforms work differently, so the model is not symmetric.
+Both platforms reduce to the same shape: hold the read permission, read the
+platform aggregate for the day, never write.
 
-iOS (read only, the phone already feeds HealthKit):
+iOS:
 
-1. HealthKit statistics total when connected (merges the Watch, deduped). Best.
-2. CMPedometer via `getStepCountAsync` (bare phone figure). Layer 1.
+1. HealthKit statistics total (the iPhone feeds it, merges the Watch, deduped).
+2. Direct CMPedometer read via `expo-sensors` (fallback only when HealthKit is
+   declined and we still want a number).
 3. Manual entry at the weekly check-in. Last resort.
 
-Android (feed-then-read, Health Connect is the arbiter):
+Android:
 
-1. Volyume's raw sensor measures steps and writes them into Health Connect as a
-   source.
-2. Volyume reads the `aggregate` back. Health Connect dedupes Volyume's
-   contribution against any wearable or other source (Samsung Health, a watch) by
-   the user's priority order, so the read is always the best available total.
-3. If the raw sensor is unavailable (no chip, or `WRITE_STEPS` declined), Volyume
-   still reads whatever else is feeding Health Connect; if nothing is, manual
-   entry at the check-in is the last resort.
+1. Health Connect `COUNT_TOTAL` aggregate. On 14+ Health Connect feeds itself the
+   phone's steps once `READ_STEPS` is held, and dedupes any wearable or Samsung
+   Health against it by the user's priority order, so the read is the best total.
+2. On Android 13 and below (no on-device counting), the Recording API or whatever
+   other source the user has feeding Health Connect; a direct sensor read is the
+   last automatic option.
+3. Manual entry at the weekly check-in. Last resort.
 
-The reconciliation rule: on iOS choose the single highest read source for the
-window and never sum. On Android do not choose at read time at all, write the
-sensor data in and let Health Connect's aggregate arbitrate. The only summing
-Volyume ever does is its own non-overlapping interval writes on Android.
+The reconciliation rule: read the platform aggregate and trust it; it already
+merges the phone and any wearable. Never write a phone figure back, never sum
+across sources. The only choosing Volyume does is "platform aggregate if it has
+data, else fallback, else manual".
 
 ### Normal operation (app open)
 
-On app start and on every foreground:
+On app start and on every foreground, this is what `health.js` and
+`recordTodaySteps` already do:
 
-- iOS: read the HealthKit statistics total for start-of-today to now if connected,
-  else `getStepCountAsync(startOfToday, now)`, and write it to `daily_steps` with
-  `source = 'health'` or `'device'`.
-- Android: read the raw cumulative counter, write the new interval since the last
-  write into Health Connect (`WRITE_STEPS`), then read the Health Connect
-  `aggregate` for start-of-today to now and write that deduped total to
+- iOS: read the HealthKit total for start-of-today to now, write it to
   `daily_steps` with `source = 'health'`.
-- Either platform: if no source has data, leave the last known value; the weekly
-  check-in owns manual entry.
+- Android: read the Health Connect `aggregate(COUNT_TOTAL, between(startOfToday, now))`,
+  write it to `daily_steps` with `source = 'health'`.
+- Either platform: if the read returns nothing and a fallback sensor read is
+  built, use it; otherwise leave the last value and let the weekly check-in own
+  manual entry.
 
-While the app stays open, iOS can stream live increments with `watchStepCount`
-and Android can keep writing intervals for a responsive number, but the
-authoritative daily total in `daily_steps` is always the most recent aggregate or
-query result, not an in-app accumulator.
+The authoritative daily total in `daily_steps` is the most recent aggregate, not
+an in-app accumulator.
 
-### App relaunch after a full close (first-class scenario)
+### App relaunch after a full close
 
-1. Read the stored last-seen timestamp (new checkpoint, see data architecture).
-   The gap is last-seen to now, clamped to seven days on iOS.
-2. Fill the gap, per platform:
-   - iOS: the OS retained the steps, so `getStepCountAsync` over the gap (or the
-     HealthKit statistics total if connected) returns them. Read, do not write.
-   - Android: read the raw cumulative counter, compute the delta since the stored
-     checkpoint, and write that interval into Health Connect to backfill the
-     closed period (Health Connect did not capture it on a bare device because no
-     source was running). If a reboot reset the counter (stored checkpoint greater
-     than current reading) the pre-reboot delta is lost from the sensor; if
-     another source fed Health Connect during the gap, the aggregate still covers
-     it.
-3. Read the day total back: on Android the Health Connect `aggregate` for the day,
-   which now includes the backfilled interval deduped against any wearable; on iOS
-   the query result. Overwrite today's `daily_steps` row with that full-day total
-   rather than adding the gap to the stored value. `setDailySteps` already upserts
-   by `(user_id, entry_date)`.
-4. Surface the day total on the StepsCard, which already re-reads on focus and
-   foreground.
+There is no gap to backfill and no checkpoint to maintain, which is the whole
+point of the correction. The platform kept counting and persisting while the app
+was closed, so the relaunch path is identical to a normal foreground: read the
+aggregate for start-of-today to now and overwrite today's `daily_steps` row.
+`setDailySteps` already upserts by `(user_id, entry_date)`. The StepsCard already
+re-reads on focus and foreground (`d554a17`), which is the fix that made this
+visible.
 
-### Device reboot (Android)
+### Device reboot
 
-If the stored `TYPE_STEP_COUNTER` checkpoint is greater than the current reading,
-a reboot happened and the counter reset. The steps between the last checkpoint and
-the reboot are lost from the raw sensor. Recovery options, in order: if Health
-Connect is available, its aggregate for the day already covers the gap, so prefer
-it and re-baseline silently; otherwise accept the small loss, re-baseline at the
-current reading, and let the rest of the day accumulate normally. Persist the
-checkpoint with a timestamp so a reboot is distinguishable from a normal
-increment.
+Not Volyume's problem on the main path. Health Connect's own on-device counter and
+HealthKit handle their counters across reboots internally; Volyume only ever reads
+the day aggregate, which is unaffected. Reboot handling is a concern only inside a
+hand-rolled raw-sensor fallback, which is the narrow residual, not the main path.
 
 ### Data architecture
 
-- Internal-sensor totals are stored in the existing `daily_steps` row for the day,
-  overwritten by the latest query, with `source` recording where the figure came
-  from (`'device'`, `'health'`, `'manual'`, plus the legacy `'auto'`). No new
-  table needed.
-- Two new pieces of small per-install state (AsyncStorage, not SQLite, since they
-  are device facts not user data): a last-seen timestamp (ms) updated on every
-  successful read, used to compute the relaunch gap; and, on Android only, the
-  last `TYPE_STEP_COUNTER` checkpoint value plus its timestamp, used for the delta
-  and reboot detection.
-- Health-platform data is queried on launch, foreground, and the periodic sync,
+- The day total lives in the existing `daily_steps` row, overwritten by the latest
+  aggregate read, `source = 'health'` (plus `'manual'` for typed entries and the
+  legacy `'auto'`). No new table, no per-install checkpoint state, no last-seen
+  timestamp needed for the main path. These were artefacts of the dropped
+  feed-then-read model.
+- The platform aggregate is read on launch, foreground, and the periodic sync,
   exactly where `recordTodaySteps` already runs.
-- The two sources are compared by the quality order above and the better one is
-  chosen, never summed.
 
 ### Manual fallback
 
@@ -557,123 +540,89 @@ wins", and it is worth a guard in `setDailySteps` or its caller.
 
 ## Recommended implementation
 
-Libraries, named and versioned, all already present except none new for the core:
+Libraries: the core needs nothing new. `react-native-health` (iOS read) and
+`react-native-health-connect` `3.3.3` (Android read) are already wired and already
+do the right thing. `expo-sensors` `~13.0.9` (already present) is the iOS
+permission-declined fallback only. No `WRITE_STEPS`, no new native module, for the
+main path.
 
-- iOS internal pedometer: `expo-sensors` `~13.0.9` (`Pedometer.getStepCountAsync`,
-  `watchStepCount`). No new dependency.
-- Android live-while-open figure: `expo-sensors` `watchStepCount` (delta only,
-  cosmetic).
-- Android read (aggregate) and write (feed steps in): `react-native-health-connect`
-  `3.3.3` (`aggregateRecord` already wired; `insertRecords` for `StepsRecord` is
-  the new write path). Needs the `WRITE_STEPS` permission added to `app.json`
-  (`READ_STEPS` is there today).
-- iOS wearable merge and >7-day history (optional upgrade): `react-native-health`.
-  Already wired.
-- Android step measurement: a new ~50-line Kotlin config-plugin module exposing
-  the raw `TYPE_STEP_COUNTER` cumulative value, since `expo-sensors` cannot. This
-  is what produces the intervals Volyume writes into Health Connect, including the
-  relaunch backfill. The only new native code.
+The main path is what Volyume already ships: hold the read permission, read the
+platform aggregate for the day, write it to `daily_steps`. Catch-up after a close
+is the same call, because the platform persisted the steps while the app was
+closed. This is already in `recordTodaySteps` and is run from `App.js`, the
+periodic sync, and the StepsCard. The two bugs that stopped it working are fixed
+(the Android permission dialog and the warm-resume refresh).
 
-Catch-up on relaunch, per platform:
+So the recommended work, in order:
 
-- iOS: on launch/foreground, `getStepCountAsync(startOfToday, now)`. The OS
-  retained the steps; one query catches up. If HealthKit is connected, prefer its
-  statistics total for the same window (it merges the Watch); otherwise the
-  CMPedometer figure stands. Read only, no write.
-- Android: on launch/foreground, read the raw cumulative counter, write the delta
-  since the stored checkpoint into Health Connect to backfill the closed period
-  (handling reboot as above), then read
-  `aggregate(COUNT_TOTAL, between(startOfToday, now))` back as the day total. If
-  the raw module is absent or `WRITE_STEPS` is declined, Volyume still reads
-  whatever else is feeding Health Connect, and falls back to manual entry if
-  nothing is.
+1. Verify on-device that the two fixes hold: the Android 14 permission dialog
+   launches, grants `READ_STEPS`, Volyume then shows the Health Connect figure,
+   and it refreshes on warm resume. On iOS confirm the HealthKit read after grant.
+   This is QA of shipped code and may close the issue for modern phones with no
+   new code at all.
+2. Measure the Android install base before building anything native: the share of
+   users on Android 13 and below, and the share of Android-14 users below SDK
+   Extension 20. That decides whether the residual is worth code.
+3. Only if the numbers warrant it, build the residual:
+   - Android 13 and below: integrate Google's Recording API (the recommended route
+     for on-device counting where Health Connect does not self-feed), not a
+     hand-rolled sensor module.
+   - Permission-declined fallback: a direct sensor read (iOS `expo-sensors`
+     `getStepCountAsync`; Android a small `TYPE_STEP_COUNTER` module) so a user
+     who refuses the health read still gets a rough number. This is the only place
+     the raw-sensor and reboot detail from the Direct Pedometer section applies,
+     and it is optional.
 
-Where the logic lives: extend `src/lib/activitySteps.js` with the source-selection
-function (call it something like `readBestTodaySteps`) and have `recordTodaySteps`
-call it, so every existing trigger (`App.js` foreground sync, `StepsCard` focus and
-foreground, the periodic sync) gets catch-up for free with no new call sites. The
-last-seen and Android-checkpoint state lives in a small new helper alongside
-`health.js`. Keep `health.js` as the thin platform wrapper and put the
-decision/reconciliation in `activitySteps.js`, matching the current separation.
-
-Last-active timestamp: store it in AsyncStorage keyed per install, write it after
-every successful read, and read it on launch to compute the gap. It is a device
-fact, not user data, so it does not belong in `daily_steps` or the cloud sync.
+Where any new logic lives: keep it behind `activitySteps.js`, which already gates
+on permission and writes `daily_steps`, so existing call sites get it for free.
+Keep `health.js` as the thin platform wrapper.
 
 Permission request flow: keep the once-per-install launch prompt
-(`stepsLaunchPrompt.js`) and the Pro-enrolment ask (`ProOnboardingScreen.js`), but
-reframe both as optional enhancement, since the internal sensor now works without
-them. On iOS request Motion (already covered by `NSMotionUsageDescription`) for
-the internal sensor and HealthKit only as the upgrade. On Android request
-`ACTIVITY_RECOGNITION` for the sensor plus Health Connect `READ_STEPS` and
-`WRITE_STEPS` (the write is what lets Volyume feed the aggregator). When declined,
-Volyume still reads whatever else is feeding Health Connect and falls back to
-manual entry.
+(`stepsLaunchPrompt.js`) and the Pro-enrolment ask (`ProOnboardingScreen.js`).
+Frame them as the thing that turns steps on, because on Android the `READ_STEPS`
+grant is also what switches on Health Connect's on-device counting. On iOS the
+HealthKit read grant does the same job. `ACTIVITY_RECOGNITION` (already declared)
+is only needed if the direct-sensor fallback is built.
 
-Implementation order:
-
-1. iOS internal pedometer via `expo-sensors`, written to `daily_steps` with
-   `source = 'device'`, behind the source-selection function. Add the last-seen
-   checkpoint. Tests for the read, the null/zero handling, and the
-   day-boundary query. Lowest risk, immediate value, no new dependency. Per the
-   runtime-critical rule this touches a read path only, so it is safe and additive.
-2. The cross-platform source-selection and reconciliation in `activitySteps.js`:
-   prefer health aggregate when granted, fall back to device, never sum, manual
-   wins for its day. Tests for each branch and for the no-double-count rule. This
-   is the piece that makes catch-up correct on both platforms.
-3. Android raw `TYPE_STEP_COUNTER` config-plugin module, plus the `WRITE_STEPS`
-   feed into Health Connect, the checkpoint, and reboot logic. This is what fixes
-   the original zero-setup gap (the bare S24 with nothing feeding Health Connect),
-   so it is central, but it is the hard, risky native piece, so it is sequenced
-   last. Users who already have a source feeding Health Connect (Samsung Health, a
-   watch) are covered by the read-only path from step 1 and 2; this step is what
-   serves the users who have nothing feeding it. Tests for the interval write and
-   its non-overlap bookkeeping, the relaunch delta, the reboot reset, and the
-   WorkManager sampler if added.
-
-React Native specifics to plan for: `expo-sensors` historical query is iOS-only,
-so the Android path must never call it; the Android raw module needs `expo
-prebuild` and EAS, and the existing `withHealthConnectPermissionDelegate` config
-plugin is the pattern to follow; `react-native-health-connect` 3.3.3's
-`getGrantedPermissions` and `getSdkStatus` are already in use, so the gating is in
-place. Per Rule 5 (runtime-critical: background handlers, permissions, async
-scheduling) the Android sensor module and any WorkManager sampler ship with tests
-in the same commit, not later.
+React Native specifics to plan for: `expo-sensors` `getStepCountAsync` is iOS-only,
+so any Android fallback must use a different path; the existing
+`withHealthConnectPermissionDelegate` config plugin is the pattern if a native
+module is ever needed; `react-native-health-connect` 3.3.3's `getGrantedPermissions`
+and `getSdkStatus` are already in use, so the gating is in place.
 
 Honest assessment of complexity and failure modes:
 
-- iOS: low complexity, near-zero battery, accurate catch-up for seven days. Known
-  limitation: CMPedometer underestimates against a waist pedometer by a known
-  margin, and history is capped at seven days. Neither blocks the use case.
-- Cross-platform source selection: moderate complexity, mostly testable in pure
-  functions. The main risk is the double-count rule; tests must cover it.
-- Android raw sensor: high complexity and the real risk. Native code, reboot edge
-  cases, OEM battery managers killing background sampling, ~5 to 10 percent of
-  devices with no usable sensor, and the June 2026 Synthetic Package Name change.
-  This is why the recommendation is to lean on Health Connect (in-OS on Android
-  14+) as the Android foundation and treat the raw sensor as a fallback that may
-  not be worth building if Health Connect coverage among real users is high.
+- Modern phones (the majority): little to no new code. The capability shipped; the
+  blockers were two bugs, now fixed. The risk is that the on-device fixes are not
+  confirmed yet, so step 1 is verification.
+- Android 13 and below: real but narrow work via the Recording API, sized by the
+  install-base measurement. Not started until the numbers justify it.
+- Permission-declined fallback: optional, moderate complexity if pursued, and the
+  only place the raw-sensor and reboot edge cases live.
+- The dropped feed-then-read model would have added native code, `WRITE_STEPS`, a
+  checkpoint, reboot logic, and a double-source risk, all to solve a problem the
+  platform already solves. It is not recommended.
 
 ---
 
 ## Open questions
 
-1. Android raw sensor: build it now, or ship iOS internal plus Android Health
-   Connect first and measure how many real users land on Android without Health
-   Connect available before committing to the native module? Recommendation:
-   measure first.
-2. Manual-wins rule: should a manual check-in entry be permanently sticky for its
-   day, or only until the next automatic read with a higher confidence source?
-   Recommendation: manual is sticky for its day.
-3. iOS HealthKit upgrade: is the Apple Watch merge and >7-day history worth
-   prompting for, given the bare-phone CMPedometer figure already works? Could be
-   deferred.
-4. `source` values: add `'device'` (and keep the legacy `'auto'`), or migrate
-   `'auto'` to a clearer set? Recommendation: add `'device'`, leave existing rows
-   alone (additive, no migration).
-5. Do we want a live in-app counter (`watchStepCount`) at all, or is a
-   query-on-foreground total enough? The live counter is cosmetic and adds a
-   subscription lifecycle to manage.
+1. The decisive measurement: what share of Volyume's Android users are on Android
+   13 and below, and what share of the Android-14 users are below SDK Extension
+   20? Until that is known, the residual is unsized. Recommendation: measure
+   before building anything native.
+2. On-device verification: do the two shipped fixes (permission dialog,
+   warm-resume refresh) close the issue on a real Android 14 phone and a real
+   iPhone? This is the first thing to confirm and may end the work.
+3. Permission-declined fallback: is it worth building a direct-sensor read for
+   users who refuse the health-platform read, or is "no steps until you grant it"
+   acceptable? Recommendation: defer until asked for.
+4. Manual-wins rule: should a manual check-in entry be sticky for its day, or be
+   overwritten by a later automatic read? Recommendation: manual is sticky for its
+   day.
+5. iOS HealthKit versus a direct CMPedometer read: HealthKit is already wired and
+   already merges the Watch, so the direct read is only a decline fallback. Worth
+   confirming the HealthKit grant prompt is in the same shape as the Android ask.
 
 ---
 
