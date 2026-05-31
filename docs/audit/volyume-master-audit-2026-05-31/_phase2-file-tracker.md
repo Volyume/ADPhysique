@@ -2,7 +2,7 @@
 
 Status: `[x]` read in full + findings recorded · `[~]` partially read (see 02-code-audit.md scope notes) · `[ ]` not yet read.
 Generated 2026-05-31T16:09Z. Total non-test source files: 227 (83,854 LOC).
-Read so far: 75 files.
+Read so far: 85 files.
 
 ## App.js/
 
@@ -164,15 +164,15 @@ Read so far: 75 files.
 
 ## src/lib/observability/
 
-- [ ] `sentryScrub.js` (229)
+- [x] `sentryScrub.js` (229)
 
 ## src/lib/payments/
 
-- [ ] `cascade.js` (267)
-- [ ] `catalogue.js` (84)
-- [ ] `index.js` (14)
-- [ ] `playBilling.js` (339)
-- [ ] `restore.js` (67)
+- [x] `cascade.js` (267)
+- [x] `catalogue.js` (84)
+- [x] `index.js` (14)
+- [x] `playBilling.js` (339)
+- [x] `restore.js` (67)
 
 ## src/lib/sync/
 
@@ -201,10 +201,10 @@ Read so far: 75 files.
 
 ## src/lib/telemetry/
 
-- [ ] `events.js` (110)
-- [ ] `index.js` (38)
-- [ ] `sentryBridge.js` (34)
-- [ ] `transport.js` (99)
+- [x] `events.js` (110)
+- [x] `index.js` (38)
+- [x] `sentryBridge.js` (34)
+- [x] `transport.js` (99)
 
 ## src/navigation/
 
