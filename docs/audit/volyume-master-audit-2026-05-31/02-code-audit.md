@@ -13,9 +13,12 @@ Branch: `main` @ `a4bf964`
 >
 > **Files read in full so far:** `App.js` (1–768),
 > `src/navigation/RootNavigator.js` (1–1066), `src/lib/supabase.js` (1–188),
-> `src/store/useAppStore.js` (1–911), `src/styles/theme.js` (1–366).
-> **Next:** `src/lib/sync.js` + `src/lib/sync/`, `src/lib/database.js`, then
-> food engine and the large screens.
+> `src/store/useAppStore.js` (1–911), `src/styles/theme.js` (1–366),
+> `src/lib/sync/runner.js` (1–242), `src/lib/sync/index.js` (1–39).
+> **Partially read:** `src/lib/sync.js` (377–425 scheduleSync, 537–580
+> bulkUploadLocalData head, structure via grep) — full read PENDING.
+> **Next:** finish `src/lib/sync.js`, `src/lib/database.js`, food engine,
+> large screens.
 
 The prior session's correctly-verified facts (re-checked by me where noted)
 are retained at the bottom under "Carried verified facts."
@@ -407,6 +410,71 @@ one most worth checking, since contrast drops on lighter surfaces).
 - `type` roles are **getters** (`:242-279`) so they read the post-a11y
   `fontSize` at `StyleSheet.create` time — the one accessibility dimension
   that *can* update at boot is wired correctly.
+
+---
+
+## Sync layer — `runner.js` + `index.js` read in full; `sync.js` partially read
+
+### A2-001 / A2-012 RESOLVED (the foreground-sync concurrency question)
+
+**Verdict: the in-memory lock is real but narrow; redundant concurrent
+uploads ARE possible on foreground/sign-in, but they are idempotent
+(wasteful, not corrupting).**
+
+Evidence, all read this session:
+- `syncAll` holds `_runLock` (`runner.js:22, 37-40`): a second `syncAll`
+  while one is running returns `{status:'skipped', reason:'already_running'}`.
+  So `syncAll`-vs-`syncAll` **is** de-duplicated. The `App.js:598-604`
+  comment is correct *for that path only*.
+- `syncAll` runs a full cycle: (1) per-table push for `MIGRATED_TABLES`,
+  (2) **legacy `sync.bulkUploadLocalData`** (`runner.js:114-115`), (3)
+  per-table pull, (4) **legacy `sync.pullFromCloud`** (`:146-147`).
+- **But `_runLock` only guards `syncAll`.** `bulkUploadLocalData` is
+  called **directly** (bypassing the lock) from at least: `App.js:85`
+  (daily background task), `App.js:478` (`maybeSync`),
+  `RootNavigator.js:809` (sign-in), `useAppStore.js:237` (sign-out),
+  and `syncQueue.js:161/172/180`. `pullFromCloud` directly from
+  `RootNavigator.js:835`.
+- `bulkUploadLocalData` itself has **no in-flight guard** — read its head
+  (`sync.js:537-575`): it just runs `syncExercises` → workout batches.
+  The only debounce is `scheduleSync`'s 2 s timer (`sync.js:385-413`),
+  which only coalesces the *write-trigger* path.
+- **Therefore:** on a single foreground after sign-in, `maybeSync`'s
+  direct `bulkUploadLocalData` (App.js:478) and `callSyncAll`'s
+  `syncAll`→`bulkUploadLocalData` (runner.js:115) can run **concurrently**;
+  the runner lock does not see the direct call.
+- **Severity downgraded to perf/efficiency, not correctness:** the cloud
+  writes are `upsert(..., { onConflict: 'user_id,id' })` (e.g.
+  `sync.js:438, :474`), so concurrent duplicate uploads converge
+  idempotently (last-write-wins). The cost is **wasted duplicate network
+  + DB round-trips on every foreground/launch**, plus two `getSession()`
+  calls. → Phase 6 perf; recommend routing **all** callers through
+  `syncAll` so the single lock actually governs every push/pull.
+
+### A2-029 — Two coexisting sync architectures, deliberately mid-migration.
+`runner.js:10-14` + `transport.js:8` confirm: `MIGRATED_TABLES` use the
+new registry/transport path; everything else still flows through the
+legacy `bulkUploadLocalData`/`pullFromCloud` in `sync.js`. Both run in the
+same `syncAll` cycle. This is intentional (documented), but it means the
+sync surface is **doubled** during the migration — every table is either
+"migrated" or "legacy", and a reader must check `MIGRATED_TABLES`
+(transport.js) to know which path owns a given table. Maintainability +
+test-surface finding; not a bug.
+
+### A2-030 — `scheduleSync` is a no-op under Jest (`sync.js:397-399`).
+`if (process.env.JEST_WORKER_ID) return;`. Sound (avoids open-handle
+timers in tests), but means **the debounced write-sync path is never
+exercised by the test suite** — tests must call `bulkUploadLocalData`
+directly (comment `:395-396`). → Phase 7 gap: the 2 s coalescing
+behaviour and its cancellation (`cancelScheduledSync`) have no unit
+coverage via the normal write path.
+
+> **Note:** `sync.js` is 1,732 lines and only partially read so far
+> (orchestration + `scheduleSync` + `bulkUploadLocalData` head + several
+> `sync*` single-row upserts at `:427-496`). Per-table upsert correctness
+> (column mappings like the `body_metrics` fix noted at `sync.js:490-496`)
+> and `pullFromCloud`'s full body remain to be read. No claim is made
+> about the unread portions.
 
 ---
 
