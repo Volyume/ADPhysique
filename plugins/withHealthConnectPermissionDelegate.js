@@ -2,16 +2,19 @@
  * withHealthConnectPermissionDelegate
  *
  * Expo config plugin that registers the Health Connect permission delegate in
- * MainActivity. react-native-health-connect needs
+ * MainActivity. react-native-health-connect (v2+) requires
  *
  *   HealthConnectPermissionDelegate.setPermissionDelegate(this)
  *
- * called in MainActivity.onCreate, otherwise the Android permission request
- * crashes fatally with UninitializedPropertyAccessException (lateinit property
- * requestPermission has not been initialized). Because Volyume uses Expo
- * prebuild and `expo prebuild --clean` regenerates MainActivity every build,
- * a manual edit there is wiped each time. This plugin re-inserts the import
- * and the call on every prebuild.
+ * in MainActivity.onCreate. Without it the permission request crashes with
+ * UninitializedPropertyAccessException (the lateinit requestPermission launcher
+ * is never initialised), so the system permission dialog never appears. This
+ * is documented in the library README under "Installation" for v2 onwards.
+ *
+ * Volyume uses Expo prebuild, and `expo prebuild --clean` regenerates
+ * MainActivity from the template on every build, wiping any manual edit. This
+ * plugin re-inserts the import and the call on every prebuild so the delegate
+ * is always registered in the shipped APK.
  *
  * The string transform (applyToMainActivity) is exported separately so it can
  * be unit tested without running a prebuild. It is idempotent: running it on

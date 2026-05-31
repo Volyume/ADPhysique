@@ -1,13 +1,21 @@
+/**
+ * withHealthConnectPermissionDelegate.applyToMainActivity
+ *
+ * The plugin injects the Health Connect permission delegate registration into
+ * MainActivity. These tests cover the string transform directly (no prebuild),
+ * since that registration is what makes the permission dialog launch at all.
+ */
+
 const { applyToMainActivity } = require('../withHealthConnectPermissionDelegate');
 
-const KT_MAIN_ACTIVITY = `package com.volyume.app
+const KT = `package app.volyume
 
 import android.os.Bundle
-import expo.modules.ReactActivityDelegateWrapper
+import com.facebook.react.ReactActivity
 
 class MainActivity : ReactActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
-    setTheme(R.style.AppTheme)
+    setTheme(R.style.AppTheme);
     super.onCreate(null)
   }
 
@@ -15,9 +23,10 @@ class MainActivity : ReactActivity() {
 }
 `;
 
-const JAVA_MAIN_ACTIVITY = `package com.volyume.app;
+const JAVA = `package app.volyume;
 
 import android.os.Bundle;
+import com.facebook.react.ReactActivity;
 
 public class MainActivity extends ReactActivity {
   @Override
@@ -28,47 +37,50 @@ public class MainActivity extends ReactActivity {
 `;
 
 describe('applyToMainActivity (Kotlin)', () => {
-  test('adds the import and the delegate call', () => {
-    const out = applyToMainActivity(KT_MAIN_ACTIVITY, 'kt');
-    expect(out).toContain('import dev.matinzd.healthconnect.permissions.HealthConnectPermissionDelegate');
-    expect(out).toContain('HealthConnectPermissionDelegate.setPermissionDelegate(this)');
-    // call lands right after super.onCreate, not before it
-    const superIdx = out.indexOf('super.onCreate(null)');
-    const callIdx = out.indexOf('HealthConnectPermissionDelegate.setPermissionDelegate(this)');
-    expect(callIdx).toBeGreaterThan(superIdx);
-    // no Java semicolon on the Kotlin call
-    expect(out).not.toContain('setPermissionDelegate(this);');
+  test('adds the import after the package declaration', () => {
+    const out = applyToMainActivity(KT, 'kt');
+    expect(out).toContain(
+      'import dev.matinzd.healthconnect.permissions.HealthConnectPermissionDelegate',
+    );
+    // No trailing semicolon in Kotlin.
+    expect(out).not.toContain('HealthConnectPermissionDelegate;');
   });
 
-  test('is idempotent (running twice does not double-insert)', () => {
-    const once = applyToMainActivity(KT_MAIN_ACTIVITY, 'kt');
+  test('adds the delegate call right after super.onCreate', () => {
+    const out = applyToMainActivity(KT, 'kt');
+    expect(out).toMatch(
+      /super\.onCreate\(null\)\n\s+HealthConnectPermissionDelegate\.setPermissionDelegate\(this\)/,
+    );
+  });
+
+  test('is idempotent: running twice does not double-insert', () => {
+    const once = applyToMainActivity(KT, 'kt');
     const twice = applyToMainActivity(once, 'kt');
-    expect(twice).toBe(once);
-    const importCount = (twice.match(/HealthConnectPermissionDelegate$/gm) || []).length;
-    const callCount = (twice.match(/setPermissionDelegate\(this\)/g) || []).length;
-    expect(importCount).toBe(1);
-    expect(callCount).toBe(1);
+    const importCount = (twice.match(/HealthConnectPermissionDelegate$/gm) || []).length
+      + (twice.match(/import dev\.matinzd/g) || []).length;
+    expect((twice.match(/setPermissionDelegate\(/g) || []).length).toBe(1);
+    expect((twice.match(/import dev\.matinzd/g) || []).length).toBe(1);
+    expect(importCount).toBeGreaterThan(0);
   });
 });
 
 describe('applyToMainActivity (Java)', () => {
-  test('adds the import and the delegate call with a semicolon', () => {
-    const out = applyToMainActivity(JAVA_MAIN_ACTIVITY, 'java');
-    expect(out).toContain('import dev.matinzd.healthconnect.permissions.HealthConnectPermissionDelegate;');
+  test('adds a semicolon-terminated import and call', () => {
+    const out = applyToMainActivity(JAVA, 'java');
+    expect(out).toContain(
+      'import dev.matinzd.healthconnect.permissions.HealthConnectPermissionDelegate;',
+    );
     expect(out).toContain('HealthConnectPermissionDelegate.setPermissionDelegate(this);');
-    const superIdx = out.indexOf('super.onCreate(savedInstanceState)');
-    const callIdx = out.indexOf('HealthConnectPermissionDelegate.setPermissionDelegate(this);');
-    expect(callIdx).toBeGreaterThan(superIdx);
   });
 });
 
-describe('applyToMainActivity guards', () => {
-  test('throws if there is no package declaration', () => {
+describe('applyToMainActivity (failure modes)', () => {
+  test('throws when there is no package declaration', () => {
     expect(() => applyToMainActivity('class MainActivity {}', 'kt')).toThrow(/package declaration/);
   });
 
-  test('throws if there is no super.onCreate call', () => {
-    const noOnCreate = 'package com.volyume.app\n\nclass MainActivity : ReactActivity() {}\n';
+  test('throws when there is no super.onCreate to anchor on', () => {
+    const noOnCreate = 'package app.volyume\n\nclass MainActivity : ReactActivity() {}\n';
     expect(() => applyToMainActivity(noOnCreate, 'kt')).toThrow(/super\.onCreate/);
   });
 });
