@@ -22,7 +22,10 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
 
   function adjust(field, delta) {
     Haptics.selectionAsync().catch(() => {});
-    const steps = { weight: 2.5, reps: 1 };
+    // Weight stepper matches the unit's smallest practical jump: 2.5 kg or 5 lb.
+    // (A2-043: weight is stored in the display unit, so a kg-sized step gave lbs
+    // users an awkward 2.5 lb tap.)
+    const steps = { weight: units === 'lbs' ? 5 : 2.5, reps: 1 };
     // Reps cap matches the TextInput's [1, 200] so a typed 150 doesn't
     // snap back to 100 when the user taps −.
     const limits = { weight: [0, 500], reps: [1, 200] };

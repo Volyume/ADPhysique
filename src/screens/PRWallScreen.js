@@ -11,6 +11,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/t
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import { getCompletedWorkoutSets, getAllExercises, getLatestBodyWeight } from '../lib/database';
 import { calculate1RM } from '../lib/algorithms';
+import { kgToLbs } from '../lib/units';
 import { EmptyPRsIllustration } from '../components/Illustrations';
 import PeekMenu from '../components/PeekMenu';
 import { getStrengthLevel, summariseStrengthStanding } from '../lib/strengthStandards';
@@ -149,7 +150,14 @@ export default function PRWallScreen({ navigation }) {
       setExerciseHistory(sessionHistory);
 
       if (bw?.weightKg) {
-        const bwValue = Math.round(bw.weightKg * 10) / 10;
+        // Bodyweight is canonical kg, but est1RM comes from logged gym weight,
+        // which is stored in the display unit. Compare like with like: convert
+        // bodyweight into the display unit so the strength ratio (and the
+        // "based on X bodyweight" read-out) line up. (A2-043: before this, a lbs
+        // user's ratio was lbs/kg, inflated ~2.2x, so everyone read as Elite.)
+        const bwValue = units === 'lbs'
+          ? Math.round(kgToLbs(bw.weightKg) * 10) / 10
+          : Math.round(bw.weightKg * 10) / 10;
         setBodyWeight(bwValue);
         const levels = {};
         for (const [name, types] of Object.entries(newGrouped)) {

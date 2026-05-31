@@ -4,6 +4,13 @@ import {
   calculateWeeklyVolume,
   getVolumeStatus,
   detectLaggingMuscles,
+  defaultIncrement,
+  getProgressionSuggestion,
+  computeSetTargets,
+  getProgressionPath,
+  calculatePlates,
+  PLATE_SETS,
+  DEFAULT_BAR_WEIGHT,
 } from '../algorithms';
 
 // ─── VOLUME_LANDMARKS shape ────────────────────────────────────────────────────
@@ -283,5 +290,108 @@ describe('detectLaggingMuscles', () => {
     const result = detectLaggingMuscles(history, 3);
     const flag = result.find(r => r.muscle === 'front_delts');
     expect(flag).toBeUndefined();
+  });
+});
+
+// ─── A2-043: unit-aware gym-weight maths ──────────────────────────────────────
+// Gym weight is stored in the display unit (kg|lbs) and never converted, so the
+// progression jumps, plate sets and bar weights must follow that unit. Before
+// the fix these were all kg-hardcoded and only the label changed.
+
+describe('defaultIncrement, unit-aware load steps', () => {
+  test('kg compound: 2.5 above 60kg, 1.25 below', () => {
+    expect(defaultIncrement(80, 'kg', 'compound')).toBe(2.5);
+    expect(defaultIncrement(40, 'kg', 'compound')).toBe(1.25);
+  });
+
+  test('lbs compound: 5 above 135lb, 2.5 below (not kg-sized)', () => {
+    expect(defaultIncrement(185, 'lbs', 'compound')).toBe(5);
+    expect(defaultIncrement(95, 'lbs', 'compound')).toBe(2.5);
+  });
+
+  test('isolation and accessory steps are smaller and unit-aware', () => {
+    expect(defaultIncrement(25, 'kg', 'isolation')).toBe(1);
+    expect(defaultIncrement(10, 'kg', 'isolation')).toBe(0.5);
+    expect(defaultIncrement(50, 'lbs', 'isolation')).toBe(2.5);
+    expect(defaultIncrement(20, 'lbs', 'isolation')).toBe(1.25);
+  });
+
+  test('defaults to kg compound', () => {
+    expect(defaultIncrement(80)).toBe(2.5);
+  });
+});
+
+describe('getProgressionSuggestion, unit-aware increments (A2-043)', () => {
+  const prev = (weight) => [{ weight, actualReps: 12, rir: 2, set_type: 'straight' }];
+
+  test('kg: heavy lift jumps 2.5kg, light lift 1.25kg', () => {
+    expect(getProgressionSuggestion(null, prev(80), 8, 12, 'kg').suggestedWeight).toBe(82.5);
+    expect(getProgressionSuggestion(null, prev(40), 8, 12, 'kg').suggestedWeight).toBe(41.25);
+  });
+
+  test('lbs: heavy lift jumps 5lb, light lift 2.5lb', () => {
+    expect(getProgressionSuggestion(null, prev(185), 8, 12, 'lbs').suggestedWeight).toBe(190);
+    expect(getProgressionSuggestion(null, prev(95), 8, 12, 'lbs').suggestedWeight).toBe(97.5);
+  });
+
+  test('message carries the display-unit label', () => {
+    expect(getProgressionSuggestion(null, prev(185), 8, 12, 'lbs').message).toContain('lbs');
+  });
+});
+
+describe('computeSetTargets, unit-aware increments (A2-043)', () => {
+  const prev = (weight) => [{ weight, actualReps: 12, rir: 2, set_type: 'straight' }];
+
+  test('lbs compound adds 5lb at the top of the range', () => {
+    const { targets } = computeSetTargets(prev(185), 8, 12, 'lbs', { exerciseCategory: 'compound' });
+    expect(targets[0].weight).toBe(190);
+  });
+
+  test('kg compound adds 2.5kg', () => {
+    const { targets } = computeSetTargets(prev(80), 8, 12, 'kg', { exerciseCategory: 'compound' });
+    expect(targets[0].weight).toBe(82.5);
+  });
+
+  test('explicit incrementKg still overrides the unit default', () => {
+    const { targets } = computeSetTargets(prev(185), 8, 12, 'lbs', { exerciseCategory: 'compound', incrementKg: 2 });
+    expect(targets[0].weight).toBe(187);
+  });
+});
+
+describe('getProgressionPath, unit-aware increments (A2-043)', () => {
+  const wk = (reps, weight) => [{ actualReps: reps, weight }];
+
+  test('lbs heavy lift suggests +5lb', () => {
+    const r = getProgressionPath(wk(12, 185), wk(10, 185), 'lbs');
+    expect(r.delta).toBe(5);
+    expect(r.message).toContain('lbs');
+  });
+
+  test('kg heavy lift suggests +2.5kg', () => {
+    expect(getProgressionPath(wk(12, 80), wk(10, 80), 'kg').delta).toBe(2.5);
+  });
+});
+
+describe('plate sets and bar weights (A2-043)', () => {
+  test('lbs plate set uses real lb denominations, kg uses kg', () => {
+    expect(PLATE_SETS.lbs).toEqual([45, 35, 25, 10, 5, 2.5]);
+    expect(PLATE_SETS.kg).toEqual([25, 20, 15, 10, 5, 2.5, 1.25]);
+  });
+
+  test('default bars are 20kg and 45lb', () => {
+    expect(DEFAULT_BAR_WEIGHT.kg).toBe(20);
+    expect(DEFAULT_BAR_WEIGHT.lbs).toBe(45);
+  });
+
+  test('225lb on a 45lb bar is 45+45 each side', () => {
+    const { plates, totalWeight } = calculatePlates(225, 45, PLATE_SETS.lbs);
+    expect(plates).toEqual([45, 45]);
+    expect(totalWeight).toBe(225);
+  });
+
+  test('100kg on a 20kg bar is 25+15 each side', () => {
+    const { plates, totalWeight } = calculatePlates(100, 20, PLATE_SETS.kg);
+    expect(plates).toEqual([25, 15]);
+    expect(totalWeight).toBe(100);
   });
 });

@@ -185,3 +185,25 @@ describe('summariseStrengthStanding', () => {
     expect(out.overallLabel).toBe('Intermediate');
   });
 });
+
+// getStrengthLevel is a pure ratio, so 1RM and bodyweight must be in the SAME
+// unit. PRWallScreen used to pass an lbs-derived 1RM against a kg bodyweight,
+// inflating the ratio ~2.2x so every lbs user read as Elite. These guard the
+// contract the screen fix now honours. (A2-043.)
+describe('getStrengthLevel, unit consistency (A2-043 regression)', () => {
+  const LB_PER_KG = 1 / 0.453592;
+
+  test('same physical lift gives the same level in kg or lbs', () => {
+    const kg  = getStrengthLevel('Barbell Bench Press', 100, 80);            // ratio 1.25
+    const lbs = getStrengthLevel('Barbell Bench Press', 100 * LB_PER_KG, 80 * LB_PER_KG);
+    expect(kg.label).toBe('Advanced');
+    expect(lbs.label).toBe(kg.label);
+    expect(lbs.ratio).toBeCloseTo(kg.ratio, 5);
+  });
+
+  test('mismatched units (lbs 1RM vs kg bodyweight) inflate the ratio ~2.2x', () => {
+    const correct    = getStrengthLevel('Barbell Bench Press', 100 * LB_PER_KG, 80 * LB_PER_KG).ratio;
+    const mismatched = getStrengthLevel('Barbell Bench Press', 100 * LB_PER_KG, 80).ratio;
+    expect(mismatched / correct).toBeCloseTo(LB_PER_KG, 2);
+  });
+});

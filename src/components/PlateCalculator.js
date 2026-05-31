@@ -2,38 +2,53 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
-import { calculatePlates } from '../lib/algorithms';
+import { calculatePlates, PLATE_SETS, DEFAULT_BAR_WEIGHT } from '../lib/algorithms';
 import useAppStore from '../store/useAppStore';
 
 export default function PlateCalculator({ targetWeight, onClose }) {
   const barWeight = useAppStore(s => s.barWeight);
   const units = useAppStore(s => s.units);
-  const [weight, setWeight] = useState(String(targetWeight || 60));
-  const [bar, setBar] = useState(String(barWeight));
+  // Gym weight is stored in the display unit, so the plate set and bar default
+  // have to follow it: kg plates on a 20 kg bar, lbs plates on a 45 lb bar.
+  // (A2-043: was kg plates end to end regardless of unit.)
+  const plateSet = PLATE_SETS[units] || PLATE_SETS.kg;
+  const defaultBar = DEFAULT_BAR_WEIGHT[units] || DEFAULT_BAR_WEIGHT.kg;
+  const isLbs = units === 'lbs';
+  const [weight, setWeight] = useState(String(targetWeight || (isLbs ? 135 : 60)));
+  const [bar, setBar] = useState(String(barWeight || defaultBar));
 
   const weightNum = parseFloat(weight) || 0;
-  const barNum = parseFloat(bar) || 20;
+  const barNum = parseFloat(bar) || defaultBar;
   // calculatePlates returns { plates, totalWeight } when weight <= bar and
   // omits sideWeight in that branch, guard with defaults so the render
   // doesn't crash on `.toFixed`.
-  const calc = calculatePlates(weightNum, barNum) || {};
+  const calc = calculatePlates(weightNum, barNum, plateSet) || {};
   const plates = calc.plates ?? [];
   const totalWeight = calc.totalWeight ?? barNum;
   const sideWeight = calc.sideWeight ?? 0;
 
-  // Real-world IPF/competition plate colours by weight. These are physical
-  // equipment standards (red 25, blue 20, yellow 15, green 10, white 5),
-  // not theme colours, so they are deliberately literal.
+  // Real-world plate colours by weight. These are physical equipment standards
+  // (kg: red 25, blue 20, yellow 15, green 10, white 5; lb: blue 45, yellow 35,
+  // green 25), not theme colours, so they are deliberately literal.
   /* eslint-disable no-restricted-syntax */
-  const plateColors = {
-    25: '#E53935',
-    20: '#1565C0',
-    15: '#F9A825',
-    10: '#2E7D32',
-    5: '#FFFFFF',
-    2.5: '#757575',
-    1.25: '#BDBDBD',
-  };
+  const plateColors = isLbs
+    ? {
+        45: '#1565C0',
+        35: '#F9A825',
+        25: '#2E7D32',
+        10: '#616161',
+        5: '#FFFFFF',
+        2.5: '#BDBDBD',
+      }
+    : {
+        25: '#E53935',
+        20: '#1565C0',
+        15: '#F9A825',
+        10: '#2E7D32',
+        5: '#FFFFFF',
+        2.5: '#757575',
+        1.25: '#BDBDBD',
+      };
   /* eslint-enable no-restricted-syntax */
 
   return (
@@ -90,8 +105,9 @@ export default function PlateCalculator({ targetWeight, onClose }) {
                 styles.plate,
                 {
                   backgroundColor: plateColors[plate] || colors.surface3,
-                  height: Math.max(28, plate * 2),
-                  width: plate >= 20 ? 22 : plate >= 10 ? 18 : 14,
+                  // Scale per unit so lbs plates (up to 45) don't tower over the bar.
+                  height: Math.max(28, Math.min(58, plate * (isLbs ? 1.1 : 2))),
+                  width: plate >= (isLbs ? 35 : 20) ? 22 : plate >= (isLbs ? 25 : 10) ? 18 : 14,
                 },
               ]}
             >

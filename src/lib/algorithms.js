@@ -164,6 +164,23 @@ export function getVolumeStatus(workingSets, muscle, customLandmarks = null) {
   return { status: 'over_mrv', color: '#FF3D00', label: 'Too much', landmarks };
 }
 
+// Default load increment for a progression step. Gym weight is stored in the
+// user's display unit (kg|lbs) and is never converted, so the jump has to match
+// the plates that unit actually comes in: 2.5/1.25 kg, or 5/2.5 lb. This mirrors
+// the `units === 'lbs' ? 5 : 2.5` convention already used in ActiveWorkoutScreen.
+// A custom per-exercise increment (incrementKg) overrides this where supplied.
+// (A2-043: before this, lbs users got kg-sized jumps with an lbs label.)
+export function defaultIncrement(weight, units = 'kg', category = 'compound') {
+  if (units === 'lbs') {
+    if (category === 'isolation') return weight >= 45 ? 2.5 : 1.25;
+    if (category === 'accessory') return weight >= 90 ? 2.5 : 1.25;
+    return weight >= 135 ? 5 : 2.5; // compound
+  }
+  if (category === 'isolation') return weight >= 20 ? 1 : 0.5;
+  if (category === 'accessory') return weight >= 40 ? 1.25 : 0.75;
+  return weight >= 60 ? 2.5 : 1.25; // compound
+}
+
 // Algorithm 2: Double Progression Suggestion
 export function getProgressionSuggestion(currentSets, prevWorkoutSets, targetRepsMin, targetRepsMax, units = 'kg') {
   if (!prevWorkoutSets || prevWorkoutSets.length === 0) {
@@ -183,7 +200,7 @@ export function getProgressionSuggestion(currentSets, prevWorkoutSets, targetRep
   const targetMax = targetRepsMax || prevAvgReps + 1;
 
   if (prevAvgReps >= targetMax && prevAvgRIR >= 1) {
-    const increment = prevAvgWeight >= 60 ? 2.5 : 1.25;
+    const increment = defaultIncrement(prevAvgWeight, units);
     return {
       action: 'increase_weight',
       message: `Great work! Try ${(prevAvgWeight + increment).toFixed(1)}${units} next session.`,
@@ -192,7 +209,7 @@ export function getProgressionSuggestion(currentSets, prevWorkoutSets, targetRep
   }
 
   if (prevAvgReps < (targetRepsMin || prevAvgReps) && prevAvgRIR <= 1) {
-    const decrement = prevAvgWeight >= 60 ? 2.5 : 1.25;
+    const decrement = defaultIncrement(prevAvgWeight, units);
     return {
       action: 'decrease_weight',
       message: `Reduce to ${(prevAvgWeight - decrement).toFixed(1)}${units} and focus on rep quality.`,
@@ -229,10 +246,7 @@ export function computeSetTargets(prevSets, repMin, repMax, units = 'kg', option
 
   function getIncrement(weight) {
     if (incrementKg != null) return incrementKg;
-    if (exerciseCategory === 'isolation') return weight >= 20 ? 1 : 0.5;
-    if (exerciseCategory === 'accessory') return weight >= 40 ? 1.25 : 0.75;
-    // compound default
-    return weight >= 60 ? 2.5 : 1.25;
+    return defaultIncrement(weight, units, exerciseCategory);
   }
 
   const prevPrevWorking = prevPrevSets.filter(
@@ -656,7 +670,7 @@ export function getProgressionPath(thisWeekSets, lastWeekSets, units = 'kg') {
     lastWeekSets.reduce((s, set) => s + (set.weight || 0), 0) / Math.max(lastWeekSets.length, 1);
 
   if (thisAvg > lastAvg + 0.5) {
-    const increment = lastWeight >= 60 ? 2.5 : 1.25;
+    const increment = defaultIncrement(lastWeight, units);
     return {
       action: 'increase_weight',
       message: `Rep count up. Increase weight by ${increment}${units} next session.`,
@@ -676,6 +690,15 @@ export function getProgressionPath(thisWeekSets, lastWeekSets, units = 'kg') {
     message: 'Maintain current weight. Focus on rep quality and full range of motion.',
   };
 }
+
+// Standard plate denominations and bar weights per display unit. Gym weight is
+// stored in the display unit, so the plate maths must use that unit's real
+// plates, not kg plates with an lbs label. (A2-043.)
+export const PLATE_SETS = Object.freeze({
+  kg:  [25, 20, 15, 10, 5, 2.5, 1.25],
+  lbs: [45, 35, 25, 10, 5, 2.5],
+});
+export const DEFAULT_BAR_WEIGHT = Object.freeze({ kg: 20, lbs: 45 });
 
 // Plate calculator utility
 export function calculatePlates(targetWeight, barWeight = 20, availablePlates = [25, 20, 15, 10, 5, 2.5, 1.25]) {
