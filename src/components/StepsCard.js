@@ -25,7 +25,7 @@ import { View, Text, StyleSheet, AppState } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { colors, spacing, type } from '../styles/theme';
+import { colors, spacing, radius, fontSize } from '../styles/theme';
 import { getDailyStepsToday } from '../lib/database';
 
 export default function StepsCard({ userId, stepsTarget }) {
@@ -79,8 +79,8 @@ export default function StepsCard({ userId, stepsTarget }) {
   const target = stepsTarget ?? null;
 
   return (
-    <View style={styles.row}>
-      <Ionicons name="walk-outline" size={14} color={colors.textMuted} />
+    <View style={styles.card}>
+      <Ionicons name="walk-outline" size={16} color={colors.primary} />
       <Text style={styles.text}>
         <Text style={styles.num}>{today.toLocaleString('en-GB')}</Text>
         {target ? ` of ${target.toLocaleString('en-GB')} steps` : ' steps'} today
@@ -89,14 +89,20 @@ export default function StepsCard({ userId, stepsTarget }) {
   );
 }
 
+// Matches the morning-weight card on Train (same box: surface, hairline
+// border, md radius, sm/md padding) so the two sit together as a pair.
 const styles = StyleSheet.create({
-  row: {
+  card: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xs,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  text: { ...type.caption, color: colors.textSecondary },
-  num: { ...type.num('caption'), color: colors.textPrimary },
+  text: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary },
+  num: { color: colors.textPrimary, fontVariant: ['tabular-nums'] },
 });
