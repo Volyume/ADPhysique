@@ -1,10 +1,11 @@
 import React, { useState, useRef } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, ActivityIndicator,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { useToast } from '../components/Toast';
 
 let WebView;
 let FileSystem;
@@ -672,6 +673,7 @@ window.drawCard = function() {
 </html>`;
 
 export default function ShareCardScreen({ navigation, route }) {
+  const toast = useToast();
   const {
     sessionData = null,
     prData = null,
@@ -756,11 +758,11 @@ export default function ShareCardScreen({ navigation, route }) {
 
   async function handleShare() {
     if (!WebView || !FileSystem || !Sharing) {
-      Alert.alert('Sharing unavailable', 'The app needs to be rebuilt with the sharing packages installed.');
+      toast.show('Sharing needs a rebuild with the sharing packages installed', { variant: 'error', duration: 5000 });
       return;
     }
     if (!webViewRef.current || !webViewReady) {
-      Alert.alert('Not ready', 'Please wait a moment and try again.');
+      toast.show('Not ready yet, wait a moment and try again', { variant: 'info' });
       return;
     }
     setSharing(true);
@@ -781,13 +783,13 @@ export default function ShareCardScreen({ navigation, route }) {
       const uri = (FileSystem.cacheDirectory || '') + filename;
       await FileSystem.writeAsStringAsync(uri, pure, { encoding: FileSystem.EncodingType.Base64 });
       const canShare = await Sharing.isAvailableAsync();
-      if (!canShare) { Alert.alert('Sharing not available on this device.'); return; }
+      if (!canShare) { toast.show('Sharing not available on this device', { variant: 'warning' }); return; }
       await Sharing.shareAsync(uri, {
         mimeType: 'image/png', UTI: 'public.png',
         dialogTitle: cardType === 'session' ? 'Share Session Card' : cardType === 'pr' ? 'Share PR Card' : 'Share Card',
       });
     } catch (_e) {
-      Alert.alert("Couldn't generate card", 'Try again.');
+      toast.show("Couldn't generate card, try again", { variant: 'error' });
     } finally {
       setSharing(false);
     }
@@ -862,7 +864,7 @@ export default function ShareCardScreen({ navigation, route }) {
 
   async function handleExportPdf() {
     if (!Print || !Sharing) {
-      Alert.alert('PDF unavailable', 'The app needs to be rebuilt with the print package installed.');
+      toast.show('PDF export needs a rebuild with the print package installed', { variant: 'error', duration: 5000 });
       return;
     }
     setExportingPdf(true);
@@ -870,13 +872,13 @@ export default function ShareCardScreen({ navigation, route }) {
       const html = buildPdfHtml(buildParams());
       const { uri } = await Print.printToFileAsync({ html });
       const canShare = await Sharing.isAvailableAsync();
-      if (!canShare) { Alert.alert('Sharing not available on this device.'); return; }
+      if (!canShare) { toast.show('Sharing not available on this device', { variant: 'warning' }); return; }
       await Sharing.shareAsync(uri, {
         mimeType: 'application/pdf', UTI: 'com.adobe.pdf',
         dialogTitle: cardType === 'session' ? 'Share session summary' : cardType === 'pr' ? 'Share PR summary' : 'Share summary',
       });
     } catch (_e) {
-      Alert.alert("Couldn't make the PDF", 'Try again.');
+      toast.show("Couldn't make the PDF, try again", { variant: 'error' });
     } finally {
       setExportingPdf(false);
     }

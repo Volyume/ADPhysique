@@ -23,12 +23,13 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, Alert,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, fontWeight, hitSlop, type } from '../styles/theme';
 import Button from '../components/Button';
+import { useToast } from '../components/Toast';
 import * as cascade from '../lib/payments/cascade';
 import * as playBilling from '../lib/payments/playBilling';
 import { skuFor } from '../lib/payments/catalogue';
@@ -74,6 +75,7 @@ function _variantContent(variant) {
 }
 
 export default function CascadeGateScreen({ navigation, route }) {
+  const toast = useToast();
   const variant = route?.params?.variant ?? 'day14';
   const pricingWindow = route?.params?.pricingWindow ?? 'open_beta';
   const content = _variantContent(variant);
@@ -91,7 +93,7 @@ export default function CascadeGateScreen({ navigation, route }) {
       logError('CascadeGate.skuMissing', new Error('sku not found'), {
         targetTier, pricingWindow,
       });
-      Alert.alert('Subscription unavailable', 'Could not load the subscription option. Try again later.');
+      toast.show("Couldn't load the subscription option, try again later", { variant: 'error' });
       setBusy(null);
       return;
     }
@@ -117,7 +119,7 @@ export default function CascadeGateScreen({ navigation, route }) {
         logInfo('CascadeGate.purchaseCancelled', `tier=${targetTier}`);
       } else {
         logError('CascadeGate.purchaseFailed', e, { targetTier });
-        Alert.alert('Purchase did not complete', 'Try again or pick a different option.');
+        toast.show('Purchase did not complete. Try again or pick a different option', { variant: 'warning', duration: 5000 });
       }
     } finally {
       setBusy(null);
@@ -157,7 +159,7 @@ export default function CascadeGateScreen({ navigation, route }) {
       : 'https://play.google.com/store/account/subscriptions';
     Linking.openURL(url).catch((e) => {
       logError('CascadeGate.openBilling', e);
-      Alert.alert('Could not open billing settings');
+      toast.show("Couldn't open billing settings", { variant: 'error' });
     });
   }, []);
 

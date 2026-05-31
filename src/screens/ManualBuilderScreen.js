@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
-  Modal, FlatList, Alert, KeyboardAvoidingView, Platform,
+  Modal, FlatList, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -34,6 +34,7 @@ const PICKER_EQUIPMENT = ['Barbell', 'Dumbbell', 'Cable', 'Machine', 'Bodyweight
 // ─── Exercise Picker Modal ────────────────────────────────────────────────────
 
 function ExercisePickerModal({ visible, onClose, onSelect }) {
+  const toast = useToast();
   const [query, setQuery]         = useState('');
   const [allExercises, setAll]    = useState([]);
   const [filtered, setFiltered]   = useState([]);
@@ -64,7 +65,7 @@ function ExercisePickerModal({ visible, onClose, onSelect }) {
 
   async function handleCreate() {
     if (!createName.trim()) {
-      Alert.alert('Name required', 'Please enter a name for the exercise.');
+      toast.show('Enter a name for the exercise', { variant: 'warning' });
       return;
     }
     setCreating(true);
@@ -81,7 +82,7 @@ function ExercisePickerModal({ visible, onClose, onSelect }) {
       onSelect(newEx);
       onClose();
     } catch (_e) {
-      Alert.alert("Couldn't save exercise", 'Try again.');
+      toast.show("Couldn't save exercise, try again", { variant: 'error' });
     } finally {
       setCreating(false);
     }
@@ -365,11 +366,11 @@ export default function ManualBuilderScreen({ navigation }) {
 
   async function handleCreatePlan() {
     if (!planName.trim()) {
-      Alert.alert('Plan name required', 'Please enter a name for your plan.');
+      toast.show('Enter a name for your plan', { variant: 'warning' });
       return;
     }
     if (!user?.id) {
-      Alert.alert('One moment', 'Setting up your profile. Please try again in a second.');
+      toast.show('Setting up your profile, try again in a second', { variant: 'info' });
       return;
     }
     setCreating(true);
@@ -389,7 +390,7 @@ export default function ManualBuilderScreen({ navigation }) {
       );
       setPage(2);
     } catch (e) {
-      Alert.alert('Error', e.message || 'Could not create plan.');
+      toast.show(e.message || "Couldn't create plan", { variant: 'error' });
     } finally {
       setCreating(false);
     }
@@ -471,20 +472,17 @@ export default function ManualBuilderScreen({ navigation }) {
 
   function validate(requireExercises = true) {
     if (!editablePlanName.trim()) {
-      Alert.alert('Plan name required', 'Give your plan a name before saving.');
+      toast.show('Give your plan a name before saving', { variant: 'warning' });
       return false;
     }
     if (days.length === 0) {
-      Alert.alert('No days', 'Add at least one training day.');
+      toast.show('Add at least one training day', { variant: 'warning' });
       return false;
     }
     if (requireExercises) {
       const empty = days.find(d => d.exercises.length === 0);
       if (empty) {
-        Alert.alert(
-          'Empty day',
-          `"${empty.name}" has no exercises. Add at least one exercise or remove the day.`,
-        );
+        toast.show(`"${empty.name}" has no exercises. Add one or remove the day`, { variant: 'warning', duration: 5000 });
         return false;
       }
     }
@@ -519,7 +517,7 @@ export default function ManualBuilderScreen({ navigation }) {
       setSavedPlanName(planName.trim() || 'Your plan');
       setSuccessModal(true);
     } catch (e) {
-      Alert.alert('Error', e.message || 'Could not save plan.');
+      toast.show(e.message || "Couldn't save plan", { variant: 'error' });
     } finally {
       setSaving(false);
     }
@@ -532,7 +530,7 @@ export default function ManualBuilderScreen({ navigation }) {
       await persistDays();
       navigation.navigate('PlansTab');
     } catch (e) {
-      Alert.alert('Error', e.message || 'Could not save draft.');
+      toast.show(e.message || "Couldn't save draft", { variant: 'error' });
     } finally {
       setSaving(false);
     }
