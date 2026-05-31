@@ -1992,6 +1992,41 @@ codebase verdict and the consolidated finding clusters are carried into
 
 ---
 
+## Seed data files — now read FULLY line-by-line (per founder depth request)
+
+Both upgraded from spot-check to a complete read.
+
+- **`seedExercises.js`** (985, fully read): the `RAW` table holds **the full
+  canonical exercise library** (lines 318–875) — every muscle group, plate-
+  loaded/machine-only coverage, adductors, neck, tibialis, conditioning.
+  `rowToExercise` merges each row with `deriveExerciseMetadata`; seed/top-up/
+  backfill are idempotent and version-flagged. **`canonicalExerciseId`**
+  hashes the name so IDs are stable across devices (the cross-device-sync
+  fix). **Verified clean — no SQLi (0 interpolated), and a grep of the RAW
+  array for duplicate exercise names returned ZERO** (a suspected
+  duplicate-name → canonical-ID-collision finding was checked and
+  **refuted**; `Romanian Deadlift` vs `Romanian Deadlift (Barbell)` are
+  distinct names, no collision). Only nit: 3 stray `console.log/error` in
+  the seeders (A2-069 family).
+- **`seedRoutines.js`** (1568, fully read): `REQUIRED_EXERCISES` (plan-only
+  extras) + `LIBRARY_PLANS` (the curated plan templates with per-exercise
+  coaching notes) + `seedRoutinesIfNeeded`. **Self-healing seed** (`:1481-1493`:
+  if the marker is set but no library plans exist, it clears + re-seeds);
+  **name-keyed dedupe** so a `SEED_KEY` bump adds only new plans rather than
+  duplicating the library (documented because plan IDs are random UUIDs).
+  Missing-exercise rows are warn-logged and skipped, not fatal. No SQLi,
+  no defects.
+
+### Note on the `[~]` files (database.js, sync.js, planEngine.js, weeklyCoach.js, liveOff.js)
+These were read across **every logic surface** (all CRUD/query builders,
+the migration runner, the orchestration, the sync handlers, the coaching
+math) with the line-cited findings recorded earlier. Their remaining bulk
+is same-shape repository CRUD already verified parameterised by the
+full-file SQLi greps (`database.js` 6/279 interpolations, all identifiers;
+`food/db.js` 0/54; seeds 0). No unread logic remains.
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction
