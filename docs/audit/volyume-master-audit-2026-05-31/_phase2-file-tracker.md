@@ -2,7 +2,7 @@
 
 Status: `[x]` read in full + findings recorded · `[~]` partially read (see 02-code-audit.md scope notes) · `[ ]` not yet read.
 Generated 2026-05-31T16:09Z. Total non-test source files: 227 (83,854 LOC).
-Read so far: 185 files.
+Read so far: 198 files.
 
 ## App.js/
 
@@ -213,7 +213,7 @@ Read so far: 185 files.
 ## src/screens/
 
 - [~] `ActiveWorkoutScreen.js` (2560)
-- [ ] `AddCustomFoodScreen.js` (267)
+- [x] `AddCustomFoodScreen.js` (267)
 - [x] `AnalyticsScreen.js` (1436)
 - [x] `Article9ConsentScreen.js` (271)
 - [x] `BlockReflectionScreen.js` (305)
@@ -230,36 +230,36 @@ Read so far: 185 files.
 - [x] `ExerciseDetailScreen.js` (1076)
 - [x] `ExerciseLibraryScreen.js` (713)
 - [x] `FirstRunScreen.js` (127)
-- [ ] `FoodInsightsScreen.js` (279)
-- [ ] `FoodSearchScreen.js` (837)
+- [x] `FoodInsightsScreen.js` (279)
+- [x] `FoodSearchScreen.js` (837)
 - [x] `GoalChangeSummaryScreen.js` (354)
 - [x] `GoalLockConsentScreen.js` (203)
 - [x] `HomeScreen.js` (2344)
 - [ ] `ImportScreen.js` (477)
 - [ ] `LiftProgressScreen.js` (141)
 - [x] `LoginScreen.js` (588)
-- [ ] `ManualBuilderScreen.js` (1250)
-- [ ] `MesocycleBuilderScreen.js` (548)
-- [ ] `MyMealsScreen.js` (231)
-- [ ] `MyRecipesScreen.js` (205)
+- [x] `ManualBuilderScreen.js` (1250)
+- [x] `MesocycleBuilderScreen.js` (548)
+- [x] `MyMealsScreen.js` (231)
+- [x] `MyRecipesScreen.js` (205)
 - [ ] `NotificationSettingsScreen.js` (939)
 - [ ] `NutritionEducationScreen.js` (294)
 - [x] `NutritionTargetsScreen.js` (1716)
 - [x] `OnboardingScreen.js` (366)
 - [ ] `PRWallScreen.js` (590)
 - [x] `PaywallScreen.js` (155)
-- [ ] `PlanDetailScreen.js` (430)
-- [ ] `PlanLibraryScreen.js` (791)
+- [x] `PlanDetailScreen.js` (430)
+- [x] `PlanLibraryScreen.js` (791)
 - [x] `PlansScreen.js` (1024)
 - [ ] `PrivacyPolicyScreen.js` (122)
 - [x] `ProGoalSetupScreen.js` (726)
 - [x] `ProOnboardingScreen.js` (1378)
 - [x] `ProSetupCompleteScreen.js` (417)
 - [x] `ProUpgradeScreen.js` (491)
-- [ ] `RecipeBuilderScreen.js` (334)
-- [ ] `RoutineDetailScreen.js` (865)
-- [ ] `ScanBarcodeScreen.js` (276)
-- [ ] `ScanLabelScreen.js` (307)
+- [x] `RecipeBuilderScreen.js` (334)
+- [x] `RoutineDetailScreen.js` (865)
+- [x] `ScanBarcodeScreen.js` (276)
+- [x] `ScanLabelScreen.js` (307)
 - [x] `SettingsScreen.js` (1435)
 - [ ] `ShareCardScreen.js` (1494)
 - [ ] `SubscriptionPolicyScreen.js` (193)

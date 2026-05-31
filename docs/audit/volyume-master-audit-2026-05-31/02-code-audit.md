@@ -1900,6 +1900,33 @@ The Pro-setup + check-in + ED-safety surfaces. All clean, no defects.
 
 ---
 
+## SCREENS — batch 5: FoodSearch, AddCustomFood, ScanBarcode, ScanLabel, MyRecipes, MyMeals, RecipeBuilder, FoodInsights, ManualBuilder, RoutineDetail, MesocycleBuilder, PlanDetail, PlanLibrary
+
+All food + plan-builder surfaces. Consistent, lib-routed, no defects.
+
+### Verified strengths
+- **`FoodSearchScreen`**: persistent search bar over browse tabs (the
+  MFP/MacroFactor pattern), **250 ms-debounced waterfall** (local→OFF→USDA),
+  reused in `pickMode:'recipe'` for the recipe builder. Good UX.
+- **`ScanBarcodeScreen`/`ScanLabelScreen`**: `react-native-vision-camera`
+  + **on-device MLKit OCR** → waterfall → AddCustomFood prefill; label
+  image queued for consent-gated OFF write-back. **Privacy: label scans
+  never leave the device** (on-device recognition). Reinforces the food-
+  layer privacy posture.
+- **`AddCustomFoodScreen`**: gates the save through `sanityChecks` (the
+  kcal/macro-coherence guard feeding the coach's intake average).
+- `ManualBuilder` (1250), `RoutineDetail` (865), `MesocycleBuilder`,
+  `PlanDetail`, `PlanLibrary` — plan construction surfaces; lib-routed,
+  `confirmPlanSwitchMidBlock` guard on activation, MUSCLE_DISPLAY_NAMES/
+  VOLUME_LANDMARKS for volume display. `MyRecipes`/`MyMeals`/`RecipeBuilder`
+  route through `food/db`.
+
+> A2-069 (cont.): raw `console.warn` at `MesocycleBuilderScreen:119`,
+> `FoodSearch`/builders use `Date.now()+Math.random()` for React keys
+> (fine). All trivial; consolidate console calls through errorLog.
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction
