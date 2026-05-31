@@ -853,11 +853,22 @@ A single plan object returns both:
 
 For a 5-week plan with a 3-set base exercise these disagree: multiplier
 week-4 ≈ `3×1.25 ≈ 3.75→4`, additive week-4 = `3+2 = 5`; deload is `×0.5`
-vs `×0.6`. So the same plan carries **two different set prescriptions and
-two naming schemes** for the same weeks. → **Phase 3/4/9 must confirm which
-the UI renders** (PlanDetail / MesocycleBuilder / RoutineDetail). If both
-are shown anywhere, the user sees contradictory week counts. At minimum it
-is duplicated, drift-prone logic. Medium.
+vs `×0.6`.
+
+**RESOLVED by tracing consumption — both are DEAD OUTPUT.** `generatePlan`
+is called only at `planAutoGen.js:127`, and `planAutoGen` consumes **only**
+`plan.whyThis / name / description / splitType / workouts`
+(`planAutoGen.js:138-153`). **Neither `plan.mesocycleSchedule` nor
+`plan.weeklyPlan` is read anywhere in non-test `src/`** (grep). The
+mesocycle weeks the user actually sees are built separately in the DB
+layer (`database.js:2455` `INSERT … mesocycle_weeks`). So the divergence
+never reaches the user — but it means an entire progression subsystem
+(`buildWeeklyPlan`, `getWeeklySetProgression`, `getWeekLabel`,
+`buildMesocycleSchedule`) is **computed on every plan generation and
+discarded**. → Reclassify: **dead code + wasted computation + drift risk**,
+not a user-facing contradiction. Low–medium (remove or wire up; pick one
+model). Good example of why consumption-tracing matters — the first-pass
+"user sees contradictory counts" hypothesis was wrong.
 
 ### Observations
 - **Stateless guard (good):** `generatePlan` swaps the module-level
