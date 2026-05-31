@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useFocusEffect } from '@react-navigation/native';
-import { LineChart } from 'react-native-gifted-charts';
+import SvgLineChart from '../components/SvgLineChart';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import { getCompletedWorkoutSets, getAllExercises, getLatestBodyWeight } from '../lib/database';
@@ -352,31 +352,20 @@ export default function PRWallScreen({ navigation }) {
                     <Text style={styles.chartLabel}>Estimated max over time</Text>
                     <Text style={styles.chartUnit}>{units}</Text>
                   </View>
-                  <LineChart
+                  <SvgLineChart
                     data={history.slice(-20).map(p => ({ value: p.value }))}
                     width={CHART_W}
                     height={90}
                     color={colors.primary}
                     thickness={2}
                     curved
-                    areaChart
-                    startFillColor={colors.primary}
-                    endFillColor={colors.primary}
-                    startOpacity={0.18}
-                    endOpacity={0}
-                    hideDataPoints={history.length > 10}
-                    dataPointsColor={colors.primary}
-                    dataPointsRadius={3}
-                    yAxisTextStyle={{ color: colors.textMuted, fontSize: fontSize.micro }}
-                    yAxisColor="transparent"
-                    xAxisColor="transparent"
-                    rulesColor={colors.border + '80'}
-                    rulesType="solid"
-                    noOfSections={3}
-                    initialSpacing={0}
-                    endSpacing={8}
-                    scrollToEnd={false}
-                    disableScroll
+                    area
+                    areaTopColor={`${colors.primary}2E`}
+                    areaBottomColor={`${colors.primary}00`}
+                    showDots={history.length <= 10}
+                    dotRadius={3}
+                    sections={3}
+                    rulesColor={`${colors.border}80`}
                   />
                   <View style={styles.chartFooterRow}>
                     <Text style={styles.chartFooterText}>

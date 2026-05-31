@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Modal, TextInput, KeyboardAvoidingView, Platform, Animated,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
-import { CartesianChart, Line, Area } from 'victory-native';
+import SvgLineChart from '../components/SvgLineChart';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import { SkeletonCard } from '../components/Skeleton';
 import AnimatedEntrance from '../components/AnimatedEntrance';
@@ -51,6 +52,8 @@ function parseLooseDate(str) {
 
   return null;
 }
+
+const SCREEN_W = Dimensions.get('window').width;
 
 export default function ExerciseDetailScreen({ navigation, route }) {
   const { exerciseId } = route.params || {};
@@ -466,22 +469,17 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
             <View style={styles.chartContainer}>
-              <CartesianChart data={chartData} xKey="x" yKeys={[activeYKey]}>
-                {({ points, chartBounds }) => (
-                  <>
-                    <Area
-                      points={points[activeYKey]}
-                      y0={chartBounds.bottom}
-                      color={colors.chartFill}
-                    />
-                    <Line
-                      points={points[activeYKey]}
-                      color={colors.primary}
-                      strokeWidth={2}
-                    />
-                  </>
-                )}
-              </CartesianChart>
+              <SvgLineChart
+                data={chartData.map(d => ({ value: d[activeYKey] }))}
+                width={SCREEN_W - spacing.lg * 2 - spacing.md * 2}
+                height={96}
+                color={colors.primary}
+                thickness={2}
+                area
+                areaTopColor={colors.chartFill}
+                areaBottomColor={colors.chartFill}
+                curved
+              />
             </View>
             {chartMode === 'e1rm' && (
               <Text style={styles.e1rmNote}>

@@ -22,7 +22,7 @@ function safeFormatDate(value, fmt) {
   }
 }
 import { useFocusEffect } from '@react-navigation/native';
-import { LineChart } from 'react-native-gifted-charts';
+import SvgLineChart from '../components/SvgLineChart';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logBodyMetric, getBodyMetricLog } from '../lib/database';
@@ -140,11 +140,6 @@ function WeightTrendChart({ entries, units, bodyWeightUnits }) {
   const weights = withWeight.map(e => e.body_weight);
   const minW = Math.floor(Math.min(...weights) - 1);
   const maxW = Math.ceil(Math.max(...weights) + 1);
-  // gifted-charts subtracts yAxisOffset from every value internally, so the
-  // axis max must be the range (not the absolute max) for the line to fill
-  // the chart height. Axis labels add yAxisOffset back for display.
-  const axisRange = Math.max(maxW - minW, 1);
-
   const data = withWeight.map((e, i) => ({
     value: e.body_weight,
     label: i === 0 || i === withWeight.length - 1
@@ -156,31 +151,21 @@ function WeightTrendChart({ entries, units, bodyWeightUnits }) {
 
   return (
     <View style={chartStyles.wrap}>
-      <LineChart
+      <SvgLineChart
         data={data}
         width={chartWidth}
         height={120}
         color={colors.primary}
         thickness={2}
-        startFillColor={colors.primary + '30'}
-        endFillColor={colors.primary + '05'}
-        areaChart
+        area
         curved
-        hideDataPoints={withWeight.length > 6}
-        dataPointsColor={colors.primary}
-        dataPointsRadius={3}
-        yAxisLabelSuffix={bodyWeightUnits === 'st' ? ' kg' : ` ${bodyWeightUnits || 'kg'}`}
-        yAxisTextStyle={chartStyles.axisText}
-        xAxisLabelTextStyle={chartStyles.axisText}
-        noOfSections={3}
-        yAxisOffset={minW}
-        maxValue={axisRange}
+        showDots={withWeight.length <= 6}
+        dotRadius={3}
+        yAxisSuffix={bodyWeightUnits === 'st' ? ' kg' : ` ${bodyWeightUnits || 'kg'}`}
+        sections={3}
+        min={minW}
+        max={maxW}
         backgroundColor={colors.surface}
-        xAxisColor={colors.border}
-        yAxisColor={colors.border}
-        rulesColor={colors.border}
-        rulesType="dashed"
-        showVerticalLines={false}
       />
     </View>
   );
@@ -214,7 +199,6 @@ function BodyFatTrendChart({ entries }) {
   const allVals = [...values, ...smoothed];
   const minV = Math.floor(Math.min(...allVals) - 1);
   const maxV = Math.ceil(Math.max(...allVals) + 1);
-  const axisRange = Math.max(maxV - minV, 1);
 
   const data = withData.map((e, i) => ({
     value: smoothed[i],
@@ -228,7 +212,7 @@ function BodyFatTrendChart({ entries }) {
 
   return (
     <View style={chartStyles.wrap}>
-      <LineChart
+      <SvgLineChart
         data={data}
         data2={rawData}
         width={chartWidth}
@@ -237,27 +221,15 @@ function BodyFatTrendChart({ entries }) {
         color2={`${colors.textMuted}66`}
         thickness={2}
         thickness2={1}
-        startFillColor={colors.primary + '30'}
-        endFillColor={colors.primary + '05'}
-        areaChart
+        area
         curved
-        hideDataPoints={withData.length > 6}
-        dataPointsColor={colors.primary}
-        dataPointsRadius={3}
-        dataPointsRadius2={2.5}
-        dataPointsColor2={`${colors.textMuted}66`}
-        yAxisLabelSuffix=" %"
-        yAxisTextStyle={chartStyles.axisText}
-        xAxisLabelTextStyle={chartStyles.axisText}
-        noOfSections={3}
-        yAxisOffset={minV}
-        maxValue={axisRange}
+        showDots={withData.length <= 6}
+        dotRadius={3}
+        yAxisSuffix=" %"
+        sections={3}
+        min={minV}
+        max={maxV}
         backgroundColor={colors.surface}
-        xAxisColor={colors.border}
-        yAxisColor={colors.border}
-        rulesColor={colors.border}
-        rulesType="dashed"
-        showVerticalLines={false}
       />
       <Text style={chartStyles.smoothedHint}>Smoothed trend, faint line is each reading</Text>
     </View>
@@ -287,7 +259,6 @@ function MeasurementTrendChart({ entries, measureKey, label }) {
   const values = withData.map(e => e[measureKey]);
   const minV = Math.floor(Math.min(...values) - 1);
   const maxV = Math.ceil(Math.max(...values) + 1);
-  const axisRange = Math.max(maxV - minV, 1);
 
   const data = withData.map((e, i) => ({
     value: e[measureKey],
@@ -300,31 +271,21 @@ function MeasurementTrendChart({ entries, measureKey, label }) {
 
   return (
     <View style={chartStyles.wrap}>
-      <LineChart
+      <SvgLineChart
         data={data}
         width={chartWidth}
         height={100}
         color={colors.primary}
         thickness={2}
-        startFillColor={colors.primary + '30'}
-        endFillColor={colors.primary + '05'}
-        areaChart
+        area
         curved
-        hideDataPoints={withData.length > 6}
-        dataPointsColor={colors.primary}
-        dataPointsRadius={3}
-        yAxisLabelSuffix=" cm"
-        yAxisTextStyle={chartStyles.axisText}
-        xAxisLabelTextStyle={chartStyles.axisText}
-        noOfSections={3}
-        yAxisOffset={minV}
-        maxValue={axisRange}
+        showDots={withData.length <= 6}
+        dotRadius={3}
+        yAxisSuffix=" cm"
+        sections={3}
+        min={minV}
+        max={maxV}
         backgroundColor={colors.surface}
-        xAxisColor={colors.border}
-        yAxisColor={colors.border}
-        rulesColor={colors.border}
-        rulesType="dashed"
-        showVerticalLines={false}
       />
     </View>
   );

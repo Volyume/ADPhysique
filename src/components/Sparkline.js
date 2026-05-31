@@ -1,21 +1,22 @@
 // Sparkline, tiny inline chart for at-a-glance trend display.
 //
-// Wraps react-native-gifted-charts' LineChart with zero axes / labels /
-// grid / interaction. Just the curve. Perfect for inside cards where
-// the user wants to see "is this going up or down" without leaving
-// the screen for a full chart view.
+// Just the curve: no axes, labels, grid or interaction. Perfect inside
+// cards where the user wants to see "is this going up or down" without
+// leaving the screen for a full chart view. Drawn with react-native-svg
+// (the app's single chart engine, shared with SvgLineChart).
 //
 // Usage:
 //   <Sparkline data={[80.1, 80.3, 80.0, 79.8, 79.9, 79.5, 79.7]} />
 //   <Sparkline data={values} width={120} height={32} color={colors.success} />
 //
-// All values must be numeric. Nulls/undefined are filtered out
-// (otherwise gifted-charts skips the segment and the line looks broken).
+// All values must be numeric. Nulls/undefined are filtered out so the
+// line doesn't break across a missing reading.
 
 import React, { useMemo } from 'react';
 import { View } from 'react-native';
-import { LineChart } from 'react-native-gifted-charts';
+import Svg, { Path, Circle } from 'react-native-svg';
 import { colors } from '../styles/theme';
+import { plotPoints, smoothPath, paddedDomain } from '../lib/chartGeometry';
 
 export default function Sparkline({
   data = [],
@@ -24,12 +25,18 @@ export default function Sparkline({
   color = colors.primary,
   showDots = false,
 }) {
-  // Filter + map to gifted-charts shape. Returns null if there isn't
-  // enough data to draw a line, caller renders the empty equivalent.
-  const points = useMemo(() => (data || [])
-    .filter(v => Number.isFinite(v))
-    .map(v => ({ value: v })),
-    [data]);
+  const values = useMemo(
+    () => (data || []).filter(v => Number.isFinite(v)),
+    [data],
+  );
+
+  const points = useMemo(() => {
+    if (values.length < 2) return [];
+    const { min, max } = paddedDomain(values, 0.12);
+    // Small top/bottom inset so the curve doesn't clip against the edges.
+    const box = { left: 1, top: 2, width: width - 2, height: height - 4 };
+    return plotPoints(values, box, min, max);
+  }, [values, width, height]);
 
   if (points.length < 2) {
     // Not enough data, render a flat placeholder line at the midpoint
@@ -46,30 +53,12 @@ export default function Sparkline({
 
   return (
     <View style={{ width, height, overflow: 'hidden' }} pointerEvents="none">
-      <LineChart
-        data={points}
-        width={width}
-        height={height}
-        // Strip every chart-chrome element so it's just a curve.
-        hideDataPoints={!showDots}
-        hideAxesAndRules
-        hideYAxisText
-        xAxisLabelsHeight={0}
-        xAxisColor="transparent"
-        yAxisColor="transparent"
-        initialSpacing={0}
-        endSpacing={0}
-        spacing={Math.max(1, (width - 2) / Math.max(1, points.length - 1))}
-        thickness={1.5}
-        color={color}
-        curved
-        // Tight padding so the curve fills the box
-        adjustToWidth
-        disableScroll
-        // No animation by default, sparklines are at-a-glance reads,
-        // not animated reveals.
-        isAnimated={false}
-      />
+      <Svg width={width} height={height}>
+        <Path d={smoothPath(points)} stroke={color} strokeWidth={1.5} fill="none" />
+        {showDots && points.map((p, i) => (
+          <Circle key={i} cx={p.x} cy={p.y} r={2} fill={color} />
+        ))}
+      </Svg>
     </View>
   );
 }

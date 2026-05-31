@@ -200,19 +200,6 @@ jest.mock('@shopify/react-native-skia', () => ({
   useFont: () => null, useImage: () => null,
 }), { virtual: true });
 
-jest.mock('react-native-gifted-charts', () => {
-  const React = require('react');
-  return {
-    LineChart: props => React.createElement('LineChart', props),
-    BarChart: props => React.createElement('BarChart', props),
-    PieChart: props => React.createElement('PieChart', props),
-  };
-}, { virtual: true });
-
-jest.mock('victory-native', () => ({
-  CartesianChart: 'CartesianChart', Line: 'Line', Bar: 'Bar',
-}), { virtual: true });
-
 jest.mock('react-native-svg', () => {
   const React = require('react');
   const mk = name => props => React.createElement(name, props, props.children);

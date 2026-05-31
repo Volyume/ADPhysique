@@ -86,7 +86,7 @@ export function emaWeekOverWeekPct(points, now = Date.now()) {
 
 /**
  * Builds a daily-bucketed sparkline series (most recent last) for a field,
- * suitable for gifted-charts. Each bucket is the simple mean for that day;
+ * suitable for the Sparkline component. Each bucket is the simple mean for that day;
  * empty days are interpolated as null-skipped (caller filters).
  *
  * @param {Array<{value:number, at:number}>} points

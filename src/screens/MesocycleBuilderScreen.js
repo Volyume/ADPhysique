@@ -5,7 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { format, differenceInWeeks } from 'date-fns';
-import { BarChart } from 'react-native-gifted-charts';
+import SvgBarSparkline from '../components/SvgBarSparkline';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
@@ -347,20 +347,14 @@ function ActiveMesoDashboard({ stats, currentWeek }) {
       {hasTonnage && (
         <View style={styles.tonnageWrap}>
           <Text style={styles.tonnageLabel}>Weekly load (kg moved)</Text>
-          <BarChart
-            data={tonnageBars}
-            barWidth={24}
-            spacing={6}
-            roundedTop
-            hideAxesAndRules
-            noOfSections={3}
+          <SvgBarSparkline
+            data={tonnageBars.map(b => ({ value: b.value, label: b.label, color: b.frontColor }))}
+            width={tonnageBars.length * 30}
             height={60}
-            barBorderRadius={3}
-            isAnimated
-            xAxisThickness={0}
-            yAxisThickness={0}
-            yAxisTextStyle={{ display: 'none' }}
-            xAxisLabelTextStyle={styles.barAxisLabel}
+            barWidth={24}
+            barGap={6}
+            showLabels
+            labelColor={colors.textMuted}
           />
         </View>
       )}
