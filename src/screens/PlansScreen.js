@@ -24,6 +24,7 @@ import { getBlockAdvice } from '../lib/blockAdvisor';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
+import { useToast } from '../components/Toast';
 import { logError } from '../lib/errorLog';
 
 const BLOCK_SNOOZE_KEY = '@volyume_block_snooze';
@@ -82,6 +83,7 @@ const BLOCK_ICON = {
 };
 
 export default function PlansScreen({ navigation }) {
+  const toast = useToast();
   // Selector-scoped subscription: only re-render when these specific
   // fields change. Without useShallow, the previous `useAppStore()` call
   // subscribed to every store mutation (rest timer ticks, PR queue
@@ -200,7 +202,7 @@ export default function PlansScreen({ navigation }) {
               await loadData();
             } catch (e) {
               logError('PlansScreen.handleRestartPlan', e, { userId: user?.id, planId: activePlan?.id });
-              Alert.alert('Couldn\'t restart plan', e?.message ?? 'Try again.');
+              toast.show("Couldn't restart plan, try again", { variant: 'error' });
             }
           },
         },
@@ -218,7 +220,7 @@ export default function PlansScreen({ navigation }) {
     try {
       const routines = await getRoutinesForPlan(plan.id);
       if (routines.length === 0) {
-        Alert.alert('No workouts', 'This plan has no workouts yet.');
+        toast.show('This plan has no workouts yet', { variant: 'warning' });
         return;
       }
       const idx = (plan.nextWorkoutIndex || 0) % routines.length;
@@ -233,7 +235,7 @@ export default function PlansScreen({ navigation }) {
       navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
     } catch (e) {
       logError('PlansScreen.handleStartNextWorkout', e, { userId: user?.id, planId: plan?.id });
-      Alert.alert('Couldn\'t start workout', e?.message ?? 'Try again.');
+      toast.show("Couldn't start workout, try again", { variant: 'error' });
     }
   }
 
@@ -245,7 +247,7 @@ export default function PlansScreen({ navigation }) {
       await loadData();
     } catch (e) {
       logError('PlansScreen.handleSetActive', e, { userId: user?.id, planId: plan?.id });
-      Alert.alert('Couldn\'t set active plan', e?.message ?? 'Try again.');
+      toast.show("Couldn't set active plan, try again", { variant: 'error' });
     }
   }
 
@@ -342,7 +344,7 @@ export default function PlansScreen({ navigation }) {
       navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
     } catch (e) {
       logError('PlansScreen.handleStartTemplate', e, { userId: user?.id, routineId: routine?.id });
-      Alert.alert('Couldn\'t start workout', e?.message ?? 'Try again.');
+      toast.show("Couldn't start workout, try again", { variant: 'error' });
     }
   }
 

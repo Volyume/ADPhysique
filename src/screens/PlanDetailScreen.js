@@ -123,7 +123,7 @@ export default function PlanDetailScreen({ navigation, route }) {
       toast.show(`"${plan?.name}" is now your active plan`, { variant: 'success' });
     } catch (e) {
       logError('PlanDetailScreen.handleSetActive', e, { userId: user?.id, planId });
-      Alert.alert('Couldn\'t activate plan', e?.message ?? 'Try again.');
+      toast.show("Couldn't activate plan, try again", { variant: 'error' });
     }
   }
 
@@ -139,7 +139,7 @@ export default function PlanDetailScreen({ navigation, route }) {
       navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
     } catch (e) {
       logError('PlanDetailScreen.handleStartWorkout', e, { userId: user?.id, routineId: routine?.id });
-      Alert.alert('Couldn\'t start workout', e?.message ?? 'Try again.');
+      toast.show("Couldn't start workout, try again", { variant: 'error' });
     }
   }
 
@@ -158,7 +158,7 @@ export default function PlanDetailScreen({ navigation, route }) {
               navigation.goBack();
             } catch (e) {
               logError('PlanDetailScreen.handleArchive', e, { planId });
-              Alert.alert('Couldn\'t archive plan', e?.message ?? 'Try again.');
+              toast.show("Couldn't archive plan, try again", { variant: 'error' });
             }
           },
         },
@@ -172,7 +172,7 @@ export default function PlanDetailScreen({ navigation, route }) {
       navigation.replace('PlanDetail', { planId: copy.id, isLibrary: false });
     } catch (e) {
       logError('PlanDetailScreen.handleDuplicate', e, { userId: user?.id, planId });
-      Alert.alert('Couldn\'t duplicate plan', e?.message ?? 'Try again.');
+      toast.show("Couldn't duplicate plan, try again", { variant: 'error' });
     }
   }
 

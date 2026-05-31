@@ -17,6 +17,7 @@ import { rankSwaps } from '../lib/swapEngine';
 import { logError } from '../lib/errorLog';
 import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
+import { useToast } from '../components/Toast';
 
 // Compute muscle coverage: { [muscleKey]: count } sorted by count descending
 function computeMuscleCoverage(exercises) {
@@ -90,6 +91,7 @@ function MuscleTagRow({ exercises }) {
 }
 
 export default function RoutineDetailScreen({ navigation, route }) {
+  const toast = useToast();
   const { routineId } = route.params || {};
   const { user, startWorkout } = useAppStore();
   const [routine, setRoutine] = useState(null);
@@ -271,7 +273,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
       navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
     } catch (e) {
       logError('RoutineDetailScreen.handleStartWorkout', e, { userId: user?.id, routineId });
-      Alert.alert('Couldn\'t start workout', e?.message ?? 'Try again.');
+      toast.show("Couldn't start workout, try again", { variant: 'error' });
     }
   }
 

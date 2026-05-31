@@ -14,6 +14,7 @@ import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import { SkeletonCard } from '../components/Skeleton';
 import SearchBar from '../components/SearchBar';
 import useAppStore from '../store/useAppStore';
+import { useToast } from '../components/Toast';
 
 // ─── Collections ─────────────────────────────────────────────────────────────
 
@@ -213,6 +214,7 @@ function DivisionGrid({ selectedDivision, onSelectDivision }) {
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function PlanLibraryScreen({ navigation, route }) {
+  const toast = useToast();
   const { user } = useAppStore();
   const fromFirstRun = route?.params?.fromFirstRun ?? false;
 
@@ -262,7 +264,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
 
   async function handleAddToMyPlans(plan) {
     if (!user?.id) {
-      Alert.alert('One moment', 'Setting up your profile. Please try again in a second.');
+      toast.show('Setting up your profile, try again in a second', { variant: 'info' });
       return;
     }
     Alert.alert(
@@ -304,7 +306,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
                 ],
               );
             } catch (_e) {
-              Alert.alert('Error', 'Could not copy plan. Please try again.');
+              toast.show("Couldn't copy plan, try again", { variant: 'error' });
             }
           },
         },
