@@ -1927,6 +1927,36 @@ All food + plan-builder surfaces. Consistent, lib-routed, no defects.
 
 ---
 
+## SCREENS — batch 6 (final): BodyMetrics, CoachHeldHistory, CoachReview, CoachingReminders, Credits, DebugLog, Import, LiftProgress, NotificationSettings, NutritionEducation, PRWall, PrivacyPolicy, ShareCard, SubscriptionPolicy, VolumeHeatmap, YearOfLifts → **SCREEN LAYER COMPLETE (60/60)**
+
+All read/scanned. Consistent, lib-routed, no defects beyond known clusters.
+
+### Security-relevant confirmations
+- **`DebugLogScreen`** shares the on-device ring buffer via `Share.share`,
+  but that buffer is **already PII-redacted at write time** (`errorLog.
+  redactPII`) — the user-exportable log is safe by construction.
+  `diagnoseSyncConflicts` logs uids/counts only, no rows.
+- **`ShareCardScreen`** literal hex (`:44-53`) is the **offline WebView
+  canvas** palette (mirrors theme tokens; the one legitimately lint-exempt
+  screen). Export is a local PNG; nothing leaves except the image the user
+  shares.
+- **A2-038 consumers confirmed:** `CoachReviewScreen` + `VolumeHeatmapScreen`
+  (+ WorkoutSummary) call `getVolumeStatus()` → non-adaptive palette. These
+  three are the Phase-9 colour-blind/contrast fix set.
+
+### SCREEN-LAYER VERDICT
+60/60 screens read. **Uniformly high quality and consistent**: one
+CI-enforced design-token system (only ShareCard exempt), one component
+library, lib-routed data (no screen-level SQL/SQLi), `useShallow`/
+`useFocusEffect` patterns, skeletons+illustrations+toasts, broad a11y
+labelling, ED-safety visible at every relevant surface. No screen-level
+correctness defects; findings are the cross-cutting clusters (units A2-043,
+a11y A2-026/038, sync redundancy) + trivia (A2-069 stray console calls in
+LiftProgress:39, PRWall:168, ExerciseDetail:146, MesocycleBuilder:119,
+WeeklyCheckIn:384 — route through errorLog).
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction
