@@ -1800,6 +1800,47 @@ ProOnboarding). Possible dead/legacy screen. → Phase 3.
 
 ---
 
+## SCREENS — batch 2: HomeScreen (re-confirmed), WorkoutSummary, BuildWorkout, WorkoutHistory, ExerciseLibrary/Detail (heads+scan), CoachOutput (head), + 4 monetisation screens
+
+### Cross-screen scan (verified facts for Phase 5/9)
+- **No screen does string-interpolated SQL** (grep of all `src/screens/*.js`
+  → empty). Screens route through `database.js`/`lib/` repos. Reinforces
+  A2-034 (no SQLi).
+- **Hardcoded hex appears in ONE screen only: `ShareCardScreen`** (the
+  lint-exempt offline HTML canvas, expected). Every other screen is
+  token-clean — the design-token CI gate holds.
+- **`setInterval` appears in ONE screen: `ActiveWorkoutScreen`** (verified
+  clean teardown, A2-044). No other screen runs raw timers.
+- **A2-038 reach:** `getVolumeStatus()` consumed by `WorkoutSummary`,
+  `VolumeHeatmap`, `CoachReview` — the non-adaptive volume palette surfaces
+  there. Carry to Phase 9.
+
+### A2-068 RESOLVED — the "four monetisation surfaces" (Phase-1 open Q) are distinct, not redundant.
+- `PaywallScreen` — single pay/dismiss modal from a DifferentialBadge tap;
+  server-authoritative purchase (`playBilling.purchasePackage` →
+  `cascade.payAt`), cancel handled gracefully.
+- `CascadeGateScreen` — day-21 trial-end gate + payment-failure overlay;
+  legacy day14/day28 accepted as synonyms (no crash).
+- `ProUpgradeScreen` — signup/sign-in + tier activation from a Pro-gate tap.
+- `SubscriptionScreen` — manage/restore from You.
+No dead-end, no confusing overlap. Phase-1 concern cleared.
+
+### Verified strengths
+- **`WorkoutSummaryScreen`** wires the post-session loop (ratings →
+  autoreg/adaptive engine → adaptation events + `syncWorkout`; review
+  prompt gated to 5 sessions).
+- **`CoachOutputScreen`** is the confirm-then-apply coach surface (pure
+  `coachApply` computes, `DifferentialBadge`, ED-flag raise/clear, Beat
+  support link).
+- `WorkoutHistory` (list+calendar), `BuildWorkout` (+travel mode),
+  `ExerciseLibrary/Detail` — lib-routed, toast errors, skeletons, a11y-clean.
+
+> Minor (A2-069): `BuildWorkoutScreen:130,136` `Date.now()+Math.random()`
+> for React list keys (fine for keys); `ExerciseDetailScreen:146` raw
+> `console.error` (should route through errorLog). Trivial.
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction

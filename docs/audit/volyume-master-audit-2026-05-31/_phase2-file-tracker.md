@@ -2,7 +2,7 @@
 
 Status: `[x]` read in full + findings recorded · `[~]` partially read (see 02-code-audit.md scope notes) · `[ ]` not yet read.
 Generated 2026-05-31T16:09Z. Total non-test source files: 227 (83,854 LOC).
-Read so far: 161 files.
+Read so far: 172 files.
 
 ## App.js/
 
@@ -218,23 +218,23 @@ Read so far: 161 files.
 - [x] `Article9ConsentScreen.js` (271)
 - [ ] `BlockReflectionScreen.js` (305)
 - [ ] `BodyMetricsScreen.js` (1164)
-- [ ] `BuildWorkoutScreen.js` (614)
-- [ ] `CascadeGateScreen.js` (272)
+- [x] `BuildWorkoutScreen.js` (614)
+- [x] `CascadeGateScreen.js` (272)
 - [ ] `CoachHeldHistoryScreen.js` (259)
-- [ ] `CoachOutputScreen.js` (2110)
+- [x] `CoachOutputScreen.js` (2110)
 - [ ] `CoachReviewScreen.js` (810)
 - [ ] `CoachingRemindersScreen.js` (339)
 - [ ] `CreditsScreen.js` (132)
 - [ ] `DebugLogScreen.js` (214)
 - [ ] `DiaryScreen.js` (776)
-- [ ] `ExerciseDetailScreen.js` (1076)
-- [ ] `ExerciseLibraryScreen.js` (713)
+- [x] `ExerciseDetailScreen.js` (1076)
+- [x] `ExerciseLibraryScreen.js` (713)
 - [x] `FirstRunScreen.js` (127)
 - [ ] `FoodInsightsScreen.js` (279)
 - [ ] `FoodSearchScreen.js` (837)
 - [ ] `GoalChangeSummaryScreen.js` (354)
 - [ ] `GoalLockConsentScreen.js` (203)
-- [ ] `HomeScreen.js` (2344)
+- [x] `HomeScreen.js` (2344)
 - [ ] `ImportScreen.js` (477)
 - [ ] `LiftProgressScreen.js` (141)
 - [x] `LoginScreen.js` (588)
@@ -247,7 +247,7 @@ Read so far: 161 files.
 - [ ] `NutritionTargetsScreen.js` (1716)
 - [x] `OnboardingScreen.js` (366)
 - [ ] `PRWallScreen.js` (590)
-- [ ] `PaywallScreen.js` (155)
+- [x] `PaywallScreen.js` (155)
 - [ ] `PlanDetailScreen.js` (430)
 - [ ] `PlanLibraryScreen.js` (791)
 - [ ] `PlansScreen.js` (1024)
@@ -255,7 +255,7 @@ Read so far: 161 files.
 - [ ] `ProGoalSetupScreen.js` (726)
 - [ ] `ProOnboardingScreen.js` (1378)
 - [x] `ProSetupCompleteScreen.js` (417)
-- [ ] `ProUpgradeScreen.js` (491)
+- [x] `ProUpgradeScreen.js` (491)
 - [ ] `RecipeBuilderScreen.js` (334)
 - [ ] `RoutineDetailScreen.js` (865)
 - [ ] `ScanBarcodeScreen.js` (276)
@@ -263,13 +263,13 @@ Read so far: 161 files.
 - [ ] `SettingsScreen.js` (1435)
 - [ ] `ShareCardScreen.js` (1494)
 - [ ] `SubscriptionPolicyScreen.js` (193)
-- [ ] `SubscriptionScreen.js` (222)
+- [x] `SubscriptionScreen.js` (222)
 - [ ] `VolumeHeatmapScreen.js` (631)
 - [ ] `WeeklyCheckInScreen.js` (1300)
 - [x] `WelcomeScreen.js` (277)
 - [ ] `WellbeingCheckScreen.js` (176)
-- [ ] `WorkoutHistoryScreen.js` (903)
-- [ ] `WorkoutSummaryScreen.js` (1305)
+- [x] `WorkoutHistoryScreen.js` (903)
+- [x] `WorkoutSummaryScreen.js` (1305)
 - [ ] `YearOfLiftsScreen.js` (516)
 - [ ] `YouScreen.js` (226)
 
