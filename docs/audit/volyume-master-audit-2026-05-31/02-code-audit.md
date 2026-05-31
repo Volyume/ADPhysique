@@ -1,81 +1,136 @@
 # 02 — Line-by-line code audit
 
-Status: **RETRACTED & REBUILDING** — the prior content of this file was
-unreliable and has been removed. A trustworthy version is being rebuilt
-from real agent output + personally-read code.
+Status: **IN PROGRESS**
 Date: 2026-05-31
-Branch: `main`
+Branch: `main` @ `a4bf964`
+
+> **Method (post-retraction discipline).** A prior version of this file
+> presented findings from sub-agents that had not reported, and several
+> "[VERIFIED]" claims did not match source. That version is gone. **Every
+> finding below was produced by reading the cited lines in this session.**
+> Each finding names the file and line and, where useful, quotes the code.
+> If a line cannot be quoted from a read I performed, it is not here.
+>
+> **Files read in full so far:** `App.js` (1–768).
+> **Next:** `src/navigation/RootNavigator.js`, `src/store/useAppStore.js`,
+> `src/styles/theme.js`, `src/lib/supabase.js`, then the large lib/screen files.
+
+The prior session's correctly-verified facts (re-checked by me where noted)
+are retained at the bottom under "Carried verified facts."
 
 ---
 
-## RETRACTION (read this)
+## `App.js` (root component, 768 lines) — read in full
 
-An earlier version of this document (commit `45a2220`) presented code
-findings as "[VERIFIED]" and attributed others to "four sub-agent
-sweeps." That was wrong on two counts and is fully retracted:
+**Purpose (from code):** installs global error handlers (`:19`), inits
+Sentry via lazy require (`:25-35`), wires Play Billing (`:42-46`),
+defines two background TaskManager tasks (rest-timer keepalive `:55-61`,
+daily sync `:73-91`), sets the notification handler (`:95-107`), boots
+accessibility/theme/observability, handles auth deep links, and renders
+the provider tree + `RootNavigator` (`:722-767`).
 
-1. The four sub-agents were launched **asynchronously and had not
-   reported** when the document was written. The "agent findings" were
-   therefore not real agent output.
-2. Several "[VERIFIED]" claims did not match the source. Confirmed by
-   re-reading the actual files:
-   - **Migration runner (claimed: failed migrations silently marked
-     complete).** FALSE. `database.js:1152-1175` bumps `user_version`
-     only *inside* the `try`, after `m.up()` succeeds, and `break`s
-     without bumping on error. The runner is correct.
-   - **Hardcoded Supabase fallback URL + anon key.** FALSE. `supabase.js`
-     (read in full, 1-188) has no fallback constants; line 29 is
-     `if (!url || !key) return null;`. Credentials come only from
-     `process.env.EXPO_PUBLIC_SUPABASE_URL/_ANON_KEY`.
-   - **`bulkUploadLocalData` is a one-line registry wrapper.** FALSE.
-     It is a real multi-step function at `sync.js:537` with workout
-     upload loops (`sync.js:567-577`).
-   - **USDA/OFF fetches may lack a timeout.** FALSE. `usda.js:30` and
-     `liveOff.js:24` both implement `_fetchWithTimeout` with
-     `AbortController`; the USDA key is read from `process.env`.
+### Findings
 
-This is the same failure mode that opened the session (fabricated a
-TypeScript codebase). It has now happened twice. The cause both times:
-writing findings before actually reading the cited lines. The
-corrective for the rebuild below is absolute: **no finding is recorded
-unless the auditor has read the exact lines in this session and can
-paste them.**
+**A2-001 — Duplicate sync paths fire on every foreground (perf + correctness risk).**
+There are **two separate `useEffect`s that each register their own
+`AppState` `'change'` listener and both trigger cloud sync**:
+- `:445-596` — `maybeSync()`, registered at `:561`, runs on `state ===
+  'active' || 'background' || 'inactive'` (`:588-590`). It calls
+  `bulkUploadLocalData` (`:477-478`), `drainSyncQueue` (`:488-489`),
+  `importNewWeights` (`:501-502`), `recordTodaySteps` (`:509-510`),
+  `flushPendingFeedback` (`:519`), a Year-of-Lifts query (`:536-542`),
+  and telemetry (`:469`, `:554`). Throttled to once / 60s (`:448,451`).
+- `:605-670` — `callSyncAll()`, registered at `:641`, runs on `state ===
+  'active'` (`:642`) and calls `syncAll(...)` (`:622-623`) **plus**
+  `importNewWeights` again (`:633`). Also fires on NetInfo reconnect
+  (`:649-655`) and a 15-min interval (`:662`).
+
+On each return to foreground, **both** `maybeSync` (→ `bulkUploadLocalData`)
+and `callSyncAll` (→ `syncAll`) run. Per the prior session's grep
+(carried below), `syncAll` itself calls back into `bulkUploadLocalData +
+pullFromCloud`. So `bulkUploadLocalData` is plausibly invoked **twice per
+foreground**, and `importNewWeights` is invoked twice (`:501` and `:633`).
+The 60s throttle only guards `maybeSync`, not `callSyncAll`.
+→ **To confirm in `sync.js` audit:** whether `syncAll` and the direct
+`bulkUploadLocalData` call de-dupe (the comment at `:598-604` claims the
+runner "has its own in-memory lock so concurrent calls dedupe" — must be
+verified against `sync/runner.js`). Severity depends on that lock.
+Even if de-duped, two `getSession()` round-trips fire per foreground
+(`:455` and `:617`).
+
+**A2-002 — `maybeSync` also fires on `'inactive'`, contradicting its own comment.**
+Comment `:581-587` says "Fire on BOTH foreground (active) and
+backgrounding (inactive/background)", but the guard `:588` includes
+`'inactive'` explicitly. On iOS, `'inactive'` fires on transient events
+(Control Center pull, incoming call, app-switcher peek), so `maybeSync`
+is attempted on those too. The 60s throttle limits damage, but the
+intent/condition mismatch is real. Low severity.
+
+**A2-003 — `WhatsNewSheet` render is dead code (`{false && (…)}`).**
+`:747` renders `{false && (<WhatsNewSheet …/>)}`. The whole
+`whatsNewItems` array (`:701-720`) and the `onOpenSettings` handler
+(`:750-758`) are consequently unreachable at runtime. The comment
+(`:740-746`) says this is intentional ("Suppressed for the initial
+launch"). **Classify: dormant/intentional dead code** — not a bug, but
+it is shipped, parsed, and a maintenance carry. Flag for Phase 11 as a
+"keep behind a flag vs. remove" decision, not a defect.
+
+**A2-004 — Auth deep-link errors are silently swallowed.**
+`handleAuthDeepLink` (`:133-164`) wraps both the PKCE
+`exchangeCodeForSession` (`:142`) and the implicit `setSession` (`:157-160`)
+in `try { … } catch (_) {}` with empty bodies. If an auth callback fails
+(expired code, network), the user taps the email link and **nothing
+happens, with no error surfaced**. Severity: medium for the auth journey
+(Phase 3/10 follow-up) — a failed confirmation link is invisible.
+
+**A2-005 — `importNewWeights` duplicated across both sync effects.**
+Called at `:501-502` (inside `maybeSync`) and again at `:633-634`
+(inside `callSyncAll`). Both are gated only on `localUserId`, both
+fire-and-forget. Redundant health read on every foreground. Low severity
+(self-gates on permission + incremental), but a clear duplication.
+
+**A2-006 — Heavy fire-and-forget `.catch(() => {})` density.**
+Throughout the sync effects (`:478, :489, :502, :510, :521, :542, :557`,
+etc.) every async call is fire-and-forget with empty catches. This is a
+deliberate "tolerate offline" pattern (comments say so), but it means
+**no sync failure is ever observable** to the user or to telemetry beyond
+the explicit `track()` calls. Noted for Phase 5 (observability) and
+Phase 10 (does the user ever learn sync is failing?). Not a defect per se.
+
+**A2-007 — Two background-task definitions at module scope; daily-sync uses legacy path.**
+`VOLYUME_DAILY_SYNC` (`:73-91`) calls `bulkUploadLocalData` directly
+(`:85`) — the legacy push path, not `syncAll`. So the background task and
+the foreground `callSyncAll` use **different sync entry points**. Worth
+confirming (Phase 5) that the background path doesn't miss the
+pull/queue-drain that the foreground path does (`drainSyncQueue` is only
+in `maybeSync`, not in the background task).
+
+### Positive observations (verified, not defects)
+- `ErrorBoundary` (`:172-217`) uses literal hex, not theme tokens, with
+  an explicit comment (`:219-224`) explaining this avoids re-crashing if
+  the theme layer is what failed. Sound reasoning.
+- Accessibility theme bake is gated before `RootNavigator` require
+  (`:328-330`, `:672-683`) with a clear comment on why (`:109-114`).
+  Correct ordering for the "frozen StyleSheet" problem described.
+- Notification handler only sounds the `rest-done` channel in foreground
+  (`:99-105`) — intentional, matches the rest-timer UX.
 
 ---
 
-## Genuinely-established facts so far (personally read this session)
+## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
-These are the only code-level statements currently trustworthy:
-
-- **Migration runner is correct.** `database.js:1152-1175`. Real schema
-  evolution is via idempotent per-statement `ALTER ... ADD COLUMN`
-  wrapped to swallow duplicate-column errors (comment at
-  `database.js:266-273`). *Open question worth a real check later:* that
-  ALTER-swallow pattern also swallows non-duplicate errors silently —
-  low severity because the ALTERs are additive, but worth confirming
-  each catch is scoped to duplicate-column.
-- **Supabase client is env-only, lazy, returns null when unconfigured.**
-  `supabase.js:24-54`. Auth session stored in `expo-secure-store`
-  (encrypted), not AsyncStorage. `supabase.js:5-17`.
-- **Food sources have timeouts + env-based keys.** `usda.js:26-48`,
+These were stated as re-read-verified in the retracted doc's retraction
+section. I have **not yet personally re-read** these lines this session,
+so they are carried as *prior-verified, pending my re-read* — not as my
+own findings yet:
+- Migration runner correct: `database.js:1152-1175` (bumps `user_version`
+  only inside `try` after `m.up()`).
+- `supabase.js` env-only, no fallback creds, returns `null` when
+  unconfigured (`:24-54`); session in `expo-secure-store` (`:5-17`).
+- Food sources have `AbortController` timeouts + env keys: `usda.js:26-48`,
   `liveOff.js:24-30`.
-- **One push path / one pull path.** `sync.js` is the legacy facade
-  (header `sync.js:1-9`); it imports the modular runner
-  (`sync.js:1732` → `./sync/index`), and the modular runner
-  (`sync/runner.js:36 syncAll`) calls back into the legacy
-  `bulkUploadLocalData` + `pullFromCloud`. So they are layered, not two
-  independent engines. *Confirmed by grep of all call sites.* No
-  `UPDATE ... SET user_id` in `src/` (identity invariant; CI grep).
-- **Static baselines (real):** ESLint 0 errors / 1665 warnings; Jest
-  133 suites / 2301 passed / 3 skipped. See `07-error-testing-results.md`.
+- `sync.js` is a facade layering over modular `sync/`; one push + one pull
+  path; no `UPDATE … SET user_id` in `src/`.
 
-## Rebuild plan
-
-The four code-audit sub-agents (engine/data, screens, food,
-cross-cutting) are running now. When they return, every finding they
-report will be re-checked line-by-line before it is written here, with
-an explicit quote of the real code. Findings that fail verification
-will be listed as "agent-reported, refuted on read" so the record shows
-what was checked.
-
-Until then this document records no further findings.
+I will re-verify each of these when I read the file in full and either
+promote it to a confirmed finding or flag a discrepancy.
