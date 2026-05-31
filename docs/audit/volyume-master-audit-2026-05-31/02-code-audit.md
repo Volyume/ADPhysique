@@ -1841,6 +1841,33 @@ No dead-end, no confusing overlap. Phase-1 concern cleared.
 
 ---
 
+## SCREENS — batch 3: PlansScreen, DiaryScreen, AnalyticsScreen, YouScreen, SettingsScreen, NutritionTargetsScreen (heads + key paths)
+
+All consistent with the established pattern (lib-routed, token-clean,
+`useFocusEffect` reload, `useShallow` selectors). Confirmations:
+
+- **A2-026 confirmed in UI:** `SettingsScreen.js:38-52` — toggling Larger
+  Text / Higher Contrast / Colour-Blind Safe **prompts `Updates.reloadAsync`**
+  because the tokens are baked at boot. This is the user-facing half of the
+  reload-to-apply accessibility weakness.
+- **A2-019 confirmed in UI:** `SettingsScreen.js:649` sign-out/delete path
+  calls `AsyncStorage.clear()` — wiping device-scoped a11y + notification
+  prefs along with user data.
+- **Delete-account is server-authoritative + safe:** `:574` invokes the
+  `delete-account` Edge Function, falls back to a direct RPC, then local
+  `wipeAllUserData` + `clearAuthStateForSignOut` + `AsyncStorage.clear`
+  (`:574-649`). No client-only deletion that could leave cloud orphans.
+- **`AnalyticsScreen` uses the ADAPTIVE palette** — imports `volumeColors`
+  from theme (`:11`), not `getVolumeStatus().color`. So Analytics is *not*
+  an A2-038 victim; the issue is scoped to WorkoutSummary/VolumeHeatmap/
+  CoachReview.
+- `DiaryScreen` (food/db routed, MacroRings adherence-neutral),
+  `PlansScreen` (block advisor + mid-block-switch confirm), `YouScreen`
+  (nav hub), `NutritionTargetsScreen` (calculateNutritionTargets +
+  wellbeing calm-mode read) — all clean, no defects.
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction

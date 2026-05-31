@@ -2,7 +2,7 @@
 
 Status: `[x]` read in full + findings recorded · `[~]` partially read (see 02-code-audit.md scope notes) · `[ ]` not yet read.
 Generated 2026-05-31T16:09Z. Total non-test source files: 227 (83,854 LOC).
-Read so far: 172 files.
+Read so far: 178 files.
 
 ## App.js/
 
@@ -214,7 +214,7 @@ Read so far: 172 files.
 
 - [~] `ActiveWorkoutScreen.js` (2560)
 - [ ] `AddCustomFoodScreen.js` (267)
-- [ ] `AnalyticsScreen.js` (1436)
+- [x] `AnalyticsScreen.js` (1436)
 - [x] `Article9ConsentScreen.js` (271)
 - [ ] `BlockReflectionScreen.js` (305)
 - [ ] `BodyMetricsScreen.js` (1164)
@@ -226,7 +226,7 @@ Read so far: 172 files.
 - [ ] `CoachingRemindersScreen.js` (339)
 - [ ] `CreditsScreen.js` (132)
 - [ ] `DebugLogScreen.js` (214)
-- [ ] `DiaryScreen.js` (776)
+- [x] `DiaryScreen.js` (776)
 - [x] `ExerciseDetailScreen.js` (1076)
 - [x] `ExerciseLibraryScreen.js` (713)
 - [x] `FirstRunScreen.js` (127)
@@ -244,13 +244,13 @@ Read so far: 172 files.
 - [ ] `MyRecipesScreen.js` (205)
 - [ ] `NotificationSettingsScreen.js` (939)
 - [ ] `NutritionEducationScreen.js` (294)
-- [ ] `NutritionTargetsScreen.js` (1716)
+- [x] `NutritionTargetsScreen.js` (1716)
 - [x] `OnboardingScreen.js` (366)
 - [ ] `PRWallScreen.js` (590)
 - [x] `PaywallScreen.js` (155)
 - [ ] `PlanDetailScreen.js` (430)
 - [ ] `PlanLibraryScreen.js` (791)
-- [ ] `PlansScreen.js` (1024)
+- [x] `PlansScreen.js` (1024)
 - [ ] `PrivacyPolicyScreen.js` (122)
 - [ ] `ProGoalSetupScreen.js` (726)
 - [ ] `ProOnboardingScreen.js` (1378)
@@ -260,7 +260,7 @@ Read so far: 172 files.
 - [ ] `RoutineDetailScreen.js` (865)
 - [ ] `ScanBarcodeScreen.js` (276)
 - [ ] `ScanLabelScreen.js` (307)
-- [ ] `SettingsScreen.js` (1435)
+- [x] `SettingsScreen.js` (1435)
 - [ ] `ShareCardScreen.js` (1494)
 - [ ] `SubscriptionPolicyScreen.js` (193)
 - [x] `SubscriptionScreen.js` (222)
@@ -271,7 +271,7 @@ Read so far: 172 files.
 - [x] `WorkoutHistoryScreen.js` (903)
 - [x] `WorkoutSummaryScreen.js` (1305)
 - [ ] `YearOfLiftsScreen.js` (516)
-- [ ] `YouScreen.js` (226)
+- [x] `YouScreen.js` (226)
 
 ## src/store/
 
