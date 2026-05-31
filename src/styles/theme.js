@@ -325,6 +325,26 @@ export const volumeColors = {
   get overMrv() { return colors.error; },
 };
 
+// Volume-status colours keyed by the status string getVolumeStatus returns.
+// getVolumeStatus lives in algorithms.js (a pure module that must not import
+// the theme), so it returns a status string and the colour is resolved here.
+// Getters so the colour-blind-safe and high-contrast palette swaps in
+// applyAccessibility propagate to the body heatmap and volume bars. (A2-038.)
+const volumeStatusColors = {
+  get unknown()  { return colors.textMuted; },
+  get below()    { return colors.textMuted; },
+  get minimum()  { return colors.warning; },
+  get optimal()  { return colors.success; },
+  get near_mrv() { return colors.warning; },
+  get over_mrv() { return colors.error; },
+};
+
+// Resolve a volume-status string to its themed colour, falling back to the
+// neutral muted token for an unrecognised status.
+export function volumeStatusColor(status) {
+  return volumeStatusColors[status] ?? colors.textMuted;
+}
+
 // Convenience: consistent icon button size used across screens
 export const iconSize = {
   sm: 16,

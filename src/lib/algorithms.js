@@ -142,9 +142,13 @@ export function calculateWeeklyVolume(sets, exerciseMap = {}) {
 }
 
 // Algorithm 5: Volume Status
+// Returns a status string, not a colour: this module is pure and must not import
+// the theme. Callers resolve the colour with volumeStatusColor(status) from
+// theme.js so the colour-blind-safe and high-contrast palette swaps apply.
+// (A2-038: colours used to be hardcoded hex here and bypassed the palette.)
 export function getVolumeStatus(workingSets, muscle, customLandmarks = null) {
   const landmarks = customLandmarks?.[muscle] || VOLUME_LANDMARKS[muscle];
-  if (!landmarks) return { status: 'unknown', color: '#9E9E9E', label: 'No data', landmarks: null };
+  if (!landmarks) return { status: 'unknown', label: 'No data', landmarks: null };
 
   const { mev, mav, mrv } = landmarks;
 
@@ -153,21 +157,21 @@ export function getVolumeStatus(workingSets, muscle, customLandmarks = null) {
   // pressing) read as 'optimal' green on the body heatmap before the user
   // has logged a single set, which makes the diagram look wrong.
   if (workingSets <= 0) {
-    return { status: 'below', color: '#616161', label: 'Below target', landmarks };
+    return { status: 'below', label: 'Below target', landmarks };
   }
   if (workingSets < mev) {
-    return { status: 'below', color: '#616161', label: 'Below target', landmarks };
+    return { status: 'below', label: 'Below target', landmarks };
   }
   if (mev > 0 && workingSets <= mev + 2) {
-    return { status: 'minimum', color: '#FFB300', label: 'Just enough', landmarks };
+    return { status: 'minimum', label: 'Just enough', landmarks };
   }
   if (workingSets <= mav) {
-    return { status: 'optimal', color: '#00C853', label: 'Good range', landmarks };
+    return { status: 'optimal', label: 'Good range', landmarks };
   }
   if (workingSets <= mrv) {
-    return { status: 'near_mrv', color: '#FFB300', label: 'Getting close', landmarks };
+    return { status: 'near_mrv', label: 'Getting close', landmarks };
   }
-  return { status: 'over_mrv', color: '#FF3D00', label: 'Too much', landmarks };
+  return { status: 'over_mrv', label: 'Too much', landmarks };
 }
 
 // Default load increment for a progression step. Gym weight is stored in the

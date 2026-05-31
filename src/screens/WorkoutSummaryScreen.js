@@ -688,7 +688,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             </View>
             {musclesWorked.map(muscle => {
               const data = weeklyVolume[muscle];
-              const { color, label, status } = getVolumeStatus(data.workingSets, muscle);
+              const { label, status } = getVolumeStatus(data.workingSets, muscle);
+            const color = volumeStatusColor(status);
               const insight = getVolumeInsight(muscle, data.workingSets, status);
               const why = getVolumeWhy(muscle, data.workingSets, status);
               const isExpanded = expandedVolumeWhy === muscle;
