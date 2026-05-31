@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Dimensions, FlatList,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Dimensions, FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +23,7 @@ function safeFormatDate(value, fmt) {
 }
 import { useFocusEffect } from '@react-navigation/native';
 import SvgLineChart from '../components/SvgLineChart';
+import { useToast } from '../components/Toast';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logBodyMetric, getBodyMetricLog } from '../lib/database';
@@ -334,6 +335,7 @@ export default function BodyMetricsScreen({ navigation }) {
   // when they did, in fact, give us a starting bodyweight.
   const onboardingWeightKg = userProfile?.weightKg ?? userProfile?.bodyWeightKg ?? null;
   const bwu = bodyWeightUnits || 'st';
+  const toast = useToast();
   const [physiqueEnabled, setPhysiqueEnabled] = useState(null); // null = loading
   const [calm, setCalm] = useState(false);
   const [sessionConfirmed, setSessionConfirmed] = useState(bodyMetricsSessionConfirmed);
@@ -521,7 +523,7 @@ export default function BodyMetricsScreen({ navigation }) {
   async function saveMetrics() {
     const hasBW = bwu === 'st' ? !!form.body_weight_st : !!form.body_weight;
     if (!hasBW && !form.chest && !form.body_fat) {
-      Alert.alert('Missing data', 'Enter at least body weight, body fat, or one measurement.');
+      toast.show('Enter at least body weight, body fat, or one measurement.', { variant: 'warning' });
       return;
     }
     setSaving(true);
@@ -585,13 +587,9 @@ export default function BodyMetricsScreen({ navigation }) {
         await loadHistory();
       } catch (e) {
         setHistory(prev => prev.filter(h => h.id !== optimisticEntry.id));
-        try {
-          // eslint-disable-next-line global-require
-          require('../components/Toast'); // ensure module loaded
-        } catch (_) {}
         // Surface the failure, body weight is important; user needs to
         // know it didn't save so they can retry.
-        Alert.alert('Could not save', e?.message ?? 'Try again in a moment.');
+        toast.show('Couldn\'t save. Try again.', { variant: 'error' });
       }
     } finally {
       setSaving(false);

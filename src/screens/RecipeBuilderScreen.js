@@ -20,7 +20,7 @@
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert,
+  View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,12 +30,14 @@ import {
   setRecipeIngredients, computeRecipeMacros,
 } from '../lib/food/db';
 import { resolveFoodRef } from '../lib/food/sources/localCache';
+import { useToast } from '../components/Toast';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
 export default function RecipeBuilderScreen({ navigation, route }) {
   const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
   const userId = user?.id;
+  const toast = useToast();
 
   const recipeId = route?.params?.recipeId ?? null;
   const mealSlot = route?.params?.mealSlot ?? 'snack';
@@ -155,7 +157,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
       })));
       navigation.goBack();
     } catch (e) {
-      Alert.alert('Could not save', String(e?.message ?? e));
+      toast.show('Couldn\'t save. Try again.', { variant: 'error' });
     } finally {
       setSaving(false);
     }

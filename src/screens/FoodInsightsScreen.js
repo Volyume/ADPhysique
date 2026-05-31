@@ -15,13 +15,14 @@
  */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import Card from '../components/Card';
+import { useToast } from '../components/Toast';
 import {
   getRollupsForRange, getFoodEntriesForRange,
 } from '../lib/food/db';
@@ -52,6 +53,7 @@ function dayLabel(iso) {
 export default function FoodInsightsScreen({ navigation }) {
   const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
   const userId = user?.id;
+  const toast = useToast();
 
   const [rollups, setRollups] = useState([]);
   const [targets, setTargets] = useState(null);
@@ -101,15 +103,15 @@ export default function FoodInsightsScreen({ navigation }) {
     try {
       const entries = await getFoodEntriesForRange(userId, startDate, endDate);
       if (!entries.length) {
-        Alert.alert('Nothing to export', 'No food entries in the last seven days.');
+        toast.show('No entries in the last seven days.', { variant: 'info' });
         return;
       }
       const result = await exportDiaryCsv({ userId, entries, startDate, endDate });
       if (result.rowCount > 0) {
-        Alert.alert('Exported', `${result.rowCount} ${result.rowCount === 1 ? 'entry' : 'entries'} written to CSV.`);
+        toast.show(`${result.rowCount} ${result.rowCount === 1 ? 'entry' : 'entries'} exported to CSV.`, { variant: 'success' });
       }
     } catch (e) {
-      Alert.alert("Export failed", 'Try again.');
+      toast.show('Export failed. Try again.', { variant: 'error' });
     } finally {
       setExporting(false);
     }

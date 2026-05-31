@@ -127,7 +127,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
       });
       navigation.goBack();
     } catch (err) {
-      Alert.alert("Couldn't save", 'Try again.');
+      toast.show('Couldn\'t save. Try again.', { variant: 'error' });
     } finally {
       setSaving(false);
     }
