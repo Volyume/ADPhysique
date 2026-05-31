@@ -21,6 +21,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, fontSize, fontWeight, spacing } from '../styles/theme';
 import { VolyumeMark } from './BrandMark';
+import SyncStatusBadge from './SyncStatusBadge';
 
 const WORDMARK_HEIGHT = 22;
 
@@ -30,7 +31,15 @@ export default function ScreenHeader({ title, subtitle, right }) {
       <View style={styles.titleRow}>
         <Text style={styles.title} numberOfLines={1}>{title}</Text>
         <View style={styles.right}>
-          {right ?? <VolyumeMark size={WORDMARK_HEIGHT} />}
+          {right ?? (
+            <View style={styles.cluster}>
+              {/* Sync status, shown on the tab roots too so it is visible
+                  consistently with the inner stack-header screens (H1 /
+                  PRODUCTION_READINESS_LOCKED.md sync-visibility rule). */}
+              <SyncStatusBadge />
+              <View style={styles.mark}><VolyumeMark size={WORDMARK_HEIGHT} /></View>
+            </View>
+          )}
         </View>
       </View>
       {subtitle ? <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text> : null}
@@ -59,6 +68,13 @@ const styles = StyleSheet.create({
   },
   right: {
     marginLeft: spacing.sm,
+  },
+  cluster: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  mark: {
     // Optical centring: wordmark sits a hair below the bold cap line
     // so its baseline aligns with the title baseline. Bumped from 2px
     // to 6px after user feedback, the V was still riding above the
