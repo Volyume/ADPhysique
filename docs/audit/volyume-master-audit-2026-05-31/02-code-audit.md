@@ -1221,6 +1221,58 @@ defects**. This subsystem reflects real production debugging.
 
 ---
 
+## Payments + Telemetry + Sentry scrub (read in full) — major Phase 5 positives
+
+Read: `payments/{playBilling,cascade,catalogue,restore,index}`,
+`telemetry/{events,transport,sentryBridge,index}`,
+`observability/sentryScrub`. **All clean; collectively a strong security
+posture.**
+
+### Security strength 1 — payments are SERVER-AUTHORITATIVE (no client tier forgery).
+- `playBilling.js`: receipt validation is **server-side** (Supabase Edge
+  Function calls Google Play Developer API `verifyPurchase`), and the
+  **RTDN Pub/Sub webhook is the source of truth** for renewal/cancel/
+  refund (`:34-39, :307-315`). The client purchase only gives immediate
+  feedback. A stub provider throws "provider not injected" rather than
+  faking entitlements (`:233-235`).
+- `cascade.js`: every tier transition goes through server RPCs
+  (`start_cascade`, `upgrade_tier`); the client never writes tier directly
+  (consistent with the `migrate_005` trigger that rolls back client tier
+  UPDATEs, and `profiles` sync excluding `tier`). No exceptions cross the
+  module boundary (`{ok:false}` returns).
+- → **Phase 5: a user cannot forge Pro by editing local state** — tier is
+  server-owned end to end. Carry as a verified strength.
+
+### Security strength 2 — comprehensive PII / health-data scrubbing before Sentry.
+`observability/sentryScrub.js` (locked to PRIVACY_CONSENT_LOCKED.md):
+- Redacts sensitive **keys** (weight/body-fat/macros/measurements + PII:
+  email, names, DOB, phone, address + `ed_pattern`/`signals_json`) via a
+  frozen regex list (`:37-99`).
+- Redacts strings embedding sensitive **table names** (`weight_log`,
+  `food_entries`, `ed_pattern_flags`, `health_data_consent`, …) and
+  **photo paths / base64 images** (`:108-123, :169-179`).
+- `scrubEvent` strips `event.user` to **`id` only** (drops email/username/
+  ip), scrubs extra/contexts/tags/request.data/message/exception/
+  breadcrumbs (`:187-218`); depth-bounded (6) against circular refs.
+- A CI test asserts the scrub list still matches the schema (quarterly
+  audit). → **Phase 5: Article-9 health data is scrubbed end to end**
+  before any crash/telemetry leaves the device. Combined with SecureStore
+  auth + parameterised SQL (A2-034), the privacy posture is strong.
+
+### Security strength 3 — telemetry allow-list (client + server) with non-sensitive payloads.
+`telemetry/events.js` is the canonical event catalogue; `transport.js`
+enforces `ALLOWED_EVENTS` client-side (hard-fail in dev on typo) and the
+server RPC `record_engine_telemetry` enforces the same list. Events persist
+to local SQLite first (offline-survivable) then debounce-push. Payloads are
+**counts/enums/SKUs**, not health values; `sentryBridge` mirrors events as
+breadcrumbs which the scrubber then cleans. Good data-minimisation.
+
+### Minor
+- `restore.js:40,50` still branches on a `'complete'` entitlement that the
+  2-tier `catalogue` no longer defines — dead/defensive legacy. Trivial.
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction
