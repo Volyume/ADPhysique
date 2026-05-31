@@ -2,7 +2,7 @@
 
 Status: `[x]` read in full + findings recorded · `[~]` partially read (see 02-code-audit.md scope notes) · `[ ]` not yet read.
 Generated 2026-05-31T16:09Z. Total non-test source files: 227 (83,854 LOC).
-Read so far: 10 full, 6 partial. Remaining: 211.
+Read so far: 16 full, 6 partial. Remaining: 205.
 
 ## App.js/
 
@@ -16,8 +16,8 @@ Read so far: 10 full, 6 partial. Remaining: 211.
 - [ ] `BottomSheet.js` (136)
 - [ ] `BrandMark.js` (85)
 - [ ] `Button.js` (108)
-- [ ] `Card.js` (86)
-- [ ] `Chip.js` (72)
+- [x] `Card.js` (86)
+- [x] `Chip.js` (72)
 - [ ] `DifferentialBadge.js` (115)
 - [ ] `EmptyState.js` (129)
 - [ ] `EngineLog.js` (161)
@@ -30,10 +30,10 @@ Read so far: 10 full, 6 partial. Remaining: 211.
 - [ ] `PRCelebration.js` (280)
 - [ ] `PeekMenu.js` (224)
 - [ ] `PlateCalculator.js` (247)
-- [ ] `PressableCard.js` (85)
-- [ ] `ProGate.js` (252)
+- [x] `PressableCard.js` (85)
+- [x] `ProGate.js` (252)
 - [ ] `ReadinessCards.js` (305)
-- [ ] `RestTimer.js` (324)
+- [x] `RestTimer.js` (324)
 - [ ] `ScreenHeader.js` (73)
 - [ ] `SearchBar.js` (77)
 - [ ] `SetEntry.js` (334)
@@ -45,7 +45,7 @@ Read so far: 10 full, 6 partial. Remaining: 211.
 - [ ] `SvgLineChart.js` (190)
 - [ ] `TierComparisonStrip.js` (119)
 - [ ] `Toast.js` (242)
-- [ ] `VolumeBars.js` (85)
+- [x] `VolumeBars.js` (85)
 - [ ] `WhatsNewSheet.js` (176)
 
 ## src/components/food/

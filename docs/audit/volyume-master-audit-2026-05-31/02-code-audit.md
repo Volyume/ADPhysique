@@ -891,6 +891,64 @@ model). Good example of why consumption-tracing matters — the first-pass
 
 ---
 
+## Components — batch 1 (read in full): VolumeBars, PressableCard, Card, Chip, ProGate, RestTimer
+
+Overall the shared component layer is **high quality and consistent** —
+token-based, reduce-motion-aware, and good about accessibility
+labels/roles. Specific items:
+
+### A2-047 — Incomplete `withAlpha` migration: lingering `token + 'NN'` hex-concat.
+`ProGate.js:199` `colors.primary + '40'` and `RestTimer.js:296`
+`colors.primary + '50'` still use the fragile hex-string concat that
+`theme.js withAlpha` (`theme.js:79-82`) was created to replace. It passes
+the lint guard (not a hex *literal*) but breaks if `colors.primary` ever
+becomes an `rgba()` token (e.g. a future palette). → mechanical cleanup to
+`withAlpha(colors.primary, 0.25/0.31)`. Low. (A broader grep for
+`colors.\w+ + '` should find the rest in Phase 11.)
+
+### A2-048 — `RestTimer` runs a dead progress-bar animation every rest (wasted JS-thread work).
+`RestTimer` sets up and drives `progressAnim` (`:45, :51-105`) via
+`Animated.timing(..., useNativeDriver: false)` — i.e. on the **JS thread**
+— and computes `barWidth = progressAnim.interpolate(...)` (`:170-173`),
+**but no `View` in the render consumes `barWidth`** (the JSX `:184-233` has
+only the timer row + adjust row; the progress bar was removed). So a
+JS-thread timing animation re-binds every second of every rest
+(`:87-105`) to drive nothing. → remove `progressAnim`/`barWidth` or
+re-add the bar. Confirms the Phase-7 lint flag `RestTimer.js:170 barWidth`.
+Low–medium (battery/CPU during workouts).
+
+### A2-049 — `RestTimer` dead var `currentExerciseName` (`:42-43`).
+Computed for the lock-screen notification that was **disabled** (`:70-75`
+comment), so it is now unused. Confirms the Phase-7 lint flag
+`RestTimer.js:42`. Trivial.
+
+### A2-050 — `RestTimer` two real `exhaustive-deps` gaps (`:82`, `:142`).
+`:51-82` effect deps are `[restTimerActive]` but it reads
+`restTimerRemaining/Duration/reduceMotion/tickRestTimer`; `:121-142`
+effect deps are `[restTimerRemaining]` but it reads `restTimerActive`.
+The design compensates (the `:87-105` effect re-binds the animation each
+tick), so no observed bug, but these are the Phase-7 `react-hooks/
+exhaustive-deps` warnings on a runtime-critical component. Low; worth a
+deliberate `eslint-disable` with reason or a deps fix.
+
+### Verified strengths
+- **`RestTimer` cleanup is correct:** all queued timeouts tracked in
+  `timeoutsRef` and drained on unmount (`:49, :140, :148-152`), interval
+  cleared (`:81, :151`) — fixes the "3 leaked setTimeouts/cycle" the
+  comment (`:47-48`) describes. `useShallow` selector (`:30`) avoids
+  per-mutation re-renders. `accessibilityLiveRegion="polite"` announces
+  ticks to screen readers (`:193`); skip button is labelled (`:209`).
+- **`ProGate`/`withProGuard`** (`:138-144`) enforce Pro at the route level
+  (defends deep-link / stale-nav entry), subscribe to `tier` only.
+- **`Card`** consolidates ~83 inline card blocks into one token-based
+  surface with `withAlpha` accent borders (`:44-54`); delegates to
+  `PressableCard` when tappable so press feel is uniform.
+- **`VolumeBars`** has good `accessibilityLabel` per muscle row (`:23`).
+  (It is the confirmed A2-038 consumer — `:14,27,35` use
+  `getVolumeStatus().color`, the non-adaptive palette.)
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction
