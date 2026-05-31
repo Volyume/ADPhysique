@@ -1702,6 +1702,59 @@ dropped. Note for Phase 6/9.
 
 ---
 
+## lib core — batch 9: planAutoGen, feedback, planSwitch, stepsLaunchPrompt, wellbeing, storeReview, links, cyclePrefs, restSound, formTips, clusterSet, unilateral, whyThisTemplates (head)
+
+All clean. No defects. Highlights + verified strengths:
+
+- **More ED-safety surfaces (consistent theme):** `wellbeing.js` — a
+  user-controlled "calm mode" with the **Beat helpline** baked in
+  (`WELLBEING_HELPLINE`, `:16-17`); `cyclePrefs.js` — menstrual tracking is
+  an **extra Article-9 opt-in, off by default, never synced** to cloud, and
+  only shown for recorded-female + opted-in.
+- **`whyThisTemplates.js`**: a self-enforcing **jargon blocklist** —
+  word-boundary regexes ban MEV/MAV/MRV/RIR/RPE/mesocycle **and bare
+  researcher surnames** from user-facing copy, with plain-language
+  substitutions documented. The honesty test ("still true if the user did
+  nothing but keep logging?") is codified. This is the mechanism behind the
+  app's consistently jargon-free voice — a real quality system.
+- **`feedback.js`**: auto-attaches session/build/recent-screens/last-error
+  for "pre-debugged" reports; suppression (14-day, not during workout, once
+  per screen/session); offline queue with **per-item retry** (documented
+  fix: keeps the *specific* failed items, not a prefix slice).
+- **`planAutoGen.js`**: orchestration only (generatePlan stays pure);
+  loads the library up front so generated names always resolve, unique
+  plan naming, partial-match soft warning, archives older plans on re-gen.
+  Confirms (A2-046) `plan.whyThis/name/splitType/workouts` are the only
+  consumed fields.
+- **`restSound.js`**: synthesises WAV countdown beeps in-JS (no audio
+  asset shipped), `playsInSilentModeIOS` so gym-silent phones still beep,
+  per-beep failure non-fatal (haptics still fire), proper unload.
+- **`planSwitch`** (confirm before resetting a mid-block plan),
+  **`stepsLaunchPrompt`** (ask-once, pure decision + guarded runner, sends
+  to install Health Connect rather than a dead refusal), **`clusterSet`**
+  (myo-rep/rest-pause logged as one set, breakdown in notes),
+  **`unilateral`** (per-side logging matching Hevy/Strong convention),
+  **`storeReview`** (after 5 sessions, once), **`links`** (single source
+  for privacy/marketing/support URLs) — all small, pure, clean.
+
+> **`formTips.js`**: ~195 hand-written exercise technique cues (data). Note:
+> one duplicate key `'Landmine Row'` (defined twice, `:37` and `:50`) — the
+> second silently wins. Trivial (A2-065).
+
+### TOP-LEVEL lib/ LAYER ≈ COMPLETE
+All `src/lib/*.js` top-level files are now read except the **two seed data
+files** (`seedExercises` 985, `seedRoutines` 1568) and the **`health.js`
+bodies** + the **`database.js` per-repository sweep**. The layer verdict:
+**uniformly high quality** — pure/testable engine, evidence-cited, privacy-
+conscious, ED-aware, jargon-policed. Substantive findings remain the
+cross-cutting cluster (units A2-043, a11y, sync redundancy, deep links,
+Apple Sign-In, the distress-paywall values call A2-063); everything else is
+trivia.
+
+### A2-065 — `formTips.js` duplicate key `'Landmine Row'` (`:37` + `:50`). Trivial.
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction
