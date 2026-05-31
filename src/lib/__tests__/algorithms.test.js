@@ -76,7 +76,8 @@ describe('getVolumeStatus, delt heads', () => {
     // rear_delts mev:4, mav:16 → 14 sets is within optimal range
     const result = getVolumeStatus(14, 'rear_delts');
     expect(result.status).toBe('optimal');
-    expect(result.color).toBe('#00C853');
+    // Colour resolution moved to theme.volumeStatusColor (A2-038); the pure
+    // algorithm returns only the status string now.
   });
 
   test('8 sets side_delts → minimum stimulus (at MEV)', () => {

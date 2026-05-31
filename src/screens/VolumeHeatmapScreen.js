@@ -135,8 +135,8 @@ export default function VolumeHeatmapScreen() {
     const map = {};
     for (const muscle of muscles) {
       const sets = Math.round(weeklyVolume[muscle]?.workingSets || 0);
-      const { status, color, label } = getVolumeStatus(sets, muscle, effectiveLandmarks);
-      map[muscle] = { workingSets: sets, status, color, label };
+      const { status, label } = getVolumeStatus(sets, muscle, effectiveLandmarks);
+      map[muscle] = { workingSets: sets, status, color: volumeStatusColor(status), label };
     }
     return map;
   }, [weeklyVolume, effectiveLandmarks, muscles]);
@@ -244,7 +244,8 @@ export default function VolumeHeatmapScreen() {
             const sets = Math.round(data.workingSets || 0);
             const prevSets = Math.round(prevData.workingSets || 0);
             const landmarks = effectiveLandmarks?.[muscle] || VOLUME_LANDMARKS[muscle];
-            const { color } = getVolumeStatus(sets, muscle, effectiveLandmarks);
+            const { status } = getVolumeStatus(sets, muscle, effectiveLandmarks);
+            const color = volumeStatusColor(status);
             const mrv = landmarks.mrv || 20;
             const fillPct = Math.min(sets / mrv, 1);
             const ghostFillPct = Math.min(prevSets / mrv, 1);
@@ -388,7 +389,8 @@ function MuscleTrendRow({ muscle, trendData, customLandmarks }) {
           const barHeight = isEmpty
             ? SPARK_EMPTY_HEIGHT
             : Math.max(SPARK_EMPTY_HEIGHT, Math.round((count / maxCount) * SPARK_MAX_HEIGHT));
-          const { color } = getVolumeStatus(count, muscle, customLandmarks);
+          const { status } = getVolumeStatus(count, muscle, customLandmarks);
+          const color = volumeStatusColor(status);
           const barColor = isEmpty ? colors.surface3 : color;
           return (
             <View
@@ -409,7 +411,7 @@ function MuscleTrendRow({ muscle, trendData, customLandmarks }) {
       <Text
         style={[
           trendStyles.currentCount,
-          { color: getVolumeStatus(counts[counts.length - 1], muscle, customLandmarks).color },
+          { color: volumeStatusColor(getVolumeStatus(counts[counts.length - 1], muscle, customLandmarks).status) },
         ]}
       >
         {counts[counts.length - 1]}
