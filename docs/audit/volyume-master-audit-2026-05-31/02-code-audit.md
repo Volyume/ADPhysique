@@ -1482,6 +1482,42 @@ harm-prevention system fully visible and it is a genuine differentiator.
 
 ---
 
+## lib core — batch 3: nutritionEngine (1–440), sentry, differentialPaywall
+
+### A2-063 — Differential paywall uses safety-adjacent distress signals as conversion triggers (Phase-10 ethics review).
+`differentialPaywall.js` fires a "Try Pro free" badge prioritising
+**`extreme_soreness` and `energy_crash` first** (`TRIGGER_CONTEXTS:56-63`)
+— the free user's *distress* signals are the top conversion levers. The
+actual safety guardrails remain free (tier-blind), and the copy is honest,
+but surfacing a paywall on "your soreness/energy is crashing" could read as
+**monetising distress** to a vulnerable user. → **Phase 10 + founder
+review** — a values call, not a code bug. Recommend de-prioritising the
+safety-adjacent contexts or softening their copy.
+
+### Verified strengths
+- **`nutritionEngine.js` (core read):** the **FFM floor is wired into
+  adaptive TDEE** (`computeAdaptiveTDEEAdjustment:287-316`): when 7-day
+  intake ≤ FFM floor (≥5 days logged) it **clamps cuts to zero** (adds
+  never blocked); `rapidLossOverride` composes without double-count.
+  `computeFFMFloor` uses Katch-McArdle on credible (non-visual) BF% else a
+  conservative sex-aware fallback that errs **safer**. Correction dampened
+  **50%**; `computeWeeklyWeightChange` needs ≥8 points for a true 7-day
+  span. Two EWMA variants with **deliberately different output shapes** so
+  fast (0.28) and slow (0.1) trends can't be mixed up. Evidence-based,
+  safety-first.
+- **`sentry.js`:** validates DSN format in JS **before** native init
+  (`:61-63`, documents a real uncatchable Android crash on malformed DSN);
+  wires `scrubEvent`/`scrubBreadcrumb` into `beforeSend`/`beforeBreadcrumb`;
+  10% prod sampling; lazy no-op when SDK absent. (`setSentryUser` sets
+  `email` but `scrubEvent` strips `event.user` to id-only before send — no
+  net leak.)
+- **`differentialPaywall.js`** otherwise clean: hard tier gate, 2-of-3
+  off-target gate, locked verbatim copy + snapshot test.
+
+> `nutritionEngine.js:440-860` + `coachingGoals.js` still to read.
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction

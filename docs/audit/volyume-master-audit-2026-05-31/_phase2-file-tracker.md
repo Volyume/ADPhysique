@@ -2,7 +2,7 @@
 
 Status: `[x]` read in full + findings recorded · `[~]` partially read (see 02-code-audit.md scope notes) · `[ ]` not yet read.
 Generated 2026-05-31T16:09Z. Total non-test source files: 227 (83,854 LOC).
-Read so far: 123 files.
+Read so far: 125 files (+ nutritionEngine partial).
 
 ## App.js/
 
@@ -76,7 +76,7 @@ Read so far: 123 files.
 - [ ] `dailyNarrative.js` (135)
 - [x] `dataBackup.js` (132)
 - [~] `database.js` (5574)
-- [ ] `differentialPaywall.js` (181)
+- [x] `differentialPaywall.js` (181)
 - [x] `edPatternDetector.js` (146)
 - [ ] `engineTelemetry.js` (11)
 - [x] `errorLog.js` (307)
@@ -102,7 +102,7 @@ Read so far: 123 files.
 - [ ] `restSound.js` (188)
 - [ ] `seedExercises.js` (985)
 - [ ] `seedRoutines.js` (1568)
-- [ ] `sentry.js` (192)
+- [x] `sentry.js` (192)
 - [ ] `stepsLaunchPrompt.js` (143)
 - [ ] `stepsSummary.js` (30)
 - [ ] `storeReview.js` (40)
