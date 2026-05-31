@@ -1362,10 +1362,46 @@ Documented. Medium (inert promised-looking feature).
 Now three identical generators (database.js, useAppStore, food/db). Fold to
 one shared `expo-crypto randomUUID` helper. Low.
 
-> **Food files still unread (next):** `seed.js`, `libraryDelta.js`,
-> `mealSuggest.js`, `ocr.js`, `csvExport.js`, `bulkEntryOps.js`,
-> `frequents.js`, `searchTabs.js`, `curatedFoods.js` (data), `curatedMeals.js`
-> (data).
+### Remaining food files (seed, libraryDelta, mealSuggest, ocr, csvExport, bulkEntryOps, frequents, searchTabs, curatedFoods, curatedMeals) — read → FOOD LAYER COMPLETE
+
+All clean. Highlights:
+- **`seed.js`** (bundled OFF/CoFID snapshot importers): a transaction
+  **mutex** (`_withTxLock`, `:52-57`) serialises the two importers firing
+  concurrently from bootstrap so expo-sqlite doesn't reject nested
+  transactions; chunked `INSERT OR IGNORE` (200/chunk), idempotent via
+  version flag, graceful at every boundary, parameterised. Strong.
+- **`libraryDelta.js`**: throttled (6 h) paginated cloud→local foods delta
+  (cap 25k/foreground), cursor advances only on success, parameterised
+  upsert preserving local id.
+- **`mealSuggest.js`**: pure, deterministic **rule-based** (no LLM)
+  protein-first meal ranking (`fitScore` rewards filling remaining protein,
+  penalises kcal overshoot) — fully unit-testable.
+- **`ocr.js`**: **on-device MLKit**, no API key, no network, reads file URI
+  directly (no base64 round-trip), graceful manual-entry fallback — good
+  privacy (label OCR never leaves the device).
+- **`bulkEntryOps.js`** routes bulk diary ops through the per-entry
+  primitives so rollups/sync/telemetry stay consistent; `entryToPatch`
+  sends the whole row to avoid nulling macros.
+- **`searchTabs.js`**: the "Database" tab was removed for a persistent
+  search bar "matching MyFitnessPal/MacroFactor/Cronometer" — good
+  competitive UX alignment (Phase 8 input).
+- **`curatedFoods.js`/`curatedMeals.js`**: research-grounded (ISSN/Morton
+  2018/Helms 2014), macros **computed** from a staple table not hand-typed,
+  `Object.freeze`d. Internally consistent.
+
+### A2-060 — `csvExport.js` doesn't neutralise CSV formula-injection prefixes. Trivial.
+`csvEscape` (`:18-25`) handles comma/quote/newline but not a leading
+`=`/`+`/`-`/`@` (Excel/Sheets formula injection if a food name starts with
+one). Very low risk (user exports their **own** diary), but a one-line
+prefix-guard is the standard hardening. → Phase 5 note, trivial.
+
+### FOOD LAYER VERDICT
+All 32 food files (lib + components) read. **A well-engineered, privacy-
+conscious, ED-aware subsystem** — parameterised throughout (no SQLi),
+on-device OCR, consent-gated OFF contribution, defensive sanity-checks
+feeding the safety calc, adherence-neutral UI. No correctness defects;
+only A2-037 (client-bundled USDA key), A2-036 (3rd uid), A2-060 (CSV) —
+all low/trivial.
 
 ---
 

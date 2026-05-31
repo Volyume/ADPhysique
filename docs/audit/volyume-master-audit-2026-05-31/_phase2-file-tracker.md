@@ -2,7 +2,7 @@
 
 Status: `[x]` read in full + findings recorded · `[~]` partially read (see 02-code-audit.md scope notes) · `[ ]` not yet read.
 Generated 2026-05-31T16:09Z. Total non-test source files: 227 (83,854 LOC).
-Read so far: 104 files.
+Read so far: 114 files (components, sync, payments, telemetry, notifications, FOOD all complete).
 
 ## App.js/
 
@@ -120,19 +120,19 @@ Read so far: 104 files.
 
 ## src/lib/food/
 
-- [ ] `bulkEntryOps.js` (58)
-- [ ] `csvExport.js` (94)
-- [ ] `curatedFoods.js` (124)
-- [ ] `curatedMeals.js` (238)
+- [x] `bulkEntryOps.js` (58)
+- [x] `csvExport.js` (94)
+- [x] `curatedFoods.js` (124)
+- [x] `curatedMeals.js` (238)
 - [x] `db.js` (1112)
-- [ ] `frequents.js` (38)
-- [ ] `libraryDelta.js` (243)
-- [ ] `mealSuggest.js` (197)
-- [ ] `ocr.js` (61)
+- [x] `frequents.js` (38)
+- [x] `libraryDelta.js` (243)
+- [x] `mealSuggest.js` (197)
+- [x] `ocr.js` (61)
 - [x] `ocrParser.js` (147)
 - [x] `sanityChecks.js` (92)
-- [ ] `searchTabs.js` (26)
-- [ ] `seed.js` (257)
+- [x] `searchTabs.js` (26)
+- [x] `seed.js` (257)
 - [x] `waterfall.js` (167)
 - [x] `writeback.js` (158)
 
