@@ -2,7 +2,7 @@
 
 Status: `[x]` read in full + findings recorded · `[~]` partially read (see 02-code-audit.md scope notes) · `[ ]` not yet read.
 Generated 2026-05-31T16:09Z. Total non-test source files: 227 (83,854 LOC).
-Read so far: 114 files (components, sync, payments, telemetry, notifications, FOOD all complete).
+Read so far: 120 files.
 
 ## App.js/
 
@@ -64,7 +64,7 @@ Read so far: 114 files (components, sync, payments, telemetry, notifications, FO
 
 ## src/lib/
 
-- [ ] `accessibilityPrefs.js` (14)
+- [x] `accessibilityPrefs.js` (14)
 - [ ] `activitySteps.js` (175)
 - [x] `algorithms.js` (1100)
 - [ ] `blockAdvisor.js` (385)
@@ -74,12 +74,12 @@ Read so far: 114 files (components, sync, payments, telemetry, notifications, FO
 - [ ] `coachingGoals.js` (513)
 - [ ] `cyclePrefs.js` (39)
 - [ ] `dailyNarrative.js` (135)
-- [ ] `dataBackup.js` (132)
+- [x] `dataBackup.js` (132)
 - [~] `database.js` (5574)
 - [ ] `differentialPaywall.js` (181)
 - [ ] `edPatternDetector.js` (146)
 - [ ] `engineTelemetry.js` (11)
-- [ ] `errorLog.js` (307)
+- [x] `errorLog.js` (307)
 - [ ] `exerciseDisplay.js` (117)
 - [ ] `exerciseMetadata.js` (242)
 - [ ] `feedback.js` (238)
@@ -97,7 +97,7 @@ Read so far: 114 files (components, sync, payments, telemetry, notifications, FO
 - [~] `planEngine.js` (1549)
 - [ ] `planSwitch.js` (53)
 - [ ] `poolGenerator.js` (131)
-- [ ] `proGate.js` (61)
+- [x] `proGate.js` (61)
 - [ ] `recoveryEMA.js` (114)
 - [ ] `restSound.js` (188)
 - [ ] `seedExercises.js` (985)
@@ -110,10 +110,10 @@ Read so far: 114 files (components, sync, payments, telemetry, notifications, FO
 - [x] `supabase.js` (187)
 - [ ] `swapEngine.js` (300)
 - [~] `sync.js` (1732)
-- [ ] `syncQueue.js` (225)
+- [x] `syncQueue.js` (225)
 - [ ] `travelMode.js` (295)
 - [ ] `unilateral.js` (77)
-- [ ] `units.js` (121)
+- [x] `units.js` (121)
 - [~] `weeklyCoach.js` (1093)
 - [ ] `wellbeing.js` (36)
 - [ ] `whyThisTemplates.js` (419)

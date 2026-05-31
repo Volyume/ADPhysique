@@ -1405,6 +1405,46 @@ all low/trivial.
 
 ---
 
+## lib core — batch 1: units, errorLog, syncQueue, proGate, accessibilityPrefs, dataBackup
+
+### A2-043 reinforced — the conversion infra EXISTS (units.js) but gym weight never uses it.
+`units.js` provides `kgToLbs`/`lbsToKg`/`stoneLbsToKg`/`parseBodyWeightToKg`/
+`formatBodyWeight` and states "**All internal storage is kg**" (`:7`) — and
+**bodyweight** genuinely is kg-canonical via these helpers. But **gym
+weight bypasses all of it** (A2-043: stored raw in display unit,
+`ActiveWorkoutScreen:748`). So `units.js:7`'s blanket comment is inaccurate
+for gym weight, and the **A2-043 fix is low-risk**: route gym-weight I/O
+through the existing `lbsToKg`/`kgToLbs` (+ unit-aware increments/plates).
+
+### A2-061 — Two parallel offline-sync queue systems.
+`syncQueue.js` (`pending_sync_ops`; workout/body_metric/morning_weight/
+check_in) and `sync/queue.js` (`sync_queue`; the 16 registry tables) are
+**two distinct queue implementations** with their own backoff schedules.
+Mirrors the legacy/registry split (A2-029) — not a bug (different domains)
+but duplicated machinery. Maintainability. Low.
+
+### A2-036 (4th copy) — `syncQueue.js:28-33` another `uid()` (now 4 copies).
+### A2-062 — `dataBackup.js:4-7` stale comment "There is no cloud sync" (there is). Trivial.
+
+### Verified strengths
+- **`errorLog.js`** = a **second PII-redaction layer**: `redactPII` over a
+  comprehensive `PII_KEYS` set (auth secrets, body data, names, notes)
+  applied **before** the user-exportable ring buffer **and** before
+  forwarding to Sentry (`:172-221`); `sanitizeStack` strips source-frame
+  excerpts so user values don't leak into an exportable log. Global
+  uncaught-exception + unhandled-rejection handlers (`:273-307`).
+- **`proGate.js` — safety is tier-blind (ethical positive):** explicit
+  contract (`:21-23`) that the FFM floor / ED-pattern lockout / rapid-loss
+  guardrails "MUST NOT consult tier". **Free users still get the
+  eating-disorder safeguards** — safety is never paywalled.
+- **`syncQueue.js`** resilient: `safeCall` guard so one rogue op-type can't
+  strand the drain; `_runOp` re-reads SQLite for freshest state; gives up
+  after 6 retries keeping `last_error`. Parameterised.
+- **`dataBackup.js`** full local export/import with format+version
+  validation (rejects unversioned/newer); auth tokens excluded (SecureStore).
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction
