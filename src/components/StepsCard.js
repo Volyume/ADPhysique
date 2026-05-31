@@ -55,8 +55,19 @@ export default function StepsCard({ userId, stepsTarget }) {
     } catch (_) { /* leave the zeros */ }
   }, [userId]);
 
-  // Re-read when the screen gains navigation focus.
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  // Re-read on navigation focus, then keep polling while the screen stays
+  // focused so the figure tracks new steps without a tab switch. Health Connect
+  // batches its on-device step writes no more than once a minute, so a 30s poll
+  // is as live as the data ever gets; polling faster would re-read an identical
+  // number. The tick no-ops while the app is backgrounded, and the interval is
+  // cleared on blur, so there is no background battery cost.
+  useFocusEffect(useCallback(() => {
+    load();
+    const id = setInterval(() => {
+      if (AppState.currentState === 'active') load();
+    }, 30_000);
+    return () => clearInterval(id);
+  }, [load]));
 
   // Re-read when the app returns to the foreground. useFocusEffect fires on
   // navigation focus only, not on a background→active transition, so without
