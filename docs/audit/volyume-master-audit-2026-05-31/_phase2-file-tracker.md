@@ -2,7 +2,7 @@
 
 Status: `[x]` read in full + findings recorded · `[~]` partially read (see 02-code-audit.md scope notes) · `[ ]` not yet read.
 Generated 2026-05-31T16:09Z. Total non-test source files: 227 (83,854 LOC).
-Read so far: 85 files.
+Read so far: 98 files (components, sync, payments, telemetry, notifications complete).
 
 ## App.js/
 
@@ -148,19 +148,19 @@ Read so far: 85 files.
 
 ## src/lib/notifications/
 
-- [ ] `activeWorkout.js` (197)
-- [ ] `categories.js` (93)
-- [ ] `channels.js` (41)
-- [ ] `handler.js` (85)
-- [ ] `index.js` (81)
-- [ ] `listeners.js` (101)
-- [ ] `permissions.js` (51)
-- [ ] `preferences.js` (287)
-- [ ] `pushToken.js` (163)
-- [ ] `quietHours.js` (124)
-- [ ] `scheduler.js` (428)
-- [ ] `telemetry.js` (105)
-- [ ] `trainingReminders.js` (178)
+- [x] `activeWorkout.js` (197)
+- [x] `categories.js` (93)
+- [x] `channels.js` (41)
+- [x] `handler.js` (85)
+- [x] `index.js` (81)
+- [x] `listeners.js` (101)
+- [x] `permissions.js` (51)
+- [x] `preferences.js` (287)
+- [x] `pushToken.js` (163)
+- [x] `quietHours.js` (124)
+- [x] `scheduler.js` (428)
+- [x] `telemetry.js` (105)
+- [x] `trainingReminders.js` (178)
 
 ## src/lib/observability/
 

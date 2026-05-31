@@ -1273,6 +1273,60 @@ breadcrumbs which the scrubber then cleans. Good data-minimisation.
 
 ---
 
+## Notifications layer — all 13 files read → NOTIFICATIONS LAYER COMPLETE
+
+Read: scheduler, quietHours, pushToken, preferences, handler, listeners,
+activeWorkout, trainingReminders, index, categories, channels, permissions,
+telemetry. Well-architected; a few real findings + strong ED-safety.
+
+### A2-056 — Remote push is currently disabled (no EAS `projectId`).
+`pushToken.js:71-81`: `getExpoPushToken` no-ops (logs once) when
+`extra.eas.projectId` is absent from `app.json` — which it is. The **only**
+remote-push use case — the **subscription-payment-failure** push (Play
+Billing RTDN → send-push Edge Function) — therefore silently does nothing;
+`registerPushToken` returns false. A user whose card fails won't be pushed.
+Documented founder-action. → Phase 4 feature gap (not a code bug).
+
+### A2-057 — Two conflicting `setNotificationHandler`; App.js's is effectively dead.
+`App.js:95-107` sets a foreground handler that plays sound for the
+`rest-done` channel. `handler.js:17-40` (via `RootNavigator:441`) sets a
+different smart-suppression handler whose default returns
+`shouldPlaySound:false` with no `rest-done` case. `setNotificationHandler`
+*replaces*; RootNavigator's effect runs after App.js module scope → **handler.js
+wins**, App.js's rest-done sound logic never applies (in-app beep handled by
+`RestTimer.playRestBeep`, so audible behaviour may be unaffected, but App.js
+`:95-107` is dead). → unify. Low–medium.
+
+### A2-059 — Lock-screen workout notification + native foreground-service rest timer BOTH disabled.
+- `activeWorkout.js:126-127`: `showActiveWorkoutNotification` **returns
+  immediately** (rest is `no-unreachable`) — persistent lock-screen workout
+  status is **off** (confusing "Set 3 of 2"). Yet `ActiveWorkoutScreen:460,485`
+  still call it on every state change / 15 s → those effects (and A2-044)
+  **fire into a no-op**.
+- `activeWorkout.js:47` `USE_FOREGROUND_SERVICE = false`: the
+  `rest-timer-live` foreground service is disabled — on Android 14
+  `FOREGROUND_SERVICE_TYPE_HEALTH` throws `SecurityException` without an
+  `ACTIVITY_RECOGNITION`/`BODY_SENSORS` manifest permission ("Volyume keeps
+  stopping" on workout start). Rest timer does not survive force-close.
+→ Phase 4/6: dead effects in the hottest screen + a real platform limit.
+Documented. Medium (inert promised-looking feature).
+
+### A2-058 — `trainingReminders.js:133-135` dead ternary (both branches identical). Trivial.
+
+### Verified strengths
+- **ED-safety:** `categories.js:36-41` routes `ED_PATTERN_LOCKOUT` +
+  `FFM_FLOOR_HOLD` to **IN_APP only** — "push for those is the harm
+  pattern". Never lock-screen-pushes ED/FFM events.
+- **Smart foreground suppression** (`handler.js`): no "log weight" if
+  already logged today, etc. Anti-annoyance done right.
+- **Quiet hours** (22:00–07:00, midnight-wrap-correct) on every schedule;
+  cancel-before-reschedule = idempotent.
+- Push token device-bound, sync-excluded, cleared on sign-out; atomic
+  conditional LWW upsert in `applyPreferenceFromPull`. Telemetry never
+  throws / won't misattribute.
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction
