@@ -16,9 +16,13 @@ Branch: `main` @ `a4bf964`
 > `src/store/useAppStore.js` (1–911), `src/styles/theme.js` (1–366),
 > `src/lib/sync/runner.js` (1–242), `src/lib/sync/index.js` (1–39).
 > **Partially read:** `src/lib/sync.js` (377–425 scheduleSync, 537–580
-> bulkUploadLocalData head, structure via grep) — full read PENDING.
-> **Next:** finish `src/lib/sync.js`, `src/lib/database.js`, food engine,
-> large screens.
+> bulkUploadLocalData head, 1150–1316 pullFromCloud full, plus several
+> single-row `sync*` upserts) — per-table `_pull*` helpers not individually
+> read. `src/lib/database.js` (1–130 init/schema, 255–299 + 1120–1187
+> migration system, 1390–1417 + 2074 update builders, 3176–3265
+> wipeAllUserData, full-file SQLi scan) — the hundreds of repository CRUD
+> functions are NOT each read; claims are scoped to what was read.
+> **Next:** food engine, large screens; per-repository sweep of database.js.
 
 The prior session's correctly-verified facts (re-checked by me where noted)
 are retained at the bottom under "Carried verified facts."
@@ -478,14 +482,111 @@ coverage via the normal write path.
 
 ---
 
+## `src/lib/sync.js` `pullFromCloud` (1150–1316) — read in full
+
+**A2-031 — Legacy `pullFromCloud` returns a number, so its per-table counts never reach `sync_run` telemetry.**
+`pullFromCloud` returns `workoutCount` (a number) on success or `0`
+(`:1311, :1314`). But the runner expects an object:
+`if (pull && typeof pull === 'object' && pull.pullCountPerTable)`
+(`runner.js:154`). Since a number fails that guard, **none of the legacy
+per-table pull counts** (programmes, routines, mesocycles, weights,
+coach outputs, the ~15 `_pull*` helpers at `:1231-1254`) are merged into
+`pull_count_per_table` in the `sync_run` event. Same shape risk applies to
+`bulkUploadLocalData`/`pushCountPerTable` (`runner.js:122`) — to confirm
+when its return is read. Observability gap, not a functional bug. Low.
+
+### Positive observations (verified)
+- Incremental **watermark delta pull** for workouts (`:1182-1227`): warm
+  cursor pulls only `updated_at >= cursor`; cursor advances **only** on a
+  fully clean pass (`:1225-1227`); sign-out clears it so sign-in full-pulls.
+  Sound incremental-sync design.
+- Exercises pulled **first** for FK resolution (`:1165-1172`); sets fetched
+  in chunks after the workout shells (`:1202-1206`) — explicitly fixes a
+  prior N+1.
+- The comment at `:1297-1302` records a real shipped bug: a stray
+  `notifPrefCount` reference threw a Hermes `ReferenceError` that dumped
+  the **entire pull** into the catch (returned 0). This is exactly the
+  `no-undef` class the ESLint gate (`eslint.config.js:114`) now blocks —
+  concrete justification for that gate.
+
+---
+
+## `src/lib/database.js` — structural core read (NOT a full per-function read)
+
+> Scope: I read the init/schema (`1–130`), the migration system
+> (`255–299`, `1120–1187`), the two dynamic-`SET` update builders
+> (`1390–1417`, `2074`), `wipeAllUserData` (`3176–3265`), and ran a
+> full-file SQL-injection scan. The hundreds of individual repository
+> CRUD functions are **not** each audited yet. Findings below are limited
+> to what was read.
+
+### A2-032 — Migration runner is CORRECT — but the prior doc's evidence for it was inaccurate.
+`runMigrations` (`:1157-1187`): iterates `SCHEMA_MIGRATIONS` (array of
+per-version op lists, `:277-1146`); benign errors (`duplicate column` /
+`already exists`) are skipped via `continue` (`:1177`); a **genuine**
+error is logged and **re-thrown** (`:1180-1181`); `PRAGMA user_version =
+v+1` is set **after** the inner op loop (`:1185`), so a failed version
+throws before its version is recorded and **re-runs next launch**. This
+is correct. **However**, the prior `02-code-audit.md` cited
+`database.js:1152-1175` and described an `m.up()` pattern — **neither
+exists**; the real structure is the `SCHEMA_MIGRATIONS` array +
+`isBenignMigrationError`. The conclusion was right, the cited evidence was
+fabricated/mismatched. Recording the accurate evidence here.
+
+### A2-033 — Prior open question RESOLVED: the ALTER-swallow is properly scoped.
+The carried worry ("the ALTER-swallow also swallows non-duplicate errors
+silently") is **refuted**. `isBenignMigrationError` (`:1150-1155`) returns
+true **only** for `duplicate column` / `already exists` / `duplicate
+column name`. Any other error falls through to `throw` (`:1181`). The
+catch is scoped; genuine schema failures are not hidden. Open question
+closed.
+
+### A2-034 — SQL-injection surface of the local DB layer is effectively nil (Phase 5 positive).
+Of **279** SQLite query calls, only **6** use `${}` interpolation
+(verified by grep), and every one interpolates a **code-controlled
+identifier**, never a value:
+- `:1185` `PRAGMA user_version = ${v+1}` — `v` is a loop integer.
+- `:1416` / `:2074` `UPDATE … SET ${fields.join(', ')} WHERE id = ?` —
+  `fields` are `col = ?` strings built from a **hardcoded `fieldMap`
+  whitelist** (`:1390-1404`); only keys present in both the map and the
+  caller's `data` are included (`:1407-1408`); all values bound via `?`.
+- `:3249` `DELETE FROM ${table} …`, `:3311` `SELECT * FROM ${t}`,
+  `:3329` `DELETE FROM ${t}` — `table`/`t` iterate hardcoded constant
+  lists (`WIPE_DIRECT_TABLES` etc.), never user input.
+All other 273 calls use bound `?` params. → Carry to `05-security-audit.md`
+as a verified strength.
+
+### A2-035 — `wipeAllUserData` is well-built (verified).
+`:3176-3265`: wrapped in `runInTransaction`, deletes FK children before
+parents (adaptation_events → planned_muscle_volume → mesocycle_weeks →
+routine_exercises → direct-user tables), per-table try/catch so a missing
+table on an older schema doesn't abort the wipe, `userId` bound. One
+note: `DELETE FROM exercises WHERE is_custom = 1` (`:3261`) is **not**
+user-scoped — it wipes all custom exercises. Safe under the documented
+"one user's data on the device at a time / sign-out wipes local SQLite"
+model, but it is the one wipe step that would over-delete if that
+invariant were ever violated. Low.
+
+### A2-036 — `uid()` duplicates the store's `generateUUID` (both `Math.random`).
+`database.js:21-30` `uid()` and `useAppStore.js:85-90` `generateUUID` are
+the same `Math.random` UUIDv4 generator, defined twice. `database.js:25`
+adds the explicit justification "ids are not security-sensitive", which
+partially answers A2-020 for **row** ids. Recommend a single shared
+`expo-crypto randomUUID` helper to remove the duplication and the
+`Math.random` caveat in one move. Low.
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction
 section. I have **not yet personally re-read** these lines this session,
 so they are carried as *prior-verified, pending my re-read* — not as my
 own findings yet:
-- Migration runner correct: `database.js:1152-1175` (bumps `user_version`
-  only inside `try` after `m.up()`).
+- ~~Migration runner correct: `database.js:1152-1175` … `m.up()`~~
+  **RE-VERIFIED with corrected evidence — see A2-032/A2-033 above. The
+  conclusion (runner correct, swallow scoped) holds; the prior line
+  numbers and `m.up()` description were wrong.**
 - ~~`supabase.js` env-only…~~ **CONFIRMED by my read — see the
   `supabase.js` section above (A2-016..018 + verified positives).**
 - Food sources have `AbortController` timeouts + env keys: `usda.js:26-48`,
