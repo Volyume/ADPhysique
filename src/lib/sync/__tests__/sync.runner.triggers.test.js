@@ -114,3 +114,29 @@ describe('App.js wires the three non-write triggers', () => {
     expect(APP).toMatch(/setInterval\([^,]+,\s*15\s*\*\s*60\s*\*\s*1000\s*\)/);
   });
 });
+
+// A2-001 / A2-012 regression: the foreground catch-up effect (maybeSync) used
+// to call bulkUploadLocalData directly, bypassing the runner lock and racing
+// callSyncAll('foreground'). It must now route through syncAll so the single
+// in-memory lock dedupes. Scope the assertions to the maybeSync effect body.
+describe('A2-001 foreground catch-up routes through syncAll', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const APP = fs.readFileSync(path.resolve(__dirname, '../../../../App.js'), 'utf8');
+  const maybeStart = APP.indexOf('async function maybeSync');
+  const callSyncAllStart = APP.indexOf('async function callSyncAll');
+  const maybeSyncBody = APP.slice(maybeStart, callSyncAllStart);
+
+  test('maybeSync block is found and precedes the callSyncAll effect', () => {
+    expect(maybeStart).toBeGreaterThan(-1);
+    expect(callSyncAllStart).toBeGreaterThan(maybeStart);
+  });
+
+  test('maybeSync no longer calls bulkUploadLocalData directly', () => {
+    expect(maybeSyncBody).not.toMatch(/bulkUploadLocalData/);
+  });
+
+  test('maybeSync routes its catch-up through syncAll with a background trigger', () => {
+    expect(maybeSyncBody).toMatch(/syncAll\(\s*\{[^}]*triggeredBy:\s*['"]background['"]/);
+  });
+});
