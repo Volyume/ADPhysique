@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal, TextInput, Alert,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal, TextInput,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,6 +19,7 @@ import { buildDailyNarrative } from '../lib/dailyNarrative';
 import { SkeletonCard } from '../components/Skeleton';
 import Sparkline from '../components/Sparkline';
 import StepsCard from '../components/StepsCard';
+import { useToast } from '../components/Toast';
 import {
   getAllWorkouts, getCompletedWorkoutSets, getActivePlan, getRoutinesForPlan,
   getAllRoutineExerciseCounts, createWorkout, getRoutineExercisesWithDetails,
@@ -49,6 +50,7 @@ function getGreeting(firstName) {
 }
 
 export default function HomeScreen({ navigation }) {
+  const toast = useToast();
   const { user, userProfile, startWorkout, activeWorkout, tier, bodyWeightUnits } = useAppStore(
     useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, tier: s.tier, bodyWeightUnits: s.bodyWeightUnits }))
   );
@@ -375,7 +377,7 @@ export default function HomeScreen({ navigation }) {
       // Revert the optimistic update and surface the failure.
       setTodayWeight(previousTodayWeight);
       logError('HomeScreen.handleLogWeight', e, { userId: user?.id, weightKg });
-      Alert.alert('Couldn\'t save weight', e?.message ?? 'Try again.');
+      toast.show("Couldn't save weight, try again", { variant: 'error' });
     }
     setSavingWeight(false);
   }
@@ -579,7 +581,7 @@ export default function HomeScreen({ navigation }) {
     } catch (e) {
       setIsStartingWorkout(false);
       logError('HomeScreen.handleStartNextWorkout', e, { userId: user?.id, routineId: target?.routine?.id });
-      Alert.alert('Couldn\'t load workout', e?.message ?? 'Try again.');
+      toast.show("Couldn't load workout, try again", { variant: 'error' });
     }
   }
 
@@ -595,7 +597,7 @@ export default function HomeScreen({ navigation }) {
     } catch (e) {
       setIsStartingWorkout(false);
       logError('HomeScreen.confirmStart', e, { userId: user?.id, routineId: pending?.routineId, intent });
-      Alert.alert('Couldn\'t start workout', e?.message ?? 'Try again.');
+      toast.show("Couldn't start workout, try again", { variant: 'error' });
     }
     pendingStartRef.current = null;
   }
@@ -616,7 +618,7 @@ export default function HomeScreen({ navigation }) {
       navigation.navigate('ActiveWorkout');
     } catch (e) {
       logError('HomeScreen.startBlankSession', e, { userId: user?.id });
-      Alert.alert("Couldn't start session", e?.message ?? 'Try again.');
+      toast.show("Couldn't start session, try again", { variant: 'error' });
     }
   }
 
@@ -655,7 +657,7 @@ export default function HomeScreen({ navigation }) {
       setShowIntentPrompt(true);
     } catch (e) {
       logError('HomeScreen.handleRepeatLastSession', e, { userId: user?.id, lastSessionId: lastSession?.id, routineId });
-      Alert.alert('Couldn\'t load last session', e?.message ?? 'Try again.');
+      toast.show("Couldn't load last session, try again", { variant: 'error' });
     }
   }
 
@@ -1143,7 +1145,7 @@ export default function HomeScreen({ navigation }) {
                   if (result.ok) {
                     await loadData();
                   } else {
-                    Alert.alert('Could not build plan', `${result.error}. Open Settings → Your goals to update your profile, then try again.`);
+                    toast.show(`Couldn't build plan: ${result.error}`, { variant: 'error', duration: 5000 });
                   }
                 }}
                 activeOpacity={0.88}

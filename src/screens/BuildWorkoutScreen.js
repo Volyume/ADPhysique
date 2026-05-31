@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList,
-  Modal, TextInput, Alert,
+  Modal, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,12 +12,14 @@ import { getAllExercises, createWorkout } from '../lib/database';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { generateTravelPlan } from '../lib/travelMode';
 import useAppStore from '../store/useAppStore';
+import { useToast } from '../components/Toast';
 import { logError } from '../lib/errorLog';
 
 const DEFAULT_SETS = 3;
 const DEFAULT_REST = 90;
 
 export default function BuildWorkoutScreen({ navigation }) {
+  const toast = useToast();
   const { user, startWorkout, units } = useAppStore();
   const [exercises, setExercises] = useState([]);
   const [showPicker, setShowPicker] = useState(false);
@@ -75,7 +77,7 @@ export default function BuildWorkoutScreen({ navigation }) {
 
   async function handleStartTraining() {
     if (exercises.length === 0) {
-      Alert.alert('No exercises', 'Add at least one exercise or tap Skip Setup to start empty.');
+      toast.show('Add at least one exercise, or tap Skip Setup to start empty', { variant: 'warning' });
       return;
     }
     setStarting(true);
@@ -97,7 +99,7 @@ export default function BuildWorkoutScreen({ navigation }) {
       navigation.replace('ActiveWorkout');
     } catch (e) {
       logError('BuildWorkoutScreen.handleStartTraining', e, { userId: user?.id, exerciseCount: exercises.length });
-      Alert.alert('Couldn\'t start workout', e?.message ?? 'Try again.');
+      toast.show("Couldn't start workout, try again", { variant: 'error' });
     } finally {
       setStarting(false);
     }
@@ -110,7 +112,7 @@ export default function BuildWorkoutScreen({ navigation }) {
       navigation.replace('ActiveWorkout');
     } catch (e) {
       logError('BuildWorkoutScreen.handleSkip', e, { userId: user?.id });
-      Alert.alert('Couldn\'t start workout', e?.message ?? 'Try again.');
+      toast.show("Couldn't start workout, try again", { variant: 'error' });
     }
   }
 

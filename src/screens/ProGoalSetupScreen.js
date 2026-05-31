@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../store/useAppStore';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import Chip from '../components/Chip';
+import { useToast } from '../components/Toast';
 import {
   PHYSIQUE_GOALS, PHYSIQUE_GOAL_GROUPS,
   TRAINING_PHASES,
@@ -62,6 +63,7 @@ const RECOVERY_OPTIONS = [
 const NUTRITION_KEY = '@volyume_nutrition_targets';
 
 export default function ProGoalSetupScreen({ navigation }) {
+  const toast = useToast();
   const { user, userProfile, saveLocalProfile } = useAppStore();
 
   const [goalFilterGroup, setGoalFilterGroup] = useState('All');
@@ -92,7 +94,7 @@ export default function ProGoalSetupScreen({ navigation }) {
     setPlanWeakPoints(prev => {
       if (prev.includes(muscle)) return prev.filter(m => m !== muscle);
       if (prev.length >= 3) {
-        Alert.alert('Max 3 muscles', 'Deselect one before adding another.');
+        toast.show('Pick up to 3 muscles. Deselect one first', { variant: 'warning' });
         return prev;
       }
       return [...prev, muscle];
@@ -226,10 +228,7 @@ export default function ProGoalSetupScreen({ navigation }) {
     } catch (e) {
       // Don't block the goal save if the recalc fails. Surface to the user
       // so they know targets weren't updated this time.
-      Alert.alert(
-        'Nutrition targets not updated',
-        'Your goal was saved but we couldn\'t recalculate the targets. Try opening Nutrition Targets to refresh them.',
-      );
+      toast.show("Goal saved, but targets didn't recalculate. Open Nutrition Targets to refresh", { variant: 'warning', duration: 5000 });
     }
 
     await saveLocalProfile(user.id, updatedProfile);
@@ -247,16 +246,13 @@ export default function ProGoalSetupScreen({ navigation }) {
     if (!planResult.ok) {
       // Don't block navigation, the goal is saved, nutrition updated. Just
       // tell the user the plan side didn't reroll so they can retry from Home.
-      Alert.alert(
-        'Plan didn\'t update',
-        `Your goal and calorie targets are saved, but the training plan didn\'t reroll for the new goal (${planResult.error}). Open Home and tap "Build my plan" to retry.`,
-      );
+      toast.show(`Goal and targets saved, but the plan didn't reroll (${planResult.error}). On Home, tap Build my plan to retry`, { variant: 'warning', duration: 5000 });
     }
 
     // Navigate to the change-summary screen instead of just popping back so
     // the user can see exactly what shifted and why. planRerolled tells the
     // summary whether the active plan was rebuilt (the path generateAndSavePlan
-    // returns ok) or left in place (engine failure, see the Alert above).
+    // returns ok) or left in place (engine failure, see the toast above).
     navigation.replace('GoalChangeSummary', {
       previous: {
         goal: previousProfile.goal,
