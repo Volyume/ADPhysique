@@ -28,6 +28,29 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Free disk space before the build. The release build (assembleRelease +
+      # bundleRelease for all ABIs, plus the react-native-skia native libs and
+      # the release lint-vital pass) sits close to the runner's disk ceiling,
+      # and the restored Gradle cache grows each run. A run failed with two
+      # "No space left on device" errors, at
+      # :shopify_react-native-skia:copyReleaseJniLibsProjectOnly (copying
+      # librnskia.so) and :expo:lintVitalAnalyzeRelease (executionHistory.bin),
+      # after all 1683 tasks had executed; the Gradle daemon then died ("Could
+      # not receive a message from the daemon"). Removing the large preinstalled
+      # toolchains we never use (dotnet, Haskell/ghc, Swift, PowerShell) and
+      # pruning docker images frees ~12-15GB. The Android SDK/NDK are left
+      # untouched because the native modules need them to compile.
+      - name: Free disk space
+        run: |
+          echo "--- disk before cleanup ---"; df -h /
+          sudo rm -rf /usr/share/dotnet || true
+          sudo rm -rf /opt/ghc /usr/local/.ghcup || true
+          sudo rm -rf /usr/share/swift || true
+          sudo rm -rf /usr/local/share/powershell || true
+          sudo rm -rf /usr/local/share/chromium /usr/local/share/vcpkg || true
+          docker image prune --all --force || true
+          echo "--- disk after cleanup ---"; df -h /
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
