@@ -2,7 +2,7 @@
 
 Status: `[x]` read in full + findings recorded · `[~]` partially read (see 02-code-audit.md scope notes) · `[ ]` not yet read.
 Generated 2026-05-31T16:09Z. Total non-test source files: 227 (83,854 LOC).
-Read so far: 16 full, 6 partial. Remaining: 205.
+Read so far: 34 full + 6 partial.
 
 ## App.js/
 
@@ -18,12 +18,12 @@ Read so far: 16 full, 6 partial. Remaining: 205.
 - [x] `Button.js` (108)
 - [x] `Card.js` (86)
 - [x] `Chip.js` (72)
-- [ ] `DifferentialBadge.js` (115)
+- [x] `DifferentialBadge.js` (115)
 - [x] `EmptyState.js` (129)
 - [ ] `EngineLog.js` (161)
-- [ ] `ExerciseCard.js` (126)
+- [x] `ExerciseCard.js` (126)
 - [ ] `FatigueTrendCard.js` (86)
-- [ ] `FeedbackSheet.js` (486)
+- [x] `FeedbackSheet.js` (486)
 - [ ] `GradientCard.js` (40)
 - [ ] `Illustrations.js` (167)
 - [ ] `InfoTooltip.js` (58)
@@ -42,8 +42,8 @@ Read so far: 16 full, 6 partial. Remaining: 205.
 - [x] `Stepper.js` (83)
 - [ ] `StepsCard.js` (108)
 - [ ] `SvgBarSparkline.js` (84)
-- [ ] `SvgLineChart.js` (190)
-- [ ] `TierComparisonStrip.js` (119)
+- [x] `SvgLineChart.js` (190)
+- [x] `TierComparisonStrip.js` (119)
 - [x] `Toast.js` (242)
 - [x] `VolumeBars.js` (85)
 - [ ] `WhatsNewSheet.js` (176)

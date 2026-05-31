@@ -1027,6 +1027,47 @@ unify both on `theme.volumeColors`.
 
 ---
 
+## Components — batch 4 (read in full): ExerciseCard, FeedbackSheet, SvgLineChart, TierComparisonStrip, DifferentialBadge
+
+### A2-052 — `ExerciseCard` dead var `sfr` (`:13`).
+`const sfr = exercise.stimulusToFatigueRatio || … || 3` computed but never
+rendered. Confirms the Phase-7 lint flag `ExerciseCard.js:13`. Trivial.
+
+### A2-047 (more sites) — `SvgLineChart` hex-concat.
+`:39` `${theme.textMuted}66`, `:97-98` `${color}30`/`${color}05` — same
+fragile concat as A2-047. Add to the `withAlpha` cleanup list. Trivial.
+
+### A2-053 / A2-054 — trivial doc/contract mismatches.
+- `TierComparisonStrip.js:20` inline comment says "Left column = Complete"
+  but the header comment (`:5`) and render order (`:76-78`, Pro then
+  Complete) put **Pro left, Complete right**. Stale comment.
+- `DifferentialBadge.js:29` calls `onTapCta('shown')` but the prop is
+  documented as `(action: 'pay'|'dismiss')` (`:22`) — `'shown'` is an
+  undocumented third value. Harmless; fix the JSDoc.
+
+### Verified strengths
+- **`FeedbackSheet`** — shake-to-report (sustained-shake accelerometer
+  detection, web bypass, 30 s suppression, accelerometer sub cleaned up
+  `:112`), sentiment chips with `accessibilityState`, 12 s auto-dismiss,
+  and a **clear privacy disclosure**: "Sent with build info, your last few
+  actions, and a recent error… Body measurements and names are stripped
+  before sending" (`:335-337`). → Phase 5 privacy positive (disclosed data
+  minimisation).
+- **`SvgLineChart`** — single SVG chart engine (replaced gifted-charts +
+  victory), geometry unit-tested in `chartGeometry`, per-instance gradient
+  id to avoid collisions (`:59`), `<2` points → null, dual-series support.
+- **`TierComparisonStrip`** pulls prices from `catalogue.skuFor` so the
+  shown price always matches the purchased SKU. **`DifferentialBadge`** is
+  clean presentation + impression telemetry. **`ExerciseCard`** clean,
+  a11y-labelled.
+
+> **Components still unread (carried to next batch):** AnimatedEntrance,
+> BlockProgressCard, BrandMark, EngineLog, FatigueTrendCard, GradientCard,
+> Illustrations, InfoTooltip, ReadinessCards, Sparkline, StepsCard,
+> SvgBarSparkline, WhatsNewSheet, + the 11 `components/food/*`.
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction
