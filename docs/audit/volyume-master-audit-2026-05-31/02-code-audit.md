@@ -1755,6 +1755,51 @@ trivia.
 
 ---
 
+## SCREENS — batch 1: WelcomeScreen, LoginScreen, OnboardingScreen, FirstRunScreen, Article9ConsentScreen, ProSetupCompleteScreen
+
+The auth + onboarding flow. All clean, well-built, strong copy + a11y. Findings:
+
+### A2-066 — `OnboardingScreen` `training_focus` values don't match the canonical goal taxonomy.
+`OnboardingScreen.js:24-29` offers `bodybuilding / hypertrophy /
+strength_hypertrophy / physique` and writes them to `profile.trainingFocus`.
+But `coachingGoals.PHYSIQUE_GOALS` uses `general / mens_physique / …` and
+`migrateProfileGoals` only migrates the *legacy* `trainingGoal` values
+(`general_hypertrophy`/`strength_hypertrophy`/`weak_point_spec`), not these
+`trainingFocus` strings. So `hypertrophy`/`physique` here are orphan values
+that don't map onto any `GOAL_OVERLAYS` key. This onboarding is the **Free /
+generic** path (Pro uses ProOnboardingScreen → ProGoalSetup), and
+`trainingFocus` is descriptive rather than driving `generatePlan` (which
+reads `trainingGoal`), so impact is low — but it's a real taxonomy
+mismatch worth tidying. → Phase 4/11, low.
+
+### A2-067 — Free `OnboardingScreen` is reachable but the live free path is `FirstRunScreen`; nav contract is subtle.
+`OnboardingScreen` (`WelcomeStack`) collects 5 prefs then
+`navigation.reset` → `Login` (`:169`), relying on the auth listener to
+route onward. The actual post-signup free flow is `FirstRunScreen`
+(name+units → `completeFirstRun`). Two onboarding surfaces with overlapping
+intent; confirm in Phase 3 that `OnboardingScreen` is still on a live path
+(it's registered in `WelcomeStack` but signup routes via tier→FirstRun/
+ProOnboarding). Possible dead/legacy screen. → Phase 3.
+
+### Verified strengths
+- **`LoginScreen`**: rapid-tap-safe, "no account found → offer signup"
+  recovery, crash-banner from the prior fatal error, platform-aware OAuth
+  (Apple on iOS per guideline 4.8), cross-user wipe before pull on a
+  different account, fire-and-forget sync with **captured** failures.
+  Confirms A2-016 (Apple uses the browser OAuth path).
+- **`Article9ConsentScreen`**: exemplary GDPR consent — explicit
+  checkbox (`accessibilityRole="checkbox"`), plain-English "what we use /
+  never do / where it lives", `record_health_consent` RPC + local cache,
+  and a **network-failure path that records local consent so the user is
+  never stranded** on the gate. Strong.
+- **`OnboardingScreen`/`FirstRunScreen`**: both rapid-double-tap guarded
+  (documented "Cannot read 'title' of undefined" fix), error-surfaced saves.
+- **`ProSetupCompleteScreen`**: the "here's your daily routine" reveal +
+  "Why this plan, for you" rationale + founder note (a deliberate
+  credibility signal per the competitive research). Reduce-motion aware.
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction
