@@ -1651,6 +1651,57 @@ All pure, well-structured, no defects.
 
 ---
 
+## lib core — batch 8: exerciseMetadata, exerciseDisplay, strengthStandards, liftProgress, chartGeometry, activitySteps, dailyNarrative, travelMode
+
+All pure/clean. One minor edge case, rest verified strengths.
+
+### A2-064 — `activitySteps.readTodaySteps` treats a genuine 0 steps as "no data".
+`:116` returns `steps > 0 ? … : null`, and `:130-143 recordTodaySteps`
+no-ops on null. Comment says this is to avoid a false zero when permission
+isn't granted — but a real 0-step morning (or a rest day before any
+movement) is indistinguishable from "no permission", so an actual zero is
+never recorded. Low impact (steps accrue through the day; the daily total
+self-corrects on the next foreground), but technically a real zero is
+dropped. Note for Phase 6/9.
+
+### Verified strengths
+- **`exerciseMetadata.js`**: pure derivation of equipment_category /
+  machineType / force / laterality / difficulty / profiles from existing
+  fields (avoids hand-editing 445 rows); reclassifies landmine/band/
+  plate-loaded/conditioning correctly; difficulty gating is **functional**
+  (beginners gated away from advanced lifts). Shared by seed + backfill so
+  results are identical.
+- **`exerciseDisplay.js`**: reads derived category first, falls back to raw
+  `equipment` string — fixes the documented "Bands chip returns nothing"
+  bug. Pure.
+- **`strengthStandards.js`**: bodyweight-multiple standards (cited
+  strengthlevel/symmetricstrength), **explicitly gender-neutral** with a
+  documented caveat; surfaces "Untrained" with the next milestone so a
+  below-beginner lifter still has a target; rolls per-lift into one
+  standing + nearest rank-up.
+- **`liftProgress.js`**: best-e1RM-per-session trend (top working effort,
+  not every set), deltaPct null on a single session (no misleading 0%).
+- **`chartGeometry.js`**: pure, unit-tested SVG maths (Catmull-Rom smooth
+  path, flat-domain centring avoids NaN, padded domain). The shared engine
+  behind every chart.
+- **`activitySteps.js`**: reads the platform **aggregator** (watch/wearable
+  steps, not just phone), fully guarded/lazy/never-throws, silent auto-
+  record only when already granted, `connectHealthStepsAndWeight` asks
+  steps+weight in **one** sheet. Privacy-respecting (no forced wearable).
+- **`dailyNarrative.js`**: data-grounded one-line Home hero (streak / PR /
+  tonnage-vs-4wk-avg / long-gap / weigh-in cadence), returns **null** when
+  it can't say something true rather than forcing a platitude. Good
+  psychology (Phase 10 input).
+- **`travelMode.js`**: bodyweight/dumbbell/hotel travel-week generator,
+  higher-rep/shorter-rest, FB/UL/PPL splits. Pure, deterministic.
+
+> Remaining lib: seedExercises, seedRoutines, whyThisTemplates, formTips,
+> restSound, wellbeing, cyclePrefs, storeReview, stepsLaunchPrompt, links,
+> clusterSet, unilateral, weightLog, edPatternFlags, dailySteps, planSwitch,
+> planAutoGen, feedback, + health bodies + database.js per-repo sweep.
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction

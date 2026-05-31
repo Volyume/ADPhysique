@@ -2,7 +2,7 @@
 
 Status: `[x]` read in full + findings recorded · `[~]` partially read (see 02-code-audit.md scope notes) · `[ ]` not yet read.
 Generated 2026-05-31T16:09Z. Total non-test source files: 227 (83,854 LOC).
-Read so far: 134 files.
+Read so far: 142 files.
 
 ## App.js/
 
@@ -65,30 +65,30 @@ Read so far: 134 files.
 ## src/lib/
 
 - [x] `accessibilityPrefs.js` (14)
-- [ ] `activitySteps.js` (175)
+- [x] `activitySteps.js` (175)
 - [x] `algorithms.js` (1100)
 - [x] `blockAdvisor.js` (385)
-- [ ] `chartGeometry.js` (100)
+- [x] `chartGeometry.js` (100)
 - [ ] `clusterSet.js` (83)
 - [x] `coachApply.js` (261)
 - [x] `coachingGoals.js` (513)
 - [ ] `cyclePrefs.js` (39)
-- [ ] `dailyNarrative.js` (135)
+- [x] `dailyNarrative.js` (135)
 - [x] `dataBackup.js` (132)
 - [~] `database.js` (5574)
 - [x] `differentialPaywall.js` (181)
 - [x] `edPatternDetector.js` (146)
 - [ ] `engineTelemetry.js` (11)
 - [x] `errorLog.js` (307)
-- [ ] `exerciseDisplay.js` (117)
-- [ ] `exerciseMetadata.js` (242)
+- [x] `exerciseDisplay.js` (117)
+- [x] `exerciseMetadata.js` (242)
 - [ ] `feedback.js` (238)
 - [ ] `formTips.js` (196)
 - [ ] `haptics.js` (80)
 - [ ] `health.js` (586)
 - [x] `importExternal.js` (488)
 - [x] `insightsEngine.js` (232)
-- [ ] `liftProgress.js` (98)
+- [x] `liftProgress.js` (98)
 - [ ] `links.js` (26)
 - [x] `mesocycle.js` (472)
 - [x] `nutritionEngine.js` (860)
@@ -106,12 +106,12 @@ Read so far: 134 files.
 - [ ] `stepsLaunchPrompt.js` (143)
 - [ ] `stepsSummary.js` (30)
 - [ ] `storeReview.js` (40)
-- [ ] `strengthStandards.js` (132)
+- [x] `strengthStandards.js` (132)
 - [x] `supabase.js` (187)
 - [x] `swapEngine.js` (300)
 - [~] `sync.js` (1732)
 - [x] `syncQueue.js` (225)
-- [ ] `travelMode.js` (295)
+- [x] `travelMode.js` (295)
 - [ ] `unilateral.js` (77)
 - [x] `units.js` (121)
 - [~] `weeklyCoach.js` (1093)
