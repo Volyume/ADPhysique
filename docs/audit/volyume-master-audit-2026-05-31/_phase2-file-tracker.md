@@ -2,7 +2,7 @@
 
 Status: `[x]` read in full + findings recorded · `[~]` partially read (see 02-code-audit.md scope notes) · `[ ]` not yet read.
 Generated 2026-05-31T16:09Z. Total non-test source files: 227 (83,854 LOC).
-Read so far: 127 files.
+Read so far: 130 files.
 
 ## App.js/
 
@@ -67,10 +67,10 @@ Read so far: 127 files.
 - [x] `accessibilityPrefs.js` (14)
 - [ ] `activitySteps.js` (175)
 - [x] `algorithms.js` (1100)
-- [ ] `blockAdvisor.js` (385)
+- [x] `blockAdvisor.js` (385)
 - [ ] `chartGeometry.js` (100)
 - [ ] `clusterSet.js` (83)
-- [ ] `coachApply.js` (261)
+- [x] `coachApply.js` (261)
 - [x] `coachingGoals.js` (513)
 - [ ] `cyclePrefs.js` (39)
 - [ ] `dailyNarrative.js` (135)
@@ -96,7 +96,7 @@ Read so far: 127 files.
 - [ ] `planAutoGen.js` (197)
 - [~] `planEngine.js` (1549)
 - [ ] `planSwitch.js` (53)
-- [ ] `poolGenerator.js` (131)
+- [x] `poolGenerator.js` (131)
 - [x] `proGate.js` (61)
 - [x] `recoveryEMA.js` (114)
 - [ ] `restSound.js` (188)

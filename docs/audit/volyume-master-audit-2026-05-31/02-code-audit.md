@@ -1547,6 +1547,36 @@ Both verified strengths, no defects.
 
 ---
 
+## lib core — batch 5: blockAdvisor, poolGenerator, coachApply
+
+All clean, pure, no defects.
+
+- **`blockAdvisor.js`**: readiness scoring (energy/soreness/sleep) + a
+  **z-score vs the user's own 8-week baseline**; the default is **always
+  "same programme + recovery week"** — programme changes fire only on
+  sustained data signals, never on time (`:14-21`). Gated on ≥2 check-ins
+  AND ≥2 weeks so a brand-new user is never told to halve their sets;
+  Masters lifters (≥40) get an earlier deload trigger (cited). "Deloads are
+  reloading the gun" framing. **All decisions proposed, never auto-run.**
+- **`coachApply.js`**: pure compute for the **confirm-then-apply** coach
+  flow (founder: nothing changes until the user taps Apply) — calorie
+  adjust (protein held, fat/carbs scaled, 1200 floor), diet-break, carb
+  cycle (weekly total preserved), refeed, deload + volume apply (every
+  change **clamped to [mev, mrv]**), `markApplied`/`isApplied`. No I/O,
+  fully testable. (Also wires the refeed math that previously sat dead in
+  `nutritionEngine.getPlanNutritionContext`.)
+- **`poolGenerator.js`**: derives the plan-selection POOL **from the
+  exercise library** so names can't drift out of sync (the documented bug
+  where a renamed library exercise was silently dropped from generation);
+  two-taxonomy subregion reconciliation; `findThinMuscles` lets the engine
+  fall back per-muscle. Pure.
+
+> Still to read: `mesocycle`, `swapEngine`, `whyThisTemplates`,
+> `dailyNarrative`, `strengthStandards`, `liftProgress`, `formTips`,
+> `health`, `observability.js`, `seedExercises`, `seedRoutines`, + small utils.
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction
