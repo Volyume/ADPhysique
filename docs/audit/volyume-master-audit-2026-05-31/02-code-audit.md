@@ -699,6 +699,57 @@ Trivial cleanup.
 
 ---
 
+## A2-043 — UNITS: gym-weight `lbs` support is display-label-only and is broken across progression, plates, the bar default, and unit-switching (verified end-to-end)
+
+This consolidates and **resolves the open thread from A2-039** with the
+storage model now confirmed.
+
+**Storage model (verified):** a logged set's weight is stored as the raw
+number the user typed, in their **current display unit** — `createWorkoutSet({
+… weight: parseFloat(currentSet.weight) || 0 })` (`ActiveWorkoutScreen.js:748`),
+no `lbsToKg`. The input alert says "weight used (in ${units})" (`:729`).
+There is **no canonical-kg storage** and **no `kgToLbs`/`lbsToKg`
+conversion** applied to gym-set weights on display anywhere
+(grep of ActiveWorkout/Summary/LiftProgress/SetEntry returns none).
+
+**Consequences (each verified):**
+1. **Progression increments are kg-tuned** (A2-039): `getIncrement`
+   (`algorithms.js:230-236`) and inline `weight >= 60 ? 2.5 : 1.25`
+   (`:186,:195,:659`) apply to a **lbs** number for lbs users → a lbs
+   lifter is told to add **+2.5 lb** (should be ~+5 lb), and a lbs
+   beginner under 60 lb-displayed gets **+1.25 lb** jumps. The manual bump
+   is unit-aware (`ActiveWorkoutScreen.js:1401` `units==='lbs'?5:2.5`),
+   so the two progression paths disagree.
+2. **Plate calculator is kg-only:** `PlateCalculator.js:19` calls
+   `calculatePlates(weightNum, barNum)` with **no plate-set arg**, so it
+   always uses the default kg plates `[25,20,15,10,5,2.5,1.25]`
+   (`algorithms.js:681`). No lbs plate inventory (`45/35/25/10/5/2.5`)
+   exists in the codebase (grep). A lbs user gets a **kg-plate breakdown
+   of a lbs target** — physically wrong.
+3. **Bar default is 20 (kg):** `barWeight: 20` (`useAppStore.js:854`); the
+   standard lbs bar is 45 lb. No unit-aware default.
+4. **Deload prescription** rounds to 0.25 kg steps (`algorithms.js:1027`).
+5. **Switching units corrupts history:** `setUnits` (`useAppStore.js:802-815`)
+   only saves the preference — it does **not** convert stored set weights.
+   So a user who logs in kg then switches to lbs sees every past weight
+   **relabelled, not converted** (100 kg → shown as "100 lbs"); all PRs,
+   charts, volume tonnage and e1RM become wrong. The reverse is equally
+   broken.
+
+**Severity: HIGH for the lbs cohort** (a large share of users, esp. US).
+The app is fundamentally kg-centric and treats `lbs` as a label. → This is
+the single biggest *product-correctness* cluster found so far. Carry to
+Phase 11 as a foundational fix: pick one canonical storage unit (kg),
+convert on input/display, make increments/plates/bar unit-aware, and
+migrate existing rows. Cross-ref Phase 9/10.
+
+> Note: **body**weight (morning weight) IS handled in canonical kg with
+> proper st/lb/kg conversions (`HomeScreen.js:858-866`,
+> `formatBodyWeightShort`) — so the pattern exists; it just was never
+> applied to **gym** weights.
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction
