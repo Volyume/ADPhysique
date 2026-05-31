@@ -787,6 +787,50 @@ staleness**; noted as analysed-and-cleared rather than a defect.
 
 ---
 
+## `src/lib/weeklyCoach.js` — foundations (30–293) + main flow (293–492) read
+
+> Scope: read the pure helpers in full (`computeEWMA`, `getLatestEwma`,
+> `computeWeeklyTrendPct`, `assessDataConfidence`, `getRecoveryScore`,
+> `getPerformanceScore`, `autoregulationMatrix`, `phaseConfig`,
+> `stepsBand`, `WHY_LIBRARY`, `pickWhy`) and the first ~200 lines of the
+> `runWeeklyCoach` orchestration. The remaining `runWeeklyCoach` body
+> (`492–1033`: calorie adjust, FFM floor, ED-pattern detector, refeed/diet
+> break, deload, steps/cardio levers, differential paywall) and the two
+> `_build*Output` helpers are **not** fully read; claims scoped accordingly.
+
+### This is the product's crown jewel and it is responsibly built (verified)
+- **EWMA bodyweight trend** (`:30-40`, α=0.1) — the gold-standard smoothing
+  used by MacroFactor/Carbon, not naive week-over-week.
+- **Data-confidence gating** (`:89-115`): `< 3` weigh-ins → `data_hold`,
+  the plan is **held** rather than adjusted on noise (`:372-391`). Honest.
+- **Eating-disorder safeguards (notable):** `scoffPositive` gates deficit
+  suggestions (`:328`), a rapid-loss detector (`computeWeeklyTrendPct`,
+  `:57-65`), an **FFM safety floor** (`:329-337`,
+  `ffm_floor_hold` copy), and an ED-pattern detector with a configurable
+  firing threshold (`:338-347`). Few competitors do this.
+- **Evidence-based gates:** the `< 50%` session-adherence "stabilise first"
+  rule (`:476-480`, attributed to Andy Morgan), on-target tolerance band
+  (`:434-436`).
+- **Voice discipline:** `WHY_LIBRARY` (`:219-262`) is explicitly jargon-free
+  (no MEV/MAV/RIR in user copy) with a documented "honesty test".
+- **Unit handling here is CORRECT:** bodyweight is kg-canonical; `u`
+  (`:446`) is a display label only. This **confirms A2-043 is scoped to
+  *gym* weights** — the bodyweight path does units properly.
+- **Heavily tested:** `weeklyCoach*.test.js` = **51 cases** (38 core + 8
+  FFM-floor + 5 voice snapshot); `algorithms.test.js` 31; `planEngine*`
+  70. Suite total **1,662** `it/test` cases. Supports the quality
+  assessment with evidence, not assumption.
+
+### A2-045 — `runWeeklyCoach` is a single ~740-line function with 40+ inputs (maintainability).
+`:293-1033`. Pure and well-tested, but the size + branch density + 40-field
+input object (`:294-362`) make it very hard to read or modify safely. The
+many `Move #N` / `row N` comments show it grew by accretion. → Phase 11
+maintainability candidate: extract the calorie / steps / deload / ED /
+paywall levers into named sub-functions (each already conceptually
+separable). Not a bug.
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction
