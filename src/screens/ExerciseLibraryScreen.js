@@ -12,6 +12,7 @@ import { getAllExercises, getCompletedWorkoutSets, insertExercise, deleteExercis
 import { logError } from '../lib/errorLog';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { matchesEquipmentFilter } from '../lib/exerciseDisplay';
+import { useToast } from '../components/Toast';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -28,6 +29,7 @@ const EQUIPMENT_CREATE = ['Barbell', 'Dumbbell', 'Cable', 'Machine', 'Bodyweight
 
 export default function ExerciseLibraryScreen({ navigation, route }) {
   const { user, units } = useAppStore(useShallow(s => ({ user: s.user, units: s.units })));
+  const toast = useToast();
   const [query, setQuery] = useState('');
   const [exercises, setExercises] = useState([]);
   const [filterMuscle, setFilterMuscle] = useState(null);
@@ -127,7 +129,7 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
       setShowAddModal(false);
       resetForm();
     } catch (_e) {
-      Alert.alert("Couldn't save exercise", 'Try again.');
+      toast.show('Couldn\'t save exercise. Try again.', { variant: 'error' });
     } finally {
       setSavingNew(false);
     }
@@ -156,7 +158,7 @@ export default function ExerciseLibraryScreen({ navigation, route }) {
                     await deleteExercise(item.id);
                     await loadExercises();
                   } catch (_e) {
-                    Alert.alert("Couldn't delete exercise", 'Try again.');
+                    toast.show('Couldn\'t delete exercise. Try again.', { variant: 'error' });
                   }
                 },
               },

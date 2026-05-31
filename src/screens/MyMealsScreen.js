@@ -69,7 +69,7 @@ export default function MyMealsScreen({ navigation, route }) {
       if (n > 0) {
         navigation.goBack();
       } else {
-        Alert.alert('Nothing to log', 'This meal has no foods in it.');
+        toast.show('This meal has no foods in it.', { variant: 'info' });
       }
     } catch (_) {
       toast.show('Couldn\'t log.', { variant: 'error' });
