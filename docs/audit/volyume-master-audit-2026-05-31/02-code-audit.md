@@ -11,9 +11,11 @@ Branch: `main` @ `a4bf964`
 > Each finding names the file and line and, where useful, quotes the code.
 > If a line cannot be quoted from a read I performed, it is not here.
 >
-> **Files read in full so far:** `App.js` (1–768).
-> **Next:** `src/navigation/RootNavigator.js`, `src/store/useAppStore.js`,
-> `src/styles/theme.js`, `src/lib/supabase.js`, then the large lib/screen files.
+> **Files read in full so far:** `App.js` (1–768),
+> `src/navigation/RootNavigator.js` (1–1066), `src/lib/supabase.js` (1–188).
+> **Next:** `src/store/useAppStore.js`, `src/styles/theme.js`,
+> `src/lib/sync.js` + `src/lib/sync/`, `src/lib/database.js`, then food engine
+> and the large screens.
 
 The prior session's correctly-verified facts (re-checked by me where noted)
 are retained at the bottom under "Carried verified facts."
@@ -117,6 +119,164 @@ in `maybeSync`, not in the background task).
 
 ---
 
+## `src/navigation/RootNavigator.js` (1066 lines) — read in full
+
+**Purpose (from code):** declares the entire navigation tree (5 tab
+stacks + 5 pre-main stacks), the cold-launch `bootstrap()` sequence, the
+`onAuthStateChange` pipeline, the splash, and the top-level routing gate
+`renderNavigator()`.
+
+### Verified navigation structure (also feeds Phase 3)
+- **Tabs (`:347-351`):** `HomeTab`→"Train", `PlansTab`→"Plans",
+  `DiaryTab`→"Diary", `ProgressTab`→"Progress", `ProfileTab`→"You".
+- **Stack sizes (verified by counting `Stack.Screen`):** HomeStack 9
+  (`:217-227`), PlansStack 9 (`:238-248`), DiaryStack 9 (`:164-206`),
+  ProgressStack 12 (`:259-273`), ProfileStack **24** (`:284-310`).
+- **Pro-gated screens (`:97-102`, via `withProGuard`):** WeeklyCheckIn,
+  NutritionTargets, BodyMetrics, CoachOutput, ProGoalSetup,
+  CoachingReminders. `GatedBodyMetrics` is registered in **both**
+  ProgressStack (`:266`) and ProfileStack (`:289`).
+- **Top-level gate `renderNavigator()` (`:904-913`):** (1) no `tier` →
+  `WelcomeStack`; (2) `user && !user.isLocal && healthConsentChecked &&
+  healthConsent === false` → `Article9ConsentStack`; (3) `!firstRunComplete`
+  → `ProOnboardingStack` (tier `pro`) else `FirstRunStack`; (4) else
+  `MainTabs`.
+- **Tab-press resets stack to root:** every stack registers a `tabPress`
+  listener → `StackActions.popToTop()` (`:158-162, :211-215, :232-236,
+  :253-257, :278-282`).
+
+### Findings
+
+**A2-008 — `lazy={false}` mounts all 5 tab stacks eagerly at startup (perf).**
+`:321`. On entering `MainTabs`, all five tab stacks and their initial
+screens mount at once — including `HomeScreen` (2,344 LOC),
+`AnalyticsScreen` (1,436), `DiaryScreen`, `PlansScreen`, `YouScreen`.
+Deliberate (avoids tab-switch lag) but a measurable cold-start cost.
+→ **Phase 6** quantify; consider `lazy` for the heaviest non-Home tabs.
+
+**A2-009 — Two independent notification-tap handlers exist (possible double-handling).**
+RootNavigator installs an `onTap` handler via `installNotificationListeners`
+(`:454-468`) whose `routeFor()` (`:448-452`) maps **only two** types
+(`weekly_checkin`, `year_of_lifts_unlock`); anything else → `return` (`:457`).
+Separately, **`App.js:410-415`** registers its *own*
+`addNotificationResponseReceivedListener` that reads
+`data.url` and calls `Linking.openURL`. So a single notification tap can
+be observed by **both** listeners. → **Phase 3/5:** confirm whether any
+notification payload carries both `type` and `url` (double navigation) and
+whether the two listeners should be unified. Verified both sites.
+
+**A2-010 — No React-Navigation `linking` config; universal links can't reach arbitrary screens.**
+The `NavigationContainer` (`:915-941`) has **no `linking` prop**. In-app
+URL handling is limited to `App.js handleAuthDeepLink` (auth callbacks)
+and the 2-type notification `routeFor`. The `volyume://` scheme +
+`volyume.app` universal links are declared (app.json — to read in Phase 3)
+but there is no declarative deep-link → screen map. → **Phase 3** deep-link
+coverage finding; large gap vs. competitors that deep-link to a workout.
+
+**A2-011 — The cold-launch `bootstrap()` + `onAuthStateChange` effect is the app's most complex unit (maintainability + test risk).**
+`:471-855` is a single `useEffect` that: awaits `initDatabase` (`:479`),
+fires 3 food-seed imports fire-and-forget (`:490-505`), `checkFirstRun`
+(`:511`), **awaits** `checkTier` (`:518`), reads the Supabase session and
+hydrates profile/units/barWeight (`:520-553`), `refreshTierFromCloud`
+(`:558`), Play Billing init (`:565-569`); then registers
+`onAuthStateChange` (`:624-849`) which on auth-enter runs cross-user wipe
+(`:750-762`), health-consent resolution (`:768-803`), `bulkUploadLocalData`
+(`:807-813`), telemetry flush (`:818-822`), `pullFromCloud` (`:835-837`)
+and push registration (`:845-847`). Dozens of fire-and-forget
+`.catch(()=>{})`. This is extremely hard to unit-test and reason about;
+it is also the **identity/data-ownership critical path** (Phase 5).
+Recommend extraction into named, individually-testable bootstrap steps.
+
+**A2-012 — Every cold launch with a session runs a full bulk-upload + full pull (perf, compounds A2-001).**
+`isAuthEnter` (`:670-672`) is true for `SIGNED_IN` **or** `INITIAL_SESSION`.
+`INITIAL_SESSION` fires on every cold launch with a restored session, so
+the entire migration/upload/pull block (`:728-848`) — including
+`bulkUploadLocalData` (`:809`) and `pullFromCloud` (`:835`) — runs on
+**every launch**. Combined with `App.js`'s foreground `maybeSync` +
+`callSyncAll` (A2-001), a cold launch can trigger `bulkUploadLocalData`
+multiple times within seconds. → **Phase 6**; depends on the runner lock
+(verify in `sync/runner.js`).
+
+**A2-013 — Fixed 2.5 s minimum splash on every cold launch (UX/perf).**
+`SPLASH_MIN_MS = 2500` (`:408`); `splashReady` is gated purely on a 2,500 ms
+timer (`:435-438`), and the splash gate requires `splashReady` (`:876`).
+So even when bootstrap finishes in 300 ms, the user waits 2.5 s. Deliberate
+brand moment, but a fixed tax on every launch. → **Phase 9/10** decide
+whether to shorten or make it bootstrap-bounded.
+
+**A2-014 — Health-consent failure paths are inconsistent (could re-prompt a consented user).**
+Inside the auth-enter block: the *cloud-error* branch deliberately sets
+`setHealthConsent(null, true)` (`:791`) with a comment that a network blip
+must **not** re-fire the Article 9 gate. But the *outer catch* sets
+`setHealthConsent(false, true)` (`:802`). Per `renderNavigator` (`:906`),
+`healthConsent === false` routes to `Article9ConsentStack`. So if the
+consent read *throws* (rather than returning `{error}`), a user who
+already consented can be bounced back into the consent gate. → reconcile
+to `null` on all transient failures. Medium (compliance-adjacent UX).
+
+**A2-015 — `cleanupOrphanRoutineExercises` + 3 food seeds run on every boot fire-and-forget (`:484-505`).**
+Each only logs via `console.warn` on failure (`:483-484, :491, :497, :505`).
+Not surfaced anywhere a user/telemetry sees. Low severity; noted for
+Phase 5 observability (boot-time data maintenance failing silently).
+
+### Positive observations (verified)
+- `heroZoomTransition` guards `current.progress` being undefined and
+  falls back to opacity-only (`:130-132`) — prevents the "interpolate of
+  undefined" crash the comment describes. Sound.
+- `RootNavigator` subscribes to the store via **field selectors**
+  (`:415-432`) with a comment (`:411-414`) explaining this prevents a
+  full-navigator re-render on every store mutation (rest-timer ticks
+  etc.). Correct perf hygiene.
+- `await checkTier()` before `refreshTierFromCloud` (`:512-518`) with a
+  comment documenting the exact race it fixes (Pro→Free demotion). Good.
+- Splash/`isAuthLoading` gating comment (`:868-875`) documents why the
+  splash is **not** gated on `isAuthLoading` (would unmount
+  ProOnboardingStack mid-flow). Real bug avoided.
+
+---
+
+## `src/lib/supabase.js` (188 lines) — read in full — carried claim CONFIRMED
+
+**Re-verified (promoting the prior carried fact to a confirmed finding):**
+- **Env-only credentials, lazy, returns `null` when unconfigured.** `:24-29`
+  (`url = process.env.EXPO_PUBLIC_SUPABASE_URL`, `key = …_ANON_KEY`,
+  `if (!url || !key) return null;`). **No fallback constants anywhere in
+  the file.** Confirmed.
+- **Auth session stored encrypted in `expo-secure-store`**, not
+  AsyncStorage, via `secureAuthStorage` adapter (`:3, :7-17`) passed as
+  `auth.storage` (`:33`). `detectSessionInUrl: false` (`:36`) — deep-link
+  auth is handled manually. **Security positive.**
+- Client wrapped by `instrumentSupabase` observability proxy (`:43-49`)
+  that emits a breadcrumb (table, op, duration) per `.from()` call. →
+  **Phase 5** verify the breadcrumb records no row *values*, only metadata.
+
+### Findings
+
+**A2-016 — Apple Sign-In uses the browser OAuth flow, not native (App Store risk).**
+`signInWithApple` (`:162-169`) just calls `_signInWithOAuthProvider('apple')`
+(browser flow). The comment itself (`:163-167`) states a native
+`expo-apple-authentication` button is "Apple's preferred path, **and
+required for App Store approval**". Since Google sign-in is offered
+(`:158`), Apple's guideline 4.8 requires native Sign in with Apple on iOS.
+→ **Phase 5 (compliance) / Phase 10.** Real submission-blocker risk.
+
+**A2-017 — OAuth `code` is exchanged twice (here + App.js).**
+`:142-146` exchanges the code in the WebBrowser success branch, and
+`App.js handleAuthDeepLink:142` exchanges it again from the deep-link
+listener. Comment calls it "belt-and-braces" (`:140-141`). With PKCE the
+second `exchangeCodeForSession` on an already-consumed code fails; both
+swallow errors (`:145`, App.js `:142`). Harmless but redundant double
+round-trip. Low.
+
+**A2-018 — `getUserProfile` uses `.single()` (errors on no-row) while other reads use `.maybeSingle()`.**
+`:186` `.single()` returns a PGRST116 error when the profile row doesn't
+exist yet (brand-new user), whereas RootNavigator's consent read uses
+`.maybeSingle()` (`RootNavigator:780`). Callers of `getUserProfile` must
+treat "no row" as an error. → flag for the per-caller audit; ensure no
+screen renders an error state for a legitimately-absent profile. Low/med.
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction
@@ -125,8 +285,8 @@ so they are carried as *prior-verified, pending my re-read* — not as my
 own findings yet:
 - Migration runner correct: `database.js:1152-1175` (bumps `user_version`
   only inside `try` after `m.up()`).
-- `supabase.js` env-only, no fallback creds, returns `null` when
-  unconfigured (`:24-54`); session in `expo-secure-store` (`:5-17`).
+- ~~`supabase.js` env-only…~~ **CONFIRMED by my read — see the
+  `supabase.js` section above (A2-016..018 + verified positives).**
 - Food sources have `AbortController` timeouts + env keys: `usda.js:26-48`,
   `liveOff.js:24-30`.
 - `sync.js` is a facade layering over modular `sync/`; one push + one pull
