@@ -831,6 +831,55 @@ separable). Not a bug.
 
 ---
 
+## `src/lib/planEngine.js` — `generatePlan` + progression builders read
+
+> Scope: read `generatePlan`/`_generatePlanInner` (`1361-1549`),
+> `getWeeklySetProgression` (`927-934`), `getWeekLabel` (`937-952`),
+> `buildWeeklyPlan` (`963-981`), `buildMesocycleSchedule` (`987-1006`),
+> `buildVolumeSummary` head (`1012-1036`). The many builder helpers
+> (`selectSplit`, `computeLandmarks`, `applyGoalOverlay`,
+> `build{FullBody,UpperLower,PPL,…}Workouts`, `trimToTimeBudget`,
+> `assignSupersets`) are **not** each read; claims scoped accordingly.
+
+### A2-046 — `generatePlan` emits TWO divergent week-by-week progression models + two label vocabularies.
+A single plan object returns both:
+- `mesocycleSchedule = buildMesocycleSchedule(experience)` (`:1482`) —
+  **multiplier** model: `setsMultiplier` 1.00 → 1.25 across build weeks,
+  **0.50** on the rest week (`:987-1006`), labels "Introduction week / Build
+  week / Peak push / Rest week".
+- `weeklyPlan = buildWeeklyPlan(validWorkouts, totalMesoWeeks, …)` (`:1532`)
+  → `getWeeklySetProgression` (`:927-934`) — **additive** model: `base + round(step·2/(progressWeeks-1))`, **0.60** on deload, labels
+  "Foundation / Building / Peak / Deload" (`getWeekLabel`, `:937-952`).
+
+For a 5-week plan with a 3-set base exercise these disagree: multiplier
+week-4 ≈ `3×1.25 ≈ 3.75→4`, additive week-4 = `3+2 = 5`; deload is `×0.5`
+vs `×0.6`. So the same plan carries **two different set prescriptions and
+two naming schemes** for the same weeks. → **Phase 3/4/9 must confirm which
+the UI renders** (PlanDetail / MesocycleBuilder / RoutineDetail). If both
+are shown anywhere, the user sees contradictory week counts. At minimum it
+is duplicated, drift-prone logic. Medium.
+
+### Observations
+- **Stateless guard (good):** `generatePlan` swaps the module-level
+  `_effectivePool` and restores it in `finally` (`:1366-1372`) so a
+  library-driven run doesn't leak state. `_generatePlanInner` is
+  synchronous, so the swap/restore is atomic in the event loop — **but it
+  is fragile**: adding any `await` inside would make concurrent
+  `generatePlan` calls clobber `_effectivePool`. Note for Phase 6.
+- **Beginner guard rails:** days capped at 4 for beginners (`:1396`);
+  weak points capped at 3 for determinism (`:1392`). Sensible.
+- Plan finalisation pipeline (dedupe → time-trim → supersets → strip
+  internal tags → estimate duration, `:1454-1469`) is clean and discards
+  empty sessions (`:1472`).
+
+### Positive observations (verified)
+- `getWeeklySetProgression` always forces the **last** week to a deload
+  (`:928-929`) and floors at 1 set — no zero-set weeks.
+- Internal-only tags (`_m`, `_req`, `_muscle`) are stripped before the
+  plan leaves the engine (`:1463`) so they never reach the DB/UI.
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction
