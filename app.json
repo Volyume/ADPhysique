@@ -114,7 +114,10 @@
           "android": {
             "compileSdkVersion": 34,
             "targetSdkVersion": 34,
-            "minSdkVersion": 26
+            "minSdkVersion": 26,
+            "manifestQueries": {
+              "package": ["com.google.android.apps.healthdata"]
+            }
           }
         }
       ],

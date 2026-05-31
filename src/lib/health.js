@@ -147,7 +147,17 @@ export async function requestHealthPermissions(scopes = ['weight']) {
       const granted = await HC.requestPermission(recordTypes);
       const allGranted = Array.isArray(granted) && granted.length >= recordTypes.length;
       return allGranted ? 'granted' : 'denied';
-    } catch (_) { return 'denied'; }
+    } catch (e) {
+      // Surface the real reason instead of swallowing it. A thrown
+      // requestPermission (delegate not registered, provider intent
+      // blocked by package visibility, contract error) and a genuine
+      // empty grant used to collapse into the same silent "denied",
+      // which is why this path could never be diagnosed from the field.
+      // logError reaches Sentry.
+      // eslint-disable-next-line global-require
+      require('./errorLog').logError('health.requestPermission', e, { scopes });
+      return 'denied';
+    }
   }
 
   return 'unavailable';
