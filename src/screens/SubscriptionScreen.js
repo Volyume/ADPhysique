@@ -23,6 +23,7 @@ import Button from '../components/Button';
 import Card from '../components/Card';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
+import { useToast } from '../components/Toast';
 import { isPaidTier } from '../lib/proGate';
 import * as cascade from '../lib/payments/cascade';
 import { restorePurchases } from '../lib/payments/restore';
@@ -44,6 +45,7 @@ const PRICING_WINDOW_LABEL = {
 };
 
 export default function SubscriptionScreen({ navigation }) {
+  const toast = useToast();
   const { userProfile } = useAppStore(useShallow((s) => ({
     userProfile: s.userProfile,
   })));
@@ -76,7 +78,7 @@ export default function SubscriptionScreen({ navigation }) {
               : 'https://play.google.com/store/account/subscriptions';
             Linking.openURL(url).catch((e) => {
               logError('Subscription.openCancelUrl', e);
-              Alert.alert('Could not open subscription settings');
+              toast.show("Couldn't open subscription settings", { variant: 'error' });
             });
           },
         },
@@ -92,19 +94,19 @@ export default function SubscriptionScreen({ navigation }) {
         currentTrialState: userProfile?.trialState ?? userProfile?.trial_state ?? null,
       });
       if (!result.ok) {
-        Alert.alert(
-          'Could not restore',
+        toast.show(
           result.error === 'no_client'
-            ? 'Cloud client unavailable. Try again later.'
-            : 'Something went wrong. Try again.',
+            ? 'Cloud unavailable, try again later'
+            : 'Could not restore, try again',
+          { variant: 'error' },
         );
       } else if (!result.tier) {
-        Alert.alert('Nothing to restore', 'There is no active subscription on this account.');
+        toast.show('No active subscription on this account', { variant: 'info' });
       } else if (result.alreadyCurrent) {
-        Alert.alert('Already restored', `Your ${result.tier} subscription is already active on this device.`);
+        toast.show(`Your ${result.tier} subscription is already active`, { variant: 'info' });
       } else {
         logInfo('Subscription.restored', `tier=${result.tier}`);
-        Alert.alert('Restored', `Your ${result.tier} subscription is active.`);
+        toast.show(`${result.tier} subscription restored`, { variant: 'success' });
       }
     } finally {
       setBusy(false);

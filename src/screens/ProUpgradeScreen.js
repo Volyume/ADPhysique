@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import Button from '../components/Button';
 import useAppStore from '../store/useAppStore';
+import { useToast } from '../components/Toast';
 import { signUpWithEmail, signInWithEmail, signInWithGoogle, signInWithApple, getSupabaseClient } from '../lib/supabase';
 import { syncProfile, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
 
@@ -19,6 +20,7 @@ const PRO_PERKS = [
 ];
 
 export default function ProUpgradeScreen({ navigation }) {
+  const toast = useToast();
   const {
     user, session, userProfile, tier, setTier, refreshTierFromCloud, resetFirstRun,
   } = useAppStore();
@@ -53,7 +55,7 @@ export default function ProUpgradeScreen({ navigation }) {
       await activatePro(session.user.id, { isNew: false });
       setDone(true);
     } catch (_) {
-      Alert.alert('Something went wrong', 'Try again.');
+      toast.show('Something went wrong, try again', { variant: 'error' });
     }
     setBusy(false);
   }
@@ -74,7 +76,7 @@ export default function ProUpgradeScreen({ navigation }) {
       const result = await fn();
       if (result?.error) {
         logError('ProUpgrade.oauth.providerError', result.error, { provider });
-        Alert.alert('Sign-in failed', result.error.message);
+        toast.show(result.error.message || 'Sign-in failed', { variant: 'error' });
         setBusy(false);
         return;
       }
@@ -107,11 +109,11 @@ export default function ProUpgradeScreen({ navigation }) {
 
   async function handleAuth() {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Missing fields', 'Enter your email and a password to continue.');
+      toast.show('Enter your email and a password to continue', { variant: 'warning' });
       return;
     }
     if (mode === 'signup' && password.length < 8) {
-      Alert.alert('Password too short', 'Use at least 8 characters.');
+      toast.show('Use at least 8 characters', { variant: 'warning' });
       return;
     }
     setBusy(true);
@@ -119,7 +121,7 @@ export default function ProUpgradeScreen({ navigation }) {
       const fn = mode === 'signup' ? signUpWithEmail : signInWithEmail;
       const { data, error } = await fn(email.trim(), password);
       if (error) {
-        Alert.alert(mode === 'signup' ? 'Signup error' : 'Sign in error', error.message);
+        toast.show(error.message || 'Authentication error', { variant: 'error' });
         setBusy(false);
         return;
       }
@@ -137,7 +139,7 @@ export default function ProUpgradeScreen({ navigation }) {
         setDone(true);
       }
     } catch (_) {
-      Alert.alert('Something went wrong', 'Try again.');
+      toast.show('Something went wrong, try again', { variant: 'error' });
     }
     setBusy(false);
   }
@@ -166,10 +168,7 @@ export default function ProUpgradeScreen({ navigation }) {
         const result = await resetFirstRun();
         if (result && result.ok === false) {
           if (result.error === 'workout_in_progress') {
-            Alert.alert(
-              'Finish your workout first',
-              'You have a workout in progress. Wrap it up, then come back to set up your Pro training plan.',
-            );
+            toast.show('Finish your workout in progress first, then set up your Pro plan', { variant: 'warning', duration: 5000 });
           }
         }
       } catch (_) {}
