@@ -949,6 +949,84 @@ deliberate `eslint-disable` with reason or a deps fix.
 
 ---
 
+## Components — batch 2 (read in full): Button, EmptyState, Toast, BottomSheet, PlateCalculator, Stepper, SearchBar, ScreenHeader
+
+All clean and token-based. Two substantive items, rest are strengths.
+
+### A2-043 — CONFIRMED again by `PlateCalculator.js` (kg-modelled end to end).
+`:19` `calculatePlates(weightNum, barNum)` with no plate-set arg → kg
+denominations. `:28-36` hardcodes **IPF *kilogram* competition plate
+colours** (red 25, blue 20, yellow 15, green 10, white 5) — a kg physical
+standard — then renders them with the user's `units` label (`:79-80,
+:120`). So a lbs user sees kg plate denominations + kg IPF colours
+relabelled "lbs". Strengthens A2-043's plate leg with a concrete consumer.
+
+### A2-051 — `EmptyState` reinvents button styles instead of using `Button` (minor consistency).
+`EmptyState.js:114-128` defines its own `primaryBtn`/`secondaryBtn`
+`TouchableOpacity` styles rather than composing the shared `Button`
+primitive — the exact "14+ hand-rolled CTA" drift `Button` was created to
+end. Low; fold into `Button` for one press/disabled model.
+
+### Verified strengths
+- **`Button`** (single CTA primitive, 4 variants × 3 sizes, one disabled +
+  loading treatment, composes `PressableCard`) — good consolidation.
+- **`Toast`** — FIFO single-visible queue, reduce-motion, `accessibilityRole
+  ="alert"` + live region (`:162-163`), an **undo pattern** with `onTimeout`
+  commit for destructive actions (`:75-78, :131-133, :173-189`), proper
+  timer cleanup. Replaces 30–40 `Alert.alert` calls.
+- **`BottomSheet`** — one sheet chrome (scrim/handle/slide), reduce-motion,
+  `accessibilityViewIsModal` (`:103`), hardware-back + tap-out dismiss,
+  stays mounted through exit anim. Replaces 6 hand-rolled sheets.
+- **`Stepper`** — 44×44 touch targets (`:65-66`, meets the 44pt min) with
+  decrease/increase a11y labels — a Phase 9 a11y positive.
+- **`SearchBar`** — `fontSize: Math.max(16, …)` (`:73`) to stop iOS
+  focus-zoom; labelled clear button.
+- **`EmptyState`** — explicit "no shame copy / directional" philosophy
+  (`:6-9`), ghost/dismissible variant.
+
+---
+
+## Components — batch 3 (read in full): SetEntry, PRCelebration, PeekMenu, BackHeader, Skeleton, BodyDiagramHeatmap
+
+### A2-043 — `SetEntry` weight +/- step is hardcoded 2.5 (kg-centric).
+`SetEntry.js:25` `const steps = { weight: 2.5, reps: 1 }` — the in-set
+weight stepper always moves 2.5 regardless of `units`. For a lbs user
+that is a too-small jump (should be 5). Adds another kg-centric site to
+the A2-043 cluster (now: progression, plates, bar default, **set stepper**).
+
+### A2-038 — `BodyDiagramHeatmap` legend uses adaptive tokens, regions use caller colour → mismatch in a11y palettes.
+The muscle-region fill comes from `getFill` → `entry.color` (caller-
+supplied, `:28-32`), but the **legend** swatches are hardcoded to the
+**theme tokens** `colors.textMuted/success/warning/error` (`:264-268`,
+which DO adapt to colourBlindSafe/higherContrast). If the caller builds
+`volumeByMuscle` from `algorithms.getVolumeStatus().color` (the non-
+adaptive hex — A2-038), then in colour-blind / high-contrast mode the
+**legend and the body regions show different colours for the same
+status**. Most user-visible consequence of A2-038 so far. → Phase 9:
+unify both on `theme.volumeColors`.
+
+### Verified strengths
+- **`SetEntry`** carefully preserves in-progress decimal entry
+  (`:80-84`), renders a legit `0` (`:72`), caps reps 1–200 / weight ≤500,
+  gates the live e1RM chip to reps 1–15 (`:148`, sidesteps A2-040's high-
+  rep inflation in the UI), 52×52 steppers, full a11y labels.
+- **`PRCelebration`** pools particles via `useRef` and bakes fixed
+  translate offsets to fix two documented memory leaks (`:37-40,
+  :142-144`); subdued mode skips particles for reduce-motion/calm; timers
+  cleaned up + animations stopped on unmount (`:87-90`); null-guarded
+  (`:98`); "+X%" only ≥1% to avoid e1RM float noise (`:170-181`).
+- **`BodyDiagramHeatmap`** has excellent a11y — every region is a labelled
+  button with muscle name + status (`:37-61`) (the "label muscle-map for
+  screen readers" work). SVG primitives, scales to width.
+- **`PeekMenu`** (imperative `forwardRef` context menu),
+  **`BackHeader`** (guarded `useNavigation`, replaces ~16 drifted
+  headers), **`Skeleton`** (reduce-motion-paused shimmer,
+  `accessibilityRole="progressbar"`) — all clean, token-based, a11y-labelled.
+- Minor: `PeekMenu:56` `useImperativeHandle([])` closes over first-render
+  `reduceMotion` (Phase-7 exhaustive-deps flag); negligible.
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction
