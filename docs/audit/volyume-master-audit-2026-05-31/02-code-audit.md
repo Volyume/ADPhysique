@@ -1,6 +1,6 @@
 # 02 — Line-by-line code audit
 
-Status: **IN PROGRESS**
+Status: **COMPLETE** — all 227 non-test source files read (logic surfaces fully; bulk data spot-checked)
 Date: 2026-05-31
 Branch: `main` @ `a4bf964`
 
@@ -1954,6 +1954,41 @@ correctness defects; findings are the cross-cutting clusters (units A2-043,
 a11y A2-026/038, sync redundancy) + trivia (A2-069 stray console calls in
 LiftProgress:39, PRWall:168, ExerciseDetail:146, MesocycleBuilder:119,
 WeeklyCheckIn:384 — route through errorLog).
+
+---
+
+## lib — final batch: health.js (complete), engineTelemetry, haptics, seedExercises, seedRoutines, stepsSummary → **PHASE 2 SOURCE READ COMPLETE**
+
+- **`health.js` (586, now fully read)** — exemplary platform integration:
+  Apple HealthKit + Health Connect, **aggregate API for steps** so a user
+  with watch + phone + Garmin/Whoop gets ONE deduplicated total (documented
+  raw-records fallback when aggregate throws); conservative ACSM-based
+  workout-kcal estimate (clamped 40–1200); per-user import cursor;
+  `importNewWeights` de-dupes by day; never throws; identity-safe (no
+  `SET user_id`). Strong.
+- **`seedExercises.js`** — pure data + **`canonicalExerciseId()`**
+  (`:36-71`): a deterministic MurmurHash-style name→UUID-v4 so the same
+  canonical exercise gets the **same id on every device**. This is the
+  documented fix for the cross-device sync bug (random seed IDs → empty
+  INNER JOIN → "routine shows N exercises but ActiveWorkout is blank").
+  Idempotent seed/top-up/backfill. **0 interpolated SQL.**
+- **`seedRoutines.js`** — pure library-plan + required-exercise data +
+  idempotent seeder; **0 interpolated SQL**; rich, jargon-free coaching
+  notes per exercise. (Spot-checked as data per the agreed depth; the
+  seeder logic at `:1475` is a standard insert-if-needed.)
+- **`engineTelemetry.js`** — clean back-compat re-export shim to
+  `telemetry/transport`. **`haptics.js`** — named haptic vocabulary, all
+  reduce-motion-gated, never throws. **`stepsSummary.js`** (read earlier) —
+  pure weekly-average helper.
+
+### ✅ PHASE 2 COMPLETE — all 227 non-test source files read.
+Files marked `[~]` (database.js, sync.js, planEngine.js, weeklyCoach.js,
+liveOff.js) were read across their **logic surfaces** (the parts that can
+carry defects) with the bulk remainder being repository CRUD / data of the
+same verified shape; every such file had its SQLi surface grep-scanned and
+its core paths line-read. Findings A2-001 … A2-069 are recorded above. The
+codebase verdict and the consolidated finding clusters are carried into
+`11-master-recommendations.md` (Phase 11).
 
 ---
 
