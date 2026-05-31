@@ -133,7 +133,11 @@ describe('A2-001 foreground catch-up routes through syncAll', () => {
   });
 
   test('maybeSync no longer calls bulkUploadLocalData directly', () => {
-    expect(maybeSyncBody).not.toMatch(/bulkUploadLocalData/);
+    // Match an actual call/destructure, not the word in an explanatory
+    // comment: `bulkUploadLocalData(` (invocation) or `{ bulkUploadLocalData }`
+    // (require destructure). The fix routes through syncAll instead.
+    expect(maybeSyncBody).not.toMatch(/bulkUploadLocalData\s*\(/);
+    expect(maybeSyncBody).not.toMatch(/\{\s*bulkUploadLocalData\s*\}/);
   });
 
   test('maybeSync routes its catch-up through syncAll with a background trigger', () => {
