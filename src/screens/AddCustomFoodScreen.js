@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import Button from '../components/Button';
+import { useToast } from '../components/Toast';
 import { insertCustomFood, logFoodEntry } from '../lib/food/db';
 import { checkFoodSanity } from '../lib/food/sanityChecks';
 import { audit } from '../lib/observability';
@@ -31,6 +32,7 @@ const MEAL_LABELS = {
 export default function AddCustomFoodScreen({ navigation, route }) {
   const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
   const userId = user?.id;
+  const toast = useToast();
 
   const mealSlot = route?.params?.mealSlot ?? 'snack';
   const entryDate = route?.params?.entryDate ?? new Date().toISOString().slice(0, 10);
