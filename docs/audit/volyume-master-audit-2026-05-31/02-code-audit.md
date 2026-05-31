@@ -1327,6 +1327,48 @@ Documented. Medium (inert promised-looking feature).
 
 ---
 
+## Food layer — sources/validation/db read (sanityChecks, writeback, ocrParser, liveOff, usdaToFood, localCache, db.js)
+
+**All clean, parameterized; strong defensive + privacy design. No defects.**
+
+### Verified strengths
+- **`food/db.js`** (1,112 lines, 54 queries): **zero `${}` interpolation —
+  fully parameterised, no SQLi** (grep-verified). Macros denormalised at log
+  time so editing a food never rewrites diary history (`logFoodEntry:27-28`).
+  `recomputeRollup` keeps `daily_intake_rollups` current; the 7-day
+  `getRecentIntakeSummary` (`:294-312`) feeds the FFM-floor safety gate
+  correctly (distinct logged days, avg kcal). Cloud-apply functions present
+  for every food table.
+- **`sanityChecks.js`** gates custom-food insert: kcal ≤900/100g, macro mass
+  ≤110 g/100g, kcal-vs-macros within 20% (`4P+4C+9F`) — prevents OCR
+  misreads / typos from contaminating the coach's intake average + FFM
+  floor. Good defensive layer feeding a safety calculation.
+- **`writeback.js`** (OFF contribution): **consent-gated, default OFF**, sends
+  only the label photo + confirmed macros, **anonymous** (no Volyume
+  creds), retry+backoff, drops silently after 3 tries. Privacy-conscious.
+- **`liveOff.js`/`usda.js`**: AbortController timeouts, OFF-compliant
+  User-Agent, `encodeURIComponent` on inputs, rows missing core macros
+  dropped so the waterfall falls through. (Completes the earlier partial
+  `liveOff` read.)
+- **`localCache.js`**: parameterised LIKE search, customs rank before
+  globals, `resolveFoodRef` handles curated/global/custom/recipe with a
+  **recursion guard** so a recipe ingredient that references a recipe can't
+  self-recurse (`:164`).
+- **`ocrParser.js`**: deterministic regex label parser with confidence
+  levels + kJ→kcal fallback; documents a real debugging lesson (dropped the
+  I/l→1 substitution because it ate the kcal space).
+
+### A2-036 (more) — a THIRD `uid()` Math.random copy at `food/db.js:16-21`.
+Now three identical generators (database.js, useAppStore, food/db). Fold to
+one shared `expo-crypto randomUUID` helper. Low.
+
+> **Food files still unread (next):** `seed.js`, `libraryDelta.js`,
+> `mealSuggest.js`, `ocr.js`, `csvExport.js`, `bulkEntryOps.js`,
+> `frequents.js`, `searchTabs.js`, `curatedFoods.js` (data), `curatedMeals.js`
+> (data).
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction
