@@ -17,6 +17,7 @@ const mockHealth = {
   getHealthPermissionStatus: jest.fn(),
   requestHealthPermissions: jest.fn(),
   readStepsToday: jest.fn(),
+  importNewWeights: jest.fn(),
 };
 jest.mock('../health', () => mockHealth);
 
@@ -25,7 +26,7 @@ jest.mock('../database', () => mockDb);
 
 const {
   isStepSourceAvailable, getStepPermissionStatus, requestStepPermission, readTodaySteps,
-  recordTodaySteps,
+  recordTodaySteps, connectHealthStepsAndWeight,
 } = require('../activitySteps');
 
 beforeEach(() => {
@@ -129,6 +130,45 @@ describe('recordTodaySteps', () => {
   test('does nothing without a user id', async () => {
     await recordTodaySteps(null);
     expect(mockDb.setDailySteps).not.toHaveBeenCalled();
+  });
+});
+
+describe('connectHealthStepsAndWeight', () => {
+  beforeEach(() => { mockPlatformOS = 'android'; });
+
+  test('requests steps and weight in one call', async () => {
+    mockHealth.requestHealthPermissions.mockResolvedValue('denied');
+    await connectHealthStepsAndWeight('user-1');
+    expect(mockHealth.requestHealthPermissions).toHaveBeenCalledWith(['steps', 'weight']);
+  });
+
+  test('on a grant, records steps and imports weight', async () => {
+    mockHealth.requestHealthPermissions.mockResolvedValue('granted');
+    mockHealth.getHealthPermissionStatus.mockResolvedValue('granted');
+    mockHealth.readStepsToday.mockResolvedValue(9100);
+    mockHealth.importNewWeights.mockResolvedValue({ imported: 1, latestMs: 1 });
+    const status = await connectHealthStepsAndWeight('user-1');
+    expect(status).toBe('granted');
+    expect(mockDb.setDailySteps).toHaveBeenCalledWith('user-1', { steps: 9100, source: 'auto' });
+    expect(mockHealth.importNewWeights).toHaveBeenCalledWith('user-1');
+  });
+
+  test('on a refusal, does not record or import', async () => {
+    mockHealth.requestHealthPermissions.mockResolvedValue('denied');
+    const status = await connectHealthStepsAndWeight('user-1');
+    expect(status).toBe('denied');
+    expect(mockDb.setDailySteps).not.toHaveBeenCalled();
+    expect(mockHealth.importNewWeights).not.toHaveBeenCalled();
+  });
+
+  test('passes through sdk_unavailable so the caller can offer install', async () => {
+    mockHealth.requestHealthPermissions.mockResolvedValue('sdk_unavailable');
+    expect(await connectHealthStepsAndWeight('user-1')).toBe('sdk_unavailable');
+  });
+
+  test('never throws when the permission layer blows up', async () => {
+    mockHealth.requestHealthPermissions.mockRejectedValue(new Error('boom'));
+    await expect(connectHealthStepsAndWeight('user-1')).resolves.toBe('unavailable');
   });
 });
 

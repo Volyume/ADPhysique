@@ -106,23 +106,23 @@ export async function maybePromptStepsConnect({ userId, firstRunComplete, stepsE
     await markStepsPromptShown();
 
     Alert.alert(
-      'Track your daily steps?',
-      'Volyume can read your daily steps from your watch, phone or tracker so your step target and the coach stay accurate. You can change this any time in Settings.',
+      'Track steps and weight?',
+      'Volyume can read your daily steps and bodyweight from your watch, phone, scale or tracker, so your step target, weight log and check-ins stay accurate without typing them in. You can change this any time in Settings.',
       [
         { text: 'Not now', style: 'cancel' },
         {
           text: 'Connect',
           onPress: async () => {
             try {
-              const status = await activitySteps.requestStepPermissionStatus();
-              if (status === 'granted') {
-                await activitySteps.recordTodaySteps(userId);
-              } else if (status === 'sdk_unavailable') {
+              // One sheet for steps and weight. On a grant this records today's
+              // steps and imports any new weight straight away.
+              const status = await activitySteps.connectHealthStepsAndWeight(userId);
+              if (status === 'sdk_unavailable') {
                 // eslint-disable-next-line global-require
                 const { openHealthConnectInstall } = require('./health');
                 Alert.alert(
                   'Health Connect needed',
-                  'Volyume reads your steps through Health Connect. It isn\'t set up on this phone yet. Install or update it, then turn steps on in Settings.',
+                  'Volyume reads your steps and weight through Health Connect. It isn\'t set up on this phone yet. Install or update it, then connect from Settings.',
                   [
                     { text: 'Not now', style: 'cancel' },
                     { text: 'Get Health Connect', onPress: () => { openHealthConnectInstall(); } },

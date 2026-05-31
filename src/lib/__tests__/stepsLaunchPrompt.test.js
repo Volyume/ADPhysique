@@ -24,6 +24,7 @@ const mockActivity = {
   getStepPermissionStatus: jest.fn(),
   requestStepPermissionStatus: jest.fn(),
   recordTodaySteps: jest.fn(),
+  connectHealthStepsAndWeight: jest.fn(),
 };
 jest.mock('../activitySteps', () => mockActivity);
 
@@ -42,6 +43,7 @@ beforeEach(() => {
   mockActivity.getStepPermissionStatus.mockResolvedValue('undetermined');
   mockActivity.requestStepPermissionStatus.mockResolvedValue('granted');
   mockActivity.recordTodaySteps.mockResolvedValue(null);
+  mockActivity.connectHealthStepsAndWeight.mockResolvedValue('granted');
 });
 
 const base = {
@@ -129,7 +131,7 @@ describe('maybePromptStepsConnect', () => {
     expect(result).toBe('skipped');
   });
 
-  test('Connect → granted records today\'s steps', async () => {
+  test('Connect → asks for steps and weight together', async () => {
     mockAlert.mockImplementation((title, body, buttons) => {
       const connect = buttons.find(b => b.text === 'Connect');
       connect.onPress();
@@ -137,8 +139,22 @@ describe('maybePromptStepsConnect', () => {
     await maybePromptStepsConnect({ userId: 'u9', firstRunComplete: true, stepsEnabled: true });
     // let the async onPress settle
     await new Promise(r => setImmediate(r));
-    expect(mockActivity.requestStepPermissionStatus).toHaveBeenCalled();
-    expect(mockActivity.recordTodaySteps).toHaveBeenCalledWith('u9');
+    // The combined helper handles the steps record and the weight import on a
+    // grant; the prompt just calls it with the user id.
+    expect(mockActivity.connectHealthStepsAndWeight).toHaveBeenCalledWith('u9');
+  });
+
+  test('Connect → sdk_unavailable raises the install prompt', async () => {
+    mockActivity.connectHealthStepsAndWeight.mockResolvedValue('sdk_unavailable');
+    const titles = [];
+    mockAlert.mockImplementation((title, body, buttons) => {
+      titles.push(title);
+      const connect = buttons?.find(b => b.text === 'Connect');
+      if (connect) connect.onPress();
+    });
+    await maybePromptStepsConnect({ userId: 'u9', firstRunComplete: true, stepsEnabled: true });
+    await new Promise(r => setImmediate(r));
+    expect(titles).toContain('Health Connect needed');
   });
 
   test('never throws when the permission layer blows up', async () => {

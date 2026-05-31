@@ -141,3 +141,35 @@ export async function recordTodaySteps(userId) {
     return null;
   }
 }
+
+/**
+ * The single "connect your health data" ask used by the launch prompt and Pro
+ * enrolment. Requests steps AND weight together in one system sheet, and on a
+ * grant kicks the immediate reads so the user sees both straight away: today's
+ * steps into daily_steps, and any new bodyweight from a scale or wearable into
+ * the morning-weight log (which the weekly check-in reads). Asking for both in
+ * one sheet is what links weight in without a second prompt or a Settings trip.
+ *
+ * Returns the permission status string ('granted' | 'denied' | 'sdk_unavailable'
+ * | 'unavailable') so the caller can send the user to install Health Connect
+ * when that is the real blocker. Never throws.
+ */
+export async function connectHealthStepsAndWeight(userId) {
+  const health = getHealth();
+  if (!health?.requestHealthPermissions) return 'unavailable';
+  let status;
+  try {
+    status = await health.requestHealthPermissions(['steps', 'weight']);
+  } catch (_) {
+    return 'unavailable';
+  }
+  if (status === 'granted') {
+    try { await recordTodaySteps(userId); } catch (_) { /* steps best effort */ }
+    try {
+      // importNewWeights self-gates on the weight permission and only reads
+      // since the last import, so it is cheap and safe to fire here.
+      health.importNewWeights?.(userId)?.catch?.(() => {});
+    } catch (_) { /* weight import best effort */ }
+  }
+  return status;
+}

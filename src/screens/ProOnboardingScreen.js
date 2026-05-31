@@ -458,15 +458,16 @@ export default function ProOnboardingScreen({ navigation }) {
 
       if (user?.id) await saveLocalProfile(user.id, merged);
 
-      // Opting into step targets is the moment to ask for the health step
-      // permission, so the foreground auto-read can populate daily_steps.
-      // Fire-and-forget: declining is fine, the check-in falls back to a
-      // manual average. Mirrors the Settings toggle.
+      // Opting into step targets is the moment to ask for health access. We
+      // request steps and weight together in one sheet, so the foreground
+      // auto-read can populate daily_steps and any scale or wearable weight
+      // flows into the morning-weight log the check-in reads. Fire-and-forget:
+      // declining is fine, the check-in falls back to a manual average.
       if (stepsTargetOn) {
         try {
           // eslint-disable-next-line global-require
-          const { requestStepPermission } = require('../lib/activitySteps');
-          requestStepPermission().catch(() => {});
+          const { connectHealthStepsAndWeight } = require('../lib/activitySteps');
+          connectHealthStepsAndWeight(user?.id).catch(() => {});
         } catch (_) { /* activitySteps unavailable */ }
       }
 
