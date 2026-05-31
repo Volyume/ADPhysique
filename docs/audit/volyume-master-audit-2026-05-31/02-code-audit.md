@@ -1445,6 +1445,43 @@ but duplicated machinery. Maintainability. Low.
 
 ---
 
+## lib core — batch 2: edPatternDetector, recoveryEMA, insightsEngine (full) + nutritionEngine (head)
+
+**All clean, pure, evidence-cited. No defects.** This batch makes the
+harm-prevention system fully visible and it is a genuine differentiator.
+
+### Verified strengths — the ED/RED-S safety architecture (lead-with-it for Phase 8/11)
+- **`edPatternDetector.js`**: pure 4-signal detector (rapid loss
+  ≤−1.5%/wk, sustained low energy ≤2 for ≥2 wk, under-adherence ≥2/3 wk,
+  weight-only check-ins ≥2/3 wk); fires on **≥2** signals (≥3 if
+  `goalLockAdvanced`); `hasEdPatternCleared` walks back 2 clean weeks to
+  clear. Thresholds exported for tests.
+- **`nutritionEngine.js`** (head read): **FFM energy floor = 30 kcal/kg
+  FFM** (IOC RED-S consensus, Mountjoy 2014/2023) — a **hard floor** that
+  refuses deficit suggestions below it; `MAX_SAFE_LOSS_RATE 0.8%/wk`,
+  `HARD_GATE 1.5%/wk`; conservative sex-aware FFM fallback that errs
+  **safer**. Activity multipliers tuned down for gym-only populations with
+  cited rationale (Pontzer 2016). Three protein approaches in g/kg LBM/BW.
+  Genuinely sophisticated, evidence-based.
+- Together with `weeklyCoach` (`scoffPositive`, rapid-loss compression),
+  `proGate` (safety is **tier-blind** — free users protected),
+  `categories.js` (ED/FFM never push-notified), `HeldDecisionCard` (Beat
+  link), and `MacroRings` (adherence-neutral colours), this is a
+  **coherent, deliberate harm-prevention system across engine + UI +
+  notifications + monetisation**. Very few competitors have any of it.
+- **`recoveryEMA.js`**: half-life-decayed EWMA (7-day) for soreness/
+  fatigue/joint; pure, clean.
+- **`insightsEngine.js`**: deterministic 6-rule "For You" engine
+  (under-MEV / stalled / peaked / recovery-warn / deload-due / gentle-
+  rhythm); requires a **3-week base** before firing volume nudges (no
+  new-user noise); jargon-free, psychologically supportive copy ("Not a
+  setback, just part of the plan").
+
+> `nutritionEngine.js` body (TDEE/macro/FFM-floor computation, `:120-860`)
+> and `coachingGoals.js` still to read — next batch.
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction

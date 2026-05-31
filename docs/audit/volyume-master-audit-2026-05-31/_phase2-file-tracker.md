@@ -2,7 +2,7 @@
 
 Status: `[x]` read in full + findings recorded · `[~]` partially read (see 02-code-audit.md scope notes) · `[ ]` not yet read.
 Generated 2026-05-31T16:09Z. Total non-test source files: 227 (83,854 LOC).
-Read so far: 120 files.
+Read so far: 123 files.
 
 ## App.js/
 
@@ -77,7 +77,7 @@ Read so far: 120 files.
 - [x] `dataBackup.js` (132)
 - [~] `database.js` (5574)
 - [ ] `differentialPaywall.js` (181)
-- [ ] `edPatternDetector.js` (146)
+- [x] `edPatternDetector.js` (146)
 - [ ] `engineTelemetry.js` (11)
 - [x] `errorLog.js` (307)
 - [ ] `exerciseDisplay.js` (117)
@@ -87,7 +87,7 @@ Read so far: 120 files.
 - [ ] `haptics.js` (80)
 - [ ] `health.js` (586)
 - [ ] `importExternal.js` (488)
-- [ ] `insightsEngine.js` (232)
+- [x] `insightsEngine.js` (232)
 - [ ] `liftProgress.js` (98)
 - [ ] `links.js` (26)
 - [ ] `mesocycle.js` (472)
@@ -98,7 +98,7 @@ Read so far: 120 files.
 - [ ] `planSwitch.js` (53)
 - [ ] `poolGenerator.js` (131)
 - [x] `proGate.js` (61)
-- [ ] `recoveryEMA.js` (114)
+- [x] `recoveryEMA.js` (114)
 - [ ] `restSound.js` (188)
 - [ ] `seedExercises.js` (985)
 - [ ] `seedRoutines.js` (1568)
