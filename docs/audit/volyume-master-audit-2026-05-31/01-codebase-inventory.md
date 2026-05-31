@@ -2,232 +2,190 @@
 
 Status: **COMPLETE** (Phase 1)
 Date: 2026-05-31
-Branch audited: `main` @ `2943b55` (verified 0 ahead / 0 behind `origin/main`, clean tree)
-Author: audit session (Claude)
+Branch audited: `main` @ `a4bf964` (code baseline identical to `2943b55`;
+the 3 commits since are audit-docs-only, verified via
+`git diff --name-status 2943b55 HEAD` → 0 deletions, 3 additions).
+Author: master audit session (Claude), rebuilt from direct verification.
 
-> Self-contained handoff note. This is the first document of the
-> 2026-05-31 master audit. Every claim here was checked against real
-> files via `git ls-files`, `wc -l`, and direct reads. An earlier draft
-> of this audit (same session) fabricated a TypeScript codebase that
-> does not exist; that draft is discarded. The repo is a **JavaScript
-> Expo / React Native app**, not TypeScript. If a later document
-> contradicts this one, re-verify against the working tree before
-> trusting either.
+> **Handoff note.** Every count in this document was produced this
+> session by `git ls-files`, `git ls-tree`, `wc -l`, and direct reads,
+> and is reproducible. A **prior version of this same file overstated
+> the counts** (claimed 598 tracked files / 108 `.md`); the real numbers
+> at that same baseline are 565 / 75 (now 568 / 78 with the audit docs).
+> That prior overstatement is corrected here. The repo is a **JavaScript
+> Expo / React Native app — not TypeScript** (an even earlier draft this
+> session fabricated a TS codebase; discarded). If any later document
+> contradicts this one, re-verify against the working tree.
 
 ---
 
-## 1. What Volyume is
+## 1. What Volyume is (from code + root docs, structurally verified)
 
-A single-codebase Expo (SDK 51) React Native app — a hypertrophy /
-physique training app with an integrated food-logging layer, a
-"Precision Coaching" weekly-adjustment engine, offline-first SQLite
-storage, and Supabase cloud sync. Dark-only UI, amber accent
-(`#F5A623`), brand background `#0D0D0D`. Currently in Play Console
-closed testing (versionCode 5, v1.1.0); release frozen by founder
-direction until the whole product is built out.
+A single-codebase **Expo SDK 51 React Native** app: a hypertrophy /
+physique training app with an integrated food-logging layer, a weekly
+"coaching" adjustment engine, offline-first **SQLite** storage, and
+**Supabase** cloud sync. App name `volyume`, version `1.1.0`
+(`package.json:2-3`). Bundle/package id and deep-link scheme to be
+confirmed against `app.json` in Phase 3 (not yet personally read).
 
-Package name / bundle id: `app.volyume`. Deep-link scheme `volyume://`
-+ universal links on `volyume.app`.
+## 2. Counts (directly verified this session)
 
-## 2. Counts (verified)
+| Metric | Count | How verified |
+|---|---|---|
+| Tracked files (git) | **568** | `git ls-files \| wc -l` |
+| `.js` files | **379** | `git ls-files '*.js'` |
+| `.md` docs | **78** | `git ls-files '*.md'` |
+| `.sql` files | **60** | `git ls-files '*.sql'` |
+| `.ts` files | **5** | `git ls-files '*.ts'` |
+| `.swift` files | **4** | `git ls-files '*.swift'` |
+| `.kt` files | **2** | `git ls-files '*.kt'` |
+| Screens (`src/screens/*.js`) | **60** | `git ls-files 'src/screens/*.js'` |
+| Components (`src/components/**`, excl `.test.`) | **49** | glob, grep -v `.test.` |
+| Lib modules (`src/lib/**`, excl `.test.`) | **114** | glob, grep -v `.test.` |
+| Test files (`*.test.js`) | **133** | `git ls-files '*.test.js'` |
+| App source LOC (`src/**` non-test + `App.js`) | **83,854** | `wc -l` total |
 
-| Metric | Count |
+> Note: there is **no `android/` native folder** in the tracked tree
+> (the prior inventory listed one; `git ls-files | grep '^android/'`
+> returns nothing). Native iOS/Android customisation lives in `modules/`
+> (`.swift`/`.kt`) and `plugins/` (Expo config plugin) only.
+
+## 3. `src/` subdirectory breakdown (verified)
+
+| Dir | Non-test `.js` files |
 |---|---|
-| Tracked files (git) | 598 |
-| `.js` files | 379 |
-| `.md` docs | 108 |
-| `.sql` files | 60 (56 `migrate_*` + schema/setup/audit/nuke) |
-| `.ts` files | 5 (3 Supabase edge functions + 2 native module index.ts) |
-| Screens (`src/screens/*.js`) | 60 |
-| Components (`src/components/**/*.js`, excl tests) | 49 |
-| Lib modules (`src/lib/**/*.js`, excl tests) | 114 |
-| Test files (`*.test.js`) | 133 |
-| Cloud migrations (`supabase/migrate_*.sql`) | 56 |
-| Edge functions | 3 (delete-account, play-billing-rtdn, send-push) |
-| App source LOC (src + App.js, excl tests/mocks) | ~83,854 |
+| `src/lib` | 114 |
+| `src/screens` | 60 |
+| `src/components` | 49 |
+| `src/styles` | 1 (`theme.js`) |
+| `src/store` | 1 (`useAppStore.js`) |
+| `src/navigation` | 1 (`RootNavigator.js`) |
 
-## 3. Tech stack (from package.json, verified)
+## 4. Largest source files by LOC (verified `wc -l`, top 15)
 
-Runtime: `expo ~51.0.0`, `react 18.2.0`, `react-native 0.74.5`.
+| LOC | File |
+|---|---|
+| 5,574 | `src/lib/database.js` |
+| 2,560 | `src/screens/ActiveWorkoutScreen.js` |
+| 2,344 | `src/screens/HomeScreen.js` |
+| 2,110 | `src/screens/CoachOutputScreen.js` |
+| 1,732 | `src/lib/sync.js` |
+| 1,716 | `src/screens/NutritionTargetsScreen.js` |
+| 1,568 | `src/lib/seedRoutines.js` |
+| 1,549 | `src/lib/planEngine.js` |
+| 1,494 | `src/screens/ShareCardScreen.js` |
+| 1,436 | `src/screens/AnalyticsScreen.js` |
+| 1,435 | `src/screens/SettingsScreen.js` |
+| 1,378 | `src/screens/ProOnboardingScreen.js` |
+| 1,305 | `src/screens/WorkoutSummaryScreen.js` |
+| 1,300 | `src/screens/WeeklyCheckInScreen.js` |
+| 1,250 | `src/screens/ManualBuilderScreen.js` |
 
-Navigation: `@react-navigation/native` 6, `bottom-tabs` 6, `stack` 6.
-State: `zustand ^4.5.2` (single store `src/store/useAppStore.js`).
-Backend: `@supabase/supabase-js ^2.43.4`.
-Local DB: `expo-sqlite ~14.0.4`.
-Charts/graphics: `@shopify/react-native-skia`, `react-native-svg`.
-Animation: `react-native-reanimated ~3.10.1` + RN `Animated`.
-Payments: `react-native-iap ^12.16.1` (Google Play Billing).
-Health: `react-native-health` (Apple), `react-native-health-connect`
-(Android), `expo-sensors`.
-Camera/scan: `react-native-vision-camera`, `@react-native-ml-kit/text-recognition`.
-Notifications: `expo-notifications`, `expo-task-manager`,
-`expo-background-fetch`.
-Errors: `@sentry/react-native ^6.22.0`.
-Native modules (local, `file:` deps): `live-activity` (iOS Live
-Activity rest timer), `rest-timer-live` (Android foreground-service
-rest timer).
+These very large single files are the highest-value targets for the
+Phase 2 (code), Phase 6 (performance) and maintainability assessment.
 
-Dev: `eslint ^9.39.4` (flat config `eslint.config.js`), `jest ^29.7.0`
-+ `jest-expo`, `babel-jest`, `xlsx` (import/export).
+## 5. Tech stack (from `package.json`, verified lines)
 
-> **Dependency-usage note (to verify in Phase 2):** package.json lists
-> `tsconfig.json` exists but the app is JS; TypeScript is not a build
-> dependency, only ambient. Confirm whether `expo-print`, `expo-av`,
-> `xlsx` etc. are all actively imported during the per-file audit. Not
-> yet confirmed unused — flagged for Phase 2 dead-code sweep.
+Runtime: `expo ~51.0.0`, `react 18.2.0`, `react-native 0.74.5`
+(`package.json:39,62-63`).
 
-## 4. Top-level layout (verified `ls` + `git ls-files`)
+- **Navigation:** `@react-navigation/native ^6.1.18`, `bottom-tabs
+  ^6.6.1`, `stack ^6.4.1` (`:32-34`).
+- **State:** `zustand ^4.5.2` (`:76`) — single store
+  `src/store/useAppStore.js` (count confirmed: 1 store file).
+- **Backend:** `@supabase/supabase-js ^2.43.4` (`:37`).
+- **Local DB:** `expo-sqlite ~14.0.4` (`:55`).
+- **Graphics/charts:** `@shopify/react-native-skia ^1.2.3` (`:36`),
+  `react-native-svg 15.2.0` (`:71`).
+- **Animation:** `react-native-reanimated ~3.10.1` (`:68`).
+- **Payments:** `react-native-iap ^12.16.1` (`:67`).
+- **Health:** `react-native-health 1.19.0` (`:65`),
+  `react-native-health-connect 3.3.3` (`:66`), `expo-sensors` (`:53`).
+- **Camera/scan:** `react-native-vision-camera ^4.7.3` (`:73`),
+  `@react-native-ml-kit/text-recognition ^1.5.2` (`:31`).
+- **Notifications:** `expo-notifications` (`:50`), `expo-task-manager`
+  (`:58`), `expo-background-fetch` (`:42`).
+- **Errors:** `@sentry/react-native ^6.22.0` (`:35`), excluded from
+  `expo install` autoupgrade (`:92-98`).
+- **Local native modules (`file:` deps):** `live-activity`
+  (`:61`), `rest-timer-live` (`:75`) → `modules/`.
+- **Dev:** `eslint ^9.39.4` flat config (`:82`), `jest ^29.7.0` +
+  `jest-expo ~51.0.4` (`:85-86`), `babel-jest`, `xlsx ^0.18.5` (`:87`).
+- **Jest config is inline** in `package.json:13-26` (node env, asset +
+  url-polyfill mocks). No separate `jest.config.js`.
+
+> **Dependency-usage — DEFERRED to Phase 2.** Whether every listed dep
+> (e.g. `expo-print`, `expo-av`, `expo-store-review`, `xlsx`,
+> `react-native-webview`) is actually imported is NOT yet verified.
+> This will be a dead-dependency sweep in the per-file audit. No dep is
+> asserted unused at this stage.
+
+## 6. Top-level layout (verified `ls` + `git ls-files`)
 
 ```
-App.js                  app root: error boundary, providers, bg tasks, bootstrap
-index.js                registerRootComponent(App)
-app.json                Expo config (perms, plugins, deep links)
-eas.json                build profiles (dev/preview/production)
-eslint.config.js        flat ESLint config (CI lint guards live here)
-babel.config.js         babel-preset-expo + reanimated plugin
-metro.config.js         metro bundler config
-tsconfig.json           ambient TS settings (app is JS)
-package.json            deps + inline jest config
-android/                native android project (prebuild output, partially tracked)
-assets/                 icons, splash, seed data (.dat snapshots)
-modules/                two local native modules (live-activity, rest-timer-live)
-plugins/                expo config plugin (withHealthConnectPermissionDelegate)
-public/                 GitHub Pages site (privacy policy, app-map, assetlinks)
-scripts/                seed builders (CoFID, OFF snapshots), identity CI check
-supabase/               schema.sql, 56 migrations, 3 edge functions, README tracker
-docs/                   108 markdown docs (locked specs, audits, status)
-src/                    all app source (see §5)
-__mocks__/              jest mocks (expo-sqlite, async-storage, reanimated, etc.)
-tests/simulator/        coaching-engine scenario simulations (12 scenarios)
+App.js                root component (34 KB)
+index.js              entry (registerRootComponent)
+app.json              Expo config (perms, plugins, deep links) — not yet read
+eas.json              EAS build profiles
+eslint.config.js      flat ESLint config
+babel.config.js       babel-preset-expo (+ reanimated plugin — to confirm)
+metro.config.js       metro config
+tsconfig.json         ambient TS settings (app is JS)
+package.json          deps + inline jest config
+__mocks__/            jest mocks (10 files)
+assets/               icons/splash/seed (.dat) — 11 files
+docs/                 65 docs (incl this audit folder)
+modules/              2 local native modules (15 files; .swift/.kt/.ts)
+plugins/              Expo config plugin (2 files)
+public/               GitHub Pages site (9 files; privacy, app-map, CNAME)
+scripts/              seed/CI scripts (5 files)
+supabase/             schema + 60 .sql + edge functions (65 files)
+tests/                12 files (incl simulator scenarios)
+src/                  all app source (see §3)
 ```
 
-Large root markdown docs (architecture references): `ARCHITECTURE.md`
+Large root reference docs (sizes from `ls -la`): `ARCHITECTURE.md`
 (83 KB), `VOLYUME_DEEPMAP.md` (50 KB), `APPMAP.md` (26 KB),
-`INFRASTRUCTURE.md` (25 KB), `CLAUDE.md` (engineering rules).
+`INFRASTRUCTURE.md` (25 KB), `CLAUDE.md` (14 KB engineering rules),
+`DOMAIN_SETUP.md` (6 KB). These are claims-about-the-app and will be
+treated as **unverified secondary sources** — cross-checked against
+code, never quoted as fact on their own.
 
-## 5. `src/` structure (verified)
+## 7. Items explicitly NOT yet verified (carried into later phases)
 
-```
-src/
-  navigation/RootNavigator.js   1065 LOC — the whole nav tree + bootstrap
-  store/useAppStore.js          910 LOC — single zustand store
-  styles/theme.js               design tokens (colors, fontSize, spacing, …)
-  screens/                      60 screens (see §6)
-  components/                   49 shared components
-    food/                       food-domain components (rings, rows, sheets)
-  lib/                          114 modules — the engine + data layer
-    database.js                 5574 LOC — SQLite schema + all repositories
-    sync.js                     1732 LOC — legacy sync layer
-    sync/                       modular per-table sync (registry, runner, tables/)
-    food/                       food engine (db, waterfall, sources, normalisers)
-    notifications/              foreground handler, scheduler, channels, push
-    payments/                   Play Billing, cascade, catalogue, restore
-    telemetry/                  event allow-list, transport, sentry bridge
-    observability/              sentry scrub
-    planEngine.js / poolGenerator.js / weeklyCoach.js / algorithms.js  coaching
-    seedExercises.js / seedRoutines.js  built-in library + routines
-```
+These were asserted in the prior inventory but I have **not personally
+read the implementing files yet**, so I record them as *to-verify*, not
+as fact:
 
-## 6. Navigation map (verified from RootNavigator.js)
+- **Navigation tree / tab structure / Pro-guard wrapping / deep-link
+  routing** — requires reading `src/navigation/RootNavigator.js`,
+  `App.js`, `app.json`. → **Phase 3.**
+- **Two sync layers (legacy `sync.js` + modular `sync/`) and whether
+  both are live** — requires reading both. → **Phase 2/5.**
+- **Four monetisation surfaces (Paywall/ProUpgrade/Subscription/
+  CascadeGate) and whether any is a dead end** — → **Phase 3/4.**
+- **Migration backlog / unapplied cloud columns** — requires reading
+  `supabase/` migrations + client query code. → **Phase 5.**
+- **Bundle id, deep-link scheme, permissions** — from `app.json`. → **Phase 3.**
 
-Entry: `index.js` → `App` → `<ErrorBoundary><GestureHandlerRootView>
-<SafeAreaProvider><ToastProvider><FeedbackProvider><RootNavigator/>`
-+ overlays (PRCelebration, WhatsNewSheet, CrashRecoveryToast).
+## 8. Static baseline status
 
-`RootNavigator` gates between flows by store state, in priority order:
-1. no `tier` → **WelcomeStack** (Welcome, Login, Onboarding)
-2. signed-in cloud user + `healthConsent === false` → **Article9ConsentStack**
-3. `!firstRunComplete` → **ProOnboardingStack** (pro) or **FirstRunStack** (free)
-4. else → **MainTabs**
+Re-run independently in Phase 7 (`07-error-testing-results.md`). The
+prior doc 07 reports ESLint 0 errors / 1665 warnings and Jest 133
+suites / 2301 passed / 3 skipped; **these will be re-run and re-confirmed
+by me before being treated as this audit's baseline**, not inherited.
 
-MainTabs (5 tabs, `lazy={false}`):
-- **HomeTab** "Train" → HomeStack: Home, BuildWorkout, ActiveWorkout,
-  WorkoutSummary, WorkoutHistory, VolumeHeatmap, ShareCard, CoachReview,
-  ProUpgrade
-- **PlansTab** "Plans" → PlansStack: Plans, PlanDetail, RoutineDetail,
-  ExerciseLibrary, ExerciseDetail, ManualBuilder, PlanLibrary,
-  MesocycleBuilder, ProUpgrade
-- **DiaryTab** "Diary" → DiaryStack: Diary, FoodSearch, AddCustomFood,
-  ScanBarcode, ScanLabel, FoodInsights, MyRecipes, MyMeals, RecipeBuilder
-- **ProgressTab** "Progress" → ProgressStack: Analytics, WorkoutHistory,
-  WorkoutSummary, VolumeHeatmap, PRWall, CoachReview, BodyMetrics,
-  LiftProgress, ExerciseLibrary, ExerciseDetail, YearOfLifts, ShareCard,
-  ProUpgrade
-- **ProfileTab** "You" → ProfileStack: You, Settings, NutritionTargets,
-  NutritionEducation, BodyMetrics, WeeklyCheckIn, CoachOutput, ShareCard,
-  CoachHeldHistory, BlockReflection, ProGoalSetup, GoalChangeSummary,
-  GoalLockConsent, NotificationSettings, Import, CoachingReminders,
-  WellbeingCheck, PrivacyPolicy, DebugLog, SubscriptionPolicy,
-  Subscription, CascadeGate, Paywall, Credits, ProUpgrade
+## 9. Phase status tracker
 
-Pro gating: six screens wrapped in `withProGuard` (WeeklyCheckIn,
-NutritionTargets, BodyMetrics, CoachOutput, ProGoalSetup,
-CoachingReminders) — guard enforces tier regardless of entry path.
-
-Deep-link routing (notification tap, verified): only two mappings —
-`weekly_checkin` → ProfileTab/WeeklyCheckIn, `year_of_lifts_unlock` →
-ProgressTab/YearOfLifts. **Flag for Phase 3:** deep-link coverage is
-narrow; the `volyume://` scheme + universal links are declared in
-app.json but the in-app `routeFor()` handles only 2 types.
-
-## 7. Screens not (yet) confirmed reachable — Phase 3 follow-ups
-
-These exist as files/imports; reachability to be traced in Phase 3:
-- `WelcomeScreen` Free/Pro CTA targets (identity spec says both →
-  sign-up) — verify against code.
-- `AthleteHubScreen` — **does NOT appear** in RootNavigator imports or
-  routes (per the 2026-05-31 status note it was removed). Confirm the
-  file is gone from `git ls-files` (it is not in the screen list).
-- `FoodInsightsScreen`, `MyMealsScreen`, `NutritionEducationScreen`,
-  `BlockReflectionScreen`, `CoachHeldHistoryScreen`,
-  `GoalChangeSummaryScreen`, `ProUpgradeScreen` vs `PaywallScreen` vs
-  `SubscriptionScreen` vs `CascadeGateScreen` (four monetisation
-  surfaces — confirm each has a live entry point and they don't
-  overlap confusingly).
-
-## 8. Build / CI surface (verified `git ls-files`)
-
-GitHub workflows: `build-android.yml` (APK/AAB sideload),
-`main-ci.yml` (jest + eslint + expo-doctor + identity grep),
-`identity-invariant.yml`, `deploy-functions.yml`, `deploy-pages.yml`,
-`refresh-off-snapshot.yml`. No Maestro/E2E (removed 2026-05-29).
-
-Identity CI guard: `scripts/check-identity-invariant.sh` greps for
-`SET user_id` and fails the build on any match
-(IDENTITY_AND_OWNERSHIP_LOCKED.md rule 3).
-
-## 9. Immediate inventory-level observations (to pursue in later phases)
-
-1. **Very large single files.** `database.js` (5,574), `ActiveWorkoutScreen.js`
-   (2,560), `HomeScreen.js` (2,344), `CoachOutputScreen.js` (2,110),
-   `sync.js` (1,732). These are maintainability risks and the highest-
-   value targets for the Phase 2 code audit and Phase 6 perf audit.
-2. **Two sync layers coexist** — legacy `sync.js` (1,732 LOC) and the
-   modular `sync/` (registry + runner + per-table). Status docs say the
-   legacy→modular refactor was deliberately not finished (high
-   regression risk on the most fragile subsystem). Phase 2/5 must check
-   whether both are live and whether they can disagree.
-3. **Four monetisation screens** (Paywall, ProUpgrade, Subscription,
-   CascadeGate) — Phase 3/4/10 to confirm no dead-end or confusing
-   overlap.
-4. **Migration backlog.** Per CURRENT_STATUS §3 + supabase/README,
-   migrations 048, 050–055, 058 are pending founder apply; 049 held.
-   Phase 5 must check client code does not hard-depend on unapplied
-   cloud columns in a way that breaks the frozen build contract.
-5. **Test suite is large (133 files)** — running now (Phase 7). Result
-   pending in `07-error-testing-results.md`.
-
-## 10. Phase status tracker
-
-- [x] Phase 1 — codebase inventory (this doc)
+- [x] **Phase 1 — codebase inventory (this doc) — COMPLETE & VERIFIED**
 - [ ] Phase 2 — line-by-line code audit (`02-code-audit.md`)
 - [ ] Phase 3 — navigation & flow (`03-navigation-flow-audit.md`)
 - [ ] Phase 4 — feature audit (`04-feature-audit.md`)
 - [ ] Phase 5 — security (`05-security-audit.md`)
 - [ ] Phase 6 — performance (`06-performance-audit.md`)
-- [ ] Phase 7 — error testing (`07-error-testing-results.md`) — lint+jest running
+- [ ] Phase 7 — error testing (`07-error-testing-results.md`)
 - [ ] Phase 8 — competitor/sentiment (`08-competitor-user-sentiment.md`)
 - [ ] Phase 9 — design/UX (`09-design-ux-audit.md`)
 - [ ] Phase 10 — journey/psychology (`10-user-journey-psychology-audit.md`)
 - [ ] Phase 11 — master recommendations (`11-master-recommendations.md`)
-- [ ] Phase 0 — executive summary (`00-executive-summary.md`, written last)
+- [ ] Phase 0 — executive summary (`00-executive-summary.md`, last)
