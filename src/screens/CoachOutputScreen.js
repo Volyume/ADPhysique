@@ -1777,6 +1777,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
     color: colors.textPrimary,
+    fontVariant: ['tabular-nums'],
   },
   macroCycleColCarbs: {
     fontSize: fontSize.sm,

@@ -1652,9 +1652,10 @@ const styles = StyleSheet.create({
   weightInputCompact: {
     fontSize: fontSize.sm, color: colors.textPrimary,
     paddingVertical: spacing.xs, minWidth: 48, textAlign: 'right',
+    fontVariant: ['tabular-nums'],
   },
   weightInputUnit: { fontSize: fontSize.sm, color: colors.textSecondary },
-  weightCardText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary },
+  weightCardText: { flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
   weightCardEdit: { ...type.caption, color: colors.primary },
   narrativeCard: {
     paddingVertical: spacing.md,
@@ -1738,6 +1739,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.primary,
     fontWeight: fontWeight.semibold,
+    fontVariant: ['tabular-nums'],
   },
   weekLabel: {
     fontSize: fontSize.xs,
@@ -1764,6 +1766,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xl,
     fontWeight: fontWeight.black,
     color: colors.textPrimary,
+    fontVariant: ['tabular-nums'],
   },
   weekBarLabel: {
     ...type.caption,
