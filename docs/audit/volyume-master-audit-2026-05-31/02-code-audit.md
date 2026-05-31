@@ -750,6 +750,43 @@ migrate existing rows. Cross-ref Phase 9/10.
 
 ---
 
+## `src/screens/ActiveWorkoutScreen.js` (2560 lines) — runtime-critical paths read (NOT full)
+
+> Scope read: store subscription (`125-157`), elapsed-timer + AppState
+> lifecycle (`405-432`), persistent-notification effects (`453-506`),
+> set-save path (`724-790`). The full 2,560-line screen (superset
+> handling, ghost sets, deload prescription UI, exercise-swap, finish
+> flow) is **not** entirely read; claims scoped to the above.
+
+### Positive observations (verified) — this screen's runtime hygiene is good
+- **Re-render discipline:** `useShallow` selector (`:135-150`) pulls only
+  needed fields and **excludes `restTimerActive`/`restTimerRemaining`**, so
+  the per-second `tickRestTimer` does not re-render the 2k-line tree. The
+  comment (`:126-130`) documents the exact 300–600-renders/workout bug this
+  fixes. Correct.
+- **Drift-free elapsed timer:** derived from `workoutStartTime`
+  (`:410-411`), re-synced on every tick and on app-foreground (`:417-419`),
+  so backgrounding never desyncs the clock.
+- **Clean teardown:** the timer effect clears the interval, removes the
+  AppState sub (wrapped in try/catch for corrupt-subscription edge cases),
+  and clears the flash timeout on unmount (`:421-431`); a separate unmount
+  effect dismisses the persistent notification (`:502-506`).
+- **Double-finish guard:** `finishingRef` (`:210`) gates `handleFinishWorkout`
+  against rapid double-taps. Good (rapid-tap protection, a Phase 7 concern).
+- **Set-save validation:** blocks empty/zero/NaN weight for non-bodyweight
+  exercises with a clear prompt (`:726-731`).
+
+### A2-044 — Notification elapsed-time can lag during rapid logging (minor).
+Path 1 (immediate, `:456-476`) sets `lastNotifUpdateRef = now` on every
+state change; Path 2 (throttled elapsed refresh, `:479-497`) early-returns
+if `< 15s` since that ref. During frequent set logging Path 1 keeps
+resetting the throttle, but Path 1 itself passes fresh `elapsedSeconds`,
+so the lock-screen clock stays current. Only goes stale if there is no
+state change for >15s — which Path 2 then covers. **Net: no real
+staleness**; noted as analysed-and-cleared rather than a defect.
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction
