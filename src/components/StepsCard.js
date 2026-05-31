@@ -13,8 +13,8 @@
  *
  * Voice rules: CLAUDE.md. No em dashes.
  */
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, AppState } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -25,24 +25,49 @@ import { summariseWeekSteps } from '../lib/stepsSummary';
 export default function StepsCard({ userId, stepsTarget }) {
   const [today, setToday] = useState(null);
   const [summary, setSummary] = useState(null);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
-  useFocusEffect(useCallback(() => {
-    let alive = true;
-    if (userId) {
-      (async () => {
-        try {
-          const t = await getDailyStepsToday(userId);
-          const toDate = activityDayKey();
-          const fromDate = activityDayKey(Date.now() - 6 * 24 * 60 * 60 * 1000);
-          const rows = await getDailyStepsRange(userId, fromDate, toDate);
-          if (!alive) return;
-          setToday(t?.steps ?? null);
-          setSummary(summariseWeekSteps(rows));
-        } catch (_) { /* leave the zeros */ }
-      })();
-    }
-    return () => { alive = false; };
-  }, [userId]));
+  // Load the figure shown on the card. Refreshes from the health source first
+  // (recordTodaySteps reads Health Connect / Apple Health and writes the
+  // daily_steps store; it no-ops if the steps permission isn't granted), then
+  // reads the store. Doing the refresh here, rather than relying on the
+  // app-foreground sync that runs elsewhere, means the number is current
+  // whenever this card is shown instead of lagging behind by a sync cycle.
+  const load = useCallback(async () => {
+    if (!userId) return;
+    try {
+      // eslint-disable-next-line global-require
+      const { recordTodaySteps } = require('../lib/activitySteps');
+      await recordTodaySteps(userId);
+    } catch (_) { /* best effort; fall through to whatever is already stored */ }
+    try {
+      const t = await getDailyStepsToday(userId);
+      const toDate = activityDayKey();
+      const fromDate = activityDayKey(Date.now() - 6 * 24 * 60 * 60 * 1000);
+      const rows = await getDailyStepsRange(userId, fromDate, toDate);
+      if (!mountedRef.current) return;
+      setToday(t?.steps ?? null);
+      setSummary(summariseWeekSteps(rows));
+    } catch (_) { /* leave the zeros */ }
+  }, [userId]);
+
+  // Re-read when the screen gains navigation focus.
+  useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  // Re-read when the app returns to the foreground. useFocusEffect fires on
+  // navigation focus only, not on a background→active transition, so without
+  // this the figure stayed frozen at the last cold-start value until the user
+  // switched tabs or force-closed the app.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') load();
+    });
+    return () => sub.remove();
+  }, [load]);
 
   const target = stepsTarget ?? 8000;
   const todayVal = today ?? 0;
