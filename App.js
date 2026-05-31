@@ -472,17 +472,29 @@ export default function App() {
           } catch (_) {}
         }
         lastSyncAt = now;
-        if (supabaseUserId && localUserId) {
+        if (supabaseUserId) {
+          // Route the catch-up push through syncAll() instead of calling
+          // bulkUploadLocalData directly. SYNC_ARCHITECTURE_LOCKED.md
+          // requires every trigger to go through syncAll so the runner's
+          // single in-memory lock can dedupe. Previously this path called
+          // bulkUploadLocalData directly, bypassing that lock, so on each
+          // foreground it raced the dedicated callSyncAll('foreground')
+          // effect below and pushed everything twice (A2-001 / A2-012,
+          // idempotent but wasteful). Now the lock serialises them: on
+          // foreground whichever fires first runs and the other skips;
+          // on background / inactive / cold-start (where callSyncAll does
+          // not fire) this is the sole sync. The push runs before the pull
+          // inside syncAll, so the background-flush guarantee still holds.
           // eslint-disable-next-line global-require
-          const { bulkUploadLocalData } = require('./src/lib/sync');
-          bulkUploadLocalData(supabaseUserId, localUserId).catch(() => {});
+          const { syncAll } = require('./src/lib/sync');
+          syncAll({ userId: supabaseUserId, localUserId, triggeredBy: 'background' }).catch(() => {});
         }
         // Drain the sync queue — retries any cloud writes that failed
         // since the last foreground (offline at the gym, flaky 5G, 5xx
         // on Supabase, etc.). Backoff schedule means we don't hammer
         // the API; each op has its own next_attempt_at gate. Safe to
-        // run alongside bulkUploadLocalData — they operate on
-        // different tables (queue is per-op retry, bulk is catch-up).
+        // run alongside syncAll — the queue is per-op retry for rows that
+        // previously failed, syncAll is the bulk catch-up.
         if (supabaseUserId) {
           // eslint-disable-next-line global-require
           const { drainSyncQueue } = require('./src/lib/syncQueue');
