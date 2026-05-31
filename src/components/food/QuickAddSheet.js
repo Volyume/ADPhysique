@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, Pressable, TextInput, Alert,
+  View, Text, StyleSheet, Pressable, TextInput,
 } from 'react-native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
 import BottomSheet from '../BottomSheet';
+import { useToast } from '../Toast';
 
 const MEAL_SLOTS = [
   { key: 'breakfast',   label: 'Breakfast' },
@@ -26,6 +27,7 @@ const MEAL_SLOTS = [
  *   onClose          () => void
  */
 export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSave, onClose }) {
+  const toast = useToast();
   const [kcal, setKcal] = useState('');
   const [protein, setProtein] = useState('');
   const [carbs, setCarbs] = useState('');
@@ -54,7 +56,7 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
   async function handleSave() {
     const k = parseFloat(kcal);
     if (!Number.isFinite(k) || k <= 0 || k > 5000) {
-      Alert.alert('Check calories', 'Enter a calorie figure between 1 and 5000.');
+      toast.show('Enter calories between 1 and 5000.', { variant: 'warning' });
       return;
     }
     setSubmitting(true);
@@ -63,7 +65,7 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
       onClose?.();
     } catch (e) {
       setSubmitting(false);
-      Alert.alert('Couldn\'t save', e?.message ?? 'Try again.');
+      toast.show('Couldn\'t save. Try again.', { variant: 'error' });
     }
   }
 

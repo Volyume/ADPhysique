@@ -5,6 +5,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
 import BottomSheet from '../BottomSheet';
+import { useToast } from '../Toast';
 
 const MEAL_SLOTS = [
   { key: 'breakfast', label: 'Breakfast' },
@@ -48,6 +49,7 @@ export default function FoodDetailSheet({
   initialQuantityG, initialMealSlot = 'snack', initialEntryDate,
   onSave, onDelete, onClose,
 }) {
+  const toast = useToast();
   const defaultQty = useMemo(() => {
     if (initialQuantityG != null && initialQuantityG > 0) return String(Math.round(initialQuantityG));
     if (food?.serving_g) return String(Math.round(food.serving_g));
@@ -72,7 +74,7 @@ export default function FoodDetailSheet({
   async function handleSave() {
     const qty = Number(quantityG);
     if (!qty || qty <= 0 || qty > 5000) {
-      Alert.alert('Check quantity', 'Enter a quantity between 1 and 5000 g.');
+      toast.show('Enter a quantity between 1 and 5000 g.', { variant: 'warning' });
       return;
     }
     setSubmitting(true);
@@ -81,7 +83,7 @@ export default function FoodDetailSheet({
       onClose?.();
     } catch (e) {
       setSubmitting(false);
-      Alert.alert('Couldn\'t save', e?.message ?? 'Try again.');
+      toast.show('Couldn\'t save. Try again.', { variant: 'error' });
     }
   }
 
