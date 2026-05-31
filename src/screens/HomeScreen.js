@@ -18,6 +18,7 @@ import PressableCard from '../components/PressableCard';
 import { buildDailyNarrative } from '../lib/dailyNarrative';
 import { SkeletonCard } from '../components/Skeleton';
 import Sparkline from '../components/Sparkline';
+import StepsCard from '../components/StepsCard';
 import {
   getAllWorkouts, getCompletedWorkoutSets, getActivePlan, getRoutinesForPlan,
   getAllRoutineExerciseCounts, createWorkout, getRoutineExercisesWithDetails,
@@ -837,10 +838,6 @@ export default function HomeScreen({ navigation }) {
           </View>
         )}
 
-        {/* Steps no longer have a daily card here. They are read silently from
-            the platform health aggregator on app foreground (see App.js) and
-            shown on the Progress tab; the weekly average feeds the coach. */}
-
         {/* ── Morning weight card ── */}
         {tier === 'pro' && (todayWeight != null ? (
           <View style={styles.weightCard}>
@@ -924,6 +921,12 @@ export default function HomeScreen({ navigation }) {
             </TouchableOpacity>
           </View>
         ))}
+
+        {/* ── Steps, a small just-info line under the weight bit (Pro;
+            automatic from the health aggregator, self-hides when none) ── */}
+        {tier === 'pro' && user?.id && userProfile?.stepsEnabled !== false && (
+          <StepsCard userId={user.id} stepsTarget={userProfile?.stepsTarget} />
+        )}
 
         {/* ── This week, progress bars ── */}
         <AnimatedEntrance index={0}>

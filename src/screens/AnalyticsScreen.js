@@ -17,7 +17,6 @@ import SvgBarSparkline from '../components/SvgBarSparkline';
 import FatigueTrendCard from '../components/FatigueTrendCard';
 import BlockProgressCard from '../components/BlockProgressCard';
 import ReadinessCards from '../components/ReadinessCards';
-import StepsCard from '../components/StepsCard';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import {
@@ -540,12 +539,8 @@ export default function AnalyticsScreen({ navigation }) {
             Athlete Hub dashboard. ──────────────────────────────── */}
         <ReadinessCards userId={user?.id} tier={tier} />
 
-        {/* ── Steps (Pro; automatic from the health aggregator) ── */}
-        {tier === 'pro' && user?.id && userProfile?.stepsEnabled !== false && (
-          <View style={{ marginTop: spacing.lg }}>
-            <StepsCard userId={user.id} stepsTarget={userProfile?.stepsTarget} />
-          </View>
-        )}
+        {/* Steps moved to the Train tab (under the morning weight) as a small
+            just-info line, founder 2026-05-31. */}
 
         {/* ── Lighter week banner ──────────────────────────────── */}
         {deloadAlert && (
