@@ -1,11 +1,26 @@
 # 11 — Master Recommendations
 
-Status: **COMPLETE** — this is the action plan. **No code has been changed.**
+Status: **COMPLETE** as a plan. **Implementation underway** (started
+2026-05-31).
 Date: 2026-05-31
 Source: every item traces to a Phase 2 finding (A2-xxx) or a later-phase
 finding (N3/D9/P10/P6), each line-cited in its own doc. Rule 1 holds: nothing
-here is asserted that wasn't verified. **Phase 12 (implementation) starts only
-after you approve this plan and we agree scope.**
+here is asserted that wasn't verified.
+
+## Implementation progress (2026-05-31)
+
+Landed on `main`, full suite green (2325 passing), eslint clean:
+
+- Tier 1: T1-C (native Apple Sign-In deferred with a spec). Tier 1 closed.
+- Tier 2 done: A2-063, A2-043, A2-040, A2-060, A2-038, A2-001 / A2-012.
+- A2-019 retracted (see its row below): it conflicts with the identity
+  lock, no code change.
+
+Tier 2 still open, in order: A2-005 (duplicate `importNewWeights`, a
+follow-up to the A2-001 change), A2-004 (auth deep-link failures
+swallowed), A2-006 (sync-failure invisibility), A2-014 / A2-021 (consent
+consistency plus the 60s heuristic). Then Tier 3 + Tier 5, then Tier 4.
+Resume from A2-005. Session detail is in `docs/CURRENT_STATUS.md` § 0.
 
 ---
 

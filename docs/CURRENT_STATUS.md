@@ -14,6 +14,76 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 
 ## 0. Session summary
 
+### 0.0000000000001. 2026-05-31 (master-audit remediation, Claude): Tier 1 closed, Tier 2 in progress. Paused for a fresh restart tomorrow.
+
+Worked the master-audit remediation backlog
+(`docs/audit/volyume-master-audit-2026-05-31/`, doc 11 is the ordered
+list). Tier 1 closed, Tier 2 in progress. All commits landed on `main`,
+full suite green (2325 passing), eslint clean on every touched file.
+
+**Shipped this session (newest first):**
+- `4c778eb` / `d51f975` / `0c98232` A2-001 + A2-012 foreground sync
+  de-duplication. App.js had two AppState 'active' effects both pushing
+  on every foreground: `maybeSync` called `bulkUploadLocalData` directly
+  (outside the runner lock) while `callSyncAll('foreground')` ran
+  `syncAll`, which pushes again. `maybeSync`'s catch-up now routes through
+  `syncAll({triggeredBy:'background'})` so the single in-memory lock
+  dedupes the foreground race; the background / inactive flush still works
+  (push runs before pull inside syncAll). Source-scan regression test
+  added. `triggered_by` is free-form jsonb in the telemetry payload, no
+  server allow-list on that field, so 'background' is safe.
+- `496fcde` A2-019 retracted. The audit wanted sign-out's
+  `AsyncStorage.clear()` scoped to the user's keys, but that conflicts
+  with the hard lock `IDENTITY_AND_OWNERSHIP_LOCKED.md` section C, which
+  deliberately specifies a full clear with no carve-outs ("same hammer as
+  delete-account", founder direction). `AsyncStorage.clear()` is
+  app-sandbox scoped so it cannot touch other apps, and local SQLite is
+  wiped first, so nothing leaks. No code change; doc 11 annotated.
+- `d305b34` .. `08c2800` A2-038 accessible volume-status colours.
+  `getVolumeStatus` plus the body-diagram heatmap now run through the
+  accessible palette so colour-blind / high-contrast modes recolour the
+  volume bands. Five commits: the first apply was partial, the four
+  repairs after it are clean.
+- `5e630a0` A2-060 CSV formula-injection hardening (both exporters
+  prefix-escape `=`, `+`, `-`, `@`).
+- `1b3f7fb` A2-040 1RM high-rep clamp so the Brzycki formula stops firing
+  spurious PRs above roughly 12 reps.
+- `6590f04` T1-C native Apple Sign-In deferred with a full implementation
+  spec.
+- `6b4865c` A2-043 unit-aware gym-weight maths for lbs users (increments,
+  plates, bar, step, strength ratio).
+- `830bf55` A2-063 removed distress signals (extreme soreness, energy
+  crash) as paywall conversion triggers.
+
+**Process note (Rule 8, no minimising).** Two slips the founder had to
+correct. First, the A2-038 work was pushed half-applied and needed four
+repair commits. Second, the A2-001 regression test was pushed red (its
+regex matched the word `bulkUploadLocalData` in a comment, not a real
+call); fixed in `4c778eb`. Root cause both times: batching edit + test +
+commit + push in one action without reading each result. Corrective for
+next session: edit, read the result, test, read the result, then commit,
+then push, one step at a time. Never commit in the same action as the
+test that is meant to validate it.
+
+**Still open, in priority order (doc 11 drives it):**
+1. A2-005 duplicate `importNewWeights` across both sync effects (the
+   A2-001 change left it in place; small follow-up).
+2. A2-004 auth deep-link failures silently swallowed
+   (`App.js handleAuthDeepLink`, empty catch on
+   `exchangeCodeForSession`). Surface the failure to the user.
+3. A2-006 sync-failure invisibility (a quiet "last synced" signal, not a
+   nag, Phase 8 lesson).
+4. A2-014 / A2-021 health-consent re-prompt consistency and the 60s "new
+   vs returning" heuristic (replace with an explicit flag).
+5. Then Tier 3 + Tier 5 (perf + tooling gates), then Tier 4 (dead-code
+   cleanup).
+
+Resume next session with Rule 1 repo validation and "resume from A2-005".
+Nothing is half-applied, so there is nothing to clean up first.
+
+Repo at session end: `main` at this doc commit on top of `4c778eb` (the
+code work), 0/0 with origin, suite green, 0 lint errors.
+
 ### 0.000000000001. 2026-05-31 (Athlete Hub + audit assessment + fixes, Claude): useful fixes shipped, but repeated instruction failures; founder ended the session to restart fresh.
 
 Honest record. Real work shipped to `main`, but the session was marred by
