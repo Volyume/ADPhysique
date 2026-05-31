@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   RefreshControl, Animated, Dimensions, Alert,
@@ -474,6 +474,15 @@ export default function AnalyticsScreen({ navigation }) {
   // top of a wall of zeros. The Training block and the first-session
   // milestone still show, because those are forward-looking, not history.
   const hasData = allSets.length > 0;
+  // Trend and history charts only read once there are a few sessions to
+  // compare; below that a fresh account just sees empty grids, which is what
+  // made Progress feel "too full". Hold the multi-session charts back until
+  // there are at least three sessions. Founder declutter 2026-05-31.
+  const sessionCount = useMemo(
+    () => new Set(allSets.map((s) => s.workoutId ?? s.workout_id)).size,
+    [allSets],
+  );
+  const enoughForTrends = sessionCount >= 3;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -617,7 +626,7 @@ export default function AnalyticsScreen({ navigation }) {
         )}
 
         {/* ── 3d · Session Length Trend ─────────────────────── */}
-        {durationBars.length > 0 && (
+        {enoughForTrends && durationBars.length > 0 && (
           <View style={styles.section}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
               <Text style={styles.sectionLabel}>Session length trend</Text>
@@ -627,7 +636,7 @@ export default function AnalyticsScreen({ navigation }) {
         )}
 
         {/* ── 3e · Training Frequency ───────────────────────── */}
-        {muscleFreq.length > 0 && (
+        {enoughForTrends && muscleFreq.length > 0 && (
           <View style={styles.section}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
               <Text style={styles.sectionLabel}>Training frequency</Text>
@@ -642,7 +651,7 @@ export default function AnalyticsScreen({ navigation }) {
         )}
 
         {/* ── 4 · PR Rate Sparkline ─────────────────────────── */}
-        {hasData && (
+        {enoughForTrends && (
         <View style={styles.section}>
           <View style={styles.rowBetween}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
@@ -662,7 +671,7 @@ export default function AnalyticsScreen({ navigation }) {
         )}
 
         {/* ── 5 · Training Day Calendar ─────────────────────── */}
-        {hasData && (
+        {enoughForTrends && (
         <View style={styles.section}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
             <Text style={styles.sectionLabel}>Training days (last 12 weeks)</Text>
