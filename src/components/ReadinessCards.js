@@ -165,55 +165,56 @@ export default function ReadinessCards({ userId, tier }) {
         </View>
       )}
 
-      {/* Recovery signals */}
+      {/* Recovery: the signals and muscle readiness folded into one block. */}
       <View style={styles.section}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-          <Text style={styles.sectionLabel}>Recovery signals</Text>
+          <Text style={styles.sectionLabel}>Recovery</Text>
           <InfoTooltip text="Weighted 7-day average of your session check-ins. Scored 1-5 where lower is better for Soreness and Fatigue (1 = fresh, 5 = very sore/tired). Joint Comfort is also 1-5 where 1 = comfortable. If scores are consistently high, consider a lighter week." />
         </View>
-        <View style={styles.recoveryGrid}>
-          <RecoveryGauge label="Soreness" value={recovery.soreness} />
-          <RecoveryGauge label="Fatigue" value={recovery.fatigue} />
-          <RecoveryGauge label="Joint comfort" value={recovery.joint} invertGood />
-        </View>
-        <Text style={styles.recoveryNote}>Scale 1-5 · Lower is better for soreness & fatigue</Text>
-      </View>
-
-      {/* Recovery capacity trend insight */}
-      {tier === 'pro' && recoveryTrendInsight && (
-        <View style={[styles.trendInsightCard, recoveryTrendInsight.type === 'good' ? styles.trendInsightGood : styles.trendInsightWarn]}>
-          <Ionicons
-            name={recoveryTrendInsight.type === 'good' ? 'trending-up-outline' : 'alert-circle-outline'}
-            size={16}
-            color={recoveryTrendInsight.type === 'good' ? colors.success : colors.warning}
-          />
-          <Text style={styles.trendInsightText}>{recoveryTrendInsight.text}</Text>
-        </View>
-      )}
-
-      {/* Muscle readiness */}
-      {tier === 'pro' && freshnessEntries.length > 0 && (
-        <View style={styles.mfCard}>
-          <View style={styles.mfHeaderRow}>
-            <View style={[styles.mfIconWrap, { backgroundColor: colors.primaryBg }]}>
-              <Ionicons name="flash-outline" size={20} color={colors.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.mfTitle}>Muscle readiness</Text>
-              <Text style={styles.mfSub}>How recovered your muscles are based on your recent training.</Text>
-            </View>
+        <View style={styles.recoveryCard}>
+          <View style={styles.recoveryGrid}>
+            <RecoveryGauge label="Soreness" value={recovery.soreness} />
+            <RecoveryGauge label="Fatigue" value={recovery.fatigue} />
+            <RecoveryGauge label="Joint comfort" value={recovery.joint} invertGood />
           </View>
-          <View style={styles.mfChipGrid}>
-            {freshnessEntries.map(({ key, displayName, label, color, dot }) => (
-              <View key={key} style={[styles.mfChip, { borderColor: color + '44', backgroundColor: color + '12' }]}>
-                <View style={[styles.mfDot, { backgroundColor: dot }]} />
-                <Text style={[styles.mfChipName, { color: colors.textPrimary }]}>{displayName}</Text>
-                <Text style={[styles.mfChipLabel, { color }]}>{label}</Text>
+          <Text style={styles.recoveryNote}>Scale 1-5 · Lower is better for soreness & fatigue</Text>
+
+          {tier === 'pro' && freshnessEntries.length > 0 && (
+            <>
+              <View style={styles.recoveryDivider} />
+              <View style={styles.mfHeaderRow}>
+                <View style={[styles.mfIconWrap, { backgroundColor: colors.primaryBg }]}>
+                  <Ionicons name="flash-outline" size={20} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.mfTitle}>Muscle readiness</Text>
+                  <Text style={styles.mfSub}>How recovered your muscles are based on your recent training.</Text>
+                </View>
               </View>
-            ))}
-          </View>
+              <View style={styles.mfChipGrid}>
+                {freshnessEntries.map(({ key, displayName, label, color, dot }) => (
+                  <View key={key} style={[styles.mfChip, { borderColor: color + '44', backgroundColor: color + '12' }]}>
+                    <View style={[styles.mfDot, { backgroundColor: dot }]} />
+                    <Text style={[styles.mfChipName, { color: colors.textPrimary }]}>{displayName}</Text>
+                    <Text style={[styles.mfChipLabel, { color }]}>{label}</Text>
+                  </View>
+                ))}
+              </View>
+            </>
+          )}
         </View>
-      )}
+
+        {tier === 'pro' && recoveryTrendInsight && (
+          <View style={[styles.trendInsightCard, recoveryTrendInsight.type === 'good' ? styles.trendInsightGood : styles.trendInsightWarn]}>
+            <Ionicons
+              name={recoveryTrendInsight.type === 'good' ? 'trending-up-outline' : 'alert-circle-outline'}
+              size={16}
+              color={recoveryTrendInsight.type === 'good' ? colors.success : colors.warning}
+            />
+            <Text style={styles.trendInsightText}>{recoveryTrendInsight.text}</Text>
+          </View>
+        )}
+      </View>
     </AnimatedEntrance>
   );
 }
@@ -263,9 +264,15 @@ const styles = StyleSheet.create({
   milestoneBarTrack: { height: 4, borderRadius: radius.full, backgroundColor: colors.surface2, overflow: 'hidden' },
   milestoneBarFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
 
+  recoveryCard: {
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    padding: spacing.lg, borderWidth: 1, borderColor: colors.border, gap: spacing.md,
+  },
   recoveryGrid: {
-    flexDirection: 'row', backgroundColor: colors.surface, borderRadius: radius.lg,
-    padding: spacing.lg, borderWidth: 1, borderColor: colors.border, gap: spacing.sm,
+    flexDirection: 'row', gap: spacing.sm,
+  },
+  recoveryDivider: {
+    height: 1, backgroundColor: colors.border, marginVertical: spacing.xs,
   },
   gaugeItem: { flex: 1, alignItems: 'center', gap: spacing.xs },
   gaugeDot: { width: 12, height: 12, borderRadius: radius.sm },
