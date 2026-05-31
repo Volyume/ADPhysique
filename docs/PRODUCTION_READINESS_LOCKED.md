@@ -27,9 +27,14 @@ mirrored to Supabase. Locked target:
   rejected if they would clear a server-side flag.
 - **Sync queue persistence.** Pending writes survive app restart and
   crashes. Stored in a dedicated `sync_queue` SQLite table.
-- **Sync status visible in the UI.** A small indicator shows
+- **Sync status visible in the UI.** ~~A small indicator shows
   `synced`, `pending`, or `offline`. Tappable for diagnostics, including
-  last-sync timestamp and queue depth.
+  last-sync timestamp and queue depth.~~ **Overridden 2026-05-31 by founder
+  direction:** the in-app sync badge was removed from all headers. Sync is
+  automatic and failures surface in logs and Sentry, so a permanent status
+  pill was noise, and its transient red "error" state (a pull-side blip with
+  no pending writes) was alarming. Do not re-add a header badge. If a manual
+  resync or status view is ever wanted, put it in Settings, not a header.
 - **Multi-device.** Opening Volyume on a second device with the same
   account pulls full history into local SQLite on first run. Subsequent
   device opens do an incremental pull.
