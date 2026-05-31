@@ -1068,6 +1068,61 @@ fragile concat as A2-047. Add to the `withAlpha` cleanup list. Trivial.
 
 ---
 
+## Components — batches 5 & 6 (read in full) + COMPONENT LAYER COMPLETE
+
+Final components read: AnimatedEntrance, InfoTooltip, ReadinessCards,
+FatigueTrendCard, BlockProgressCard, WhatsNewSheet, GradientCard,
+EngineLog, BrandMark, Sparkline, SvgBarSparkline, Illustrations, and all
+`components/food/*` (MacroRings, QuickAddSheet, EntryRow, HeldDecisionCard,
+FoodDetailSheet, ServingPicker, FoodRow, SourceChip, MealSection,
+EmptyDiary, MacroBreakdownSheet). **All 49 components are now read.**
+
+### Standout positive — ED-conscious design (notable competitive differentiator)
+- **`MacroRings`** uses a deliberately **adherence-neutral** ring colour
+  (all amber, no red/green over/under judgement) with an explicit comment
+  (`MacroRings.js:11-17`) that colour-coded targets drive the harm pattern
+  for the at-risk subgroup. Numbers stay factual (value/target).
+- **`HeldDecisionCard`** surfaces a **"Get support" → Beat** (UK eating-
+  disorder charity) link for the `ed_pattern` override, and `openSupport`
+  **never dead-ends** — falls back to an Alert with the URL if the link
+  fails (`HeldDecisionCard.js:19-24`).
+- Pairs with the engine-side ED safeguards (weeklyCoach `scoffPositive`,
+  FFM floor, rapid-loss). **Very few competitors do any of this** → carry
+  to Phase 8/10/11 as a differentiator.
+
+### Other verified strengths
+- **A11y is consistently strong** across the component layer: spoken
+  summaries for decorative visualisations (`MacroRings` a11ySummary,
+  `BodyDiagramHeatmap` per-region labels), `accessibilityLiveRegion` on
+  changing values (`FoodDetailSheet`, `Toast`, `RestTimer`), labelled
+  controls, 44–56px touch targets on rows/steppers.
+- **`BrandMark`** uses `expo-image` with an RN `Image` fallback (disk
+  cache + graceful degrade).
+- **`Illustrations`** ships custom token-based SVG empty states (polish
+  most apps skip).
+- `Sparkline`/`SvgBarSparkline`/`SvgLineChart` share one geometry lib
+  (`chartGeometry`, unit-tested) — one chart aesthetic.
+
+### Minor items found in these batches
+- More **A2-047** hex-concat sites: `ReadinessCards` (`+'99'/'44'/'12'/
+  '40'`), `SvgLineChart` (already noted). Mechanical `withAlpha` cleanup.
+- `BrandMark` `VolyumeMark/Icon` accept `color`/`accent` props that are
+  unused (`:33,53,72,81`) — dead params, trivial.
+- Observation (not a defect): food logging supports **oz** units
+  (`ServingPicker` g/oz) while **gym weight has no working lbs path**
+  (A2-043) — underscores that the unit gap is specifically gym weight.
+
+### COMPONENT-LAYER VERDICT
+The shared component layer is **best-in-class for consistency and
+accessibility**. Card/Button/Chip/Toast/BottomSheet/SearchBar/Stepper/
+BackHeader each consolidated 6–40 hand-rolled copies into one token-based,
+reduce-motion-aware, a11y-labelled primitive. No correctness defects of
+note; the only actionable item is **A2-048** (dead RestTimer animation).
+Everything else is trivial cleanup (A2-047/051/052/053/054) or a
+cross-cutting issue already tracked (A2-038 colours, A2-043 units).
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction

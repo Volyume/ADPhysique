@@ -2,65 +2,65 @@
 
 Status: `[x]` read in full + findings recorded · `[~]` partially read (see 02-code-audit.md scope notes) · `[ ]` not yet read.
 Generated 2026-05-31T16:09Z. Total non-test source files: 227 (83,854 LOC).
-Read so far: 34 full + 6 partial.
+Read so far: 58 files (component layer 49/49 complete).
 
 ## App.js/
 
 
 ## src/components/
 
-- [ ] `AnimatedEntrance.js` (53)
+- [x] `AnimatedEntrance.js` (53)
 - [x] `BackHeader.js` (70)
-- [ ] `BlockProgressCard.js` (108)
+- [x] `BlockProgressCard.js` (108)
 - [x] `BodyDiagramHeatmap.js` (332)
 - [x] `BottomSheet.js` (136)
-- [ ] `BrandMark.js` (85)
+- [x] `BrandMark.js` (85)
 - [x] `Button.js` (108)
 - [x] `Card.js` (86)
 - [x] `Chip.js` (72)
 - [x] `DifferentialBadge.js` (115)
 - [x] `EmptyState.js` (129)
-- [ ] `EngineLog.js` (161)
+- [x] `EngineLog.js` (161)
 - [x] `ExerciseCard.js` (126)
-- [ ] `FatigueTrendCard.js` (86)
+- [x] `FatigueTrendCard.js` (86)
 - [x] `FeedbackSheet.js` (486)
-- [ ] `GradientCard.js` (40)
-- [ ] `Illustrations.js` (167)
-- [ ] `InfoTooltip.js` (58)
+- [x] `GradientCard.js` (40)
+- [x] `Illustrations.js` (167)
+- [x] `InfoTooltip.js` (58)
 - [x] `PRCelebration.js` (280)
 - [x] `PeekMenu.js` (224)
 - [x] `PlateCalculator.js` (247)
 - [x] `PressableCard.js` (85)
 - [x] `ProGate.js` (252)
-- [ ] `ReadinessCards.js` (305)
+- [x] `ReadinessCards.js` (305)
 - [x] `RestTimer.js` (324)
 - [x] `ScreenHeader.js` (73)
 - [x] `SearchBar.js` (77)
 - [x] `SetEntry.js` (334)
 - [x] `Skeleton.js` (101)
-- [ ] `Sparkline.js` (64)
+- [x] `Sparkline.js` (64)
 - [x] `Stepper.js` (83)
-- [ ] `StepsCard.js` (108)
-- [ ] `SvgBarSparkline.js` (84)
+- [x] `StepsCard.js` (108)
+- [x] `SvgBarSparkline.js` (84)
 - [x] `SvgLineChart.js` (190)
 - [x] `TierComparisonStrip.js` (119)
 - [x] `Toast.js` (242)
 - [x] `VolumeBars.js` (85)
-- [ ] `WhatsNewSheet.js` (176)
+- [x] `WhatsNewSheet.js` (176)
 
 ## src/components/food/
 
-- [ ] `EmptyDiary.js` (41)
-- [ ] `EntryRow.js` (140)
-- [ ] `FoodDetailSheet.js` (271)
-- [ ] `FoodRow.js` (99)
-- [ ] `HeldDecisionCard.js` (113)
-- [ ] `MacroBreakdownSheet.js` (119)
-- [ ] `MacroRings.js` (250)
-- [ ] `MealSection.js` (58)
-- [ ] `QuickAddSheet.js` (183)
-- [ ] `ServingPicker.js` (110)
-- [ ] `SourceChip.js` (49)
+- [x] `EmptyDiary.js` (41)
+- [x] `EntryRow.js` (140)
+- [x] `FoodDetailSheet.js` (271)
+- [x] `FoodRow.js` (99)
+- [x] `HeldDecisionCard.js` (113)
+- [x] `MacroBreakdownSheet.js` (119)
+- [x] `MacroRings.js` (250)
+- [x] `MealSection.js` (58)
+- [x] `QuickAddSheet.js` (183)
+- [x] `ServingPicker.js` (110)
+- [x] `SourceChip.js` (49)
 
 ## src/lib/
 
