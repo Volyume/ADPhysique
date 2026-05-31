@@ -2,7 +2,7 @@
 
 Status: `[x]` read in full + findings recorded · `[~]` partially read (see 02-code-audit.md scope notes) · `[ ]` not yet read.
 Generated 2026-05-31T16:09Z. Total non-test source files: 227 (83,854 LOC).
-Read so far: 178 files.
+Read so far: 185 files.
 
 ## App.js/
 
@@ -216,7 +216,7 @@ Read so far: 178 files.
 - [ ] `AddCustomFoodScreen.js` (267)
 - [x] `AnalyticsScreen.js` (1436)
 - [x] `Article9ConsentScreen.js` (271)
-- [ ] `BlockReflectionScreen.js` (305)
+- [x] `BlockReflectionScreen.js` (305)
 - [ ] `BodyMetricsScreen.js` (1164)
 - [x] `BuildWorkoutScreen.js` (614)
 - [x] `CascadeGateScreen.js` (272)
@@ -232,8 +232,8 @@ Read so far: 178 files.
 - [x] `FirstRunScreen.js` (127)
 - [ ] `FoodInsightsScreen.js` (279)
 - [ ] `FoodSearchScreen.js` (837)
-- [ ] `GoalChangeSummaryScreen.js` (354)
-- [ ] `GoalLockConsentScreen.js` (203)
+- [x] `GoalChangeSummaryScreen.js` (354)
+- [x] `GoalLockConsentScreen.js` (203)
 - [x] `HomeScreen.js` (2344)
 - [ ] `ImportScreen.js` (477)
 - [ ] `LiftProgressScreen.js` (141)
@@ -252,8 +252,8 @@ Read so far: 178 files.
 - [ ] `PlanLibraryScreen.js` (791)
 - [x] `PlansScreen.js` (1024)
 - [ ] `PrivacyPolicyScreen.js` (122)
-- [ ] `ProGoalSetupScreen.js` (726)
-- [ ] `ProOnboardingScreen.js` (1378)
+- [x] `ProGoalSetupScreen.js` (726)
+- [x] `ProOnboardingScreen.js` (1378)
 - [x] `ProSetupCompleteScreen.js` (417)
 - [x] `ProUpgradeScreen.js` (491)
 - [ ] `RecipeBuilderScreen.js` (334)
@@ -265,9 +265,9 @@ Read so far: 178 files.
 - [ ] `SubscriptionPolicyScreen.js` (193)
 - [x] `SubscriptionScreen.js` (222)
 - [ ] `VolumeHeatmapScreen.js` (631)
-- [ ] `WeeklyCheckInScreen.js` (1300)
+- [x] `WeeklyCheckInScreen.js` (1300)
 - [x] `WelcomeScreen.js` (277)
-- [ ] `WellbeingCheckScreen.js` (176)
+- [x] `WellbeingCheckScreen.js` (176)
 - [x] `WorkoutHistoryScreen.js` (903)
 - [x] `WorkoutSummaryScreen.js` (1305)
 - [ ] `YearOfLiftsScreen.js` (516)

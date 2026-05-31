@@ -1868,6 +1868,38 @@ All consistent with the established pattern (lib-routed, token-clean,
 
 ---
 
+## SCREENS — batch 4: ProOnboarding, ProGoalSetup, WeeklyCheckIn, GoalLockConsent, GoalChangeSummary, BlockReflection, WellbeingCheck
+
+The Pro-setup + check-in + ED-safety surfaces. All clean, no defects.
+
+### More ED-safety, now confirmed at the UI layer (differentiator)
+- **`WellbeingCheckScreen`** implements the **SCOFF questionnaire** verbatim
+  (`SCOFF_QUESTIONS`, the validated 5-item ED screening tool) — this is the
+  `scoffPositive` signal that gates `weeklyCoach` deficit suggestions.
+- **`GoalLockConsentScreen`** (Move #2): an informed-consent gate shown when
+  a competition/advanced-recomp goal is picked; "I have prior experience /
+  a coach" **raises the ED-pattern detector threshold from 2→3** (wires
+  `setGoalLockAdvanced`). Thoughtful: it doesn't disable safety, it
+  calibrates sensitivity to the user's stated context.
+- **`GoalChangeSummaryScreen`** explains every phase transition in plain
+  English ("stepping out of a deficit, calories rise…") — transparency.
+- `ProGoalSetupScreen` correctly uses the canonical `PHYSIQUE_GOALS` /
+  `TRAINING_PHASES` taxonomy (unlike the generic `OnboardingScreen`, A2-066)
+  and `ADVANCED_PROTEIN_GOALS` for protein selection.
+
+### Verified strengths
+- **`ProOnboardingScreen`** (1378): the guided multi-step Pro wizard —
+  body metrics (unit-aware via `parseBodyWeightToKg`/`ftInToCm`), auth,
+  `generateAndSavePlan`, notification opt-in. The screen the splash-gating
+  (RootNavigator A2-013) was carefully built to protect mid-flow.
+- `BlockReflection` (end-of-block recap), `WeeklyCheckInScreen` (the
+  core check-in feeding the coach) — lib-routed, EWMA-aware.
+
+> Minor (A2-069 cont.): `WeeklyCheckInScreen:384` raw `console.warn`
+> (should route through errorLog). Trivial.
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction
