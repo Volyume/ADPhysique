@@ -1618,6 +1618,39 @@ sound; the read/import/permission bodies (`:130-586`) still to read fully.
 
 ---
 
+## lib core — batch 7: mesocycle, swapEngine, importExternal (all read in full)
+
+All pure, well-structured, no defects.
+
+- **`mesocycle.js`** (473): the **live** mesocycle scheduler — 5-week
+  (std) / 6-week (advanced) accumulation→recovery, DST-safe week counting
+  (anchors local midnight, `:56-58`), `evaluateAutoReg` (weighted recent
+  feedback → continue/hold/reduce/deload with joint-discomfort emergency
+  brake), `predictDeloadWeek`, `applyTimeCrunch` (cuts rest 30% then drops
+  lowest-priority **isolation** only, compounds protected),
+  `checkDoubleProgressionReady`, `getBlockStatus`.
+  → **A2-046 update:** this `MESO_SCHEDULE` is a *third* progression model
+  alongside planEngine's two **dead** ones (`weeklyPlan`/`mesocycleSchedule`).
+  This one is the consumed one. Confirms the planEngine pair is dead code,
+  not a competing live source. (Recommendation unchanged: delete the dead
+  pair; keep this.)
+- **`swapEngine.js`**: pure exercise-swap scoring (same muscle 40 / same
+  subregion 25 / pattern 20 / equipment 15 / SFR + fatigue similarity),
+  jargon-free "why this" reasons capped at 20 words, plus
+  **joint-discomfort auto-swap** (≥2 flagged sessions → swap, prefers
+  lower-fatigue alternatives, excludes other flagged exercises). Sound.
+- **`importExternal.js`**: Hevy + Strong CSV importer — **dependency-free
+  CSV parser** (handles quoted/escaped fields, `MAX_CSV_ROWS=100k` OOM
+  cap), fuzzy exercise matching (Jaccard ≥0.7 else create custom),
+  **idempotent re-import** (skip on user+started_at), single transaction
+  with rollback, denormalises exercise_name for cross-device recovery.
+  Competitor-switching onboarding done well (Phase 8 input). Parameterised.
+
+> A2-036: `importExternal:483` + `mesocycle` (none) — `uuid()` copies now
+> at 5 (importExternal has its own). Carry to the dedupe recommendation.
+
+---
+
 ## Carried verified facts (from prior session; to be re-confirmed at each file's audit)
 
 These were stated as re-read-verified in the retracted doc's retraction
