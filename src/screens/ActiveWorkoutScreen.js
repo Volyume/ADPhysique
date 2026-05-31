@@ -90,6 +90,39 @@ function countProgressSets(sets) {
   }).length;
 }
 
+/**
+ * One already-logged set in the "This workout" list. Display only, no inputs.
+ * Pulled out of the screen's render and memoised so the logged-set rows do not
+ * re-render on every workout-timer tick (the parent re-renders each second);
+ * with stable props React.memo skips them. `progressNum` is the set's position
+ * among counting (non-warm-up, non-dropset) sets, computed by the caller.
+ */
+const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progressNum }) {
+  const isWarmup = set.setType === 'warmup';
+  const est1RM = isWarmup ? null : calculate1RM(set.weight, set.actualReps);
+  const perSide = formatPerSide(set.leftReps, set.rightReps);
+  return (
+    <View style={[styles.loggedSetRow, isWarmup && styles.loggedSetRowWarmup]}>
+      {isWarmup ? (
+        <Ionicons name="flame" size={14} color={colors.warning} style={{ width: 22, textAlign: 'center' }} />
+      ) : (
+        <View style={styles.setNumBadge}>
+          <Text style={styles.setNumText}>{progressNum}</Text>
+        </View>
+      )}
+      <Text style={[styles.loggedSetText, isWarmup && styles.loggedSetTextWarmup]}>
+        {set.weight}{units} × {set.actualReps}
+        {perSide ? ` · ${perSide}` : ''}
+        {isWarmup ? ' · Warm-up' : ''}
+      </Text>
+      {!isWarmup && est1RM > 0 && (
+        <Text style={styles.loggedEst1RM}>Est. max ≈{est1RM.toFixed(0)}{units}</Text>
+      )}
+      <Ionicons name="checkmark-circle" size={16} color={isWarmup ? colors.warning : colors.success} />
+    </View>
+  );
+});
+
 export default function ActiveWorkoutScreen({ navigation, route }) {
   // Use a shallow selector so every store mutation (rest timer ticks,
   // PR celebration flag flips, accessibility toggles) doesn't re-render
@@ -1691,34 +1724,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           {loggedSets.length > 0 && (
             <View style={styles.loggedSection}>
               <Text style={styles.loggedTitle}>This workout</Text>
-              {loggedSets.map((s, i) => {
-                const isWarmup = s.setType === 'warmup';
-                const est1RM = isWarmup ? null : calculate1RM(s.weight, s.actualReps);
-                const progressNum = loggedSets.slice(0, i + 1).filter(x => countProgressSets([x]) > 0).reduce((n, x) => n + 1, 0);
-                return (
-                  <View key={i} style={[
-                    styles.loggedSetRow,
-                    isWarmup && styles.loggedSetRowWarmup,
-                  ]}>
-                    {isWarmup ? (
-                      <Ionicons name="flame" size={14} color={colors.warning} style={{ width: 22, textAlign: 'center' }} />
-                    ) : (
-                      <View style={styles.setNumBadge}>
-                        <Text style={styles.setNumText}>{progressNum}</Text>
-                      </View>
-                    )}
-                    <Text style={[styles.loggedSetText, isWarmup && styles.loggedSetTextWarmup]}>
-                      {s.weight}{units} × {s.actualReps}
-                      {formatPerSide(s.leftReps, s.rightReps) ? ` · ${formatPerSide(s.leftReps, s.rightReps)}` : ''}
-                      {isWarmup ? ' · Warm-up' : ''}
-                    </Text>
-                    {!isWarmup && est1RM > 0 && (
-                      <Text style={styles.loggedEst1RM}>Est. max ≈{est1RM.toFixed(0)}{units}</Text>
-                    )}
-                    <Ionicons name="checkmark-circle" size={16} color={isWarmup ? colors.warning : colors.success} />
-                  </View>
-                );
-              })}
+              {loggedSets.map((s, i) => (
+                <LoggedSetRow
+                  key={i}
+                  set={s}
+                  units={units}
+                  progressNum={countProgressSets(loggedSets.slice(0, i + 1))}
+                />
+              ))}
             </View>
           )}
 
