@@ -820,16 +820,26 @@ function InsightRow({ insight, onDismiss }) {
 const MUSCLES = Object.keys(VOLUME_LANDMARKS);
 
 function VolumeSnapshotGrid({ volume }) {
+  // Only the muscles trained this week, not all 17 with a wall of zeros.
+  // "Full view" in the section header still opens the complete heatmap.
+  const trained = MUSCLES.filter(m => (volume[m]?.workingSets ?? 0) > 0);
+  if (trained.length === 0) {
+    return (
+      <View style={styles.volEmpty}>
+        <Text style={styles.volEmptyText}>Nothing logged this week yet.</Text>
+      </View>
+    );
+  }
   return (
     <View style={styles.volGrid}>
-      {MUSCLES.map(m => {
+      {trained.map(m => {
         const ws = volume[m]?.workingSets ?? 0;
         const dot = volumeDotColor(m, ws);
         return (
           <View key={m} style={styles.volCell}>
             <View style={[styles.volDot, { backgroundColor: dot }]} />
             <Text style={styles.volMuscle}>{MUSCLE_DISPLAY_NAMES[m]}</Text>
-            <Text style={styles.volSets}>{ws > 0 ? `${ws} sets` : '0'}</Text>
+            <Text style={styles.volSets}>{ws} sets</Text>
           </View>
         );
       })}
@@ -1141,7 +1151,7 @@ function diffChipColor(d) {
 
 const styles = StyleSheet.create({
   safe:        { flex: 1, backgroundColor: colors.background },
-  content:     { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxxl },
+  content:     { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxxl },
   header:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   pageTitle:   { ...type.h3, color: colors.textPrimary },
 
@@ -1205,6 +1215,8 @@ const styles = StyleSheet.create({
   },
   volCell:   { width: '33.333%', alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.xs },
   volDot:    { width: 10, height: 10, borderRadius: 5 },
+  volEmpty: { paddingVertical: spacing.md, alignItems: 'center' },
+  volEmptyText: { fontSize: fontSize.sm, color: colors.textMuted },
   volMuscle: { fontSize: fontSize.micro, color: colors.textSecondary, textAlign: 'center' },
   volSets:   { fontSize: fontSize.micro, fontWeight: fontWeight.semibold, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
   volLegend: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.md, width: '100%' },
