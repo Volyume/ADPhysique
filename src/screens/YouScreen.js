@@ -108,9 +108,15 @@ export default function YouScreen({ navigation }) {
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Coaching</Text>
             <NavRow
+              icon="pulse-outline"
+              label="Weekly check-in"
+              sub="Your weekly check-in. Answer four questions and the coach adjusts your plan from them."
+              onPress={() => navigation.navigate('WeeklyCheckIn')}
+            />
+            <NavRow
               icon="sparkles-outline"
               label="Precision Coaching"
-              sub="Your weekly coach output and adjustments"
+              sub="Read what the coach changed, and why, after your check-in."
               onPress={() => navigation.navigate('CoachOutput')}
             />
             <NavRow
@@ -130,12 +136,6 @@ export default function YouScreen({ navigation }) {
               label="Body metrics"
               sub="Weight trend and measurements"
               onPress={() => navigation.navigate('BodyMetrics')}
-            />
-            <NavRow
-              icon="pulse-outline"
-              label="Weekly check-in"
-              sub="Answer four questions; the coach adjusts from them"
-              onPress={() => navigation.navigate('WeeklyCheckIn')}
             />
             <NavRow
               icon="pause-circle-outline"
