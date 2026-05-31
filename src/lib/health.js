@@ -145,7 +145,28 @@ export async function requestHealthPermissions(scopes = ['weight']) {
         recordTypes.push({ accessType: 'write', recordType: 'ActiveCaloriesBurned' });
       }
       const granted = await HC.requestPermission(recordTypes);
-      const allGranted = Array.isArray(granted) && granted.length >= recordTypes.length;
+      const grantedCount = Array.isArray(granted) ? granted.length : -1;
+      const allGranted = grantedCount >= recordTypes.length;
+      // When requestPermission resolves with NOTHING (no dialog shown, app
+      // never registered with Health Connect) it does not throw, so the catch
+      // below never sees it. That is the exact field failure on Android 14+
+      // when the ViewPermissionUsageActivity alias is missing or the launcher
+      // is not registered: the framework returns an empty grant set silently.
+      // Log it as a warning with enough context to tell it apart from a real
+      // "user tapped deny" (which returns a short-but-non-empty set), so the
+      // reason is visible in Sentry rather than collapsing into "denied".
+      if (!allGranted) {
+        try {
+          // eslint-disable-next-line global-require
+          require('./errorLog').logWarn('health.requestPermission.empty', 'no permission granted', {
+            scopes,
+            requested: recordTypes.length,
+            grantedCount,
+            // null vs [] distinguishes "module returned nothing" from "empty array".
+            grantedType: granted === null ? 'null' : (granted === undefined ? 'undefined' : typeof granted),
+          });
+        } catch (_) {}
+      }
       return allGranted ? 'granted' : 'denied';
     } catch (e) {
       // Surface the real reason instead of swallowing it. A thrown
