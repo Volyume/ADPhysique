@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, volumeStatusColor } from '../styles/theme';
 import { VOLUME_LANDMARKS, MUSCLE_DISPLAY_NAMES, getVolumeStatus } from '../lib/algorithms';
 
 export default function VolumeBars({ weeklyVolume = {}, customLandmarks = null }) {
