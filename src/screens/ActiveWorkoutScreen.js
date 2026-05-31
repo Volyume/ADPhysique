@@ -22,7 +22,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
 import SetEntry from '../components/SetEntry';
-import PlateCalculator from '../components/PlateCalculator';
 import RestTimer from '../components/RestTimer';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -40,7 +39,7 @@ import {
 } from '../lib/algorithms';
 import { rankSwaps } from '../lib/swapEngine';
 import { isClusterType, clusterLabel, summariseCluster, mergeClusterNote } from '../lib/clusterSet';
-import { formatPerSide, loadUnilateralExercises, setUnilateralExercise } from '../lib/unilateral';
+import { formatPerSide, loadUnilateralExercises } from '../lib/unilateral';
 import { FORM_TIPS } from '../lib/formTips';
 import InfoTooltip from '../components/InfoTooltip';
 import { applyTimeCrunch } from '../lib/mesocycle';
@@ -189,8 +188,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [setTargets, setSetTargets] = useState([]);
   const [targetReason, setTargetReason] = useState(null);
   const [showSetTypePicker, setShowSetTypePicker] = useState(false);
-  const [showPlateCalc, setShowPlateCalc] = useState(false);
-  const [plateCalcTarget, setPlateCalcTarget] = useState(0);
   const [showExecution, setShowExecution] = useState(false);
   const [showStaleModal, setShowStaleModal] = useState(false);
   const [showSwapModal, setShowSwapModal] = useState(false);
@@ -962,16 +959,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setClusterReps('');
   }
 
-  // Mark the current exercise as per-side (unilateral) and remember it on
-  // the device. A per-side exercise logs one reps value, done on both
-  // sides at the same weight; the flag only changes the field labels.
-  async function toggleUnilateral() {
-    if (!exercise?.id) return;
-    const on = !unilateralExercises.has(exercise.id);
-    setUnilateralExercises(await setUnilateralExercise(exercise.id, on));
-    hapticsVocab.setLogged();
-  }
-
   function handleRevertTimeCrunch() {
     if (!preCrunchSnapshot) return;
     store.setWorkoutExercises(preCrunchSnapshot);
@@ -1499,13 +1486,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               }}
               units={units}
               onOpenSetTypePicker={() => setShowSetTypePicker(true)}
-              onOpenPlateCalc={(targetW) => {
-                setPlateCalcTarget(targetW);
-                setShowPlateCalc(true);
-              }}
               isWarmup={currentSet.setType === 'warmup'}
-              unilateral={exercise ? unilateralExercises.has(exercise.id) : false}
-              onToggleUnilateral={toggleUnilateral}
             />
 
             {showNoteInput ? (
@@ -1628,32 +1609,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 {currentSet.setType === 'warmup' ? 'Done'
                   : (isClusterType(currentSet.setType) && !(exercise && unilateralExercises.has(exercise.id))) ? 'Start cluster' : 'Log set'}
               </Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Manual warm-up button. The auto-suggest chip was removed
-              earlier in this branch; this button is the deliberate
-              "if someone wants to they can add one" path. Hidden once
-              the user has already switched the current entry to a
-              warm-up so the row isn't redundant. */}
-          {currentSet.setType !== 'warmup' && !cluster && (
-            <TouchableOpacity
-              style={styles.addWarmupBtn}
-              onPress={() => {
-                const baseWeight = parseFloat(currentSet.weight) || 0;
-                const warmupWeight = baseWeight ? Math.round(baseWeight * 0.5 * 2) / 2 : '';
-                setCurrentSet(cs => ({
-                  ...cs,
-                  setType: 'warmup',
-                  weight: warmupWeight || cs.weight,
-                  reps: 10,
-                }));
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Add a warm-up set"
-            >
-              <Ionicons name="flame-outline" size={15} color={colors.warning} />
-              <Text style={styles.addWarmupBtnText}>Add warm-up set</Text>
             </TouchableOpacity>
           )}
 
@@ -1928,28 +1883,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
 
 
-        {/* Plate Calculator Bottom Sheet, opens with the current
-            working weight pre-filled so the user gets an answer in
-            one tap. */}
-        <Modal
-          visible={showPlateCalc}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setShowPlateCalc(false)}
-        >
-          <TouchableOpacity
-            style={styles.sheetOverlay}
-            activeOpacity={1}
-            onPress={() => setShowPlateCalc(false)}
-          />
-          <View style={[styles.sheet, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}>
-            <View style={styles.sheetHandle} />
-            <PlateCalculator
-              targetWeight={plateCalcTarget}
-              onClose={() => setShowPlateCalc(false)}
-            />
-          </View>
-        </Modal>
 
         {/* Set Type Picker Bottom Sheet */}
         <Modal

@@ -16,7 +16,7 @@ const SET_TYPE_LABELS = {
   amrap: 'AMRAP',
 };
 
-export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypePicker, onOpenPlateCalc, isWarmup = false, unilateral = false, onToggleUnilateral }) {
+export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypePicker, isWarmup = false }) {
   const { weight, reps, setType, isGhost } = value;
   const repsRef = useRef(null);
 
@@ -54,18 +54,6 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
       <View style={styles.inputRow}>
         <View style={styles.fieldLabelWrap}>
           <Text style={styles.fieldLabel}>Weight ({units})</Text>
-          {onOpenPlateCalc && !isWarmup && (
-            <TouchableOpacity
-              onPress={() => { Haptics.selectionAsync().catch(() => {}); onOpenPlateCalc(parseFloat(value.weight) || 0); }}
-              style={styles.plateBtn}
-              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-              accessibilityRole="button"
-              accessibilityLabel="Plate calculator"
-            >
-              <Ionicons name="cube-outline" size={12} color={colors.primary} />
-              <Text style={styles.plateBtnText}>Plates</Text>
-            </TouchableOpacity>
-          )}
         </View>
         <View style={styles.stepper}>
           <TouchableOpacity
@@ -112,11 +100,10 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
         </View>
       </View>
 
-      {/* Reps. A per-side (unilateral) exercise logs one reps value, done
-          on both sides at the same weight: no separate left/right. */}
+      {/* Reps */}
       <View style={styles.inputRow}>
         <View style={styles.fieldLabelWrap}>
-          <Text style={styles.fieldLabel}>{unilateral ? 'Reps per side' : 'Reps'}</Text>
+          <Text style={styles.fieldLabel}>Reps</Text>
           {live1RM != null && live1RM > 0 && (
             <Text style={styles.e1rmHint}>e1RM {Math.round(live1RM)}{units}</Text>
           )}
@@ -144,7 +131,7 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
             returnKeyType="done"
             onSubmitEditing={() => Keyboard.dismiss()}
             selectTextOnFocus
-            accessibilityLabel={unilateral ? 'Reps per side' : 'Number of reps'}
+            accessibilityLabel="Number of reps"
           />
           <TouchableOpacity
             style={styles.stepBtn}
@@ -156,33 +143,6 @@ export default function SetEntry({ value, onChange, units = 'kg', onOpenSetTypeP
           </TouchableOpacity>
         </View>
       </View>
-
-      {unilateral && (
-        <Text style={styles.perSideHint}>Same weight each side. Log the reps you did per side.</Text>
-      )}
-
-      {/* Per-side (unilateral) toggle: one arm or leg at a time. */}
-      {onToggleUnilateral && !isWarmup && (
-        <TouchableOpacity
-          style={styles.setTypeRow}
-          onPress={onToggleUnilateral}
-          activeOpacity={0.7}
-          accessibilityRole="switch"
-          accessibilityState={{ checked: unilateral }}
-          accessibilityLabel="Log this exercise per side, one arm or leg at a time"
-        >
-          <Text style={styles.setTypeLabel}>Per side</Text>
-          <View style={styles.setTypeRight}>
-            <Text style={styles.setTypeValue}>{unilateral ? 'On' : 'Off'}</Text>
-            <Ionicons
-              name={unilateral ? 'toggle' : 'toggle-outline'}
-              size={20}
-              color={unilateral ? colors.primary : colors.textMuted}
-              style={{ marginLeft: spacing.xs }}
-            />
-          </View>
-        </TouchableOpacity>
-      )}
 
       {/* Live estimated 1RM chip, shown when weight and reps are present, not a warm-up */}
       {live1RM > 0 && liveReps >= 1 && liveReps <= 15 && !isWarmup && (
