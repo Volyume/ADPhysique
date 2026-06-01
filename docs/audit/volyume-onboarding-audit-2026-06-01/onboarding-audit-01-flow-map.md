@@ -1,5 +1,13 @@
 # Onboarding Audit 01 — Complete Flow Map
 
+> HANDOFF UPDATE, end of 2026-06-01 session. Build batches 1 to 3 are shipped to
+> main (fc30e30, 096167e, 708fccd). Changes that affect this map: onboarding now
+> ASKS training days per week (3-6, no longer hardcoded 4), the saved profile now
+> persists planWeakPoints, the reveal states food logging is optional, and the
+> Plans-tab coached builder is reachable for every Pro user (not only
+> Pro-with-active-plan). Treat the pre-fix lines below as historical where they
+> conflict with this note. See doc 07 for per-item status.
+
 Status: COMPLETE (Phase 1 of 7). Fresh audit, written from the live code.
 Date: 2026-06-01. Source of truth: the current code only.
 Self-contained for handoff.

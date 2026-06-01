@@ -1,5 +1,14 @@
 # Onboarding Audit 06 — Redesign Proposal
 
+> HANDOFF UPDATE, end of 2026-06-01 session. Partially implemented. Shipped:
+> days-per-week added to onboarding, weak points persisted, paywall reframed,
+> food line corrected, reveal states food is optional, builder reachable for all
+> Pro users. NOT yet implemented from this proposal: the single shared account
+> component, the ScreenHeader frame across the flow, the reveal rendered via
+> MacroRings and the plan card, the unified selection language, protein approach
+> in onboarding, and the first-run Home cue. This proposal remains the target for
+> those. See doc 07 for per-item status.
+
 Status: COMPLETE (Phase 6 of 7). Date: 2026-06-01. Proposed copy is written to
 final standard (British, no em dashes, plain voice). No code changed.
 

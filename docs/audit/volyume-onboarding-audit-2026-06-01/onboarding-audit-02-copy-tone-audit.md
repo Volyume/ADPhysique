@@ -1,5 +1,12 @@
 # Onboarding Audit 02 — Copy and Tone
 
+> HANDOFF UPDATE, end of 2026-06-01 session. Shipped (batches 1-3): C1 food line
+> now points to the in-app diary; C2 Complete-tier strip removed; C3/C4 trial and
+> price corrected; C5 paywall reframed to "Pro is the coach"; C6 "2 questions";
+> P4 "MAV-level volume" jargon replaced. REMAINING copy items: H1 full "how
+> coaching works" line in step 4, H3 protein copy, P5 gloss "Precision Coaching".
+> See doc 07.
+
 Status: COMPLETE (Phase 2 of 7). Fresh audit from the live code. Date: 2026-06-01.
 
 Assesses every user-facing string in both flows for accuracy, clarity, tone,

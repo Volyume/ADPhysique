@@ -1,5 +1,14 @@
 # Onboarding Audit 04 — Integration Accuracy
 
+> HANDOFF UPDATE, end of 2026-06-01 session. Fixed and shipped (batches 1-3):
+> F1 food line now points to the in-app diary; F2 Complete column removed; F3/F4
+> trial length and price corrected; F6 paywall headline reframed; F8 weak points
+> now persist; F9 dead legacy-goal branches removed. STILL OPEN: F5 was fixed
+> (quiz "2 questions"), the broader differential-paywall "food data" framing was
+> left intact as a product decision, and the day14/28 docstring synonyms in
+> cascade remain by design. Re-verify against the live code before acting on the
+> pre-fix tables below.
+
 Status: COMPLETE (Phase 4 of 7). Fresh audit from the live code. Date: 2026-06-01.
 
 Confirms each feature reference in both flows against how the app actually works.

@@ -1,5 +1,17 @@
 # Onboarding Audit 00 — Executive Summary
 
+> HANDOFF UPDATE, end of 2026-06-01 session. Build batches 1 to 3 are shipped to
+> main (commits fc30e30, 096167e, 708fccd). DONE: C1, C2, C3, C4, C5, C6, C7, C8,
+> H1, H2, H4, P3, P4, P8. REMAINING for the next session: H3 protein in
+> onboarding, H5 and H6 design unification (ScreenHeader on the flow, reveal via
+> MacroRings and the plan card), H7 dedup of the account step (auth-critical),
+> H8 unify the selection components, H9, P1, P2, P5, P6, P7. Where this document
+> describes pre-fix behaviour, check the live code first: onboarding now asks
+> training days per week, persists weak points, the reveal states food logging
+> is optional, the paywall is reframed to "Pro is the coach", TierComparisonStrip
+> is Free vs Pro, and the nutrition primer points to the in-app diary. See doc 07
+> for the full per-item status.
+
 Status: COMPLETE. Fresh seven-phase audit, written last. Date: 2026-06-01.
 Scope: first launch to the workout screen (Flow A) and the Plans-tab plan builder
 (Flow B). Grounded in the live code, every claim cited in the companion docs.

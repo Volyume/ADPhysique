@@ -1,5 +1,9 @@
 # Onboarding Audit 05 — Research
 
+> HANDOFF UPDATE, end of 2026-06-01 session. This research doc is unchanged and
+> still current. It informed the proposal (doc 06) and the build list (doc 07).
+> No build items derive from this doc directly.
+
 Status: COMPLETE (Phase 5 of 7). Fresh web research, June 2026. Date: 2026-06-01.
 Sources listed at the end.
 

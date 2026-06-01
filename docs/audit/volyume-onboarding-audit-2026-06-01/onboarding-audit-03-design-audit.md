@@ -1,5 +1,13 @@
 # Onboarding Audit 03 — Design and Presentation
 
+> HANDOFF UPDATE, end of 2026-06-01 session. The design-unification items in this
+> doc are NOT yet built and are the main work for the next session: H5 put the
+> shared ScreenHeader on every flow screen, H6 render the reveal's calories,
+> macros and plan via MacroRings and the plan card, H8 unify the three
+> plan-creation selection components. These touch the look of every onboarding
+> screen and should be done with the app running and verified visually, not as
+> blind edits. Only P8 (reveal goal-chip icon) is shipped so far.
+
 Status: COMPLETE (Phase 3 of 7). Fresh audit from the live code. Date: 2026-06-01.
 
 Assesses each flow screen for design-language consistency with the rest of the
