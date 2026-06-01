@@ -222,6 +222,97 @@ function applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys, phase) 
 }
 
 // ---------------------------------------------------------------------------
+// Volume integrity (rebuild spec phase 1)
+// ---------------------------------------------------------------------------
+//
+// Per-muscle weekly volume landmarks (Israetel / Renaissance Periodization
+// classic figures, intermediate, weekly hard sets), keyed by the engine's
+// internal muscle names. MRV is the hard ceiling. The three delt heads share a
+// combined cap of 26 (Israetel) enforced separately below, which is what stops
+// the "shoulders to 30" failure. Forearms and adductors are not in the spec
+// table; their values are an assumption flagged in the rebuild docs.
+const SPEC_LANDMARKS = {
+  chest:       { MV: 4, MEV: 6,  MRV: 22 },
+  back:        { MV: 8, MEV: 10, MRV: 25 },
+  side_delts:  { MV: 6, MEV: 8,  MRV: 20 },
+  rear_delts:  { MV: 0, MEV: 0,  MRV: 14 },
+  front_delts: { MV: 0, MEV: 0,  MRV: 12 },
+  biceps:      { MV: 5, MEV: 8,  MRV: 20 },
+  triceps:     { MV: 4, MEV: 6,  MRV: 18 },
+  quads:       { MV: 6, MEV: 8,  MRV: 20 },
+  hamstrings:  { MV: 4, MEV: 6,  MRV: 20 },
+  glutes:      { MV: 4, MEV: 6,  MRV: 16 },
+  calves:      { MV: 6, MEV: 8,  MRV: 20 },
+  abs:         { MV: 0, MEV: 6,  MRV: 25 },
+  traps:       { MV: 0, MEV: 0,  MRV: 26 },
+  forearms:    { MV: 0, MEV: 0,  MRV: 16 }, // assumption: not in spec table
+  adductors:   { MV: 0, MEV: 0,  MRV: 12 }, // assumption: not in spec table
+};
+
+// Combined delt-complex weekly ceiling (Israetel side+rear = 26). The spec caps
+// side+rear at 26 and front separately; we fold all three heads into the 26 so
+// the ceiling matches the engine's combined "shoulders" volume bucket and
+// directly prevents the shoulders-to-30 failure. Flagged as a conservative
+// interpretation in the rebuild docs; splitting front out waits on the summary
+// exposing per-head sets.
+const SIDE_REAR_DELT_CAP = 26;
+
+// Structural movers that must never read zero in any generated program, even
+// when a division de-emphasises them (spec: "maintenance, not zero"). At 3
+// training days the maintenance floor compresses to 4.
+const STRUCTURAL_MUSCLES = ['chest', 'back', 'side_delts', 'quads', 'hamstrings', 'glutes'];
+
+function maintenanceFloor(effectiveDays) {
+  return effectiveDays <= 3 ? 4 : 6;
+}
+
+// Apply the spec's hard floors and caps to the weekly per-muscle targets,
+// after the division overlay has distributed volume. Floors: structural
+// muscles to a maintenance minimum; division-judged muscles (overlay >= 1.0)
+// to their MEV. Caps: every muscle to its MRV, and the three delt heads to a
+// combined 26. This is the phase-1 guarantee: no judged/structural zero, no
+// muscle over MRV.
+function enforceWeeklyFloorsAndCaps(weeklyTargets, goal, effectiveDays) {
+  const t = { ...weeklyTargets };
+  const overlay = GOAL_OVERLAYS[goal] ?? {};
+  const maint = maintenanceFloor(effectiveDays);
+
+  // Floors.
+  for (const m of STRUCTURAL_MUSCLES) {
+    if (SPEC_LANDMARKS[m]) t[m] = Math.max(t[m] ?? 0, maint);
+  }
+  for (const [m, lm] of Object.entries(SPEC_LANDMARKS)) {
+    const mult = overlay[m];
+    if (mult != null && mult >= 1.0) t[m] = Math.max(t[m] ?? 0, lm.MEV);
+  }
+
+  // Per-muscle MRV cap. Glutes get a higher ceiling for the lower-body
+  // divisions, where the spec allows ~30 weekly sets split across glute
+  // exercise types (Contreras), versus RP's general MRV of 16 elsewhere.
+  const lowerGluteDivision = goal === 'bikini' || goal === 'wellness';
+  for (const m of Object.keys(t)) {
+    const lm = SPEC_LANDMARKS[m];
+    if (!lm) continue;
+    const cap = (m === 'glutes' && lowerGluteDivision) ? 30 : lm.MRV;
+    t[m] = Math.min(t[m], cap);
+  }
+
+  // Combined delt-complex cap (side + rear + front folded into 26).
+  const sd = t.side_delts ?? 0;
+  const rd = t.rear_delts ?? 0;
+  const fd = t.front_delts ?? 0;
+  const deltSum = sd + rd + fd;
+  if (deltSum > SIDE_REAR_DELT_CAP) {
+    const scale = SIDE_REAR_DELT_CAP / deltSum;
+    t.side_delts = Math.round(sd * scale);
+    t.rear_delts = Math.round(rd * scale);
+    t.front_delts = Math.round(fd * scale);
+  }
+
+  return t;
+}
+
+// ---------------------------------------------------------------------------
 // Exercise pool
 // ---------------------------------------------------------------------------
 
@@ -550,12 +641,14 @@ function trimToTimeBudget(exercises, sessionLengthMinutes, equipment) {
 
   const result = exercises.map(e => ({ ...e }));
 
-  // Phase 1: reduce sets back-to-front, min 2 sets
+  // Phase 1: reduce sets back-to-front, min 3 sets (rebuild spec: no 2-set
+  // fragments). Below this floor we drop whole exercises in phase 2 rather than
+  // shaving an entry down to 2.
   let safety = 120;
   while (estimateSessionMinutes(result, equipment) > budget && safety-- > 0) {
     let trimmed = false;
     for (let i = result.length - 1; i >= 1; i--) {
-      if (result[i].sets > 2) {
+      if (result[i].sets > 3) {
         result[i].sets--;
         trimmed = true;
         break;
@@ -742,19 +835,19 @@ function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal, slot, 
   }
 
   // Distribute sessionTarget sets across chosen exercises.
-  // Compounds get minimum 3 sets (PT/coach standard); isolations minimum 2.
-  // The reservation ensures the later exercise is never starved.
+  // Every entry gets a minimum of 3 sets (rebuild spec phase 1: no 2-set
+  // fragments anywhere). The reservation ensures the later exercise is never
+  // starved below that floor.
+  const MIN_SETS_PER_ENTRY = 3;
   const n = chosen.length;
   const result = [];
   let remaining = sessionTarget;
   for (let i = 0; i < n; i++) {
     const entry = chosen[i];
     const isCompound = entry.p === 'heavy_compound' || entry.p === 'mod_compound';
-    const minSets = isCompound ? 3 : 2;
+    const minSets = MIN_SETS_PER_ENTRY;
     const slotsAfter = n - i - 1;
-    const laterMin = slotsAfter > 0
-      ? (chosen[i + 1].p === 'heavy_compound' || chosen[i + 1].p === 'mod_compound' ? 3 : 2)
-      : 0;
+    const laterMin = slotsAfter > 0 ? MIN_SETS_PER_ENTRY : 0;
     const maxForThis = remaining - laterMin * slotsAfter;
     let s = Math.min(maxForThis, isCompound ? 4 : 3);
     s = Math.max(minSets, s);
@@ -1434,8 +1527,11 @@ function _generatePlanInner(inputs) {
     weeklyTargets[m] = lm.MEV;
   }
 
-  // Apply goal overlay
-  const adjustedTargets = applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys, phase);
+  // Apply goal overlay, then the spec's hard floors and caps (phase 1):
+  // structural/judged muscles never zero, no muscle over MRV, delts capped at
+  // a combined 26.
+  const overlaidTargets = applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys, phase);
+  const adjustedTargets = enforceWeeklyFloorsAndCaps(overlaidTargets, goal, effectiveDays);
 
   // Build workouts
   let rawWorkouts;
