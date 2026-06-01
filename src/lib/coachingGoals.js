@@ -131,6 +131,39 @@ export const WEAK_POINT_MUSCLES = Object.freeze([
   'Core / Abs', 'Traps',
 ]);
 
+// Region each weak-point label belongs to, so the selector can group chips
+// (upper / lower / core) consistently across onboarding and the builder.
+export const WEAK_POINT_REGION = Object.freeze({
+  'Chest': 'upper', 'Upper Chest': 'upper', 'Lats / Back Width': 'upper',
+  'Back Thickness': 'upper', 'Side Delts': 'upper', 'Rear Delts': 'upper',
+  'Front Delts': 'upper', 'Biceps': 'upper', 'Triceps': 'upper', 'Traps': 'upper',
+  'Quads': 'lower', 'Hamstrings': 'lower', 'Glutes': 'lower',
+  'Adductors': 'lower', 'Calves': 'lower',
+  'Core / Abs': 'core',
+});
+
+// Division-specific weak-point option sets. A weak point should only offer
+// muscles that division is judged on or commonly wants to bring up, derived
+// from each division's GOAL_OVERLAYS priorities and judging criteria (see the
+// onboarding audit, doc 06). Goals not listed here (general, bodybuilding,
+// womens_bodybuilding) fall back to the full WEAK_POINT_MUSCLES list, because
+// they are balanced and nothing is de-prioritised. Every label is a member of
+// WEAK_POINT_MUSCLES so WEAK_POINT_MAP stays the single label-to-key resolver.
+export const WEAK_POINT_SETS = Object.freeze({
+  mens_physique: ['Side Delts', 'Rear Delts', 'Front Delts', 'Lats / Back Width', 'Back Thickness', 'Upper Chest', 'Chest', 'Biceps', 'Triceps'],
+  classic_physique: ['Side Delts', 'Rear Delts', 'Lats / Back Width', 'Back Thickness', 'Upper Chest', 'Chest', 'Biceps', 'Triceps', 'Quads', 'Hamstrings', 'Calves'],
+  bikini: ['Side Delts', 'Rear Delts', 'Lats / Back Width', 'Glutes', 'Hamstrings', 'Adductors'],
+  wellness: ['Side Delts', 'Glutes', 'Quads', 'Hamstrings', 'Adductors', 'Calves'],
+  figure: ['Side Delts', 'Rear Delts', 'Lats / Back Width', 'Back Thickness', 'Glutes', 'Hamstrings'],
+  womens_physique: ['Side Delts', 'Lats / Back Width', 'Back Thickness', 'Upper Chest', 'Biceps', 'Triceps', 'Quads', 'Hamstrings', 'Glutes', 'Calves'],
+});
+
+// The weak-point options to show for a given division. Falls back to the full
+// balanced list for goals without a specific set (general / open bodybuilding).
+export function weakPointSetForGoal(goal) {
+  return WEAK_POINT_SETS[goal] ?? WEAK_POINT_MUSCLES;
+}
+
 // Goals that trigger the Article 9 / safety-check goal-lock prompt
 // during onboarding. Per ONBOARDING_SEQUENCE_LOCKED.md screen 6:
 // shown to users picking physique competition divisions (where

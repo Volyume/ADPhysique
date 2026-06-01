@@ -25,6 +25,8 @@ import {
 import {
   PHYSIQUE_GOALS,
   TRAINING_PHASES,
+  GOALS_WITH_WEAK_POINTS,
+  weakPointSetForGoal,
   phaseToNutritionKey,
   phaseToCoachingKey,
   daysToActivityLevel,
@@ -171,6 +173,26 @@ export default function ProOnboardingScreen({ navigation }) {
   // "Competing in a category?" dropdown to pick a physique category.
   const [trainingGoal, setTrainingGoal] = useState('general');
   const [trainingPhase, setTrainingPhase] = useState(null);
+  // Weak points the user wants to bring up (UI labels, max 3). Division-scoped:
+  // the options shown depend on trainingGoal. Passed into plan generation, which
+  // biases volume toward these muscles within the recovery envelope.
+  const [planWeakPoints, setPlanWeakPoints] = useState([]);
+
+  // Changing division re-scopes the weak-point options, so drop any selected
+  // muscle that the new division does not offer.
+  function changeGoal(nextGoal) {
+    setTrainingGoal(nextGoal);
+    const allowed = weakPointSetForGoal(nextGoal);
+    setPlanWeakPoints(prev => prev.filter(m => allowed.includes(m)));
+  }
+
+  function toggleWeakPoint(muscle) {
+    setPlanWeakPoints(prev => {
+      if (prev.includes(muscle)) return prev.filter(m => m !== muscle);
+      if (prev.length >= 3) return prev; // cap at 3; chips show the current pick
+      return [...prev, muscle];
+    });
+  }
 
   // Step 4, recovery + reminders
   const [recoveryRating, setRecoveryRating] = useState(null);
@@ -516,7 +538,7 @@ export default function ProOnboardingScreen({ navigation }) {
           equipment,
           trainingGoal,
           trainingPhase,
-          planWeakPoints: [],
+          planWeakPoints,
           recoveryRating,
         };
         let planResult = { ok: false, error: 'not attempted' };
@@ -980,9 +1002,42 @@ export default function ProOnboardingScreen({ navigation }) {
               hint="Only if you're chasing a competitive physique. Biases volume toward the muscles that category is judged on."
               value={trainingGoal}
               options={goalOptions}
-              onChange={setTrainingGoal}
+              onChange={changeGoal}
               placeholder="Not competing, General"
             />
+
+            {/* Weak points, division-scoped. The options shown are the ones
+                this division is judged on (or commonly brings up). Picking none
+                is fine, it just means a balanced plan. */}
+            {GOALS_WITH_WEAK_POINTS.includes(trainingGoal) && (
+              <View style={styles.wpSection}>
+                <Text style={styles.wpLabel}>
+                  Anything to bring up? <Text style={styles.wpOptional}>(optional, up to 3)</Text>
+                </Text>
+                <Text style={styles.wpHint}>
+                  Pick a muscle or two you want to prioritise and your plan puts extra
+                  work into them. Not sure? Leave it blank for a balanced plan; you can
+                  set this later.
+                </Text>
+                <View style={styles.wpGrid}>
+                  {weakPointSetForGoal(trainingGoal).map(muscle => {
+                    const sel = planWeakPoints.includes(muscle);
+                    return (
+                      <TouchableOpacity
+                        key={muscle}
+                        style={[styles.wpChip, sel && styles.wpChipSelected]}
+                        onPress={() => toggleWeakPoint(muscle)}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={[styles.wpChipText, sel && styles.wpChipTextSelected]}>
+                          {muscle}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
 
             <TouchableOpacity
               style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
@@ -1218,6 +1273,23 @@ const styles = StyleSheet.create({
     color: colors.textMuted, letterSpacing: 0.3, marginBottom: spacing.sm,
   },
   fieldHint: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18, marginBottom: spacing.sm },
+  // Weak-point selector (step 3). Chip grid, division-scoped options.
+  wpSection: { marginTop: spacing.lg, marginBottom: spacing.sm },
+  wpLabel: {
+    fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
+    color: colors.textMuted, letterSpacing: 0.3, marginBottom: spacing.xs,
+  },
+  wpOptional: { color: colors.textMuted, fontWeight: fontWeight.regular },
+  wpHint: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18, marginBottom: spacing.md },
+  wpGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  wpChip: {
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    borderRadius: radius.full, backgroundColor: colors.surface2,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  wpChipSelected: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
+  wpChipText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  wpChipTextSelected: { color: colors.primary, fontWeight: fontWeight.semibold },
   input: {
     backgroundColor: colors.surface, borderRadius: radius.md,
     borderWidth: 1.5, borderColor: colors.border,

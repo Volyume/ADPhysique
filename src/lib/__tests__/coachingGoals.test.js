@@ -8,12 +8,62 @@ import {
   GOAL_LABELS,
   PHASE_LABELS,
   GOALS_WITH_WEAK_POINTS,
+  WEAK_POINT_MUSCLES,
+  WEAK_POINT_SETS,
+  WEAK_POINT_REGION,
+  weakPointSetForGoal,
   phaseToNutritionKey,
   phaseToCoachingKey,
   daysToActivityLevel,
   getTrainingNote,
   migrateProfileGoals,
 } from '../coachingGoals';
+
+describe('Division-specific weak-point sets', () => {
+  const fullSet = new Set(WEAK_POINT_MUSCLES);
+
+  test('every label in every division set is a canonical weak-point muscle', () => {
+    // So WEAK_POINT_MAP (the single label->key resolver) always resolves them.
+    for (const [goal, labels] of Object.entries(WEAK_POINT_SETS)) {
+      for (const label of labels) {
+        expect(fullSet.has(label)).toBe(true);
+      }
+      expect(labels.length).toBeGreaterThan(0);
+    }
+  });
+
+  test('every weak-point muscle has a region for grouping', () => {
+    for (const m of WEAK_POINT_MUSCLES) {
+      expect(['upper', 'lower', 'core']).toContain(WEAK_POINT_REGION[m]);
+    }
+  });
+
+  test('weakPointSetForGoal returns the division set, and the full list as fallback', () => {
+    // A division with a specific set gets it.
+    expect(weakPointSetForGoal('bikini')).toBe(WEAK_POINT_SETS.bikini);
+    expect(weakPointSetForGoal('mens_physique')).toBe(WEAK_POINT_SETS.mens_physique);
+    // Balanced / unlisted goals fall back to the full list.
+    expect(weakPointSetForGoal('general')).toBe(WEAK_POINT_MUSCLES);
+    expect(weakPointSetForGoal('bodybuilding')).toBe(WEAK_POINT_MUSCLES);
+    expect(weakPointSetForGoal('womens_bodybuilding')).toBe(WEAK_POINT_MUSCLES);
+  });
+
+  test('division character shows in the sets: Bikini is lower-led, MP upper-led', () => {
+    // Bikini offers glutes/hams but not heavy upper mass like chest.
+    expect(WEAK_POINT_SETS.bikini).toContain('Glutes');
+    expect(WEAK_POINT_SETS.bikini).not.toContain('Chest');
+    // Men's Physique offers delts/back/arms but not legs (hidden by shorts).
+    expect(WEAK_POINT_SETS.mens_physique).toContain('Side Delts');
+    expect(WEAK_POINT_SETS.mens_physique).not.toContain('Quads');
+    expect(WEAK_POINT_SETS.mens_physique).not.toContain('Glutes');
+  });
+
+  test('every goal that supports weak points resolves to a non-empty option set', () => {
+    for (const goal of GOALS_WITH_WEAK_POINTS) {
+      expect(weakPointSetForGoal(goal).length).toBeGreaterThan(0);
+    }
+  });
+});
 
 describe('PHYSIQUE_GOALS catalogue', () => {
   test('has at least the general default and competitive physique categories', () => {
