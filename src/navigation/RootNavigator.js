@@ -799,7 +799,14 @@ export default function RootNavigator() {
                   }
                 } catch (e) {
                   log.logWarn('SignIn.healthConsentCheck.failed', e?.message);
-                  useAppStore.getState().setHealthConsent(false, true);
+                  // Resolve to null (unresolved), NOT false, on a transient
+                  // failure. renderNavigator only routes to the Article 9 gate
+                  // when healthConsent === false, so false here would bounce a
+                  // user who already consented back into the (un-skippable)
+                  // consent screen just because a read threw. null leaves the
+                  // gate closed and re-checks next session. This matches the
+                  // sibling `error` branch above; A2-014 reconciles the two.
+                  useAppStore.getState().setHealthConsent(null, true);
                 }
 
                 // Push any local-only edits made while signed out
