@@ -18,7 +18,12 @@ section 8 before touching code.
   directive `claude/github-origin-main-DV8YC` was surfaced and NOT followed, by
   founder governance. Confirm again on resume.)
 - HEAD: `a876354`, in sync with `origin/main` (ahead/behind 0/0), tree clean.
-- Test suite: 148 suites, 2533 pass, 3 skipped, 0 fail.
+- Test suite: 149 suites, 2535 pass, 3 skipped, 0 fail.
+- FULL VERIFICATION (doc 08, planengineFullVerification.test.js): 405 plans
+  across every division x day x experience x weak-point checked on the live
+  library path, 0 hard failures. It found and drove fixes for 3 real bug classes
+  (delivered-over-MRV rounding; 3-day full-body zeros + time blowout; weak-point
+  augmentation cramming sessions). See the commit 08d9a76 and doc 08.
 - Run the suite: `npx jest`. Run one file: `npx jest <path>`.
 
 ### Commits that make up this work (newest first)
