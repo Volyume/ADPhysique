@@ -439,14 +439,14 @@ const POOL = {
     { n: 'Swiss Ball Leg Curl',            sub: 'knee_flexion',  p: 'isolation',      eq: ['full_gym', 'bodyweight', 'home_gym', 'dumbbells_only'] },
   ],
   glutes: [
-    { n: 'Barbell Hip Thrust',        sub: 'glute_max', p: 'mod_compound', eq: ['full_gym', 'barbell_plates'] },
-    { n: 'Smith Machine Hip Thrust',  sub: 'glute_max', p: 'machine',      eq: ['full_gym', 'machines_cables'] },
-    { n: 'Dumbbell Hip Thrust',       sub: 'glute_max', p: 'mod_compound', eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
-    { n: 'Cable Pull-Through',        sub: 'glute_max', p: 'isolation',    eq: ['full_gym', 'machines_cables'] },
-    { n: 'Glute Bridge',              sub: 'glute_max', p: 'mod_compound', eq: ['full_gym', 'bodyweight', 'home_gym', 'dumbbells_only'] },
-    { n: 'Step-Up (Dumbbell)',        sub: 'glute_max', p: 'mod_compound', eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
-    { n: 'Abductor Machine',          sub: 'glute_med', p: 'isolation',    eq: ['full_gym', 'machines_cables'] },
-    { n: 'Cable Hip Abduction',       sub: 'glute_med', p: 'isolation',    eq: ['full_gym', 'machines_cables'] },
+    { n: 'Barbell Hip Thrust',        sub: 'activator', p: 'mod_compound', eq: ['full_gym', 'barbell_plates'] },
+    { n: 'Smith Machine Hip Thrust',  sub: 'activator', p: 'machine',      eq: ['full_gym', 'machines_cables'] },
+    { n: 'Dumbbell Hip Thrust',       sub: 'activator', p: 'mod_compound', eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
+    { n: 'Cable Pull-Through',        sub: 'activator', p: 'isolation',    eq: ['full_gym', 'machines_cables'] },
+    { n: 'Glute Bridge',              sub: 'activator', p: 'mod_compound', eq: ['full_gym', 'bodyweight', 'home_gym', 'dumbbells_only'] },
+    { n: 'Step-Up (Dumbbell)',        sub: 'stretcher', p: 'mod_compound', eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
+    { n: 'Abductor Machine',          sub: 'pumper',    p: 'isolation',    eq: ['full_gym', 'machines_cables'] },
+    { n: 'Cable Hip Abduction',       sub: 'pumper',    p: 'isolation',    eq: ['full_gym', 'machines_cables'] },
   ],
   calves: [
     { n: 'Standing Calf Raise (Machine)',      sub: 'gastro', p: 'isolation', eq: ['full_gym', 'machines_cables', 'barbell_plates'] },
@@ -518,6 +518,12 @@ function buildEffectivePool(exerciseLibrary) {
 const SUBREGION_REQUIREMENTS = {
   back:       { minSets: 6,  required: ['vertical_pull', 'horizontal_row'] },
   hamstrings: { minSets: 6,  required: ['hip_extension', 'knee_flexion'] },
+  // Glutes: Contreras split-by-type. Once volume is glute-led (Bikini/Wellness
+  // territory, >= 16 weekly), spread across a heavy peak-contraction lift and a
+  // light abduction/kickback so the week is not three hip thrusts. Stretcher is
+  // a bonus, not required, because the program's hip-hinge already loads the
+  // glute in the lengthened position.
+  glutes:     { minSets: 16, required: ['activator', 'pumper'] },
   chest:      { minSets: 10, required: ['incline', 'flat'] },  // flat covers flat+lower
   rear_delts: { minSets: 6,  required: ['face_pull', 'horiz_abduction'] },
   triceps:    { minSets: 8,  required: ['overhead'] },
@@ -741,8 +747,8 @@ const DIVISION_SUBREGION_BIAS = {
   figure:           { chest: 'incline', back: 'vertical_pull' },
   classic_physique: { back: 'vertical_pull' },
   womens_physique:  { back: 'vertical_pull' },
-  bikini:           { glutes: 'glute_max' },
-  wellness:         { glutes: 'glute_max' },
+  bikini:           { glutes: 'activator' },
+  wellness:         { glutes: 'activator' },
 };
 
 // Deterministic index-based pick (no randomness)

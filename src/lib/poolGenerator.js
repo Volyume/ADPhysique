@@ -38,6 +38,7 @@ const SUBREGION_TRANSLATION = {
   rear_delts: { face_pull: 'face_pull', horiz_abduction: 'horiz_abduction' },
   triceps:    { overhead: 'overhead', pushdown: 'lateral' },
   hamstrings: { hip_extension: 'hip_extension', knee_flexion: 'knee_flexion' },
+  glutes:     { activator: 'activator', stretcher: 'stretcher', pumper: 'pumper' },
   calves:     { gastro: 'gastro', soleus: 'soleus' },
   abs:        { flexion: 'flexion', anti_extension: 'anti_extension', rotation: 'anti_rotation' },
 };
@@ -55,7 +56,7 @@ const DEFAULT_SUBREGION = {
   triceps: 'lateral',
   quads: 'vasti',
   hamstrings: 'hip_extension',
-  glutes: 'glute_max',
+  glutes: 'activator',
   calves: 'gastro',
   abs: 'flexion',
   traps: 'upper',
