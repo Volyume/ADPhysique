@@ -34,6 +34,8 @@ import {
 } from '../lib/health';
 import Constants from 'expo-constants';
 import * as Updates from 'expo-updates';
+import { getStatus as getSyncStatus, syncAll } from '../lib/sync';
+import { formatLastSynced } from '../lib/syncStatusLabel';
 
 // Larger Text / Higher Contrast / Colour-Blind Safe mutate theme tokens
 // that StyleSheet.create has already baked at module-evaluation time, so
@@ -144,6 +146,10 @@ export default function SettingsScreen({ navigation }) {
   const [healthWorkoutStatus, setHealthWorkoutStatus] = useState('unavailable');
   const [healthStepsStatus, setHealthStepsStatus] = useState('unavailable');
   const [healthSyncing, setHealthSyncing] = useState(false);
+  // Cloud sync status line (A2-006). Quiet, read from the runner snapshot;
+  // syncingNow tracks the manual "tap to sync" so the row shows progress.
+  const [syncSnapshot, setSyncSnapshot] = useState(null);
+  const [syncingNow, setSyncingNow] = useState(false);
 
   async function toggleCalmMode(value) {
     haptics.selection();
@@ -201,6 +207,7 @@ export default function SettingsScreen({ navigation }) {
       getWellbeingMode().then(m => setCalmEnabled(m === 'calm'));
       getOffWritebackConsent().then(setOffConsent);
       getCycleTracking().then(setCycleEnabled).catch(() => {});
+      getSyncStatus().then(setSyncSnapshot).catch(() => {});
       if (user?.id) getUserBodyProfile(user.id).then(p => setBioSex(p?.sex ?? null)).catch(() => {});
       if (isHealthAvailable()) {
         getHealthPermissionStatus(['weight']).then(setHealthWeightStatus).catch(() => {});
@@ -316,6 +323,37 @@ export default function SettingsScreen({ navigation }) {
       toast.show('Could not connect. Try again in a moment.', { variant: 'error' });
     } finally {
       setHealthSyncing(false);
+    }
+  }
+
+  // Manual cloud resync. The lock (PRODUCTION_READINESS_LOCKED § 1) allows a
+  // manual resync from Settings; this routes through the same syncAll runner
+  // as the automatic triggers, so its in-memory lock dedupes against any
+  // background round already in flight.
+  async function handleSyncNow() {
+    if (syncingNow) return;
+    haptics.selection();
+    setSyncingNow(true);
+    try {
+      let supabaseUserId = null;
+      try {
+        const sb = getSupabaseClient();
+        const { data: { session: s } = {} } = await sb.auth.getSession();
+        supabaseUserId = s?.user?.id ?? null;
+      } catch (_) { /* offline / no session — push local, pull skips */ }
+      await syncAll({ userId: supabaseUserId, localUserId: user?.id ?? null, triggeredBy: 'manual' });
+      const snap = await getSyncStatus();
+      setSyncSnapshot(snap);
+      toast.show(
+        (snap?.queue_depth ?? 0) > 0 ? 'Synced. Some changes are still uploading.' : 'Synced.',
+        { variant: 'success' },
+      );
+    } catch (e) {
+      logError('SettingsScreen.syncNow', e);
+      getSyncStatus().then(setSyncSnapshot).catch(() => {});
+      toast.show("Couldn't sync. It retries automatically.", { variant: 'error' });
+    } finally {
+      setSyncingNow(false);
     }
   }
 
@@ -1129,6 +1167,13 @@ export default function SettingsScreen({ navigation }) {
         {/* Your data */}
         <SectionHeader title="Your data" />
         <View style={styles.section}>
+          <SettingRow
+            icon="cloud-outline"
+            label={syncingNow ? 'Syncing…' : 'Cloud sync'}
+            sub={syncingNow ? 'Checking for changes.' : formatLastSynced(syncSnapshot)}
+            onPress={syncingNow ? null : handleSyncNow}
+            showArrow={!syncingNow}
+          />
           <SettingRow
             icon="swap-horizontal-outline"
             label="Import from another app"
