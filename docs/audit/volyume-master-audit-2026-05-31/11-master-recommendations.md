@@ -42,14 +42,19 @@ Landed on `main`, full suite green (2358 passing), eslint clean:
   founder; 049 held.
 - Also cleared the same day: A2-047 (full withAlpha sweep, 127 sites/34 files,
   plus a lint gate for both concat patterns), A2-020 (row ids via a CSPRNG,
-  expo-crypto + Math.random fallback), and A2-030 (scheduleSync debounce/cancel
-  tests).
+  expo-crypto + Math.random fallback), A2-030 (scheduleSync debounce/cancel
+  tests), Tier 5 #4 (cleared a Promise.race timer leak in two store cloud-reads
+  that was the source of Jest's "did not exit"), Tier 5 #5 (npm-audit survey:
+  all build-tooling bar xlsx), and A2-003 (wired the What's New sheet live).
+- Tier 3 reviewed: A2-001 (foreground sync dedup) was already fixed by
+  `0c98232`; A2-048 done; A2-013/A2-008/A2-055 are product/profiling calls left
+  for an on-device profiling pass.
 
 Still open: A2-020 on-device check (native module resolves in the next build),
-A2-047 visual pass on the 34 converted screens, A2-003 (WhatsNewSheet dormant
-feature, a product decision), Tier 3 (needs on-device profiling), Tier 5
-#3/#4/#5 (long-term). Resume from the on-device checks or a Tier 3 profiling
-pass. Session detail is in `docs/CURRENT_STATUS.md` § 0.
+A2-047 visual pass on the 34 converted screens, the What's New copy review,
+moving xlsx to devDependencies, Tier 3 profile-driven tuning, and Tier 5 #3/#5
+(long-term). Resume from the on-device checks or a profiling pass. Session
+detail is in `docs/CURRENT_STATUS.md` § 0.
 
 ---
 

@@ -14,7 +14,7 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 
 ## 0. Session summary
 
-### 0.00000000000001. 2026-06-01 (master-audit remediation continued, Claude): Tier 2 + Tier 4 + Tier 5 gates done, migrations applied, plus A2-047 (withAlpha sweep + gate), A2-020 (CSPRNG), A2-030 (sync test). Only on-device verification and Tier 3 profiling remain.
+### 0.00000000000001. 2026-06-01 (master-audit remediation continued, Claude): Tier 2 + Tier 4 + Tier 5 gates done, migrations applied, plus A2-047 (withAlpha sweep + gate), A2-020 (CSPRNG), A2-030 (sync test), open-handles timer-leak fix, npm-audit survey, and A2-003 (What's New live). Tier 3 reviewed (A2-001 already fixed). Only on-device verification, copy review, and profile-driven tuning remain.
 
 Resumed from A2-005 per the prior session's pointer, after a full Rule 1
 repo validation and a cross-check (commit history + doc 11 + this section)
@@ -118,28 +118,47 @@ alongside the hex gate). Both enforced by the existing CI eslint job.
   falls back safely until then).
 - `266ba4b` A2-030: added coverage for scheduleSync's 2s debounce, coalescing
   and cancelScheduledSync (the JEST guard had left them untested).
+- `12d8202` Tier 5 #4 (open handles): the two Promise.race cloud-read timeouts
+  in restoreSessionFromCloud / refreshTierFromCloud never cleared the loser
+  timer, leaving a 10s / 5s timer armed per call (a small production leak and
+  the source of Jest's intermittent "did not exit"). Wrapped both in
+  try/finally with clearTimeout; the full suite now exits clean.
+- `55cf758` Tier 5 #5 (npm audit survey): docs/audit/npm-audit-survey-2026-06-01.md.
+  32 advisories, all Expo/RN build + CLI tooling (clear with the next SDK bump)
+  except xlsx, which is only used by the offline seed script and belongs in
+  devDependencies. No dependency changes made (survey only).
+- `6f4e9c3` A2-003: wired the What's New sheet live. It was a finished,
+  self-gating component that nothing mounted; mounted it in RootNavigator with
+  items in src/config/whatsNew.js (Frequents, per-side logging, daily steps).
+  Copy is provisional, pending founder review; bump SEEN_KEY per batch.
+- Tier 3 perf reviewed: A2-001 (foreground sync dedup) was already fixed by
+  `0c98232` (the perf audit predated it; _runLock serialises the two triggers).
+  A2-048 done earlier this session. A2-013 (2.5s splash) and A2-008 (lazy tabs)
+  are deliberate product/profiling calls, left as-is. A2-055 (N+1 updated_at on
+  pull) is a delta-path micro-opt over a handful of rows; not worth a 4-handler
+  runtime-critical refactor, deferred to the profiling pass the audit asks for.
 
 **Still open in the audit:**
 - A2-020 on-device check: confirm expo-crypto's native module resolves in the
   next build (the code is in and falls back safely until then).
 - A2-047 visual pass: eyeball the 34 converted screens on a device before the
   next build (no intended change, but it's a broad colour edit).
-- A2-003 (WhatsNewSheet `{false && …}`): intentional dormant feature; a
-  product call to keep-for-later or remove, not a cleanup.
-- Tier 3 (perf): needs on-device Sentry-traces profiling first.
-- Tier 5 #3 (TS/JSDoc), #4 (--detectOpenHandles diagnostic), #5 (npm audit on
-  next SDK bump): long-term. (npm now reports 32 advisories across the dep
-  tree; that is the SDK-bump cleanup, not new.)
+- A2-003 copy: confirm/finalise the What's New items + wording for the release.
+- xlsx -> devDependencies (one line, awaiting the go-ahead; survey was scoped
+  no-changes).
+- Tier 3 deeper tuning (A2-013 splash, A2-008 lazy tabs, A2-055): needs
+  on-device Sentry-traces profiling first.
+- Tier 5 #3 (TS/JSDoc) and #5 (the SDK-bump dependency cleanup): long-term.
 
-**Resume from the on-device checks (A2-020 native module, A2-047 visual pass)
-or a Tier 3 profiling pass.** Everything that can be done off-device from the
-audit is now done.
+**Resume from the on-device checks (A2-020 native module, A2-047 visual pass,
+What's New copy) or a Tier 3 profiling pass.** Everything that can be done
+off-device from the audit is now done.
 
-Repo at session end: `main` at this doc commit on top of `266ba4b`, 0/0 with
-origin, suite green (2358 passing across 140 suites), 0 lint errors. expo-crypto
-~13.0.2 added. Migrations 048, 050-055, 058 were applied by the founder on
-2026-06-01 (so 037-048, 050-058 are live); 049 stays held until the next AAB
-ships.
+Repo at session end: `main` at this doc commit on top of `6f4e9c3`, 0/0 with
+origin, suite green (2362 passing across 141 suites), 0 lint errors. expo-crypto
+~13.0.2 added; What's New sheet mounted live. Migrations 048, 050-055, 058 were
+applied by the founder on 2026-06-01 (so 037-048, 050-058 are live); 049 stays
+held until the next AAB ships.
 
 ### 0.0000000000001. 2026-05-31 (master-audit remediation, Claude): Tier 1 closed, Tier 2 in progress. Paused for a fresh restart tomorrow.
 
