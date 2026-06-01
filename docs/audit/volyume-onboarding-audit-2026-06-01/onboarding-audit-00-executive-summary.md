@@ -93,7 +93,30 @@ Full scoring in Phase 7.
 - 06 full proposal for both flows
 - 07 prioritised build recommendations
 
-## Status
+## Status (current)
 
-Audit and proposal pass only. No app code has been changed. Awaiting approval
-before any implementation, per the brief and per the engineering rules.
+Implementation has only partially begun, and is now PAUSED awaiting direction.
+
+DONE and committed:
+- Weak-point selection reinstated in onboarding (the brief's critical omission).
+  Division-scoped selector in ProOnboarding step 3 reading WEAK_POINT_SETS
+  (per-division options), wired so the selection reaches plan generation
+  (the hard-coded `planWeakPoints: []` is removed). Commit 4928a04. The engine
+  applies it through the existing (rebuilt) weak-point path.
+
+NOT done (awaiting explicit go-ahead, do not implement without it):
+- The broader onboarding alignment the brief asks for: the comprehensive
+  copy pass (accuracy to the current system, removing redundant communications,
+  rewriting instructions) and the format/style standardisation (onboarding's
+  dropdowns to the rest of the app's card/chip language, division made
+  prominent, recovery grouped with training, days/protein parity). This is the
+  bulk of the work and is specified screen-by-screen in doc 06 and doc 03. It
+  has NOT been built. A full screen-by-screen before/after must be presented
+  and approved before any of it is implemented.
+- Always-on weak-point bias (doc 06 engine item): NOT implemented and out of
+  scope for the onboarding alignment. The engine was deliberately left
+  untouched. A selected weak point therefore applies on the weak-point training
+  phase (where the engine biases) and not on other phases. Greenlight
+  separately if wanted.
+
+Engine: unchanged by this onboarding work.

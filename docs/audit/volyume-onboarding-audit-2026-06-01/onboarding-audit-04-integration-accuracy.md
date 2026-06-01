@@ -8,6 +8,13 @@ division-aware MRV, and weak-point that composes with the division split and
 respects MRV). The two defects below still stand exactly as written. The
 onboarding flow code itself is unchanged since the original audit.
 
+IMPLEMENTATION STATUS (current): Defect 1 (onboarding could not pass weak
+points) is FIXED, commit 4928a04 removes the hard-coded `planWeakPoints: []` and
+wires the division-scoped selector. Defect 2 (weak points ignored off the
+weak-point phase) is NOT fixed, the always-on bias was deliberately not built
+(onboarding work left the engine untouched). The remaining accuracy/redundancy
+copy items below are NOT done and await an approved copy pass.
+
 # Integration accuracy audit
 
 Do the two flows describe the app as it actually works, and do their selections

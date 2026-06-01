@@ -8,6 +8,13 @@ below were re-checked against the current `GOAL_OVERLAYS` and still hold (the
 rebuild only tuned magnitudes, e.g. WBB quads, not which muscles a division
 emphasises). The one engine change still outstanding is the always-on bias.
 
+IMPLEMENTATION STATUS (current): of this proposal, only the division-scoped
+weak-point selector in onboarding is built (commit 4928a04). The rest, the
+shared selector in the builder, the onboarding copy/format standardisation, the
+always-on bias, days/protein parity, division judging notes, is NOT built and
+awaits an approved screen-by-screen pass. The always-on bias engine change is
+explicitly deferred (onboarding work does not touch the engine).
+
 # Redesign proposal, both flows
 
 Built on the corrected reality (Phase 1) and the two founder decisions for this

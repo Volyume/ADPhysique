@@ -6,6 +6,12 @@ split), so the "division judging note / division-specific sets" items connect to
 real infrastructure. The ONLY runtime-critical engine change still outstanding is
 the always-on bias; everything else is UI/data wiring on the unchanged flow code.
 
+IMPLEMENTATION STATUS (current): only the weak-point selector in onboarding is
+built (commit 4928a04, the critical item below). Everything else, the copy pass,
+the format/style standardisation, days/protein parity, the always-on bias, is
+NOT built and awaits an approved screen-by-screen plan. Do not implement further
+without explicit go-ahead.
+
 # Prioritised build recommendations
 
 Scored Impact x Effort. Impact is plan correctness and parity first, premium
