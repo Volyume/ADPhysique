@@ -25,10 +25,16 @@ Landed on `main`, full suite green (2358 passing), eslint clean:
   a signup seed of the per-uid first-run flag. Both gated so genuine
   returning users and cache-hit decisions are never disturbed.
 
-Next: Tier 3 + Tier 5, then Tier 4. Most of Tier 3 needs on-device
-Sentry-traces profiling first (only A2-048's dead RestTimer animation is a
-no-profile win); Tier 5's tooling gates are cheap and doable in-repo.
-Resume from Tier 5 gates or A2-048. Session detail is in
+- Tier 5 gates #1 + #2 done (`0eaa5e7`): eslint-plugin-react's
+  `react/jsx-uses-vars` (lint warnings 1670 → 777) and a voice-rule copy
+  gate (no em dashes / machine-tell words in displayed copy, scoped to
+  screens + components, as `no-restricted-syntax` errors). Both CI-enforced.
+  Tier 5 #3 (TS/JSDoc) and #5 (npm audit) stay long-term / next-SDK-bump;
+  #4 (--detectOpenHandles) is a low diagnostic pass.
+
+Next: Tier 3 + Tier 4. Most of Tier 3 needs on-device Sentry-traces
+profiling first (only A2-048's dead RestTimer animation is a no-profile
+win). Resume from A2-048 or the Tier 4 dead-code batch. Session detail is in
 `docs/CURRENT_STATUS.md` § 0.
 
 ---

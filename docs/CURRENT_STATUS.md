@@ -64,11 +64,18 @@ re-litigated):**
 
 **Still open (doc 11 drives it):** Tier 3 (perf, most of it needs on-device
 Sentry-traces profiling first, only A2-048's dead RestTimer animation is a
-no-profile win), Tier 5 (tooling gates: eslint-plugin-react, copy-lint grep
-gate, both cheap and doable in-repo), then Tier 4 (dead-code cleanup).
-**Resume from Tier 5 gates or A2-048**, founder's call on order.
+no-profile win), then Tier 4 (dead-code cleanup). Tier 5 gates #1 + #2 are
+done this session (see below); #3 (TS/JSDoc) and #5 (npm audit) are
+explicitly long-term / next-SDK-bump, #4 (--detectOpenHandles) is a low
+diagnostic pass. **Resume from A2-048 or the Tier 4 dead-code batch.**
 
-Repo at session end: `main` at this doc commit on top of `989dc4c`, 0/0 with
+**Tier 5 gates landed (`0eaa5e7`):** eslint-plugin-react's
+`react/jsx-uses-vars` (lint warnings 1670 → 777, so real dead code is now
+visible) and a voice-rule copy gate (no em dashes, no machine-tell words in
+displayed copy in screens/components, as `no-restricted-syntax` errors
+alongside the hex gate). Both enforced by the existing CI eslint job.
+
+Repo at session end: `main` at this doc commit on top of `0eaa5e7`, 0/0 with
 origin, suite green (2358 passing), 0 lint errors. Migrations unchanged this
 session (048, 050-055, 058 still pending founder apply; 049 held).
 
