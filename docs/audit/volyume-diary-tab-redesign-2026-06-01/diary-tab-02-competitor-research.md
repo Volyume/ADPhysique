@@ -580,43 +580,43 @@ calm dashboard, not a dense table, wins on daily use.
 
 ## Sources
 
-- [Introducing the brand new Today tab (MyFitnessPal support)](https://support.myfitnesspal.com/hc/en-us/articles/39985611667341-Introducing-the-brand-new-Today-tab) — blocked to direct fetch (403), used via search summary
-- [MyFitnessPal's New Today Screen & Progress Tab (MFP blog)](https://blog.myfitnesspal.com/myfitnesspal-today-screen-progress-tab-update/) — blocked to direct fetch (403), used via search summary
+- [Introducing the brand new Today tab (MyFitnessPal support)](https://support.myfitnesspal.com/hc/en-us/articles/39985611667341-Introducing-the-brand-new-Today-tab), blocked to direct fetch (403), used via search summary
+- [MyFitnessPal's New Today Screen & Progress Tab (MFP blog)](https://blog.myfitnesspal.com/myfitnesspal-today-screen-progress-tab-update/), blocked to direct fetch (403), used via search summary
 - [Macros By Meal FAQs (MFP support)](https://support.myfitnesspal.com/hc/en-us/articles/360032625151-Macros-By-Meal-FAQs)
-- [MyFitnessPal Alternatives 2026: Why Users Are Switching After the Redesign (PlateLens)](https://platelens.app/blog/myfitnesspal-alternatives-2026) — blocked to direct fetch (403), used via search summary
-- [MyFitnessPal users complain new Today tab update makes the app harder to use (piunikaweb)](https://piunikaweb.com/2026/04/24/myfitnesspal-new-update-complaints/) — TLS error on direct fetch, used via search summary; summarises r/MyFitnessPal complaints
-- [The new food diary format is horrible. Please change it back. (MyFitnessPal community)](https://community.myfitnesspal.com/en/discussion/10941695/the-new-food-diary-format-is-horrible-please-change-it-back) — blocked to direct fetch (403), title and theme from search results
+- [MyFitnessPal Alternatives 2026: Why Users Are Switching After the Redesign (PlateLens)](https://platelens.app/blog/myfitnesspal-alternatives-2026), blocked to direct fetch (403), used via search summary
+- [MyFitnessPal users complain new Today tab update makes the app harder to use (piunikaweb)](https://piunikaweb.com/2026/04/24/myfitnesspal-new-update-complaints/), TLS error on direct fetch, used via search summary; summarises r/MyFitnessPal complaints
+- [The new food diary format is horrible. Please change it back. (MyFitnessPal community)](https://community.myfitnesspal.com/en/discussion/10941695/the-new-food-diary-format-is-horrible-please-change-it-back), blocked to direct fetch (403), title and theme from search results
 - [MacroFactor delivers the next-generation experience / dashboard revamp (MacroFactor)](https://macrofactor.com/dashboard-revamp/)
-- [Get to Know Your Dashboard (MacroFactor help)](https://help.macrofactorapp.com/en/articles/22-get-to-know-your-dashboard) — blocked to direct fetch (403), used via search summary
+- [Get to Know Your Dashboard (MacroFactor help)](https://help.macrofactorapp.com/en/articles/22-get-to-know-your-dashboard), blocked to direct fetch (403), used via search summary
 - [MacroFactor Advances Macro Tracking with its Timeline-Based Food Log (MacroFactor)](https://macrofactor.com/timeline-based-food-logger/)
 - [MacroFactor is rolling out the fastest food logger (MacroFactor)](https://macrofactor.com/new-food-logger/)
 - [Is MacroFactor Still the Fastest Food Logger (MacroFactor)](https://macrofactorapp.com/best-food-logging-app/)
 - [MacroFactor widgets (MacroFactor)](https://macrofactorapp.com/widgets/)
-- [MacroFactor review (Outlift)](https://outlift.com/macrofactor-review/) — TLS error on direct fetch this session
-- [MacroFactor best calorie counter app (Simple Solutions Fitness)](https://www.simplesolutionsfitness.com/macrofactor-best-calorie-counter-app) — used via search summary
+- [MacroFactor review (Outlift)](https://outlift.com/macrofactor-review/), TLS error on direct fetch this session
+- [MacroFactor best calorie counter app (Simple Solutions Fitness)](https://www.simplesolutionsfitness.com/macrofactor-best-calorie-counter-app), used via search summary
 - [Carbon Diet Coach review (FeastGood)](https://feastgood.com/carbon-diet-coach-review/)
-- [Is Carbon Diet Coach Worth It in 2026 (NutriScan)](https://nutriscan.app/blog/posts/is-carbon-diet-coach-worth-it-2026-b08ffeab07) — used via search summary
+- [Is Carbon Diet Coach Worth It in 2026 (NutriScan)](https://nutriscan.app/blog/posts/is-carbon-diet-coach-worth-it-2026-b08ffeab07), used via search summary
 - [Carbon Diet Coach review (Garage Gym Revisited)](https://garagegymrevisited.com/carbon-diet-coach/)
-- [Diary Overview (Cronometer support)](https://support.cronometer.com/hc/en-us/articles/360018171731-Diary-Overview) — used via search summary
-- [Cronometer Review 2026 (calorie-trackers)](https://calorie-trackers.com/reviews/cronometer/) — used via search summary
+- [Diary Overview (Cronometer support)](https://support.cronometer.com/hc/en-us/articles/360018171731-Diary-Overview), used via search summary
+- [Cronometer Review 2026 (calorie-trackers)](https://calorie-trackers.com/reviews/cronometer/), used via search summary
 - [Beta User Interface complaints, suggestions, and feedback (Cronometer forums)](https://forums.cronometer.com/discussion/1906/beta-user-interface-complaints-suggestions-and-feedback)
-- [Lose It! Review 2026 (calorie-trackers)](https://calorie-trackers.com/reviews/lose-it/) — used via search summary
-- [Lose It! Review (trygaya)](https://www.trygaya.com/review/lose-it-review) — used via search summary
-- [Lose It! reviews (Trustpilot)](https://www.trustpilot.com/review/loseit.com) — user complaints, used via search summary
+- [Lose It! Review 2026 (calorie-trackers)](https://calorie-trackers.com/reviews/lose-it/), used via search summary
+- [Lose It! Review (trygaya)](https://www.trygaya.com/review/lose-it-review), used via search summary
+- [Lose It! reviews (Trustpilot)](https://www.trustpilot.com/review/loseit.com), user complaints, used via search summary
 - [Lose It! App Review (Amy Food Journal)](https://www.amyfoodjournal.com/blog/lose-it-app-review)
-- [Yazio Review 2026 (trygaya)](https://www.trygaya.com/review/yazio-review) — used via search summary, includes summarised store reviews
+- [Yazio Review 2026 (trygaya)](https://www.trygaya.com/review/yazio-review), used via search summary, includes summarised store reviews
 - [AI Calorie Tracker by Yazio (App Store)](https://apps.apple.com/us/app/ai-calorie-tracker-by-yazio/id946099227)
-- [AI Calorie Tracker by Yazio (ScreensDesign)](https://screensdesign.com/showcase/yazio-calorie-counter-diet) — blocked to direct fetch (403)
+- [AI Calorie Tracker by Yazio (ScreensDesign)](https://screensdesign.com/showcase/yazio-calorie-counter-diet), blocked to direct fetch (403)
 - [5 Great Apps to Track Macros On the Go (Daily Burn)](https://dailyburn.com/life/tech/food-diary-app-tracking-macros/)
 - [12 Best Macro Tracking Apps 2026 (Eat This Much)](https://blog.eatthismuch.com/best-macro-tracking-apps/)
 - [My Macros+ (official site)](https://getmymacros.com/)
-- [Lifesum Review 2026 (calorie-trackers)](https://calorie-trackers.com/reviews/lifesum/) — used via search summary
-- [Lifesum Free vs Premium 2026 (Nutrola)](https://nutrola.app/en/blog/lifesum-free-vs-premium-what-do-you-actually-get) — used via search summary
+- [Lifesum Review 2026 (calorie-trackers)](https://calorie-trackers.com/reviews/lifesum/), used via search summary
+- [Lifesum Free vs Premium 2026 (Nutrola)](https://nutrola.app/en/blog/lifesum-free-vs-premium-what-do-you-actually-get), used via search summary
 - [Lifesum features](https://lifesum.com/features/)
-- [Activity rings (Apple Developer HIG)](https://developer.apple.com/design/human-interface-guidelines/activity-rings) — page body did not load for quoting; specifics taken from secondary sources below (inference)
+- [Activity rings (Apple Developer HIG)](https://developer.apple.com/design/human-interface-guidelines/activity-rings), page body did not load for quoting; specifics taken from secondary sources below (inference)
 - [Apple Fitness rings explained (Competo)](https://www.competoapp.com/en/activity-rings-explained)
 - [How to Effectively Use Apple Fitness Rings (Vertu)](https://vertu.com/lifestyle/use-apple-fitness-rings-effectively-2025/)
-- [How Gentler Streak brings kindness to fitness (Sketch blog)](https://www.sketch.com/blog/gentler-streak/) — blocked to direct fetch (403), used via search summary
-- [Gentler Streak's Design: The Hidden UX Gems (Pixso)](https://pixso.net/articles/gentler/) — blocked to direct fetch (403)
+- [How Gentler Streak brings kindness to fitness (Sketch blog)](https://www.sketch.com/blog/gentler-streak/), blocked to direct fetch (403), used via search summary
+- [Gentler Streak's Design: The Hidden UX Gems (Pixso)](https://pixso.net/articles/gentler/), blocked to direct fetch (403)
 - [Gentler Streak Workout Tracker (App Store)](https://apps.apple.com/us/app/gentler-streak-workout-tracker/id1576857102)
-- [5 Best Bevel App Alternatives for Health Tracking 2026 (SuperAge)](https://www.superage.app/en/blog/best-bevel-alternatives/) — used via search summary
+- [5 Best Bevel App Alternatives for Health Tracking 2026 (SuperAge)](https://www.superage.app/en/blog/best-bevel-alternatives/), used via search summary
