@@ -9,7 +9,6 @@ import { A11Y_PREFS_KEY, loadA11yPrefs } from '../lib/accessibilityPrefs';
 // eslint-disable-next-line global-require
 const _observability = (() => { try { return require('../lib/observability'); } catch (_) { return null; } })();
 
-const LOCAL_USER_KEY   = '@volyume_local_user_id';
 const FIRST_RUN_KEY    = '@volyume_first_run_complete';
 const FIRST_RUN_KEY_PFX = '@volyume_first_run_complete_'; // per-uid: + supabase user.id
 const PROFILE_KEY_PFX  = '@volyume_user_profile_';
@@ -176,12 +175,6 @@ const useAppStore = create((set, get) => ({
         syncProfile(sess.user.id, profile, get().tier).catch(() => {});
       }
     } catch (_) {}
-  },
-
-  // Clears local user from AsyncStorage and store
-  clearLocalUser: async () => {
-    await AsyncStorage.removeItem(LOCAL_USER_KEY);
-    set({ user: null, session: null });
   },
 
   // Sign-out. Per IDENTITY_AND_OWNERSHIP_LOCKED.md the locked design is
