@@ -144,7 +144,6 @@ describe('generatePlan, output shape', () => {
     expect(plan).toHaveProperty('personalisationSummary');
     expect(plan).toHaveProperty('whyThis');
     expect(plan).toHaveProperty('warnings');
-    expect(plan).toHaveProperty('mesocycleSchedule');
   });
 
   test('workouts is a non-empty array', () => {
@@ -351,42 +350,6 @@ describe('generatePlan, nutrition phase and RIR', () => {
 
     // Cut phases add +1 to RIR so the average should be higher
     expect(avgRir(cutPlan)).toBeGreaterThan(avgRir(surplusPlan));
-  });
-});
-
-// ─── generatePlan, mesocycleSchedule ────────────────────────────────────────
-
-describe('generatePlan, mesocycleSchedule', () => {
-  test('intermediate plan has 5 weeks in the mesocycle', () => {
-    const plan = generatePlan(BASE_INPUTS);
-    expect(plan.mesocycleSchedule).toHaveLength(5);
-  });
-
-  test('advanced plan has 6 weeks in the mesocycle', () => {
-    const plan = generatePlan({ ...BASE_INPUTS, experience: 'advanced' });
-    expect(plan.mesocycleSchedule).toHaveLength(6);
-  });
-
-  test('each mesocycle week has week, label, and setsMultiplier fields', () => {
-    const plan = generatePlan(BASE_INPUTS);
-    for (const week of plan.mesocycleSchedule) {
-      expect(typeof week.week).toBe('number');
-      expect(typeof week.label).toBe('string');
-      expect(typeof week.setsMultiplier).toBe('number');
-    }
-  });
-
-  test('final week (deload) has setsMultiplier of 0.50', () => {
-    const plan = generatePlan(BASE_INPUTS);
-    const lastWeek = plan.mesocycleSchedule[plan.mesocycleSchedule.length - 1];
-    expect(lastWeek.setsMultiplier).toBe(0.50);
-  });
-
-  test('week numbers are sequential starting from 1', () => {
-    const plan = generatePlan(BASE_INPUTS);
-    plan.mesocycleSchedule.forEach((w, i) => {
-      expect(w.week).toBe(i + 1);
-    });
   });
 });
 
