@@ -234,16 +234,22 @@ REMAINING:
   and quad TYPE tags landed; a whole-library primary-muscle re-audit (every
   hip-extension primary = glutes, fractional = hamstrings) is still open. The
   POOL is correct; this is library hygiene, low risk, not on the gate path.
-- (3e indirect-volume reporting now done, see above; remaining 3e items listed)
-  from direct targets; flag near-zero indirect coverage to force isolation;
-  side delts in pressing programs trigger the flag).
 - 3f Coverage warnings scoped to split type. NOTE: `buildWarnings` in the engine
   only emits recovery/experience warnings. The per-session coverage cues live in
   the app's session/coaching layer, OUTSIDE planEngine.js. Locate them first.
-- Phase 4 Autoregulation: weak-point cap-flexing (raise priority/weak-point
-  session cap to min(12, target+2), add a 3rd session), double progression,
-  mesocycle accessory rotation, deload trigger. Also wire the always-on
-  division-bias decision here / in the overlay.
+- Phase 4 weak-point cap-flexing: INVESTIGATED (doc 06). The per-session cap-flex
+  and the overlay division-aware MRV cap were both built, MEASURED inert, and
+  reverted (the engine already gives the weak muscle a 3rd session, so the cap
+  never binds). THE REAL LEVER: the `weak_point` phase bypasses the
+  DIVISION_MATRIX (`matrixCell` only when `phase !== 'weak_point'`), so a
+  weak-point plan loses its division split and delivers LESS for an already-
+  emphasised muscle (Bikini glutes base 23 -> WP 19). Next session: route
+  weak_point through the matrix so the two systems compose, then re-apply the
+  overlay division-aware MRV fix (a real latent bug: Bikini WP glute should
+  reach ~30, not clamp to 16). See doc 06.
+- Phase 4 other (double progression, mesocycle accessory rotation, deload
+  triggers): RUNTIME / app-layer (workout logging, multi-week state), NOT
+  single-plan generation. Outside planEngine.js.
 
 ---
 
