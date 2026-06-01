@@ -277,8 +277,12 @@ variant):
 Every new screen has a designed empty state. Reuses
 `EmptyState` component with these copy variants:
 
-- **Diary, no entries today**: "No food logged yet. Tap a meal slot
-  above to start. Or use Scan to grab something from a barcode."
+- **Diary, no entries today**: superseded by the diary-tab redesign
+  (2026-06-01, founder-approved). The empty day now shows a designed
+  `EmptyDiary` card: the line "Nothing logged yet." plus the primary
+  actions (Add food, Copy yesterday); Scan stays on the persistent FAB.
+  Former locked copy, for the record: "No food logged yet. Tap a meal
+  slot above to start. Or use Scan to grab something from a barcode."
 - **Search, Recents empty**: "Foods you've logged will show up here."
 - **Search, Favourites empty**: "Star a food to keep it close."
 - **Search, Database empty (no query)**: "Type a food name above."

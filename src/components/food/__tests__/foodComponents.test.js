@@ -27,12 +27,21 @@ import { EntryRow, friendlyFoodName } from '../EntryRow';
 import FoodRow, { SOURCE_LABEL, kcalForServing } from '../FoodRow';
 
 describe('EmptyDiary', () => {
-  test('renders the spec copy verbatim', () => {
-    expect(EMPTY_DIARY_COPY).toBe(
-      "No food logged yet. Tap a meal slot above to start. Or use Scan to grab something from a barcode."
-    );
+  // Redesigned 2026-06-01 (supersedes the locked single-sentence copy): a calm
+  // card with a short line and the primary actions.
+  test('renders the prompt and the add / copy-yesterday actions', () => {
+    const tree = create(<EmptyDiary onAdd={() => {}} onCopyYesterday={() => {}} />).toJSON();
+    const txt = JSON.stringify(tree);
+    expect(txt).toContain(EMPTY_DIARY_COPY); // 'Nothing logged yet.'
+    expect(txt).toContain('Add food');
+    expect(txt).toContain('Copy yesterday');
+  });
+
+  test('omits actions when no handlers are supplied', () => {
     const tree = create(<EmptyDiary />).toJSON();
-    expect(JSON.stringify(tree)).toContain(EMPTY_DIARY_COPY);
+    const txt = JSON.stringify(tree);
+    expect(txt).toContain(EMPTY_DIARY_COPY);
+    expect(txt).not.toContain('Copy yesterday');
   });
 });
 

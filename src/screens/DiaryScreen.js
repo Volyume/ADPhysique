@@ -4,9 +4,10 @@
  * Locked in UI_FLOWS_LOCKED.md and MOVE_1_FOOD_FOUNDATION_AND_FFM.md.
  * Voice rules from COACHING_VOICE_SYNTHESIS_LOCKED.md.
  *
- * v1 ships: date pager, macro totals, four meal sections, manual
- * entry CTA, swipe-delete, copy yesterday. Search-based add lands
- * once the bundled OFF snapshot ingestion is wired (Move #1.5).
+ * Ships: date pager, macro summary, six meal sections as contained cards
+ * (Breakfast, Lunch, Dinner, Pre/Post-workout, Snacks), search-based add,
+ * barcode scan, swipe-delete, multi-select bulk tools, copy yesterday, and a
+ * designed empty state (diary-tab redesign 2026-06-01).
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -466,25 +467,30 @@ export default function DiaryScreen({ navigation }) {
           />
         </View>
 
-        {MEAL_SLOTS.map((slot, i) => (
-          <AnimatedEntrance key={slot.key} index={i}>
-          <MealSection
-            slot={slot}
-            entries={entriesBySlot[slot.key]}
-            onAdd={() => addFood(slot.key)}
-            onEdit={openEditSheet}
-            onDelete={requestDelete}
-            selectionMode={selectionMode}
-            selectedIds={selectedIds}
-            onLongPressEntry={enterSelection}
-            onToggleSelect={toggleSelect}
+        {entries.length === 0 ? (
+          <EmptyDiary
+            onAdd={() => addFood('breakfast')}
+            onCopyYesterday={copyYesterday}
           />
-          </AnimatedEntrance>
-        ))}
+        ) : (
+          MEAL_SLOTS.map((slot, i) => (
+            <AnimatedEntrance key={slot.key} index={i}>
+              <MealSection
+                slot={slot}
+                entries={entriesBySlot[slot.key]}
+                onAdd={() => addFood(slot.key)}
+                onEdit={openEditSheet}
+                onDelete={requestDelete}
+                selectionMode={selectionMode}
+                selectedIds={selectedIds}
+                onLongPressEntry={enterSelection}
+                onToggleSelect={toggleSelect}
+              />
+            </AnimatedEntrance>
+          ))
+        )}
 
         <WaterRow ml={waterMl} onAdd={() => logWaterDelta(250)} onSub={() => logWaterDelta(-250)} />
-
-        {entries.length === 0 && <EmptyDiary />}
       </ScrollView>
 
       <FoodDetailSheet
@@ -517,23 +523,6 @@ export default function DiaryScreen({ navigation }) {
           accessibilityLabel="Scan barcode"
         >
           <Ionicons name="barcode-outline" size={26} color={colors.background} />
-        </TouchableOpacity>
-      ) : null}
-
-      {/* Copy-yesterday FAB stacks above the scan FAB. Hidden when
-          the diary already has entries for today, since the action
-          appends rather than replaces and copying yesterday's set on
-          top of today's would surprise the user. */}
-      {!selectionMode && entries.length === 0 ? (
-        <TouchableOpacity
-          style={styles.copyYesterdayFab}
-          onPress={copyYesterday}
-          activeOpacity={0.85}
-          accessibilityRole="button"
-          accessibilityLabel="Copy yesterday's entries"
-        >
-          <Ionicons name="copy-outline" size={18} color={colors.textPrimary} />
-          <Text style={styles.copyYesterdayLabel}>Copy yesterday</Text>
         </TouchableOpacity>
       ) : null}
 
@@ -655,25 +644,6 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     ...shadow.lg,
   },
-  copyYesterdayFab: {
-    position: 'absolute',
-    right: spacing.lg,
-    bottom: spacing.xl + 56 + spacing.sm, // stack above scanFab
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.surface2,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    ...shadow.md,
-  },
-  copyYesterdayLabel: {
-    ...type.label,
-    color: colors.textPrimary,
-  },
   safe: { flex: 1, backgroundColor: colors.background },
   selectionBar: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
@@ -750,7 +720,6 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxxl },
   macroRingsWrap: { marginBottom: spacing.lg },
-
   waterRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: colors.surface, borderRadius: radius.lg,
@@ -766,11 +735,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
   },
 
-  empty: {
-    padding: spacing.xl, alignItems: 'center',
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed',
-  },
-  emptyTitle: { ...type.bodyStrong, color: colors.textPrimary, marginBottom: spacing.sm },
-  emptyBody: { color: colors.textSecondary, fontSize: fontSize.sm, textAlign: 'center', lineHeight: 20 },
 });
