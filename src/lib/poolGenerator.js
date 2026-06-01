@@ -35,7 +35,7 @@ const SUBREGION_TRANSLATION = {
   chest:      { flat: 'flat', incline: 'incline', decline: 'lower' },
   back:       { vertical_pull: 'vertical_pull', horizontal_row: 'horizontal_row', lower_lat: 'lower_lat' },
   quads:      { sweep: 'sweep' },
-  side_delts: { lateral_raise: 'side' },
+  side_delts: { lateral_raise: 'side', overhead_press: 'press' },
   rear_delts: { face_pull: 'face_pull', horiz_abduction: 'horiz_abduction' },
   triceps:    { overhead: 'overhead', pushdown: 'lateral' },
   hamstrings: { hip_extension: 'hip_extension', knee_flexion: 'knee_flexion' },

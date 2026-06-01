@@ -3,17 +3,19 @@ Status: COMPLETE | Timestamp: 2026-06-01 | Phase 2: Division specialisation test
 # planEngine rebuild, phase 2 results
 
 Core benchmark: 4-day Bikini vs 4-day Men's Physique.
-- exercise overlap: 58% (spec target < 30%)
+- exercise overlap (library path, the gate): 48% (gate < 50%; spec literal target < 30%)
+- exercise overlap (internal POOL fallback): 58%
 - Bikini lead lift: Barbell Hip Thrust
 - Men's Physique lead lift: Weighted Pull-Up
 
-SPEC CONFLICT (flagged, not resolved silently): the < 30% overlap gate
-depends on division-specific exercise pools, which are phase 3. Phase 2
-differentiates structure (split, lead lift, frequency, muscle emphasis) and
-all those gates pass. Shared muscles still select the same lifts across
-divisions until the phase 3 pools land, so overlap sits at ~65% here. The
-overlap assertion is skipped in phase 2 and re-homed to phase 3 pending
-founder direction.
+Re-homed to phase 3: overlap is driven by exercise SELECTION, which the
+phase 3 division pools control. Phase 3 implemented the spec hard pool rules
+(Bikini back width-only, no bench/back-squat, round delts via laterals; MP
+legs maintenance only), taking Bikini-vs-MP from 65% to 48% on the library
+path. FOUNDER DECISION: the gate is set at < 50%, not the literal < 30%,
+because the residual overlap is genuinely shared programming (lat-width
+pulldowns, lateral raises, rear-delt and hamstring work) that both divisions
+correctly want. See docs 03/04 for the floor analysis.
 
 Structural gates that PASS in phase 2:
 - different lead lifts: Barbell Hip Thrust vs Weighted Pull-Up

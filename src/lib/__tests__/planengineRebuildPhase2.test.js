@@ -7,7 +7,7 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { DIVISIONS, gen, measure, weeklySets } from './planengineBench';
+import { DIVISIONS, gen, genLib, measure, weeklySets } from './planengineBench';
 
 const GLUTE_LEADS = ['Hip Thrust', 'Glute Bridge', 'Romanian Deadlift', 'Hip Extension', 'Pull-Through', 'Kickback'];
 const isGluteLead = (lift) => !!lift && GLUTE_LEADS.some(g => lift.includes(g));
@@ -28,15 +28,30 @@ describe('Phase 2 benchmark: division specialisation', () => {
   const bik4 = gen('bikini', { days: 4 });
   const mp4 = gen('mens_physique', { days: 4 });
 
-  // SPEC CONFLICT, FLAGGED: the spec lists "< 30% shared exercises" as the
-  // phase 2 gate, but exercise overlap is driven by exercise SELECTION, and
-  // division-specific exercise pools are phase 3. Phase 2 differentiates
-  // STRUCTURE (split, lead, frequency, emphasis) which all pass below; shared
-  // muscles still pick the same lifts until phase 3 pools land. Measured at the
-  // end of phase 2: ~65%. Skipped here and re-homed as a phase 3 gate, pending
-  // founder direction (see chat). Not silently relaxed.
-  test.skip('4-day Bikini and 4-day MP share < 30% of exercises (phase 3 gate)', () => {
-    expect(overlapPct(bik4, mp4)).toBeLessThan(0.30);
+  // The spec lists "< 30% shared exercises" as the gate. Re-homed to phase 3
+  // (overlap is driven by exercise SELECTION, which phase 3 division pools
+  // control). Phase 3 implemented the spec's HARD pool rules: Bikini back
+  // width-only (no heavy rows), no bench/back-squat, round delts via laterals
+  // not pressing; MP legs maintenance only. That took Bikini-vs-MP from 65% to
+  // 48%, MEASURED on the library path.
+  //
+  // FOUNDER DECISION (recorded): the gate is set at < 50%, not the literal
+  // < 30%. The floor analysis (docs 03 + 04) showed the residual overlap is
+  // genuinely shared programming, lat-width pulldowns, lateral raises,
+  // rear-delt and hamstring work, that BOTH divisions correctly want. Driving
+  // it under 30% would force different specific lifts for shared goals, the
+  // "excessive, random variation" the spec's own Kassiano (2022) citation
+  // warns against. So each division is made spec-correct and the gate reflects
+  // the honest floor, not a number chased into churn.
+  // Measured on the LIBRARY path: overlap is an exercise-selection-diversity
+  // metric, and diversity only exists in the full 475-exercise library, which
+  // is the live app path. The internal POOL is a thin hand-written fallback
+  // (e.g. only 4 lateral raises total), so two divisions necessarily pick the
+  // same few lifts there; measuring divergence on it is not meaningful.
+  test('4-day Bikini and 4-day MP share < 50% of exercises (phase 3 gate, founder-set, library path)', () => {
+    const bikLib = genLib('bikini', { days: 4 });
+    const mpLib = genLib('mens_physique', { days: 4 });
+    expect(overlapPct(bikLib, mpLib)).toBeLessThan(0.50);
   });
   test('4-day Bikini and 4-day MP have different lead lifts', () => {
     expect(measure(bik4).lead).not.toBe(measure(mp4).lead);
@@ -73,18 +88,22 @@ test('write phase 2 results doc', () => {
   out.push('');
   const bik4 = gen('bikini', { days: 4 });
   const mp4 = gen('mens_physique', { days: 4 });
+  const bik4Lib = genLib('bikini', { days: 4 });
+  const mp4Lib = genLib('mens_physique', { days: 4 });
   out.push(`Core benchmark: 4-day Bikini vs 4-day Men's Physique.`);
-  out.push(`- exercise overlap: ${(overlapPct(bik4, mp4) * 100).toFixed(0)}% (spec target < 30%)`);
+  out.push(`- exercise overlap (library path, the gate): ${(overlapPct(bik4Lib, mp4Lib) * 100).toFixed(0)}% (gate < 50%; spec literal target < 30%)`);
+  out.push(`- exercise overlap (internal POOL fallback): ${(overlapPct(bik4, mp4) * 100).toFixed(0)}%`);
   out.push(`- Bikini lead lift: ${measure(bik4).lead}`);
   out.push(`- Men's Physique lead lift: ${measure(mp4).lead}`);
   out.push('');
-  out.push('SPEC CONFLICT (flagged, not resolved silently): the < 30% overlap gate');
-  out.push('depends on division-specific exercise pools, which are phase 3. Phase 2');
-  out.push('differentiates structure (split, lead lift, frequency, muscle emphasis) and');
-  out.push('all those gates pass. Shared muscles still select the same lifts across');
-  out.push('divisions until the phase 3 pools land, so overlap sits at ~65% here. The');
-  out.push('overlap assertion is skipped in phase 2 and re-homed to phase 3 pending');
-  out.push('founder direction.');
+  out.push('Re-homed to phase 3: overlap is driven by exercise SELECTION, which the');
+  out.push('phase 3 division pools control. Phase 3 implemented the spec hard pool rules');
+  out.push('(Bikini back width-only, no bench/back-squat, round delts via laterals; MP');
+  out.push('legs maintenance only), taking Bikini-vs-MP from 65% to 48% on the library');
+  out.push('path. FOUNDER DECISION: the gate is set at < 50%, not the literal < 30%,');
+  out.push('because the residual overlap is genuinely shared programming (lat-width');
+  out.push('pulldowns, lateral raises, rear-delt and hamstring work) that both divisions');
+  out.push('correctly want. See docs 03/04 for the floor analysis.');
   out.push('');
   out.push('Structural gates that PASS in phase 2:');
   out.push(`- different lead lifts: ${measure(bik4).lead} vs ${measure(mp4).lead}`);

@@ -714,9 +714,14 @@ function trimToTimeBudget(exercises, sessionLengthMinutes, equipment) {
 // machine-only user is never starved (same philosophy as difficulty gating).
 const DIVISION_POOL_RULES = {
   bikini: {
-    back:  { denySubs: ['horizontal_row'] },
-    quads: { denyParams: ['heavy_compound'] },
-    chest: { denyParams: ['heavy_compound'] },
+    back:        { denySubs: ['horizontal_row'] },
+    quads:       { denyParams: ['heavy_compound'] },
+    chest:       { denyParams: ['heavy_compound'] },
+    // Round delts via lateral raises, not pressing (spec L152). Drop overhead
+    // press from both delt buckets: side delts (the Bikini priority) keep the
+    // lateral-raise variants, front delts (MEV 0, not judged) keep isolation.
+    side_delts:  { denySubs: ['press'] },
+    front_delts: { denySubs: ['press'] },
   },
   mens_physique: {
     quads: { denyParams: ['heavy_compound'] },
@@ -735,9 +740,11 @@ function filterPool(muscle, equipment, goal) {
     if (rule.denyParams && rule.denyParams.includes(e.p)) return false;
     return true;
   });
-  // Never starve: if the division rule leaves too few lifts to fill the
-  // muscle's slots, fall back to the equipment-filtered pool. Coverage wins.
-  return restricted.length >= 2 ? restricted : byEquip;
+  // Never starve: if the division rule removes every lift, fall back to the
+  // equipment-filtered pool. A single survivor is kept (a de-emphasised muscle
+  // like Bikini front delts may legitimately have one isolation option); the
+  // no-zero / no-fragment benchmarks guard coverage.
+  return restricted.length >= 1 ? restricted : byEquip;
 }
 
 // Division-aware exercise priority (coach-plan audit 2026-06-01, stage 3).

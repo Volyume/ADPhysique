@@ -44,7 +44,7 @@ Seed library parsed: 475 exercises.
 
 ## Bikini-vs-MP exercise overlap (the 3c gate target is < 30%)
 
-- library path: 57%
+- library path: 48%
 - POOL path: 58%
 
 This is the gap 3c (division-specific pools + mandated lead category +
