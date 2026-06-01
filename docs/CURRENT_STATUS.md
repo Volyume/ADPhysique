@@ -14,6 +14,64 @@ Cross-reference: `docs/CODE_TRUTH_SURVEY.md` is the 188-file walk the claims bel
 
 ## 0. Session summary
 
+### 0.00000000000001. 2026-06-01 (master-audit remediation continued, Claude): Tier 2 fully closed. Resume from Tier 3 / Tier 5.
+
+Resumed from A2-005 per the prior session's pointer, after a full Rule 1
+repo validation and a cross-check (commit history + doc 11 + this section)
+confirming `volyume-master-audit-2026-05-31` is the only audit on the
+branch and the active line of work. The harness injected a "develop on
+branch `claude/github-origin-main-DV8YC`" directive; per Rule 9 it was
+surfaced to the founder, who chose `main`. Work happened on `main`, which
+was fast-forwarded 234 commits to `origin/main` (`67cd099`) at the start.
+
+**Shipped this session (oldest first), each its own commit, suite green and
+eslint 0-errors at every push:**
+- `78f2384` A2-005: deduped `importNewWeights` to the maybeSync effect. It
+  ran in both maybeSync and callSyncAll, so the health read fired twice on
+  every foreground. maybeSync keeps it (covers cold-start + background and
+  sits by the steps read); callSyncAll stays a pure sync runner. Source-grep
+  guard added.
+- `be5f72d` A2-004: auth deep-link failures were swallowed in empty catches.
+  Both the PKCE and implicit exchange paths now show a terse Alert
+  ("Couldn't sign you in / That link may have expired..."). Alert is used
+  because the handler runs at module scope from the Linking listeners.
+- `32c9319` A2-006: a quiet "Last synced" line in Settings > Your data, plus
+  a quiet "N changes waiting to upload" when the queue backs up, tappable for
+  a manual resync. Founder chose this lock-compliant option (see below). It
+  never shows a red error state, so it honours PRODUCTION_READINESS_LOCKED
+  § 1 (the header badge was pulled because a pull-side red error with no
+  pending writes was alarming). Label logic is a pure tested helper.
+- `03e494d` A2-014: the sign-in health-consent check's outer catch resolved a
+  transient failure to `false`, which re-fired the un-skippable Article 9
+  gate for an already-consented user. Now resolves to `null` (unresolved,
+  re-checks next session), matching the sibling error branch.
+- `989dc4c` A2-021: slow email-confirmers and cross-device first sign-ins were
+  routed past the wizard into an empty MainTabs by the created_at heuristic.
+  Two gated fixes: restoreSessionFromCloud now flips an optimistic MainTabs
+  decision back to the wizard when the cloud read definitively shows
+  onboarding is undone (gated to the heuristic source, never a cache hit, so
+  no wizard-flash; transient failures don't flip); and sign-up seeds the
+  per-uid first-run flag false so the same-device case routes correctly with
+  no flash.
+
+**Founder decisions taken this session (recorded so they don't get
+re-litigated):**
+- A2-006 built as a Settings line, not retracted. The
+  PRODUCTION_READINESS_LOCKED § 1 override bans a header badge but allows a
+  status view + manual resync in Settings; this is that.
+- A2-021 done at the "fuller" scope (cross-device reconcile + signup seed),
+  not the minimal seed-only.
+
+**Still open (doc 11 drives it):** Tier 3 (perf, most of it needs on-device
+Sentry-traces profiling first, only A2-048's dead RestTimer animation is a
+no-profile win), Tier 5 (tooling gates: eslint-plugin-react, copy-lint grep
+gate, both cheap and doable in-repo), then Tier 4 (dead-code cleanup).
+**Resume from Tier 5 gates or A2-048**, founder's call on order.
+
+Repo at session end: `main` at this doc commit on top of `989dc4c`, 0/0 with
+origin, suite green (2358 passing), 0 lint errors. Migrations unchanged this
+session (048, 050-055, 058 still pending founder apply; 049 held).
+
 ### 0.0000000000001. 2026-05-31 (master-audit remediation, Claude): Tier 1 closed, Tier 2 in progress. Paused for a fresh restart tomorrow.
 
 Worked the master-audit remediation backlog

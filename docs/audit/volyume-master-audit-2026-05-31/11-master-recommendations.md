@@ -7,20 +7,29 @@ Source: every item traces to a Phase 2 finding (A2-xxx) or a later-phase
 finding (N3/D9/P10/P6), each line-cited in its own doc. Rule 1 holds: nothing
 here is asserted that wasn't verified.
 
-## Implementation progress (2026-05-31)
+## Implementation progress (2026-06-01)
 
-Landed on `main`, full suite green (2325 passing), eslint clean:
+Landed on `main`, full suite green (2358 passing), eslint clean:
 
 - Tier 1: T1-C (native Apple Sign-In deferred with a spec). Tier 1 closed.
-- Tier 2 done: A2-063, A2-043, A2-040, A2-060, A2-038, A2-001 / A2-012.
+- **Tier 2 fully closed.** 2026-05-31: A2-063, A2-043, A2-040, A2-060,
+  A2-038, A2-001 / A2-012. 2026-06-01: A2-005, A2-004, A2-006, A2-014,
+  A2-021.
 - A2-019 retracted (see its row below): it conflicts with the identity
   lock, no code change.
+- A2-006 built as a lock-compliant Settings line (founder call), not
+  retracted: a quiet "Last synced" row + manual resync, no header badge,
+  no red error state, honouring PRODUCTION_READINESS_LOCKED § 1.
+- A2-021 done at the fuller scope (founder call): cross-device cloud
+  reconcile that flips a heuristic MainTabs guess back to the wizard, plus
+  a signup seed of the per-uid first-run flag. Both gated so genuine
+  returning users and cache-hit decisions are never disturbed.
 
-Tier 2 still open, in order: A2-005 (duplicate `importNewWeights`, a
-follow-up to the A2-001 change), A2-004 (auth deep-link failures
-swallowed), A2-006 (sync-failure invisibility), A2-014 / A2-021 (consent
-consistency plus the 60s heuristic). Then Tier 3 + Tier 5, then Tier 4.
-Resume from A2-005. Session detail is in `docs/CURRENT_STATUS.md` § 0.
+Next: Tier 3 + Tier 5, then Tier 4. Most of Tier 3 needs on-device
+Sentry-traces profiling first (only A2-048's dead RestTimer animation is a
+no-profile win); Tier 5's tooling gates are cheap and doable in-repo.
+Resume from Tier 5 gates or A2-048. Session detail is in
+`docs/CURRENT_STATUS.md` § 0.
 
 ---
 
