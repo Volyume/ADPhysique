@@ -1,140 +1,90 @@
-# Onboarding Audit 03 — Design and Layout Consistency
+# Onboarding Audit 03 — Design and Presentation
 
-Status: COMPLETE (Phase 3 of 7), rewritten 2026-06-01 after founder feedback
-that the first pass assessed the design *document* rather than the actual
-pages. This version compares every onboarding/flow page against the real,
-shipped layout of the rest of the app, page by page.
+Status: COMPLETE (Phase 3 of 7). Fresh audit from the live code. Date: 2026-06-01.
 
-Method: read the shared chrome primitives (`ScreenHeader`, `Card`,
-`PressableCard`, `Button`), confirmed how the five main tabs use them, then
-checked each flow screen against that standard. Caveat: composition and
-primitive usage read from source, not a running build.
+Assesses each flow screen for design-language consistency with the rest of the
+app, visual hierarchy, selection components, progress, transitions, empty/loading
+states, touch targets, and visual residue, then cross-flow consistency. Look,
+feel and the competitive read are folded in here and in doc 05, per the prompt.
 
 ---
 
-## 1. The app's standard page chrome (what "the rest of the site" does)
+## 1. The app's standard, and the journey does not follow it
 
-The five main tabs all share one top-of-screen pattern, the `ScreenHeader`
-primitive: page title on the left, the Volyume wordmark on the right
-(`ScreenHeader.js`, header comment "Unified top-of-screen header used by Train,
-Plans, Progress and Athlete Hub"). Confirmed in use by:
-- Train / Home: `ScreenHeader title="Train" subtitle={greeting}` (HomeScreen:699)
-- Plans: `ScreenHeader title="Plans"` (PlansScreen:376)
-- Diary: `ScreenHeader title="Diary"` (DiaryScreen:450)
-- Progress: `ScreenHeader` (AnalyticsScreen)
-- You: `ScreenHeader` (YouScreen)
+All five main tabs use the shared `ScreenHeader` primitive (title left, wordmark
+right): Train (HomeScreen:699), Plans (:376), Diary (:450), Progress, You. That
+is the chrome a user internalises.
 
-So the standard a user internalises in the app is: every screen has the title +
-wordmark header, then content cards below.
+Not one onboarding/flow screen uses it. Every one hand-rolls its own header:
+Welcome (centred wordmark), Login (centred mark), ProOnboarding (custom brand row
++ progress, :583-598), ProSetupComplete (centred check + PRO badge, :97-112),
+FirstRun (bare title), ProGoalSetup (back-arrow + centred title, :281-290),
+ManualBuilder (bare title), PlanLibrary (search only). The flow is a separate
+visual world from the app it leads into.
 
-The Train tab specifically (the screen the flow ends on) is: `ScreenHeader` +
-greeting subtitle, a `GradientCard` daily-narrative hero (HomeScreen:720), then
-`PressableCard` continue/next-session cards and data cards (:1004-1021).
+## 2. The page before Home (the reveal) does not match the rest of the app
 
-## 2. Onboarding does not use the app's chrome, anywhere
+`ProSetupCompleteScreen` lists the plan, calories and macros, the user's first
+sight of those numbers. It presents them in a bespoke layout: a hand-rolled kcal
+hero + a three-column protein/carbs/fat row + goal/phase chips + a hand-rolled
+split list (:140-238). The rest of the app shows the same data through the shared
+`MacroRings` component (used on the Diary tab, DiaryScreen:485) and the plan card
+on Plans. The reveal imports `MacroRings` zero times. So the first presentation of
+calories, macros and plan does not match how the user will see them seconds later
+on the Diary and Plans tabs. This is the sharpest in-journey inconsistency.
 
-**Not one onboarding or flow screen uses `ScreenHeader`.** Every one hand-rolls
-its own header:
+By contrast the returning-user reveal `GoalChangeSummaryScreen` does use the
+shared `Card` primitive (:77), so the two reveals are themselves inconsistent.
 
-| Screen | Header it uses instead | Uses ScreenHeader? |
-|---|---|---|
-| WelcomeScreen | centred wordmark image + tagline (:55-58) | No |
-| LoginScreen | centred `VolyumeMark` + tagline (:254-257) | No |
-| Article9ConsentScreen | bare `<Text>` title (:114) | No |
-| ProOnboardingScreen | custom `Header`: brand row + PRO badge + progress bar + step title (:583-598) | No |
-| ProSetupCompleteScreen | centred check circle + brand row + PRO badge (:97-112) | No |
-| FirstRunScreen | bare `<Text>` title "Almost there." (:45) | No |
-| ProGoalSetupScreen | custom back-arrow + centred title "Update your plan" (:281-290) | No |
-| NutritionEducationScreen | `BackHeader` (a different shared header) (:21) | No |
-| ManualBuilderScreen | bare `<Text>` "Build a Plan" (:549) | No |
-| PlanLibraryScreen | `SearchBar` only, no title header (:376) | No |
+## 3. Primary buttons and cards: mixed primitives
 
-This is the core consistency failure: onboarding is a self-contained visual
-world that looks nothing like the app it leads into. Five different header
-treatments across the flow, none of them the app standard.
+- Buttons: `ProSetupComplete` and `FirstRun` use the `Button` primitive;
+  `ProOnboarding`, `ProGoalSetup`, `ManualBuilder` and `Welcome` hand-roll their
+  primaries. Two consecutive Pro-flow screens (ProOnboarding then
+  ProSetupComplete) use two different button implementations.
+- Cards: hand-rolled across both the flow and the main tabs; the `Card` primitive
+  is used by only a handful of screens (including `GoalChangeSummary`). No single
+  card look binds the flow to the app.
 
-## 3. The last page before Train, the sharpest discontinuity
+## 4. Cross-flow consistency (the three plan-creation surfaces)
+Same task, three selection metaphors: wizard dropdowns + segments
+(ProOnboarding:949-1007), ProGoalSetup icon cards + goal grid (:323-560),
+ManualBuilder pills + modal picker (:569-598). A returning user who built their
+first plan in the wizard meets an unfamiliar layout in the builder. Shared
+selection types are not visually identical across the flows, which the brief
+requires.
 
-`ProSetupCompleteScreen` (the screen the user taps "Start training" from) and
-`HomeScreen` (where they land) are adjacent in time and opposite in design:
+## 5. Hierarchy, progress, transitions, states, targets
+- Hierarchy: generally good; the reveal's "hit your targets" card is dense
+  (kcal hero + macros + two chips + a link) but readable.
+- Progress: wizard has a clear 4-segment bar; the builder has none (acceptable,
+  it is single-screen).
+- Transitions: tasteful (splash sequence, reveal check spring, hero-zoom into
+  ActiveWorkout), all reduce-motion gated.
+- Loading/empty: skeletons on Plans and Library, plain on-brand empties; no
+  "coming soon" placeholders in the flow.
+- Touch targets: meet size; icon taps use hitSlop.
 
-| | ProSetupComplete (reveal) | Home / Train (destination) |
-|---|---|---|
-| Header | Centred check circle, brand row, PRO badge, "You're all set, {name}" (:97-112) | `ScreenHeader` title "Train" + wordmark + greeting (:699) |
-| Layout | Centred celebration, vertical routine-card stack (:115-267) | Left-aligned data feed, gradient hero + pressable cards (:715-1021) |
-| Card style | Hand-rolled `routineCard` (radius.xl, :335) | `GradientCard`, `PressableCard`, hand-rolled data cards |
-| Primary button | `Button` primitive "Start training" (:291) | n/a (cards are the actions) |
-| Greeting | "You're all set, {name}" | "Good morning, {name}" |
+## 6. Visual residue
+- ManualBuilder cosmetic goal pills (drive nothing, :20-26).
+- MesocycleBuilder unused create-block modal styles (:495-529).
+- `PaywallScreen` renders `TierComparisonStrip`, a 3-tier "Pro vs Complete"
+  comparison in a 2-tier app (see doc 04).
 
-The tap from reveal to Train is a hard cut from a bespoke, centred,
-celebration layout to the standard left-aligned `ScreenHeader` app feed. There
-is no shared frame carrying the user across the boundary. A first-time user's
-first impression of the actual app is a screen that looks unrelated to the four
-minutes of onboarding they just finished. This is exactly the
-"not standard against the rest of the site" problem.
-
-## 4. Primary buttons are inconsistent within the flow itself
-
-The design system mandates the `Button` primitive (one press model, one
-disabled/loading treatment). The flow is split:
-
-| Screen | Primary button |
-|---|---|
-| ProSetupComplete | `Button` primitive (:291) |
-| FirstRun | `Button` primitive (:78) |
-| ProOnboarding | hand-rolled `TouchableOpacity` + `primaryBtn` style (11 hits) |
-| ProGoalSetup | hand-rolled `saveBtn` (6 hits) |
-| ManualBuilder | hand-rolled `activateBtn` / `primaryBtn` (8 hits) |
-| WelcomeScreen | hand-rolled `proCtaRow` |
-
-So two consecutive screens in the same Pro flow (ProOnboarding then
-ProSetupComplete) use two different primary-button implementations. The press
-feel, disabled state and loading spinner are reimplemented per screen rather
-than inherited, which is both a consistency risk and a drift risk.
-
-## 5. Cards: hand-rolled across the board
-
-The design system says "Use the `Card` primitive, don't hand-roll
-`backgroundColor: colors.surface` blocks." In practice the `Card` primitive is
-imported by only a handful of screens (Credits, FoodInsights, GoalChangeSummary,
-Subscription, WorkoutHistory). Both the onboarding flow and the main tabs
-hand-roll their surface cards (PlansScreen, HomeScreen and ProOnboarding all do).
-So card hand-rolling is an app-wide gap, not unique to onboarding, but it means
-there is no single card look binding onboarding to the app either.
-
-## 6. Cross-flow inconsistency between the three plan-creation surfaces
-
-(Carried from the first pass, still valid.) The same task, choose goal /
-equipment / experience, looks different in each surface:
-- Wizard step 3: inline dropdowns + segmented rows (ProOnboarding:949-1007).
-- ProGoalSetup: full-width icon cards + a 2-up goal grid (:323-560).
-- ManualBuilder: pill rows + a modal exercise picker (:569-598).
-A returning user who built their first plan in the wizard meets an unfamiliar
-layout in the builder. Shared selection types are not visually identical across
-the flows, which the brief explicitly requires.
-
-## 7. Decoration and residue against the "precision instrument" rules
-
-- ProGoalSetup puts an icon on every option card (:333, :392, :420, :484, :510),
-  against the accent-discipline rule "nothing decorative that doesn't earn its
-  place".
-- ManualBuilder goal pills look like a selector but change nothing (:20-26).
-- MesocycleBuilder carries an unused create-block modal style set (:495-529).
-- HomeScreen uses a `GradientCard` for its narrative hero (:720). The design
-  system bans decorative gradients except as functional data encoding, this is a
-  borderline case worth confirming, and it is another way the Train tab differs
-  from the flat onboarding surfaces.
-
----
+## 7. Look and feel vs the field
+`docs/DESIGN_SYSTEM.md` targets a "Whoop / Linear / Stripe" precision-instrument
+feel: amber on near-black, one accent, depth by tonal elevation, numbers-as-hero,
+no gamification, dark-only. That is a credible, ownable position, level with the
+serious end of the market (MacroFactor's non-gamified data look, Whoop's metric
+authority, Oura's minimalism, per doc 05). The flow honours it at the core
+(numbers-as-hero on the reveal, no gamification) but undercuts it at the edges:
+the bespoke chrome, the non-standard reveal, and the off-brand "use MyFitnessPal"
+line read as less premium than the design system intends.
 
 ## Design verdict
-
-The onboarding is individually well made (good spacing, real motion taste, a
-premium reveal) but it is a **separate visual system from the app it leads
-into**. The single highest-value design change is to put the app's standard
-`ScreenHeader` frame on the flow screens (or a deliberate, shared onboarding
-frame that visibly belongs to the same product), and to route every primary
-button and card through the shared primitives, so the jump from the last
-onboarding page to the Train tab feels like one product rather than two. See
-doc 06 for the proposed unified treatment and doc 07 for the build items
-(H4/H5, plus a new item to adopt `ScreenHeader` across the flow).
+The flow is individually well made but is a separate visual system from the app.
+The highest-value design change is to put the app's `ScreenHeader` frame on the
+flow, route primary buttons and the reveal's calorie/macro/plan presentation
+through the shared `Button` / `MacroRings` / plan-card components, and unify the
+three plan-creation surfaces to one selection language, so the journey and the
+reveal feel like the same product as the Train tab they lead into.
