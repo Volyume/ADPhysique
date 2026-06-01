@@ -36,6 +36,18 @@ describe('Coach division contract', () => {
     expect(adv).toBeGreaterThan(beg);
   });
 
+  test('lower-body divisions deliver real glute volume (stage 2 split)', () => {
+    // Was 4 sets before the lower-focus split; must now reach the working band.
+    expect(vol(generatePlan(cfg('bikini'))).glutes).toBeGreaterThanOrEqual(14);
+    expect(vol(generatePlan(cfg('wellness'))).glutes).toBeGreaterThanOrEqual(14);
+  });
+
+  test('Bikini and Wellness are no longer identical (Wellness carries more quad volume)', () => {
+    const bikini = vol(generatePlan(cfg('bikini')));
+    const wellness = vol(generatePlan(cfg('wellness')));
+    expect(wellness.quads).toBeGreaterThan(bikini.quads);
+  });
+
   test('every division generates a non-empty plan with a recoverable session count', () => {
     for (const g of ['mens_physique', 'classic_physique', 'bodybuilding', 'bikini',
       'wellness', 'figure', 'womens_physique', 'womens_bodybuilding']) {
