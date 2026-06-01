@@ -1,4 +1,32 @@
-Status: COMPLETE | Timestamp: 2026-06-01 | Phase 6: Build recommendations
+Status: COMPLETE (plan) | Timestamp: 2026-06-01 | Phase 6: Build recommendations
+
+## Implementation progress (2026-06-01)
+
+SHIPPED to `main`, the visual-elevation tier (Diary-local, tested, needs a
+device look before final sign-off):
+- Stage 1a (`6efadec`): one card language for meal sections, in-card item rows,
+  per-meal kcal + protein subtotal, title-case meal names. Removes the dashed
+  boxes at the root.
+- Stage 1b (`f567e00`): designed empty-state card (replaces six section cards +
+  trailing sentence), single FAB, dead-style cleanup, locked `EMPTY_DIARY_COPY`
+  superseded (doc + test updated).
+- Stage 2 macro bars (`d4a66f1`): macro sub-rings become protein-first bars,
+  adherence-neutral amber kept.
+- Stage 2 water (`4a6cb85`): water tracker becomes a progress bar in the card
+  language (default 3 L target, flagged for a per-user setting).
+
+REMAINING (next tranche):
+- Quick-log strip of Frequents + Saved meals (integration: reads + log action).
+- Pre/Post-workout tied to the session (needs the workout name + nav route).
+- Collapsible meal sections.
+- Stage 3 polish: count-up, ring sweep, entry-insert animation, haptics, swipe
+  between days, week strip.
+- The numbered-meal model: the migration-backed, food-domain-wide unit with the
+  suggestion re-keying. Per Rule 6 the migration is drafted and tracked, the
+  founder applies it. Best done as its own focused, tested pass.
+
+---
+
 
 # Prioritised build recommendations
 
