@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Canvas, Path, Skia } from '@shopify/react-native-skia';
 import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
+import useAppStore from '../../store/useAppStore';
 
 const KCAL_SIZE = 132;
 const KCAL_STROKE = 14;
@@ -96,6 +97,34 @@ export default function MacroRings({ rollup, targets, dayTypeLabel, onPress }) {
   const kcalOver = kcalRemaining != null && kcalRemaining < 0;
   const kcalTint = bandColour();
 
+  // Count the calorie number up and sweep the ring when the total changes, so
+  // the headline reads as alive when a food lands. Animates ON CHANGE only (no
+  // replay on every mount), and is skipped entirely under reduce-motion. The
+  // accessibility label and the macro numbers stay on the real values.
+  const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
+  const animValue = useRef(new Animated.Value(1)).current;
+  const fromRef = useRef({ kcal, progress: kcalProgress });
+  const [disp, setDisp] = useState({ kcal, progress: kcalProgress });
+  useEffect(() => {
+    const from = fromRef.current;
+    const to = { kcal, progress: kcalProgress };
+    if (reduceMotion || (from.kcal === to.kcal && from.progress === to.progress)) {
+      setDisp(to);
+      fromRef.current = to;
+      return undefined;
+    }
+    animValue.setValue(0);
+    const id = animValue.addListener(({ value }) => {
+      setDisp({
+        kcal: Math.round(from.kcal + (to.kcal - from.kcal) * value),
+        progress: from.progress + (to.progress - from.progress) * value,
+      });
+    });
+    Animated.timing(animValue, { toValue: 1, duration: 500, useNativeDriver: false })
+      .start(() => { fromRef.current = to; });
+    return () => animValue.removeListener(id);
+  }, [kcal, kcalProgress, reduceMotion, animValue]);
+
   // The rings are decorative (Skia canvas); the numbers are the data. Build
   // one spoken summary of kcal + macros so a screen reader conveys the same
   // information the rings show, and hide the inner content from a11y so the
@@ -130,12 +159,12 @@ export default function MacroRings({ rollup, targets, dayTypeLabel, onPress }) {
           <Ring
             size={KCAL_SIZE}
             stroke={KCAL_STROKE}
-            progress={kcalProgress}
+            progress={disp.progress}
             tint={kcalTint}
             track={colors.surface2}
           />
           <View style={styles.kcalCentre} pointerEvents="none">
-            <Text style={styles.kcalValue}>{kcal}</Text>
+            <Text style={styles.kcalValue}>{disp.kcal}</Text>
             {kcalTarget != null ? (
               <Text style={styles.kcalSubLabel}>of {kcalTarget}</Text>
             ) : (

@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius, shadow, circle, type } from '../styles/theme';
@@ -361,7 +362,12 @@ export default function DiaryScreen({ navigation }) {
     await load();
   }
 
+  function lightTap() {
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); } catch (_) {}
+  }
+
   async function logWaterDelta(deltaMl) {
+    if (deltaMl > 0) lightTap();
     const next = Math.max(0, waterMl + deltaMl);
     await setWater(userId, selectedDate, next);
     setWaterMl(next);
@@ -509,7 +515,7 @@ export default function DiaryScreen({ navigation }) {
             {!selectionMode ? (
               <TouchableOpacity
                 style={styles.addMealRow}
-                onPress={() => setAddedMeals((n) => n + 1)}
+                onPress={() => { lightTap(); setAddedMeals((n) => n + 1); }}
                 accessibilityRole="button"
                 accessibilityLabel="Add another meal"
               >
