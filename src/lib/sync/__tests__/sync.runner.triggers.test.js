@@ -144,3 +144,35 @@ describe('A2-001 foreground catch-up routes through syncAll', () => {
     expect(maybeSyncBody).toMatch(/syncAll\(\s*\{[^}]*triggeredBy:\s*['"]background['"]/);
   });
 });
+
+// A2-005 regression: importNewWeights was called in BOTH the maybeSync effect
+// and the callSyncAll effect, so the health read fired twice on every
+// foreground ('active' reaches both). The dedup keeps the single call in
+// maybeSync (which also covers cold-start / background) and drops it from
+// callSyncAll. These guards pin that: maybeSync remains the sole site and the
+// sync runner does not re-introduce the duplicate read.
+describe('A2-005 bodyweight import is deduped to the maybeSync effect', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const APP = fs.readFileSync(path.resolve(__dirname, '../../../../App.js'), 'utf8');
+  const maybeStart = APP.indexOf('async function maybeSync');
+  const callSyncAllStart = APP.indexOf('async function callSyncAll');
+  // callSyncAll's body ends where the trigger wiring begins.
+  const triggersStart = APP.indexOf('// 1. Foreground trigger.');
+  const maybeSyncBody = APP.slice(maybeStart, callSyncAllStart);
+  const callSyncAllBody = APP.slice(callSyncAllStart, triggersStart);
+
+  test('callSyncAll body is found between maybeSync and the trigger wiring', () => {
+    expect(callSyncAllStart).toBeGreaterThan(maybeStart);
+    expect(triggersStart).toBeGreaterThan(callSyncAllStart);
+  });
+
+  test('maybeSync still imports new bodyweight (the single canonical site)', () => {
+    expect(maybeSyncBody).toMatch(/importNewWeights\s*\(/);
+  });
+
+  test('callSyncAll no longer imports bodyweight (dedup, no double read)', () => {
+    expect(callSyncAllBody).not.toMatch(/importNewWeights\s*\(/);
+    expect(callSyncAllBody).not.toMatch(/\{\s*importNewWeights\s*\}/);
+  });
+});
