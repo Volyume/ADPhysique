@@ -203,12 +203,27 @@ DONE (commits 638cffc, 2621ebd, d25d971, c6eba50, a876354; see doc 04):
   LIBRARY path, threshold < 50% (FOUNDER DECISION, not the literal < 30%; the
   residual is genuinely shared programming, see doc 04 floor analysis).
 
+3e increment 1 DONE (commit f39804c, doc 05): indirect-volume REPORTING.
+secondaryMuscles flow through poolGenerator into pool entries (live DB path
+carries them); buildVolumeSummary reports weeklyVolumeSummary.indirectSets
+(0.5/synergist), additive, plannedSets untouched. Benchmark
+planengineRebuildPhase3e.test.js. Measured: MP biceps 6d+8i, BB triceps 6d+10i,
+Bikini shoulders 18d+1.5i (no pressing, so delts are trained direct).
+
 REMAINING:
+- 3e increment 2 (target subtraction): trim synergist DIRECT targets when
+  indirect is high, floored at MEV. MEASURED value at 5 days (Classic biceps
+  12d + 8i = over-dosed vs MEV 8). PENDING FOUNDER DIRECTION on aggressiveness
+  (trim to MEV vs leave a buffer): under-dosing arms is the risk, so not done
+  unilaterally. The reporting layer it needs is in place.
+- 3e increment 3 (hard coverage flag forcing isolation at near-zero indirect):
+  largely redundant with the matrix (every division already gets direct side
+  delts); low value, deferred.
 - 3a Full library primary-muscle audit (`src/lib/seedExercises.js`): the glute
   and quad TYPE tags landed; a whole-library primary-muscle re-audit (every
   hip-extension primary = glutes, fractional = hamstrings) is still open. The
   POOL is correct; this is library hygiene, low risk, not on the gate path.
-- 3e Indirect volume modelling (fractional secondary contributions subtracted
+- (3e indirect-volume reporting now done, see above; remaining 3e items listed)
   from direct targets; flag near-zero indirect coverage to force isolation;
   side delts in pressing programs trigger the flag).
 - 3f Coverage warnings scoped to split type. NOTE: `buildWarnings` in the engine
